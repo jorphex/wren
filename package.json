@@ -69,7 +69,11 @@
     "verify:privacy": "node scripts/verify-no-upstream-telemetry.mjs && node scripts/verify-log-hygiene.mjs",
     "audit:release": "npm audit --audit-level=high"
   },
-  "author": "Wren contributors",
+  "author": {
+    "name": "Jorphex and Wren contributors",
+    "email": "jorphex@users.noreply.github.com",
+    "url": "https://github.com/jorphex/wren"
+  },
   "license": "GPL-3.0",
   "dependencies": {
     "@ethereumjs/common": "3.2.0",
