@@ -4,8 +4,10 @@ import path from 'path'
 
 import {
   APPLICATION_NAME,
+  INSTANCE_LOCK_DIRECTORY,
   configureApplicationIdentity,
-  legacyProfilePath
+  legacyProfilePath,
+  requestWrenSingleInstanceLock
 } from '../../main/applicationIdentity'
 
 const roots: string[] = []
@@ -22,6 +24,7 @@ const application = (customProfile?: string) => {
   return {
     commandLine: { hasSwitch: jest.fn(() => Boolean(customProfile)) },
     getPath: jest.fn((name: 'appData' | 'userData') => paths[name]),
+    requestSingleInstanceLock: jest.fn(() => true),
     setName: jest.fn(),
     setPath: jest.fn((name: 'userData', value: string) => {
       paths[name] = value
@@ -45,6 +48,21 @@ it('preserves an explicit isolated profile', () => {
 
   expect(app.setName).toHaveBeenCalledWith(APPLICATION_NAME)
   expect(app.setPath).not.toHaveBeenCalled()
+})
+
+it('acquires one Wren-wide lock without creating the wallet profile', () => {
+  const profile = path.join(os.tmpdir(), 'isolated-wren-profile')
+  const app = application(profile)
+  app.requestSingleInstanceLock.mockImplementation(() => {
+    expect(app.getPath('userData')).toBe(path.join(app.getPath('appData'), INSTANCE_LOCK_DIRECTORY))
+    return true
+  })
+
+  expect(requestWrenSingleInstanceLock(app)).toBe(true)
+  expect(app.getPath('userData')).toBe(profile)
+  const lockPath = path.join(app.getPath('appData'), INSTANCE_LOCK_DIRECTORY)
+  expect(fs.lstatSync(lockPath).isDirectory()).toBe(true)
+  if (process.platform !== 'win32') expect(fs.statSync(lockPath).mode & 0o777).toBe(0o700)
 })
 
 it('rejects direct and nested access to the legacy Frame profile', () => {

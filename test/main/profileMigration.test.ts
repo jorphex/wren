@@ -146,6 +146,14 @@ test('refuses to overwrite an existing Wren profile', () => {
   expect(fs.readFileSync(path.join(target, 'keep'), 'utf8')).toBe('existing')
 })
 
+test('replaces only an empty directory pre-created by Electron', () => {
+  const { source, target } = fixture()
+  fs.mkdirSync(target)
+
+  expect(importFrameProfile(source, target)).toMatchObject({ status: 'imported' })
+  expect(fs.existsSync(path.join(target, 'config.json'))).toBe(true)
+})
+
 test('treats a broken Wren profile symlink as an existing destination', () => {
   const { appDataPath, target } = fixture()
   fs.symlinkSync('missing-profile', target)

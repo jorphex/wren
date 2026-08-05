@@ -1,16 +1,19 @@
 import { app, dialog } from 'electron'
+import log from 'electron-log'
 
-import { configureApplicationIdentity } from './applicationIdentity'
+import { configureApplicationIdentity, requestWrenSingleInstanceLock } from './applicationIdentity'
 import { rollbackImportedProfile, runRequestedProfileMigration } from './profileMigration'
 
 let importedProfileId: string | undefined
 try {
   configureApplicationIdentity(app)
 
-  if (!app.requestSingleInstanceLock()) {
+  if (!requestWrenSingleInstanceLock(app)) {
     app.exit(1)
   } else {
     const userDataPath = app.getPath('userData')
+    const importRequested = process.argv.includes('--import-frame-profile')
+    if (importRequested) log.transports.file.level = false
     const migration = runRequestedProfileMigration({
       appDataPath: app.getPath('appData'),
       argv: process.argv,

@@ -216,6 +216,47 @@ function isInside(parent: string, candidate: string) {
   )
 }
 
+function removeEmptyBootstrapDirectory(targetRoot: string) {
+  const target = lstatIfPresent(targetRoot)
+  if (!target) return
+  if (!target.isDirectory() || target.isSymbolicLink() || fs.readdirSync(targetRoot).length > 0) {
+    throw new Error('A Wren profile already exists; import is available only before first launch')
+  }
+  fs.rmdirSync(targetRoot)
+}
+
+function installStagedProfile(stagingRoot: string, targetRoot: string) {
+  const displaced: string[] = []
+  try {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const target = lstatIfPresent(targetRoot)
+      if (target) {
+        if (!target.isDirectory() || target.isSymbolicLink() || fs.readdirSync(targetRoot).length > 0) {
+          throw new Error('A Wren profile already exists; import is available only before first launch')
+        }
+        const bootstrap = `${targetRoot}.bootstrap-${randomUUID()}`
+        fs.renameSync(targetRoot, bootstrap)
+        displaced.push(bootstrap)
+      }
+
+      try {
+        fs.renameSync(stagingRoot, targetRoot)
+        return
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || attempt === 2) throw error
+      }
+    }
+  } finally {
+    displaced.forEach((directory) => {
+      try {
+        fs.rmdirSync(directory)
+      } catch {
+        // The staged profile is already installed; stale empty bootstrap directories are harmless.
+      }
+    })
+  }
+}
+
 export function importFrameProfile(sourceProfilePath: string, userDataPath: string): ProfileMigrationResult {
   const sourceRoot = canonicalProfilePath(sourceProfilePath)
   const targetRoot = canonicalProfilePath(userDataPath)
@@ -224,9 +265,7 @@ export function importFrameProfile(sourceProfilePath: string, userDataPath: stri
   if (sourceRoot === targetRoot || isInside(sourceRoot, targetRoot) || isInside(targetRoot, sourceRoot)) {
     throw new Error('Frame and Wren profile paths must be different')
   }
-  if (lstatIfPresent(targetRoot)) {
-    throw new Error('A Wren profile already exists; import is available only before first launch')
-  }
+  removeEmptyBootstrapDirectory(targetRoot)
   if (!lstatIfPresent(sourceRoot)) throw new Error('No Frame profile was found to import')
 
   requireDirectory(sourceRoot, 'Frame profile')
@@ -261,7 +300,7 @@ export function importFrameProfile(sourceProfilePath: string, userDataPath: stri
     )
     writePrivateFile(path.join(stagingRoot, RECEIPT_FILE), receipt)
     assertFrameIsClosed(sourceRoot)
-    fs.renameSync(stagingRoot, targetRoot)
+    installStagedProfile(stagingRoot, targetRoot)
     return { status: 'imported', files, importId }
   } catch (error) {
     fs.rmSync(stagingRoot, { recursive: true, force: true })
@@ -270,21 +309,19 @@ export function importFrameProfile(sourceProfilePath: string, userDataPath: stri
 }
 
 export function rollbackImportedProfile(userDataPath: string, importId: string) {
-  const targetRoot = path.resolve(userDataPath)
-  const receipt = path.join(targetRoot, RECEIPT_FILE)
-  if (!lstatIfPresent(receipt)) return false
-  let parsed: unknown
   try {
-    parsed = readValidatedJson(receipt, MAX_SIGNER_BYTES, 'Wren profile import receipt').parsed
+    const targetRoot = path.resolve(userDataPath)
+    const receipt = path.join(targetRoot, RECEIPT_FILE)
+    if (!lstatIfPresent(receipt)) return false
+    const parsed = readValidatedJson(receipt, MAX_SIGNER_BYTES, 'Wren profile import receipt').parsed
+    if (Reflect.get(parsed, 'schemaVersion') !== 1 || Reflect.get(parsed, 'importId') !== importId) {
+      return false
+    }
+    fs.rmSync(targetRoot, { recursive: true, force: true })
+    return true
   } catch {
     return false
   }
-  if (!parsed || typeof parsed !== 'object') return false
-  if (Reflect.get(parsed, 'schemaVersion') !== 1 || Reflect.get(parsed, 'importId') !== importId) {
-    return false
-  }
-  fs.rmSync(targetRoot, { recursive: true, force: true })
-  return true
 }
 
 export function runRequestedProfileMigration({

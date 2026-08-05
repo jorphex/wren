@@ -162,7 +162,7 @@ const surface = {
     // gets the dapp manifest and returns all options and details for user to confirm before installing
   },
   add: (dapp: Dapp) => {
-    const { ens, config } = dapp
+    const { ens, config, openWhenReady = false, checkStatusRetryCount = 0 } = dapp
 
     const id = hash(ens)
     const status = 'initial'
@@ -170,7 +170,18 @@ const surface = {
     const existingDapp = store('main.dapps', id)
 
     // If ens name has not been installed, start install
-    if (!existingDapp) requireStoreAction('appDapp')({ id, ens, status, config, manifest: {}, current: {} })
+    if (!existingDapp) {
+      requireStoreAction('appDapp')({
+        id,
+        ens,
+        status,
+        config,
+        manifest: {},
+        current: {},
+        openWhenReady,
+        checkStatusRetryCount
+      })
+    }
   },
   addServerSession(_namehash: string /* , session */) {
     // server.sessions.add(namehash, session)

@@ -209,6 +209,24 @@ it('migrates the version 41 boundary and reloads it without another migration', 
   expect(reloaded.main).toEqual(migrated.main)
 })
 
+it('recovers a persisted dapp missing lifecycle fields', async () => {
+  const fixture = loadFixture('v41-current-state.json')
+  const dappId = 'fixture-dapp'
+  fixture.state.main.dapps = {
+    [dappId]: { ens: 'example.eth', status: 'loading', config: {} }
+  }
+
+  const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
+
+  expect(migrated.main.dapps[dappId]).toMatchObject({
+    ens: 'example.eth',
+    status: 'loading',
+    openWhenReady: false,
+    checkStatusRetryCount: 0
+  })
+  expect(reloaded.main.dapps[dappId]).toEqual(migrated.main.dapps[dappId])
+})
+
 it('rejects a newer persisted snapshot instead of loading an older fallback', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wren-future-state-'))
   const fixture = loadFixture('v41-current-state.json')

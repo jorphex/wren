@@ -26,13 +26,12 @@ describe('persisted state schema compatibility', () => {
     expect(MainSchema.shape.mute.parse({ gasFeeWarning: true })).toStrictEqual({ gasFeeWarning: true })
   })
 
-  it('accepts cached dapps without a manifest', () => {
+  it('accepts cached dapps without a manifest or lifecycle fields', () => {
     expect(
       DappSchema.parse({
         ens: 'example.eth',
         status: 'initial',
-        config: {},
-        openWhenReady: false
+        config: {}
       })
     ).toStrictEqual({
       ens: 'example.eth',
