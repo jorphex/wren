@@ -275,7 +275,7 @@ is reset before replacement. Product contracts and strategies can still contain
 bugs, governance risk, economic loss, or malicious upgrades; Wren does not audit
 or guarantee their safety or yield.
 
-This fork does not initialize or ship a hosted crash-telemetry client. Uncaught
+This project does not initialize or ship a hosted crash-telemetry client. Uncaught
 main-process errors are written to the local Electron log and may display a local
 dialog, but Wren does not transmit crash events, instance identifiers, network
 configuration, or token metadata to the upstream project's Sentry service.
@@ -288,7 +288,7 @@ creates a draft release for review. The companion repository separately produces
 source-bound deterministic Chrome/Firefox archives, checksums, compatibility
 metadata, and a production SBOM. Linux desktop artifacts are not currently
 signed, and byte-for-byte reproducible desktop builds have not been established.
-macOS and Windows signing are not configured for this fork.
+macOS and Windows signing are not configured for this project.
 
 The updater derives its release repository from package metadata and requires a
 user action before download/install. Release credentials, GitHub administration,

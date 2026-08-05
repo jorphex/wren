@@ -36,7 +36,7 @@ you control every affected account and asset.
 
 ## Response Expectations
 
-This is a volunteer-maintained fork, so no response-time guarantee is offered.
+This is a volunteer-maintained project, so no response-time guarantee is offered.
 Maintainers should acknowledge a private report, reproduce it, agree on a
 disclosure plan, and publish a fixed release and advisory before discussing the
 details publicly when practical.

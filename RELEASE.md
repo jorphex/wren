@@ -2,11 +2,11 @@
 
 ## Current Release Boundary
 
-This fork currently produces Linux x64 AppImage and deb artifacts. The automated
+This project currently produces Linux x64 AppImage and deb artifacts. The automated
 workflow runs for an exact version tag or a manual dispatch and creates a new
 GitHub **draft** release. It never updates or publishes a release automatically.
 Linux artifacts are currently unsigned; macOS notarization and Windows signing
-are not configured for this fork.
+are not configured for this project.
 
 Dependency locking makes installation deterministic, but byte-for-byte
 reproducible artifacts have not yet been demonstrated.

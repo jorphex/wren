@@ -2,10 +2,10 @@
 
 ## Status Definitions
 
-- **Physical**: exercised on a real device with this fork.
+- **Physical**: exercised on a real device with this project.
 - **Automated**: covered by unit or adapter tests, usually with mocks.
 - **Implemented**: a code path exists but has not been regression-qualified for
-  this fork.
+  this project.
 - **Unsupported**: no maintained implementation is present.
 
 These statuses describe available evidence, not a security certification.
@@ -17,7 +17,7 @@ upgrade automated or implemented evidence to physical qualification.
 
 ## Current Matrix
 
-| Signer or platform                 | Transport/package             | Evidence in this fork                                                                                                        | Release status                              |
+| Signer or platform                 | Transport/package             | Evidence in this project                                                                                                     | Release status                              |
 | ---------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | Trezor Safe 7                      | USB through Trezor Connect    | Physical address, message, EIP-712, transaction, broadcast, rejection, and reconnect on Linux x64; automated bridge coverage | Workable, use at your own risk              |
 | Trezor Model One                   | USB through Trezor Connect    | Physical address, message, hash-only EIP-712, rejection, and reconnect on firmware 1.13.1                                    | Qualified with limitations on Linux x64     |
@@ -27,11 +27,11 @@ upgrade automated or implemented evidence to physical qualification.
 | GridPlus Lattice1                  | Vendor SDK/network            | Automated adapter/device coverage                                                                                            | Implemented, not physically requalified     |
 | Software seed/private key/keystore | Local encrypted signer worker | Live packaged import, unlock, signing, restart, and removal runs plus automated signer coverage                              | Qualified on Linux x64; legacy limits apply |
 | Linux x64 AppImage and deb         | Electron package              | Automated package verification plus live fresh/migrated AppImage and deb-upgrade runs                                        | Current release target                      |
-| macOS x64/arm64                    | Electron package              | Inherited build configuration only                                                                                           | Unverified and unsigned by this fork        |
-| Windows x64                        | Electron package              | Inherited build configuration only                                                                                           | Unverified and unsigned by this fork        |
+| macOS x64/arm64                    | Electron package              | Inherited build configuration only                                                                                           | Unverified and unsigned by this project     |
+| Windows x64                        | Electron package              | Inherited build configuration only                                                                                           | Unverified and unsigned by this project     |
 | Linux arm64, snap, tarball         | Electron package              | Legacy configuration only                                                                                                    | Not produced by current CI                  |
 
-The `0.8.0` qualification exercised fresh Safe 7 pairing, full address display,
+The pre-separation `0.8.0` qualification exercised fresh Safe 7 pairing, full address display,
 request rejection, personal signing, and structured EIP-712 review on an initial
 candidate. After targeted transaction-state and balance-rendering fixes, the
 post-fix candidate reused that isolated profile's trust and repeated physical
@@ -105,4 +105,4 @@ type-2 signing path, which Wren covers with deterministic adapter tests.
 Trezor Connect does not expose an EIP-2930 type-1 signing request in the installed
 API, so Wren rejects type-1 transactions for Trezor instead of converting them
 or signing different bytes. These access-list paths have not received new
-physical-device qualification in this fork.
+physical-device qualification in this project.

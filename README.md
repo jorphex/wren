@@ -23,23 +23,22 @@ Wren runs as a desktop wallet and exposes one consistent approval and signing in
 
 ## Current Release
 
-Wren `0.8.0` is the current Linux x64 AppImage and deb release candidate.
-Browser dapps require the separately packaged Wren Companion `0.14.0`
-candidate. The last published versions remain available from the
-[desktop releases](https://github.com/jorphex/wren/releases) and
-[companion releases](https://github.com/jorphex/wren-companion/releases) once
-the paired `0.8.0` and `0.14.0` artifacts are published.
+Wren `0.1.0` is the first independently branded Linux x64 AppImage and deb
+release candidate. Browser dapps require the separately versioned Wren
+Companion `0.1.0` candidate. Neither candidate is a published release until its
+repository's release page contains the matching artifacts, checksums, and
+source-bound metadata.
 
 | Component or platform                  | Current status                                                                |
 | -------------------------------------- | ----------------------------------------------------------------------------- |
 | Linux x64 AppImage and deb             | Release candidate; Wren-branded qualification pending                         |
 | Trezor Safe 7 over USB                 | Physically tested for address verification, signing, broadcast, and reconnect |
 | Trezor Model One over USB              | Physically tested with documented typed-data and testnet limitations          |
-| Ledger and GridPlus Lattice1           | Implemented with automated coverage; not physically requalified for `0.8.0`   |
+| Ledger and GridPlus Lattice1           | Implemented with automated coverage; not physically requalified for `0.1.0`   |
 | Seed phrase, private key, and keystore | Encrypted local signer workers; disposable seed and private-key flows tested  |
 | Watch-only addresses                   | Supported for monitoring; signing is blocked                                  |
-| Chrome and Firefox companion           | Packaged and tested against the `0.8.0` desktop protocol                      |
-| macOS, Windows, and Linux arm64        | Not produced or qualified by this fork                                        |
+| Chrome and Firefox companion           | Companion `0.1.0`; paired candidate qualification remains release-gated       |
+| macOS, Windows, and Linux arm64        | Not produced or qualified by this project                                     |
 | Trezor Safe 7 Bluetooth                | Unsupported                                                                   |
 
 See [Signer and Platform Support](HARDWARE_SUPPORT.md) for the evidence behind
@@ -92,9 +91,9 @@ Standards](SUPPORTED_EIPS.md) and [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## Install
 
-After the candidate is published, download `Wren-0.8.0.AppImage` or
-`wren_0.8.0_amd64.deb` together with `SHA256SUMS` from the
-[`0.8.0` release](https://github.com/jorphex/wren/releases/tag/v0.8.0). Verify
+After the candidate is published, download `Wren-0.1.0.AppImage` or
+`wren_0.1.0_amd64.deb` together with `SHA256SUMS` from the
+[`0.1.0` release](https://github.com/jorphex/wren/releases/tag/v0.1.0). Verify
 the files from the download directory before running either package:
 
 ```bash
@@ -104,14 +103,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage without installing it:
 
 ```bash
-chmod +x Wren-0.8.0.AppImage
-./Wren-0.8.0.AppImage
+chmod +x Wren-0.1.0.AppImage
+./Wren-0.1.0.AppImage
 ```
 
 Or install the deb package:
 
 ```bash
-sudo apt install ./wren_0.8.0_amd64.deb
+sudo apt install ./wren_0.1.0_amd64.deb
 ```
 
 The Linux packages are currently unsigned. Verify their checksums and GitHub
@@ -124,7 +123,7 @@ private copy, close Frame and Wren, back up `~/.config/frame`, and run Wren with
 the explicit import flag before Wren has created `~/.config/wren`:
 
 ```bash
-./Wren-0.8.0.AppImage --import-frame-profile
+./Wren-0.1.0.AppImage --import-frame-profile
 ```
 
 For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validates
@@ -140,7 +139,7 @@ profile; do not delete either profile until the imported state has been verified
 The browser companion injects Wren's EIP-1193 provider and announces it using
 EIP-6963. Once the candidate is published, download the Chrome or Firefox
 archive from the
-[`0.14.0` companion release](https://github.com/jorphex/wren-companion/releases/tag/v0.14.0),
+[`0.1.0` companion release](https://github.com/jorphex/wren-companion/releases/tag/v0.1.0),
 verify its checksum, extract it, and follow the
 [companion installation instructions](https://github.com/jorphex/wren-companion#install).
 

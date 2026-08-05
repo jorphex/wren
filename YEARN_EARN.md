@@ -5,8 +5,9 @@
 The current `main` branch contains the first Yearn Earn milestone. It has unit,
 integration, component, production-bundle, and isolated virtual-display Electron
 coverage plus manual Linux-package testing of a Base deposit, partial and full
-withdrawals, and physical Trezor signing. It is not included in the published
-`0.7.0` release; the `0.8.0` release has not yet been published.
+withdrawals, and physical Trezor signing. It is included in the Wren `0.1.0`
+candidate; the earlier published Frame-derived `0.7.0` release did not include
+Earn.
 
 Earn is a focused Yearn integration, not a general DeFi marketplace. Wren owns
 the catalog and transaction boundary. Yearn Kong supplies current metadata but
