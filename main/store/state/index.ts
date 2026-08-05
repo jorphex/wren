@@ -69,8 +69,15 @@ const latestStateVersion = () => {
 
   // valid states are less than or equal to the latest migration we know about
   const versions = Object.keys(state['__'])
-    .filter((v) => parseInt(v) <= migrations.latest)
-    .sort((a, b) => parseInt(a) - parseInt(b))
+  const numericVersions = versions.map((version) => {
+    if (!/^\d+$/u.test(version)) throw new Error('Saved state contains an invalid version')
+    return Number(version)
+  })
+  const futureVersion = numericVersions.find((version) => version > migrations.latest)
+  if (futureVersion !== undefined) {
+    throw new Error(`Saved state version ${futureVersion} is newer than Wren supports`)
+  }
+  versions.sort((a, b) => Number(a) - Number(b))
 
   if (versions.length === 0) {
     // log.info('Persisted state: returning base state')

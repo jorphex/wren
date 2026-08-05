@@ -1,7 +1,11 @@
 import fs from 'fs'
 import path from 'path'
+import { randomUUID } from 'crypto'
+import { z } from 'zod'
 
-import { legacyProfilePath } from './applicationIdentity'
+import { canonicalProfilePath, legacyProfilePath } from './applicationIdentity'
+import migrations from './store/migrate'
+import { MainSchema } from './store/state/types/main'
 
 const IMPORT_FLAG = '--import-frame-profile'
 const IMPORT_SOURCE_PREFIX = '--import-frame-profile-from='
@@ -13,6 +17,26 @@ const MAX_CONFIG_BYTES = 32 * 1024 * 1024
 const MAX_SIGNER_BYTES = 2 * 1024 * 1024
 const MAX_SIGNER_FILES = 512
 const SIGNER_FILE = /^[A-Za-z0-9._-]+(?:\.json|\.legacy-v1\.bak)$/u
+const ADDRESS = /^0x[0-9a-f]{40}$/iu
+const ImportedMainSchema = MainSchema.partial().passthrough()
+
+const SignerRecordSchema = z
+  .object({
+    id: z.string().min(1).max(256),
+    addresses: z.array(z.string().regex(ADDRESS)).min(1).max(1024),
+    type: z.enum(['seed', 'ring']),
+    network: z.string().max(128).optional(),
+    encryptedSeed: z.union([z.string().min(1), z.record(z.string(), z.unknown())]).optional(),
+    encryptedKeys: z.union([z.string().min(1), z.record(z.string(), z.unknown())]).optional()
+  })
+  .passthrough()
+  .superRefine((signer, context) => {
+    const validSecret =
+      (signer.type === 'seed' && signer.encryptedSeed !== undefined && signer.encryptedKeys === undefined) ||
+      (signer.type === 'ring' && signer.encryptedKeys !== undefined && signer.encryptedSeed === undefined)
+    if (!validSecret)
+      context.addIssue({ code: 'custom', message: 'Signer encryption does not match its type' })
+  })
 
 type ProfileMigrationRequest = {
   appDataPath: string
@@ -20,7 +44,8 @@ type ProfileMigrationRequest = {
   userDataPath: string
 }
 
-export type ProfileMigrationResult = { status: 'not-requested' } | { status: 'imported'; files: string[] }
+export type ProfileMigrationResult =
+  { status: 'not-requested' } | { status: 'imported'; files: string[]; importId: string }
 
 function lstatIfPresent(target: string) {
   try {
@@ -39,12 +64,46 @@ function requireDirectory(directory: string, label: string) {
 }
 
 function readValidatedJson(source: string, maximumBytes: number, label: string) {
-  const stats = fs.lstatSync(source)
-  if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`${label} is not a regular file`)
-  if (stats.size > maximumBytes) throw new Error(`${label} exceeds the import size limit`)
+  const sourceStats = fs.lstatSync(source)
+  if (!sourceStats.isFile() || sourceStats.isSymbolicLink()) {
+    throw new Error(`${label} is not a regular file`)
+  }
 
-  const bytes = fs.readFileSync(source)
-  let parsed: unknown
+  let descriptor: number | undefined
+  try {
+    descriptor = fs.openSync(source, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0))
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
+      throw new Error(`${label} is not a regular file`)
+    }
+    throw error
+  }
+
+  let bytes: Buffer
+  try {
+    const stats = fs.fstatSync(descriptor)
+    if (!stats.isFile()) throw new Error(`${label} is not a regular file`)
+    if (stats.dev !== sourceStats.dev || stats.ino !== sourceStats.ino) {
+      throw new Error(`${label} changed during import`)
+    }
+    if (stats.size > maximumBytes) throw new Error(`${label} exceeds the import size limit`)
+    bytes = fs.readFileSync(descriptor)
+    if (bytes.length > maximumBytes) throw new Error(`${label} exceeds the import size limit`)
+
+    const finalStats = fs.lstatSync(source)
+    if (
+      !finalStats.isFile() ||
+      finalStats.isSymbolicLink() ||
+      finalStats.dev !== stats.dev ||
+      finalStats.ino !== stats.ino
+    ) {
+      throw new Error(`${label} changed during import`)
+    }
+  } finally {
+    fs.closeSync(descriptor)
+  }
+
+  let parsed: object
   try {
     parsed = JSON.parse(bytes.toString('utf8'))
   } catch {
@@ -53,7 +112,46 @@ function readValidatedJson(source: string, maximumBytes: number, label: string) 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error(`${label} must contain a JSON object`)
   }
-  return bytes
+  return { bytes, parsed }
+}
+
+function validatePersistedConfiguration(config: unknown) {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error('Frame configuration must contain a JSON object')
+  }
+
+  const main = Reflect.get(config, 'main')
+  if (!main || typeof main !== 'object' || Array.isArray(main)) {
+    throw new Error('Frame configuration does not contain wallet state')
+  }
+
+  const snapshots = Reflect.get(main, '__')
+  let state: unknown
+  if (snapshots && typeof snapshots === 'object' && !Array.isArray(snapshots)) {
+    const versions = Object.keys(snapshots).map((version) => {
+      if (!/^\d+$/u.test(version)) throw new Error('Frame configuration contains an invalid state version')
+      return Number(version)
+    })
+    if (versions.length === 0) throw new Error('Frame configuration does not contain wallet state')
+    const futureVersion = versions.find((version) => version > migrations.latest)
+    if (futureVersion !== undefined) {
+      throw new Error(`Frame profile version ${futureVersion} is newer than Wren supports`)
+    }
+    const latestVersion = Math.max(...versions)
+    state = Reflect.get(snapshots, String(latestVersion))
+  } else {
+    state = { main }
+  }
+
+  let migrated: ReturnType<typeof migrations.apply>
+  try {
+    migrated = migrations.apply(structuredClone(state))
+  } catch {
+    throw new Error('Frame configuration cannot be migrated safely')
+  }
+  if (!ImportedMainSchema.safeParse(migrated.main).success) {
+    throw new Error('Frame configuration is invalid after migration')
+  }
 }
 
 function writePrivateFile(destination: string, bytes: Buffer) {
@@ -86,11 +184,14 @@ function copySignerFiles(sourceRoot: string, stagingRoot: string) {
       throw new Error(`Frame signer file is not regular: ${entry.name}`)
     }
     const relative = path.join(SIGNERS_DIRECTORY, entry.name)
-    const bytes = readValidatedJson(
+    const { bytes, parsed } = readValidatedJson(
       path.join(source, entry.name),
       MAX_SIGNER_BYTES,
       `Frame signer file ${entry.name}`
     )
+    if (entry.name.endsWith('.json') && !SignerRecordSchema.safeParse(parsed).success) {
+      throw new Error(`Frame signer file ${entry.name} has an invalid record`)
+    }
     writePrivateFile(path.join(stagingRoot, relative), bytes)
     copied.push(relative)
   }
@@ -116,8 +217,8 @@ function isInside(parent: string, candidate: string) {
 }
 
 export function importFrameProfile(sourceProfilePath: string, userDataPath: string): ProfileMigrationResult {
-  const sourceRoot = path.resolve(sourceProfilePath)
-  const targetRoot = path.resolve(userDataPath)
+  const sourceRoot = canonicalProfilePath(sourceProfilePath)
+  const targetRoot = canonicalProfilePath(userDataPath)
   const targetParent = path.dirname(targetRoot)
 
   if (sourceRoot === targetRoot || isInside(sourceRoot, targetRoot) || isInside(targetRoot, sourceRoot)) {
@@ -141,12 +242,15 @@ export function importFrameProfile(sourceProfilePath: string, userDataPath: stri
       MAX_CONFIG_BYTES,
       'Frame configuration'
     )
-    writePrivateFile(path.join(stagingRoot, CONFIG_FILE), config)
+    validatePersistedConfiguration(config.parsed)
+    writePrivateFile(path.join(stagingRoot, CONFIG_FILE), config.bytes)
     const files = [CONFIG_FILE, ...copySignerFiles(sourceRoot, stagingRoot)]
+    const importId = randomUUID()
     const receipt = Buffer.from(
       `${JSON.stringify(
         {
           schemaVersion: 1,
+          importId,
           importedAt: new Date().toISOString(),
           sourceProfile: 'frame',
           files
@@ -156,12 +260,31 @@ export function importFrameProfile(sourceProfilePath: string, userDataPath: stri
       )}\n`
     )
     writePrivateFile(path.join(stagingRoot, RECEIPT_FILE), receipt)
+    assertFrameIsClosed(sourceRoot)
     fs.renameSync(stagingRoot, targetRoot)
-    return { status: 'imported', files }
+    return { status: 'imported', files, importId }
   } catch (error) {
     fs.rmSync(stagingRoot, { recursive: true, force: true })
     throw error
   }
+}
+
+export function rollbackImportedProfile(userDataPath: string, importId: string) {
+  const targetRoot = path.resolve(userDataPath)
+  const receipt = path.join(targetRoot, RECEIPT_FILE)
+  if (!lstatIfPresent(receipt)) return false
+  let parsed: unknown
+  try {
+    parsed = readValidatedJson(receipt, MAX_SIGNER_BYTES, 'Wren profile import receipt').parsed
+  } catch {
+    return false
+  }
+  if (!parsed || typeof parsed !== 'object') return false
+  if (Reflect.get(parsed, 'schemaVersion') !== 1 || Reflect.get(parsed, 'importId') !== importId) {
+    return false
+  }
+  fs.rmSync(targetRoot, { recursive: true, force: true })
+  return true
 }
 
 export function runRequestedProfileMigration({

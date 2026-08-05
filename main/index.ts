@@ -1,21 +1,24 @@
 import { app, dialog } from 'electron'
 
 import { configureApplicationIdentity } from './applicationIdentity'
-import { runRequestedProfileMigration } from './profileMigration'
+import { rollbackImportedProfile, runRequestedProfileMigration } from './profileMigration'
 
-configureApplicationIdentity(app)
-
+let importedProfileId: string | undefined
 try {
-  const migration = runRequestedProfileMigration({
-    appDataPath: app.getPath('appData'),
-    argv: process.argv,
-    userDataPath: app.getPath('userData')
-  })
+  configureApplicationIdentity(app)
 
   if (!app.requestSingleInstanceLock()) {
     app.exit(1)
   } else {
-    if (migration.status === 'imported') {
+    const userDataPath = app.getPath('userData')
+    const migration = runRequestedProfileMigration({
+      appDataPath: app.getPath('appData'),
+      argv: process.argv,
+      userDataPath
+    })
+    importedProfileId = migration.status === 'imported' ? migration.importId : undefined
+
+    if (importedProfileId) {
       app.once('ready', () => {
         void dialog.showMessageBox({
           type: 'info',
@@ -32,7 +35,8 @@ try {
     require('./application')
   }
 } catch (error) {
+  if (importedProfileId) rollbackImportedProfile(app.getPath('userData'), importedProfileId)
   const message = error instanceof Error ? error.message : 'Unknown profile import error'
-  dialog.showErrorBox('Wren profile import failed', message)
+  dialog.showErrorBox('Wren startup failed', message)
   app.exit(1)
 }

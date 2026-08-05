@@ -53,13 +53,12 @@ afterEach(() => {
   jest.resetModules()
 })
 
-it('maintains backwards compatible access to the current version of state', async () => {
-  // load state already migrated to version 2 and make sure version 1 values are available
+it('rejects state containing a snapshot newer than this Wren build supports', async () => {
   mockLatestVersion = 1
 
-  const { default: state } = await import('../../../../main/store/state')
-
-  expect(state().main.instanceId).toBe('test-frame')
+  await expect(import('../../../../main/store/state')).rejects.toThrow(
+    'Saved state version 2 is newer than Wren supports'
+  )
 })
 
 it('loads values from the current version of the state', async () => {

@@ -27,6 +27,14 @@ it('rejects malformed migration envelopes before applying a version', () => {
   expect(() => migrations.apply({ main: [] })).toThrow('Before migration: state is not migratable')
 })
 
+it('rejects state newer than the requested migration boundary', () => {
+  state.main._version = migrations.latest + 1
+
+  expect(() => migrations.apply(state)).toThrow(
+    `Saved state version ${migrations.latest + 1} is newer than Wren supports`
+  )
+})
+
 describe('migration 13', () => {
   beforeEach(() => {
     state.main._version = 12

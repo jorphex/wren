@@ -68,6 +68,9 @@ export default {
   // Apply migrations to current state
   apply: (state: unknown, migrateToVersion = latest): MigratableState => {
     let current = parseMigratableState(state, 'Before migration')
+    if (current.main._version > migrateToVersion) {
+      throw new Error(`Saved state version ${current.main._version} is newer than Wren supports`)
+    }
 
     migrations.forEach(({ version, migrate }) => {
       if (current.main._version < version && version <= migrateToVersion) {

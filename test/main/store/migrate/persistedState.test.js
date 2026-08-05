@@ -208,3 +208,28 @@ it('migrates the version 41 boundary and reloads it without another migration', 
   expect(migrated.main._version).toBe(migrations.latest)
   expect(reloaded.main).toEqual(migrated.main)
 })
+
+it('rejects a newer persisted snapshot instead of loading an older fallback', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wren-future-state-'))
+  const fixture = loadFixture('v41-current-state.json')
+  const configPath = path.join(directory, 'config.json')
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify({
+      main: {
+        __: {
+          [fixture.state.main._version]: fixture.state,
+          [migrations.latest + 1]: { main: { _version: migrations.latest + 1 } }
+        }
+      }
+    })
+  )
+
+  try {
+    await expect(loadApplicationState(configPath)).rejects.toThrow(
+      `Saved state version ${migrations.latest + 1} is newer than Wren supports`
+    )
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})

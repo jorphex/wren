@@ -2,7 +2,11 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import { importFrameProfile, runRequestedProfileMigration } from '../../main/profileMigration'
+import {
+  importFrameProfile,
+  rollbackImportedProfile,
+  runRequestedProfileMigration
+} from '../../main/profileMigration'
 
 const roots: string[] = []
 
@@ -16,14 +20,24 @@ function fixture() {
   const source = path.join(appDataPath, 'frame')
   const target = path.join(appDataPath, 'wren')
   fs.mkdirSync(path.join(source, 'signers'), { recursive: true })
-  fs.writeFileSync(path.join(source, 'config.json'), '{"main":{"__":{"51":{"accounts":{}}}}}\n')
+  const migrationFixture = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'store/migrate/fixtures/v41-current-state.json'), 'utf8')
+  ).state
   fs.writeFileSync(
-    path.join(source, 'signers', 'signer.json'),
-    '{"id":"signer","encryptedSeed":{"ciphertext":"test-only"}}'
+    path.join(source, 'config.json'),
+    `${JSON.stringify({ main: { __: { 41: migrationFixture } } })}\n`
   )
+  const signer = {
+    id: 'signer',
+    addresses: ['0x000000000000000000000000000000000000dead'],
+    type: 'seed',
+    network: 'mainnet',
+    encryptedSeed: 'test-only'
+  }
+  fs.writeFileSync(path.join(source, 'signers', 'signer.json'), JSON.stringify(signer))
   fs.writeFileSync(
     path.join(source, 'signers', 'signer.legacy-v1.bak'),
-    '{"id":"signer","encryptedSeed":"legacy-test-only"}'
+    JSON.stringify({ ...signer, encryptedSeed: 'legacy-test-only' })
   )
   return { appDataPath, source, target }
 }
@@ -65,23 +79,60 @@ test('atomically copies only wallet state and encrypted signer files', () => {
     userDataPath: target
   })
 
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     status: 'imported',
     files: ['config.json', 'signers/signer.json', 'signers/signer.legacy-v1.bak']
   })
+  if (result.status !== 'imported') throw new Error('Expected imported profile')
+  expect(result.importId).toEqual(expect.any(String))
   expect(fs.readFileSync(path.join(target, 'config.json'), 'utf8')).toContain('accounts')
   expect(fs.readFileSync(path.join(target, 'signers', 'signer.json'), 'utf8')).toContain('test-only')
   expect(fs.existsSync(path.join(target, 'DappCache'))).toBe(false)
   expect(fs.existsSync(path.join(source, 'config.json'))).toBe(true)
   expect(fs.existsSync(path.join(source, 'signers', 'signer.json'))).toBe(true)
   const receipt = JSON.parse(fs.readFileSync(path.join(target, 'frame-profile-import.json'), 'utf8'))
-  expect(receipt).toMatchObject({ schemaVersion: 1, sourceProfile: 'frame', files: result.files })
+  expect(receipt).toMatchObject({
+    schemaVersion: 1,
+    importId: result.importId,
+    sourceProfile: 'frame',
+    files: result.files
+  })
   expect(receipt.importedAt).toEqual(expect.any(String))
   if (process.platform !== 'win32') {
     expect(fs.statSync(target).mode & 0o777).toBe(0o700)
     expect(fs.statSync(path.join(target, 'config.json')).mode & 0o777).toBe(0o600)
     expect(fs.statSync(path.join(target, 'signers', 'signer.json')).mode & 0o777).toBe(0o600)
   }
+})
+
+test('rolls back only a profile created by the import flow', () => {
+  const { source, target } = fixture()
+  const result = importFrameProfile(source, target)
+  if (result.status !== 'imported') throw new Error('Expected imported profile')
+
+  expect(rollbackImportedProfile(target, result.importId)).toBe(true)
+
+  expect(fs.existsSync(target)).toBe(false)
+  expect(fs.existsSync(path.join(source, 'config.json'))).toBe(true)
+  const unrelated = path.join(path.dirname(target), 'unrelated')
+  fs.mkdirSync(unrelated)
+  fs.writeFileSync(path.join(unrelated, 'keep'), 'keep')
+  fs.writeFileSync(
+    path.join(unrelated, 'frame-profile-import.json'),
+    JSON.stringify({ schemaVersion: 1, importId: 'different-import' })
+  )
+  expect(rollbackImportedProfile(unrelated, result.importId)).toBe(false)
+  expect(fs.readFileSync(path.join(unrelated, 'keep'), 'utf8')).toBe('keep')
+})
+
+test('accepts a bounded legacy backup without treating it as an active signer', () => {
+  const { source, target } = fixture()
+  fs.writeFileSync(path.join(source, 'signers', 'signer.legacy-v1.bak'), '{"legacy":"backup"}')
+
+  expect(importFrameProfile(source, target)).toMatchObject({ status: 'imported' })
+  expect(fs.readFileSync(path.join(target, 'signers', 'signer.legacy-v1.bak'), 'utf8')).toBe(
+    '{"legacy":"backup"}'
+  )
 })
 
 test('refuses to overwrite an existing Wren profile', () => {
@@ -126,6 +177,32 @@ test('removes staging data when validation fails', () => {
   expect(fs.readFileSync(path.join(source, 'config.json'), 'utf8')).toBe('not json')
 })
 
+test('rejects a profile from a newer state version', () => {
+  const { source, target } = fixture()
+  fs.writeFileSync(
+    path.join(source, 'config.json'),
+    JSON.stringify({ main: { __: { 999: { main: { _version: 999 } } } } })
+  )
+
+  expect(() => importFrameProfile(source, target)).toThrow(
+    'Frame profile version 999 is newer than Wren supports'
+  )
+  expect(fs.existsSync(target)).toBe(false)
+})
+
+test('rejects malformed signer records without creating a profile', () => {
+  const { source, target } = fixture()
+  fs.writeFileSync(
+    path.join(source, 'signers', 'signer.json'),
+    JSON.stringify({ id: 'signer', encryptedSeed: 'missing addresses and type' })
+  )
+
+  expect(() => importFrameProfile(source, target)).toThrow(
+    'Frame signer file signer.json has an invalid record'
+  )
+  expect(fs.existsSync(target)).toBe(false)
+})
+
 test('rejects signer symlinks without creating a partial Wren profile', () => {
   const { source, target } = fixture()
   fs.symlinkSync('signer.json', path.join(source, 'signers', 'linked.json'))
@@ -161,6 +238,12 @@ test('rejects relative, empty, and nested import paths', () => {
     })
   ).toThrow('Frame profile import source cannot be empty')
   expect(() => importFrameProfile(source, path.join(source, 'wren'))).toThrow(
+    'Frame and Wren profile paths must be different'
+  )
+
+  const sourceAlias = path.join(appDataPath, 'frame-alias')
+  fs.symlinkSync(source, sourceAlias, 'dir')
+  expect(() => importFrameProfile(source, path.join(sourceAlias, 'wren'))).toThrow(
     'Frame and Wren profile paths must be different'
   )
 })
