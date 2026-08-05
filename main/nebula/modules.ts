@@ -1,6 +1,6 @@
 type KuboClient = {
-  cat: (path: string) => AsyncIterable<Uint8Array>
-  get: (path: string, options?: { archive?: boolean }) => AsyncIterable<Uint8Array>
+  cat: (path: string, options?: { signal?: AbortSignal }) => AsyncIterable<Uint8Array>
+  get: (path: string, options?: { archive?: boolean; signal?: AbortSignal }) => AsyncIterable<Uint8Array>
 }
 
 type KuboModule = {

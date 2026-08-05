@@ -10,8 +10,12 @@ import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 import { NETWORK_PRESETS } from '../../../../../resources/constants'
 
+export function presetLabel(key) {
+  return key === 'publicnode' ? 'PublicNode' : key
+}
+
 function mapToPreset(chainId, key) {
-  return { text: key, value: `ethereum:${chainId}:${key}` }
+  return { text: presetLabel(key), value: `ethereum:${chainId}:${key}` }
 }
 
 const ConnectionIndicator = ({ className, connection }) => {
@@ -38,7 +42,7 @@ const ConnectionIndicator = ({ className, connection }) => {
 const ConnectionStatus = ({ connection }) => (
   <div style={{ display: 'flex' }}>
     <ConnectionIndicator className='sliceTileIndicatorLarge sliceTileIndicator' connection={connection} />
-    <div className='sliceTileConnectionName'>{connection.current}</div>
+    <div className='sliceTileConnectionName'>{presetLabel(connection.current)}</div>
   </div>
 )
 

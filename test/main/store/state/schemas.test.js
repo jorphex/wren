@@ -109,6 +109,18 @@ describe('persisted state schema compatibility', () => {
     ).toBe(status)
   })
 
+  it('accepts PublicNode and rejects the retired Pylon preset', () => {
+    const connection = {
+      on: true,
+      connected: false,
+      status: 'loading',
+      custom: ''
+    }
+
+    expect(ConnectionSchema.parse({ ...connection, current: 'publicnode' }).current).toBe('publicnode')
+    expect(() => ConnectionSchema.parse({ ...connection, current: 'pylon' })).toThrow()
+  })
+
   it('persists unavailable EIP-1559 fee data as null', () => {
     expect(
       GasSchema.parse({

@@ -195,6 +195,30 @@ explanatory and do not prove contract behavior. Users must verify chain,
 recipient, value, calldata, and signing details on the hardware device whenever
 possible.
 
+Wren has no first-party hosted backend. Supported built-in networks default to
+the visibly named PublicNode preset. PublicNode can observe the user's IP and all
+RPC traffic routed through it, including account/contract reads, simulation and
+trace inputs, calldata, and signed transactions submitted for broadcast. A
+custom or local RPC replaces that provider per network. Migration 53 moves
+supported Pylon presets to PublicNode and disables retired Pylon selections;
+the old URL is retained only as inert migration history. A release gate rejects
+active Pylon, Nebula-hosted IPFS, Frame CDN, or Frame runtime-package references.
+
+DefiLlama pricing receives native-asset and tracked token identifiers for
+connected supported mainnets. It does not receive the selected account address,
+but the requested token set and timing can still fingerprint a wallet. Requests
+are bounded and failure preserves prior local values. Wren sends no account to
+an NFT indexer and removes the inherited inventory module rather than silently
+substituting another account-indexing service.
+
+IPFS.io receives the user's IP and requested content CID by default. Users can
+select another HTTPS gateway or an explicit self-hosted Kubo API through Wren
+environment settings. Kubo credentials are accepted only from separate token
+configuration, not an endpoint URL. Gateway/API paths, response sizes, and
+stream duration are bounded. Recognized token artwork is loaded only from the
+explicitly trusted CoinGecko asset host; arbitrary remote artwork falls back to
+a local icon rather than creating an unrestricted renderer request.
+
 The embedded Send application is pinned to a source-reviewed content CID and
 verified as a complete UnixFS directory before activation. Wren does not follow
 mutable ENS updates for it. The general token inventory is bundled with each

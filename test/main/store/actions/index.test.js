@@ -30,6 +30,7 @@ import {
   setGlideSide as setGlideSideAction
 } from '../../../../main/store/actions'
 import { toTokenId } from '../../../../resources/domain/balance'
+import * as storeActions from '../../../../main/store/actions'
 
 beforeAll(() => {
   log.transports.console.level = false
@@ -40,6 +41,11 @@ afterAll(() => {
 })
 
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
+
+it('does not expose the retired Pylon migration actions', () => {
+  expect(storeActions).not.toHaveProperty('mutePylonMigrationNotice')
+  expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
+})
 
 describe('#setGlideSide', () => {
   it('persists only supported display edges', () => {

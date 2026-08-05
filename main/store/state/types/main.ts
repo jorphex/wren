@@ -46,6 +46,7 @@ const notificationTypes = z.enum([
   'betaDisclosure',
   'onboardingWindow',
   'signerCompatibilityWarning',
+  // Read-only compatibility for profiles created before migration 53.
   'migrateToPylon'
 ])
 

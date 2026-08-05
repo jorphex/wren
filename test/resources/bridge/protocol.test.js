@@ -177,7 +177,7 @@ describe('renderer bridge protocol', () => {
     expect(request('dapp', 'invoke', ['tray:addChain', {}])).toBeNull()
 
     expect(request('notify', 'rpc', ['getState'])).not.toBeNull()
-    expect(request('notify', 'event', ['tray:action', 'mutePylonMigrationNotice'])).not.toBeNull()
+    expect(request('notify', 'event', ['tray:action', 'mutePylonMigrationNotice'])).toBeNull()
     expect(request('notify', 'event', ['tray:action', 'navDash'])).toBeNull()
 
     expect(request('onboard', 'event', ['tray:openExternal', 'https://frame.sh'])).not.toBeNull()

@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import { safeRemoteImageUrl } from '../../../../../resources/utils/image'
 
 class Inventory extends React.Component {
   constructor(...args) {
@@ -20,9 +21,7 @@ class Inventory extends React.Component {
             <div className='inventoryPreviewMedia'>
               {this.state.hoverAsset.img ? (
                 <img
-                  src={`https://proxy.pylon.link?type=nft&target=${encodeURIComponent(
-                    this.state.hoverAsset.img
-                  )}`}
+                  src={safeRemoteImageUrl(this.state.hoverAsset.img)}
                   loading='lazy'
                   alt={this.state.hoverAsset.name.toUpperCase()}
                 />
@@ -34,9 +33,7 @@ class Inventory extends React.Component {
               style={
                 inventory[k].meta.image
                   ? {
-                      backgroundImage: `url(https://proxy.pylon.link?type=nft&target=${encodeURIComponent(
-                        inventory[k].meta.image
-                      )})`
+                      backgroundImage: `url(${JSON.stringify(safeRemoteImageUrl(inventory[k].meta.image))})`
                     }
                   : {}
               }
@@ -79,11 +76,7 @@ class Inventory extends React.Component {
                 >
                   {img ? (
                     <div className='inventoryItemImage'>
-                      <img
-                        src={`https://proxy.pylon.link?type=nft&target=${encodeURIComponent(img)}`}
-                        loading='lazy'
-                        alt={name.toUpperCase()}
-                      />
+                      <img src={safeRemoteImageUrl(img)} loading='lazy' alt={name.toUpperCase()} />
                     </div>
                   ) : null}
                 </div>

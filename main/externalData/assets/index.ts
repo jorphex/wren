@@ -1,123 +1,150 @@
 import log from 'electron-log'
 
-import Pylon, { AssetType } from '@framelabs/pylon-client'
-
-import type { AssetId } from '@framelabs/pylon-client/dist/assetId'
-import type { UsdRate } from '../../provider/assets'
+import { loadDefiLlamaPrices, type ExternalPrice } from './provider'
 import type { NativeCurrency, Rate, Token } from '../../store/state'
+import type { UsdRate } from '../../provider/assets'
 import { requireStoreActionFrom } from '../../store/actionFrom'
 
-interface RateUpdate {
-  id: AssetId
-  data: {
-    usd: number
-    usd_24h_change: number
-  }
+export const PRICE_REFRESH_MS = 5 * 60 * 1000
+
+const CHAIN_PRICE_IDENTIFIERS: Record<number, { chain: string; native: string }> = {
+  1: { chain: 'ethereum', native: 'coingecko:ethereum' },
+  10: { chain: 'optimism', native: 'coingecko:ethereum' },
+  100: { chain: 'xdai', native: 'coingecko:xdai' },
+  137: { chain: 'polygon', native: 'coingecko:polygon-ecosystem-token' },
+  8453: { chain: 'base', native: 'coingecko:ethereum' },
+  42161: { chain: 'arbitrum', native: 'coingecko:ethereum' },
+  747474: { chain: 'katana', native: 'coingecko:ethereum' }
 }
 
-export default function rates(pylon: Pylon, store: Store) {
+type PriceTarget = { type: 'native'; chainId: number } | { type: 'token'; chainId: number; address: Address }
+
+type PriceLoader = (identifiers: string[], signal?: AbortSignal) => Promise<Record<string, ExternalPrice>>
+
+const defaultPriceLoader: PriceLoader = (identifiers, signal) =>
+  loadDefiLlamaPrices(identifiers, fetch, Date.now, signal)
+
+const tokenIdentifier = (token: Token) => {
+  const chain = CHAIN_PRICE_IDENTIFIERS[token.chainId]?.chain
+  const address = token.address.toLowerCase()
+  return chain && /^0x[0-9a-f]{40}$/u.test(address) ? `${chain}:${address}` : undefined
+}
+
+export default function rates(store: Store, loadPrices: PriceLoader = defaultPriceLoader) {
   const storeApi = {
     getKnownTokens: (address?: Address) =>
       ((address && store('main.tokens.known', address)) || []) as Token[],
     getCustomTokens: () => (store('main.tokens.custom') || []) as Token[],
-    setNativeCurrencyData: (chainId: number, currencyData: NativeCurrency) =>
-      requireStoreActionFrom(store, 'setNativeCurrencyData')('ethereum', chainId, currencyData),
     setNativeCurrencyRate: (chainId: number, rate: Rate) =>
-      requireStoreActionFrom(store, 'setNativeCurrencyData')('ethereum', chainId, { usd: rate }),
+      requireStoreActionFrom(store, 'setNativeCurrencyData')('ethereum', chainId, {
+        usd: rate
+      } satisfies Partial<NativeCurrency>),
     setTokenRates: (rates: Record<Address, UsdRate>) => requireStoreActionFrom(store, 'setRates')(rates)
   }
 
-  function handleRatesUpdates(updates: RateUpdate[]) {
-    if (updates.length === 0) return
+  let started = false
+  let generation = 0
+  let refreshTimer: NodeJS.Timeout | undefined
+  let refreshController: AbortController | undefined
+  let targets = new Map<string, PriceTarget[]>()
 
-    const nativeCurrencyUpdates = updates.filter((u) => u.id.type === AssetType.NativeCurrency)
+  const schedule = (activeGeneration: number) => {
+    if (!started || activeGeneration !== generation || targets.size === 0) return
+    refreshTimer = setTimeout(() => void refresh(activeGeneration), PRICE_REFRESH_MS)
+  }
 
-    if (nativeCurrencyUpdates.length > 0) {
-      log.debug(`got currency rate updates for chains: ${nativeCurrencyUpdates.map((u) => u.id.chainId)}`)
+  const applyPrices = (prices: Record<string, ExternalPrice>) => {
+    const tokenRates: Record<Address, UsdRate> = {}
 
-      nativeCurrencyUpdates.forEach((u) => {
-        storeApi.setNativeCurrencyRate(u.id.chainId, {
-          price: u.data.usd,
-          change24hr: u.data.usd_24h_change
-        })
+    Object.entries(prices).forEach(([identifier, price]) => {
+      const rate = { price: price.price, change24hr: price.change24hr }
+      ;(targets.get(identifier) || []).forEach((target) => {
+        if (target.type === 'native') {
+          storeApi.setNativeCurrencyRate(target.chainId, rate)
+        } else {
+          tokenRates[target.address.toLowerCase()] = { usd: rate }
+        }
       })
+    })
+
+    if (Object.keys(tokenRates).length > 0) storeApi.setTokenRates(tokenRates)
+  }
+
+  async function refresh(activeGeneration = generation) {
+    if (!started || activeGeneration !== generation || targets.size === 0) return
+    clearTimeout(refreshTimer)
+    refreshTimer = undefined
+    const controller = new AbortController()
+    refreshController = controller
+
+    try {
+      const prices = await loadPrices([...targets.keys()], controller.signal)
+      if (started && activeGeneration === generation) applyPrices(prices)
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        log.warn('Independent asset pricing is temporarily unavailable', error)
+      }
+    } finally {
+      if (refreshController === controller) refreshController = undefined
+      schedule(activeGeneration)
     }
+  }
 
-    const tokenUpdates = updates.filter((u) => u.id.type === AssetType.Token)
-
-    if (tokenUpdates.length > 0) {
-      log.debug(`got token rate updates for addresses: ${tokenUpdates.map((u) => u.id.address)}`)
-
-      const tokenRates = tokenUpdates.reduce(
-        (allRates, update) => {
-          // address is always defined for tokens
-          const address = update.id.address as string
-
-          allRates[address] = {
-            usd: {
-              price: update.data.usd,
-              change24hr: update.data.usd_24h_change
-            }
-          }
-
-          return allRates
-        },
-        {} as Record<string, UsdRate>
-      )
-
-      storeApi.setTokenRates(tokenRates)
-    }
+  function setAssets(nextTargets: Map<string, PriceTarget[]>) {
+    generation += 1
+    targets = nextTargets
+    refreshController?.abort()
+    refreshController = undefined
+    clearTimeout(refreshTimer)
+    refreshTimer = undefined
+    if (started && targets.size > 0) void refresh(generation)
   }
 
   function updateSubscription(chains: number[], address?: Address) {
-    const subscribedCurrencies = chains.map((chainId) => ({ type: AssetType.NativeCurrency, chainId }))
+    const nextTargets = new Map<string, PriceTarget[]>()
+    const addTarget = (identifier: string, target: PriceTarget) => {
+      nextTargets.set(identifier, [...(nextTargets.get(identifier) || []), target])
+    }
+
+    chains.forEach((chainId) => {
+      const identifier = CHAIN_PRICE_IDENTIFIERS[chainId]?.native
+      if (identifier) addTarget(identifier, { type: 'native', chainId })
+    })
+
     const knownTokens = storeApi.getKnownTokens(address).filter((token) => chains.includes(token.chainId))
+    const knownIds = new Set(knownTokens.map((token) => `${token.chainId}:${token.address.toLowerCase()}`))
     const customTokens = storeApi
       .getCustomTokens()
-      .filter(
-        (token) => !knownTokens.some((kt) => kt.address === token.address && kt.chainId === token.chainId)
-      )
+      .filter((token) => chains.includes(token.chainId))
+      .filter((token) => !knownIds.has(`${token.chainId}:${token.address.toLowerCase()}`))
 
-    const subscribedTokens = [...knownTokens, ...customTokens].map((token) => ({
-      type: AssetType.Token,
-      chainId: token.chainId,
-      address: token.address
-    }))
+    ;[...knownTokens, ...customTokens].forEach((token) => {
+      const identifier = tokenIdentifier(token)
+      if (identifier) {
+        addTarget(identifier, {
+          type: 'token',
+          chainId: token.chainId,
+          address: token.address
+        })
+      }
+    })
 
-    setAssets([...subscribedCurrencies, ...subscribedTokens])
-  }
-
-  function start() {
-    log.verbose('starting asset updates')
-
-    pylon.on('rates', handleRatesUpdates)
-  }
-
-  function stop() {
-    log.verbose('stopping asset updates')
-
-    pylon.off('rates', handleRatesUpdates)
-
-    pylon.rates([])
-  }
-
-  function setAssets(assetIds: AssetId[]) {
-    log.verbose(
-      'subscribing to rates updates for native currencies on chains:',
-      assetIds.filter((a) => a.type === AssetType.NativeCurrency).map((a) => a.chainId)
-    )
-    log.verbose(
-      'subscribing to rates updates for tokens:',
-      assetIds.filter((a) => a.type === AssetType.Token).map((a) => a.address)
-    )
-
-    pylon.rates(assetIds)
+    setAssets(nextTargets)
   }
 
   return {
-    start,
-    stop,
-    setAssets,
+    start() {
+      started = true
+      if (targets.size > 0) void refresh(generation)
+    },
+    stop() {
+      started = false
+      generation += 1
+      refreshController?.abort()
+      refreshController = undefined
+      clearTimeout(refreshTimer)
+      refreshTimer = undefined
+    },
     updateSubscription
   }
 }

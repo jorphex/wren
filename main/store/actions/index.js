@@ -741,9 +741,6 @@ module.exports = {
     }
     u('windows.dash', (dash) => Object.assign(dash, update))
   },
-  setNotify: (u, update) => {
-    u('windows.notify.showing', () => update.showing)
-  },
   setOnboard: (u, update) => {
     u('windows.onboard.showing', () => update.showing)
   },
@@ -848,31 +845,6 @@ module.exports = {
       return nav
     })
     u('windows.dash.showing', () => true)
-  },
-  mutePylonMigrationNotice: (u) => {
-    u('main.mute.migrateToPylon', () => true)
-  },
-  migrateToPylonConnections: (u) => {
-    const pylonChains = ['1', '5', '10', '137', '42161', '11155111']
-
-    const switchToPylon = (connection = {}) => {
-      if (connection.current === 'custom' && connection.custom === '') {
-        connection.current = 'pylon'
-      }
-    }
-
-    u('main.networks.ethereum', (chains) => {
-      Object.entries(chains).forEach(([id, chain]) => {
-        if (pylonChains.includes(id)) {
-          const { primary, secondary } = chain.connection
-
-          switchToPylon(primary)
-          switchToPylon(secondary)
-        }
-      })
-
-      return chains
-    })
   },
   completeOnboarding: (u) => {
     u('main.mute.onboardingWindow', () => true)

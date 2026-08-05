@@ -92,14 +92,10 @@ class Requests extends React.Component {
 
   renderRequestGroup(origin, requests) {
     const groupName = getOriginDisplayName(this.store('main.origins', origin, 'name'))
-    // const favicon = `https://s2.googleusercontent.com/s2/favicons?sz=256&domain_url=https://` + groupName
-    // const proxyFavicon = `https://proxy.pylon.link?type=icon&target=${encodeURIComponent(favicon)}`
 
     return (
       <ClusterBox key={origin}>
         <div className='requestGroup'>
-          {/* <img src={proxyFavicon} width='24px' height='24px' />
-          <RingIcon img={favicon} alt={'?'} small noRing /> */}
           <div className='requestGroupMain'>
             <div style={{ marginRight: '8px' }}>{svg.window(12)}</div>
             <div className='requestGroupName'>{groupName}</div>

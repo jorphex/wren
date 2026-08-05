@@ -133,7 +133,9 @@ const mainState = {
     gasFeeWarning: main('mute.gasFeeWarning', false),
     betaDisclosure: main('mute.betaDisclosure', false),
     onboardingWindow: main('mute.onboardingWindow', false),
-    migrateToPylon: main('mute.migrateToPylon', true),
+    ...(get('mute.migrateToPylon') === undefined
+      ? {}
+      : { migrateToPylon: main('mute.migrateToPylon', true) }),
     signerCompatibilityWarning: main('mute.signerCompatibilityWarning', false)
   },
   shortcuts: {
@@ -203,7 +205,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -238,7 +240,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -308,7 +310,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -343,7 +345,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -413,7 +415,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -448,7 +450,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -483,7 +485,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -518,7 +520,7 @@ const mainState = {
         connection: {
           primary: {
             on: true,
-            current: 'pylon',
+            current: 'publicnode',
             status: 'loading',
             connected: false,
             type: '',
@@ -582,7 +584,7 @@ const mainState = {
           symbol: 'ETH',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/icons/optimism.svg',
+        icon: '',
         primaryColor: 'accent4' // Optimism
       },
       100: {
@@ -604,7 +606,7 @@ const mainState = {
           name: 'xDAI',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/icons/gnosis.svg',
+        icon: '',
         primaryColor: 'accent5' // Gnosis
       },
       137: {
@@ -626,7 +628,7 @@ const mainState = {
           name: 'Matic',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/icons/polygon.svg',
+        icon: '',
         primaryColor: 'accent6' // Polygon
       },
       8453: {
@@ -648,7 +650,7 @@ const mainState = {
           name: 'Ether',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/baseiconcolor.png',
+        icon: '',
         primaryColor: 'accent8' // Base
       },
       747474: {
@@ -692,7 +694,7 @@ const mainState = {
           symbol: 'ETH',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/icons/arbitrum.svg',
+        icon: '',
         primaryColor: 'accent7' // Arbitrum
       },
       84532: {
@@ -714,7 +716,7 @@ const mainState = {
           name: 'Base Sepolia Ether',
           decimals: 18
         },
-        icon: 'https://frame.nyc3.cdn.digitaloceanspaces.com/baseiconcolor.png',
+        icon: '',
         primaryColor: 'accent2' // Testnet
       },
       11155111: {
@@ -810,7 +812,6 @@ const initial = {
         // 'gas',
         'chains',
         'balances',
-        'inventory',
         'permissions',
         // 'verify',
         'signer',

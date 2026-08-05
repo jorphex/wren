@@ -45,17 +45,19 @@ test('authorizes event channels against the registered main-owned role', () => {
   expect(mockLog.warn).toHaveBeenCalledTimes(2)
 })
 
-test('enforces limited store actions in the main process', () => {
+test('rejects the retired Pylon migration action in the main process', () => {
   const listener = jest.fn()
   onRenderer('tray:action', listener)
   const dispatch = mockListeners.get('tray:action')
   const notify = sender('notify')
 
-  dispatch(notify, 'navDash')
   dispatch(notify, 'mutePylonMigrationNotice')
 
-  expect(listener).toHaveBeenCalledTimes(1)
-  expect(listener).toHaveBeenCalledWith(notify, 'mutePylonMigrationNotice')
+  expect(listener).not.toHaveBeenCalled()
+  expect(mockLog.warn).toHaveBeenCalledWith(
+    'Rejected unauthorized renderer IPC',
+    expect.objectContaining({ channel: 'tray:action', role: 'notify' })
+  )
 })
 
 test('rejects unauthorized invokes and permits privileged invokes', async () => {

@@ -92,7 +92,7 @@ class ChainConnection extends EventEmitter {
 
     this[priority].provider = provider(target, {
       name: priority,
-      origin: 'frame'
+      origin: 'wren'
     })
 
     this[priority].blockMonitor = this._createBlockMonitor(this[priority].provider, priority)

@@ -156,8 +156,10 @@ it('migrates a representative version 12 profile through application state initi
     custom: ''
   })
   expect(migrated.main.networks.ethereum[5].connection.primary).toMatchObject({
+    on: false,
+    status: 'off',
     current: 'custom',
-    custom: 'wss://evm.pylon.link/goerli'
+    custom: ''
   })
   expect(migrated.main.networks.ethereum[100].connection.primary).toMatchObject({
     current: 'custom',
@@ -206,6 +208,40 @@ it('migrates the version 41 boundary and reloads it without another migration', 
     walletCallBatches: {}
   })
   expect(migrated.main._version).toBe(migrations.latest)
+  expect(reloaded.main).toEqual(migrated.main)
+})
+
+it('migrates version 52 Pylon presets through application state initialization', async () => {
+  const fixture = loadFixture('v52-pylon-network-state.json')
+  const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
+
+  expect(migrated.main.networks.ethereum[1].connection).toMatchObject({
+    primary: {
+      current: 'publicnode',
+      custom: 'https://dormant.example/mainnet'
+    },
+    secondary: {
+      current: 'custom',
+      custom: 'wss://private.example/mainnet'
+    }
+  })
+  expect(migrated.main.networks.ethereum[5].connection.primary).toMatchObject({
+    on: false,
+    status: 'off',
+    current: 'custom',
+    custom: ''
+  })
+  expect(migrated.main.networks.ethereum[1].icon).toBe('')
+  expect(migrated.main.networksMeta.ethereum[1]).toMatchObject({
+    icon: '',
+    nativeCurrency: { icon: '' }
+  })
+  expect(migrated.main.networksMeta.ethereum[5]).toMatchObject({
+    icon: 'https://icons.example/goerli.svg',
+    nativeCurrency: { icon: 'https://icons.example/goerli-native.svg' }
+  })
+  expect(migrated.main.mute.migrateToPylon).toBe(false)
+  expect(JSON.stringify(migrated)).not.toContain('pylon.link')
   expect(reloaded.main).toEqual(migrated.main)
 })
 

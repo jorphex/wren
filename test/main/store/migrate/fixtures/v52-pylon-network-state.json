@@ -1,0 +1,101 @@
+{
+  "metadata": {
+    "formatVersion": 1,
+    "sourceVersion": 52,
+    "synthetic": true,
+    "title": "Synthetic version 52 Pylon preset migration state"
+  },
+  "state": {
+    "main": {
+      "_version": 52,
+      "mute": { "migrateToPylon": false },
+      "networks": {
+        "ethereum": {
+          "1": {
+            "id": 1,
+            "name": "Mainnet",
+            "on": true,
+            "layer": "mainnet",
+            "isTestnet": false,
+            "explorer": "https://etherscan.io",
+            "icon": "https://frame.nyc3.cdn.digitaloceanspaces.com/icons/ethereum.svg",
+            "connection": {
+              "primary": {
+                "on": true,
+                "connected": false,
+                "status": "loading",
+                "current": "pylon",
+                "custom": "https://dormant.example/mainnet"
+              },
+              "secondary": {
+                "on": false,
+                "connected": false,
+                "status": "loading",
+                "current": "custom",
+                "custom": "wss://private.example/mainnet"
+              }
+            }
+          },
+          "5": {
+            "id": 5,
+            "name": "Goerli",
+            "on": false,
+            "layer": "testnet",
+            "isTestnet": true,
+            "explorer": "https://goerli.etherscan.io",
+            "connection": {
+              "primary": {
+                "on": false,
+                "connected": false,
+                "status": "loading",
+                "current": "pylon",
+                "custom": ""
+              },
+              "secondary": {
+                "on": false,
+                "connected": false,
+                "status": "loading",
+                "current": "custom",
+                "custom": ""
+              }
+            }
+          }
+        }
+      },
+      "networksMeta": {
+        "ethereum": {
+          "1": {
+            "gas": {
+              "price": { "selected": "standard", "levels": {}, "fees": null },
+              "samples": []
+            },
+            "nativeCurrency": {
+              "name": "Ether",
+              "symbol": "ETH",
+              "decimals": 18,
+              "icon": "https://frame.nyc3.cdn.digitaloceanspaces.com/icons/ethereum-native.svg",
+              "usd": { "price": 0, "change24hr": 0 }
+            },
+            "icon": "https://frame.nyc3.cdn.digitaloceanspaces.com/icons/ethereum.svg",
+            "primaryColor": "accent1"
+          },
+          "5": {
+            "gas": {
+              "price": { "selected": "standard", "levels": {}, "fees": null },
+              "samples": []
+            },
+            "nativeCurrency": {
+              "name": "Goerli Ether",
+              "symbol": "ETH",
+              "decimals": 18,
+              "icon": "https://icons.example/goerli-native.svg",
+              "usd": { "price": 0, "change24hr": 0 }
+            },
+            "icon": "https://icons.example/goerli.svg",
+            "primaryColor": "accent2"
+          }
+        }
+      }
+    }
+  }
+}

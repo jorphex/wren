@@ -28,7 +28,6 @@ type Windows = {
   tray?: BrowserWindow
   dash?: BrowserWindow
   onboard?: BrowserWindow
-  notify?: BrowserWindow
   [key: string]: BrowserWindow | undefined
 }
 
@@ -48,7 +47,6 @@ const shouldForceDashOnStartup = process.platform === 'linux'
 let tray: Tray
 let dash: Dash
 let onboard: Onboard
-let notify: Notify
 let glideDetector: GlideDetector | undefined
 let glideSentinel: GlideSentinel | undefined
 let glide = false
@@ -215,7 +213,6 @@ export class Tray {
       if (!visible && store('main.reveal')) glideDetector?.start()
 
       const showOnboardingWindow = !store('main.mute.onboardingWindow')
-      const showNotifyWindow = !store('main.mute.migrateToPylon')
 
       if (store('windows.dash.showing') || showOnboardingWindow) {
         setTimeout(() => {
@@ -227,15 +224,9 @@ export class Tray {
         }, 300)
       }
 
-      if (showOnboardingWindow && !showNotifyWindow) {
+      if (showOnboardingWindow) {
         setTimeout(() => {
           requireStoreAction('setOnboard')({ showing: true })
-        }, 600)
-      }
-
-      if (showNotifyWindow) {
-        setTimeout(() => {
-          requireStoreAction('setNotify')({ showing: true })
         }, 600)
       }
     }
@@ -512,85 +503,6 @@ class Onboard {
   }
 }
 
-class Notify {
-  constructor() {
-    const notifyOpts: Electron.BrowserWindowConstructorOptions = {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      titleBarStyle: 'hidden',
-      trafficLightPosition: { x: 10, y: 9 },
-      icon: path.join(__dirname, './AppIcon.png')
-    }
-
-    if (isMacOS) {
-      notifyOpts.type = 'panel'
-    }
-
-    initWindow('notify', notifyOpts)
-  }
-
-  public hide() {
-    if (windows.notify && windows.notify.isVisible()) {
-      windows.notify.hide()
-    }
-  }
-
-  public show() {
-    if (!tray.isReady()) {
-      return
-    }
-
-    const notifyWindow = windows.notify
-    if (!notifyWindow || notifyWindow.isDestroyed()) return
-
-    const cleanupHandler = () => notifyWindow.off('close', closeHandler)
-
-    const closeHandler = () => {
-      if (!store('main.mute.migrateToPylon')) {
-        requireStoreAction('migrateToPylonConnections')()
-        requireStoreAction('mutePylonMigrationNotice')()
-      }
-
-      if (!store('main.mute.onboardingWindow')) {
-        requireStoreAction('setNotify')({ showing: false })
-        requireStoreAction('setOnboard')({ showing: true })
-      }
-      windows.tray?.focus()
-
-      electronApp.off('before-quit', cleanupHandler)
-      if (windows.notify === notifyWindow) delete windows.notify
-    }
-
-    setTimeout(() => {
-      if (notifyWindow.isDestroyed()) return
-
-      electronApp.on('before-quit', cleanupHandler)
-      notifyWindow.once('close', closeHandler)
-
-      // const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-      const height = 512
-      const maxWidth = Math.floor(height * 1.24)
-      const targetWidth = 600 // area.width - 460
-      const width = targetWidth > maxWidth ? maxWidth : targetWidth
-      notifyWindow.setMinimumSize(600, 300)
-      notifyWindow.setSize(width, height)
-      const pos = center(notifyWindow)
-      notifyWindow.setPosition(pos.x, pos.y)
-      notifyWindow.show()
-      notifyWindow.focus()
-      notifyWindow.setVisibleOnAllWorkspaces(false, {
-        visibleOnFullScreen: true,
-        skipTransformProcessType: true
-      })
-      if (devToolsEnabled) {
-        notifyWindow.webContents.openDevTools()
-      }
-    }, 10)
-  }
-}
-
 onRenderer('tray:quit', () => electronApp.quit())
 onRenderer('tray:mouseout', () => {
   if (glide && !(windows.dash && windows.dash.isVisible())) {
@@ -689,10 +601,6 @@ const init = () => {
     onboard = new Onboard()
   }
 
-  if (!store('main.mute.migrateToPylon') && (!windows.notify || windows.notify.isDestroyed())) {
-    notify = new Notify()
-  }
-
   // data change events
   lifecycleObservers.push(
     store.observer(() => {
@@ -718,21 +626,6 @@ const init = () => {
         windows.tray?.focus()
       }
     }, 'windows:onboard')
-  )
-
-  lifecycleObservers.push(
-    store.observer(() => {
-      if (store('windows.notify.showing')) {
-        if (!windows.notify) {
-          notify = new Notify()
-        }
-
-        notify.show()
-      } else if (notify) {
-        notify.hide()
-        windows.tray?.focus()
-      }
-    }, 'windows:notify')
   )
 
   lifecycleObservers.push(

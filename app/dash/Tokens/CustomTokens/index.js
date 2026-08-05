@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import svg from '../../../../resources/svg'
 import link from '../../../../resources/link'
+import { safeRemoteImageUrl } from '../../../../resources/utils/image'
 
 class CustomTokens extends React.Component {
   constructor(props, context) {
@@ -35,10 +36,7 @@ class CustomTokens extends React.Component {
                       <div className='customTokensListItemTitle'>
                         <div className='customTokensListItemName'>
                           <img
-                            src={
-                              token.logoURI &&
-                              `https://proxy.pylon.link?type=icon&target=${encodeURIComponent(token.logoURI)}`
-                            }
+                            src={safeRemoteImageUrl(token.logoURI)}
                             value={token.symbol.toUpperCase()}
                             alt={token.symbol.toUpperCase()}
                           />

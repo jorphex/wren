@@ -1,10 +1,12 @@
 import React from 'react'
 import Restore from 'react-restore'
 import svg from '../../../resources/svg'
+import { safeRemoteImageUrl } from '../../utils/image'
 
 const Icon = ({ svgName, alt = '', svgSize = 16, img, small }) => {
-  if (img) {
-    return <img src={`https://proxy.pylon.link?type=icon&target=${encodeURIComponent(img)}`} alt={alt} />
+  const imageUrl = safeRemoteImageUrl(img)
+  if (imageUrl) {
+    return <img src={imageUrl} alt={alt} />
   }
   if (svgName) {
     const iconName = svgName.toLowerCase()

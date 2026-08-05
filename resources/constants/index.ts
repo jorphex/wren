@@ -23,28 +23,28 @@ const NETWORK_PRESETS = {
       local: 'direct'
     },
     1: {
-      pylon: 'wss://evm.pylon.link/mainnet'
+      publicnode: 'https://ethereum-rpc.publicnode.com'
     },
     10: {
-      pylon: 'wss://evm.pylon.link/optimism'
+      publicnode: 'https://optimism-rpc.publicnode.com'
     },
     137: {
-      pylon: 'wss://evm.pylon.link/polygon'
+      publicnode: 'https://polygon-bor-rpc.publicnode.com'
     },
     8453: {
-      pylon: 'wss://evm.pylon.link/base-mainnet'
+      publicnode: 'https://base-rpc.publicnode.com'
     },
     42161: {
-      pylon: 'wss://evm.pylon.link/arbitrum'
+      publicnode: 'https://arbitrum-one-rpc.publicnode.com'
     },
     84532: {
-      pylon: 'wss://evm.pylon.link/base-sepolia'
+      publicnode: 'https://base-sepolia-rpc.publicnode.com'
     },
     11155111: {
-      pylon: 'wss://evm.pylon.link/sepolia'
+      publicnode: 'https://ethereum-sepolia-rpc.publicnode.com'
     },
     11155420: {
-      pylon: 'wss://evm.pylon.link/optimism-sepolia'
+      publicnode: 'https://optimism-sepolia-rpc.publicnode.com'
     }
   }
 }

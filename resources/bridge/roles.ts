@@ -18,7 +18,7 @@ const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
     rpc: new Set(['getFrameId', 'getState'])
   },
   notify: {
-    actions: new Set(['mutePylonMigrationNotice']),
+    actions: new Set(),
     events: new Set(['*:contextmenu', 'frame:close', 'frame:max', 'frame:min', 'frame:unmax', 'tray:action']),
     rpc: new Set(['getState'])
   },

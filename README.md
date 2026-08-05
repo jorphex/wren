@@ -199,25 +199,45 @@ an enabled EVM chain using Wren's documented request metadata. Wallet-owned
 methods, subscriptions, origin handling, limits, and known local-process trust
 boundaries are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
 
+## Network Data And Privacy
+
+Wren has no first-party hosted backend. Its default public services are explicit
+and replaceable:
+
+| Purpose                   | Default                                                              | Data sent                                                                                                                                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM RPC                   | [PublicNode](https://publicnode.com/) on supported built-in networks | The RPC provider receives the user's IP address and every request routed to it, including queried account/contract addresses, transaction data, and signed transactions submitted for broadcast. Select `Custom` or `Local` per network to replace it.                 |
+| USD pricing               | [DefiLlama Coins API](https://defillama.com/docs/api)                | Every five minutes while relevant networks are connected, Wren sends native-asset and tracked token identifiers. It does not send the selected account address, although a token set can still be identifying. Pricing failure leaves the last local values unchanged. |
+| Pinned Send content       | [IPFS.io](https://ipfs.io/)                                          | The gateway receives the user's IP address and the source-reviewed Send content CID. The complete downloaded directory is CID-verified before activation.                                                                                                              |
+| Curated Earn display data | [Yearn Kong](https://kong.yearn.fi/)                                 | Wren requests the same fixed vault-list endpoint for every user. Account addresses, balances, and transaction details are not sent to Kong.                                                                                                                            |
+| Token artwork             | CoinGecko's reviewed asset host                                      | CoinGecko receives an ordinary image request when recognized artwork is displayed. Arbitrary remote artwork is not loaded; untrusted or user-added hosts fall back to a local icon. Wren no longer routes images through the inherited Pylon proxy.                    |
+
+Wren does not contact Pylon and does not send account addresses to an NFT
+indexer. The inherited NFT inventory panel is disabled until an independent,
+privacy-reviewed implementation exists. Explorers and external protocol pages
+open only after a user action. Hardware-vendor transports, optional ABI source
+lookups, updates, and other third-party boundaries are detailed in the
+[Threat Model](THREAT_MODEL.md).
+
 ## IPFS Configuration
 
 Wren downloads the embedded Send application from one source-reviewed,
-content-addressed CID through a Kubo RPC endpoint. It does not follow mutable
-ENS updates for that application, and token inventory comes from the bundled
-release snapshot. Set `FRAME_IPFS_API_URL` to use a different endpoint and set
-`NEBULA_AUTH_TOKEN` when it requires HTTP Basic authentication. The existing
-hosted endpoint remains the default.
+content-addressed CID through `https://ipfs.io` by default. Set
+`WREN_IPFS_GATEWAY_URL` to a different HTTPS gateway; loopback HTTP is accepted
+for a self-hosted local gateway. Gateway responses, download time, JSON, and
+archives are bounded.
 
-`FRAME_IPFS_API_URL` retains its historical name for configuration
-compatibility; a future migration can introduce a Wren alias without breaking
-existing deployments.
+To use Kubo RPC instead, set `WREN_IPFS_API_URL`. Set
+`WREN_IPFS_AUTH_TOKEN` when that endpoint requires HTTP Basic authentication.
+The historical `FRAME_IPFS_API_URL` and `NEBULA_AUTH_TOKEN` names remain
+deprecated compatibility fallbacks only when API mode is explicitly configured.
+Kubo RPC is an administrative interface: keep it on loopback, or protect a
+remote endpoint with TLS, authentication, and a restricted proxy.
 
-Kubo RPC is an administrative interface. Keep a local endpoint bound to
-localhost, or place a remote endpoint behind TLS, authentication, and a
-restricted proxy. Do not expose it directly to the public internet. Archived
-dapp downloads are bounded and activated only after their complete UnixFS
-directory CID matches the locally pinned manifest. User-added decentralized
-applications may retain their explicitly requested resolution behavior.
+Wren does not follow mutable ENS updates for the built-in Send application.
+Downloaded content is activated only after its complete UnixFS directory CID
+matches the locally pinned manifest. User-added decentralized applications may
+retain their explicitly requested resolution behavior.
 
 ## Security
 

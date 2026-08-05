@@ -78,7 +78,7 @@ const state = {
           connection: {
             primary: {
               on: false,
-              current: 'pylon',
+              current: 'publicnode',
               status: 'loading',
               connected: false,
               type: '',
@@ -104,7 +104,7 @@ const state = {
           connection: {
             primary: {
               on: false,
-              current: 'pylon',
+              current: 'publicnode',
               status: 'loading',
               connected: false,
               type: '',
@@ -148,18 +148,19 @@ const state = {
   }
 }
 
-jest.mock('eth-provider', () => (target) => mockConnections[target].connection)
+const mockEthProvider = jest.fn((target) => mockConnections[target].connection)
+jest.mock('eth-provider', () => (target, options) => mockEthProvider(target, options))
 jest.mock('../../../main/store/state', () => () => state)
 jest.mock('../../../main/accounts', () => ({ updatePendingFees: jest.fn() }))
 jest.mock('../../../main/store/persist')
 
 const mockConnections = {
-  'wss://evm.pylon.link/sepolia': {
+  'https://ethereum-sepolia-rpc.publicnode.com': {
     id: '11155111',
     name: 'sepolia',
     connection: new MockConnection(5)
   },
-  'wss://evm.pylon.link/polygon': {
+  'https://polygon-bor-rpc.publicnode.com': {
     id: '137',
     name: 'polygon',
     connection: new MockConnection(137)
@@ -282,6 +283,19 @@ describe('#send', () => {
   })
 })
 
+it('identifies Wren when creating an upstream RPC provider', (done) => {
+  mockEthProvider.mockClear()
+  chains.once('connect', () => {
+    expect(mockEthProvider).toHaveBeenCalledWith('https://polygon-bor-rpc.publicnode.com', {
+      name: 'primary',
+      origin: 'wren'
+    })
+    done()
+  })
+
+  store.toggleConnection('ethereum', '137', 'primary', true)
+})
+
 Object.values(mockConnections).forEach((chain) => {
   it(`sets legacy gas prices on a new non-London block on ${chain.name}`, (done) => {
     gasPrice = gweiToHex(6)
@@ -331,7 +345,7 @@ Object.values(mockConnections).forEach((chain) => {
 })
 
 it('falls back to legacy gas pricing when fee history is malformed', (done) => {
-  const chain = mockConnections['wss://evm.pylon.link/sepolia']
+  const chain = mockConnections['https://ethereum-sepolia-rpc.publicnode.com']
   gasPrice = gweiToHex(6)
   block = {
     number: addHexPrefix((12965200).toString(16)),

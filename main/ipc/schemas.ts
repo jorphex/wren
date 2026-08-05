@@ -155,7 +155,6 @@ const actionSchemas = {
   clearPermissions: z.tuple([AddressSchema]),
   closeDash: noArgs,
   muteBetaDisclosure: noArgs,
-  mutePylonMigrationNotice: noArgs,
   muteWelcomeWarning: noArgs,
   navDash: z.tuple([BreadcrumbSchema]),
   navReplace: z.tuple([z.literal('dash'), z.array(BreadcrumbSchema).max(32).optional()]),
