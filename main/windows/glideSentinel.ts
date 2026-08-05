@@ -50,6 +50,11 @@ export class GlideSentinel {
     if (this.active || !this.supported) return
 
     this.active = true
+    this.rebuild()
+  }
+
+  private rebuild() {
+    this.destroyWindows()
     try {
       for (const { workArea } of this.screen.getAllDisplays()) {
         if (workArea.width < edgeWidth || workArea.height <= verticalMargin * 2) continue
@@ -75,13 +80,12 @@ export class GlideSentinel {
         window.showInactive()
       }
     } catch (error) {
-      this.stop()
+      this.destroyWindows()
       this.reportError(error)
     }
   }
 
-  stop() {
-    this.active = false
+  private destroyWindows() {
     const windows = this.windows
     this.windows = []
     windows.forEach((window) => {
@@ -89,9 +93,13 @@ export class GlideSentinel {
     })
   }
 
+  stop() {
+    this.active = false
+    this.destroyWindows()
+  }
+
   refresh() {
     if (!this.active) return
-    this.stop()
-    this.start()
+    this.rebuild()
   }
 }

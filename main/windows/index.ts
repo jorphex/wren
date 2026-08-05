@@ -40,7 +40,6 @@ const fullheight = !!process.env['FULL_HEIGHT']
 const openedAtLogin =
   electronApp?.getLoginItemSettings() && electronApp.getLoginItemSettings().wasOpenedAtLogin
 const windows: Windows = {}
-const showOnReady = true
 const devHeight = 800
 const isWindows = process.platform === 'win32'
 const isMacOS = process.platform === 'darwin'
@@ -53,6 +52,8 @@ let notify: Notify
 let glideDetector: GlideDetector | undefined
 let glideSentinel: GlideSentinel | undefined
 let glide = false
+let lifecycleObservers: Observer[] = []
+let displayChangeHandler: (() => void) | undefined
 
 const getGlideEdge = (): GlideEdge => (store('main.glideSide') === 'left' ? 'left' : 'right')
 
@@ -176,16 +177,6 @@ function initTrayWindow() {
       tray.show()
     }
   })
-
-  setTimeout(() => {
-    const handleDisplayChange = () => {
-      glideSentinel?.refresh()
-      tray.hide()
-    }
-    screen.on('display-added', handleDisplayChange)
-    screen.on('display-removed', handleDisplayChange)
-    screen.on('display-metrics-changed', handleDisplayChange)
-  }, 30 * 1000)
 }
 
 export class Tray {
@@ -216,10 +207,12 @@ export class Tray {
 
       this.ready = true
       systemTray.init(trayWindow)
-      systemTray.setContextMenu('hide', { displaySummonShortcut: getDisplaySummonShortcut() })
-      if (showOnReady) {
-        requireStoreAction('trayOpen')(true)
-      }
+      const visible = trayWindow.isVisible()
+      systemTray.setContextMenu(visible ? 'hide' : 'show', {
+        displaySummonShortcut: getDisplaySummonShortcut()
+      })
+      requireStoreAction('trayOpen')(visible)
+      if (!visible && store('main.reveal')) glideDetector?.start()
 
       const showOnboardingWindow = !store('main.mute.onboardingWindow')
       const showNotifyWindow = !store('main.mute.migrateToPylon')
@@ -352,6 +345,7 @@ export class Tray {
   }
 
   destroy() {
+    clearTimeout(this.recentDisplayEventTimeout)
     this.gasObserver.remove()
     this.removeReadyHandler()
   }
@@ -360,6 +354,7 @@ export class Tray {
 class Dash {
   private recentDisplayEvent = false
   private recentDisplayEventTimeout?: NodeJS.Timeout
+  private showTimeout: NodeJS.Timeout | undefined
   public hiddenByAppHide = false
 
   constructor() {
@@ -410,7 +405,9 @@ class Dash {
     this.recentDisplayEventTimeout = setTimeout(() => {
       this.recentDisplayEvent = false
     }, 150)
-    setTimeout(() => {
+    clearTimeout(this.showTimeout)
+    this.showTimeout = setTimeout(() => {
+      this.showTimeout = undefined
       const trayWindow = windows.tray
       const dashWindow = windows.dash
       if (!trayWindow || !dashWindow || trayWindow.isDestroyed() || dashWindow.isDestroyed()) return
@@ -442,6 +439,11 @@ class Dash {
 
   isVisible() {
     return windows.dash?.isVisible() ?? false
+  }
+
+  destroy() {
+    clearTimeout(this.recentDisplayEventTimeout)
+    clearTimeout(this.showTimeout)
   }
 }
 
@@ -634,8 +636,25 @@ const windowFromWebContents = (webContents: WebContents) =>
 
 const init = () => {
   glideDetector?.stop()
+  glideSentinel?.stop()
+  lifecycleObservers.forEach((observer) => observer.remove())
+  lifecycleObservers = []
+  if (displayChangeHandler) {
+    screen.off('display-added', displayChangeHandler)
+    screen.off('display-removed', displayChangeHandler)
+    screen.off('display-metrics-changed', displayChangeHandler)
+    displayChangeHandler = undefined
+  }
   if (tray) {
     tray.destroy()
+  }
+  if (dash) {
+    dash.destroy()
+  }
+  for (const id of ['tray', 'dash']) {
+    const window = windows[id]
+    if (window && !window.isDestroyed()) window.destroy()
+    delete windows[id]
   }
 
   tray = new Tray()
@@ -657,89 +676,108 @@ const init = () => {
     getGlideEdge
   )
 
-  if (!store('main.mute.onboardingWindow')) {
+  displayChangeHandler = () => {
+    glideSentinel?.refresh()
+    tray.reposition()
+    if (dash.isVisible()) dash.positionNextToTray()
+  }
+  screen.on('display-added', displayChangeHandler)
+  screen.on('display-removed', displayChangeHandler)
+  screen.on('display-metrics-changed', displayChangeHandler)
+
+  if (!store('main.mute.onboardingWindow') && (!windows.onboard || windows.onboard.isDestroyed())) {
     onboard = new Onboard()
   }
 
-  if (!store('main.mute.migrateToPylon')) {
+  if (!store('main.mute.migrateToPylon') && (!windows.notify || windows.notify.isDestroyed())) {
     notify = new Notify()
   }
 
   // data change events
-  store.observer(() => {
-    if (store('windows.dash.showing')) {
-      dash.show()
-    } else {
-      dash.hide()
-      windows.tray?.focus()
-    }
-  }, 'windows:dash')
-
-  store.observer(() => {
-    if (store('windows.onboard.showing')) {
-      if (!windows.onboard) {
-        onboard = new Onboard()
+  lifecycleObservers.push(
+    store.observer(() => {
+      if (store('windows.dash.showing')) {
+        dash.show()
+      } else {
+        dash.hide()
+        windows.tray?.focus()
       }
+    }, 'windows:dash')
+  )
 
-      onboard.show()
-    } else if (onboard) {
-      onboard.hide()
-      windows.tray?.focus()
-    }
-  }, 'windows:onboard')
-
-  store.observer(() => {
-    if (store('windows.notify.showing')) {
-      if (!windows.notify) {
-        notify = new Notify()
-      }
-
-      notify.show()
-    } else if (notify) {
-      notify.hide()
-      windows.tray?.focus()
-    }
-  }, 'windows:notify')
-
-  store.observer(() => {
-    let summonShortcut: Shortcut = store('main.shortcuts.summon')
-    const summonHandler = (accelerator: string) => {
-      app.toggle()
+  lifecycleObservers.push(
+    store.observer(() => {
       if (store('windows.onboard.showing')) {
-        send('onboard', 'main:flex', 'shortcutActivated')
-      }
-      if (tray?.isReady()) {
-        systemTray.setContextMenu(tray.isVisible() ? 'hide' : 'show', {
-          displaySummonShortcut: summonShortcut.enabled,
-          accelerator
-        })
-      }
-    }
+        if (!windows.onboard) {
+          onboard = new Onboard()
+        }
 
-    registerShortcut(summonShortcut, summonHandler)
-  })
+        onboard.show()
+      } else if (onboard) {
+        onboard.hide()
+        windows.tray?.focus()
+      }
+    }, 'windows:onboard')
+  )
+
+  lifecycleObservers.push(
+    store.observer(() => {
+      if (store('windows.notify.showing')) {
+        if (!windows.notify) {
+          notify = new Notify()
+        }
+
+        notify.show()
+      } else if (notify) {
+        notify.hide()
+        windows.tray?.focus()
+      }
+    }, 'windows:notify')
+  )
+
+  lifecycleObservers.push(
+    store.observer(() => {
+      let summonShortcut: Shortcut = store('main.shortcuts.summon')
+      const summonHandler = (accelerator: string) => {
+        app.toggle()
+        if (store('windows.onboard.showing')) {
+          send('onboard', 'main:flex', 'shortcutActivated')
+        }
+        if (tray?.isReady()) {
+          systemTray.setContextMenu(tray.isVisible() ? 'hide' : 'show', {
+            displaySummonShortcut: summonShortcut.enabled,
+            accelerator
+          })
+        }
+      }
+
+      registerShortcut(summonShortcut, summonHandler)
+    })
+  )
 
   let revealEnabled = store('main.reveal')
   let glideEdge = getGlideEdge()
-  store.observer(() => {
-    const nextRevealEnabled = store('main.reveal')
-    const nextGlideEdge = getGlideEdge()
-    if (nextGlideEdge !== glideEdge) {
-      glideEdge = nextGlideEdge
-      glideSentinel?.setEdge(glideEdge)
-      tray.reposition()
-      if (dash.isVisible()) dash.positionNextToTray()
-    }
-    if (nextRevealEnabled === revealEnabled) return
+  lifecycleObservers.push(
+    store.observer(() => {
+      const nextRevealEnabled = store('main.reveal')
+      const nextGlideEdge = getGlideEdge()
+      if (nextGlideEdge !== glideEdge) {
+        glideEdge = nextGlideEdge
+        glideSentinel?.setEdge(glideEdge)
+        tray.reposition()
+        if (dash.isVisible()) dash.positionNextToTray()
+      }
+      if (nextRevealEnabled === revealEnabled) return
 
-    revealEnabled = nextRevealEnabled
-    if (!revealEnabled) {
-      glide = false
-      glideDetector?.stop()
-    } else if (!tray.isVisible()) {
-      glideDetector?.start()
-    }
-  }, 'windows:glide')
+      revealEnabled = nextRevealEnabled
+      if (!revealEnabled) {
+        glide = false
+        glideDetector?.stop()
+      } else if (!tray.isVisible()) {
+        glideDetector?.start()
+      }
+    }, 'windows:glide')
+  )
 }
 
 const send = (id: string, channel: string, ...args: string[]) => {

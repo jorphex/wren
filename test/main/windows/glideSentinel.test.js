@@ -119,4 +119,33 @@ describe('GlideSentinel', () => {
     expect(windows[0].destroy).toHaveBeenCalledTimes(1)
     expect(reportError).toHaveBeenCalledWith(error)
   })
+
+  it('recovers on refresh after a transient creation failure', () => {
+    const error = new Error('window creation failed')
+    let fail = true
+    const { createWindow, reportError, sentinel, windows } = createSetup()
+    createWindow.mockImplementation((options) => {
+      if (fail) {
+        fail = false
+        throw error
+      }
+
+      const window = {
+        options,
+        destroy: jest.fn(),
+        isDestroyed: jest.fn(() => false),
+        setVisibleOnAllWorkspaces: jest.fn(),
+        showInactive: jest.fn()
+      }
+      windows.push(window)
+      return window
+    })
+
+    sentinel.start()
+    sentinel.refresh()
+
+    expect(reportError).toHaveBeenCalledWith(error)
+    expect(windows).toHaveLength(2)
+    windows.forEach((window) => expect(window.showInactive).toHaveBeenCalledTimes(1))
+  })
 })

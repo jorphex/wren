@@ -42,7 +42,8 @@ export type SystemTrayEventHandlers = {
 
 export class SystemTray {
   private clickHandlers: SystemTrayEventHandlers
-  private electronTray?: ElectronTray
+  private electronTray: ElectronTray | undefined
+  private contextMenuTimeout: NodeJS.Timeout | undefined
 
   constructor(clickHandlers: SystemTrayEventHandlers) {
     this.clickHandlers = clickHandlers
@@ -50,6 +51,7 @@ export class SystemTray {
 
   init(mainWindow: BrowserWindow) {
     // Electron Tray can only be instantiated when the app is ready
+    this.destroy()
     this.electronTray = new ElectronTray(path.join(__dirname, isMacOS ? './IconTemplate.png' : './Icon.png'))
     this.electronTray.on('click', (_event: KeyboardEvent, bounds: Rectangle) => {
       const mainWindowBounds = mainWindow.getBounds()
@@ -97,8 +99,19 @@ export class SystemTray {
     if (switchScreen) {
       this.electronTray?.setContextMenu(menu)
     } else {
-      setTimeout(() => this.electronTray?.setContextMenu(menu), delaySettingContextMenu() ? 200 : 0)
+      clearTimeout(this.contextMenuTimeout)
+      this.contextMenuTimeout = setTimeout(
+        () => this.electronTray?.setContextMenu(menu),
+        delaySettingContextMenu() ? 200 : 0
+      )
     }
+  }
+
+  destroy() {
+    clearTimeout(this.contextMenuTimeout)
+    this.contextMenuTimeout = undefined
+    this.electronTray?.destroy()
+    this.electronTray = undefined
   }
 
   closeContextMenu() {
