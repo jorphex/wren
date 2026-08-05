@@ -1,6 +1,8 @@
 import { BaseWindow, BaseWindowConstructorOptions, screen as electronScreen } from 'electron'
 import log from 'electron-log'
 
+import type { GlideEdge } from './shellGeometry'
+
 type Display = {
   workArea: { x: number; y: number; width: number; height: number }
 }
@@ -27,6 +29,7 @@ const supportsEdgeSentinel =
 
 export class GlideSentinel {
   private active = false
+  private edge: GlideEdge = 'right'
   private windows: EdgeWindow[] = []
 
   constructor(
@@ -37,6 +40,12 @@ export class GlideSentinel {
       log.warn('Could not start Glide edge sentinel', error)
   ) {}
 
+  setEdge(edge: GlideEdge) {
+    if (edge === this.edge) return
+    this.edge = edge
+    this.refresh()
+  }
+
   start() {
     if (this.active || !this.supported) return
 
@@ -46,7 +55,7 @@ export class GlideSentinel {
         if (workArea.width < edgeWidth || workArea.height <= verticalMargin * 2) continue
 
         const window = this.createWindow({
-          x: workArea.x + workArea.width - edgeWidth,
+          x: this.edge === 'right' ? workArea.x + workArea.width - edgeWidth : workArea.x,
           y: workArea.y + verticalMargin,
           width: edgeWidth,
           height: workArea.height - verticalMargin * 2,

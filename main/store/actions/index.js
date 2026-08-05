@@ -88,6 +88,9 @@ module.exports = {
   setLaunch: (u, launch) => u('main.launch', () => launch),
   toggleLaunch: (u) => u('main.launch', (launch) => !launch),
   toggleReveal: (u) => u('main.reveal', (reveal) => !reveal),
+  setGlideSide: (u, side) => {
+    if (side === 'left' || side === 'right') u('main.glideSide', () => side)
+  },
   toggleShowLocalNameWithENS: (u) =>
     u('main.showLocalNameWithENS', (showLocalNameWithENS) => !showLocalNameWithENS),
   setPermission: (u, address, permission) => {
@@ -723,11 +726,6 @@ module.exports = {
   removeKnownTokens: (u, address, tokensToRemove) => {
     const needsRemoval = (token) => tokensToRemove.has(toTokenId(token))
     u('main.tokens.known', address, (existing = []) => existing.filter((token) => !needsRemoval(token)))
-  },
-  setColorway: (u, colorway) => {
-    u('main.colorway', () => {
-      return colorway
-    })
   },
   // Dashboard
   toggleDash: (u, force) => {

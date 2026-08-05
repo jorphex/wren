@@ -86,6 +86,19 @@ describe('GlideSentinel', () => {
     expect(windows[1].destroy).toHaveBeenCalledTimes(1)
   })
 
+  it('moves every mapped sentinel to the left edge', () => {
+    const { createWindow, sentinel, windows } = createSetup()
+
+    sentinel.start()
+    sentinel.setEdge('left')
+
+    expect(createWindow).toHaveBeenCalledTimes(4)
+    expect(windows[0].destroy).toHaveBeenCalledTimes(1)
+    expect(windows[1].destroy).toHaveBeenCalledTimes(1)
+    expect(windows[2].options.x).toBe(0)
+    expect(windows[3].options.x).toBe(-1920)
+  })
+
   it('does nothing outside supported X11 sessions', () => {
     const { createWindow, screen, sentinel } = createSetup({ supported: false })
 

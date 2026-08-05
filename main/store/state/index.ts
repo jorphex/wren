@@ -109,12 +109,12 @@ const mainState = {
   colorway: main('colorway', 'dark'),
   colorwayPrimary: {
     dark: {
-      background: 'rgb(26, 22, 28)',
-      text: 'rgb(241, 241, 255)'
+      background: 'rgb(17, 21, 19)',
+      text: 'rgb(231, 238, 232)'
     },
     light: {
-      background: 'rgb(240, 230, 243)',
-      text: 'rgb(20, 40, 60)'
+      background: 'rgb(17, 21, 19)',
+      text: 'rgb(231, 238, 232)'
     }
   },
   mute: {
@@ -140,6 +140,7 @@ const mainState = {
   // showUSDValue: main('showUSDValue', true),
   launch: main('launch', false),
   reveal: main('reveal', false),
+  glideSide: main('glideSide', 'right'),
   showLocalNameWithENS: main('showLocalNameWithENS', false),
   autohide: main('autohide', false),
   accountCloseLock: main('accountCloseLock', false),

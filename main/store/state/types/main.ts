@@ -25,6 +25,7 @@ const UpdaterPreferencesSchema = z.object({
 const PreferencesSchema = {
   launch: z.boolean().default(false).describe('Launch Wren on system start'),
   reveal: z.boolean().default(false).describe('Show Wren when user glides mouse to edge of screen'),
+  glideSide: z.enum(['left', 'right']).default('right').describe('Display edge used by Glide'),
   autohide: z.boolean().default(false).describe('Automatically hide Wren when it loses focus'),
   accountCloseLock: z
     .boolean()
@@ -69,7 +70,7 @@ export const MainSchema = z.object({
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),
   mute: z.partialRecord(notificationTypes, z.boolean()),
-  colorway: z.enum(['light', 'dark']),
+  colorway: z.literal('dark').default('dark'),
   colorwayPrimary: ColorwayPrimarySchema,
   shortcuts: ShortcutsSchema,
   updater: UpdaterPreferencesSchema,

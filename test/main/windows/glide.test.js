@@ -1,4 +1,4 @@
-import { GlideDetector, isAtRightEdge } from '../../../main/windows/glide'
+import { GlideDetector, isAtEdge, isAtRightEdge } from '../../../main/windows/glide'
 
 const display = {
   workArea: { x: 0, y: 48, width: 3840, height: 2112 }
@@ -22,6 +22,13 @@ describe('isAtRightEdge', () => {
   it('accepts the final two pixels of the usable right edge', () => {
     expect(isAtRightEdge({ x: 3838, y: 1080 }, display)).toBe(true)
     expect(isAtRightEdge({ x: 3839, y: 1080 }, display)).toBe(true)
+  })
+
+  it('supports the left edge without accepting points outside the display', () => {
+    expect(isAtEdge({ x: 0, y: 1080 }, display, 'left')).toBe(true)
+    expect(isAtEdge({ x: 1, y: 1080 }, display, 'left')).toBe(true)
+    expect(isAtEdge({ x: -1, y: 1080 }, display, 'left')).toBe(false)
+    expect(isAtEdge({ x: 2, y: 1080 }, display, 'left')).toBe(false)
   })
 
   it('rejects nearby and vertically reserved screen coordinates', () => {
@@ -117,5 +124,22 @@ describe('GlideDetector', () => {
     jest.advanceTimersByTime(500)
 
     expect(screen.getCursorScreenPoint).toHaveBeenCalledTimes(1)
+  })
+
+  it('reveals from the configured left edge', () => {
+    const screen = createScreen({ x: 0, y: 800 })
+    const reveal = jest.fn(() => true)
+    const detector = new GlideDetector(
+      screen,
+      () => true,
+      reveal,
+      undefined,
+      () => 'left'
+    )
+
+    detector.start()
+    jest.advanceTimersByTime(50)
+
+    expect(reveal).toHaveBeenCalledTimes(1)
   })
 })

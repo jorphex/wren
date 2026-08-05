@@ -70,9 +70,12 @@ and checksums.
    ```
 
 2. Confirm startup, tray/dashboard placement, settings persistence after a
-   restart, and clean shutdown. On X11, enable Glide, dismiss Wren, and confirm
-   touching the right edge reveals it without focusing or leaving an edge window
-   behind. Confirm no unexpected update prompt appears.
+   restart, dark-native rendering, and clean shutdown. Open and close the
+   dashboard repeatedly and confirm both panes remain coupled without an
+   intermediate jump. On X11, enable Glide and test both the right and left edge
+   settings on every connected display. Each selected edge must reveal Wren
+   without focusing or leaving an edge window behind; the unselected edge must
+   do nothing. Confirm no unexpected update prompt appears.
 3. Confirm launching a second candidate exits without corrupting state or
    taking over ports `1248` or `8421`.
 4. With Frame and Wren closed, copy a compatible Frame backup to a temporary

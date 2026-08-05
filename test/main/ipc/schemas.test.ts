@@ -290,6 +290,9 @@ test('dispatches only recognized store actions with validated arguments', () => 
   ).toEqual(['removeNetwork', { type: 'ethereum', id: 10 }])
   expect(parseRendererIpcArgs('event', 'tray:action', ['unknownAction']).success).toBe(false)
   expect(parseRendererIpcArgs('event', 'tray:action', ['setColorway', 'purple']).success).toBe(false)
+  expect(parseRendererIpcArgs('event', 'tray:action', ['setColorway', 'light']).success).toBe(false)
+  expect(parse('event', 'tray:action', ['setGlideSide', 'left'])).toEqual(['setGlideSide', 'left'])
+  expect(parseRendererIpcArgs('event', 'tray:action', ['setGlideSide', 'top']).success).toBe(false)
 })
 
 test('validates complete add-chain invokes and strips their request reference', () => {

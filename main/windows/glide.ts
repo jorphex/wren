@@ -1,3 +1,5 @@
+import type { GlideEdge } from './shellGeometry'
+
 type Point = { x: number; y: number }
 type Rectangle = Point & { width: number; height: number }
 
@@ -19,15 +21,24 @@ const sampleInterval = 50
 const edgeTolerance = 2
 const verticalMargin = 5
 
-export function isAtRightEdge(point: Point, display: Display) {
+export function isAtEdge(point: Point, display: Display, edge: GlideEdge) {
   const { workArea } = display
+  const left = workArea.x
   const right = workArea.x + workArea.width - 1
+  const atHorizontalEdge =
+    edge === 'right'
+      ? point.x >= right - edgeTolerance + 1 && point.x <= right
+      : point.x >= left && point.x <= left + edgeTolerance - 1
 
   return (
-    point.x >= right - edgeTolerance + 1 &&
+    atHorizontalEdge &&
     point.y >= workArea.y + verticalMargin &&
     point.y <= workArea.y + workArea.height - verticalMargin
   )
+}
+
+export function isAtRightEdge(point: Point, display: Display) {
+  return isAtEdge(point, display, 'right')
 }
 
 export class GlideDetector {
@@ -38,7 +49,8 @@ export class GlideDetector {
     private readonly screen: Screen,
     private readonly enabled: () => boolean,
     private readonly reveal: () => boolean,
-    private readonly lifecycle?: Lifecycle
+    private readonly lifecycle?: Lifecycle,
+    private readonly edge: () => GlideEdge = () => 'right'
   ) {}
 
   start() {
@@ -75,8 +87,9 @@ export class GlideDetector {
 
       const currentPoint = this.screen.getCursorScreenPoint()
       const currentDisplay = this.screen.getDisplayNearestPoint(currentPoint)
+      const edge = this.edge()
       const dwellingAtEdge =
-        isAtRightEdge(initialPoint, initialDisplay) && isAtRightEdge(currentPoint, currentDisplay)
+        isAtEdge(initialPoint, initialDisplay, edge) && isAtEdge(currentPoint, currentDisplay, edge)
 
       if (dwellingAtEdge && this.reveal()) {
         this.stop()

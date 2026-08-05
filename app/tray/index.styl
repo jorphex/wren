@@ -6,7 +6,8 @@ html, body
   -webkit-app-region no-drag
   overflow hidden
   color var(--outerspace)
-  background var(--ghostA)
+  background-color var(--wren-bg-canvas)
+  background-image radial-gradient(circle at 12% 8%, rgba(166, 138, 97, 0.06), transparent 34%), radial-gradient(circle at 88% 92%, rgba(126, 155, 115, 0.04), transparent 30%)
 
 div
   user-select none
@@ -26,6 +27,8 @@ div
   // border-radius 12px
   // box-shadow 0px 1px 5px 1px rgba(33, 45, 46, 0.1), 0px 0px 0px 1px rgba(110, 120, 140, 0.2)
   overflow hidden
+  border 1px solid var(--wren-border-subtle)
+  box-sizing border-box
 
   #bar
     right 360px

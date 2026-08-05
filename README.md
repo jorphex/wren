@@ -69,6 +69,9 @@ qualified Safe 7 USB flow.
   consent for dangerous `eth_sign` requests.
 - **Multichain routing:** Each application can target an enabled chain without
   forcing every connected application onto one global network.
+- **Desktop-native shell:** A bounded dark-mode wallet and dashboard stay coupled
+  on the active display. Glide summons from the right edge by default and can be
+  mirrored to the left in Settings.
 - **Curated Yearn Earn:** Locally
   allowlisted Ethereum, Base, and Katana Yearn products with positions, direct
   and product-specific workflows, exact approvals, configured-RPC simulation,

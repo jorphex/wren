@@ -18,6 +18,7 @@ import { installCloseToTray } from './closeToTray'
 import { createWindow } from './window'
 import { GlideDetector } from './glide'
 import { GlideSentinel } from './glideSentinel'
+import { getShellLayout, GlideEdge, shellDashboardTargetWidth, shellMainTargetWidth } from './shellGeometry'
 import { SystemTray, SystemTrayEventHandlers } from './systemTray'
 import { registerShortcut } from '../keyboardShortcuts'
 import { Shortcut } from '../store/state/types/shortcuts'
@@ -40,7 +41,6 @@ const openedAtLogin =
   electronApp?.getLoginItemSettings() && electronApp.getLoginItemSettings().wasOpenedAtLogin
 const windows: Windows = {}
 const showOnReady = true
-const trayWidth = 400
 const devHeight = 800
 const isWindows = process.platform === 'win32'
 const isMacOS = process.platform === 'darwin'
@@ -53,6 +53,8 @@ let notify: Notify
 let glideDetector: GlideDetector | undefined
 let glideSentinel: GlideSentinel | undefined
 let glide = false
+
+const getGlideEdge = (): GlideEdge => (store('main.glideSide') === 'left' ? 'left' : 'right')
 
 const app = {
   hide: () => {
@@ -84,17 +86,6 @@ const systemTrayEventHandlers: SystemTrayEventHandlers = {
 const systemTray = new SystemTray(systemTrayEventHandlers)
 const getDisplaySummonShortcut = () => store('main.shortcuts.summon.enabled')
 
-const topRight = (window: BrowserWindow) => {
-  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-  const screenSize = area
-  const [windowWidth] = window.getSize()
-  if (windowWidth === undefined) throw new Error('Window width is unavailable')
-  return {
-    x: Math.floor(screenSize.x + screenSize.width - windowWidth),
-    y: screenSize.y
-  }
-}
-
 const center = (window: BrowserWindow) => {
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
   const screenSize = area
@@ -122,7 +113,7 @@ function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) 
 
 function initTrayWindow() {
   const trayOpts: Electron.BrowserWindowConstructorOptions = {
-    width: trayWidth,
+    width: shellMainTargetWidth,
     icon: path.join(__dirname, './AppIcon.png')
   }
   if (isMacOS) {
@@ -326,14 +317,9 @@ export class Tray {
       visibleOnFullScreen: true,
       skipTransformProcessType: true
     })
-    trayWindow.setResizable(false) // Keeps height consistent
+    trayWindow.setResizable(false)
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    const height = isDev && !fullheight ? devHeight : area.height
-    trayWindow.setMinimumSize(trayWidth, height)
-    trayWindow.setSize(trayWidth, height)
-    trayWindow.setMaximumSize(trayWidth, height)
-    const pos = topRight(trayWindow)
-    trayWindow.setPosition(pos.x, pos.y)
+    trayWindow.setBounds(getShellLayout(area, getGlideEdge()).main, false)
     requireStoreAction('trayOpen')(true)
     if (glide && isMacOS) {
       trayWindow.showInactive()
@@ -357,6 +343,14 @@ export class Tray {
     else this.show()
   }
 
+  reposition() {
+    const trayWindow = windows.tray
+    if (!trayWindow || trayWindow.isDestroyed()) return
+
+    const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
+    trayWindow.setBounds(getShellLayout(area, getGlideEdge()).main, false)
+  }
+
   destroy() {
     this.gasObserver.remove()
     this.removeReadyHandler()
@@ -370,50 +364,23 @@ class Dash {
 
   constructor() {
     const dashOpts: Electron.BrowserWindowConstructorOptions = {
-      width: trayWidth
+      width: shellDashboardTargetWidth
     }
     if (isMacOS) {
       dashOpts.type = 'panel'
     } else if (process.platform === 'linux') {
       dashOpts.type = 'toolbar'
     }
-    const dashWindow = initWindow('dash', dashOpts)
-
-    if (process.platform === 'linux') {
-      const trayWindow = windows.tray
-      if (!trayWindow || trayWindow.isDestroyed()) {
-        throw new Error('Tray window is unavailable while creating the dash')
-      }
-
-      const positionDash = () => {
-        setTimeout(() => this.positionNextToTray(), 0)
-        setTimeout(() => this.positionNextToTray(), 50)
-        setTimeout(() => this.positionNextToTray(), 150)
-      }
-
-      trayWindow.on('show', positionDash)
-      trayWindow.on('move', positionDash)
-      dashWindow.on('show', positionDash)
-    }
+    initWindow('dash', dashOpts)
   }
 
-  private positionNextToTray(height?: number) {
+  public positionNextToTray() {
     const trayWindow = windows.tray
     const dashWindow = windows.dash
     if (!trayWindow || !dashWindow || trayWindow.isDestroyed() || dashWindow.isDestroyed()) return
 
-    const trayBounds = trayWindow.getBounds()
-    const dashBounds = dashWindow.getBounds()
-
-    dashWindow.setBounds(
-      {
-        x: trayBounds.x - dashBounds.width - 5,
-        y: trayBounds.y,
-        width: dashBounds.width,
-        height: height || dashBounds.height
-      },
-      false
-    )
+    const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
+    dashWindow.setBounds(getShellLayout(area, getGlideEdge()).dashboard, false)
   }
 
   public hide(context?: string) {
@@ -459,15 +426,9 @@ class Dash {
         visibleOnFullScreen: true,
         skipTransformProcessType: true
       })
-      dashWindow.setResizable(false) // Keeps height consistent
-      const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-      const height = isDev && !fullheight ? devHeight : area.height
-      dashWindow.setMinimumSize(trayWidth, height)
-      dashWindow.setSize(trayWidth, height)
-      dashWindow.setMaximumSize(trayWidth, height)
-      this.positionNextToTray(height)
+      dashWindow.setResizable(false)
+      this.positionNextToTray()
       dashWindow.show()
-      setTimeout(() => this.positionNextToTray(height), 50)
       dashWindow.focus()
       dashWindow.setVisibleOnAllWorkspaces(false, {
         visibleOnFullScreen: true,
@@ -534,12 +495,8 @@ class Onboard {
       const width = targetWidth > maxWidth ? maxWidth : targetWidth
       onboardWindow.setMinimumSize(600, 300)
       onboardWindow.setSize(width, height)
-      const pos = topRight(onboardWindow)
-
-      // const x = (pos.x * 2 - width * 2 - 810) / 2
-      const x = pos.x - 880
-      onboardWindow.setPosition(x, pos.y + 80)
-      // windows.onboard.setAlwaysOnTop(true)
+      const pos = center(onboardWindow)
+      onboardWindow.setPosition(pos.x, pos.y)
       onboardWindow.show()
       onboardWindow.focus()
       onboardWindow.setVisibleOnAllWorkspaces(false, {
@@ -618,14 +575,7 @@ class Notify {
       notifyWindow.setMinimumSize(600, 300)
       notifyWindow.setSize(width, height)
       const pos = center(notifyWindow)
-      let x = pos.x - (trayWidth - 10) / 2
-      if (store('windows.dash.showing')) {
-        const pos = topRight(notifyWindow)
-        x = pos.x - 880
-      }
-
-      notifyWindow.setPosition(x, pos.y)
-      // windows.onboard.setAlwaysOnTop(true)
+      notifyWindow.setPosition(pos.x, pos.y)
       notifyWindow.show()
       notifyWindow.focus()
       notifyWindow.setVisibleOnAllWorkspaces(false, {
@@ -691,6 +641,7 @@ const init = () => {
   tray = new Tray()
   dash = new Dash()
   glideSentinel = new GlideSentinel(screen)
+  glideSentinel.setEdge(getGlideEdge())
   glideDetector = new GlideDetector(
     screen,
     () => store('main.reveal'),
@@ -702,7 +653,8 @@ const init = () => {
       glide = false
       return false
     },
-    glideSentinel
+    glideSentinel,
+    getGlideEdge
   )
 
   if (!store('main.mute.onboardingWindow')) {
@@ -768,8 +720,16 @@ const init = () => {
   })
 
   let revealEnabled = store('main.reveal')
+  let glideEdge = getGlideEdge()
   store.observer(() => {
     const nextRevealEnabled = store('main.reveal')
+    const nextGlideEdge = getGlideEdge()
+    if (nextGlideEdge !== glideEdge) {
+      glideEdge = nextGlideEdge
+      glideSentinel?.setEdge(glideEdge)
+      tray.reposition()
+      if (dash.isVisible()) dash.positionNextToTray()
+    }
     if (nextRevealEnabled === revealEnabled) return
 
     revealEnabled = nextRevealEnabled

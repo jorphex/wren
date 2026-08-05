@@ -8,12 +8,12 @@ const ColorSchema = z.object({
 
 export const ColorwayPrimarySchema = z.object({
   dark: z.object({
-    background: z.literal('rgb(26, 22, 28)'),
-    text: z.literal('rgb(241, 241, 255)')
+    background: z.literal('rgb(17, 21, 19)'),
+    text: z.literal('rgb(231, 238, 232)')
   }),
   light: z.object({
-    background: z.literal('rgb(240, 230, 243)'),
-    text: z.literal('rgb(20, 40, 60)')
+    background: z.literal('rgb(17, 21, 19)'),
+    text: z.literal('rgb(231, 238, 232)')
   })
 })
 

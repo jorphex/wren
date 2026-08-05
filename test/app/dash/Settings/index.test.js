@@ -12,7 +12,6 @@ const state = {
   main: {
     accountCloseLock: false,
     autohide: false,
-    colorway: 'dark',
     extensionCredentials: {
       companion: {
         browser: 'Firefox',
@@ -21,6 +20,7 @@ const state = {
         pairedAt: 1
       }
     },
+    glideSide: 'right',
     latticeSettings: {
       accountLimit: 5,
       derivation: 'standard',
@@ -72,7 +72,7 @@ it.each([
 it('routes every settings dropdown to its matching store action', () => {
   renderSettings()
   const selections = [
-    ['Colorway', 'Light', ['tray:action', 'setColorway', 'light']],
+    ['Glide Edge', 'Left', ['tray:action', 'setGlideSide', 'left']],
     ['Trezor Derivation', 'Legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
     ['Ledger Derivation', 'Standard', ['tray:action', 'setLedgerDerivation', 'standard']],
     ['Ledger Live Accounts', '10', ['tray:action', 'setLiveAccountLimit', 10]],

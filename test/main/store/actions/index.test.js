@@ -26,7 +26,8 @@ import {
   navClearSigner as clearNavSignerAction,
   notify as notifyAction,
   showWalletCallsStatus as showWalletCallsStatusAction,
-  updateTypedDataRequest as updateTypedDataAction
+  updateTypedDataRequest as updateTypedDataAction,
+  setGlideSide as setGlideSideAction
 } from '../../../../main/store/actions'
 import { toTokenId } from '../../../../resources/domain/balance'
 
@@ -39,6 +40,19 @@ afterAll(() => {
 })
 
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
+
+describe('#setGlideSide', () => {
+  it('persists only supported display edges', () => {
+    const update = jest.fn()
+
+    setGlideSideAction(update, 'left')
+    setGlideSideAction(update, 'top')
+
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith('main.glideSide', expect.any(Function))
+    expect(update.mock.calls[0][1]()).toBe('left')
+  })
+})
 
 describe('#notify', () => {
   it('uses serializable empty notification state when dismissed', () => {

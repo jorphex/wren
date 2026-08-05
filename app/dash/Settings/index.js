@@ -196,11 +196,27 @@ export class Settings extends Component {
                 <div className='signerPermissionToggleSwitch' />
               </div>
             </div>
-            <div className='signerPermissionDetails'>{"Mouse to display's right edge to summon Wren"}</div>
+            <div className='signerPermissionDetails'>{`Mouse to display's ${this.store(
+              'main.glideSide'
+            )} edge to summon Wren`}</div>
+          </div>
+          <div className='signerPermission localSetting' style={{ zIndex: 210 }}>
+            <div className='signerPermissionControls'>
+              <div className='signerPermissionSetting'>Glide Edge</div>
+              <Dropdown
+                syncValue={this.store('main.glideSide')}
+                onChange={(value) => link.send('tray:action', 'setGlideSide', value)}
+                options={[
+                  { text: 'Right', value: 'right' },
+                  { text: 'Left', value: 'left' }
+                ]}
+              />
+            </div>
+            <div className='signerPermissionDetails'>Choose which display edge summons Wren</div>
           </div>
 
           {this.store('platform') === 'darwin' ? (
-            <div className='signerPermission localSetting' style={{ zIndex: 210 }}>
+            <div className='signerPermission localSetting' style={{ zIndex: 209 }}>
               <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>Display Gas in Menubar</div>
                 <div
@@ -237,23 +253,6 @@ export class Settings extends Component {
               </div>
             </div>
             <div className='signerPermissionDetails'>{'Show local account name when ENS is resolved'}</div>
-          </div>
-
-          <div className='signerPermission localSetting' style={{ zIndex: 206 }}>
-            <div className='signerPermissionControls'>
-              <div className='signerPermissionSetting'>Colorway</div>
-              <Dropdown
-                syncValue={this.store('main.colorway')}
-                onChange={(value) => link.send('tray:action', 'setColorway', value)}
-                options={[
-                  { text: 'Dark', value: 'dark' },
-                  { text: 'Light', value: 'light' }
-                ]}
-              />
-            </div>
-            <div className='signerPermissionDetails'>
-              <span>Set Wren&apos;s visual theme</span>
-            </div>
           </div>
 
           <div className='signerPermission localSetting' style={{ zIndex: 205 }}>
