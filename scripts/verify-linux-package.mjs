@@ -117,7 +117,7 @@ const signatureData = {
     ]
   },
   primaryType: 'Mail',
-  domain: { name: 'Wren', version: '1', chainId: 1, verifyingContract: signatureAddress },
+  domain: { name: 'Frame', version: '1', chainId: 1, verifyingContract: signatureAddress },
   message: { recipient: signatureAddress, contents: 'hello' }
 }
 const signature = sigUtil.signTypedData({
