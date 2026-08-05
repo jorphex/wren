@@ -75,11 +75,30 @@ and checksums.
    behind. Confirm no unexpected update prompt appears.
 3. Confirm launching a second candidate exits without corrupting state or
    taking over ports `1248` or `8421`.
-4. With Wren closed, copy a backed-up compatible profile to a separate temporary
-   directory and launch the AppImage against that copy. Do not unlock a valuable
-   signer. Confirm accounts, account names, custom chains/RPCs, permissions,
-   tokens, and settings survive migration and a second restart without changing
-   again.
+4. With Frame and Wren closed, copy a compatible Frame backup to a temporary
+   source directory. Choose a nonexistent target below a separate temporary
+   parent and exercise the explicit import path without reading the production
+   profile:
+
+   ```bash
+   source_profile=/absolute/path/to/disposable-frame-backup
+   target_parent=$(mktemp -d)
+   target_profile="$target_parent/wren"
+   ./Wren-<version>.AppImage \
+     --user-data-dir="$target_profile" \
+     --import-frame-profile \
+     --import-frame-profile-from="$source_profile"
+   ```
+
+   Confirm the source is byte-for-byte unchanged; the target has mode `0700`;
+   copied files have mode `0600`; no cache, logs, or Chromium profile data were
+   copied; and `frame-profile-import.json` contains no secrets. Without unlocking
+   a valuable signer, confirm accounts, account names, custom chains/RPCs,
+   permissions, contacts, custom tokens, Earn activity, and encrypted signers
+   survive migration and a second restart without changing again. Repeat with a
+   locked source and an existing target and confirm both fail without partial
+   target data.
+
 5. Install the deb as an upgrade over the prior fork package. Confirm package
    version, desktop launcher, startup, shutdown, and preserved state. Restore
    the backup and stop qualification if any profile field is unexpectedly lost.

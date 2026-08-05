@@ -114,6 +114,24 @@ sudo apt install ./wren_0.8.0_amd64.deb
 The Linux packages are currently unsigned. Verify their checksums and GitHub
 artifact attestations against the published release before installation.
 
+### Import A Frame Profile
+
+Wren never reads or shares Frame's live profile by default. To make a one-time
+private copy, close Frame and Wren, back up `~/.config/frame`, and run Wren with
+the explicit import flag before Wren has created `~/.config/wren`:
+
+```bash
+./Wren-0.8.0.AppImage --import-frame-profile
+```
+
+For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validates
+and copies only `config.json` and encrypted signer files through a private staging
+directory, then atomically installs the new profile. It refuses an active Frame
+profile, malformed data, links, oversized files, or an existing Wren profile.
+The source remains unchanged, and the new profile records a non-secret import
+receipt. Rollback means closing Wren and returning to the untouched Frame app and
+profile; do not delete either profile until the imported state has been verified.
+
 ### Browser Companion
 
 The browser companion injects Wren's EIP-1193 provider and announces it using

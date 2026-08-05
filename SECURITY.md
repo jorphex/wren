@@ -50,3 +50,8 @@ claims are bounded by [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
 The separately released browser transport has its own
 [security boundary](https://github.com/jorphex/wren-companion/blob/main/SECURITY.md).
+
+Frame profile import is opt-in and available only before the Wren destination
+exists. It copies a bounded allowlist through a private staging directory and
+never modifies the source profile. Both applications must be closed; keep a
+verified backup until the imported Wren state has been inspected.
