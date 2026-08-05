@@ -45,6 +45,27 @@ describe('connect events', () => {
     )
   })
 
+  it('silences an initialization cancelled by shutdown', async () => {
+    let rejectInitialization
+    const initialization = new Promise((resolve, reject) => {
+      rejectInitialization = reject
+    })
+    const logError = jest.spyOn(log, 'error').mockImplementation(() => undefined)
+    const connected = jest.fn()
+
+    TrezorConnect.init.mockReturnValueOnce(initialization)
+    TrezorBridge.once('connect', connected)
+
+    const opening = TrezorBridge.open()
+    await TrezorBridge.close()
+    rejectInitialization(new Error('Disposed during initialization'))
+    await opening
+
+    expect(connected).not.toHaveBeenCalled()
+    expect(logError).not.toHaveBeenCalled()
+    logError.mockRestore()
+  })
+
   it('emits a detected event on device changed event with type unacquired', (done) => {
     TrezorBridge.once('trezor:detected', (path) => {
       try {

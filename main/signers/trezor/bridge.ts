@@ -66,22 +66,29 @@ async function handleResponse<T>(p: Response<T>) {
 }
 
 class TrezorBridge extends EventEmitter {
+  private lifecycleGeneration = 0
+
   async open() {
+    const generation = ++this.lifecycleGeneration
+
     TrezorConnect.on(DEVICE_EVENT, this.handleDeviceEvent.bind(this))
     TrezorConnect.on(UI_EVENT, this.handleUiEvent.bind(this))
 
     try {
       await TrezorConnect.init(config)
 
+      if (generation !== this.lifecycleGeneration) return
+
       log.info('Trezor Connect initialized')
 
       this.emit('connect')
     } catch (e) {
-      log.error('could not open TrezorConnect!', e)
+      if (generation === this.lifecycleGeneration) log.error('could not open TrezorConnect!', e)
     }
   }
 
   async close() {
+    ++this.lifecycleGeneration
     this.removeAllListeners()
 
     TrezorConnect.removeAllListeners()
