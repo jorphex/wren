@@ -8,6 +8,7 @@ import nebulaApi from '../nebula'
 import server from './server'
 import extractColors from '../windows/extractColors'
 import { installDappArchive } from './cache'
+import { getPinnedDappManifest } from './manifests'
 import { dappPathExists, getDappCacheDir, isDappVerified } from './verify'
 
 import type { Dapp } from '../store/state'
@@ -69,7 +70,10 @@ async function checkStatus(dappId: string) {
   const { checkStatusRetryCount, openWhenReady } = dapp
 
   try {
-    const { record, manifest } = await nebula.resolve(dapp.ens)
+    const pinnedManifest = getPinnedDappManifest(dapp.ens)
+    const { record, manifest } = pinnedManifest
+      ? { record: { content: pinnedManifest.content }, manifest: pinnedManifest }
+      : await nebula.resolve(dapp.ens)
     const { version, content } = manifest || {}
 
     if (!content) {

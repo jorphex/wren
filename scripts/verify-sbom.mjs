@@ -37,7 +37,7 @@ serialBytes[8] = (serialBytes[8] & 0x3f) | 0x80
 const serialHex = serialBytes.toString('hex')
 const expectedSerial = `urn:uuid:${serialHex.slice(0, 8)}-${serialHex.slice(8, 12)}-${serialHex.slice(12, 16)}-${serialHex.slice(16, 20)}-${serialHex.slice(20)}`
 const sourceProperty = sbom.metadata.component.properties?.find(
-  (property) => property?.name === 'frame:source-commit'
+  (property) => property?.name === 'wren:source-commit'
 )
 if (
   sbom.serialNumber !== expectedSerial ||
@@ -85,7 +85,7 @@ const electronVersion = packageJson.devDependencies?.electron
 const electronReference = `pkg:github/electron/electron@v${electronVersion}`
 const electron = componentsByReference.get(electronReference)
 const packagedRuntime = electron?.properties?.some(
-  (property) => property?.name === 'frame:packaged-runtime' && property.value === 'true'
+  (property) => property?.name === 'wren:packaged-runtime' && property.value === 'true'
 )
 if (electron?.version !== electronVersion || !packagedRuntime || !rootDependencies.has(electronReference)) {
   throw new Error('SBOM is missing the packaged Electron runtime')

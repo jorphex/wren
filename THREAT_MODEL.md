@@ -178,8 +178,8 @@ filtering.
 
 ### Networks And Third Parties
 
-RPC endpoints, explorers, IPFS gateways, ABI sources, token metadata, pricing
-services, update hosting, and signer-vendor services may be unavailable,
+RPC endpoints, explorers, IPFS gateways, ABI sources, pricing services, update
+hosting, and signer-vendor services may be unavailable,
 incorrect, or malicious. Transaction execution checks, reported token effects,
 native balance-change traces, internal-call traces, allowance reads,
 account-code classifications, and EIP-7702 account-delegation checks come from
@@ -194,6 +194,13 @@ prove ERC-1271, Safe, or any other interface. Decoding and tracing are
 explanatory and do not prove contract behavior. Users must verify chain,
 recipient, value, calldata, and signing details on the hardware device whenever
 possible.
+
+The embedded Send application is pinned to a source-reviewed content CID and
+verified as a complete UnixFS directory before activation. Wren does not follow
+mutable ENS updates for it. The general token inventory is bundled with each
+release rather than refreshed from a legacy Frame-controlled name. These
+snapshots can become stale; updates require a reviewed Wren source change and
+release.
 
 Renderer-requested external links use a fixed allowlist. User-configured block
 explorers bypass that fixed host list by design, but the final OS-launch sink

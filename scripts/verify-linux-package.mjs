@@ -257,6 +257,7 @@ const probeResult = runPackagedProbe('linux-unpacked', packagedExecutable)
 const appImageExtraction = await mkdtemp(path.join(tmpdir(), 'wren-appimage-'))
 const debExtraction = await mkdtemp(path.join(tmpdir(), 'wren-deb-'))
 let appImageProbeResult
+let appImageDesktopEntry
 let debProbeResult
 try {
   execFileSync(path.join(dist, artifacts[0]), ['--appimage-extract'], {
@@ -270,6 +271,10 @@ try {
   })
 
   appImageProbeResult = runPackagedProbe('AppImage', path.join(appImageExtraction, 'squashfs-root', 'wren'))
+  appImageDesktopEntry = await readFile(
+    path.join(appImageExtraction, 'squashfs-root', packageJson.desktopName),
+    'utf8'
+  )
   debProbeResult = runPackagedProbe('deb', path.join(debExtraction, 'opt', 'Wren', 'wren'))
 } finally {
   await Promise.all([
@@ -301,6 +306,7 @@ assert.equal(typeof notarize, 'function')
 assert.equal(typeof notarizeHook, 'function')
 assert.equal(builderConfig.win.signtoolOptions, undefined)
 assert.equal(builderConfig.win.publisherName, undefined)
+assert.deepEqual(builderConfig.appImage.executableArgs, [])
 assert.equal(builderConfig.linux.syncDesktopName, true)
 assert.equal(builderConfig.linux.category, 'Office;Finance')
 await notarizeHook({})
@@ -314,6 +320,8 @@ assert.deepEqual(probeResult.workerEnvironment, {
   override: 'worker',
   runAsNode: '1'
 })
+assert.match(appImageDesktopEntry, /^Exec=AppRun %U$/m)
+assert.doesNotMatch(appImageDesktopEntry, /--no-sandbox/)
 assert.match(desktopEntry, /^Exec=\/opt\/Wren\/wren %U$/m)
 assert.match(desktopEntry, /^StartupWMClass=wren$/m)
 assert.match(desktopEntry, /^Categories=Office;Finance;$/m)

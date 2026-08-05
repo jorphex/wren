@@ -35,10 +35,8 @@ sbom.metadata.timestamp = new Date(sourceTimestamp).toISOString()
 sbom.metadata.component.name = packageJson.name
 sbom.metadata.component.version = packageJson.version
 sbom.metadata.component.properties = [
-  ...(sbom.metadata.component.properties || []).filter(
-    (property) => property?.name !== 'frame:source-commit'
-  ),
-  { name: 'frame:source-commit', value: sourceCommit }
+  ...(sbom.metadata.component.properties || []).filter((property) => property?.name !== 'wren:source-commit'),
+  { name: 'wren:source-commit', value: sourceCommit }
 ].sort((left, right) => left.name.localeCompare(right.name))
 const productionReferences = new Set()
 const productionGraph = new Map([[rootRef, new Set()]])
@@ -79,7 +77,7 @@ sbom.components = [
     version: electronVersion,
     scope: 'required',
     purl: electronRef,
-    properties: [{ name: 'frame:packaged-runtime', value: 'true' }]
+    properties: [{ name: 'wren:packaged-runtime', value: 'true' }]
   }
 ].sort((left, right) => left['bom-ref'].localeCompare(right['bom-ref']))
 

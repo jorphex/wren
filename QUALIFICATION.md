@@ -102,9 +102,10 @@ and checksums.
    locked source and an existing target and confirm both fail without partial
    target data.
 
-5. Install the deb as an upgrade over the prior fork package. Confirm package
-   version, desktop launcher, startup, shutdown, and preserved state. Restore
-   the backup and stop qualification if any profile field is unexpectedly lost.
+5. Install the deb alongside the separately named Frame package. Confirm package
+   version, desktop launcher, startup, shutdown, and that concurrent startup
+   fails closed on the occupied provider ports. Import only through the explicit
+   disposable-profile flow above; no state should be shared automatically.
 
 Delete temporary profiles only after the result has been recorded. Profile
 migration failures are release blockers even when fresh-profile tests pass.

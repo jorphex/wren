@@ -87,6 +87,11 @@ verify discovery, address display, personal signing, typed-data behavior,
 EIP-1559 transaction signing, rejection/cancellation, disconnect/reconnect, and
 application shutdown.
 
+GridPlus pairings currently retain the legacy `Frame[-tag]` permission ID so
+existing devices do not silently lose access during migration. Wren labels this
+identifier as legacy in signer details; changing it requires a separately
+qualified re-pairing migration.
+
 Automated tests must not broadcast, access a physical device by default, or share
 ports/profile data with an installed Wren instance.
 

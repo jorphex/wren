@@ -83,10 +83,10 @@ CodeQL runs on pushes to `main` and through its weekly scheduled scan.
    `sha256sum --check SHA256SUMS` from the download directory.
 3. Inspect the GitHub artifact attestations and SBOM. Confirm artifact filenames
    and embedded application version match the draft tag and release notes.
-4. Install the deb as an upgrade over the previous fork release and launch the
-   AppImage separately. Verify startup, single-instance behavior, tray/dash
-   placement, local provider startup, update behavior, and preservation of a
-   backed-up test profile.
+4. Install the deb alongside the separately named Frame package and launch the
+   AppImage separately. Verify startup, single-instance and local-port conflict
+   behavior, tray/dash placement, local provider startup, update behavior, and
+   explicit profile import from a backed-up disposable Frame profile.
 5. Run the applicable manual signer regression with test-only accounts. Do not
    use valuable accounts merely to qualify a release. Record the complete paired
    browser, signer, package, and profile result using

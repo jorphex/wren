@@ -32,7 +32,7 @@ the paired `0.8.0` and `0.14.0` artifacts are published.
 
 | Component or platform                  | Current status                                                                |
 | -------------------------------------- | ----------------------------------------------------------------------------- |
-| Linux x64 AppImage and deb             | Current qualified release target                                              |
+| Linux x64 AppImage and deb             | Release candidate; Wren-branded qualification pending                         |
 | Trezor Safe 7 over USB                 | Physically tested for address verification, signing, broadcast, and reconnect |
 | Trezor Model One over USB              | Physically tested with documented typed-data and testnet limitations          |
 | Ledger and GridPlus Lattice1           | Implemented with automated coverage; not physically requalified for `0.8.0`   |
@@ -201,8 +201,10 @@ boundaries are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## IPFS Configuration
 
-Wren reads decentralized dapp and token content through a Kubo RPC endpoint.
-Set `FRAME_IPFS_API_URL` to use a different endpoint and set
+Wren downloads the embedded Send application from one source-reviewed,
+content-addressed CID through a Kubo RPC endpoint. It does not follow mutable
+ENS updates for that application, and token inventory comes from the bundled
+release snapshot. Set `FRAME_IPFS_API_URL` to use a different endpoint and set
 `NEBULA_AUTH_TOKEN` when it requires HTTP Basic authentication. The existing
 hosted endpoint remains the default.
 
@@ -214,7 +216,8 @@ Kubo RPC is an administrative interface. Keep a local endpoint bound to
 localhost, or place a remote endpoint behind TLS, authentication, and a
 restricted proxy. Do not expose it directly to the public internet. Archived
 dapp downloads are bounded and activated only after their complete UnixFS
-directory CID matches the ENS manifest.
+directory CID matches the locally pinned manifest. User-added decentralized
+applications may retain their explicitly requested resolution behavior.
 
 ## Security
 

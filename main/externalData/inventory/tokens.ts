@@ -1,13 +1,6 @@
-import log from 'electron-log'
-
-import ethProvider from 'eth-provider'
-
-import nebulaApi from '../../nebula'
 import defaultTokenList from './default-tokens.json'
 
 import type { Token } from '../../store/state'
-
-const TOKENS_ENS_DOMAIN = 'tokens.frame.eth'
 
 interface TokenSpec extends Token {
   extensions?: {
@@ -20,93 +13,18 @@ function isBlacklisted(token: TokenSpec) {
 }
 
 export default class TokenLoader {
-  private tokens: TokenSpec[] = defaultTokenList.tokens as TokenSpec[]
-  private nextLoad?: NodeJS.Timeout | null
+  private readonly tokens: TokenSpec[]
 
-  private readonly eth = ethProvider('frame', { origin: 'frame-internal', name: 'tokenLoader' })
-  private readonly nebula = nebulaApi(this.eth)
-
-  constructor() {
-    this.eth.setChain('0x1')
-  }
-
-  private async loadTokenList(timeout = 60_000) {
-    try {
-      const updatedTokens = await this.fetchTokenList(timeout)
-      log.info(`Fetched ${updatedTokens.length} tokens`)
-      this.tokens = updatedTokens
-      log.info(`Updated token list to contain ${this.tokens.length} tokens`)
-
-      this.nextLoad = setTimeout(() => this.loadTokenList(), 10 * 60_000)
-    } catch (e) {
-      log.warn('Could not fetch token list', e)
-      this.nextLoad = setTimeout(() => this.loadTokenList(), 30_000)
-    }
-  }
-
-  private async fetchTokenList(timeout: number) {
-    log.verbose(`Fetching tokens from ${TOKENS_ENS_DOMAIN}`)
-
-    let timeoutHandle: NodeJS.Timeout | undefined
-    const requestTimeout = new Promise<TokenSpec[]>((resolve, reject) => {
-      timeoutHandle = setTimeout(() => {
-        reject(`Timeout fetching token list from ${TOKENS_ENS_DOMAIN}`)
-      }, timeout)
-    })
-
-    const cancelTimeout = () => clearTimeout(timeoutHandle)
-
-    return Promise.race([requestTimeout, this.resolveTokens()]).finally(cancelTimeout)
-  }
-
-  private async resolveTokens() {
-    const tokenListRecord = await this.nebula.resolve(TOKENS_ENS_DOMAIN)
-    const tokenManifest: { tokens: TokenSpec[] } = await this.nebula.ipfs.getJson(
-      tokenListRecord.record.content
-    )
-
-    return tokenManifest.tokens
+  constructor(tokens: TokenSpec[] = defaultTokenList.tokens as TokenSpec[]) {
+    this.tokens = tokens
   }
 
   async start() {
-    log.verbose('Starting token loader')
-
-    return new Promise<void>((resolve) => {
-      const startLoading = async () => {
-        clearTimeout(connectTimeout)
-
-        // use a lower timeout for the first load
-        await this.loadTokenList(8000)
-
-        finishLoading()
-      }
-
-      const finishLoading = () => {
-        this.eth.off('connect', onConnect)
-        resolve()
-      }
-
-      const connectTimeout = setTimeout(() => {
-        log.warn('Token loader could not connect to provider, using default list')
-        finishLoading()
-      }, 5 * 1000)
-
-      const onConnect = startLoading.bind(this)
-
-      if (this.eth.connected) {
-        void startLoading()
-        return
-      }
-
-      this.eth.once('connect', onConnect)
-    })
+    return
   }
 
   stop() {
-    if (this.nextLoad) {
-      clearInterval(this.nextLoad)
-      this.nextLoad = null
-    }
+    return
   }
 
   getTokens(chains: number[]) {

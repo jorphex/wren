@@ -5,6 +5,10 @@ const baseConfig = require('./electron-builder-base.js')
 const config = {
   ...baseConfig,
   afterSign: './build/notarize.js',
+  appImage: {
+    // Wren requires Electron's renderer sandbox in production.
+    executableArgs: []
+  },
   linux: {
     category: 'Office;Finance',
     syncDesktopName: true,
