@@ -3,7 +3,7 @@ import EventEmitter from 'events'
 import {
   EIP6963_ANNOUNCE_EVENT,
   EIP6963_REQUEST_EVENT,
-  FRAME_PROVIDER_METADATA,
+  WREN_PROVIDER_METADATA,
   installEip6963Provider
 } from '../../../resources/provider/eip6963'
 import { installFrameProvider } from '../../../resources/provider/frame'
@@ -37,7 +37,7 @@ it('announces immutable final EIP-6963 metadata immediately', () => {
   expect(installation.detail).toEqual({
     info: {
       uuid: '4d2d8f2a-85fb-4d1d-aa0e-16490915ee09',
-      ...FRAME_PROVIDER_METADATA
+      ...WREN_PROVIDER_METADATA
     },
     provider
   })
@@ -45,7 +45,7 @@ it('announces immutable final EIP-6963 metadata immediately', () => {
   expect(Object.isFrozen(installation.detail.info)).toBe(true)
   expect(Object.isFrozen(provider)).toBe(false)
   expect(installation.detail.info.icon).toMatch(/^data:image\/svg\+xml;base64,/)
-  expect(installation.detail.info.rdns).toBe('io.github.jorphex.frame')
+  expect(installation.detail.info.rdns).toBe('io.github.jorphex.wren')
   expect(target.crypto.randomUUID).toHaveBeenCalledTimes(1)
 })
 

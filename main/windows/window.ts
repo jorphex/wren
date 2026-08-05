@@ -14,9 +14,9 @@ import store from '../store'
 import type { ChainId } from '../store/state'
 import { rendererRoleForWindow } from '../../resources/bridge/roles'
 import {
-  FRAME_COMPANION_RELEASES_URL,
-  FRAME_LICENSE_URL,
-  FRAME_SUPPORT_URL,
+  WREN_COMPANION_RELEASES_URL,
+  WREN_LICENSE_URL,
+  WREN_SUPPORT_URL,
   LEDGER_SHOP_URL,
   TREZOR_SHOP_URL
 } from '../../resources/constants'
@@ -134,15 +134,15 @@ export function createViewInstance(
 
 const externalWhitelist = [
   'https://yearn.fi',
-  FRAME_COMPANION_RELEASES_URL,
-  FRAME_LICENSE_URL,
-  FRAME_SUPPORT_URL,
+  WREN_COMPANION_RELEASES_URL,
+  WREN_LICENSE_URL,
+  WREN_SUPPORT_URL,
   LEDGER_SHOP_URL,
   TREZOR_SHOP_URL,
   'https://opensea.io'
 ]
 
-const isValidReleasePage = (url: string) => url.startsWith('https://github.com/jorphex/frame/releases/tag/')
+const isValidReleasePage = (url: string) => url.startsWith('https://github.com/jorphex/wren/releases/tag/')
 const isWhitelistedHost = (url: string) =>
   externalWhitelist.some((entry) => url === entry || url.startsWith(entry + '/'))
 

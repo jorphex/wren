@@ -1,9 +1,12 @@
 import { app, protocol, clipboard, powerMonitor } from 'electron'
 import path from 'path'
 import url from 'url'
+import { configureApplicationIdentity } from './applicationIdentity'
 
 // DO NOT MOVE - env var below is required for app init and must be set before all local imports
 process.env.BUNDLE_LOCATION = process.env.BUNDLE_LOCATION || path.resolve(__dirname, './../..', 'bundle')
+
+configureApplicationIdentity(app)
 
 import { purgeLegacyLogFiles } from './security/logSanitization'
 
@@ -63,7 +66,7 @@ if (process.env.LOG_LEVEL === 'debug') {
 const hasInstanceLock = app.requestSingleInstanceLock()
 
 if (!hasInstanceLock) {
-  log.info('another instance of Frame is running - exiting...')
+  log.info('another instance of Wren is running - exiting...')
   app.exit(1)
 }
 

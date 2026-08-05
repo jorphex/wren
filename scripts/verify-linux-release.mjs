@@ -14,7 +14,7 @@ const selectOne = (description, predicate) => {
 const expected = new Set([
   selectOne('AppImage', (entry) => entry.endsWith('.AppImage')),
   selectOne('amd64 deb', (entry) => entry.endsWith('_amd64.deb')),
-  selectOne('SBOM', (entry) => entry === 'frame.cdx.json')
+  selectOne('SBOM', (entry) => entry === 'wren.cdx.json')
 ])
 
 const lines = (await readFile(path.join(dist, 'SHA256SUMS'), 'utf8')).trim().split('\n')

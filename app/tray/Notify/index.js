@@ -8,7 +8,7 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 import { capitalize } from '../../../resources/utils'
 import frameIcon from '../../../asset/FrameIcon.png'
 import ExtensionConnectNotification from './ExtensionConnect'
-import { FRAME_LICENSE_URL, FRAME_SUPPORT_URL } from '../../../resources/constants'
+import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -27,7 +27,7 @@ export class Notify extends React.Component {
               Please read{' '}
               <span
                 onMouseDown={() => {
-                  link.send('tray:openExternal', FRAME_LICENSE_URL)
+                  link.send('tray:openExternal', WREN_LICENSE_URL)
                 }}
               >
                 our license
@@ -69,7 +69,7 @@ export class Notify extends React.Component {
                   <span
                     className='notifyBodyLink'
                     onMouseDown={() => {
-                      link.send('tray:openExternal', FRAME_LICENSE_URL)
+                      link.send('tray:openExternal', WREN_LICENSE_URL)
                     }}
                   >
                     our license
@@ -81,7 +81,7 @@ export class Notify extends React.Component {
                   <span
                     className='notifyBodyLink'
                     onMouseDown={() => {
-                      link.send('tray:openExternal', FRAME_SUPPORT_URL)
+                      link.send('tray:openExternal', WREN_SUPPORT_URL)
                     }}
                   >
                     community support

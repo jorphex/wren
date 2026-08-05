@@ -32,7 +32,7 @@ const Extension = ({ setTitle, setProceed }) => {
           <div
             style={{ padding: '10px', cursor: 'pointer' }}
             onClick={() =>
-              link.send('tray:openExternal', 'https://github.com/jorphex/frame-extension/releases')
+              link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
             }
           >
             {svg.chrome(48)}
@@ -40,7 +40,7 @@ const Extension = ({ setTitle, setProceed }) => {
           <div
             style={{ padding: '10px', cursor: 'pointer' }}
             onClick={() =>
-              link.send('tray:openExternal', 'https://github.com/jorphex/frame-extension/releases')
+              link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
             }
           >
             {svg.firefox(48)}

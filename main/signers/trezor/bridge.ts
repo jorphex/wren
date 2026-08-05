@@ -14,7 +14,7 @@ import TrezorConnect, {
   UI_EVENT
 } from '@trezor/connect'
 import { closeFrameNodeUsbTransports, FrameNodeUsbTransport } from './nodeUsbTransport'
-import { FRAME_REPOSITORY_URL } from '../../../resources/constants'
+import { WREN_REPOSITORY_URL } from '../../../resources/constants'
 
 export class DeviceError extends Error {
   readonly code
@@ -35,8 +35,8 @@ type DeviceReference = {
 
 const manifest = {
   email: 'jorphex@users.noreply.github.com',
-  appName: 'Frame',
-  appUrl: FRAME_REPOSITORY_URL
+  appName: 'Wren',
+  appUrl: WREN_REPOSITORY_URL
 }
 
 const config = {

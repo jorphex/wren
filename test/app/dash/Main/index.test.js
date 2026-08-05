@@ -2,9 +2,9 @@ import Restore from 'react-restore'
 
 import { Main } from '../../../../app/dash/Main'
 import {
-  FRAME_COMPANION_RELEASES_URL,
-  FRAME_LICENSE_URL,
-  FRAME_SUPPORT_URL
+  WREN_COMPANION_RELEASES_URL,
+  WREN_LICENSE_URL,
+  WREN_SUPPORT_URL
 } from '../../../../resources/constants'
 import link from '../../../../resources/link'
 import { fireEvent, render, screen } from '../../../componentSetup'
@@ -56,7 +56,7 @@ it.each(['Download Chrome companion', 'Download Firefox companion'])(
 
     fireEvent.click(screen.getByRole('button', { name: label }))
 
-    expect(link.send).toHaveBeenCalledWith('tray:openExternal', FRAME_COMPANION_RELEASES_URL)
+    expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_RELEASES_URL)
   }
 )
 
@@ -70,11 +70,11 @@ it('routes support, tutorial, quit, and license actions', () => {
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))
 
   expect(link.send.mock.calls).toEqual([
-    ['tray:openExternal', FRAME_SUPPORT_URL],
-    ['tray:openExternal', FRAME_SUPPORT_URL],
+    ['tray:openExternal', WREN_SUPPORT_URL],
+    ['tray:openExternal', WREN_SUPPORT_URL],
     ['tray:action', 'setOnboard', { showing: true }],
     ['tray:quit'],
-    ['tray:openExternal', FRAME_LICENSE_URL]
+    ['tray:openExternal', WREN_LICENSE_URL]
   ])
 })
 

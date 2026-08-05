@@ -1,6 +1,6 @@
 const config = {
-  appId: 'sh.frame.app',
-  productName: 'Frame',
+  appId: 'io.github.jorphex.wren',
+  productName: 'Wren',
   npmRebuild: false,
   files: ['compiled', 'bundle', '!compiled/main/dev']
 }

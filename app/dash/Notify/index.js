@@ -9,7 +9,7 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 import Confirm from '../../../resources/Components/Confirm'
 import AddToken from './AddToken'
 import frameIcon from '../../../asset/FrameIcon.png'
-import { FRAME_LICENSE_URL, FRAME_SUPPORT_URL } from '../../../resources/constants'
+import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)
@@ -41,7 +41,7 @@ class Notify extends React.Component {
                 <span
                   className='notifyBodyLink'
                   onMouseDown={() => {
-                    link.send('tray:openExternal', FRAME_LICENSE_URL)
+                    link.send('tray:openExternal', WREN_LICENSE_URL)
                   }}
                 >
                   our license
@@ -54,7 +54,7 @@ class Notify extends React.Component {
                   className='notifyBodyLink'
                   style={{ marginTop: '20px' }}
                   onMouseDown={() => {
-                    link.send('tray:openExternal', FRAME_SUPPORT_URL)
+                    link.send('tray:openExternal', WREN_SUPPORT_URL)
                   }}
                 >
                   Open GitHub issue

@@ -82,7 +82,7 @@ jobs:
           subject-path: |
             dist/*.AppImage
             dist/*_amd64.deb
-          sbom-path: dist/frame.cdx.json
+          sbom-path: dist/wren.cdx.json
       - name: Create or update draft release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -99,4 +99,4 @@ jobs:
             echo "Refusing to modify existing release $RELEASE_TAG; delete a failed draft or use a new version" >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/*.AppImage dist/*_amd64.deb dist/SHA256SUMS dist/frame.cdx.json --target "$GITHUB_SHA" --draft --title "$RELEASE_VERSION" --notes "Automated Linux draft build from $GITHUB_SHA."
+          gh release create "$RELEASE_TAG" dist/*.AppImage dist/*_amd64.deb dist/SHA256SUMS dist/wren.cdx.json --target "$GITHUB_SHA" --draft --title "$RELEASE_VERSION" --notes "Automated Linux draft build from $GITHUB_SHA."

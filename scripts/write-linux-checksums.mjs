@@ -14,7 +14,7 @@ const selectOne = (description, predicate) => {
 const artifacts = [
   selectOne('AppImage', (entry) => entry.endsWith('.AppImage')),
   selectOne('amd64 deb', (entry) => entry.endsWith('_amd64.deb')),
-  selectOne('SBOM', (entry) => entry === 'frame.cdx.json')
+  selectOne('SBOM', (entry) => entry === 'wren.cdx.json')
 ].sort()
 
 const lines = []

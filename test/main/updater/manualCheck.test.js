@@ -7,7 +7,7 @@ import packageInfo from '../../../package.json'
 // response for current release
 const githubReleasesResponse = [
   {
-    html_url: 'https://frame.sh/the-next-great-release',
+    html_url: 'https://github.com/jorphex/wren/releases/tag/current',
     prerelease: false,
     tag_name: packageInfo.version
   }
@@ -40,7 +40,7 @@ it('identifies that a newer version is not available', async () => {
 it('identifies that a newer version is available', async () => {
   const response = [
     {
-      html_url: 'https://frame.sh/cutting-edge-frame-release',
+      html_url: 'https://github.com/jorphex/wren/releases/tag/cutting-edge',
       prerelease: true,
       tag_name: `v${nextVersion}`
     },
@@ -52,13 +52,13 @@ it('identifies that a newer version is available', async () => {
   const res = await checkForUpdates({ prereleaseTrack: true })
 
   expect(res.version).toBe(`v${nextVersion}`)
-  expect(res.location).toBe('https://frame.sh/cutting-edge-frame-release')
+  expect(res.location).toBe('https://github.com/jorphex/wren/releases/tag/cutting-edge')
 })
 
 it('ignores a release on the prerelease track', () => {
   const response = [
     {
-      html_url: 'https://frame.sh/cutting-edge-frame-release',
+      html_url: 'https://github.com/jorphex/wren/releases/tag/cutting-edge',
       prerelease: true,
       tag_name: `v${nextVersion}`
     },
@@ -95,5 +95,5 @@ it('handles an error parsing the JSON response', async () => {
 })
 
 function mockApiResponse(status, body, headers = { 'content-type': 'application/json' }) {
-  nock('https://api.github.com').get('/repos/jorphex/frame/releases').reply(status, body, headers)
+  nock('https://api.github.com').get('/repos/jorphex/wren/releases').reply(status, body, headers)
 }

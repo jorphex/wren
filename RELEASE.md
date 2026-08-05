@@ -53,7 +53,7 @@ tray menu or summon shortcut instead.
    ```
 
 6. Inspect the final diff, dependency graph, test output, package names,
-   `dist/SHA256SUMS`, and `dist/frame.cdx.json`. The checksum manifest must cover
+   `dist/SHA256SUMS`, and `dist/wren.cdx.json`. The checksum manifest must cover
    both packages and the source-bound SBOM. Package verification must report the
    exact clean source identity embedded during compilation. Do not waive
    unexplained signing, migration, native-module, or packaging failures.

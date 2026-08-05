@@ -1,9 +1,9 @@
 {
-  "name": "frame",
+  "name": "wren",
   "version": "0.8.0",
-  "desktopName": "frame.desktop",
+  "desktopName": "wren.desktop",
   "packageManager": "npm@11.12.0",
-  "description": "System-wide web3",
+  "description": "Desktop EVM wallet and system-wide provider",
   "main": "compiled/main",
   "scripts": {
     "clean": "npx rimraf dist bundle compiled .parcel-cache node_modules",
@@ -48,8 +48,8 @@
     "build": "npm run compile && sleep 4 && npm run bundle && sleep 4 && electron-builder --config=build/electron-builder-standard.js --publish never",
     "package:linux:x64": "node scripts/prepare-linux-package.mjs && electron-builder --config=build/electron-builder-standard.js --linux AppImage deb --x64 --publish never",
     "package:verify:linux": "node scripts/verify-linux-package.mjs",
-    "sbom:linux": "node scripts/generate-sbom.mjs dist/frame.cdx.json",
-    "sbom:verify:linux": "node scripts/verify-sbom.mjs dist/frame.cdx.json",
+    "sbom:linux": "node scripts/generate-sbom.mjs dist/wren.cdx.json",
+    "sbom:verify:linux": "node scripts/verify-sbom.mjs dist/wren.cdx.json",
     "checksums:linux": "node scripts/write-linux-checksums.mjs",
     "release:verify:linux": "node scripts/verify-linux-release.mjs",
     "copy-assets": "shx mkdir -p ./compiled/main/windows ./compiled/main/yearn && shx cp ./main/windows/*.png ./compiled/main/windows && shx cp ./app/dash/Earn/assets/LICENSE.txt ./compiled/main/yearn/token-assets.LICENSE.txt && shx cp ./app/dash/Earn/assets/SOURCE.txt ./compiled/main/yearn/token-assets.SOURCE.txt",
@@ -69,11 +69,7 @@
     "verify:privacy": "node scripts/verify-no-upstream-telemetry.mjs && node scripts/verify-log-hygiene.mjs",
     "audit:release": "npm audit --audit-level=high"
   },
-  "author": {
-    "name": "Frame Labs",
-    "email": "jordan@frame.sh",
-    "url": "https://frame.sh"
-  },
+  "author": "Wren contributors",
   "license": "GPL-3.0",
   "dependencies": {
     "@ethereumjs/common": "3.2.0",
@@ -240,7 +236,7 @@
       "distDir": "./bundle"
     }
   },
-  "repository": "github:jorphex/frame",
+  "repository": "github:jorphex/wren",
   "overrides": {
     "@framelabs/logger": "1.1.1",
     "ws@>=7.0.0 <7.5.11": "7.5.11",

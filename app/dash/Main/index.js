@@ -3,11 +3,7 @@ import Restore from 'react-restore'
 import { okPort, okProtocol } from '../../../resources/connections'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
-import {
-  FRAME_COMPANION_RELEASES_URL,
-  FRAME_LICENSE_URL,
-  FRAME_SUPPORT_URL
-} from '../../../resources/constants'
+import { WREN_COMPANION_RELEASES_URL, WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
 export class Main extends React.Component {
   constructor(props, context) {
@@ -65,7 +61,7 @@ export class Main extends React.Component {
         <button
           type='button'
           className='appInfoViewLicense'
-          onClick={() => link.send('tray:openExternal', FRAME_LICENSE_URL)}
+          onClick={() => link.send('tray:openExternal', WREN_LICENSE_URL)}
         >
           View License
         </button>
@@ -308,7 +304,7 @@ export class Main extends React.Component {
                 type='button'
                 aria-label='Download Chrome companion'
                 className='snipItBrowserExtensionIcon snipItBrowserExtensionIconChrome'
-                onClick={() => link.send('tray:openExternal', FRAME_COMPANION_RELEASES_URL)}
+                onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
                 {svg.chrome(28)}
               </button>
@@ -316,7 +312,7 @@ export class Main extends React.Component {
                 type='button'
                 aria-label='Download Firefox companion'
                 className='snipItBrowserExtensionIcon snipItBrowserExtensionIconFirefox'
-                onClick={() => link.send('tray:openExternal', FRAME_COMPANION_RELEASES_URL)}
+                onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
                 {svg.firefox(28)}
               </button>
@@ -333,7 +329,7 @@ export class Main extends React.Component {
               type='button'
               className='requestFeatureButton'
               onClick={() => {
-                link.send('tray:openExternal', FRAME_SUPPORT_URL)
+                link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
               Request a Feature or Report an Issue
@@ -344,7 +340,7 @@ export class Main extends React.Component {
               type='button'
               className='requestFeatureButton'
               onClick={() => {
-                link.send('tray:openExternal', FRAME_SUPPORT_URL)
+                link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
               Get Community Support

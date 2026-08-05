@@ -64,7 +64,7 @@ const nativeModules = [
 
 await Promise.all(nativeModules.map((modulePath) => access(modulePath)))
 
-const packagedExecutable = path.join(dist, 'linux-unpacked', 'frame')
+const packagedExecutable = path.join(dist, 'linux-unpacked', 'wren')
 const packagedModuleProbe = `
 const { createRequire } = require('node:module')
 const fs = require('node:fs')
@@ -117,7 +117,7 @@ const signatureData = {
     ]
   },
   primaryType: 'Mail',
-  domain: { name: 'Frame', version: '1', chainId: 1, verifyingContract: signatureAddress },
+  domain: { name: 'Wren', version: '1', chainId: 1, verifyingContract: signatureAddress },
   message: { recipient: signatureAddress, contents: 'hello' }
 }
 const signature = sigUtil.signTypedData({
@@ -254,8 +254,8 @@ const runPackagedProbe = (description, executable) => {
 }
 
 const probeResult = runPackagedProbe('linux-unpacked', packagedExecutable)
-const appImageExtraction = await mkdtemp(path.join(tmpdir(), 'frame-appimage-'))
-const debExtraction = await mkdtemp(path.join(tmpdir(), 'frame-deb-'))
+const appImageExtraction = await mkdtemp(path.join(tmpdir(), 'wren-appimage-'))
+const debExtraction = await mkdtemp(path.join(tmpdir(), 'wren-deb-'))
 let appImageProbeResult
 let debProbeResult
 try {
@@ -269,8 +269,8 @@ try {
     timeout: 30_000
   })
 
-  appImageProbeResult = runPackagedProbe('AppImage', path.join(appImageExtraction, 'squashfs-root', 'frame'))
-  debProbeResult = runPackagedProbe('deb', path.join(debExtraction, 'opt', 'Frame', 'frame'))
+  appImageProbeResult = runPackagedProbe('AppImage', path.join(appImageExtraction, 'squashfs-root', 'wren'))
+  debProbeResult = runPackagedProbe('deb', path.join(debExtraction, 'opt', 'Wren', 'wren'))
 } finally {
   await Promise.all([
     rm(appImageExtraction, { recursive: true, force: true }),
@@ -299,7 +299,7 @@ assert.equal(builderPackage.version, packageJson.devDependencies['electron-build
 assert.equal(notarizePackage.version, packageJson.devDependencies['@electron/notarize'])
 assert.equal(typeof notarize, 'function')
 assert.equal(typeof notarizeHook, 'function')
-assert.deepEqual(builderConfig.win.signtoolOptions.publisherName, 'Frame Labs, Inc.')
+assert.equal(builderConfig.win.signtoolOptions, undefined)
 assert.equal(builderConfig.win.publisherName, undefined)
 assert.equal(builderConfig.linux.syncDesktopName, true)
 assert.equal(builderConfig.linux.category, 'Office;Finance')
@@ -314,8 +314,8 @@ assert.deepEqual(probeResult.workerEnvironment, {
   override: 'worker',
   runAsNode: '1'
 })
-assert.match(desktopEntry, /^Exec=\/opt\/Frame\/frame %U$/m)
-assert.match(desktopEntry, /^StartupWMClass=frame$/m)
+assert.match(desktopEntry, /^Exec=\/opt\/Wren\/wren %U$/m)
+assert.match(desktopEntry, /^StartupWMClass=wren$/m)
 assert.match(desktopEntry, /^Categories=Office;Finance;$/m)
 assert.doesNotMatch(desktopEntry, /^Categories=Utility;$/m)
 assert.deepEqual(probeResult.modules, ['node-hid', 'usb', 'usb via @trezor/transport'])
