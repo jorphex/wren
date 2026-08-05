@@ -16,3 +16,5 @@ test/.userData
 *.code-workspace
 /PLAN.md
 /NOTES.md
+/DESIGN.md
+/IMAGE_GEN.md
