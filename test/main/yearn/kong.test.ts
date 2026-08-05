@@ -103,7 +103,7 @@ describe('Yearn Kong catalog normalization', () => {
     })
     expect(errors).toContainEqual({
       chainId: 8453,
-      message: "USDC Horizon yVault token metadata does not match Frame's curated policy"
+      message: "USDC Horizon yVault token metadata does not match Wren's curated policy"
     })
   })
 

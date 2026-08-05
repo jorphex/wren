@@ -270,9 +270,8 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         if (controller.signal.aborted) return
 
         if (!trusted) {
-          let error = { message: `Permission denied, approve ${origin} in Frame to continue`, code: 4100 }
-          if (!accounts.getSelectedAddresses()[0])
-            error = { message: 'No Frame account selected', code: 4100 }
+          let error = { message: `Permission denied, approve ${origin} in Wren to continue`, code: 4100 }
+          if (!accounts.getSelectedAddresses()[0]) error = { message: 'No Wren account selected', code: 4100 }
           respond({ id: payload.id, jsonrpc: payload.jsonrpc, error })
         } else {
           if (payload.method === 'eth_pollSubscriptions') {

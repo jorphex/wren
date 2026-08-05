@@ -68,7 +68,7 @@ class Verify extends React.Component {
       <div ref={this.moduleRef} className='balancesBlock'>
         <div className='moduleHeader'>{'Verify Address'}</div>
         <div className='moduleMain'>
-          <div className='signerVerifyText'>Verify that the address displayed in Frame is correct</div>
+          <div className='signerVerifyText'>Verify that the address displayed in Wren is correct</div>
           {this.state.verifyAddressResponse ? (
             <div
               className={

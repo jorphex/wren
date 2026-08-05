@@ -18,7 +18,7 @@ const MoveToPylon = () => {
         </Item>
         <Item>
           <div>Pylon gives us greater control over the quality and </div>
-          <div>privacy of the default connections we offer in Frame.</div>
+          <div>privacy of the default connections we offer in Wren.</div>
         </Item>
         <Item>
           <div>To continue using Infura or Alchemy directly, please visit their</div>

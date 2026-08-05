@@ -85,7 +85,7 @@ export const TypedDataWarnings = ({ context }) => {
 
 export const getTypedDataDeviceWarning = (signer) =>
   signer?.signingCapabilities?.typedDataHashOnly
-    ? `${signer.model || 'This signer'} will display only the EIP-712 domain and message hashes. Verify every structured field in Frame before approving on-device.`
+    ? `${signer.model || 'This signer'} will display only the EIP-712 domain and message hashes. Verify every structured field in Wren before approving on-device.`
     : undefined
 
 export const TypedDataDeviceWarning = ({ warning }) =>

@@ -65,7 +65,7 @@ it('routes support, tutorial, quit, and license actions', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Request a Feature or Report an Issue' }))
   fireEvent.click(screen.getByRole('button', { name: 'Get Community Support' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Open Frame Tutorial' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))
 

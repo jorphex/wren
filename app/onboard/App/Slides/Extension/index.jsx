@@ -14,9 +14,9 @@ const Extension = ({ setTitle, setProceed }) => {
       <SlideBody>
         <SlideItem>
           <div>If you're using a dapp that doesn't natively</div>
-          <div>connect to Frame, you can inject a connection with</div>
+          <div>connect to Wren, you can inject a connection with</div>
           <div>
-            our <Tag>Frame Companion</Tag> browser extension.
+            the <Tag>Wren Companion</Tag> browser extension.
           </div>
         </SlideItem>
         <SlideItem>

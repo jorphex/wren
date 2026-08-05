@@ -252,9 +252,9 @@ export class RequestCommand extends React.Component {
   infoPane() {
     const { infoPane } = this.state
     const info = {
-      sign: 'When Frame is waiting for your signer to sign this transaction',
-      send: 'When Frame is broadcasting this transaction to your selected endpoint',
-      block: 'When Frame is waiting for this transaction to be included into a block'
+      sign: 'When Wren is waiting for your signer to sign this transaction',
+      send: 'When Wren is broadcasting this transaction to your selected endpoint',
+      block: 'When Wren is waiting for this transaction to be included into a block'
     }
     return <div className='infoPane'>{info[infoPane]}</div>
   }

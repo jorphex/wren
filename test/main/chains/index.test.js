@@ -244,7 +244,7 @@ describe('#send', () => {
     expect(res).toHaveBeenCalledWith({
       id: payload.id,
       jsonrpc: payload.jsonrpc,
-      error: { message: 'Frame is not connected to ethereum chain 999', code: 4901 }
+      error: { message: 'Wren is not connected to ethereum chain 999', code: 4901 }
     })
   })
 
@@ -257,7 +257,7 @@ describe('#send', () => {
     expect(res).toHaveBeenCalledWith({
       id: payload.id,
       jsonrpc: payload.jsonrpc,
-      error: { message: 'Frame is not connected to chain 137', code: 4901 }
+      error: { message: 'Wren is not connected to chain 137', code: 4901 }
     })
   })
 

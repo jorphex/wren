@@ -171,7 +171,7 @@ function prepareFilledTransaction(
 
   const transactionMaxFee = gasLimit * feePerGas
   if (transactionMaxFee > maxFee(transaction)) {
-    throw new Error('Wallet call maximum fee exceeds Frame hard limit')
+    throw new Error('Wallet call maximum fee exceeds Wren hard limit')
   }
 
   return Object.freeze({ transaction, maxFee: transactionMaxFee })
@@ -201,7 +201,7 @@ export async function prepareWalletCallBatch(
       const preparedCall = prepareFilledTransaction(filled, intent)
       aggregateMaxFee += preparedCall.maxFee
       if (aggregateMaxFee > maxFee(preparedCall.transaction)) {
-        throw new Error('Wallet call batch maximum fee exceeds Frame hard limit')
+        throw new Error('Wallet call batch maximum fee exceeds Wren hard limit')
       }
       prepared.push(preparedCall)
     }

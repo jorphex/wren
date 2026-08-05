@@ -1,34 +1,34 @@
 <p align="center">
-  <img src="asset/png/FrameLogo512.png" alt="Frame" width="150" />
+  <img src="asset/png/WrenLogo512.png" alt="Wren" width="150" />
 </p>
 
-<h1 align="center">Frame</h1>
+<h1 align="center">Wren</h1>
 
 <p align="center">
   A system-wide EVM wallet and signing firewall for browsers, native applications, and command-line tools.
 </p>
 
 <p align="center">
-  <a href="https://github.com/jorphex/frame/releases">Desktop releases</a> ·
-  <a href="https://github.com/jorphex/frame-extension/releases">Browser companion</a> ·
+  <a href="https://github.com/jorphex/wren/releases">Desktop releases</a> ·
+  <a href="https://github.com/jorphex/wren-companion/releases">Browser companion</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="SUPPORTED_EIPS.md">Standards</a> ·
   <a href="RPC_COMPATIBILITY.md">RPC compatibility</a>
 </p>
 
 > [!WARNING]
-> This is a community-maintained wallet preview with no independent security audit. The current release target is Linux x64. Back up your Frame profile, verify release checksums, and test with accounts that do not hold valuable assets before relying on a release. Use at your own risk.
+> Wren is preview wallet software with no independent security audit. The current release target is Linux x64. Back up your Wren profile, verify release checksums, and test with accounts that do not hold valuable assets before relying on a release. Use at your own risk.
 
-Frame runs as a desktop wallet and exposes one consistent approval and signing interface to the rest of the system. Dapps can connect through the paired browser companion or directly through Frame's local EIP-1193/JSON-RPC provider. Accounts and chains are routed independently, so applications do not have to share one global network selection.
+Wren runs as a desktop wallet and exposes one consistent approval and signing interface to the rest of the system. Dapps can connect through the paired browser companion or directly through Wren's local EIP-1193/JSON-RPC provider. Accounts and chains are routed independently, so applications do not have to share one global network selection.
 
 ## Current Release
 
-Frame `0.8.0` is the current Linux x64 AppImage and deb release candidate.
-Browser dapps require the separately packaged Frame Companion `0.13.1`
+Wren `0.8.0` is the current Linux x64 AppImage and deb release candidate.
+Browser dapps require the separately packaged Wren Companion `0.14.0`
 candidate. The last published versions remain available from the
-[desktop releases](https://github.com/jorphex/frame/releases) and
-[companion releases](https://github.com/jorphex/frame-extension/releases) until
-the paired `0.8.0` and `0.13.1` artifacts are published.
+[desktop releases](https://github.com/jorphex/wren/releases) and
+[companion releases](https://github.com/jorphex/wren-companion/releases) once
+the paired `0.8.0` and `0.14.0` artifacts are published.
 
 | Component or platform                  | Current status                                                                |
 | -------------------------------------- | ----------------------------------------------------------------------------- |
@@ -55,7 +55,7 @@ qualified Safe 7 USB flow.
 - **Software and watch accounts:** Seed, private-key, keystore, and watch-only
   accounts coexist behind clear signing boundaries.
 - **Local contacts:** Save, search, back up, and restore trusted EVM
-  destinations. Saved contacts and existing Frame account names appear beside
+  destinations. Saved contacts and existing Wren account names appear beside
   the full address during transfer and approval review without changing the
   signed payload; saved contacts take precedence.
 - **Origin permissions:** Account access and wallet-owned RPC methods are
@@ -72,7 +72,7 @@ qualified Safe 7 USB flow.
 - **Curated Yearn Earn:** Locally
   allowlisted Ethereum, Base, and Katana Yearn products with positions, direct
   and product-specific workflows, exact approvals, configured-RPC simulation,
-  ordinary Frame signer review, and hidden balance tracking for curated assets
+  ordinary Wren signer review, and hidden balance tracking for curated assets
   and vault shares. Packaged Base deposit, partial withdrawal, Max redeem, and
   physical Trezor signing have been exercised; other product paths retain the
   narrower evidence and limitations documented in [Yearn Earn](YEARN_EARN.md).
@@ -89,9 +89,9 @@ Standards](SUPPORTED_EIPS.md) and [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## Install
 
-After the candidate is published, download `Frame-0.8.0.AppImage` or
-`frame_0.8.0_amd64.deb` together with `SHA256SUMS` from the
-[`0.8.0` release](https://github.com/jorphex/frame/releases/tag/v0.8.0). Verify
+After the candidate is published, download `Wren-0.8.0.AppImage` or
+`wren_0.8.0_amd64.deb` together with `SHA256SUMS` from the
+[`0.8.0` release](https://github.com/jorphex/wren/releases/tag/v0.8.0). Verify
 the files from the download directory before running either package:
 
 ```bash
@@ -101,14 +101,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage without installing it:
 
 ```bash
-chmod +x Frame-0.8.0.AppImage
-./Frame-0.8.0.AppImage
+chmod +x Wren-0.8.0.AppImage
+./Wren-0.8.0.AppImage
 ```
 
 Or install the deb package:
 
 ```bash
-sudo apt install ./frame_0.8.0_amd64.deb
+sudo apt install ./wren_0.8.0_amd64.deb
 ```
 
 The Linux packages are currently unsigned. Verify their checksums and GitHub
@@ -116,14 +116,14 @@ artifact attestations against the published release before installation.
 
 ### Browser Companion
 
-The browser companion injects Frame's EIP-1193 provider and announces it using
+The browser companion injects Wren's EIP-1193 provider and announces it using
 EIP-6963. Once the candidate is published, download the Chrome or Firefox
 archive from the
-[`0.13.1` companion release](https://github.com/jorphex/frame-extension/releases/tag/v0.13.1),
+[`0.14.0` companion release](https://github.com/jorphex/wren-companion/releases/tag/v0.14.0),
 verify its checksum, extract it, and follow the
-[companion installation instructions](https://github.com/jorphex/frame-extension#install).
+[companion installation instructions](https://github.com/jorphex/wren-companion#install).
 
-The first connection displays a six-digit code in Frame and the extension.
+The first connection displays a six-digit code in Wren and the extension.
 Compare both codes before approving the pairing. Older store extensions do not
 implement the authenticated protocol used by this desktop release.
 
@@ -140,8 +140,8 @@ sudo apt-get install build-essential libudev-dev
 Then install the pinned toolchain and dependencies:
 
 ```bash
-git clone https://github.com/jorphex/frame.git
-cd frame
+git clone https://github.com/jorphex/wren.git
+cd wren
 nvm install
 nvm use
 npm install --global npm@11.12.0
@@ -166,7 +166,7 @@ not release qualification.
 
 ## Local Provider
 
-Frame listens only on the loopback interface:
+Wren listens only on the loopback interface:
 
 ```text
 http://127.0.0.1:1248
@@ -174,16 +174,20 @@ ws://127.0.0.1:1248
 ```
 
 Applications can send standard JSON-RPC requests to these endpoints and route
-an enabled EVM chain using Frame's documented request metadata. Wallet-owned
+an enabled EVM chain using Wren's documented request metadata. Wallet-owned
 methods, subscriptions, origin handling, limits, and known local-process trust
 boundaries are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## IPFS Configuration
 
-Frame reads decentralized dapp and token content through a Kubo RPC endpoint.
+Wren reads decentralized dapp and token content through a Kubo RPC endpoint.
 Set `FRAME_IPFS_API_URL` to use a different endpoint and set
 `NEBULA_AUTH_TOKEN` when it requires HTTP Basic authentication. The existing
 hosted endpoint remains the default.
+
+`FRAME_IPFS_API_URL` retains its historical name for configuration
+compatibility; a future migration can introduce a Wren alias without breaking
+existing deployments.
 
 Kubo RPC is an administrative interface. Keep a local endpoint bound to
 localhost, or place a remote endpoint behind TLS, authentication, and a
@@ -198,9 +202,9 @@ the private-reporting process in [Security Policy](SECURITY.md). The
 [Threat Model](THREAT_MODEL.md) documents local RPC, renderer, persistence,
 signer, network, and release boundaries.
 
-Published packages do not inherit support guarantees from the original Frame
-maintainers. Only the newest release in this repository is considered for
-community security fixes.
+Published Wren packages do not inherit support guarantees from the original
+Frame maintainers. Only the newest Wren release is considered for security
+fixes.
 
 ## Direction
 
@@ -229,6 +233,6 @@ This repository is a community-maintained continuation of the GPL-licensed
 Labs. It is not an official Frame Labs release and is not supported by the
 original maintainers.
 
-Frame is distributed under the [GNU General Public License v3.0](LICENSE).
+Wren is distributed under the [GNU General Public License v3.0](LICENSE).
 Modified versions and binaries must continue to satisfy the GPL's source,
 license, notice, and corresponding-source requirements.

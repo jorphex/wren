@@ -28,10 +28,10 @@ it('opens the dashboard from the keyboard', () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
 })
 
-it('opens Frame Send and closes the dashboard after the click delay', () => {
+it('opens Wren Send and closes the dashboard after the click delay', () => {
   renderMenu()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open Frame Send' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
   act(() => jest.advanceTimersByTime(50))
 
   expect(link.send.mock.calls).toEqual([
@@ -40,10 +40,10 @@ it('opens Frame Send and closes the dashboard after the click delay', () => {
   ])
 })
 
-it('cancels a pending Frame Send action when the menu unmounts', () => {
+it('cancels a pending Wren Send action when the menu unmounts', () => {
   const { unmount } = renderMenu()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open Frame Send' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
   unmount()
   act(() => jest.advanceTimersByTime(50))
 

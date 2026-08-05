@@ -18,7 +18,7 @@ const Chains = ({ setTitle, setProceed }) => {
           <div>Next, let's set up the chains you want to use.</div>
         </SlideItem>
         <SlideItem>
-          <div>Frame includes many popular chains out of the</div>
+          <div>Wren includes many popular chains out of the</div>
           <div>box -- to start using a chain just toggle it on!</div>
         </SlideItem>
         <SlideItem>

@@ -113,7 +113,7 @@ const findVariant = (vault: YearnVault, id: YearnWorkflowRequest['variant']) => 
 
 const findDefinition = (vaultId: string, chainId: number) => {
   const definition = YEARN_CATALOG.find(({ id, chainId: idChain }) => id === vaultId && idChain === chainId)
-  if (!definition) throw new Error("Vault is not in Frame's curated Yearn catalog")
+  if (!definition) throw new Error("Vault is not in Wren's curated Yearn catalog")
   return definition
 }
 
@@ -381,7 +381,7 @@ export function createYearnWorkflowService({
       vault.asset.decimals !== definition.asset.decimals ||
       vault.decimals !== definition.decimals
     ) {
-      throw new Error("Yearn metadata does not match Frame's curated policy")
+      throw new Error("Yearn metadata does not match Wren's curated policy")
     }
     const rootVariant = vault.variants.find(
       ({ address }) => checksum(address) === checksum(definition.address)
@@ -392,7 +392,7 @@ export function createYearnWorkflowService({
       checksum(rootVariant.asset.address) !== checksum(definition.asset.address) ||
       rootVariant.asset.decimals !== definition.asset.decimals
     ) {
-      throw new Error("Yearn vault metadata does not match Frame's curated policy")
+      throw new Error("Yearn vault metadata does not match Wren's curated policy")
     }
     const rootAsset = await readAsset(vault.chainId, vault.address)
     if (rootAsset !== checksum(definition.asset.address))
@@ -402,7 +402,7 @@ export function createYearnWorkflowService({
       readDecimals(vault.chainId, definition.address)
     ])
     if (assetDecimals !== definition.asset.decimals || vaultDecimals !== definition.decimals) {
-      throw new Error("On-chain decimals do not match Frame's curated Yearn policy")
+      throw new Error("On-chain decimals do not match Wren's curated Yearn policy")
     }
     if (variant.address.toLowerCase() === vault.address.toLowerCase()) return
     const companion = definition.companions?.find(({ id }) => id === variant.id)
@@ -413,14 +413,14 @@ export function createYearnWorkflowService({
       checksum(variant.asset.address) !== checksum(definition.address) ||
       variant.asset.decimals !== definition.decimals
     ) {
-      throw new Error("Yearn companion metadata does not match Frame's curated policy")
+      throw new Error("Yearn companion metadata does not match Wren's curated policy")
     }
     const companionAsset = await readAsset(vault.chainId, variant.address)
     if (companionAsset !== checksum(vault.address)) {
       throw new Error('Yearn companion vault does not match its allowlisted product')
     }
     if ((await readDecimals(vault.chainId, variant.address)) !== companion.decimals) {
-      throw new Error("Companion decimals do not match Frame's curated Yearn policy")
+      throw new Error("Companion decimals do not match Wren's curated Yearn policy")
     }
   }
 
@@ -572,7 +572,7 @@ export function createYearnWorkflowService({
 
     const catalog = await getCatalog()
     const vault = catalog.vaults.find(({ id }) => id === request.vaultId)
-    if (!vault) throw new Error("Vault is not in Frame's curated Yearn catalog")
+    if (!vault) throw new Error("Vault is not in Wren's curated Yearn catalog")
     const isExit = ['withdraw', 'start-cooldown', 'cancel-cooldown'].includes(request.action)
     if (!isExit && (catalog.status !== 'fresh' || vault.status !== 'available')) {
       throw new Error('Fresh eligible Yearn data is required before depositing')
@@ -768,7 +768,7 @@ export function createYearnWorkflowService({
     } else {
       const catalog = await getCatalog()
       vault = catalog.vaults.find(({ id }) => id === workflow.vaultId)
-      if (!vault) throw new Error("The workflow vault is no longer in Frame's curated catalog")
+      if (!vault) throw new Error("The workflow vault is no longer in Wren's curated catalog")
       const routeVariant = routeVariantFor(vault, workflow.action, workflow.variant)
       await assertProductRoute(vault, routeVariant)
       assertYearnWorkflowStep(workflow, current, vault)

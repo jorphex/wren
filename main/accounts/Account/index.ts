@@ -530,7 +530,7 @@ class FrameAccount {
       case 'failed':
         copy = {
           title: 'Execution Check Failed',
-          message: 'Frame could not determine whether this transaction will execute successfully.'
+          message: 'Wren could not determine whether this transaction will execute successfully.'
         }
         break
       case 'unavailable':
@@ -689,7 +689,7 @@ class FrameAccount {
     const subject = kind === 'message' ? 'message signing request' : 'typed-data signing request'
     this.syncManagedApproval(req, ApprovalType.SignatureRisk, {
       title: kind === 'message' ? 'Dangerous Message Signature' : 'Risky Typed Signature',
-      message: `Frame detected ${risks.length} high-risk condition${
+      message: `Wren detected ${risks.length} high-risk condition${
         risks.length === 1 ? '' : 's'
       } in this ${subject}. Review every displayed warning before proceeding.`,
       confirmLabel: 'Sign Anyway',

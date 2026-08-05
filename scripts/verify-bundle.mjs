@@ -8,6 +8,13 @@ const { findUnresolvedParcelImports } = bundleSymbols
 
 const root = fileURLToPath(new URL('../bundle', import.meta.url))
 const renderers = ['tray', 'dash', 'dapp', 'onboard', 'notify']
+const deprecatedIdentityPhrases = [
+  'Frame Companion',
+  'Frame Community Preview',
+  'Open Frame Tutorial',
+  'Welcome to Frame',
+  'use Frame at your own risk'
+]
 
 if (!existsSync(root)) throw new Error('bundle directory does not exist')
 
@@ -55,9 +62,15 @@ for (const renderer of renderers) {
   }
 
   for (const asset of expectedJavaScript) {
-    const unresolvedImports = findUnresolvedParcelImports(readFileSync(join(root, asset), 'utf8'))
+    const javascript = readFileSync(join(root, asset), 'utf8')
+    const unresolvedImports = findUnresolvedParcelImports(javascript)
     if (unresolvedImports.length > 0) {
       throw new Error(`${renderer} contains unresolved Parcel imports: ${unresolvedImports.join(', ')}`)
+    }
+    for (const phrase of deprecatedIdentityPhrases) {
+      if (javascript.includes(phrase)) {
+        throw new Error(`${renderer} contains deprecated product identity: ${phrase}`)
+      }
     }
   }
 

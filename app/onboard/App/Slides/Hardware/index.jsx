@@ -5,14 +5,14 @@ import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const Extension = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Harware Signers')
+    setTitle('Hardware Signers')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
   return (
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>Frame supports many hardware signers including</div>
+          <div>Wren supports many hardware signers including</div>
           <div>Ledger, GridPlus, Trezor and more on the way!</div>
         </SlideItem>
         <SlideItem>

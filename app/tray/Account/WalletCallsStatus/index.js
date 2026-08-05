@@ -1,5 +1,5 @@
 const presentations = {
-  100: { label: 'Pending', detail: 'Frame is waiting for the batch to finish.', className: 'pending' },
+  100: { label: 'Pending', detail: 'Wren is waiting for the batch to finish.', className: 'pending' },
   200: { label: 'Confirmed', detail: 'Every call completed successfully.', className: 'success' },
   400: {
     label: 'Failed',

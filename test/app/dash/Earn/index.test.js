@@ -231,7 +231,7 @@ const makePositions = (readOnly = false) => ({
   account: { address, name: 'Treasury', readOnly },
   chains: [
     { chainId: 1, status: 'ready', positions: [position] },
-    { chainId: 8453, status: 'disabled', reason: 'Enable this chain in Frame', positions: [] },
+    { chainId: 8453, status: 'disabled', reason: 'Enable this chain in Wren', positions: [] },
     { chainId: 747474, status: 'ready', positions: [] }
   ]
 })

@@ -237,7 +237,7 @@ it.each([
   expect(deps.ledger.fail).not.toHaveBeenCalled()
 })
 
-it('reapplies Frame hard fee limits before invoking the signer', async () => {
+it('reapplies Wren hard fee limits before invoking the signer', async () => {
   const source = singleCallInput('0x2')
   const excessiveFee = 2n * 10n ** 18n + 1n
   source.preparation.calls[0].transaction.gasLimit = '0x1'

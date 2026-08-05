@@ -308,7 +308,7 @@ export class Provider extends EventEmitter {
     const chain = store('main.networks.ethereum', targetChain.id)
     if (!chain?.on) {
       return resError(
-        { message: `Frame is not connected to chain ${targetChain.id}`, code: 4901 },
+        { message: `Wren is not connected to chain ${targetChain.id}`, code: 4901 },
         payload,
         res
       )
@@ -321,7 +321,7 @@ export class Provider extends EventEmitter {
     const chain = store('main.networks.ethereum', targetChain.id)
     if (!chain?.on) {
       return resError(
-        { message: `Frame is not connected to chain ${targetChain.id}`, code: 4901 },
+        { message: `Wren is not connected to chain ${targetChain.id}`, code: 4901 },
         payload,
         res
       )
@@ -343,7 +343,7 @@ export class Provider extends EventEmitter {
     getSignedAddress(signed, message, (err, verifiedAddress) => {
       if (err) return cb(err)
       if ((verifiedAddress || '').toLowerCase() !== address.toLowerCase())
-        return cb(new Error('Frame verifySignature: Failed ecRecover check'))
+        return cb(new Error('Wren verifySignature: Failed ecRecover check'))
       cb(null, true)
     })
   }
@@ -1235,7 +1235,7 @@ export class Provider extends EventEmitter {
   }
 
   clientVersion(payload: RPCRequestPayload, res: RPCSuccessCallback) {
-    res({ id: payload.id, jsonrpc: '2.0', result: `Frame/v${packageFile.version}` })
+    res({ id: payload.id, jsonrpc: '2.0', result: `Wren/v${packageFile.version}` })
   }
 
   private switchEthereumChain(payload: RPCRequestPayload, res: RPCRequestCallback) {
@@ -1249,7 +1249,7 @@ export class Provider extends EventEmitter {
         return resError(err, payload, res)
       }
       if (targetChain.on === false) {
-        const err: EVMError = { message: `Frame is not connected to chain ${chainId}`, code: 4901 }
+        const err: EVMError = { message: `Wren is not connected to chain ${chainId}`, code: 4901 }
         return resError(err, payload, res)
       }
 
@@ -1435,7 +1435,7 @@ export class Provider extends EventEmitter {
 
       if (!chain?.on || !connection?.chainConfig) {
         return resError(
-          { code: 4901, message: `Frame is not connected to chain ${request.chainId}` },
+          { code: 4901, message: `Wren is not connected to chain ${request.chainId}` },
           payload,
           cb
         )
@@ -1687,7 +1687,7 @@ export class Provider extends EventEmitter {
     if (method === 'eth_chainId') return this.getChainId(payload, res, targetChain)
 
     if (isUnsafeRpcForwardingMethod(method)) {
-      return resError({ message: `Frame does not support ${method}`, code: 4200 }, payload, res)
+      return resError({ message: `Wren does not support ${method}`, code: 4200 }, payload, res)
     }
 
     // remove custom data

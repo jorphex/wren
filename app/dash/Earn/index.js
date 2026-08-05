@@ -295,7 +295,7 @@ const routeNeedsApproval = (action, variant) =>
 
 const actionDescription = (vault, form) => {
   if (form.action === 'deposit') {
-    return `Deposit only ${vault.asset.symbol}; Frame will not swap or bridge assets.`
+    return `Deposit only ${vault.asset.symbol}; Wren will not swap or bridge assets.`
   }
   if (form.action === 'stake') return 'Stake existing yBOLD and receive ysyBOLD.'
   if (form.action === 'start-cooldown') {
@@ -667,9 +667,9 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
       ) : null}
       <div className='earnActionSafety'>
         {needsApproval
-          ? 'This route may need a token approval. Frame requests only the exact amount.'
+          ? 'This route may need a token approval. Wren requests only the exact amount.'
           : 'This action does not request a token approval.'}{' '}
-        Every transaction opens Frame&apos;s normal simulation and signer review.
+        Every transaction opens Wren&apos;s normal simulation and signer review.
         {form.action === 'withdraw' ? ' Withdrawal loss tolerance is fixed at 0%.' : ''}
       </div>
       <button

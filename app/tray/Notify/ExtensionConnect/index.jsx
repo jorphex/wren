@@ -85,9 +85,9 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
                 <ClusterValue>
                   <NotifyMain>
                     <div style={{ paddingBottom: '24px' }}>
-                      {`A new ${browserName} extension is attempting to connect as "Frame Companion"`}{' '}
+                      {`A new ${browserName} extension is attempting to connect as "Wren Companion"`}{' '}
                     </div>
-                    <div>{`Verify this code matches the code in the Frame Companion popup.`}</div>
+                    <div>{`Verify this code matches the code in the Wren Companion popup.`}</div>
                     <PairingCode>{pairingCode}</PairingCode>
                   </NotifyMain>
                 </ClusterValue>

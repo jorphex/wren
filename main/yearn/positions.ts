@@ -229,13 +229,13 @@ export function createYearnPositionsService({
         }
         const network = getNetworkStatus(chainId)
         if (!network?.on) {
-          return { chainId, status: 'disabled' as const, reason: 'Enable this chain in Frame', positions: [] }
+          return { chainId, status: 'disabled' as const, reason: 'Enable this chain in Wren', positions: [] }
         }
         if (!network.connected) {
           return {
             chainId,
             status: 'disconnected' as const,
-            reason: 'Frame is not connected to this chain',
+            reason: 'Wren is not connected to this chain',
             positions: []
           }
         }

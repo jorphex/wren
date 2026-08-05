@@ -218,7 +218,7 @@ export function snapshotPreparedWalletCallExecutionInput(
       throw new Error('Prepared wallet call transaction does not match request')
     }
     if (reportedFee > maxFee(transaction)) {
-      throw new Error('Prepared wallet call transaction fee exceeds Frame hard limit')
+      throw new Error('Prepared wallet call transaction fee exceeds Wren hard limit')
     }
 
     if (firstNonce === undefined) firstNonce = nonce
@@ -227,7 +227,7 @@ export function snapshotPreparedWalletCallExecutionInput(
     }
     aggregateFee += reportedFee
     if (aggregateFee > maxFee(transaction)) {
-      throw new Error('Prepared wallet call batch fee exceeds Frame hard limit')
+      throw new Error('Prepared wallet call batch fee exceeds Wren hard limit')
     }
     return Object.freeze({ transaction, maxFee: toRpcQuantity(reportedFee) })
   })

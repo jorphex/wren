@@ -37,7 +37,7 @@ function mockJsonResponse(body, init = {}) {
 }
 
 describe('chain request parsing', () => {
-  it('parses canonical chain IDs within Frame safe storage range', () => {
+  it('parses canonical chain IDs within Wren safe storage range', () => {
     expect(parseChainId('0x1')).toBe(1)
     expect(parseChainId('0xAA')).toBe(170)
     expect(parseChainId(`0x${Number.MAX_SAFE_INTEGER.toString(16)}`)).toBe(Number.MAX_SAFE_INTEGER)
@@ -47,7 +47,7 @@ describe('chain request parsing', () => {
     expect(() => parseChainId(id)).toThrow()
   })
 
-  it('rejects chain IDs that Frame cannot store safely', () => {
+  it('rejects chain IDs that Wren cannot store safely', () => {
     expect(() => parseChainId('0x20000000000000')).toThrow(/safely supported/)
   })
 

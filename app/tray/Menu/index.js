@@ -57,7 +57,7 @@ export class Menu extends React.Component {
         <div
           className={'panelMenuItem panelMenuItemSend'}
           role='button'
-          aria-label='Open Frame Send'
+          aria-label='Open Wren Send'
           tabIndex='0'
           onKeyDown={activateOnKeyboard}
           onClick={() => {

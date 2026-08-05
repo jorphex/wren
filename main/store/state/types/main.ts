@@ -23,13 +23,13 @@ const UpdaterPreferencesSchema = z.object({
 
 // these are individual keys on the main state object
 const PreferencesSchema = {
-  launch: z.boolean().default(false).describe('Launch Frame on system start'),
-  reveal: z.boolean().default(false).describe('Show Frame when user glides mouse to edge of screen'),
-  autohide: z.boolean().default(false).describe('Automatically hide Frame when it loses focus'),
+  launch: z.boolean().default(false).describe('Launch Wren on system start'),
+  reveal: z.boolean().default(false).describe('Show Wren when user glides mouse to edge of screen'),
+  autohide: z.boolean().default(false).describe('Automatically hide Wren when it loses focus'),
   accountCloseLock: z
     .boolean()
     .default(false)
-    .describe("Lock an account when it's closed instead of when Frame restarts"),
+    .describe("Lock an account when it's closed instead of when Wren restarts"),
   showLocalNameWithENS: z.boolean(),
   menubarGasPrice: z.boolean().default(false).describe('Show gas price in menu bar'),
   hardwareDerivation: z.string()

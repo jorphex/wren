@@ -794,7 +794,7 @@ describe('#send', () => {
     expect(response).toHaveBeenCalledWith({
       id: 19,
       jsonrpc: '2.0',
-      error: { message: `Frame does not support ${method}`, code: 4200 }
+      error: { message: `Wren does not support ${method}`, code: 4200 }
     })
     expect(connection.send).not.toHaveBeenCalled()
   })
@@ -817,7 +817,7 @@ describe('#send', () => {
     expect(response).toHaveBeenCalledWith({
       id: 20,
       jsonrpc: '2.0',
-      error: { message: 'Frame does not support personal_sendTransaction', code: 4200 }
+      error: { message: 'Wren does not support personal_sendTransaction', code: 4200 }
     })
     expect(connection.send).not.toHaveBeenCalled()
   })
@@ -883,7 +883,7 @@ describe('#send', () => {
       store.set('main.networks.ethereum', 5, { id: 5, on: false })
 
       send({ method: 'eth_chainId', chainId: '0x5' }, (response) => {
-        expect(response.error).toEqual({ message: 'Frame is not connected to chain 5', code: 4901 })
+        expect(response.error).toEqual({ message: 'Wren is not connected to chain 5', code: 4901 })
         expect(response.result).toBeUndefined()
       })
     })
@@ -907,7 +907,7 @@ describe('#send', () => {
       expect(response).toHaveBeenCalledTimes(1)
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: { message: 'Frame is not connected to chain 5', code: 4901 }
+          error: { message: 'Wren is not connected to chain 5', code: 4901 }
         })
       )
     })
@@ -1178,7 +1178,7 @@ describe('#send', () => {
       store.set('main.networks.ethereum', 5, { id: 5, on: false })
 
       send({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x5' }] }, (response) => {
-        expect(response.error).toEqual({ code: 4901, message: 'Frame is not connected to chain 5' })
+        expect(response.error).toEqual({ code: 4901, message: 'Wren is not connected to chain 5' })
         expect(accountRequests).toHaveLength(0)
         done()
       })
@@ -3330,7 +3330,7 @@ describe('#send', () => {
         const params = [address, 'test']
 
         send({ method, params }, (err) => {
-          expect(err.error).toEqual({ message: `Frame does not support ${method}`, code: 4200 })
+          expect(err.error).toEqual({ message: `Wren does not support ${method}`, code: 4200 })
           expect(connection.send).not.toHaveBeenCalled()
           done()
         })

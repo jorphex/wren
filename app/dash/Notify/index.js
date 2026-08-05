@@ -8,7 +8,7 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 
 import Confirm from '../../../resources/Components/Confirm'
 import AddToken from './AddToken'
-import frameIcon from '../../../asset/FrameIcon.png'
+import wrenIcon from '../../../asset/WrenIcon.png'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
 const FEE_WARNING_THRESHOLD_USD = 50
@@ -20,13 +20,13 @@ class Notify extends React.Component {
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBoxSlide'>
           <div className='notifyBox'>
-            <div className='notifyFrameIcon'>
-              <img src={frameIcon} />
+            <div className='notifyWrenIcon'>
+              <img src={wrenIcon} />
             </div>
-            <div className='notifyTitle'>Frame Community Preview</div>
+            <div className='notifyTitle'>Wren Preview</div>
             <div className='notifyBody'>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
-                This community-maintained release is independent from the original Frame maintainers.
+                Wren is independently maintained and derived from the original Frame project.
               </div>
               <div className='notifyBodyBlock'>
                 Back up your profile, verify release checksums, and test with accounts that do not hold
@@ -46,7 +46,7 @@ class Notify extends React.Component {
                 >
                   our license
                 </span>
-                <span>and use Frame at your own risk</span>
+                <span>and use Wren at your own risk</span>
               </div>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
                 <div>Report problems through community support.</div>
@@ -326,7 +326,7 @@ class Notify extends React.Component {
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Frame hot signers are in alpha! Do not use them with high value accounts and verify your backups
+              Wren hot signers are in alpha! Do not use them with high value accounts and verify your backups
               are valid. Only proceed if you understand and accept these risks.
             </div>
           </div>
@@ -362,7 +362,7 @@ class Notify extends React.Component {
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              The unlocked hot signer did not match the address shown in Frame and has been relocked.
+              The unlocked hot signer did not match the address shown in Wren and has been relocked.
             </div>
           </div>
           <div className='notifyInput'>
@@ -420,7 +420,7 @@ class Notify extends React.Component {
           <div className='notifyTitle'>Open Block Explorer</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Frame will open a block explorer in your browser for transaction:
+              Wren will open a block explorer in your browser for transaction:
             </div>
             <div className='notifyBodyHash'>{hash}</div>
           </div>

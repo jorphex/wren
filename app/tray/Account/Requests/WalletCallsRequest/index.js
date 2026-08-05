@@ -134,7 +134,7 @@ export class WalletCallsRequest extends React.Component {
                 <div className='walletCallsWarningTitle'>Delegated account batch blocked</div>
                 <div>
                   Your configured RPC reports that {delegation.account} delegates execution to{' '}
-                  {delegation.delegate}. Frame does not submit wallet-call batches from delegated accounts.
+                  {delegation.delegate}. Wren does not submit wallet-call batches from delegated accounts.
                 </div>
               </div>
             )}

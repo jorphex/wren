@@ -97,7 +97,7 @@ describe('confirm', () => {
     store.removeAddressBookEntry(recipient)
   })
 
-  it('recognizes an existing Frame account without hiding the recipient address', () => {
+  it('recognizes an existing Wren account without hiding the recipient address', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
     store.updateAccount({ id: recipient, name: 'Frame Savings' })
 
@@ -112,7 +112,7 @@ describe('confirm', () => {
     )
 
     expect(screen.getByText('Frame Savings')).toBeTruthy()
-    expect(screen.getByText('Frame account')).toBeTruthy()
+    expect(screen.getByText('Wren account')).toBeTruthy()
     expect(screen.getAllByText(recipient)).toHaveLength(2)
     store.removeAccount(recipient)
   })

@@ -15,7 +15,7 @@ const Chains = ({ setTitle, setProceed }) => {
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>With Frame, you can easily manage multiple</div>
+          <div>With Wren, you can easily manage multiple</div>
           <div>accounts and signers in a single location.</div>
         </SlideItem>
         <SlideItem>

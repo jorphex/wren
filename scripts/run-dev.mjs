@@ -34,11 +34,11 @@ async function launchDevServer() {
   return { shutdown: () => server.unsubscribe() }
 }
 
-function launchFrame({ shutdown }) {
+function launchWren({ shutdown }) {
   const npmProcess = spawn('npm', ['run', 'launch:dev'], { stdio: 'inherit', shell: isWindows })
 
   npmProcess.once('exit', () => {
-    console.log('Frame exited')
+    console.log('Wren exited')
     shutdown()
   })
 }
@@ -46,7 +46,7 @@ function launchFrame({ shutdown }) {
 async function run() {
   const [, server] = await Promise.all([prepareEnvironment(), launchDevServer()])
 
-  launchFrame(server)
+  launchWren(server)
 }
 
 run()

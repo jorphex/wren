@@ -156,7 +156,7 @@ it('makes legacy eth_sign and malformed SIWE warnings explicit', () => {
 
   render(<SignatureRequest req={req} />)
 
-  expect(screen.getByText('eth_sign (EIP-191-prefixed by Frame)')).toBeTruthy()
+  expect(screen.getByText('eth_sign (EIP-191-prefixed by Wren)')).toBeTruthy()
   expect(screen.getAllByRole('alert')[0].textContent).toMatch(/Dangerous legacy eth_sign/)
   expect(screen.getAllByRole('alert')[1].textContent).toMatch(/does not conform to ERC-4361/)
 })

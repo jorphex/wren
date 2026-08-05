@@ -212,9 +212,9 @@ export function resError(errorData: string | Error | EVMError, request: RPCId, r
 
 export function getSignedAddress(signed: string, message: string, cb: Callback<string>) {
   const signature = Buffer.from((signed || '').replace('0x', ''), 'hex')
-  if (signature.length !== 65) return cb(new Error('Frame verifySignature: Signature has incorrect length'))
+  if (signature.length !== 65) return cb(new Error('Wren verifySignature: Signature has incorrect length'))
   let v = signature[64]
-  if (v === undefined) return cb(new Error('Frame verifySignature: Signature recovery byte is missing'))
+  if (v === undefined) return cb(new Error('Wren verifySignature: Signature recovery byte is missing'))
   v = v === 0 || v === 1 ? v + 27 : v
   const r = toBuffer(signature.slice(0, 32))
   const s = toBuffer(signature.slice(32, 64))

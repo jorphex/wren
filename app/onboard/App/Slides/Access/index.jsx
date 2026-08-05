@@ -35,7 +35,7 @@ const Access = ({ setTitle, setProceed, platform }) => {
       setTitle(`Let's get started...`)
       setProceed({ action: 'skip', text: 'skip this step' })
     } else if (!trayOpen) {
-      setTitle('Summon Frame')
+      setTitle('Summon Wren')
       setProceed({ action: 'skip', text: 'skip this step' })
     } else {
       setTitle('Auto-hide')
@@ -49,24 +49,24 @@ const Access = ({ setTitle, setProceed, platform }) => {
         <SlideBody key={1}>
           <SlideItem>
             <div>You can quickly summon and dismiss</div>
-            <div>Frame using the keyboard shortcut.</div>
+            <div>Wren using the keyboard shortcut.</div>
           </SlideItem>
           <SlideItem>
-            <span>{'Dismiss Frame now using '}</span>
+            <span>{'Dismiss Wren now using '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
           </SlideItem>
         </SlideBody>
       ) : !trayOpen ? (
         <SlideBody key={2}>
           <SlideItem>
-            <span>{'You can summon Frame the same way '}</span>
+            <span>{'You can summon Wren the same way '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
           </SlideItem>
         </SlideBody>
       ) : (
         <SlideBody key={3}>
           <SlideItem>
-            <div>You can also set Frame to automatically hide</div>
+            <div>You can also set Wren to automatically hide</div>
             <div>when not in use, so it's out of the way</div>
             <div>but still easily accessible when you need it.</div>
           </SlideItem>

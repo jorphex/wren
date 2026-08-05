@@ -96,7 +96,7 @@ function populate(rawTx: TransactionData, chainConfig: Common, gas: Gas): Transa
 
     const useFrameGasPrice = !rawTx.gasPrice || isNaN(parseInt(rawTx.gasPrice, 16))
     if (useFrameGasPrice) {
-      // no valid dapp-supplied value for gasPrice so we use the Frame-supplied value
+      // No valid dapp-supplied gasPrice, so use the wallet-supplied value.
       const gasPrice = BigNumber(gas.price.levels.fast as string).toString(16)
       txData.gasPrice = addHexPrefix(gasPrice)
       txData.gasFeesSource = GasFeesSource.Frame
@@ -113,7 +113,7 @@ function populate(rawTx: TransactionData, chainConfig: Common, gas: Gas): Transa
     !rawTx.maxPriorityFeePerGas || isNaN(parseInt(rawTx.maxPriorityFeePerGas, 16))
 
   if (!useFrameMaxFeePerGas && !useFrameMaxPriorityFeePerGas) {
-    // return tx unaltered when we are using no Frame-supplied values
+    // Return the transaction unchanged when no wallet-supplied values are used.
     return txData
   }
 
@@ -132,7 +132,7 @@ function populate(rawTx: TransactionData, chainConfig: Common, gas: Gas): Transa
     txData.maxFeePerGas = calculateMaxFeePerGas(gas.price.fees.maxBaseFeePerGas, maxPriorityFee)
   }
 
-  // if no valid dapp-supplied value for maxPriorityFeePerGas we use the Frame-supplied value
+  // Use the wallet-supplied priority fee when the dapp did not provide a valid value.
   if (useFrameMaxPriorityFeePerGas) {
     txData.maxPriorityFeePerGas = addHexPrefix(BigNumber(maxPriorityFee).toString(16))
   }

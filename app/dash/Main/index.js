@@ -298,7 +298,7 @@ export class Main extends React.Component {
             </button>
           </div>
           <div className='snipIt'>
-            <div>Using a dapp that doesn&apos;t support Frame natively?</div>
+            <div>Using a dapp that doesn&apos;t support Wren natively?</div>
             <div className='snipItBrowserExtensionIcons'>
               <button
                 type='button'
@@ -354,7 +354,7 @@ export class Main extends React.Component {
                 link.send('tray:action', 'setOnboard', { showing: true })
               }}
             >
-              Open Frame Tutorial
+              Open Wren Tutorial
             </button>
           </div>
           <div className='requestFeature'>

@@ -19,7 +19,7 @@ interface LocalAddressBookEntry {
 
 export interface LocalAddressIdentity {
   label: string
-  source: 'Saved contact' | 'Frame account'
+  source: 'Saved contact' | 'Wren account'
 }
 
 const parseAddress = (address: unknown) => {
@@ -114,5 +114,5 @@ export function resolveLocalAddressIdentity(
   if (typeof name !== 'string' || !normalizeAddressBookText(name) || hasAddressBookControlCharacters(name)) {
     return
   }
-  return { label: normalizeAddressBookText(name), source: 'Frame account' }
+  return { label: normalizeAddressBookText(name), source: 'Wren account' }
 }

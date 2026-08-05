@@ -140,7 +140,7 @@ export function parseSendCalls(params: unknown): SendCallsRequest {
   assertBoundedId(request.id)
 
   if (request.calls.length > MAX_WALLET_CALLS) {
-    throw walletCallsError(5740, `Bundle too large: Frame supports at most ${MAX_WALLET_CALLS} calls`)
+    throw walletCallsError(5740, `Bundle too large: Wren supports at most ${MAX_WALLET_CALLS} calls`)
   }
   if (BigInt(request.chainId) === 0n || BigInt(request.chainId) > MAX_SAFE_CHAIN_ID) {
     throw walletCallsError(5710, `Unsupported chain id: ${request.chainId}`)

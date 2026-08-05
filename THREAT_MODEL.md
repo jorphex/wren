@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Frame is a desktop EVM wallet and account router. It accepts requests from local
-HTTP/WebSocket clients and the Frame browser extension, presents approvals, and
+Wren is a desktop EVM wallet and account router. It accepts requests from local
+HTTP/WebSocket clients and Wren Companion, presents approvals, and
 routes approved signing operations to software or hardware signers.
 
 This document describes the current implementation. It is not an audit or a
@@ -13,10 +13,10 @@ The current standards and wallet-method surface are documented in
 [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
 
-Frame rejects unhandled wallet/signing methods, the `admin_*`, `engine_*`, and
+Wren rejects unhandled wallet/signing methods, the `admin_*`, `engine_*`, and
 `miner_*` namespaces, and unreviewed `debug_*` methods instead of forwarding
 them to the configured RPC. This prevents those node-account and administrative
-method families from becoming a path around Frame's review boundary; ordinary
+method families from becoming a path around Wren's review boundary; ordinary
 execution reads, reviewed debug queries, and explicitly signed raw transaction
 broadcast remain available.
 
@@ -37,7 +37,7 @@ network metadata and should be handled as sensitive support data.
 
 ### Host And Local Clients
 
-Frame binds HTTP and WebSocket JSON-RPC to `127.0.0.1:1248`. Loopback prevents
+Wren binds HTTP and WebSocket JSON-RPC to `127.0.0.1:1248`. Loopback prevents
 direct remote connections but does not authenticate another process running as
 the same user. HTTP permits any CORS origin, and native clients can choose their
 `Origin` header. Origin labels and permission prompts reduce accidental access;
@@ -63,23 +63,23 @@ WebSocket subscription count and buffered delivery are also bounded. These
 controls prevent cross-client cancellation and unbounded inactive poll queues,
 but a poll token and asserted origin are still not process authentication.
 
-The separately distributed Frame Companion uses protocol version 2. Browser
+The separately distributed Wren Companion uses protocol version 2. Browser
 scheme/ID and connection-role metadata select the handshake path but are not the
 credential. A bounded nonce challenge binds browser identity, installation UUID,
 P-256 public-key fingerprint, challenge ID, and expiry into a signed proof. The
 first control session requires the user to compare and approve the same six-digit
-code in Frame and Companion; Frame then stores the public credential. Known page
+code in Wren and Companion; Wren then stores the public credential. Known page
 sessions may reuse that credential but cannot create a pairing prompt. Rotation
-replaces and disconnects the prior key for that browser installation, and Frame
+replaces and disconnects the prior key for that browser installation, and Wren
 settings can revoke a credential explicitly.
 
-This authenticates Companion to Frame so Frame can trust the dapp origins that
-the browser extension derives from browser APIs. It does not authenticate Frame
+This authenticates Companion to Wren so Wren can trust the dapp origins that
+the browser extension derives from browser APIs. It does not authenticate Wren
 or the localhost endpoint back to Companion, establish native process identity,
 or protect against compromise of the browser profile or host account. A same-user
 process that owns or intercepts port 1248 remains in the trusted computing base.
 
-The operating system account is therefore a major trust boundary. Frame is not
+The operating system account is therefore a major trust boundary. Wren is not
 expected to protect wallet data from malware, debuggers, or an administrator that
 can read the user's files or process memory.
 
@@ -94,7 +94,7 @@ signer is unlocked.
 
 Legacy AES-256-CBC signer payloads remain decryptable. After a successful unlock,
 the worker validates that the decrypted seed or keys derive the signer's stored
-addresses before returning a new authenticated envelope. Frame retains the first
+addresses before returning a new authenticated envelope. Wren retains the first
 legacy signer JSON as a mode-`0600` `.legacy-v1.bak` recovery copy, then atomically
 replaces the active JSON. Recovery copies are ignored by signer scanning and are
 removed with the signer.
@@ -126,19 +126,19 @@ wallet data, and recoverable without silently weakening encryption.
 
 ### Hardware Signers
 
-Private keys are expected to remain on the hardware device. Frame still controls
+Private keys are expected to remain on the hardware device. Wren still controls
 the request shown to the device and depends on vendor libraries, firmware, USB
 drivers, and the user comparing device output with the intended action. Blind or
 incomplete device displays remain a risk.
 
-Frame does not protect against compromised device firmware, malicious vendor
+Wren does not protect against compromised device firmware, malicious vendor
 software, physical coercion, or a user approving unexpected data. Support claims
 require physical-device testing and are listed in
 [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md).
 
 ### Renderer And IPC
 
-Frame windows currently enable context isolation and renderer sandboxing, disable
+Wren windows currently enable context isolation and renderer sandboxing, disable
 Node integration and webviews, and deny navigation and popup creation. Production
 renderers use Content Security Policy. A preload bridge and main-process IPC still
 form a privileged boundary: exposed methods and payloads must be treated as
@@ -148,7 +148,7 @@ Production startup rejects Chromium's `--no-sandbox` switch. AppImage hosts must
 support unprivileged user namespaces rather than falling back to an unsandboxed
 renderer process. Browser permission checks and requests, display capture,
 Bluetooth pairing, device permissions, and HID/USB/serial/Bluetooth selectors are
-denied for every Frame renderer and embedded dapp.
+denied for every Wren renderer and embedded dapp.
 
 The current preload bridge accepts only bounded serialized envelopes from its own
 window, an expected packaged/development origin, and the expected protocol source
@@ -200,22 +200,22 @@ explorers bypass that fixed host list by design, but the final OS-launch sink
 accepts only credential-free HTTP(S) URLs; file, script, custom-protocol, and
 credential-bearing values are rejected.
 
-Frame recognizes the exact EIP-7702 delegation indicator returned by
+Wren recognizes the exact EIP-7702 delegation indicator returned by
 `eth_getCode`, requires an additional approval for ordinary transactions from a
 reported delegated account, and blocks sequential wallet-call batches from one.
 Externally supplied type-4 transactions and authorization lists are rejected;
-Frame does not create or sign EIP-7702 authorizations. Delegation state can
+Wren does not create or sign EIP-7702 authorizations. Delegation state can
 change after review, and a faulty or malicious RPC can omit or falsify it.
 
 Externally supplied transaction envelopes are restricted to fields and types
-Frame explicitly supports. Access lists have bounded entry and storage-key
+Wren explicitly supports. Access lists have bounded entry and storage-key
 counts, require exact address/key widths, retain order and duplicates, and are
 shown in full during review. Signer adapters must preserve those exact bytes;
 unsupported hardware transaction types fail instead of being silently converted.
 
 The Earn module has two separate Yearn trust boundaries. A
 versioned local `(chainId, vaultAddress)` catalog is the only promotion boundary;
-Kong metadata cannot add a vault or transaction target. Frame locally pins asset
+Kong metadata cannot add a vault or transaction target. Wren locally pins asset
 addresses and decimal scales; Kong supplies display names, estimated APY, TVL,
 fees, risk metadata, and eligibility signals. A fresh eligible response is
 required for a new deposit. Cached or failed metadata can preserve visibility
@@ -237,16 +237,16 @@ Earn transactions are restricted to the allowlisted vault, companion, and
 first-party periphery contracts documented in [`YEARN_EARN.md`](YEARN_EARN.md).
 The main process rebuilds calldata, verifies on-chain asset relationships and
 decimal scales, and
-re-recognizes each persisted step before queueing it through Frame's ordinary
+re-recognizes each persisted step before queueing it through Wren's ordinary
 transaction path. Renderer-provided targets, token metadata, calldata, and action
 labels are not trusted. Approvals are exact and a mismatched existing allowance
 is reset before replacement. Product contracts and strategies can still contain
-bugs, governance risk, economic loss, or malicious upgrades; Frame does not audit
+bugs, governance risk, economic loss, or malicious upgrades; Wren does not audit
 or guarantee their safety or yield.
 
 This fork does not initialize or ship a hosted crash-telemetry client. Uncaught
 main-process errors are written to the local Electron log and may display a local
-dialog, but Frame does not transmit crash events, instance identifiers, network
+dialog, but Wren does not transmit crash events, instance identifiers, network
 configuration, or token metadata to the upstream project's Sentry service.
 
 ### Builds And Updates

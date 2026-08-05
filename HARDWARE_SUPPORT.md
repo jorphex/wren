@@ -22,7 +22,7 @@ upgrade automated or implemented evidence to physical qualification.
 | Trezor Safe 7                      | USB through Trezor Connect    | Physical address, message, EIP-712, transaction, broadcast, rejection, and reconnect on Linux x64; automated bridge coverage | Workable, use at your own risk              |
 | Trezor Model One                   | USB through Trezor Connect    | Physical address, message, hash-only EIP-712, rejection, and reconnect on firmware 1.13.1                                    | Qualified with limitations on Linux x64     |
 | Other Trezor models                | USB through Trezor Connect    | Shared implementation and automated bridge coverage                                                                          | Implemented, not physically requalified     |
-| Trezor Safe 7 Bluetooth            | Bluetooth                     | No Frame transport                                                                                                           | Unsupported                                 |
+| Trezor Safe 7 Bluetooth            | Bluetooth                     | No Wren transport                                                                                                            | Unsupported                                 |
 | Ledger                             | USB HID                       | Automated adapter/device coverage                                                                                            | Implemented, not physically requalified     |
 | GridPlus Lattice1                  | Vendor SDK/network            | Automated adapter/device coverage                                                                                            | Implemented, not physically requalified     |
 | Software seed/private key/keystore | Local encrypted signer worker | Live packaged import, unlock, signing, restart, and removal runs plus automated signer coverage                              | Qualified on Linux x64; legacy limits apply |
@@ -41,16 +41,16 @@ covered by automated bridge tests.
 
 Trezor Suite is not required for the verified Safe 7 USB flow. Running another
 application that owns the device transport may cause contention. Bluetooth
-communication through Trezor Suite is not exposed to Frame as a supported signer
+communication through Trezor Suite is not exposed to Wren as a supported signer
 transport.
 
 Model One displays EIP-712 domain and message hashes rather than the structured
-fields. Frame warns about this before typed-data and permit approval, so users
-must verify every structured field in Frame before comparing the hashes on the
+fields. Wren warns about this before typed-data and permit approval, so users
+must verify every structured field in Wren before comparing the hashes on the
 device. Strict Trezor safety checks also reject a transaction when the selected
 account's derivation coin type does not match the signed network definition. For
-example, Base Sepolia declares coin type 1 while Frame's standard Ethereum path
-uses coin type 60. Frame leaves the device setting unchanged and reports the
+example, Base Sepolia declares coin type 1 while Wren's standard Ethereum path
+uses coin type 60. Wren leaves the device setting unchanged and reports the
 request as unsigned. Use a network-matching account, or choose Prompt safety
 checks in Trezor Suite only if you understand the mismatched coin-key risk.
 
@@ -58,20 +58,20 @@ checks in Trezor Suite only if you understand the mismatched coin-key risk.
 
 Use a test-only account and a test network with no valuable assets.
 
-1. Start from a packaged Linux x64 artifact and ensure no second Frame process is
+1. Start from a packaged Linux x64 artifact and ensure no second Wren process is
    running.
 2. Connect a Safe 7 over USB with current stable firmware. Record the firmware,
    Trezor Connect package version, OS, kernel, and artifact checksum.
-3. Confirm Frame detects the device and pairing-code entry completes. Reconnect
+3. Confirm Wren detects the device and pairing-code entry completes. Reconnect
    once and confirm the signer recovers without a reload loop.
 4. Derive an expected Ethereum address and use on-device address verification.
    Compare the full device address with an independently recorded test address.
 5. Sign a personal message and EIP-712 test fixture when supported. Verify each
    signature independently without using a production dapp.
 6. On a test network, review and sign a zero-value self-transfer. Confirm chain,
-   address, value, calldata, and fees on both Frame and the device before
+   address, value, calldata, and fees on both Wren and the device before
    broadcasting.
-7. Lock, disconnect, reconnect, and quit Frame. Confirm no request remains stuck
+7. Lock, disconnect, reconnect, and quit Wren. Confirm no request remains stuck
    and no plaintext secret appears in logs.
 
 Any mismatch, blind-signing requirement, unexplained reload, or device-call loop
@@ -88,16 +88,16 @@ EIP-1559 transaction signing, rejection/cancellation, disconnect/reconnect, and
 application shutdown.
 
 Automated tests must not broadcast, access a physical device by default, or share
-ports/profile data with an installed Frame instance.
+ports/profile data with an installed Wren instance.
 
 ## EIP-2930 Access Lists
 
-Frame validates and displays the complete ordered access list before signing.
+Wren validates and displays the complete ordered access list before signing.
 Software, Ledger, and Lattice transaction paths preserve that list in the typed
 transaction payload. Trezor Connect accepts access lists through its EIP-1559
-type-2 signing path, which Frame covers with deterministic adapter tests.
+type-2 signing path, which Wren covers with deterministic adapter tests.
 
 Trezor Connect does not expose an EIP-2930 type-1 signing request in the installed
-API, so Frame rejects type-1 transactions for Trezor instead of converting them
+API, so Wren rejects type-1 transactions for Trezor instead of converting them
 or signing different bytes. These access-list paths have not received new
 physical-device qualification in this fork.

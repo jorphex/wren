@@ -177,7 +177,7 @@ it('fails closed when transaction filling requires another approval', async () =
   )
 })
 
-it('enforces per-transaction and aggregate Frame fee limits', async () => {
+it('enforces per-transaction and aggregate Wren fee limits', async () => {
   const overLimit = toRpcQuantity(2n * 10n ** 18n + 1n)
   const perTransaction = dependencies(async (intent) =>
     filled(intent, {
@@ -189,7 +189,7 @@ it('enforces per-transaction and aggregate Frame fee limits', async () => {
     })
   )
   await expect(prepareWalletCallBatch(input({ calls: [input().calls[0]] }), perTransaction)).rejects.toThrow(
-    /maximum fee exceeds Frame hard limit/
+    /maximum fee exceeds Wren hard limit/
   )
 
   const eachFee = 11n * 10n ** 17n
@@ -203,7 +203,7 @@ it('enforces per-transaction and aggregate Frame fee limits', async () => {
     })
   )
   await expect(prepareWalletCallBatch(input(), aggregate)).rejects.toThrow(
-    /batch maximum fee exceeds Frame hard limit/
+    /batch maximum fee exceeds Wren hard limit/
   )
 })
 

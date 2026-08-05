@@ -11,7 +11,7 @@ const Outro = ({ setTitle, setProceed }) => {
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>Frame is here to help you</div>
+          <div>Wren is here to help you</div>
           <div>push the boundaries of web3.</div>
         </SlideItem>
         <SlideItem>

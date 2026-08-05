@@ -30,12 +30,12 @@ test('normalizes addresses and bounded contact text', () => {
   expect(lookupAddressBookEntry(addressBook, alice)).toEqual(entry)
 })
 
-test('resolves saved contacts before existing Frame account names', () => {
+test('resolves saved contacts before existing Wren account names', () => {
   const accounts = { [alice]: { name: 'Frame Savings' } }
 
   expect(resolveLocalAddressIdentity({}, accounts, alice)).toEqual({
     label: 'Frame Savings',
-    source: 'Frame account'
+    source: 'Wren account'
   })
 
   const addressBook = saveAddressBookEntry(

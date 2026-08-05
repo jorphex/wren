@@ -141,7 +141,7 @@ export class Settings extends Component {
             </div>
             <div className='signerPermissionDetails'>
               <KeyboardShortcutConfigurator
-                actionText='summon Frame'
+                actionText='summon Wren'
                 shortcut={summonShortcut}
                 shortcutName='summon'
                 platform={platform}
@@ -163,7 +163,7 @@ export class Settings extends Component {
               </div>
             </div>
             <div className='signerPermissionDetails'>
-              <span>Hide Frame on loss of focus</span>
+              <span>Hide Wren on loss of focus</span>
             </div>
           </div>
           <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
@@ -180,7 +180,7 @@ export class Settings extends Component {
                 <div className='signerPermissionToggleSwitch' />
               </div>
             </div>
-            <div className='signerPermissionDetails'>Run Frame when your computer starts</div>
+            <div className='signerPermissionDetails'>Run Wren when your computer starts</div>
           </div>
           <div className='signerPermission localSetting' style={{ zIndex: 211 }}>
             <div className='signerPermissionControls'>
@@ -196,7 +196,7 @@ export class Settings extends Component {
                 <div className='signerPermissionToggleSwitch' />
               </div>
             </div>
-            <div className='signerPermissionDetails'>{"Mouse to display's right edge to summon Frame"}</div>
+            <div className='signerPermissionDetails'>{"Mouse to display's right edge to summon Wren"}</div>
           </div>
 
           {this.store('platform') === 'darwin' ? (
@@ -252,7 +252,7 @@ export class Settings extends Component {
               />
             </div>
             <div className='signerPermissionDetails'>
-              <span>Set Frame&apos;s visual theme</span>
+              <span>Set Wren&apos;s visual theme</span>
             </div>
           </div>
 
@@ -379,7 +379,7 @@ export class Settings extends Component {
                 ]}
               />
             </div>
-            <div className='signerPermissionDetails'>When should Frame relock your hot signers?</div>
+            <div className='signerPermissionDetails'>When should Wren relock your hot signers?</div>
           </div>
           {companionCredentials.map((credential, index) => {
             const confirm = this.state.revokeCompanionConfirm === credential.fingerprint

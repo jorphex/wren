@@ -1,6 +1,6 @@
 # Linux Release Qualification
 
-This procedure is the minimum manual gate for a paired Frame desktop and Frame
+This procedure is the minimum manual gate for a paired Wren desktop and Wren
 Companion release candidate. It supplements automated tests; it is not a
 security audit. Use disposable accounts and an approved testnet only: Ethereum
 Sepolia (`0xaa36a7`) or Base Sepolia (`0x14a34`). Never paste a seed, private
@@ -47,10 +47,10 @@ and checksums.
 
 ## Safety Setup
 
-1. Back up the current Frame profile while Frame is closed. Keep the backup
+1. Back up the current Wren profile while Wren is closed. Keep the backup
    offline from this test and verify that it is readable before proceeding.
-2. Close every Frame process. Trezor Suite is not required; close it and any
-   other hardware-wallet application so only Frame owns the USB transport.
+2. Close every Wren process. Trezor Suite is not required; close it and any
+   other hardware-wallet application so only Wren owns the USB transport.
 3. Use newly generated disposable software accounts and hardware-wallet test
    accounts with no valuable assets. Fund only enough approved-testnet ETH for
    the test.
@@ -66,16 +66,16 @@ and checksums.
    ```bash
    profile=$(mktemp -d)
    chmod 700 "$profile"
-   ./Frame-<version>.AppImage --user-data-dir="$profile"
+   ./Wren-<version>.AppImage --user-data-dir="$profile"
    ```
 
 2. Confirm startup, tray/dashboard placement, settings persistence after a
-   restart, and clean shutdown. On X11, enable Glide, dismiss Frame, and confirm
+   restart, and clean shutdown. On X11, enable Glide, dismiss Wren, and confirm
    touching the right edge reveals it without focusing or leaving an edge window
    behind. Confirm no unexpected update prompt appears.
 3. Confirm launching a second candidate exits without corrupting state or
    taking over ports `1248` or `8421`.
-4. With Frame closed, copy a backed-up prior-fork profile to a separate temporary
+4. With Wren closed, copy a backed-up compatible profile to a separate temporary
    directory and launch the AppImage against that copy. Do not unlock a valuable
    signer. Confirm accounts, account names, custom chains/RPCs, permissions,
    tokens, and settings survive migration and a second restart without changing
@@ -101,16 +101,16 @@ npm run qualify:serve
 
 Open `http://127.0.0.1:8765/` in each browser. The page is local, stores nothing,
 and makes no network request of its own. It must discover an EIP-6963 provider
-named Frame with RDNS `sh.frame`. `window.ethereum` may remain owned by another
-installed provider; Frame must still be discoverable through EIP-6963.
+named Wren with RDNS `io.github.jorphex.wren`. `window.ethereum` may remain owned
+by another installed provider; Wren must still be discoverable through EIP-6963.
 
 For **both Chrome and Firefox**:
 
-1. Compare the same six-digit initial pairing code in Frame and Companion, then
-   approve it in Frame. A page session must not create a separate pairing prompt.
+1. Compare the same six-digit initial pairing code in Wren and Companion, then
+   approve it in Wren. A page session must not create a separate pairing prompt.
 2. Reject one account connection, then approve one. Confirm only the selected
    disposable account is returned.
-3. Change the selected account and approved testnet in Frame. Confirm every
+3. Change the selected account and approved testnet in Wren. Confirm every
    connected tab for that origin logs the corresponding `accountsChanged` and
    `chainChanged` events once.
 4. Open the page in two tabs. Submit a request in one tab and confirm its RPC
@@ -119,9 +119,9 @@ For **both Chrome and Firefox**:
    tabs.
 5. Close/reopen the tab and restart the browser. Confirm the known companion
    reconnects without another pairing approval.
-6. Revoke the browser credential in Frame and confirm requests stop. Pair again,
+6. Revoke the browser credential in Wren and confirm requests stop. Pair again,
    then reset Companion and confirm the prior credential no longer works.
-7. Confirm malformed/rejected requests leave no permanent spinner, stale Frame
+7. Confirm malformed/rejected requests leave no permanent spinner, stale Wren
    approval, or reconnect loop.
 
 ## Signer Matrix
@@ -150,7 +150,7 @@ and removal using only disposable secrets. Confirm no plaintext seed, private
 key, password, message, typed data, transaction payload, or pairing response is
 present in production logs.
 
-The transaction action is disabled unless Frame reports Ethereum Sepolia chain
+The transaction action is disabled unless Wren reports Ethereum Sepolia chain
 `0xaa36a7` or Base Sepolia chain `0x14a34` and the disposable-account
 confirmation is checked. Confirm the returned hash on the matching explorer
 without placing the full hash in a public qualification report.
@@ -187,7 +187,7 @@ valuable account or position. Record transaction hashes privately.
    one yvUSD/yBOLD product share. Confirm positions precede opportunities and all
    transaction controls remain disabled.
 3. Disable and disconnect each chain in turn. Confirm only that chain reports the
-   failure and that Frame opens chain settings instead of silently switching it.
+   failure and that Wren opens chain settings instead of silently switching it.
 4. Make Kong unavailable after a successful refresh. Confirm timestamped cached
    data remains visible, deposits are disabled, existing exits remain available,
    and missing APY is never rendered as `0%`.
@@ -200,7 +200,7 @@ valuable account or position. Record transaction hashes privately.
 Use minimum practical amounts and withdraw each test deposit after its required
 state transition. Before approving, compare chain, account, target, underlying,
 amount/share semantics, exact approval, receiver/owner, zero native value, and
-simulation result in Frame. Compare all information the hardware can display.
+simulation result in Wren. Compare all information the hardware can display.
 
 | Account             | Required flow                                                                                                                    |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -213,10 +213,10 @@ For one software-account deposit, first create a different nonzero allowance to
 the exact allowed spender. Confirm Earn queues reset-to-zero, exact approval, and
 deposit as three separately reviewed transactions. Reject each stage once and
 verify retry does not duplicate a submitted hash. After confirming an approval,
-quit Frame before the operation, restart, and test both Resume and the separate
+quit Wren before the operation, restart, and test both Resume and the separate
 Revoke approval cleanup path.
 
-Separately terminate Frame after a request reaches review but before a hash is
+Separately terminate Wren after a request reaches review but before a hash is
 recorded. On restart, confirm the workflow reports an unknown outcome, cannot be
 resumed, and does not enqueue another transaction. Check the account and recent
 transactions independently before starting a replacement flow.
@@ -229,12 +229,12 @@ Qualify locked yvUSD as a staged test because its timing cannot be compressed:
 
 1. Deposit minimum USDC through the pinned zap and confirm the completed position
    is the locked variant.
-2. Start cooldown for an exact amount, restart Frame, and confirm persisted state
+2. Start cooldown for an exact amount, restart Wren, and confirm persisted state
    and contract-derived end/window timestamps.
 3. During cooldown, confirm Withdraw is disabled and Cancel is available. Cancel
    one disposable cooldown and verify the shares return to the liquid locked
    position, then start it again.
-4. During the real withdrawal window, perform a partial USDC exit. Confirm Frame
+4. During the real withdrawal window, perform a partial USDC exit. Confirm Wren
    separately reviews locked-to-yvUSD and yvUSD-to-USDC calls and does not use the
    deprecated zap-out route.
 5. Repeat with Max and confirm both calls use share-exact `redeem`, all intended
@@ -248,7 +248,7 @@ change Yearn loss tolerance.
 
 ### Receipts, Privacy, And Completion
 
-1. For every flow, confirm each transaction appears in Frame's ordinary review,
+1. For every flow, confirm each transaction appears in Wren's ordinary review,
    simulation, signer, broadcast, and monitor UI and links to the matching chain
    explorer after confirmation. Compare receipt-derived sent/received amounts
    with independently decoded allowlisted Transfer logs; absent evidence must not
@@ -258,8 +258,8 @@ change Yearn loss tolerance.
    token, method, or yBOLD loss tolerance in a controlled fixture. Confirm an
    independently changed amount remains recognized but displays the decoded
    amount, while changing a persisted workflow step amount prevents queueing.
-3. Hide Frame before one confirmation. Confirm the native notification contains
-   only Frame's generic shortened hash and no account, balance, asset amount, or
+3. Hide Wren before one confirmation. Confirm the native notification contains
+   only Wren's generic shortened hash and no account, balance, asset amount, or
    vault position.
 4. Restart after each completed product flow. Confirm positions refresh, terminal
    workflows remain bounded, no request is duplicated, and no approval exceeds
@@ -273,12 +273,12 @@ change Yearn loss tolerance.
 
 After every signer run:
 
-1. Relock the signer, disconnect the device when applicable, and quit Frame.
+1. Relock the signer, disconnect the device when applicable, and quit Wren.
 2. Confirm no request remains pending after restart.
 3. Search the isolated profile and captured logs for the exact disposable key,
    phrase, passwords, signing messages, typed-data statement, pairing code, and
    custom RPC credentials without printing those values.
-4. Remove disposable accounts and software signers through Frame, confirm signer
+4. Remove disposable accounts and software signers through Wren, confirm signer
    files are gone, and delete isolated test profiles.
 5. Treat retained public address metadata as non-secret operational data; it is
    not evidence that secret scanning passed.
@@ -297,7 +297,7 @@ Report only versions, checksums, pass/fail status, sanitized error text, and
 reproduction steps. Keep account addresses, transaction hashes, signatures,
 device identifiers, profile contents, and all secrets private.
 
-## Frame 0.8.0 Linux x64 Execution Record
+## Pre-Separation Frame 0.8.0 Linux x64 Execution Record
 
 This record summarizes the completed `0.8.0` manual run without publishing
 accounts, device identifiers, transaction hashes, signatures, or secrets. The

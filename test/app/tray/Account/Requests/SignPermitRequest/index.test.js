@@ -89,7 +89,7 @@ it('shows a live local label without hiding the permit spender address', () => {
   expect(screen.getAllByText(spender)).not.toHaveLength(0)
 })
 
-it('recognizes a Frame account as the permit spender', () => {
+it('recognizes a Wren account as the permit spender', () => {
   const spender = req.permit.spender.address
   render(
     <SignPermitRequest
@@ -101,7 +101,7 @@ it('recognizes a Frame account as the permit spender', () => {
   )
 
   expect(screen.getByText('Frame Deployer')).toBeTruthy()
-  expect(screen.getByText('Frame account')).toBeTruthy()
+  expect(screen.getByText('Wren account')).toBeTruthy()
   expect(screen.getAllByText(spender)).not.toHaveLength(0)
 })
 

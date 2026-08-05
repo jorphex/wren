@@ -122,7 +122,7 @@ export const SimulationNativeBalanceChanges = ({ simulation }) => {
       <div className='txViewDataHeader'>RPC-Reported Native Balance Changes</div>
       <div className='simulationEffectsNotice' role='note'>
         {unavailable
-          ? `Frame could not derive native balance changes. ${evidence.reason || ''}`.trim()
+          ? `Wren could not derive native balance changes. ${evidence.reason || ''}`.trim()
           : 'Derived from a prestateTracer diff returned by your configured RPC. Amounts are Wei, may omit gas fees, and are not independently verified.'}
       </div>
       {!unavailable &&
@@ -168,7 +168,7 @@ export const SimulationProxyImplementationChanges = ({ simulation }) => {
       <div className='txViewData'>
         <div className='txViewDataHeader'>ERC-1967 Implementation Slot Check</div>
         <div className='simulationEffectsNotice' role='note'>
-          {`Frame could not derive net ERC-1967 implementation-slot changes from the configured RPC. ${
+          {`Wren could not derive net ERC-1967 implementation-slot changes from the configured RPC. ${
             evidence.reason || ''
           }`.trim()}
         </div>
@@ -316,7 +316,7 @@ export const SimulationDelegation = ({ simulation }) => {
       >
         {delegation.status === 'delegated'
           ? "Your configured RPC reports EIP-7702 delegated code. Transactions execute with the delegate's code and may not behave like ordinary account transactions."
-          : `Frame could not determine whether this account delegates execution. ${
+          : `Wren could not determine whether this account delegates execution. ${
               delegation.reason || ''
             }`.trim()}
       </div>

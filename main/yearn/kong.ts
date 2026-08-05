@@ -306,7 +306,7 @@ export function normalizeKongCatalog(
     }
 
     if (!rootMatchesPolicy(definition, root)) {
-      const message = `${definition.name} token metadata does not match Frame's curated policy`
+      const message = `${definition.name} token metadata does not match Wren's curated policy`
       errors.push({ chainId: definition.chainId, message })
       return unavailableVault(definition, message, root, companions)
     }
@@ -321,7 +321,7 @@ export function normalizeKongCatalog(
       ({ definition: companion, vault }) => vault && !companionMatchesPolicy(definition, companion, vault)
     )
     if (mismatchedCompanion) {
-      const message = `${definition.name} companion metadata does not match Frame's curated policy`
+      const message = `${definition.name} companion metadata does not match Wren's curated policy`
       errors.push({ chainId: definition.chainId, message })
       return unavailableVault(definition, message, root, companions)
     }

@@ -2,12 +2,12 @@ import { SimpleJSON, Section } from '../../../../../resources/Components/SimpleT
 
 const RISK_MESSAGES = {
   'legacy-eth-sign': () =>
-    'Dangerous legacy eth_sign request. Frame applies the EIP-191 personal-message prefix for compatibility.',
+    'Dangerous legacy eth_sign request. Wren applies the EIP-191 personal-message prefix for compatibility.',
   'opaque-message': () =>
     'This message is opaque hexadecimal data. Its meaning cannot be verified before signing.',
   'siwe-malformed': () => 'This message looks like Sign-In with Ethereum but does not conform to ERC-4361.',
   'siwe-origin-unverified': ({ origin }) =>
-    `Frame can compare only the stored origin label (${
+    `Wren can compare only the stored origin label (${
       origin || 'Unknown'
     }); native clients are not authenticated.`,
   'siwe-origin-mismatch': ({ origin, siwe }) =>
@@ -77,7 +77,7 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
   const { account, data, id, handlerId, status, type } = req
   const { context, decodedMessage } = data
   const requestChain = `${chainData.requestChainName || 'Unknown chain'} (${context.requestChainId})`
-  const method = context.method === 'eth_sign' ? 'eth_sign (EIP-191-prefixed by Frame)' : 'personal_sign'
+  const method = context.method === 'eth_sign' ? 'eth_sign (EIP-191-prefixed by Wren)' : 'personal_sign'
   const requestClass = getRequestClass(status)
 
   return type === 'sign' ? (

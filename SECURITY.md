@@ -1,14 +1,14 @@
 # Security Policy
 
-Frame is wallet software. Treat every change to signing, persisted state, local
+Wren is wallet software. Treat every change to signing, persisted state, local
 RPC, renderer isolation, IPC, hardware transports, updates, and packaging as
 security-sensitive.
 
 ## Supported Versions
 
 Only the newest release published by
-[`jorphex/frame`](https://github.com/jorphex/frame/releases) is considered for
-security fixes. This community fork has not received an independent security
+[`jorphex/wren`](https://github.com/jorphex/wren/releases) is considered for
+security fixes. Wren has not received an independent security
 audit and does not inherit support guarantees from Frame Labs.
 
 ## Reporting A Vulnerability
@@ -49,4 +49,4 @@ in [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md). Standards and local-provider
 claims are bounded by [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
 The separately released browser transport has its own
-[security boundary](https://github.com/jorphex/frame-extension/blob/main/SECURITY.md).
+[security boundary](https://github.com/jorphex/wren-companion/blob/main/SECURITY.md).

@@ -4,6 +4,6 @@ interface CommandLine {
 
 export function assertSandboxEnabled(commandLine: CommandLine, environment = process.env.NODE_ENV) {
   if (environment === 'production' && commandLine.hasSwitch('no-sandbox')) {
-    throw new Error('Frame refuses to run without the Chromium sandbox')
+    throw new Error('Wren refuses to run without the Chromium sandbox')
   }
 }

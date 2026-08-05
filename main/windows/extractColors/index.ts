@@ -46,7 +46,7 @@ async function extractColors(url: string, ens: string) {
   view.webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
     if (!details || !details.frame) return cb({ cancel: true }) // Reject the request
 
-    // Block any dapp requests to Frame during color extraction
+    // Block any dapp requests to Wren during color extraction.
     if (details.url.includes('127.0.0.1:1248') || details.url.includes('localhost:1248')) {
       return cb({ cancel: true })
     }

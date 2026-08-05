@@ -8,7 +8,7 @@ coverage plus manual Linux-package testing of a Base deposit, partial and full
 withdrawals, and physical Trezor signing. It is not included in the published
 `0.7.0` release; the `0.8.0` release has not yet been published.
 
-Earn is a focused Yearn integration, not a general DeFi marketplace. Frame owns
+Earn is a focused Yearn integration, not a general DeFi marketplace. Wren owns
 the catalog and transaction boundary. Yearn Kong supplies current metadata but
 cannot promote an address, change calldata, or select a transaction target.
 
@@ -26,13 +26,13 @@ cannot promote an address, change calldata, or select a transaction target.
 | Katana   | vbUSDT yVault              | `0x9A6bd7B6Fd5C4F87eb66356441502fc7dCdd185B` |
 
 The catalog intentionally excludes Yearn single-strategy vaults and lower-priority
-alternatives. Base exposes only the Horizon USDC product, which Frame labels as
+alternatives. Base exposes only the Horizon USDC product, which Wren labels as
 higher risk. Katana accepts only the listed Vault Bridge assets; Earn does not
 swap, bridge, wrap, or acquire them.
 
 ### Pinned Transaction Policy
 
-Frame pins the token scale and transaction addresses below in source. Kong
+Wren pins the token scale and transaction addresses below in source. Kong
 cannot change them.
 
 | Product       | Exact input asset                                   | Decimals | Additional trusted route                                                                               |
@@ -57,11 +57,11 @@ cannot change them.
 - `All` renders separate Ethereum, Base, and Katana sections. A failed chain read
   cannot erase another chain's catalog or positions.
 - Fresh eligible metadata is required for deposits. Cached, retired, hidden, or
-  failed data is withdraw-only when Frame can identify an existing position.
+  failed data is withdraw-only when Wren can identify an existing position.
 - Positions and underlying balances are read for the selected account. Watch-only
   accounts can inspect them but cannot create a transaction.
 - Curated underlying, vault-share, and companion-share contracts are also hidden
-  balance-scanner defaults. A real nonzero ERC-20 balance appears in Frame's
+  balance-scanner defaults. A real nonzero ERC-20 balance appears in Wren's
   normal balances and Send token picker without becoming a custom token; zero
   balances are not fabricated, and remote token-list omit metadata cannot
   suppress these locally pinned entries. Cooldown-only yvUSD accounting remains
@@ -71,13 +71,13 @@ cannot change them.
 
 ## Transaction Flows
 
-Every step is created in the main process and enters Frame's normal account
+Every step is created in the main process and enters Wren's normal account
 request, configured-RPC simulation, approval, signer, broadcast, monitor, and
 receipt path. Earn never silently changes a dapp's chain assignment.
 
 ### Direct Vaults
 
-Deposits accept only the vault's exact underlying asset. Frame reuses an existing
+Deposits accept only the vault's exact underlying asset. Wren reuses an existing
 allowance only when it exactly equals the requested amount. Otherwise it resets a
 nonzero allowance to zero and requests a new exact approval before `deposit`.
 
@@ -90,9 +90,9 @@ Flexible yvUSD is a direct USDC ERC-4626 flow. Locked yvUSD deposits USDC throug
 the pinned Yearn zap `0x7ba61c8e19414dcB8fe769a7Be63B508C8062bbA`
 into locked vault `0xAaaFEa48472f77563961Cdb53291DEDfB46F9040`.
 
-Frame reads the locked vault's current cooldown duration, withdrawal window, and
+Wren reads the locked vault's current cooldown duration, withdrawal window, and
 account status. The user explicitly starts or cancels cooldown. During the active
-window, Frame exits the locked vault to yvUSD and then exits yvUSD to USDC. Exact
+window, Wren exits the locked vault to yvUSD and then exits yvUSD to USDC. Exact
 exits use two `withdraw` calls; Max exits use two `redeem` calls. The workflow
 persists between those separately reviewed transactions and across restart.
 
@@ -104,7 +104,7 @@ New BOLD deposits finish staked as ysyBOLD through pinned Yearn zap
 yBOLD remains visible with a separate Stake action. Exits return BOLD through the
 pinned zap.
 
-The yBOLD exit always submits `maxLoss = 0`. Frame does not expose a persistent
+The yBOLD exit always submits `maxLoss = 0`. Wren does not expose a persistent
 loss-tolerance or swap-slippage setting and will not silently increase this value.
 A withdrawal that requires realized loss must be handled outside this milestone.
 
@@ -116,16 +116,16 @@ A withdrawal that requires realized loss must be handled outside this milestone.
   spender are re-recognized against the current curated vault before queueing.
 - A rejected unsubmitted step can be retried. A submitted transaction is never
   blindly retried. Receipt monitoring survives restart once a hash is recorded.
-  If Frame restarts while a request is awaiting review and cannot prove whether
+  If Wren restarts while a request is awaiting review and cannot prove whether
   it was broadcast, the workflow is canceled and cannot be resumed; verify the
   account on-chain before starting a replacement.
 - An interrupted approval cleanup first offers a read-only allowance recheck. If
-  the allowance remains nonzero, Frame requires a separate Revoke again action
+  the allowance remains nonzero, Wren requires a separate Revoke again action
   after warning the user to verify that no prior request is pending. It never
   converts the unknown outcome directly into another transaction.
 - Cancel and approval cleanup are blocked while a request is awaiting review or
   confirmation. If an exact approval was confirmed but its operation did not
-  complete, Frame offers one separately reviewed zero-allowance cleanup and
+  complete, Wren offers one separately reviewed zero-allowance cleanup and
   prevents the parent operation from being resumed in parallel.
 - Yearn review labels come from allowlist-bound calldata recognition. Any chain,
   target, native value, receiver, owner, token-spender relationship, unsupported
@@ -139,7 +139,7 @@ A withdrawal that requires realized loss must be handled outside this milestone.
 - Persisted workflows carry a local policy version. State migrations discard
   workflows created before the current policy rather than interpreting old
   amounts or routes under newer trust rules.
-- Native success notifications retain Frame's privacy-preserving generic hash
+- Native success notifications retain Wren's privacy-preserving generic hash
   copy rather than exposing account balances or Earn amounts.
 
 ## Verification Boundary

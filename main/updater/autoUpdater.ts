@@ -30,7 +30,7 @@ export default class AutoUpdater extends EventEmitter {
     super()
 
     // due to some bugs in the library, electron-updater can sometimes throw uncaught exceptions, so wrap these calls in a domain
-    // in order to not interrupt the application execution and have Frame crash
+    // in order to not interrupt application execution and make Wren crash
     this.domain = createDomain()
 
     this.domain.on('error', (err) => {

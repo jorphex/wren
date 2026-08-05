@@ -275,7 +275,7 @@ export class ExtensionAuthSession {
       this.proofPending = false
     }
     if (!authorized || signal?.aborted) {
-      return errorMessage('denied', 'Frame Companion pairing was denied')
+      return errorMessage('denied', 'Wren Companion pairing was denied')
     }
 
     this.authenticated = true

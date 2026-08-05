@@ -24,7 +24,7 @@ const server = http.createServer((req, res) => {
     return asset.stream(res, namehash, url.pathname)
   } else {
     res.writeHead(403)
-    return res.end('No dapp session, launch this dapp from Frame')
+    return res.end('No dapp session, launch this dapp from Wren')
   }
 })
 

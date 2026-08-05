@@ -438,7 +438,7 @@ export class Accounts extends EventEmitter {
                     }
                   })
 
-                  // If Frame is hidden, trigger native notification
+                  // If Wren is hidden, trigger a native notification.
                   notify('Transaction Successful', body, () => {
                     openBlockExplorer(targetChain, hash)
                   })

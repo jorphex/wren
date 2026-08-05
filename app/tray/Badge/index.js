@@ -11,7 +11,7 @@ class Bridge extends React.Component {
         <div className='badgeWrap'>
           <div className='badge cardShow' style={{ transform: 'translateY(0px)', height: '196px' }}>
             <div className='badgeInner'>
-              <div className='badgeMessage'>Your update is ready, restart Frame to switch?</div>
+              <div className='badgeMessage'>Your update is ready, restart Wren to switch?</div>
               <div className='badgeInput'>
                 <div className='badgeInputButton'>
                   <div

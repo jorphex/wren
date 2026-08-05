@@ -545,7 +545,7 @@ class ChainConnection extends EventEmitter {
         res(result)
       })
     } else {
-      resError({ message: `Frame is not connected to chain ${this.chainId}`, code: 4901 }, payload, res)
+      resError({ message: `Wren is not connected to chain ${this.chainId}`, code: 4901 }, payload, res)
     }
   }
 }
@@ -634,7 +634,7 @@ class Chains extends EventEmitter {
 
     const { type, id } = targetChain
     if (!this.connections[type] || !this.connections[type][id]) {
-      return resError({ message: `Frame is not connected to ${type} chain ${id}`, code: 4901 }, payload, res)
+      return resError({ message: `Wren is not connected to ${type} chain ${id}`, code: 4901 }, payload, res)
     }
 
     this.connections[type][id].send(payload, res)

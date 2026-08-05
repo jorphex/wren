@@ -6,7 +6,7 @@ import svg from '../../../resources/svg'
 import link from '../../../resources/link'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 import { capitalize } from '../../../resources/utils'
-import frameIcon from '../../../asset/FrameIcon.png'
+import wrenIcon from '../../../asset/WrenIcon.png'
 import ExtensionConnectNotification from './ExtensionConnect'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
@@ -17,10 +17,10 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyFrameIcon'>
-            <img src={frameIcon} />
+          <div className='notifyWrenIcon'>
+            <img src={wrenIcon} />
           </div>
-          <div className='notifyTitle'>Welcome to Frame!</div>
+          <div className='notifyTitle'>Welcome to Wren!</div>
           <div className='notifySubtitle'>System-wide web3</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
@@ -57,10 +57,10 @@ export class Notify extends React.Component {
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBoxSlide'>
           <div className='notifyBox'>
-            <div className='notifyFrameIcon'>
-              <img src={frameIcon} />
+            <div className='notifyWrenIcon'>
+              <img src={wrenIcon} />
             </div>
-            <div className='notifyTitle'>Frame Community Preview</div>
+            <div className='notifyTitle'>Wren Preview</div>
             <div className='notifyBody'>
               <div className='notifyBodyBlock'>
                 <div className='notifySection'>Use hardware signers for high value accounts</div>
@@ -74,7 +74,7 @@ export class Notify extends React.Component {
                   >
                     our license
                   </span>
-                  <span>and use Frame at your own risk</span>
+                  <span>and use Wren at your own risk</span>
                 </div>
                 <div className='notifySection'>
                   <span>Report problems through </span>
@@ -353,7 +353,7 @@ export class Notify extends React.Component {
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Frame hot signers are in alpha! Do not use them with high value accounts and verify your backups
+              Wren hot signers are in alpha! Do not use them with high value accounts and verify your backups
               are valid. Only proceed if you understand and accept these risks.
             </div>
           </div>
@@ -389,7 +389,7 @@ export class Notify extends React.Component {
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              The unlocked hot signer did not match the address shown in Frame and has been relocked.
+              The unlocked hot signer did not match the address shown in Wren and has been relocked.
             </div>
           </div>
           <div className='notifyInput'>
@@ -449,13 +449,13 @@ export class Notify extends React.Component {
           {hash ? (
             <div className='notifyBody'>
               <div className='notifyBodyLine'>
-                {'Frame will open a block explorer in your browser for transaction:'}
+                {'Wren will open a block explorer in your browser for transaction:'}
               </div>
               <div className='notifyBodyHash'>{hash}</div>
             </div>
           ) : (
             <div className='notifyBody'>
-              <div className='notifyBodyLine'>{`Frame will open the ${chainName}`}</div>
+              <div className='notifyBodyLine'>{`Wren will open the ${chainName}`}</div>
               <div className='notifyBodyLine'>{`block explorer in your browser:`}</div>
               <div className='notifyBodyHash'>{explorerUrl}</div>
             </div>

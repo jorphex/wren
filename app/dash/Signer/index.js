@@ -514,7 +514,7 @@ class Signer extends React.Component {
         <div className='signerControls'>
           {permissionId ? (
             <div className='signerControlDetail'>
-              <div className='signerControlDetailKey'>{'PERMISSION ID:'}</div>
+              <div className='signerControlDetailKey'>{'LATTICE PERMISSION ID (LEGACY):'}</div>
               <div className='signerControlDetailValue'>{permissionId}</div>
             </div>
           ) : null}

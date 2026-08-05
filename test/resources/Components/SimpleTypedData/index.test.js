@@ -193,7 +193,7 @@ it('warns when the selected device displays only typed-data hashes', () => {
 
   expect(screen.getByLabelText('Device signing warning')).toBeTruthy()
   expect(screen.getByRole('alert').textContent).toBe(
-    'Trezor One will display only the EIP-712 domain and message hashes. Verify every structured field in Frame before approving on-device.'
+    'Trezor One will display only the EIP-712 domain and message hashes. Verify every structured field in Wren before approving on-device.'
   )
 })
 
