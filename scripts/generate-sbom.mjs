@@ -16,8 +16,10 @@ const runNpm = (args) =>
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024
   })
-const sbom = JSON.parse(runNpm(['sbom', '--sbom-format', 'cyclonedx']))
-const productionTree = JSON.parse(runNpm(['ls', '--omit=dev', '--all', '--json']))
+const sbom = JSON.parse(runNpm(['sbom', '--package-lock-only', '--sbom-format', 'cyclonedx']))
+const productionTree = JSON.parse(
+  runNpm(['ls', '--package-lock-only', '--omit=dev', '--all', '--json'])
+)
 
 const rootRef = sbom.metadata?.component?.['bom-ref']
 if (typeof rootRef !== 'string') throw new Error('npm SBOM is missing its root component')

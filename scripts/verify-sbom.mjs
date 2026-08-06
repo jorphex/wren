@@ -92,10 +92,14 @@ if (electron?.version !== electronVersion || !packagedRuntime || !rootDependenci
 }
 
 const productionTree = JSON.parse(
-  execFileSync(process.execPath, [process.env.npm_execpath, 'ls', '--omit=dev', '--all', '--json'], {
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024
-  })
+  execFileSync(
+    process.execPath,
+    [process.env.npm_execpath, 'ls', '--package-lock-only', '--omit=dev', '--all', '--json'],
+    {
+      encoding: 'utf8',
+      maxBuffer: 128 * 1024 * 1024
+    }
+  )
 )
 const expectedGraph = new Map([[rootReference, new Set([electronReference])]])
 expectedGraph.set(electronReference, new Set())
@@ -117,7 +121,7 @@ if (
   references.size !== expectedComponents.size ||
   [...expectedComponents].some((reference) => !references.has(reference))
 ) {
-  throw new Error('SBOM components do not match the installed production dependency closure')
+  throw new Error('SBOM components do not match the locked production dependency closure')
 }
 
 const dependencyGraph = new Map()
@@ -143,7 +147,7 @@ if (
     )
   })
 ) {
-  throw new Error('SBOM graph does not match the installed production dependency graph')
+  throw new Error('SBOM graph does not match the locked production dependency graph')
 }
 
 const reachable = new Set()
