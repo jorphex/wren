@@ -38,6 +38,13 @@ link.rpc('getState', (err, state) => {
       document.body.classList.add('suspend')
     }
   })
+  store.observer(() => {
+    const workspaceOpen = !!store('windows.dash.showing')
+    const glideSide = store('main.glideSide') === 'left' ? 'left' : 'right'
+    document.body.classList.toggle('workspace-open', workspaceOpen)
+    document.body.classList.toggle('workspace-edge-left', glideSide === 'left')
+    document.body.classList.toggle('workspace-edge-right', glideSide === 'right')
+  })
   const root = createRoot(document.getElementById('tray'))
   const Tray = Restore.connect(AppComponent, store)
   root.render(<Tray />)

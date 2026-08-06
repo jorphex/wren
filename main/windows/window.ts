@@ -102,6 +102,44 @@ export function createWindow(
   return browserWindow
 }
 
+export function createRendererView(
+  name: string,
+  webPreferences: BrowserWindowConstructorOptions['webPreferences'] = {}
+) {
+  log.verbose(`Creating ${name} renderer view`)
+  const rendererRole = rendererRoleForWindow(name)
+  const rendererView = new WebContentsView({
+    webPreferences: {
+      ...webPreferences,
+      additionalArguments: [
+        ...(webPreferences?.additionalArguments || []),
+        `--frame-renderer-role=${rendererRole}`
+      ],
+      preload: path.resolve(process.env.BUNDLE_LOCATION, 'bridge.js'),
+      backgroundThrottling: false,
+      contextIsolation: true,
+      webviewTag: false,
+      sandbox: true,
+      defaultEncoding: 'utf-8',
+      nodeIntegration: false,
+      scrollBounce: true,
+      navigateOnDragDrop: false,
+      disableBlinkFeatures: 'Auxclick'
+    }
+  })
+  registerRendererRole(rendererView.webContents, rendererRole)
+  denySessionPermissions(rendererView.webContents.session)
+  denyDeviceSelection(rendererView.webContents)
+
+  const backgroundColor = store('main.colorwayPrimary', store('main.colorway'), 'background')
+  rendererView.setBackgroundColor(backgroundColor || '#0b0f0d')
+  rendererView.webContents.on('will-navigate', (event) => event.preventDefault())
+  rendererView.webContents.on('will-attach-webview', (event) => event.preventDefault())
+  rendererView.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  return rendererView
+}
+
 export function createViewInstance(
   ens = '',
   webPreferences: BrowserWindowConstructorOptions['webPreferences'] = {}

@@ -15,10 +15,11 @@ import store from '../store'
 import { requireStoreAction } from '../store/action'
 import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
-import { createWindow } from './window'
+import { createRendererView, createWindow } from './window'
+import { EmbeddedWorkspace } from './embeddedWorkspace'
 import { GlideDetector, shouldAutoHideGlide } from './glide'
 import { GlideSentinel } from './glideSentinel'
-import { getShellLayout, GlideEdge, shellDashboardTargetWidth, shellMainTargetWidth } from './shellGeometry'
+import { getShellLayout, GlideEdge, ShellLayout, shellMainTargetWidth } from './shellGeometry'
 import { SystemTray, SystemTrayEventHandlers } from './systemTray'
 import { registerShortcut } from '../keyboardShortcuts'
 import { Shortcut } from '../store/state/types/shortcuts'
@@ -26,7 +27,6 @@ import { onRenderer, onceRenderer } from '../ipc/renderer'
 
 type Windows = {
   tray?: BrowserWindow
-  dash?: BrowserWindow
   onboard?: BrowserWindow
   [key: string]: BrowserWindow | undefined
 }
@@ -42,7 +42,6 @@ const windows: Windows = {}
 const devHeight = 800
 const isWindows = process.platform === 'win32'
 const isMacOS = process.platform === 'darwin'
-const shouldForceDashOnStartup = process.platform === 'linux'
 
 let tray: Tray
 let dash: Dash
@@ -56,18 +55,8 @@ let displayChangeHandler: (() => void) | undefined
 const getGlideEdge = (): GlideEdge => (store('main.glideSide') === 'left' ? 'left' : 'right')
 
 const app = {
-  hide: () => {
-    tray.hide()
-    if (dash.isVisible()) {
-      dash.hide('app')
-    }
-  },
-  show: () => {
-    tray.show()
-    if (dash.hiddenByAppHide || dash.isVisible()) {
-      requireStoreAction('setDash')({ showing: true })
-    }
-  },
+  hide: () => tray.hide(),
+  show: () => tray.show(),
   toggle: () => {
     if (tray.isVisible()) app.hide()
     else app.show()
@@ -98,15 +87,15 @@ const center = (window: BrowserWindow) => {
   }
 }
 
-function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) {
-  // in development, serve files from local filesystem instead of the created bundle
-  const url = isDev
-    ? `http://localhost:1234/${id}/index.dev.html`
+const rendererUrl = (id: string) =>
+  isDev
+    ? new URL(`http://localhost:1234/${id}/index.dev.html`)
     : new URL(path.join(process.env.BUNDLE_LOCATION, `${id}.html`), 'file:')
 
+function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) {
   const window = createWindow(id, opts)
   windows[id] = window
-  window.loadURL(url.toString())
+  window.loadURL(rendererUrl(id).toString())
   return window
 }
 
@@ -214,11 +203,7 @@ export class Tray {
 
       const showOnboardingWindow = !store('main.mute.onboardingWindow')
 
-      if (store('windows.dash.showing') || showOnboardingWindow) {
-        setTimeout(() => {
-          requireStoreAction('setDash')({ showing: true })
-        }, 300)
-      } else if (shouldForceDashOnStartup && !openedAtLogin) {
+      if (store('windows.dash.showing')) {
         setTimeout(() => {
           requireStoreAction('setDash')({ showing: true })
         }, 300)
@@ -266,7 +251,6 @@ export class Tray {
       this.recentDisplayEvent = false
     }, 150)
 
-    requireStoreAction('toggleDash')('hide')
     requireStoreAction('trayOpen')(false)
     if (store('main.reveal')) {
       glideDetector?.start()
@@ -303,7 +287,9 @@ export class Tray {
     })
     trayWindow.setResizable(false)
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    trayWindow.setBounds(getShellLayout(area, getGlideEdge()).main, false)
+    const layout = getShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    if (dash) dash.applyLayout(layout)
+    else trayWindow.setBounds(layout.window, false)
     requireStoreAction('trayOpen')(true)
     if (glide && isMacOS) {
       trayWindow.showInactive()
@@ -332,7 +318,9 @@ export class Tray {
     if (!trayWindow || trayWindow.isDestroyed()) return
 
     const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
-    trayWindow.setBounds(getShellLayout(area, getGlideEdge()).main, false)
+    const layout = getShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    if (dash) dash.applyLayout(layout)
+    else trayWindow.setBounds(layout.window, false)
   }
 
   destroy() {
@@ -343,98 +331,61 @@ export class Tray {
 }
 
 class Dash {
-  private recentDisplayEvent = false
-  private recentDisplayEventTimeout?: NodeJS.Timeout
-  private showTimeout: NodeJS.Timeout | undefined
-  public hiddenByAppHide = false
+  private readonly workspace: EmbeddedWorkspace
 
   constructor() {
-    const dashOpts: Electron.BrowserWindowConstructorOptions = {
-      width: shellDashboardTargetWidth
-    }
-    if (isMacOS) {
-      dashOpts.type = 'panel'
-    } else if (process.platform === 'linux') {
-      dashOpts.type = 'toolbar'
-    }
-    initWindow('dash', dashOpts)
-  }
-
-  public positionNextToTray() {
     const trayWindow = windows.tray
-    const dashWindow = windows.dash
-    if (!trayWindow || !dashWindow || trayWindow.isDestroyed() || dashWindow.isDestroyed()) return
+    if (!trayWindow || trayWindow.isDestroyed()) {
+      throw new Error('Tray window is unavailable while creating the workspace')
+    }
 
-    const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
-    dashWindow.setBounds(getShellLayout(area, getGlideEdge()).dashboard, false)
+    this.workspace = new EmbeddedWorkspace(trayWindow, createRendererView('dash'))
+    this.workspace.loadURL(rendererUrl('dash').toString())
+    this.workspace.onLoaded(() => {
+      const processId = this.workspace.processId()
+      if (processId !== null) log.info('Created dash renderer view process, pid:', processId)
+      tray.reposition()
+    })
   }
 
-  public hide(context?: string) {
-    if (this.recentDisplayEvent || !windows.dash?.isVisible()) {
-      return
-    }
-    if (context === 'app') {
-      this.hiddenByAppHide = true
-    }
-    clearTimeout(this.recentDisplayEventTimeout)
-    this.recentDisplayEvent = true
-    this.recentDisplayEventTimeout = setTimeout(() => {
-      this.recentDisplayEvent = false
-    }, 150)
-    windows.dash.hide()
+  public applyLayout(layout: ShellLayout) {
+    const showing = !!store('windows.dash.showing')
+    this.workspace.applyShellLayout(layout.window, layout.workspace, showing)
+    this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
+  }
+
+  public hide() {
+    this.workspace.hide()
+    tray.reposition()
+    windows.tray?.webContents.focus()
   }
 
   public show() {
-    if (!tray.isReady() || this.recentDisplayEvent) {
-      return
-    }
-    if (this.hiddenByAppHide) {
-      this.hiddenByAppHide = false
-    }
-    clearTimeout(this.recentDisplayEventTimeout)
-    this.recentDisplayEvent = true
-    this.recentDisplayEventTimeout = setTimeout(() => {
-      this.recentDisplayEvent = false
-    }, 150)
-    clearTimeout(this.showTimeout)
-    this.showTimeout = setTimeout(() => {
-      this.showTimeout = undefined
-      const trayWindow = windows.tray
-      const dashWindow = windows.dash
-      if (!trayWindow || !dashWindow || trayWindow.isDestroyed() || dashWindow.isDestroyed()) return
+    if (!tray.isReady()) return
 
-      if (!trayWindow.isVisible()) tray.show()
-
-      if (isMacOS) {
-        dashWindow.setPosition(0, 0)
-      } else {
-        dashWindow.setAlwaysOnTop(true)
-      }
-      dashWindow.setVisibleOnAllWorkspaces(true, {
-        visibleOnFullScreen: true,
-        skipTransformProcessType: true
-      })
-      dashWindow.setResizable(false)
-      this.positionNextToTray()
-      dashWindow.show()
-      dashWindow.focus()
-      dashWindow.setVisibleOnAllWorkspaces(false, {
-        visibleOnFullScreen: true,
-        skipTransformProcessType: true
-      })
-      if (devToolsEnabled) {
-        dashWindow.webContents.openDevTools()
-      }
-    }, 10)
+    if (!tray.isVisible()) {
+      tray.show()
+    } else {
+      tray.reposition()
+    }
+    this.workspace.show()
+    if (devToolsEnabled) this.workspace.openDevTools()
   }
 
   isVisible() {
-    return windows.dash?.isVisible() ?? false
+    return this.workspace.isVisible()
   }
 
   destroy() {
-    clearTimeout(this.recentDisplayEventTimeout)
-    clearTimeout(this.showTimeout)
+    this.workspace.destroy()
+  }
+
+  send(channel: string, ...args: string[]) {
+    this.workspace.send(channel, ...args)
+  }
+
+  reload() {
+    this.workspace.reload()
   }
 }
 
@@ -505,7 +456,7 @@ class Onboard {
 
 onRenderer('tray:quit', () => electronApp.quit())
 onRenderer('tray:mouseout', () => {
-  if (shouldAutoHideGlide(glide, !!store('main.autohide'), !!(windows.dash && windows.dash.isVisible()))) {
+  if (shouldAutoHideGlide(glide, !!store('main.autohide'), !!store('windows.dash.showing'))) {
     glide = false
     app.hide()
   }
@@ -531,6 +482,7 @@ if (isDev) {
       Object.keys(windows).forEach((win) => {
         windows[win]?.reload()
       })
+      dash?.reload()
 
       // frameManager.reloadFrames()
     })
@@ -557,13 +509,13 @@ const init = () => {
     screen.off('display-metrics-changed', displayChangeHandler)
     displayChangeHandler = undefined
   }
-  if (tray) {
-    tray.destroy()
-  }
   if (dash) {
     dash.destroy()
   }
-  for (const id of ['tray', 'dash']) {
+  if (tray) {
+    tray.destroy()
+  }
+  for (const id of ['tray']) {
     const window = windows[id]
     if (window && !window.isDestroyed()) window.destroy()
     delete windows[id]
@@ -591,7 +543,6 @@ const init = () => {
   displayChangeHandler = () => {
     glideSentinel?.refresh()
     tray.reposition()
-    if (dash.isVisible()) dash.positionNextToTray()
   }
   screen.on('display-added', displayChangeHandler)
   screen.on('display-removed', displayChangeHandler)
@@ -608,7 +559,7 @@ const init = () => {
         dash.show()
       } else {
         dash.hide()
-        windows.tray?.focus()
+        windows.tray?.webContents.focus()
       }
     }, 'windows:dash')
   )
@@ -658,7 +609,6 @@ const init = () => {
         glideEdge = nextGlideEdge
         glideSentinel?.setEdge(glideEdge)
         tray.reposition()
-        if (dash.isVisible()) dash.positionNextToTray()
       }
       if (nextRevealEnabled === revealEnabled) return
 
@@ -674,6 +624,10 @@ const init = () => {
 }
 
 const send = (id: string, channel: string, ...args: string[]) => {
+  if (id === 'dash') {
+    dash?.send(channel, ...args)
+    return
+  }
   const window = windows[id]
   if (window && !window.isDestroyed()) {
     window.webContents.send(channel, ...args)
@@ -684,6 +638,7 @@ const send = (id: string, channel: string, ...args: string[]) => {
 
 const broadcast = (channel: string, ...args: string[]) => {
   Object.keys(windows).forEach((id) => send(id, channel, ...args))
+  dash?.send(channel, ...args)
   frameManager.broadcast(channel, args)
 }
 

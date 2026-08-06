@@ -77,7 +77,7 @@ class Dash extends React.Component {
     return (
       <div className='dash'>
         <Command />
-        <div className='dashMain' style={{ bottom: showAddButton ? '100px' : '24px' }}>
+        <div className='dashMain' style={showAddButton ? { bottom: '100px' } : undefined}>
           <div className='dashMainOverlay' />
           <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>
         </div>

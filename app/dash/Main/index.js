@@ -84,6 +84,11 @@ export class Main extends React.Component {
     clearTimeout(this.localShakeTimeout)
   }
 
+  componentDidMount() {
+    const scroll = document.querySelector('.dashMainScroll')
+    if (scroll) scroll.scrollTop = 0
+  }
+
   appInfo() {
     // TODO: move this to global passed over IPC
     // eslint-disable-next-line
@@ -348,16 +353,7 @@ export class Main extends React.Component {
                 link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
-              Report an issue
-            </button>
-            <button
-              type='button'
-              className='requestFeatureButton'
-              onClick={() => {
-                link.send('tray:openExternal', WREN_SUPPORT_URL)
-              }}
-            >
-              Community support
+              Support &amp; feedback
             </button>
             <button
               type='button'

@@ -898,16 +898,21 @@
 
 // Wren account surface
 .accountMain
-  right 12px
-  left 12px
-  border-radius var(--wren-radius-xl)
-
-  .accountMainScroll
-    border-radius var(--wren-radius-xl)
-
-.accountModule
   right 0
   left 0
+  border-radius 0
+
+  .accountMainScroll
+    border-radius 0
+
+  .accountMainSlide
+    padding-right var(--wren-space-5)
+    padding-left var(--wren-space-5)
+    box-sizing border-box
+
+.accountModule
+  right var(--wren-space-5)
+  left var(--wren-space-5)
   padding-bottom var(--wren-space-2)
 
 .accountModuleInner
@@ -971,13 +976,13 @@
     border-radius var(--wren-radius-lg)
 
 .accountView
-  right 12px
-  left 12px
-  border-radius var(--wren-radius-xl)
+  right 0
+  left 0
+  border-radius 0
 
   .accountViewMenu
-    right 0
-    left 0
+    right var(--wren-space-5)
+    left var(--wren-space-5)
     height 52px
     border 1px solid var(--wren-border-subtle)
     border-radius var(--wren-radius-lg)
@@ -1005,3 +1010,7 @@
       &:hover
         color var(--wren-text-primary)
         background var(--wren-surface-hover)
+
+  .accountViewMain
+    right var(--wren-space-5)
+    left var(--wren-space-5)

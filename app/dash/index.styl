@@ -7,7 +7,7 @@ html, body
   overflow hidden
   color var(--outerspace)
   background-color var(--wren-bg-canvas)
-  background-image radial-gradient(circle at 86% 10%, rgba(166, 138, 97, 0.05), transparent 34%), radial-gradient(circle at 12% 90%, rgba(126, 155, 115, 0.04), transparent 30%)
+  background-image radial-gradient(circle at 86% 10%, rgba(208, 168, 94, 0.025), transparent 34%), radial-gradient(circle at 12% 90%, rgba(127, 170, 188, 0.018), transparent 30%)
 
 div
   user-select none
@@ -35,6 +35,8 @@ div
   overflow-x hidden
   background var(--ghostA)
   position relative
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
 
   .dashMain
     position absolute 
@@ -329,22 +331,23 @@ div
   background var(--wren-bg-canvas)
 
   .dashMain
-    top 72px
-    right 12px
-    bottom 16px
-    left 12px
+    top 64px
+    right 0
+    bottom 0
+    left 0
     padding-bottom 0
     overflow hidden
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-xl)
-    background var(--wren-bg-subtle)
-    box-shadow var(--wren-shadow-md), var(--wren-shadow-inset)
+    border 0
+    border-radius 0
+    background transparent
+    box-shadow none
 
     .dashMainScroll
-      border-radius var(--wren-radius-xl)
+      border-radius 0
 
     .dashMainOverlay
-      border-radius var(--wren-radius-xl)
+      display none
+      border-radius 0
       box-shadow none
 
   .dashFooter
@@ -385,3 +388,15 @@ div
         width auto
         height auto
         margin-right var(--wren-space-2)
+
+.workspace-edge-right .dash
+  border-right 0
+  border-radius var(--wren-radius-xl) 0 0 var(--wren-radius-xl)
+
+.workspace-edge-left .dash
+  border-left 0
+  border-radius 0 var(--wren-radius-xl) var(--wren-radius-xl) 0
+
+.workspace-overlay .dash
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-xl)

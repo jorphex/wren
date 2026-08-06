@@ -12,7 +12,7 @@ export enum ApprovalType {
 
 export const WREN_REPOSITORY_URL = 'https://github.com/jorphex/wren'
 export const WREN_LICENSE_URL = `${WREN_REPOSITORY_URL}/blob/main/LICENSE`
-export const WREN_SUPPORT_URL = `${WREN_REPOSITORY_URL}/issues/new`
+export const WREN_SUPPORT_URL = `${WREN_REPOSITORY_URL}/issues`
 export const WREN_COMPANION_RELEASES_URL = 'https://github.com/jorphex/wren-companion/releases'
 export const LEDGER_SHOP_URL = 'https://shop.ledger.com/'
 export const TREZOR_SHOP_URL = 'https://shop.trezor.io/'

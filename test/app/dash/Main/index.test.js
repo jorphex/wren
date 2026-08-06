@@ -63,14 +63,12 @@ it.each(['Download Chrome companion', 'Download Firefox companion'])(
 it('routes support, tutorial, quit, and license actions', () => {
   renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Report an issue' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Community support' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Support & feedback' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))
 
   expect(link.send.mock.calls).toEqual([
-    ['tray:openExternal', WREN_SUPPORT_URL],
     ['tray:openExternal', WREN_SUPPORT_URL],
     ['tray:action', 'setOnboard', { showing: true }],
     ['tray:quit'],
@@ -99,4 +97,16 @@ it('copies the visible instance ID', () => {
 
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', instanceId)
   expect(screen.getByText('Instance ID Copied')).toBeTruthy()
+})
+
+it('returns the workspace home to its top-level navigation', () => {
+  const scroll = document.createElement('div')
+  scroll.className = 'dashMainScroll'
+  scroll.scrollTop = 240
+  document.body.appendChild(scroll)
+
+  renderMain()
+
+  expect(scroll.scrollTop).toBe(0)
+  scroll.remove()
 })

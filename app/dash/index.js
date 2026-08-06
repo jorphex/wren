@@ -19,6 +19,12 @@ function AppComponent() {
   return <App />
 }
 
+link.on('flex', (event, value) => {
+  if (event === 'shellLayout') {
+    document.body.classList.toggle('workspace-overlay', value === 'overlay')
+  }
+})
+
 link.rpc('getState', (err, state) => {
   if (err) return console.error('Could not get initial state from main')
   const store = appStore(state)
@@ -29,6 +35,11 @@ link.rpc('getState', (err, state) => {
     setTimeout(() => {
       document.body.classList.remove('clip')
     }, 100)
+  })
+  store.observer(() => {
+    const glideSide = store('main.glideSide') === 'left' ? 'left' : 'right'
+    document.body.classList.toggle('workspace-edge-left', glideSide === 'left')
+    document.body.classList.toggle('workspace-edge-right', glideSide === 'right')
   })
   const root = createRoot(document.getElementById('dash'))
   const Dash = Restore.connect(AppComponent, store)

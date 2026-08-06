@@ -8,40 +8,47 @@ export type Rectangle = {
 }
 
 export type ShellLayout = {
+  window: Rectangle
   main: Rectangle
-  dashboard: Rectangle
-  dashboardOverlaysMain: boolean
+  workspace: Rectangle
+  workspaceOverlaysMain: boolean
 }
 
-export const shellMainTargetWidth = 720
-export const shellDashboardTargetWidth = 500
-const dashboardMinimumWidth = 400
-const shellTargetHeight = 680
-const paneGap = 6
+export const shellMainTargetWidth = 760
+export const shellWorkspaceTargetWidth = 520
+export const shellTargetHeight = 720
+const workspaceMinimumWidth = 400
 const verticalMargin = 12
 
-export function getShellLayout(workArea: Rectangle, edge: GlideEdge): ShellLayout {
+export function getShellLayout(workArea: Rectangle, edge: GlideEdge, workspaceOpen = false): ShellLayout {
   const mainWidth = Math.min(shellMainTargetWidth, workArea.width)
   const height = Math.max(1, Math.min(shellTargetHeight, workArea.height - verticalMargin * 2))
-  const main = {
-    x: edge === 'right' ? workArea.x + workArea.width - mainWidth : workArea.x,
+  const adjacentWidth = Math.max(0, workArea.width - mainWidth)
+  const workspaceOverlaysMain = workspaceOpen && adjacentWidth < workspaceMinimumWidth
+  const workspaceWidth = workspaceOpen
+    ? workspaceOverlaysMain
+      ? mainWidth
+      : Math.min(shellWorkspaceTargetWidth, adjacentWidth)
+    : 0
+  const windowWidth = workspaceOverlaysMain ? mainWidth : mainWidth + workspaceWidth
+  const window = {
+    x: edge === 'right' ? workArea.x + workArea.width - windowWidth : workArea.x,
     y: workArea.y + Math.floor((workArea.height - height) / 2),
+    width: windowWidth,
+    height
+  }
+  const main = {
+    x: workspaceOpen && !workspaceOverlaysMain && edge === 'right' ? workspaceWidth : 0,
+    y: 0,
     width: mainWidth,
     height
   }
-  const adjacentWidth = workArea.width - mainWidth - paneGap
-  const dashboardOverlaysMain = adjacentWidth < dashboardMinimumWidth
-  const dashboardWidth = dashboardOverlaysMain
-    ? mainWidth
-    : Math.min(shellDashboardTargetWidth, adjacentWidth)
-  const dashboard = dashboardOverlaysMain
-    ? { ...main }
-    : {
-        x: edge === 'right' ? main.x - paneGap - dashboardWidth : main.x + main.width + paneGap,
-        y: main.y,
-        width: dashboardWidth,
-        height
-      }
+  const workspace = {
+    x: workspaceOpen && !workspaceOverlaysMain && edge === 'left' ? mainWidth : 0,
+    y: 0,
+    width: workspaceWidth,
+    height
+  }
 
-  return { main, dashboard, dashboardOverlaysMain }
+  return { window, main, workspace, workspaceOverlaysMain }
 }

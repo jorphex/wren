@@ -541,31 +541,30 @@ button.requestFeatureButton:focus-visible
     text-transform uppercase
 
 .dashModuleList
-  overflow hidden
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-lg)
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-inset)
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-2)
+
+.dashModuleSection:first-child .dashModuleList
+  grid-template-columns repeat(3, minmax(0, 1fr))
 
 button.dashModule
   position relative
   width 100%
-  height 64px
+  height 112px
   margin 0
-  padding 0 var(--wren-space-4)
-  justify-content flex-start
-  border 0
-  border-bottom 1px solid var(--wren-border-subtle)
-  border-radius 0
+  padding var(--wren-space-3)
+  align-items flex-start
+  flex-direction column
+  justify-content flex-end
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
   color var(--wren-text-primary)
-  background transparent
-  box-shadow none
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-inset)
   font-family var(--wren-font-ui)
   text-align left
   transition background var(--wren-motion-fast) var(--wren-ease)
-
-  &:last-child
-    border-bottom 0
 
   &:hover
     z-index auto
@@ -585,11 +584,14 @@ button.dashModule
     box-shadow none
 
   .dashModuleIcon
+    position absolute
+    top var(--wren-space-3)
+    left var(--wren-space-3)
     display flex
     flex none
     width 34px
     height 34px
-    margin 0 var(--wren-space-3) 0 0
+    margin 0
     align-items center
     justify-content center
     border-radius var(--wren-radius-md)
@@ -597,9 +599,13 @@ button.dashModule
     background var(--wren-accent-primary-soft, #29231b)
 
   .dashModuleCopy
+    position absolute
+    right var(--wren-space-3)
+    bottom var(--wren-space-3)
+    left var(--wren-space-3)
     display flex
     min-width 0
-    flex 1
+    flex none
     flex-direction column
     gap 3px
 
@@ -614,18 +620,30 @@ button.dashModule
     font-size 11px
     font-weight 300
     line-height 14px
-    text-overflow ellipsis
-    white-space nowrap
+    display -webkit-box
+    min-height 28px
+    overflow hidden
+    -webkit-box-orient vertical
+    -webkit-line-clamp 2
 
   .dashModuleArrow
+    position absolute
+    top var(--wren-space-4)
+    right var(--wren-space-3)
     display flex
-    margin-left var(--wren-space-3)
+    margin 0
     color var(--wren-text-muted)
     transition transform var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
   &:hover .dashModuleArrow
     color var(--wren-text-secondary)
     transform translateX(2px)
+
+.dashModuleSection:first-child button.dashModule
+  height 94px
+
+  .dashModuleDescription
+    display none
 
 .dashCompanion
   display flex
@@ -679,7 +697,7 @@ button.dashModule
 
 .dashSupportActions
   display grid
-  grid-template-columns 1fr 1fr
+  grid-template-columns repeat(3, minmax(0, 1fr))
   gap var(--wren-space-2)
   margin-bottom var(--wren-space-6)
 
@@ -701,8 +719,8 @@ button.dashModule
 
   .requestFeatureButtonDanger:hover
     color var(--wren-danger)
-    border-color rgba(201, 107, 99, .45)
-    background var(--wren-danger-soft, #2d1b1a)
+    border-color rgba(213, 116, 104, .45)
+    background var(--wren-danger-soft)
 
 .localSettings .appInfo
   padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
@@ -738,3 +756,15 @@ button.dashModule
     color var(--wren-text-tertiary)
     font-size 10px
     line-height 24px
+
+  .appInfoLineResetButton
+    padding 0
+    color var(--wren-text-muted)
+    background transparent
+    border 0
+    font-family var(--wren-font-ui)
+    font-size 10px
+    cursor pointer
+
+    &:hover
+      color var(--wren-danger)

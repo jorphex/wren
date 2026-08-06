@@ -2,6 +2,7 @@ import { BrowserWindow, shell, WebContentsView } from 'electron'
 import path from 'path'
 
 import {
+  createRendererView,
   createViewInstance,
   createWindow,
   openBlockExplorer,
@@ -166,6 +167,31 @@ describe('createViewInstance', () => {
 
     expect(event.preventDefault).toHaveBeenCalled()
     expect(callback).toHaveBeenCalledWith(...expectedArguments)
+  })
+})
+
+describe('createRendererView', () => {
+  it('creates a hardened dashboard view with the dashboard renderer role', () => {
+    createRendererView('dash', { additionalArguments: ['--existing'] })
+
+    expect(WebContentsView).toHaveBeenCalledWith({
+      webPreferences: expect.objectContaining({
+        additionalArguments: ['--existing', '--frame-renderer-role=dash'],
+        backgroundThrottling: false,
+        contextIsolation: true,
+        nodeIntegration: false,
+        preload: path.resolve('/tmp/frame-test-bundle', 'bridge.js'),
+        sandbox: true,
+        webviewTag: false
+      })
+    })
+    expect(mockView.webContents.on).toHaveBeenCalledWith('will-navigate', expect.any(Function))
+    expect(mockView.webContents.on).toHaveBeenCalledWith('will-attach-webview', expect.any(Function))
+    expect(mockView.webContents.setWindowOpenHandler).toHaveBeenCalledWith(expect.any(Function))
+  })
+
+  it('rejects renderer views without an explicit role', () => {
+    expect(() => createRendererView('unknown')).toThrow('has no renderer IPC role')
   })
 })
 
