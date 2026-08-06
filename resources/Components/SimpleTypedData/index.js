@@ -83,10 +83,15 @@ export const TypedDataWarnings = ({ context }) => {
   ) : null
 }
 
-export const getTypedDataDeviceWarning = (signer) =>
-  signer?.signingCapabilities?.typedDataHashOnly
-    ? `${signer.model || 'This signer'} will display only the EIP-712 domain and message hashes. Verify every structured field in Wren before approving on-device.`
-    : undefined
+export const getTypedDataDeviceWarning = (signer) => {
+  if (signer?.signingCapabilities?.typedDataHashOnly) {
+    return `${signer.model || 'This signer'} will display only the EIP-712 domain and message hashes. Verify every structured field in Wren before approving on-device.`
+  }
+
+  if (signer?.type?.toLowerCase() === 'trezor') {
+    return `${signer.model || 'This Trezor'} may summarize EIP-712 structures on-device. Open the device menu and choose Show full message to inspect every value before signing.`
+  }
+}
 
 export const TypedDataDeviceWarning = ({ warning }) =>
   warning ? (

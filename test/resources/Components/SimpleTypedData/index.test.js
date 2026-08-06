@@ -197,10 +197,25 @@ it('warns when the selected device displays only typed-data hashes', () => {
   )
 })
 
-it('does not warn when hash-only device review is not known', () => {
+it('explains how to expand structured data on supported Trezor devices', () => {
+  const deviceWarning = getTypedDataDeviceWarning({
+    type: 'trezor',
+    model: 'Trezor Safe 7',
+    signingCapabilities: { typedDataHashOnly: false }
+  })
+
+  render(<SimpleTypedData deviceWarning={deviceWarning} req={request()} />)
+
+  expect(screen.getByRole('alert').textContent).toBe(
+    'Trezor Safe 7 may summarize EIP-712 structures on-device. Open the device menu and choose Show full message to inspect every value before signing.'
+  )
+})
+
+it('does not warn when device-specific review behavior is not known', () => {
   expect(
     getTypedDataDeviceWarning({
-      model: 'Trezor Safe 7',
+      type: 'ledger',
+      model: 'Ledger Flex',
       signingCapabilities: { typedDataHashOnly: false }
     })
   ).toBeUndefined()
