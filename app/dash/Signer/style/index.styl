@@ -299,8 +299,12 @@
     *
       pointer-events none
 
-  .signerControlOption:hover
+  .signerControlOption:not(:disabled):hover
     background var(--ghostB)
+
+  .signerControlOption:disabled
+    cursor default
+    opacity 0.55
 
   .signerControlOptionImportant
     color var(--bad)
@@ -367,6 +371,15 @@
 
     *
       pointer-events none
+
+  .signerLatticePairSubmit:disabled
+    cursor default
+    opacity 0.55
+
+  .signerLatticePairError
+    color var(--bad)
+    font-size 11px
+    text-align center
 
 .signerAccountsTitle
   // background pink
@@ -699,7 +712,7 @@
       .signerPinDelete
         left 0px
 
-    .signerPinSubmit:hover
+    .signerPinSubmit:not(:disabled):hover
       background var(--ghostC)
 
     .signerPinSubmit:disabled
@@ -734,9 +747,12 @@
           justify-content center
           align-items center
 
-        .trezorPinInputButton:hover
+        .trezorPinInputButton:not(:disabled):hover
           .signerPinDot
             transform scale(1.7)
+
+        .trezorPinInputButton:disabled
+          opacity 0.45
 
         .trezorPinInputButton:active
           .signerPinDot

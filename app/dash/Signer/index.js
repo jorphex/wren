@@ -23,9 +23,34 @@ export class Signer extends React.Component {
       page: 0,
       addressLimit: 5,
       latticePairCode: '',
+      latticePairError: '',
+      latticePairPending: false,
       tPin: '',
+      tPinPending: false,
       tPhrase: '',
-      tPairing: ''
+      tPhrasePending: false,
+      tPairing: '',
+      tPairingPending: false
+    }
+    this.pending = { latticePair: false, pin: false, phrase: false, pairing: false }
+    this.mounted = true
+  }
+
+  componentWillUnmount() {
+    this.mounted = false
+  }
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.status !== this.props.status) {
+      this.pending.pin = false
+      this.pending.phrase = false
+      this.pending.pairing = false
+      if (this.state.tPinPending || this.state.tPhrasePending || this.state.tPairingPending) {
+        this.setState({ tPinPending: false, tPhrasePending: false, tPairingPending: false })
+      }
+    } else if (previousProps.pinError !== this.props.pinError && this.state.tPinPending) {
+      this.pending.pin = false
+      this.setState({ tPinPending: false })
     }
   }
 
@@ -39,18 +64,34 @@ export class Signer extends React.Component {
   }
 
   submitPin() {
-    link.rpc('trezorPin', this.props.id, this.state.tPin, () => {})
-    this.setState({ tPin: '' })
+    if (!this.state.tPin || this.pending.pin) return
+    const pin = this.state.tPin
+    this.pending.pin = true
+    this.setState({ tPin: '', tPinPending: true })
+    link.rpc('trezorPin', this.props.id, pin, () => {})
   }
 
   submitPhrase() {
-    this.setState({ tPhrase: '' })
-    link.rpc('trezorPhrase', this.props.id, this.state.tPhrase || '', () => {})
+    if (this.pending.phrase) return
+    const phrase = this.state.tPhrase || ''
+    this.pending.phrase = true
+    this.setState({ tPhrase: '', tPhrasePending: true })
+    link.rpc('trezorPhrase', this.props.id, phrase, () => {})
+  }
+
+  submitPhraseOnDevice() {
+    if (this.pending.phrase) return
+    this.pending.phrase = true
+    this.setState({ tPhrase: '', tPhrasePending: true })
+    link.rpc('trezorEnterPhrase', this.props.id, () => {})
   }
 
   submitPairing() {
-    this.setState({ tPairing: '' })
-    link.rpc('trezorPairing', this.props.id, { tag: this.state.tPairing || '' }, () => {})
+    if (!this.state.tPairing || this.pending.pairing) return
+    const pairing = this.state.tPairing
+    this.pending.pairing = true
+    this.setState({ tPairing: '', tPairingPending: true })
+    link.rpc('trezorPairing', this.props.id, { tag: pairing }, () => {})
   }
 
   renderLoadingLive() {
@@ -86,7 +127,11 @@ export class Signer extends React.Component {
       <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
         {active ? (
           <>
-            {this.props.pinError ? <div className='trezorPinError'>{this.props.pinError}</div> : null}
+            {this.props.pinError ? (
+              <div role='alert' className='trezorPinError'>
+                {this.props.pinError}
+              </div>
+            ) : null}
             <div
               className='trezorPhraseInput'
               role='status'
@@ -104,7 +149,7 @@ export class Signer extends React.Component {
               <button
                 type='button'
                 className='signerPinMessage signerPinSubmit'
-                disabled={!this.state.tPin}
+                disabled={!this.state.tPin || this.state.tPinPending}
                 onClick={() => this.submitPin()}
               >
                 Submit PIN
@@ -128,6 +173,7 @@ export class Signer extends React.Component {
                     aria-label={`PIN position ${i}`}
                     key={i}
                     className='trezorPinInputButton'
+                    disabled={this.state.tPinPending}
                     onClick={this.trezorPin.bind(this, i)}
                   >
                     <span className='signerPinDot' />
@@ -157,15 +203,19 @@ export class Signer extends React.Component {
           <>
             <div className='trezorPhraseInput'>
               <input
+                aria-label='Trezor passphrase'
                 type='password'
+                value={this.state.tPhrase}
+                disabled={this.state.tPhrasePending}
                 onChange={(e) => this.setState({ tPhrase: e.target.value })}
-                onKeyPress={(e) => this.phraseKeyPress(e)}
+                onKeyDown={(e) => this.phraseKeyPress(e)}
                 autoFocus
               />
             </div>
             <button
               type='button'
               className='signerPinMessage signerPinSubmit'
+              disabled={this.state.tPhrasePending}
               onClick={() => this.submitPhrase()}
             >
               Submit Passphrase
@@ -176,7 +226,8 @@ export class Signer extends React.Component {
                 <button
                   type='button'
                   className='signerPinMessage signerPinSubmit'
-                  onClick={() => link.rpc('trezorEnterPhrase', this.props.id, () => {})}
+                  disabled={this.state.tPhrasePending}
+                  onClick={() => this.submitPhraseOnDevice()}
                 >
                   Enter passphrase on device
                 </button>
@@ -204,12 +255,14 @@ export class Signer extends React.Component {
             <div className='signerLatticePairTitle'>{title}</div>
             <div className='trezorPhraseInput'>
               <input
+                aria-label='Trezor pairing code'
                 type='text'
                 autoFocus
                 maxLength={isCodeEntry ? 6 : undefined}
                 value={this.state.tPairing}
+                disabled={this.state.tPairingPending}
                 onChange={(e) => this.setState({ tPairing: (e.target.value || '').trim().toUpperCase() })}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
                     this.submitPairing()
@@ -220,7 +273,7 @@ export class Signer extends React.Component {
             <button
               type='button'
               className='signerPinMessage signerPinSubmit'
-              disabled={!this.state.tPairing}
+              disabled={!this.state.tPairing || this.state.tPairingPending}
               onClick={() => this.submitPairing()}
             >
               Submit Pairing Code
@@ -287,9 +340,19 @@ export class Signer extends React.Component {
   }
 
   pairToLattice() {
-    link.rpc('latticePair', this.props.id, this.state.latticePairCode, () => {})
-
-    this.setState({ latticePairCode: '' })
+    if (!this.state.latticePairCode || this.pending.latticePair) return
+    const code = this.state.latticePairCode
+    this.pending.latticePair = true
+    this.setState({ latticePairError: '', latticePairPending: true })
+    link.rpc('latticePair', this.props.id, code, (err) => {
+      this.pending.latticePair = false
+      if (!this.mounted) return
+      if (err) {
+        this.setState({ latticePairError: err.message || String(err), latticePairPending: false })
+      } else {
+        this.setState({ latticePairCode: '', latticePairError: '', latticePairPending: false })
+      }
+    })
   }
 
   expand(id) {
@@ -451,16 +514,35 @@ export class Signer extends React.Component {
             <div className='signerLatticePairTitle'>Please input your Lattice&apos;s pairing code</div>
             <div className='signerLatticePairInput'>
               <input
+                aria-label='GridPlus pairing code'
                 autoFocus
-                tabIndex='1'
                 value={this.state.latticePairCode}
-                onChange={(e) => this.setState({ latticePairCode: (e.target.value || '').toUpperCase() })}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') this.pairToLattice()
+                disabled={this.state.latticePairPending}
+                onChange={(e) =>
+                  this.setState({
+                    latticePairCode: (e.target.value || '').toUpperCase(),
+                    latticePairError: ''
+                  })
+                }
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    this.pairToLattice()
+                  }
                 }}
               />
             </div>
-            <button type='button' onClick={() => this.pairToLattice()} className='signerLatticePairSubmit'>
+            {this.state.latticePairError ? (
+              <div role='alert' className='signerLatticePairError'>
+                {this.state.latticePairError}
+              </div>
+            ) : null}
+            <button
+              type='button'
+              disabled={!this.state.latticePairCode || this.state.latticePairPending}
+              onClick={() => this.pairToLattice()}
+              className='signerLatticePairSubmit'
+            >
               Pair
             </button>
           </div>
@@ -549,7 +631,7 @@ export class Signer extends React.Component {
               <div className='signerControlDetailValue'>{permissionId}</div>
             </div>
           ) : null}
-          {canReconnect && <ReloadSignerButton id={id} />}
+          {canReconnect && <ReloadSignerButton id={id} status={status} />}
           <button
             type='button'
             className='signerControlOption signerControlOptionImportant'

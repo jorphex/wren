@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import link from '../../../../resources/link'
 import { isHardwareSigner } from '../../../../resources/domain/signer'
 
-class SignerStatus extends React.Component {
+export class SignerStatus extends React.Component {
   constructor(...args) {
     super(...args)
     // this.moduleRef = React.createRef()
@@ -14,26 +14,47 @@ class SignerStatus extends React.Component {
     // })
     this.state = {
       expand: false,
-      shake: false
+      shake: false,
+      unlockInput: '',
+      unlockError: '',
+      unlockPending: false
     }
+    this.unlockPending = false
+    this.mounted = true
     this.statusRef = React.createRef()
     this.inputRef = React.createRef()
   }
 
+  componentWillUnmount() {
+    this.mounted = false
+    clearTimeout(this.shakeTimer)
+  }
+
   shake() {
     this.setState({ shake: true })
-    setTimeout(() => {
-      this.setState({ shake: false })
+    clearTimeout(this.shakeTimer)
+    this.shakeTimer = setTimeout(() => {
+      if (this.mounted) this.setState({ shake: false })
     }, 1200)
   }
 
   unlockChange(e) {
-    this.setState({ unlockInput: e.target.value })
+    this.setState({ unlockInput: e.target.value, unlockError: '' })
   }
 
   unlockSubmit() {
-    link.rpc('unlockSigner', this.props.signer.id, this.state.unlockInput, (err) => {
-      if (err) this.shake()
+    if (!this.state.unlockInput || this.unlockPending) return
+    const password = this.state.unlockInput
+    this.unlockPending = true
+    this.setState({ unlockInput: '', unlockError: '', unlockPending: true })
+    link.rpc('unlockSigner', this.props.signer.id, password, (err) => {
+      this.unlockPending = false
+      if (!this.mounted) return
+      this.setState({ unlockPending: false })
+      if (err) {
+        this.setState({ unlockError: err.message || String(err) })
+        this.shake()
+      }
     })
   }
 
@@ -51,7 +72,7 @@ class SignerStatus extends React.Component {
   // }
 
   render() {
-    const { shake } = this.state
+    const { shake, unlockInput, unlockError, unlockPending } = this.state
 
     const signer = this.props.signer || {}
 
@@ -61,11 +82,13 @@ class SignerStatus extends React.Component {
           <div className='signerStatusMain'>
             <div className='signerUnlockWrap'>
               <input
+                aria-label='Signer password'
                 autoFocus={true}
                 ref={this.inputRef}
                 className='signerUnlockInput'
                 type='password'
-                value={this.state.unlockInput}
+                value={unlockInput}
+                disabled={unlockPending}
                 onChange={this.unlockChange.bind(this)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -75,9 +98,19 @@ class SignerStatus extends React.Component {
                 }}
               />
               <div className='signerUnlockInputLabel'>{'Enter password to unlock'}</div>
-              <div className='signerUnlockSubmit' onClick={this.unlockSubmit.bind(this)}>
+              {unlockError ? (
+                <div role='alert' className='signerUnlockError'>
+                  {unlockError}
+                </div>
+              ) : null}
+              <button
+                type='button'
+                className='signerUnlockSubmit'
+                disabled={!unlockInput || unlockPending}
+                onClick={this.unlockSubmit.bind(this)}
+              >
                 {'Unlock'}
-              </div>
+              </button>
             </div>
           </div>
         </div>
