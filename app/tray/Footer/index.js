@@ -89,9 +89,10 @@ export class Footer extends React.Component {
           )
           return (
             <div className='requestApprove'>
-              <div
+              <button
+                type='button'
                 className='requestDecline'
-                style={{ pointerEvents: actionPending ? 'none' : 'auto' }}
+                disabled={actionPending}
                 onClick={() => {
                   if (!actionPending) {
                     this.setState({ walletCallsActionId: req.handlerId })
@@ -99,13 +100,14 @@ export class Footer extends React.Component {
                   }
                 }}
               >
-                <div className='requestDeclineButton _txButton _txButtonBad'>
+                <span className='requestDeclineButton _txButton _txButtonBad'>
                   <span>Decline</span>
-                </div>
-              </div>
-              <div
-                className={`requestSign ${canApprove ? '' : 'requestApproveDisabled'}`}
-                style={{ pointerEvents: canApprove ? 'auto' : 'none' }}
+                </span>
+              </button>
+              <button
+                type='button'
+                className='requestSign'
+                disabled={!canApprove}
                 onClick={() => {
                   if (canApprove) {
                     this.setState({ walletCallsActionId: req.handlerId })
@@ -113,37 +115,39 @@ export class Footer extends React.Component {
                   }
                 }}
               >
-                <div className='requestSignButton _txButton'>
+                <span className='requestSignButton _txButton'>
                   <span>{watchOnly ? 'Watch-only' : 'Submit Batch'}</span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           )
         } else if (req.type === 'access') {
           return (
             <div className='requestApprove'>
-              <div
+              <button
+                type='button'
                 className='requestDecline'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   if (this.state.allowInput) link.send('tray:giveAccess', req, false)
                 }}
               >
-                <div className='requestDeclineButton _txButton _txButtonBad'>
+                <span className='requestDeclineButton _txButton _txButtonBad'>
                   <span>Decline</span>
-                </div>
-              </div>
-              <div
+                </span>
+              </button>
+              <button
+                type='button'
                 className='requestSign'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   if (this.state.allowInput) link.send('tray:giveAccess', req, true)
                 }}
               >
-                <div className='requestSignButton _txButton'>
+                <span className='requestSignButton _txButton'>
                   <span>Approve</span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           )
         } else if (isSignatureRequest(req) && crumb.data.step === 'confirm') {
@@ -157,20 +161,22 @@ export class Footer extends React.Component {
         } else if (req.type === 'addChain') {
           return (
             <div className='requestApprove'>
-              <div
+              <button
+                type='button'
                 className='requestDecline'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   this.rejectRequest(req)
                 }}
               >
-                <div className='requestDeclineButton _txButton _txButtonBad'>
+                <span className='requestDeclineButton _txButton _txButtonBad'>
                   <span>Decline</span>
-                </div>
-              </div>
-              <div
+                </span>
+              </button>
+              <button
+                type='button'
                 className='requestSign'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   if (this.state.allowInput) {
                     link.send('tray:action', 'navDash', {
@@ -183,30 +189,32 @@ export class Footer extends React.Component {
                   }
                 }}
               >
-                <div className='requestSignButton _txButton'>
+                <span className='requestSignButton _txButton'>
                   <span>Review</span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           )
         } else if (req.type === 'addToken') {
           const requestReference = { account: req.account, handlerId: req.handlerId }
           return (
             <div className='requestApprove'>
-              <div
+              <button
+                type='button'
                 className='requestDecline'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   if (this.state.allowInput) link.send('tray:addToken', false, requestReference)
                 }}
               >
-                <div className='requestDeclineButton _txButton _txButtonBad'>
+                <span className='requestDeclineButton _txButton _txButtonBad'>
                   <span>Decline</span>
-                </div>
-              </div>
-              <div
+                </span>
+              </button>
+              <button
+                type='button'
                 className='requestSign'
-                style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+                disabled={!this.state.allowInput}
                 onClick={() => {
                   if (this.state.allowInput) {
                     const { address, symbol, decimals, logoURI, name, chainId } = req.token
@@ -225,10 +233,10 @@ export class Footer extends React.Component {
                   }
                 }}
               >
-                <div className='requestSignButton _txButton'>
+                <span className='requestSignButton _txButton'>
                   <span>Review</span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           )
         } else {

@@ -25,19 +25,27 @@ const TxApproval = ({ req, approval }) => {
             </ClusterValue>
           </ClusterRow>
           <ClusterRow>
-            <ClusterValue
-              onClick={() => {
-                link.rpc('declineRequest', req, () => {})
-              }}
-            >
-              <div className='_txActionButton _txActionButtonBad'>{'Reject'}</div>
+            <ClusterValue pointerEvents>
+              <button
+                type='button'
+                className='_txActionButton _txActionButtonBad'
+                onClick={() => {
+                  link.rpc('declineRequest', req, () => {})
+                }}
+              >
+                Reject
+              </button>
             </ClusterValue>
-            <ClusterValue
-              onClick={() => {
-                link.rpc('confirmRequestApproval', req, approval.type, {}, () => {})
-              }}
-            >
-              <div className='_txActionButton _txActionButtonGood'>{confirmLabel}</div>
+            <ClusterValue pointerEvents>
+              <button
+                type='button'
+                className='_txActionButton _txActionButtonGood'
+                onClick={() => {
+                  link.rpc('confirmRequestApproval', req, approval.type, {}, () => {})
+                }}
+              >
+                {confirmLabel}
+              </button>
             </ClusterValue>
           </ClusterRow>
           <ClusterRow>

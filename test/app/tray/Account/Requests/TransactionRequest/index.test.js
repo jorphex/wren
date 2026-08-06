@@ -313,7 +313,7 @@ describe('simulation review', () => {
 
     expect(screen.getByText('RPC Reports Revert')).toBeTruthy()
     expect(screen.getByText('The configured RPC reports a revert.')).toBeTruthy()
-    await user.click(screen.getByText('Sign Anyway'))
+    await user.click(screen.getByRole('button', { name: 'Sign Anyway' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
       req,
@@ -321,6 +321,21 @@ describe('simulation review', () => {
       {},
       expect.any(Function)
     )
+  })
+
+  it('exposes the approval rejection as a native decision', async () => {
+    const req = { handlerId: 'simulation-rejection' }
+    const approval = {
+      type: 'approveSimulationOverride',
+      data: { title: 'RPC Reports Revert', message: 'The configured RPC reports a revert.' }
+    }
+    const { user } = render(<TxApproval req={req} approval={approval} />)
+
+    await user.tab()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reject' }))
+    await user.keyboard('{Enter}')
+
+    expect(link.rpc).toHaveBeenCalledWith('declineRequest', req, expect.any(Function))
   })
 
   it('renders and confirms broad token authority consent', async () => {
@@ -339,7 +354,7 @@ describe('simulation review', () => {
 
     expect(screen.getByText('Broad Token Approval')).toBeTruthy()
     expect(screen.getByText(approval.data.message)).toBeTruthy()
-    await user.click(screen.getByText('Approve Anyway'))
+    await user.click(screen.getByRole('button', { name: 'Approve Anyway' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
       req,
@@ -390,7 +405,7 @@ describe('simulation review', () => {
 
     expect(screen.getByText('Unlimited Token Permit')).toBeTruthy()
     expect(screen.getByText(approval.data.message)).toBeTruthy()
-    await user.click(screen.getByText('Sign Permit Anyway'))
+    await user.click(screen.getByRole('button', { name: 'Sign Permit Anyway' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
       req,

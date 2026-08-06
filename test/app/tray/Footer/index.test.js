@@ -6,6 +6,11 @@ import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
+beforeEach(() => {
+  link.rpc.mockReset()
+  link.send.mockReset()
+})
+
 let resizeCallback
 const disconnectResizeObserver = jest.fn()
 
@@ -33,6 +38,33 @@ const request = (overrides = {}) => ({
   preparation: { status: 'succeeded' },
   ...overrides
 })
+
+const renderRequestFooter = (req, signerType = 'ledger') => {
+  const account = req.account || '0x0000000000000000000000000000000000000001'
+  const store = Restore.create(
+    {
+      main: {
+        accounts: {
+          [account]: { lastSignerType: signerType, requests: { [req.handlerId]: req } }
+        }
+      },
+      windows: {
+        panel: {
+          footer: { height: 80 },
+          nav: [
+            {
+              view: 'requestView',
+              data: { accountId: account, requestId: req.handlerId, step: 'confirm' }
+            }
+          ]
+        }
+      }
+    },
+    {}
+  )
+  const ConnectedFooter = Restore.connect(Footer, store)
+  return render(<ConnectedFooter />)
+}
 
 it('allows a fully reviewed wallet-call batch to be submitted', () => {
   expect(canApproveWalletCalls(request(), undefined, 'ledger')).toBe(true)
@@ -65,6 +97,61 @@ it.each([
   expect(canApproveWalletCalls(request(overrides), undefined, 'ledger')).toBe(false)
 })
 
+it('exposes native wallet-call decisions and locks actions once submitted', async () => {
+  const req = request({ account: '0x0000000000000000000000000000000000000001' })
+  const { user } = renderRequestFooter(req)
+  const decline = screen.getByRole('button', { name: 'Decline' })
+  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+
+  expect(decline.disabled).toBe(false)
+  expect(submit.disabled).toBe(false)
+  await user.click(submit)
+
+  expect(link.rpc).toHaveBeenCalledWith('approveRequest', req, expect.any(Function))
+  expect(decline.disabled).toBe(true)
+  expect(submit.disabled).toBe(true)
+})
+
+it('renders watch-only wallet-call submission as a disabled native button', () => {
+  renderRequestFooter(request(), 'address')
+
+  expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(false)
+  expect(screen.getByRole('button', { name: 'Watch-only' }).disabled).toBe(true)
+})
+
+it.each([
+  ['access', 'Approve', ['tray:giveAccess', expect.anything(), true]],
+  [
+    'addChain',
+    'Review',
+    [
+      'tray:action',
+      'navDash',
+      expect.objectContaining({
+        view: 'chains',
+        data: expect.objectContaining({
+          requestReference: expect.objectContaining({ handlerId: 'native-footer-action' })
+        })
+      })
+    ]
+  ]
+])('routes the native %s review action without changing its payload', async (type, label, expected) => {
+  const req = {
+    type,
+    handlerId: 'native-footer-action',
+    account: '0x0000000000000000000000000000000000000001',
+    chain: { id: 8453 }
+  }
+  const { user } = renderRequestFooter(req)
+
+  await user.keyboard('{Tab}')
+  await user.keyboard('{Tab}')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: label }))
+  await user.keyboard('{Enter}')
+
+  expect(link.send).toHaveBeenCalledWith(...expected)
+})
+
 describe('asset suggestion lifecycle', () => {
   const account = '0x0000000000000000000000000000000000000001'
   const handlerId = '11111111-1111-4111-8111-111111111111'
@@ -83,35 +170,13 @@ describe('asset suggestion lifecycle', () => {
   }
 
   const renderFooter = () => {
-    const store = Restore.create(
-      {
-        main: {
-          accounts: {
-            [account]: { lastSignerType: 'address', requests: { [handlerId]: assetRequest } }
-          }
-        },
-        windows: {
-          panel: {
-            footer: { height: 80 },
-            nav: [{ view: 'requestView', data: { accountId: account, requestId: handlerId } }]
-          }
-        }
-      },
-      {}
-    )
-    const ConnectedFooter = Restore.connect(Footer, store)
-    return render(<ConnectedFooter />)
+    return renderRequestFooter(assetRequest, 'address')
   }
-
-  beforeEach(() => {
-    link.rpc.mockReset()
-    link.send.mockReset()
-  })
 
   it('declines once through the asset-suggestion lifecycle', async () => {
     const { user } = renderFooter()
 
-    await user.click(screen.getByText('Decline'))
+    await user.click(screen.getByRole('button', { name: 'Decline' }))
 
     expect(link.send.mock.calls.filter(([channel]) => channel === 'tray:addToken')).toEqual([
       ['tray:addToken', false, { account, handlerId }]
@@ -122,7 +187,7 @@ describe('asset suggestion lifecycle', () => {
   it('keeps the suggestion pending while opening token review', async () => {
     const { user } = renderFooter()
 
-    await user.click(screen.getByText('Review'))
+    await user.click(screen.getByRole('button', { name: 'Review' }))
 
     expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
       view: 'tokens',

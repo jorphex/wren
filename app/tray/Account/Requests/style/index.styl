@@ -504,7 +504,12 @@
     text-align center
 
   .cancelRequest
-    font-size 10px
+    appearance none
+    padding 0
+    color inherit
+    border 0
+    font-family inherit
+    font-size 11px
     background var(--thin)
     height 20px
     width  100px
@@ -885,6 +890,12 @@
       border-bottom 2px solid var(--ghostZ)
 
     .txActionButton
+      appearance none
+      padding 0
+      color inherit
+      border 0
+      font-family inherit
+      font-size inherit
       background var(--ghostA)
       box-sizing border-box
       height 40px
@@ -899,7 +910,7 @@
       background var(--ghostA)
       box-shadow 0px 1px 2px var(--ghostZ)
     
-    .txActionButton:hover
+    .txActionButton:not(:disabled):hover
       background var(--ghostB)
 
     .txActionButtonGood
@@ -908,11 +919,13 @@
     .txActionButtonBad
       color var(--bad)
     
-    .txActionButtonDisabled
+    .txActionButtonDisabled,
+    .txActionButton:disabled
       color var(--outerspace05)
       cursor default
     
-    .txActionButtonDisabled:hover
+    .txActionButtonDisabled:hover,
+    .txActionButton:disabled:hover
       background var(--ghostA)
 
   .requestApproveFeeReject
@@ -1427,6 +1440,12 @@
   margin 10px 8px 40px 8px
 
   .requestDecline
+    appearance none
+    padding 0
+    color inherit
+    border 0
+    font-family inherit
+    background transparent
     position absolute
     top 4px
     left 4px
@@ -1474,6 +1493,12 @@
     background var(--badOver)
 
   .requestSign
+    appearance none
+    padding 0
+    color inherit
+    border 0
+    font-family inherit
+    background transparent
     position absolute
     top 4px
     right 4px
@@ -1533,14 +1558,18 @@
 .requestQuickButton
   animation scalein 800ms var(--cubic) !important
 
-.requestApproveDisabled
-  pointer-events none
-  opacity 0.2
-  .requestDecline
-    pointer-events none
-  .requestSign
-    pointer-events none
+.requestApprove
+  .requestDecline:disabled,
+  .requestSign:disabled
+    cursor default
+    opacity 0.35
 
+    .requestDeclineButton,
+    .requestSignButton
+      cursor default
+
+      &:hover
+        background transparent
 // Wren request-review foundation
 .requestProvider
   width calc(100% - 24px)

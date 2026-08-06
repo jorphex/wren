@@ -149,8 +149,10 @@ export class RequestCommand extends React.Component {
                 </div>
               ) : this.state.showHashDetails || status === 'confirming' ? (
                 <div className='txActionButtonsRow'>
-                  <div
-                    className={`txActionButton${explorer ? '' : ' txActionButtonDisabled'}`}
+                  <button
+                    type='button'
+                    className='txActionButton'
+                    disabled={!explorer}
                     onClick={() => {
                       if (explorer && req && req.tx && req.tx.hash) {
                         if (this.store('main.mute.explorerWarning')) {
@@ -162,8 +164,9 @@ export class RequestCommand extends React.Component {
                     }}
                   >
                     Open Explorer
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type='button'
                     className={'txActionButton'}
                     onClick={() => {
                       if (req && req.tx && req.tx.hash) {
@@ -180,11 +183,12 @@ export class RequestCommand extends React.Component {
                     }}
                   >
                     Copy Hash
-                  </div>
+                  </button>
                 </div>
               ) : (
                 <div className='txActionButtonsRow'>
-                  <div
+                  <button
+                    type='button'
                     className='txActionButton txActionButtonBad'
                     onClick={() => {
                       link.send(
@@ -195,23 +199,25 @@ export class RequestCommand extends React.Component {
                     }}
                   >
                     Cancel
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type='button'
                     className={'txActionButton'}
                     onClick={() => {
                       this.setState({ showHashDetails: true })
                     }}
                   >
                     View Details
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type='button'
                     className='txActionButton txActionButtonGood'
                     onClick={() => {
                       link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'speed')
                     }}
                   >
                     Speed Up
-                  </div>
+                  </button>
                 </div>
               )
             ) : null}
@@ -241,9 +247,9 @@ export class RequestCommand extends React.Component {
           {displayStatus}
         </div>
         {isCancelableRequest(status) && (
-          <div className='cancelRequest' onClick={() => this.decline(req)}>
+          <button type='button' className='cancelRequest' onClick={() => this.decline(req)}>
             Cancel
-          </div>
+          </button>
         )}
       </div>
     )
@@ -292,19 +298,22 @@ export class RequestCommand extends React.Component {
             right: '0px'
           }}
         >
-          <div
+          <button
+            type='button'
             className='requestDecline'
+            disabled={!this.state.allowInput}
             onClick={() => {
               if (this.state.allowInput) this.decline(req)
             }}
           >
-            <div className='requestDeclineButton _txButton _txButtonBad'>
+            <span className='requestDeclineButton _txButton _txButtonBad'>
               <span>Decline</span>
-            </div>
-          </div>
-          <div
+            </span>
+          </button>
+          <button
+            type='button'
             className={this.state.signerLocked ? 'requestSign headShake' : 'requestSign'}
-            style={{ pointerEvents: allowApproval ? 'auto' : 'none' }}
+            disabled={!allowApproval}
             onClick={() => {
               if (allowApproval) {
                 link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
@@ -329,7 +338,7 @@ export class RequestCommand extends React.Component {
               }
             }}
           >
-            <div className='requestSignButton _txButton'>
+            <span className='requestSignButton _txButton'>
               {this.state.signerLocked ? (
                 <span style={{ display: 'flex' }}>
                   <span>
@@ -342,8 +351,8 @@ export class RequestCommand extends React.Component {
               ) : (
                 <span>{req.simulation?.status === 'pending' ? 'Checking' : 'Sign'}</span>
               )}
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </>
     )
@@ -360,7 +369,8 @@ export class RequestCommand extends React.Component {
         <div className='txActionButtons'>
           <div className='txActionButtonsRow' style={{ padding: '0px 60px' }}>
             <div className='txActionText'>{'Fee Updated'}</div>
-            <div
+            <button
+              type='button'
               className='txActionButton txActionButtonGood'
               onClick={() => {
                 link.rpc('removeFeeUpdateNotice', req.account, req.handlerId, (e) => {
@@ -369,7 +379,7 @@ export class RequestCommand extends React.Component {
               }}
             >
               {'Ok'}
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -434,9 +444,9 @@ export class RequestCommand extends React.Component {
                       <div className='loader' />
                     </div>
                     <div className='requestNoticeInnerText'>See Signer</div>
-                    <div className='cancelRequest' onClick={() => this.decline(req)}>
+                    <button type='button' className='cancelRequest' onClick={() => this.decline(req)}>
                       Cancel
-                    </div>
+                    </button>
                   </div>
                 )
               } else if (status === 'success') {
@@ -468,20 +478,22 @@ export class RequestCommand extends React.Component {
           </div>
         ) : (
           <div className='requestApprove'>
-            <div
+            <button
+              type='button'
               className='requestDecline'
-              style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+              disabled={!this.state.allowInput}
               onClick={() => {
                 if (this.state.allowInput) this.decline(req)
               }}
             >
-              <div className='requestDeclineButton _txButton _txButtonBad'>
+              <span className='requestDeclineButton _txButton _txButtonBad'>
                 <span>Decline</span>
-              </div>
-            </div>
-            <div
+              </span>
+            </button>
+            <button
+              type='button'
               className='requestSign'
-              style={{ pointerEvents: this.state.allowInput ? 'auto' : 'none' }}
+              disabled={!this.state.allowInput}
               onClick={() => {
                 if (this.state.allowInput) {
                   link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
@@ -491,10 +503,10 @@ export class RequestCommand extends React.Component {
                 }
               }}
             >
-              <div className='requestSignButton _txButton'>
+              <span className='requestSignButton _txButton'>
                 <span>Sign</span>
-              </div>
-            </div>
+              </span>
+            </button>
           </div>
         )}
       </div>
