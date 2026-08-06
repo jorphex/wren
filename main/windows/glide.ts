@@ -43,6 +43,7 @@ export function isAtRightEdge(point: Point, display: Display) {
 
 export class GlideDetector {
   private running = false
+  private awaitingEdgeExit = false
   private timeout: ReturnType<typeof setTimeout> | undefined
 
   constructor(
@@ -88,10 +89,21 @@ export class GlideDetector {
       const currentPoint = this.screen.getCursorScreenPoint()
       const currentDisplay = this.screen.getDisplayNearestPoint(currentPoint)
       const edge = this.edge()
-      const dwellingAtEdge =
-        isAtEdge(initialPoint, initialDisplay, edge) && isAtEdge(currentPoint, currentDisplay, edge)
+      const initialAtEdge = isAtEdge(initialPoint, initialDisplay, edge)
+      const currentAtEdge = isAtEdge(currentPoint, currentDisplay, edge)
+
+      if (this.awaitingEdgeExit) {
+        if (!initialAtEdge || !currentAtEdge) this.awaitingEdgeExit = false
+        this.poll()
+        return
+      }
+
+      const dwellingAtEdge = initialAtEdge && currentAtEdge
 
       if (dwellingAtEdge && this.reveal()) {
+        // A hide can restart detection before the pointer leaves the edge.
+        // Require an exit before treating that pointer as a new gesture.
+        this.awaitingEdgeExit = true
         this.stop()
         return
       }

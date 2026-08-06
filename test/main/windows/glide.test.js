@@ -74,6 +74,32 @@ describe('GlideDetector', () => {
     expect(jest.getTimerCount()).toBe(0)
   })
 
+  it('requires the pointer to leave the edge before revealing again', () => {
+    const screen = createScreenSequence([
+      { x: 3839, y: 800 },
+      { x: 3839, y: 800 },
+      { x: 3839, y: 800 },
+      { x: 3839, y: 800 },
+      { x: 3800, y: 800 },
+      { x: 3800, y: 800 },
+      { x: 3839, y: 800 },
+      { x: 3839, y: 800 }
+    ])
+    const reveal = jest.fn(() => true)
+    const detector = new GlideDetector(screen, () => true, reveal)
+
+    detector.start()
+    jest.advanceTimersByTime(50)
+    expect(reveal).toHaveBeenCalledTimes(1)
+
+    detector.start()
+    jest.advanceTimersByTime(100)
+    expect(reveal).toHaveBeenCalledTimes(1)
+
+    jest.advanceTimersByTime(50)
+    expect(reveal).toHaveBeenCalledTimes(2)
+  })
+
   it('requires consecutive edge samples', () => {
     const screen = createScreenSequence([
       { x: 3839, y: 800 },
