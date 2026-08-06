@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../resources/svg'
+import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 import { safeRemoteImageUrl } from '../../../../resources/utils/image'
 
@@ -48,7 +48,9 @@ class CustomTokens extends React.Component {
                         <div className='customTokensListItemChain'>
                           <div className='customTokensListItemChainLabel'>{'Chain ID:'}</div>
                           <div>{token.chainId}</div>
-                          <div
+                          <button
+                            type='button'
+                            aria-label={this.state.tokenExpanded === i ? 'Collapse token' : 'Expand token'}
                             className={
                               this.state.tokenExpanded === i
                                 ? 'customTokensListItemExpand'
@@ -58,8 +60,8 @@ class CustomTokens extends React.Component {
                               this.setState({ tokenExpanded: this.state.tokenExpanded === i ? -1 : i })
                             }
                           >
-                            {svg.octicon('chevron-down', { height: 16 })}
-                          </div>
+                            <Icon name='chevron-down' size={16} />
+                          </button>
                         </div>
                       </div>
                       <div

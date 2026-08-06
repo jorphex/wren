@@ -7,7 +7,7 @@ import TxConfirmations from './TxConfirmations'
 import TxApproval from './TxApproval'
 import Time from '../Time'
 
-import svg from '../../../../resources/svg'
+import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 
 import { usesBaseFee } from '../../../../resources/domain/transaction'
@@ -332,8 +332,12 @@ export class RequestCommand extends React.Component {
             <div className='requestSignButton _txButton'>
               {this.state.signerLocked ? (
                 <span style={{ display: 'flex' }}>
-                  <span>{svg.sign(19)}</span>
-                  <span>{svg.lock(13)}</span>
+                  <span>
+                    <Icon name='sign' size={19} />
+                  </span>
+                  <span>
+                    <Icon name='lock' size={13} />
+                  </span>
                 </span>
               ) : (
                 <span>{req.simulation?.status === 'pending' ? 'Checking' : 'Sign'}</span>
@@ -438,7 +442,9 @@ export class RequestCommand extends React.Component {
               } else if (status === 'success') {
                 return (
                   <div key={status} className='requestNoticeInner requestNoticeSuccess'>
-                    <div className='requestNoticeInnerSymbol'>{svg.octicon('check', { height: 40 })}</div>
+                    <div className='requestNoticeInnerSymbol'>
+                      <Icon name='check' size={40} />
+                    </div>
                     <div className='requestNoticeInnerText'>{notice}</div>
                   </div>
                 )
@@ -446,7 +452,7 @@ export class RequestCommand extends React.Component {
                 return (
                   <div key={status} className='requestNoticeInner requestNoticeError'>
                     <div className='requestNoticeInnerSymbol'>
-                      {svg.octicon('circle-slash', { height: 40 })}
+                      <Icon name='blocked' size={40} />
                     </div>
                     <div className='requestNoticeInnerText'>{notice}</div>
                   </div>

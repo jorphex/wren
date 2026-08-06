@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 
-import { Slide, SlideBody, SlideItem } from '../../styled'
+import onboardingReady from 'url:../../../../../asset/ui/onboarding-ready.png'
+import { Slide, SlideArtwork, SlideBody, SlideItem } from '../../styled'
 
 const Outro = ({ setTitle, setProceed }) => {
   useEffect(() => {
@@ -10,6 +11,7 @@ const Outro = ({ setTitle, setProceed }) => {
   return (
     <Slide>
       <SlideBody>
+        <SlideArtwork alt='' aria-hidden='true' src={onboardingReady} />
         <SlideItem>
           <div>Wren is here to help you</div>
           <div>push the boundaries of web3.</div>

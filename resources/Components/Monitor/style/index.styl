@@ -170,6 +170,7 @@
       padding 3px 0px 1px 0px 
 
 .gasArrow
+  appearance none
   position absolute
   top 5px
   left -14px
@@ -179,6 +180,10 @@
   border-radius 8px
   cursor pointer
   color var(--outerspace)
+  padding 0
+  border 0
+  background transparent
+  font-family inherit
 
   *
     pointer-events none !important
@@ -193,12 +198,10 @@
     border-radius 13px
     padding 1px 1px
     box-sizing border-box
-    transform rotate(90deg)
   
 .gasArrowRight
   left auto
   right -14px
-  transform scaleX(-1)
   cursor pointer
 
   *

@@ -394,6 +394,9 @@ button.requestFeatureButton:focus-visible
   background var(--ghostB)
 
 .signerPermissionToggle
+  appearance none
+  border 0
+  padding 0
   position relative
   background var(--bad)
   height 20px
@@ -405,6 +408,9 @@ button.requestFeatureButton:focus-visible
   transition var(--standard)
   transform translateZ(0)
   cursor pointer
+
+  &:disabled
+    cursor default
 
   .signerPermissionToggleSwitch
     position absolute
@@ -694,8 +700,12 @@ button.dashModule
   margin-bottom var(--wren-space-6)
 
   .requestFeatureButton
+    display flex
     min-height 38px
     padding 0 var(--wren-space-3)
+    align-items center
+    justify-content center
+    gap var(--wren-space-2)
     border 0
     border-radius 4px
     color var(--wren-text-secondary)
@@ -758,3 +768,29 @@ button.dashModule
 
     &:hover
       color var(--wren-danger)
+
+@media (max-height: 760px)
+  .localSettings .localSettingsWrap
+    padding-top var(--wren-space-3)
+    padding-bottom var(--wren-space-3)
+
+  .dashHomeHeader
+    padding-bottom var(--wren-space-3)
+
+  .dashModuleSection
+    margin-bottom var(--wren-space-3)
+
+  button.dashModule
+    height 62px
+
+  .dashCompanion
+    min-height 58px
+    margin-bottom var(--wren-space-1)
+    padding-top var(--wren-space-2)
+    padding-bottom var(--wren-space-2)
+
+  .dashSupportActions
+    margin-bottom var(--wren-space-2)
+
+  .localSettings .appInfo
+    padding-top var(--wren-space-2)

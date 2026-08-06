@@ -1,8 +1,9 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import emptyContacts from 'url:../../../asset/ui/empty-contacts.png'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
-import svg from '../../../resources/svg'
 import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddressBookEntry } from './api'
 
 const shortAddress = (address) => `${address.slice(0, 8)}...${address.slice(-6)}`
@@ -73,7 +74,9 @@ export class AddressBookEditor extends React.Component {
     return (
       <form className='addressBookEditor cardShow' onSubmit={(event) => this.submit(event)}>
         <header className='addressBookEditorHeader'>
-          <div className='addressBookEditorIcon'>{svg.people(24)}</div>
+          <div className='addressBookEditorIcon'>
+            <Icon name='contacts' size={24} />
+          </div>
           <div>
             <h2>{editing ? 'Edit contact' : 'New contact'}</h2>
             <p>{editing ? 'Update the local name or note.' : 'Save a trusted address for review.'}</p>
@@ -258,7 +261,13 @@ export class AddressBook extends React.Component {
           </div>
         ) : (
           <div className='addressBookEmpty'>
-            <div>{svg.people(28)}</div>
+            {filter ? (
+              <div className='addressBookEmptyIcon'>
+                <Icon name='contacts' size={28} />
+              </div>
+            ) : (
+              <img alt='' aria-hidden='true' className='addressBookEmptyArtwork' src={emptyContacts} />
+            )}
             <strong>{filter ? 'No contacts match' : 'No saved contacts'}</strong>
             <span>{filter ? 'Try another search.' : 'Add addresses you recognize and verify often.'}</span>
           </div>
@@ -289,7 +298,9 @@ export class AddressBook extends React.Component {
       if (address && !entry) {
         return (
           <div className='addressBookMissing cardShow'>
-            <div>{svg.people(28)}</div>
+            <div>
+              <Icon name='contacts' size={28} />
+            </div>
             <strong>Contact not found</strong>
             <span>It may have been removed or replaced by imported contacts.</span>
             <button onClick={() => link.send('tray:action', 'backDash')} type='button'>

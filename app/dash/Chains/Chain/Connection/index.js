@@ -2,12 +2,12 @@ import React, { createRef } from 'react'
 import Restore from 'react-restore'
 
 import Dropdown from '../../../../../resources/Components/Dropdown'
+import Icon from '../../../../../resources/Components/Icon'
 import { ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import { isInvalidCustomTarget } from '../../../../../resources/connections'
 import { capitalize } from '../../../../../resources/utils'
 
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import { NETWORK_PRESETS } from '../../../../../resources/constants'
 
 export function presetLabel(key) {
@@ -88,9 +88,13 @@ class ChainModule extends React.Component {
           <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', width: '100%' }}>
             <ConnectionStatus connection={connection} />
             <div className='sliceTileBlock'>
-              <div className='sliceTileBlockIcon'>{svg.chain(14)}</div>
+              <div className='sliceTileBlockIcon'>
+                <Icon name='network' size={14} />
+              </div>
               <div className='sliceTileChainId'>{id}</div>
-              <div className='sliceTileBlockIcon'>{svg.cube(14)}</div>
+              <div className='sliceTileBlockIcon'>
+                <Icon name='server' size={14} />
+              </div>
               <div>{blockHeight}</div>
             </div>
           </div>

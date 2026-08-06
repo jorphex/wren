@@ -1,9 +1,9 @@
 import { isValidAddress } from '@ethereumjs/util'
 import { Component, useEffect, useRef, useState } from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../resources/Components/Icon'
 import RingIcon from '../../../../resources/Components/RingIcon'
 import link from '../../../../resources/link'
-import svg from '../../../../resources/svg'
 
 const invalidFormatError = 'INVALID CONTRACT ADDRESS'
 const unableToVerifyError = `COULD NOT FIND TOKEN WITH ADDRESS`
@@ -266,7 +266,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
           <div className='newTokenChainSelectTitle'>
             <div className='newTokenChainAddress' role='heading' aria-level='2'>
               {address.substring(0, 10)}
-              {svg.octicon('kebab-horizontal', { height: 14 })}
+              <Icon name='ellipsis' size={14} />
               {address.substring(address.length - 8)}
             </div>
             {chainName ? (

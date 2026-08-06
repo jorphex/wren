@@ -12,11 +12,11 @@ import Restore from 'react-restore'
 import TxOverview from './TransactionRequest/TxMainNew/overview'
 
 import RequestItem from '../../../../resources/Components/RequestItem'
+import Icon from '../../../../resources/Components/Icon'
 
 import { ClusterBox, Cluster } from '../../../../resources/Components/Cluster'
 
 import link from '../../../../resources/link'
-import svg from '../../../../resources/svg'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
 
 class Requests extends React.Component {
@@ -69,13 +69,15 @@ class Requests extends React.Component {
         >
           <div className={'requestPreviewContent'}>
             <div className={'requestPreviewContentTitle'}>
-              <span style={reqCount ? { color: 'var(--good)' } : {}}>{svg.inbox(13)}</span>
+              <span style={reqCount ? { color: 'var(--good)' } : {}}>
+                <Icon name='requests' size={13} />
+              </span>
               <span>{reqCount ? (reqCount === 1 ? '1 Request' : reqCount + ' Requests') : 'Requests'}</span>
             </div>
             <div className={'requestPreviewContentArrow'} style={reqCount ? { color: 'var(--good)' } : {}}>
-              {svg.arrowRight(14)}
-              {svg.arrowRight(14)}
-              {svg.arrowRight(14)}
+              <Icon name='next' size={14} />
+              <Icon name='next' size={14} />
+              <Icon name='next' size={14} />
             </div>
           </div>
           <div className={'requestsPreviewArrow'}>
@@ -97,18 +99,22 @@ class Requests extends React.Component {
       <ClusterBox key={origin}>
         <div className='requestGroup'>
           <div className='requestGroupMain'>
-            <div style={{ marginRight: '8px' }}>{svg.window(12)}</div>
+            <div style={{ marginRight: '8px' }}>
+              <Icon name='apps' size={12} />
+            </div>
             <div className='requestGroupName'>{groupName}</div>
           </div>
-          <div
+          <button
+            type='button'
+            aria-label={`Clear requests from ${groupName}`}
             className='requestGroupButton'
             onClick={() => {
               link.send('tray:clearRequestsByOrigin', this.props.account, origin)
             }}
           >
-            {svg.x(14)}
+            <Icon name='close' size={14} />
             <div className='requestGroupButtonLabel'>{'clear all'}</div>
-          </div>
+          </button>
         </div>
         <Cluster>
           {!requests.length ? (

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 
-import { Slide, SlideBody, SlideItem, Tag } from '../../styled'
+import { BrowserChoice, BrowserChoices, Slide, SlideBody, SlideItem, Tag } from '../../styled'
 
 const Extension = ({ setTitle, setProceed }) => {
   useEffect(() => {
@@ -23,29 +23,26 @@ const Extension = ({ setTitle, setProceed }) => {
           <div>Download the qualified companion release for</div>
           <div>your preferred browser:</div>
         </SlideItem>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center'
-          }}
-        >
-          <div
-            style={{ padding: '10px', cursor: 'pointer' }}
+        <BrowserChoices>
+          <BrowserChoice
+            aria-label='Download Wren Companion for Chrome'
+            type='button'
             onClick={() =>
               link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
             }
           >
             {svg.chrome(48)}
-          </div>
-          <div
-            style={{ padding: '10px', cursor: 'pointer' }}
+          </BrowserChoice>
+          <BrowserChoice
+            aria-label='Download Wren Companion for Firefox'
+            type='button'
             onClick={() =>
               link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
             }
           >
             {svg.firefox(48)}
-          </div>
-        </div>
+          </BrowserChoice>
+        </BrowserChoices>
       </SlideBody>
     </Slide>
   )

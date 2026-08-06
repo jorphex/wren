@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
@@ -37,7 +37,9 @@ export class DappsPermissionsPreview extends React.Component {
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
         <div className='moduleHeader'>
-          <span>{svg.window(14)}</span>
+          <span>
+            <Icon name='apps' size={14} />
+          </span>
           <span>{'Dapps'}</span>
         </div>
         <Cluster>

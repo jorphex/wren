@@ -3,10 +3,11 @@ import Restore from 'react-restore'
 
 import AccountController from './AccountController'
 
+import emptyAccounts from 'url:../../../asset/ui/empty-accounts.png'
+import Icon from '../../../resources/Components/Icon'
 import { accountSort as byCreation } from '../../../resources/domain/account'
 import { matchFilter } from '../../../resources/utils'
 
-import svg from '../../../resources/svg'
 import link from '../../../resources/link'
 
 let firstScroll = true
@@ -41,10 +42,12 @@ class AccountSelector extends React.Component {
 
     return (
       <div className='panelFilterMain'>
-        <div className='panelFilterIcon'>{svg.search(12)}</div>
+        <div className='panelFilterIcon'>
+          <Icon name='search' size={12} />
+        </div>
         <div className='panelFilterInput'>
           <input
-            tabIndex='-1'
+            aria-label='Filter accounts'
             spellCheck='false'
             onChange={(e) => {
               const value = e.target.value
@@ -55,15 +58,17 @@ class AccountSelector extends React.Component {
           />
         </div>
         {this.store('panel.accountFilter') ? (
-          <div
+          <button
+            type='button'
+            aria-label='Clear account filter'
             className='panelFilterClear'
             onClick={() => {
               this.setState({ accountFilter: '' })
               link.send('tray:action', 'setAccountFilter', '')
             }}
           >
-            {svg.close(12)}
-          </div>
+            <Icon name='close' size={12} />
+          </button>
         ) : null}
       </div>
     )
@@ -99,7 +104,7 @@ class AccountSelector extends React.Component {
             ))
           ) : Object.keys(accounts).length === 0 ? (
             <div className='accountSelectorEmpty'>
-              <div className='accountSelectorEmptyIcon'>{svg.accounts(22)}</div>
+              <img alt='' aria-hidden='true' className='accountSelectorEmptyArtwork' src={emptyAccounts} />
               <div className='accountSelectorEmptyTitle'>No accounts yet</div>
               <div className='accountSelectorEmptyCopy'>Add an account to connect, review, and sign.</div>
               <button
@@ -112,7 +117,9 @@ class AccountSelector extends React.Component {
                   })
                 }}
               >
-                <span className='newAccountIcon'>{svg.plus(14)}</span>
+                <span className='newAccountIcon'>
+                  <Icon name='add' size={14} />
+                </span>
                 <span className='newAccountText'>Add account</span>
               </button>
             </div>

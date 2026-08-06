@@ -95,7 +95,7 @@ describe('rendering', () => {
 
     render(<Chain {...chainConfig} />)
 
-    const submitButton = screen.getByRole('button')
+    const submitButton = screen.getByRole('button', { name: 'Add Chain' })
     expect(submitButton.textContent).toBe('Add Chain')
   })
 
@@ -103,7 +103,7 @@ describe('rendering', () => {
     const chainConfig = { view: 'setup', id: 137, name: 'Polygon' }
     render(<Chain {...chainConfig} />)
 
-    const submitButton = screen.getByRole('button')
+    const submitButton = screen.getByRole('button', { name: 'Fill Chain Details' })
     expect(submitButton.textContent).toBe('Fill Chain Details')
   })
 
@@ -111,7 +111,7 @@ describe('rendering', () => {
     const chainConfig = { view: 'setup', id: 1, name: 'Mainnet' }
     render(<Chain {...chainConfig} />)
 
-    const submitButton = screen.getByRole('button')
+    const submitButton = screen.getByRole('button', { name: 'Chain ID Already Exists' })
     expect(submitButton.textContent).toBe('Chain ID Already Exists')
   })
 
@@ -119,8 +119,8 @@ describe('rendering', () => {
     const chainConfig = { view: 'setup' }
     render(<Chain {...chainConfig} />)
 
-    const testnetToggle = screen.getByRole('chainTestnet')
-    expect(testnetToggle.getAttribute('aria-checked')).toBe('false')
+    const testnetToggle = screen.getByRole('button', { name: 'Enable testnet mode' })
+    expect(testnetToggle.getAttribute('aria-pressed')).toBe('false')
   })
 })
 
@@ -141,7 +141,7 @@ describe('submitting', () => {
     const chainConfig = { id: 1, name: 'Mainnet' }
     const { user } = render(<Chain view='setup' {...chainConfig} />)
 
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Chain ID Already Exists' }))
     expect(link.invoke).not.toHaveBeenCalled()
   })
 
@@ -160,7 +160,7 @@ describe('submitting', () => {
 
     const { user } = render(<Chain view='setup' {...chainConfig} />)
 
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
 
     expect(link.invoke).toHaveBeenNthCalledWith(1, 'tray:addChain', {
       id: 42162,
@@ -199,7 +199,7 @@ describe('submitting', () => {
     await user.clear(secondaryRpcInput)
     await user.type(secondaryRpcInput, 'https://myrpc-rinkeby.arbitrum.io')
 
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
 
     expect(link.invoke).toHaveBeenNthCalledWith(
       1,
@@ -223,7 +223,7 @@ describe('submitting', () => {
 
     const { user } = render(<Chain view='setup' {...chainConfig} />)
 
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
 
     expect(link.invoke).toHaveBeenNthCalledWith(1, 'tray:addChain', {
       id: 42162,
@@ -258,7 +258,7 @@ describe('submitting', () => {
     }
 
     const { user } = render(<Chain view='setup' {...chainConfig} />)
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
 
     expect(link.invoke).toHaveBeenCalledWith(
       'tray:addChain',
@@ -279,7 +279,7 @@ describe('submitting', () => {
     }
 
     const { user } = render(<Chain view='setup' {...chainConfig} />)
-    await user.click(screen.getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
 
     expect(link.send).not.toHaveBeenCalled()
     expect(await screen.findByText('RPC chain mismatch')).toBeTruthy()
@@ -300,9 +300,9 @@ describe('submitting', () => {
     }
 
     const { user } = render(<Chain view='setup' {...chainConfig} />)
-    expect(screen.getByRole('button').textContent).toBe('Dapp RPC Must Use HTTPS')
+    const submitButton = screen.getByRole('button', { name: 'Dapp RPC Must Use HTTPS' })
 
-    await user.click(screen.getByRole('button'))
+    await user.click(submitButton)
     expect(link.invoke).not.toHaveBeenCalled()
   })
 })
@@ -312,8 +312,8 @@ describe('updating fields', () => {
     const chainConfig = { view: 'setup' }
     const { user } = render(<Chain {...chainConfig} />)
 
-    const testnetToggle = screen.getByRole('chainTestnet')
+    const testnetToggle = screen.getByRole('button', { name: 'Enable testnet mode' })
     await user.click(testnetToggle)
-    expect(testnetToggle.getAttribute('aria-checked')).toBe('true')
+    expect(testnetToggle.getAttribute('aria-pressed')).toBe('true')
   })
 })

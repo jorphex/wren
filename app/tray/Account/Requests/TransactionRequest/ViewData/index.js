@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../../../resources/svg'
+import Icon from '../../../../../../resources/Components/Icon'
 import link from '../../../../../../resources/link'
 import {
   SimulationAllowance,
@@ -34,31 +34,33 @@ const NonceValue = ({ req, nonce }) => {
     <>
       <div style={{ width: '24px' }}>{nonce}</div>
       <div className='txNonceControl'>
-        <div
+        <button
+          type='button'
+          aria-label='Decrease nonce'
           className='txNonceButton txNonceButtonLower'
-          onMouseDown={() => {
+          onClick={() => {
             link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, -1)
           }}
         >
-          {svg.octicon('chevron-down', { height: 14 })}
-        </div>
-        <div
+          <Icon name='chevron-down' size={14} />
+        </button>
+        <button
+          type='button'
+          aria-label='Increase nonce'
           className='txNonceButton txNonceButtonRaise'
-          onMouseDown={() =>
-            link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, 1)
-          }
+          onClick={() => link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, 1)}
         >
-          {svg.octicon('chevron-up', { height: 14 })}
-        </div>
+          <Icon name='chevron-up' size={14} />
+        </button>
         {nonceHasBeenChanged(req) && (
-          <div
+          <button
+            type='button'
+            aria-label='Reset nonce'
             className='txNonceButton txNonceButtonReset'
-            onMouseDown={() =>
-              link.send('tray:resetNonce', { account: req.account, handlerId: req.handlerId })
-            }
+            onClick={() => link.send('tray:resetNonce', { account: req.account, handlerId: req.handlerId })}
           >
-            {svg.octicon('sync', { height: 14 })}
-          </div>
+            <Icon name='sync' size={14} />
+          </button>
         )}
       </div>
     </>
@@ -128,8 +130,12 @@ export class ViewData extends React.Component {
         <div className='dataUnverified'>unverified abi</div>
         <div className='dataSource'>{'abi source: ' + req.decodedData.source}</div>
         <div className='decodedDataContractTarget'>
-          <div className='decodedDataSync decodedDataSyncLeft'>{svg.sync(16)}</div>
-          <div className='decodedDataSync decodedDataSyncRight'>{svg.sync(16)}</div>
+          <div className='decodedDataSync decodedDataSyncLeft'>
+            <Icon name='sync' size={16} />
+          </div>
+          <div className='decodedDataSync decodedDataSyncRight'>
+            <Icon name='sync' size={16} />
+          </div>
           <div className='decodedDataContractName'>{req.decodedData.contractName}</div>
           <div className='decodedDataContractMethod'>
             <div>{req.decodedData.method}</div>

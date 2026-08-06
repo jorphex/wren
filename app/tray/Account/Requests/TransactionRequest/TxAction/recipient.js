@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import svg from '../../../../../../resources/svg'
+import Icon from '../../../../../../resources/Components/Icon'
 import { getAddress } from '../../../../../../resources/utils'
 
 const Recipient = ({ address, ens, copyAddress, textSize = 16 }) => {
@@ -22,7 +22,7 @@ const Recipient = ({ address, ens, copyAddress, textSize = 16 }) => {
         ) : (
           <span className='_txRecipient'>
             {checkSummedAddress.substring(0, 8)}
-            {svg.octicon('kebab-horizontal', { height: 15 })}
+            <Icon name='ellipsis' size={15} />
             {checkSummedAddress.substring(address.length - 6)}
           </span>
         )}

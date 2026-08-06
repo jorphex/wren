@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import link from '../../../resources/link'
+import Icon from '../../../resources/Components/Icon'
 import svg from '../../../resources/svg'
 import { capitalize, getAddress } from '../../../resources/utils'
 import { isHardwareSigner, getSignerDisplayType } from '../../../resources/domain/signer'
@@ -14,7 +15,7 @@ function isLoading(status = '') {
   return ['loading', 'connecting', 'addresses', 'input', 'pairing'].some((s) => statusToCheck.includes(s))
 }
 
-class Signer extends React.Component {
+export class Signer extends React.Component {
   constructor(...args) {
     super(...args)
 
@@ -86,32 +87,51 @@ class Signer extends React.Component {
         {active ? (
           <>
             {this.props.pinError ? <div className='trezorPinError'>{this.props.pinError}</div> : null}
-            <div className='trezorPhraseInput'>
+            <div
+              className='trezorPhraseInput'
+              role='status'
+              aria-label={`${this.state.tPin.length} PIN positions entered`}
+            >
               {this.state.tPin.split('').map((n, i) => {
                 return (
-                  <div key={i} className='trezorPinInputButton' onMouseDown={this.trezorPin.bind(this, i)}>
-                    {svg.octicon('primitive-dot', { height: 14 })}
-                  </div>
+                  <span key={i} className='trezorPinInputButton' aria-hidden='true'>
+                    <span className='signerPinDot' />
+                  </span>
                 )
               })}
             </div>
-            <div
-              className='signerPinMessage signerPinSubmit'
-              onMouseDown={this.state.tPin ? () => this.submitPin() : null}
-            >
-              Submit Pin
+            <div className='signerPinActions'>
+              <button
+                type='button'
+                className='signerPinMessage signerPinSubmit'
+                disabled={!this.state.tPin}
+                onClick={() => this.submitPin()}
+              >
+                Submit PIN
+              </button>
               {this.state.tPin ? (
-                <div className='signerPinDelete' onMouseDown={this.backspacePin.bind(this)}>
-                  {svg.octicon('chevron-left', { height: 18 })}
-                </div>
+                <button
+                  type='button'
+                  aria-label='Delete last PIN position'
+                  className='signerPinDelete'
+                  onClick={this.backspacePin.bind(this)}
+                >
+                  <Icon name='back' size={18} />
+                </button>
               ) : null}
             </div>
             <div className='trezorPinInputWrap'>
               <div className='trezorPinInput'>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                  <div key={i} className='trezorPinInputButton' onMouseDown={this.trezorPin.bind(this, i)}>
-                    {svg.octicon('primitive-dot', { height: 20 })}
-                  </div>
+                  <button
+                    type='button'
+                    aria-label={`PIN position ${i}`}
+                    key={i}
+                    className='trezorPinInputButton'
+                    onClick={this.trezorPin.bind(this, i)}
+                  >
+                    <span className='signerPinDot' />
+                  </button>
                 ))}
               </div>
             </div>
@@ -143,31 +163,23 @@ class Signer extends React.Component {
                 autoFocus
               />
             </div>
-            <div
+            <button
+              type='button'
               className='signerPinMessage signerPinSubmit'
-              onMouseDown={(evt) => {
-                if (evt.button === 0) {
-                  // left click only
-                  this.submitPhrase()
-                }
-              }}
+              onClick={() => this.submitPhrase()}
             >
               Submit Passphrase
-            </div>
+            </button>
             {allowsDeviceEntry ? (
               <>
                 <div className='signerPinMessageOr'>{'or'}</div>
-                <div
+                <button
+                  type='button'
                   className='signerPinMessage signerPinSubmit'
-                  onMouseDown={(evt) => {
-                    if (evt.button === 0) {
-                      // left click only
-                      link.rpc('trezorEnterPhrase', this.props.id, () => {})
-                    }
-                  }}
+                  onClick={() => link.rpc('trezorEnterPhrase', this.props.id, () => {})}
                 >
                   Enter passphrase on device
-                </div>
+                </button>
               </>
             ) : (
               <></>
@@ -205,16 +217,14 @@ class Signer extends React.Component {
                 }}
               />
             </div>
-            <div
+            <button
+              type='button'
               className='signerPinMessage signerPinSubmit'
-              onMouseDown={(evt) => {
-                if (evt.button === 0) {
-                  this.submitPairing()
-                }
-              }}
+              disabled={!this.state.tPairing}
+              onClick={() => this.submitPairing()}
             >
               Submit Pairing Code
-            </div>
+            </button>
           </>
         ) : null}
       </div>
@@ -326,23 +336,31 @@ class Signer extends React.Component {
                 if (type === 'trezor')
                   return <div className='signerIconWrap signerIconHardware'>{svg.trezor(20)}</div>
                 if (type === 'seed' || type === 'ring')
-                  return <div className='signerIconWrap signerIconHot'>{svg.flame(23)}</div>
+                  return (
+                    <div className='signerIconWrap signerIconHot'>
+                      <Icon name='hot' size={23} />
+                    </div>
+                  )
                 if (type === 'lattice')
                   return <div className='signerIconWrap signerIconSmart'>{svg.lattice(22)}</div>
-                return <div className='signerIconWrap'>{svg.logo(20)}</div>
+                return (
+                  <div className='signerIconWrap'>
+                    <Icon name='hardware' size={20} />
+                  </div>
+                )
               })()}
             </div>
             {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
-            <div className='signerName'>
-              {this.props.name}
-              {/* <div className='signerNameUpdate'>
-                {svg.save(14)}
-              </div> */}
-            </div>
+            <div className='signerName'>{this.props.name}</div>
           </div>
-          <div className='signerExpand' onClick={() => this.expand(signer.id)}>
-            {svg.bars(14)}
-          </div>
+          <button
+            type='button'
+            aria-label={`Open ${this.props.name || 'signer'} details`}
+            className='signerExpand'
+            onClick={() => this.expand(signer.id)}
+          >
+            <Icon name='details' size={14} />
+          </button>
           {/* {this.status()} */}
         </div>
         {this.statusText()}
@@ -372,7 +390,7 @@ class Signer extends React.Component {
                     >
                       <div className='signerAccountIndex'>{index}</div>
                       <div className='signerAccountAddress'>
-                        {checkSummedAddress.substr(0, 11)} {svg.octicon('kebab-horizontal', { height: 20 })}{' '}
+                        {checkSummedAddress.substr(0, 11)} <Icon name='ellipsis' size={20} />{' '}
                         {checkSummedAddress.substr(address.length - 10)}
                       </div>
                       <div className='signerAccountCheck' />
@@ -380,9 +398,9 @@ class Signer extends React.Component {
                   )
                 })
               ) : (
-                <div className='signerAccountsAdd' onClick={() => this.expand(signer.id)}>
+                <button type='button' className='signerAccountsAdd' onClick={() => this.expand(signer.id)}>
                   {'View available accounts'}
-                </div>
+                </button>
               )}
             </div>
           </>
@@ -442,9 +460,9 @@ class Signer extends React.Component {
                 }}
               />
             </div>
-            <div onMouseDown={() => this.pairToLattice()} className='signerLatticePairSubmit'>
+            <button type='button' onClick={() => this.pairToLattice()} className='signerLatticePairSubmit'>
               Pair
-            </div>
+            </button>
           </div>
         ) : status === 'ok' || isLocked ? (
           <>
@@ -455,7 +473,8 @@ class Signer extends React.Component {
                 const added = this.store('main.accounts', address.toLowerCase())
                 const checkSummedAddress = getAddress(address)
                 return (
-                  <div
+                  <button
+                    type='button'
                     key={address}
                     className={!added ? 'signerAccount' : 'signerAccount signerAccountAdded'}
                     onClick={() => {
@@ -477,24 +496,36 @@ class Signer extends React.Component {
                   >
                     <div className='signerAccountIndex'>{index + 1 + startIndex}</div>
                     <div className='signerAccountAddress'>
-                      {checkSummedAddress.substr(0, 11)} {svg.octicon('kebab-horizontal', { height: 20 })}{' '}
+                      {checkSummedAddress.substr(0, 11)} <Icon name='ellipsis' size={20} />{' '}
                       {checkSummedAddress.substr(address.length - 10)}
                     </div>
                     <div className='signerAccountCheck' />
-                  </div>
+                  </button>
                 )
               })}
             </div>
             <div className='signerBottom'>
-              <div className='signerBottomPageBack' onMouseDown={() => this.nextPage(true)}>
-                {svg.triangleLeft(20)}
-              </div>
+              <button
+                type='button'
+                aria-label='Previous address page'
+                className='signerBottomPageBack'
+                disabled={page === 0}
+                onClick={() => this.nextPage(true)}
+              >
+                <Icon name='back' size={20} />
+              </button>
               <div className='signerBottomPages'>
                 {page + 1 + ' / ' + Math.ceil(signer.addresses.length / addressLimit)}
               </div>
-              <div className='signerBottomPageNext' onMouseDown={() => this.nextPage()}>
-                {svg.triangleLeft(20)}
-              </div>
+              <button
+                type='button'
+                aria-label='Next address page'
+                className='signerBottomPageNext'
+                disabled={startIndex + addressLimit >= signer.addresses.length}
+                onClick={() => this.nextPage()}
+              >
+                <Icon name='back' size={20} />
+              </button>
             </div>
           </>
         ) : type === 'trezor' &&
@@ -519,7 +550,8 @@ class Signer extends React.Component {
             </div>
           ) : null}
           {canReconnect && <ReloadSignerButton id={id} />}
-          <div
+          <button
+            type='button'
             className='signerControlOption signerControlOptionImportant'
             onClick={() => {
               link.send('dash:removeSigner', id)
@@ -527,7 +559,7 @@ class Signer extends React.Component {
             }}
           >
             Remove Signer
-          </div>
+          </button>
         </div>
       </div>
     )

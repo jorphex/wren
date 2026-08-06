@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 import { isNetworkConnected } from '../../../../../resources/utils/chains'
@@ -68,10 +69,12 @@ class BalancesExpanded extends React.Component {
   renderAccountFilter() {
     return (
       <div className='panelFilterAccount'>
-        <div className='panelFilterIcon'>{svg.search(12)}</div>
+        <div className='panelFilterIcon'>
+          <Icon name='search' size={12} />
+        </div>
         <div className='panelFilterInput'>
           <input
-            tabIndex='-1'
+            aria-label='Filter balances'
             type='text'
             spellCheck='false'
             onChange={(e) => {
@@ -82,14 +85,16 @@ class BalancesExpanded extends React.Component {
           />
         </div>
         {this.state.balanceFilter ? (
-          <div
+          <button
+            type='button'
+            aria-label='Clear balance filter'
             className='panelFilterClear'
             onClick={() => {
               this.setState({ balanceFilter: '' })
             }}
           >
-            {svg.close(12)}
-          </div>
+            <Icon name='close' size={12} />
+          </button>
         ) : null}
       </div>
     )

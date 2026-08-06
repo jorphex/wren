@@ -1,11 +1,12 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import Icon from '../../../../resources/Components/Icon'
 import svg from '../../../../resources/svg'
 import link from '../../../../resources/link'
 import { getAddress } from '../../../../resources/utils'
 
-class Account extends React.Component {
+export class Account extends React.Component {
   constructor(...args) {
     super(...args)
     this.locked = false
@@ -46,20 +47,6 @@ class Account extends React.Component {
     link.rpc('unlockSigner', this.props.id, this.state.unlockInput, () => {})
   }
 
-  trezorPin(num) {
-    this.setState({ tPin: this.state.tPin + num.toString() })
-  }
-
-  submitPin() {
-    link.rpc('trezorPin', this.props.id, this.state.tPin, () => {})
-    this.setState({ tPin: '' })
-  }
-
-  backspacePin(e) {
-    e.stopPropagation()
-    this.setState({ tPin: this.state.tPin ? this.state.tPin.slice(0, -1) : '' })
-  }
-
   select() {
     if (this.store('selected.current') === this.props.id) {
       link.rpc('unsetSigner', this.props.id, (err) => {
@@ -82,20 +69,6 @@ class Account extends React.Component {
         if (err) return console.log(err)
       })
     }
-  }
-
-  renderTrezorPin(active) {
-    return (
-      <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
-        <div className='trezorPinInput'>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-            <div key={i} className='trezorPinInputButton' onMouseDown={this.trezorPin.bind(this, i)}>
-              {svg.octicon('primitive-dot', { height: 20 })}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
   }
 
   setSignerStatusOpen(value) {
@@ -152,10 +125,18 @@ class Account extends React.Component {
           if (type === 'trezor')
             return <div className='signerSelectIconWrap signerIconTrezor'>{svg.trezor(24)}</div>
           if (type === 'seed' || type === 'ring')
-            return <div className='signerSelectIconWrap'>{svg.flame(25)}</div>
+            return (
+              <div className='signerSelectIconWrap'>
+                <Icon name='hot' size={25} />
+              </div>
+            )
           if (type === 'lattice')
             return <div className='signerSelectIconWrap signerIconSmart'>{svg.lattice(26)}</div>
-          return <div className='signerSelectIconWrap'>{svg.logo(22)}</div>
+          return (
+            <div className='signerSelectIconWrap'>
+              <Icon name='hardware' size={22} />
+            </div>
+          )
         })()}
       </div>
     )
@@ -164,28 +145,36 @@ class Account extends React.Component {
   renderMenu() {
     let menuClass = 'signerMenu'
     menuClass += this.store('selected.view') === 'settings' ? ' signerMenuSettings' : ' signerMenuDefault'
-    if ((this.store('selected.current') === this.props.id) & this.store('selected.open'))
-      menuClass += ' signerMenuOpen'
+    const menuOpen = this.store('selected.current') === this.props.id && this.store('selected.open')
+    if (menuOpen) menuClass += ' signerMenuOpen'
     return (
       <div className={menuClass}>
-        <div
+        <button
+          type='button'
+          aria-label='Show account activity'
+          aria-hidden={!menuOpen}
           className='signerMenuItem signerMenuItemLeft'
-          onMouseDown={() => this.store.setSignerView('default')}
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={() => this.store.setSignerView('default')}
         >
           <div className='signerMenuItemIcon'>
-            {svg.octicon('pulse', { height: 23 })}
+            <Icon name='pulse' size={23} />
             <div className='iconUnderline' />
           </div>
-        </div>
-        <div
+        </button>
+        <button
+          type='button'
+          aria-label='Show account settings'
+          aria-hidden={!menuOpen}
           className='signerMenuItem signerMenuItemRight'
-          onMouseDown={() => this.store.setSignerView('settings')}
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={() => this.store.setSignerView('settings')}
         >
           <div className='signerMenuItemIcon'>
-            {svg.octicon('settings', { height: 23 })}
+            <Icon name='settings' size={23} />
             <div className='iconUnderline' />
           </div>
-        </div>
+        </button>
       </div>
     )
   }
@@ -233,7 +222,7 @@ class Account extends React.Component {
         >
           {this.state.copied ? (
             <div className='signerDetailsFullAddressCopied'>
-              {svg.copy(16)}
+              <Icon name='copy' size={16} />
               <span>{'Address Copied'}</span>
             </div>
           ) : (
@@ -293,7 +282,9 @@ class Account extends React.Component {
               ) : (
                 <>
                   <div className='signerDetailsAddressPart'>{formattedAddress.substring(0, 5)}</div>
-                  <div className='signerDetailsAddressDivide'>{svg.ellipsis(16)}</div>
+                  <div className='signerDetailsAddressDivide'>
+                    <Icon name='ellipsis' size={16} />
+                  </div>
                   <div className='signerDetailsAddressPart'>
                     {formattedAddress.substr(formattedAddress.length - 3)}
                   </div>
@@ -363,7 +354,9 @@ class Account extends React.Component {
                     }}
                   >
                     <div>{formattedAddress.substring(0, 5)}</div>
-                    <div className='transactionToAddressLargeEllipsis'>{svg.ellipsis(16)}</div>
+                    <div className='transactionToAddressLargeEllipsis'>
+                      <Icon name='ellipsis' size={16} />
+                    </div>
                     <div>{formattedAddress.substr(formattedAddress.length - 3)}</div>
                   </div>
                 )
@@ -482,9 +475,6 @@ class Account extends React.Component {
               <>
                 {this.renderSignerIndicator()}
                 {this.renderType()}
-                {/* <div className='accountGrabber' style={open ? { opacity: 0, pointerEvents: 'none' } : {}}>
-                  {svg.grab(35)}
-                </div> */}
                 {(() => {
                   if (this.state.addressHover) return null
                   let requestBadgeClass = 'accountNotificationBadge'
@@ -496,18 +486,26 @@ class Account extends React.Component {
                     </div>
                   )
                 })()}
-                <div className='signerSelect' onClick={this.typeClick.bind(this)}>
+                <button
+                  type='button'
+                  aria-label={selectedAccountOpen ? 'Close account details' : 'Open account details'}
+                  className='signerSelect'
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    this.typeClick()
+                  }}
+                >
                   <div className='signerSelectButton'>
                     <div className='signerSelectIconWrap'>
                       <div
                         className='signerSelectIcon'
                         style={{ transform: selectedAccountOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
                       >
-                        {svg.chevron(26)}
+                        <Icon name='chevron-down' size={26} />
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               </>
             ) : null}
             {/* {this.renderStatus()} */}

@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../resources/svg'
+import Icon from '../Icon'
 
 class Filter extends React.Component {
   constructor(...args) {
@@ -49,16 +49,20 @@ class Filter extends React.Component {
     return (
       <div className='filter'>
         <div className='filterWrap'>
-          <div className='filterIcon'>{svg.search(18)}</div>
+          <div className='filterIcon'>
+            <Icon name='search' size={18} />
+          </div>
           <input
+            aria-label={this.props.inputLabel || 'Filter'}
             className='filterInput'
             spellCheck={false}
-            tabIndex={-1}
             onChange={(e) => this.props.onInput(e.target.value)}
           />
         </div>
         {buttonActionName ? (
-          <div
+          <button
+            type='button'
+            aria-label={buttonActionName}
             className='filterButton'
             onClick={() => {
               this.setState({ glitchOn: false })
@@ -70,11 +74,11 @@ class Filter extends React.Component {
           >
             {this.glitch(
               <div className='filterButtonInner'>
-                {'+'}
-                {svg.chain(14)}
+                <Icon name='add' size={12} />
+                <Icon name='network' size={14} />
               </div>
             )}
-          </div>
+          </button>
         ) : null}
       </div>
     )

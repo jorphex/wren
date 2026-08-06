@@ -5,8 +5,8 @@ import BigNumber from 'bignumber.js'
 import link from '../../link'
 
 import { ClusterRow, ClusterValue } from '../Cluster'
+import Icon from '../Icon'
 
-import svg from '../../svg'
 import { weiToGwei, hexToInt, roundGwei } from '../../utils'
 
 function levelDisplay(level) {
@@ -59,26 +59,38 @@ const GasFeesMarket = ({ gasPrice, fees: { nextBaseFee, maxPriorityFeePerGas }, 
         <span className='gasLevelLabel'>{'Current Base'}</span>
       </div>
       <div className='gasItem gasItemLarge'>
-        <div
+        <button
+          type='button'
+          aria-label='Explain current base fee'
           className='gasArrow'
           onClick={() => setDisplayBaseHint(true)}
+          onFocus={() => setDisplayBaseHint(true)}
+          onBlur={() => setDisplayBaseHint(false)}
           onMouseLeave={() => setDisplayBaseHint(false)}
         >
           <div className='gasArrowNotify'>+</div>
-          <div className='gasArrowInner'>{svg.chevron(27)}</div>
-        </div>
+          <div className='gasArrowInner'>
+            <Icon name='back' size={22} />
+          </div>
+        </button>
         <div className='gasGweiNum'>{gasPrice || '‹0.001'}</div>
         <span className='gasGweiLabel' style={{ color }}>
           {'GWEI'}
         </span>
         <span className='gasLevelLabel'>{'Recommended'}</span>
-        <div
+        <button
+          type='button'
+          aria-label='Explain priority fee'
           className='gasArrow gasArrowRight'
           onClick={() => setDisplayPriorityHint(true)}
+          onFocus={() => setDisplayPriorityHint(true)}
+          onBlur={() => setDisplayPriorityHint(false)}
           onMouseLeave={() => setDisplayPriorityHint(false)}
         >
-          <div className='gasArrowInner'>{svg.chevron(27)}</div>
-        </div>
+          <div className='gasArrowInner'>
+            <Icon name='chevron-right' size={22} />
+          </div>
+        </button>
       </div>
       <div className='gasItem gasItemSmall'>
         <div className='gasGweiNum'>{calculatedFees.priorityFee || '‹0.001'}</div>
@@ -126,7 +138,7 @@ export class ChainSummaryComponent extends Component {
           >
             <div className='sliceTileGasPrice'>
               <div className='sliceTileGasPriceIcon' style={{ color: this.props.color }}>
-                {svg.gas(12)}
+                <Icon name='gas' size={14} />
               </div>
               <div className='sliceTileGasPriceNumber'>{actualFee || '‹0.001'}</div>
               <div className='sliceTileGasPriceUnit'>{'gwei'}</div>
@@ -147,7 +159,9 @@ export class ChainSummaryComponent extends Component {
             }
           >
             <div style={{ padding: '6px', color: !explorer && 'var(--outerspace05)' }}>
-              <div>{address ? svg.accounts(16) : svg.telescope(18)}</div>
+              <div>
+                <Icon name='external' size={address ? 16 : 18} />
+              </div>
             </div>
           </ClusterValue>
         </ClusterRow>

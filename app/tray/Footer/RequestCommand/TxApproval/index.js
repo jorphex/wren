@@ -1,4 +1,4 @@
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 
 import { Cluster, ClusterValue, ClusterRow } from '../../../../../resources/Components/Cluster'
@@ -15,11 +15,11 @@ const TxApproval = ({ req, approval }) => {
             <ClusterValue>
               <div className='approveTransactionWarningTitle'>
                 <div className='approveTransactionWarningIcon approveTransactionWarningIconLeft'>
-                  {svg.alert(32)}
+                  <Icon name='alert' size={32} />
                 </div>
                 {title}
                 <div className='approveTransactionWarningIcon approveTransactionWarningIconRight'>
-                  {svg.alert(32)}
+                  <Icon name='alert' size={32} />
                 </div>
               </div>
             </ClusterValue>

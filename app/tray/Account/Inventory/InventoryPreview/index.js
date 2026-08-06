@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import { matchFilter } from '../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
@@ -95,7 +95,9 @@ class Inventory extends React.Component {
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <div className='moduleHeader'>
-          <span>{svg.inventory(12)}</span>
+          <span>
+            <Icon name='inventory' size={12} />
+          </span>
           <span>{'Inventory'}</span>
         </div>
         <Cluster>

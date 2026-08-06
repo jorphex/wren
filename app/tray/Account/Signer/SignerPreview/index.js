@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../../resources/Components/Icon'
 
 import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
@@ -81,14 +82,18 @@ class Signer extends React.Component {
     } else if (type === 'seed' || type === 'ring') {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>{svg.flame(16)}</div>
+          <div className='moduleItemIcon'>
+            <Icon name='hot' size={16} />
+          </div>
           <div>{'Hot'}</div>
         </div>
       )
     } else {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>{svg.mask(20)}</div>
+          <div className='moduleItemIcon'>
+            <Icon name='watch' size={20} />
+          </div>
           <div>{'Watch-only'}</div>
         </div>
       )
@@ -142,7 +147,9 @@ class Signer extends React.Component {
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
         <div className='moduleHeader'>
-          <span style={{ position: 'relative', top: '2px' }}>{svg.sign(19)}</span>
+          <span style={{ position: 'relative', top: '2px' }}>
+            <Icon name='sign' size={19} />
+          </span>
           <span>{'Signer'}</span>
         </div>
         <Cluster>
@@ -182,7 +189,7 @@ class Signer extends React.Component {
             {!watchOnly && (
               <ClusterColumn width={'80px'}>
                 <ClusterValue onClick={() => this.verifyAddress(hardwareSigner)}>
-                  {svg.doubleCheck(20)}
+                  <Icon name='verify' size={20} />
                 </ClusterValue>
               </ClusterColumn>
             )}

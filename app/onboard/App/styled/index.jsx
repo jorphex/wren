@@ -19,12 +19,18 @@ export const SlideContainer = styled.div`
   right: 0;
   bottom: 0;
   left: 0;
+  display: grid;
+  grid-template-rows: 20% 60% 20%;
   border-top: 1px solid var(--ghostX);
+
+  @media (max-height: 540px) {
+    grid-template-rows: 18% 64% 18%;
+  }
 `
 
 export const SlideScroller = styled.div`
   position: relative;
-  height: 60%;
+  min-height: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -36,7 +42,7 @@ export const Slide = styled.div`
   z-index: 700;
   max-height: 100%;
   box-sizing: border-box;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
 `
 
@@ -55,6 +61,31 @@ export const SlideBody = styled.div`
   div:last-child {
     padding-bottom: 0px;
   }
+
+  @media (max-height: 540px) {
+    font-size: 16px;
+
+    div {
+      padding-bottom: 18px;
+      line-height: 24px;
+    }
+  }
+`
+
+export const SlideArtwork = styled.img`
+  display: block;
+  width: min(390px, calc(100vw - 48px));
+  height: clamp(128px, 27vh, 220px);
+  margin: 0 auto 18px;
+  border-radius: var(--wren-radius-md);
+  object-fit: cover;
+  object-position: center;
+  box-shadow: var(--wren-shadow-md);
+
+  @media (max-height: 540px) {
+    height: clamp(96px, 24vh, 116px);
+    margin-bottom: 12px;
+  }
 `
 export const SlideVideo = styled.div`
   font-size: 32px;
@@ -65,7 +96,9 @@ export const SlideVideo = styled.div`
   border-radius: 6px;
   height: 240px;
   width: 390px;
-  box-shadow: 0px 8px 24px var(--ghostX), 0px -4px 8px var(--ghostY);
+  box-shadow:
+    0px 8px 24px var(--ghostX),
+    0px -4px 8px var(--ghostY);
 
   video {
     height: 100%;
@@ -77,14 +110,16 @@ export const SlideTitle = styled.div`
   font-weight: 500;
   animation: cardShow 400ms linear both;
   animation-delay: 0s;
-  height: 20%;
   display: flex;
   justify-content: center;
   align-items: flex-end;
+
+  @media (max-height: 540px) {
+    font-size: 28px;
+  }
 `
 
 export const SlideProceed = styled.div`
-  height: 40%;
   display: flex;
   justify-content: center;
 `
@@ -114,6 +149,35 @@ export const SlideItem = styled.div`
   flex-direction: column;
   div {
     padding-bottom: 0px;
+  }
+`
+
+export const BrowserChoices = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+`
+
+export const BrowserChoice = styled.button`
+  display: flex;
+  width: 68px;
+  height: 68px;
+  padding: 10px;
+  align-items: center;
+  justify-content: center;
+  color: var(--outerspace);
+  background: transparent;
+  border: 0;
+  border-radius: var(--wren-radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--wren-surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--wren-focus);
+    outline-offset: 2px;
   }
 `
 

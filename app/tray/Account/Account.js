@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import svg from '../../../resources/svg'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 
 import Default from './Default'
@@ -117,10 +117,12 @@ class _AccountMain extends React.Component {
   renderAccountFilter() {
     return (
       <div className='panelFilterAccount'>
-        <div className='panelFilterIcon'>{svg.search(12)}</div>
+        <div className='panelFilterIcon'>
+          <Icon name='search' size={12} />
+        </div>
         <div className='panelFilterInput'>
           <input
-            tabIndex='-1'
+            aria-label='Filter account details'
             type='text'
             spellCheck='false'
             onChange={(e) => {
@@ -131,14 +133,16 @@ class _AccountMain extends React.Component {
           />
         </div>
         {this.state.accountModuleFilter ? (
-          <div
+          <button
+            type='button'
+            aria-label='Clear account view filter'
             className='panelFilterClear'
             onClick={() => {
               this.setState({ accountModuleFilter: '' })
             }}
           >
-            {svg.close(12)}
-          </div>
+            <Icon name='close' size={12} />
+          </button>
         ) : null}
       </div>
     )
@@ -190,9 +194,14 @@ class _AccountView extends React.Component {
         style={{ top: accountOpen ? '140px' : '80px', bottom: footerHeight + 'px' }}
       >
         <div className='accountViewMenu cardShow'>
-          <div className='accountViewBack' onClick={() => this.props.back()}>
-            {svg.chevronLeft(16)}
-          </div>
+          <button
+            type='button'
+            aria-label='Back'
+            className='accountViewBack'
+            onClick={() => this.props.back()}
+          >
+            <Icon name='back' size={16} />
+          </button>
           <div className='accountViewTitle'>
             <div className='accountViewIcon'>{this.props.accountViewIcon}</div>
             <div className='accountViewText'>{this.props.accountViewTitle}</div>

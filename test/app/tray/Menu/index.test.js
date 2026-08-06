@@ -20,10 +20,12 @@ it('opens the dashboard with the current visibility inverted', () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
 })
 
-it('opens the dashboard from the keyboard', () => {
-  renderMenu()
+it('opens the dashboard from the keyboard', async () => {
+  const { user } = renderMenu()
+  const button = screen.getByRole('button', { name: 'Open dashboard' })
 
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Open dashboard' }), { key: 'Enter' })
+  button.focus()
+  await user.keyboard('{Enter}')
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
 })

@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 import { getOriginDisplayName } from '../../../../../resources/domain/origin'
 
 class AddTokenRequest extends React.Component {
@@ -42,12 +42,14 @@ class AddTokenRequest extends React.Component {
                   )
                 } else if (status === 'success') {
                   return (
-                    <div className='requestNoticeInner scaleIn'>{svg.octicon('check', { height: 80 })}</div>
+                    <div className='requestNoticeInner scaleIn'>
+                      <Icon name='check' size={80} />
+                    </div>
                   )
                 } else if (status === 'error' || status === 'declined') {
                   return (
                     <div className='requestNoticeInner scaleIn'>
-                      {svg.octicon('circle-slash', { height: 80 })}
+                      <Icon name='blocked' size={80} />
                     </div>
                   )
                 }
@@ -57,7 +59,9 @@ class AddTokenRequest extends React.Component {
             <div className='approveTransactionPayload'>
               {
                 <div className='approveRequestHeader approveTransactionHeader'>
-                  <div className='approveRequestHeaderIcon'> {svg.octicon('shield', { height: 20 })}</div>
+                  <div className='approveRequestHeaderIcon'>
+                    <Icon name='permissions' size={20} />
+                  </div>
                   <div className='approveRequestHeaderLabel'> Add Token</div>
                 </div>
               }

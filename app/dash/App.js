@@ -12,7 +12,7 @@ import Tokens from './Tokens'
 import Settings from './Settings'
 import Earn from './Earn'
 import AddressBook from './AddressBook'
-import svg from '../../resources/svg'
+import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
 
@@ -34,7 +34,9 @@ const AddNewItemButton = ({ view, req }) => {
         className='dashFooterButton'
         onClick={() => link.send('tray:action', 'navDash', { view, data: dataMap[view] })}
       >
-        <div className='newAccountIcon'>{svg.plus(16)}</div>
+        <div className='newAccountIcon'>
+          <Icon name='add' size={16} />
+        </div>
         Add New {itemName(view)}
       </button>
     </div>

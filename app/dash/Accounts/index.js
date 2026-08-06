@@ -1,6 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 
@@ -85,34 +86,46 @@ class AddAccounts extends React.Component {
           <div className='addAccountsHeaderTitle'>What type of account would you like to add?</div>
           {/* <div className='addAccountsHeaderClose' onClick={() => this.props.close()}>{'done'}</div> */}
         </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('lattice')}>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('lattice')}>
           <div className='accountTypeSelectIcon'>{svg.lattice(24)}</div>
           <div>{'GridPlus Lattice1'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('ledger')}>
+        </button>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('ledger')}>
           <div className='accountTypeSelectIcon'>{svg.ledger(22)}</div>
           <div>{'Ledger Device'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('trezor')}>
+        </button>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('trezor')}>
           <div className='accountTypeSelectIcon'>{svg.trezor(20)}</div>
           <div>{'Trezor Device'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('seed')}>
-          <div className='accountTypeSelectIcon'>{svg.seedling(25)}</div>
+        </button>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('seed')}>
+          <div className='accountTypeSelectIcon'>
+            <Icon name='key' size={23} />
+          </div>
           <div>{'Seed Phrase'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('keyring')}>
-          <div className='accountTypeSelectIcon'>{svg.key(23)}</div>
+        </button>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('keyring')}>
+          <div className='accountTypeSelectIcon'>
+            <Icon name='key' size={23} />
+          </div>
           <div>{'Private Key'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('keystore')}>
-          <div className='accountTypeSelectIcon'>{svg.file(22)}</div>
+        </button>
+        <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('keystore')}>
+          <div className='accountTypeSelectIcon'>
+            <Icon name='file' size={22} />
+          </div>
           <div>{'Keystore File (json)'}</div>
-        </div>
-        <div className='accountTypeSelect' onClick={() => this.createNewAccount('nonsigning')}>
-          <div className='accountTypeSelectIcon'>{svg.mask(26)}</div>
+        </button>
+        <button
+          type='button'
+          className='accountTypeSelect'
+          onClick={() => this.createNewAccount('nonsigning')}
+        >
+          <div className='accountTypeSelectIcon'>
+            <Icon name='watch' size={24} />
+          </div>
           <div>{'Watch Account'}</div>
-        </div>
+        </button>
       </div>
     )
   }

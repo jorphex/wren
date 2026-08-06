@@ -1,7 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
 import link from '../../../../resources/link'
-import svg from '../../../../resources/svg'
 import { isHardwareSigner } from '../../../../resources/domain/signer'
 
 class SignerStatus extends React.Component {
@@ -36,34 +35,6 @@ class SignerStatus extends React.Component {
     link.rpc('unlockSigner', this.props.signer.id, this.state.unlockInput, (err) => {
       if (err) this.shake()
     })
-  }
-
-  trezorPin(num) {
-    this.setState({ tPin: this.state.tPin + num.toString() })
-  }
-
-  submitPin() {
-    link.rpc('trezorPin', this.props.signer.id, this.state.tPin, () => {})
-    this.setState({ tPin: '' })
-  }
-
-  backspacePin(e) {
-    e.stopPropagation()
-    this.setState({ tPin: this.state.tPin ? this.state.tPin.slice(0, -1) : '' })
-  }
-
-  renderTrezorPin(active) {
-    return (
-      <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
-        <div className='trezorPinInput'>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-            <div key={i} className='trezorPinInputButton' onMouseDown={this.trezorPin.bind(this, i)}>
-              {svg.octicon('primitive-dot', { height: 20 })}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
   }
 
   // componentDidMount () {

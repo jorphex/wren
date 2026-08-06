@@ -1,7 +1,7 @@
 import link from '../../../../../../resources/link'
 import EnsOverview from '../../Ens'
 
-import svg from '../../../../../../resources/svg'
+import Icon from '../../../../../../resources/Components/Icon'
 import { isNonZeroHex } from '../../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/Components/Cluster'
@@ -329,7 +329,9 @@ const TxOverview = ({
             <div className='_txDescription'>
               <RequestHeader chain={chainName} chainColor={chainColor}>
                 <div className='requestItemTitleSub'>
-                  <div className='requestItemTitleSubIcon'>{svg.window(10)}</div>
+                  <div className='requestItemTitleSubIcon'>
+                    <Icon name='apps' size={10} />
+                  </div>
                   <div className='requestItemTitleSubText'>{originName}</div>
                 </div>
                 <div className='_txDescriptionSummaryMain'>

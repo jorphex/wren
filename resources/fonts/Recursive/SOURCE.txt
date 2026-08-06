@@ -1,0 +1,5 @@
+Recursive 1.085 variable desktop font
+https://github.com/arrowtype/recursive/releases/tag/v1.085
+
+Bundled file: Recursive_VF_1.085.woff2
+License: SIL Open Font License 1.1; see LICENSE.txt

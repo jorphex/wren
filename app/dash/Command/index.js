@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 
@@ -10,11 +11,19 @@ export class Command extends React.Component {
     } else if (type === 'trezor') {
       return <div className='expandedSignerIcon'>{svg.trezor(20)}</div>
     } else if (type === 'seed' || type === 'ring') {
-      return <div className='expandedSignerIcon'>{svg.flame(23)}</div>
+      return (
+        <div className='expandedSignerIcon'>
+          <Icon name='hot' size={23} />
+        </div>
+      )
     } else if (type === 'lattice') {
       return <div className='expandedSignerIcon'>{svg.lattice(22)}</div>
     } else {
-      return <div className='expandedSignerIcon'>{svg.logo(20)}</div>
+      return (
+        <div className='expandedSignerIcon'>
+          <Icon name='hardware' size={20} />
+        </div>
+      )
     }
   }
   renderSignerTitle() {
@@ -53,7 +62,7 @@ export class Command extends React.Component {
               link.send('tray:action', 'backDash')
             }}
           >
-            {svg.chevronLeft(16)}
+            <Icon name='back' size={16} />
           </button>
         ) : null}
         <div key={view} className='commandTitle cardShow'>
@@ -67,7 +76,7 @@ export class Command extends React.Component {
             link.send('tray:action', 'closeDash')
           }}
         >
-          {svg.x(16)}
+          <Icon name='close' size={16} />
         </button>
       </div>
     )

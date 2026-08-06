@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../resources/Components/Icon'
 import { Transition } from 'react-transition-group'
-import svg from '../../../../resources/svg'
 
 import AddHardware from './AddHardware'
 import AddHardwareLattice from './AddHardwareLattice'
@@ -67,25 +67,33 @@ export class Add extends React.Component {
                       </div>
                       <div className='addAccountBreak' />
                       <div className='addAccountHeader'>
-                        <div style={{ marginRight: '10px' }}>{svg.octicon('server', { height: 17 })}</div>
+                        <div style={{ marginRight: '10px' }}>
+                          <Icon name='hardware' size={17} />
+                        </div>
                         <div>Hardware Accounts</div>
                       </div>
                       <AddHardware index={1} type='ledger' />
                       <AddHardware index={2} type='trezor' />
                       <AddHardwareLattice index={3} type='lattice' />
                       <div className='addAccountHeader'>
-                        <div style={{ margin: '-1px 10px 0px 0px' }}>{svg.flame(18)}</div>
+                        <div style={{ margin: '-1px 10px 0px 0px' }}>
+                          <Icon name='hot' size={18} />
+                        </div>
                         <div>Hot Accounts</div>
                       </div>
                       <AddPhrase index={4} />
                       <AddRing index={5} />
                       <div className='addAccountHeader'>
-                        <div style={{ margin: '-3px 10px 0px 0px' }}>{svg.handshake(23)}</div>
+                        <div style={{ margin: '-3px 10px 0px 0px' }}>
+                          <Icon name='watch' size={21} />
+                        </div>
                         <div>Nonsigning Accounts</div>
                       </div>
                       <AddAddress index={6} />
                       <div className='addAccountBreak' style={{ margin: '40px 0px 0px 0px' }} />
-                      <div className='addAccountFooter'>{svg.logo(32)}</div>
+                      <div className='addAccountFooter'>
+                        <Icon name='accounts' size={32} />
+                      </div>
                     </div>
                   </div>
                 </>

@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
-import svg from '../../../../resources/svg'
 
 class Activity extends React.Component {
   constructor(...args) {
@@ -25,7 +25,9 @@ class Activity extends React.Component {
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <div className='moduleHeader'>
-          <span>{svg.inbox(13)}</span>
+          <span>
+            <Icon name='activity' size={13} />
+          </span>
           <span>{'Activity'}</span>
         </div>
         <div className='moduleComingSoon'>{'Coming Soon'}</div>

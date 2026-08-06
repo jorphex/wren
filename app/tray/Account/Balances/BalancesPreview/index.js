@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 import { isNetworkConnected } from '../../../../../resources/utils/chains'
@@ -107,7 +108,9 @@ class BalancesPreview extends React.Component {
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <div className={'moduleHeader'}>
-          <span>{svg.tokens(13)}</span>
+          <span>
+            <Icon name='tokens' size={13} />
+          </span>
           <span>{'Balances'}</span>
         </div>
         {balances.length && scanning === 0 ? (

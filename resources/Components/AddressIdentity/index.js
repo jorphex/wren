@@ -1,4 +1,4 @@
-import svg from '../../svg'
+import Icon from '../Icon'
 import { getAddress } from '../../utils'
 
 const AddressIdentity = ({ address, copied = false, label = '', source = '' }) => {
@@ -17,7 +17,7 @@ const AddressIdentity = ({ address, copied = false, label = '', source = '' }) =
       ) : (
         <span aria-label={checksummed} className='clusterAddressRecipient'>
           {checksummed.substring(0, 8)}
-          {svg.octicon('kebab-horizontal', { height: 15 })}
+          <Icon name='ellipsis' size={15} />
           {checksummed.substring(checksummed.length - 6)}
         </span>
       )}

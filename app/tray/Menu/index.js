@@ -1,14 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
-import svg from '../../../resources/svg'
-
-const activateOnKeyboard = (event) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    event.currentTarget.click()
-  }
-}
 
 export class Menu extends React.Component {
   constructor(...args) {
@@ -36,12 +29,10 @@ export class Menu extends React.Component {
   render() {
     return (
       <div className='panelMenu'>
-        <div
+        <button
+          type='button'
           className={'panelMenuItem panelMenuItemOpen'}
-          role='button'
           aria-label='Open dashboard'
-          tabIndex='0'
-          onKeyDown={activateOnKeyboard}
           onClick={() => {
             this.setState({ glitchOnSidebar: false })
             link.send('tray:action', 'setDash', {
@@ -52,14 +43,12 @@ export class Menu extends React.Component {
           onMouseOver={() => this.setState({ glitchOnSidebar: true })}
           onMouseLeave={() => this.setState({ glitchOnSidebar: false })}
         >
-          {this.glitch(svg.sidebar(15), this.state.glitchOnSidebar)}
-        </div>
-        <div
+          {this.glitch(<Icon name='sidebar' size={15} />, this.state.glitchOnSidebar)}
+        </button>
+        <button
+          type='button'
           className={'panelMenuItem panelMenuItemSend'}
-          role='button'
           aria-label='Open Wren Send'
-          tabIndex='0'
-          onKeyDown={activateOnKeyboard}
           onClick={() => {
             clearTimeout(this.clickTimer)
             this.clickTimer = setTimeout(() => {
@@ -72,8 +61,8 @@ export class Menu extends React.Component {
           onMouseOver={() => this.setState({ glitchOnSend: true })}
           onMouseLeave={() => this.setState({ glitchOnSend: false })}
         >
-          {this.glitch(svg.send(15), this.state.glitchOnSend)}
-        </div>
+          {this.glitch(<Icon name='send' size={15} />, this.state.glitchOnSend)}
+        </button>
       </div>
     )
   }

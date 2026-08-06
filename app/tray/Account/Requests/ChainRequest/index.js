@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 
 export class ChainRequest extends React.Component {
   render() {
@@ -28,9 +28,13 @@ export class ChainRequest extends React.Component {
                   </div>
                 </div>
               ) : status === 'success' ? (
-                <div className='requestNoticeInner'>{svg.octicon('check', { height: 80 })}</div>
+                <div className='requestNoticeInner'>
+                  <Icon name='check' size={80} />
+                </div>
               ) : status === 'error' || status === 'declined' ? (
-                <div className='requestNoticeInner'>{svg.octicon('circle-slash', { height: 80 })}</div>
+                <div className='requestNoticeInner'>
+                  <Icon name='blocked' size={80} />
+                </div>
               ) : null}
             </div>
           ) : (

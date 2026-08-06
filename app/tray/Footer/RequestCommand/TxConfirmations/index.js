@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 
 class TxConfirmations extends React.Component {
   render() {
@@ -14,7 +14,7 @@ class TxConfirmations extends React.Component {
             confirmations > i ? 'txProgressConfirmsItem txProgressConfirmsItemGood' : 'txProgressConfirmsItem'
           return (
             <div key={i} className={monitorConfirmsItem}>
-              {svg.arrowRight(11)}
+              <Icon name='next' size={11} />
             </div>
           )
         })}

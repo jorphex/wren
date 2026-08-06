@@ -202,7 +202,9 @@
     font-size 12px
 
   .requestGroupButton
+    appearance none
     font-weight 400
+    font-family inherit
     font-size 12px
     cursor pointer
     height 22px
@@ -214,6 +216,7 @@
     justify-content center
     align-items center
     border 2px solid var(--ghostZ)
+    padding 0
     color var(--mint)
 
     .requestGroupButtonLabel
@@ -1788,6 +1791,11 @@ span
   justify-conent space-between
 
 .txNonceButton
+  appearance none
+  padding 0
+  color inherit
+  background transparent
+  border 0
   height 21px
   width 25px
   display flex
@@ -2171,6 +2179,11 @@ span
           height 100%
 
           .txProgressStepIcon
+            appearance none
+            padding 0
+            color inherit
+            background transparent
+            border 0
             position absolute
             z-index 996
             left 50%

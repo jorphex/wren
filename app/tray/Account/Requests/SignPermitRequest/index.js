@@ -4,7 +4,7 @@ import {
   MAX_TOKEN_DECIMALS,
   parseTokenBaseUnitAmount
 } from '../../../../../resources/domain/token/amount'
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import Countdown from '../../../../../resources/Components/Countdown'
@@ -76,7 +76,9 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                     <div className='_txDescription'>
                       <RequestHeader chain={chainName} chainColor={chainColor}>
                         <div className='requestItemTitleSub'>
-                          <div className='requestItemTitleSubIcon'>{svg.window(10)}</div>
+                          <div className='requestItemTitleSubIcon'>
+                            <Icon name='apps' size={10} />
+                          </div>
                           <div className='requestItemTitleSubText'>{originName}</div>
                         </div>
                         <div className='_txDescriptionSummaryMain'>{`Permit to Spend ${

@@ -52,7 +52,7 @@
     "sbom:verify:linux": "node scripts/verify-sbom.mjs dist/wren.cdx.json",
     "checksums:linux": "node scripts/write-linux-checksums.mjs",
     "release:verify:linux": "node scripts/verify-linux-release.mjs",
-    "copy-assets": "shx mkdir -p ./compiled/main/windows ./compiled/main/yearn && shx cp ./main/windows/*.png ./compiled/main/windows && shx cp ./app/dash/Earn/assets/LICENSE.txt ./compiled/main/yearn/token-assets.LICENSE.txt && shx cp ./app/dash/Earn/assets/SOURCE.txt ./compiled/main/yearn/token-assets.SOURCE.txt",
+    "copy-assets": "shx mkdir -p ./compiled/main/licenses ./compiled/main/windows ./compiled/main/yearn && shx cp ./main/windows/*.png ./compiled/main/windows && shx cp ./resources/fonts/Recursive/LICENSE.txt ./compiled/main/licenses/Recursive.OFL.txt && shx cp ./resources/fonts/Recursive/SOURCE.txt ./compiled/main/licenses/Recursive.SOURCE.txt && shx cp ./app/dash/Earn/assets/LICENSE.txt ./compiled/main/yearn/token-assets.LICENSE.txt && shx cp ./app/dash/Earn/assets/SOURCE.txt ./compiled/main/yearn/token-assets.SOURCE.txt",
     "parcel:build": "parcel build --no-autoinstall --public-url .",
     "publish": "node -e \"console.error('Direct publishing is disabled; use the qualified draft-release workflow.'); process.exit(1)\"",
     "publish:linux:arm64": "node -e \"console.error('Direct publishing is disabled; use a reviewed release workflow.'); process.exit(1)\"",

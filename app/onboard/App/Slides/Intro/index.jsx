@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 
-import { Slide, SlideBody, SlideItem } from '../../styled'
+import onboardingWelcome from 'url:../../../../../asset/ui/onboarding-welcome.png'
+import { Slide, SlideArtwork, SlideBody, SlideItem } from '../../styled'
 
 const Intro = ({ setTitle, setProceed, version }) => {
   useEffect(() => {
@@ -10,6 +11,7 @@ const Intro = ({ setTitle, setProceed, version }) => {
   return (
     <Slide>
       <SlideBody>
+        <SlideArtwork alt='' aria-hidden='true' src={onboardingWelcome} />
         <SlideItem>
           <div>Wren is a desktop wallet that creates a secure</div>
           <div>system-wide interface to your chains and accounts.</div>

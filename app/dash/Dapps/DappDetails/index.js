@@ -1,10 +1,10 @@
 import React from 'react'
 import Restore from 'react-restore'
 import link from '../../../../resources/link'
+import Icon from '../../../../resources/Components/Icon'
 import RingIcon from '../../../../resources/Components/RingIcon'
-import svg from '../../../../resources/svg'
 
-class DappDetails extends React.Component {
+export class DappDetails extends React.Component {
   updateOriginChain() {
     const origin = this.store('main.origins', this.props.originId)
     return (
@@ -18,7 +18,9 @@ class DappDetails extends React.Component {
             const selected = origin.chain.id === parseInt(id)
             const { primaryColor, icon } = this.store('main.networksMeta.ethereum', id)
             return (
-              <div
+              <button
+                type='button'
+                aria-pressed={selected}
                 key={id}
                 className={'originChainItem'}
                 onClick={() => {
@@ -31,8 +33,10 @@ class DappDetails extends React.Component {
 
                 {chain.name}
 
-                <div className='originChainItemCheck'>{selected ? svg.check(28) : null}</div>
-              </div>
+                <div className='originChainItemCheck'>
+                  {selected ? <Icon name='check' size={28} /> : null}
+                </div>
+              </button>
             )
           })}
       </div>
@@ -44,7 +48,7 @@ class DappDetails extends React.Component {
     return (
       <div className='cardShow'>
         <div className='originSwapOrigin'>
-          {svg.window(20)}
+          <Icon name='apps' size={20} />
           <div className='originSwapOriginText'>{origin.name}</div>
         </div>
         <div className='originSwapTitle'>default chain</div>

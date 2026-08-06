@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../resources/Components/Icon'
 import { okPort, okProtocol } from '../../../resources/connections'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
@@ -13,19 +14,19 @@ const dashboardSections = [
         view: 'accounts',
         title: 'Accounts',
         description: 'Manage signing and watch-only accounts',
-        icon: svg.accounts
+        icon: 'accounts'
       },
       {
         view: 'addressBook',
         title: 'Contacts',
         description: 'Name and verify frequently used addresses',
-        icon: svg.people
+        icon: 'contacts'
       },
       {
         view: 'earn',
         title: 'Earn',
         description: 'Review selected Yearn vault opportunities',
-        icon: svg.bars
+        icon: 'earn'
       }
     ]
   },
@@ -36,25 +37,25 @@ const dashboardSections = [
         view: 'chains',
         title: 'Networks',
         description: 'Configure chains and RPC connections',
-        icon: svg.chain
+        icon: 'network'
       },
       {
         view: 'tokens',
         title: 'Tokens',
         description: 'Control recognized and custom assets',
-        icon: svg.tokens
+        icon: 'tokens'
       },
       {
         view: 'dapps',
         title: 'Connected apps',
         description: 'Review dapp access and permissions',
-        icon: svg.window
+        icon: 'apps'
       },
       {
         view: 'settings',
         title: 'Settings',
         description: 'Desktop behavior, shortcuts, and privacy',
-        icon: svg.settings
+        icon: 'settings'
       }
     ]
   }
@@ -309,12 +310,16 @@ export class Main extends React.Component {
                       key={item.view}
                       onClick={() => link.send('tray:action', 'navDash', { view: item.view, data: {} })}
                     >
-                      <span className='dashModuleIcon'>{item.icon(20)}</span>
+                      <span className='dashModuleIcon'>
+                        <Icon name={item.icon} size={20} />
+                      </span>
                       <span className='dashModuleCopy'>
                         <strong className='dashModuleTitle'>{item.title}</strong>
                         <span className='dashModuleDescription'>{item.description}</span>
                       </span>
-                      <span className='dashModuleArrow'>{svg.arrowRight(14)}</span>
+                      <span className='dashModuleArrow'>
+                        <Icon name='next' size={14} />
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -353,6 +358,7 @@ export class Main extends React.Component {
                 link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
+              <Icon name='support' size={15} />
               Support &amp; feedback
             </button>
             <button
@@ -362,6 +368,7 @@ export class Main extends React.Component {
                 link.send('tray:action', 'setOnboard', { showing: true })
               }}
             >
+              <Icon name='tutorial' size={15} />
               Tutorial
             </button>
             <button
@@ -371,6 +378,7 @@ export class Main extends React.Component {
                 link.send('tray:quit')
               }}
             >
+              <Icon name='quit' size={15} />
               Quit
             </button>
           </div>

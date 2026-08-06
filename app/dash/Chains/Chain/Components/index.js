@@ -1,20 +1,21 @@
 import { useState } from 'react'
 
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 import chainDefault from '../chainDefault'
 
 export const SubmitChainButton = ({ text, enabled, textColor, onClick }) => {
   return (
-    <div
-      role='button'
+    <button
+      type='button'
       className={enabled ? 'addTokenSubmit addTokenSubmitEnabled' : 'addTokenSubmit'}
+      disabled={!enabled}
       style={{ color: textColor }}
       onClick={onClick}
     >
       <span>{text}</span>
-    </div>
+    </button>
   )
 }
 
@@ -33,45 +34,63 @@ export const ChainHeader = ({ type, id, primaryColor, icon, svgName, name, on, s
       </div>
       <div className='signerMenuItems'>
         {showExpand && (
-          <div
+          <button
+            type='button'
+            aria-label={`Open ${name} network details`}
             className='signerExpand'
             onClick={() => {
               const chain = { id, type }
               link.send('tray:action', 'navDash', { view: 'chains', data: { selectedChain: chain } })
             }}
           >
-            {svg.bars(14)}
-          </div>
+            <Icon name='details' size={14} />
+          </button>
         )}
         {showToggle && (
-          <div
+          <button
+            type='button'
+            aria-label={isMainnet ? `${name} is always enabled` : `${on ? 'Disable' : 'Enable'} ${name}`}
+            aria-pressed={on}
             className={on ? 'signerPermissionToggle signerPermissionToggleOn' : 'signerPermissionToggle'}
+            disabled={isMainnet}
             onClick={!isMainnet ? () => link.send('tray:action', 'activateNetwork', type, id, !on) : null}
           >
             {isMainnet ? (
               <div className='signerPermissionToggleSwitchLocked'>
-                {svg.lock(10)}
+                <Icon name='lock' size={10} />
                 <div className='signerPermissionToggleSwitch' />
               </div>
             ) : (
               <div className='signerPermissionToggleSwitch' />
             )}
-          </div>
+          </button>
         )}
       </div>
     </div>
   )
 }
 
-const accents = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'accent7', 'accent8']
+const accents = [
+  ['accent1', 'feather gold'],
+  ['accent2', 'straw gold'],
+  ['accent3', 'stone gray'],
+  ['accent4', 'clay red'],
+  ['accent5', 'moss green'],
+  ['accent6', 'heather'],
+  ['accent7', 'mist blue'],
+  ['accent8', 'slate gray']
+]
 
 export const EditChainColor = ({ currentColor, onChange }) => {
   return (
     <div className='chainRow'>
       <div className='chainInputLabel'>Chain Color</div>
       <div className='chainColorSwatches'>
-        {accents.map((color) => (
-          <div
+        {accents.map(([color, label]) => (
+          <button
+            type='button'
+            aria-label={`Use ${label} as the network color`}
+            aria-pressed={currentColor === color}
             key={color}
             className={
               currentColor === color ? 'chainColorSwatch chainColorSwatchSelected' : 'chainColorSwatch'
@@ -201,14 +220,15 @@ export const EditTestnet = ({ testnet, onChange }) => {
   return (
     <div className='chainRowTestnet'>
       <label>Testnet</label>
-      <div
-        role='chainTestnet'
-        aria-checked={testnet}
+      <button
+        type='button'
+        aria-label={`${testnet ? 'Disable' : 'Enable'} testnet mode`}
+        aria-pressed={testnet}
         className={testnet ? 'signerPermissionToggle signerPermissionToggleOn' : 'signerPermissionToggle'}
         onClick={() => onChange(!testnet)}
       >
         <div className='signerPermissionToggleSwitch' />
-      </div>
+      </button>
     </div>
   )
 }

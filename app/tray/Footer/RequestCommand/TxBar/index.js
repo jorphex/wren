@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import svg from '../../../../../resources/svg'
+import Icon from '../../../../../resources/Components/Icon'
 
 class TxBar extends React.Component {
   render() {
@@ -31,14 +31,19 @@ class TxBar extends React.Component {
             <div className='txProgressLine' />
             <div className='txProgressSteps'>
               <div className='txProgressStep'>
-                <div
+                <button
+                  type='button'
+                  aria-label='Show signing status'
+                  aria-hidden={position >= 4 ? 'true' : undefined}
                   className={progressIconClass}
+                  disabled={position >= 4}
                   style={{ padding: '10px 11px' }}
                   onClick={() => this.props.infoPane('sign')}
+                  onBlur={() => this.props.infoPane('')}
                   onMouseLeave={() => this.props.infoPane('')}
                 >
-                  {svg.sign(22)}
-                </div>
+                  <Icon name='sign' size={22} />
+                </button>
                 <div className='txProgressStepMarker' />
                 <div
                   className={
@@ -47,14 +52,19 @@ class TxBar extends React.Component {
                 />
               </div>
               <div className='txProgressStep'>
-                <div
+                <button
+                  type='button'
+                  aria-label='Show broadcast status'
+                  aria-hidden={position >= 4 ? 'true' : undefined}
                   className={progressIconClass}
+                  disabled={position >= 4}
                   style={{ padding: '11px 12px' }}
                   onClick={() => this.props.infoPane('send')}
+                  onBlur={() => this.props.infoPane('')}
                   onMouseLeave={() => this.props.infoPane('')}
                 >
-                  {svg.send(15)}
-                </div>
+                  <Icon name='send' size={15} />
+                </button>
                 <div className='txProgressStepMarker' />
                 <div
                   className={
@@ -63,14 +73,19 @@ class TxBar extends React.Component {
                 />
               </div>
               <div className='txProgressStep'>
-                <div
+                <button
+                  type='button'
+                  aria-label='Show confirmation status'
+                  aria-hidden={position >= 4 ? 'true' : undefined}
                   className={progressIconClass}
+                  disabled={position >= 4}
                   style={{ padding: '11px 12px' }}
                   onClick={() => this.props.infoPane('block')}
+                  onBlur={() => this.props.infoPane('')}
                   onMouseLeave={() => this.props.infoPane('')}
                 >
-                  {svg.cube(16)}
-                </div>
+                  <Icon name='check' size={16} />
+                </button>
                 <div className='txProgressStepMarker' />
                 <div
                   className={

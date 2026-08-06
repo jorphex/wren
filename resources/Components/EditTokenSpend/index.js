@@ -8,7 +8,7 @@ import {
   parseTokenBaseUnitAmount,
   parseTokenDecimalAmount
 } from '../../domain/token/amount'
-import svg from '../../svg'
+import Icon from '../Icon'
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../Cluster'
 import Countdown from '../Countdown'
 
@@ -41,7 +41,7 @@ const Details = ({ address, name }) => {
             ) : (
               <>
                 {address.substring(0, 8)}
-                {svg.octicon('kebab-horizontal', { height: 15 })}
+                <Icon name='ellipsis' size={15} />
                 {address.substring(address.length - 6)}
               </>
             )}
@@ -194,7 +194,7 @@ const EditTokenSpend = ({
                     className='approveTokenSpendAmountSubmit'
                     style={{ color: 'var(--good)' }}
                   >
-                    {svg.check(20)}
+                    <Icon name='check' size={20} />
                   </div>
                 )}
                 {mode === 'custom' ? (

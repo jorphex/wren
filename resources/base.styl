@@ -33,25 +33,12 @@
   font-weight 500
   src url('./fonts/FiraCode/FiraCode-Bold.ttf')
 
+// Recursive keeps small UI copy readable while adding a restrained, hand-built character.
 @font-face
   font-family 'MainFont'
-  font-weight 200
-  src url('./fonts/Ubuntu/Ubuntu-Light.ttf')
-
-@font-face
-  font-family 'MainFont'
-  font-weight 300
-  src url('./fonts/Ubuntu/Ubuntu-Regular.ttf')
-
-@font-face
-  font-family 'MainFont'
-  font-weight 400
-  src url('./fonts/Ubuntu/Ubuntu-Medium.ttf')
-
-@font-face
-  font-family 'MainFont'
-  font-weight 500
-  src url('./fonts/Ubuntu/Ubuntu-Bold.ttf')
+  font-style normal
+  font-weight 300 1000
+  src url('./fonts/Recursive/Recursive_VF_1.085.woff2') format('woff2-variations')
 
 @keyframes shake 
   0% 
@@ -169,7 +156,7 @@
     transform: translate(0, 0) rotate(0)  
 
 body
-  // Wren foundation. MainFont and FiraCode remain provisional aliases.
+  // Wren foundation. FiraCode remains the provisional technical face.
   --wren-font-ui 'MainFont', sans-serif
   --wren-font-mono 'FiraCode', monospace
 
@@ -215,6 +202,7 @@ body
   --cubic cubic-bezier(.82,0,.12,1)
 
   font-feature-settings 'ss04', 'zero'
+  font-variation-settings 'CASL' .12, 'CRSV' .25
 
 :focus-visible
   outline 2px solid var(--wren-focus, var(--moon))

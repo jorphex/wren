@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import Monitor from '../../../../../resources/Components/Monitor'
 
 import { Cluster } from '../../../../../resources/Components/Cluster'
@@ -61,20 +61,28 @@ class ChainsPreview extends React.Component {
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
         <div className='moduleHeader'>
-          <span style={{ marginLeft: '-2px' }}>{svg.chain(16)}</span>
+          <span style={{ marginLeft: '-2px' }}>
+            <Icon name='network' size={16} />
+          </span>
           <span>{`${name} Monitor`}</span>
           {existingChains.length > 1 && (
             <div className='chainMonitorSwitch'>
-              <div className='chainMonitorSwitchButton' onClick={() => this.setIndex(this.state.index - 1)}>
-                <div style={{ padding: '0px' }}>
-                  <div style={{ transform: 'rotate(-90deg)' }}>{svg.chevron(22)}</div>
-                </div>
-              </div>
-              <div className='chainMonitorSwitchButton' onClick={() => this.setIndex(this.state.index + 1)}>
-                <div style={{ padding: '0px' }}>
-                  <div style={{ transform: 'rotate(90deg)' }}>{svg.chevron(22)}</div>
-                </div>
-              </div>
+              <button
+                type='button'
+                aria-label='Previous network'
+                className='chainMonitorSwitchButton'
+                onClick={() => this.setIndex(this.state.index - 1)}
+              >
+                <Icon name='back' size={18} />
+              </button>
+              <button
+                type='button'
+                aria-label='Next network'
+                className='chainMonitorSwitchButton'
+                onClick={() => this.setIndex(this.state.index + 1)}
+              >
+                <Icon name='chevron-right' size={18} />
+              </button>
             </div>
           )}
         </div>

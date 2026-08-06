@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
-import svg from '../../../resources/svg'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 import { capitalize } from '../../../resources/utils'
@@ -143,12 +143,17 @@ export class Notify extends React.Component {
               <div className='notifyInputOptionText'>Proceed</div>
             </div>
           </div>
-          <div className='notifyCheck' onMouseDown={() => link.send('tray:action', 'toggleGasFeeWarning')}>
+          <button
+            type='button'
+            aria-pressed={this.store('main.mute.gasFeeWarning')}
+            className='notifyCheck'
+            onClick={() => link.send('tray:action', 'toggleGasFeeWarning')}
+          >
             <div className='notifyCheckBox'>
-              {this.store('main.mute.gasFeeWarning') ? svg.octicon('check', { height: 26 }) : null}
+              {this.store('main.mute.gasFeeWarning') ? <Icon name='check' size={26} /> : null}
             </div>
             <div className='notifyCheckText'>{"Don't show this warning again"}</div>
-          </div>
+          </button>
         </div>
       </div>
     )
@@ -279,17 +284,17 @@ export class Notify extends React.Component {
               <div className='notifyInputOptionText'>Proceed</div>
             </div>
           </div>
-          <div
+          <button
+            type='button'
+            aria-pressed={this.store('main.mute.signerCompatibilityWarning')}
             className='notifyCheck'
-            onMouseDown={() => link.send('tray:action', 'toggleSignerCompatibilityWarning')}
+            onClick={() => link.send('tray:action', 'toggleSignerCompatibilityWarning')}
           >
             <div className='notifyCheckBox'>
-              {this.store('main.mute.signerCompatibilityWarning')
-                ? svg.octicon('check', { height: 26 })
-                : null}
+              {this.store('main.mute.signerCompatibilityWarning') ? <Icon name='check' size={26} /> : null}
             </div>
             <div className='notifyCheckText'>{"Don't show this warning again"}</div>
-          </div>
+          </button>
         </div>
       </div>
     )
@@ -480,17 +485,19 @@ export class Notify extends React.Component {
               <div className='notifyInputOptionText'>Proceed</div>
             </div>
           </div>
-          <div
+          <button
+            type='button'
+            aria-pressed={this.store('main.mute.explorerWarning')}
             className='notifyCheck'
-            onMouseDown={() => {
+            onClick={() => {
               link.send('tray:action', 'toggleExplorerWarning')
             }}
           >
             <div className='notifyCheckBox'>
-              {this.store('main.mute.explorerWarning') ? svg.octicon('check', { height: 26 }) : null}
+              {this.store('main.mute.explorerWarning') ? <Icon name='check' size={26} /> : null}
             </div>
             <div className='notifyCheckText'>{"Don't show this warning again"}</div>
-          </div>
+          </button>
         </div>
       </div>
     )
