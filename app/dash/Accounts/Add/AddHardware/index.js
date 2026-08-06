@@ -2,9 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import hardwareSetup from 'url:../../../../../asset/ui/hardware-setup.png'
-import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
-import { LEDGER_SHOP_URL, TREZOR_SHOP_URL } from '../../../../../resources/constants'
 
 import Signer from '../../../Signer'
 
@@ -37,21 +35,10 @@ export class AddHardware extends React.Component {
           </div>
           <div className='addAccountItemDevices'>
             {tethered.length ? (
-              tethered.map((signer, i) => {
+              tethered.map((signer) => {
                 return (
-                  <div key={i + signer.id} className='addAccountItemOptionSetupFrame'>
-                    {signer ? (
-                      <Signer {...signer} inSetup={true} />
-                    ) : (
-                      <>
-                        <div className='addAccountItemOptionTitle'>{this.state.status}</div>
-                        {this.state.error ? (
-                          <div className='addAccountItemOptionSubmit' onMouseDown={() => this.restart()}>
-                            try again
-                          </div>
-                        ) : null}
-                      </>
-                    )}
+                  <div key={signer.id} className='addAccountItemOptionSetupFrame'>
+                    <Signer {...signer} inSetup={true} />
                   </div>
                 )
               })
@@ -65,16 +52,7 @@ export class AddHardware extends React.Component {
               </div>
             )}
           </div>
-          <div
-            className='addAccountItemFooter'
-            onClick={() => {
-              const open = (url) => link.send('tray:openExternal', url)
-              if (this.props.type === 'ledger') return open(LEDGER_SHOP_URL)
-              if (this.props.type === 'trezor') return open(TREZOR_SHOP_URL)
-            }}
-          >
-            {``}
-          </div>
+          <div className='addAccountItemFooter' />
         </div>
       </div>
     )
