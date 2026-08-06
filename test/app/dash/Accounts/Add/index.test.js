@@ -38,11 +38,20 @@ afterEach(() => {
 it('enters through an explicit transition node without findDOMNode', () => {
   render(<ConnectedAdd close={jest.fn()} />)
 
-  act(() => {
-    store.setAddAccount(true)
-    jest.runAllTimers()
-  })
+  act(() => store.setAddAccount(true))
+  act(() => jest.runAllTimers())
 
   expect(screen.getByText('Add Account')).toBeTruthy()
   expect(ReactDOM.findDOMNode).not.toHaveBeenCalled()
+})
+
+it('exposes account setup as a keyboard control', async () => {
+  const close = jest.fn()
+  const { user } = render(<ConnectedAdd close={close} />)
+
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add account' }))
+  await user.keyboard('{Enter}')
+
+  expect(close).toHaveBeenCalledTimes(1)
 })

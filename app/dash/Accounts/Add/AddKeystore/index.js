@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { cloneElement, useEffect, useRef, useState } from 'react'
 import { AddHotAccount } from '../Components'
 import link from '../../../../../resources/link'
 import { PasswordInput } from '../../../../../resources/Components/Password'
@@ -13,7 +13,7 @@ const navForward = (accountData) =>
     }
   })
 
-const LocateKeystore = ({ addKeystore, error, setError }) => {
+const LocateKeystore = ({ addKeystore, error, setError, active, selectionPending }) => {
   useEffect(() => {
     if (!error) return
     const timeout = setTimeout(() => {
@@ -23,34 +23,35 @@ const LocateKeystore = ({ addKeystore, error, setError }) => {
     return () => clearTimeout(timeout)
   }, [error, setError])
   return (
-    <div className='addAccountItemOptionSetupFrame'>
+    <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
       {error ? (
-        <div role='button' className='addAccountItemOptionError'>
+        <div role='alert' className='addAccountItemOptionError'>
           {error}
         </div>
       ) : (
-        <div
-          role='button'
+        <button
+          type='button'
           className='addAccountItemOptionSubmit'
+          disabled={selectionPending}
           style={{ marginTop: '10px' }}
           onClick={() => addKeystore()}
         >
           Locate Keystore File (json)
-        </div>
+        </button>
       )}
     </div>
   )
 }
 
-const Locating = () => (
-  <div className='addAccountItemOptionSetupFrame'>
+const Locating = ({ active }) => (
+  <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
     <div role={'status'} className='addAccountItemOptionTitle' style={{ marginTop: '15px' }}>
       Locating Keystore file...
     </div>
   </div>
 )
 
-const EnterKeystorePassword = ({ keystore }) => {
+const EnterKeystorePassword = ({ keystore, active }) => {
   const next = (keystorePassword) => {
     navForward({
       secret: keystore,
@@ -61,18 +62,56 @@ const EnterKeystorePassword = ({ keystore }) => {
   const getError = () => {}
   const title = 'Enter Keystore Password'
   const buttonText = 'Continue'
-  return <PasswordInput {...{ next, getError, title, buttonText }} />
+  return <PasswordInput {...{ next, getError, title, buttonText, active }} />
 }
 
-const LoadKeystore = ({ accountData }) => {
+const LoadKeystore = ({ accountData, active }) => {
   const { keystore, selecting, secret } = accountData
 
   const [error, setError] = useState('')
+  const [selectionPending, setSelectionPending] = useState(false)
+  const selectionTimer = useRef()
+  const selectionPendingRef = useRef(false)
+  const selectionRequest = useRef(0)
+  const observedSelecting = useRef(Boolean(selecting))
+  const mounted = useRef(true)
+
+  useEffect(
+    () => () => {
+      mounted.current = false
+      selectionRequest.current += 1
+      clearTimeout(selectionTimer.current)
+    },
+    []
+  )
+
+  useEffect(() => {
+    if (selecting) {
+      observedSelecting.current = true
+      return
+    }
+    if (!observedSelecting.current) return
+    observedSelecting.current = false
+    if (!selectionPendingRef.current) return
+    selectionRequest.current += 1
+    clearTimeout(selectionTimer.current)
+    selectionTimer.current = undefined
+    selectionPendingRef.current = false
+    setSelectionPending(false)
+  }, [selecting])
 
   const addKeystore = () => {
+    if (selectionPendingRef.current) return
+    selectionPendingRef.current = true
+    const request = ++selectionRequest.current
+    setSelectionPending(true)
     navForward({ selecting: true })
-    setTimeout(() => {
+    selectionTimer.current = setTimeout(() => {
+      selectionTimer.current = undefined
       link.rpc('locateKeystore', (err, locatedKeystore) => {
+        if (!mounted.current || request !== selectionRequest.current) return
+        selectionPendingRef.current = false
+        setSelectionPending(false)
         link.send('nav:back', 'dash')
         if (err) {
           setError(err)
@@ -86,11 +125,11 @@ const LoadKeystore = ({ accountData }) => {
   const viewIndex = secret || keystore ? 2 : selecting ? 1 : 0
 
   const steps = [
-    <LocateKeystore key={0} {...{ addKeystore, error, setError }} />,
+    <LocateKeystore key={0} {...{ addKeystore, error, setError, selectionPending }} />,
     <Locating key={1} />,
     <EnterKeystorePassword key={2} keystore={accountData.keystore} />
   ]
-  return <>{steps[viewIndex]}</>
+  return cloneElement(steps[viewIndex], { active })
 }
 
 const AddKeystore = ({ accountData }) => (

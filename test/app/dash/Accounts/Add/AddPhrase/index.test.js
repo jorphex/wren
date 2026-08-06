@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { screen, render } from '../../../../../componentSetup'
+import { act, fireEvent, screen, render } from '../../../../../componentSetup'
 import store from '../../../../../../main/store'
 import link from '../../../../../../resources/link'
 import AddPhraseAccountComponent from '../../../../../../app/dash/Accounts/Add/AddPhrase'
@@ -22,8 +22,9 @@ describe('entering seed phrase', () => {
     const { user } = render(<AddPhrase accountData={{}} />, { advanceTimersAfterInput: true })
 
     return {
-      clickNext: async () => user.click(screen.getAllByRole('button')[0]),
-      enterSeedPhrase: async (text) => await user.type(screen.getAllByRole('textbox')[0], text)
+      clickNext: async () => user.click(screen.getByRole('button', { name: 'Next' })),
+      enterSeedPhrase: async (text) =>
+        await user.type(screen.getByRole('textbox', { name: 'Seed Phrase' }), text)
     }
   }
 
@@ -39,8 +40,7 @@ describe('entering seed phrase', () => {
 
     await enterSeedPhrase('INVALID')
 
-    const nextButton = screen.getAllByRole('button')[0]
-    expect(nextButton.textContent).toBe('INVALID SEED PHRASE')
+    expect(screen.getByRole('alert').textContent).toBe('INVALID SEED PHRASE')
   })
 
   it('should update the navigation with the password entry screen when a seed phrase is submitted', async () => {
@@ -60,17 +60,32 @@ describe('entering seed phrase', () => {
       }
     })
   })
+
+  it('normalizes a multiline pasted seed phrase without concatenating words', async () => {
+    const { user } = render(<AddPhrase accountData={{}} />)
+    const input = screen.getByRole('textbox', { name: 'Seed Phrase' })
+    fireEvent.change(input, { target: { value: phrase.replaceAll(' ', '\n') } })
+    act(() => jest.advanceTimersByTime(300))
+
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+
+    expect(link.send).toHaveBeenCalledWith(
+      'nav:forward',
+      'dash',
+      expect.objectContaining({
+        data: expect.objectContaining({ accountData: { secret: phrase } })
+      })
+    )
+  })
 })
 
 describe('entering password', () => {
   it('should update the navigation to the confirmation screen when a password is submitted', async () => {
     const { user } = render(<AddPhrase accountData={{ secret: phrase }} />, { advanceTimersAfterInput: true })
 
-    const passwordEntryTextArea = screen.getAllByRole('textbox')[1]
-    const createButton = screen.getAllByRole('button')[1]
-
+    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Create Password' })
     await user.type(passwordEntryTextArea, password)
-    await user.click(createButton)
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'accounts',
@@ -94,8 +109,9 @@ describe('confirming password', () => {
     })
 
     return {
-      enterPassword: async (text) => user.type(screen.getAllByRole('textbox')[2], text),
-      clickConfirm: async () => user.click(screen.getAllByRole('button')[2])
+      enterPassword: async (text) =>
+        user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), text),
+      clickConfirm: async () => user.click(screen.getByRole('button', { name: 'Create' }))
     }
   }
 

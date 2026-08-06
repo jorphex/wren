@@ -107,14 +107,16 @@ export class Add extends React.Component {
                 }
               >
                 <div className='panelBottomMenu'>
-                  <div
+                  <button
+                    type='button'
+                    aria-label={state === 'entered' ? 'Close account setup' : 'Add account'}
                     className={
                       state === 'entered' ? 'addAccountTrigger addAccountTriggerActive' : 'addAccountTrigger'
                     }
-                    onMouseDown={() => this.toggleAddAccount(state)}
+                    onClick={() => this.toggleAddAccount(state)}
                   >
-                    <div className='addAccountTriggerIcon'>+</div>
-                  </div>
+                    <span className='addAccountTriggerIcon'>+</span>
+                  </button>
                 </div>
               </div>
               <div

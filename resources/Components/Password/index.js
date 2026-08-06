@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import zxcvbn from 'zxcvbn'
 import useFocusableRef from '../../Hooks/useFocusableRef'
 
@@ -12,12 +12,18 @@ export const PasswordInput = ({
   title,
   buttonText,
   autofocus,
+  active = true,
   lastStep = false
 }) => {
   const [error, setError] = useState(NO_PASSWORD_ENTERED)
   const inputRef = useFocusableRef(autofocus)
   const [disabled, setDisabled] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const submitting = useRef(false)
+  const resetTimer = useRef()
+  const wasActive = useRef(active)
+
+  useEffect(() => () => clearTimeout(resetTimer.current), [])
 
   const resetError = () => setError(NO_PASSWORD_ENTERED)
 
@@ -25,13 +31,28 @@ export const PasswordInput = ({
     inputRef.current && (inputRef.current.value = '')
   }
 
+  useEffect(() => {
+    if (active && !wasActive.current) {
+      clearTimeout(resetTimer.current)
+      submitting.current = false
+      setDisabled(false)
+      setProcessing(false)
+      resetError()
+      clear()
+    }
+    wasActive.current = active
+  }, [active])
+
   const handleSubmit = () => {
+    if (disabled || submitting.current) return
+    submitting.current = true
+    if (lastStep) setProcessing(true)
     next(inputRef.current.value)
     if (lastStep) {
-      setProcessing(true)
       clear()
     } else {
-      setTimeout(() => {
+      resetTimer.current = setTimeout(() => {
+        submitting.current = false
         resetError()
         clear()
       }, 1_000)
@@ -54,41 +75,46 @@ export const PasswordInput = ({
   }
 
   return (
-    <div className='addAccountItemOptionSetupFrame'>
-      <div role='heading' className='addAccountItemOptionTitle'>
+    <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
+      <div role='heading' aria-level='2' className='addAccountItemOptionTitle'>
         {title}
       </div>
       <div className='addAccountItemOptionInput addAccountItemOptionInputPassword'>
         <input
           role='textbox'
           type='password'
-          tabIndex='-1'
+          aria-label={title}
           ref={inputRef}
           onChange={validateInput}
           onKeyDown={(e) => {
-            if (!error && e.key === 'Enter' && !disabled) handleSubmit()
+            if (!error && e.key === 'Enter' && !disabled && !submitting.current) handleSubmit()
           }}
         />
       </div>
 
       {error ? (
-        <div role='button' className='addAccountItemOptionError'>
+        <div role='alert' className='addAccountItemOptionError'>
           {error}
         </div>
       ) : processing ? (
-        <div role='button' className='addAccountItemOptionProcessing'>
+        <div role='status' className='addAccountItemOptionProcessing'>
           Processing...
         </div>
       ) : (
-        <div role='button' className='addAccountItemOptionSubmit' onClick={() => !disabled && handleSubmit()}>
+        <button
+          type='button'
+          className='addAccountItemOptionSubmit'
+          disabled={disabled || processing}
+          onClick={handleSubmit}
+        >
           {buttonText}
-        </div>
+        </button>
       )}
     </div>
   )
 }
 
-export const CreatePassword = ({ onCreate, autofocus }) => {
+export const CreatePassword = ({ onCreate, autofocus, active }) => {
   const getError = (password) => {
     if (password.length < 12) return 'PASSWORD MUST BE 12 OR MORE CHARACTERS'
     const {
@@ -107,11 +133,12 @@ export const CreatePassword = ({ onCreate, autofocus }) => {
       title='Create Password'
       buttonText='Continue'
       autofocus={autofocus}
+      active={active}
     />
   )
 }
 
-export const ConfirmPassword = ({ password, onConfirm, autofocus, lastStep }) => {
+export const ConfirmPassword = ({ password, onConfirm, autofocus, active, lastStep }) => {
   const getError = (confirmedPassword) => {
     if (password !== confirmedPassword) return 'PASSWORDS DO NOT MATCH'
   }
@@ -123,6 +150,7 @@ export const ConfirmPassword = ({ password, onConfirm, autofocus, lastStep }) =>
       title='Confirm Password'
       buttonText='Create'
       autofocus={autofocus}
+      active={active}
       lastStep={lastStep}
     />
   )

@@ -1,10 +1,20 @@
 import React from 'react'
 import Restore from 'react-restore'
+import { ensNormalize, isAddress } from 'ethers'
 
 import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 
-const isEnsName = (input) => input.toLowerCase().includes('.eth')
+const normalizeInput = (input) => input.trim()
+
+const isEnsName = (input) => {
+  if (isAddress(input) || /^0x/i.test(input)) return false
+  try {
+    return ensNormalize(input).includes('.')
+  } catch {
+    return false
+  }
+}
 
 class AddAddress extends React.Component {
   constructor(...args) {
@@ -15,15 +25,20 @@ class AddAddress extends React.Component {
       address: '',
       status: '',
       error: false,
-      resolvingEnsName: false
+      resolvingEnsName: false,
+      creating: false
     }
 
     this.forms = [React.createRef(), React.createRef()]
     this.cancelEnsResolution = () => {}
+    this.operationPending = false
+    this.mounted = true
   }
 
   componentWillUnmount() {
+    this.mounted = false
     this.cancelEnsResolution()
+    clearTimeout(this.focusTimer)
   }
 
   onChange(key, e) {
@@ -80,33 +95,42 @@ class AddAddress extends React.Component {
   }
 
   createFromAddress(address) {
+    this.setState({ creating: true, resolvingEnsName: false })
+    this.nextForm()
     link.rpc('createFromAddress', address, 'Watch Account', (err) => {
+      this.operationPending = false
+      if (!this.mounted) return
       if (err) {
+        this.setState({ creating: false })
         this.setError(err)
       } else {
-        this.setState({ status: 'Successful', error: false })
+        this.setState({ status: 'Successful', error: false, creating: false })
       }
     })
   }
 
   async create() {
-    const { address: input } = this.state
+    if (this.operationPending) return
+    const input = normalizeInput(this.state.address)
 
-    const create = (address) => {
-      this.nextForm()
-      return this.createFromAddress(address)
+    if (!isAddress(input) && !isEnsName(input)) {
+      this.setError('Enter a valid address or ENS name')
+      return this.nextForm()
     }
 
     if (!isEnsName(input)) {
-      return create(input)
+      this.operationPending = true
+      return this.createFromAddress(input)
     }
 
     try {
+      this.operationPending = true
       this.setResolving()
 
       const address = await this.resolveEnsName(input)
-      create(address)
+      this.createFromAddress(address)
     } catch (e) {
+      this.operationPending = false
       if (!e.canceled) {
         this.setError(e.message)
         this.nextForm()
@@ -116,11 +140,16 @@ class AddAddress extends React.Component {
 
   restart() {
     this.cancelEnsResolution()
-    this.setState({ index: 0, adding: false, address: '', success: false, resolvingEnsName: false })
-
-    setTimeout(() => {
-      this.setState({ status: '', error: false })
-    }, 500)
+    this.operationPending = false
+    this.setState({
+      index: 0,
+      adding: false,
+      address: '',
+      status: '',
+      error: false,
+      resolvingEnsName: false,
+      creating: false
+    })
 
     this.focusActive()
   }
@@ -134,20 +163,16 @@ class AddAddress extends React.Component {
     }
   }
 
-  adding() {
-    this.setState({ adding: true })
-    this.focusActive()
-  }
-
   focusActive() {
-    setTimeout(() => {
+    clearTimeout(this.focusTimer)
+    this.focusTimer = setTimeout(() => {
       const formInput = this.forms[this.state.index]
-      if (formInput) formInput.current.focus()
+      if (formInput?.current) formInput.current.focus()
     }, 500)
   }
 
   render() {
-    const { status, error, address, index: formIndex, resolvingEnsName } = this.state
+    const { status, error, address, index: formIndex, resolvingEnsName, creating } = this.state
 
     let itemClass = 'addAccountItem addAccountItemSmart addAccountItemAdding'
 
@@ -169,40 +194,39 @@ class AddAddress extends React.Component {
           </div>
           <div className='addAccountItemOption'>
             <div
-              className='addAccountItemOptionIntro'
-              onClick={() => {
-                this.adding()
-              }}
-            >
-              Add Address Account
-            </div>
-            <div
               className='addAccountItemOptionSetup'
               style={{ transform: `translateX(-${100 * formIndex}%)` }}
             >
               <div className='addAccountItemOptionSetupFrames'>
-                <div className='addAccountItemOptionSetupFrame'>
+                <div
+                  className='addAccountItemOptionSetupFrame'
+                  aria-hidden={formIndex !== 0}
+                  inert={formIndex !== 0}
+                >
                   {!resolvingEnsName ? (
                     <>
-                      <label htmlFor='addressInput' role='label' className='addAccountItemOptionTitle'>
+                      <label htmlFor='addressInput' className='addAccountItemOptionTitle'>
                         input address or ENS name
                       </label>
                       <div className='addAccountItemOptionInput address'>
                         <input
                           autoFocus
                           id='addressInput'
-                          tabIndex='-1'
                           value={address}
                           ref={this.forms[0]}
                           onChange={(e) => this.onChange('address', e)}
                           onFocus={(e) => this.onFocus('address', e)}
                           onBlur={(e) => this.onBlur('address', e)}
-                          onKeyPress={(e) => this.keyPress(e)}
+                          onKeyDown={(e) => this.keyPress(e)}
                         />
                       </div>
-                      <div role='button' className='addAccountItemOptionSubmit' onClick={() => this.create()}>
+                      <button
+                        type='button'
+                        className='addAccountItemOptionSubmit'
+                        onClick={() => this.create()}
+                      >
                         Create
-                      </div>
+                      </button>
                     </>
                   ) : (
                     <div className='addAccountResolvingEns'>
@@ -210,41 +234,53 @@ class AddAddress extends React.Component {
                       <div className='signerLoading'>
                         <div className='signerLoadingLoader' />
                       </div>
-                      <div
-                        role='button'
+                      <button
+                        type='button'
                         className='addAccountItemOptionSubmit'
                         onClick={() => this.restart()}
                       >
                         cancel
-                      </div>
+                      </button>
                     </div>
                   )}
                 </div>
 
-                <div className='addAccountItemOptionSetupFrame'>
+                <div
+                  className='addAccountItemOptionSetupFrame'
+                  aria-hidden={formIndex !== 1}
+                  inert={formIndex !== 1}
+                >
                   {error ? (
                     <>
-                      <div className='addAccountItemOptionTitle'>{status}</div>
-                      <div
-                        role='button'
+                      <div role='alert' className='addAccountItemOptionTitle'>
+                        {status}
+                      </div>
+                      <button
+                        type='button'
                         className='addAccountItemOptionSubmit'
                         onClick={() => this.restart()}
                       >
                         try again
+                      </button>
+                    </>
+                  ) : creating ? (
+                    <>
+                      <div role='status' className='addAccountItemOptionTitle'>
+                        Adding watch account...
                       </div>
                     </>
-                  ) : (
+                  ) : status === 'Successful' ? (
                     <>
                       <div className='addAccountItemOptionTitle'>{'account added successfully'}</div>
-                      <div
-                        role='button'
+                      <button
+                        type='button'
                         className='addAccountItemOptionSubmit'
                         onClick={() => link.send('nav:back', 'dash', 2)}
                       >
                         back
-                      </div>
+                      </button>
                     </>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

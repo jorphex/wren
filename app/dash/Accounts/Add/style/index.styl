@@ -1,3 +1,12 @@
+.addAccountTrigger
+  appearance none
+  padding 0
+  color inherit
+  font-family inherit
+  font-size inherit
+  border 0
+  background transparent
+
 .addAccountItem
   display flex
   justify-content center
@@ -298,6 +307,11 @@
     text-align center
 
   .addAccountItemOptionSubmit
+    appearance none
+    color inherit
+    font-family inherit
+    font-size inherit
+    border 0
     height 32px
     border-radius 16px
     padding 0px 40px
@@ -312,8 +326,12 @@
     transform translate3d(0, 0, 0)
     box-shadow 0px 1px 6px var(--ghostY)
 
-  .addAccountItemOptionSubmit:hover
+  .addAccountItemOptionSubmit:not(:disabled):hover
     background var(--ghostC)
+
+  .addAccountItemOptionSubmit:disabled
+    cursor default
+    opacity 0.45
 
   .addAccountResolvingEns
 
@@ -444,7 +462,7 @@
       justify-content center
       align-items center
       text-align center
-      font-size 8px
+      font-size 11px
       width 100%
       font-weight 300
       letter-spacing 1px
