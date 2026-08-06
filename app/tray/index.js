@@ -19,6 +19,12 @@ function AppComponent() {
   return <App />
 }
 
+link.on('flex', (event, value) => {
+  if (event === 'shellJoined') {
+    document.body.classList.toggle('workspace-joined', value === 'true')
+  }
+})
+
 link.rpc('getState', (err, state) => {
   if (err) return console.error('Could not get initial state from main.')
   const store = appStore(state)

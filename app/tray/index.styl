@@ -83,20 +83,20 @@ div
   border 1px solid var(--wren-border-default)
   border-radius var(--wren-radius-xl)
   color var(--wren-text-primary)
-  background var(--wren-bg-subtle)
+  background var(--wren-bg-canvas)
   box-shadow var(--wren-shadow-lg), var(--wren-shadow-inset)
 
 .workspace-edge-left #panel
   left 0
   right auto
 
-.workspace-open.workspace-edge-right #panel
-  border-left-color var(--wren-border-strong)
+.workspace-joined.workspace-edge-right #panel
+  border-left 0
   border-top-left-radius 0
   border-bottom-left-radius 0
 
-.workspace-open.workspace-edge-left #panel
-  border-right-color var(--wren-border-strong)
+.workspace-joined.workspace-edge-left #panel
+  border-right 0
   border-top-right-radius 0
   border-bottom-right-radius 0
 
