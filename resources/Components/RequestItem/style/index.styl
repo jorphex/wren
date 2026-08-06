@@ -458,3 +458,49 @@
   margin-top 0px
   margin-bottom 0px
   pointer-events none
+
+// Wren request hierarchy
+.requestItem
+  margin-top var(--wren-space-1)
+  border-radius var(--wren-radius-md)
+  font-family var(--wren-font-ui)
+  transition background var(--wren-motion-fast) var(--wren-ease)
+
+.requestItem:hover,
+.requestItem:active
+  z-index 1
+  transform none
+  border-bottom 0
+  background var(--wren-surface-hover)
+  box-shadow none
+
+.requestItemTitle
+  padding var(--wren-space-4) var(--wren-space-4) var(--wren-space-2)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size 15px
+
+  .requestItemTitleMain
+    margin-left var(--wren-space-2)
+    font-weight 500
+
+.requestItemTitleSub
+  margin-top 3px
+  color var(--wren-text-tertiary)
+  font-size 11px
+
+  .requestItemTitleSubIcon
+    margin 1px var(--wren-space-2) 0 0
+    color var(--wren-text-tertiary)
+
+.requestItemNotice
+  margin var(--wren-space-3) var(--wren-space-4)
+  padding var(--wren-space-3) 0 0
+  border-top 1px solid var(--wren-border-subtle)
+  font-size 10px
+  letter-spacing .6px
+
+.requestItemSummary
+  padding var(--wren-space-2) var(--wren-space-4) var(--wren-space-4)
+  color var(--wren-text-secondary)
+  font-size 12px

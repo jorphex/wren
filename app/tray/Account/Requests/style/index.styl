@@ -1538,6 +1538,72 @@
   .requestSign
     pointer-events none
 
+// Wren request-review foundation
+.requestProvider
+  width calc(100% - 24px)
+  min-height 184px
+  margin 12px
+  padding 36px 24px
+  color var(--wren-text-primary)
+  background var(--wren-surface-card)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  .requestProviderOrigin
+    width min(100%, 420px)
+    font-size 18px
+    line-height 26px
+    font-weight 600
+    direction ltr
+
+  .requestProviderOrigin18,
+  .requestProviderOrigin12
+    font-size 15px
+    line-height 22px
+    font-weight 500
+
+  .requestProviderSub
+    margin-top 8px
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 20px
+    font-weight 400
+    letter-spacing 0
+    text-transform none
+
+.requestApprove
+  height 72px
+  margin 8px 12px 20px
+  color var(--wren-text-primary)
+  background var(--wren-surface-card)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  animation 0.24s fadeUp ease-out
+
+  .requestDecline,
+  .requestSign
+    top 4px
+    bottom 4px
+    text-transform none
+
+  .requestDeclineButton,
+  .requestSignButton
+    padding 0
+    border-radius var(--wren-radius-md)
+    font-size 14px
+    font-weight 600
+    letter-spacing 0
+    transition background var(--wren-motion-fast)
+
+    &:hover
+      background var(--wren-surface-hover)
+
+  .requestDeclineButton:before,
+  .requestSignButton:before
+    display none
+
 .signerRequestsHidden
   left -100%
   right 100%

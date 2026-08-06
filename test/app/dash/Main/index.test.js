@@ -37,9 +37,9 @@ it.each([
   ['Accounts', 'accounts'],
   ['Contacts', 'addressBook'],
   ['Earn', 'earn'],
-  ['Chains', 'chains'],
+  ['Networks', 'chains'],
   ['Tokens', 'tokens'],
-  ['Dapps', 'dapps'],
+  ['Connected apps', 'dapps'],
   ['Settings', 'settings']
 ])('opens %s from the dashboard', (label, view) => {
   renderMain()
@@ -63,9 +63,9 @@ it.each(['Download Chrome companion', 'Download Firefox companion'])(
 it('routes support, tutorial, quit, and license actions', () => {
   renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Request a Feature or Report an Issue' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Get Community Support' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Tutorial' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Report an issue' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Community support' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))
 

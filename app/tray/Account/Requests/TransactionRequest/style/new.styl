@@ -279,3 +279,39 @@
 
 @import '../AdjustFee/style'
 @import '../ViewData/style'
+
+._txDescription
+  padding var(--wren-space-2) var(--wren-space-4) var(--wren-space-4)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+
+  ._txDescriptionSummary
+    align-items flex-start
+
+    ._txDescriptionSummaryMain
+      width 100%
+      padding var(--wren-space-3) 0 0
+      box-sizing border-box
+      text-align left
+
+    ._txDescriptionSummaryTag
+      width 100%
+      color var(--wren-text-tertiary)
+      font-size 11px
+      letter-spacing .2px
+      text-align left
+      text-transform none
+
+    ._txDescriptionSummaryHeadline
+      font-size 22px
+      line-height 28px
+
+.txDescriptionSummaryStandalone
+  margin var(--wren-space-2) var(--wren-space-4) 0
+  padding var(--wren-space-4) 0
+  border-top 1px solid var(--wren-border-subtle)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size 15px
+  font-weight 500
+  text-transform none

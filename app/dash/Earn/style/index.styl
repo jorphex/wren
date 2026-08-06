@@ -866,3 +866,259 @@
     background var(--ghostB)
     font-family 'MainFont'
     cursor pointer
+
+// Wren Earn surface
+.earn, .earnDetails, .earnActivityView
+  padding var(--wren-space-4) var(--wren-space-3) var(--wren-space-8)
+  color var(--wren-text-primary)
+
+.earnHero, .earnDetailsHero
+  margin 0 0 var(--wren-space-4)
+  padding var(--wren-space-5)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  color var(--wren-text-primary)
+  background radial-gradient(circle at 92% 8%, rgba(166, 138, 97, .12), transparent 38%), var(--wren-bg-elevated)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  h1
+    margin var(--wren-space-1) 0 var(--wren-space-2)
+    font-size 28px
+    font-weight 500
+    letter-spacing -.5px
+    line-height 34px
+
+  p
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 18px
+
+  .earnEyebrow
+    color var(--wren-info)
+
+.earnEyebrow
+  color var(--wren-text-tertiary)
+  font-size 10px
+  letter-spacing 1.2px
+
+.earnRefresh
+  top var(--wren-space-4)
+  right var(--wren-space-4)
+  min-height 34px
+  padding 0 var(--wren-space-3)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-card)
+  font-family var(--wren-font-ui)
+  font-size 10px
+  letter-spacing .5px
+
+  &:not(:disabled):hover
+    color var(--wren-text-primary)
+    background var(--wren-surface-hover)
+
+.earnAccount
+  margin var(--wren-space-3) 0 0
+  color var(--wren-text-primary)
+
+  span
+    color var(--wren-text-tertiary)
+
+  em
+    color var(--wren-text-secondary)
+    background var(--wren-surface-card)
+
+.earnTabs
+  gap var(--wren-space-1)
+  margin var(--wren-space-3) 0 var(--wren-space-5)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+
+  button
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+
+  .earnTabActive
+    color var(--wren-text-primary)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm)
+
+  button:not(.earnTabActive):hover
+    color var(--wren-text-secondary)
+    background var(--wren-surface-hover)
+
+.earnPositionsOverview
+  margin 0 0 var(--wren-space-5)
+  padding 0 0 var(--wren-space-5)
+  border-bottom 1px solid var(--wren-border-subtle)
+
+  h2
+    color var(--wren-text-tertiary)
+    font-size 10px
+
+.earnChain
+  margin-bottom var(--wren-space-6)
+
+.earnChainHeading
+  padding 0 var(--wren-space-2) var(--wren-space-2)
+
+  h2
+    font-size 18px
+    font-weight 500
+
+  span
+    color var(--wren-text-tertiary)
+    font-size 11px
+
+.earnPositionList, .earnVaultList
+  gap var(--wren-space-2)
+
+.earnVault, .earnPosition
+  margin 0
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  color var(--wren-text-primary)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  font-family var(--wren-font-ui)
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover
+    transform none
+    border-color var(--wren-border-default)
+    background var(--wren-surface-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.earnVault
+  padding var(--wren-space-4)
+
+.earnVaultName, .earnPositionName
+  font-size 14px
+  font-weight 500
+
+.earnVaultAsset, .earnPositionChain
+  color var(--wren-text-tertiary)
+  font-size 12px
+
+.earnApy
+  strong
+    color var(--wren-warning)
+    font-family var(--wren-font-mono)
+    font-size 17px
+
+  span
+    color var(--wren-text-tertiary)
+    font-size 11px
+
+.earnVaultMetrics
+  color var(--wren-text-tertiary)
+  font-size 12px
+
+  .earnPositionPill
+    color var(--wren-text-primary)
+    background var(--wren-success-soft, #1b291b)
+
+.earnDetailsMetrics
+  gap var(--wren-space-2)
+
+.earnMetric
+  min-height 70px
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-card)
+
+.earnMetricLabel
+  color var(--wren-text-tertiary)
+  font-size 10px
+
+.earnMetricValue
+  color var(--wren-text-primary)
+  font-size 14px
+
+.earnVariants, .earnOwned, .earnActionForm, .earnWorkflow
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm)
+
+.earnVariant
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background var(--wren-bg-elevated)
+  font-family var(--wren-font-ui)
+
+  p
+    color var(--wren-text-tertiary)
+
+.earnVariantSelected
+  border-color var(--wren-accent-primary)
+  background var(--wren-accent-primary-soft, #29231b)
+  box-shadow none
+
+.earnNotice, .earnProductNote, .earnActionSafety
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-secondary)
+  background var(--wren-bg-elevated)
+
+.earnActions
+  button
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background var(--wren-surface-card)
+    box-shadow none
+    font-family var(--wren-font-ui)
+
+  button.active
+    color var(--wren-text-primary)
+    border-color var(--wren-accent-primary)
+    background var(--wren-accent-primary-soft, #29231b)
+    box-shadow none
+
+.earnAmountField
+  > label
+    color var(--wren-text-tertiary)
+
+  > div
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    background var(--wren-surface-inset)
+
+  input
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+
+.earnAvailable
+  color var(--wren-text-tertiary)
+
+.earnPrimaryAction
+  border 0
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-inverse, #10130f)
+  background var(--wren-accent-primary)
+  font-family var(--wren-font-ui)
+
+  &:not(:disabled):hover
+    background var(--wren-accent-primary-hover)
+
+.earnSecondaryActions, .earnWorkflowActions
+  button
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background var(--wren-bg-elevated)
+    font-family var(--wren-font-ui)
+
+.earnDisclosure
+  color var(--wren-text-muted)

@@ -494,3 +494,247 @@ button.requestFeatureButton:focus-visible
 .signerPermissionToggleSmall:hover
   .signerPermissionToggleSwitch
     background var(--ghostD)
+
+// Wren dashboard home
+.localSettings
+  justify-content flex-start
+
+  .localSettingsWrap
+    width 100%
+    padding var(--wren-space-5) var(--wren-space-4) var(--wren-space-8)
+    box-sizing border-box
+
+.dashHomeHeader
+  padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-5)
+
+  h1
+    margin var(--wren-space-1) 0 var(--wren-space-2)
+    color var(--wren-text-primary)
+    font-size 28px
+    font-weight 500
+    letter-spacing -.6px
+    line-height 34px
+
+  p
+    max-width 390px
+    margin 0
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 19px
+
+.dashHomeEyebrow
+  color var(--wren-accent-primary-hover)
+  font-size 10px
+  font-weight 500
+  letter-spacing 1.4px
+  text-transform uppercase
+
+.dashModuleSection
+  margin-bottom var(--wren-space-5)
+
+  h2
+    margin 0 var(--wren-space-2) var(--wren-space-2)
+    color var(--wren-text-tertiary)
+    font-size 10px
+    font-weight 500
+    letter-spacing 1.2px
+    text-transform uppercase
+
+.dashModuleList
+  overflow hidden
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-inset)
+
+button.dashModule
+  position relative
+  width 100%
+  height 64px
+  margin 0
+  padding 0 var(--wren-space-4)
+  justify-content flex-start
+  border 0
+  border-bottom 1px solid var(--wren-border-subtle)
+  border-radius 0
+  color var(--wren-text-primary)
+  background transparent
+  box-shadow none
+  font-family var(--wren-font-ui)
+  text-align left
+  transition background var(--wren-motion-fast) var(--wren-ease)
+
+  &:last-child
+    border-bottom 0
+
+  &:hover
+    z-index auto
+    transform none
+    background var(--wren-surface-hover)
+    box-shadow none
+
+  &:active
+    transform none
+    background var(--wren-surface-active)
+    box-shadow none
+
+  &:focus-visible
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+    box-shadow none
+
+  .dashModuleIcon
+    display flex
+    flex none
+    width 34px
+    height 34px
+    margin 0 var(--wren-space-3) 0 0
+    align-items center
+    justify-content center
+    border-radius var(--wren-radius-md)
+    color var(--wren-accent-primary-hover)
+    background var(--wren-accent-primary-soft, #29231b)
+
+  .dashModuleCopy
+    display flex
+    min-width 0
+    flex 1
+    flex-direction column
+    gap 3px
+
+  .dashModuleTitle
+    font-size 13px
+    font-weight 500
+    line-height 16px
+
+  .dashModuleDescription
+    overflow hidden
+    color var(--wren-text-tertiary)
+    font-size 11px
+    font-weight 300
+    line-height 14px
+    text-overflow ellipsis
+    white-space nowrap
+
+  .dashModuleArrow
+    display flex
+    margin-left var(--wren-space-3)
+    color var(--wren-text-muted)
+    transition transform var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover .dashModuleArrow
+    color var(--wren-text-secondary)
+    transform translateX(2px)
+
+.dashCompanion
+  display flex
+  min-height 78px
+  margin-bottom var(--wren-space-3)
+  padding var(--wren-space-4)
+  align-items center
+  gap var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  background var(--wren-bg-elevated)
+  box-sizing border-box
+
+.dashCompanionCopy
+  min-width 0
+  flex 1
+
+  h2
+    margin 0 0 var(--wren-space-1)
+    font-size 13px
+    font-weight 500
+
+  p
+    margin 0
+    color var(--wren-text-tertiary)
+    font-size 11px
+    line-height 15px
+
+.dashCompanion .snipItBrowserExtensionIcons
+  display flex
+  flex none
+  gap var(--wren-space-2)
+
+  .snipItBrowserExtensionIcon
+    display flex
+    width 38px
+    height 38px
+    padding 0
+    align-items center
+    justify-content center
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background var(--wren-surface-card)
+    cursor pointer
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-hover)
+
+.dashSupportActions
+  display grid
+  grid-template-columns 1fr 1fr
+  gap var(--wren-space-2)
+  margin-bottom var(--wren-space-6)
+
+  .requestFeatureButton
+    min-height 38px
+    padding 0 var(--wren-space-3)
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background transparent
+    font-family var(--wren-font-ui)
+    font-size 11px
+    cursor pointer
+
+    &:hover
+      color var(--wren-text-primary)
+      border-color var(--wren-border-default)
+      background var(--wren-surface-hover)
+
+  .requestFeatureButtonDanger:hover
+    color var(--wren-danger)
+    border-color rgba(201, 107, 99, .45)
+    background var(--wren-danger-soft, #2d1b1a)
+
+.localSettings .appInfo
+  padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
+  border-top 1px solid var(--wren-border-subtle)
+  color var(--wren-text-muted)
+  font-size 11px
+
+  .appInfoLineInstanceId
+    width 100%
+    max-width 100%
+    margin 0 0 var(--wren-space-3)
+    overflow hidden
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size 10px
+    text-align center
+    text-overflow ellipsis
+    text-transform none
+    white-space nowrap
+
+  .appInfoLineVersion
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-mono)
+    font-size 11px
+
+  .appInfoViewLicense
+    margin-top var(--wren-space-3)
+    color var(--wren-text-tertiary)
+    font-size 10px
+
+  .appInfoLineReset
+    margin var(--wren-space-2) 0 0
+    color var(--wren-text-tertiary)
+    font-size 10px
+    line-height 24px

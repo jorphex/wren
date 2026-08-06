@@ -895,3 +895,113 @@
 @import '../WalletCallsStatus/style'
 
 @import './view'
+
+// Wren account surface
+.accountMain
+  right 12px
+  left 12px
+  border-radius var(--wren-radius-xl)
+
+  .accountMainScroll
+    border-radius var(--wren-radius-xl)
+
+.accountModule
+  right 0
+  left 0
+  padding-bottom var(--wren-space-2)
+
+.accountModuleInner
+  right 0
+  bottom var(--wren-space-2)
+  left 0
+  padding 0
+  border-radius var(--wren-radius-lg)
+
+  .accountModuleCard
+    overflow hidden
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-lg)
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  .moduleHeader
+    height 40px
+    padding 13px 76px 10px var(--wren-space-4)
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size 10px
+    font-weight 500
+    letter-spacing 1.2px
+
+  .moduleMain
+    padding var(--wren-space-4)
+
+  .moduleFooterAction
+    border-top 1px solid var(--wren-border-subtle)
+    color var(--wren-text-secondary)
+    background var(--wren-bg-elevated)
+    font-size 11px
+    text-transform none
+
+    &:hover
+      color var(--wren-text-primary)
+      background var(--wren-surface-hover)
+
+.requestsPreview
+  height 48px
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-card)
+  font-size 11px
+  letter-spacing .4px
+  text-transform none
+  transition background var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover
+    color var(--wren-text-primary)
+    background var(--wren-surface-hover)
+
+  .requestsPreviewOverlay,
+  .requestsPreviewArrow
+    display none
+
+  .requestPreviewContent
+    padding 0 var(--wren-space-4)
+    border-radius var(--wren-radius-lg)
+
+.accountView
+  right 12px
+  left 12px
+  border-radius var(--wren-radius-xl)
+
+  .accountViewMenu
+    right 0
+    left 0
+    height 52px
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-lg)
+    background var(--wren-bg-elevated)
+    box-shadow var(--wren-shadow-sm)
+
+    .accountViewTitle
+      color var(--wren-text-secondary)
+      font-family var(--wren-font-ui)
+      font-size 12px
+      font-weight 500
+      letter-spacing .2px
+      text-transform none
+
+    .accountViewBack
+      width 40px
+      height 40px
+      top 5px
+      left 5px
+      border 1px solid var(--wren-border-subtle)
+      border-radius var(--wren-radius-md)
+      color var(--wren-text-secondary)
+      background var(--wren-surface-card)
+
+      &:hover
+        color var(--wren-text-primary)
+        background var(--wren-surface-hover)

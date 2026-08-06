@@ -31,7 +31,17 @@ export class Command extends React.Component {
   }
   render() {
     const { view } = this.store('windows.dash.nav')[0] || { view: '', data: {} }
-    const title = view === 'addressBook' ? 'Contacts' : view
+    const titles = {
+      accounts: 'Accounts',
+      addressBook: 'Contacts',
+      chains: 'Networks',
+      earn: 'Earn',
+      dapps: 'Connected apps',
+      default: 'Wren',
+      settings: 'Settings',
+      tokens: 'Tokens'
+    }
+    const title = titles[view || 'default'] || view
     return (
       <div className='command'>
         {this.store('windows.dash.nav').length ? (

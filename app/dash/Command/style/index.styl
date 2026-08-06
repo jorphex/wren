@@ -72,3 +72,46 @@
   right 0
   bottom 0
   width 64px
+
+// Wren dashboard chrome
+.command
+  top 8px
+  left 12px
+  right 12px
+  height 56px
+
+  .commandTitle
+    left 58px
+    right 58px
+    top 0
+    color var(--wren-text-secondary)
+    font-size 12px
+    font-weight 500
+    letter-spacing .2px
+    text-transform none
+
+  .commandItem
+    width 40px
+    height 40px
+    top 8px
+    padding 0
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background var(--wren-bg-elevated)
+    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      color var(--wren-text-primary)
+      background var(--wren-surface-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+      box-shadow none
+
+  .commandItemBack
+    left 0
+
+  .commandItemClose
+    right 0

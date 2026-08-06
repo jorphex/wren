@@ -6,8 +6,6 @@ import AccountController from './AccountController'
 import { accountSort as byCreation } from '../../../resources/domain/account'
 import { matchFilter } from '../../../resources/utils'
 
-import { Cluster, ClusterBox, ClusterValue, ClusterRow } from '../../../resources/Components/Cluster'
-
 import svg from '../../../resources/svg'
 import link from '../../../resources/link'
 
@@ -100,30 +98,24 @@ class AccountSelector extends React.Component {
               />
             ))
           ) : Object.keys(accounts).length === 0 ? (
-            <ClusterBox style={{ pointerEvents: 'auto' }}>
-              <Cluster>
-                <ClusterRow>
-                  <ClusterValue>
-                    <div className='noSigners'>{'No Accounts Added'}</div>
-                  </ClusterValue>
-                </ClusterRow>
-                <ClusterRow>
-                  <ClusterValue
-                    onClick={() => {
-                      link.send('tray:action', 'navDash', {
-                        view: 'accounts',
-                        data: { showAddAccounts: true }
-                      })
-                    }}
-                  >
-                    <div className='newAccountButton'>
-                      <div className='newAccountIcon'>{svg.accounts(16)}</div>
-                      <div className='newAccountText'>{'Add New Account'}</div>
-                    </div>
-                  </ClusterValue>
-                </ClusterRow>
-              </Cluster>
-            </ClusterBox>
+            <div className='accountSelectorEmpty'>
+              <div className='accountSelectorEmptyIcon'>{svg.accounts(22)}</div>
+              <div className='accountSelectorEmptyTitle'>No accounts yet</div>
+              <div className='accountSelectorEmptyCopy'>Add an account to connect, review, and sign.</div>
+              <button
+                type='button'
+                className='newAccountButton'
+                onClick={() => {
+                  link.send('tray:action', 'navDash', {
+                    view: 'accounts',
+                    data: { showAddAccounts: true }
+                  })
+                }}
+              >
+                <span className='newAccountIcon'>{svg.plus(14)}</span>
+                <span className='newAccountText'>Add account</span>
+              </button>
+            </div>
           ) : (
             <div className='noSigners'>{'No Matching Accounts'}</div>
           )}

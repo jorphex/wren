@@ -243,3 +243,58 @@
 
 // ._txMain:active
 //   animation shake-little 2s ease-in-out infinite
+
+// Wren transaction review
+._txMain
+  margin 0 0 var(--wren-space-3)
+  padding 0
+  overflow hidden
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  ._txMainInner
+    overflow hidden
+
+    ._txMainValues
+      margin var(--wren-space-2)
+      padding 0
+      border 1px solid var(--wren-border-subtle)
+      border-radius var(--wren-radius-md)
+      background var(--wren-bg-subtle)
+
+      ._txMainTransferringPart,
+      ._txMainValue
+        border 0
+        border-radius var(--wren-radius-md)
+        background var(--wren-bg-elevated)
+        box-shadow none
+
+      ._txMainValueClickable:hover,
+      ._txMainValueClickable:active
+        transform none
+        border 0
+        background var(--wren-surface-hover)
+        box-shadow none
+
+  ._txMainTag
+    margin var(--wren-space-1) var(--wren-space-3) 0
+    padding 6px var(--wren-space-2)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-bg-elevated)
+    font-size 10px
+    letter-spacing .3px
+    text-transform none
+
+  ._txMainTagWarning
+    color var(--wren-warning)
+    background var(--wren-warning-soft, #2c2418)
+
+  ._txMainTagBad
+    color var(--wren-danger)
+    background var(--wren-danger-soft, #2d1b1a)
+
+  ._txMainTagGood
+    color var(--wren-success)
+    background var(--wren-success-soft, #1b291b)

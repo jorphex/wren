@@ -5,6 +5,61 @@ import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import { WREN_COMPANION_RELEASES_URL, WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
+const dashboardSections = [
+  {
+    label: 'Wallet',
+    items: [
+      {
+        view: 'accounts',
+        title: 'Accounts',
+        description: 'Manage signing and watch-only accounts',
+        icon: svg.accounts
+      },
+      {
+        view: 'addressBook',
+        title: 'Contacts',
+        description: 'Name and verify frequently used addresses',
+        icon: svg.people
+      },
+      {
+        view: 'earn',
+        title: 'Earn',
+        description: 'Review selected Yearn vault opportunities',
+        icon: svg.bars
+      }
+    ]
+  },
+  {
+    label: 'Configuration',
+    items: [
+      {
+        view: 'chains',
+        title: 'Networks',
+        description: 'Configure chains and RPC connections',
+        icon: svg.chain
+      },
+      {
+        view: 'tokens',
+        title: 'Tokens',
+        description: 'Control recognized and custom assets',
+        icon: svg.tokens
+      },
+      {
+        view: 'dapps',
+        title: 'Connected apps',
+        description: 'Review dapp access and permissions',
+        icon: svg.window
+      },
+      {
+        view: 'settings',
+        title: 'Settings',
+        description: 'Desktop behavior, shortcuts, and privacy',
+        icon: svg.settings
+      }
+    ]
+  }
+]
+
 export class Main extends React.Component {
   constructor(props, context) {
     super(props, context)
@@ -228,77 +283,44 @@ export class Main extends React.Component {
   }
 
   render() {
-    const networks = this.store('main.networks')
-    const networkOptions = []
-
-    Object.keys(networks).forEach((type) => {
-      Object.keys(networks[type]).forEach((id) => {
-        networkOptions.push({ text: networks[type][id].name, value: type + ':' + id })
-      })
-    })
     return (
       <div className={'localSettings cardShow'}>
         <div className='localSettingsWrap'>
-          <div className='dashModules'>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'accounts', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.accounts(24)}</div>
-              <div className='dashModuleTitle'>{'Accounts'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'addressBook', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.people(24)}</div>
-              <div className='dashModuleTitle'>{'Contacts'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'earn', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.bars(24)}</div>
-              <div className='dashModuleTitle'>{'Earn'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'chains', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.chain(24)}</div>
-              <div className='dashModuleTitle'>{'Chains'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'tokens', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.tokens(24)}</div>
-              <div className='dashModuleTitle'>{'Tokens'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'dapps', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.window(24)}</div>
-              <div className='dashModuleTitle'>{'Dapps'}</div>
-            </button>
-            <button
-              type='button'
-              className='dashModule'
-              onClick={() => link.send('tray:action', 'navDash', { view: 'settings', data: {} })}
-            >
-              <div className='dashModuleIcon'>{svg.settings(24)}</div>
-              <div className='dashModuleTitle'>{'Settings'}</div>
-            </button>
-          </div>
-          <div className='snipIt'>
-            <div>Using a dapp that doesn&apos;t support Wren natively?</div>
+          <header className='dashHomeHeader'>
+            <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
+            <h1>Control center</h1>
+            <p>Manage accounts, networks, permissions, and wallet behavior.</p>
+          </header>
+          <nav className='dashModules' aria-label='Wallet management'>
+            {dashboardSections.map((section) => (
+              <section className='dashModuleSection' key={section.label}>
+                <h2>{section.label}</h2>
+                <div className='dashModuleList'>
+                  {section.items.map((item) => (
+                    <button
+                      type='button'
+                      className='dashModule'
+                      aria-label={item.title}
+                      key={item.view}
+                      onClick={() => link.send('tray:action', 'navDash', { view: item.view, data: {} })}
+                    >
+                      <span className='dashModuleIcon'>{item.icon(20)}</span>
+                      <span className='dashModuleCopy'>
+                        <strong className='dashModuleTitle'>{item.title}</strong>
+                        <span className='dashModuleDescription'>{item.description}</span>
+                      </span>
+                      <span className='dashModuleArrow'>{svg.arrowRight(14)}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </nav>
+          <section className='dashCompanion' aria-labelledby='dash-companion-title'>
+            <div className='dashCompanionCopy'>
+              <h2 id='dash-companion-title'>Browser companion</h2>
+              <p>Connect browser dapps to this Wren desktop instance.</p>
+            </div>
             <div className='snipItBrowserExtensionIcons'>
               <button
                 type='button'
@@ -306,7 +328,7 @@ export class Main extends React.Component {
                 className='snipItBrowserExtensionIcon snipItBrowserExtensionIconChrome'
                 onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
-                {svg.chrome(28)}
+                {svg.chrome(22)}
               </button>
               <button
                 type='button'
@@ -314,17 +336,11 @@ export class Main extends React.Component {
                 className='snipItBrowserExtensionIcon snipItBrowserExtensionIconFirefox'
                 onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
-                {svg.firefox(28)}
+                {svg.firefox(22)}
               </button>
-              {/* <div 
-                className='snipItBrowserExtensionIcon snipItBrowserExtensionIconSafari'
-              >
-                {svg.safari(28)}
-              </div> */}
             </div>
-            <div>Inject a connection with our browser extension!</div>
-          </div>
-          <div className='requestFeature'>
+          </section>
+          <div className='dashSupportActions'>
             <button
               type='button'
               className='requestFeatureButton'
@@ -332,10 +348,8 @@ export class Main extends React.Component {
                 link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
-              Request a Feature or Report an Issue
+              Report an issue
             </button>
-          </div>
-          <div className='requestFeature'>
             <button
               type='button'
               className='requestFeatureButton'
@@ -343,10 +357,8 @@ export class Main extends React.Component {
                 link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
-              Get Community Support
+              Community support
             </button>
-          </div>
-          <div className='requestFeature'>
             <button
               type='button'
               className='requestFeatureButton'
@@ -354,13 +366,11 @@ export class Main extends React.Component {
                 link.send('tray:action', 'setOnboard', { showing: true })
               }}
             >
-              Open Wren Tutorial
+              Tutorial
             </button>
-          </div>
-          <div className='requestFeature'>
             <button
               type='button'
-              className='requestFeatureButton'
+              className='requestFeatureButton requestFeatureButtonDanger'
               onClick={() => {
                 link.send('tray:quit')
               }}

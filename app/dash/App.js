@@ -29,13 +29,14 @@ const AddNewItemButton = ({ view, req }) => {
 
   return (
     <div className='dashFooter'>
-      <div
+      <button
+        type='button'
         className='dashFooterButton'
         onClick={() => link.send('tray:action', 'navDash', { view, data: dataMap[view] })}
       >
         <div className='newAccountIcon'>{svg.plus(16)}</div>
         Add New {itemName(view)}
-      </div>
+      </button>
     </div>
   )
 }

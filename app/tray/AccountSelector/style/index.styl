@@ -196,3 +196,88 @@
 
   .newAccountIcon
     padding-right 10px
+
+// Wren account selector foundation
+.accountSelector
+  top 88px
+  right 12px
+  bottom 52px
+  left 12px
+  border-radius var(--wren-radius-lg)
+
+  .accountSelectorScroll
+    border-radius var(--wren-radius-lg)
+
+    .accountSelectorScrollWrap
+      padding 24px 4px
+
+.accountSelectorEmpty
+  width calc(100% - 32px)
+  max-width 440px
+  box-sizing border-box
+  padding 32px 28px
+  margin auto
+  display flex
+  align-items center
+  flex-direction column
+  pointer-events auto
+  text-align center
+  color var(--wren-text-primary)
+  background var(--wren-surface-card)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-lg)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+.accountSelectorEmptyIcon
+  width 48px
+  height 48px
+  display flex
+  align-items center
+  justify-content center
+  margin-bottom 16px
+  color var(--wren-accent-primary-hover)
+  background var(--wren-accent-primary-soft)
+  border-radius var(--wren-radius-md)
+
+.accountSelectorEmptyTitle
+  font-size 18px
+  line-height 24px
+  font-weight 600
+
+.accountSelectorEmptyCopy
+  max-width 300px
+  margin-top 6px
+  color var(--wren-text-secondary)
+  font-size 13px
+  line-height 20px
+
+.accountSelectorEmpty .newAccountButton
+  min-height 44px
+  margin-top 22px
+  padding 0 18px
+  align-items center
+  justify-content center
+  color var(--wren-text-inverse)
+  font-family 'MainFont'
+  font-size 13px
+  font-weight 600
+  background var(--wren-accent-primary)
+  border 0
+  border-radius var(--wren-radius-md)
+  cursor pointer
+  transition background var(--wren-motion-fast), transform var(--wren-motion-fast)
+
+  &:hover
+    background var(--wren-accent-primary-hover)
+
+  &:active
+    background var(--wren-accent-primary-active)
+    transform translateY(1px)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  .newAccountIcon
+    display flex
+    padding-right 8px

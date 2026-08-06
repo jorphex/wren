@@ -169,6 +169,36 @@
     transform: translate(0, 0) rotate(0)  
 
 body
+  // Wren foundation. MainFont and FiraCode remain provisional aliases.
+  --wren-font-ui 'MainFont', sans-serif
+  --wren-font-mono 'FiraCode', monospace
+
+  --wren-space-1 4px
+  --wren-space-2 8px
+  --wren-space-3 12px
+  --wren-space-4 16px
+  --wren-space-5 20px
+  --wren-space-6 24px
+  --wren-space-8 32px
+  --wren-space-10 40px
+  --wren-space-12 48px
+
+  --wren-radius-sm 8px
+  --wren-radius-md 12px
+  --wren-radius-lg 16px
+  --wren-radius-xl 20px
+  --wren-radius-pill 999px
+
+  --wren-shadow-sm 0 1px 2px rgba(0, 0, 0, .22)
+  --wren-shadow-md 0 6px 18px rgba(0, 0, 0, .22)
+  --wren-shadow-lg 0 12px 28px rgba(0, 0, 0, .28)
+  --wren-shadow-inset inset 0 1px 0 rgba(255, 255, 255, .03)
+
+  --wren-motion-fast 120ms
+  --wren-motion-standard 180ms
+  --wren-motion-slow 240ms
+  --wren-ease cubic-bezier(.2, .8, .2, 1)
+
   // Shadows
   --cardDrop 0px 1px 1px rgba(0, 34, 32, 0.1)
 
@@ -428,6 +458,7 @@ body
   --wren-surface-hover #222923
   --wren-surface-active #283129
   --wren-surface-inset #0e1210
+  --wren-surface-overlay #171c19
   --wren-border-subtle #2b342d
   --wren-border-default #344038
   --wren-border-strong #465247
@@ -435,14 +466,24 @@ body
   --wren-text-secondary #b7c3b8
   --wren-text-tertiary #8b978d
   --wren-text-muted #677268
+  --wren-text-disabled #586258
+  --wren-text-inverse #10130f
   --wren-accent-primary #a68a61
   --wren-accent-primary-hover #b79a70
   --wren-accent-primary-active #947953
+  --wren-accent-primary-soft #29231b
   --wren-accent-secondary #7e9b73
+  --wren-accent-secondary-hover #8eac82
+  --wren-accent-secondary-active #708a66
+  --wren-accent-secondary-soft #1e291f
   --wren-success #7e9b73
+  --wren-success-soft #1b291b
   --wren-warning #d2a24b
+  --wren-warning-soft #2c2418
   --wren-danger #c96b63
+  --wren-danger-soft #2d1b1a
   --wren-info #78a6b8
+  --wren-info-soft #1c262b
   --wren-focus #bfa77e
 
   // Compatibility aliases for inherited components
