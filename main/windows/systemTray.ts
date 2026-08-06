@@ -6,6 +6,12 @@ import { app, screen, BrowserWindow, Menu, KeyboardEvent, Rectangle, Tray as Ele
 import { capitalize } from '../../resources/utils'
 
 const isMacOS = process.platform === 'darwin'
+const systemTrayIcon =
+  process.platform === 'darwin'
+    ? 'IconTemplate.png'
+    : process.platform === 'linux'
+      ? 'LinuxTray.png'
+      : 'Icon.png'
 let isUbuntu23OrGreater = false
 
 interface LinuxOsInfo {
@@ -52,7 +58,7 @@ export class SystemTray {
   init(mainWindow: BrowserWindow) {
     // Electron Tray can only be instantiated when the app is ready
     this.destroy()
-    this.electronTray = new ElectronTray(path.join(__dirname, isMacOS ? './IconTemplate.png' : './Icon.png'))
+    this.electronTray = new ElectronTray(path.join(__dirname, systemTrayIcon))
     this.electronTray.on('click', (_event: KeyboardEvent, bounds: Rectangle) => {
       const mainWindowBounds = mainWindow.getBounds()
       const currentDisplay = screen.getDisplayMatching(bounds)

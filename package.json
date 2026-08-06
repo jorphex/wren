@@ -43,7 +43,7 @@
     "format:check": "prettier --check '**/*.{yml,json,md,html,ts,js}'",
     "prod": "npm run compile && npm run bundle && npm run launch",
     "compile:clean": "rimraf compiled",
-    "compile": "npm run compile:clean && npm run copy-assets && tsc --project tsconfig.build.json && node scripts/write-build-identity.mjs",
+    "compile": "npm run compile:clean && npm run copy-assets && node scripts/verify-tray-icons.mjs && tsc --project tsconfig.build.json && node scripts/write-build-identity.mjs",
     "compile:watch": "npm run compile:clean && npm run copy-assets && tsc --project tsconfig.build.json -w",
     "build": "npm run compile && sleep 4 && npm run bundle && sleep 4 && electron-builder --config=build/electron-builder-standard.js --publish never",
     "package:linux:x64": "node scripts/prepare-linux-package.mjs && electron-builder --config=build/electron-builder-standard.js --linux AppImage deb --x64 --publish never",
