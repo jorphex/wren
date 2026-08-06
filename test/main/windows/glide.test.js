@@ -1,4 +1,4 @@
-import { GlideDetector, isAtEdge, isAtRightEdge } from '../../../main/windows/glide'
+import { GlideDetector, isAtEdge, isAtRightEdge, shouldAutoHideGlide } from '../../../main/windows/glide'
 
 const display = {
   workArea: { x: 0, y: 48, width: 3840, height: 2112 }
@@ -35,6 +35,15 @@ describe('isAtRightEdge', () => {
     expect(isAtRightEdge({ x: 3837, y: 1080 }, display)).toBe(false)
     expect(isAtRightEdge({ x: 3839, y: 48 }, display)).toBe(false)
     expect(isAtRightEdge({ x: 3839, y: 2160 }, display)).toBe(false)
+  })
+})
+
+describe('shouldAutoHideGlide', () => {
+  it('requires both Glide and Auto-hide without an open dashboard', () => {
+    expect(shouldAutoHideGlide(true, true, false)).toBe(true)
+    expect(shouldAutoHideGlide(true, false, false)).toBe(false)
+    expect(shouldAutoHideGlide(false, true, false)).toBe(false)
+    expect(shouldAutoHideGlide(true, true, true)).toBe(false)
   })
 })
 

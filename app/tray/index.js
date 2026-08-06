@@ -42,8 +42,5 @@ link.rpc('getState', (err, state) => {
   const Tray = Restore.connect(AppComponent, store)
   root.render(<Tray />)
 })
-// document.addEventListener('mouseover', e => link.send('tray:focus'))
-document.addEventListener('mouseout', (e) => {
-  if (e.clientX < 0) link.send('tray:mouseout')
-})
+document.documentElement.addEventListener('mouseleave', () => link.send('tray:mouseout'))
 document.addEventListener('contextmenu', (e) => link.send('*:contextmenu', e.clientX, e.clientY))

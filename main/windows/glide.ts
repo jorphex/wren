@@ -41,6 +41,10 @@ export function isAtRightEdge(point: Point, display: Display) {
   return isAtEdge(point, display, 'right')
 }
 
+export function shouldAutoHideGlide(glide: boolean, autoHide: boolean, dashVisible: boolean) {
+  return glide && autoHide && !dashVisible
+}
+
 export class GlideDetector {
   private running = false
   private awaitingEdgeExit = false

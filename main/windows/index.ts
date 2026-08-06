@@ -16,7 +16,7 @@ import { requireStoreAction } from '../store/action'
 import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
 import { createWindow } from './window'
-import { GlideDetector } from './glide'
+import { GlideDetector, shouldAutoHideGlide } from './glide'
 import { GlideSentinel } from './glideSentinel'
 import { getShellLayout, GlideEdge, shellDashboardTargetWidth, shellMainTargetWidth } from './shellGeometry'
 import { SystemTray, SystemTrayEventHandlers } from './systemTray'
@@ -505,7 +505,7 @@ class Onboard {
 
 onRenderer('tray:quit', () => electronApp.quit())
 onRenderer('tray:mouseout', () => {
-  if (glide && !(windows.dash && windows.dash.isVisible())) {
+  if (shouldAutoHideGlide(glide, !!store('main.autohide'), !!(windows.dash && windows.dash.isVisible()))) {
     glide = false
     app.hide()
   }
