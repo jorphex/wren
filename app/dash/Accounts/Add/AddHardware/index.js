@@ -1,20 +1,16 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import hardwareSetup from 'url:../../../../../asset/ui/hardware-setup.png'
 import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 import { LEDGER_SHOP_URL, TREZOR_SHOP_URL } from '../../../../../resources/constants'
 
 import Signer from '../../../Signer'
 
-class AddHardware extends React.Component {
-  constructor(...args) {
-    super(...args)
-    this.state = {}
-    this.deviceName = this.props.type // .replace(/\b\w/g, l => l.toUpperCase())
-  }
-
+export class AddHardware extends React.Component {
   render() {
+    const deviceName = `${this.props.type.charAt(0).toUpperCase()}${this.props.type.slice(1)}`
     const signers = this.store('main.signers')
     const isType = (id) => this.store('main.signers', id, 'type') === this.props.type
     const toDevice = (id) => this.store('main.signers', id)
@@ -34,10 +30,10 @@ class AddHardware extends React.Component {
                 )}
                 <div className='addAccountItemIconHex addAccountItemIconHexHardware' />
               </div>
-              <div className='addAccountItemTopTitle'>{this.deviceName}</div>
+              <div className='addAccountItemTopTitle'>{deviceName}</div>
             </div>
             {/* <div className='addAccountItemClose' onMouseDown={() => this.props.close()}>{'DONE'}</div> */}
-            <div className='addAccountItemSummary'>{`Unlock your ${this.deviceName} to get started`}</div>
+            <div className='addAccountItemSummary'>{`Unlock your ${deviceName} to get started`}</div>
           </div>
           <div className='addAccountItemDevices'>
             {tethered.length ? (
@@ -60,19 +56,21 @@ class AddHardware extends React.Component {
                 )
               })
             ) : (
-              <>
-                <div className='addAccountItemDevice'>
-                  <div className='addAccountItemDeviceTitle'>No Devices Found</div>
+              <div className='addAccountItemDevice'>
+                <img alt='' aria-hidden='true' className='addAccountItemDeviceArtwork' src={hardwareSetup} />
+                <div aria-live='polite' className='addAccountItemDeviceTitle' role='status'>
+                  Looking for a {deviceName}
                 </div>
-              </>
+                <div className='addAccountItemDeviceStatus'>Connect and unlock your device.</div>
+              </div>
             )}
           </div>
           <div
             className='addAccountItemFooter'
             onClick={() => {
               const open = (url) => link.send('tray:openExternal', url)
-              if (this.deviceName === 'ledger') return open(LEDGER_SHOP_URL)
-              if (this.deviceName === 'trezor') return open(TREZOR_SHOP_URL)
+              if (this.props.type === 'ledger') return open(LEDGER_SHOP_URL)
+              if (this.props.type === 'trezor') return open(TREZOR_SHOP_URL)
             }}
           >
             {``}

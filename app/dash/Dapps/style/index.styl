@@ -49,23 +49,34 @@
 .sliceOrigin:hover
   background var(--ghostB)
 
-.sliceOriginNoDapp
+.connectedAppsEmpty
   display flex
   justify-content center
   align-items center
-  position relative
-  text-transform uppercase
+  flex-direction column
+  min-height 410px
+  padding 28px 24px 48px
   box-sizing border-box
-  height 52px
-  font-size 10px
-  letter-spacing 2px
-  font-weight 400
-  margin 6px
-  border-radius 26px
-  background var(--ghostZ)
-  border 3px solid var(--ghostY)
-  *
-    pointer-events none
+  color var(--wren-text-secondary)
+  text-align center
+
+  .connectedAppsEmptyArtwork
+    display block
+    width min(100%, 420px)
+    max-height 230px
+    margin-bottom 16px
+    object-fit contain
+
+  strong
+    color var(--wren-text-primary)
+    font-size 18px
+    font-weight 600
+
+  span
+    max-width 340px
+    margin-top 7px
+    font-size 13px
+    line-height 20px
 
 .viewAllOrigin
   display flex

@@ -1,5 +1,6 @@
 import React, { createRef } from 'react'
 import Restore from 'react-restore'
+import emptyConnections from 'url:../../../asset/ui/empty-connections.png'
 import link from '../../../resources/link'
 import { isNetworkConnected, isNetworkEnabled } from '../../../resources/utils/chains'
 // import svg from '../../../resources/svg'
@@ -17,6 +18,7 @@ function byLastUpdated(a, b) {
 }
 
 const originFilter = ['frame-internal', 'frame-extension']
+const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 
 function getOriginsForChain(chain, origins) {
   const { connectedOrigins, disconnectedOrigins } = Object.entries(origins).reduce(
@@ -38,7 +40,7 @@ function getOriginsForChain(chain, origins) {
     connected: connectedOrigins.sort(bySessionStartTime),
     disconnected: disconnectedOrigins
       .sort(byLastUpdated)
-      .filter((origin) => Date.now() - origin.session.lastUpdatedAt < 60 * 60 * 1000)
+      .filter((origin) => Date.now() - origin.session.lastUpdatedAt < RECENT_ORIGIN_TTL)
   }
 }
 
@@ -142,26 +144,66 @@ const ChainOrigins = ({ chain: { name }, origins, primaryColor, icon }) => {
         <div className='originTitleText'>{name}</div>
       </div>
       {origins.connected.map((origin) => (
-        <OriginModule key={origin} origin={origin} connected={true} />
+        <OriginModule key={origin.id} origin={origin} connected={true} />
       ))}
       {origins.disconnected.map((origin) => (
-        <OriginModule key={origin} origin={origin} connected={false} />
+        <OriginModule key={origin.id} origin={origin} connected={false} />
       ))}
-      {origins.connected.length === 0 && origins.disconnected.length === 0 ? (
-        <div className='sliceOriginNoDapp'>{'No Dapp Recently Connected'}</div>
-      ) : null}
     </>
   )
 }
 
-class Dapps extends React.Component {
+export class Dapps extends React.Component {
+  componentDidMount() {
+    this.scheduleOriginExpiry()
+  }
+
+  componentDidUpdate() {
+    this.scheduleOriginExpiry()
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.originExpiryTimer)
+  }
+
   getEnabledChains() {
     return Object.values(this.store('main.networks.ethereum')).filter(isNetworkEnabled)
+  }
+
+  scheduleOriginExpiry() {
+    clearTimeout(this.originExpiryTimer)
+
+    const origins = this.store('main.origins')
+    const expiries = this.getEnabledChains().flatMap((chain) => {
+      return getOriginsForChain(chain, origins).disconnected.map((origin) => {
+        return origin.session.lastUpdatedAt + RECENT_ORIGIN_TTL
+      })
+    })
+
+    if (expiries.length) {
+      const nextExpiry = Math.min(...expiries)
+      const delay = Math.max(1, nextExpiry - Date.now() + 1)
+      this.originExpiryTimer = setTimeout(() => {
+        this.setState((state) => ({ originExpiryTick: (state?.originExpiryTick || 0) + 1 }))
+      }, delay)
+    }
   }
 
   render() {
     const enabledChains = this.getEnabledChains()
     const origins = this.store('main.origins')
+    const chainGroups = enabledChains
+      .map((chain) => {
+        const chainOrigins = getOriginsForChain(chain, origins)
+        return {
+          chain,
+          origins: chainOrigins,
+          meta: this.store('main.networksMeta.ethereum', chain.id)
+        }
+      })
+      .filter(({ origins: chainOrigins }) => {
+        return chainOrigins.connected.length > 0 || chainOrigins.disconnected.length > 0
+      })
 
     const { dappDetails } = this.props.data
 
@@ -170,13 +212,8 @@ class Dapps extends React.Component {
     } else {
       return (
         <div className='cardShow' style={{ padding: '0px 0px 64px 0px' }}>
-          {enabledChains.map((chain) => {
-            const chainOrigins = getOriginsForChain(chain, origins)
-            const { primaryColor, icon } = this.store('main.networksMeta.ethereum', chain.id)
-
-            return chainOrigins.length === 0 ? (
-              <></>
-            ) : (
+          {chainGroups.length ? (
+            chainGroups.map(({ chain, origins: chainOrigins, meta: { primaryColor, icon } }) => (
               <ChainOrigins
                 key={chain.id}
                 chain={chain}
@@ -184,8 +221,14 @@ class Dapps extends React.Component {
                 primaryColor={primaryColor}
                 icon={icon}
               />
-            )
-          })}
+            ))
+          ) : (
+            <div className='connectedAppsEmpty'>
+              <img alt='' aria-hidden='true' className='connectedAppsEmptyArtwork' src={emptyConnections} />
+              <strong>No connected apps</strong>
+              <span>Open a dapp with the Wren Companion to see it here.</span>
+            </div>
+          )}
         </div>
       )
     }
