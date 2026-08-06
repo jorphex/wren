@@ -74,15 +74,21 @@ it('animates expansion and lands on exact shell bounds', () => {
   view.setVisible.mockClear()
   workspace.applyShellLayout(windowBounds, viewBounds, true, true)
 
-  expect(view.setVisible).toHaveBeenCalledWith(true)
+  expect(view.setVisible.mock.calls).toEqual([[true]])
+  expect(parent.setBounds).toHaveBeenCalledTimes(1)
   expect(parent.setBounds).not.toHaveBeenLastCalledWith(windowBounds, false)
+  expect(workspace.isVisible()).toBe(true)
+  expect(workspace.isSettled(true)).toBe(false)
+  expect(workspace.isTransitioningTo(true)).toBe(true)
 
   jest.runAllTimers()
 
   expect(parent.setBounds).toHaveBeenLastCalledWith(windowBounds, false)
   expect(view.setBounds).toHaveBeenLastCalledWith(viewBounds)
-  expect(view.setVisible).toHaveBeenCalledTimes(1)
+  expect(view.setVisible.mock.calls).toEqual([[true]])
   expect(workspace.isVisible()).toBe(true)
+  expect(workspace.isSettled(true)).toBe(true)
+  expect(workspace.isTransitioningTo(true)).toBe(false)
   jest.useRealTimers()
 })
 
@@ -114,15 +120,17 @@ it('keeps a left-edge overlay anchored while it expands over the wallet', () => 
   parent.getBounds.mockReturnValue(windowBounds)
   workspace.applyLayout(compactView, false)
   view.setBounds.mockClear()
+  view.setVisible.mockClear()
   workspace.applyShellLayout(windowBounds, viewBounds, true, true)
 
+  expect(view.setVisible).toHaveBeenCalledWith(true)
   jest.runAllTimers()
 
   expect(view.setBounds.mock.calls.every(([bounds]) => bounds.x + bounds.width === 760)).toBe(true)
   jest.useRealTimers()
 })
 
-it('keeps the workspace visible until a collapse animation completes', () => {
+it('hides workspace content before a collapse animation begins', () => {
   jest.useFakeTimers()
   const { parent, view, workspace } = createSetup()
   const onComplete = jest.fn()
@@ -135,14 +143,18 @@ it('keeps the workspace visible until a collapse animation completes', () => {
   view.setVisible.mockClear()
   workspace.applyShellLayout(windowBounds, viewBounds, false, true, onComplete)
 
-  expect(view.setVisible).not.toHaveBeenCalled()
-  expect(workspace.isVisible()).toBe(true)
+  expect(view.setVisible).toHaveBeenCalledWith(false)
+  expect(workspace.isVisible()).toBe(false)
+  expect(workspace.isSettled(false)).toBe(false)
+  expect(workspace.isTransitioningTo(false)).toBe(true)
   expect(onComplete).not.toHaveBeenCalled()
 
   jest.runAllTimers()
 
   expect(view.setVisible).toHaveBeenCalledWith(false)
   expect(workspace.isVisible()).toBe(false)
+  expect(workspace.isSettled(false)).toBe(true)
+  expect(workspace.isTransitioningTo(false)).toBe(false)
   expect(onComplete).toHaveBeenCalledTimes(1)
   jest.useRealTimers()
 })
@@ -184,6 +196,19 @@ it('moves focus into and out of visibility without recreating the view', () => {
   expect(view.setVisible.mock.calls).toEqual([[false], [true], [false]])
   expect(webContents.focus).toHaveBeenCalledTimes(1)
   expect(workspace.isVisible()).toBe(false)
+})
+
+it('focuses only a visible settled workspace', () => {
+  const { webContents, workspace } = createSetup()
+
+  workspace.focus()
+  workspace.show()
+  webContents.focus.mockClear()
+  workspace.focus()
+  workspace.hide()
+  workspace.focus()
+
+  expect(webContents.focus).toHaveBeenCalledTimes(1)
 })
 
 it('forwards state updates and reloads while active', () => {

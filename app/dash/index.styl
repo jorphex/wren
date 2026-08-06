@@ -330,6 +330,12 @@ div
 .dash
   background var(--wren-bg-canvas)
 
+  > .command,
+  > .dashMain,
+  > .dashFooter
+    opacity 1
+    transition opacity var(--wren-motion-standard) var(--wren-ease)
+
   .dashMain
     top 64px
     right 0
@@ -400,3 +406,11 @@ div
 .workspace-overlay .dash
   border 1px solid var(--wren-border-default)
   border-radius var(--wren-radius-xl)
+
+.workspace-content-hidden .dash
+  > .command,
+  > .dashMain,
+  > .dashFooter
+    opacity 0
+    pointer-events none
+    transition none

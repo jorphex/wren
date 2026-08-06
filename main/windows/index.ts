@@ -26,7 +26,8 @@ import {
   GlideEdge,
   ShellLayout,
   shellMainTargetWidth,
-  shouldJoinWorkspace
+  shouldJoinWorkspace,
+  shouldShowWorkspaceContent
 } from './shellGeometry'
 import { SystemTray, SystemTrayEventHandlers } from './systemTray'
 import { registerShortcut } from '../keyboardShortcuts'
@@ -321,13 +322,13 @@ export class Tray {
     else this.show()
   }
 
-  reposition(animate = false) {
+  reposition(animate = false, focusWorkspace = false) {
     const trayWindow = windows.tray
     if (!trayWindow || trayWindow.isDestroyed()) return
 
     const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
     const layout = getShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
-    if (dash) dash.applyLayout(layout, animate)
+    if (dash) dash.applyLayout(layout, animate, focusWorkspace)
     else trayWindow.setBounds(layout.window, false)
   }
 
@@ -356,11 +357,14 @@ class Dash {
     })
   }
 
-  public applyLayout(layout: ShellLayout, animate = false) {
+  public applyLayout(layout: ShellLayout, animate = false, focusWhenShown = false) {
     const showing = !!store('windows.dash.showing')
     this.setShellJoined(shouldJoinWorkspace(layout, showing, animate))
+    this.setWorkspaceContentVisible(shouldShowWorkspaceContent(showing, animate))
     this.workspace.applyShellLayout(layout.window, layout.workspace, showing, animate, () => {
       this.setShellJoined(shouldJoinWorkspace(layout, showing, false))
+      this.setWorkspaceContentVisible(shouldShowWorkspaceContent(showing, false))
+      if (showing && focusWhenShown) this.workspace.focus()
     })
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
   }
@@ -371,25 +375,35 @@ class Dash {
     trayWindow.webContents.send('main:flex', 'shellJoined', joined ? 'true' : 'false')
   }
 
+  private setWorkspaceContentVisible(visible: boolean) {
+    this.workspace.send('main:flex', 'shellContent', visible ? 'visible' : 'hidden')
+  }
+
   public hide() {
-    tray.reposition(!systemPreferences.getAnimationSettings().prefersReducedMotion)
+    if (this.workspace.isTransitioningTo(false)) return
+    const animate = shouldAnimateShell(
+      tray.isVisible() && !this.workspace.isSettled(false),
+      systemPreferences.getAnimationSettings().prefersReducedMotion
+    )
+    tray.reposition(animate)
     windows.tray?.webContents.focus()
   }
 
   public show() {
     if (!tray.isReady()) return
+    if (this.workspace.isTransitioningTo(true)) return
 
     const currentlyVisible = tray.isVisible()
     const animate = shouldAnimateShell(
-      currentlyVisible,
+      currentlyVisible && !this.workspace.isSettled(true),
       systemPreferences.getAnimationSettings().prefersReducedMotion
     )
     if (!currentlyVisible) {
       tray.show()
     } else {
-      tray.reposition(animate)
+      tray.reposition(animate, true)
     }
-    this.workspace.show()
+    if (!animate) this.workspace.focus()
     if (devToolsEnabled) this.workspace.openDevTools()
   }
 

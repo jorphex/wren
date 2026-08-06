@@ -1,4 +1,8 @@
-import { getShellLayout, shouldJoinWorkspace } from '../../../main/windows/shellGeometry'
+import {
+  getShellLayout,
+  shouldJoinWorkspace,
+  shouldShowWorkspaceContent
+} from '../../../main/windows/shellGeometry'
 
 describe('getShellLayout', () => {
   it('anchors a compact wallet to the right edge', () => {
@@ -103,5 +107,12 @@ describe('getShellLayout', () => {
     expect(collapsedOverlay.workspace).toEqual({ x: 760, y: 0, width: 0, height: 744 })
     expect(overlay.workspace).toEqual({ x: 0, y: 0, width: 760, height: 744 })
     expect(shouldJoinWorkspace(collapsedOverlay, false, true)).toBe(false)
+  })
+
+  it('reveals workspace content only after visible geometry settles', () => {
+    expect(shouldShowWorkspaceContent(true, false)).toBe(true)
+    expect(shouldShowWorkspaceContent(true, true)).toBe(false)
+    expect(shouldShowWorkspaceContent(false, false)).toBe(false)
+    expect(shouldShowWorkspaceContent(false, true)).toBe(false)
   })
 })

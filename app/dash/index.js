@@ -22,6 +22,8 @@ function AppComponent() {
 link.on('flex', (event, value) => {
   if (event === 'shellLayout') {
     document.body.classList.toggle('workspace-overlay', value === 'overlay')
+  } else if (event === 'shellContent') {
+    document.body.classList.toggle('workspace-content-hidden', value !== 'visible')
   }
 })
 

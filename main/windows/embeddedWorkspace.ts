@@ -2,6 +2,7 @@ import type { App, BrowserWindow, Rectangle, WebContentsView } from 'electron'
 
 export class EmbeddedWorkspace {
   private visible = false
+  private targetVisible = false
   private destroyed = false
   private viewBounds: Rectangle = { x: 0, y: 0, width: 0, height: 0 }
   private animationTimer: ReturnType<typeof setTimeout> | undefined
@@ -37,6 +38,7 @@ export class EmbeddedWorkspace {
     this.view.setVisible(showing)
     this.viewBounds = bounds
     this.visible = showing
+    this.targetVisible = showing
   }
 
   applyShellLayout(
@@ -63,16 +65,17 @@ export class EmbeddedWorkspace {
     onComplete?: () => void
   ) {
     this.cancelAnimation()
+    this.targetVisible = showing
 
     const startWindowBounds = this.parent.getBounds()
     const startViewBounds = this.viewBounds
     const frameCount = 10
     let frame = 0
 
-    if (showing) {
-      this.view.setVisible(true)
-      this.visible = true
-    }
+    // The renderer hides its controls during this transition. Keeping only its surface
+    // visible preserves seam-origin motion for narrow layouts where the window cannot grow.
+    this.view.setVisible(showing)
+    this.visible = showing
 
     const interpolate = (start: number, end: number, progress: number) =>
       Math.round(start + (end - start) * progress)
@@ -105,7 +108,6 @@ export class EmbeddedWorkspace {
       } else {
         this.animationTimer = undefined
         this.visible = showing
-        if (!showing) this.view.setVisible(false)
         onComplete?.()
       }
     }
@@ -123,16 +125,32 @@ export class EmbeddedWorkspace {
     this.view.setVisible(true)
     this.view.webContents.focus()
     this.visible = true
+    this.targetVisible = true
   }
 
   hide() {
     if (this.destroyed) return
     this.view.setVisible(false)
     this.visible = false
+    this.targetVisible = false
   }
 
   isVisible() {
     return this.visible
+  }
+
+  isSettled(showing: boolean) {
+    return this.animationTimer === undefined && this.visible === showing && this.targetVisible === showing
+  }
+
+  isTransitioningTo(showing: boolean) {
+    return this.animationTimer !== undefined && this.targetVisible === showing
+  }
+
+  focus() {
+    if (!this.destroyed && this.visible && !this.view.webContents.isDestroyed()) {
+      this.view.webContents.focus()
+    }
   }
 
   send(channel: string, ...args: string[]) {
@@ -161,5 +179,6 @@ export class EmbeddedWorkspace {
       this.view.webContents.close({ waitForBeforeUnload: false })
     }
     this.visible = false
+    this.targetVisible = false
   }
 }
