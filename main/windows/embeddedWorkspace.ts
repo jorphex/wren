@@ -1,15 +1,18 @@
-import type { BrowserWindow, Rectangle, WebContentsView } from 'electron'
+import type { App, BrowserWindow, Rectangle, WebContentsView } from 'electron'
 
 export class EmbeddedWorkspace {
   private visible = false
   private destroyed = false
+  private readonly shutdownHandler = () => this.destroy()
 
   constructor(
     private readonly parent: BrowserWindow,
-    private readonly view: WebContentsView
+    private readonly view: WebContentsView,
+    private readonly app?: Pick<App, 'off' | 'once'>
   ) {
     parent.contentView.addChildView(view)
     view.setVisible(false)
+    app?.once('before-quit', this.shutdownHandler)
   }
 
   loadURL(url: string) {
@@ -74,6 +77,7 @@ export class EmbeddedWorkspace {
   destroy() {
     if (this.destroyed) return
     this.destroyed = true
+    this.app?.off('before-quit', this.shutdownHandler)
     if (!this.parent.isDestroyed()) this.parent.contentView.removeChildView(this.view)
     if (!this.view.webContents.isDestroyed()) {
       this.view.webContents.close({ waitForBeforeUnload: false })

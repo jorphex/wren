@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events'
 import { EmbeddedWorkspace } from '../../../main/windows/embeddedWorkspace'
 
 const createSetup = () => {
@@ -25,8 +26,9 @@ const createSetup = () => {
     isDestroyed: jest.fn(() => false),
     setBounds: jest.fn()
   }
-  const workspace = new EmbeddedWorkspace(parent as never, view as never)
-  return { parent, view, webContents, workspace }
+  const app = new EventEmitter()
+  const workspace = new EmbeddedWorkspace(parent as never, view as never, app as never)
+  return { app, parent, view, webContents, workspace }
 }
 
 it('attaches once, starts hidden, and applies local pane bounds', () => {
@@ -80,7 +82,7 @@ it('forwards state updates and reloads while active', () => {
 })
 
 it('detaches and closes web contents exactly once', () => {
-  const { parent, webContents, workspace } = createSetup()
+  const { app, parent, webContents, workspace } = createSetup()
 
   workspace.destroy()
   workspace.destroy()
@@ -88,5 +90,17 @@ it('detaches and closes web contents exactly once', () => {
   expect(parent.contentView.removeChildView).toHaveBeenCalledTimes(1)
   expect(webContents.close).toHaveBeenCalledTimes(1)
   expect(webContents.close).toHaveBeenCalledWith({ waitForBeforeUnload: false })
+  expect(app.listenerCount('before-quit')).toBe(0)
+  expect(workspace.isVisible()).toBe(false)
+})
+
+it('detaches and closes web contents before application shutdown', () => {
+  const { app, parent, webContents, workspace } = createSetup()
+
+  app.emit('before-quit')
+
+  expect(parent.contentView.removeChildView).toHaveBeenCalledTimes(1)
+  expect(webContents.close).toHaveBeenCalledWith({ waitForBeforeUnload: false })
+  expect(app.listenerCount('before-quit')).toBe(0)
   expect(workspace.isVisible()).toBe(false)
 })

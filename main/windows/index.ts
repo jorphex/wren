@@ -17,6 +17,7 @@ import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
 import { createRendererView, createWindow } from './window'
 import { EmbeddedWorkspace } from './embeddedWorkspace'
+import { shouldSuppressRepeatedShow } from './displayTransition'
 import { GlideDetector, shouldAutoHideGlide } from './glide'
 import { GlideSentinel } from './glideSentinel'
 import { getShellLayout, GlideEdge, ShellLayout, shellMainTargetWidth } from './shellGeometry'
@@ -266,7 +267,7 @@ export class Tray {
     if (!trayWindow || trayWindow.isDestroyed()) {
       return init()
     }
-    if (this.recentDisplayEvent) {
+    if (shouldSuppressRepeatedShow(this.recentDisplayEvent, trayWindow.isVisible())) {
       return
     }
     glideDetector?.stop()
@@ -339,7 +340,7 @@ class Dash {
       throw new Error('Tray window is unavailable while creating the workspace')
     }
 
-    this.workspace = new EmbeddedWorkspace(trayWindow, createRendererView('dash'))
+    this.workspace = new EmbeddedWorkspace(trayWindow, createRendererView('dash'), electronApp)
     this.workspace.loadURL(rendererUrl('dash').toString())
     this.workspace.onLoaded(() => {
       const processId = this.workspace.processId()
