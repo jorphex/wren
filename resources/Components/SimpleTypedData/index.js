@@ -213,8 +213,8 @@ export const SimpleTypedData = ({ chainName, deviceWarning, originName, req }) =
       <div className='txViewData'>
         <div className='txViewDataHeader'>Typed Data Review</div>
         <div className='signTypedDataInner'>
-          <SigningContext {...{ chainName, context, origin, originName, typedMessage }} />
           <TypedDataDeviceWarning warning={deviceWarning} />
+          <SigningContext {...{ chainName, context, origin, originName, typedMessage }} />
           {Array.isArray(typedMessage.data) ? (
             <LegacyTypedData typedData={typedMessage.data} />
           ) : (

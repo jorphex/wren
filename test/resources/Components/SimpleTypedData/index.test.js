@@ -191,7 +191,11 @@ it('warns when the selected device displays only typed-data hashes', () => {
 
   render(<SimpleTypedData deviceWarning={deviceWarning} req={request()} />)
 
-  expect(screen.getByLabelText('Device signing warning')).toBeTruthy()
+  const warning = screen.getByLabelText('Device signing warning')
+  const signingContext = screen.getByText('Signing Context')
+
+  expect(warning).toBeTruthy()
+  expect(warning.compareDocumentPosition(signingContext) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(screen.getByRole('alert').textContent).toBe(
     'Trezor One will display only the EIP-712 domain and message hashes. Verify every structured field in Wren before approving on-device.'
   )
