@@ -1,8 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import Signer from '../../../Signer'
-
 import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 
@@ -10,19 +8,27 @@ function parseDeviceName(name) {
   return name.replace(/\s+/g, '-').substring(0, 14)
 }
 
-class AddHardwareLattice extends React.Component {
+export class AddHardwareLattice extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
-      adding: false,
       index: 0,
       status: '',
       error: false,
+      creating: false,
       deviceId: '',
-      deviceName: 'GridPlus',
-      pairCode: ''
+      deviceName: 'GridPlus'
     }
     this.forms = [React.createRef(), React.createRef()]
+    this.createPending = false
+    this.createRequest = 0
+    this.mounted = true
+  }
+
+  componentWillUnmount() {
+    this.mounted = false
+    this.createRequest += 1
+    clearTimeout(this.focusTimer)
   }
 
   onChange(key, e) {
@@ -58,23 +64,33 @@ class AddHardwareLattice extends React.Component {
     if (formInput && formInput.current) formInput.current.blur()
   }
 
-  focusActive() {
-    setTimeout(() => {
-      const formInput = this.currentForm()
+  focusActive(index = this.state.index) {
+    clearTimeout(this.focusTimer)
+    this.focusTimer = setTimeout(() => {
+      const formInput = this.forms[index]
       if (formInput && formInput.current) formInput.current.focus()
     }, 500)
   }
 
   next() {
+    if (this.state.index !== 0) return
     this.blurActive()
-    this.setState({ index: this.state.index + 1 })
-    this.focusActive()
+    this.setState({ index: 1 }, () => this.focusActive(1))
   }
 
   createLattice() {
+    if (this.createPending || this.state.index !== 1 || !this.state.deviceId.trim()) return
+    this.createPending = true
+    const request = ++this.createRequest
+    this.blurActive()
+    if (document.activeElement?.blur) document.activeElement.blur()
+    clearTimeout(this.focusTimer)
+    this.setState({ index: 2, status: 'Creating GridPlus signer...', error: false, creating: true })
     link.rpc('createLattice', this.state.deviceId, this.state.deviceName, (err, signer) => {
+      if (!this.mounted || request !== this.createRequest) return
       if (err) {
-        this.setState({ status: err, error: true })
+        this.createPending = false
+        this.setState({ status: err.message || String(err), error: true, creating: false })
       } else {
         // reset nav state to before the start of the flow and open the new signer
         link.send('tray:action', 'backDash', 2)
@@ -87,27 +103,16 @@ class AddHardwareLattice extends React.Component {
     })
   }
 
-  capitalize(s) {
-    if (typeof s !== 'string') return ''
-    return s.charAt(0).toUpperCase() + s.slice(1)
-  }
-
   restart() {
-    this.setState({ adding: false, index: 0, pairCode: '' })
-    setTimeout(() => {
-      this.setState({ status: '', error: false })
-    }, 500)
-    this.focusActive()
+    this.createPending = false
+    this.createRequest += 1
+    this.setState({ index: 0, status: '', error: false, creating: false }, () => this.focusActive(0))
   }
 
   render() {
     let itemClass = 'addAccountItem addAccountItemSmart addAccountItemAdding'
 
-    let signer
-
-    if (this.state.status === 'Successful') {
-      signer = this.store('main.signers', 'lattice-' + this.state.deviceId)
-    }
+    const { index, status, error, creating, deviceId, deviceName } = this.state
 
     return (
       <div className={itemClass} style={{ transitionDelay: (0.64 * this.props.index) / 4 + 's' }}>
@@ -126,78 +131,74 @@ class AddHardwareLattice extends React.Component {
             <div className='addAccountItemSummary'>GridPlus Lattice1</div>
           </div>
           <div className='addAccountItemOption'>
-            <div
-              className='addAccountItemOptionSetup'
-              style={{ transform: `translateX(-${100 * this.state.index}%)` }}
-            >
+            <div className='addAccountItemOptionSetup' style={{ transform: `translateX(-${100 * index}%)` }}>
               <div className='addAccountItemOptionSetupFrames'>
-                <div className='addAccountItemOptionSetupFrame'>
-                  <div className='addAccountItemOptionTitle'>Device Name</div>
+                <div className='addAccountItemOptionSetupFrame' aria-hidden={index !== 0} inert={index !== 0}>
+                  <label htmlFor='gridPlusDeviceName' className='addAccountItemOptionTitle'>
+                    Device Name
+                  </label>
                   <div className='addAccountItemOptionInput'>
                     <input
-                      tabIndex='-1'
+                      id='gridPlusDeviceName'
                       ref={this.forms[0]}
-                      value={this.state.deviceName}
+                      value={deviceName}
                       onChange={(e) => this.onChange('deviceName', e)}
                       onFocus={(e) => this.onFocus('deviceName', e)}
                       onBlur={(e) => this.onBlur('deviceName', e)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
+                          e.preventDefault()
                           this.next()
                         }
                       }}
                     />
                   </div>
-                  <div
-                    className='addAccountItemOptionSubmit'
-                    onMouseDown={() => {
-                      this.next()
-                    }}
-                  >
+                  <button type='button' className='addAccountItemOptionSubmit' onClick={() => this.next()}>
                     Next
-                  </div>
+                  </button>
                 </div>
-                <div className='addAccountItemOptionSetupFrame'>
-                  <div className='addAccountItemOptionTitle'>Enter device id</div>
+                <div className='addAccountItemOptionSetupFrame' aria-hidden={index !== 1} inert={index !== 1}>
+                  <label htmlFor='gridPlusDeviceId' className='addAccountItemOptionTitle'>
+                    Enter device id
+                  </label>
                   <div className='addAccountItemOptionInput'>
                     <input
-                      tabIndex='-1'
+                      id='gridPlusDeviceId'
                       ref={this.forms[1]}
-                      value={this.state.deviceId}
+                      value={deviceId}
                       onChange={(e) => this.onChange('deviceId', e)}
                       onFocus={(e) => this.onFocus('deviceId', e)}
                       onBlur={(e) => this.onBlur('deviceId', e)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
+                          e.preventDefault()
                           this.createLattice()
-                          this.next()
                         }
                       }}
                     />
                   </div>
-                  <div
+                  <button
+                    type='button'
                     className='addAccountItemOptionSubmit'
-                    onMouseDown={() => {
-                      this.createLattice()
-                      this.next()
-                    }}
+                    disabled={!deviceId.trim() || creating}
+                    onClick={() => this.createLattice()}
                   >
                     Create
-                  </div>
+                  </button>
                 </div>
-                <div className='addAccountItemOptionSetupFrame'>
-                  {signer && this.state.status === 'Successful' ? (
-                    <Signer key={signer.id} {...signer} inSetup={true} />
-                  ) : (
-                    <>
-                      <div className='addAccountItemOptionTitle'>{this.state.status}</div>
-                      {this.state.error ? (
-                        <div className='addAccountItemOptionSubmit' onMouseDown={() => this.restart()}>
-                          try again
-                        </div>
-                      ) : null}
-                    </>
-                  )}
+                <div className='addAccountItemOptionSetupFrame' aria-hidden={index !== 2} inert={index !== 2}>
+                  <div role={error ? 'alert' : 'status'} className='addAccountItemOptionTitle'>
+                    {status}
+                  </div>
+                  {error ? (
+                    <button
+                      type='button'
+                      className='addAccountItemOptionSubmit'
+                      onClick={() => this.restart()}
+                    >
+                      try again
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
