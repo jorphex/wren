@@ -16,3 +16,17 @@ test('exposes warning suppression as a pressed-state button', () => {
   fireEvent.click(control)
   expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleGasFeeWarning')
 })
+
+test('exposes warning decisions as native actions', () => {
+  const notify = new Notify({})
+  const store = jest.fn((...path) => (path.join('.') === 'main.mute.gasFeeWarning' ? false : undefined))
+  store.notify = jest.fn()
+  notify.store = store
+  render(notify.gasFeeWarning({ req: { handlerId: 'request' } }))
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(store.notify).toHaveBeenCalledTimes(1)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  expect(link.rpc).toHaveBeenCalledWith('approveRequest', { handlerId: 'request' }, expect.any(Function))
+})

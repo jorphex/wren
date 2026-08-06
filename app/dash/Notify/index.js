@@ -14,14 +14,14 @@ import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants
 const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)
 
-class Notify extends React.Component {
+export class Notify extends React.Component {
   betaDisclosure() {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBoxSlide'>
           <div className='notifyBox'>
             <div className='notifyWrenIcon'>
-              <img src={wrenIcon} />
+              <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
             <div className='notifyTitle'>Wren Preview</div>
             <div className='notifyBody'>
@@ -38,39 +38,42 @@ class Notify extends React.Component {
               </div>
               <div className='notifyBodyBlock'>
                 <span>Read</span>
-                <span
+                <button
+                  type='button'
                   className='notifyBodyLink'
-                  onMouseDown={() => {
+                  onClick={() => {
                     link.send('tray:openExternal', WREN_LICENSE_URL)
                   }}
                 >
                   our license
-                </span>
+                </button>
                 <span>and use Wren at your own risk</span>
               </div>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
                 <div>Report problems through community support.</div>
-                <div
+                <button
+                  type='button'
                   className='notifyBodyLink'
                   style={{ marginTop: '20px' }}
-                  onMouseDown={() => {
+                  onClick={() => {
                     link.send('tray:openExternal', WREN_SUPPORT_URL)
                   }}
                 >
                   Open GitHub issue
-                </div>
+                </button>
               </div>
             </div>
             <div className='notifyInput'>
-              <div
+              <button
+                type='button'
                 className='notifyInputOption notifyInputSingleButton'
-                onMouseDown={() => {
+                onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
                   link.send('tray:action', 'backDash')
                 }}
               >
                 <div className='notifyInputOptionText notifyBetaGo'>Let&apos;s go!</div>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -97,23 +100,25 @@ class Notify extends React.Component {
             <div className='notifyBodyQuestion'>Are you sure you want to proceed?</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputDeny'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
-            </div>
-            <div
+            </button>
+            <button
+              type='button'
               className='notifyInputOption notifyInputProceed'
-              onMouseDown={() => {
+              onClick={() => {
                 link.rpc('approveRequest', req, () => {})
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Proceed</div>
-            </div>
+            </button>
           </div>
           <button
             type='button'
@@ -140,14 +145,15 @@ class Notify extends React.Component {
             <div className='notifyBodyQuestion'>Please check the signer for this account and try again</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputSingleButton'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -164,14 +170,15 @@ class Notify extends React.Component {
             <div className='notifyBodyQuestion'>Please attach a signer that can sign for this account</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputSingleButton'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -202,17 +209,19 @@ class Notify extends React.Component {
             <div className='notifyBodyQuestion'>Do you want to proceed?</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputDeny'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
-            </div>
-            <div
+            </button>
+            <button
+              type='button'
               className='notifyInputOption notifyInputProceed'
-              onMouseDown={() => {
+              onClick={() => {
                 // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
                 const {
@@ -255,7 +264,7 @@ class Notify extends React.Component {
               }}
             >
               <div className='notifyInputOptionText'>Proceed</div>
-            </div>
+            </button>
           </div>
           <button
             type='button'
@@ -300,14 +309,15 @@ class Notify extends React.Component {
             </div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputSingleButton'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -336,14 +346,15 @@ class Notify extends React.Component {
             </div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputSingleButton'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -371,14 +382,15 @@ class Notify extends React.Component {
             </div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputSingleButton'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -395,23 +407,25 @@ class Notify extends React.Component {
             <div className='notifyBodyLine'>{'Open Link in Browser?'}</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputDeny'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
-            </div>
-            <div
+            </button>
+            <button
+              type='button'
               className='notifyInputOption notifyInputProceed'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:openExternal', url)
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Proceed</div>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -430,23 +444,25 @@ class Notify extends React.Component {
             <div className='notifyBodyHash'>{hash}</div>
           </div>
           <div className='notifyInput'>
-            <div
+            <button
+              type='button'
               className='notifyInputOption notifyInputDeny'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
-            </div>
-            <div
+            </button>
+            <button
+              type='button'
               className='notifyInputOption notifyInputProceed'
-              onMouseDown={() => {
+              onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
                 link.send('tray:action', 'backDash')
               }}
             >
               <div className='notifyInputOptionText'>Proceed</div>
-            </div>
+            </button>
           </div>
           <button
             type='button'

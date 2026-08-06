@@ -8,22 +8,29 @@
   align-items center
 
   .confirmButton
+    appearance none
     margin 8px
     padding 0px 16px
     height 38px
     font-weight 300
     background var(--ghostB)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
     border-radius 16px
     display flex
     justify-content center
     align-items center
-    border 3px solid var(--ghostZ)
+    border 1px solid var(--wren-border-default)
     cursor pointer
     *
       pointer-events none
 
-  .confirmButton:hover
+  .confirmButton:hover:not(:disabled)
     background var(--ghostC)
+
+  .confirmButton:disabled
+    opacity .5
+    cursor default
 
 .confirmText
   font-size 20px

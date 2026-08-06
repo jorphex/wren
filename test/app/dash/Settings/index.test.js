@@ -57,14 +57,14 @@ const renderSettings = () => {
 const setting = (name) => screen.getByText(name).closest('.localSetting')
 
 it.each([
-  ['Auto-hide', ['tray:action', 'setAutohide', true]],
-  ['Run on Startup', ['tray:action', 'toggleLaunch']],
-  ['Glide', ['tray:action', 'toggleReveal']],
-  ['Show Account Name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]
-])('routes the %s toggle to its store action', (name, expected) => {
+  ['Auto-hide', 'Auto-hide', ['tray:action', 'setAutohide', true]],
+  ['Run on Startup', 'Run on startup', ['tray:action', 'toggleLaunch']],
+  ['Glide', 'Glide', ['tray:action', 'toggleReveal']],
+  ['Show Account Name with ENS', 'Show account name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]
+])('routes the %s toggle to its store action', (name, accessibleName, expected) => {
   renderSettings()
 
-  fireEvent.click(setting(name).querySelector('.signerPermissionToggle'))
+  fireEvent.click(within(setting(name)).getByRole('switch', { name: accessibleName }))
 
   expect(link.send).toHaveBeenCalledWith(...expected)
 })
@@ -72,26 +72,28 @@ it.each([
 it('routes every settings dropdown to its matching store action', () => {
   renderSettings()
   const selections = [
-    ['Glide Edge', 'Left', ['tray:action', 'setGlideSide', 'left']],
-    ['Trezor Derivation', 'Legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
-    ['Ledger Derivation', 'Standard', ['tray:action', 'setLedgerDerivation', 'standard']],
-    ['Ledger Live Accounts', '10', ['tray:action', 'setLiveAccountLimit', 10]],
-    ['Lattice Derivation', 'Live', ['tray:action', 'setLatticeDerivation', 'live']],
-    ['Lattice Accounts', '20', ['tray:action', 'setLatticeAccountLimit', 20]],
-    ['Lattice Relay', 'Custom', ['tray:action', 'setLatticeEndpointMode', 'custom']],
-    ['Lock Hot Signers on', 'Close', ['tray:action', 'setAccountCloseLock', true]]
+    ['Glide Edge', 'left', ['tray:action', 'setGlideSide', 'left']],
+    ['Trezor Derivation', 'legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
+    ['Ledger Derivation', 'standard', ['tray:action', 'setLedgerDerivation', 'standard']],
+    ['Ledger Live Accounts', 10, ['tray:action', 'setLiveAccountLimit', 10]],
+    ['Lattice Derivation', 'live', ['tray:action', 'setLatticeDerivation', 'live']],
+    ['Lattice Accounts', 20, ['tray:action', 'setLatticeAccountLimit', 20]],
+    ['Lattice Relay', 'custom', ['tray:action', 'setLatticeEndpointMode', 'custom']],
+    ['Lock Hot Signers on', true, ['tray:action', 'setAccountCloseLock', true]]
   ]
 
-  selections.forEach(([name, option, expected]) => {
-    fireEvent.mouseDown(within(setting(name)).getByRole('option', { name: option }))
+  selections.forEach(([name, value, expected]) => {
+    fireEvent.change(within(setting(name)).getByRole('combobox'), { target: { value: String(value) } })
     expect(link.send).toHaveBeenCalledWith(...expected)
   })
 })
 
 it('debounces a whitespace-free custom Lattice relay value', () => {
   renderSettings()
-  fireEvent.mouseDown(within(setting('Lattice Relay')).getByRole('option', { name: 'Custom' }))
-  fireEvent.change(setting('Lattice Relay').querySelector('input'), {
+  fireEvent.change(within(setting('Lattice Relay')).getByRole('combobox'), {
+    target: { value: 'custom' }
+  })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Custom Lattice relay' }), {
     target: { value: ' https://relay.example/rpc ' }
   })
 
@@ -108,13 +110,26 @@ it('debounces a whitespace-free custom Lattice relay value', () => {
 it('requires confirmation before revoking a companion pairing', () => {
   renderSettings()
 
-  fireEvent.click(screen.getByText('Revoke'))
+  fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(link.rpc).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByText('Confirm revoke'))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))
 
   expect(link.rpc).toHaveBeenCalledWith(
     'revokeExtensionCredential',
     'companion-fingerprint',
     expect.any(Function)
+  )
+})
+
+it('exposes shortcut editing as a native action', () => {
+  renderSettings()
+
+  fireEvent.click(screen.getByRole('button', { name: 'edit' }))
+
+  expect(link.send).toHaveBeenCalledWith(
+    'tray:action',
+    'setShortcut',
+    'summon',
+    expect.objectContaining({ configuring: true })
   )
 })

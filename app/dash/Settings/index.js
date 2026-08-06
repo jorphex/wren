@@ -4,10 +4,12 @@ import Restore from 'react-restore'
 import link from '../../../resources/link'
 import Dropdown from '../../../resources/Components/Dropdown'
 import KeyboardShortcutConfigurator from '../../../resources/Components/KeyboardShortcutConfigurator'
+import Toggle from '../../../resources/Components/Toggle'
 
 import styled from 'styled-components'
 
-const EditShortcut = styled.div`
+const EditShortcut = styled.button`
+  appearance: none;
   position: absolute;
   top: 1px;
   bottom: 0px;
@@ -15,7 +17,11 @@ const EditShortcut = styled.div`
   background: var(--ghostC);
   height: 20px;
   width: 60px;
+  padding: 0;
+  color: var(--wren-text-primary);
+  font-family: inherit;
   border-radius: 10px;
+  border: 1px solid var(--wren-border-subtle);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -23,8 +29,9 @@ const EditShortcut = styled.div`
   text-transform: uppercase;
   font-size: 10px;
   font-weight: 500;
-  * {
-    pointer-events: none;
+  &:hover {
+    color: var(--wren-text-primary);
+    background: var(--wren-surface-hover);
   }
 `
 
@@ -44,8 +51,14 @@ const CompanionIdentity = styled.div`
   white-space: nowrap;
 `
 
-const RevokeCompanion = styled.div`
+const RevokeCompanion = styled.button`
+  appearance: none;
   color: ${({ $confirm }) => ($confirm ? 'var(--bad)' : 'var(--moon)')};
+  font-family: inherit;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--wren-radius-sm);
   cursor: pointer;
   flex-shrink: 0;
   font-size: 11px;
@@ -53,6 +66,9 @@ const RevokeCompanion = styled.div`
   letter-spacing: 0.6px;
   margin-left: 16px;
   text-transform: uppercase;
+  &:hover {
+    background: ${({ $confirm }) => ($confirm ? 'var(--wren-danger-soft)' : 'var(--wren-surface-hover)')};
+  }
 `
 
 export class Settings extends Component {
@@ -98,6 +114,7 @@ export class Settings extends Component {
                   <div>
                     {summonShortcut.configuring ? (
                       <EditShortcut
+                        type='button'
                         onClick={() => {
                           link.send('tray:action', 'setShortcut', 'summon', {
                             ...summonShortcut,
@@ -109,6 +126,7 @@ export class Settings extends Component {
                       </EditShortcut>
                     ) : (
                       <EditShortcut
+                        type='button'
                         onClick={() => {
                           link.send('tray:action', 'setShortcut', 'summon', {
                             ...summonShortcut,
@@ -123,21 +141,16 @@ export class Settings extends Component {
                 </span>
               </div>
 
-              <div
-                className={
-                  summonShortcut.enabled
-                    ? 'signerPermissionToggle signerPermissionToggleOn'
-                    : 'signerPermissionToggle'
-                }
-                onClick={() => {
+              <Toggle
+                checked={summonShortcut.enabled}
+                label='Enable summon shortcut'
+                onChange={(enabled) => {
                   link.send('tray:action', 'setShortcut', 'summon', {
                     ...summonShortcut,
-                    enabled: !summonShortcut.enabled
+                    enabled
                   })
                 }}
-              >
-                <div className='signerPermissionToggleSwitch' />
-              </div>
+              />
             </div>
             <div className='signerPermissionDetails'>
               <KeyboardShortcutConfigurator
@@ -151,16 +164,11 @@ export class Settings extends Component {
           <div className='signerPermission localSetting' style={{ zIndex: 213 }}>
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Auto-hide</div>
-              <div
-                className={
-                  this.store('main.autohide')
-                    ? 'signerPermissionToggle signerPermissionToggleOn'
-                    : 'signerPermissionToggle'
-                }
-                onClick={() => link.send('tray:action', 'setAutohide', !this.store('main.autohide'))}
-              >
-                <div className='signerPermissionToggleSwitch' />
-              </div>
+              <Toggle
+                checked={this.store('main.autohide')}
+                label='Auto-hide'
+                onChange={(enabled) => link.send('tray:action', 'setAutohide', enabled)}
+              />
             </div>
             <div className='signerPermissionDetails'>
               <span>Hide Wren on loss of focus</span>
@@ -169,32 +177,22 @@ export class Settings extends Component {
           <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Run on Startup</div>
-              <div
-                className={
-                  this.store('main.launch')
-                    ? 'signerPermissionToggle signerPermissionToggleOn'
-                    : 'signerPermissionToggle'
-                }
-                onClick={() => link.send('tray:action', 'toggleLaunch')}
-              >
-                <div className='signerPermissionToggleSwitch' />
-              </div>
+              <Toggle
+                checked={this.store('main.launch')}
+                label='Run on startup'
+                onChange={() => link.send('tray:action', 'toggleLaunch')}
+              />
             </div>
             <div className='signerPermissionDetails'>Run Wren when your computer starts</div>
           </div>
           <div className='signerPermission localSetting' style={{ zIndex: 211 }}>
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Glide</div>
-              <div
-                className={
-                  this.store('main.reveal')
-                    ? 'signerPermissionToggle signerPermissionToggleOn'
-                    : 'signerPermissionToggle'
-                }
-                onClick={() => link.send('tray:action', 'toggleReveal')}
-              >
-                <div className='signerPermissionToggleSwitch' />
-              </div>
+              <Toggle
+                checked={this.store('main.reveal')}
+                label='Glide'
+                onChange={() => link.send('tray:action', 'toggleReveal')}
+              />
             </div>
             <div className='signerPermissionDetails'>{`Mouse to display's ${this.store(
               'main.glideSide'
@@ -204,6 +202,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Glide Edge</div>
               <Dropdown
+                label='Glide edge'
                 syncValue={this.store('main.glideSide')}
                 onChange={(value) => link.send('tray:action', 'setGlideSide', value)}
                 options={[
@@ -219,18 +218,11 @@ export class Settings extends Component {
             <div className='signerPermission localSetting' style={{ zIndex: 209 }}>
               <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>Display Gas in Menubar</div>
-                <div
-                  className={
-                    this.store('main.menubarGasPrice')
-                      ? 'signerPermissionToggle signerPermissionToggleOn'
-                      : 'signerPermissionToggle'
-                  }
-                  onClick={() =>
-                    link.send('tray:action', 'setMenubarGasPrice', !this.store('main.menubarGasPrice'))
-                  }
-                >
-                  <div className='signerPermissionToggleSwitch' />
-                </div>
+                <Toggle
+                  checked={this.store('main.menubarGasPrice')}
+                  label='Display gas in menubar'
+                  onChange={(enabled) => link.send('tray:action', 'setMenubarGasPrice', enabled)}
+                />
               </div>
               <div className='signerPermissionDetails'>Show mainnet gas price (Gwei) in menubar</div>
             </div>
@@ -239,18 +231,11 @@ export class Settings extends Component {
           <div className='signerPermission localSetting' style={{ zIndex: 207 }}>
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Show Account Name with ENS</div>
-              <div
-                className={
-                  this.store('main.showLocalNameWithENS')
-                    ? 'signerPermissionToggle signerPermissionToggleOn'
-                    : 'signerPermissionToggle'
-                }
-                onClick={() => {
-                  link.send('tray:action', 'toggleShowLocalNameWithENS')
-                }}
-              >
-                <div className='signerPermissionToggleSwitch' />
-              </div>
+              <Toggle
+                checked={this.store('main.showLocalNameWithENS')}
+                label='Show account name with ENS'
+                onChange={() => link.send('tray:action', 'toggleShowLocalNameWithENS')}
+              />
             </div>
             <div className='signerPermissionDetails'>{'Show local account name when ENS is resolved'}</div>
           </div>
@@ -259,6 +244,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Trezor Derivation</div>
               <Dropdown
+                label='Trezor derivation'
                 syncValue={this.store('main.trezor.derivation')}
                 onChange={(value) => link.send('tray:action', 'setTrezorDerivation', value)}
                 options={[
@@ -274,6 +260,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Ledger Derivation</div>
               <Dropdown
+                label='Ledger derivation'
                 syncValue={this.store('main.ledger.derivation')}
                 onChange={(value) => link.send('tray:action', 'setLedgerDerivation', value)}
                 options={[
@@ -291,6 +278,7 @@ export class Settings extends Component {
               <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>Ledger Live Accounts</div>
                 <Dropdown
+                  label='Ledger Live accounts'
                   syncValue={this.store('main.ledger.liveAccountLimit')}
                   onChange={(value) => link.send('tray:action', 'setLiveAccountLimit', value)}
                   options={[
@@ -308,6 +296,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Lattice Derivation</div>
               <Dropdown
+                label='Lattice derivation'
                 syncValue={this.store('main.latticeSettings.derivation')}
                 onChange={(value) => link.send('tray:action', 'setLatticeDerivation', value)}
                 options={[
@@ -323,6 +312,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Lattice Accounts</div>
               <Dropdown
+                label='Lattice accounts'
                 syncValue={this.store('main.latticeSettings.accountLimit')}
                 onChange={(value) => link.send('tray:action', 'setLatticeAccountLimit', value)}
                 options={[
@@ -339,6 +329,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Lattice Relay</div>
               <Dropdown
+                label='Lattice relay'
                 syncValue={this.store('main.latticeSettings.endpointMode')}
                 onChange={(value) => {
                   link.send('tray:action', 'setLatticeEndpointMode', value)
@@ -358,7 +349,8 @@ export class Settings extends Component {
               }
             >
               <input
-                tabIndex='-1'
+                disabled={this.state.latticeEndpointMode !== 'custom'}
+                aria-label='Custom Lattice relay'
                 placeholder={'Custom Relay'}
                 value={this.state.latticeEndpoint}
                 onChange={(e) => this.inputLatticeEndpoint(e)}
@@ -370,6 +362,7 @@ export class Settings extends Component {
             <div className='signerPermissionControls'>
               <div className='signerPermissionSetting'>Lock Hot Signers on</div>
               <Dropdown
+                label='Lock hot signers on'
                 syncValue={this.store('main.accountCloseLock')}
                 onChange={(value) => link.send('tray:action', 'setAccountCloseLock', value)}
                 options={[
@@ -395,6 +388,7 @@ export class Settings extends Component {
                     <CompanionIdentity>{credential.fingerprint}</CompanionIdentity>
                   </CompanionDetails>
                   <RevokeCompanion
+                    type='button'
                     $confirm={confirm}
                     onClick={() => {
                       if (!confirm) {

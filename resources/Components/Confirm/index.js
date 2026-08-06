@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-const ResponseButton = ({ text, onClick }) => (
-  <div role='button' className='confirmButton' onClick={onClick}>
+const ResponseButton = ({ disabled, text, onClick }) => (
+  <button type='button' className='confirmButton' disabled={disabled} onClick={onClick}>
     {text}
-  </div>
+  </button>
 )
 
 export default function ConfirmDialog({
@@ -15,8 +15,8 @@ export default function ConfirmDialog({
 }) {
   const [submitted, setSubmitted] = useState(false)
 
-  const clickHandler = (evt, onClick) => {
-    if (evt.button === 0 && !submitted) {
+  const clickHandler = (onClick) => {
+    if (!submitted) {
       setSubmitted(true)
       onClick()
     }
@@ -29,8 +29,8 @@ export default function ConfirmDialog({
       </div>
 
       <div className='confirmButtonOptions'>
-        <ResponseButton text={declineText} onClick={(evt) => clickHandler(evt, onDecline)} />
-        <ResponseButton text={acceptText} onClick={(evt) => clickHandler(evt, onAccept)} />
+        <ResponseButton disabled={submitted} text={declineText} onClick={() => clickHandler(onDecline)} />
+        <ResponseButton disabled={submitted} text={acceptText} onClick={() => clickHandler(onAccept)} />
       </div>
     </div>
   )

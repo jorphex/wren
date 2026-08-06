@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 
 import Dropdown from '../../../../../resources/Components/Dropdown'
 import Icon from '../../../../../resources/Components/Icon'
+import Toggle from '../../../../../resources/Components/Toggle'
 import { ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import { isInvalidCustomTarget } from '../../../../../resources/connections'
 import { capitalize } from '../../../../../resources/utils'
@@ -54,7 +55,7 @@ function getActiveConnection(primary, secondary) {
   return primary
 }
 
-class ChainModule extends React.Component {
+export class ChainModule extends React.Component {
   constructor(props, context) {
     super(props, context)
 
@@ -73,6 +74,11 @@ class ChainModule extends React.Component {
     }
 
     this.ref = createRef()
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.primaryCustomInputTimeout)
+    clearTimeout(this.secondaryCustomInputTimeout)
   }
 
   renderConnection(id, { primary, secondary }, blockHeight) {
@@ -200,16 +206,11 @@ class ChainModule extends React.Component {
               >
                 <div className='connectionOptionToggle'>
                   <div className='signerPermissionSetting'>Primary</div>
-                  <div
-                    className={
-                      connection.primary.on
-                        ? 'signerPermissionToggleSmall signerPermissionToggleSmallOn'
-                        : 'signerPermissionToggleSmall'
-                    }
-                    onMouseDown={(_) => link.send('tray:action', 'toggleConnection', type, id, 'primary')}
-                  >
-                    <div className='signerPermissionToggleSwitch' />
-                  </div>
+                  <Toggle
+                    checked={connection.primary.on}
+                    label='Enable primary RPC'
+                    onChange={() => link.send('tray:action', 'toggleConnection', type, id, 'primary')}
+                  />
                 </div>
                 {connection.primary.on ? (
                   <>
@@ -217,6 +218,7 @@ class ChainModule extends React.Component {
                       <div className='connectionOptionDetailsInset'>
                         {renderStatus('primary')}
                         <Dropdown
+                          label='Primary RPC preset'
                           syncValue={`${type}:${id}:${connection.primary.current}`}
                           onChange={(preset) => {
                             const [type, id, value] = preset.split(':')
@@ -234,8 +236,9 @@ class ChainModule extends React.Component {
                       }
                     >
                       <input
+                        aria-label='Custom primary RPC endpoint'
                         className='customInput'
-                        tabIndex='-1'
+                        disabled={connection.primary.current !== 'custom'}
                         value={this.state.primaryCustom}
                         onFocus={() => customFocusHandler('primary')}
                         onBlur={() => customBlurHandler('primary')}
@@ -254,16 +257,11 @@ class ChainModule extends React.Component {
               >
                 <div className='connectionOptionToggle'>
                   <div className='signerPermissionSetting'>Secondary</div>
-                  <div
-                    className={
-                      connection.secondary.on
-                        ? 'signerPermissionToggleSmall signerPermissionToggleSmallOn'
-                        : 'signerPermissionToggleSmall'
-                    }
-                    onMouseDown={(_) => link.send('tray:action', 'toggleConnection', type, id, 'secondary')}
-                  >
-                    <div className='signerPermissionToggleSwitch' />
-                  </div>
+                  <Toggle
+                    checked={connection.secondary.on}
+                    label='Enable secondary RPC'
+                    onChange={() => link.send('tray:action', 'toggleConnection', type, id, 'secondary')}
+                  />
                 </div>
                 {connection.secondary.on ? (
                   <>
@@ -271,6 +269,7 @@ class ChainModule extends React.Component {
                       <div className='connectionOptionDetailsInset'>
                         {renderStatus('secondary')}
                         <Dropdown
+                          label='Secondary RPC preset'
                           syncValue={`${type}:${id}:${connection.secondary.current}`}
                           onChange={(preset) => {
                             const [type, id, value] = preset.split(':')
@@ -288,7 +287,8 @@ class ChainModule extends React.Component {
                       }
                     >
                       <input
-                        tabIndex='-1'
+                        aria-label='Custom secondary RPC endpoint'
+                        disabled={connection.secondary.current !== 'custom'}
                         value={this.state.secondaryCustom}
                         onFocus={() => customFocusHandler('secondary')}
                         onBlur={() => customBlurHandler('secondary')}
