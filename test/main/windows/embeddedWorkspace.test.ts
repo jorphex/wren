@@ -25,7 +25,8 @@ const createSetup = () => {
     },
     getBounds: jest.fn(() => ({ x: 1160, y: 114, width: 760, height: 900 })),
     isDestroyed: jest.fn(() => false),
-    setBounds: jest.fn()
+    setBounds: jest.fn(),
+    setShape: jest.fn()
   }
   const app = new EventEmitter()
   const workspace = new EmbeddedWorkspace(parent as never, view as never, app as never)
@@ -49,7 +50,7 @@ it('coordinates parent expansion with child bounds and visibility', () => {
   const windowBounds = { x: 540, y: 114, width: 1380, height: 900 }
   const viewBounds = { x: 0, y: 0, width: 620, height: 900 }
 
-  workspace.applyShellLayout(windowBounds, viewBounds, true)
+  workspace.applyShellLayout(windowBounds, { x: 620, y: 0, width: 760, height: 900 }, viewBounds, true)
 
   expect(parent.setBounds).toHaveBeenCalledWith(windowBounds, false)
   expect(view.setBounds).toHaveBeenCalledWith(viewBounds)
@@ -72,20 +73,23 @@ it('animates expansion and lands on exact shell bounds', () => {
   parent.setBounds.mockClear()
   view.setBounds.mockClear()
   view.setVisible.mockClear()
-  workspace.applyShellLayout(windowBounds, viewBounds, true, true)
+  workspace.applyShellLayout(windowBounds, { x: 620, y: 0, width: 760, height: 900 }, viewBounds, true, true)
 
-  expect(view.setVisible.mock.calls).toEqual([[true]])
+  expect(view.setVisible.mock.calls).toEqual([[false]])
   expect(parent.setBounds).toHaveBeenCalledTimes(1)
-  expect(parent.setBounds).not.toHaveBeenLastCalledWith(windowBounds, false)
-  expect(workspace.isVisible()).toBe(true)
+  expect(parent.setBounds).toHaveBeenLastCalledWith(windowBounds, false)
+  expect(view.setBounds).toHaveBeenLastCalledWith(viewBounds)
+  if (process.platform === 'linux') {
+    expect(parent.setShape).toHaveBeenCalledWith([{ x: 0, y: 0, width: 1380, height: 900 }])
+  }
+  expect(workspace.isVisible()).toBe(false)
   expect(workspace.isSettled(true)).toBe(false)
   expect(workspace.isTransitioningTo(true)).toBe(true)
 
   jest.runAllTimers()
 
-  expect(parent.setBounds).toHaveBeenLastCalledWith(windowBounds, false)
-  expect(view.setBounds).toHaveBeenLastCalledWith(viewBounds)
-  expect(view.setVisible.mock.calls).toEqual([[true]])
+  expect(parent.setBounds).toHaveBeenCalledTimes(1)
+  expect(view.setVisible.mock.calls).toEqual([[false], [true]])
   expect(workspace.isVisible()).toBe(true)
   expect(workspace.isSettled(true)).toBe(true)
   expect(workspace.isTransitioningTo(true)).toBe(false)
@@ -102,11 +106,12 @@ it('keeps a left-edge expansion anchored at the wallet seam', () => {
   parent.getBounds.mockReturnValue({ x: 0, y: 90, width: 760, height: 900 })
   workspace.applyLayout(compactView, false)
   view.setBounds.mockClear()
-  workspace.applyShellLayout(windowBounds, viewBounds, true, true)
+  workspace.applyShellLayout(windowBounds, { x: 0, y: 0, width: 760, height: 900 }, viewBounds, true, true)
 
-  expect(view.setBounds.mock.calls.every(([bounds]) => bounds.x === 760)).toBe(true)
+  expect(view.setBounds).toHaveBeenCalledWith(viewBounds)
+  expect(parent.setBounds).toHaveBeenCalledWith(windowBounds, false)
   jest.runAllTimers()
-  expect(view.setBounds.mock.calls.every(([bounds]) => bounds.x === 760)).toBe(true)
+  expect(view.setVisible).toHaveBeenLastCalledWith(true)
   jest.useRealTimers()
 })
 
@@ -121,37 +126,46 @@ it('keeps a left-edge overlay anchored while it expands over the wallet', () => 
   workspace.applyLayout(compactView, false)
   view.setBounds.mockClear()
   view.setVisible.mockClear()
-  workspace.applyShellLayout(windowBounds, viewBounds, true, true)
+  workspace.applyShellLayout(windowBounds, { x: 0, y: 0, width: 760, height: 744 }, viewBounds, true, true)
 
-  expect(view.setVisible).toHaveBeenCalledWith(true)
+  expect(view.setVisible).toHaveBeenCalledWith(false)
+  expect(view.setBounds).toHaveBeenCalledWith(viewBounds)
   jest.runAllTimers()
 
-  expect(view.setBounds.mock.calls.every(([bounds]) => bounds.x + bounds.width === 760)).toBe(true)
+  expect(view.setVisible).toHaveBeenLastCalledWith(true)
   jest.useRealTimers()
 })
 
-it('hides workspace content before a collapse animation begins', () => {
+it('hides workspace content as a collapse animation begins', () => {
   jest.useFakeTimers()
   const { parent, view, workspace } = createSetup()
   const onComplete = jest.fn()
   const expandedView = { x: 0, y: 0, width: 620, height: 900 }
-  const windowBounds = { x: 1160, y: 114, width: 760, height: 900 }
-  const viewBounds = { x: 0, y: 0, width: 0, height: 900 }
+  const windowBounds = { x: 540, y: 114, width: 1380, height: 900 }
+  const mainBounds = { x: 620, y: 0, width: 760, height: 900 }
+  const viewBounds = { x: 0, y: 0, width: 620, height: 900 }
 
   parent.getBounds.mockReturnValue({ x: 540, y: 114, width: 1380, height: 900 })
   workspace.applyLayout(expandedView, true)
+  parent.setBounds.mockClear()
+  view.setBounds.mockClear()
   view.setVisible.mockClear()
-  workspace.applyShellLayout(windowBounds, viewBounds, false, true, onComplete)
+  workspace.applyShellLayout(windowBounds, mainBounds, viewBounds, false, true, onComplete)
 
   expect(view.setVisible).toHaveBeenCalledWith(false)
   expect(workspace.isVisible()).toBe(false)
   expect(workspace.isSettled(false)).toBe(false)
   expect(workspace.isTransitioningTo(false)).toBe(true)
   expect(onComplete).not.toHaveBeenCalled()
+  expect(parent.setBounds).not.toHaveBeenCalled()
+  expect(view.setBounds).not.toHaveBeenCalled()
 
   jest.runAllTimers()
 
-  expect(view.setVisible).toHaveBeenCalledWith(false)
+  expect(view.setVisible).toHaveBeenCalledTimes(1)
+  expect(parent.setBounds).not.toHaveBeenCalled()
+  if (process.platform === 'linux') expect(parent.setShape).toHaveBeenCalledWith([mainBounds])
+  expect(view.setBounds).toHaveBeenCalledWith(viewBounds)
   expect(workspace.isVisible()).toBe(false)
   expect(workspace.isSettled(false)).toBe(true)
   expect(workspace.isTransitioningTo(false)).toBe(false)
@@ -167,14 +181,16 @@ it('does not complete a cancelled shell animation', () => {
 
   workspace.applyShellLayout(
     { x: 540, y: 114, width: 1380, height: 900 },
+    { x: 620, y: 0, width: 760, height: 900 },
     { x: 0, y: 0, width: 620, height: 900 },
     true,
     true,
     cancelledComplete
   )
   workspace.applyShellLayout(
-    { x: 1160, y: 114, width: 760, height: 900 },
-    { x: 0, y: 0, width: 0, height: 900 },
+    { x: 540, y: 114, width: 1380, height: 900 },
+    { x: 620, y: 0, width: 760, height: 900 },
+    { x: 0, y: 0, width: 620, height: 900 },
     false,
     true,
     replacementComplete

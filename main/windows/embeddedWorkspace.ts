@@ -1,5 +1,7 @@
 import type { App, BrowserWindow, Rectangle, WebContentsView } from 'electron'
 
+export const shellTransitionDuration = 180
+
 export class EmbeddedWorkspace {
   private visible = false
   private targetVisible = false
@@ -43,6 +45,7 @@ export class EmbeddedWorkspace {
 
   applyShellLayout(
     windowBounds: Rectangle,
+    mainBounds: Rectangle,
     viewBounds: Rectangle,
     showing: boolean,
     animate = false,
@@ -50,16 +53,18 @@ export class EmbeddedWorkspace {
   ) {
     if (this.destroyed || this.parent.isDestroyed()) return
     if (animate) {
-      this.animateShellLayout(windowBounds, viewBounds, showing, onComplete)
+      this.animateShellLayout(windowBounds, mainBounds, viewBounds, showing, onComplete)
       return
     }
-    this.parent.setBounds(windowBounds, false)
+    this.applyWindowBounds(windowBounds)
+    this.applyWindowShape(showing ? this.fullShape(windowBounds) : mainBounds)
     this.applyLayout(viewBounds, showing)
     onComplete?.()
   }
 
   private animateShellLayout(
     windowBounds: Rectangle,
+    mainBounds: Rectangle,
     viewBounds: Rectangle,
     showing: boolean,
     onComplete?: () => void
@@ -67,52 +72,52 @@ export class EmbeddedWorkspace {
     this.cancelAnimation()
     this.targetVisible = showing
 
-    const startWindowBounds = this.parent.getBounds()
-    const startViewBounds = this.viewBounds
-    const frameCount = 10
-    let frame = 0
-
-    // The renderer hides its controls during this transition. Keeping only its surface
-    // visible preserves seam-origin motion for narrow layouts where the window cannot grow.
-    this.view.setVisible(showing)
-    this.visible = showing
-
-    const interpolate = (start: number, end: number, progress: number) =>
-      Math.round(start + (end - start) * progress)
-
-    const advance = () => {
-      if (this.destroyed || this.parent.isDestroyed()) return
-
-      frame += 1
-      const progress = frame / frameCount
-      const easedProgress = 1 - Math.pow(1 - progress, 3)
-      const nextWindowBounds = {
-        x: interpolate(startWindowBounds.x, windowBounds.x, easedProgress),
-        y: interpolate(startWindowBounds.y, windowBounds.y, easedProgress),
-        width: interpolate(startWindowBounds.width, windowBounds.width, easedProgress),
-        height: interpolate(startWindowBounds.height, windowBounds.height, easedProgress)
-      }
-      const nextViewBounds = {
-        x: interpolate(startViewBounds.x, viewBounds.x, easedProgress),
-        y: interpolate(startViewBounds.y, viewBounds.y, easedProgress),
-        width: interpolate(startViewBounds.width, viewBounds.width, easedProgress),
-        height: interpolate(startViewBounds.height, viewBounds.height, easedProgress)
-      }
-
-      this.parent.setBounds(nextWindowBounds, false)
-      this.view.setBounds(nextViewBounds)
-      this.viewBounds = nextViewBounds
-
-      if (frame < frameCount) {
-        this.animationTimer = setTimeout(advance, 18)
-      } else {
-        this.animationTimer = undefined
-        this.visible = showing
-        onComplete?.()
-      }
+    if (showing) {
+      this.view.setVisible(false)
+      this.visible = false
+      this.applyWindowBounds(windowBounds)
+      this.applyWindowShape(this.fullShape(windowBounds))
+      this.view.setBounds(viewBounds)
+      this.viewBounds = viewBounds
+    } else {
+      this.view.setVisible(false)
+      this.visible = false
     }
 
-    advance()
+    this.animationTimer = setTimeout(() => {
+      if (this.destroyed || this.parent.isDestroyed()) return
+
+      if (!showing) {
+        this.applyWindowBounds(windowBounds)
+        this.applyWindowShape(mainBounds)
+        this.view.setBounds(viewBounds)
+        this.viewBounds = viewBounds
+      }
+      this.animationTimer = undefined
+      this.visible = showing
+      if (showing) this.view.setVisible(true)
+      onComplete?.()
+    }, shellTransitionDuration)
+  }
+
+  private applyWindowBounds(bounds: Rectangle) {
+    const current = this.parent.getBounds()
+    if (
+      current.x !== bounds.x ||
+      current.y !== bounds.y ||
+      current.width !== bounds.width ||
+      current.height !== bounds.height
+    ) {
+      this.parent.setBounds(bounds, false)
+    }
+  }
+
+  private applyWindowShape(bounds: Rectangle) {
+    if (process.platform === 'linux') this.parent.setShape([bounds])
+  }
+
+  private fullShape(bounds: Rectangle): Rectangle {
+    return { x: 0, y: 0, width: bounds.width, height: bounds.height }
   }
 
   private cancelAnimation() {

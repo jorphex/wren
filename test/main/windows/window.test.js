@@ -72,7 +72,9 @@ describe('createWindow', () => {
     const options = BrowserWindow.mock.calls[0][0]
     expect(options).toEqual(
       expect.objectContaining({
+        backgroundColor: '#00000000',
         frame: false,
+        transparent: true,
         webPreferences: expect.objectContaining({
           contextIsolation: true,
           additionalArguments: ['--frame-renderer-role=tray'],

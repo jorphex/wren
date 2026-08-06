@@ -115,7 +115,20 @@ const isValidStateSync = (value) => {
 
 const isValidResponseEvent = (message) => {
   if (!hasValidArgs(message) || !responseEventChannels.has(message.channel)) return false
-  if (message.channel === 'flex') return message.args.length === 1 && message.args[0] === 'shortcutActivated'
+  if (message.channel === 'flex') {
+    const [event, value] = message.args
+    if (event === 'shortcutActivated') return message.args.length === 1
+    if (event === 'shellLayout') {
+      return message.args.length === 2 && (value === 'adjacent' || value === 'overlay')
+    }
+    if (event === 'shellContent') {
+      return message.args.length === 2 && ['prepare', 'conceal', 'reveal'].includes(value)
+    }
+    if (event === 'shellJoined') {
+      return message.args.length === 2 && (value === 'true' || value === 'false')
+    }
+    return false
+  }
   return message.args.length === 2 && message.args[0] === 'stateSync' && isValidStateSync(message.args[1])
 }
 

@@ -550,18 +550,19 @@ button.requestFeatureButton:focus-visible
 
 button.dashModule
   position relative
+  display grid
+  grid-template-columns 28px minmax(0, 1fr) 16px
+  column-gap var(--wren-space-2)
   width 100%
-  height 118px
+  height 68px
   margin 0
-  padding var(--wren-space-3)
-  align-items flex-start
-  flex-direction column
-  justify-content flex-end
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
+  padding var(--wren-space-2)
+  align-items center
+  border 0
+  border-radius 4px
   color var(--wren-text-primary)
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-inset)
+  background transparent
+  box-shadow none
   font-family var(--wren-font-ui)
   text-align left
   transition background var(--wren-motion-fast) var(--wren-ease)
@@ -584,25 +585,19 @@ button.dashModule
     box-shadow none
 
   .dashModuleIcon
-    position absolute
-    top var(--wren-space-3)
-    left var(--wren-space-3)
+    position static
     display flex
     flex none
-    width 34px
-    height 34px
+    width 24px
+    height 24px
     margin 0
     align-items center
     justify-content center
-    border-radius var(--wren-radius-md)
     color var(--wren-accent-primary-hover)
-    background var(--wren-accent-primary-soft, #29231b)
+    background transparent
 
   .dashModuleCopy
-    position absolute
-    right var(--wren-space-3)
-    bottom var(--wren-space-3)
-    left var(--wren-space-3)
+    position static
     display flex
     min-width 0
     flex none
@@ -627,10 +622,9 @@ button.dashModule
     -webkit-line-clamp 2
 
   .dashModuleArrow
-    position absolute
-    top var(--wren-space-4)
-    right var(--wren-space-3)
+    position static
     display flex
+    justify-self end
     margin 0
     color var(--wren-text-muted)
     transition transform var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
@@ -640,7 +634,7 @@ button.dashModule
     transform translateX(2px)
 
 .dashModuleSection:first-child button.dashModule
-  height 98px
+  height 60px
 
   .dashModuleDescription
     display none
@@ -683,15 +677,14 @@ button.dashModule
     padding 0
     align-items center
     justify-content center
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-md)
+    border 0
+    border-radius 4px
     color var(--wren-text-secondary)
-    background var(--wren-surface-card)
+    background transparent
     cursor pointer
     transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
     &:hover
-      border-color var(--wren-border-strong)
       background var(--wren-surface-hover)
 
 .dashSupportActions
@@ -703,8 +696,8 @@ button.dashModule
   .requestFeatureButton
     min-height 38px
     padding 0 var(--wren-space-3)
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-md)
+    border 0
+    border-radius 4px
     color var(--wren-text-secondary)
     background transparent
     font-family var(--wren-font-ui)
@@ -713,12 +706,10 @@ button.dashModule
 
     &:hover
       color var(--wren-text-primary)
-      border-color var(--wren-border-default)
       background var(--wren-surface-hover)
 
   .requestFeatureButtonDanger:hover
     color var(--wren-danger)
-    border-color rgba(213, 116, 104, .45)
     background var(--wren-danger-soft)
 
 .localSettings .appInfo

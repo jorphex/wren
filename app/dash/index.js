@@ -19,12 +19,48 @@ function AppComponent() {
   return <App />
 }
 
+let shellRevealTimer
+let shellRevealFrame
+
+const revealShellContent = () => {
+  clearTimeout(shellRevealTimer)
+  cancelAnimationFrame(shellRevealFrame)
+  shellRevealFrame = requestAnimationFrame(() => {
+    shellRevealFrame = requestAnimationFrame(() => {
+      document.body.classList.remove('workspace-content-prepared', 'workspace-content-concealing')
+    })
+  })
+}
+
+const prepareShellContent = () => {
+  clearTimeout(shellRevealTimer)
+  cancelAnimationFrame(shellRevealFrame)
+  document.body.classList.remove('workspace-content-concealing')
+  document.body.classList.add('workspace-content-prepared')
+  shellRevealTimer = setTimeout(() => {
+    revealShellContent()
+  }, 600)
+}
+
+const concealShellContent = () => {
+  clearTimeout(shellRevealTimer)
+  cancelAnimationFrame(shellRevealFrame)
+  document.body.classList.remove('workspace-content-prepared')
+  document.body.classList.add('workspace-content-concealing')
+}
+
 link.on('flex', (event, value) => {
   if (event === 'shellLayout') {
     document.body.classList.toggle('workspace-overlay', value === 'overlay')
   } else if (event === 'shellContent') {
-    document.body.classList.toggle('workspace-content-hidden', value !== 'visible')
+    if (value === 'prepare') prepareShellContent()
+    if (value === 'conceal') concealShellContent()
+    if (value === 'reveal') revealShellContent()
   }
+})
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) revealShellContent()
 })
 
 link.rpc('getState', (err, state) => {

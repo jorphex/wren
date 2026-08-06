@@ -26,8 +26,7 @@ import {
   GlideEdge,
   ShellLayout,
   shellMainTargetWidth,
-  shouldJoinWorkspace,
-  shouldShowWorkspaceContent
+  shouldJoinWorkspace
 } from './shellGeometry'
 import { SystemTray, SystemTrayEventHandlers } from './systemTray'
 import { registerShortcut } from '../keyboardShortcuts'
@@ -49,6 +48,7 @@ const openedAtLogin =
   electronApp?.getLoginItemSettings() && electronApp.getLoginItemSettings().wasOpenedAtLogin
 const windows: Windows = {}
 const devHeight = 800
+const shellBackgroundColor = '#090c0a'
 const isWindows = process.platform === 'win32'
 const isMacOS = process.platform === 'darwin'
 
@@ -62,6 +62,16 @@ let lifecycleObservers: Observer[] = []
 let displayChangeHandler: (() => void) | undefined
 
 const getGlideEdge = (): GlideEdge => (store('main.glideSide') === 'left' ? 'left' : 'right')
+
+const getActiveShellLayout = (
+  area: Electron.Rectangle,
+  edge: GlideEdge,
+  workspaceOpen: boolean
+): ShellLayout => {
+  const requested = getShellLayout(area, edge, workspaceOpen)
+  if (process.platform !== 'linux' || requested.workspaceOverlaysMain) return requested
+  return getShellLayout(area, edge, true)
+}
 
 const app = {
   hide: () => tray.hide(),
@@ -111,6 +121,7 @@ function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) 
 function initTrayWindow() {
   const trayOpts: Electron.BrowserWindowConstructorOptions = {
     width: shellMainTargetWidth,
+    backgroundColor: shellBackgroundColor,
     icon: path.join(__dirname, './AppIcon.png')
   }
   if (isMacOS) {
@@ -296,7 +307,7 @@ export class Tray {
     })
     trayWindow.setResizable(false)
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    const layout = getShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
     if (dash) dash.applyLayout(layout)
     else trayWindow.setBounds(layout.window, false)
     requireStoreAction('trayOpen')(true)
@@ -327,7 +338,7 @@ export class Tray {
     if (!trayWindow || trayWindow.isDestroyed()) return
 
     const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
-    const layout = getShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
     if (dash) dash.applyLayout(layout, animate, focusWorkspace)
     else trayWindow.setBounds(layout.window, false)
   }
@@ -348,7 +359,9 @@ class Dash {
       throw new Error('Tray window is unavailable while creating the workspace')
     }
 
-    this.workspace = new EmbeddedWorkspace(trayWindow, createRendererView('dash'), electronApp)
+    const workspaceView = createRendererView('dash')
+    workspaceView.setBackgroundColor('#00000000')
+    this.workspace = new EmbeddedWorkspace(trayWindow, workspaceView, electronApp)
     this.workspace.loadURL(rendererUrl('dash').toString())
     this.workspace.onLoaded(() => {
       const processId = this.workspace.processId()
@@ -359,13 +372,16 @@ class Dash {
 
   public applyLayout(layout: ShellLayout, animate = false, focusWhenShown = false) {
     const showing = !!store('windows.dash.showing')
-    this.setShellJoined(shouldJoinWorkspace(layout, showing, animate))
-    this.setWorkspaceContentVisible(shouldShowWorkspaceContent(showing, animate))
-    this.workspace.applyShellLayout(layout.window, layout.workspace, showing, animate, () => {
-      this.setShellJoined(shouldJoinWorkspace(layout, showing, false))
-      this.setWorkspaceContentVisible(shouldShowWorkspaceContent(showing, false))
+    const joined = shouldJoinWorkspace(layout, showing, false)
+    if (animate && showing) this.prepareWorkspaceContent()
+    if (animate && !showing) this.concealWorkspaceContent()
+    if (!animate) this.setShellJoined(joined)
+    this.workspace.applyShellLayout(layout.window, layout.main, layout.workspace, showing, animate, () => {
+      this.setShellJoined(joined)
+      if (showing) this.revealWorkspaceContent()
       if (showing && focusWhenShown) this.workspace.focus()
     })
+    if (animate) this.setShellJoined(shouldJoinWorkspace(layout, showing, true))
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
   }
 
@@ -375,17 +391,21 @@ class Dash {
     trayWindow.webContents.send('main:flex', 'shellJoined', joined ? 'true' : 'false')
   }
 
-  private setWorkspaceContentVisible(visible: boolean) {
-    this.workspace.send('main:flex', 'shellContent', visible ? 'visible' : 'hidden')
+  private revealWorkspaceContent() {
+    this.workspace.send('main:flex', 'shellContent', 'reveal')
+  }
+
+  private prepareWorkspaceContent() {
+    this.workspace.send('main:flex', 'shellContent', 'prepare')
+  }
+
+  private concealWorkspaceContent() {
+    this.workspace.send('main:flex', 'shellContent', 'conceal')
   }
 
   public hide() {
     if (this.workspace.isTransitioningTo(false)) return
-    const animate = shouldAnimateShell(
-      tray.isVisible() && !this.workspace.isSettled(false),
-      systemPreferences.getAnimationSettings().prefersReducedMotion
-    )
-    tray.reposition(animate)
+    tray.reposition(false)
     windows.tray?.webContents.focus()
   }
 
@@ -468,11 +488,10 @@ class Onboard {
       onboardWindow.once('close', closeHandler)
 
       const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-      const height = (isDev && !fullheight ? devHeight : area.height) - 160
-      const maxWidth = Math.floor(height * 1.24)
-      const targetWidth = 600 // area.width - 460
-      const width = targetWidth > maxWidth ? maxWidth : targetWidth
-      onboardWindow.setMinimumSize(600, 300)
+      const availableHeight = (isDev && !fullheight ? devHeight : area.height) - 48
+      const width = Math.max(1, Math.min(720, area.width - 48))
+      const height = Math.max(1, Math.min(720, availableHeight))
+      onboardWindow.setMinimumSize(Math.min(600, width), Math.min(480, height))
       onboardWindow.setSize(width, height)
       const pos = center(onboardWindow)
       onboardWindow.setPosition(pos.x, pos.y)

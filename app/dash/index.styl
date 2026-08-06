@@ -6,8 +6,7 @@ html, body
   -webkit-app-region no-drag
   overflow hidden
   color var(--outerspace)
-  background-color var(--wren-bg-canvas)
-  background-image radial-gradient(circle at 86% 10%, rgba(208, 168, 94, 0.025), transparent 34%), radial-gradient(circle at 12% 90%, rgba(127, 170, 188, 0.018), transparent 30%)
+  background transparent
 
 div
   user-select none
@@ -33,10 +32,10 @@ div
   height 100%
   overflow-y scroll
   overflow-x hidden
-  background var(--ghostA)
+  background transparent
   position relative
   box-sizing border-box
-  border 1px solid var(--wren-border-default)
+  border 0
 
   .dashMain
     position absolute 
@@ -327,6 +326,9 @@ div
 @import './card.styl'
 
 // Wren dashboard shell
+.frameOverlay
+  display none
+
 .dash
   background var(--wren-bg-canvas)
 
@@ -334,7 +336,7 @@ div
   > .dashMain,
   > .dashFooter
     opacity 1
-    transition opacity var(--wren-motion-standard) var(--wren-ease)
+    transition opacity var(--wren-motion-slow) var(--wren-ease)
 
   .dashMain
     top 64px
@@ -396,21 +398,27 @@ div
         margin-right var(--wren-space-2)
 
 .workspace-edge-right .dash
-  border-right 0
   border-radius var(--wren-radius-xl) 0 0 var(--wren-radius-xl)
 
 .workspace-edge-left .dash
-  border-left 0
   border-radius 0 var(--wren-radius-xl) var(--wren-radius-xl) 0
 
 .workspace-overlay .dash
-  border 1px solid var(--wren-border-default)
+  border 0
   border-radius var(--wren-radius-xl)
 
-.workspace-content-hidden .dash
+.workspace-content-prepared .dash
   > .command,
   > .dashMain,
   > .dashFooter
     opacity 0
-    pointer-events none
     transition none
+
+.workspace-content-concealing .dash
+  background transparent
+
+  > .command,
+  > .dashMain,
+  > .dashFooter
+    opacity 0
+    transition-duration var(--wren-motion-standard)

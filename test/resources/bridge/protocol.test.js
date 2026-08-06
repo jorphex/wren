@@ -92,6 +92,23 @@ describe('renderer bridge protocol', () => {
       )
     ).not.toBeNull()
 
+    for (const args of [
+      ['shellLayout', 'adjacent'],
+      ['shellLayout', 'overlay'],
+      ['shellContent', 'prepare'],
+      ['shellContent', 'conceal'],
+      ['shellContent', 'reveal'],
+      ['shellJoined', 'true'],
+      ['shellJoined', 'false']
+    ]) {
+      expect(
+        decodeBridgeMessage(
+          encode({ source: BRIDGE_SOURCE, method: 'event', channel: 'flex', args }),
+          BRIDGE_SOURCE
+        )
+      ).not.toBeNull()
+    }
+
     expect(
       decodeBridgeMessage(
         encode({ source: BRIDGE_SOURCE, method: 'event', channel: 'unknown', args: [] }),
@@ -112,6 +129,10 @@ describe('renderer bridge protocol', () => {
     expect(response('action', ['stateSync', '{'])).toBeNull()
     expect(response('action', ['unknown', action('main.ready')])).toBeNull()
     expect(response('flex', ['unknown'])).toBeNull()
+    expect(response('flex', ['shellLayout', 'wide'])).toBeNull()
+    expect(response('flex', ['shellContent', 'visible'])).toBeNull()
+    expect(response('flex', ['shellJoined', true])).toBeNull()
+    expect(response('flex', ['shellJoined', 'true', 'animate'])).toBeNull()
     expect(response('dapp', [])).toBeNull()
   })
 

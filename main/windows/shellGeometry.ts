@@ -56,7 +56,3 @@ export function getShellLayout(workArea: Rectangle, edge: GlideEdge, workspaceOp
 export function shouldJoinWorkspace(layout: ShellLayout, showing: boolean, transitioning: boolean) {
   return !layout.workspaceOverlaysMain && (showing || transitioning)
 }
-
-export function shouldShowWorkspaceContent(showing: boolean, transitioning: boolean) {
-  return showing && !transitioning
-}

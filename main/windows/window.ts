@@ -61,14 +61,17 @@ export function createWindow(
   log.verbose(`Creating ${name} window`)
   const rendererRole = rendererRoleForWindow(name)
 
+  const isShellWindow = name === 'tray'
   const browserWindow = new BrowserWindow({
     ...opts,
     frame: false,
     ...(process.platform === 'linux' ? { roundedCorners: false } : {}),
     acceptFirstMouse: true,
-    transparent: process.platform === 'darwin',
+    transparent: process.platform === 'darwin' || isShellWindow,
     show: false,
-    backgroundColor: store('main.colorwayPrimary', store('main.colorway'), 'background'),
+    backgroundColor: isShellWindow
+      ? '#00000000'
+      : store('main.colorwayPrimary', store('main.colorway'), 'background'),
     skipTaskbar: process.platform !== 'linux',
     webPreferences: {
       ...webPreferences,

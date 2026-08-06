@@ -9,13 +9,39 @@ html, body
   -webkit-app-region no-drag
   overflow hidden
   color var(--outerspace)
-  background-color var(--wren-bg-canvas)
-  background-image radial-gradient(circle at 12% 8%, rgba(208, 168, 94, 0.025), transparent 34%), radial-gradient(circle at 88% 92%, rgba(127, 170, 188, 0.018), transparent 30%)
+  background transparent
 
 body
-  border 1px solid var(--wren-border-default)
+  position relative
+  border 0
   border-radius var(--wren-radius-xl)
+
+.frameOverlay
+  display none
+
+body::before
+  content ''
+  position fixed
+  top 0
+  right 0
+  bottom 0
+  width 760px
+  max-width 100%
+  border-radius var(--wren-radius-xl)
+  background var(--wren-bg-canvas)
   box-shadow var(--wren-shadow-lg), var(--wren-shadow-inset)
+  pointer-events none
+
+.workspace-edge-left::before
+  right auto
+  left 0
+
+body::before
+  transition width var(--wren-motion-standard) var(--wren-ease)
+
+.workspace-joined::before,
+.workspace-open::before
+  width 100%
 
 div
   user-select none
@@ -98,11 +124,13 @@ div
   left 0
   right auto
 
-.workspace-joined.workspace-edge-right #panel
+.workspace-joined.workspace-edge-right #panel,
+.workspace-open.workspace-edge-right #panel
   border-top-left-radius 0
   border-bottom-left-radius 0
 
-.workspace-joined.workspace-edge-left #panel
+.workspace-joined.workspace-edge-left #panel,
+.workspace-open.workspace-edge-left #panel
   border-top-right-radius 0
   border-bottom-right-radius 0
 
