@@ -301,14 +301,14 @@ export class Main extends React.Component {
                       onClick={() => link.send('tray:action', 'navDash', { view: item.view, data: {} })}
                     >
                       <span className='dashModuleIcon'>
-                        <Icon name={item.icon} size={20} />
+                        <Icon name={item.icon} size={22} />
                       </span>
                       <span className='dashModuleCopy'>
                         <strong className='dashModuleTitle'>{item.title}</strong>
                         <span className='dashModuleDescription'>{item.description}</span>
                       </span>
                       <span className='dashModuleArrow'>
-                        <Icon name='next' size={14} />
+                        <Icon name='next' size={15} />
                       </span>
                     </button>
                   ))}

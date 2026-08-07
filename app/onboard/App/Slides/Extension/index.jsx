@@ -6,22 +6,21 @@ import { BrowserChoice, BrowserChoices, Slide, SlideBody, SlideItem, Tag } from 
 
 const Extension = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Browser Extension')
+    setTitle('Meet the companion')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
   return (
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>If you're using a dapp that doesn't natively</div>
-          <div>connect to Wren, you can inject a connection with</div>
+          <div>Some dapps only look for a browser wallet.</div>
           <div>
-            the <Tag>Wren Companion</Tag> browser extension.
+            <Tag>Wren Companion</Tag> introduces them to the desktop app.
           </div>
         </SlideItem>
         <SlideItem>
-          <div>Download the qualified companion release for</div>
-          <div>your preferred browser:</div>
+          <div>Requests arrive in Wren, where you can read</div>
+          <div>the details and decide what happens next.</div>
         </SlideItem>
         <BrowserChoices>
           <BrowserChoice

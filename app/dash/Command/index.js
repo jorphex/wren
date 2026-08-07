@@ -62,7 +62,7 @@ export class Command extends React.Component {
               link.send('tray:action', 'backDash')
             }}
           >
-            <Icon name='back' size={16} />
+            <Icon name='back' size={19} />
           </button>
         ) : null}
         <div key={view} className='commandTitle cardShow'>
@@ -76,7 +76,7 @@ export class Command extends React.Component {
             link.send('tray:action', 'closeDash')
           }}
         >
-          <Icon name='close' size={16} />
+          <Icon name='close' size={19} />
         </button>
       </div>
     )

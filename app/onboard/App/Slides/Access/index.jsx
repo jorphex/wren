@@ -32,11 +32,11 @@ const Access = ({ setTitle, setProceed, platform }) => {
 
   useEffect(() => {
     if (trayOpen && !shortcutActivated) {
-      setTitle(`Let's get started...`)
-      setProceed({ action: 'skip', text: 'skip this step' })
+      setTitle('Wren, when you need it')
+      setProceed({ action: 'skip', text: 'Skip' })
     } else if (!trayOpen) {
-      setTitle('Summon Wren')
-      setProceed({ action: 'skip', text: 'skip this step' })
+      setTitle('Bring Wren back')
+      setProceed({ action: 'skip', text: 'Skip' })
     } else {
       setTitle('Auto-hide')
       setProceed({ action: 'next', text: 'Next' })
@@ -48,27 +48,26 @@ const Access = ({ setTitle, setProceed, platform }) => {
       {trayOpen && !shortcutActivated ? (
         <SlideBody key={1}>
           <SlideItem>
-            <div>You can quickly summon and dismiss</div>
-            <div>Wren using the keyboard shortcut.</div>
+            <div>Keep Wren close without keeping it in the way.</div>
+            <div>One shortcut opens or dismisses the wallet.</div>
           </SlideItem>
           <SlideItem>
-            <span>{'Dismiss Wren now using '}</span>
+            <span>{'Try dismissing Wren with '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
           </SlideItem>
         </SlideBody>
       ) : !trayOpen ? (
         <SlideBody key={2}>
           <SlideItem>
-            <span>{'You can summon Wren the same way '}</span>
+            <span>{'Bring Wren back with '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
           </SlideItem>
         </SlideBody>
       ) : (
         <SlideBody key={3}>
           <SlideItem>
-            <div>You can also set Wren to automatically hide</div>
-            <div>when not in use, so it's out of the way</div>
-            <div>but still easily accessible when you need it.</div>
+            <div>When your work is done, auto-hide moves Wren</div>
+            <div>aside. Your shortcut keeps it one step away.</div>
           </SlideItem>
         </SlideBody>
       )}

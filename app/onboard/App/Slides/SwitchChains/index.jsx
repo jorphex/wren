@@ -5,7 +5,7 @@ import { Slide, SlideBody, SlideItem, SlideVideo } from '../../styled'
 
 const SwitchChainsSlide = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Extension Chain Selector')
+    setTitle('Choose the right network')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
 
@@ -19,10 +19,10 @@ const SwitchChainsSlide = ({ setTitle, setProceed }) => {
             </video>
           </SlideVideo>
           <div style={{ fontSize: '13px', lineHeight: '20px' }}>
-            Legacy dapp not switching chains automatically?
+            Older dapps do not always ask to change networks.
           </div>
           <div style={{ fontSize: '13px', lineHeight: '20px', paddingBottom: '15px' }}>
-            Switch chains for any dapp via the browser extension.
+            Wren Companion lets you choose one for them.
           </div>
         </SlideItem>
       </SlideBody>

@@ -6,7 +6,7 @@ import link from '../../../../../resources/link'
 
 const Chains = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Accounts')
+    setTitle('Bring your accounts')
     setProceed({ action: 'next', text: 'Next' })
     link.send('tray:action', 'navDash', { view: 'accounts', data: {} })
   }, [])
@@ -15,12 +15,12 @@ const Chains = ({ setTitle, setProceed }) => {
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>With Wren, you can easily manage multiple</div>
-          <div>accounts and signers in a single location.</div>
+          <div>Hardware signers, local accounts, and watch-only</div>
+          <div>addresses all have a place in Wren.</div>
         </SlideItem>
         <SlideItem>
-          <div>To set up your first account, click "Add New Account"</div>
-          <div>at the bottom of the Accounts panel.</div>
+          <div>Choose Add account, then connect in the way</div>
+          <div>that suits you.</div>
         </SlideItem>
       </SlideBody>
     </Slide>

@@ -6,7 +6,7 @@ import link from '../../../../../resources/link'
 
 const Chains = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Chains')
+    setTitle('Pick your networks')
     setProceed({ action: 'next', text: 'Next' })
     link.send('tray:action', 'navDash', { view: 'chains', data: {} })
   }, [])
@@ -15,16 +15,15 @@ const Chains = ({ setTitle, setProceed }) => {
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>Next, let's set up the chains you want to use.</div>
+          <div>Turn on the networks you use and leave the rest quiet.</div>
         </SlideItem>
         <SlideItem>
-          <div>Wren includes many popular chains out of the</div>
-          <div>box -- to start using a chain just toggle it on!</div>
+          <div>Wren comes ready for popular EVM networks.</div>
+          <div>Prefer your own RPC? Add it here.</div>
         </SlideItem>
         <SlideItem>
-          <div>You can also add new chains by clicking the button</div>
-          <div>at the bottom of the panel or by using a dapp</div>
-          <div>that adds chains for you, such as chainlist.org.</div>
+          <div>You can add another network at any time.</div>
+          <div>Dapps can ask Wren to add one, too.</div>
         </SlideItem>
       </SlideBody>
     </Slide>
