@@ -165,9 +165,15 @@ body
             transform rotate(360deg)
 
       .mainDappEnableChains
+        appearance none
         height 40px
         margin-top 30px
         background var(--ghostC)
+        color inherit
+        font-family inherit
+        border-top 0
+        border-right 0
+        border-left 0
         border-bottom 2px solid var(--ghostZ)
         box-shadow 0px 1px 4px var(--ghostX)
         border-radius 15px
@@ -185,6 +191,10 @@ body
       .mainDappEnableChains:hover
         background var(--ghostD)
         color var(--outerspace)
+
+      .mainDappEnableChains:disabled
+        cursor default
+        opacity .7
 
       .mainApps
         width 600px

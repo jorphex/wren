@@ -251,16 +251,6 @@ export class Main extends React.Component {
     )
   }
 
-  quit() {
-    return (
-      <div className='addCustomTokenButtonWrap quitFrame' style={{ zIndex: 215 }}>
-        <div className='addCustomTokenButton' onClick={() => link.send('tray:quit')}>
-          Quit
-        </div>
-      </div>
-    )
-  }
-
   indicator(status) {
     if (status === 'connected') {
       return (

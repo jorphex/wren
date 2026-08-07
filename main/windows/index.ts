@@ -16,7 +16,7 @@ import store from '../store'
 import { requireStoreAction } from '../store/action'
 import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
-import { createRendererView, createWindow } from './window'
+import { createRendererView, createWindow, restoreWindow } from './window'
 import { EmbeddedWorkspace } from './embeddedWorkspace'
 import { shouldAnimateShell, shouldSuppressRepeatedShow } from './displayTransition'
 import { GlideDetector, shouldAutoHideGlide } from './glide'
@@ -717,7 +717,7 @@ export default {
     windowFromWebContents(e.sender).maximize()
   },
   unmax(e: IpcMainEvent) {
-    windowFromWebContents(e.sender).unmaximize()
+    restoreWindow(windowFromWebContents(e.sender))
   },
   min(e: IpcMainEvent) {
     windowFromWebContents(e.sender).minimize()

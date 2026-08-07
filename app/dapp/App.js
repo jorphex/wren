@@ -12,24 +12,34 @@ const FailedToLoad = () => {
   )
 }
 
-const MainnetDisconnected = () => {
+export const MainnetDisconnected = () => {
+  const openingNetworks = React.useRef(false)
+  const [opening, setOpening] = React.useState(false)
+
+  const openNetworks = () => {
+    if (openingNetworks.current) return
+    openingNetworks.current = true
+    setOpening(true)
+    link.send('tray:action', 'navDash', { view: 'chains', data: {} })
+    setTimeout(() => {
+      link.send('frame:close')
+    }, 100)
+  }
+
   return (
     <>
       <div className='mainDappLoadingText'>
         <div>{'Mainnet connection required'}</div>
         <div>{'to resolve ENS for Send dapp'}</div>
       </div>
-      <div
+      <button
+        type='button'
         className='mainDappEnableChains'
-        onClick={() => {
-          link.send('tray:action', 'navDash', { view: 'chains', data: {} })
-          setTimeout(() => {
-            link.send('frame:close')
-          }, 100)
-        }}
+        disabled={opening}
+        onClick={openNetworks}
       >
-        View Chains
-      </div>
+        {opening ? 'Opening Networks…' : 'View Networks'}
+      </button>
     </>
   )
 }

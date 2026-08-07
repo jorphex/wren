@@ -105,6 +105,14 @@ export function createWindow(
   return browserWindow
 }
 
+export function restoreWindow(browserWindow: BrowserWindow) {
+  if (browserWindow.isFullScreen()) {
+    browserWindow.setFullScreen(false)
+  } else {
+    browserWindow.unmaximize()
+  }
+}
+
 export function createRendererView(
   name: string,
   webPreferences: BrowserWindowConstructorOptions['webPreferences'] = {}

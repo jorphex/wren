@@ -6,7 +6,8 @@ import {
   createViewInstance,
   createWindow,
   openBlockExplorer,
-  openExternal
+  openExternal,
+  restoreWindow
 } from '../../../main/windows/window'
 import store from '../../../main/store'
 
@@ -20,6 +21,9 @@ const createMockSession = () => ({
 })
 
 const mockWindow = {
+  isFullScreen: jest.fn(() => false),
+  setFullScreen: jest.fn(),
+  unmaximize: jest.fn(),
   webContents: {
     on: jest.fn(),
     once: jest.fn(),
@@ -108,6 +112,30 @@ describe('createWindow', () => {
 
   it('rejects windows without an explicit renderer role', () => {
     expect(() => createWindow('unknown')).toThrow('has no renderer IPC role')
+  })
+})
+
+describe('restoreWindow', () => {
+  beforeEach(() => {
+    mockWindow.isFullScreen.mockReturnValue(false)
+    mockWindow.setFullScreen.mockClear()
+    mockWindow.unmaximize.mockClear()
+  })
+
+  it('unmaximizes a regular maximized window', () => {
+    restoreWindow(mockWindow)
+
+    expect(mockWindow.unmaximize).toHaveBeenCalledTimes(1)
+    expect(mockWindow.setFullScreen).not.toHaveBeenCalled()
+  })
+
+  it('exits fullscreen instead of issuing an ineffective unmaximize', () => {
+    mockWindow.isFullScreen.mockReturnValue(true)
+
+    restoreWindow(mockWindow)
+
+    expect(mockWindow.setFullScreen).toHaveBeenCalledWith(false)
+    expect(mockWindow.unmaximize).not.toHaveBeenCalled()
   })
 })
 
