@@ -1,6 +1,54 @@
 .clearPermissionsButton
   padding 6px
 
+.clearPermissionsConfirm
+  display flex
+  gap 6px
+
+.clearPermissionsAction
+  appearance none
+  padding 0 12px
+  border 0
+  color inherit
+  font-family inherit
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus, var(--moon))
+    outline-offset 2px
+
+  &:disabled
+    cursor default
+    opacity .55
+
+.clearPermissionsConfirm .clearPermissionsAction
+  flex 1
+
+.clearPermissionsStatus
+  padding 10px 12px
+  color var(--wren-text-secondary)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus, var(--moon))
+    outline-offset -2px
+
+.signerBalanceTotal .signerBalanceShowAll
+  appearance none
+  border 0
+  border-bottom 2px solid var(--ghostZ)
+  color inherit
+  font-family inherit
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus, var(--moon))
+    outline-offset 2px
+
+  &:disabled
+    cursor default
+    opacity .55
+
+.signerPermissionControls .wrenToggle
+  margin-top 2px
+
 .moduleMainPermissions
   border-radius 20px
   overflow auto
@@ -42,73 +90,3 @@
     padding 10px 0px 0px 1px
     z-index 20
     font-weight 300
-
-.signerPermissionToggle
-  position relative
-  background var(--bad)
-  height 20px
-  width 40px
-  border-radius 10px
-  transition var(--standard)
-  transform translateZ(0)
-  margin-top 4px
-  cursor pointer
-
-  .signerPermissionToggleSwitch
-    position absolute
-    top 2px
-    left 2px
-    bottom 2px
-    width 16px
-    border-radius 10px
-    transition var(--standard)
-    background var(--ghostD)
-    transform translateZ(0)
-    // box-shadow 5px 5px 9px 0px var(--tripleThick) 
-    pointer-events none
-
-.signerPermissionToggleOn
-  background var(--good)
-  .signerPermissionToggleSwitch
-    position absolute
-    transform translateX(20px)
-
-.signerPermissionToggle:hover
-  .signerPermissionToggleSwitch
-    background var(--ghostD)
-
-.signerPermissionToggleSmall
-  position relative
-  background var(--bad)
-  height 14px
-  width 30px
-  border-radius 10px
-  transition var(--standard)
-  transform translateZ(0)
-  margin-top 2px
-  margin-right 4px
-  cursor pointer
-
-  .signerPermissionToggleSwitch
-    position absolute
-    top 2px
-    left 2px
-    bottom 2px
-    width 10px
-    border-radius 10px
-    transition var(--standard)
-    background var(--ghostC)
-    transform translateZ(0)
-    box-shadow 0px 3px 3px 0px var(--tripleThick) 
-    pointer-events none
-
-.signerPermissionToggleSmallOn
-  background var(--good)
-
-  .signerPermissionToggleSwitch
-    position absolute
-    transform translateX(16px)
-
-.signerPermissionToggleSmall:hover
-  .signerPermissionToggleSwitch
-    background var(--ghostD)

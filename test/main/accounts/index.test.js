@@ -1565,6 +1565,43 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
   })
 })
 
+describe('#rejectUnapprovedRequestsForOrigins', () => {
+  it('rejects only untouched requests for revoked origins on the selected account', () => {
+    const activeAccount = Accounts.current()
+    const revokedResponse = jest.fn()
+    const retainedResponse = jest.fn()
+    const requestFor = (handlerId, overrides = {}) => ({
+      ...request,
+      handlerId,
+      payload: { ...request.payload, id: handlerId },
+      ...overrides
+    })
+
+    Accounts.addRequest(requestFor('revoked-request'), revokedResponse)
+    Accounts.addRequest(requestFor('other-origin', { origin: 'other-origin' }), retainedResponse)
+    Accounts.addRequest(requestFor('locked-request', { status: 'pending', locked: true }), retainedResponse)
+
+    expect(Accounts.rejectUnapprovedRequestsForOrigins(activeAccount.id, [request.origin])).toBe(true)
+
+    expect(activeAccount.requests).not.toHaveProperty('revoked-request')
+    expect(activeAccount.requests).toHaveProperty('other-origin')
+    expect(activeAccount.requests).toHaveProperty('locked-request')
+    expect(revokedResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4100, message: 'Request origin access was revoked' } })
+    )
+    expect(retainedResponse).not.toHaveBeenCalled()
+  })
+
+  it('ignores unknown accounts and empty origin sets', () => {
+    expect(
+      Accounts.rejectUnapprovedRequestsForOrigins('0x1111111111111111111111111111111111111111', [
+        request.origin
+      ])
+    ).toBe(false)
+    expect(Accounts.rejectUnapprovedRequestsForOrigins(Accounts.current().id, [])).toBe(false)
+  })
+})
+
 describe('#signTransactionForAccount', () => {
   it('signs through the pinned account even when another account is current', () => {
     const targetAccount = Accounts.accounts[account2.address]

@@ -1326,6 +1326,14 @@ export class Accounts extends EventEmitter {
     })
   }
 
+  rejectUnapprovedRequestsForOrigins(accountId: string, origins: readonly string[]) {
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account || origins.length === 0) return false
+
+    account.rejectUnapprovedRequestsForOrigins(origins)
+    return true
+  }
+
   remove(address = '') {
     address = address.toLowerCase()
 

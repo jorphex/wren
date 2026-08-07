@@ -9,6 +9,7 @@ import {
 } from '../../../resources/domain/addressBook'
 
 const panelActions = require('../../../resources/store/actions.panel')
+const { isManagedPermission } = require('../../../resources/domain/permissions')
 const supportedNetworkTypes = ['ethereum']
 
 function switchChainForOrigins(origins, oldChainId, newChainId) {
@@ -100,14 +101,22 @@ module.exports = {
     })
   },
   clearPermissions: (u, address) => {
-    u('main.permissions', address, () => {
-      return {}
+    u('main.permissions', address, (permissions = {}) => {
+      return Object.fromEntries(
+        Object.entries(permissions).filter(([, permission]) => isManagedPermission(permission))
+      )
     })
   },
-  toggleAccess: (u, address, handlerId) => {
-    u('main.permissions', address, (permissions) => {
-      permissions[handlerId].provider = !permissions[handlerId].provider
-      return permissions
+  toggleAccess: (u, address, handlerId, provider) => {
+    u('main.permissions', address, (permissions = {}) => {
+      const permission = permissions[handlerId]
+      if (!permission) return permissions
+      if (permission.provider === provider) return permissions
+
+      return {
+        ...permissions,
+        [handlerId]: { ...permission, provider }
+      }
     })
   },
   setAccountCloseLock: (u, value) => {

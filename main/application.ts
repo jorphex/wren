@@ -27,8 +27,7 @@ import { openBlockExplorer, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
-import { applyPermissionAction } from './provider/permissionEvents'
-import { originIdForName } from './provider/subscriptions'
+import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
 import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
@@ -377,14 +376,12 @@ onRenderer('tray:action', (e, action, ...args) => {
   const storeAction = typeof action === 'string' ? store[action] : undefined
   if (typeof storeAction === 'function') {
     if ((action === 'toggleAccess' || action === 'clearPermissions') && typeof args[0] === 'string') {
-      const permission =
-        action === 'toggleAccess' && typeof args[1] === 'string'
-          ? store('main.permissions', args[0], args[1])
-          : undefined
-      const affectedOriginIds =
-        permission && typeof permission.origin === 'string' ? [originIdForName(permission.origin)] : undefined
-
-      return applyPermissionAction(args[0], () => storeAction(...args), accounts, provider, affectedOriginIds)
+      return applyAccountPermissionRendererAction(action, args, {
+        accounts,
+        provider,
+        getPermissions: (address) => store('main.permissions', address) || {},
+        mutate: (address, ...mutationArgs) => storeAction(address, ...mutationArgs)
+      })
     }
     return storeAction(...args)
   }

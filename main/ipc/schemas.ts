@@ -183,7 +183,7 @@ const actionSchemas = {
   setShortcut: z.tuple([z.literal('summon'), ShortcutSchema]),
   setTrezorDerivation: z.tuple([z.enum(['standard', 'legacy', 'testnet'])]),
   switchOriginChain: z.tuple([HandlerIdSchema, ChainNumberSchema, NetworkTypeSchema]),
-  toggleAccess: z.tuple([AddressSchema, HandlerIdSchema]),
+  toggleAccess: z.tuple([AddressSchema, HandlerIdSchema, z.boolean()]),
   toggleConnection: z.tuple([
     NetworkTypeSchema,
     ChainKeySchema,

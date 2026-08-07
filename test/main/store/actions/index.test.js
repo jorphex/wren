@@ -31,6 +31,7 @@ import {
 } from '../../../../main/store/actions'
 import { toTokenId } from '../../../../resources/domain/balance'
 import * as storeActions from '../../../../main/store/actions'
+import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
 
 beforeAll(() => {
   log.transports.console.level = false
@@ -41,6 +42,60 @@ afterAll(() => {
 })
 
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
+
+describe('#toggleAccess', () => {
+  const address = '0x1111111111111111111111111111111111111111'
+
+  const toggleAccess = (permissions, handlerId, provider) => {
+    let result
+    storeActions.toggleAccess(
+      (...args) => {
+        expect(args.slice(0, 2)).toEqual(['main.permissions', address])
+        result = args[2](permissions)
+      },
+      address,
+      handlerId,
+      provider
+    )
+    return result
+  }
+
+  it('immutably toggles an existing permission', () => {
+    const permissions = { first: { origin: 'alpha.example', provider: false } }
+
+    const result = toggleAccess(permissions, 'first', true)
+
+    expect(result).toEqual({ first: { origin: 'alpha.example', provider: true } })
+    expect(permissions.first.provider).toBe(false)
+  })
+
+  it('keeps stale and missing permission state unchanged', () => {
+    const permissions = { first: { origin: 'alpha.example', provider: false } }
+
+    expect(toggleAccess(permissions, 'first', false)).toBe(permissions)
+    expect(toggleAccess(permissions, 'missing', true)).toBe(permissions)
+    expect(toggleAccess(undefined, 'missing', true)).toEqual({})
+  })
+})
+
+describe('#clearPermissions', () => {
+  it('removes external permissions while preserving managed Wren Send access', () => {
+    const address = '0x1111111111111111111111111111111111111111'
+    const permissions = {
+      managed: { origin: FRAME_SEND_ORIGIN, provider: true },
+      external: { origin: 'https://alpha.example', provider: true }
+    }
+    let result
+
+    storeActions.clearPermissions((...args) => {
+      expect(args.slice(0, 2)).toEqual(['main.permissions', address])
+      result = args[2](permissions)
+    }, address)
+
+    expect(result).toEqual({ managed: permissions.managed })
+    expect(permissions).toHaveProperty('external')
+  })
+})
 
 it('does not expose the retired Pylon migration actions', () => {
   expect(storeActions).not.toHaveProperty('mutePylonMigrationNotice')

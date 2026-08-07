@@ -6,6 +6,7 @@ import { openFileDialog } from '../windows/dialog'
 import { openBlockExplorer } from '../windows/window'
 import { routeWalletCallRequest } from './walletCalls'
 import { applyRequestUpdate } from './updateRequest'
+import { enforceRequestOriginAuthorization } from './requestAuthorization'
 import {
   respondToExtensionPairing,
   revokeExtensionCredential as revokePairedExtension
@@ -162,6 +163,13 @@ const rpc = {
     const storedRequest = currentAccount.getRequest(req.handlerId)
     if (!storedRequest) return cb(new Error('Request is no longer pending'))
     req = storedRequest
+    const permissions = store('main.permissions', req.account) || {}
+    const authorizationError = enforceRequestOriginAuthorization(
+      req,
+      permissions,
+      (account, handlerId, error) => accounts.rejectRequestForAccount(account, handlerId, error)
+    )
+    if (authorizationError) return cb(authorizationError)
     if ((req.approvals || []).some((approval) => !approval.approved)) {
       return cb(new Error('Request approvals are incomplete'))
     }

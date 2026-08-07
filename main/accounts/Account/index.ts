@@ -360,6 +360,19 @@ class FrameAccount {
     })
   }
 
+  rejectUnapprovedRequestsForOrigins(origins: readonly string[]) {
+    const revokedOrigins = new Set(origins)
+    Object.values(this.requests).forEach((request) => {
+      if (
+        revokedOrigins.has(request.origin) &&
+        request.status === undefined &&
+        !('locked' in request && request.locked)
+      ) {
+        this.rejectRequest(request, { code: 4100, message: 'Request origin access was revoked' })
+      }
+    })
+  }
+
   addRequiredApproval(
     req: TransactionRequest,
     type: ApprovalType,

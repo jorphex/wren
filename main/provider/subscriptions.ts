@@ -1,12 +1,9 @@
-import { v5 as uuid } from 'uuid'
 import store from '../store'
 
 import type { Permission } from '../store/state'
+import { isTrustedOriginId, originIdForName } from '../../resources/domain/origin'
 
-export const originIdForName = (origin: string) => uuid(origin, uuid.DNS)
-
-const trustedOriginIds = ['frame-extension', 'frame-internal'].map(originIdForName)
-const isTrustedOrigin = (originId: string) => trustedOriginIds.includes(originId)
+export { isTrustedOriginId, originIdForName }
 
 export const enum SubscriptionType {
   ACCOUNTS = 'accountsChanged',
@@ -33,7 +30,7 @@ export type Subscription = {
 }
 
 export function hasSubscriptionPermission(subType: string, address: string | undefined, originId: string) {
-  if (subType === SubscriptionType.CHAINS && isTrustedOrigin(originId)) {
+  if (subType === SubscriptionType.CHAINS && isTrustedOriginId(originId)) {
     // internal trusted origins are allowed to subscribe to chain changes without approval
     return true
   }

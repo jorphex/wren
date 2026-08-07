@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
+import PermissionToggle from '../PermissionToggle'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 
@@ -10,6 +11,7 @@ export class DappsPermissionsPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
+    this.state = { navigating: false }
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
@@ -29,10 +31,24 @@ export class DappsPermissionsPreview extends React.Component {
     if (this.resizeObserver) this.resizeObserver.disconnect()
   }
 
+  openExpanded() {
+    if (this.state.navigating) return
+
+    const crumb = {
+      view: 'expandedModule',
+      data: {
+        id: this.props.moduleId,
+        account: this.props.account
+      }
+    }
+    this.setState({ navigating: true })
+    link.send('nav:forward', 'panel', crumb)
+  }
+
   render() {
     const permissions = this.store('main.permissions', this.props.account) || {}
-    let permissionList = getPermissionIds(permissions, this.props.filter)
-    if (!this.props.expanded) permissionList = permissionList.slice(0, 4)
+    const permissionIds = getPermissionIds(permissions, this.props.filter)
+    const permissionList = this.props.expanded ? permissionIds : permissionIds.slice(0, 4)
 
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
@@ -61,16 +77,12 @@ export class DappsPermissionsPreview extends React.Component {
                     <div className='signerPermission'>
                       <div className='signerPermissionControls'>
                         <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
-                        <div
-                          className={
-                            permissions[o].provider
-                              ? 'signerPermissionToggle signerPermissionToggleOn'
-                              : 'signerPermissionToggle'
-                          }
-                          onClick={(_) => link.send('tray:action', 'toggleAccess', this.props.account, o)}
-                        >
-                          <div className='signerPermissionToggleSwitch' />
-                        </div>
+                        <PermissionToggle
+                          account={this.props.account}
+                          permissionId={o}
+                          origin={permissions[o].origin}
+                          checked={permissions[o].provider}
+                        />
                       </div>
                     </div>
                   </ClusterValue>
@@ -79,25 +91,20 @@ export class DappsPermissionsPreview extends React.Component {
             })
           )}
         </Cluster>
-        <div className='signerBalanceTotal'>
-          <div className='signerBalanceButtons'>
-            <div
-              className='signerBalanceButton signerBalanceShowAll'
-              onClick={() => {
-                const crumb = {
-                  view: 'expandedModule',
-                  data: {
-                    id: this.props.moduleId,
-                    account: this.props.account
-                  }
-                }
-                link.send('nav:forward', 'panel', crumb)
-              }}
-            >
-              More
+        {permissionIds.length > 0 && (
+          <div className='signerBalanceTotal'>
+            <div className='signerBalanceButtons'>
+              <button
+                type='button'
+                className='signerBalanceButton signerBalanceShowAll'
+                disabled={this.state.navigating}
+                onClick={() => this.openExpanded()}
+              >
+                More
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     )
   }
