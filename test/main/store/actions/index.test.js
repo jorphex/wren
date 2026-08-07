@@ -877,7 +877,7 @@ describe('#switchOriginChain', () => {
     const nodePath = [node, origin].join('.')
     expect(nodePath).toBe('main.origins.91f6971d-ba85-52d7-a27e-6af206eb2433')
 
-    origins[origin] = update()
+    origins[origin] = update(origins[origin])
   }
 
   beforeEach(() => {
@@ -895,6 +895,30 @@ describe('#switchOriginChain', () => {
     switchChain(50, 'ethereum')
 
     expect(origins['91f6971d-ba85-52d7-a27e-6af206eb2433'].chain).toStrictEqual({ id: 50, type: 'ethereum' })
+  })
+
+  it('does not create a malformed record for a stale origin', () => {
+    delete origins['91f6971d-ba85-52d7-a27e-6af206eb2433']
+
+    switchChain(50, 'ethereum')
+
+    expect(origins['91f6971d-ba85-52d7-a27e-6af206eb2433']).toBeUndefined()
+  })
+
+  it('keeps the existing record when the selected chain is unchanged', () => {
+    const existing = origins['91f6971d-ba85-52d7-a27e-6af206eb2433']
+
+    switchChain(1, 'ethereum')
+
+    expect(origins['91f6971d-ba85-52d7-a27e-6af206eb2433']).toBe(existing)
+  })
+
+  it.each([0, -1, 1.5, Number.NaN])('ignores an invalid chain id: %s', (invalidChainId) => {
+    const update = jest.fn()
+
+    switchOriginChainAction(update, '91f6971d-ba85-52d7-a27e-6af206eb2433', invalidChainId, 'ethereum')
+
+    expect(update).not.toHaveBeenCalled()
   })
 })
 

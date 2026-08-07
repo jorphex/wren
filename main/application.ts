@@ -28,6 +28,7 @@ import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
+import { applyOriginChainRendererAction } from './provider/originChainActions'
 import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
@@ -381,6 +382,13 @@ onRenderer('tray:action', (e, action, ...args) => {
         provider,
         getPermissions: (address) => store('main.permissions', address) || {},
         mutate: (address, ...mutationArgs) => storeAction(address, ...mutationArgs)
+      })
+    }
+    if (action === 'switchOriginChain') {
+      return applyOriginChainRendererAction(args, {
+        getOrigin: (originId) => store('main.origins', originId),
+        getChain: (chainId) => store('main.networks.ethereum', chainId),
+        mutate: (originId, chainId, type) => storeAction(originId, chainId, type)
       })
     }
     return storeAction(...args)

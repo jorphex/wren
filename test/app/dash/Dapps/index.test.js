@@ -1,8 +1,9 @@
 import Restore from 'react-restore'
 
 import { act, render, screen } from '../../../componentSetup'
-import { Dapps, Indicator, OriginModuleComponent } from '../../../../app/dash/Dapps'
+import { Dapps, OriginModuleComponent } from '../../../../app/dash/Dapps'
 import link from '../../../../resources/link'
+import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
@@ -22,12 +23,13 @@ const chain = {
 }
 const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 
-function renderDapps(origins) {
+function renderDapps(origins, permissions = {}, networks = { 1: chain }) {
   const store = Restore.create({
     main: {
-      networks: { ethereum: { 1: chain } },
+      networks: { ethereum: networks },
       networksMeta: { ethereum: { 1: { primaryColor: 'accent1', icon: '' } } },
-      origins
+      origins,
+      permissions
     }
   })
   const ConnectedDapps = Restore.connect(Dapps, store)
@@ -52,6 +54,8 @@ test('renders application activity instead of the empty state', () => {
   })
 
   expect(screen.getByText('example.test')).toBeTruthy()
+  expect(screen.getByText('Connected')).toBeTruthy()
+  expect(screen.getByText('avg reqs/min')).toBeTruthy()
   expect(screen.queryByText('No connected apps')).toBeNull()
 })
 
@@ -63,7 +67,10 @@ test('opens connected-app details once from native keyboard input', async () => 
       session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
     }
   })
-  const app = screen.getByRole('button', { name: 'Open example.test connection details' })
+  const app = screen.getByRole('button', {
+    name: /^Open example\.test connection details, connected/
+  })
+  expect(document.getElementById(app.getAttribute('aria-describedby')).textContent).toMatch(/avg reqs\/min/)
 
   app.focus()
   await user.keyboard('{Enter}')
@@ -73,8 +80,7 @@ test('opens connected-app details once from native keyboard input', async () => 
   ])
   expect(app.disabled).toBe(true)
 
-  act(() => jest.advanceTimersByTime(500))
-  expect(screen.getByRole('button', { name: 'Open example.test connection details' }).disabled).toBe(false)
+  expect(app.disabled).toBe(true)
 })
 
 test('ignores duplicate connected-app activation', async () => {
@@ -86,39 +92,28 @@ test('ignores duplicate connected-app activation', async () => {
     }
   })
 
-  await user.dblClick(screen.getByRole('button', { name: 'Open example.test connection details' }))
+  await user.dblClick(
+    screen.getByRole('button', { name: /^Open example\.test connection details, connected/ })
+  )
 
   expect(link.send).toHaveBeenCalledTimes(1)
 })
 
-test('clears connected-app indicator timers on unmount', () => {
-  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
-  const indicator = new Indicator({ connected: true })
-  indicator.componentDidMount()
-
-  indicator.componentWillUnmount()
-
-  expect(clearTimeoutSpy).toHaveBeenCalledWith(indicator.activateTimer)
-  expect(clearTimeoutSpy).toHaveBeenCalledWith(indicator.deactivateTimer)
-  clearTimeoutSpy.mockRestore()
-})
-
-test('clears a pending connected-app navigation timer on unmount', async () => {
+test('clears connected request-rate updates on unmount', () => {
   const ref = { current: null }
-  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
+  const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
   const origin = {
     id: 'origin',
     name: 'example.test',
     session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
   }
-  const { unmount, user } = render(<OriginModuleComponent ref={ref} connected origin={origin} />)
+  const { unmount } = render(<OriginModuleComponent ref={ref} connected origin={origin} />)
 
-  await user.click(screen.getByRole('button', { name: 'Open example.test connection details' }))
-  const navigationTimer = ref.current.navigationTimer
+  const requestUpdates = ref.current.requestUpdates
   unmount()
 
-  expect(clearTimeoutSpy).toHaveBeenCalledWith(navigationTimer)
-  clearTimeoutSpy.mockRestore()
+  expect(clearIntervalSpy).toHaveBeenCalledWith(requestUpdates)
+  clearIntervalSpy.mockRestore()
 })
 
 test('expires the last recently disconnected app without a store update', () => {
@@ -142,4 +137,45 @@ test('expires the last recently disconnected app without a store update', () => 
 
   expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(screen.queryByText('recent.test')).toBeNull()
+})
+
+test('keeps an expired disconnected app visible while any account retains its permission', () => {
+  const lastUpdatedAt = Date.now() - RECENT_ORIGIN_TTL - 1
+  renderDapps(
+    {
+      origin: {
+        chain: { id: 1 },
+        name: 'durable.test',
+        session: { startedAt: lastUpdatedAt, endedAt: lastUpdatedAt, lastUpdatedAt, requests: 1 }
+      }
+    },
+    {
+      account: {
+        permission: { handlerId: 'permission', origin: 'durable.test', provider: true }
+      }
+    }
+  )
+
+  expect(screen.getByText('durable.test')).toBeTruthy()
+  expect(screen.getByText('Access granted')).toBeTruthy()
+})
+
+test('does not expose managed Wren Send activity as a connected app', () => {
+  renderDapps(
+    {
+      managed: {
+        chain: { id: 1 },
+        name: FRAME_SEND_ORIGIN,
+        session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+      }
+    },
+    {
+      account: {
+        managed: { handlerId: 'send-dapp-native', origin: FRAME_SEND_ORIGIN, provider: true }
+      }
+    }
+  )
+
+  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })

@@ -34,27 +34,39 @@
   font-size 14px
   font-weight 400
   margin 6px
-  border-radius 26px
-  background var(--ghostA)
-  border-bottom 2px solid var(--ghostZ)
-  box-shadow 0px 2px 4px var(--ghostY)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-card)
+  border 1px solid var(--wren-border-subtle)
+  box-shadow var(--wren-shadow-sm)
   *
     pointer-events none
 
+.sliceOriginIdentity
+  min-width 0
+  flex 1
+  display flex
+  flex-direction column
+  align-items flex-start
+  padding 0 16px 0 48px
+
   .sliceOriginTitle
-    padding 0px 48px 1px 48px
-    color var(--outerspace)
-    font-weight 400
-    width 180px
-    direction rtl
+    max-width 100%
+    color var(--wren-text-primary)
     text-overflow ellipsis
     overflow hidden
     text-align left
     white-space nowrap
-    font-weight 300
+    font-weight 500
+
+  .sliceOriginStatus
+    margin-top 3px
+    color var(--wren-text-tertiary)
+    font-size 11px
+    line-height 14px
 
 .sliceOrigin:hover
-  background var(--ghostB)
+  background var(--wren-surface-hover)
+  border-color var(--wren-border-default)
 
 .sliceOrigin:focus-visible
   outline 2px solid var(--wren-focus, var(--moon))
@@ -93,26 +105,7 @@
     font-size 13px
     line-height 20px
 
-.viewAllOrigin
-  display flex
-  justify-content center
-  align-items center
-  height 10px
-  padding 5px
-  text-transform uppercase
-  font-size 10px
-  font-weight 300
-  color var(--good)
-  cursor pointer
-  *
-    pointer-events none
-
-.viewAllOrigin:hover
-  color var(--goodLight)
-  
 .sliceOriginIndicator
-  color var(--outerspace)
-  cursor pointer
   position absolute 
   top 50%
   margin-top -3px
@@ -133,10 +126,6 @@
   background var(--ghostY)
   box-shadow 0px 0px 0px var(--ghostX)
 
-.sliceOriginIndicatorActive
-  background var(--goodHighlight)
-  box-shadow 0px 0px 4px var(--goodHighlight)
-
 .sliceOriginReqs
   margin-right 24px
   display flex
@@ -144,12 +133,14 @@
   align-items center
 
   .sliceOriginReqsNumber
-    font-size 16px
+    color var(--wren-text-primary)
+    font-size 15px
     margin-right 5px
     
   .sliceOriginReqsLabel
     margin-top 2px
-    font-size 8px
+    color var(--wren-text-tertiary)
+    font-size 9px
     text-transform uppercase
     font-weight 500
 
@@ -192,7 +183,7 @@
     align-items center
     height 64px
     margin 6px
-    border-radius 26px
+    border-radius var(--wren-radius-sm)
     cursor pointer
     background var(--ghostA)
     box-shadow 0px 2px 4px var(--ghostX)

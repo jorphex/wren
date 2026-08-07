@@ -71,3 +71,14 @@ test('renders a safe status when a connected app disappears', () => {
 
   expect(screen.getByRole('status').textContent).toBe('This connected app is no longer available.')
 })
+
+test('does not dispatch a chain change after the connected app becomes stale', async () => {
+  const { user } = render(<DappDetailsHarness originId='origin' />)
+  const polygon = screen.getByRole('button', { name: 'Polygon' })
+  origin = undefined
+
+  await user.click(polygon)
+
+  expect(link.send).not.toHaveBeenCalled()
+  expect(polygon.disabled).toBe(false)
+})

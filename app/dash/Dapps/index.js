@@ -1,114 +1,55 @@
-import React, { createRef } from 'react'
+import React from 'react'
 import Restore from 'react-restore'
 import emptyConnections from 'url:../../../asset/ui/empty-connections.png'
 import link from '../../../resources/link'
-import { isNetworkConnected, isNetworkEnabled } from '../../../resources/utils/chains'
-// import svg from '../../../resources/svg'
+import {
+  nextTransientConnectedAppExpiry,
+  requestsPerMinute,
+  selectConnectedAppGroups
+} from '../../../resources/domain/connectedApps'
 
 import RingIcon from '../../../resources/Components/RingIcon'
 
 import DappDetails from './DappDetails'
 
-function bySessionStartTime(a, b) {
-  return b.session.startedAt - a.session.startedAt
-}
-
-function byLastUpdated(a, b) {
-  return b.session.lastUpdatedAt - a.session.lastUpdatedAt
-}
-
-const originFilter = ['frame-internal', 'frame-extension']
-const RECENT_ORIGIN_TTL = 60 * 60 * 1000
-
-function getOriginsForChain(chain, origins) {
-  const { connectedOrigins, disconnectedOrigins } = Object.entries(origins).reduce(
-    (acc, [id, origin]) => {
-      if (origin.chain.id === chain.id && !originFilter.includes(origin.name)) {
-        const connected =
-          isNetworkConnected(chain) &&
-          (!origin.session.endedAt || origin.session.startedAt > origin.session.endedAt)
-
-        acc[connected ? 'connectedOrigins' : 'disconnectedOrigins'].push({ ...origin, id })
-      }
-
-      return acc
-    },
-    { connectedOrigins: [], disconnectedOrigins: [] }
-  )
-
-  return {
-    connected: connectedOrigins.sort(bySessionStartTime),
-    disconnected: disconnectedOrigins
-      .sort(byLastUpdated)
-      .filter((origin) => Date.now() - origin.session.lastUpdatedAt < RECENT_ORIGIN_TTL)
-  }
-}
-
-export class Indicator extends React.Component {
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      active: false
-    }
-  }
-
-  componentDidMount() {
-    this.activateTimer = setTimeout(() => {
-      this.setState({ active: true })
-    }, 20)
-
-    this.deactivateTimer = setTimeout(() => {
-      this.setState({ active: false })
-    }, 200)
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.activateTimer)
-    clearTimeout(this.deactivateTimer)
-  }
-
-  render() {
-    if (this.props.connected) {
-      return (
-        <span
-          className={
-            this.state.active ? 'sliceOriginIndicator sliceOriginIndicatorActive' : 'sliceOriginIndicator'
-          }
-        />
-      )
-    } else {
-      return <span className='sliceOriginIndicator sliceOriginIndicatorOff' />
-    }
-  }
-}
+export const Indicator = ({ connected }) => (
+  <span
+    aria-hidden='true'
+    className={connected ? 'sliceOriginIndicator' : 'sliceOriginIndicator sliceOriginIndicatorOff'}
+  />
+)
 
 export class OriginModuleComponent extends React.Component {
   constructor(...args) {
     super(...args)
 
     this.state = {
-      expanded: false,
-      averageRequests: '0.0',
-      opening: false
+      opening: false,
+      rateNow: Date.now()
     }
 
-    this.ref = createRef()
     this.navigationPending = false
   }
 
   componentDidMount() {
-    this.requestUpdates = setInterval(() => {
-      if (this.props.connected) {
-        this.updateRequestRate()
-      }
-    }, 1000)
+    this.updateRateTimer()
+  }
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.connected !== this.props.connected) this.updateRateTimer()
   }
 
   componentWillUnmount() {
     this.navigationPending = false
-    clearTimeout(this.navigationTimer)
     clearInterval(this.requestUpdates)
+  }
+
+  updateRateTimer() {
+    clearInterval(this.requestUpdates)
+    this.setState({ rateNow: Date.now() })
+    if (this.props.connected) {
+      this.requestUpdates = setInterval(() => this.setState({ rateNow: Date.now() }), 1000)
+    }
   }
 
   openDetails(originId) {
@@ -116,48 +57,40 @@ export class OriginModuleComponent extends React.Component {
     this.navigationPending = true
     this.setState({ opening: true })
     link.send('tray:action', 'navDash', { view: 'dapps', data: { dappDetails: originId } })
-    this.navigationTimer = setTimeout(() => {
-      this.navigationPending = false
-      this.setState({ opening: false })
-    }, 500)
-  }
-
-  updateRequestRate() {
-    const { origin } = this.props
-    const now = new Date().getTime()
-    const sessionLength = now - origin.session.startedAt
-    const sessionLengthSeconds = sessionLength / Math.min(sessionLength, 1000)
-    this.setState({ averageRequests: (origin.session.requests / sessionLengthSeconds).toFixed(2) })
   }
 
   render() {
     const { origin, connected } = this.props
+    const rateEnd = connected ? this.state.rateNow : (origin.session.endedAt ?? origin.session.lastUpdatedAt)
+    const averageRequests = requestsPerMinute(origin.session, rateEnd).toFixed(2)
+    const connectionStatus = connected ? 'Connected' : origin.durable ? 'Access granted' : 'Not active'
 
     return (
-      <div>
-        <button
-          type='button'
-          aria-label={`Open ${origin.name} connection details`}
-          className='sliceOrigin'
-          disabled={this.state.opening}
-          onClick={() => this.openDetails(origin.id)}
-        >
-          <Indicator key={origin.session.lastUpdatedAt} connected={connected} />
+      <button
+        type='button'
+        aria-label={`Open ${origin.name} connection details, ${connectionStatus.toLowerCase()}`}
+        aria-describedby={`origin-rate-${origin.id}`}
+        className='sliceOrigin'
+        disabled={this.state.opening}
+        onClick={() => this.openDetails(origin.id)}
+      >
+        <Indicator connected={connected} />
+        <span className='sliceOriginIdentity'>
           <span className='sliceOriginTitle'>{origin.name}</span>
-          <span className='sliceOriginReqs'>
-            <span className='sliceOriginReqsNumber'>{this.state.averageRequests}</span>
-            <span className='sliceOriginReqsLabel'>{'reqs/min'}</span>
-          </span>
-        </button>
-        {this.state.expanded ? <div>{'origin quick menu'}</div> : null}
-      </div>
+          <span className='sliceOriginStatus'>{connectionStatus}</span>
+        </span>
+        <span className='sliceOriginReqs' id={`origin-rate-${origin.id}`}>
+          <span className='sliceOriginReqsNumber'>{averageRequests}</span>
+          <span className='sliceOriginReqsLabel'>avg reqs/min</span>
+        </span>
+      </button>
     )
   }
 }
 
 const OriginModule = Restore.connect(OriginModuleComponent)
 
-const ChainOrigins = ({ chain: { name }, origins, primaryColor, icon }) => {
+const ChainOrigins = ({ chain: { name }, connected, disconnected, primaryColor, icon }) => {
   return (
     <>
       <div className='originTitle'>
@@ -166,10 +99,10 @@ const ChainOrigins = ({ chain: { name }, origins, primaryColor, icon }) => {
         </div>
         <div className='originTitleText'>{name}</div>
       </div>
-      {origins.connected.map((origin) => (
+      {connected.map((origin) => (
         <OriginModule key={origin.id} origin={origin} connected={true} />
       ))}
-      {origins.disconnected.map((origin) => (
+      {disconnected.map((origin) => (
         <OriginModule key={origin.id} origin={origin} connected={false} />
       ))}
     </>
@@ -189,22 +122,20 @@ export class Dapps extends React.Component {
     clearTimeout(this.originExpiryTimer)
   }
 
-  getEnabledChains() {
-    return Object.values(this.store('main.networks.ethereum')).filter(isNetworkEnabled)
+  getGroups(now = Date.now()) {
+    return selectConnectedAppGroups({
+      networks: this.store('main.networks.ethereum') || {},
+      origins: this.store('main.origins') || {},
+      permissions: this.store('main.permissions') || {},
+      now
+    })
   }
 
   scheduleOriginExpiry() {
     clearTimeout(this.originExpiryTimer)
 
-    const origins = this.store('main.origins')
-    const expiries = this.getEnabledChains().flatMap((chain) => {
-      return getOriginsForChain(chain, origins).disconnected.map((origin) => {
-        return origin.session.lastUpdatedAt + RECENT_ORIGIN_TTL
-      })
-    })
-
-    if (expiries.length) {
-      const nextExpiry = Math.min(...expiries)
+    const nextExpiry = nextTransientConnectedAppExpiry(this.getGroups())
+    if (nextExpiry !== undefined) {
       const delay = Math.max(1, nextExpiry - Date.now() + 1)
       this.originExpiryTimer = setTimeout(() => {
         this.setState((state) => ({ originExpiryTick: (state?.originExpiryTick || 0) + 1 }))
@@ -213,20 +144,10 @@ export class Dapps extends React.Component {
   }
 
   render() {
-    const enabledChains = this.getEnabledChains()
-    const origins = this.store('main.origins')
-    const chainGroups = enabledChains
-      .map((chain) => {
-        const chainOrigins = getOriginsForChain(chain, origins)
-        return {
-          chain,
-          origins: chainOrigins,
-          meta: this.store('main.networksMeta.ethereum', chain.id)
-        }
-      })
-      .filter(({ origins: chainOrigins }) => {
-        return chainOrigins.connected.length > 0 || chainOrigins.disconnected.length > 0
-      })
+    const chainGroups = this.getGroups().map((group) => ({
+      ...group,
+      meta: this.store('main.networksMeta.ethereum', group.chain.id)
+    }))
 
     const { dappDetails } = this.props.data
 
@@ -236,11 +157,12 @@ export class Dapps extends React.Component {
       return (
         <div className='cardShow' style={{ padding: '0px 0px 64px 0px' }}>
           {chainGroups.length ? (
-            chainGroups.map(({ chain, origins: chainOrigins, meta: { primaryColor, icon } }) => (
+            chainGroups.map(({ chain, connected, disconnected, meta: { primaryColor, icon } }) => (
               <ChainOrigins
                 key={chain.id}
                 chain={chain}
-                origins={chainOrigins}
+                connected={connected}
+                disconnected={disconnected}
                 primaryColor={primaryColor}
                 icon={icon}
               />

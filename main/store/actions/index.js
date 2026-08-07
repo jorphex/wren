@@ -554,8 +554,11 @@ module.exports = {
     })
   },
   switchOriginChain: (u, originId, chainId, type) => {
-    if (originId && typeof chainId === 'number' && type === 'ethereum') {
-      u('main.origins', originId, (origin) => ({ ...origin, chain: { id: chainId, type } }))
+    if (originId && Number.isSafeInteger(chainId) && chainId > 0 && type === 'ethereum') {
+      u('main.origins', originId, (origin) => {
+        if (!origin || origin.chain?.id === chainId) return origin
+        return { ...origin, chain: { id: chainId, type } }
+      })
     }
   },
   clearOrigins: (u) => {

@@ -18,6 +18,10 @@ export class DappDetails extends React.Component {
 
   switchOriginChain(id, selected) {
     if (selected || this.switchPending) return
+    const origin = this.store('main.origins', this.props.originId)
+    const chain = this.store('main.networks.ethereum', id)
+    if (!origin || !chain?.on || origin.chain?.id === id) return
+
     this.switchPending = true
     this.setState({ switchingChainId: id })
     link.send('tray:action', 'switchOriginChain', this.props.originId, id, 'ethereum')
@@ -81,23 +85,6 @@ export class DappDetails extends React.Component {
         </div>
         <div className='originSwapTitle'>default chain</div>
         <div>{this.updateOriginChain(origin)}</div>
-        {/* <div 
-          className='clearOriginsButton'
-          style={{ color: 'var(--good)' }}
-          onClick={() => {
-            link.send('tray:openExternal', `https://${origin.name}/`)
-          }
-        }>{'launch dapp'}</div> */}
-        {/* <div 
-          className='clearOriginsButton' 
-          style={{ color: 'var(--bad)' }}
-          onClick={() => {
-            link.send('tray:removeOrigin', this.props.originId)
-            link.send('tray:action', 'navDash', { view: 'dapps', data: {}})
-          }}
-        >
-          Remove Dapp
-        </div>   */}
       </div>
     )
   }
