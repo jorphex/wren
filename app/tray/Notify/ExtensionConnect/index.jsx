@@ -1,10 +1,16 @@
 import styled from 'styled-components'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import link from '../../../../resources/link'
 import { capitalize } from '../../../../resources/utils'
 import svg from '../../../../resources/svg'
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../resources/Components/Cluster'
+import {
+  ClusterBox,
+  Cluster,
+  ClusterRow,
+  ClusterStatus,
+  ClusterValue
+} from '../../../../resources/Components/Cluster'
 
 const NotifyTop = styled.div`
   padding: 24px 0px 16px 0px;
@@ -67,10 +73,28 @@ const ConfirmButton = styled.div`
 `
 
 const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, requestId, onClose }) => {
-  const respond = (accepted) => link.rpc('respondToExtensionRequest', requestId, accepted, onClose)
   const browserName = capitalize(browser)
   const browserIcon = svg[browser] || svg.chrome
   const [copyId, setCopyId] = useState(false)
+  const [responding, setResponding] = useState(false)
+  const copyTimerRef = useRef()
+  const responsePendingRef = useRef(false)
+
+  useEffect(() => () => clearTimeout(copyTimerRef.current), [])
+
+  const copyExtensionId = () => {
+    link.send('tray:clipboardData', extensionId)
+    setCopyId(true)
+    clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopyId(false), 2000)
+  }
+
+  const respond = (accepted) => {
+    if (responsePendingRef.current) return
+    responsePendingRef.current = true
+    setResponding(true)
+    link.rpc('respondToExtensionRequest', requestId, accepted, onClose)
+  }
 
   return (
     <div className='notify cardShow'>
@@ -93,15 +117,10 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
                 </ClusterValue>
               </ClusterRow>
               <ClusterRow>
-                <ClusterValue
-                  onClick={() => {
-                    link.send('tray:clipboardData', extensionId)
-                    setCopyId(true)
-                    setTimeout(() => setCopyId(false), 2000)
-                  }}
-                >
+                <ClusterValue ariaLabel='Copy extension origin' onClick={copyExtensionId}>
                   <ExtensionId>{copyId ? 'extension origin copied' : <VCR>{extensionId}</VCR>}</ExtensionId>
                 </ClusterValue>
+                <ClusterStatus>{copyId ? 'Extension origin copied' : ''}</ClusterStatus>
               </ClusterRow>
               <ClusterRow>
                 <ClusterValue>
@@ -109,10 +128,18 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
                 </ClusterValue>
               </ClusterRow>
               <ClusterRow>
-                <ClusterValue onClick={() => respond(false)}>
+                <ClusterValue
+                  ariaLabel='Decline extension connection'
+                  disabled={responding}
+                  onClick={() => respond(false)}
+                >
                   <ConfirmButton style={{ color: 'var(--bad)' }}>Decline</ConfirmButton>
                 </ClusterValue>
-                <ClusterValue onClick={() => respond(true)}>
+                <ClusterValue
+                  ariaLabel='Accept extension connection'
+                  disabled={responding}
+                  onClick={() => respond(true)}
+                >
                   <ConfirmButton style={{ color: 'var(--good)' }}>Accept</ConfirmButton>
                 </ClusterValue>
               </ClusterRow>

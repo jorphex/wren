@@ -5,15 +5,38 @@ export const ClusterValue = ({
   grow = 1,
   pointerEvents = false,
   transparent = false,
-  role
+  role,
+  ariaLabel,
+  ariaExpanded,
+  actionRef,
+  disabled = false
 }) => {
+  const actionable = typeof onClick === 'function'
   let valueClass = 'clusterValue'
-  if (onClick) valueClass += ' clusterValueClickable'
+  if (actionable) valueClass += ' clusterValueClickable clusterValueButton'
   if (pointerEvents) valueClass += ' clusterValueInteractable'
   if (transparent) valueClass += ' clusterValueTransparent'
   const valueStyle = { ...style, flexGrow: grow }
+
+  if (actionable) {
+    return (
+      <div className={`${valueClass}${disabled ? ' clusterValueDisabled' : ''}`} style={valueStyle}>
+        <button
+          type='button'
+          aria-label={ariaLabel || (typeof children === 'string' ? children : undefined)}
+          aria-expanded={ariaExpanded}
+          className='clusterValueAction'
+          disabled={disabled}
+          onClick={onClick}
+          ref={actionRef}
+        />
+        <div className='clusterValueContent'>{children}</div>
+      </div>
+    )
+  }
+
   return (
-    <div className={valueClass} style={valueStyle} onClick={onClick} role={role}>
+    <div className={valueClass} style={valueStyle} role={role}>
       {children}
     </div>
   )
@@ -26,6 +49,12 @@ export const ClusterRow = ({ children, style = {} }) => {
     </div>
   )
 }
+
+export const ClusterStatus = ({ children }) => (
+  <span className='clusterStatus' role='status' aria-live='polite'>
+    {children}
+  </span>
+)
 
 export const ClusterColumn = ({ children, style = {}, grow = 1, width }) => {
   const columnStyle = {

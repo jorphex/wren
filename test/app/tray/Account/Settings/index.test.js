@@ -33,8 +33,8 @@ const renderWithStore = (Component, props = {}) => {
 
 it('saves a normalized account name only after editing completes', () => {
   renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByText('more'))
-  fireEvent.click(screen.getByText('Update Name'))
+  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Update account name' }))
 
   const input = screen.getByDisplayValue('Primary')
   fireEvent.change(input, { target: { value: ' Treasury ' } })
@@ -55,13 +55,55 @@ it('restores the persisted name instead of submitting an empty name', () => {
   expect(screen.getByDisplayValue('Primary')).toBeTruthy()
 })
 
-it('requires a second action before removing an account', () => {
+it('requires a separately armed second action before removing an account', () => {
   renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByText('more'))
+  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
 
-  fireEvent.click(screen.getByText('Remove Account'))
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }), { detail: 1 })
   expect(link.rpc).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByText('Confirm Remove'))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm remove account' }), { detail: 1 })
 
   expect(link.rpc).toHaveBeenCalledWith('removeAccount', account, {}, expect.any(Function))
+})
+
+it('does not let one multi-click gesture arm and confirm account removal', () => {
+  renderWithStore(SettingsPreview)
+  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }), { detail: 1 })
+  const confirm = screen.getByRole('button', { name: 'Confirm remove account' })
+  fireEvent.click(confirm, { detail: 2 })
+  expect(link.rpc).not.toHaveBeenCalled()
+
+  fireEvent.click(confirm, { detail: 1 })
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(link.rpc).toHaveBeenCalledWith('removeAccount', account, {}, expect.any(Function))
+})
+
+it('moves keyboard focus to the safe action before account removal can be confirmed', async () => {
+  const { user } = renderWithStore(SettingsPreview)
+  await user.click(screen.getByRole('button', { name: 'Show account settings' }))
+  const remove = screen.getByRole('button', { name: 'Remove account' })
+
+  remove.focus()
+  await user.keyboard('{Enter}')
+
+  const cancel = screen.getByRole('button', { name: 'Cancel account removal' })
+  expect(document.activeElement).toBe(cancel)
+  await user.keyboard('{Enter}')
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
+})
+
+it('disables account removal while the name editor is active', async () => {
+  const { user } = renderWithStore(SettingsPreview)
+  await user.click(screen.getByRole('button', { name: 'Show account settings' }))
+  await user.click(screen.getByRole('button', { name: 'Update account name' }))
+
+  const removeButton = screen.getByRole('button', { name: 'Remove account' })
+  expect(removeButton.disabled).toBe(true)
+  await user.click(removeButton)
+
+  expect(link.rpc).not.toHaveBeenCalled()
 })

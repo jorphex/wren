@@ -115,6 +115,7 @@ class TxFee extends React.Component {
           <ClusterRow>
             <ClusterColumn>
               <ClusterValue
+                ariaLabel='Adjust transaction fee'
                 onClick={() => {
                   link.send('nav:update', 'panel', { data: { step: 'adjustFee' } })
                 }}

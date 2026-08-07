@@ -23,10 +23,44 @@ it('opens a request with a validated navigation breadcrumb', async () => {
     />
   )
 
-  await user.click(screen.getByText('Base Sepolia Transaction').closest('.clusterValue'))
+  const requestButton = screen.getByRole('button', { name: 'Review Base Sepolia Transaction' })
+  requestButton.focus()
+  await user.keyboard('{Enter}')
 
   expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
     view: 'requestView',
     data: { step: 'confirm', accountId: account, requestId: handlerId }
   })
+})
+
+it('opens a request only once for duplicate activation', async () => {
+  const { user } = render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      req={{ created: Date.now(), handlerId, status: 'pending', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  await user.dblClick(screen.getByRole('button', { name: 'Review Base Sepolia Transaction' }))
+
+  expect(link.send).toHaveBeenCalledTimes(1)
+})
+
+it('keeps header request composition static so nested actions remain valid', () => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      headerMode
+      req={{ created: Date.now(), handlerId, status: 'pending', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    >
+      <button type='button'>Nested review action</button>
+    </RequestItem>
+  )
+
+  expect(screen.queryByRole('button', { name: 'Review Base Sepolia Transaction' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Nested review action' })).toBeTruthy()
 })

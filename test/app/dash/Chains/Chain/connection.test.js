@@ -44,6 +44,18 @@ it('presents the PublicNode preset with its provider name', () => {
   expect(presetLabel('custom')).toBe('custom')
 })
 
+it('exposes and toggles RPC disclosure state with the keyboard', async () => {
+  const { user } = renderConnection()
+  const disclosure = screen.getByRole('button', { name: 'Collapse RPC connection details' })
+
+  expect(disclosure.getAttribute('aria-expanded')).toBe('true')
+  disclosure.focus()
+  await user.keyboard('{Enter}')
+
+  expect(screen.getByRole('button', { name: 'Expand RPC connection details' })).toBeTruthy()
+  expect(screen.queryByRole('switch', { name: 'Enable primary RPC' })).toBeNull()
+})
+
 it('routes primary RPC controls through their existing actions', () => {
   renderConnection()
 

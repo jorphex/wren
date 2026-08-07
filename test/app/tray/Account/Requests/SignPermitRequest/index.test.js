@@ -112,6 +112,17 @@ it('labels the raw permit view with the resolved request chain', () => {
   expect(screen.getByText('Type Definitions')).toBeTruthy()
 })
 
+it('preserves raw-data navigation and spender copying on named controls', async () => {
+  const { user } = render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} />)
+
+  await user.click(screen.getByRole('button', { name: 'View raw permit data' }))
+  await user.click(screen.getByRole('button', { name: 'Copy permit spender address' }))
+
+  expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', { data: { step: 'viewRaw' } })
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', req.permit.spender.address)
+  expect(screen.getByText('Permit spender address copied')).toBeTruthy()
+})
+
 it.each([undefined, 'viewRaw'])('warns about hash-only device review in the %s permit view', (step) => {
   render(
     <SignPermitRequest
@@ -200,7 +211,9 @@ it('shows and allows editing a zero-decimal token permit', async () => {
   )
 
   expect(screen.getByText('1 WHOLE')).toBeTruthy()
-  await user.click(screen.getByText('1 WHOLE'))
+  const editor = screen.getByRole('button', { name: 'Edit permit amount' })
+  editor.focus()
+  await user.keyboard('{Enter}')
   expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', {
     data: { step: 'adjustPermit', tokenData: zeroDecimalRequest.tokenData }
   })

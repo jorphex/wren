@@ -62,6 +62,7 @@ class Inventory extends React.Component {
       return (
         <ClusterRow key={k}>
           <ClusterValue
+            ariaLabel={`Open ${inventory[k].meta.name || k} collection`}
             onClick={() => {
               const crumb = {
                 view: 'expandedModule',

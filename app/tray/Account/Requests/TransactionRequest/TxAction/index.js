@@ -3,7 +3,13 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import link from '../../../../../../resources/link'
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/Components/Cluster'
+import {
+  ClusterBox,
+  Cluster,
+  ClusterRow,
+  ClusterStatus,
+  ClusterValue
+} from '../../../../../../resources/Components/Cluster'
 import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { formatDisplayDecimal, isUnlimited } from '../../../../../../resources/utils/numbers'
@@ -54,7 +60,7 @@ export const getYearnIntentLines = (actionType, data = {}) => {
   return []
 }
 
-class TxSending extends React.Component {
+export class TxSending extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
@@ -268,6 +274,7 @@ class TxSending extends React.Component {
               {address && (
                 <ClusterRow>
                   <ClusterValue
+                    ariaLabel='Copy token transfer recipient address'
                     pointerEvents={true}
                     onClick={() => {
                       this.copyAddress(address)
@@ -282,6 +289,9 @@ class TxSending extends React.Component {
                       />
                     </div>
                   </ClusterValue>
+                  <ClusterStatus>
+                    {this.state.copied ? 'Transfer recipient address copied' : ''}
+                  </ClusterStatus>
                 </ClusterRow>
               )}
             </Cluster>
@@ -313,13 +323,20 @@ class TxSending extends React.Component {
               {revoke ? (
                 <ClusterRow>
                   <ClusterValue
-                    onClick={() => {
-                      if (!isSubmitted) {
-                        link.send('nav:update', 'panel', {
-                          data: { step: 'adjustApproval', actionId: action.id, requestedAmountHex: amount }
-                        })
-                      }
-                    }}
+                    ariaLabel={!isSubmitted ? `Edit ${symbol} approval` : undefined}
+                    onClick={
+                      !isSubmitted
+                        ? () => {
+                            link.send('nav:update', 'panel', {
+                              data: {
+                                step: 'adjustApproval',
+                                actionId: action.id,
+                                requestedAmountHex: amount
+                              }
+                            })
+                          }
+                        : undefined
+                    }
                     style={isSubmitted ? { cursor: 'auto' } : {}}
                   >
                     <div className='clusterFocus'>
@@ -331,13 +348,20 @@ class TxSending extends React.Component {
               ) : (
                 <ClusterRow>
                   <ClusterValue
-                    onClick={() => {
-                      if (!isSubmitted) {
-                        link.send('nav:update', 'panel', {
-                          data: { step: 'adjustApproval', actionId: action.id, requestedAmountHex: amount }
-                        })
-                      }
-                    }}
+                    ariaLabel={!isSubmitted ? `Edit ${symbol} approval` : undefined}
+                    onClick={
+                      !isSubmitted
+                        ? () => {
+                            link.send('nav:update', 'panel', {
+                              data: {
+                                step: 'adjustApproval',
+                                actionId: action.id,
+                                requestedAmountHex: amount
+                              }
+                            })
+                          }
+                        : undefined
+                    }
                     style={isSubmitted ? { cursor: 'auto' } : {}}
                   >
                     <div className='clusterFocus'>
@@ -350,6 +374,7 @@ class TxSending extends React.Component {
               {address && (
                 <ClusterRow>
                   <ClusterValue
+                    ariaLabel='Copy token approval spender address'
                     pointerEvents={true}
                     onClick={() => {
                       this.copyAddress(address)
@@ -364,6 +389,7 @@ class TxSending extends React.Component {
                       />
                     </div>
                   </ClusterValue>
+                  <ClusterStatus>{this.state.copied ? 'Approval spender address copied' : ''}</ClusterStatus>
                 </ClusterRow>
               )}
             </Cluster>

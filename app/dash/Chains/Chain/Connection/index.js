@@ -87,6 +87,8 @@ export class ChainModule extends React.Component {
     return (
       <ClusterRow>
         <ClusterValue
+          ariaLabel={`${this.state.expanded ? 'Collapse' : 'Expand'} RPC connection details`}
+          ariaExpanded={this.state.expanded}
           onClick={() => {
             this.setState({ expanded: !this.state.expanded })
           }}

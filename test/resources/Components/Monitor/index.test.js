@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '../../../componentSetup'
 
 import link from '../../../../resources/link'
 import { ChainSummaryComponent } from '../../../../resources/Components/Monitor'
@@ -35,7 +35,7 @@ test('renders account monitoring without background account-code requests or sta
 
 test('opens gas explanations for keyboard focus and closes them on blur', () => {
   render(<FeeMarketMonitorHarness chainId={1} color='var(--good)' />)
-  fireEvent.click(screen.getByText('gwei'))
+  fireEvent.click(screen.getByRole('button', { name: 'Expand gas details' }))
   const baseFeeButton = screen.getByRole('button', { name: 'Explain current base fee' })
 
   fireEvent.focus(baseFeeButton)
@@ -43,4 +43,15 @@ test('opens gas explanations for keyboard focus and closes them on blur', () => 
 
   fireEvent.blur(baseFeeButton)
   expect(screen.queryByText(/current base fee is added with a buffer/)).toBeNull()
+})
+
+test('exposes and toggles gas disclosure state with the keyboard', async () => {
+  const { user } = render(<MonitorHarness chainId={1} color='var(--good)' />)
+  const disclosure = screen.getByRole('button', { name: 'Expand gas details' })
+
+  expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+  disclosure.focus()
+  await user.keyboard(' ')
+
+  expect(screen.getByRole('button', { name: 'Collapse gas details' })).toBeTruthy()
 })

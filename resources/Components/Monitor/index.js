@@ -132,6 +132,8 @@ export class ChainSummaryComponent extends Component {
       <>
         <ClusterRow>
           <ClusterValue
+            ariaLabel={`${this.state.expanded ? 'Collapse' : 'Expand'} gas details`}
+            ariaExpanded={this.state.expanded}
             onClick={() => {
               this.setState({ expanded: !this.state.expanded })
             }}
@@ -145,6 +147,13 @@ export class ChainSummaryComponent extends Component {
             </div>
           </ClusterValue>
           <ClusterValue
+            ariaLabel={
+              explorer
+                ? address
+                  ? 'Open account in block explorer'
+                  : 'Open network block explorer'
+                : undefined
+            }
             style={{ minWidth: '70px', maxWidth: '70px' }}
             onClick={
               explorer

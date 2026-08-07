@@ -13,7 +13,7 @@ import { accountPanelCrumb, signerPanelCrumb } from '../../../../../resources/do
 
 import { Cluster, ClusterRow, ClusterColumn, ClusterValue } from '../../../../../resources/Components/Cluster'
 
-class Signer extends React.Component {
+export class Signer extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
@@ -28,33 +28,70 @@ class Signer extends React.Component {
     }
     this.state = {
       notifySuccess: false,
-      notifyText: ''
+      notifyText: '',
+      openingDetails: false,
+      verifying: false
     }
+    this.mounted = false
+    this.navigationPending = false
+    this.verifyPending = false
   }
 
   componentDidMount() {
+    this.mounted = true
     if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
   }
 
   componentWillUnmount() {
+    this.mounted = false
+    clearTimeout(this.notificationTimer)
+    clearTimeout(this.unavailableTimer)
     if (this.resizeObserver) this.resizeObserver.disconnect()
   }
 
   verifyAddress(hardwareSigner) {
+    if (this.verifyPending) return
+    this.verifyPending = true
+    this.setState({ verifying: true })
     if (hardwareSigner) {
       // prompt for on-signer verification
       this.setState({ notifySuccess: false, notifyText: 'Verify address on signer' })
     }
     link.rpc('verifyAddress', (err) => {
+      if (!this.mounted) return
+      this.verifyPending = false
       if (err) {
-        this.setState({ notifySuccess: false, notifyText: err })
+        this.setState({ notifySuccess: false, notifyText: err, verifying: false })
       } else {
-        this.setState({ notifySuccess: true, notifyText: 'Address matched!' })
+        this.setState({ notifySuccess: true, notifyText: 'Address matched!', verifying: false })
       }
-      setTimeout(() => {
+      clearTimeout(this.notificationTimer)
+      this.notificationTimer = setTimeout(() => {
         this.setState({ notifySuccess: false, notifyText: '' })
       }, 5000)
     })
+  }
+
+  openSignerDetails(activeAccount, activeSigner) {
+    if (this.navigationPending) return
+    this.navigationPending = true
+    this.setState({ openingDetails: true })
+
+    const getUnavailableSigner = () => {
+      const signers = Object.values(this.store('main.signers'))
+      const unavailableSigners = findUnavailableSigners(activeAccount.lastSignerType, signers)
+      return unavailableSigners.length === 1 && unavailableSigners[0]
+    }
+    const signer = activeSigner || getUnavailableSigner()
+    if (!signer) {
+      this.setState({ notifySuccess: false, notifyText: 'Signer Unavailable' })
+      clearTimeout(this.unavailableTimer)
+      this.unavailableTimer = setTimeout(() => {
+        this.setState({ notifySuccess: false, notifyText: '' })
+      }, 5000)
+    }
+    const crumb = signer ? signerPanelCrumb(signer) : accountPanelCrumb()
+    link.send('tray:action', 'navDash', crumb)
   }
 
   renderSignerType(type) {
@@ -156,25 +193,9 @@ class Signer extends React.Component {
           <ClusterRow>
             <ClusterColumn>
               <ClusterValue
-                onClick={() => {
-                  const getUnavailableSigner = () => {
-                    const signers = Object.values(this.store('main.signers'))
-                    const unavailableSigners = findUnavailableSigners(activeAccount.lastSignerType, signers)
-                    return unavailableSigners.length === 1 && unavailableSigners[0]
-                  }
-                  const signer = activeSigner || getUnavailableSigner()
-                  if (!signer) {
-                    this.setState({
-                      notifySuccess: false,
-                      notifyText: 'Signer Unavailable'
-                    })
-                    setTimeout(() => {
-                      this.setState({ notifySuccess: false, notifyText: '' })
-                    }, 5000)
-                  }
-                  const crumb = signer ? signerPanelCrumb(signer) : accountPanelCrumb()
-                  link.send('tray:action', 'navDash', crumb)
-                }}
+                ariaLabel='Open signer details'
+                disabled={this.state.openingDetails}
+                onClick={() => this.openSignerDetails(activeAccount, activeSigner)}
               >
                 <div
                   style={{
@@ -188,7 +209,11 @@ class Signer extends React.Component {
             </ClusterColumn>
             {!watchOnly && (
               <ClusterColumn width={'80px'}>
-                <ClusterValue onClick={() => this.verifyAddress(hardwareSigner)}>
+                <ClusterValue
+                  ariaLabel='Verify account address on signer'
+                  disabled={this.state.verifying}
+                  onClick={() => this.verifyAddress(hardwareSigner)}
+                >
                   <Icon name='verify' size={20} />
                 </ClusterValue>
               </ClusterColumn>

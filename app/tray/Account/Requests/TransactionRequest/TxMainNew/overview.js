@@ -321,6 +321,7 @@ const TxOverview = ({
       <Cluster>
         <ClusterRow>
           <ClusterValue
+            ariaLabel='View transaction data'
             onClick={() => {
               link.send('nav:update', 'panel', { data: { step: 'viewData' } })
             }}

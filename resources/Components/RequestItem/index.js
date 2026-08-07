@@ -11,8 +11,10 @@ class _RequestItem extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      ago: this.getElapsedTime()
+      ago: this.getElapsedTime(),
+      opening: false
     }
+    this.navigationPending = false
   }
   getElapsedTime() {
     const elapsed = Date.now() - ((this.props.req && this.props.req.created) || 0)
@@ -33,6 +35,20 @@ class _RequestItem extends React.Component {
   }
   componentWillUnmount() {
     clearInterval(this.timer)
+  }
+  openRequest(account, req) {
+    if (this.navigationPending) return
+    this.navigationPending = true
+    this.setState({ opening: true })
+    const crumb = {
+      view: 'requestView',
+      data: {
+        step: 'confirm',
+        accountId: account,
+        requestId: req.handlerId
+      }
+    }
+    link.send('nav:forward', 'panel', crumb)
   }
   render() {
     const { account, title, svgName, img, color, headerMode, req, children } = this.props
@@ -56,21 +72,9 @@ class _RequestItem extends React.Component {
     return (
       <ClusterRow>
         <ClusterValue
-          onClick={
-            !headerMode
-              ? () => {
-                  const crumb = {
-                    view: 'requestView',
-                    data: {
-                      step: 'confirm',
-                      accountId: account,
-                      requestId: req.handlerId
-                    }
-                  }
-                  link.send('nav:forward', 'panel', crumb)
-                }
-              : null
-          }
+          ariaLabel={!headerMode ? `Review ${title}` : undefined}
+          disabled={!headerMode && this.state.opening}
+          onClick={!headerMode ? () => this.openRequest(account, req) : null}
         >
           <div key={req.handlerId} className={headerMode ? 'requestItem requestItemHeader' : 'requestItem'}>
             <div

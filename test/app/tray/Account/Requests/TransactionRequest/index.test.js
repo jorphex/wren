@@ -6,7 +6,11 @@ import TxRequestComponent from '../../../../../../app/tray/Account/Requests/Tran
 import { TransactionRequest } from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TxMain } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
 import TxRecipientComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxRecipient'
-import { getYearnIntentLines } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxAction'
+import { TxSending as TxValue } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxValue'
+import {
+  getYearnIntentLines,
+  TxSending as TxAction
+} from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxAction'
 import {
   getAllowancePresentation,
   getAccessListPresentation,
@@ -39,7 +43,7 @@ import { FRAME_SEND_DISPLAY_NAME, FRAME_SEND_ORIGIN } from '../../../../../../re
 import { TxClassification } from '../../../../../../main/accounts/types'
 
 jest.mock('../../../../../../main/store/persist')
-jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
 const TxRequest = Restore.connect(TxRequestComponent, store)
 const TxRecipient = Restore.connect(TxRecipientComponent, store)
@@ -72,6 +76,24 @@ describe('confirm', () => {
 
     expect(screen.getByText('Recipient Account')).toBeTruthy()
     expect(screen.getByText(recipient)).toBeTruthy()
+  })
+
+  it('announces a copied transaction recipient without replacing its visible identity', async () => {
+    const recipient = '0x1111111111111111111111111111111111111111'
+    const { user } = render(
+      <TxRecipient
+        i={0}
+        req={{
+          data: { to: recipient, value: '0x0' },
+          recipientType: 'external'
+        }}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Copy transaction recipient address' }))
+
+    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+    expect(screen.getByText('Transaction recipient address copied')).toBeTruthy()
   })
 
   it('shows a saved contact label with full recipient evidence', () => {
@@ -159,7 +181,8 @@ describe('confirm', () => {
 
     render(<TxRequest req={req} step='confirm' />)
 
-    const notice = screen.getByRole('status')
+    const notice = screen.getByText('confirming')
+    expect(notice.getAttribute('role')).toBe('status')
     expect(notice.textContent).toBe('confirming')
   })
 
@@ -225,6 +248,92 @@ describe('confirm', () => {
 })
 
 describe('approval editing', () => {
+  const approvalAction = {
+    id: 'erc20:approve',
+    data: {
+      amount: '1',
+      decimals: 6,
+      spender: { address: '0x1111111111111111111111111111111111111111', ens: '' },
+      symbol: 'USDC'
+    }
+  }
+  class TxActionHarness extends TxAction {
+    store(...path) {
+      const key = path.join('.')
+      if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
+      if (key === 'main.addressBook' || key === 'main.accounts') return {}
+    }
+  }
+
+  class TxValueHarness extends TxValue {
+    store(...path) {
+      const key = path.join('.')
+      if (key === 'main.addressBook' || key === 'main.accounts') return {}
+      if (key === 'main.networks.ethereum.1.isTestnet') return false
+      if (key === 'main.networksMeta.ethereum.1') {
+        return { nativeCurrency: { symbol: 'ETH', usd: 1 } }
+      }
+      if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
+    }
+  }
+
+  const renderApprovalAction = (status) =>
+    render(
+      <TxActionHarness
+        action={approvalAction}
+        chain={{ id: 1, type: 'ethereum' }}
+        i={0}
+        req={{
+          data: { chainId: '0x1', to: '0x2222222222222222222222222222222222222222' },
+          status
+        }}
+      />
+    )
+
+  it('opens the exact approval editor from native keyboard input', async () => {
+    const { user } = renderApprovalAction()
+    const editor = screen.getByRole('button', { name: 'Edit USDC approval' })
+
+    editor.focus()
+    await user.keyboard('{Enter}')
+
+    expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', {
+      data: { step: 'adjustApproval', actionId: 'erc20:approve', requestedAmountHex: '1' }
+    })
+  })
+
+  it('keeps a submitted approval value non-interactive', () => {
+    renderApprovalAction('signed')
+
+    expect(screen.queryByRole('button', { name: 'Edit USDC approval' })).toBeNull()
+    expect(screen.getByText('Granting Approval To Spend')).toBeTruthy()
+  })
+
+  it('announces a copied approval spender without replacing its visible identity', async () => {
+    const { user } = renderApprovalAction()
+
+    await user.click(screen.getByRole('button', { name: 'Copy token approval spender address' }))
+
+    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', approvalAction.data.spender.address)
+    expect(screen.getByText('Approval spender address copied')).toBeTruthy()
+  })
+
+  it('announces a copied native-transfer recipient', async () => {
+    const recipient = '0x3333333333333333333333333333333333333333'
+    const { user } = render(
+      <TxValueHarness
+        chain={{ id: 1, type: 'ethereum' }}
+        i={0}
+        req={{ data: { to: recipient, value: '0x1' }, recipientType: 'external' }}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Copy transfer recipient address' }))
+
+    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+    expect(screen.getByText('Transfer recipient address copied')).toBeTruthy()
+  })
+
   it('forwards the exact account, request, action, amount, and callback to the bridge', () => {
     const callback = jest.fn()
     const req = {

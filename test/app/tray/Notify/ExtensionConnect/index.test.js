@@ -37,6 +37,25 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
   expect(screen.getByText('123456')).toBeTruthy()
   expect(screen.getByText('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBeTruthy()
 
-  await user.click(screen.getByText('Accept'))
+  const accept = screen.getByRole('button', { name: 'Accept extension connection' })
+  accept.focus()
+  await user.keyboard('{Enter}')
   expect(link.rpc).toHaveBeenCalledWith('respondToExtensionRequest', 'pairing-request', true, onClose)
+  expect(screen.getByRole('button', { name: 'Decline extension connection' }).disabled).toBe(true)
+})
+
+it('settles one response for duplicate extension authorization input', async () => {
+  const { user } = render(
+    <ExtensionConnectNotification
+      browser='firefox'
+      extensionId='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+      pairingCode='654321'
+      requestId='duplicate-request'
+      onClose={jest.fn()}
+    />
+  )
+
+  await user.dblClick(screen.getByRole('button', { name: 'Accept extension connection' }))
+
+  expect(link.rpc).toHaveBeenCalledTimes(1)
 })

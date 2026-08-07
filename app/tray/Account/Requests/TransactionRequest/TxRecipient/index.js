@@ -4,7 +4,13 @@ import BigNumber from 'bignumber.js'
 
 import link from '../../../../../../resources/link'
 
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/Components/Cluster'
+import {
+  ClusterBox,
+  Cluster,
+  ClusterRow,
+  ClusterStatus,
+  ClusterValue
+} from '../../../../../../resources/Components/Cluster'
 import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
@@ -60,6 +66,7 @@ class TxRecipient extends React.Component {
         <Cluster>
           <ClusterRow>
             <ClusterValue
+              ariaLabel='Copy transaction recipient address'
               pointerEvents={true}
               onClick={() => {
                 this.copyAddress(address)
@@ -74,6 +81,7 @@ class TxRecipient extends React.Component {
                 />
               </div>
             </ClusterValue>
+            <ClusterStatus>{this.state.copied ? 'Transaction recipient address copied' : ''}</ClusterStatus>
           </ClusterRow>
 
           {req.decodedData && req.decodedData.method ? (

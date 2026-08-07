@@ -6,7 +6,13 @@ import {
 } from '../../../../../resources/domain/token/amount'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import {
+  ClusterBox,
+  Cluster,
+  ClusterRow,
+  ClusterStatus,
+  ClusterValue
+} from '../../../../../resources/Components/Cluster'
 import Countdown from '../../../../../resources/Components/Countdown'
 import RequestHeader from '../../../../../resources/Components/RequestHeader'
 import RequestItem from '../../../../../resources/Components/RequestItem'
@@ -67,6 +73,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
               <Cluster>
                 <ClusterRow>
                   <ClusterValue
+                    ariaLabel='View raw permit data'
                     onClick={() => {
                       link.send('nav:update', 'panel', {
                         data: { step: 'viewRaw' }
@@ -98,7 +105,11 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
               {tokenData && (
                 <>
                   <ClusterRow>
-                    <ClusterValue pointerEvents={true} onClick={() => copySpender()}>
+                    <ClusterValue
+                      ariaLabel='Copy permit spender address'
+                      pointerEvents={true}
+                      onClick={() => copySpender()}
+                    >
                       <div className='clusterAddress'>
                         <AddressIdentity
                           address={spender.address}
@@ -108,6 +119,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                         />
                       </div>
                     </ClusterValue>
+                    <ClusterStatus>{showCopiedMessage ? 'Permit spender address copied' : ''}</ClusterStatus>
                   </ClusterRow>
                   <ClusterRow>
                     <ClusterValue>
@@ -119,6 +131,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                   </ClusterRow>
                   <ClusterRow>
                     <ClusterValue
+                      ariaLabel={canEditAmount ? 'Edit permit amount' : undefined}
                       onClick={
                         canEditAmount &&
                         (() => {
