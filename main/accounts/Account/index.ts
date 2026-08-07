@@ -306,6 +306,7 @@ class FrameAccount {
   clearRequest(handlerId: string) {
     log.info(`clearRequest(${handlerId}) for account ${this.id}`)
 
+    this.accounts.clearPendingNonceAdjustment?.(this, handlerId)
     this.requestAbortCleanup[handlerId]?.()
     delete this.requestAbortCleanup[handlerId]
     delete this.requests[handlerId]

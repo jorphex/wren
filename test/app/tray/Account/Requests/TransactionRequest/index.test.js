@@ -30,7 +30,10 @@ import {
   SimulationNativeBalanceChanges,
   SimulationProxyImplementationChanges
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData/effects'
-import { ViewData } from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData'
+import {
+  SimpleTxJSON,
+  ViewData
+} from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData'
 import {
   canApproveTransaction,
   getRequiredRequestApproval,
@@ -915,6 +918,65 @@ describe('simulation review', () => {
     expect(rendered.indexOf(firstAddress)).toBeLessThan(rendered.indexOf(secondAddress))
     expect(rendered.indexOf(firstKey)).toBeLessThan(rendered.indexOf(secondKey))
     expect(rendered).toBe(JSON.stringify(accessList, null, 2))
+  })
+})
+
+describe('raw transaction nonce controls', () => {
+  const nonceRequest = (overrides = {}) => ({
+    account,
+    handlerId: 'nonce-request',
+    data: { nonce: '0x5' },
+    payload: { params: [{ nonce: '0x5' }] },
+    ...overrides
+  })
+
+  it('sends exact adjustment and reset payloads for mutable requests', async () => {
+    const req = nonceRequest({ data: { nonce: '0x6' } })
+    link.send.mockClear()
+    const { user } = render(<SimpleTxJSON json={{ nonce: 6 }} req={req} />)
+
+    await user.click(screen.getByRole('button', { name: 'Decrease nonce' }))
+    await user.click(screen.getByRole('button', { name: 'Increase nonce' }))
+    await user.click(screen.getByRole('button', { name: 'Reset nonce' }))
+
+    const reference = { account, handlerId: 'nonce-request' }
+    expect(link.send).toHaveBeenNthCalledWith(1, 'tray:adjustNonce', reference, -1)
+    expect(link.send).toHaveBeenNthCalledWith(2, 'tray:adjustNonce', reference, 1)
+    expect(link.send).toHaveBeenNthCalledWith(3, 'tray:resetNonce', reference)
+  })
+
+  it('shows reset only when the nonce differs from the original transaction', () => {
+    const { rerender } = render(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest()} />)
+
+    expect(screen.queryByRole('button', { name: 'Reset nonce' })).toBeNull()
+
+    rerender(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest({ payload: { params: [{}] } })} />)
+    expect(screen.getByRole('button', { name: 'Reset nonce' })).toBeTruthy()
+  })
+
+  it('decodes large transaction quantities without losing display precision', () => {
+    const decoded = new ViewData({}).decodeRawTx({
+      chainId: '0x1',
+      nonce: '0x20000000000000',
+      data: '0x1234'
+    })
+
+    expect(decoded).toEqual({
+      chainId: '1',
+      nonce: '9007199254740992',
+      data: '0x1234'
+    })
+  })
+
+  it.each([
+    ['locked', { locked: true }],
+    ['submitted', { status: 'pending' }]
+  ])('does not expose nonce mutation for a %s request', (_, state) => {
+    render(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest(state)} />)
+
+    expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Increase nonce' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reset nonce' })).toBeNull()
   })
 })
 

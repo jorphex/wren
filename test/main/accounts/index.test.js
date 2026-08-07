@@ -733,6 +733,22 @@ describe('#adjustNonce', () => {
     expect(Accounts.current().requests[1].data.nonce).toBe(expectedNonce)
   })
 
+  it('adjusts nonces above the safe integer range without losing precision', () => {
+    request.data.nonce = '0x20000000000000'
+
+    adjustNonce(1)
+
+    expect(request.data.nonce).toBe('0x20000000000001')
+  })
+
+  it('keeps nonce adjustments inside the RPC quantity range', () => {
+    request.data.nonce = '0x' + 'f'.repeat(64)
+
+    adjustNonce(1)
+
+    expect(request.data.nonce).toBe('0x' + 'f'.repeat(64))
+  })
+
   it('gets the latest nonce from the chain', () => {
     onChainNonce = '0x5'
 
@@ -752,6 +768,108 @@ describe('#adjustNonce', () => {
     adjustNonce(-1)
 
     expect(Accounts.current().requests[1].data.nonce).toBe(expectedNonce)
+  })
+
+  it.each([
+    ['repeated increases', '0x5', [1, 1, 1], '0x7'],
+    ['mixed adjustments', '0x5', [-1, 1, 1], '0x6'],
+    ['zero-boundary adjustments', '0x0', [-1, 1], '0x1'],
+    ['large nonces', '0x20000000000000', [1, 1], '0x20000000000001']
+  ])(
+    'coalesces %s while loading the nonce and applies them in order',
+    (_, chainNonce, adjustments, expected) => {
+      let respond
+      provider.send = jest.fn((payload, cb) => {
+        respond = cb
+      })
+      delete request.data.nonce
+      const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+
+      adjustments.forEach((value) => adjustNonce(value))
+
+      expect(provider.send).toHaveBeenCalledTimes(1)
+      expect(request.data.nonce).toBeUndefined()
+
+      respond({ result: chainNonce })
+
+      expect(request.data.nonce).toBe(expected)
+      expect(refresh.mock.calls.filter(([, publishPending]) => publishPending === undefined)).toHaveLength(1)
+      refresh.mockRestore()
+    }
+  )
+
+  it('discards a pending nonce lookup when the request becomes locked', () => {
+    let respond
+    provider.send = jest.fn((payload, cb) => {
+      respond = cb
+    })
+    delete request.data.nonce
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+
+    adjustNonce(1)
+    Accounts.lockRequest(1)
+    respond({ result: '0x5' })
+
+    expect(request.data.nonce).toBeUndefined()
+    expect(refresh.mock.calls.filter(([, publishPending]) => publishPending === undefined)).toHaveLength(0)
+    refresh.mockRestore()
+  })
+
+  it('clears a pending nonce lookup when the request is removed directly', () => {
+    provider.send = jest.fn()
+    delete request.data.nonce
+
+    adjustNonce(1)
+    expect(Accounts.pendingNonceAdjustments.size).toBe(1)
+
+    Accounts.current().clearRequest(1)
+
+    expect(Accounts.pendingNonceAdjustments.size).toBe(0)
+  })
+
+  it('clears pending nonce lookups when their account is removed', () => {
+    provider.send = jest.fn()
+    delete request.data.nonce
+
+    adjustNonce(1)
+    expect(Accounts.pendingNonceAdjustments.size).toBe(1)
+
+    Accounts.remove(account.id)
+
+    expect(Accounts.pendingNonceAdjustments.size).toBe(0)
+  })
+
+  it('clears all pending nonce lookups when accounts close', () => {
+    provider.send = jest.fn()
+    delete request.data.nonce
+    const dataScanner = Accounts.dataScanner
+    Accounts.dataScanner = { close: jest.fn() }
+
+    try {
+      adjustNonce(1)
+      expect(Accounts.pendingNonceAdjustments.size).toBe(1)
+
+      Accounts.close()
+
+      expect(Accounts.pendingNonceAdjustments.size).toBe(0)
+    } finally {
+      Accounts.dataScanner = dataScanner
+    }
+  })
+
+  it.each([
+    ['locked', { locked: true }],
+    ['submitted', { status: 'pending' }]
+  ])('does not adjust a %s request', (_, state) => {
+    Object.assign(request, state)
+    const initialNonce = request.data.nonce
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+
+    adjustNonce(1)
+
+    expect(request.data.nonce).toBe(initialNonce)
+    expect(refresh.mock.calls.filter(([, publishPending]) => publishPending === undefined)).toHaveLength(0)
+    refresh.mockRestore()
   })
 })
 
@@ -784,6 +902,21 @@ describe('#resetNonce', () => {
     request.payload.params[0].nonce = '0x' + BigNumber(request.data.nonce).minus(1).toString(16)
     resetNonce()
     expect(request.data.nonce).toBe(request.payload.params[0].nonce)
+  })
+
+  it.each([
+    ['locked', { locked: true }],
+    ['submitted', { status: 'pending' }]
+  ])('does not reset a %s request', (_, state) => {
+    Object.assign(request, state)
+    const initialNonce = request.data.nonce
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+
+    resetNonce()
+
+    expect(request.data.nonce).toBe(initialNonce)
+    expect(refresh.mock.calls.filter(([, publishPending]) => publishPending === undefined)).toHaveLength(0)
+    refresh.mockRestore()
   })
 })
 

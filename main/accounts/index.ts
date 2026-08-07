@@ -1,7 +1,7 @@
 import EventEmitter from 'events'
 import log from 'electron-log'
 import { Notification } from 'electron'
-import { addHexPrefix, intToHex } from '@ethereumjs/util'
+import { addHexPrefix } from '@ethereumjs/util'
 import { v5 as uuidv5 } from 'uuid'
 import { toBeHex } from 'ethers'
 
@@ -126,11 +126,18 @@ export {
 
 type RequestWithId = [string, TransactionRequest]
 
+type PendingNonceAdjustment = {
+  account: FrameAccount
+  request: TransactionRequest
+  adjustments: Array<-1 | 1>
+}
+
 export class Accounts extends EventEmitter {
   _current: string
   accounts: Record<string, FrameAccount>
 
   private readonly dataScanner: DataScanner
+  private readonly pendingNonceAdjustments = new Map<string, PendingNonceAdjustment>()
 
   constructor() {
     super()
@@ -155,6 +162,28 @@ export class Accounts extends EventEmitter {
 
   private getTransactionRequest(account: FrameAccount, id: string): TransactionRequest {
     return account.getRequest(id)
+  }
+
+  private nonceAdjustmentKey(account: FrameAccount, handlerId: string) {
+    return `${account.id}:${handlerId}`
+  }
+
+  clearPendingNonceAdjustment(account: FrameAccount, handlerId: string) {
+    this.pendingNonceAdjustments.delete(this.nonceAdjustmentKey(account, handlerId))
+  }
+
+  private clearPendingNonceAdjustmentsForAccount(account: FrameAccount) {
+    this.pendingNonceAdjustments.forEach((pending, key) => {
+      if (pending.account === account) this.pendingNonceAdjustments.delete(key)
+    })
+  }
+
+  private mutableTransactionRequest(account: FrameAccount, handlerId: string) {
+    const request = account.getRequest<TransactionRequest>(handlerId)
+    if (!request || request.type !== 'transaction' || request.locked || request.status !== undefined) {
+      return undefined
+    }
+    return request
   }
 
   async add(address: Address, name = '', options = {}, cb: Callback<FrameAccount> = () => {}) {
@@ -958,6 +987,7 @@ export class Accounts extends EventEmitter {
   }
 
   close() {
+    this.pendingNonceAdjustments.clear()
     this.dataScanner.close()
     // usbDetect.stopMonitoring()
   }
@@ -1312,7 +1342,10 @@ export class Accounts extends EventEmitter {
     }
 
     const account = this.accounts[address]
-    if (account) account.close()
+    if (account) {
+      this.clearPendingNonceAdjustmentsForAccount(account)
+      account.close()
+    }
 
     requireStoreAction('removeAccount')(address)
     delete this.accounts[address]
@@ -1550,45 +1583,76 @@ export class Accounts extends EventEmitter {
     if (nonceAdjust !== 1 && nonceAdjust !== -1) return log.error('Invalid nonce adjustment', nonceAdjust)
     if (!currentAccount) return log.error('No account selected during nonce adjustement', nonceAdjust)
 
-    const txRequest = this.getTransactionRequest(currentAccount, handlerId)
+    const txRequest = this.mutableTransactionRequest(currentAccount, handlerId)
+    if (!txRequest) return log.warn('Ignoring nonce adjustment for immutable transaction request')
 
     txRequest.data = Object.assign({}, txRequest.data)
 
-    if (txRequest && txRequest.type === 'transaction') {
-      const nonce = txRequest.data && txRequest.data.nonce
-      if (nonce) {
-        let updatedNonce = parseInt(nonce, 16) + nonceAdjust
-        if (updatedNonce < 0) updatedNonce = 0
-        const adjustedNonce = intToHex(updatedNonce)
+    const nonce = txRequest.data.nonce
+    if (nonce) {
+      const parsedNonce = parseRpcQuantity(nonce)
+      if (parsedNonce === undefined) return log.warn('Ignoring adjustment for invalid transaction nonce')
 
-        txRequest.data.nonce = adjustedNonce
-        currentAccount.refreshTransactionSimulation(txRequest)
-      } else {
-        const { from, chainId } = txRequest.data
-        this.sendRequest(
-          { method: 'eth_getTransactionCount', chainId, params: [from, 'pending'] },
-          (res: RPCResponsePayload) => {
-            const parsedNonce = parseRpcQuantity(res.result)
-            if (parsedNonce !== undefined) {
-              const newNonce = Number(parsedNonce)
-              let updatedNonce = nonceAdjust === 1 ? newNonce : newNonce + nonceAdjust
-              if (updatedNonce < 0) updatedNonce = 0
-              const adjustedNonce = intToHex(updatedNonce)
-              txRequest.data.nonce = adjustedNonce
-              currentAccount.refreshTransactionSimulation(txRequest)
-            }
-          }
-        )
-      }
+      let updatedNonce = parsedNonce + BigInt(nonceAdjust)
+      if (updatedNonce < 0n) updatedNonce = 0n
+      if (updatedNonce > MAX_UINT256) updatedNonce = MAX_UINT256
+      txRequest.data.nonce = toRpcQuantity(updatedNonce)
+      currentAccount.refreshTransactionSimulation(txRequest)
+      return
     }
+
+    const key = this.nonceAdjustmentKey(currentAccount, handlerId)
+    const pending = this.pendingNonceAdjustments.get(key)
+    if (pending && pending.account === currentAccount && pending.request === txRequest) {
+      pending.adjustments.push(nonceAdjust)
+      return
+    }
+
+    const adjustment: PendingNonceAdjustment = {
+      account: currentAccount,
+      request: txRequest,
+      adjustments: [nonceAdjust]
+    }
+    this.pendingNonceAdjustments.set(key, adjustment)
+
+    const { from, chainId } = txRequest.data
+    this.sendRequest(
+      { method: 'eth_getTransactionCount', chainId, params: [from, 'pending'] },
+      (res: RPCResponsePayload) => {
+        if (this.pendingNonceAdjustments.get(key) !== adjustment) return
+        this.pendingNonceAdjustments.delete(key)
+
+        if (
+          this.accounts[currentAccount.id] !== currentAccount ||
+          this.mutableTransactionRequest(currentAccount, handlerId) !== txRequest
+        ) {
+          return
+        }
+
+        const parsedNonce = parseRpcQuantity(res.result)
+        if (parsedNonce === undefined) return
+
+        let updatedNonce = parsedNonce
+        adjustment.adjustments.forEach((value, index) => {
+          if (index > 0 || value === -1) updatedNonce += BigInt(value)
+          if (updatedNonce < 0n) updatedNonce = 0n
+          if (updatedNonce > MAX_UINT256) updatedNonce = MAX_UINT256
+        })
+        txRequest.data.nonce = toRpcQuantity(updatedNonce)
+        currentAccount.refreshTransactionSimulation(txRequest)
+      }
+    )
   }
 
   resetNonce(handlerId: string, accountId?: string) {
     const currentAccount = this.requestAccount(handlerId, accountId)
     if (!currentAccount) return log.error('No account selected during nonce reset')
 
-    const txRequest = this.getTransactionRequest(currentAccount, handlerId)
-    const initialNonce = txRequest.payload.params[0]?.nonce
+    const txRequest = this.mutableTransactionRequest(currentAccount, handlerId)
+    if (!txRequest) return log.warn('Ignoring nonce reset for immutable transaction request')
+
+    this.clearPendingNonceAdjustment(currentAccount, handlerId)
+    const initialNonce = txRequest.payload.params?.[0]?.nonce
     if (initialNonce) {
       txRequest.data.nonce = initialNonce
     } else {
@@ -1601,6 +1665,7 @@ export class Accounts extends EventEmitter {
     // When a request is approved, lock it so that no automatic updates such as fee changes can happen
     const currentAccount = this.requestAccount(handlerId, accountId)
     if (currentAccount && currentAccount.requests[handlerId]) {
+      this.clearPendingNonceAdjustment(currentAccount, handlerId)
       ;(currentAccount.requests[handlerId] as TransactionRequest).locked = true
     } else {
       log.error('Trying to lock request ' + handlerId + ' but there is no current account')

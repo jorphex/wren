@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../../../../resources/Components/Icon'
 import link from '../../../../../../resources/link'
+import { parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
 import {
   SimulationAllowance,
   SimulationCallTrace,
@@ -26,43 +27,49 @@ const txFieldPriority = [
 ]
 
 const nonceHasBeenChanged = (req) => {
-  return req.data.nonce && req.payload.nonce !== req.data.nonce
+  return req.data.nonce && req.payload.params?.[0]?.nonce !== req.data.nonce
 }
 
 const NonceValue = ({ req, nonce }) => {
+  const mutable = !req.locked && req.status === undefined
+
   return (
     <>
       <div style={{ width: '24px' }}>{nonce}</div>
-      <div className='txNonceControl'>
-        <button
-          type='button'
-          aria-label='Decrease nonce'
-          className='txNonceButton txNonceButtonLower'
-          onClick={() => {
-            link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, -1)
-          }}
-        >
-          <Icon name='chevron-down' size={14} />
-        </button>
-        <button
-          type='button'
-          aria-label='Increase nonce'
-          className='txNonceButton txNonceButtonRaise'
-          onClick={() => link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, 1)}
-        >
-          <Icon name='chevron-up' size={14} />
-        </button>
-        {nonceHasBeenChanged(req) && (
+      {mutable && (
+        <div className='txNonceControl'>
           <button
             type='button'
-            aria-label='Reset nonce'
-            className='txNonceButton txNonceButtonReset'
-            onClick={() => link.send('tray:resetNonce', { account: req.account, handlerId: req.handlerId })}
+            aria-label='Decrease nonce'
+            className='txNonceButton txNonceButtonLower'
+            onClick={() => {
+              link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, -1)
+            }}
           >
-            <Icon name='sync' size={14} />
+            <Icon name='chevron-down' size={14} />
           </button>
-        )}
-      </div>
+          <button
+            type='button'
+            aria-label='Increase nonce'
+            className='txNonceButton txNonceButtonRaise'
+            onClick={() =>
+              link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, 1)
+            }
+          >
+            <Icon name='chevron-up' size={14} />
+          </button>
+          {nonceHasBeenChanged(req) && (
+            <button
+              type='button'
+              aria-label='Reset nonce'
+              className='txNonceButton txNonceButtonReset'
+              onClick={() => link.send('tray:resetNonce', { account: req.account, handlerId: req.handlerId })}
+            >
+              <Icon name='sync' size={14} />
+            </button>
+          )}
+        </div>
+      )}
     </>
   )
 }
@@ -102,26 +109,6 @@ export const SimpleTxJSON = ({ json, req }) => {
 }
 
 export class ViewData extends React.Component {
-  constructor(props, context) {
-    super(props, context)
-    this.state = {
-      copiedData: false
-    }
-  }
-
-  copyData(data) {
-    if (data) {
-      link.send('tray:clipboardData', data)
-      this.setState({ copiedData: true })
-      clearTimeout(this.copyTimer)
-      this.copyTimer = setTimeout(() => this.setState({ copiedData: false }), 1000)
-    }
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.copyTimer)
-  }
-
   renderDecodedData() {
     const { req } = this.props
     return req.decodedData ? (
@@ -178,12 +165,8 @@ export class ViewData extends React.Component {
           'maxPriorityFeePerGas'
         ].includes(key)
       ) {
-        try {
-          // convert these keys to ints
-          decodeTx[key] = parseInt(tx[key], 16)
-        } catch {
-          decodeTx[key] = tx[key]
-        }
+        const quantity = parseRpcQuantity(tx[key])
+        decodeTx[key] = quantity === undefined ? tx[key] : quantity.toString(10)
       } else {
         decodeTx[key] = tx[key]
       }
