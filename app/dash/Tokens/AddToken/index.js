@@ -122,7 +122,6 @@ class AddTokenChainScreenComponent extends Component {
           <button
             type='button'
             className='newTokenEnableChainLink'
-            role='link'
             disabled={this.state.selectingChainId !== null}
             onClick={() => this.openChains()}
           >

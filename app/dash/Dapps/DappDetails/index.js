@@ -5,8 +5,29 @@ import Icon from '../../../../resources/Components/Icon'
 import RingIcon from '../../../../resources/Components/RingIcon'
 
 export class DappDetails extends React.Component {
-  updateOriginChain() {
-    const origin = this.store('main.origins', this.props.originId)
+  state = { switchingChainId: null }
+
+  componentDidMount() {
+    this.mounted = true
+  }
+
+  componentWillUnmount() {
+    this.mounted = false
+    clearTimeout(this.switchTimer)
+  }
+
+  switchOriginChain(id, selected) {
+    if (selected || this.switchPending) return
+    this.switchPending = true
+    this.setState({ switchingChainId: id })
+    link.send('tray:action', 'switchOriginChain', this.props.originId, id, 'ethereum')
+    this.switchTimer = setTimeout(() => {
+      this.switchPending = false
+      if (this.mounted) this.setState({ switchingChainId: null })
+    }, 500)
+  }
+
+  updateOriginChain(origin) {
     return (
       <div className='originSwapChainList'>
         {Object.keys(this.store('main.networks.ethereum'))
@@ -23,9 +44,8 @@ export class DappDetails extends React.Component {
                 aria-pressed={selected}
                 key={id}
                 className={'originChainItem'}
-                onClick={() => {
-                  link.send('tray:action', 'switchOriginChain', this.props.originId, parseInt(id), 'ethereum')
-                }}
+                disabled={selected || this.state.switchingChainId !== null}
+                onClick={() => this.switchOriginChain(parseInt(id), selected)}
               >
                 <div className='originChainItemIcon'>
                   <RingIcon color={`var(--${primaryColor})`} img={icon} />
@@ -45,6 +65,14 @@ export class DappDetails extends React.Component {
 
   render() {
     const origin = this.store('main.origins', this.props.originId)
+    if (!origin) {
+      return (
+        <div className='cardShow connectedAppMissing' role='status'>
+          This connected app is no longer available.
+        </div>
+      )
+    }
+
     return (
       <div className='cardShow'>
         <div className='originSwapOrigin'>
@@ -52,7 +80,7 @@ export class DappDetails extends React.Component {
           <div className='originSwapOriginText'>{origin.name}</div>
         </div>
         <div className='originSwapTitle'>default chain</div>
-        <div>{this.updateOriginChain()}</div>
+        <div>{this.updateOriginChain(origin)}</div>
         {/* <div 
           className='clearOriginsButton'
           style={{ color: 'var(--good)' }}

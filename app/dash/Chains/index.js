@@ -5,7 +5,7 @@ import Chain from './Chain'
 import link from '../../../resources/link'
 import { WREN_SUPPORT_URL } from '../../../resources/constants'
 
-class Settings extends React.Component {
+export class Settings extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.customMessage = 'Custom Endpoint'
@@ -41,20 +41,14 @@ class Settings extends React.Component {
 
   discord() {
     return (
-      <div className='discordInvite' onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}>
-        <div>Need help?</div>
-        <div className='discordLink'>Open a community support issue</div>
-      </div>
-    )
-  }
-
-  quit() {
-    return (
-      <div className='quitFrame'>
-        <div onMouseDown={() => link.send('tray:quit')} className='quitFrameButton'>
-          Quit
-        </div>
-      </div>
+      <button
+        type='button'
+        className='discordInvite'
+        onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
+      >
+        <span>Need help?</span>
+        <span className='discordLink'>Open a community support issue</span>
+      </button>
     )
   }
 

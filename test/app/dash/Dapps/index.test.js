@@ -1,7 +1,10 @@
 import Restore from 'react-restore'
 
 import { act, render, screen } from '../../../componentSetup'
-import { Dapps } from '../../../../app/dash/Dapps'
+import { Dapps, Indicator, OriginModuleComponent } from '../../../../app/dash/Dapps'
+import link from '../../../../resources/link'
+
+jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 jest.mock(
   '../../../../resources/Components/RingIcon',
@@ -50,6 +53,72 @@ test('renders application activity instead of the empty state', () => {
 
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.queryByText('No connected apps')).toBeNull()
+})
+
+test('opens connected-app details once from native keyboard input', async () => {
+  const { user } = renderDapps({
+    origin: {
+      chain: { id: 1 },
+      name: 'example.test',
+      session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+    }
+  })
+  const app = screen.getByRole('button', { name: 'Open example.test connection details' })
+
+  app.focus()
+  await user.keyboard('{Enter}')
+
+  expect(link.send.mock.calls).toEqual([
+    ['tray:action', 'navDash', { view: 'dapps', data: { dappDetails: 'origin' } }]
+  ])
+  expect(app.disabled).toBe(true)
+
+  act(() => jest.advanceTimersByTime(500))
+  expect(screen.getByRole('button', { name: 'Open example.test connection details' }).disabled).toBe(false)
+})
+
+test('ignores duplicate connected-app activation', async () => {
+  const { user } = renderDapps({
+    origin: {
+      chain: { id: 1 },
+      name: 'example.test',
+      session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+    }
+  })
+
+  await user.dblClick(screen.getByRole('button', { name: 'Open example.test connection details' }))
+
+  expect(link.send).toHaveBeenCalledTimes(1)
+})
+
+test('clears connected-app indicator timers on unmount', () => {
+  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
+  const indicator = new Indicator({ connected: true })
+  indicator.componentDidMount()
+
+  indicator.componentWillUnmount()
+
+  expect(clearTimeoutSpy).toHaveBeenCalledWith(indicator.activateTimer)
+  expect(clearTimeoutSpy).toHaveBeenCalledWith(indicator.deactivateTimer)
+  clearTimeoutSpy.mockRestore()
+})
+
+test('clears a pending connected-app navigation timer on unmount', async () => {
+  const ref = { current: null }
+  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
+  const origin = {
+    id: 'origin',
+    name: 'example.test',
+    session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+  }
+  const { unmount, user } = render(<OriginModuleComponent ref={ref} connected origin={origin} />)
+
+  await user.click(screen.getByRole('button', { name: 'Open example.test connection details' }))
+  const navigationTimer = ref.current.navigationTimer
+  unmount()
+
+  expect(clearTimeoutSpy).toHaveBeenCalledWith(navigationTimer)
+  clearTimeoutSpy.mockRestore()
 })
 
 test('expires the last recently disconnected app without a store update', () => {

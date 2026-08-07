@@ -28,3 +28,10 @@ test('exposes disclosure links and acceptance as native actions', () => {
   fireEvent.click(screen.getByRole('button', { name: "Let's go!" }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'muteBetaDisclosure')
 })
+
+test.each(['mainnet', 'addToken'])('ignores the removed %s notification route', (notify) => {
+  const { container } = render(<Notify data={{ notify, notifyData: {} }} />)
+
+  expect(container.firstChild).toBeNull()
+  expect(link.send).not.toHaveBeenCalled()
+})

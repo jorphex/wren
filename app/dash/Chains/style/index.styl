@@ -281,6 +281,13 @@
     cursor pointer
 
 .discordInvite
+  appearance none
+  padding 0
+  border 0
+  color inherit
+  font-family inherit
+  background transparent
+  cursor pointer
   margin 30px 8px 30px 8px 
   font-size 13px
   font-weight 300
@@ -295,6 +302,10 @@
     padding-left 5px
     transition var(--standardFast)
     transform translateY(0px)
+
+.discordInvite:focus-visible
+  outline 2px solid var(--wren-focus, var(--moon))
+  outline-offset 2px
 
 .quitFrame
   padding 0px

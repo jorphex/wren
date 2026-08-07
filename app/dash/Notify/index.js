@@ -7,7 +7,6 @@ import BigNumber from 'bignumber.js'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 
 import Confirm from '../../../resources/Components/Confirm'
-import AddToken from './AddToken'
 import wrenIcon from '../../../asset/WrenIcon.png'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
@@ -484,13 +483,7 @@ export class Notify extends React.Component {
 
   render() {
     const { notify, notifyData } = this.props.data
-    if (notify === 'mainnet') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => link.send('tray:action', 'backDash')}>
-          {this.mainnet()}
-        </div>
-      )
-    } else if (notify === 'betaDisclosure') {
+    if (notify === 'betaDisclosure') {
       return <div className='notify cardShow'>{this.betaDisclosure()}</div>
     } else if (notify === 'gasFeeWarning') {
       return <div className='notify cardShow'>{this.gasFeeWarning(notifyData)}</div>
@@ -537,16 +530,6 @@ export class Notify extends React.Component {
       return <div className='notify cardShow'>{this.openExternal(notifyData)}</div>
     } else if (notify === 'openExplorer') {
       return <div className='notify cardShow'>{this.openExplorer(notifyData)}</div>
-    } else if (notify === 'addToken') {
-      return (
-        <div className='notify cardShow'>
-          <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
-            <div className='notifyBoxSlide'>
-              <AddToken {...notifyData} />
-            </div>
-          </div>
-        </div>
-      )
     } else {
       return null
     }

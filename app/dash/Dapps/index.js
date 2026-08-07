@@ -44,48 +44,57 @@ function getOriginsForChain(chain, origins) {
   }
 }
 
-class Indicator extends React.Component {
+export class Indicator extends React.Component {
   constructor(props) {
     super(props)
 
     this.state = {
       active: false
     }
+  }
 
-    setTimeout(() => {
+  componentDidMount() {
+    this.activateTimer = setTimeout(() => {
       this.setState({ active: true })
     }, 20)
 
-    setTimeout(() => {
+    this.deactivateTimer = setTimeout(() => {
       this.setState({ active: false })
     }, 200)
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.activateTimer)
+    clearTimeout(this.deactivateTimer)
   }
 
   render() {
     if (this.props.connected) {
       return (
-        <div
+        <span
           className={
             this.state.active ? 'sliceOriginIndicator sliceOriginIndicatorActive' : 'sliceOriginIndicator'
           }
         />
       )
     } else {
-      return <div className='sliceOriginIndicator sliceOriginIndicatorOff' />
+      return <span className='sliceOriginIndicator sliceOriginIndicatorOff' />
     }
   }
 }
 
-class _OriginModule extends React.Component {
+export class OriginModuleComponent extends React.Component {
   constructor(...args) {
     super(...args)
 
     this.state = {
       expanded: false,
-      averageRequests: '0.0'
+      averageRequests: '0.0',
+      opening: false
     }
 
     this.ref = createRef()
+    this.navigationPending = false
   }
 
   componentDidMount() {
@@ -97,7 +106,20 @@ class _OriginModule extends React.Component {
   }
 
   componentWillUnmount() {
+    this.navigationPending = false
+    clearTimeout(this.navigationTimer)
     clearInterval(this.requestUpdates)
+  }
+
+  openDetails(originId) {
+    if (this.navigationPending) return
+    this.navigationPending = true
+    this.setState({ opening: true })
+    link.send('tray:action', 'navDash', { view: 'dapps', data: { dappDetails: originId } })
+    this.navigationTimer = setTimeout(() => {
+      this.navigationPending = false
+      this.setState({ opening: false })
+    }, 500)
   }
 
   updateRequestRate() {
@@ -113,26 +135,27 @@ class _OriginModule extends React.Component {
 
     return (
       <div>
-        <div
+        <button
+          type='button'
+          aria-label={`Open ${origin.name} connection details`}
           className='sliceOrigin'
-          onClick={() => {
-            link.send('tray:action', 'navDash', { view: 'dapps', data: { dappDetails: origin.id } })
-          }}
+          disabled={this.state.opening}
+          onClick={() => this.openDetails(origin.id)}
         >
           <Indicator key={origin.session.lastUpdatedAt} connected={connected} />
-          <div className='sliceOriginTitle'>{origin.name}</div>
-          <div className='sliceOriginReqs'>
-            <div className='sliceOriginReqsNumber'>{this.state.averageRequests}</div>
-            <div className='sliceOriginReqsLabel'>{'reqs/min'}</div>
-          </div>
-        </div>
+          <span className='sliceOriginTitle'>{origin.name}</span>
+          <span className='sliceOriginReqs'>
+            <span className='sliceOriginReqsNumber'>{this.state.averageRequests}</span>
+            <span className='sliceOriginReqsLabel'>{'reqs/min'}</span>
+          </span>
+        </button>
         {this.state.expanded ? <div>{'origin quick menu'}</div> : null}
       </div>
     )
   }
 }
 
-const OriginModule = Restore.connect(_OriginModule)
+const OriginModule = Restore.connect(OriginModuleComponent)
 
 const ChainOrigins = ({ chain: { name }, origins, primaryColor, icon }) => {
   return (

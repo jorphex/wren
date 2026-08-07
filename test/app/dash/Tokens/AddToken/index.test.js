@@ -51,7 +51,10 @@ describe('selecting token chain', () => {
   it('should display the expected chain IDs', () => {
     render(<AddToken />)
 
-    const tokenChainNames = screen.getAllByRole('button').map((el) => el.textContent)
+    const tokenChainNames = screen
+      .getAllByRole('button')
+      .filter((el) => el.classList.contains('originChainItem'))
+      .map((el) => el.textContent)
     expect(tokenChainNames).toEqual(['Mainnet', 'Polygon'])
   })
 
@@ -101,7 +104,7 @@ describe('selecting token chain', () => {
     const { user } = render(<AddToken />)
 
     await user.click(screen.getByRole('button', { name: 'Polygon' }))
-    const enableChains = screen.getByRole('link', { name: 'Enable it in Chains' })
+    const enableChains = screen.getByRole('button', { name: 'Enable it in Chains' })
     expect(enableChains.disabled).toBe(true)
     enableChains.click()
     act(() => jest.advanceTimersByTime(200))
@@ -124,7 +127,7 @@ describe('selecting token chain', () => {
   it('opens chain settings only once for duplicate activation', async () => {
     const { user } = render(<AddToken />)
 
-    await user.dblClick(screen.getByRole('link', { name: 'Enable it in Chains' }))
+    await user.dblClick(screen.getByRole('button', { name: 'Enable it in Chains' }))
 
     expect(link.send.mock.calls).toEqual([['tray:action', 'navDash', { view: 'chains', data: {} }]])
   })
