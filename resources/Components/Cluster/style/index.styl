@@ -113,6 +113,12 @@
     *
       pointer-events auto
 
+  .clusterValueButton .clusterValueContent
+    pointer-events none
+
+    *
+      pointer-events none
+
   .clusterValueClickable:hover
     background var(--ghostB)
     transform translateY(-1px)
@@ -317,6 +323,7 @@
   font-size 13px 
   font-family 'FiraCode'
 
-.clusterAddressRecipientFull:hover
+.clusterAddressRecipientFull:hover,
+.clusterValueClickable:hover .clusterAddressRecipientFull
   opacity 1
   transform translateX(0px) scale(1)
