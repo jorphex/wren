@@ -489,10 +489,13 @@ class Onboard {
 
       const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
       const availableHeight = (isDev && !fullheight ? devHeight : area.height) - 48
-      const width = Math.max(1, Math.min(720, area.width - 48))
-      const height = Math.max(1, Math.min(720, availableHeight))
-      onboardWindow.setMinimumSize(Math.min(600, width), Math.min(480, height))
+      const artworkRatio = 900 / 506
+      const width = Math.max(1, Math.floor(Math.min(720, area.width - 48, availableHeight * artworkRatio)))
+      const height = Math.max(1, Math.round(width / artworkRatio))
+      const minimumWidth = Math.min(560, width)
+      onboardWindow.setMinimumSize(minimumWidth, Math.round(minimumWidth / artworkRatio))
       onboardWindow.setSize(width, height)
+      onboardWindow.setResizable(false)
       const pos = center(onboardWindow)
       onboardWindow.setPosition(pos.x, pos.y)
       onboardWindow.show()

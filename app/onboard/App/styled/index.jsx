@@ -15,16 +15,16 @@ export const Onboard = styled.div`
 
 export const SlideContainer = styled.div`
   position: absolute;
-  top: 32px;
+  top: ${({ $immersive }) => ($immersive ? '0' : '32px')};
   right: 0;
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-rows: 20% 60% 20%;
-  border-top: 1px solid var(--ghostX);
+  grid-template-rows: ${({ $immersive }) => ($immersive ? '1fr' : '20% 60% 20%')};
+  border-top: ${({ $immersive }) => ($immersive ? '0' : '1px solid var(--ghostX)')};
 
   @media (max-height: 540px) {
-    grid-template-rows: 18% 64% 18%;
+    grid-template-rows: ${({ $immersive }) => ($immersive ? '1fr' : '18% 64% 18%')};
   }
 `
 
@@ -108,6 +108,10 @@ export const SlideVideo = styled.div`
 export const SlideTitle = styled.div`
   font-size: 32px;
   font-weight: 500;
+  font-variation-settings:
+    'CASL' 0.55,
+    'CRSV' 0.25;
+  letter-spacing: -0.01em;
   animation: cardShow 400ms linear both;
   animation-delay: 0s;
   display: flex;

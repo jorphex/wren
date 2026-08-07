@@ -14,9 +14,9 @@ import Accounts from './Accounts'
 import Extension from './Extension'
 import Outro from './Outro'
 
-const CurrentSlide = ({ slide, platform, setTitle, setProceed }) => {
+const CurrentSlide = ({ slide, platform, setTitle, setProceed, nextSlide }) => {
   if (slide === 0) return null
-  else if (slide === 1) return <Intro setTitle={setTitle} setProceed={setProceed} />
+  else if (slide === 1) return <Intro onProceed={nextSlide} setTitle={setTitle} setProceed={setProceed} />
   else if (slide === 2) return <Access platform={platform} setTitle={setTitle} setProceed={setProceed} />
   else if (slide === 3) return <Chains setTitle={setTitle} setProceed={setProceed} />
   else if (slide === 4) return <Omnichain setTitle={setTitle} setProceed={setProceed} />
@@ -46,20 +46,29 @@ const Slides = ({ platform }) => {
   const [title, setTitle] = useState()
   const [proceed, setProceed] = useState({})
   const [slide, setSlide] = useState(1)
+  const immersive = slide === 1
 
   return (
-    <SlideContainer>
-      <SlideTitle key={title}>{title}</SlideTitle>
+    <SlideContainer $immersive={immersive}>
+      {!immersive && <SlideTitle key={title}>{title}</SlideTitle>}
       <SlideScroller>
-        <CurrentSlide slide={slide} platform={platform} setTitle={setTitle} setProceed={setProceed} />
+        <CurrentSlide
+          slide={slide}
+          platform={platform}
+          setTitle={setTitle}
+          setProceed={setProceed}
+          nextSlide={() => nextSlide(slide, setSlide)}
+        />
       </SlideScroller>
-      <Proceed
-        slide={slide}
-        proceed={proceed}
-        nextSlide={() => nextSlide(slide, setSlide)}
-        prevSlide={() => prevSlide(slide, setSlide)}
-        onComplete={onComplete}
-      />
+      {!immersive && (
+        <Proceed
+          slide={slide}
+          proceed={proceed}
+          nextSlide={() => nextSlide(slide, setSlide)}
+          prevSlide={() => prevSlide(slide, setSlide)}
+          onComplete={onComplete}
+        />
+      )}
     </SlideContainer>
   )
 }
