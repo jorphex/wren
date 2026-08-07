@@ -20,30 +20,70 @@ const navForward = async (notifyData) =>
 const navBack = async (steps = 1) => link.send('nav:back', 'dash', steps)
 
 const TokenError = ({ text, onContinue }) => {
+  const handledRef = useRef(false)
+  const handleOnce = (action) => {
+    if (handledRef.current) return
+    handledRef.current = true
+    action()
+  }
+
   return (
     <div className='newTokenView cardShow'>
       <div className='newTokenErrorTitle'>{text}</div>
 
-      <div className='tokenSetAddress' role='button' onClick={() => navBack()}>
+      <button type='button' className='tokenSetAddress' onClick={() => handleOnce(() => navBack())}>
         {'BACK'}
-      </div>
+      </button>
       {text.includes(unableToVerifyError) && (
-        <div
+        <button
+          type='button'
           className='tokenSetAddress'
-          role='button'
-          onClick={() => {
-            navBack()
-            onContinue()
-          }}
+          onClick={() =>
+            handleOnce(() => {
+              navBack()
+              onContinue()
+            })
+          }
         >
           {'ADD ANYWAY'}
-        </div>
+        </button>
       )}
     </div>
   )
 }
 
 class AddTokenChainScreenComponent extends Component {
+  state = { selectingChainId: null }
+
+  componentWillUnmount() {
+    this.selectionPending = false
+    clearTimeout(this.selectionTimer)
+  }
+
+  selectChain(chain, primaryColor) {
+    if (this.selectionPending) return
+
+    const chainId = chain.id
+    this.selectionPending = true
+    this.setState({ selectingChainId: chainId })
+    this.selectionTimer = setTimeout(() => {
+      link.send('tray:action', 'navDash', {
+        view: 'tokens',
+        data: {
+          notify: 'addToken',
+          notifyData: { chain: { id: chainId, color: primaryColor, name: chain.name } }
+        }
+      })
+    }, 200)
+  }
+
+  openChains() {
+    if (this.selectionPending) return
+    this.selectionPending = true
+    this.setState({ selectingChainId: 'chains' })
+    link.send('tray:action', 'navDash', { view: 'chains', data: {} })
+  }
+
   render() {
     const activeChains = Object.values(this.store('main.networks.ethereum')).filter((chain) => chain.on)
 
@@ -57,23 +97,12 @@ class AddTokenChainScreenComponent extends Component {
               const { primaryColor, icon } = this.store('main.networksMeta.ethereum', chainId)
 
               return (
-                <div
+                <button
+                  type='button'
                   className='originChainItem'
                   key={chainId}
-                  role='button'
-                  onClick={() => {
-                    this.setState({ chainId })
-
-                    setTimeout(() => {
-                      link.send('tray:action', 'navDash', {
-                        view: 'tokens',
-                        data: {
-                          notify: 'addToken',
-                          notifyData: { chain: { id: chainId, color: primaryColor, name: chain.name } }
-                        }
-                      })
-                    }, 200)
-                  }}
+                  disabled={this.state.selectingChainId !== null}
+                  onClick={() => this.selectChain(chain, primaryColor)}
                 >
                   <div className='originChainItemIcon'>
                     <RingIcon
@@ -83,22 +112,22 @@ class AddTokenChainScreenComponent extends Component {
                     />
                   </div>
                   {chain.name}
-                </div>
+                </button>
               )
             })}
           </div>
         </div>
         <div className='newTokenChainSelectFooter'>
           {'Chain not listed?'}
-          <div
+          <button
+            type='button'
             className='newTokenEnableChainLink'
             role='link'
-            onClick={() => {
-              link.send('tray:action', 'navDash', { view: 'chains', data: {} })
-            }}
+            disabled={this.state.selectingChainId !== null}
+            onClick={() => this.openChains()}
           >
             {'Enable it in Chains'}
-          </div>
+          </button>
         </div>
       </div>
     )
@@ -109,19 +138,40 @@ const SelectChain = Restore.connect(AddTokenChainScreenComponent)
 
 const EnterAddress = ({ chain }) => {
   const [isFetching, setFetching] = useState(false)
+  const [isSubmitting, setSubmitting] = useState(false)
   const [contractAddress, setAddress] = useState('')
+  const mountedRef = useRef(true)
+  const submittingRef = useRef(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const { name: chainName, color } = chain
 
   const resolveTokenData = async () => {
     setFetching(true)
 
-    const tokenData = await link.invoke('tray:getTokenDetails', contractAddress, chain.id)
+    let tokenData = {}
+    try {
+      tokenData = (await link.invoke('tray:getTokenDetails', contractAddress, chain.id)) || {}
+    } catch {
+      tokenData = {}
+    }
+    if (!mountedRef.current) return
+
     const error = tokenData.totalSupply ? null : `${unableToVerifyError} ${contractAddress}`
     return navForward({ error, tokenData, address: contractAddress, chain })
   }
 
   const submit = () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setSubmitting(true)
+
     if (!isValidAddress(contractAddress))
       return navForward({
         error: invalidFormatError,
@@ -164,10 +214,13 @@ const EnterAddress = ({ chain }) => {
                 aria-labelledby='newTokenAddressLabel'
                 className='tokenInput tokenInputAddress'
                 value={contractAddress}
+                disabled={isSubmitting}
                 spellCheck={false}
                 autoFocus={true}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (e.repeat) return
                     submit()
                   }
                 }}
@@ -181,9 +234,9 @@ const EnterAddress = ({ chain }) => {
               />
             </div>
           </div>
-          <div className='tokenSetAddress' role='button' onClick={submit}>
+          <button type='button' className='tokenSetAddress' disabled={isSubmitting} onClick={submit}>
             {'Set Address'}
-          </div>
+          </button>
         </>
       )}
     </div>
@@ -200,10 +253,12 @@ const tokenDetailsDefaults = {
 const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
   const [name, setName] = useState(tokenData.name || tokenDetailsDefaults.name)
   const [symbol, setSymbol] = useState(tokenData.symbol || tokenDetailsDefaults.symbol)
-  const [decimals, setDecimals] = useState(tokenData.decimals || tokenDetailsDefaults.decimals)
+  const [decimals, setDecimals] = useState(tokenData.decimals ?? tokenDetailsDefaults.decimals)
   const [logoUri, setLogoUri] = useState(tokenData.logoURI || tokenDetailsDefaults.logoURI)
+  const [isSaving, setSaving] = useState(false)
 
-  const submitRef = useRef(null)
+  const savingRef = useRef(false)
+  const navigationTimerRef = useRef()
 
   const { address } = tokenData
   const { name: chainName, color } = chain
@@ -217,6 +272,10 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
     Number.isInteger(decimals)
 
   const saveAndClose = () => {
+    if (!newTokenReady || savingRef.current) return
+    savingRef.current = true
+    setSaving(true)
+
     const token = {
       name,
       symbol,
@@ -230,19 +289,13 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
 
     link.send('tray:addToken', token, req)
 
-    setTimeout(() => {
+    navigationTimerRef.current = setTimeout(() => {
       navBack(backSteps)
       link.send('nav:forward', 'dash', {
         view: 'tokens',
         data: {}
       })
     }, 250)
-  }
-
-  const focusSubmitButton = () => {
-    if (submitRef.current) {
-      submitRef.current.focus()
-    }
   }
 
   const handleKeyPress = (e) => {
@@ -253,7 +306,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
   }
 
   useEffect(() => {
-    focusSubmitButton()
+    return () => clearTimeout(navigationTimerRef.current)
   }, [])
 
   return (
@@ -288,6 +341,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                 <input
                   className={`tokenInput ${name === tokenDetailsDefaults.name ? 'tokenInputDim' : ''}`}
                   value={name}
+                  disabled={isSaving}
                   spellCheck={false}
                   onChange={(e) => {
                     setName(e.target.value)
@@ -297,7 +351,6 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                   }}
                   onBlur={(e) => {
                     if (e.target.value === '') setName(tokenDetailsDefaults.name)
-                    focusSubmitButton()
                   }}
                   onKeyDown={handleKeyPress}
                 />
@@ -312,6 +365,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                 <input
                   className={`tokenInput ${symbol === tokenDetailsDefaults.symbol ? 'tokenInputDim' : ''}`}
                   value={symbol}
+                  disabled={isSaving}
                   spellCheck={false}
                   onChange={(e) => {
                     if (e.target.value.length > 10) return e.preventDefault()
@@ -322,7 +376,6 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                   }}
                   onBlur={(e) => {
                     if (e.target.value === '') setSymbol(tokenDetailsDefaults.symbol)
-                    focusSubmitButton()
                   }}
                   onKeyDown={handleKeyPress}
                 />
@@ -337,6 +390,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                     decimals === tokenDetailsDefaults.decimals ? 'tokenInputDim' : ''
                   }`}
                   value={decimals}
+                  disabled={isSaving}
                   spellCheck={false}
                   onChange={(e) => {
                     if (!e.target.value) return setDecimals('')
@@ -352,7 +406,6 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                   }}
                   onBlur={(e) => {
                     if (e.target.value === '') setDecimals(tokenDetailsDefaults.decimals)
-                    focusSubmitButton()
                   }}
                   onKeyDown={handleKeyPress}
                 />
@@ -367,6 +420,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                 <input
                   className={`tokenInput ${logoUri === tokenDetailsDefaults.logoURI ? 'tokenInputDim' : ''}`}
                   value={logoUri}
+                  disabled={isSaving}
                   spellCheck={false}
                   onChange={(e) => {
                     setLogoUri(e.target.value)
@@ -376,7 +430,6 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
                   }}
                   onBlur={(e) => {
                     if (e.target.value === '') setLogoUri(tokenDetailsDefaults.logoURI)
-                    focusSubmitButton()
                   }}
                   onKeyDown={handleKeyPress}
                 />
@@ -386,24 +439,18 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
           </div>
           <div className='tokenRow'>
             {newTokenReady ? (
-              <div
-                role='button'
-                tabIndex={0}
-                ref={submitRef}
+              <button
+                type='button'
                 className='addTokenSubmit addTokenSubmitEnabled'
-                onMouseDown={(e) => {
-                  if (e.button === 0) {
-                    saveAndClose()
-                  }
-                }}
-                onKeyDown={handleKeyPress}
+                disabled={isSaving}
+                onClick={saveAndClose}
               >
                 {isEdit ? 'Save' : 'Add Token'}
-              </div>
+              </button>
             ) : (
-              <div role='button' className='addTokenSubmit'>
+              <button type='button' className='addTokenSubmit' disabled>
                 Fill in Token Details
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -416,7 +463,7 @@ const AddToken = ({ data }) => {
   const { address, chain, error, tokenData, isEdit, requestReference } = data?.notifyData || {}
 
   if (!chain) return <SelectChain />
-  if (!address) return <EnterAddress chain={chain} />
+  if (!address) return <EnterAddress key={chain.id} chain={chain} />
   if (error) return <TokenError text={error} onContinue={() => navForward({ address, chain })} />
 
   return (

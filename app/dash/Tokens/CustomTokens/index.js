@@ -4,112 +4,204 @@ import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 import { safeRemoteImageUrl } from '../../../../resources/utils/image'
 
+const tokenIdentity = (token) => `${token.chainId}:${token.address.toLowerCase()}`
+const sortTokens = (tokens) =>
+  [...tokens].sort((a, b) => {
+    const chainOrder = Number(a.chainId) - Number(b.chainId)
+    return chainOrder || a.address.toLowerCase().localeCompare(b.address.toLowerCase())
+  })
+
 class CustomTokens extends React.Component {
   constructor(props, context) {
     super(props, context)
-    this.state = {}
+    this.state = {
+      copiedTokenIds: [],
+      focusAfterRemovalId: null,
+      navigatingTokenId: null,
+      removingTokenId: null,
+      tokenExpanded: null
+    }
+    this.copyTimers = new Map()
+    this.expandButtons = new Map()
+    this.listRef = React.createRef()
+    this.removeTimer = null
+    this.removePending = false
+    this.navigationPending = false
+  }
+
+  componentDidUpdate() {
+    const { removingTokenId } = this.state
+    if (
+      removingTokenId &&
+      !this.store('main.tokens.custom').some((token) => tokenIdentity(token) === removingTokenId)
+    ) {
+      const { focusAfterRemovalId } = this.state
+      this.removePending = false
+      this.setState({ focusAfterRemovalId: null, removingTokenId: null }, () => {
+        const focusTarget = this.expandButtons.get(focusAfterRemovalId) || this.listRef.current
+        focusTarget?.focus()
+      })
+    }
+  }
+
+  componentWillUnmount() {
+    this.copyTimers.forEach((timer) => clearTimeout(timer))
+    this.copyTimers.clear()
+    this.expandButtons.clear()
+    clearTimeout(this.removeTimer)
+    this.removePending = false
+    this.navigationPending = false
+  }
+
+  copyAddress(token) {
+    const tokenId = tokenIdentity(token)
+
+    link.send('tray:clipboardData', token.address)
+    clearTimeout(this.copyTimers.get(tokenId))
+    this.setState(({ copiedTokenIds }) => ({
+      copiedTokenIds: copiedTokenIds.includes(tokenId) ? copiedTokenIds : [...copiedTokenIds, tokenId]
+    }))
+
+    this.copyTimers.set(
+      tokenId,
+      setTimeout(() => {
+        this.copyTimers.delete(tokenId)
+        this.setState(({ copiedTokenIds }) => ({
+          copiedTokenIds: copiedTokenIds.filter((copiedTokenId) => copiedTokenId !== tokenId)
+        }))
+      }, 1000)
+    )
+  }
+
+  editToken(token) {
+    if (this.navigationPending) return
+    this.navigationPending = true
+    this.setState({ navigatingTokenId: tokenIdentity(token) })
+    link.send('nav:forward', 'dash', {
+      view: 'tokens',
+      data: {
+        notify: 'addToken',
+        notifyData: {
+          error: null,
+          isEdit: true,
+          address: token.address,
+          chain: { id: token.chainId },
+          tokenData: token
+        }
+      }
+    })
+  }
+
+  removeToken(token) {
+    if (this.removePending) return
+
+    const tokenId = tokenIdentity(token)
+    const orderedTokenIds = sortTokens(this.store('main.tokens.custom')).map(tokenIdentity)
+    const tokenIndex = orderedTokenIds.indexOf(tokenId)
+    const focusAfterRemovalId = orderedTokenIds[tokenIndex + 1] || orderedTokenIds[tokenIndex - 1] || null
+    this.removePending = true
+    this.setState({ focusAfterRemovalId, removingTokenId: tokenId })
+    this.removeTimer = setTimeout(() => {
+      this.removeTimer = null
+      link.send('tray:removeToken', token)
+    }, 100)
   }
 
   render() {
     const tokens = this.store('main.tokens.custom')
+    const { copiedTokenIds, navigatingTokenId, removingTokenId, tokenExpanded } = this.state
 
     return (
       <div className='cardShow' onMouseDown={(e) => e.stopPropagation()}>
         <div className='customTokens'>
-          <div className='customTokensList'>
+          <div ref={this.listRef} className='customTokensList' tabIndex={-1} aria-label='Custom tokens'>
             {tokens.length > 0 ? (
-              []
-                .concat(tokens)
-                .sort((a, b) => {
-                  return a.chainId <= b.chainId
-                })
-                .map((token, i) => {
-                  return (
-                    <div
-                      key={i}
-                      className={
-                        this.state.tokenExpanded === i
-                          ? 'customTokensListItem customTokensListItemExpanded'
-                          : 'customTokensListItem'
-                      }
-                    >
-                      <div className='customTokensListItemTitle'>
-                        <div className='customTokensListItemName'>
-                          <img
-                            src={safeRemoteImageUrl(token.logoURI)}
-                            value={token.symbol.toUpperCase()}
-                            alt={token.symbol.toUpperCase()}
-                          />
-                          <div className='customTokensListItemText'>
-                            <div className='customTokensListItemSymbol'>{token.symbol}</div>
-                            <div className='customTokensListItemSub'>{token.name}</div>
-                          </div>
-                        </div>
-                        <div className='customTokensListItemChain'>
-                          <div className='customTokensListItemChainLabel'>{'Chain ID:'}</div>
-                          <div>{token.chainId}</div>
-                          <button
-                            type='button'
-                            aria-label={this.state.tokenExpanded === i ? 'Collapse token' : 'Expand token'}
-                            className={
-                              this.state.tokenExpanded === i
-                                ? 'customTokensListItemExpand'
-                                : 'customTokensListItemExpand customTokensListItemExpandActive'
-                            }
-                            onClick={() =>
-                              this.setState({ tokenExpanded: this.state.tokenExpanded === i ? -1 : i })
-                            }
-                          >
-                            <Icon name='chevron-down' size={16} />
-                          </button>
+              sortTokens(tokens).map((token) => {
+                const tokenId = tokenIdentity(token)
+                const copied = copiedTokenIds.includes(tokenId)
+                const expanded = tokenExpanded === tokenId
+
+                return (
+                  <div
+                    key={tokenId}
+                    className={
+                      expanded ? 'customTokensListItem customTokensListItemExpanded' : 'customTokensListItem'
+                    }
+                  >
+                    <div className='customTokensListItemTitle'>
+                      <div className='customTokensListItemName'>
+                        <img
+                          src={safeRemoteImageUrl(token.logoURI)}
+                          value={token.symbol.toUpperCase()}
+                          alt={token.symbol.toUpperCase()}
+                        />
+                        <div className='customTokensListItemText'>
+                          <div className='customTokensListItemSymbol'>{token.symbol}</div>
+                          <div className='customTokensListItemSub'>{token.name}</div>
                         </div>
                       </div>
-                      <div
-                        className='customTokensListItemAddress'
-                        onClick={() => {
-                          link.send('tray:clipboardData', token.address)
-                          this.setState({ copied: true })
-                          setTimeout((_) => this.setState({ copied: false }), 1000)
-                        }}
-                      >
-                        {this.state.copied ? 'Address Copied' : token.address}
-                      </div>
-                      <div className='customTokensListItemBottom'>
-                        <div
-                          className='customTokensListItemButton editButton'
-                          onClick={() => {
-                            link.send('nav:forward', 'dash', {
-                              view: 'tokens',
-                              data: {
-                                notify: 'addToken',
-                                notifyData: {
-                                  error: null,
-                                  isEdit: true,
-                                  address: token.address,
-                                  chain: { id: token.chainId },
-                                  tokenData: token
-                                }
-                              }
-                            })
+                      <div className='customTokensListItemChain'>
+                        <div className='customTokensListItemChainLabel'>{'Chain ID:'}</div>
+                        <div>{token.chainId}</div>
+                        <button
+                          ref={(node) => {
+                            if (node) this.expandButtons.set(tokenId, node)
+                            else this.expandButtons.delete(tokenId)
                           }}
+                          type='button'
+                          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${token.symbol} token on chain ${token.chainId}`}
+                          aria-expanded={expanded}
+                          disabled={removingTokenId !== null}
+                          className={
+                            expanded
+                              ? 'customTokensListItemExpand'
+                              : 'customTokensListItemExpand customTokensListItemExpandActive'
+                          }
+                          onClick={() => this.setState({ tokenExpanded: expanded ? null : tokenId })}
                         >
-                          {'Edit Token'}
-                        </div>
-                        <div
-                          className='customTokensListItemButton removeButton'
-                          onClick={() => {
-                            this.setState({ tokenExpanded: false })
-                            setTimeout(() => {
-                              link.send('tray:removeToken', token)
-                            }, 100)
-                          }}
-                        >
-                          {'Remove Token'}
-                        </div>
+                          <Icon name='chevron-down' size={16} />
+                        </button>
                       </div>
                     </div>
-                  )
-                })
+                    {expanded && (
+                      <>
+                        <button
+                          type='button'
+                          aria-label={`Copy ${token.symbol} token address`}
+                          className='customTokensListItemAddress'
+                          disabled={removingTokenId !== null}
+                          onClick={() => this.copyAddress(token)}
+                        >
+                          {copied ? 'Address Copied' : token.address}
+                        </button>
+                        <span className='customTokensCopyStatus' role='status' aria-live='polite'>
+                          {copied ? `${token.symbol} token address copied` : ''}
+                        </span>
+                        <div className='customTokensListItemBottom'>
+                          <button
+                            type='button'
+                            aria-label={`Edit ${token.symbol} token`}
+                            className='customTokensListItemButton editButton'
+                            disabled={navigatingTokenId !== null || removingTokenId !== null}
+                            onClick={() => this.editToken(token)}
+                          >
+                            {navigatingTokenId === tokenId ? 'Opening Token' : 'Edit Token'}
+                          </button>
+                          <button
+                            type='button'
+                            aria-label={`Remove ${token.symbol} token`}
+                            aria-disabled={removingTokenId !== null}
+                            className='customTokensListItemButton removeButton'
+                            onClick={() => this.removeToken(token)}
+                          >
+                            {removingTokenId === tokenId ? 'Removing Token' : 'Remove Token'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })
             ) : (
               <div className='customTokensListNoTokens'>{'No Custom Tokens'}</div>
             )}

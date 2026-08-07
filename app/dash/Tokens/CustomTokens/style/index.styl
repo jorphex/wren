@@ -110,6 +110,10 @@
       .customTokensListItemExpand:hover
         background var(--ghostC)
 
+      .customTokensListItemExpand:focus-visible
+        outline 0
+        box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+
       .customTokensListItemExpandActive
         transform rotate(0deg)
 
@@ -192,6 +196,7 @@
       font-weight 300
 
     .customTokensListItemAddress
+      appearance none
       display flex
       justify-content center
       align-items center
@@ -200,13 +205,39 @@
       margin 0px 10px
       border-radius 9px
       font-family 'FiraCode'
+      color inherit
+      border 0
       background var(--ghostB)
       // border-radius 12px
       // margin 0px 3px 0px 3px
-      padding-top 1px
+      padding 1px 0px 0px
       cursor pointer
       *
         pointer-events none
+
+    .customTokensListItemAddress:hover
+      background var(--ghostC)
+
+    .customTokensListItemAddress:focus-visible
+      outline 0
+      box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+
+    .customTokensListItemAddress:disabled
+      cursor default
+
+    .customTokensListItemAddress:disabled:hover
+      background var(--ghostB)
+
+    .customTokensCopyStatus
+      position absolute
+      width 1px
+      height 1px
+      padding 0
+      margin -1px
+      overflow hidden
+      clip rect(0, 0, 0, 0)
+      white-space nowrap
+      border 0
 
     .customTokensListItemBottom
       height 40px
@@ -216,6 +247,7 @@
       font-size 12px
 
       .customTokensListItemButton
+        appearance none
         display flex
         justify-content center
         align-items center
@@ -225,6 +257,10 @@
         border-radius 10px
         cursor pointer
         text-transform uppercase
+        border 0
+        color inherit
+        font-family inherit
+        padding 0
         background var(--ghostB)
 
         *
@@ -232,6 +268,24 @@
 
       .customTokensListItemButton:hover
         background var(--ghostC)
+
+      .customTokensListItemButton:focus-visible
+        outline 0
+        box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+
+      .customTokensListItemButton:disabled
+        opacity .45
+        cursor default
+
+      .customTokensListItemButton:disabled:hover
+        background var(--ghostB)
+
+      .customTokensListItemButton[aria-disabled='true']
+        opacity .45
+        cursor default
+
+      .customTokensListItemButton[aria-disabled='true']:hover
+        background var(--ghostB)
 
       .editButton
         color var(--good)
