@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { MAX_UINT256 } from '../../domain/transaction/quantity'
 import {
@@ -21,18 +21,18 @@ const getMode = (requestedAmount, amount) => {
   return isMax(amount) ? 'unlimited' : 'custom'
 }
 
-const Details = ({ address, name }) => {
+const Details = ({ address, name, copyLabel }) => {
   const [showCopiedMessage, copyAddress] = useCopiedMessage(address)
 
   return (
     <ClusterRow>
-      <ClusterValue
-        pointerEvents={'auto'}
-        onClick={() => {
-          copyAddress()
-        }}
-      >
-        <div className='clusterAddress'>
+      <ClusterValue pointerEvents={'auto'}>
+        <button
+          type='button'
+          aria-label={copyLabel}
+          className='clusterAddress clusterAddressButton'
+          onClick={copyAddress}
+        >
           <span className='clusterAddressRecipient'>
             {name ? (
               <span className='clusterAddressRecipient' style={{ fontFamily: 'MainFont', fontWeight: '400' }}>
@@ -53,7 +53,7 @@ const Details = ({ address, name }) => {
               <span className='clusterFira'>{address}</span>
             )}
           </div>
-        </div>
+        </button>
       </ClusterValue>
     </ClusterRow>
   )
@@ -87,33 +87,63 @@ const EditTokenSpend = ({
 
   const [mode, setMode] = useState(hasInvalidAmount ? 'invalid' : getMode(requestedValue, amountValue))
   const [custom, setCustom] = useState(decimalAmount || amountValue.toString(10))
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false)
+  const approvalSubmittingRef = useRef(false)
+
+  const releaseApprovalSubmission = () => {
+    approvalSubmittingRef.current = false
+    setApprovalSubmitting(false)
+  }
 
   const updateCustomAmount = (value) => {
     setMode('custom')
     setCustom(value)
   }
 
+  const submitApprovalAmount = (nextAmount, nextMode, nextCustom = custom) => {
+    if (approvalSubmittingRef.current) return
+
+    const previousMode = mode
+    const previousCustom = custom
+    approvalSubmittingRef.current = true
+    setApprovalSubmitting(true)
+    setMode(nextMode)
+    setCustom(nextCustom)
+    updateHandlerRequest(nextAmount, (error) => {
+      releaseApprovalSubmission()
+      if (error) {
+        setMode(previousMode)
+        setCustom(previousCustom)
+      }
+    })
+  }
+
+  const activateOnce = (event, action) => {
+    if (event.detail < 2) action()
+  }
+
   const resetToRequestAmount = () => {
-    setCustom(formatTokenBaseUnitAmount(requestedValue.toString(10), decimals) || requestedValue.toString(10))
-    setMode('requested')
-    updateHandlerRequest(requestedValue.toString(10))
+    const requested = requestedValue.toString(10)
+    submitApprovalAmount(requested, 'requested', formatTokenBaseUnitAmount(requested, decimals) || requested)
   }
 
   const setToMax = () => {
-    setMode('unlimited')
-    updateHandlerRequest(MAX_UINT256.toString(10))
+    submitApprovalAmount(MAX_UINT256.toString(10), 'unlimited')
   }
 
   const setToRevoke = () => {
-    setCustom('0')
-    setMode('revoke')
-    updateHandlerRequest('0')
+    submitApprovalAmount('0', 'revoke', '0')
   }
 
   const customAmount = parseTokenDecimalAmount(custom, decimals)
   const submitCustomAmount = () => {
+    const nextAmount = custom === '' ? requestedValue : customAmount
+    if (nextAmount === undefined) {
+      releaseApprovalSubmission()
+      return
+    }
     if (custom === '') return resetToRequestAmount()
-    if (customAmount !== undefined) updateHandlerRequest(customAmount.toString(10))
+    submitApprovalAmount(nextAmount.toString(10), 'custom')
   }
 
   const isRevoke = canRevoke && parsedAmount === 0n
@@ -141,7 +171,8 @@ const EditTokenSpend = ({
           <Details
             {...{
               address: spender.address,
-              name: spender.ens
+              name: spender.ens,
+              copyLabel: 'Copy spender address'
             }}
           />
           <Description
@@ -154,7 +185,8 @@ const EditTokenSpend = ({
           <Details
             {...{
               address: contract.address,
-              name
+              name,
+              copyLabel: 'Copy token contract address'
             }}
           />
           {deadline && (
@@ -181,17 +213,28 @@ const EditTokenSpend = ({
             <ClusterValue transparent={true} pointerEvents={'auto'}>
               <div className='approveTokenSpendAmount'>
                 {isCustom && custom !== '' && customAmount === undefined ? (
-                  <div className='approveTokenSpendAmountSubmit' style={{ color: 'var(--bad)' }}>
+                  <div
+                    role='alert'
+                    className='approveTokenSpendAmountSubmit approveTokenSpendAmountStatus'
+                    style={{ color: 'var(--bad)' }}
+                  >
                     {'invalid'}
                   </div>
                 ) : isCustom && customAmount !== undefined && amountValue !== customAmount ? (
-                  <div className='approveTokenSpendAmountSubmit' role='button' onClick={submitCustomAmount}>
+                  <button
+                    type='button'
+                    className='approveTokenSpendAmountSubmit'
+                    disabled={approvalSubmitting}
+                    onClick={(event) => activateOnce(event, submitCustomAmount)}
+                  >
                     {'update'}
-                  </div>
+                  </button>
                 ) : (
                   <div
                     key={mode + amount}
-                    className='approveTokenSpendAmountSubmit'
+                    className='approveTokenSpendAmountSubmit approveTokenSpendAmountStatus'
+                    role='status'
+                    aria-label='Approval amount applied'
                     style={{ color: 'var(--good)' }}
                   >
                     <Icon name='check' size={20} />
@@ -204,6 +247,7 @@ const EditTokenSpend = ({
                     maxLength={MAX_TOKEN_AMOUNT_INPUT_LENGTH}
                     aria-label='Custom Amount'
                     value={custom}
+                    disabled={approvalSubmitting}
                     onChange={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -211,27 +255,29 @@ const EditTokenSpend = ({
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
+                        e.preventDefault()
                         e.target.blur()
                         submitCustomAmount()
                       }
                     }}
                   />
-                ) : (
-                  <div
-                    className='approveTokenSpendAmountNoInput'
-                    role='textbox'
-                    style={inputLock ? { cursor: 'default' } : null}
-                    onClick={
-                      inputLock
-                        ? null
-                        : () => {
-                            setCustom('')
-                            setMode('custom')
-                          }
-                    }
-                  >
+                ) : inputLock ? (
+                  <div className='approveTokenSpendAmountNoInput' style={{ cursor: 'default' }}>
                     {displayAmount}
                   </div>
+                ) : (
+                  <button
+                    type='button'
+                    aria-label={`Edit approval amount, current ${displayAmount}`}
+                    className='approveTokenSpendAmountNoInput'
+                    disabled={approvalSubmitting}
+                    onClick={() => {
+                      setCustom('')
+                      setMode('custom')
+                    }}
+                  >
+                    {displayAmount}
+                  </button>
                 )}
               </div>
             </ClusterValue>
@@ -245,58 +291,65 @@ const EditTokenSpend = ({
             <>
               {canRevoke && (
                 <ClusterRow>
-                  <ClusterValue onClick={setToRevoke}>
-                    <div
-                      className='clusterTag'
+                  <ClusterValue pointerEvents={'auto'}>
+                    <button
+                      type='button'
+                      className='clusterTag clusterTagButton'
+                      disabled={approvalSubmitting}
                       style={mode === 'revoke' ? { color: 'var(--good)' } : {}}
-                      role='button'
+                      aria-pressed={mode === 'revoke'}
+                      onClick={(event) => activateOnce(event, setToRevoke)}
                     >
                       {'Revoke'}
-                    </div>
+                    </button>
                   </ClusterValue>
                 </ClusterRow>
               )}
               <ClusterRow>
-                <ClusterValue onClick={() => resetToRequestAmount()}>
-                  <div
-                    className='clusterTag'
+                <ClusterValue pointerEvents={'auto'}>
+                  <button
+                    type='button'
+                    className='clusterTag clusterTagButton'
+                    disabled={approvalSubmitting}
                     style={mode === 'requested' ? { color: 'var(--good)' } : {}}
-                    role='button'
+                    aria-pressed={mode === 'requested'}
+                    onClick={(event) => activateOnce(event, resetToRequestAmount)}
                   >
                     {'Requested'}
-                  </div>
+                  </button>
                 </ClusterValue>
               </ClusterRow>
               <ClusterRow>
-                <ClusterValue
-                  onClick={() => {
-                    setToMax()
-                  }}
-                >
-                  <div
-                    className='clusterTag'
+                <ClusterValue pointerEvents={'auto'}>
+                  <button
+                    type='button'
+                    className='clusterTag clusterTagButton'
+                    disabled={approvalSubmitting}
                     style={mode === 'unlimited' ? { color: 'var(--good)' } : {}}
-                    role='button'
+                    aria-pressed={mode === 'unlimited'}
+                    onClick={(event) => activateOnce(event, setToMax)}
                   >
                     {'Unlimited'}
-                  </div>
+                  </button>
                 </ClusterValue>
               </ClusterRow>
               {!inputLock && (
                 <ClusterRow>
-                  <ClusterValue
-                    onClick={() => {
-                      setMode('custom')
-                      setCustom('')
-                    }}
-                  >
-                    <div
-                      className={'clusterTag'}
+                  <ClusterValue pointerEvents={'auto'}>
+                    <button
+                      type='button'
+                      className='clusterTag clusterTagButton'
+                      disabled={approvalSubmitting}
                       style={isCustom ? { color: 'var(--good)' } : {}}
-                      role='button'
+                      aria-pressed={isCustom}
+                      onClick={() => {
+                        releaseApprovalSubmission()
+                        setMode('custom')
+                        setCustom('')
+                      }}
                     >
                       Custom
-                    </div>
+                    </button>
                   </ClusterValue>
                 </ClusterRow>
               )}

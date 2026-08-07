@@ -14,7 +14,7 @@ import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
 import link from '../../../../../resources/link'
 import { erc20Interface } from '../../../../../resources/contracts'
 
-class TransactionRequest extends React.Component {
+export class TransactionRequest extends React.Component {
   renderAdjustFee() {
     const { req } = this.props
     return <AdjustFee req={req} />
@@ -44,8 +44,8 @@ class TransactionRequest extends React.Component {
       <EditTokenSpend
         data={data}
         requestedAmount={requestedAmount}
-        updateRequest={(amount) =>
-          link.rpc('updateRequest', req.account, handlerId, { amount }, actionId, () => {})
+        updateRequest={(amount, callback = () => {}) =>
+          link.rpc('updateRequest', req.account, handlerId, { amount }, actionId, callback)
         }
         canRevoke={true}
       />

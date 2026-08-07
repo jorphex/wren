@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import store from '../../../../../../main/store'
 import { screen, render } from '../../../../../componentSetup'
 import TxRequestComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest'
+import { TransactionRequest } from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TxMain } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
 import TxRecipientComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxRecipient'
 import { getYearnIntentLines } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxAction'
@@ -33,6 +34,7 @@ import {
 } from '../../../../../../app/tray/Footer/RequestCommand'
 import TxApproval from '../../../../../../app/tray/Footer/RequestCommand/TxApproval'
 import link from '../../../../../../resources/link'
+import { erc20Interface } from '../../../../../../resources/contracts'
 import { FRAME_SEND_DISPLAY_NAME, FRAME_SEND_ORIGIN } from '../../../../../../resources/domain/origin'
 import { TxClassification } from '../../../../../../main/accounts/types'
 
@@ -219,6 +221,40 @@ describe('confirm', () => {
     render(<TxRequest req={req} step='confirm' />)
 
     expect(screen.getByText('RPC reports execution will revert via eth_simulateV1')).toBeTruthy()
+  })
+})
+
+describe('approval editing', () => {
+  it('forwards the exact account, request, action, amount, and callback to the bridge', () => {
+    const callback = jest.fn()
+    const req = {
+      account,
+      handlerId: 'approval-request',
+      payload: {
+        params: [
+          {
+            data: erc20Interface.encodeFunctionData('approve', [
+              '0x1111111111111111111111111111111111111111',
+              1n
+            ])
+          }
+        ]
+      },
+      recognizedActions: [{ id: 'erc20:approve', data: { amount: '1' } }]
+    }
+    const component = new TransactionRequest({ req })
+    component.store = jest.fn(() => [{ data: { actionId: 'erc20:approve' } }])
+
+    component.renderTokenSpend().props.updateRequest('42', callback)
+
+    expect(link.rpc).toHaveBeenCalledWith(
+      'updateRequest',
+      account,
+      req.handlerId,
+      { amount: '42' },
+      'erc20:approve',
+      callback
+    )
   })
 })
 

@@ -847,8 +847,9 @@ describe('#updateRequest', () => {
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
 
-    Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')
+    const updated = Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')
 
+    expect(updated).toBe(true)
     expect(update).toHaveBeenCalledWith(request, { amount: '42' })
     expect(simulation).toHaveBeenCalledWith(request)
   })
@@ -860,12 +861,12 @@ describe('#updateRequest', () => {
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
 
-    Accounts.updateRequest(request.handlerId, { amount: '-1' }, 'erc20:approve')
+    expect(Accounts.updateRequest(request.handlerId, { amount: '-1' }, 'erc20:approve')).toBe(false)
     request.locked = true
-    Accounts.updateRequest(request.handlerId, { amount: '1' }, 'erc20:approve')
+    expect(Accounts.updateRequest(request.handlerId, { amount: '1' }, 'erc20:approve')).toBe(false)
     request.locked = false
     request.status = 'pending'
-    Accounts.updateRequest(request.handlerId, { amount: '1' }, 'erc20:approve')
+    expect(Accounts.updateRequest(request.handlerId, { amount: '1' }, 'erc20:approve')).toBe(false)
 
     expect(update).toHaveBeenCalledTimes(1)
     expect(simulation).not.toHaveBeenCalled()
@@ -880,7 +881,7 @@ describe('#updateRequest', () => {
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
 
-    expect(() => Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')).not.toThrow()
+    expect(Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')).toBe(false)
     expect(simulation).not.toHaveBeenCalled()
   })
 
@@ -902,7 +903,7 @@ describe('#updateRequest', () => {
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
 
-    Accounts.updateRequest(
+    const updated = Accounts.updateRequest(
       permitRequest.handlerId,
       {
         amount: '42',
@@ -914,6 +915,7 @@ describe('#updateRequest', () => {
       null
     )
 
+    expect(updated).toBe(true)
     expect(permitRequest.typedMessage.data.message.value).toBe('42')
     expect(permitRequest.typedMessage.data.domain.chainId).toBe(1)
     expect(permitRequest.permit.value).toBe('42')

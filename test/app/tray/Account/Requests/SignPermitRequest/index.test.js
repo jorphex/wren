@@ -1,4 +1,4 @@
-import { screen, render } from '../../../../../componentSetup'
+import { act, screen, render } from '../../../../../componentSetup'
 import SignPermitRequest from '../../../../../../app/tray/Account/Requests/SignPermitRequest'
 import link from '../../../../../../resources/link'
 
@@ -155,7 +155,8 @@ it('sends only a normalized amount request from the permit editor', async () => 
     />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Unlimited' }))
+  const unlimited = screen.getByRole('button', { name: 'Unlimited' })
+  await user.click(unlimited)
 
   expect(link.rpc).toHaveBeenCalledWith(
     'updateRequest',
@@ -165,6 +166,12 @@ it('sends only a normalized amount request from the permit editor', async () => 
     null,
     expect.any(Function)
   )
+
+  expect(unlimited.getAttribute('aria-pressed')).toBe('true')
+  const callback = link.rpc.mock.calls.at(-1)[5]
+  await act(async () => callback(new Error('update rejected')))
+  expect(screen.getByRole('button', { name: 'Requested' }).getAttribute('aria-pressed')).toBe('true')
+  expect(unlimited.getAttribute('aria-pressed')).toBe('false')
 })
 
 it('shows and allows editing a zero-decimal token permit', async () => {

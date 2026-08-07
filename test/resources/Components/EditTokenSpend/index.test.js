@@ -1,7 +1,10 @@
-import { render, screen } from '../../../componentSetup'
+import { act, render, screen } from '../../../componentSetup'
 import EditTokenSpend from '../../../../resources/Components/EditTokenSpend'
+import link from '../../../../resources/link'
 import BigNumber from 'bignumber.js'
 import { max } from '../../../../resources/utils/numbers'
+
+jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 const maxIntStr = max.toString(10)
 
@@ -35,14 +38,16 @@ describe('changing approval amounts', () => {
 
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
+    expect(custom.getAttribute('aria-pressed')).toBe('true')
 
-    const enterAmount = screen.queryByRole('textbox', { label: 'Custom Amount' })
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
     await user.type(enterAmount, '50')
 
-    const updateCustom = screen.getByText('update')
-    await user.click(updateCustom)
+    const updateCustom = screen.getByRole('button', { name: 'update' })
+    await user.dblClick(updateCustom)
 
-    expect(onUpdate).toHaveBeenCalledWith('500000')
+    expect(onUpdate).toHaveBeenCalledWith('500000', expect.any(Function))
+    expect(onUpdate).toHaveBeenCalledTimes(1)
   })
 
   it('allows users to input custom amounts which are decimal', async () => {
@@ -75,13 +80,10 @@ describe('changing approval amounts', () => {
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
 
-    const enterAmount = screen.queryByRole('textbox', { label: 'Custom Amount' })
-    await user.type(enterAmount, '50.1')
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
+    await user.type(enterAmount, '50.1{Enter}')
 
-    const updateCustom = screen.getByText('update')
-    await user.click(updateCustom)
-
-    expect(onUpdate).toHaveBeenCalledWith('501000')
+    expect(onUpdate).toHaveBeenCalledWith('501000', expect.any(Function))
   })
 
   it('does not allow users to input a custom amount with more decimals than allowed by the contract', async () => {
@@ -114,7 +116,7 @@ describe('changing approval amounts', () => {
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
 
-    const enterAmount = screen.queryByRole('textbox', { label: 'Custom Amount' })
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
     await user.type(enterAmount, '50.00001')
 
     expect(screen.getByText('invalid')).toBeTruthy()
@@ -172,10 +174,12 @@ describe('changing approval amounts', () => {
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
 
-    const setUnlimited = screen.queryByRole('button', { name: 'Unlimited' })
-    await user.click(setUnlimited)
+    const setUnlimited = screen.getByRole('button', { name: 'Unlimited' })
+    setUnlimited.focus()
+    await user.keyboard('{Enter}')
 
-    expect(onUpdate).toHaveBeenCalledWith(maxIntStr)
+    expect(onUpdate).toHaveBeenCalledWith(maxIntStr, expect.any(Function))
+    expect(setUnlimited.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('allows the user to revoke a transaction approval explicitly', async () => {
@@ -201,13 +205,43 @@ describe('changing approval amounts', () => {
       />
     )
 
-    await user.click(screen.getByRole('button', { name: 'Revoke' }))
+    const revoke = screen.getByRole('button', { name: 'Revoke' })
+    revoke.focus()
+    await user.keyboard(' ')
 
-    expect(onUpdate).toHaveBeenCalledWith('0')
+    expect(onUpdate).toHaveBeenCalledWith('0', expect.any(Function))
+    expect(revoke.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('rolls back a rejected preset and suppresses duplicate activation', async () => {
+    const onUpdate = jest.fn((_amount, callback) => callback(new Error('update rejected')))
+    const requestedAmount = BigNumber('100')
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '100',
+        decimals: 0,
+        name: 'TST',
+        symbol: 'TST',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={requestedAmount} updateRequest={onUpdate} />
+    )
+
+    const requested = screen.getByRole('button', { name: 'Requested' })
+    const unlimited = screen.getByRole('button', { name: 'Unlimited' })
+    await user.dblClick(unlimited)
+
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+    expect(onUpdate).toHaveBeenCalledWith(maxIntStr, expect.any(Function))
+    expect(requested.getAttribute('aria-pressed')).toBe('true')
+    expect(unlimited.getAttribute('aria-pressed')).toBe('false')
   })
 
   it('supports exact custom amounts for zero-decimal tokens', async () => {
-    const onUpdate = jest.fn()
+    const onUpdate = jest.fn((_amount, callback) => callback(null))
     const approval = {
       data: {
         spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
@@ -227,7 +261,7 @@ describe('changing approval amounts', () => {
     await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
     await user.click(screen.getByText('update'))
 
-    expect(onUpdate).toHaveBeenCalledWith('42')
+    expect(onUpdate).toHaveBeenCalledWith('42', expect.any(Function))
   })
 
   it('supports zero-padded ABI hex amounts', async () => {
@@ -248,7 +282,7 @@ describe('changing approval amounts', () => {
     )
 
     expect(screen.getByText('1')).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Custom' }))
+    await user.click(screen.getByRole('button', { name: 'Edit approval amount, current 1' }))
     expect(screen.getByRole('textbox', { name: 'Custom Amount' })).toBeTruthy()
   })
 
@@ -308,7 +342,7 @@ describe('changing approval amounts', () => {
   })
 
   it('allows the user to revert the token approval back to the original request', async () => {
-    const onUpdate = jest.fn()
+    const onUpdate = jest.fn((_amount, callback) => callback(null))
     const requestedAmountHex = '0x011170'
     const requestedAmount = BigNumber(requestedAmountHex)
     const approval = {
@@ -335,14 +369,171 @@ describe('changing approval amounts', () => {
     await user.click(setUnlimited)
 
     const setRequested = screen.queryByRole('button', { name: 'Requested' })
+    expect(setRequested.getAttribute('aria-pressed')).toBe('false')
     await user.click(setRequested)
 
-    expect(onUpdate).toHaveBeenNthCalledWith(1, maxIntStr)
-    expect(onUpdate).toHaveBeenNthCalledWith(2, '70000')
+    expect(onUpdate).toHaveBeenNthCalledWith(1, maxIntStr, expect.any(Function))
+    expect(onUpdate).toHaveBeenNthCalledWith(2, '70000', expect.any(Function))
+    expect(setRequested.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('allows a failed custom update to be retried', async () => {
+    const onUpdate = jest.fn((_amount, callback) => callback(new Error('update failed')))
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '1',
+        decimals: 0,
+        name: 'Whole Token',
+        symbol: 'WHOLE',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={BigNumber(1)} updateRequest={onUpdate} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Custom' }))
+    await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
+    const update = screen.getByRole('button', { name: 'update' })
+    await user.click(update)
+    await user.click(update)
+
+    expect(onUpdate).toHaveBeenCalledTimes(2)
+    expect(onUpdate).toHaveBeenNthCalledWith(1, '42', expect.any(Function))
+    expect(onUpdate).toHaveBeenNthCalledWith(2, '42', expect.any(Function))
+  })
+
+  it('keeps amount editing locked while a custom update is pending', async () => {
+    const onUpdate = jest.fn()
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '1',
+        decimals: 0,
+        name: 'Whole Token',
+        symbol: 'WHOLE',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={BigNumber(1)} updateRequest={onUpdate} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Custom' }))
+    const input = screen.getByRole('textbox', { name: 'Custom Amount' })
+    await user.type(input, '42')
+    await user.click(screen.getByRole('button', { name: 'update' }))
+
+    expect(input.disabled).toBe(true)
+    expect(screen.getByRole('button', { name: 'Requested' }).disabled).toBe(true)
+    expect(screen.getByRole('button', { name: 'Unlimited' }).disabled).toBe(true)
+    expect(screen.getByRole('button', { name: 'Custom' }).disabled).toBe(true)
+    await user.type(input, '7')
+    expect(input.value).toBe('42')
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('unlocks editing after the request update completes', async () => {
+    let completeUpdate
+    const onUpdate = jest.fn((_amount, callback) => {
+      completeUpdate = callback
+    })
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '1',
+        decimals: 0,
+        name: 'Whole Token',
+        symbol: 'WHOLE',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { rerender, user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={BigNumber(1)} updateRequest={onUpdate} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Custom' }))
+    const input = screen.getByRole('textbox', { name: 'Custom Amount' })
+    await user.type(input, '42')
+    await user.click(screen.getByRole('button', { name: 'update' }))
+    expect(input.disabled).toBe(true)
+
+    await act(async () => completeUpdate(null))
+    expect(screen.getByRole('textbox', { name: 'Custom Amount' }).disabled).toBe(false)
+
+    rerender(
+      <EditTokenSpend
+        data={{ ...approval.data, amount: '42' }}
+        requestedAmount={BigNumber(1)}
+        updateRequest={onUpdate}
+      />
+    )
+
+    expect(screen.getByRole('textbox', { name: 'Custom Amount' }).disabled).toBe(false)
+    expect(screen.getByRole('button', { name: 'Requested' }).disabled).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Unlimited' }))
+    await act(async () => completeUpdate(null))
+    rerender(
+      <EditTokenSpend
+        data={{ ...approval.data, amount: maxIntStr }}
+        requestedAmount={BigNumber(1)}
+        updateRequest={onUpdate}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Requested' }).disabled).toBe(false)
+    expect(screen.getByRole('button', { name: 'Unlimited' }).disabled).toBe(false)
+  })
+
+  it('suppresses the second activation of a completed double click', async () => {
+    const onUpdate = jest.fn((_amount, callback) => callback(null))
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '1',
+        decimals: 0,
+        name: 'Whole Token',
+        symbol: 'WHOLE',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={BigNumber(1)} updateRequest={onUpdate} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Custom' }))
+    await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
+    await user.dblClick(screen.getByRole('button', { name: 'update' }))
+
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('copies the exact spender and token contract addresses', async () => {
+    const approval = {
+      data: {
+        spender: { address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4', ens: '', type: 'external' },
+        amount: '1',
+        decimals: 0,
+        name: 'Whole Token',
+        symbol: 'WHOLE',
+        contract: { address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698', ens: '', type: 'contract' }
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend data={approval.data} requestedAmount={BigNumber(1)} updateRequest={() => {}} />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Copy spender address' }))
+    await user.click(screen.getByRole('button', { name: 'Copy token contract address' }))
+
+    expect(link.send).toHaveBeenNthCalledWith(1, 'tray:clipboardData', approval.data.spender.address)
+    expect(link.send).toHaveBeenNthCalledWith(2, 'tray:clipboardData', approval.data.contract.address)
   })
 
   it('allows the user to revert the token approval back to the original amount when no decimal data is present', async () => {
-    const onUpdate = jest.fn()
+    const onUpdate = jest.fn((_amount, callback) => callback(null))
     const requestedAmountHex = '0x011170'
     const requestedAmount = BigNumber(requestedAmountHex)
     const approval = {
@@ -374,8 +565,8 @@ describe('changing approval amounts', () => {
     const setRequested = screen.queryByRole('button', { name: 'Requested' })
     await user.click(setRequested)
 
-    expect(onUpdate).toHaveBeenNthCalledWith(1, maxIntStr)
-    expect(onUpdate).toHaveBeenNthCalledWith(2, BigNumber('0x011170').toString(10))
+    expect(onUpdate).toHaveBeenNthCalledWith(1, maxIntStr, expect.any(Function))
+    expect(onUpdate).toHaveBeenNthCalledWith(2, BigNumber('0x011170').toString(10), expect.any(Function))
   })
 
   const requiredApprovalData = ['decimals', 'symbol', 'name']
@@ -416,9 +607,8 @@ describe('changing approval amounts', () => {
       const custom = screen.queryByRole('button', { name: 'Custom' })
       expect(custom).toBeNull()
 
-      const requestedAmount = screen.queryByRole('textbox')
-      const displayedContent = requestedAmount.textContent.trim()
-      expect(displayedContent).toBe(approval.data.decimals ? '100' : '100000000')
+      const displayedContent = approval.data.decimals ? '100' : '100000000'
+      const requestedAmount = screen.getByText(displayedContent)
 
       // ensure click on requested amount textbox doesn't allow user to enter a custom amount
       await user.click(requestedAmount)

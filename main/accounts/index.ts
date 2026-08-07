@@ -252,15 +252,15 @@ export class Accounts extends EventEmitter {
 
     const currentAccount = this.requestAccount(reqId, accountId)
     const request = currentAccount?.getRequest(reqId)
-    if (!currentAccount || !request) return
-    if (request.status !== undefined) return
+    if (!currentAccount || !request) return false
+    if (request.status !== undefined) return false
 
     if (request.type === 'transaction') {
       const transactionReq = request as TransactionRequest
-      if (!actionId || transactionReq.locked) return
+      if (!actionId || transactionReq.locked) return false
 
       const action = (transactionReq.recognizedActions || []).find((a) => a.id === actionId)
-      if (!action?.update) return
+      if (!action?.update) return false
 
       let updated = false
       try {
@@ -270,10 +270,10 @@ export class Accounts extends EventEmitter {
       }
       if (!updated) {
         log.warn('Ignored invalid transaction action update', { reqId, actionId })
-        return
+        return false
       }
       currentAccount.refreshTransactionSimulation(transactionReq)
-      return
+      return true
     }
 
     if (request.type === 'signErc20Permit') {
@@ -281,7 +281,7 @@ export class Accounts extends EventEmitter {
       const amount = parseTokenBaseUnitAmount(data['amount'])
       if (amount === undefined || !permitReq.typedMessage?.data?.message || !permitReq.permit) {
         log.warn('Ignored invalid token permit amount update', { reqId })
-        return
+        return false
       }
 
       const normalizedAmount = amount.toString(10)
@@ -289,7 +289,10 @@ export class Accounts extends EventEmitter {
       permitReq.permit.value = normalizedAmount
       currentAccount.syncPermitApprovalRisk(permitReq)
       currentAccount.update()
+      return true
     }
+
+    return false
   }
 
   async replaceTx(accountId: string, id: string, type: ReplacementType) {

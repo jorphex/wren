@@ -148,6 +148,40 @@
   padding 8px
   text-align center
 
+.clusterTagButton
+  appearance none
+  width 100%
+  border 0
+  background transparent
+  color inherit
+  cursor pointer
+  font-family inherit
+
+.clusterTagButton:disabled
+  cursor default
+  opacity 0.55
+
+.clusterTagButton:not(:disabled):hover,
+.clusterAddressButton:hover
+  background var(--ghostB)
+
+.clusterTagButton:not(:disabled):active,
+.clusterAddressButton:active
+  background var(--ghostC)
+
+.clusterTagButton:focus-visible,
+.clusterAddressButton:focus-visible
+  outline 0
+  box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+
+.clusterAddressButton
+  appearance none
+  width 100%
+  border 0
+  background transparent
+  color inherit
+  font-family inherit
+
 .clusterFocus
   text-transform uppercase
   font-size 13px

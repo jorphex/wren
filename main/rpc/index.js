@@ -5,6 +5,7 @@ import { isAddress } from 'ethers'
 import { openFileDialog } from '../windows/dialog'
 import { openBlockExplorer } from '../windows/window'
 import { routeWalletCallRequest } from './walletCalls'
+import { applyRequestUpdate } from './updateRequest'
 import {
   respondToExtensionPairing,
   revokeExtensionCredential as revokePairedExtension
@@ -140,7 +141,7 @@ const rpc = {
     }, cb)
   },
   updateRequest(accountId, reqId, data, actionId, cb) {
-    callbackWhenDone(() => accounts.updateRequest(reqId, data, actionId, accountId), cb)
+    callbackWhenDone(() => applyRequestUpdate(accounts, reqId, data, actionId, accountId), cb)
   },
   approveRequest(req, cb = () => {}) {
     if (
