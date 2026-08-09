@@ -43,5 +43,4 @@ it('keeps Send and copy address actions connected to their existing tray behavio
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(link.send).toHaveBeenCalledWith('*:addFrame', 'dappLauncher')
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: false })
 })

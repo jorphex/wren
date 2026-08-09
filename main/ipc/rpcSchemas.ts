@@ -5,7 +5,6 @@ const MAX_SECRET = 4096
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/)
 const HandlerIdSchema = z.string().uuid()
 const IdSchema = z.string().min(1).max(256)
-const ChainIdSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 const ErrorSchema = z.string().min(1).max(1024)
 const OptionalErrorSchema = z.union([ErrorSchema, z.null(), z.undefined()])
 const NullishSchema = z.union([z.null(), z.undefined()])
@@ -15,9 +14,6 @@ const QuantitySchema = z
   .regex(/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/)
   .max(66)
 const AmountSchema = z.string().regex(/^(?:0|[1-9][0-9]{0,77})$/)
-const NetworkReferenceSchema = z
-  .object({ type: z.literal('ethereum'), id: ChainIdSchema })
-  .transform(({ type, id }) => ({ type, id }))
 const RequestReferenceSchema = z
   .object({ handlerId: HandlerIdSchema, account: AddressSchema })
   .transform(({ handlerId, account }) => ({ handlerId, account }))
@@ -125,7 +121,6 @@ const rpcSchemas = {
   },
   locateKeystore: { request: noArgs, response: result(JsonRecordSchema) },
   lockSigner: { request: z.tuple([IdSchema]), response: actionResult },
-  openExplorer: { request: z.tuple([NetworkReferenceSchema]), response: actionResult },
   removeAccount: {
     request: z.tuple([AddressSchema, z.object({}).strict()]),
     response: actionResult

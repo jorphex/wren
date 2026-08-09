@@ -1,4 +1,3 @@
-import { URL } from 'url'
 import log from 'electron-log'
 
 import { FrameInstance } from './frameInstances'
@@ -6,20 +5,9 @@ import store from '../../store'
 import { requireStoreAction } from '../../store/action'
 import server from '../../dapps/server'
 import { createViewInstance } from '../window'
+import { embeddedDappOrigin, extractDappSession, loadDappView } from '../dappView'
 
-interface Extract {
-  session: string
-  ens: string
-}
-
-const extract = (l: string): Extract => {
-  const url = new URL(l)
-  const session = url.searchParams.get('session') || ''
-  const ens = url.port === '8421' ? url.hostname.replace('.localhost', '') || '' : ''
-  return { session, ens }
-}
-
-export const embeddedDappOrigin = (ens: string) => `http://${ens}.localhost:8421`
+export { embeddedDappOrigin }
 
 export default {
   // Create a view instance on a frame
@@ -30,40 +18,6 @@ export default {
     if (!frame) throw new Error(`Frame ${frameId} is unavailable while creating a view`)
 
     const viewInstance = createViewInstance(view.ens)
-    const { session } = extract(view.url)
-
-    viewInstance.webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
-      if (!details || !details.frame) return cb({ cancel: true }) // Reject the request\
-
-      const appUrl = details.frame.url
-
-      if (
-        // Initial request for app
-        details.resourceType === 'mainFrame' &&
-        details.url === view.url &&
-        !appUrl
-      ) {
-        return cb({ requestHeaders: details.requestHeaders }) // Leave untouched
-      } else if (
-        // devtools:// request
-        details.url.startsWith('devtools://')
-      ) {
-        return cb({ requestHeaders: details.requestHeaders }) // Leave untouched
-      } else if (
-        // Reqest from app
-        appUrl === view.url
-      ) {
-        const { ens, session } = extract(appUrl)
-        if (ens !== view.ens || !server.sessions.verify(ens, session)) {
-          return cb({ cancel: true })
-        } else {
-          details.requestHeaders['Origin'] = embeddedDappOrigin(view.ens)
-          return cb({ requestHeaders: details.requestHeaders })
-        }
-      } else {
-        return cb({ cancel: true }) // Reject the request
-      }
-    })
 
     const fullscreen = !!frame.fullscreen
 
@@ -87,22 +41,9 @@ export default {
 
     // viewInstance.webContents.openDevTools({ mode: 'detach' })
 
-    viewInstance.webContents.session.cookies
-      .set({
-        url: view.url,
-        name: '__frameSession',
-        value: session
-      })
-      .then(
-        () => {
-          viewInstance.webContents.loadURL(view.url)
-        },
-        (error) => log.error(error)
-      )
-
-    viewInstance.webContents.on('did-finish-load', () => {
+    loadDappView(viewInstance, view, () => {
       requireStoreAction('updateFrameView')(frameId, view.id, { ready: true })
-    })
+    }).catch((error) => log.error(error))
 
     // Keep reference to view on frame instance
     frameInstance.views = { ...(frameInstance.views || {}), [view.id]: viewInstance }
@@ -114,7 +55,7 @@ export default {
 
     const viewMetadata = frameId ? store('main.frames', frameId, 'views', viewId) : undefined
     if (viewMetadata) {
-      const { ens, session } = extract(viewMetadata.url)
+      const { ens, session } = extractDappSession(viewMetadata.url)
       server.sessions.remove(ens, session)
     }
 

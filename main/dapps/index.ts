@@ -12,8 +12,10 @@ import { getPinnedDappManifest } from './manifests'
 import { dappPathExists, getDappCacheDir, isDappVerified } from './verify'
 
 import type { Dapp } from '../store/state'
+import type { DappViewDescriptor } from '../windows/dappView'
 
 const nebula = nebulaApi()
+let embeddedOpener: ((view: DappViewDescriptor) => void) | undefined
 
 function getDapp(dappId: string): Dapp {
   const dapp = store('main.dapps', dappId)
@@ -88,14 +90,11 @@ async function checkStatus(dappId: string) {
 
     requireStoreAction('updateDapp')(dappId, { record })
 
-    const isDappCurrent = async () => {
-      return (
-        dapp.content === content && (await dappPathExists(dappId)) && (await isDappVerified(dappId, content))
-      )
-    }
+    const installedContentIsCurrent =
+      (await dappPathExists(dappId)) && (await isDappVerified(dappId, content))
 
     // Checks if all assets are up to date with current manifest
-    if (!(await isDappCurrent())) {
+    if (!installedContentIsCurrent) {
       log.info(`Updating content for dapp ${dappId} from hash ${content}`)
       // Sets status to 'updating' when updating the bundle
       requireStoreAction('updateDapp')(dappId, { status: 'updating' })
@@ -103,12 +102,14 @@ async function checkStatus(dappId: string) {
       await updateDappContent(dappId, content, manifest)
     } else {
       log.info(`Dapp ${dapp.ens} already up to date: ${content}`)
+      if (dapp.content !== content) {
+        requireStoreAction('updateDapp')(dappId, { content, manifest })
+      }
     }
     // Sets status to 'ready' when done
     requireStoreAction('updateDapp')(dappId, { status: 'ready', openWhenReady: false })
 
-    // The frame id 'dappLauncher' needs to refrence target frame
-    if (openWhenReady) surface.open('dappLauncher', dapp.ens)
+    if (openWhenReady) surface.openEmbedded(dapp.ens)
   } catch (e) {
     log.error('Check status error', e)
     const retry = checkStatusRetryCount || 0
@@ -135,7 +136,9 @@ const refreshDapps = ({ statusFilter = '' } = {}) => {
     })
     .forEach((id) => {
       requireStoreAction('updateDapp')(id, { status: 'loading' })
-      if (nebula.ready()) {
+      const dapp = dapps[id]
+      if (!dapp) return
+      if (getPinnedDappManifest(dapp.ens) || nebula.ready()) {
         checkStatus(id)
       } else {
         nebula.once('ready', () => checkStatus(id))
@@ -158,6 +161,9 @@ let nextId = 0
 const getId = () => (++nextId).toString()
 
 const surface = {
+  setEmbeddedOpener(opener: (view: DappViewDescriptor) => void) {
+    embeddedOpener = opener
+  },
   manifest: (_ens: string) => {
     // gets the dapp manifest and returns all options and details for user to confirm before installing
   },
@@ -215,6 +221,31 @@ const surface = {
     } else {
       requireStoreAction('updateDapp')(dappId, { ens, status: 'initial', openWhenReady: true })
     }
+  },
+  openEmbedded(ens: string) {
+    const dappId = hash(ens)
+    const dapp = getDapp(dappId)
+
+    if (dapp.status !== 'ready') {
+      requireStoreAction('updateDapp')(dappId, { ens, status: 'initial', openWhenReady: true })
+      return
+    }
+    if (!embeddedOpener) {
+      log.error(`Attempted to open embedded dapp ${ens} before its host was registered`)
+      return
+    }
+
+    const session = crypto.randomBytes(6).toString('hex')
+    const view = {
+      id: getId(),
+      ready: false,
+      dappId,
+      ens,
+      url: `http://${ens}.localhost:8421/?session=${session}`
+    }
+
+    server.sessions.add(ens, session)
+    embeddedOpener(view)
   }
 }
 

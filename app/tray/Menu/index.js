@@ -4,9 +4,6 @@ import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 
 export class Menu extends React.Component {
-  componentWillUnmount() {
-    clearTimeout(this.clickTimer)
-  }
   render() {
     return (
       <div className='panelMenu'>
@@ -27,11 +24,7 @@ export class Menu extends React.Component {
           className='panelMenuItem panelMenuItemSend wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           aria-label='Open Wren Send'
           onClick={() => {
-            clearTimeout(this.clickTimer)
-            this.clickTimer = setTimeout(() => {
-              link.send('*:addFrame', 'dappLauncher')
-              link.send('tray:action', 'setDash', { showing: false })
-            }, 50)
+            link.send('*:addFrame', 'dappLauncher')
           }}
         >
           <Icon name='send' size={19} />

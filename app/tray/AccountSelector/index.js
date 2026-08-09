@@ -229,8 +229,8 @@ export class AccountSelector extends React.Component {
             type='button'
             className={
               hideBalances
-                ? 'accountPrivacyToggle accountPrivacyToggleHidden wrenControl wrenControlSecondary wrenControlIcon'
-                : 'accountPrivacyToggle wrenControl wrenControlSecondary wrenControlIcon'
+                ? 'accountPrivacyToggle accountPrivacyToggleHidden wrenControl wrenControlGhost wrenControlIcon'
+                : 'accountPrivacyToggle wrenControl wrenControlGhost wrenControlIcon'
             }
             aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
             aria-pressed={hideBalances}
@@ -251,7 +251,8 @@ export class AccountSelector extends React.Component {
         <button
           type='button'
           className='accountDrawerScrim'
-          aria-label='Close account drawer'
+          aria-hidden='true'
+          tabIndex={-1}
           onClick={() => this.store.toggleShowAccounts(false)}
         />
         <aside

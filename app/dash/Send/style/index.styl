@@ -1,0 +1,33 @@
+.sendRouteStatus
+  position absolute
+  inset 0
+  display flex
+  align-items center
+  justify-content center
+  flex-direction column
+  gap var(--wren-space-5)
+  color var(--wren-text-secondary)
+  background var(--wren-bg-canvas)
+
+  .loader,
+  .loader:after
+    width 72px
+    height 72px
+    border-radius 50%
+
+  .loader
+    box-sizing border-box
+    border 3px solid var(--wren-border-subtle)
+    border-left-color var(--wren-accent-primary)
+    animation sendRouteSpin 0.58s linear infinite
+
+.sendRouteMessage
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 450
+  line-height 1.45
+  text-align center
+
+@keyframes sendRouteSpin
+  to
+    transform rotate(360deg)

@@ -11,6 +11,7 @@ import Dapps from './Dapps'
 import Tokens from './Tokens'
 import Settings from './Settings'
 import Earn from './Earn'
+import Send from './Send'
 import AddressBook from './AddressBook'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
@@ -68,6 +69,7 @@ class Dash extends React.Component {
     if (view === 'tokens') return <Tokens data={data} />
     if (view === 'settings') return <Settings data={data} />
     if (view === 'notify') return <Notify data={data} />
+    if (view === 'send') return <Send />
     return <Main />
   }
 

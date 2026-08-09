@@ -3,7 +3,6 @@ const log = require('electron-log')
 const { randomBytes } = require('crypto')
 import { isAddress } from 'ethers'
 import { openFileDialog } from '../windows/dialog'
-import { openBlockExplorer } from '../windows/window'
 import { routeWalletCallRequest } from './walletCalls'
 import { applyRequestUpdate } from './updateRequest'
 import { enforceRequestOriginAuthorization } from './requestAuthorization'
@@ -316,14 +315,6 @@ const rpc = {
   },
   signerCompatibility(accountId, handlerId, cb) {
     accounts.signerCompatibility(handlerId, cb, accountId)
-  },
-  openExplorer(chain, cb) {
-    if (store('main.mute.explorerWarning')) {
-      openBlockExplorer(chain)
-    } else {
-      store.notify('openExplorer', { chain })
-    }
-    cb(null)
   }
 }
 

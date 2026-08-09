@@ -2,7 +2,7 @@ import Restore from 'react-restore'
 
 import { Menu } from '../../../../app/tray/Menu'
 import link from '../../../../resources/link'
-import { act, fireEvent, render, screen } from '../../../componentSetup'
+import { fireEvent, render, screen } from '../../../componentSetup'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
@@ -32,24 +32,10 @@ it('opens the dashboard from the keyboard', async () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
 })
 
-it('opens Wren Send and closes the dashboard after the click delay', () => {
+it('opens Wren Send in the dashboard workspace', () => {
   renderMenu()
 
   fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
-  act(() => jest.advanceTimersByTime(50))
 
-  expect(link.send.mock.calls).toEqual([
-    ['*:addFrame', 'dappLauncher'],
-    ['tray:action', 'setDash', { showing: false }]
-  ])
-})
-
-it('cancels a pending Wren Send action when the menu unmounts', () => {
-  const { unmount } = renderMenu()
-
-  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
-  unmount()
-  act(() => jest.advanceTimersByTime(50))
-
-  expect(link.send).not.toHaveBeenCalled()
+  expect(link.send).toHaveBeenCalledWith('*:addFrame', 'dappLauncher')
 })

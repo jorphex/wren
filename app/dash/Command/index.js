@@ -48,6 +48,7 @@ export class Command extends React.Component {
       dapps: 'Connected apps',
       default: 'Wren',
       settings: 'Settings',
+      send: 'Send',
       tokens: 'Tokens'
     }
     const title = titles[view || 'default'] || view

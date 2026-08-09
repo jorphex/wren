@@ -41,7 +41,7 @@ describe('WebContentsView creation', () => {
           cookies: { set: jest.fn(() => new Promise(() => {})) }
         },
         setVisualZoomLevelLimits: jest.fn(),
-        on: jest.fn(),
+        once: jest.fn(),
         loadURL: jest.fn()
       }
     }

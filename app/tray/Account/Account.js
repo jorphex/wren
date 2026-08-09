@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import Icon from '../../../resources/Components/Icon'
+import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
 import { createBalance, formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
@@ -55,6 +56,32 @@ const modules = {
   balances: Balances,
   signer: Signer,
   settings: Settings
+}
+
+export const AccountAddressActions = ({ address, explorerChain }) => {
+  const [copied, copyAddress] = useCopiedMessage(address, 1800)
+
+  return (
+    <div className='accountHomeAddressActions'>
+      <button type='button' className='accountHomeAddress' aria-label='Copy address' onClick={copyAddress}>
+        <span>{address}</span>
+        <Icon name={copied ? 'check' : 'copy'} size={14} />
+      </button>
+      {explorerChain ? (
+        <button
+          type='button'
+          className='accountHomeExplorer wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
+          aria-label='Open account in block explorer'
+          onClick={() => link.send('tray:openExplorer', explorerChain, null, address)}
+        >
+          <Icon name='external' size={14} />
+        </button>
+      ) : null}
+      <span className='clusterStatus' role='status' aria-live='polite'>
+        {copied ? 'Address copied' : ''}
+      </span>
+    </div>
+  )
 }
 
 class _AccountModule extends React.Component {
@@ -179,6 +206,16 @@ class _AccountMain extends React.Component {
     }, BigNumber(0))
   }
 
+  getAddressExplorerChain() {
+    const networks = this.store('main.networks.ethereum') || {}
+    const entries = Object.entries(networks)
+    const preferred = entries.find(([id, network]) => String(id) === '1' && network?.on && network.explorer)
+    const available = preferred || entries.find(([, network]) => network?.on && network.explorer)
+    if (!available) return null
+    const [id, network] = available
+    return { type: 'ethereum', id: network.id ?? Number(id) }
+  }
+
   renderHomeHeader() {
     const account = this.store('main.accounts', this.props.id) || {}
     const address = getAddress(account.address || this.props.id)
@@ -191,15 +228,7 @@ class _AccountMain extends React.Component {
         <div className='accountHomeIdentity'>
           <div className='accountHomeEyebrow'>Selected account</div>
           <h1 className='accountHomeTitle'>{name}</h1>
-          <button
-            type='button'
-            className='accountHomeAddress'
-            aria-label='Copy address'
-            onClick={() => link.send('tray:clipboardData', address)}
-          >
-            <span>{address}</span>
-            <Icon name='copy' size={13} />
-          </button>
+          <AccountAddressActions address={address} explorerChain={this.getAddressExplorerChain()} />
         </div>
         <div className='accountHomeTotal'>
           <div className='accountHomeTotalLabel'>Total balance</div>
@@ -217,7 +246,6 @@ class _AccountMain extends React.Component {
             className='wrenControl wrenControlPrimary'
             onClick={() => {
               link.send('*:addFrame', 'dappLauncher')
-              link.send('tray:action', 'setDash', { showing: false })
             }}
           >
             <Icon name='send' size={14} />
@@ -453,18 +481,10 @@ class _AccountBody extends React.Component {
             link.send('nav:back', 'panel')
           }}
           {...this.props}
-          accountViewTitle={crumb.data.id}
+          accountViewTitle={crumb.data.id === 'requests' ? 'Requests' : crumb.data.id}
         >
-          <div
-            className='accountsModuleExpand cardShow'
-            onMouseDown={() => this.setState({ expandedModule: false })}
-          >
-            <div
-              className='moduleExpanded'
-              onMouseDown={(e) => {
-                e.stopPropagation()
-              }}
-            >
+          <div className='accountsModuleExpand cardShow'>
+            <div className='moduleExpanded'>
               <AccountModule
                 id={crumb.data.id}
                 account={crumb.data.account}

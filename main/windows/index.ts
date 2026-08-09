@@ -18,6 +18,8 @@ import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
 import { createRendererView, createWindow, restoreWindow } from './window'
 import { EmbeddedWorkspace } from './embeddedWorkspace'
+import { EmbeddedDapp } from './embeddedDapp'
+import type { DappViewDescriptor } from './dappView'
 import { shouldAnimateShell, shouldSuppressRepeatedShow } from './displayTransition'
 import { GlideDetector, shouldAutoHideGlide } from './glide'
 import { GlideSentinel } from './glideSentinel'
@@ -355,6 +357,8 @@ export class Tray {
 
 class Dash {
   private readonly workspace: EmbeddedWorkspace
+  private embeddedDapp: EmbeddedDapp | undefined
+  private lastLayout: ShellLayout | undefined
 
   constructor() {
     const trayWindow = windows.tray
@@ -374,15 +378,18 @@ class Dash {
   }
 
   public applyLayout(layout: ShellLayout, animate = false, focusWhenShown = false) {
+    this.lastLayout = layout
     const showing = !!store('windows.dash.showing')
     const joined = shouldJoinWorkspace(layout, showing, false)
     if (animate && showing) this.prepareWorkspaceContent()
     if (animate && !showing) this.concealWorkspaceContent()
+    if (animate) this.embeddedDapp?.hide()
     if (!animate) this.setShellJoined(joined)
     this.workspace.applyShellLayout(layout.window, layout.main, layout.workspace, showing, animate, () => {
       this.setShellJoined(joined)
       if (showing) this.revealWorkspaceContent()
-      if (showing && focusWhenShown) this.workspace.focus()
+      this.syncEmbeddedDapp(focusWhenShown)
+      if (showing && focusWhenShown && !this.isSendRoute()) this.workspace.focus()
     })
     if (animate) this.setShellJoined(shouldJoinWorkspace(layout, showing, true))
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
@@ -408,6 +415,7 @@ class Dash {
 
   public hide() {
     if (this.workspace.isTransitioningTo(false)) return
+    this.embeddedDapp?.hide()
     tray.reposition(false)
     windows.tray?.webContents.focus()
   }
@@ -426,7 +434,10 @@ class Dash {
     } else {
       tray.reposition(animate, true)
     }
-    if (!animate) this.workspace.focus()
+    if (!animate) {
+      if (this.isSendRoute()) this.embeddedDapp?.focus()
+      else this.workspace.focus()
+    }
     if (devToolsEnabled) this.workspace.openDevTools()
   }
 
@@ -435,7 +446,45 @@ class Dash {
   }
 
   destroy() {
+    this.embeddedDapp?.destroy()
+    this.embeddedDapp = undefined
     this.workspace.destroy()
+  }
+
+  openEmbeddedDapp(view: DappViewDescriptor) {
+    const trayWindow = windows.tray
+    if (!trayWindow || trayWindow.isDestroyed()) return
+    this.embeddedDapp?.destroy()
+    this.embeddedDapp = new EmbeddedDapp(
+      trayWindow,
+      view,
+      () => {
+        this.workspace.send('main:flex', 'sendReady')
+      },
+      electronApp
+    )
+    this.syncEmbeddedDapp(true)
+  }
+
+  focusEmbeddedDapp(ens: string) {
+    if (!this.embeddedDapp?.matches(ens)) return false
+    this.syncEmbeddedDapp(true)
+    return true
+  }
+
+  syncEmbeddedDapp(focus = false) {
+    if (!this.embeddedDapp) return
+    if (!this.isSendRoute()) {
+      this.embeddedDapp.destroy()
+      this.embeddedDapp = undefined
+      return
+    }
+    if (!this.lastLayout) return
+    this.embeddedDapp.applyLayout(this.lastLayout.workspace, !!store('windows.dash.showing'), focus)
+  }
+
+  private isSendRoute() {
+    return store('windows.dash.nav', 0, 'view') === 'send'
   }
 
   send(channel: string, ...args: string[]) {
@@ -615,6 +664,7 @@ const init = () => {
   // data change events
   lifecycleObservers.push(
     store.observer(() => {
+      dash.syncEmbeddedDapp()
       if (store('windows.dash.showing')) {
         dash.show()
       } else {
@@ -715,6 +765,12 @@ export default {
   },
   refocusFrame(frameId: string) {
     frameManager.refocus(frameId)
+  },
+  openEmbeddedDapp(view: DappViewDescriptor) {
+    dash.openEmbeddedDapp(view)
+  },
+  focusEmbeddedDapp(ens: string) {
+    return dash.focusEmbeddedDapp(ens)
   },
   close(e: IpcMainEvent) {
     windowFromWebContents(e.sender).close()

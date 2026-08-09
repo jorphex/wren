@@ -348,23 +348,15 @@ dapps.add({
 })
 
 onRenderer('*:addFrame', (e, id) => {
-  const existingFrame = store('main.frames', id)
-
-  if (existingFrame) {
-    windows.refocusFrame(id)
-  } else {
-    requireStoreAction('addFrame')({
-      id,
-      currentView: '',
-      views: {}
-    })
-    dapps.open(id, 'send.frame.eth')
-  }
+  if (id !== 'dappLauncher') return
+  requireStoreAction('navDash')({ view: 'send', data: {} })
+  if (!windows.focusEmbeddedDapp('send.frame.eth')) dapps.openEmbedded('send.frame.eth')
 })
 
 app.on('ready', () => {
   menu()
   windows.init()
+  dapps.setEmbeddedOpener((view) => windows.openEmbeddedDapp(view))
   if (app.dock) app.dock.hide()
   if (isDev) {
     const loadDev = async () => {

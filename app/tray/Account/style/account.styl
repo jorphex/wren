@@ -611,10 +611,6 @@
       border-radius 0
       background transparent
 
-.requestsPreview:hover
-  .requestsPreviewArrow
-    transform translateX(0px)
-
 .requestsPreview
   appearance none
   display block
@@ -638,18 +634,6 @@
 
   *
     pointer-events none
-
-  .requestsPreviewOverlay
-    position absolute
-    top 0
-    right 0
-    bottom 0
-    left 0
-    z-index 200
-    pointer-events none
-    transition var(--standardFast)
-    background linear-gradient(90deg, var(--overlayA), var(--overlayB))
-    border-radius 26px
 
   .requestPreviewContent
     position absolute
@@ -680,29 +664,6 @@
       div
         max-width 13px
         
-  .requestsPreviewArrow
-     position absolute
-     top 0
-     right 0
-     bottom 0
-     left 0px
-     transform translateX(-440px)
-     transition var(--standard)
-
-    .requestsPreviewArrow1
-      position absolute
-      background var(--ghostA)
-      left 0px
-      margin -157px
-      width 367px
-      height 367px
-      transform rotate(45deg)
-      margin-left 0px
-      border-radius 12px
-      pointer-events none
-      z-index 100
-      filter blur(8px)
-    
   span
     margin-right 8px
 
@@ -1080,19 +1041,34 @@
         padding 0 var(--wren-space-3)
 
     .chainMonitorPreview
-      .clusterRow:first-child > .clusterValue:first-child
-        justify-content flex-end
+      .moduleHeader
+        display grid
+        height 52px
+        padding 0 var(--wren-space-3)
+        grid-template-columns minmax(0, 1fr) auto auto
+        align-items center
+        gap var(--wren-space-2)
 
-      .clusterRow:first-child > .clusterValue + .clusterValue
-        min-width 44px !important
-        max-width 44px !important
-        border-left 0
-        flex-basis 44px !important
-        flex-grow 0 !important
+      .chainMonitorIdentity
+        display flex
+        min-width 0
+        align-items center
+        gap var(--wren-space-2)
+
+        span
+          display flex
+
+        span:last-child
+          overflow hidden
+          text-overflow ellipsis
+          white-space nowrap
+
+      .chainMonitorSwitch
+        position static
 
       .sliceTileGasPrice
         justify-content flex-end
-        padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-3) var(--wren-space-3)
+        padding 0
 
 .accountMainSlide > .accountModule:first-child
   .accountModuleCard
@@ -1312,12 +1288,21 @@
   font-weight 660
   line-height 1.08
 
+.accountHomeAddressActions
+  display flex
+  max-width 100%
+  min-height 34px
+  margin-top 3px
+  align-items center
+  gap var(--wren-space-1)
+
 .accountHomeAddress
   appearance none
   display inline-flex
+  min-width 0
+  min-height 32px
   max-width 100%
-  margin-top 6px
-  padding 0
+  padding 0 var(--wren-space-1)
   align-items center
   gap 7px
   overflow hidden
@@ -1348,6 +1333,13 @@
     border-radius 2px
     outline 2px solid var(--wren-focus)
     outline-offset 3px
+
+.accountHomeExplorer
+  flex none
+  width 32px !important
+  min-width 32px !important
+  height 32px !important
+  min-height 32px !important
 
 .accountHomeTotal
   align-self end

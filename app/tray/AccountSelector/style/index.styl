@@ -189,14 +189,6 @@
   *
     pointer-events none
 
-.accountSelectorOpen
-  transform translateY(-14px)
-  transition var(--standard)
-  z-index 999999999
-  pointer-events none
-  *
-    pointer-events none
-
 .newAccountButton
   display flex
 
@@ -280,9 +272,6 @@
   transform none
   pointer-events none
 
-  *
-    pointer-events auto
-
 .accountSwitcherBar
   position absolute
   top 0
@@ -293,6 +282,12 @@
   height 60px
   align-items center
   justify-content space-between
+  pointer-events none
+
+.accountSwitcherTrigger,
+.accountSwitcherPrivacy,
+.accountDrawerScrim,
+.accountDrawer
   pointer-events auto
 
 .accountSwitcherTrigger
