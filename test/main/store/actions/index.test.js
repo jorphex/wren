@@ -155,9 +155,7 @@ describe('ordered RPC endpoint actions', () => {
   it('updates a disabled endpoint URL without enabling network traffic', () => {
     const disabled = { ...second, on: false, connected: false, status: 'off' }
 
-    expect(
-      run(storeActions.setEndpointUrl, [first, disabled], 'rpc-2', 'https://new.example')
-    ).toEqual([
+    expect(run(storeActions.setEndpointUrl, [first, disabled], 'rpc-2', 'https://new.example')).toEqual([
       first,
       expect.objectContaining({
         id: 'rpc-2',

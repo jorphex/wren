@@ -26,7 +26,5 @@ export function getChainIdentity(chainId, isTestnet = false) {
   const family = chainFamilies[Number(chainId)] || 'custom'
   const identity = identities[family]
 
-  return isTestnet
-    ? { ...identity, colorToken: '--wren-chain-testnet' }
-    : identity
+  return isTestnet ? { ...identity, colorToken: '--wren-chain-testnet' } : identity
 }

@@ -98,7 +98,9 @@ export class Notify extends React.Component {
           <div className='notifyWrenIcon'>
             <img alt='' aria-hidden='true' src={wrenIcon} />
           </div>
-          <h2 id='wren-notify-title' className='notifyTitle'>Welcome to Wren</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Welcome to Wren
+          </h2>
           <div className='notifySubtitle'>Your desktop EVM wallet</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
@@ -141,7 +143,9 @@ export class Notify extends React.Component {
             <div className='notifyWrenIcon'>
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
-            <h2 id='wren-notify-title' className='notifyTitle'>Wren Preview</h2>
+            <h2 id='wren-notify-title' className='notifyTitle'>
+              Wren Preview
+            </h2>
             <div className='notifyBody'>
               <div className='notifyBodyBlock'>
                 <div className='notifySection'>Use hardware signers for high-value accounts.</div>
@@ -194,7 +198,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>Gas fee warning</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Gas fee warning
+          </h2>
           <div className='notifyBody'>
             {feeUSD !== '0.00' ? (
               <>
@@ -249,7 +255,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>Signer unavailable</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Signer unavailable
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyQuestion'>Check the signer for this account, then try again.</div>
           </div>
@@ -273,7 +281,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>No signer attached</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            No signer attached
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>This account does not have a signer.</div>
             <div className='notifyBodyQuestion'>Attach a signer that can sign for this account.</div>
@@ -304,7 +314,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>Signer compatibility</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Signer compatibility
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               {`Your ${capitalize(signer)} is not compatible with ${capitalize(tx)} ${
@@ -509,7 +521,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>Open external link</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Open external link
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLineUrl'>{url}</div>
             <div className='notifyBodyLine'>Open this link in your browser?</div>
@@ -545,7 +559,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <h2 id='wren-notify-title' className='notifyTitle'>Open block explorer</h2>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            Open block explorer
+          </h2>
           {hash ? (
             <div className='notifyBody'>
               <div className='notifyBodyLine'>{'Wren will open this transaction in your browser:'}</div>

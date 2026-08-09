@@ -352,12 +352,7 @@ class ChainConnection extends EventEmitter {
     const earlierEndpointsFailed = enabled
       .slice(0, currentIndex)
       .every((endpoint) => failedStatuses.includes(endpoint.status))
-    if (
-      this.active.provider &&
-      current &&
-      target === this.active.currentTarget &&
-      earlierEndpointsFailed
-    ) {
+    if (this.active.provider && current && target === this.active.currentTarget && earlierEndpointsFailed) {
       return
     }
 

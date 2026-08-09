@@ -42,9 +42,7 @@ it('presents extension consent as a modal with the safe action focused first', (
   render(<NotifyHarness />)
 
   expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true')
-  expect(document.activeElement).toBe(
-    screen.getByRole('button', { name: 'Decline extension connection' })
-  )
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Decline extension connection' }))
 })
 
 it('shows the pairing identity and submits the opaque pairing request', async () => {

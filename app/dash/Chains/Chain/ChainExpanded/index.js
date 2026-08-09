@@ -77,9 +77,7 @@ const ChainExpanded = ({
     link.send('tray:action', 'setEndpointUrl', type, id, endpointId, value)
     setEndpoints((items) =>
       items.map((endpoint) =>
-        endpoint.id === endpointId
-          ? { ...endpoint, status: endpoint.on ? 'loading' : 'off' }
-          : endpoint
+        endpoint.id === endpointId ? { ...endpoint, status: endpoint.on ? 'loading' : 'off' } : endpoint
       )
     )
     setEndpointStatuses((statuses) => ({

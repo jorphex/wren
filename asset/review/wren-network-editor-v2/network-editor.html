@@ -81,9 +81,7 @@
       .primaryButton {
         border: 1px solid var(--border);
         border-radius: 7px;
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%),
-          var(--elevated);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%), var(--elevated);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.045),
           inset 0 -1px 0 rgba(0, 0, 0, 0.36),
@@ -361,7 +359,10 @@
       </div>
       <div class="accountContext">
         <span class="accountMark">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3" /><path d="M5 20v-2.5C5 14.5 7.5 13 12 13s7 1.5 7 4.5V20M8 4h8" /></svg>
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3" />
+            <path d="M5 20v-2.5C5 14.5 7.5 13 12 13s7 1.5 7 4.5V20M8 4h8" />
+          </svg>
         </span>
         Workshop
       </div>
@@ -393,7 +394,9 @@
           <div class="fieldRow full">
             <label class="field rpcField">
               <span class="fieldLabel">RPC URL <span class="fieldState">Connected</span></span>
-              <span class="well technical focused"><input class="rpcInput" value="https://polygon.example/rpc" /></span>
+              <span class="well technical focused"
+                ><input class="rpcInput" value="https://polygon.example/rpc"
+              /></span>
             </label>
           </div>
           <div class="fieldRow full">
@@ -402,7 +405,9 @@
               <span class="well technical"><input value="https://explorer.example" /></span>
             </label>
           </div>
-          <div class="toggleRow"><span>Test network</span><span class="toggle" aria-label="Test network off"></span></div>
+          <div class="toggleRow">
+            <span>Test network</span><span class="toggle" aria-label="Test network off"></span>
+          </div>
         </form>
       </section>
 
@@ -430,8 +435,12 @@
           </div>
           <div class="fieldRow full">
             <label class="field rpcField invalid">
-              <span class="fieldLabel">RPC URL <span class="fieldState error">Chain ID 1 · expected 137</span></span>
-              <span class="well technical"><input class="rpcInput" value="https://rpc.example.invalid" /></span>
+              <span class="fieldLabel"
+                >RPC URL <span class="fieldState error">Chain ID 1 · expected 137</span></span
+              >
+              <span class="well technical"
+                ><input class="rpcInput" value="https://rpc.example.invalid"
+              /></span>
             </label>
           </div>
           <div class="fieldRow full">
@@ -440,7 +449,9 @@
               <span class="well technical"><input value="https://explorer.example" /></span>
             </label>
           </div>
-          <div class="toggleRow"><span>Test network</span><span class="toggle" aria-label="Test network off"></span></div>
+          <div class="toggleRow">
+            <span>Test network</span><span class="toggle" aria-label="Test network off"></span>
+          </div>
         </form>
       </section>
 
@@ -469,13 +480,17 @@
           <div class="fieldRow full">
             <label class="field rpcField">
               <span class="fieldLabel">RPC URL <span class="fieldState">Connected</span></span>
-              <span class="well technical"><input class="rpcInput" value="https://polygon.example/primary" /></span>
+              <span class="well technical"
+                ><input class="rpcInput" value="https://polygon.example/primary"
+              /></span>
             </label>
           </div>
           <div class="fieldRow full">
             <label class="field rpcField">
               <span class="fieldLabel">Fallback RPC <span class="fieldState">Connected</span></span>
-              <span class="well technical"><input class="rpcInput" value="https://polygon.example/fallback" /></span>
+              <span class="well technical"
+                ><input class="rpcInput" value="https://polygon.example/fallback"
+              /></span>
             </label>
           </div>
           <div class="fieldRow full">
@@ -484,7 +499,9 @@
               <span class="well technical"><input value="https://explorer.example" /></span>
             </label>
           </div>
-          <div class="toggleRow"><span>Use this network</span><span class="toggle on" aria-label="Network enabled"></span></div>
+          <div class="toggleRow">
+            <span>Use this network</span><span class="toggle on" aria-label="Network enabled"></span>
+          </div>
         </form>
       </section>
 
@@ -503,7 +520,12 @@
 
       const page = {
         add: { title: 'Add Polygon', subtitle: 'Requested by uniswap.org', action: 'Add network' },
-        error: { title: 'Add Polygon', subtitle: 'Requested by uniswap.org', action: 'Add network', disabled: true },
+        error: {
+          title: 'Add Polygon',
+          subtitle: 'Requested by uniswap.org',
+          action: 'Add network',
+          disabled: true
+        },
         edit: { title: 'Edit Polygon', subtitle: 'Chain ID 137', action: 'Save changes' }
       }[view]
 

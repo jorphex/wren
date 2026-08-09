@@ -235,9 +235,7 @@ export const ChainHeader = ({
   const chainIdentity = getChainIdentity(id, isTestnet)
   const isCustomIdentity = chainIdentity.mark === 'chain'
   const identityColor =
-    isCustomIdentity && primaryColor
-      ? `var(--${primaryColor})`
-      : `var(${chainIdentity.colorToken})`
+    isCustomIdentity && primaryColor ? `var(--${primaryColor})` : `var(${chainIdentity.colorToken})`
   const identity = (
     <>
       <div className='signerIcon'>

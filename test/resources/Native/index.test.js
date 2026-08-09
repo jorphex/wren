@@ -34,15 +34,18 @@ const renderControls = (platform, frame = {}) => {
   return render(<TestNativeControls />)
 }
 
-it.each(['linux', 'win32'])('exposes named window controls and preserves IPC events on %s', async (platform) => {
-  const { user } = renderControls(platform)
+it.each(['linux', 'win32'])(
+  'exposes named window controls and preserves IPC events on %s',
+  async (platform) => {
+    const { user } = renderControls(platform)
 
-  await user.click(screen.getByRole('button', { name: 'Minimize window' }))
-  await user.click(screen.getByRole('button', { name: 'Maximize window' }))
-  await user.click(screen.getByRole('button', { name: 'Close window' }))
+    await user.click(screen.getByRole('button', { name: 'Minimize window' }))
+    await user.click(screen.getByRole('button', { name: 'Maximize window' }))
+    await user.click(screen.getByRole('button', { name: 'Close window' }))
 
-  expect(link.send.mock.calls).toEqual([['frame:min'], ['frame:max'], ['frame:close']])
-})
+    expect(link.send.mock.calls).toEqual([['frame:min'], ['frame:max'], ['frame:close']])
+  }
+)
 
 it.each([
   ['linux', { maximized: true }],
