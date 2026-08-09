@@ -48,7 +48,7 @@ const Details = ({ address, name, copyLabel }) => {
           </span>
           <div className='clusterAddressRecipientFull'>
             {showCopiedMessage ? (
-              <span>{'Address Copied'}</span>
+              <span>{'Address copied'}</span>
             ) : (
               <span className='clusterFira'>{address}</span>
             )}
@@ -63,7 +63,7 @@ const Description = ({ isRevoke }) => (
   <ClusterRow>
     <ClusterValue>
       <div className='clusterTag' style={{ color: 'var(--moon)' }}>
-        {isRevoke ? <span>{'revoke approval to spend'}</span> : <span>{'grant approval to spend'}</span>}
+        {isRevoke ? <span>{'Revoke approval to spend'}</span> : <span>{'Grant approval to spend'}</span>}
       </div>
     </ClusterValue>
   </ClusterRow>
@@ -166,7 +166,7 @@ const EditTokenSpend = ({
 
   return (
     <div className='updateTokenApproval'>
-      <ClusterBox title={'token approval details'} style={{ marginTop: '64px' }}>
+      <ClusterBox title={'Token approval details'} style={{ marginTop: '64px' }}>
         <Cluster>
           <Details
             {...{
@@ -194,7 +194,7 @@ const EditTokenSpend = ({
               <ClusterValue>
                 <Countdown
                   end={deadline}
-                  title={'Permission Expires in'}
+                  title={'Permission expires in'}
                   innerClass='clusterFocusHighlight'
                   titleClass='clusterFocus'
                 />
@@ -218,7 +218,7 @@ const EditTokenSpend = ({
                     className='approveTokenSpendAmountSubmit approveTokenSpendAmountStatus'
                     style={{ color: 'var(--bad)' }}
                   >
-                    {'invalid'}
+                    {'Invalid amount'}
                   </div>
                 ) : isCustom && customAmount !== undefined && amountValue !== customAmount ? (
                   <button
@@ -227,7 +227,7 @@ const EditTokenSpend = ({
                     disabled={approvalSubmitting}
                     onClick={(event) => activateOnce(event, submitCustomAmount)}
                   >
-                    {'update'}
+                    {'Update'}
                   </button>
                 ) : (
                   <div
@@ -245,7 +245,7 @@ const EditTokenSpend = ({
                     autoFocus
                     type='text'
                     maxLength={MAX_TOKEN_AMOUNT_INPUT_LENGTH}
-                    aria-label='Custom Amount'
+                    aria-label='Custom amount'
                     value={custom}
                     disabled={approvalSubmitting}
                     onChange={(e) => {
@@ -284,7 +284,7 @@ const EditTokenSpend = ({
           </ClusterRow>
           <ClusterRow>
             <ClusterValue transparent={true}>
-              <div className='approveTokenSpendAmountSubtitle'>Set Token Approval Spend Limit</div>
+              <div className='approveTokenSpendAmountSubtitle'>Token approval spending limit</div>
             </ClusterValue>
           </ClusterRow>
           {!hasInvalidAmount && (

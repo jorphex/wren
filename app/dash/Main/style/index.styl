@@ -296,7 +296,7 @@ button.requestFeatureButton:focus-visible
     padding 1px 6px 2px 6px
     font-weight 400
     border-radius 5px
-    font-size 12px
+    font-size var(--wren-type-small)
     border 1px solid var(--outerspace05)
     color var(--outerspace)
     height 30px
@@ -306,7 +306,7 @@ button.requestFeatureButton:focus-visible
     padding 1px 6px 2px 6px
     font-weight 400
     border-radius 5px
-    font-size 12px
+    font-size var(--wren-type-small)
     border 1px solid var(--outerspace05)
     color var(--outerspace)
     height 30px
@@ -317,7 +317,7 @@ button.requestFeatureButton:focus-visible
     align-items center
     height 18px
     border-radius 10px
-    font-size 10px
+    font-size var(--wren-type-caption)
     text-transform uppercase
     padding-left 8px
     padding-right 8px
@@ -487,6 +487,41 @@ button.requestFeatureButton:focus-visible
     padding var(--wren-space-5) var(--wren-space-4) var(--wren-space-8)
     box-sizing border-box
 
+  .localSetting
+    margin 0 0 var(--wren-space-2)
+    padding var(--wren-space-4)
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+    .signerPermissionSetting
+      width auto
+      max-width calc(100% - 90px)
+      color var(--wren-text-primary)
+      font-size 15px
+      font-weight 500
+      text-transform none
+
+    .signerPermissionDetails
+      padding-top var(--wren-space-2)
+      color var(--wren-text-tertiary)
+      font-size 13px
+      line-height 18px
+
+    .keyCommand,
+    .keyCommandLoading
+      min-height 28px
+      height auto
+      border-color var(--wren-border-default)
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-secondary)
+      background var(--wren-surface-inset)
+      font-family var(--wren-font-mono)
+
+  .localSetting:last-of-type
+    margin-bottom 0
+
 .dashHomeHeader
   padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-5)
 
@@ -507,7 +542,8 @@ button.requestFeatureButton:focus-visible
 
 .dashHomeEyebrow
   color var(--wren-accent-primary-hover)
-  font-size 10px
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
   font-weight 500
   letter-spacing 1.4px
   text-transform uppercase
@@ -517,11 +553,13 @@ button.requestFeatureButton:focus-visible
 
   h2
     margin 0 var(--wren-space-2) var(--wren-space-2)
-    color var(--wren-text-tertiary)
-    font-size 11px
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
     font-weight 500
-    letter-spacing 1.2px
-    text-transform uppercase
+    letter-spacing 0
+    line-height 18px
+    text-transform none
 
 .dashModuleList
   display grid
@@ -531,7 +569,7 @@ button.requestFeatureButton:focus-visible
 .dashModuleSection:first-child .dashModuleList
   grid-template-columns repeat(3, minmax(0, 1fr))
 
-button.dashModule
+button.dashModule.wrenControl
   position relative
   display grid
   grid-template-columns 28px minmax(0, 1fr) 16px
@@ -567,6 +605,23 @@ button.dashModule
     outline-offset -2px
     box-shadow none
 
+button.dashModule.wrenControl.wrenControlGhost
+  border-color transparent
+  background-color transparent
+  background-image none
+  box-shadow none
+
+  &:hover:not(:disabled)
+    border-color transparent
+    background-color var(--wren-surface-hover)
+    background-image none
+    box-shadow none
+
+  &:active:not(:disabled)
+    transform none
+    background-color var(--wren-surface-active)
+    box-shadow none
+
   .dashModuleIcon
     position static
     display flex
@@ -595,7 +650,7 @@ button.dashModule
   .dashModuleDescription
     overflow hidden
     color var(--wren-text-tertiary)
-    font-size 12px
+    font-size var(--wren-type-small)
     font-weight 300
     line-height 16px
     display -webkit-box
@@ -645,30 +700,13 @@ button.dashModule
   p
     margin 0
     color var(--wren-text-tertiary)
-    font-size 12px
+    font-size var(--wren-type-small)
     line-height 17px
 
-.dashCompanion .snipItBrowserExtensionIcons
+.dashCompanionBrowserActions
   display flex
   flex none
   gap var(--wren-space-2)
-
-  .snipItBrowserExtensionIcon
-    display flex
-    width 38px
-    height 38px
-    padding 0
-    align-items center
-    justify-content center
-    border 0
-    border-radius 4px
-    color var(--wren-text-secondary)
-    background transparent
-    cursor pointer
-    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
-
-    &:hover
-      background var(--wren-surface-hover)
 
 .dashSupportActions
   display grid
@@ -676,34 +714,11 @@ button.dashModule
   gap var(--wren-space-2)
   margin-bottom var(--wren-space-6)
 
-  .requestFeatureButton
-    display flex
-    min-height 38px
-    padding 0 var(--wren-space-3)
-    align-items center
-    justify-content center
-    gap var(--wren-space-2)
-    border 0
-    border-radius 4px
-    color var(--wren-text-secondary)
-    background transparent
-    font-family var(--wren-font-ui)
-    font-size 12px
-    cursor pointer
-
-    &:hover
-      color var(--wren-text-primary)
-      background var(--wren-surface-hover)
-
-  .requestFeatureButtonDanger:hover
-    color var(--wren-danger)
-    background var(--wren-danger-soft)
-
 .localSettings .appInfo
   padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
   border-top 1px solid var(--wren-border-subtle)
   color var(--wren-text-muted)
-  font-size 11px
+  font-size var(--wren-type-caption)
 
   .appInfoLineInstanceId
     width 100%
@@ -712,7 +727,7 @@ button.dashModule
     overflow hidden
     color var(--wren-text-muted)
     font-family var(--wren-font-mono)
-    font-size 10px
+    font-size var(--wren-type-caption)
     text-align center
     text-overflow ellipsis
     text-transform none
@@ -721,17 +736,17 @@ button.dashModule
   .appInfoLineVersion
     color var(--wren-text-tertiary)
     font-family var(--wren-font-mono)
-    font-size 11px
+    font-size var(--wren-type-caption)
 
   .appInfoViewLicense
     margin-top var(--wren-space-3)
     color var(--wren-text-tertiary)
-    font-size 10px
+    font-size var(--wren-type-caption)
 
   .appInfoLineReset
     margin var(--wren-space-2) 0 0
     color var(--wren-text-tertiary)
-    font-size 10px
+    font-size var(--wren-type-caption)
     line-height 24px
 
   .appInfoLineResetButton
@@ -740,7 +755,7 @@ button.dashModule
     background transparent
     border 0
     font-family var(--wren-font-ui)
-    font-size 10px
+    font-size var(--wren-type-caption)
     cursor pointer
 
     &:hover

@@ -1,11 +1,18 @@
 import React from 'react'
 
 import RingIcon from '../../../resources/Components/RingIcon'
+import Icon from '../../../resources/Components/Icon'
 
 import { ClusterRow, ClusterValue } from '../../../resources/Components/Cluster'
 
 import link from '../../../resources/link'
-import svg from '../../../resources/svg'
+
+const requestIcons = {
+  accounts: 'accounts',
+  chain: 'network',
+  sign: 'sign',
+  tokens: 'tokens'
+}
 
 class _RequestItem extends React.Component {
   constructor(props, context) {
@@ -68,6 +75,12 @@ class _RequestItem extends React.Component {
     const notice = (req.notice || '').toLowerCase()
 
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
+    const requestIcon = requestIcons[svgName]
+    const statusIcon = ['error', 'declined'].includes(req.status)
+      ? 'failed'
+      : ['sent', 'sending', 'verifying', 'confirming', 'confirmed'].includes(req.status)
+        ? 'check'
+        : 'pending'
 
     return (
       <ClusterRow>
@@ -86,7 +99,11 @@ class _RequestItem extends React.Component {
             <div className='requestItemTitle'>
               <div className='requestItemTitleLeft'>
                 <div className='requestItemIcon'>
-                  <RingIcon color={color} svgName={svgName} img={img} small={true} />
+                  {requestIcon && !img ? (
+                    <Icon name={requestIcon} size={18} />
+                  ) : (
+                    <RingIcon color={color} svgName={svgName} img={img} small={true} />
+                  )}
                 </div>
                 <div className='requestItemMain'>
                   <div className='requestItemTitleMain'>{title}</div>
@@ -114,10 +131,7 @@ class _RequestItem extends React.Component {
                 )}
               </div>
               <div className={requestItemDetailsClass}>
-                <div className={inactive ? 'requestItemWave requestItemWaveDisabled' : 'requestItemWave'}>
-                  <div className='requestItemLine'>{svg.sine()}</div>
-                  <div className='requestItemLine requestItemLineShadow'>{svg.sine()}</div>
-                </div>
+                <Icon name={statusIcon} size={16} />
               </div>
             </div>
             <div style={headerMode ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}>{children}</div>

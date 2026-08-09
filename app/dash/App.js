@@ -31,7 +31,7 @@ const AddNewItemButton = ({ view, req }) => {
     <div className='dashFooter'>
       <button
         type='button'
-        className='dashFooterButton'
+        className='dashFooterButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
         onClick={() => link.send('tray:action', 'navDash', { view, data: dataMap[view] })}
       >
         <div className='newAccountIcon'>
@@ -79,7 +79,7 @@ class Dash extends React.Component {
     return (
       <div className='dash'>
         <Command />
-        <div className='dashMain' style={showAddButton ? { bottom: '100px' } : undefined}>
+        <div className='dashMain' style={showAddButton ? { bottom: '78px' } : undefined}>
           <div className='dashMainOverlay' />
           <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>
         </div>

@@ -1,89 +1,132 @@
 .sliceTileUsage
+  display flex
+  align-items center
+  justify-content center
   width 100%
   height 100%
-  display flex
-  font-size 10px
-  justify-content center
-  align-items center
-  text-transform uppercase
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-caption)
   font-weight 400
+  text-transform none
 
   .sliceTileUsageCount
-    font-size 17px
-    margin-right 7px
-    border-radius 16px
     display flex
-    justify-content center
     align-items center
+    justify-content center
+    margin-right var(--wren-space-2)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
 
 .sliceOrigin
   appearance none
-  width calc(100% - 12px)
-  padding 0
-  border 0
-  color inherit
-  font-family inherit
-  text-align inherit
-  cursor pointer
   display flex
-  justify-content space-between
   align-items center
-  position relative
-  height 52px
+  width 100%
+  min-height 60px
   box-sizing border-box
-  font-size 14px
-  font-weight 400
-  margin 6px
-  border-radius var(--wren-radius-sm)
-  background var(--wren-surface-card)
-  border 1px solid var(--wren-border-subtle)
-  box-shadow var(--wren-shadow-sm)
+  margin 0
+  padding 10px var(--wren-space-3)
+  border 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+  border-radius 0
+  color var(--wren-text-primary)
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  text-align left
+  cursor pointer
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
   *
     pointer-events none
 
 .sliceOriginIdentity
-  min-width 0
-  flex 1
   display flex
+  flex 1
+  min-width 0
   flex-direction column
   align-items flex-start
-  padding 0 16px 0 48px
+  padding 0 var(--wren-space-3) 0 var(--wren-space-3)
 
   .sliceOriginTitle
     max-width 100%
-    color var(--wren-text-primary)
-    text-overflow ellipsis
     overflow hidden
-    text-align left
-    white-space nowrap
+    color var(--wren-text-primary)
     font-weight 500
+    text-overflow ellipsis
+    white-space nowrap
 
   .sliceOriginStatus
-    margin-top 3px
+    margin-top 2px
     color var(--wren-text-tertiary)
-    font-size 11px
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
     line-height 14px
 
 .sliceOrigin:hover
-  background var(--wren-surface-hover)
-  border-color var(--wren-border-default)
+  background var(--wren-ledger-hover)
+
+.sliceOrigin:active
+  background var(--wren-surface-active)
 
 .sliceOrigin:focus-visible
-  outline 2px solid var(--wren-focus, var(--moon))
+  outline 2px solid var(--wren-focus)
   outline-offset 2px
 
+.sliceOriginGroup
+  display block
+
+.sliceOriginList
+  margin 0 var(--wren-space-2) var(--wren-space-3)
+  border-top 1px solid var(--wren-ledger-rule)
+
+  .sliceOrigin:last-child
+    border-bottom 0
+
 .sliceOrigin:disabled
-  cursor default
+  color var(--wren-text-disabled)
+  cursor not-allowed
   opacity .65
+
+.sliceOriginIndicator
+  flex 0 0 auto
+  width 8px
+  height 8px
+  border-radius 50%
+  background var(--wren-success)
+
+.sliceOriginIndicatorOff
+  background var(--wren-text-muted)
+
+.sliceOriginReqs
+  display flex
+  flex 0 0 auto
+  align-items baseline
+  margin-left var(--wren-space-2)
+  color var(--wren-text-tertiary)
+
+  .sliceOriginReqsNumber
+    margin-right 4px
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-small)
+
+  .sliceOriginReqsLabel
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 400
+    text-transform none
 
 .connectedAppsEmpty
   display flex
-  justify-content center
-  align-items center
   flex-direction column
+  align-items center
+  justify-content center
   min-height 410px
-  padding 28px 24px 48px
   box-sizing border-box
+  padding 28px 24px 48px
   color var(--wren-text-secondary)
   text-align center
 
@@ -91,7 +134,7 @@
     display block
     width min(100%, 420px)
     max-height 230px
-    margin-bottom 16px
+    margin-bottom var(--wren-space-4)
     object-fit contain
 
   strong
@@ -102,141 +145,102 @@
   span
     max-width 340px
     margin-top 7px
-    font-size 13px
+    font-size var(--wren-type-small)
     line-height 20px
 
-.sliceOriginIndicator
-  position absolute 
-  top 50%
-  margin-top -3px
-  left 20px
-  bottom 0px
-  width 7px
-  height 7px
-  border-radius 4px
-  display flex
-  justify-content center
-  align-items center
-  border-radius 12px
-  background var(--good)
-  *
-    pointer-events none
-
-.sliceOriginIndicatorOff
-  background var(--ghostY)
-  box-shadow 0px 0px 0px var(--ghostX)
-
-.sliceOriginReqs
-  margin-right 24px
-  display flex
-  justify-content center
-  align-items center
-
-  .sliceOriginReqsNumber
-    color var(--wren-text-primary)
-    font-size 15px
-    margin-right 5px
-    
-  .sliceOriginReqsLabel
-    margin-top 2px
-    color var(--wren-text-tertiary)
-    font-size 9px
-    text-transform uppercase
-    font-weight 500
-
 .originSwapOrigin
-  height 120px
-  width 100%
-  font-size 20px
-  font-weight 300
   display flex
   align-items center
   justify-content center
+  min-height 112px
+  padding var(--wren-space-4)
+  box-sizing border-box
+  color var(--wren-text-primary)
+  font-size var(--wren-type-heading)
+  font-weight 500
 
   .originSwapOriginText
-    margin-left 10px
+    margin-left var(--wren-space-2)
 
 .originSwapTitle
-  width 100%
-  display flex
-  justify-content center
-  text-transform uppercase
-  font-size 12px
+  padding 0 var(--wren-space-4) var(--wren-space-2)
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
   font-weight 500
-  padding-bottom 6px
-  letter-spacing 1px
-  padding-left 1px
-  
+  text-transform none
+
 .originSwapChainList
-  background var(--ghostZ)
-  border-radius 12px
+  margin var(--wren-space-2)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
   .originChainItem
     appearance none
     position relative
-    width calc(100% - 12px)
-    padding 0
-    color inherit
-    font-family inherit
     display flex
-    justify-content flex-start
     align-items center
-    height 64px
-    margin 6px
+    width 100%
+    min-height 58px
+    box-sizing border-box
+    margin 0
+    padding var(--wren-space-2) 52px var(--wren-space-2) var(--wren-space-2)
+    border 1px solid transparent
     border-radius var(--wren-radius-sm)
+    color var(--wren-text-primary)
+    background transparent
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-weight 500
+    text-align left
     cursor pointer
-    background var(--ghostA)
-    box-shadow 0px 2px 4px var(--ghostX)
-    margin-bottom 10px
-    font-size 18px
-    font-weight 400
-    border 0
-    border-bottom 2px solid var(--ghostZ)
-    transform translateY(0px)
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
   .originChainItem:hover
-    background var(--ghostB)
-    box-shadow 0px 4px 8px var(--ghostX)
-    transform translateY(-1px)
+    border-color var(--wren-border-default)
+    background var(--wren-surface-hover)
 
   .originChainItem:active
-    background var(--ghostB)
-    box-shadow 0px 1px 2px var(--ghostX)
-    transform translateY(0px)
+    background var(--wren-surface-active)
 
   .originChainItem:focus-visible
-    outline 2px solid var(--wren-focus, var(--moon))
+    outline 2px solid var(--wren-focus)
     outline-offset 2px
 
   .originChainItem:disabled
     cursor default
-    opacity .6
+    opacity .65
 
   .originChainItemIcon
-    padding 1px 16px 0px 16px
-    *
-      cursor pointer
-  
+    display flex
+    align-items center
+    justify-content center
+    width 36px
+    margin-right var(--wren-space-3)
+
   .originChainItemCheck
     position absolute
-    bottom 11px
-    right 11px
-    height 42px
-    width 42px
+    top 50%
+    right var(--wren-space-3)
     display flex
-    justify-content center
     align-items center
-    background var(--ghostZ)
-    border-radius 12px
+    justify-content center
+    width 28px
+    height 28px
+    border-radius var(--wren-radius-sm)
+    color var(--wren-success)
+    background var(--wren-success-soft)
+    transform translateY(-50%)
 
   .originChainItemActive
-    color var(--good)
+    color var(--wren-success)
 
 .connectedAppMissing
-  min-height 220px
   display flex
   align-items center
   justify-content center
-  padding 24px
+  min-height 220px
+  padding var(--wren-space-6)
   color var(--wren-text-secondary)
   text-align center

@@ -1,25 +1,18 @@
 import React, { useEffect } from 'react'
 
-import onboardingReady from 'url:../../../../../asset/ui/onboarding-ready.png'
-import { Slide, SlideArtwork, SlideBody, SlideItem } from '../../styled'
+import onboardingReady from 'url:../../../../../asset/ui/onboarding-ready-v2.png'
+import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const Outro = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Ready when you are')
+    setTitle('Ready to begin')
     setProceed({ action: 'complete', text: 'Open Wren' })
   }, [])
   return (
-    <Slide>
+    <Slide $background={onboardingReady}>
       <SlideBody>
-        <SlideArtwork alt='' aria-hidden='true' src={onboardingReady} />
-        <SlideItem>
-          <div>Your wallet is set up. Add an account when</div>
-          <div>you are ready to connect and sign.</div>
-        </SlideItem>
-        <SlideItem>
-          <div>Wren keeps the simple path clear and the</div>
-          <div>important details close at hand.</div>
-        </SlideItem>
+        <SlideItem>Wren is ready. Add an account when you are ready to connect and sign.</SlideItem>
+        <SlideItem>Wren keeps the next step clear and the important details close at hand.</SlideItem>
       </SlideBody>
     </Slide>
   )

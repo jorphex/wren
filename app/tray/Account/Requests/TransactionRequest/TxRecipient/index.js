@@ -1,6 +1,5 @@
 import React from 'react'
 import Restore from 'react-restore'
-import BigNumber from 'bignumber.js'
 
 import link from '../../../../../../resources/link'
 
@@ -46,14 +45,12 @@ class TxRecipient extends React.Component {
   render() {
     const req = this.props.req
     const address = req.data.to ? getAddress(req.data.to) : ''
+    if (!address) return null
+
     const ensName = req.recipient && req.recipient.length < 25 ? req.recipient : ''
     const localIdentity = address
       ? resolveLocalAddressIdentity(this.store('main.addressBook'), this.store('main.accounts'), address)
       : undefined
-    const value = req.data.value || '0x'
-    const isZeroValue = value === '0x' || new BigNumber(value).isZero()
-    if (req.recipientType !== 'contract' && !isZeroValue) return null
-
     const yearnAction = (req.recognizedActions || []).find(({ id }) => id?.startsWith('yearn:'))
     const yearnData = yearnAction?.data || {}
     const title = yearnAction
@@ -62,7 +59,7 @@ class TxRecipient extends React.Component {
         ? 'Calling Contract'
         : 'Recipient Account'
     return (
-      <ClusterBox title={title} animationSlot={this.props.i}>
+      <ClusterBox className='transactionReviewRecipient' title={title} animationSlot={this.props.i}>
         <Cluster>
           <ClusterRow>
             <ClusterValue
@@ -72,6 +69,7 @@ class TxRecipient extends React.Component {
                 this.copyAddress(address)
               }}
             >
+              <span className='transactionReviewMetaLabel transactionReviewRecipientLabel'>To</span>
               <div className='clusterAddress'>
                 <AddressIdentity
                   address={address}

@@ -13,8 +13,7 @@ class ChainWrapper extends React.Component {
       type,
       explorer,
       symbol,
-      primaryRpc,
-      secondaryRpc,
+      rpcUrls,
       icon,
       nativeCurrencyName,
       nativeCurrencyIcon,
@@ -29,8 +28,7 @@ class ChainWrapper extends React.Component {
         type={type}
         explorer={explorer}
         symbol={symbol}
-        primaryRpc={primaryRpc}
-        secondaryRpc={secondaryRpc}
+        rpcUrls={rpcUrls}
         existingChains={existingChains}
         icon={icon}
         nativeCurrencyName={nativeCurrencyName}
@@ -54,6 +52,7 @@ class ChainWrapper extends React.Component {
       on,
       connection,
       nativeCurrencyName,
+      nativeCurrencyDecimals,
       icon,
       nativeCurrencyIcon
     } = this.props
@@ -73,6 +72,7 @@ class ChainWrapper extends React.Component {
         primaryColor={primaryColor}
         icon={icon}
         nativeCurrencyName={nativeCurrencyName}
+        nativeCurrencyDecimals={nativeCurrencyDecimals}
         nativeCurrencyIcon={nativeCurrencyIcon}
         price={price}
       />
@@ -80,7 +80,7 @@ class ChainWrapper extends React.Component {
   }
 
   renderPreview() {
-    const { id, name, type, symbol, filter, on, explorer, icon } = this.props
+    const { id, name, type, symbol, filter, isTestnet, on, explorer, icon } = this.props
     const { primaryColor } = this.store('main.networksMeta.ethereum', id)
     const price = this.store('main.networksMeta.ethereum', id, 'nativeCurrency.usd.price') || '?'
 
@@ -101,6 +101,7 @@ class ChainWrapper extends React.Component {
         explorer={explorer}
         primaryColor={primaryColor}
         icon={icon}
+        isTestnet={isTestnet}
         name={name}
         on={on}
         symbol={symbol}

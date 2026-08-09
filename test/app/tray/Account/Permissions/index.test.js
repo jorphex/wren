@@ -118,22 +118,22 @@ it('opens permission management once with the exact breadcrumb and remains singl
 it('requires safe confirmation before clearing all permissions and sends once', async () => {
   const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true })
 
-  await user.click(screen.getByRole('button', { name: 'Clear All Permissions' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
   expect(link.send).not.toHaveBeenCalled()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear All Permissions' }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
 
-  await user.click(screen.getByRole('button', { name: 'Clear All Permissions' }))
-  await user.dblClick(screen.getByRole('button', { name: 'Confirm Clear' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Confirm clear' }))
 
   expect(link.send.mock.calls).toEqual([['tray:action', 'clearPermissions', account]])
-  expect(screen.getByRole('button', { name: 'Clearing...' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Clearing…' }).disabled).toBe(true)
 
   act(() => jest.advanceTimersByTime(600))
-  expect(screen.getByRole('button', { name: 'Clear All Permissions' })).toBeTruthy()
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear All Permissions' }))
+  expect(screen.getByRole('button', { name: 'Clear all permissions' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
 })
 
 it('announces late store-confirmed permission clearing and moves focus to the status', async () => {
@@ -152,26 +152,29 @@ it('announces late store-confirmed permission clearing and moves focus to the st
     <TestExpanded account={account} moduleId='permissions' permissions={permissions} />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Clear All Permissions' }))
-  await user.click(screen.getByRole('button', { name: 'Confirm Clear' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm clear' }))
   act(() => jest.advanceTimersByTime(600))
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear All Permissions' }))
-  await user.click(screen.getByRole('button', { name: 'Clear All Permissions' }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   rerender(
     <TestExpanded account={account} moduleId='permissions' permissions={{ managed: permissions.managed }} />
   )
 
   const status = screen.getByRole('status')
-  expect(status.textContent).toBe('All external permissions cleared.')
+  expect(status.textContent).toBe('All app permissions cleared.')
   expect(document.activeElement).toBe(status)
 })
 
 it('does not offer permission management or clearing for an empty list', () => {
   const { unmount } = renderWithStore(DappsPermissionsPreview, {}, {})
+  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(document.querySelector('.wrenEmptyStateImage')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'More' })).toBeNull()
   unmount()
 
   renderWithStore(DappsPermissionsExpanded, { expanded: true }, {})
-  expect(screen.queryByRole('button', { name: 'Clear All Permissions' })).toBeNull()
+  expect(document.querySelector('.wrenEmptyStateExpanded')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Clear all permissions' })).toBeNull()
 })

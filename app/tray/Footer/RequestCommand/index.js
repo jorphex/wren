@@ -236,7 +236,7 @@ export class RequestCommand extends React.Component {
               <div className='txProgressSuccessItem txProgressSuccessItemCenter'>
                 <div className='txProgressSuccessItemLabel'>Fee</div>
                 <div className='txProgressSuccessItemValue'>
-                  <div style={{ margin: '0px 1px 0px 0px', fontSize: '10px' }}>$</div>
+                  <div className='txProgressSuccessCurrency'>$</div>
                   {feeAtTime || '?.??'}
                 </div>
               </div>
@@ -288,16 +288,19 @@ export class RequestCommand extends React.Component {
     if (displayStatus === 'verifying') displayStatus = 'waiting for block'
 
     return (
-      <>
-        <div
-          className='requestApprove'
-          style={{
-            position: 'absolute',
-            bottom: '8px',
-            left: '0px',
-            right: '0px'
-          }}
-        >
+      <div className='requestApprove requestApproveTransaction'>
+        <div className='requestActionContext'>
+          <span className='requestActionContextIcon'>
+            <Icon name='verify' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>
+              {req.simulation?.status === 'pending' ? 'Checking transaction' : 'Ready for review'}
+            </strong>
+            <span>Verify these details on your signer before approving.</span>
+          </span>
+        </div>
+        <div className='requestActionButtons'>
           <button
             type='button'
             className='requestDecline'
@@ -349,12 +352,12 @@ export class RequestCommand extends React.Component {
                   </span>
                 </span>
               ) : (
-                <span>{req.simulation?.status === 'pending' ? 'Checking' : 'Sign'}</span>
+                <span>{req.simulation?.status === 'pending' ? 'Checking' : 'Sign transaction'}</span>
               )}
             </span>
           </button>
         </div>
-      </>
+      </div>
     )
   }
 
@@ -404,8 +407,11 @@ export class RequestCommand extends React.Component {
         </div>
       )
     } else {
+      const commandClass = notice
+        ? 'requestNotice requestNoticeTransaction requestNoticeTransactionStatus'
+        : 'requestNotice requestNoticeTransaction requestNoticeTransactionReview'
       return (
-        <div className='requestNotice'>
+        <div className={commandClass}>
           <div className='requestNoticeInner'>
             <TxBar req={req} infoPane={(type) => this.setState({ infoPane: type })} />
             {!notice && this.renderPopBar()}
@@ -477,36 +483,47 @@ export class RequestCommand extends React.Component {
             })()}
           </div>
         ) : (
-          <div className='requestApprove'>
-            <button
-              type='button'
-              className='requestDecline'
-              disabled={!this.state.allowInput}
-              onClick={() => {
-                if (this.state.allowInput) this.decline(req)
-              }}
-            >
-              <span className='requestDeclineButton _txButton _txButtonBad'>
-                <span>Decline</span>
+          <div className='requestApprove requestApproveSignature'>
+            <div className='requestActionContext'>
+              <span className='requestActionContextIcon'>
+                <Icon name='sign' size={19} />
               </span>
-            </button>
-            <button
-              type='button'
-              className='requestSign'
-              disabled={!this.state.allowInput}
-              onClick={() => {
-                if (this.state.allowInput) {
-                  link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
-                    if (this.handleSignerCompatibilityFailure(e, compatibility, req)) return
-                    this.approve(req.handlerId, req)
-                  })
-                }
-              }}
-            >
-              <span className='requestSignButton _txButton'>
-                <span>Sign</span>
+              <span className='requestActionContextCopy'>
+                <strong>Ready to sign</strong>
+                <span>Verify this message on your signer before approving.</span>
               </span>
-            </button>
+            </div>
+            <div className='requestActionButtons'>
+              <button
+                type='button'
+                className='requestDecline'
+                disabled={!this.state.allowInput}
+                onClick={() => {
+                  if (this.state.allowInput) this.decline(req)
+                }}
+              >
+                <span className='requestDeclineButton _txButton _txButtonBad'>
+                  <span>Decline</span>
+                </span>
+              </button>
+              <button
+                type='button'
+                className='requestSign'
+                disabled={!this.state.allowInput}
+                onClick={() => {
+                  if (this.state.allowInput) {
+                    link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
+                      if (this.handleSignerCompatibilityFailure(e, compatibility, req)) return
+                      this.approve(req.handlerId, req)
+                    })
+                  }
+                }}
+              >
+                <span className='requestSignButton _txButton'>
+                  <span>Sign message</span>
+                </span>
+              </button>
+            </div>
           </div>
         )}
       </div>

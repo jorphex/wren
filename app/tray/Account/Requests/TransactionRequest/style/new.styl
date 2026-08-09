@@ -10,30 +10,19 @@
     pointer-events none
 
 ._txButton:hover
-  // background var(--good)
-  color var(--goodOver)
-  box-shadow 0px 12px 12px var(--ghostZ)
-  animation 5s shake ease-in-out infinite alternate
+  color var(--wren-text-primary)
+  background var(--wren-surface-hover)
+  box-shadow var(--wren-control-shadow-hover)
 
 ._txButton:hover::after
-  content ''
-  position absolute
-  inset 0
-  background white
-  background var(--good)
-  z-index 3
+  display none
 
 ._txButtonBad:hover
-  color var(--badOver)
+  color var(--wren-danger)
+  background var(--wren-danger-soft)
 
 ._txButtonBad:hover::after
-  content ''
-  position absolute
-  inset 0
-  background white
-  color var(--badOver)
-  background var(--bad)
-  z-index 3
+  display none
 
 ._txButton:active
   transform translateY(0px)
@@ -169,7 +158,8 @@
   .txViewDataHeader
     padding 0px 0px
     margin-bottom 32px
-    font-family 'VCR'
+    font-family var(--wren-font-ui)
+    font-variation-settings var(--wren-font-heading-settings)
     text-transform uppercase
     font-size 18px
     text-align center
@@ -206,7 +196,7 @@
       justify-content center
       align-items center
       text-transform uppercase
-      font-size 12px
+      font-size var(--wren-type-small)
       // border-right 1px solid var(--ghostA)
       padding 0px 6px
       font-family 'FiraCode'
@@ -226,7 +216,8 @@
   font-weight 600
   border-top 2px solid var(--ghostY)
   margin 12px 12px 0px 12px
-  font-family VCR
+  font-family var(--wren-font-ui)
+  font-variation-settings var(--wren-font-heading-settings)
   text-transform uppercase
 
   div, span
@@ -255,7 +246,7 @@
       text-align center
 
     ._txDescriptionSummaryTag
-      font-size 12px
+      font-size var(--wren-type-small)
       font-weight 500
       text-transform uppercase
       text-align center
@@ -268,10 +259,10 @@
       font-size 26px
 
     ._txDescriptionSummaryMidline
-      font-size 12px
+      font-size var(--wren-type-small)
 
   ._txDescriptionTag
-    font-size 10px
+    font-size var(--wren-type-caption)
     width 100%
     border-top 1px solid var(--ghostX)
     padding 10px 20px
@@ -297,7 +288,7 @@
     ._txDescriptionSummaryTag
       width 100%
       color var(--wren-text-tertiary)
-      font-size 11px
+      font-size var(--wren-type-caption)
       letter-spacing .2px
       text-align left
       text-transform none

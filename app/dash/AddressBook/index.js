@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import emptyContacts from 'url:../../../asset/ui/empty-contacts.png'
+import emptyContacts from 'url:../../../asset/ui/empty-contacts-v5.png'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddressBookEntry } from './api'
@@ -79,13 +79,18 @@ export class AddressBookEditor extends React.Component {
           </div>
           <div>
             <h2>{editing ? 'Edit contact' : 'New contact'}</h2>
-            <p>{editing ? 'Update the local name or note.' : 'Save a trusted address for review.'}</p>
+            <p>
+              {editing
+                ? 'Update this local label or note.'
+                : 'Save an address you can recognize during review.'}
+            </p>
           </div>
         </header>
 
         <label className='addressBookField'>
           <span>Address or ENS name</span>
           <input
+            className='wrenInput'
             autoComplete='off'
             autoFocus={!editing}
             disabled={editing || pending}
@@ -103,11 +108,12 @@ export class AddressBookEditor extends React.Component {
         <label className='addressBookField'>
           <span>Name</span>
           <input
+            className='wrenInput'
             autoComplete='off'
             disabled={pending}
             maxLength={80}
             onChange={(event) => this.setState({ name: event.target.value, error: '' })}
-            placeholder='Treasury, teammate, protocol...'
+            placeholder='Treasury, teammate, protocol'
             value={this.state.name}
           />
         </label>
@@ -117,10 +123,11 @@ export class AddressBookEditor extends React.Component {
             Note <small>optional</small>
           </span>
           <textarea
+            className='wrenInput'
             disabled={pending}
             maxLength={280}
             onChange={(event) => this.setState({ note: event.target.value, error: '' })}
-            placeholder='Why you trust or use this address'
+            placeholder='How you use this address'
             rows={3}
             value={this.state.note}
           />
@@ -133,7 +140,11 @@ export class AddressBookEditor extends React.Component {
           </div>
         ) : null}
 
-        <button className='addressBookPrimaryButton' disabled={pending} type='submit'>
+        <button
+          className='addressBookPrimaryButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+          disabled={pending || !this.state.address.trim() || !this.state.name.trim()}
+          type='submit'
+        >
           {this.state.resolving ? 'Resolving ENS...' : this.state.saving ? 'Saving...' : 'Save Contact'}
         </button>
       </form>
@@ -207,8 +218,8 @@ export class AddressBook extends React.Component {
       <div className='addressBook cardShow'>
         <header className='addressBookHeader'>
           <div>
-            <h2>Trusted destinations</h2>
-            <p>Local labels appear during transaction review. Always verify the address.</p>
+            <h2>Contacts</h2>
+            <p>Local labels help identify recipients during review. Always verify the address.</p>
           </div>
           <div className='addressBookCount'>{Object.keys(addressBook).length}</div>
         </header>
@@ -216,12 +227,17 @@ export class AddressBook extends React.Component {
         <div className='addressBookToolbar'>
           <input
             aria-label='Search contacts'
+            className='wrenInput wrenInputQuiet'
             onChange={(event) => this.setState({ filter: event.target.value, confirmDelete: '' })}
             placeholder='Search name, note, or address'
             spellCheck={false}
             value={this.state.filter}
           />
-          <button onClick={() => this.openEditor()} type='button'>
+          <button
+            className='wrenControl wrenControlSecondary'
+            onClick={() => this.openEditor()}
+            type='button'
+          >
             Add
           </button>
         </div>
@@ -247,8 +263,8 @@ export class AddressBook extends React.Component {
                   aria-label={`${this.state.confirmDelete === entry.address ? 'Confirm removing' : 'Remove'} ${entry.name}`}
                   className={
                     this.state.confirmDelete === entry.address
-                      ? 'addressBookRemove addressBookRemoveConfirm'
-                      : 'addressBookRemove'
+                      ? 'addressBookRemove addressBookRemoveConfirm wrenControl wrenControlDanger wrenControlCompact'
+                      : 'addressBookRemove wrenControl wrenControlGhost wrenControlCompact'
                   }
                   disabled={this.state.working}
                   onClick={() => this.remove(entry.address)}
@@ -269,15 +285,25 @@ export class AddressBook extends React.Component {
               <img alt='' aria-hidden='true' className='addressBookEmptyArtwork' src={emptyContacts} />
             )}
             <strong>{filter ? 'No contacts match' : 'No saved contacts'}</strong>
-            <span>{filter ? 'Try another search.' : 'Add addresses you recognize and verify often.'}</span>
+            <span>{filter ? 'Try another search.' : 'Save addresses you recognize and verify often.'}</span>
           </div>
         )}
 
         <div className='addressBookTransfer'>
-          <button disabled={this.state.working} onClick={() => this.transfer('import')} type='button'>
+          <button
+            className='wrenControl wrenControlGhost wrenControlCompact'
+            disabled={this.state.working}
+            onClick={() => this.transfer('import')}
+            type='button'
+          >
             Import JSON
           </button>
-          <button disabled={this.state.working} onClick={() => this.transfer('export')} type='button'>
+          <button
+            className='wrenControl wrenControlGhost wrenControlCompact'
+            disabled={this.state.working}
+            onClick={() => this.transfer('export')}
+            type='button'
+          >
             Export JSON
           </button>
         </div>
@@ -303,7 +329,11 @@ export class AddressBook extends React.Component {
             </div>
             <strong>Contact not found</strong>
             <span>It may have been removed or replaced by imported contacts.</span>
-            <button onClick={() => link.send('tray:action', 'backDash')} type='button'>
+            <button
+              className='wrenControl wrenControlSecondary'
+              onClick={() => link.send('tray:action', 'backDash')}
+              type='button'
+            >
               Return to Contacts
             </button>
           </div>

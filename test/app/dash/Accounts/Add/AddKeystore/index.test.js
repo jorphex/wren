@@ -27,7 +27,7 @@ describe('selecting a keystore', () => {
     })
 
     const { user } = render(<AddKeystore accountData={{}} />, { advanceTimersAfterInput: 650 })
-    const selectKeystoreButton = screen.getByRole('button', { name: 'Locate Keystore File (json)' })
+    const selectKeystoreButton = screen.getByRole('button', { name: 'Choose keystore JSON file' })
 
     await user.click(selectKeystoreButton)
 
@@ -35,7 +35,7 @@ describe('selecting a keystore', () => {
 
     act(() => jest.advanceTimersByTime(1_500))
 
-    expect(screen.getByRole('button', { name: 'Locate Keystore File (json)' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Choose keystore JSON file' })).toBeTruthy()
   })
 
   it('should update the navigation with the keystore password entry screen when a keystore file is located', async () => {
@@ -45,7 +45,7 @@ describe('selecting a keystore', () => {
     })
 
     const { user } = render(<AddKeystore accountData={{}} />, { advanceTimersAfterInput: true })
-    const selectKeystoreButton = screen.getByRole('button', { name: 'Locate Keystore File (json)' })
+    const selectKeystoreButton = screen.getByRole('button', { name: 'Choose keystore JSON file' })
 
     await user.click(selectKeystoreButton)
 
@@ -64,7 +64,7 @@ describe('selecting a keystore', () => {
   it('cancels the delayed file picker when the flow unmounts', async () => {
     const view = render(<AddKeystore accountData={{}} />)
 
-    await view.user.click(screen.getByRole('button', { name: 'Locate Keystore File (json)' }))
+    await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
     view.unmount()
     act(() => jest.advanceTimersByTime(640))
 
@@ -74,13 +74,13 @@ describe('selecting a keystore', () => {
   it('cancels the delayed file picker when navigation leaves the locating step', async () => {
     const view = render(<AddKeystore accountData={{}} />)
 
-    await view.user.click(screen.getByRole('button', { name: 'Locate Keystore File (json)' }))
+    await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
     view.rerender(<AddKeystore accountData={{ selecting: true }} />)
     view.rerender(<AddKeystore accountData={{}} />)
     act(() => jest.advanceTimersByTime(640))
 
     expect(link.rpc).not.toHaveBeenCalledWith('locateKeystore', expect.any(Function))
-    expect(screen.getByRole('button', { name: 'Locate Keystore File (json)' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Choose keystore JSON file' })).toBeTruthy()
   })
 
   it('ignores a file picker result after navigation leaves the locating step', async () => {
@@ -91,7 +91,7 @@ describe('selecting a keystore', () => {
     })
     const view = render(<AddKeystore accountData={{}} />)
 
-    await view.user.click(screen.getByRole('button', { name: 'Locate Keystore File (json)' }))
+    await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
     view.rerender(<AddKeystore accountData={{ selecting: true }} />)
     act(() => jest.advanceTimersByTime(640))
     view.rerender(<AddKeystore accountData={{}} />)
@@ -107,7 +107,7 @@ describe('entering keystore password', () => {
     const { user } = render(<AddKeystore accountData={{ keystore }} />, {
       advanceTimersAfterInput: true
     })
-    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Enter Keystore Password' })
+    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Enter keystore password' })
 
     await user.type(passwordEntryTextArea, keystorePassword)
 

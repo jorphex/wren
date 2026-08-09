@@ -1,3 +1,5 @@
+import useCopiedMessage from '../../Hooks/useCopiedMessage'
+
 const RISK_MESSAGES = {
   'legacy-v1': () =>
     'Legacy V1 typed data has no EIP-712 domain separation. Verify every field before signing.',
@@ -24,6 +26,73 @@ const RISK_MESSAGES = {
 
 const displayKey = (key) => key.replace(/([A-Z])/g, ' $1').trim()
 
+export const getTypedDataReviewPresentation = (context = {}, typedMessage = {}) => {
+  if (context.permit2) {
+    const allowance = context.permit2.kind === 'allowance'
+    return {
+      eyebrow: allowance ? 'Permit2 allowance' : 'Permit2 transfer',
+      title: allowance ? 'Authorize token spending' : 'Authorize token transfer',
+      help: allowance
+        ? 'This signature can grant spending authority without a transaction.'
+        : 'This signature can authorize token movement without a transaction.',
+      status: 'Permit2 structure recognized'
+    }
+  }
+
+  if (context.eip3009) {
+    const cancel = context.eip3009.kind === 'cancel'
+    return {
+      eyebrow: 'ERC-3009 authorization',
+      title: cancel ? 'Cancel token authorization' : 'Authorize token transfer',
+      help: cancel
+        ? 'This signature invalidates the displayed token authorization.'
+        : 'This signature can authorize a token transfer without a transaction.',
+      status: 'ERC-3009 structure recognized'
+    }
+  }
+
+  const legacy = Array.isArray(typedMessage.data)
+  return {
+    eyebrow: legacy ? 'Legacy typed data' : `EIP-712 ${typedMessage.version || ''}`.trim(),
+    title: legacy ? 'Review signed fields' : 'Review structured message',
+    help: 'Verify the signing context and every exact field before approving.',
+    status: legacy ? 'Legacy field structure' : 'Typed-data structure recognized'
+  }
+}
+
+const TypedDataReviewSummary = ({ context, typedMessage }) => {
+  const presentation = getTypedDataReviewPresentation(context, typedMessage)
+
+  return (
+    <div className='typedDataReviewSummary'>
+      <div className='typedDataReviewSummaryMain'>
+        <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
+        <div className='typedDataReviewTitle'>{presentation.title}</div>
+        <div className='typedDataReviewHelp'>{presentation.help}</div>
+      </div>
+      <div className='typedDataReviewRecognition'>
+        <div>{presentation.status}</div>
+        <span>Recognition describes structure, not safety.</span>
+      </div>
+    </div>
+  )
+}
+
+const CopyableAuthorityValue = ({ label, value }) => {
+  const [copied, copyValue] = useCopiedMessage(value)
+
+  return (
+    <button
+      type='button'
+      aria-label={`Copy ${label}`}
+      className='signingAuthorityCopy'
+      onClick={() => copyValue()}
+    >
+      {copied ? 'Address copied' : value}
+    </button>
+  )
+}
+
 const displayValue = (value, quoteStrings) => {
   if (value === undefined) return 'undefined'
   if (typeof value === 'bigint') return `${value}n`
@@ -31,7 +100,24 @@ const displayValue = (value, quoteStrings) => {
   return JSON.stringify(value)
 }
 
-export const SimpleJSON = ({ humanizeKeys = false, json, quoteStrings = true }) => {
+const SimpleJSONScalar = ({ copyLabel, quoteStrings, value }) => {
+  const [copied, copyValue] = useCopiedMessage(value)
+
+  return copyLabel ? (
+    <button
+      type='button'
+      aria-label={`Copy ${copyLabel}`}
+      className='simpleJsonCopyValue'
+      onClick={() => copyValue()}
+    >
+      {copied ? 'Address copied' : displayValue(value, quoteStrings)}
+    </button>
+  ) : (
+    displayValue(value, quoteStrings)
+  )
+}
+
+export const SimpleJSON = ({ copyableKeys = {}, humanizeKeys = false, json, quoteStrings = true }) => {
   if (json === null || typeof json !== 'object') {
     return <span>{displayValue(json, quoteStrings)}</span>
   }
@@ -50,7 +136,7 @@ export const SimpleJSON = ({ humanizeKeys = false, json, quoteStrings = true }) 
             {value !== null && typeof value === 'object' ? (
               <SimpleJSON humanizeKeys={humanizeKeys} json={value} quoteStrings={quoteStrings} />
             ) : (
-              displayValue(value, quoteStrings)
+              <SimpleJSONScalar copyLabel={copyableKeys[key]} quoteStrings={quoteStrings} value={value} />
             )}
           </div>
         </div>
@@ -105,26 +191,53 @@ export const TypedDataDeviceWarning = ({ warning }) =>
 const Permit2Authority = ({ authority }) => {
   if (!authority) return null
 
+  const authorityType = authority.kind === 'allowance' ? 'Standing allowance' : 'One-time transfer'
+
   return (
-    <Section title='Permit2 Authority'>
-      <SimpleJSON
-        humanizeKeys
-        quoteStrings={false}
-        json={{
-          authorityType: authority.kind === 'allowance' ? 'Standing allowance' : 'One-time transfer',
-          spender: authority.spender,
-          verifyingContract: authority.verifyingContract,
-          canonicalContract: authority.canonicalContract ? 'Yes' : 'No',
-          signatureDeadlineUnixSeconds: authority.deadline,
-          batch: authority.batch ? 'Yes' : 'No',
-          witnessData: authority.witness ? 'Included' : 'None',
-          permissions: authority.permissions.map(({ token, amount, expiration }) => ({
-            token,
-            amountBaseUnits: amount,
-            ...(expiration === undefined ? {} : { expirationUnixSeconds: expiration })
-          }))
-        }}
-      />
+    <Section title='Permission'>
+      <div className='signingAuthorityGrid'>
+        <div>
+          <span className='signingAuthorityLabel'>Permit2 authority</span>
+          <strong>{authorityType}</strong>
+          <small>{authority.batch ? 'Batch request' : 'Single request'}</small>
+        </div>
+        <div>
+          <span className='signingAuthorityLabel'>Spender</span>
+          <CopyableAuthorityValue label='Permit2 spender address' value={authority.spender} />
+          <small>Requested authority holder</small>
+        </div>
+        <div>
+          <span className='signingAuthorityLabel'>Permit2 contract</span>
+          <CopyableAuthorityValue label='Permit2 contract address' value={authority.verifyingContract} />
+          <small>{authority.canonicalContract ? 'Canonical deployment' : 'Noncanonical deployment'}</small>
+        </div>
+      </div>
+      <div className='signingPermissionList'>
+        {authority.permissions.map(({ token, amount, expiration }, index) => (
+          <div className='signingPermissionRow' key={`${token}:${index}`}>
+            <div>
+              <span className='signingAuthorityLabel'>Token</span>
+              <CopyableAuthorityValue label={`permission ${index + 1} token address`} value={token} />
+            </div>
+            <div>
+              <span className='signingAuthorityLabel'>Amount in base units</span>
+              <strong
+                className={
+                  authority.maximumAmount && authority.permissions.length === 1
+                    ? 'signingAuthorityDanger'
+                    : ''
+                }
+              >
+                {amount}
+              </strong>
+            </div>
+            <div>
+              <span className='signingAuthorityLabel'>Permission expiration</span>
+              <strong>{expiration === undefined ? 'Not declared' : expiration}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
     </Section>
   )
 }
@@ -172,15 +285,15 @@ const SigningContext = ({ chainName, context, origin, originName, typedMessage }
           quoteStrings={false}
           json={{
             origin: originName || origin || 'Unknown origin',
-            requestChain,
+            requestNetwork: requestChain,
             signatureVersion: typedMessage.version,
             primaryType: structured ? typedMessage.data.primaryType : 'Legacy fields'
           }}
         />
       </Section>
-      <TypedDataWarnings context={context} />
       <Permit2Authority authority={context?.permit2} />
       <Eip3009Authorization authorization={context?.eip3009} />
+      <TypedDataWarnings context={context} />
     </>
   )
 }
@@ -210,16 +323,26 @@ export const SimpleTypedData = ({ chainName, deviceWarning, originName, req }) =
 
   return type === 'signTypedData' || type === 'signErc20Permit' ? (
     <div className='accountViewScroll cardShow'>
-      <div className='txViewData'>
-        <div className='txViewDataHeader'>Typed Data Review</div>
+      <div className='txViewData signingReview typedDataSigningReview'>
+        <TypedDataReviewSummary context={context} typedMessage={typedMessage} />
         <div className='signTypedDataInner'>
           <TypedDataDeviceWarning warning={deviceWarning} />
           <SigningContext {...{ chainName, context, origin, originName, typedMessage }} />
-          {Array.isArray(typedMessage.data) ? (
-            <LegacyTypedData typedData={typedMessage.data} />
-          ) : (
-            <StructuredTypedData typedData={typedMessage.data} />
-          )}
+          <details className='signingRawDisclosure'>
+            <summary>
+              <span>Exact signed data</span>
+              <span>
+                {Array.isArray(typedMessage.data) ? 'Signed fields' : 'Domain, message, and types'} ›
+              </span>
+            </summary>
+            <div className='signingRawDisclosureBody'>
+              {Array.isArray(typedMessage.data) ? (
+                <LegacyTypedData typedData={typedMessage.data} />
+              ) : (
+                <StructuredTypedData typedData={typedMessage.data} />
+              )}
+            </div>
+          </details>
         </div>
       </div>
     </div>

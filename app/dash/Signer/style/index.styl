@@ -101,7 +101,8 @@
   position absolute
   top 20px
   right 44px
-  font-size 11px
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
   text-transform uppercase
   font-weight 400
   letter-spacing 0px
@@ -111,7 +112,7 @@
   position absolute
   top 26px
   right 18px
-  font-size 12px
+  font-size var(--wren-type-small)
   text-transform uppercase
   font-weight 400
   background var(--ghostZ)
@@ -129,7 +130,8 @@
   padding 0px 32px 16px 32px
   margin 0px 6px 6px 6px
   border-radius 20px
-  font-size 12px
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-small)
   text-transform uppercase
   text-align center
   font-weight 500
@@ -228,7 +230,7 @@
     margin-left -53px
     padding-bottom 2px
     letter-spacing 1px
-    font-size 11px
+    font-size var(--wren-type-caption)
     display flex
     justify-content center
     align-items center
@@ -268,7 +270,7 @@
     border-radius 9px
 
     .signerControlDetailKey
-      font-size 11px
+      font-size var(--wren-type-caption)
       margin 4px 4px 6px 4px
       letter-spacing 1px
 
@@ -378,12 +380,12 @@
 
   .signerLatticePairError
     color var(--bad)
-    font-size 11px
+    font-size var(--wren-type-caption)
     text-align center
 
 .signerAccountsTitle
   // background pink
-  font-size 12px
+  font-size var(--wren-type-small)
   font-weight 300
   display flex
   justify-content center
@@ -393,7 +395,7 @@
 
 .signerAccountsTitleActive
   text-transform uppercase
-  font-size 10px
+  font-size var(--wren-type-caption)
   font-weight 300
   letter-spacing 1px
   display flex
@@ -426,7 +428,7 @@
   text-align center
   
   // border-radius 8px
-  font-size 11px
+  font-size var(--wren-type-caption)
   // text-transform uppercase
   font-weight 400
   // height 204px
@@ -454,7 +456,7 @@
     border 0
     font-family inherit
     padding 16px
-    font-size 12px
+    font-size var(--wren-type-small)
     cursor pointer
     text-transform uppercase
     font-weight 400
@@ -559,7 +561,7 @@
 
 .signerLoadingLoader
   margin 60px auto
-  font-size 10px
+  font-size 10px // Spinner geometry; no visible text.
   position relative
   text-indent -9999em
   border-top 3px solid var(--ghostZ)
@@ -637,12 +639,12 @@
 
     .trezorPinError
       color var(--bad)
-      font-size 12px
+      font-size var(--wren-type-small)
       line-height 16px
       margin-bottom 12px
 
     .signerPinMessageOr
-      font-size 10px
+      font-size var(--wren-type-caption)
       text-transform uppercase
       font-weight 300
       padding 5px
@@ -702,7 +704,7 @@
       width 250px
       border-radius 8px
       cursor pointer
-      font-size 12px
+      font-size var(--wren-type-small)
       text-transform uppercase
       text-align center
       font-weight 300
@@ -779,10 +781,378 @@
   justify-content center
   align-items center
   text-transform uppercase
-  font-size 9px
+  font-size var(--wren-type-caption)
   margin 2px 0px 4px 0px
   font-weight 500
   letter-spacing 1px
   padding-top 8px
 
 @import '../SignerStatus/style'
+
+// Wren signer surfaces
+.expandedSigner, .signer
+  margin 6px
+  padding-top var(--wren-space-2)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+.signerTop
+  padding var(--wren-space-5) var(--wren-space-4)
+
+.signerDetails .signerName
+  font-weight 500
+  font-variation-settings var(--wren-font-heading-settings)
+
+.signerExpand,
+.signerBottom .signerBottomPageBack,
+.signerBottom .signerBottomPageNext,
+.signerDrawer .showControls
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-card)
+  box-shadow none
+
+  &:not(:disabled):hover
+    background var(--wren-surface-hover)
+
+.signerType, .signerStatusText, .signerDrawer .showControls, .signerAddedAccountTitle
+  text-transform none
+  letter-spacing 0
+
+.signerStatusText
+  margin 0 var(--wren-space-2) var(--wren-space-2)
+  padding 0 var(--wren-space-4) var(--wren-space-3)
+  border-radius 0
+  font-size var(--wren-type-small)
+
+.signerDrawer .showControlsLine
+  height 1px
+  background var(--wren-border-subtle)
+
+.signerControls .signerControlDetail,
+.signerAccounts .signerAccount,
+.signerAccounts .signerAccountsAdd
+  border-radius var(--wren-radius-sm)
+  background var(--wren-bg-elevated)
+  box-shadow none
+
+.signerControls .signerControlOption,
+.signerLatticePair .signerLatticePairSubmit,
+.signerInterface .signerPinSubmit,
+.signerInterface .signerPinDelete
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-card)
+  box-shadow none
+  text-transform none
+  letter-spacing 0
+  font-weight 500
+
+  &:not(:disabled):hover
+    background var(--wren-surface-hover)
+
+.signerLatticePair .signerLatticePairInput,
+.signerInterface .trezorPhraseInput
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+  box-shadow none
+
+// Wren signer ledger: one document, no nested cards.
+.dash .dashMain .signers
+  .signersMid
+    padding 0 var(--wren-space-5) 72px
+
+  .signersList
+    display block
+
+  .signersList .signer
+    width 100%
+    margin 0
+    padding 0 0 var(--wren-space-3)
+    overflow visible
+    border 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+  .signersList .signer:last-child
+    border-bottom 1px solid var(--wren-ledger-rule)
+
+  .signerTop
+    min-height 66px
+    box-sizing border-box
+    padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-2)
+
+  .signerDetails
+    min-width 0
+    gap var(--wren-space-3)
+
+    .signerName
+      width auto
+      min-width 0
+      height auto
+      margin 0
+      padding 0
+      overflow hidden
+      color var(--wren-text-primary)
+      font-size var(--wren-type-body)
+      font-weight 560
+      line-height 1.35
+      text-overflow ellipsis
+
+  .signerExpand
+    flex none
+
+  .signerStatusText
+    margin 0 52px var(--wren-space-2)
+    padding 0
+    color var(--wren-text-muted)
+    text-align left
+
+  .signerStatusReady
+    color var(--wren-success)
+
+  .signerStatusIssue
+    color var(--wren-warning)
+
+  .signerAddedAccountTitle
+    justify-content flex-start
+    margin var(--wren-space-2) 52px 0
+    padding var(--wren-space-2) 0
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    line-height 1.3
+
+  .signerAccounts
+    margin 0 52px var(--wren-space-2)
+    overflow visible
+    border-radius 0
+    background transparent
+
+    .signerAccountsAdd
+      width auto
+      min-width 148px
+      margin var(--wren-space-2) 0 0
+      padding 0 var(--wren-space-4)
+
+    .signerAccount
+      width 100%
+      height 44px
+      margin 0
+      border-radius 0
+      border-top 1px solid var(--wren-ledger-rule)
+      color var(--wren-text-secondary)
+      background transparent
+
+      &:last-child
+        border-bottom 1px solid var(--wren-ledger-rule)
+
+      .signerAccountIndex
+        left 0
+        width 32px
+        color var(--wren-text-muted)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-caption)
+
+      .signerAccountAddress
+        left 40px
+        right 36px
+        bottom auto
+        top 0
+        height 43px
+        justify-content flex-start
+        color var(--wren-text-secondary)
+        font-size var(--wren-type-small)
+
+      .signerAccountCheck
+        top 18px
+        right 12px
+        width 7px
+        height 7px
+        border-radius 1px
+        background var(--wren-text-disabled)
+
+    .signerAccountAdded
+      background var(--wren-ledger-selected)
+
+      .signerAccountCheck
+        background var(--wren-success)
+
+    .signerAccount:not(.signerAccountDisabled):hover
+      background var(--wren-ledger-hover)
+
+.expandedSigner
+  width auto
+  margin 0 var(--wren-space-5)
+  padding var(--wren-space-2) 0 var(--wren-space-8)
+  overflow visible
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
+
+  > div:first-child
+    height var(--wren-space-1) !important
+
+  > .signerStatusText
+    margin 0 0 var(--wren-space-4)
+    padding 0
+    color var(--wren-text-muted)
+    text-align left
+
+  > .signerAddedAccountTitle
+    justify-content flex-start
+    margin 0
+    padding var(--wren-space-3) 0 var(--wren-space-2)
+    border-bottom 1px solid var(--wren-ledger-rule)
+    color var(--wren-text-tertiary)
+
+  > .signerAccounts
+    margin 0
+    overflow visible
+    border-radius 0
+    background transparent
+
+    .signerAccount
+      width 100%
+      height 50px
+      margin 0
+      border 0
+      border-bottom 1px solid var(--wren-ledger-rule)
+      border-radius 0
+      color var(--wren-text-secondary)
+      background transparent
+
+      &:hover
+        background var(--wren-ledger-hover)
+
+      &.signerAccountAdded
+        background var(--wren-ledger-selected)
+
+      .signerAccountIndex
+        top 0
+        bottom 0
+        left 0
+        width 36px
+        color var(--wren-text-muted)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-caption)
+
+      .signerAccountAddress
+        top 0
+        bottom auto
+        left 44px
+        right 42px
+        height 49px
+        justify-content flex-start
+        color var(--wren-text-secondary)
+        font-size var(--wren-type-small)
+
+      .signerAccountCheck
+        top 21px
+        right 14px
+        width 8px
+        height 8px
+        border-radius 1px
+
+  .signerBottom
+    height 52px
+    padding var(--wren-space-3) 0 0
+    gap var(--wren-space-3)
+
+    .signerBottomPages
+      width 72px
+      color var(--wren-text-muted)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+
+    .signerBottomPageBack,
+    .signerBottomPageNext
+      padding 0
+
+  .signerControls
+    display flex
+    flex-wrap wrap
+    justify-content flex-end
+    gap var(--wren-space-3)
+    margin-top var(--wren-space-5)
+    padding var(--wren-space-5) 0 0
+    border-top 1px solid var(--wren-ledger-rule)
+
+    .signerControlDetail
+      width 100%
+      height auto
+      min-height 40px
+      margin 0
+      justify-content flex-start
+      border 0
+      border-radius 0
+      color var(--wren-text-muted)
+      background transparent
+
+    .signerControlOption
+      width auto
+      min-width 156px
+      height 42px
+      margin 0
+
+  .signerLatticePair
+    height auto
+    max-width 620px
+    margin var(--wren-space-6) auto
+
+    .signerLatticePairTitle
+      height auto
+      justify-content flex-start
+      margin-bottom var(--wren-space-3)
+      color var(--wren-text-secondary)
+
+    .signerLatticePairInput
+      height 39px
+      margin 0 0 var(--wren-space-3)
+
+    .signerLatticePairSubmit
+      left auto
+      width auto
+      min-width 124px
+      height 42px
+      margin 0 0 0 auto
+
+  .signerInterface
+    max-width 620px
+    margin var(--wren-space-5) auto
+
+    .trezorPinWrap
+      gap var(--wren-space-3)
+
+    .trezorPhraseInput
+      width 100%
+      height 39px
+      margin 0
+
+    .signerPinMessageOr
+      padding 0
+      color var(--wren-text-muted)
+      text-transform none
+
+    .signerPinSubmit
+      width auto
+      min-width 190px
+      min-height 42px
+
+    .signerPinActions
+      width 250px
+
+      .signerPinSubmit
+        width 100%
+
+@media (max-height: 760px)
+  .dash .dashMain .signers .signersMid
+    padding-bottom var(--wren-space-10)
+
+  .expandedSigner
+    padding-bottom var(--wren-space-5)

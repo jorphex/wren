@@ -1,164 +1,138 @@
 .accountViewScroll
-  position absolute 
+  position absolute
   top 0
+  right 0
   bottom 0
   left 0
-  right 0
   padding-top 30px
   padding-bottom 60px
-  overflow-y scroll
   overflow-x hidden
-  border-radius 26px
+  overflow-y scroll
 
 .inventoryWrapper
-  background var(--ghostZ)
-  margin 0px 6px 6px 6px
-  padding 0px 3px 1px 3px
-  border-radius 20px
+  margin 0 var(--wren-space-2) var(--wren-space-2)
+  padding 0 3px 1px
   overflow auto
-
-  .inventoryCollection:first-child
-    border-top-left-radius 17px
-    border-top-right-radius 17px
-
-  .inventoryCollection:last-child
-    border-bottom-left-radius 17px
-    border-bottom-right-radius 17px
-
-  .inventoryCollection:first-child:last-child
-    border-radius 17px
-
-.inventoryCollection:hover
-  background var(--ghostB)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
 .inventoryCollection
   position relative
-  border-radius 8px
   z-index 300
   width 100%
-  
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-primary)
+
+  &:last-child
+    border-bottom 0
+
+  &:hover
+    background var(--wren-surface-hover)
+
   .inventoryCollectionTop
     position relative
     display flex
-    justify-content space-between
     align-items center
-    padding 16px 12px 16px 16px
-    font-size 14px
+    justify-content space-between
+    padding var(--wren-space-4)
     cursor pointer
-    font-weight 400
+    font-size var(--wren-type-small)
+    font-weight 500
 
     *
       pointer-events none
 
   .inventoryCollectionLine
-    position absolute
-    top 0
-    left 16px
-    right 16px
-    bottom -1px
-    border-bottom 1px solid var(--ghostA)
-    pointer-events none
+    display none
 
   .inventoryCollectionName
-    display flex
-    justify-content center
-    align-items center
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
 
   .inventoryCollectionCount
-    width 48px
-    height 24px
-    background var(--ghostB)
     display flex
-    justify-content center
     align-items center
-    border-radius 12px
-    font-size 16px
-    margin-bottom -2px
-    border 2px solid var(--ghostZ)
-    font-weight 400
-    font-size 14px
-    
-.inventoryCollection:last-child
-  .inventoryCollectionLine
-    border-bottom none
+    justify-content center
+    min-width 24px
+    height 24px
+    margin-left var(--wren-space-3)
+    padding 0 var(--wren-space-2)
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-surface-card)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
 
 .inventoryNotFound
-  font-size 10px
-  text-transform uppercase
-  font-weight 400
-  letter-spacing 1px
-  padding-left 1px
   display flex
-  justify-content center
   align-items center
-  transition var(--standard)
-  color var(--outerspace04)
-  font-weight 400
-  margin-top 3px
+  justify-content center
   height 48px
-  border-radius 17px
-  box-sizing border-box
+  margin-top 3px
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+  font-weight 400
 
 .inventoryPreviewTitle
-  background var(--ghostB)
-  box-shadow 0px 1px 4px var(--ghostA)
-  position absolute
-  top 267px
-  left 3px
-  right 3px
-  height 30px
+  position relative
   z-index 4
   display flex
-  justify-content center
   align-items center
-  font-weight 400
-  font-size 12px
-  border-radius 3px
-  border-radius 8px
-  text-transform uppercase
-  letter-spacing 1px
+  justify-content center
+  height 32px
+  min-height 0
+  box-sizing border-box
   padding-bottom 2px
+  border 1px solid var(--wren-border-subtle)
+  border-top 0
+  border-radius 0 0 var(--wren-radius-sm) var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-card)
+  font-size var(--wren-type-caption)
+  font-weight 500
 
 .inventoryPreview
-  position absolute
-  top 33px
-  left 3px
-  right 3px
-  height 130px
-  padding 50px
+  position relative
   z-index 3
+  min-height 0
   display flex
-  justify-content center
   align-items center
+  justify-content center
   flex-direction column
-  border-radius 3px
-  border-top-left-radius 8px
-  border-top-right-radius 8px
+  height auto
+  padding var(--wren-space-4)
+  box-sizing border-box
+  overflow hidden
+  border 1px solid var(--wren-border-subtle)
+  border-bottom 0
+  border-radius var(--wren-radius-md) var(--wren-radius-md) 0 0
+  background var(--wren-surface-inset)
 
   .inventoryPreviewCollection
-    background-repeat no-repeat
-    background-size cover
-    background-position center
     position absolute
     left 50%
-    height 100px 
-    width 100px
-    margin-left -56px
     z-index 2
-    border-radius 56px
-    box-shadow 0px 5px 10px var(--ghostY)
-    border 6px solid var(--ghostB)
+    width 100px
+    height 100px
+    margin-left -56px
+    border 3px solid var(--wren-border-default)
+    border-radius 50%
+    background-repeat no-repeat
+    background-position center
+    background-size cover
+    box-shadow var(--wren-shadow-sm)
 
   .inventoryPreviewMedia
     position absolute
-    top 12px
-    left 12px
-    right 12px
-    bottom 12px
-    z-index 1
-    opacity 1
-    overflow hidden
+    top var(--wren-space-3)
+    right var(--wren-space-3)
+    bottom var(--wren-space-3)
+    left var(--wren-space-3)
     z-index 4
+    overflow hidden
 
     img
       width 100%
@@ -167,26 +141,17 @@
 
     img:before
       content attr(alt)
-      top 0
-      bottom 0
-      left 0
-      right 0
+      display flex
+      align-items center
+      justify-content center
       width 100%
       height 100%
-      overflow: hidden
-      background var(--outerspace)
-      color var(--ghostZ)
-      display flex
-      justify-content center
-      align-items center
-      font-size 11px
-      font-weight 300
-      letter-spacing -0.5px
-      margin-left -0.5px
+      color var(--wren-text-muted)
+      background var(--wren-surface-inset)
+      font-size var(--wren-type-caption)
 
-.moduleExpanded
-  .inventoryCollectionItems
-    position relative
+.moduleExpanded .inventoryCollectionItems
+  position relative
 
 .inventoryDisplay
   position absolute
@@ -194,81 +159,81 @@
   right 0
   bottom 0
   left 0
+  display grid
+  grid-template-rows minmax(132px, 42%) 32px minmax(96px, 1fr)
+  padding var(--wren-space-4) var(--wren-space-1) 0
+  box-sizing border-box
 
   .inventoryCollectionImage
-    height 42px
     width 42px
-    border-radius 4px
-    background var(--ghostA)
+    height 42px
     overflow hidden
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
 
     img
-      height 42px
       width 42px
+      height 42px
       object-fit cover
 
   .inventoryCollectionItems
-    position absolute
-    top 290px
-    bottom 0
-    left 0
-    right 0
-    padding 14px 0px 4px 4px
+    position relative
+    min-height 0
     display flex
     flex-wrap wrap
     align-content flex-start
-    overflow-y scroll
-    border-bottom-left-radius 26px
-    border-bottom-right-radius 26px
+    padding 14px 0 4px 4px
+    overflow-x hidden
+    overflow-y auto
 
     .inventoryCollectionItem
+      appearance none
       width 94px
       height 94px
-      border-radius 12px
-      padding 4px
+      padding var(--wren-space-1)
       box-sizing border-box
+      border 0
+      border-radius var(--wren-radius-md)
+      color inherit
+      background transparent
       cursor pointer
+
       *
         pointer-events none
 
-    .inventoryItemImage
-      object-fit cover
-      left 0px
-      top 0px
-      z-index 1
-      width: 94px
-      height: 94px
+      &:hover img,
+      &:focus-visible img
+        box-shadow 0 0 0 1px var(--wren-accent-primary)
+        transform scale(1.03)
 
-      img
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset -2px
+
+    .inventoryItemImage
+      width 94px
+      height 94px
+      object-fit cover
+
+      img,
+      img:before
         width 90px
         height 90px
-        border-radius 16px
-        box-shadow 0px 2px 0px var(--ghostZ)
-        transition 0.03s linear
+        border-radius var(--wren-radius-md)
+
+      img
         overflow hidden
+        background var(--wren-surface-card)
+        transition transform var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease)
 
       img:before
         content attr(alt)
-        top 0
-        bottom 0
-        left 0
-        right 0
-        border-radius 16px
-        width 80px
-        height 82px
-        overflow: hidden
-        background var(--outerspace)
-        color var(--ghostZ)
         display flex
-        justify-content center
         align-items center
-        font-size 11px
-        font-weight 300
-        letter-spacing -0.5px
-        padding 4px
+        justify-content center
+        padding var(--wren-space-1)
+        box-sizing border-box
+        color var(--wren-text-muted)
+        background var(--wren-surface-inset)
+        font-size var(--wren-type-caption)
         text-align center
-
-    .inventoryCollectionItem:hover
-      img
-        transform scale(1.1)
-        box-shadow 0px 3px 6px var(--ghostX)

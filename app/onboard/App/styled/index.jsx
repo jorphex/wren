@@ -7,7 +7,7 @@ export const Onboard = styled.div`
   bottom: 0;
   left: 0;
   color: var(--outerspace);
-  background: var(--ghostZ);
+  background: var(--wren-bg-canvas);
   font-family: 'MainFont';
   font-size: 20px;
   overflow: hidden;
@@ -19,154 +19,116 @@ export const SlideContainer = styled.div`
   right: 0;
   bottom: 0;
   left: 0;
-  display: grid;
-  grid-template-rows: ${({ $immersive }) => ($immersive ? '1fr' : '20% 60% 20%')};
-  border-top: ${({ $immersive }) => ($immersive ? '0' : '1px solid var(--ghostX)')};
-
-  @media (max-height: 540px) {
-    grid-template-rows: ${({ $immersive }) => ($immersive ? '1fr' : '18% 64% 18%')};
-  }
+  background: var(--wren-bg-canvas);
 `
 
 export const SlideScroller = styled.div`
-  position: relative;
-  min-height: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: absolute;
+  inset: 0;
 `
 
 export const Slide = styled.div`
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
   z-index: 700;
-  max-height: 100%;
   box-sizing: border-box;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(7, 11, 10, 0.45) 0%, rgba(7, 11, 10, 0.08) 48%, transparent 66%),
+    ${({ $background }) => ($background ? `url(${$background}) center / cover no-repeat` : 'transparent')};
 `
 
 export const SlideBody = styled.div`
-  max-width: 448px;
-  animation: cardShow 400ms linear both;
-  animation-delay: 200ms;
-  font-weight: 300;
-  font-size: 18px;
-  margin: auto;
-  text-align: center;
-  div {
-    padding-bottom: 30px;
-    line-height: 30px;
-  }
-  div:last-child {
-    padding-bottom: 0px;
-  }
+  position: absolute;
+  top: 112px;
+  left: clamp(36px, 7vw, 54px);
+  width: min(320px, 43%);
+  animation: cardShow var(--wren-motion-page) ease both;
+  font-weight: 350;
+  font-size: 16px;
+  text-align: left;
+  color: var(--wren-text-secondary);
 
   @media (max-height: 540px) {
-    font-size: 16px;
-
-    div {
-      padding-bottom: 18px;
-      line-height: 24px;
-    }
+    top: 104px;
+    font-size: 15px;
   }
 `
 
-export const SlideArtwork = styled.img`
-  display: block;
-  width: min(390px, calc(100vw - 48px));
-  height: clamp(128px, 27vh, 220px);
-  margin: 0 auto 18px;
-  border-radius: var(--wren-radius-md);
-  object-fit: cover;
-  object-position: center;
-  box-shadow: var(--wren-shadow-md);
-
-  @media (max-height: 540px) {
-    height: clamp(96px, 24vh, 116px);
-    margin-bottom: 12px;
-  }
-`
-export const SlideVideo = styled.div`
-  font-size: 32px;
-  font-weight: 500;
-  animation: cardShow 400ms linear both;
-  overflow: hidden;
-  margin: 25px auto;
-  border-radius: 6px;
-  height: 240px;
-  width: 390px;
-  box-shadow:
-    0px 8px 24px var(--ghostX),
-    0px -4px 8px var(--ghostY);
-
-  video {
-    height: 100%;
-  }
-`
-
-export const SlideTitle = styled.div`
-  font-size: 32px;
-  font-weight: 500;
-  font-variation-settings:
-    'CASL' 0.55,
-    'CRSV' 0.25;
+export const SlideTitle = styled.h1`
+  position: absolute;
+  top: 54px;
+  left: clamp(36px, 7vw, 54px);
+  z-index: 800;
+  margin: 0;
+  width: min(340px, 46%);
+  font-size: 30px;
+  font-weight: 600;
+  font-variation-settings: var(--wren-font-heading-settings);
   letter-spacing: -0.01em;
-  animation: cardShow 400ms linear both;
+  animation: cardShow var(--wren-motion-page) ease both;
   animation-delay: 0s;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
+  line-height: 1.08;
 
   @media (max-height: 540px) {
-    font-size: 28px;
+    top: 48px;
+    font-size: 27px;
   }
 `
 
 export const SlideProceed = styled.div`
+  position: absolute;
+  bottom: 34px;
+  left: clamp(36px, 7vw, 54px);
+  z-index: 800;
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: var(--wren-space-3);
+  animation: cardShow var(--wren-motion-page) ease both;
 `
 
 export const Shortcut = styled.span`
-  padding: 4px 19px 5px 19px;
-  height: 42px;
-  border-radius: 21px;
-  font-weight: 400;
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 14px;
+  align-items: center;
+  border: 1px solid var(--wren-accent-primary);
+  border-radius: var(--wren-radius-sm);
+  color: var(--wren-text-primary);
+  background: var(--wren-surface-inset);
+  font-family: var(--wren-font-mono);
+  font-weight: 450;
   font-size: 14px;
-  border: 2px solid var(--moon);
-  margin: 6px;
+  margin: 6px 8px;
   white-space: nowrap;
 `
 
 export const Tag = styled.span`
-  padding: 2px 8px;
-  height: 40px;
-  border-radius: 4px;
-  background: var(--outerspace);
-  color: var(--ghostZ);
-  margin: 4px;
+  display: inline;
+  color: var(--wren-accent-primary-hover);
 `
 
 export const SlideItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  div {
-    padding-bottom: 0px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+
+  &:last-child {
+    margin-bottom: 0;
   }
 `
 
 export const BrowserChoices = styled.div`
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
 `
 
 export const BrowserChoice = styled.button`
   display: flex;
-  width: 68px;
-  height: 68px;
-  padding: 10px;
+  width: 48px;
+  height: 48px;
+  padding: 6px;
   align-items: center;
   justify-content: center;
   color: var(--outerspace);
@@ -174,6 +136,11 @@ export const BrowserChoice = styled.button`
   border: 0;
   border-radius: var(--wren-radius-md);
   cursor: pointer;
+
+  svg {
+    width: 36px;
+    height: 36px;
+  }
 
   &:hover {
     background: var(--wren-surface-hover);

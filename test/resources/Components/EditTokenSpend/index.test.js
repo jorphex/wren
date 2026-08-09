@@ -40,10 +40,10 @@ describe('changing approval amounts', () => {
     await user.click(custom)
     expect(custom.getAttribute('aria-pressed')).toBe('true')
 
-    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom amount' })
     await user.type(enterAmount, '50')
 
-    const updateCustom = screen.getByRole('button', { name: 'update' })
+    const updateCustom = screen.getByRole('button', { name: 'Update' })
     await user.dblClick(updateCustom)
 
     expect(onUpdate).toHaveBeenCalledWith('500000', expect.any(Function))
@@ -80,7 +80,7 @@ describe('changing approval amounts', () => {
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
 
-    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom amount' })
     await user.type(enterAmount, '50.1{Enter}')
 
     expect(onUpdate).toHaveBeenCalledWith('501000', expect.any(Function))
@@ -116,11 +116,11 @@ describe('changing approval amounts', () => {
     const custom = screen.queryByRole('button', { name: 'Custom' })
     await user.click(custom)
 
-    const enterAmount = screen.queryByRole('textbox', { name: 'Custom Amount' })
+    const enterAmount = screen.queryByRole('textbox', { name: 'Custom amount' })
     await user.type(enterAmount, '50.00001')
 
-    expect(screen.getByText('invalid')).toBeTruthy()
-    expect(screen.queryByText('update')).toBeNull()
+    expect(screen.getByText('Invalid amount')).toBeTruthy()
+    expect(screen.queryByText('Update')).toBeNull()
     expect(onUpdate).not.toHaveBeenCalled()
   })
 
@@ -258,8 +258,8 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
-    await user.click(screen.getByText('update'))
+    await user.type(screen.getByRole('textbox', { name: 'Custom amount' }), '42')
+    await user.click(screen.getByText('Update'))
 
     expect(onUpdate).toHaveBeenCalledWith('42', expect.any(Function))
   })
@@ -283,7 +283,7 @@ describe('changing approval amounts', () => {
 
     expect(screen.getByText('1')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Edit approval amount, current 1' }))
-    expect(screen.getByRole('textbox', { name: 'Custom Amount' })).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: 'Custom amount' })).toBeTruthy()
   })
 
   it('shows malformed stored amounts as unknown and keeps editing locked', () => {
@@ -333,11 +333,11 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    const input = screen.getByRole('textbox', { name: 'Custom Amount' })
+    const input = screen.getByRole('textbox', { name: 'Custom amount' })
     await user.type(input, '1e2{Enter}')
 
     expect(input.value).toBe('1e2')
-    expect(screen.getByText('invalid')).toBeTruthy()
+    expect(screen.getByText('Invalid amount')).toBeTruthy()
     expect(onUpdate).not.toHaveBeenCalled()
   })
 
@@ -394,8 +394,8 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
-    const update = screen.getByRole('button', { name: 'update' })
+    await user.type(screen.getByRole('textbox', { name: 'Custom amount' }), '42')
+    const update = screen.getByRole('button', { name: 'Update' })
     await user.click(update)
     await user.click(update)
 
@@ -421,9 +421,9 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    const input = screen.getByRole('textbox', { name: 'Custom Amount' })
+    const input = screen.getByRole('textbox', { name: 'Custom amount' })
     await user.type(input, '42')
-    await user.click(screen.getByRole('button', { name: 'update' }))
+    await user.click(screen.getByRole('button', { name: 'Update' }))
 
     expect(input.disabled).toBe(true)
     expect(screen.getByRole('button', { name: 'Requested' }).disabled).toBe(true)
@@ -454,13 +454,13 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    const input = screen.getByRole('textbox', { name: 'Custom Amount' })
+    const input = screen.getByRole('textbox', { name: 'Custom amount' })
     await user.type(input, '42')
-    await user.click(screen.getByRole('button', { name: 'update' }))
+    await user.click(screen.getByRole('button', { name: 'Update' }))
     expect(input.disabled).toBe(true)
 
     await act(async () => completeUpdate(null))
-    expect(screen.getByRole('textbox', { name: 'Custom Amount' }).disabled).toBe(false)
+    expect(screen.getByRole('textbox', { name: 'Custom amount' }).disabled).toBe(false)
 
     rerender(
       <EditTokenSpend
@@ -470,7 +470,7 @@ describe('changing approval amounts', () => {
       />
     )
 
-    expect(screen.getByRole('textbox', { name: 'Custom Amount' }).disabled).toBe(false)
+    expect(screen.getByRole('textbox', { name: 'Custom amount' }).disabled).toBe(false)
     expect(screen.getByRole('button', { name: 'Requested' }).disabled).toBe(false)
 
     await user.click(screen.getByRole('button', { name: 'Unlimited' }))
@@ -504,8 +504,8 @@ describe('changing approval amounts', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Custom' }))
-    await user.type(screen.getByRole('textbox', { name: 'Custom Amount' }), '42')
-    await user.dblClick(screen.getByRole('button', { name: 'update' }))
+    await user.type(screen.getByRole('textbox', { name: 'Custom amount' }), '42')
+    await user.dblClick(screen.getByRole('button', { name: 'Update' }))
 
     expect(onUpdate).toHaveBeenCalledTimes(1)
   })
@@ -612,7 +612,7 @@ describe('changing approval amounts', () => {
 
       // ensure click on requested amount textbox doesn't allow user to enter a custom amount
       await user.click(requestedAmount)
-      expect(screen.queryByRole('textbox', { name: 'Custom Amount' })).toBeNull()
+      expect(screen.queryByRole('textbox', { name: 'Custom amount' })).toBeNull()
     })
   })
 })

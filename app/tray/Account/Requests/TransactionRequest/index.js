@@ -10,6 +10,7 @@ import TxAction from './TxAction'
 import TxRecipient from './TxRecipient'
 import AdjustFee from './AdjustFee'
 import ViewData from './ViewData'
+import NonceControl from './NonceControl'
 import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
 import link from '../../../../../resources/link'
 import { erc20Interface } from '../../../../../resources/contracts'
@@ -73,6 +74,7 @@ export class TransactionRequest extends React.Component {
     }
 
     const recognizedActions = req.recognizedActions || []
+    const isNativeTransfer = req.classification === 'NATIVE_TRANSFER'
 
     return (
       <div key={req.handlerId} className={requestClass}>
@@ -81,7 +83,7 @@ export class TransactionRequest extends React.Component {
             <div className='approveTransactionPayload'>
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
-                <TxValue i={1} {...this.props} req={req} chain={chain} />
+                {!isNativeTransfer && <TxValue i={1} {...this.props} req={req} chain={chain} />}
                 {recognizedActions.map((action, i) => {
                   return (
                     <TxAction
@@ -96,6 +98,12 @@ export class TransactionRequest extends React.Component {
                 })}
                 <TxRecipient i={3 + recognizedActions.length} {...this.props} req={req} />
                 <TxFee i={4 + recognizedActions.length} {...this.props} req={req} />
+                <div className='_txMain transactionReviewNonce'>
+                  <div className='transactionReviewNonceRow'>
+                    <span className='transactionReviewMetaLabel'>Nonce</span>
+                    <NonceControl req={req} hint='Transaction sequence' />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

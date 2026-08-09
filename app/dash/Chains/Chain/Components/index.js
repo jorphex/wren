@@ -4,6 +4,7 @@ import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 import chainDefault from '../chainDefault'
+import { getChainIdentity } from '../../../../../resources/utils/chainIdentity'
 
 export const SubmitChainButton = ({ text, enabled, textColor, onClick }) => {
   return (
@@ -19,33 +20,266 @@ export const SubmitChainButton = ({ text, enabled, textColor, onClick }) => {
   )
 }
 
-export const ChainHeader = ({ type, id, primaryColor, icon, svgName, name, on, showExpand, showToggle }) => {
+export const NetworkEditorField = ({
+  label,
+  value,
+  onChange,
+  onBlur,
+  status,
+  error,
+  technical = false,
+  readOnly = false,
+  inputMode
+}) => {
+  const id = `network-${label.toLowerCase().replace(/\s+/g, '-')}`
+
+  return (
+    <label className={error ? 'networkEditorField networkEditorFieldError' : 'networkEditorField'}>
+      <span className='networkEditorFieldLabel'>
+        <span>{label}</span>
+        {status && (
+          <span
+            className={
+              error ? 'networkEditorFieldStatus networkEditorFieldStatusError' : 'networkEditorFieldStatus'
+            }
+          >
+            {status}
+          </span>
+        )}
+      </span>
+      <input
+        id={id}
+        aria-label={label}
+        aria-invalid={error || undefined}
+        className={
+          technical
+            ? 'networkEditorInput networkEditorInputTechnical wrenInput'
+            : 'networkEditorInput wrenInput'
+        }
+        inputMode={inputMode}
+        readOnly={readOnly}
+        spellCheck='false'
+        value={value ?? ''}
+        onBlur={onBlur}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    </label>
+  )
+}
+
+export const NetworkEditorToggle = ({ label, checked, disabled = false, onChange }) => (
+  <div className='networkEditorToggleRow'>
+    <span>{label}</span>
+    <button
+      type='button'
+      aria-label={label}
+      aria-pressed={checked}
+      className={checked ? 'networkEditorToggle networkEditorToggleOn' : 'networkEditorToggle'}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <span />
+    </button>
+  </div>
+)
+
+export const NetworkEditorActions = ({ primaryLabel, primaryEnabled, onCancel, onPrimary, onRemove }) => (
+  <div className='networkEditorFooter'>
+    {onRemove && (
+      <button type='button' className='networkEditorRemove wrenControl wrenControlDanger' onClick={onRemove}>
+        Remove network
+      </button>
+    )}
+    <div className='networkEditorFooterActions'>
+      <button
+        type='button'
+        className='networkEditorCancel wrenControl wrenControlSecondary'
+        onClick={onCancel}
+      >
+        Cancel
+      </button>
+      <button
+        type='button'
+        className='networkEditorSubmit wrenControl wrenControlPrimary'
+        disabled={!primaryEnabled}
+        onClick={onPrimary}
+      >
+        {primaryLabel}
+      </button>
+    </div>
+  </div>
+)
+
+const endpointStatus = (endpoint, localStatus) => {
+  if (localStatus) return localStatus
+  if (!endpoint.on) return ''
+  if (endpoint.status === 'connected') {
+    return endpoint.latencyMs === undefined ? 'Connected' : `Connected · ${Math.round(endpoint.latencyMs)} ms`
+  }
+  if (endpoint.status === 'standby') {
+    return endpoint.latencyMs === undefined ? 'Not checked' : `Standby · ${Math.round(endpoint.latencyMs)} ms`
+  }
+  if (['loading', 'pending', 'syncing'].includes(endpoint.status)) return 'Checking connection…'
+  if (['disconnected', 'error', 'chain mismatch'].includes(endpoint.status)) return 'Can’t connect'
+  return 'Not checked'
+}
+
+export const RpcEndpointLedger = ({
+  endpoints,
+  values,
+  statuses = {},
+  onValueChange,
+  onCommit,
+  onToggle,
+  onMove,
+  onAdd,
+  onRemove
+}) => (
+  <section className='rpcEndpointSection' aria-labelledby='rpc-endpoints-title'>
+    <div className='rpcEndpointHeading'>
+      <div>
+        <h2 id='rpc-endpoints-title'>RPC endpoints</h2>
+        <p>Wren uses endpoints in order and tries the next one only if the current endpoint fails.</p>
+      </div>
+    </div>
+    <div className='rpcEndpointLedger'>
+      {endpoints.map((endpoint, index) => {
+        const status = endpointStatus(endpoint, statuses[endpoint.id])
+        const error = status === 'Can’t connect' || status === 'Use an HTTPS RPC URL'
+        return (
+          <div
+            className={endpoint.on ? 'rpcEndpointRow' : 'rpcEndpointRow rpcEndpointRowOff'}
+            key={endpoint.id}
+          >
+            <span className='rpcEndpointOrder'>{index + 1}</span>
+            <span className={`rpcEndpointDot rpcEndpointDot${endpoint.status || 'off'}`} aria-hidden='true' />
+            <label className='rpcEndpointInputWrap'>
+              <input
+                aria-label={`RPC URL ${index + 1}`}
+                aria-invalid={error || undefined}
+                className='rpcEndpointInput wrenInput'
+                spellCheck='false'
+                value={values[endpoint.id] ?? ''}
+                onBlur={() => onCommit(endpoint.id)}
+                onChange={(event) => onValueChange(endpoint.id, event.target.value.replace(/\s+/g, ''))}
+              />
+            </label>
+            <span className={error ? 'rpcEndpointStatus rpcEndpointStatusError' : 'rpcEndpointStatus'}>
+              {status}
+            </span>
+            <div className='rpcEndpointMove'>
+              <button
+                type='button'
+                aria-label={`Move RPC endpoint ${index + 1} up`}
+                disabled={index === 0}
+                onClick={() => onMove(endpoint.id, -1)}
+              >
+                <Icon name='chevron-up' size={13} />
+              </button>
+              <button
+                type='button'
+                aria-label={`Move RPC endpoint ${index + 1} down`}
+                disabled={index === endpoints.length - 1}
+                onClick={() => onMove(endpoint.id, 1)}
+              >
+                <Icon name='chevron-down' size={13} />
+              </button>
+            </div>
+            <button
+              type='button'
+              aria-label={`${endpoint.on ? 'Disable' : 'Enable'} RPC endpoint ${index + 1}`}
+              aria-pressed={endpoint.on}
+              className={endpoint.on ? 'networkEditorToggle networkEditorToggleOn' : 'networkEditorToggle'}
+              onClick={() => onToggle(endpoint.id, !endpoint.on)}
+            >
+              <span />
+            </button>
+            {index > 0 ? (
+              <button
+                type='button'
+                className='rpcEndpointRemove'
+                aria-label={`Remove RPC endpoint ${index + 1}`}
+                onClick={() => onRemove(endpoint.id)}
+              >
+                <Icon name='remove' size={14} />
+              </button>
+            ) : (
+              <span className='rpcEndpointRemoveSpacer' />
+            )}
+          </div>
+        )
+      })}
+    </div>
+    <div className='rpcEndpointAddRow'>
+      <button type='button' disabled={endpoints.length >= 5} onClick={onAdd}>
+        <Icon name='add' size={14} />
+        <span>Add RPC</span>
+      </button>
+      {endpoints.length >= 5 && <span>Maximum of 5 RPC endpoints</span>}
+    </div>
+  </section>
+)
+
+export const ChainHeader = ({
+  type,
+  id,
+  icon,
+  name,
+  isTestnet,
+  on,
+  primaryColor,
+  showExpand,
+  showToggle
+}) => {
   const isMainnet = id === 1
+  const chainIdentity = getChainIdentity(id, isTestnet)
+  const isCustomIdentity = chainIdentity.mark === 'chain'
+  const identityColor =
+    isCustomIdentity && primaryColor
+      ? `var(--${primaryColor})`
+      : `var(${chainIdentity.colorToken})`
+  const identity = (
+    <>
+      <div className='signerIcon'>
+        <RingIcon
+          block={!isCustomIdentity}
+          color={identityColor}
+          img={isCustomIdentity ? icon : undefined}
+          noRing={!isCustomIdentity}
+          svgName={chainIdentity.mark}
+          svgSize={isCustomIdentity ? undefined : 20}
+        />
+      </div>
+      <div role='chainName' className='signerName'>
+        {name}
+      </div>
+      {showExpand && (
+        <span className='networkDetailsChevron' aria-hidden='true'>
+          <Icon name='chevron-right' size={16} />
+        </span>
+      )}
+    </>
+  )
+  const openDetails = () => {
+    const chain = { id, type }
+    link.send('tray:action', 'navDash', { view: 'chains', data: { selectedChain: chain } })
+  }
+
   return (
     <div className='signerTop'>
-      <div className='signerDetails'>
-        <div className='signerIcon'>
-          <RingIcon color={`var(--${primaryColor})`} img={icon} svgName={svgName} />
-        </div>
-        {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
-        <div role='chainName' className='signerName'>
-          {name}
-        </div>
-      </div>
+      {showExpand ? (
+        <button
+          type='button'
+          aria-label={`Open ${name} network details`}
+          className='signerDetails networkDetailsTrigger'
+          onClick={openDetails}
+        >
+          {identity}
+        </button>
+      ) : (
+        <div className='signerDetails'>{identity}</div>
+      )}
       <div className='signerMenuItems'>
-        {showExpand && (
-          <button
-            type='button'
-            aria-label={`Open ${name} network details`}
-            className='signerExpand'
-            onClick={() => {
-              const chain = { id, type }
-              link.send('tray:action', 'navDash', { view: 'chains', data: { selectedChain: chain } })
-            }}
-          >
-            <Icon name='details' size={14} />
-          </button>
-        )}
         {showToggle && (
           <button
             type='button'
@@ -118,7 +352,7 @@ export const EditChainField = ({ currentValue, defaultValue, label, onChange }) 
       </label>
       <input
         id={id}
-        className={!currentValue ? 'chainInput chainInputDim' : 'chainInput'}
+        className={!currentValue ? 'chainInput chainInputDim wrenInput' : 'chainInput wrenInput'}
         value={currentValue || (!editing && defaultValue) || ''}
         spellCheck='false'
         onChange={(e) => {

@@ -36,7 +36,7 @@
     display flex
     justify-content center
     align-items center
-    font-size 11px
+    font-size var(--wren-type-caption)
     font-weight 300
     overflow hidden
     background-position 0 100%
@@ -122,45 +122,16 @@
   top 9px
   right 9px
   display flex
-  background var(--ghostZ)
-  padding 2px 2px 1px 2px
-  border-radius 16px
+  gap 4px
 
   .chainMonitorSwitchButton
-    appearance none
-    padding 2px 6px
-    color inherit
-    font-family inherit
-    border-radius 16px
-    background var(--ghostA)
-    box-shadow 0px 1px 2px var(--ghostX)
-    border 0
-    border-bottom 2px solid var(--ghostZ)
-    cursor pointer
+    width 30px
+    min-width 30px
+    height 28px
+    min-height 28px
+    padding 0
+    border-radius var(--wren-radius-sm)
     *
       pointer-events none
-
-  .chainMonitorSwitchButton:first-child
-    margin-right 3px
-    border-top-right-radius 4px
-    border-bottom-right-radius 4px
-
-  .chainMonitorSwitchButton:last-child
-    border-top-left-radius 4px
-    border-bottom-left-radius 4px
-
-
-  .chainMonitorSwitchButton:hover
-    background var(--ghostB)
-    transform translateY(-1px)
-    border-bottom 2px solid var(--ghostZ)
-    box-shadow 0px 4px 30px -8px var(--ghostX)
-    position relative
-    z-index 300000
-
-  .chainMonitorSwitchButton:active
-    background var(--ghostB)
-    transform translateY(0px)
-    box-shadow 0px 2px 4px var(--ghostX)
 
 @import './account.styl'

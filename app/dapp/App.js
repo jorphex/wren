@@ -7,7 +7,7 @@ import Native from '../../resources/Native'
 const FailedToLoad = () => {
   return (
     <div className='mainDappLoadingText'>
-      <div>{'Send dapp failed to load'}</div>
+      <div>{'Send is unavailable.'}</div>
     </div>
   )
 }
@@ -29,12 +29,12 @@ export const MainnetDisconnected = () => {
   return (
     <>
       <div className='mainDappLoadingText'>
-        <div>{'Mainnet connection required'}</div>
-        <div>{'to resolve ENS for Send dapp'}</div>
+        <div>{'Ethereum Mainnet connection required'}</div>
+        <div>{'to resolve ENS for Send'}</div>
       </div>
       <button
         type='button'
-        className='mainDappEnableChains'
+        className='mainDappEnableChains wrenControl wrenControlPrimary'
         disabled={opening}
         onClick={openNetworks}
       >
@@ -80,7 +80,7 @@ class App extends React.Component {
 
     const mainnet = this.store('main.networks.ethereum.1')
     const isMainnetConnected =
-      mainnet.on && (mainnet.connection.primary.connected || mainnet.connection.secondary.connected)
+      mainnet.on && mainnet.connection.endpoints.some((endpoint) => endpoint.connected)
 
     const shouldDisplayError =
       (sendDapp.status !== 'ready' && !isMainnetConnected) || sendDapp.status === 'failed'

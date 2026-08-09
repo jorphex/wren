@@ -38,7 +38,7 @@ it('should render an existing shortcut', () => {
     />
   )
 
-  const displayedShortcut = screen.getByLabelText('To Test this component press')
+  const displayedShortcut = screen.getByLabelText('To Test this component, press')
   expect(displayedShortcut.textContent).toBe('Alt+/')
 })
 
@@ -57,7 +57,7 @@ it('should render an existing Meta key shortcut on MacOS', () => {
     />
   )
 
-  const displayedShortcut = screen.getByLabelText('To Test this component press')
+  const displayedShortcut = screen.getByLabelText('To Test this component, press')
   expect(displayedShortcut.textContent).toBe('Command+/')
 })
 
@@ -75,7 +75,7 @@ it('should render an existing Alt key shortcut on MacOS', () => {
     />
   )
 
-  const displayedShortcut = screen.getByLabelText('To Test this component press')
+  const displayedShortcut = screen.getByLabelText('To Test this component, press')
   expect(displayedShortcut.textContent).toBe('Option+/')
 })
 
@@ -94,7 +94,7 @@ it('should render an existing Meta key shortcut on Windows', () => {
     />
   )
 
-  const displayedShortcut = screen.getByLabelText('To Test this component press')
+  const displayedShortcut = screen.getByLabelText('To Test this component, press')
   expect(displayedShortcut.textContent).toBe('Win+/')
 })
 
@@ -114,7 +114,7 @@ describe('when configuring', () => {
       />
     )
 
-    const enterShortcutPrompt = screen.getByText('Enter new keyboard shortcut!')
+    const enterShortcutPrompt = screen.getByText('Press a new keyboard shortcut')
     expect(enterShortcutPrompt).toBeDefined()
   })
 
@@ -134,7 +134,7 @@ describe('when configuring', () => {
         />
       )
 
-      const enterShortcutPrompt = screen.getByText('Enter new keyboard shortcut!')
+      const enterShortcutPrompt = screen.getByText('Press a new keyboard shortcut')
       expect(enterShortcutPrompt).toBeDefined()
       await user.keyboard('{Alt>}T{/Alt}')
 
@@ -161,7 +161,7 @@ describe('when configuring', () => {
         />
       )
 
-      const enterShortcutPrompt = screen.getByText('Enter new keyboard shortcut!')
+      const enterShortcutPrompt = screen.getByText('Press a new keyboard shortcut')
       expect(enterShortcutPrompt).toBeDefined()
       await user.keyboard('{Alt>}T{/Alt}')
 
@@ -190,7 +190,7 @@ describe('when configuring', () => {
         />
       )
 
-      const enterShortcutPrompt = screen.getByText('Enter new keyboard shortcut!')
+      const enterShortcutPrompt = screen.getByText('Press a new keyboard shortcut')
       expect(enterShortcutPrompt).toBeDefined()
       await user.keyboard('{Shift>};{/Shift}')
 

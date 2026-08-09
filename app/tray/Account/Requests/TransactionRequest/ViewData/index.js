@@ -1,8 +1,8 @@
 import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../../../../resources/Components/Icon'
-import link from '../../../../../../resources/link'
 import { parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
+import NonceControl from '../NonceControl'
 import {
   SimulationAllowance,
   SimulationCallTrace,
@@ -26,54 +26,6 @@ const txFieldPriority = [
   'accessList'
 ]
 
-const nonceHasBeenChanged = (req) => {
-  return req.data.nonce && req.payload.params?.[0]?.nonce !== req.data.nonce
-}
-
-const NonceValue = ({ req, nonce }) => {
-  const mutable = !req.locked && req.status === undefined
-
-  return (
-    <>
-      <div style={{ width: '24px' }}>{nonce}</div>
-      {mutable && (
-        <div className='txNonceControl'>
-          <button
-            type='button'
-            aria-label='Decrease nonce'
-            className='txNonceButton txNonceButtonLower'
-            onClick={() => {
-              link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, -1)
-            }}
-          >
-            <Icon name='chevron-down' size={14} />
-          </button>
-          <button
-            type='button'
-            aria-label='Increase nonce'
-            className='txNonceButton txNonceButtonRaise'
-            onClick={() =>
-              link.send('tray:adjustNonce', { account: req.account, handlerId: req.handlerId }, 1)
-            }
-          >
-            <Icon name='chevron-up' size={14} />
-          </button>
-          {nonceHasBeenChanged(req) && (
-            <button
-              type='button'
-              aria-label='Reset nonce'
-              className='txNonceButton txNonceButtonReset'
-              onClick={() => link.send('tray:resetNonce', { account: req.account, handlerId: req.handlerId })}
-            >
-              <Icon name='sync' size={14} />
-            </button>
-          )}
-        </div>
-      )}
-    </>
-  )
-}
-
 const TextValue = ({ value }) =>
   typeof value === 'object' ? (
     <pre className='simpleJsonStructuredValue'>{JSON.stringify(value, null, 2)}</pre>
@@ -95,7 +47,11 @@ export const SimpleTxJSON = ({ json, req }) => {
         })
         .map((key, o) => {
           const value =
-            key === 'nonce' ? <NonceValue nonce={json[key]} req={req} /> : <TextValue value={json[key]} />
+            key === 'nonce' ? (
+              <NonceControl nonce={req.data.nonce} displayValue={json[key]} req={req} />
+            ) : (
+              <TextValue value={json[key]} />
+            )
 
           return (
             <div key={key + o} className='simpleJsonChild'>

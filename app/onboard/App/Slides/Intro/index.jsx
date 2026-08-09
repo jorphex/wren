@@ -48,32 +48,7 @@ const WelcomeCopy = styled.p`
 const WelcomeButton = styled.button`
   min-width: 144px;
   height: 46px;
-  padding: 0 22px;
-  border: 1px solid var(--wren-accent-primary-hover);
-  border-radius: var(--wren-radius-sm);
-  color: var(--wren-text-inverse);
-  background: var(--wren-accent-primary);
-  box-shadow: var(--wren-shadow-sm);
-  font: inherit;
   font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    transform 120ms ease;
-
-  &:hover {
-    background: var(--wren-accent-primary-hover);
-  }
-
-  &:active {
-    transform: translateY(1px);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--wren-focus);
-    outline-offset: 3px;
-  }
 `
 
 const Intro = ({ onProceed, setTitle, setProceed }) => {
@@ -90,7 +65,11 @@ const Intro = ({ onProceed, setTitle, setProceed }) => {
           <WelcomeCopy>
             Your accounts, networks, and signing tools together in one calm desktop wallet.
           </WelcomeCopy>
-          <WelcomeButton type='button' onClick={onProceed}>
+          <WelcomeButton
+            type='button'
+            className='wrenControl wrenControlPrimary wrenControlLarge wrenOnboardPrimary'
+            onClick={onProceed}
+          >
             Get started
           </WelcomeButton>
         </WelcomeContent>

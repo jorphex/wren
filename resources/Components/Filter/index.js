@@ -32,29 +32,17 @@ class Filter extends React.Component {
   // componentWillUnmount () {
   //   document.removeEventListener('keydown', this.h.bind(this))
   // }
-  glitch(el) {
-    return (
-      <div className={this.state.glitchOn ? 'glitch glitchOn' : 'glitch'}>
-        {[...Array(10).keys()].map((i) => (
-          <div key={i + 'hg'} className='line'>
-            {el}
-          </div>
-        ))}
-        {!this.state.glitchOn ? <div className='line lastLine'>{el}</div> : null}
-      </div>
-    )
-  }
   render() {
     const { buttonActionName, buttonAction } = this.props
     return (
       <div className='filter'>
-        <div className='filterWrap'>
+        <div className='filterWrap wrenInputGroup wrenInputGroupQuiet'>
           <div className='filterIcon'>
             <Icon name='search' size={18} />
           </div>
           <input
             aria-label={this.props.inputLabel || 'Filter'}
-            className='filterInput'
+            className='filterInput wrenInput'
             spellCheck={false}
             onChange={(e) => this.props.onInput(e.target.value)}
           />
@@ -63,21 +51,13 @@ class Filter extends React.Component {
           <button
             type='button'
             aria-label={buttonActionName}
-            className='filterButton'
+            className='filterButton wrenControl wrenControlSecondary wrenControlCompact'
             onClick={() => {
-              this.setState({ glitchOn: false })
               if (buttonAction) buttonAction()
             }}
-            onMouseEnter={() => this.setState({ glitchOn: true })}
-            onMouseOver={() => this.setState({ glitchOn: true })}
-            onMouseLeave={() => this.setState({ glitchOn: false })}
           >
-            {this.glitch(
-              <div className='filterButtonInner'>
-                <Icon name='add' size={12} />
-                <Icon name='network' size={14} />
-              </div>
-            )}
+            <Icon name='add' size={14} />
+            <Icon name='network' size={16} />
           </button>
         ) : null}
       </div>

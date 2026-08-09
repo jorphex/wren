@@ -18,6 +18,19 @@ test('supports a label when an icon conveys standalone meaning', () => {
   expect(screen.getByRole('img', { name: 'Connected' })).toBeTruthy()
 })
 
+test('selects compact and regular optical masters for pixel-authored icons', () => {
+  render(
+    <>
+      <Icon data-testid='compact-token' name='tokens' size={16} />
+      <Icon data-testid='regular-token' name='tokens' size={20} />
+    </>
+  )
+
+  expect(screen.getByTestId('compact-token').getAttribute('viewBox')).toBe('0 0 16 16')
+  expect(screen.getByTestId('regular-token').getAttribute('viewBox')).toBe('0 0 20 20')
+  expect(screen.getByTestId('compact-token').getAttribute('shape-rendering')).toBe('crispEdges')
+})
+
 test('publishes unique names and rejects unknown icons', () => {
   expect(new Set(iconNames).size).toBe(iconNames.length)
   expect(() => render(<Icon name='missing' />)).toThrow('Unknown Wren icon: missing')

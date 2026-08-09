@@ -1,5 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
+
+import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v1.png'
 // import { CSSTransitionGroup } from 'react-transition-group'
 
 // import ProviderRequest from './ProviderRequest'
@@ -13,13 +15,14 @@ import TxOverview from './TransactionRequest/TxMainNew/overview'
 
 import RequestItem from '../../../../resources/Components/RequestItem'
 import Icon from '../../../../resources/Components/Icon'
+import WrenEmptyState from '../../../../resources/Components/WrenEmptyState'
 
 import { ClusterBox, Cluster } from '../../../../resources/Components/Cluster'
 
 import link from '../../../../resources/link'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
 
-class Requests extends React.Component {
+export class Requests extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
@@ -53,7 +56,8 @@ class Requests extends React.Component {
     const reqCount = Object.keys(this.store('main.accounts', this.props.account, 'requests') || {}).length
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
-        <div
+        <button
+          type='button'
           className={'requestsPreview'}
           onClick={() => {
             const crumb = {
@@ -76,8 +80,6 @@ class Requests extends React.Component {
             </div>
             <div className={'requestPreviewContentArrow'} style={reqCount ? { color: 'var(--good)' } : {}}>
               <Icon name='next' size={14} />
-              <Icon name='next' size={14} />
-              <Icon name='next' size={14} />
             </div>
           </div>
           <div className={'requestsPreviewArrow'}>
@@ -87,7 +89,7 @@ class Requests extends React.Component {
             />
           </div>
           <div className={'requestsPreviewOverlay'} style={reqCount ? { opacity: '1' } : { opacity: '0' }} />
-        </div>
+        </button>
       </div>
     )
   }
@@ -107,19 +109,19 @@ class Requests extends React.Component {
           <button
             type='button'
             aria-label={`Clear requests from ${groupName}`}
-            className='requestGroupButton'
+            className='requestGroupButton wrenControl wrenControlGhost wrenControlCompact'
             onClick={() => {
               link.send('tray:clearRequestsByOrigin', this.props.account, origin)
             }}
           >
             <Icon name='close' size={14} />
-            <div className='requestGroupButtonLabel'>{'clear all'}</div>
+            <span className='requestGroupButtonLabel'>{'Clear all'}</span>
           </button>
         </div>
-        <Cluster>
+        <Cluster className='requestLedger'>
           {!requests.length ? (
             <div key='noReq' className='noRequests'>
-              No Pending Requests
+              No pending requests
             </div>
           ) : null}
           {requests.map((req, i) => {
@@ -210,7 +212,7 @@ class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Add Tokens'}
+                  title={'Add Token'}
                   color={'var(--outerspace)'}
                   svgName={'tokens'}
                 >
@@ -294,7 +296,14 @@ class Requests extends React.Component {
       <div className='accountViewScroll' style={{ paddingTop: '40px' }}>
         {groups.length === 0 ? (
           <div className='requestContainerWrap'>
-            <div className='requestContainerEmpty'>{'NO PENDING REQUESTS'}</div>
+            <div className='requestContainerEmpty'>
+              <WrenEmptyState
+                image={emptyRequests}
+                title='No pending requests'
+                copy='Connection and signing requests will appear here.'
+                expanded
+              />
+            </div>
           </div>
         ) : (
           groups.map((origin) => {

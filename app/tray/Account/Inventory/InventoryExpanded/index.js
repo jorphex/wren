@@ -1,10 +1,14 @@
 import React from 'react'
 import Restore from 'react-restore'
+
+import emptyInventory from 'url:../../../../../asset/ui/wren-empty-inventory-v1.png'
+
 import link from '../../../../../resources/link'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
-class Inventory extends React.Component {
+export class InventoryExpanded extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
@@ -63,29 +67,24 @@ class Inventory extends React.Component {
     const inventory = this.store('main.inventory', this.props.account)
     const collections = Object.keys(inventory || {})
     return (
-      <div className='accountViewScroll'>
-        <ClusterBox style={{ marginTop: '20px' }}>
-          <Cluster>
-            {collections.length ? (
-              this.renderInventoryList()
-            ) : inventory ? (
-              <ClusterRow>
-                <ClusterValue>
-                  <div className='inventoryNotFound'>No Items Found</div>
-                </ClusterValue>
-              </ClusterRow>
-            ) : (
-              <ClusterRow>
-                <ClusterValue>
-                  <div className='inventoryNotFound'>Loading Items..</div>
-                </ClusterValue>
-              </ClusterRow>
-            )}
-          </Cluster>
-        </ClusterBox>
+      <div className='accountViewScroll accountLedgerView'>
+        {collections.length ? (
+          <ClusterBox>
+            <Cluster>{this.renderInventoryList()}</Cluster>
+          </ClusterBox>
+        ) : inventory ? (
+          <WrenEmptyState
+            image={emptyInventory}
+            title='No collectibles yet'
+            copy='Collectibles associated with this account appear here.'
+            expanded
+          />
+        ) : (
+          <div className='inventoryNotFound'>Loading collectibles…</div>
+        )}
       </div>
     )
   }
 }
 
-export default Restore.connect(Inventory)
+export default Restore.connect(InventoryExpanded)

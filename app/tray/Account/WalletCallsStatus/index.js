@@ -1,90 +1,234 @@
+import { useEffect, useRef, useState } from 'react'
+
+import Icon from '../../../../resources/Components/Icon'
+import link from '../../../../resources/link'
+
+const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/
+
 const presentations = {
-  100: { label: 'Pending', detail: 'Wren is waiting for the batch to finish.', className: 'pending' },
-  200: { label: 'Confirmed', detail: 'Every call completed successfully.', className: 'success' },
+  100: {
+    label: 'Pending',
+    detail: 'Wren is waiting for submitted transactions.',
+    tone: 'pending',
+    icon: 'pending'
+  },
+  200: {
+    label: 'Confirmed',
+    detail: 'Every transaction completed successfully.',
+    tone: 'success',
+    icon: 'verified'
+  },
   400: {
     label: 'Failed',
-    detail: 'The batch failed before any transaction was submitted.',
-    className: 'failure'
+    detail: 'The batch stopped before any transaction was submitted.',
+    tone: 'failure',
+    icon: 'failed'
   },
-  500: { label: 'Reverted', detail: 'Every submitted call reverted.', className: 'failure' },
+  500: {
+    label: 'Reverted',
+    detail: 'Every submitted transaction reverted.',
+    tone: 'failure',
+    icon: 'failed'
+  },
   600: {
     label: 'Partially executed',
-    detail: 'The batch has mixed results or stopped before every call was submitted.',
-    className: 'warning'
+    detail: 'Some transactions succeeded while others reverted or were not submitted.',
+    tone: 'warning',
+    icon: 'alert'
   }
 }
 
+const quantity = (value) => {
+  if (typeof value !== 'string' || !QUANTITY.test(value)) return
+  try {
+    return BigInt(value)
+  } catch {
+    return
+  }
+}
+
+const formatInteger = (value) => quantity(value)?.toLocaleString('en-US') || 'Unavailable'
+
+const formatNative = (value, decimals, symbol) => {
+  if (typeof value !== 'bigint') return 'Unavailable'
+  const scale = 10n ** BigInt(decimals)
+  const whole = value / scale
+  const fraction = (value % scale).toString().padStart(decimals, '0').slice(0, 8).replace(/0+$/, '')
+  if (value > 0n && whole === 0n && !fraction && decimals > 0) {
+    const precision = Math.min(decimals, 8)
+    return `<0.${'0'.repeat(precision - 1)}1 ${symbol}`
+  }
+  return `${whole}${fraction ? `.${fraction}` : ''} ${symbol}`
+}
+
+const formatGwei = (value) => {
+  const parsed = quantity(value)
+  if (parsed === undefined) return
+  const whole = parsed / 1_000_000_000n
+  const fraction = (parsed % 1_000_000_000n).toString().padStart(9, '0').replace(/0+$/, '')
+  return `${whole}${fraction ? `.${fraction}` : ''} Gwei`
+}
+
+const shortValue = (value = '', lead = 10, tail = 8) =>
+  value.length > lead + tail + 1 ? `${value.slice(0, lead)}…${value.slice(-tail)}` : value
+
 const receiptLabel = (receipt) => (receipt.status === '0x1' ? 'Confirmed' : 'Reverted')
 
-export function WalletCallsStatus({ accountId, chainName, originName, status }) {
+const feeModel = (receipt) => {
+  if (receipt.type === '0x2') return 'EIP-1559 effective rate'
+  if (receipt.type === '0x0' || receipt.type === '0x1') return 'Legacy effective rate'
+  return 'Effective rate'
+}
+
+export function WalletCallsStatus({
+  accountId,
+  accountName,
+  chainName,
+  nativeCurrency = {},
+  originName,
+  status
+}) {
   const presentation = presentations[status.status] || presentations[100]
   const receipts = Array.isArray(status.receipts) ? status.receipts : []
+  const confirmed = receipts.filter((receipt) => receipt.status === '0x1').length
+  const [copied, setCopied] = useState(-1)
+  const copyTimer = useRef()
+  const decimals =
+    Number.isInteger(nativeCurrency.decimals) &&
+    nativeCurrency.decimals >= 0 &&
+    nativeCurrency.decimals <= 255
+      ? nativeCurrency.decimals
+      : 18
+  const symbol = nativeCurrency.symbol || '?'
+
+  useEffect(() => () => clearTimeout(copyTimer.current), [])
+
+  const copyHash = (index, hash) => {
+    link.send('tray:clipboardData', hash)
+    clearTimeout(copyTimer.current)
+    setCopied(index)
+    copyTimer.current = setTimeout(() => setCopied(-1), 1000)
+  }
+
+  const statusDetail =
+    status.status === 600 && receipts.length
+      ? `${confirmed} of ${receipts.length} submitted transactions confirmed.`
+      : presentation.detail
 
   return (
     <div className='walletCallsStatus'>
       <div className='walletCallsStatusScroll'>
-        <div className='walletCallsStatusHeader'>
-          <div className='walletCallsStatusOrigin'>{originName}</div>
-          <div className='walletCallsStatusIntent'>wallet call batch</div>
-          <div className='walletCallsStatusChain'>
-            {chainName} ({status.chainId})
+        <section className={`walletCallsStatusSummary walletCallsStatusSummary-${presentation.tone}`}>
+          <div className='walletCallsStatusSummaryCopy'>
+            <div className='walletCallsStatusEyebrow'>Wallet call batch</div>
+            <h2>{presentation.label}</h2>
+            <p>{statusDetail}</p>
           </div>
-          <div className='walletCallsStatusAccount'>{accountId}</div>
-        </div>
+          <span className='walletCallsStatusMark' aria-hidden='true'>
+            <Icon name={presentation.icon} size={20} />
+          </span>
+        </section>
 
-        <div className={`walletCallsStatusSummary walletCallsStatusSummary-${presentation.className}`}>
-          <div className='walletCallsStatusLabel'>{presentation.label}</div>
-          <div className='walletCallsStatusDetail'>{presentation.detail}</div>
-          <div className='walletCallsStatusAtomic'>Non-atomic execution</div>
-        </div>
-
-        <dl className='walletCallsStatusMetadata'>
-          <div>
-            <dt>Batch ID</dt>
-            <dd>{status.id}</dd>
+        <section className='walletCallsStatusSection'>
+          <h3>Batch context</h3>
+          <div className='walletCallsStatusContext'>
+            <div>
+              <span>Origin</span>
+              <strong>{originName}</strong>
+            </div>
+            <div>
+              <span>Network</span>
+              <strong>
+                {chainName} · {formatInteger(status.chainId)}
+              </strong>
+            </div>
+            <div>
+              <span>Account</span>
+              <strong title={accountId}>
+                {accountName ? `${accountName} · ` : ''}
+                {shortValue(accountId, 8, 6)}
+              </strong>
+            </div>
+            <div>
+              <span>Execution</span>
+              <strong className='walletCallsStatusNonAtomic'>Non-atomic</strong>
+            </div>
           </div>
-          <div>
-            <dt>Version</dt>
-            <dd>{status.version}</dd>
+          <div className='walletCallsStatusAtomic'>
+            <Icon name='alert' size={16} />
+            <span>Non-atomic: an earlier transaction can remain confirmed if a later one fails.</span>
           </div>
-        </dl>
+        </section>
 
-        <div className='walletCallsStatusReceipts'>
-          <div className='walletCallsStatusSectionTitle'>Transaction evidence</div>
+        <section className='walletCallsStatusSection walletCallsStatusEvidence'>
+          <div className='walletCallsStatusSectionHeading'>
+            <h3>Transaction evidence</h3>
+            <span>
+              {receipts.length
+                ? `${receipts.length} receipt${receipts.length === 1 ? '' : 's'}`
+                : 'No receipts yet'}
+            </span>
+          </div>
           {receipts.length ? (
-            receipts.map((receipt, index) => (
-              <div className='walletCallsStatusReceipt' key={`${index}:${receipt.transactionHash}`}>
-                <div className='walletCallsStatusReceiptHeader'>
-                  <span>Transaction {index + 1}</span>
-                  <span
-                    className={
-                      receipt.status === '0x1'
-                        ? 'walletCallsStatusReceiptGood'
-                        : 'walletCallsStatusReceiptBad'
-                    }
-                  >
-                    {receiptLabel(receipt)}
-                  </span>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Hash</dt>
-                    <dd>{receipt.transactionHash}</dd>
+            <div className='walletCallsStatusReceipts'>
+              {receipts.map((receipt, index) => {
+                const gasUsed = quantity(receipt.gasUsed)
+                const gasPrice = quantity(receipt.effectiveGasPrice)
+                const paid = gasUsed !== undefined && gasPrice !== undefined ? gasUsed * gasPrice : undefined
+                return (
+                  <div className='walletCallsStatusReceipt' key={`${index}:${receipt.transactionHash}`}>
+                    <span className='walletCallsStatusReceiptNumber'>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className='walletCallsStatusReceiptBody'>
+                      <button type='button' onClick={() => copyHash(index, receipt.transactionHash)}>
+                        <strong>Transaction {index + 1}</strong>
+                        <span>{copied === index ? 'Hash copied' : shortValue(receipt.transactionHash)}</span>
+                      </button>
+                      <dl>
+                        <div>
+                          <dt>Block</dt>
+                          <dd>{formatInteger(receipt.blockNumber)}</dd>
+                        </div>
+                        <div>
+                          <dt>Gas used</dt>
+                          <dd>{formatInteger(receipt.gasUsed)}</dd>
+                        </div>
+                        <div>
+                          <dt>Network fee</dt>
+                          <dd>{paid === undefined ? 'Unavailable' : formatNative(paid, decimals, symbol)}</dd>
+                          {gasPrice !== undefined && (
+                            <small>
+                              {formatGwei(receipt.effectiveGasPrice)} · {feeModel(receipt)}
+                            </small>
+                          )}
+                        </div>
+                      </dl>
+                    </div>
+                    <span
+                      className={
+                        receipt.status === '0x1'
+                          ? 'walletCallsStatusReceiptGood'
+                          : 'walletCallsStatusReceiptBad'
+                      }
+                    >
+                      {receiptLabel(receipt)}
+                    </span>
                   </div>
-                  <div>
-                    <dt>Block</dt>
-                    <dd>{receipt.blockNumber}</dd>
-                  </div>
-                  <div>
-                    <dt>Gas used</dt>
-                    <dd>{receipt.gasUsed}</dd>
-                  </div>
-                </dl>
-              </div>
-            ))
+                )
+              })}
+            </div>
           ) : (
-            <div className='walletCallsStatusEmpty'>No transaction receipts are available yet.</div>
+            <div className='walletCallsStatusEmpty'>
+              Receipts will appear here after transactions are submitted.
+            </div>
           )}
+        </section>
+
+        <div className='walletCallsStatusMetadata'>
+          <span title={status.id}>Batch {shortValue(status.id, 12, 8)}</span>
+          <span>Version {status.version}</span>
+          <span>Status {status.status}</span>
         </div>
       </div>
     </div>

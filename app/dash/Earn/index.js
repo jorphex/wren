@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import yearnLogo from 'url:./assets/yearn-logo-white.svg'
 
 import link from '../../../resources/link'
 import {
@@ -37,6 +38,11 @@ export const formatPercent = (value) =>
   typeof value === 'number'
     ? `${(value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
     : 'Unavailable'
+
+export const formatPercentLabel = (value, label) => {
+  const formatted = formatPercent(value)
+  return formatted === label ? formatted : `${formatted} ${label}`
+}
 
 export const formatUsd = (value) => {
   if (typeof value !== 'number') return 'Unavailable'
@@ -125,9 +131,10 @@ const ChainStatus = ({ chain }) => {
       {['disabled', 'disconnected'].includes(chain.status) ? (
         <button
           type='button'
+          className='wrenControl wrenControlSecondary wrenControlCompact'
           onClick={() => link.send('tray:action', 'navDash', { view: 'chains', data: {} })}
         >
-          Manage chain
+          Manage networks
         </button>
       ) : null}
     </div>
@@ -376,7 +383,7 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
                 {step.txHash ? (
                   <button
                     type='button'
-                    className='earnReceiptLink'
+                    className='earnReceiptLink wrenControl wrenControlGhost wrenControlCompact'
                     onClick={() =>
                       link.send('tray:openExplorer', { type: 'ethereum', id: workflow.chainId }, step.txHash)
                     }
@@ -411,22 +418,42 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
       ) : null}
       <div className='earnWorkflowActions'>
         {canResume ? (
-          <button type='button' disabled={busy || !canTransact} onClick={() => onResume(workflow.id)}>
+          <button
+            type='button'
+            className='wrenControl wrenControlPrimary wrenControlCompact'
+            disabled={busy || !canTransact}
+            onClick={() => onResume(workflow.id)}
+          >
             {workflow.status === 'error' ? 'Retry' : 'Resume'}
           </button>
         ) : null}
         {canRevoke ? (
-          <button type='button' disabled={busy || !canTransact} onClick={() => onRevoke(workflow.id)}>
+          <button
+            type='button'
+            className='wrenControl wrenControlDanger wrenControlCompact'
+            disabled={busy || !canTransact}
+            onClick={() => onRevoke(workflow.id)}
+          >
             Revoke approval
           </button>
         ) : null}
         {canRecoverCleanup ? (
-          <button type='button' disabled={busy || !canTransact} onClick={() => onRevoke(workflow.id)}>
+          <button
+            type='button'
+            className='wrenControl wrenControlDanger wrenControlCompact'
+            disabled={busy || !canTransact}
+            onClick={() => onRevoke(workflow.id)}
+          >
             {workflow.cleanupRecovery === 'unknown-outcome' ? 'Recheck approval' : 'Revoke again'}
           </button>
         ) : null}
         {canClose ? (
-          <button type='button' disabled={busy} onClick={() => onCancel(workflow.id)}>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlCompact'
+            disabled={busy}
+            onClick={() => onCancel(workflow.id)}
+          >
             Close
           </button>
         ) : null}
@@ -547,7 +574,7 @@ class ActivityPreview extends React.Component {
         {hidden > 0 ? (
           <button
             type='button'
-            className='earnMoreButton'
+            className='earnMoreButton wrenControl wrenControlSecondary wrenControlCompact'
             ref={(element) => {
               this.more = element
             }}
@@ -622,8 +649,9 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
       {!isCancel ? (
         <div className='earnAmountField'>
           <label htmlFor='earn-action-amount'>Amount in {symbol}</label>
-          <div>
+          <div className={form.error ? 'wrenInputGroup wrenInputGroupError' : 'wrenInputGroup'}>
             <input
+              className='wrenInput'
               id='earn-action-amount'
               type='text'
               inputMode='decimal'
@@ -637,7 +665,7 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
             />
             <button
               type='button'
-              className={form.max ? 'active' : ''}
+              className={`wrenControl wrenControlSecondary wrenControlCompact ${form.max ? 'active' : ''}`}
               aria-pressed={form.max}
               disabled={form.busy || disabled || (!form.max && !maxAvailable)}
               onClick={() =>
@@ -669,12 +697,12 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
         {needsApproval
           ? 'This route may need a token approval. Wren requests only the exact amount.'
           : 'This action does not request a token approval.'}{' '}
-        Every transaction opens Wren&apos;s normal simulation and signer review.
+        Every transaction opens Wren&apos;s simulation and signer review.
         {form.action === 'withdraw' ? ' Withdrawal loss tolerance is fixed at 0%.' : ''}
       </div>
       <button
         type='button'
-        className='earnPrimaryAction'
+        className='earnPrimaryAction wrenControl wrenControlPrimary wrenControlLarge'
         disabled={disabled || form.busy || (!isCancel && !form.max && !form.amount)}
         onClick={onSubmit}
       >
@@ -767,15 +795,15 @@ const VaultDetails = ({
             {vault.variants.map((variant) => (
               <button
                 type='button'
-                className={`earnVariant ${selectedVariant === variant.id ? 'earnVariantSelected' : ''}`}
+                className={`earnVariant wrenControl wrenControlSecondary ${
+                  selectedVariant === variant.id ? 'earnVariantSelected' : ''
+                }`}
                 aria-pressed={selectedVariant === variant.id}
                 key={variant.id}
                 onClick={() => onFormChange({ variant: variant.id, error: '' })}
               >
                 <strong>{variant.id === 'locked' ? 'Locked' : 'Flexible'}</strong>
-                <span>
-                  {formatPercent(variant.apy.value)} {variant.apy.label}
-                </span>
+                <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
                 <p>
                   {variant.id === 'locked'
                     ? `Higher yield with a ${durationDays(
@@ -843,7 +871,9 @@ const VaultDetails = ({
         <button
           type='button'
           aria-pressed={form?.action === 'deposit'}
-          className={form?.action === 'deposit' ? 'active' : ''}
+          className={`wrenControl wrenControlPrimary wrenControlLarge ${
+            form?.action === 'deposit' ? 'active' : ''
+          }`}
           disabled={!canDeposit}
           onClick={() => onOpenAction('deposit', selectedVariant)}
         >
@@ -852,7 +882,9 @@ const VaultDetails = ({
         <button
           type='button'
           aria-pressed={form?.action === 'withdraw'}
-          className={form?.action === 'withdraw' ? 'active' : ''}
+          className={`wrenControl wrenControlSecondary wrenControlLarge ${
+            form?.action === 'withdraw' ? 'active' : ''
+          }`}
           disabled={!canWithdrawSelected}
           onClick={() => onOpenAction('withdraw', selectedVariant)}
         >
@@ -863,6 +895,7 @@ const VaultDetails = ({
         <div className='earnSecondaryActions'>
           <button
             type='button'
+            className='wrenControl wrenControlSecondary wrenControlCompact'
             disabled={!canStartCooldown}
             onClick={() => onOpenAction('start-cooldown', 'locked')}
           >
@@ -870,6 +903,7 @@ const VaultDetails = ({
           </button>
           <button
             type='button'
+            className='wrenControl wrenControlDanger wrenControlCompact'
             disabled={!canCancelCooldown}
             onClick={() => onOpenAction('cancel-cooldown', 'locked')}
           >
@@ -879,7 +913,12 @@ const VaultDetails = ({
       ) : null}
       {vault.kind === 'yBOLD' && direct?.sharesRaw !== '0' ? (
         <div className='earnSecondaryActions'>
-          <button type='button' disabled={!canDeposit} onClick={() => onOpenAction('stake', 'direct')}>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlCompact'
+            disabled={!canDeposit}
+            onClick={() => onOpenAction('stake', 'direct')}
+          >
             Stake existing yBOLD
           </button>
         </div>
@@ -912,23 +951,21 @@ const VaultDetails = ({
       <div className='earnDetailsFooter'>
         <button
           type='button'
-          className='earnYearnLink'
+          className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
           onClick={() => link.send('tray:openExternal', vault.yearnUrl)}
         >
           View on Yearn (external)
         </button>
         <button
           type='button'
-          className='earnYearnLink'
+          className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
           onClick={() =>
             link.send('tray:openExplorer', { type: 'ethereum', id: vault.chainId }, null, vault.address)
           }
         >
           View vault contract (external)
         </button>
-        <div className='earnDisclosure'>
-          Powered by Yearn. Vault deposits involve smart-contract and strategy risk.
-        </div>
+        <div className='earnDisclosure'>Yearn vaults involve smart-contract and strategy risk.</div>
       </div>
     </div>
   )
@@ -1254,7 +1291,7 @@ export class Earn extends React.Component {
       return (
         <div className='earnState cardShow'>
           {this.state.error || 'Earn is unavailable.'}
-          <button type='button' onClick={() => this.load(true)}>
+          <button type='button' className='wrenControl wrenControlPrimary' onClick={() => this.load(true)}>
             Try again
           </button>
         </div>
@@ -1322,12 +1359,15 @@ export class Earn extends React.Component {
     return (
       <div className='earn cardShow'>
         <header className='earnHero'>
-          <div className='earnEyebrow'>Powered by Yearn</div>
+          <div className='earnEyebrow earnProvider'>
+            <span>Vaults by</span>
+            <img src={yearnLogo} alt='Yearn' />
+          </div>
           <h1>Earn</h1>
-          <p>A focused list of established Yearn vaults, separated by chain.</p>
+          <p>A focused selection of established vaults, separated by chain.</p>
           <button
             type='button'
-            className='earnRefresh'
+            className='earnRefresh wrenControl wrenControlSecondary wrenControlCompact'
             disabled={this.state.refreshing}
             onClick={() => this.load(true)}
           >
@@ -1347,7 +1387,7 @@ export class Earn extends React.Component {
               {currentPositions.account.name ||
                 `${currentPositions.account.address.slice(0, 6)}...${currentPositions.account.address.slice(-4)}`}
             </strong>
-            {currentPositions.account.readOnly ? <em>Read only</em> : null}
+            {currentPositions.account.readOnly ? <em>Watch-only</em> : null}
           </div>
         ) : null}
         <div className='earnTabs' role='tablist' aria-label='Filter Earn by chain'>
@@ -1359,7 +1399,9 @@ export class Earn extends React.Component {
               aria-controls='earn-chain-panels'
               aria-selected={filter === chain.id}
               tabIndex={filter === chain.id ? 0 : -1}
-              className={filter === chain.id ? 'earnTabActive' : ''}
+              className={`wrenControl wrenControlGhost wrenControlCompact ${
+                filter === chain.id ? 'earnTabActive' : ''
+              }`}
               key={chain.id}
               ref={(element) => {
                 this[`earnTab${index}`] = element

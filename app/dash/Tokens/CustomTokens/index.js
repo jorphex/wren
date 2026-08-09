@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import emptyCustomTokens from 'url:../../../../asset/ui/empty-custom-tokens-v1.png'
 import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 import { safeRemoteImageUrl } from '../../../../resources/utils/image'
@@ -185,7 +186,7 @@ class CustomTokens extends React.Component {
                             disabled={navigatingTokenId !== null || removingTokenId !== null}
                             onClick={() => this.editToken(token)}
                           >
-                            {navigatingTokenId === tokenId ? 'Opening Token' : 'Edit Token'}
+                            {navigatingTokenId === tokenId ? 'Opening token' : 'Edit token'}
                           </button>
                           <button
                             type='button'
@@ -194,7 +195,7 @@ class CustomTokens extends React.Component {
                             className='customTokensListItemButton removeButton'
                             onClick={() => this.removeToken(token)}
                           >
-                            {removingTokenId === tokenId ? 'Removing Token' : 'Remove Token'}
+                            {removingTokenId === tokenId ? 'Removing token' : 'Remove token'}
                           </button>
                         </div>
                       </>
@@ -203,7 +204,11 @@ class CustomTokens extends React.Component {
                 )
               })
             ) : (
-              <div className='customTokensListNoTokens'>{'No Custom Tokens'}</div>
+              <div className='customTokensListNoTokens'>
+                <img alt='' aria-hidden='true' src={emptyCustomTokens} />
+                <strong>No custom tokens</strong>
+                <span>Add a token contract to keep it available in Wren.</span>
+              </div>
             )}
           </div>
         </div>

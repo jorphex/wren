@@ -42,9 +42,9 @@ export const ClusterValue = ({
   )
 }
 
-export const ClusterRow = ({ children, style = {} }) => {
+export const ClusterRow = ({ children, style = {}, className = '' }) => {
   return (
-    <div className='clusterRow' style={style}>
+    <div className={`clusterRow${className ? ` ${className}` : ''}`} style={style}>
       {children}
     </div>
   )
@@ -69,35 +69,23 @@ export const ClusterColumn = ({ children, style = {}, grow = 1, width }) => {
   )
 }
 
-export const Cluster = ({ children, style = {} }) => {
+export const Cluster = ({ children, style = {}, className = '' }) => {
   return (
-    <div className='cluster' style={style}>
+    <div className={`cluster${className ? ` ${className}` : ''}`} style={style}>
       {children}
     </div>
   )
 }
 
-export const ClusterBox = ({ title, subtitle, children, style = {}, animationSlot = 0 }) => {
+export const ClusterBox = ({ title, subtitle, children, className = '', style = {}, animationSlot = 0 }) => {
   const boxStyle = { ...style, animationDelay: 0.1 * animationSlot + 's' }
   return (
-    <div className='_txMain' style={boxStyle}>
+    <div className={`_txMain${className ? ` ${className}` : ''}`} style={boxStyle}>
       <div className='_txMainInner'>
         {title ? (
           <div className='_txLabel'>
             <div>{title}</div>
-            {subtitle && (
-              <span
-                style={{
-                  opacity: 0.9,
-                  fontSize: '9px',
-                  position: 'relative',
-                  top: '0px',
-                  left: '4px'
-                }}
-              >
-                {`(${subtitle})`}
-              </span>
-            )}
+            {subtitle && <span className='clusterBoxSubtitle'>{`(${subtitle})`}</span>}
           </div>
         ) : null}
         {children}

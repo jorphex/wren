@@ -1,0 +1,93 @@
+.wrenEmptyState
+  position relative
+  display flex
+  width 100%
+  min-height 88px
+  padding var(--wren-space-3) 220px var(--wren-space-3) var(--wren-space-4)
+  box-sizing border-box
+  align-items center
+  overflow hidden
+  background linear-gradient(90deg, rgba(13, 17, 14, .8) 0%, rgba(13, 17, 14, .34) 58%, rgba(13, 17, 14, 0) 82%)
+
+.wrenEmptyStateText
+  position relative
+  z-index 2
+  min-width 0
+
+.wrenEmptyStateTitle
+  color var(--wren-text-primary)
+  font-size var(--wren-type-small)
+  font-weight 600
+  line-height 1.25
+
+.wrenEmptyStateCopy
+  margin-top var(--wren-space-1)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  font-weight 400
+  line-height 1.45
+
+.wrenEmptyStateImage
+  position absolute
+  top 50%
+  right var(--wren-space-2)
+  z-index 1
+  display block
+  width 210px
+  height auto
+  transform translateY(-50%)
+  opacity .94
+  -webkit-mask-image radial-gradient(ellipse 72% 62% at 50% 50%, #000 38%, rgba(0, 0, 0, .92) 61%, transparent 100%)
+  mask-image radial-gradient(ellipse 72% 62% at 50% 50%, #000 38%, rgba(0, 0, 0, .92) 61%, transparent 100%)
+  pointer-events none
+
+.wrenEmptyStateExpanded
+  min-height 190px
+  padding var(--wren-space-6) 320px var(--wren-space-6) var(--wren-space-6)
+  background transparent
+  text-align left
+
+  .wrenEmptyStateImage
+    position absolute
+    top 50%
+    right var(--wren-space-5)
+    width 300px
+    margin 0
+    transform translateY(-50%)
+    opacity 1
+
+  .wrenEmptyStateText
+    max-width 340px
+
+  .wrenEmptyStateTitle
+    font-size var(--wren-type-body)
+
+  .wrenEmptyStateCopy
+    margin-top var(--wren-space-1)
+    font-size var(--wren-type-small)
+
+.wrenEmptyFilter
+  display flex
+  min-height 64px
+  padding var(--wren-space-3) var(--wren-space-4)
+  box-sizing border-box
+  align-items center
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+
+@media (max-width: 560px)
+  .wrenEmptyState
+    min-height 84px
+    padding-right 164px
+
+  .wrenEmptyState:not(.wrenEmptyStateExpanded) .wrenEmptyStateImage
+    right -10px
+    width 172px
+
+  .wrenEmptyStateExpanded
+    min-height 156px
+    padding var(--wren-space-4) 190px var(--wren-space-4) var(--wren-space-4)
+
+    .wrenEmptyStateImage
+      right 0
+      width 190px

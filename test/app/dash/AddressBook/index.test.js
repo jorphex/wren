@@ -63,6 +63,8 @@ test('resolves ENS once, saves its address, and returns through Dash navigation'
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor />)
 
+  expect(screen.getByRole('button', { name: 'Save Contact' }).disabled).toBe(true)
+
   await user.type(screen.getByLabelText('Address or ENS name'), 'treasury.eth')
   await user.type(screen.getByLabelText('Name'), 'Yearn Treasury')
   await user.type(screen.getByLabelText(/Note/), 'Operations')

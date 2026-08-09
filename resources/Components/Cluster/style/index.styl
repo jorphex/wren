@@ -1,51 +1,43 @@
 .cluster
-  font-size 17px
-  font-weight 400
-  border-radius 20px
-  -webkit-app-region no-drag
-  transition none
-  transform translate3d(0, 0, 0)
-  font-family 'MainFont'
   display flow-root
-  background var(--ghostZ)
-  margin 6px
-  padding 2px 0px 1px 0px
+  margin var(--wren-space-2)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background var(--wren-bg-subtle)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  font-weight 400
+  -webkit-app-region no-drag
 
   .clusterRow
     display flex
-    justify-content center
     align-items stretch
-    font-weight 300
-    margin-left 3px
+    gap var(--wren-space-1)
+
+  .clusterRow + .clusterRow
+    margin-top var(--wren-space-1)
 
   .clusterValue
-    appearance none
+    position relative
     box-sizing border-box
+    display flex
+    flex-grow 1
+    align-items center
+    justify-content center
+    min-width 0
+    margin 0
     padding 0
-    border 0
+    overflow hidden
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
     color inherit
+    background var(--wren-surface-card)
     font inherit
     text-align inherit
-    flex-grow 1
-    display flex
-    justify-content center
-    align-items center
-    border-radius 12px
-    margin-right 3px
-    font-size 14px
-    display flex
-    justify-content center
-    align-items center
-    border-radius 8px
     -webkit-app-region no-drag
-    transition all linear 0.1s
-    transform translate3d(0, 0, 0)
-    font-family 'MainFont'
-    background var(--ghostA)
-    box-shadow 0px 1px 2px var(--ghostX)
-    border-bottom 2px solid var(--ghostZ)
-    overflow hidden
-    margin-top 1px
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
     *
       pointer-events none
@@ -54,22 +46,18 @@
       position absolute
       top 0
       left 0
-      right 0
-      width 60px
       display flex
-      justify-content center
+      width 60px
       align-items center
+      justify-content center
 
   .clusterValueClickable
     cursor pointer
-    margin-bottom 0px
-    position relative
 
   .clusterValueContent
     display contents
 
   .clusterValueAction
-    appearance none
     position absolute
     inset 0
     z-index 2
@@ -78,36 +66,21 @@
     padding 0
     border 0
     border-radius inherit
-    background transparent
     color inherit
+    background transparent
     cursor inherit
     font inherit
     pointer-events auto !important
 
   .clusterValueAction:focus-visible
-    outline 0
-    box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
 
   .clusterValueDisabled
     cursor default
-    opacity .55
-
-  .clusterValueClickable.clusterValueDisabled:hover,
-  .clusterValueClickable.clusterValueDisabled:active
-    background var(--ghostA)
-    transform translateY(0px)
-    box-shadow 0px 1px 2px var(--ghostX)
-
-  .clusterStatus
-    position absolute
-    width 1px
-    height 1px
-    padding 0
-    margin -1px
-    overflow hidden
-    clip rect(0, 0, 0, 0)
-    white-space nowrap
-    border 0
+    color var(--wren-text-disabled)
+    background var(--wren-bg-elevated)
+    opacity .7
 
   .clusterValueInteractable
     *
@@ -119,211 +92,163 @@
     *
       pointer-events none
 
-  .clusterValueClickable:hover
-    background var(--ghostB)
-    transform translateY(-1px)
-    border-bottom 2px solid var(--ghostZ)
-    box-shadow 0px 4px 30px -8px var(--ghostX)
-    position relative
-    z-index 300000
-  
-  .clusterValueClickable:active
-    background var(--ghostB)
-    transform translateY(0px)
-    box-shadow 0px 2px 4px var(--ghostX)
+  .clusterValueClickable:not(.clusterValueDisabled):hover
+    border-color var(--wren-border-default)
+    background var(--wren-surface-hover)
+
+  .clusterValueClickable:not(.clusterValueDisabled):active
+    border-color var(--wren-border-strong)
+    background var(--wren-surface-active)
 
   .clusterValueTransparent
+    border-color transparent
     background transparent
-    box-shadow none
-    border-bottom 2px solid transparent
-
-  .clusterRow:first-child
-    > .clusterValue
-      border-radius 8px
-    > .clusterValue:first-child
-      border-top-left-radius 18px
-    > .clusterValue:last-of-type
-      border-top-right-radius 18px
-
-  .clusterRow:last-child
-    > .clusterValue
-      border-radius 8px
-    > .clusterValue:first-child
-      border-bottom-left-radius 18px
-    > .clusterValue:last-of-type
-      border-bottom-right-radius 18px
 
   .clusterColumn
     display flex
     flex-direction column
     flex-grow 1
-    font-size 14px
-    align-items stretch
+    gap var(--wren-space-1)
+    min-width 0
+    font-size var(--wren-type-small)
 
-    .clusterValue
-      border-radius 8px
+.clusterStatus
+  position absolute
+  width 1px
+  height 1px
+  padding 0
+  margin -1px
+  overflow hidden
+  clip rect(0, 0, 0, 0)
+  white-space nowrap
+  border 0
 
-  .clusterColumn:first-child
-    > .clusterValue
-      border-radius 8px
-    > .clusterValue:first-child
-      border-top-left-radius 18px
-      
-  .clusterColumn:last-child
-    > .clusterValue
-      border-radius 8px
-    > .clusterValue:first-child
-      border-top-right-radius 18px
-
-  .clusterRow:last-child
-    .clusterColumn:first-child
-      > .clusterValue
-        border-radius 8px
-      > .clusterValue:first-child
-        border-top-left-radius 18px
-      > .clusterValue:last-child
-        border-bottom-left-radius 18px
-      > .clusterValue:first-child:last-child
-        border-top-left-radius 18px
-        border-bottom-left-radius 18px
-        
-    .clusterColumn:last-child
-      > .clusterValue
-        border-radius 8px
-      > .clusterValue:first-child
-        border-top-right-radius 18px
-      > .clusterValue:last-child
-        border-bottom-right-radius 18px
-      > .clusterValue:first-child:last-child
-        border-top-right-radius 18px
-        border-bottom-right-radius 18px
+.clusterBoxSubtitle
+  position relative
+  left var(--wren-space-1)
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  font-weight 400
 
 .clusterTag
-  text-transform uppercase
-  font-size 11px
-  font-weight 500
-  padding 8px
+  padding var(--wren-space-2)
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  font-weight 450
+  line-height 18px
   text-align center
 
-.clusterTagButton
+.clusterTagButton,
+.clusterAddressButton
   appearance none
   width 100%
   border 0
-  background transparent
+  border-radius var(--wren-radius-sm)
   color inherit
+  background transparent
   cursor pointer
   font-family inherit
 
 .clusterTagButton:disabled
   cursor default
-  opacity 0.55
+  color var(--wren-text-disabled)
+  opacity .7
 
 .clusterTagButton:not(:disabled):hover,
 .clusterAddressButton:hover
-  background var(--ghostB)
+  background var(--wren-surface-hover)
 
 .clusterTagButton:not(:disabled):active,
 .clusterAddressButton:active
-  background var(--ghostC)
+  background var(--wren-surface-active)
 
 .clusterTagButton:focus-visible,
 .clusterAddressButton:focus-visible
-  outline 0
-  box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
-
-.clusterAddressButton
-  appearance none
-  width 100%
-  border 0
-  background transparent
-  color inherit
-  font-family inherit
+  outline 2px solid var(--wren-focus)
+  outline-offset -2px
 
 .clusterFocus
-  text-transform uppercase
-  font-size 13px
+  padding var(--wren-space-4) var(--wren-space-2)
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  font-weight 450
   line-height 20px
-  font-weight 500
-  padding 16px 8px
   text-align center
 
   .clusterFocusHighlight
-    font-size 16px
-    color var(--good)
+    color var(--wren-success)
+    font-size var(--wren-type-body)
+    font-weight 550
 
 .clusterAddress
-  padding 12px
-  font-size 14px
-  font-weight 600
+  padding var(--wren-space-3)
+  color var(--wren-text-primary)
+  font-size var(--wren-type-small)
+  font-weight 500
   cursor pointer
 
 .clusterAddressRecipient
-  font-size 16px
-  font-weight 300
-  font-family 'FiraCode'
   display flex
-  justify-content center
   align-items center
+  justify-content center
+  color var(--wren-text-primary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-small)
+  font-weight 400
+  line-height 18px
   pointer-events none
-  
+
   svg
-    padding 0px 4px !important
+    padding 0 var(--wren-space-1) !important
 
 .clusterAddressRecipientLabeled
   flex-direction column
-  gap 4px
+  gap var(--wren-space-1)
 
 .clusterAddressLabel
   display flex
   align-items baseline
   gap 7px
   max-width 100%
-  font-family 'MainFont'
-  font-size 16px
-  font-weight 500
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 550
 
   small
-    color var(--outerspace05)
-    font-size 9px
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
     font-weight 400
-    text-transform uppercase
 
 .clusterAddressEvidence
-  color var(--moon)
-  font-family 'FiraCode'
-  font-size 10px
-  font-weight 300
-  letter-spacing -.35px
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  font-weight 400
+  letter-spacing -.2px
 
 .clusterAddressRecipientFull
-  position absolute 
-  top 0
-  left 0
-  bottom 0px
-  right 0
-  padding-bottom 1px
-  display flex
-  justify-content center
-  align-items center
-  cursor pointer
-  z-index 40000
-  border-radius 8px
-  font-weight 500
-  background var(--ghostB)
-  opacity 0
+  position absolute
+  inset 0
   z-index 4
-  box-shadow 0px 4px 4px var(--ghostZ)
-  transition 0.05s linear all
+  display flex
+  align-items center
+  justify-content center
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-primary)
+  background var(--wren-surface-hover)
+  box-shadow var(--wren-shadow-sm)
+  font-weight 500
+  opacity 0
+  transition opacity var(--wren-motion-fast) var(--wren-ease)
+
+.clusterAddressRecipientFull:hover,
+.clusterValueClickable:hover .clusterAddressRecipientFull,
+.clusterAddressRecipientFullCopied
+  opacity 1
 
 .clusterFira
   position relative
-  top 1.5px
-  left 1px
-  font-weight 300
-  font-size 13px 
-  font-family 'FiraCode'
-
-.clusterAddressRecipientFull:hover,
-.clusterValueClickable:hover .clusterAddressRecipientFull
-  opacity 1
-  transform translateX(0px) scale(1)
+  top 1px
+  font-family var(--wren-font-mono)

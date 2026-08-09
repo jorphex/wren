@@ -39,10 +39,10 @@ test('opens gas explanations for keyboard focus and closes them on blur', () => 
   const baseFeeButton = screen.getByRole('button', { name: 'Explain current base fee' })
 
   fireEvent.focus(baseFeeButton)
-  expect(screen.getByText(/current base fee is added with a buffer/)).toBeTruthy()
+  expect(screen.getByText(/Wren adds a buffer to the current base fee/)).toBeTruthy()
 
   fireEvent.blur(baseFeeButton)
-  expect(screen.queryByText(/current base fee is added with a buffer/)).toBeNull()
+  expect(screen.queryByText(/Wren adds a buffer to the current base fee/)).toBeNull()
 })
 
 test('exposes and toggles gas disclosure state with the keyboard', async () => {

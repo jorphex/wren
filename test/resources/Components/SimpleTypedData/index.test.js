@@ -1,5 +1,9 @@
 import { screen, render } from '../../../componentSetup'
-import { getTypedDataDeviceWarning, SimpleTypedData } from '../../../../resources/Components/SimpleTypedData'
+import {
+  getTypedDataDeviceWarning,
+  getTypedDataReviewPresentation,
+  SimpleTypedData
+} from '../../../../resources/Components/SimpleTypedData'
 
 const typedData = {
   types: {
@@ -33,7 +37,9 @@ const request = (overrides = {}) => ({
 it('shows complete EIP-712 signing context and declarations', () => {
   render(<SimpleTypedData chainName='Ethereum' originName='example.test' req={request()} />)
 
-  expect(screen.getByText('Typed Data Review')).toBeTruthy()
+  expect(screen.getByText('Review structured message')).toBeTruthy()
+  expect(screen.getByText('Typed-data structure recognized')).toBeTruthy()
+  expect(screen.getByText('request Network')).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Ethereum (1)')).toBeTruthy()
   expect(screen.getByText('V4')).toBeTruthy()
@@ -134,11 +140,21 @@ it('shows normalized Permit2 authority before the raw typed data', () => {
     />
   )
 
-  expect(screen.getByText('Permit2 Authority')).toBeTruthy()
+  expect(screen.getByText('Permission')).toBeTruthy()
+  expect(screen.getByText('Permit2 authority')).toBeTruthy()
   expect(screen.getByText('Standing allowance')).toBeTruthy()
   expect(screen.getByText(permit2.spender)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy Permit2 spender address' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy Permit2 contract address' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy permission 1 token address' })).toBeTruthy()
   expect(screen.getByText(permit2.permissions[0].token)).toBeTruthy()
-  expect(screen.getByText(/creates standing token allowances/)).toBeTruthy()
+  const warning = screen.getByText(/creates standing token allowances/)
+  expect(warning).toBeTruthy()
+  expect(
+    screen.getByText('Permission').compareDocumentPosition(warning) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+  expect(screen.getByText(/Recognition describes structure, not safety/)).toBeTruthy()
+  expect(screen.getByText('Exact signed data').closest('details').open).toBe(false)
 })
 
 it('shows normalized ERC-3009 transfer authority', () => {
@@ -179,7 +195,7 @@ it('shows normalized ERC-3009 transfer authority', () => {
 it('uses the same complete view for specialized permit requests', () => {
   render(<SimpleTypedData req={request({ type: 'signErc20Permit' })} />)
 
-  expect(screen.getByText('Typed Data Review')).toBeTruthy()
+  expect(screen.getByText('Review structured message')).toBeTruthy()
   expect(screen.getByText('Type Definitions')).toBeTruthy()
 })
 
@@ -223,4 +239,15 @@ it('does not warn when device-specific review behavior is not known', () => {
       signingCapabilities: { typedDataHashOnly: false }
     })
   ).toBeUndefined()
+})
+
+it('uses authority-specific summaries without presenting recognition as approval', () => {
+  expect(
+    getTypedDataReviewPresentation({ permit2: { kind: 'allowance' } }, { version: 'V4', data: typedData })
+  ).toEqual({
+    eyebrow: 'Permit2 allowance',
+    title: 'Authorize token spending',
+    help: 'This signature can grant spending authority without a transaction.',
+    status: 'Permit2 structure recognized'
+  })
 })

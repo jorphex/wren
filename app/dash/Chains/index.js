@@ -8,17 +8,6 @@ import { WREN_SUPPORT_URL } from '../../../resources/constants'
 export class Settings extends React.Component {
   constructor(props, context) {
     super(props, context)
-    this.customMessage = 'Custom Endpoint'
-    // context.store.observer(() => {
-    //   const { type, id } = context.store('main.currentNetwork')
-    //   if (this.network !== id || this.networkType !== type) {
-    //     this.networkType = type
-    //     this.network = id
-    //     const primaryCustom = context.store('main.networks', type, id, 'connection.primary.custom') || this.customMessage
-    //     const secondaryCustom = context.store('main.networks', type, id, 'connection.secondary.custom') || this.customMessage
-    //     this.setState({ primaryCustom, secondaryCustom })
-    //   }
-    // })
     this.newNetworkIdDefault = 'ID'
     this.newNetworkNameDefault = 'New Network'
     this.newNetworkExplorerDefault = 'Block Explorer'
@@ -47,7 +36,7 @@ export class Settings extends React.Component {
         onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
       >
         <span>Need help?</span>
-        <span className='discordLink'>Open a community support issue</span>
+        <span className='discordLink'>Open community support</span>
       </button>
     )
   }
@@ -140,6 +129,7 @@ export class Settings extends React.Component {
             connection={networks[type][id].connection}
             on={networks[type][id].on}
             nativeCurrencyName={metadata[type][id].nativeCurrency.name}
+            nativeCurrencyDecimals={metadata[type][id].nativeCurrency.decimals}
             nativeCurrencyIcon={metadata[type][id].nativeCurrency.icon}
             icon={metadata[type][id].icon}
             view={'expanded'}
@@ -161,8 +151,7 @@ export class Settings extends React.Component {
             explorer={newChain.explorer}
             isTestnet={newChain.isTestnet}
             type={newChain.type}
-            primaryRpc={newChain.primaryRpc}
-            secondaryRpc={newChain.secondaryRpc}
+            rpcUrls={newChain.rpcUrls}
             nativeCurrencyName={newChain.nativeCurrencyName}
             nativeCurrencyIcon={newChain.nativeCurrencyIcon}
             icon={newChain.icon}

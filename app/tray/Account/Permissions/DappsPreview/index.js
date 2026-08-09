@@ -1,11 +1,15 @@
 import React from 'react'
 import Restore from 'react-restore'
+
+import emptyConnections from 'url:../../../../../asset/ui/wren-empty-connections-v2.png'
+
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
 import PermissionToggle from '../PermissionToggle'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
 export class DappsPermissionsPreview extends React.Component {
   constructor(...args) {
@@ -47,6 +51,7 @@ export class DappsPermissionsPreview extends React.Component {
 
   render() {
     const permissions = this.store('main.permissions', this.props.account) || {}
+    const allPermissionIds = getPermissionIds(permissions)
     const permissionIds = getPermissionIds(permissions, this.props.filter)
     const permissionList = this.props.expanded ? permissionIds : permissionIds.slice(0, 4)
 
@@ -56,21 +61,22 @@ export class DappsPermissionsPreview extends React.Component {
           <span>
             <Icon name='apps' size={14} />
           </span>
-          <span>{'Dapps'}</span>
+          <span>{'Connected apps'}</span>
         </div>
-        <Cluster>
-          {permissionList.length === 0 ? (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='signerPermission'>
-                  <div className='signerPermissionControls'>
-                    <div className='signerPermissionNoPermissions'>No Permissions Set</div>
-                  </div>
-                </div>
-              </ClusterValue>
-            </ClusterRow>
+        {permissionList.length === 0 ? (
+          allPermissionIds.length ? (
+            <div className='wrenEmptyFilter'>No matching app permissions</div>
           ) : (
-            permissionList.map((o) => {
+            <WrenEmptyState
+              image={emptyConnections}
+              transparentImage={true}
+              title='No connected apps'
+              copy='Apps with access to this account appear here.'
+            />
+          )
+        ) : (
+          <Cluster>
+            {permissionList.map((o) => {
               return (
                 <ClusterRow key={o}>
                   <ClusterValue pointerEvents={true}>
@@ -88,15 +94,15 @@ export class DappsPermissionsPreview extends React.Component {
                   </ClusterValue>
                 </ClusterRow>
               )
-            })
-          )}
-        </Cluster>
+            })}
+          </Cluster>
+        )}
         {permissionIds.length > 0 && (
           <div className='signerBalanceTotal'>
             <div className='signerBalanceButtons'>
               <button
                 type='button'
-                className='signerBalanceButton signerBalanceShowAll'
+                className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlSecondary wrenControlCompact'
                 disabled={this.state.navigating}
                 onClick={() => this.openExpanded()}
               >

@@ -1,6 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import emptyConnections from 'url:../../../asset/ui/empty-connections.png'
+import emptyConnections from 'url:../../../asset/ui/empty-connections-v15.png'
 import link from '../../../resources/link'
 import {
   nextTransientConnectedAppExpiry,
@@ -92,20 +92,22 @@ const OriginModule = Restore.connect(OriginModuleComponent)
 
 const ChainOrigins = ({ chain: { name }, connected, disconnected, primaryColor, icon }) => {
   return (
-    <>
+    <section className='sliceOriginGroup'>
       <div className='originTitle'>
         <div className='originTitleIcon'>
           <RingIcon small={true} color={`var(--${primaryColor})`} img={icon} />
         </div>
         <div className='originTitleText'>{name}</div>
       </div>
-      {connected.map((origin) => (
-        <OriginModule key={origin.id} origin={origin} connected={true} />
-      ))}
-      {disconnected.map((origin) => (
-        <OriginModule key={origin.id} origin={origin} connected={false} />
-      ))}
-    </>
+      <div className='sliceOriginList'>
+        {connected.map((origin) => (
+          <OriginModule key={origin.id} origin={origin} connected={true} />
+        ))}
+        {disconnected.map((origin) => (
+          <OriginModule key={origin.id} origin={origin} connected={false} />
+        ))}
+      </div>
+    </section>
   )
 }
 

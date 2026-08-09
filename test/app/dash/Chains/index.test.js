@@ -14,7 +14,7 @@ class ChainsHarness extends Settings {
 
 test('opens community support from native keyboard input', async () => {
   const { user } = render(<ChainsHarness data={{}} />)
-  const support = screen.getByRole('button', { name: /open a community support issue/i })
+  const support = screen.getByRole('button', { name: /need help\? open community support/i })
 
   support.focus()
   await user.keyboard('{Enter}')

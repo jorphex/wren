@@ -44,9 +44,19 @@ it.each([
 ])('opens %s from the dashboard', (label, view) => {
   renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: label }))
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}\\b`) }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
+})
+
+it('includes each destination description in its accessible name', () => {
+  renderMain()
+
+  expect(
+    screen.getByRole('button', {
+      name: 'Accounts Manage signing and watch-only accounts.'
+    })
+  ).toBeTruthy()
 })
 
 it.each(['Download Chrome companion', 'Download Firefox companion'])(
@@ -63,7 +73,7 @@ it.each(['Download Chrome companion', 'Download Firefox companion'])(
 it('routes support, tutorial, quit, and license actions', () => {
   renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Support & feedback' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Community support' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))

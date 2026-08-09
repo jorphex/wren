@@ -1,70 +1,52 @@
 .addChainTitle
-  padding 42px
-  font-size 24px
-  font-weight 300
+  padding var(--wren-space-8) var(--wren-space-5) var(--wren-space-4)
+  color var(--wren-text-primary)
+  font-size var(--wren-type-title)
+  font-weight 500
+  font-variation-settings var(--wren-font-heading-settings)
 
 .addChain
-  font-size 16px
   position relative
   z-index 3
-  word-break break-word
   width 100%
   box-sizing border-box
-  padding-bottom 32px
+  padding-bottom var(--wren-space-8)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  word-break break-word
 
 .chainColorSwatches
   display flex
-  margin-top 4px
-  margin-bottom 4px
-  background var(--ghostZ)
-  border-radius 16px
+  gap 3px
+  margin var(--wren-space-1) 0
   padding 3px
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
 
   .chainColorSwatch
     appearance none
-    border 0
+    flex 1
+    height 18px
+    min-width 0
     padding 0
-    height 16px
-    width calc(100% / 8)
-    margin-left 3px
+    border 1px solid transparent
     border-radius 3px
     cursor pointer
-    // box-shadow 0px 2px 4px var(--ghostX)
-    box-sizing border-box
-    position relative
+    transition transform var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
   .chainColorSwatch:hover
     transform translateY(-1px)
-    box-shadow 0px 4px 8px var(--ghostX)
-    position relative
-    z-index 100
-    margin-bottom -1px
-  
-  // .chainColorSwatch:active
-  //   transform translateY(0px)
-  //   box-shadow 0px 1px 2px var(--ghostX)
+    border-color var(--wren-text-primary)
 
-  .chainColorSwatch:first-child
-    border-top-left-radius 12px
-    border-bottom-left-radius 12px
-    margin-left 0px
+  .chainColorSwatch:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
 
-  .chainColorSwatch:last-child
-    border-top-right-radius 12px
-    border-bottom-right-radius 12px
-
-  .chainColorSwatchSelected::before
-    content ''
-    position absolute
-    width 5px 
-    height 5px
-    border-radius 2.5px
-    top 50%
-    left 50%
-    margin-top -2.5px
-    margin-left -2.5px
-    background var(--ghostZ)
-    z-index 3000000
+  .chainColorSwatchSelected
+    border-color var(--wren-text-primary)
+    box-shadow inset 0 0 0 1px var(--wren-surface-inset)
 
 .chainId
   width calc(50% - 5px)
@@ -73,88 +55,545 @@
   width calc(50% - 5px)
 
 .chainRpc
-  width 100%  
+  width 100%
 
 .chainInput
-  background transparent
-  outline none
-  border none
-  text-align center
-  font-size 18px
   width 100%
-  background var(--ghostZ)
-  border-radius 20px
-  font-family 'MainFont'
-  padding 16px
-  font-weight 300
-  color var(--outerspace)
-  margin-top 5px
+  box-sizing border-box
+  margin-top var(--wren-space-1)
+  padding 12px
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  outline none
+  color var(--wren-text-primary)
+  background var(--wren-surface-inset)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 400
+  text-align left
+  transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
+
+.chainInput:hover
+  border-color var(--wren-border-strong)
+
+.chainInput:focus
+  border-color var(--wren-focus)
+  background var(--wren-bg-subtle)
+
+.chainInput:focus-visible
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
 
 .chainInputDim
-  color var(--outerspace03)
+  color var(--wren-text-tertiary)
 
 .chainInputLabel
-  font-size 10px
-  text-transform uppercase
+  padding var(--wren-space-2) 0 0
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
   font-weight 500
-  padding 8px 0px 4px 16px
-  letter-spacing 1px
+  letter-spacing 0
+  text-transform none
 
 .chainFieldDisplay
-  padding 10px
-  margin-top 5px
-  text-align center
+  padding var(--wren-space-3)
+  margin-top var(--wren-space-1)
+  text-align left
 
 .addChainSubmit
-  background var(--ghostC)
+  appearance none
   width 100%
-  margin-top 25px
-  margin-bottom 25px
-  height 48px
-  border-radius 8px
+  min-height 44px
   box-sizing border-box
-  padding 13px
+  margin var(--wren-space-3) 0 var(--wren-space-1)
+  padding 10px var(--wren-space-4)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-disabled)
+  background var(--wren-surface-inset)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 500
   text-align center
-  margin-bottom 5px
-  display flex
-  justify-content center
-  align-items center
-  font-size 15px
-  text-transform uppercase
-  opacity 0.5
+  text-transform none
+  opacity 1
+  cursor not-allowed
 
   svg
-    margin-right 10px
+    margin-right var(--wren-space-2)
 
 .addChainSubmitEnabled
-  background var(--ghostD)
-  color var(--good)
-  opacity 1
+  border-color var(--wren-accent-secondary)
+  color var(--wren-text-inverse)
+  background var(--wren-accent-secondary)
   cursor pointer
-  * 
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+  *
     pointer-events none
-    
+
+.addChainSubmitEnabled:hover
+  border-color var(--wren-accent-secondary-hover)
+  background var(--wren-accent-secondary-hover)
+
+.addChainSubmitEnabled:active
+  background var(--wren-accent-secondary-active)
+
+.addChainSubmit:focus-visible
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
+
 .chainRow
-  width 100%
   display flex
-  justify-content space-between
-  padding 0px 16px 16px 16px
-  box-sizing border-box
   flex-direction column
+  width 100%
+  box-sizing border-box
+  padding 0 var(--wren-space-4) var(--wren-space-4)
 
 .chainRowTestnet
-  padding 8px 3px 8px 17px
-  margin 8px auto 16px auto
-  font-size 11px
-  font-weight 500
   display flex
   align-items center
   justify-content space-between
-  border 3px solid var(--ghostZ)
-  border-radius 26px
-  text-transform uppercase
-  letter-spacing 1px
-  width 140px
+  width auto
+  margin var(--wren-space-1) var(--wren-space-4) var(--wren-space-4)
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  font-weight 500
+  letter-spacing 0
+  text-transform none
 
 .chainRowRemove
-  padding 8px 0px 8px 0px
+  padding var(--wren-space-2) 0
+
+.networkEditor
+  display flex
+  flex-direction column
+  width 100%
+  min-height calc(100vh - 64px)
+  box-sizing border-box
+  color var(--wren-text-primary)
+  background var(--wren-bg-canvas)
+  font-family var(--wren-font-ui)
+
+.networkEditorHeader
+  flex none
+  min-height 70px
+  box-sizing border-box
+  padding 15px 48px 12px
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+  h1,
+  p
+    margin 0
+
+  h1
+    overflow hidden
+    font-size 20px
+    font-weight 660
+    font-variation-settings 'CASL' .28, 'CRSV' 0
+    line-height 25px
+    text-overflow ellipsis
+    white-space nowrap
+
+  p
+    margin-top 2px
+    overflow hidden
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    text-overflow ellipsis
+    white-space nowrap
+
+.networkEditorBody
+  position relative
+  flex 1 1 auto
+  min-height 0
+  padding 34px 48px 26px
+
+.networkEditorGrid
+  display grid
+  grid-template-columns minmax(0, 2fr) minmax(0, 1fr)
+  gap 22px 16px
+
+.networkEditorWide
+  grid-column 1 / -1
+
+.networkEditorField
+  display block
+  min-width 0
+
+.networkEditorFieldLabel
+  display flex
+  min-height 20px
+  align-items flex-start
+  justify-content space-between
+  gap var(--wren-space-3)
+  color var(--wren-text-secondary)
+  font-size 12px
+  font-weight 590
+
+.networkEditorFieldStatus
+  overflow hidden
+  color var(--wren-success)
+  font-family var(--wren-font-mono)
+  font-size 11px
+  font-weight 400
+  text-overflow ellipsis
+  white-space nowrap
+
+.networkEditorFieldStatusError
+  color var(--wren-danger)
+
+input.networkEditorInput
+  width 100%
+  height 39px
+  padding 0 12px
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size 13px
+  text-align left
+
+  &[readonly]
+    color var(--wren-text-muted)
+
+input.networkEditorInputTechnical
+  font-family var(--wren-font-mono)
+  font-size 12px
+
+.rpcEndpointSection
+  min-width 0
+
+.rpcEndpointHeading
+  display flex
+  margin-bottom 10px
+  align-items flex-end
+  justify-content space-between
+
+  h2,
+  p
+    margin 0
+
+  h2
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 500
+    line-height 20px
+
+  p
+    max-width 520px
+    margin-top 2px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-ui)
+    font-size 13px
+    line-height 18px
+
+.rpcEndpointLedger
+  border-top 1px solid var(--wren-ledger-rule)
+
+.rpcEndpointRow
+  display grid
+  min-height 52px
+  box-sizing border-box
+  border-bottom 1px solid var(--wren-ledger-rule)
+  align-items center
+  grid-template-columns 18px 8px minmax(0, 1fr) 112px 60px 42px 28px
+  gap 6px
+
+.rpcEndpointRowOff
+  color var(--wren-text-muted)
+
+  .rpcEndpointInput
+    color var(--wren-text-muted)
+
+.rpcEndpointOrder
+  color var(--wren-text-muted)
+  font-family var(--wren-font-mono)
+  font-size 11px
+  text-align center
+
+.rpcEndpointDot
+  width 7px
+  height 7px
+  border-radius 50%
+  background var(--wren-text-disabled)
+
+.rpcEndpointDotconnected
+  background var(--wren-success)
+
+.rpcEndpointDotloading,
+.rpcEndpointDotpending,
+.rpcEndpointDotsyncing
+  background var(--wren-warning)
+
+.rpcEndpointDotdegraded,
+.rpcEndpointDoterror,
+.rpcEndpointDotchain\ mismatch
+  background var(--wren-danger)
+
+.rpcEndpointInputWrap
+  min-width 0
+
+input.rpcEndpointInput
+  width 100%
+  height 34px
+  min-width 0
+  box-sizing border-box
+  padding 0 9px
+  color var(--wren-text-primary)
+  font-family var(--wren-font-mono)
+  font-size 11px
+  text-align left
+
+.rpcEndpointStatus
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-mono)
+  font-size 10px
+  text-align right
+  text-overflow ellipsis
+  white-space nowrap
+
+.rpcEndpointStatusError
+  color var(--wren-danger)
+
+.rpcEndpointMove
+  display grid
+  width 60px
+  height 32px
+  grid-template-columns repeat(2, 30px)
+
+  button
+    appearance none
+    display flex
+    width 30px
+    height 32px
+    min-height 32px
+    padding 0
+    border 0
+    align-items center
+    justify-content center
+    color var(--wren-text-secondary)
+    background transparent
+    cursor pointer
+
+    &:hover:not(:disabled)
+      color var(--wren-text-primary)
+      background var(--wren-surface-hover)
+
+    &:disabled
+      color var(--wren-text-disabled)
+      cursor default
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -2px
+
+.rpcEndpointRemove
+  appearance none
+  display flex
+  width 28px
+  height 32px
+  padding 0
+  border 0
+  align-items center
+  justify-content center
+  color var(--wren-text-muted)
+  background transparent
+  cursor pointer
+
+  &:hover
+    color var(--wren-danger)
+    background var(--wren-danger-soft)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.rpcEndpointRemoveSpacer
+  width 28px
+
+.rpcEndpointAddRow
+  display flex
+  min-height 46px
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+
+  > span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 11px
+
+  button
+    appearance none
+    display inline-flex
+    min-width 124px
+    height 34px
+    padding 0 12px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    align-items center
+    justify-content center
+    gap 7px
+    color var(--wren-text-primary)
+    background-color var(--wren-bg-elevated)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-control-shadow)
+    font-family var(--wren-font-ui)
+    font-size 12px
+    font-weight 590
+    cursor pointer
+
+    &:hover:not(:disabled)
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-hover)
+
+    &:active:not(:disabled)
+      transform translateY(1px)
+      box-shadow var(--wren-control-shadow-pressed)
+
+    &:disabled
+      color var(--wren-text-disabled)
+      background var(--wren-surface-inset)
+      box-shadow none
+      cursor default
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+.networkEditorToggleRow
+  display flex
+  min-height 44px
+  margin-top 24px
+  align-items center
+  justify-content space-between
+  color var(--wren-text-secondary)
+  font-size 13px
+  font-weight 590
+
+.networkEditorToggle
+  appearance none
+  position relative
+  width 42px
+  height 24px
+  padding 0
+  border 1px solid var(--wren-border-default)
+  border-radius 6px
+  background var(--wren-surface-inset)
+  box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
+  cursor pointer
+
+  span
+    position absolute
+    top 3px
+    left 4px
+    width 16px
+    height 16px
+    border-radius 4px
+    background var(--wren-text-disabled)
+    transition left var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  &:disabled
+    cursor default
+    opacity .65
+
+.networkEditorToggleOn span
+  left 20px
+  background var(--wren-success)
+  box-shadow 0 1px 2px rgba(0, 0, 0, .42)
+
+.networkEditorMessage
+  margin-top var(--wren-space-3)
+  color var(--wren-danger)
+  font-family var(--wren-font-utility)
+  font-size 12px
+
+.networkEditorFooter
+  display flex
+  flex none
+  min-height 104px
+  box-sizing border-box
+  padding 26px 24px
+  border-top 1px solid var(--wren-ledger-rule)
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+
+.networkEditorFooterActions
+  display flex
+  margin-left auto
+  align-items center
+  gap 10px
+
+button.networkEditorCancel,
+button.networkEditorSubmit
+  width 156px
+  min-width 156px
+  height 46px
+  min-height 46px
+  padding 0 19px
+  font-size 14px
+  font-weight 650
+
+button.networkEditorCancel
+  width 160px
+  min-width 160px
+  height 48px
+  min-height 48px
+  transform translateY(-1px)
+
+button.networkEditorRemove
+  min-height 38px
+
+// The dash header and the short-shell content padding leave a 656px editor viewport
+// in the supported 760 × 744 shell. Keep the actions anchored while the complete
+// form remains scrollable there.
+@media (max-height: 760px) and (min-width: 561px)
+  .networkEditor
+    height calc(100vh - 88px)
+    min-height 0
+    overflow hidden
+
+  .networkEditorBody
+    overflow-x hidden
+    overflow-y auto
+    background-image linear-gradient(to top, var(--wren-bg-canvas) 60%, rgba(9, 12, 10, 0)), linear-gradient(to top, rgba(90, 105, 92, .24), rgba(90, 105, 92, 0))
+    background-position center bottom, center bottom
+    background-repeat no-repeat
+    background-size 100% 18px, 100% 14px
+    background-attachment local, scroll
+
+@media (max-width: 560px)
+  .networkEditorHeader
+    padding-right var(--wren-space-5)
+    padding-left var(--wren-space-5)
+
+  .networkEditorBody
+    padding var(--wren-space-5)
+
+  .networkEditorGrid
+    grid-template-columns 1fr
+
+  .networkEditorWide
+    grid-column auto
+
+  .networkEditorFooter
+    flex-wrap wrap
+
+  .networkEditorFooterActions
+    width 100%
+
+  button.networkEditorCancel,
+  button.networkEditorSubmit
+    flex 1 1 0
+    width auto
+    min-width 0

@@ -1,27 +1,22 @@
 import React, { useEffect } from 'react'
 
+import onboardingAccounts from 'url:../../../../../asset/ui/onboarding-accounts-v13.png'
 import { Slide, SlideBody, SlideItem } from '../../styled'
 
 import link from '../../../../../resources/link'
 
 const Chains = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Bring your accounts')
+    setTitle('Add your accounts')
     setProceed({ action: 'next', text: 'Next' })
     link.send('tray:action', 'navDash', { view: 'accounts', data: {} })
   }, [])
 
   return (
-    <Slide>
+    <Slide $background={onboardingAccounts}>
       <SlideBody>
-        <SlideItem>
-          <div>Hardware signers, local accounts, and watch-only</div>
-          <div>addresses all have a place in Wren.</div>
-        </SlideItem>
-        <SlideItem>
-          <div>Choose Add account, then connect in the way</div>
-          <div>that suits you.</div>
-        </SlideItem>
+        <SlideItem>Hardware signers, local accounts, and watch-only addresses all belong here.</SlideItem>
+        <SlideItem>Choose Add account, then choose how you want to connect.</SlideItem>
       </SlideBody>
     </Slide>
   )

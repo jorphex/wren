@@ -132,13 +132,13 @@ body
 
       .mainDappLoading
         .mainDappLoadingText
-          font-family 'MainFont'
-          text-transform uppercase
-          font-size 14px
-          font-weight 400
+          color var(--wren-text-secondary)
+          font-family var(--wren-font-ui)
+          font-size var(--wren-type-body)
+          font-weight 450
           text-align center
-          line-height 20px
-          letter-spacing 1px
+          line-height 1.45
+          letter-spacing 0
 
         .loader,
         .loader:after
@@ -165,36 +165,7 @@ body
             transform rotate(360deg)
 
       .mainDappEnableChains
-        appearance none
-        height 40px
         margin-top 30px
-        background var(--ghostC)
-        color inherit
-        font-family inherit
-        border-top 0
-        border-right 0
-        border-left 0
-        border-bottom 2px solid var(--ghostZ)
-        box-shadow 0px 1px 4px var(--ghostX)
-        border-radius 15px
-        box-sizing border-box
-        cursor pointer
-        display flex
-        justify-content center
-        align-items center
-        font-size 14px
-        font-weight 400
-        letter-spacing 1px
-        text-transform uppercase
-        padding 1px 20px 0px 21px
-
-      .mainDappEnableChains:hover
-        background var(--ghostD)
-        color var(--outerspace)
-
-      .mainDappEnableChains:disabled
-        cursor default
-        opacity .7
 
       .mainApps
         width 600px
@@ -230,7 +201,7 @@ body
         display flex
         justify-content center
         align-items center
-        font-size 12px
+        font-size var(--wren-type-small)
         font-weight 300
         letter-spacing 1px
         pointer-events none
@@ -328,3 +299,4 @@ body
         // border-radius 6px
 
 @import './DappTile/style'
+@import '../../resources/Components/Button'

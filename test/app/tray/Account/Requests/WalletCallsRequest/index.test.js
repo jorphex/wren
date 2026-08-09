@@ -1,8 +1,13 @@
-import { cleanup, screen, render } from '../../../../../componentSetup'
+import { cleanup, render, screen } from '../../../../../componentSetup'
 import { WalletCallsRequest } from '../../../../../../app/tray/Account/Requests/WalletCallsRequest'
+import { createWalletCallsDraft } from '../../../../../../app/tray/Account/Requests/WalletCallsRequest/adjustment'
+import link from '../../../../../../resources/link'
+
+jest.mock('../../../../../../resources/link', () => ({ send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
+const quantity = (value) => `0x${BigInt(value).toString(16)}`
 
 function request(calls) {
   return {
@@ -17,67 +22,78 @@ function request(calls) {
   }
 }
 
-it('shows exact parent, chain, sender, call order, value, and calldata', () => {
-  render(
+function preparedRequest() {
+  const req = request([
+    { to: target, value: '0x0', data: '0xa9059cbb' },
+    { to: target, value: '0x1', data: '0x095ea7b3' }
+  ])
+  const fees = [21_000n * 1_000_000_000n, 50_000n * 2_000_000_000n]
+  req.preparation = {
+    status: 'succeeded',
+    maxFee: quantity(fees[0] + fees[1]),
+    calls: req.calls.map((call, index) => ({
+      transaction: {
+        from: account,
+        chainId: '0x1',
+        nonce: quantity(5 + index),
+        type: '0x2',
+        gasLimit: quantity(index ? 50_000 : 21_000),
+        maxFeePerGas: quantity(index ? 2_000_000_000 : 1_000_000_000),
+        maxPriorityFeePerGas: quantity(500_000_000),
+        to: call.to,
+        data: call.data,
+        value: call.value
+      },
+      maxFee: quantity(fees[index])
+    }))
+  }
+  req.simulation = {
+    status: 'succeeded',
+    source: 'eth_simulateV1',
+    calls: req.calls.map(() => ({ status: 'succeeded', source: 'eth_simulateV1' }))
+  }
+  return req
+}
+
+beforeEach(() => link.send.mockReset())
+
+it('shows the approved hierarchy, ordered call identities, values, and disclosed calldata', async () => {
+  const req = preparedRequest()
+  req.callDetails = [{ label: 'USD Coin (USDC)', source: 'Token contract', method: 'transfer' }, null]
+  const { user } = render(
     <WalletCallsRequest
+      accountName='Main account'
       originName='example.test'
-      chainData={{ chainName: 'Ethereum' }}
-      req={request([
-        { to: target, value: '0xf', data: '0xabcd' },
-        { value: '0x0', data: '0x6000' }
-      ])}
+      chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
+      req={req}
     />
   )
 
+  expect(screen.getByRole('heading', { name: 'Submit 2 transactions?' })).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Ethereum (0x1)')).toBeTruthy()
-  expect(screen.getByText(account)).toBeTruthy()
-  expect(screen.getByText('Call 1')).toBeTruthy()
-  expect(screen.getByText('Call 2')).toBeTruthy()
-  expect(screen.getByText(target)).toBeTruthy()
-  expect(screen.getByText('Contract deployment')).toBeTruthy()
-  expect(screen.getByText('0xf')).toBeTruthy()
-  expect(screen.getByText('0xabcd')).toBeTruthy()
-  expect(screen.getByText('0x6000')).toBeTruthy()
-  expect(screen.getAllByText('2 bytes')).toHaveLength(2)
-  expect(screen.getByText('Calculating maximum execution gas fees')).toBeTruthy()
+  expect(screen.getByText('Ethereum')).toBeTruthy()
+  expect(screen.getByText('Main account')).toBeTruthy()
+  expect(screen.getByText('USD Coin (USDC)')).toBeTruthy()
+  expect(screen.getByText('transfer call')).toBeTruthy()
+  expect(screen.getByText('Contract call')).toBeTruthy()
+  expect(screen.getByText('Value · 0 ETH')).toBeTruthy()
+  expect(screen.getByText('Value · <0.000001 ETH')).toBeTruthy()
+  expect(screen.getByText('Gas limit · 21,000')).toBeTruthy()
+  expect(screen.getByText('Gas limit · 50,000')).toBeTruthy()
+  expect(screen.getByText('Max rate · 1 Gwei')).toBeTruthy()
+  expect(screen.getByText('Max rate · 2 Gwei')).toBeTruthy()
+
+  await user.click(screen.getAllByRole('button', { name: /Calldata · 4 bytes/i })[0])
+  expect(screen.getByText('0xa9059cbb')).toBeTruthy()
+
+  await user.click(screen.getByRole('button', { name: /USD Coin.*Token contract/i }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', target)
+  expect(screen.getByText('Address copied')).toBeTruthy()
 })
 
-it('renders exact per-call and aggregate maximum execution gas fees in order', () => {
-  const req = request([
-    { to: target, value: '0x0', data: '0x' },
-    { to: target, value: '0x1', data: '0xabcd' }
-  ])
-  req.preparation = {
-    status: 'succeeded',
-    maxFee: '0x29a2241af62c0000',
-    calls: [
-      {
-        transaction: {
-          from: account,
-          chainId: '0x1',
-          nonce: '0x5',
-          to: target,
-          data: '0x',
-          value: '0x0'
-        },
-        maxFee: '0xde0b6b3a7640000'
-      },
-      {
-        transaction: {
-          from: account,
-          chainId: '0x1',
-          nonce: '0x6',
-          to: target,
-          data: '0xabcd',
-          value: '0x1'
-        },
-        maxFee: '0x1bc16d674ec80000'
-      }
-    ]
-  }
-
-  render(
+it('renders per-transaction and aggregate maximum fees and opens a separate editor', async () => {
+  const req = preparedRequest()
+  const { user } = render(
     <WalletCallsRequest
       originName='example.test'
       chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
@@ -85,62 +101,38 @@ it('renders exact per-call and aggregate maximum execution gas fees in order', (
     />
   )
 
-  expect(screen.getByText('Maximum execution gas fee')).toBeTruthy()
-  expect(screen.getByText('3 ETH')).toBeTruthy()
-  expect(screen.getByText(/1 ETH.*0xde0b6b3a7640000 raw/)).toBeTruthy()
-  expect(screen.getByText(/2 ETH.*0x1bc16d674ec80000 raw/)).toBeTruthy()
-  expect(screen.getByText(/L2 data fees.*may be additional/i)).toBeTruthy()
+  expect(screen.getByText('Total maximum network fees')).toBeTruthy()
+  expect(screen.getByText('0.000121 ETH')).toBeTruthy()
+  expect(screen.getByText('2 separate transactions')).toBeTruthy()
+  expect(screen.getByText('0.000021 ETH')).toBeTruthy()
+  expect(screen.getByText('0.0001 ETH')).toBeTruthy()
+
+  await user.click(screen.getByRole('button', { name: /Adjust/i }))
+  expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', {
+    data: { step: 'adjustWalletCalls', walletCallsDraft: createWalletCallsDraft(req) }
+  })
 })
 
-it('fails closed for failed, malformed, or mismatched preparation', () => {
+it('fails closed for failed, malformed, mismatched, or stale preparation', () => {
   const failed = request([{ to: target, value: '0x0', data: '0x' }])
   failed.preparation = { status: 'failed', reason: 'RPC fee lookup failed' }
   render(<WalletCallsRequest originName='example.test' req={failed} />)
-
-  expect(screen.getByText('Execution gas fee preparation failed')).toBeTruthy()
-  expect(screen.getByText('RPC fee lookup failed')).toBeTruthy()
-  expect(screen.queryByText('Maximum execution gas fee')).toBeNull()
+  expect(screen.getByRole('alert').textContent).toMatch(/RPC fee lookup failed/)
   cleanup()
 
-  const mismatched = request([
-    { to: target, value: '0x0', data: '0x' },
-    { to: target, value: '0x0', data: '0x' }
-  ])
-  mismatched.preparation = {
-    status: 'succeeded',
-    maxFee: '0x1',
-    calls: [{ transaction: {}, maxFee: '0x1' }]
-  }
+  const mismatched = preparedRequest()
+  mismatched.preparation.calls[0].transaction.to = account
   render(<WalletCallsRequest originName='example.test' req={mismatched} />)
-
-  expect(screen.getByText('Prepared call count does not match the requested batch.')).toBeTruthy()
-  expect(screen.queryByText(/raw base units/i)).toBeNull()
+  expect(screen.getByRole('alert').textContent).toMatch(/no longer match/i)
   cleanup()
 
-  const malformed = request([{ to: target, value: '0x0', data: '0x' }])
-  malformed.preparation = {
-    status: 'succeeded',
-    maxFee: '0x02',
-    calls: [
-      {
-        transaction: {
-          from: account,
-          chainId: '0x1',
-          to: target,
-          data: '0x',
-          value: '0x0'
-        },
-        maxFee: '0x1'
-      }
-    ]
-  }
+  const malformed = preparedRequest()
+  malformed.preparation.maxFee = '0x02'
   render(<WalletCallsRequest originName='example.test' req={malformed} />)
-
-  expect(screen.getByText('Prepared fee data is invalid.')).toBeTruthy()
-  expect(screen.queryByText(/raw base units/i)).toBeNull()
+  expect(screen.getByRole('alert').textContent).toMatch(/fee evidence is invalid/i)
 })
 
-it('warns about non-atomic partial execution and exposes no approval control', () => {
+it('warns about non-atomic partial execution without putting approval controls in content', () => {
   render(
     <WalletCallsRequest
       originName='example.test'
@@ -149,71 +141,37 @@ it('warns about non-atomic partial execution and exposes no approval control', (
     />
   )
 
-  const warning = screen.getByRole('alert')
-  expect(warning.textContent).toMatch(/separate transaction/i)
-  expect(warning.textContent).toMatch(/own gas fee/i)
-  expect(warning.textContent).toMatch(/remain unsent/i)
-  expect(warning.textContent).toMatch(/no call is sent before the whole batch is approved/i)
-  expect(screen.queryByText('Approve')).toBeNull()
-  expect(screen.queryByText('Sign')).toBeNull()
+  expect(screen.getByText('Partial execution possible')).toBeTruthy()
+  expect(screen.getByText(/earlier transaction can succeed/i)).toBeTruthy()
+  expect(screen.queryByText('Submit Batch')).toBeNull()
 })
 
-it('shows that delegated-account wallet-call submission is blocked', () => {
-  const req = request([{ to: target, value: '0x0', data: '0x' }])
-  const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-  req.simulation = {
-    status: 'succeeded',
-    source: 'eth_simulateV1',
-    calls: [{ status: 'succeeded', source: 'eth_simulateV1' }],
-    delegation: { status: 'delegated', source: 'eth_getCode', account, delegate }
+it('blocks delegated-account submission and reports unavailable delegation checks', () => {
+  const delegated = preparedRequest()
+  delegated.simulation.delegation = {
+    status: 'delegated',
+    source: 'eth_getCode',
+    account,
+    delegate: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
   }
+  render(<WalletCallsRequest originName='example.test' req={delegated} />)
+  expect(screen.getByText(/Delegated account batch blocked/)).toBeTruthy()
+  cleanup()
 
-  render(<WalletCallsRequest originName='example.test' req={req} />)
-
-  expect(screen.getByText('Delegated account batch blocked')).toBeTruthy()
-  expect(screen.getByText((content) => content.includes(account) && content.includes(delegate))).toBeTruthy()
-})
-
-it('shows an unavailable wallet-call delegation check without claiming delegation', () => {
-  const req = request([{ to: target, value: '0x0', data: '0x' }])
-  req.simulation = {
-    status: 'succeeded',
-    source: 'eth_simulateV1',
-    calls: [{ status: 'succeeded', source: 'eth_simulateV1' }],
-    delegation: {
-      status: 'unavailable',
-      source: 'eth_getCode',
-      account,
-      reason: 'Account delegation check timed out'
-    }
+  const unavailable = preparedRequest()
+  unavailable.simulation.delegation = {
+    status: 'unavailable',
+    source: 'eth_getCode',
+    account,
+    reason: 'Account delegation check timed out'
   }
-
-  render(<WalletCallsRequest originName='example.test' req={req} />)
-
-  expect(screen.getByText('Account delegation check unavailable')).toBeTruthy()
+  render(<WalletCallsRequest originName='example.test' req={unavailable} />)
   expect(screen.getByText('Account delegation check timed out')).toBeTruthy()
-  expect(screen.queryByText('Delegated account batch blocked')).toBeNull()
+  expect(screen.queryByText(/Delegated account batch blocked/)).toBeNull()
 })
 
-it('renders complete long calldata rather than a shortened preview', () => {
-  const calldata = `0x${'ab'.repeat(256)}`
-  render(
-    <WalletCallsRequest
-      originName='example.test'
-      chainData={{ chainName: 'Ethereum' }}
-      req={request([{ to: target, value: '0x0', data: calldata }])}
-    />
-  )
-
-  expect(screen.getByText('256 bytes')).toBeTruthy()
-  expect(screen.getByText(calldata).textContent).toBe(calldata)
-})
-
-it('renders ordered RPC execution evidence and qualified token effects', () => {
-  const req = request([
-    { to: target, value: '0x0', data: '0x' },
-    { to: target, value: '0x1', data: '0xabcd' }
-  ])
+it('keeps compact reverting-call evidence and qualified token effects', () => {
+  const req = preparedRequest()
   req.simulation = {
     status: 'reverted',
     source: 'eth_simulateV1',
@@ -221,56 +179,48 @@ it('renders ordered RPC execution evidence and qualified token effects', () => {
       {
         status: 'succeeded',
         source: 'eth_simulateV1',
-        gasUsed: '0x5208',
         effects: [
-          {
-            type: 'transfer',
-            standard: 'erc20',
-            token: target,
-            from: account,
-            to: target,
-            amount: '5'
-          }
-        ],
-        allowance: {
-          source: 'eth_call',
-          token: target,
-          owner: account,
-          spender: target,
-          currentAmount: '1',
-          requestedAmount: '5'
-        }
+          { type: 'transfer', standard: 'erc20', token: target, from: account, to: target, amount: '5' }
+        ]
       },
       {
         status: 'reverted',
         source: 'eth_simulateV1',
-        gasUsed: '0x42',
+        gasUsed: '0x5208',
         reason: 'execution reverted: denied'
       }
     ]
   }
 
   render(<WalletCallsRequest originName='example.test' req={req} />)
-
-  expect(screen.getByText('RPC reports one or more calls revert')).toBeTruthy()
-  expect(screen.getByText('RPC result: succeeded - gas used 0x5208')).toBeTruthy()
-  expect(screen.getByText('RPC result: reverted - gas used 0x42')).toBeTruthy()
-  expect(screen.getByText('execution reverted: denied')).toBeTruthy()
+  expect(screen.getByText(/Simulation: reverted · gas used 21,000 · execution reverted: denied/)).toBeTruthy()
   expect(screen.getByText('ERC-20 Send')).toBeTruthy()
-  expect(screen.getByText('RPC-Reported Current Allowance')).toBeTruthy()
-  expect(screen.getAllByText(/not independently verified/i).length).toBeGreaterThan(0)
 })
 
-it.each([
-  ['unavailable', 'Stateful simulation unavailable', 'Configured RPC does not support stateful simulation'],
-  ['failed', 'Stateful simulation failed', 'RPC returned malformed output']
-])('renders a bounded %s batch result without per-call claims', (status, label, reason) => {
-  const req = request([{ to: target, value: '0x0', data: '0x' }])
-  req.simulation = { status, source: 'eth_simulateV1', calls: [], reason }
+it('edits contiguous nonce and per-transaction EIP-1559 fields only in the draft', async () => {
+  const req = preparedRequest()
+  const draft = createWalletCallsDraft(req)
+  const { user } = render(
+    <WalletCallsRequest
+      step='adjustWalletCalls'
+      requestData={{ walletCallsDraft: draft }}
+      originName='example.test'
+      chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
+      req={req}
+    />
+  )
 
-  render(<WalletCallsRequest originName='example.test' req={req} />)
+  expect(screen.getByText('Nonce 5')).toBeTruthy()
+  expect(screen.getByText('Nonce 6')).toBeTruthy()
+  expect(screen.getAllByText('EIP-1559')).toHaveLength(1)
+  await user.clear(screen.getByLabelText('Starting nonce'))
+  await user.type(screen.getByLabelText('Starting nonce'), '9')
 
-  expect(screen.getByText(label)).toBeTruthy()
-  expect(screen.getByText(reason)).toBeTruthy()
-  expect(screen.queryByText(/RPC result:/)).toBeNull()
+  expect(req.preparation.calls[0].transaction.nonce).toBe('0x5')
+  expect(link.send).toHaveBeenLastCalledWith(
+    'nav:update',
+    'panel',
+    expect.objectContaining({ data: expect.objectContaining({ walletCallsAdjustmentError: '' }) }),
+    false
+  )
 })

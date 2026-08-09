@@ -19,7 +19,32 @@ it('routes the complete authentication candidate into the consent component', ()
     { notify: jest.fn() }
   )
 
-  expect(notification.render().props).toMatchObject(notifyData)
+  expect(notification.render().props.children.props).toMatchObject(notifyData)
+})
+
+it('presents extension consent as a modal with the safe action focused first', () => {
+  const notifyData = {
+    browser: 'firefox',
+    extensionId: '4be0643f-1d98-573b-97cd-ca98a65347dd',
+    pairingCode: '654321',
+    requestId: 'pairing-request'
+  }
+  class NotifyHarness extends Notify {
+    constructor(props) {
+      super(props)
+      this.store = Object.assign(
+        jest.fn((path) => (path === 'view.notify' ? 'extensionConnect' : notifyData)),
+        { notify: jest.fn() }
+      )
+    }
+  }
+
+  render(<NotifyHarness />)
+
+  expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true')
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Decline extension connection' })
+  )
 })
 
 it('shows the pairing identity and submits the opaque pairing request', async () => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import hardwareSetup from 'url:../../../../../asset/ui/hardware-setup.png'
+import hardwareSetup from 'url:../../../../../asset/ui/hardware-setup-v6.png'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 
 import Signer from '../../../Signer'
@@ -31,7 +31,7 @@ export class AddHardware extends React.Component {
               <div className='addAccountItemTopTitle'>{deviceName}</div>
             </div>
             {/* <div className='addAccountItemClose' onMouseDown={() => this.props.close()}>{'DONE'}</div> */}
-            <div className='addAccountItemSummary'>{`Unlock your ${deviceName} to get started`}</div>
+            <div className='addAccountItemSummary'>{`Unlock your ${deviceName} to continue.`}</div>
           </div>
           <div className='addAccountItemDevices'>
             {tethered.length ? (
@@ -46,7 +46,7 @@ export class AddHardware extends React.Component {
               <div className='addAccountItemDevice'>
                 <img alt='' aria-hidden='true' className='addAccountItemDeviceArtwork' src={hardwareSetup} />
                 <div aria-live='polite' className='addAccountItemDeviceTitle' role='status'>
-                  Looking for a {deviceName}
+                  Looking for your {deviceName}
                 </div>
                 <div className='addAccountItemDeviceStatus'>Connect and unlock your device.</div>
               </div>

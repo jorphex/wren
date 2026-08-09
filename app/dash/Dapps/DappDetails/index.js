@@ -83,7 +83,7 @@ export class DappDetails extends React.Component {
           <Icon name='apps' size={20} />
           <div className='originSwapOriginText'>{origin.name}</div>
         </div>
-        <div className='originSwapTitle'>default chain</div>
+        <div className='originSwapTitle'>Default network</div>
         <div>{this.updateOriginChain(origin)}</div>
       </div>
     )

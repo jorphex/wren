@@ -2,9 +2,10 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
+import emptyBalances from 'url:../../../../../asset/ui/wren-empty-balances-v2.png'
+
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import { isNetworkConnected } from '../../../../../resources/utils/chains'
 import {
   formatUsdRate,
@@ -15,10 +16,11 @@ import {
 import { matchFilter } from '../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
 import Balance from '../Balance'
 
-class BalancesPreview extends React.Component {
+export class BalancesPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
@@ -104,87 +106,110 @@ class BalancesPreview extends React.Component {
     // scan if balances are more than a minute old
     const scanning = !lastBalanceUpdate || new Date() - new Date(lastBalanceUpdate) > 1000 * 60
     const hotSigner = ['ring', 'seed'].includes(lastSignerType)
+    const hideBalances = this.store('selected.hideBalances')
 
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <div className={'moduleHeader'}>
           <span>
-            <Icon name='tokens' size={13} />
+            <Icon name='tokens' size={16} />
           </span>
           <span>{'Balances'}</span>
         </div>
-        {balances.length && scanning === 0 ? (
+        {scanning ? (
           <div className='signerBalancesLoading'>
             <div className='loader' />
           </div>
-        ) : null}
-        <Cluster>
-          {balances.map(({ chainId, symbol, ...balance }, i) => {
-            return (
-              <ClusterRow key={chainId + symbol}>
-                <ClusterValue>
-                  <Balance chainId={chainId} symbol={symbol} balance={balance} i={i} scanning={scanning} />
-                </ClusterValue>
-              </ClusterRow>
-            )
-          })}
-        </Cluster>
-        <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
-          {!this.props.expanded ? (
-            <div className='signerBalanceButtons'>
-              <div
-                className='signerBalanceButton signerBalanceShowAll'
-                onClick={() => {
-                  const crumb = {
-                    view: 'expandedModule',
-                    data: {
-                      id: this.props.moduleId,
-                      account: this.props.account
-                    }
-                  }
-                  link.send('nav:forward', 'panel', crumb)
-                }}
-              >
-                {filteredBalances.length - balances.length > 0
-                  ? `+${filteredBalances.length - balances.length} More`
-                  : 'More'}
-              </div>
-            </div>
+        ) : balances.length === 0 ? (
+          this.props.filter ? (
+            <div className='wrenEmptyFilter'>No matching balances</div>
           ) : (
-            <div className='signerBalanceButtons'>
-              <div
-                className='signerBalanceButton signerBalanceAddToken'
-                onMouseDown={() => {
-                  link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
-                }}
-              >
-                <span>Add Token</span>
+            <WrenEmptyState
+              image={emptyBalances}
+              transparentImage={true}
+              title='No balances yet'
+              copy='Assets appear here after Wren checks your enabled networks.'
+            />
+          )
+        ) : (
+          <Cluster>
+            {balances.map(({ chainId, symbol, ...balance }, i) => {
+              return (
+                <ClusterRow key={chainId + symbol}>
+                  <ClusterValue>
+                    <Balance chainId={chainId} symbol={symbol} balance={balance} i={i} scanning={scanning} />
+                  </ClusterValue>
+                </ClusterRow>
+              )
+            })}
+          </Cluster>
+        )}
+        {balances.length > 0 || this.props.expanded ? (
+          <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
+            {!this.props.expanded ? (
+              <div className='signerBalanceButtons'>
+                <button
+                  type='button'
+                  className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlSecondary wrenControlCompact'
+                  onClick={() => {
+                    const crumb = {
+                      view: 'expandedModule',
+                      data: {
+                        id: this.props.moduleId,
+                        account: this.props.account
+                      }
+                    }
+                    link.send('nav:forward', 'panel', crumb)
+                  }}
+                >
+                  {filteredBalances.length - balances.length > 0
+                    ? `+${filteredBalances.length - balances.length} More`
+                    : 'More'}
+                </button>
               </div>
-            </div>
-          )}
-          <div className='signerBalanceTotalText'>
-            <div className='signerBalanceTotalLabel'>{'Total'}</div>
-            <div className='signerBalanceTotalValue'>
-              {svg.usd(11)}
-              {balances.length > 0 ? totalDisplayValue : '---.--'}
+            ) : (
+              <div className='signerBalanceButtons'>
+                <button
+                  type='button'
+                  className='signerBalanceButton signerBalanceAddToken wrenControl wrenControlSecondary wrenControlCompact'
+                  onClick={() => {
+                    link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
+                  }}
+                >
+                  <span>Add token</span>
+                </button>
+              </div>
+            )}
+            <div className='signerBalanceTotalText'>
+              <div className='signerBalanceTotalLabel'>{'Total'}</div>
+              <div className='signerBalanceTotalValue'>
+                {hideBalances ? (
+                  <span aria-label='Total balance hidden'>$••••</span>
+                ) : (
+                  <>
+                    <span aria-hidden='true'>$</span>
+                    {balances.length > 0 ? totalDisplayValue : '---.--'}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        {totalValue.toNumber() > 10000 && hotSigner ? (
-          <div
+        ) : null}
+        {!hideBalances && totalValue.toNumber() > 10000 && hotSigner ? (
+          <button
+            type='button'
             className='signerBalanceWarning'
+            aria-expanded={this.state.showHighHotMessage || false}
             onClick={() => this.setState({ showHighHotMessage: !this.state.showHighHotMessage })}
             style={scanning ? { opacity: 0 } : { opacity: 1 }}
           >
-            <div className='signerBalanceWarningTitle'>{'high value account is using hot signer'}</div>
+            <div className='signerBalanceWarningTitle'>High-value account using a hot signer</div>
             {this.state.showHighHotMessage ? (
               <div className='signerBalanceWarningMessage'>
-                {
-                  'We recommend using one of our supported hardware signers to increase the security of your account'
-                }
+                {'Use a hardware signer to better protect this account.'}
               </div>
             ) : null}
-          </div>
+          </button>
         ) : null}
       </div>
     )

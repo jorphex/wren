@@ -12,11 +12,11 @@
     margin 8px
     padding 0px 16px
     height 38px
-    font-weight 300
-    background var(--ghostB)
+    font-weight 500
+    background var(--wren-surface-card)
     color var(--wren-text-primary)
     font-family var(--wren-font-ui)
-    border-radius 16px
+    border-radius var(--wren-radius-sm)
     display flex
     justify-content center
     align-items center
@@ -26,13 +26,26 @@
       pointer-events none
 
   .confirmButton:hover:not(:disabled)
-    background var(--ghostC)
+    background var(--wren-surface-hover)
 
   .confirmButton:disabled
     opacity .5
     cursor default
 
 .confirmText
-  font-size 20px
-  padding 0px 42px 42px 42px
-  font-weight 300
+  font-size var(--wren-type-heading)
+  padding 0 42px 42px
+  font-weight 500
+  font-variation-settings var(--wren-font-heading-settings)
+
+.confirmTextWithDescription
+  padding-bottom 18px
+
+.confirmDescription
+  max-width 420px
+  margin 0 auto 24px
+  padding 0 42px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  line-height 1.5

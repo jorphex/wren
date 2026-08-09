@@ -25,7 +25,7 @@ test('exposes disclosure links and acceptance as native actions', () => {
   fireEvent.click(screen.getByRole('button', { name: 'our license' }))
   expect(link.send).toHaveBeenCalledWith('tray:openExternal', expect.any(String))
 
-  fireEvent.click(screen.getByRole('button', { name: "Let's go!" }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'muteBetaDisclosure')
 })
 

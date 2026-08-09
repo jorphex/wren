@@ -18,7 +18,7 @@
     text-transform uppercase
     letter-spacing 2px
     font-weight 500
-    font-size 11px
+    font-size var(--wren-type-caption)
 
   .commandItem
     height 38px
@@ -84,11 +84,27 @@
     left 58px
     right 58px
     top 0
+    min-width 0
+    overflow hidden
     color var(--wren-text-secondary)
-    font-size 12px
+    font-size var(--wren-type-small)
     font-weight 500
     letter-spacing .2px
     text-transform none
+
+    > .expandedSignerTitle
+      min-width 0
+      max-width 100%
+      overflow hidden
+
+      .expandedSignerIcon
+        flex none
+
+      .signerName
+        min-width 0
+        overflow hidden
+        text-overflow ellipsis
+        white-space nowrap
 
   .commandItem
     width 40px

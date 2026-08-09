@@ -145,16 +145,16 @@ it('uses native disabled decisions until the transaction signing delay completes
   const view = renderMountedCommand(req, 'signOrDecline', commandStore())
 
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(true)
-  expect(screen.getByRole('button', { name: 'Sign' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)
 
   act(() => jest.advanceTimersByTime(1499))
-  expect(screen.getByRole('button', { name: 'Sign' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)
   act(() => jest.advanceTimersByTime(1))
   link.rpc.mockImplementation((method, ...args) => {
     const callback = args.at(-1)
     if (method === 'signerCompatibility') callback(null, { compatible: true })
   })
-  await view.user.click(screen.getByRole('button', { name: 'Sign' }))
+  await view.user.click(screen.getByRole('button', { name: 'Sign transaction' }))
 
   expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility', 'approveRequest'])
   view.unmount()
@@ -179,13 +179,13 @@ it('uses native disabled decisions for signatures until input is allowed', async
   const view = renderMountedCommand(req, 'renderSignDataCommand', commandStore())
 
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(true)
-  expect(screen.getByRole('button', { name: 'Sign' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Sign message' }).disabled).toBe(true)
 
   act(() => jest.advanceTimersByTime(1500))
   link.rpc.mockImplementation((method, ...args) => {
     if (method === 'signerCompatibility') args.at(-1)(null, { compatible: true })
   })
-  await view.user.click(screen.getByRole('button', { name: 'Sign' }))
+  await view.user.click(screen.getByRole('button', { name: 'Sign message' }))
 
   expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility', 'approveRequest'])
   view.unmount()
@@ -201,7 +201,7 @@ it('preserves the signer-compatibility warning before approval', async () => {
     if (method === 'signerCompatibility') args.at(-1)(null, compatibility)
   })
 
-  await view.user.click(screen.getByRole('button', { name: 'Sign' }))
+  await view.user.click(screen.getByRole('button', { name: 'Sign transaction' }))
 
   expect(store.notify).toHaveBeenCalledWith('signerCompatibilityWarning', {
     req,
@@ -229,7 +229,7 @@ it.each([
     if (method === 'signerCompatibility') args.at(-1)(null, { compatible: true })
   })
 
-  await view.user.click(screen.getByRole('button', { name: 'Sign' }))
+  await view.user.click(screen.getByRole('button', { name: 'Sign transaction' }))
 
   expect(store.notify).toHaveBeenCalledWith('gasFeeWarning', {
     req,

@@ -1,31 +1,31 @@
 import { ChainHeader } from '../Components'
 import Connection from '../Connection'
 import Gas from '../../../../../resources/Components/Monitor'
-import { ClusterBox, Cluster } from '../../../../../resources/Components/Cluster'
+import { Cluster } from '../../../../../resources/Components/Cluster'
 
 const ChainPreview = (props) => {
-  const { type, id, primaryColor, icon, name, on } = props
+  const { type, id, icon, name, isTestnet, on, primaryColor } = props
   return (
     <div className='network'>
       <ChainHeader
         type={type}
         id={id}
-        primaryColor={primaryColor}
         icon={icon}
         name={name}
+        isTestnet={isTestnet}
         on={on}
+        primaryColor={primaryColor}
         showExpand={true}
         showToggle={true}
       />
       {on && (
         <div className='chainModules'>
-          <ClusterBox>
-            <Cluster>
-              <Connection {...props} />
+          <Cluster>
+            <Connection {...props} />
+            <div className='networkGasRows'>
               <Gas chainId={id} />
-            </Cluster>
-          </ClusterBox>
-          <div style={{ height: '14px' }} />
+            </div>
+          </Cluster>
         </div>
       )}
     </div>

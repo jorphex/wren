@@ -71,6 +71,20 @@ export class Account extends React.Component {
     }
   }
 
+  selectFromDrawer() {
+    if (this.props.status !== 'ok') return
+
+    if (this.store('selected.current') === this.props.id) {
+      this.store.toggleShowAccounts(false)
+      return
+    }
+
+    this.store.toggleShowAccounts(false)
+    link.rpc('setSigner', this.props.id, (err) => {
+      if (err) console.log(err)
+    })
+  }
+
   setSignerStatusOpen(value) {
     link.send('tray:action', 'setAccountSignerStatusOpen', value)
   }
@@ -212,7 +226,9 @@ export class Account extends React.Component {
 
     if (this.state.addressHover) {
       return (
-        <div
+        <button
+          type='button'
+          aria-label='Copy account address'
           className='signerDetailsFullAddress'
           onClick={(e) => {
             e.stopPropagation()
@@ -228,14 +244,21 @@ export class Account extends React.Component {
           ) : (
             <div className='signerDetailsFullAddressText'>{formattedAddress}</div>
           )}
-        </div>
+        </button>
       )
     } else {
       if (ensName && !showLocal) {
         return (
           <div className='signerDetails'>
-            <div
+            <button
+              type='button'
+              aria-label='Show full account address'
               className='signerDetailsENSName'
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                this.setState({ addressHover: true })
+              }}
               onMouseOver={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
@@ -249,14 +272,16 @@ export class Account extends React.Component {
               style={{ fontSize: this.getAddressSize() + 'px' }}
             >
               {ensName}
-            </div>
+            </button>
           </div>
         )
       } else {
         return (
           <div className='signerDetails'>
             <div className='signerDetailsName'>{this.props.name}</div>
-            <div
+            <button
+              type='button'
+              aria-label='Show full account address'
               className='signerDetailsAddress'
               onClick={(e) => {
                 e.stopPropagation()
@@ -290,7 +315,7 @@ export class Account extends React.Component {
                   </div>
                 </>
               )}
-            </div>
+            </button>
           </div>
         )
       }
@@ -381,7 +406,51 @@ export class Account extends React.Component {
     )
   }
 
+  renderDrawerItem() {
+    const { id, name, status, lastSignerType } = this.props
+    const account = this.store('main.accounts', id) || this.props
+    const address = getAddress(account.address || id)
+    const displayName = account.ensName || name || 'Account'
+    const current = this.store('selected.current') === id
+    let requests = account.requests || {}
+    requests = Object.keys(requests).filter((requestId) => requests[requestId].mode === 'normal')
+
+    return (
+      <button
+        type='button'
+        className={current ? 'accountDrawerItem accountDrawerItemSelected' : 'accountDrawerItem'}
+        disabled={status !== 'ok'}
+        aria-current={current ? 'true' : undefined}
+        onClick={() => this.selectFromDrawer()}
+      >
+        <span className='accountDrawerItemIcon'>
+          <Icon name={this.isHotSigner(lastSignerType) ? 'hot' : 'hardware'} size={17} />
+        </span>
+        <span className='accountDrawerItemIdentity'>
+          <span className='accountDrawerItemName'>{displayName}</span>
+          <span className='accountDrawerItemAddress'>
+            {address.substring(0, 8)}…{address.slice(-6)}
+          </span>
+        </span>
+        <span className='accountDrawerItemEnd'>
+          {current ? <Icon name='check' size={15} /> : null}
+          {!current && requests.length ? (
+            <span
+              className='accountDrawerRequestCount'
+              role='status'
+              aria-label={`${requests.length} pending account ${requests.length === 1 ? 'request' : 'requests'}`}
+            >
+              {requests.length}
+            </span>
+          ) : null}
+        </span>
+      </button>
+    )
+  }
+
   render() {
+    if (this.props.drawer) return this.renderDrawerItem()
+
     const { id, status, active, index } = this.props
 
     const selectedAccountId = this.store('selected.current')
@@ -476,12 +545,19 @@ export class Account extends React.Component {
                 {this.renderSignerIndicator()}
                 {this.renderType()}
                 {(() => {
+                  if (requests.length === 0) return null
                   if (this.state.addressHover) return null
                   let requestBadgeClass = 'accountNotificationBadge'
                   if (active) requestBadgeClass += ' accountNotificationBadgeReady'
                   if (requests.length > 0) requestBadgeClass += ' accountNotificationBadgeActive'
                   return (
-                    <div className={requestBadgeClass}>
+                    <div
+                      className={requestBadgeClass}
+                      role='status'
+                      aria-label={`${requests.length} pending account ${
+                        requests.length === 1 ? 'request' : 'requests'
+                      }`}
+                    >
                       <span>{requests.length}</span>
                     </div>
                   )
@@ -489,7 +565,7 @@ export class Account extends React.Component {
                 <button
                   type='button'
                   aria-label={selectedAccountOpen ? 'Close account details' : 'Open account details'}
-                  className='signerSelect'
+                  className='signerSelect wrenControl wrenControlSecondary wrenControlIcon'
                   onClick={(event) => {
                     event.stopPropagation()
                     this.typeClick()
@@ -501,7 +577,7 @@ export class Account extends React.Component {
                         className='signerSelectIcon'
                         style={{ transform: selectedAccountOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
                       >
-                        <Icon name='chevron-down' size={26} />
+                        <Icon name='chevron-down' size={20} />
                       </div>
                     </div>
                   </div>

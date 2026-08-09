@@ -41,14 +41,13 @@ const GasFeesMarket = ({ gasPrice, fees: { nextBaseFee, maxPriorityFeePerGas }, 
     <>
       {displayBaseHint && (
         <div className='feeToolTip feeToolTipBase cardShow'>
-          The current base fee is added with a buffer to cover the next 3 blocks, any amount greater than your
-          block&apos;s base fee is refunded
+          Wren adds a buffer to the current base fee to cover the next three blocks. Any amount above your
+          block&apos;s base fee is refunded.
         </div>
       )}
       {displayPriorityHint && (
         <div className='feeToolTip feeToolTipPriority cardShow'>
-          A priority tip paid to validators is added to incentivize quick inclusion of your transaction into a
-          block
+          A priority fee (tip) is paid to validators to help include your transaction sooner.
         </div>
       )}
       <div className='gasItem gasItemSmall'>
@@ -56,7 +55,7 @@ const GasFeesMarket = ({ gasPrice, fees: { nextBaseFee, maxPriorityFeePerGas }, 
         <span className='gasGweiLabel' style={{ color }}>
           {'GWEI'}
         </span>
-        <span className='gasLevelLabel'>{'Current Base'}</span>
+        <span className='gasLevelLabel'>{'Current base fee'}</span>
       </div>
       <div className='gasItem gasItemLarge'>
         <button
@@ -97,7 +96,7 @@ const GasFeesMarket = ({ gasPrice, fees: { nextBaseFee, maxPriorityFeePerGas }, 
         <span className='gasGweiLabel' style={{ color }}>
           {'GWEI'}
         </span>
-        <span className='gasLevelLabel'>{'Priority Tip'}</span>
+        <span className='gasLevelLabel'>{'Priority fee'}</span>
       </div>
     </>
   )

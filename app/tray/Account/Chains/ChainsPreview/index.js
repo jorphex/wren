@@ -59,7 +59,7 @@ class ChainsPreview extends React.Component {
     const { name } = currentChain
     const { primaryColor } = currentChainMeta
     return (
-      <div className='balancesBlock' ref={this.moduleRef}>
+      <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
         <div className='moduleHeader'>
           <span style={{ marginLeft: '-2px' }}>
             <Icon name='network' size={16} />
@@ -70,7 +70,7 @@ class ChainsPreview extends React.Component {
               <button
                 type='button'
                 aria-label='Previous network'
-                className='chainMonitorSwitchButton'
+                className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index - 1)}
               >
                 <Icon name='back' size={18} />
@@ -78,7 +78,7 @@ class ChainsPreview extends React.Component {
               <button
                 type='button'
                 aria-label='Next network'
-                className='chainMonitorSwitchButton'
+                className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index + 1)}
               >
                 <Icon name='chevron-right' size={18} />

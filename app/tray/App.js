@@ -14,7 +14,7 @@ import Footer from './Footer'
 
 class Panel extends React.Component {
   indicator(connection) {
-    const status = [connection.primary.status, connection.secondary.status]
+    const status = connection.endpoints.map((endpoint) => endpoint.status)
     if (status.indexOf('connected') > -1) {
       if (this.store('selected.current')) {
         return <div className='panelDetailIndicatorInner panelDetailIndicatorGood' />
@@ -55,7 +55,7 @@ class Panel extends React.Component {
     Object.keys(networks).forEach((type) => {
       Object.keys(networks[type]).forEach((id) => {
         const net = networks[type][id]
-        const status = [net.connection.primary.status, net.connection.secondary.status]
+        const status = net.connection.endpoints.map((endpoint) => endpoint.status)
         if (net.on) {
           networkOptions.push({
             text: net.name,

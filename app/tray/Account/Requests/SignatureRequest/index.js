@@ -48,10 +48,42 @@ const getRequestClass = (status) => {
   return `signerRequest${suffix ? ` signerRequest${suffix}` : ''}`
 }
 
+export const getMessageReviewPresentation = (context = {}) => ({
+  eyebrow: context.siwe ? 'Sign-In with Ethereum' : 'Message signature',
+  title: context.siwe ? 'Review sign-in request' : 'Sign a message',
+  help: context.siwe
+    ? 'Verify the domain, account, network, and exact sign-in statement.'
+    : 'This signature can verify control of this account but does not submit a transaction.',
+  status: context.siwe
+    ? 'SIWE structure recognized'
+    : context.encoding === 'utf8'
+      ? 'Readable text message'
+      : 'Opaque message data'
+})
+
+const MessageReviewSummary = ({ context }) => {
+  const presentation = getMessageReviewPresentation(context)
+
+  return (
+    <div className='typedDataReviewSummary messageReviewSummary'>
+      <div className='typedDataReviewSummaryMain'>
+        <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
+        <div className='typedDataReviewTitle'>{presentation.title}</div>
+        <div className='typedDataReviewHelp'>{presentation.help}</div>
+      </div>
+      <div className='typedDataReviewRecognition'>
+        <div>{presentation.status}</div>
+        <span>Recognition describes format, not trust.</span>
+      </div>
+    </div>
+  )
+}
+
 const SiweReview = ({ siwe }) => (
   <>
     <Section title='Sign-In Request'>
       <SimpleJSON
+        copyableKeys={{ address: 'SIWE account address' }}
         humanizeKeys
         json={presentFields({
           scheme: siwe.scheme,
@@ -83,16 +115,17 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
   return type === 'sign' ? (
     <div key={id || handlerId} className={requestClass}>
       <div className='accountViewScroll cardShow'>
-        <div className='txViewData'>
-          <div className='txViewDataHeader'>Message Signing Review</div>
+        <div className='txViewData signingReview messageSigningReview'>
+          <MessageReviewSummary context={context} />
           <Section first title='Signing Context'>
             <SimpleJSON
+              copyableKeys={{ account: 'signing account address' }}
               humanizeKeys
               quoteStrings={false}
               json={{
                 origin: originName || context.origin || 'Unknown origin',
                 account,
-                requestChain,
+                requestNetwork: requestChain,
                 method,
                 encoding: context.encoding === 'utf8' ? 'UTF-8 text' : 'Opaque hex',
                 bytes: context.byteLength

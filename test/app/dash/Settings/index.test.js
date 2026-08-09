@@ -56,11 +56,27 @@ const renderSettings = () => {
 
 const setting = (name) => screen.getByText(name).closest('.localSetting')
 
+it('groups settings into a short, semantic ledger', () => {
+  renderSettings()
+
+  expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
+    'Desktop behavior',
+    'Accounts and signing',
+    'Browser companions'
+  ])
+  expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Summon shortcut'))).toBe(
+    true
+  )
+  expect(
+    screen.getByRole('region', { name: 'Accounts and signing' }).contains(setting('Ledger derivation'))
+  ).toBe(true)
+})
+
 it.each([
   ['Auto-hide', 'Auto-hide', ['tray:action', 'setAutohide', true]],
-  ['Run on Startup', 'Run on startup', ['tray:action', 'toggleLaunch']],
+  ['Run on startup', 'Run on startup', ['tray:action', 'toggleLaunch']],
   ['Glide', 'Glide', ['tray:action', 'toggleReveal']],
-  ['Show Account Name with ENS', 'Show account name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]
+  ['Show account name with ENS', 'Show account name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]
 ])('routes the %s toggle to its store action', (name, accessibleName, expected) => {
   renderSettings()
 
@@ -72,14 +88,14 @@ it.each([
 it('routes every settings dropdown to its matching store action', () => {
   renderSettings()
   const selections = [
-    ['Glide Edge', 'left', ['tray:action', 'setGlideSide', 'left']],
-    ['Trezor Derivation', 'legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
-    ['Ledger Derivation', 'standard', ['tray:action', 'setLedgerDerivation', 'standard']],
-    ['Ledger Live Accounts', 10, ['tray:action', 'setLiveAccountLimit', 10]],
-    ['Lattice Derivation', 'live', ['tray:action', 'setLatticeDerivation', 'live']],
-    ['Lattice Accounts', 20, ['tray:action', 'setLatticeAccountLimit', 20]],
-    ['Lattice Relay', 'custom', ['tray:action', 'setLatticeEndpointMode', 'custom']],
-    ['Lock Hot Signers on', true, ['tray:action', 'setAccountCloseLock', true]]
+    ['Glide edge', 'left', ['tray:action', 'setGlideSide', 'left']],
+    ['Trezor derivation', 'legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
+    ['Ledger derivation', 'standard', ['tray:action', 'setLedgerDerivation', 'standard']],
+    ['Ledger Live accounts', 10, ['tray:action', 'setLiveAccountLimit', 10]],
+    ['Lattice derivation', 'live', ['tray:action', 'setLatticeDerivation', 'live']],
+    ['Lattice accounts', 20, ['tray:action', 'setLatticeAccountLimit', 20]],
+    ['Lattice relay', 'custom', ['tray:action', 'setLatticeEndpointMode', 'custom']],
+    ['Lock hot signers when', true, ['tray:action', 'setAccountCloseLock', true]]
   ]
 
   selections.forEach(([name, value, expected]) => {
@@ -90,7 +106,7 @@ it('routes every settings dropdown to its matching store action', () => {
 
 it('debounces a whitespace-free custom Lattice relay value', () => {
   renderSettings()
-  fireEvent.change(within(setting('Lattice Relay')).getByRole('combobox'), {
+  fireEvent.change(within(setting('Lattice relay')).getByRole('combobox'), {
     target: { value: 'custom' }
   })
   fireEvent.change(screen.getByRole('textbox', { name: 'Custom Lattice relay' }), {
@@ -124,7 +140,7 @@ it('requires confirmation before revoking a companion pairing', () => {
 it('exposes shortcut editing as a native action', () => {
   renderSettings()
 
-  fireEvent.click(screen.getByRole('button', { name: 'edit' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
 
   expect(link.send).toHaveBeenCalledWith(
     'tray:action',

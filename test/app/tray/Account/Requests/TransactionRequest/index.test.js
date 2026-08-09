@@ -20,6 +20,7 @@ import {
   getProxyImplementationChangesPresentation,
   getSimulationEffectsPresentation,
   getSimulationPresentation,
+  TransactionDataRow,
   YearnOverview
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew/overview'
 import {
@@ -34,6 +35,9 @@ import {
   SimpleTxJSON,
   ViewData
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData'
+import NonceControl, {
+  displayTransactionNonce
+} from '../../../../../../app/tray/Account/Requests/TransactionRequest/NonceControl'
 import {
   canApproveTransaction,
   getRequiredRequestApproval,
@@ -64,6 +68,18 @@ function addRequest(req) {
 }
 
 describe('confirm', () => {
+  it('copies the displayed sender identity from the main review', () => {
+    const txMain = new TxMain({})
+    txMain.setState = jest.fn()
+    link.send.mockClear()
+
+    txMain.copyFromAddress(account)
+
+    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', account)
+    expect(txMain.setState).toHaveBeenCalledWith({ copied: true })
+    txMain.componentWillUnmount()
+  })
+
   it('shows the recipient for a zero-value EOA transaction', () => {
     const recipient = '0x1111111111111111111111111111111111111111'
 
@@ -79,6 +95,38 @@ describe('confirm', () => {
 
     expect(screen.getByText('Recipient Account')).toBeTruthy()
     expect(screen.getByText(recipient)).toBeTruthy()
+  })
+
+  it('keeps a native-transfer recipient in the shared transaction details ledger', () => {
+    const recipient = '0x1111111111111111111111111111111111111111'
+
+    render(
+      <TxRecipient
+        i={0}
+        req={{
+          data: { to: recipient, value: '0x1' },
+          recipientType: 'external'
+        }}
+      />
+    )
+
+    expect(screen.getByText('To')).toBeTruthy()
+    expect(screen.getByText(recipient)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy transaction recipient address' })).toBeTruthy()
+  })
+
+  it('does not expose a recipient copy target for contract creation', () => {
+    render(
+      <TxRecipient
+        i={0}
+        req={{
+          data: { value: '0x0' },
+          recipientType: ''
+        }}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'Copy transaction recipient address' })).toBeNull()
   })
 
   it('announces a copied transaction recipient without replacing its visible identity', async () => {
@@ -371,6 +419,17 @@ describe('approval editing', () => {
 })
 
 describe('simulation review', () => {
+  it('exposes contract data as a named disclosure in the main review', async () => {
+    link.send.mockClear()
+    const { user } = render(<TransactionDataRow method='deposit' />)
+
+    expect(screen.getByText('Contract data')).toBeTruthy()
+    expect(screen.getByText('deposit ›')).toBeTruthy()
+    const disclosures = screen.getAllByRole('button', { name: 'View transaction data' })
+    await user.click(disclosures.at(-1))
+    expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', { data: { step: 'viewData' } })
+  })
+
   it('renders a trusted Yearn action summary with its decoded amount', () => {
     render(
       <YearnOverview
@@ -943,6 +1002,15 @@ describe('raw transaction nonce controls', () => {
     expect(link.send).toHaveBeenNthCalledWith(1, 'tray:adjustNonce', reference, -1)
     expect(link.send).toHaveBeenNthCalledWith(2, 'tray:adjustNonce', reference, 1)
     expect(link.send).toHaveBeenNthCalledWith(3, 'tray:resetNonce', reference)
+  })
+
+  it('shows the exact main-review nonce and keeps its step controls available', () => {
+    render(<NonceControl req={nonceRequest()} />)
+
+    expect(screen.getByText('5')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Decrease nonce' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Increase nonce' })).toBeTruthy()
+    expect(displayTransactionNonce('0x20000000000000')).toBe('9007199254740992')
   })
 
   it('shows reset only when the nonce differs from the original transaction', () => {

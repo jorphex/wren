@@ -1,0 +1,225 @@
+button.wrenControl
+  appearance none
+  min-height 38px
+  padding 0 var(--wren-space-3)
+  display inline-flex
+  align-items center
+  justify-content center
+  gap var(--wren-space-2)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-primary)
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-control-shadow)
+  font-family var(--wren-font-ui)
+  font-size 13px
+  font-weight 550
+  line-height 1
+  letter-spacing .01em
+  text-transform none
+  cursor pointer
+  transform translateY(0)
+  transition background-color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
+
+  > svg
+    flex none
+
+  &:hover:not(:disabled)
+    border-color var(--wren-border-strong)
+    background-color var(--wren-bg-panel)
+    box-shadow var(--wren-control-shadow-hover)
+
+  &:active:not(:disabled)
+    transform translateY(1px)
+    background-color var(--wren-surface-active)
+    box-shadow var(--wren-control-shadow-pressed)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  &:disabled,
+  &[aria-disabled='true']
+    color var(--wren-text-disabled)
+    border-color var(--wren-border-subtle)
+    background-color var(--wren-surface-inset)
+    background-image none
+    box-shadow var(--wren-control-shadow-disabled)
+    cursor default
+    opacity .72
+
+button.wrenControl.wrenControlPrimary
+  border-color var(--wren-control-primary-border)
+  color var(--wren-text-inverse)
+  background-color var(--wren-accent-primary)
+  background-image var(--wren-control-texture-light)
+  box-shadow var(--wren-control-primary-shadow)
+
+  &:hover:not(:disabled)
+    border-color var(--wren-control-primary-border-hover)
+    background-color var(--wren-accent-primary-hover)
+    box-shadow var(--wren-control-primary-shadow-hover)
+
+  &:active:not(:disabled)
+    background-color var(--wren-accent-primary-active)
+    box-shadow var(--wren-control-primary-shadow-pressed)
+
+button.wrenControl.wrenControlSecondary
+  color var(--wren-text-secondary)
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+
+button.wrenControl.wrenControlGhost
+  border-color transparent
+  color var(--wren-text-secondary)
+  background-color transparent
+  background-image none
+  box-shadow none
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+    border-color var(--wren-border-subtle)
+    background-color var(--wren-surface-hover)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-shadow-inset)
+
+  &:active:not(:disabled)
+    background-color var(--wren-surface-active)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .32)
+
+button.wrenControl.wrenControlDanger
+  border-color rgba(213, 116, 104, .48)
+  color var(--wren-danger)
+  background-color var(--wren-danger-soft)
+  background-image var(--wren-control-texture-dark)
+
+  &:hover:not(:disabled)
+    border-color var(--wren-danger)
+    color #f0b2ab
+    background-color #321a18
+
+button.wrenControl.wrenControlLarge
+  min-height 44px
+  padding 0 var(--wren-space-5)
+  font-size 15px
+
+button.wrenControl.wrenControlIcon
+  width 38px
+  min-width 38px
+  height 38px
+  min-height 38px
+  padding 0
+
+button.wrenControl.wrenControlCompact
+  min-height 32px
+  padding 0 var(--wren-space-2)
+  font-size var(--wren-type-small)
+
+button.wrenControl.wrenControlChrome
+  width 28px
+  min-width 28px
+  height 24px
+  min-height 24px
+  padding 0
+  border-radius var(--wren-radius-sm)
+
+// Navigation shared by the adjoining wallet and dashboard shells.
+button.wrenControl.wrenShellNav
+  width 40px
+  min-width 40px
+  height 40px
+  min-height 40px
+  padding 0
+  border-color var(--wren-border-default)
+  border-radius 7px
+  color var(--wren-text-secondary)
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-control-shadow)
+
+  &:hover:not(:disabled)
+    color var(--wren-accent-primary-hover)
+    border-color var(--wren-border-strong)
+    background-color var(--wren-bg-panel)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-control-shadow-hover)
+
+  &:active:not(:disabled)
+    color var(--wren-accent-primary-active)
+    background-color var(--wren-surface-active)
+    box-shadow var(--wren-control-shadow-pressed)
+
+button.wrenControl.wrenControlPrimary:disabled,
+button.wrenControl.wrenControlPrimary[aria-disabled='true'],
+button.wrenControl.wrenControlSecondary:disabled,
+button.wrenControl.wrenControlSecondary[aria-disabled='true'],
+button.wrenControl.wrenControlDanger:disabled,
+button.wrenControl.wrenControlDanger[aria-disabled='true']
+  border-color var(--wren-border-subtle)
+  color var(--wren-text-disabled)
+  background-color var(--wren-surface-inset)
+  background-image none
+  box-shadow var(--wren-control-shadow-disabled)
+
+button.wrenControl.wrenControlGhost:disabled,
+button.wrenControl.wrenControlGhost[aria-disabled='true']
+  border-color transparent
+  color var(--wren-text-disabled)
+  background-color transparent
+  background-image none
+  box-shadow none
+
+// Emphasized calls to action reproduce the reviewed quiet-tactile masters.
+// Onboarding retains a semantic alias so its paired secondary can optically overshoot.
+button.wrenControl.wrenHeroPrimary,
+button.wrenControl.wrenOnboardPrimary
+  min-width 156px
+  height 46px
+  min-height 46px
+  padding 0 22px
+  border-color var(--wren-accent-primary-hover)
+  border-radius 7px
+  color #11130f
+  background-color var(--wren-accent-primary)
+  background-image var(--wren-control-texture-light)
+  box-shadow var(--wren-control-primary-shadow)
+
+  &:hover:not(:disabled)
+    border-color var(--wren-control-primary-border-hover)
+    background-color var(--wren-accent-primary-hover)
+    background-image var(--wren-control-texture-light)
+    box-shadow var(--wren-control-primary-shadow-hover)
+
+  &:active:not(:disabled)
+    transform translateY(1px)
+    background-color var(--wren-accent-primary-active)
+    box-shadow var(--wren-control-primary-shadow-pressed)
+
+button.wrenControl.wrenOnboardSecondary
+  min-width 96px
+  height 48px
+  min-height 48px
+  padding 0 18px
+  border-color var(--wren-border-strong)
+  border-radius 7px
+  color var(--wren-text-secondary)
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-control-shadow)
+  transform translateY(-1px)
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+    border-color var(--wren-border-strong)
+    background-color var(--wren-bg-panel)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-control-shadow-hover)
+    transform translateY(-1px)
+
+  &:active:not(:disabled)
+    transform translateY(0)
+    background-color var(--wren-surface-active)
+    box-shadow var(--wren-control-shadow-pressed)

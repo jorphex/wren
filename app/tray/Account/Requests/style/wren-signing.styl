@@ -1,0 +1,844 @@
+// Signing-critical surfaces use one continuous review canvas. Preserve the existing request and
+// signer flow while removing the inherited card stack, animated split pill, and decorative chrome.
+.approveTransaction
+  padding 0 24px 16px
+  border-radius 0
+  background var(--wren-bg-canvas)
+
+  .approveTransactionPayload,
+  ._txBody
+    width 100%
+
+  ._txBody
+    margin 0
+    padding 0
+
+  ._txMain
+    margin 0
+    overflow visible
+    border 0
+    border-bottom 0
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:last-child
+      border-bottom 0
+
+    ._txMainInner
+      overflow visible
+
+  .requestItem,
+  .requestItem:hover,
+  .requestItem:active
+    margin 0
+    border-radius 0
+    background transparent
+
+  .requestItemBackground
+    display none
+
+  .transactionReviewMain
+    .requestItem > .requestItemTitle
+      display none
+
+    .transactionReviewOverview > .clusterRow:first-child .clusterValue
+      min-height 116px
+
+    ._txDescription
+      display grid
+      width 100%
+      min-height 116px
+      padding var(--wren-space-3) 0
+      box-sizing border-box
+      grid-template-columns minmax(0, 1fr) minmax(176px, 224px)
+      align-items center
+      gap var(--wren-space-6)
+
+    ._txDescriptionSummary
+      width 100%
+
+    ._txDescriptionSummaryMain
+      padding-top var(--wren-space-2)
+      font-size 32px
+      line-height 38px
+
+      > div
+        display flex
+        align-items baseline
+        gap var(--wren-space-2)
+
+      .displayValue
+        font-size inherit
+
+      ._txDescriptionTransfer
+        display grid
+        justify-items start
+        gap 2px
+
+      ._txDescriptionAction
+        color var(--wren-accent-primary)
+        font-family var(--wren-font-ui)
+        font-size var(--wren-type-caption)
+        font-variation-settings var(--wren-font-body-settings)
+        font-weight 620
+        letter-spacing .8px
+        line-height 16px
+        text-transform uppercase
+
+      ._txDescriptionFiat
+        display flex
+        align-items baseline
+        gap var(--wren-space-1)
+        color var(--wren-text-secondary)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-small)
+        font-weight 450
+        line-height 18px
+
+    .transactionReviewSummaryStatus
+      width 224px
+      max-width 224px
+      justify-self end
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-small)
+      font-variation-settings var(--wren-font-body-settings)
+      font-weight 540
+      line-height 18px
+      text-align left
+
+    ._txDescriptionSummaryTag
+      display none
+
+  .transactionReviewSectionTitle
+    min-height 38px
+    padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-1)
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+
+  .transactionReviewRecipient,
+  .transactionReviewFee,
+  .transactionReviewNonce
+    margin 0
+
+    > ._txMainInner > ._txLabel
+      display none
+
+  .transactionReviewRecipient
+    .cluster
+      margin 0
+      padding 0
+
+    .clusterRow:first-child .clusterValue
+      display grid
+      min-height 56px
+      padding 0
+      grid-template-columns 112px minmax(0, 1fr)
+      align-items center
+      justify-content stretch
+      column-gap var(--wren-space-6)
+
+    .transactionReviewRecipientLabel
+      text-align left
+
+    .clusterAddress
+      min-width 0
+      padding var(--wren-space-2) 0
+
+    .clusterAddressRecipient,
+    .clusterAddressRecipientLabeled
+      align-items flex-start
+      justify-content flex-start
+      text-align left
+
+    .clusterAddressEvidence
+      color var(--wren-accent-primary-hover)
+
+    .clusterRow + .clusterRow
+      margin 0
+      border-top 1px solid var(--wren-ledger-rule)
+
+  .transactionReviewFeeRow,
+  .transactionReviewNonceRow
+    display grid
+    width 100%
+    min-height 62px
+    box-sizing border-box
+    padding var(--wren-space-3) 0
+    grid-template-columns 112px minmax(0, 1fr) auto
+    align-items center
+    column-gap var(--wren-space-6)
+
+  .transactionReviewNonceRow
+    grid-template-columns 112px minmax(0, 1fr) auto
+
+  .transactionReviewFeeValue,
+  .transactionNonceDetails
+    display flex
+    min-width 0
+    flex-direction column
+    align-items flex-start
+
+  .transactionReviewFeeValue
+    max-width 330px
+
+  .transactionReviewFeeTotal
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
+    font-weight 550
+
+  .transactionReviewFeeSubline
+    display flex
+    min-width 0
+    margin-top 2px
+    align-items center
+    gap var(--wren-space-2)
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+    .clusterTag,
+    ._txFeeGwei
+      display flex
+      min-height 0
+      padding 0
+      color inherit
+      font-size inherit
+      gap 3px
+
+    ._txFeeGweiValue,
+    ._txFeeGweiLabel
+      color inherit
+      font-size inherit
+      font-weight 400
+
+  .transactionReviewFeeAdjust
+    align-self center
+    justify-self end
+    min-width 88px
+    height 32px
+
+  .transactionReviewFeeNotice
+    min-height 34px
+    padding 8px 0 8px 136px
+    border-top 1px solid var(--wren-ledger-rule)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  .transactionReviewNonceHint
+    margin-top 2px
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  .transactionNonce
+    display grid
+    min-width 0
+    grid-column 2 / 4
+    grid-template-columns minmax(0, 1fr) auto
+    align-items center
+    gap var(--wren-space-6)
+
+  .transactionNonceDetails
+    min-width 0
+
+  .transactionNonceValue
+    display flex
+    height 20px
+    align-items center
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
+    font-weight 550
+    line-height 20px
+
+  .transactionNonceActions
+    justify-self end
+
+  .transactionReviewNonce
+    padding-bottom var(--wren-space-3)
+
+  .transactionReviewMeta,
+  .transactionReviewRecipient,
+  .transactionReviewFee,
+  .transactionReviewNonce
+    border 0
+    background transparent
+    box-shadow none
+
+  ._txLabel
+    min-height 38px
+    padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+    letter-spacing 0
+    text-transform none
+
+  .cluster
+    margin 0
+    padding 0
+    border 0
+    border-top 0
+    border-radius 0
+    background transparent
+
+    .clusterRow
+      gap 0
+      border-bottom 0
+
+      &:last-child
+        border-bottom 0
+
+    .clusterRow + .clusterRow
+      margin-top 0
+
+    .clusterValue
+      min-height 48px
+      border 0
+      border-radius 0
+      background transparent
+
+    .clusterValue + .clusterValue,
+    .clusterColumn + .clusterColumn
+      border-left 0
+
+    .clusterColumn
+      gap 0
+
+      .clusterValue + .clusterValue
+        border-top 0
+        border-left 0
+
+    .clusterValueClickable:not(.clusterValueDisabled):hover
+      border-color transparent
+      background var(--wren-ledger-hover)
+
+    .clusterValueClickable:not(.clusterValueDisabled):active
+      border-color transparent
+      background var(--wren-surface-active)
+
+  .transactionReviewOverview
+    > .clusterRow:first-child + .clusterRow,
+    > .transactionReviewDataRow
+      border-top 1px solid rgba(43, 53, 45, .68)
+
+  .requestItemHeader
+    margin 0
+    border-radius 0
+    background transparent
+
+    > .requestItemTitle
+      min-height 52px
+      padding var(--wren-space-3) var(--wren-space-2)
+      border-bottom 0
+
+    .requestItemTitleMain
+      font-size var(--wren-type-heading)
+      font-weight 650
+
+    .requestItemDetailsSlide
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+
+  ._txDescription
+    width 100%
+    padding var(--wren-space-4) var(--wren-space-2)
+
+    ._txDescriptionSummaryMain
+      padding-top var(--wren-space-2)
+      font-size var(--wren-type-title)
+      font-weight 650
+      line-height 30px
+
+    ._txDescriptionSummaryTag,
+    .requestItemTitleSub
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+
+  ._txMainTag
+    width 100%
+    margin 0
+    padding var(--wren-space-3) var(--wren-space-2)
+    border-radius 0
+    background transparent
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 18px
+    text-align left
+
+  ._txMainTagGood
+    color var(--wren-success)
+    background transparent
+
+  ._txMainTagWarning
+    color var(--wren-warning)
+    background transparent
+
+  ._txMainTagBad
+    color var(--wren-danger)
+    background var(--wren-danger-soft)
+
+  .txSendingValue
+    min-height 52px
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size 18px
+    font-weight 500
+
+  ._txFeeGwei
+    min-height 52px
+    padding var(--wren-space-3)
+
+    ._txFeeGweiValue
+      font-family var(--wren-font-utility)
+      font-size 18px
+      font-weight 500
+
+    ._txFeeGweiLabel
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      text-transform none
+
+  .transactionReviewFeeValue .transactionReviewFeeSubline
+    ._txFeeGwei
+      min-height 0
+      padding 0
+
+    ._txFeeGweiValue,
+    ._txFeeGweiLabel
+      font-size inherit
+      font-weight 400
+
+    ._txFeeAdjustLabel
+      margin-left var(--wren-space-3)
+      padding var(--wren-space-1) var(--wren-space-2)
+      border 1px solid var(--wren-border-default)
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-secondary)
+      background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-caption)
+      font-weight 550
+
+  .transactionDataDisclosure
+    display flex
+    align-items center
+    justify-content space-between
+    color var(--wren-text-secondary)
+
+    span:last-child
+      color var(--wren-accent-primary-hover)
+
+  .clusterTag,
+  ._txFeeValueDefault
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+
+  .clusterAddress
+    padding var(--wren-space-3) var(--wren-space-2)
+
+  .clusterValueClickable .clusterAddressRecipient,
+  .clusterValueClickable .clusterAddressEvidence
+    color var(--wren-accent-primary-hover)
+
+  .clusterValueClickable .clusterAddressLabel
+    color var(--wren-text-primary)
+
+  .transactionReviewMeta
+    border-top 0
+
+  .transactionReviewAddress
+    display grid
+    width 100%
+    min-height 56px
+    box-sizing border-box
+    padding 0
+    border 0
+    border-bottom 0
+    color var(--wren-text-primary)
+    background transparent
+    grid-template-columns 112px minmax(0, 1fr)
+    align-items center
+    column-gap var(--wren-space-6)
+    text-align left
+
+  .transactionReviewAddress
+    cursor pointer
+    transition background var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      background var(--wren-ledger-hover)
+
+    &:active
+      background var(--wren-surface-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -2px
+
+  .transactionReviewAddressValue
+    position relative
+    min-width 0
+    padding var(--wren-space-2) 0
+
+    .clusterAddressRecipient,
+    .clusterAddressRecipientLabeled
+      align-items flex-start
+
+    .clusterAddressEvidence
+      color var(--wren-accent-primary-hover)
+
+  .transactionReviewMetaLabel
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-small)
+
+  .transactionNonceActions
+    display flex
+    gap var(--wren-space-2)
+
+  .transactionNonceButton
+    display flex
+    width 32px
+    height 32px
+    padding 0
+    align-items center
+    justify-content center
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+    box-shadow var(--wren-control-shadow)
+    cursor pointer
+
+    &:hover
+      border-color var(--wren-border-strong)
+      background var(--wren-control-texture-dark), var(--wren-surface-hover)
+
+    &:active
+      background var(--wren-control-texture-dark), var(--wren-surface-active)
+      box-shadow var(--wren-control-shadow-pressed)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+  .transactionNonceReset
+    margin-left var(--wren-space-1)
+    color var(--wren-accent-primary-hover)
+
+  .transactionNonceGlyph
+    position relative
+    top -1px
+    font-family var(--wren-font-ui)
+    font-size 18px
+    font-weight 650
+    line-height 1
+
+.approvePermit
+  ._txBody > ._txMain:last-child
+    padding-top var(--wren-space-2)
+
+  .permitReviewLedger
+    .clusterRow + .clusterRow
+      border-top 1px solid rgba(43, 53, 45, .68)
+
+    .clusterValue
+      min-height 58px
+
+  .permitReviewRow
+    display grid
+    width 100%
+    min-height 58px
+    box-sizing border-box
+    padding var(--wren-space-2)
+    grid-template-columns 210px minmax(0, 1fr)
+    align-items center
+    gap var(--wren-space-4)
+
+  .permitReviewLabel
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-small)
+    line-height 18px
+
+  .permitReviewValue
+    min-width 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    font-weight 500
+    text-align right
+    overflow-wrap anywhere
+
+  .permitReviewCountdown
+    min-width 0
+
+    > div:first-child
+      display none
+
+  .clusterAddress
+    min-width 0
+    padding 0
+
+    .clusterAddressRecipient,
+    .clusterAddressRecipientLabeled
+      justify-content flex-end
+      text-align right
+
+.requestNoticeTransactionReview
+  height 114px
+  border-top 1px solid var(--wren-ledger-rule)
+  background var(--wren-bg-subtle)
+
+  .requestNoticeInner
+    display block
+
+  .txBar,
+  .monitorConfirms
+    display none
+
+.requestNoticeTransactionStatus
+  border-top 1px solid var(--wren-ledger-rule)
+  background var(--wren-bg-subtle)
+
+  .txProgressSuccessCurrency
+    margin-right 1px
+    font-size var(--wren-type-caption)
+
+.requestApproveTransaction,
+.requestApproveSignature,
+.requestApproveLightweight
+  display grid
+  width 100%
+  height 114px
+  margin 0
+  padding 16px 24px
+  border 0
+  border-radius 0
+  background var(--wren-bg-subtle)
+  box-shadow none
+  grid-template-columns minmax(0, 1fr) auto
+  align-items center
+  gap var(--wren-space-6)
+  animation 0.24s fadeUp ease-out
+
+  .requestActionContext
+    display flex
+    min-width 0
+    align-items center
+    gap var(--wren-space-3)
+
+  .requestActionContextIcon
+    display flex
+    flex 0 0 40px
+    width 40px
+    height 40px
+    align-items center
+    justify-content center
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    color var(--wren-accent-primary-hover)
+    background var(--wren-bg-elevated)
+
+  .requestActionContextCopy
+    display block
+    min-width 0
+
+    strong,
+    span
+      display block
+
+    strong
+      color var(--wren-text-primary)
+      font-size 14px
+      font-weight 650
+
+    span
+      margin-top 2px
+      max-width 360px
+      color var(--wren-text-muted)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      line-height 16px
+      white-space normal
+
+  .requestActionButtons
+    display flex
+    gap var(--wren-space-2)
+
+  .requestDecline,
+  .requestSign
+    position relative
+    inset auto
+    flex 0 0 156px
+    width 156px
+    min-width 156px
+    max-width 156px
+    height 46px
+    padding 0
+    border 0
+    background transparent
+    text-transform none
+
+  .requestDeclineButton,
+  .requestSignButton
+    position absolute
+    inset 0
+    padding 0 var(--wren-space-4)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    font-size 14px
+    font-weight 650
+    letter-spacing 0
+    transform none
+    animation none
+    box-shadow var(--wren-control-shadow)
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease)
+
+    &::before,
+    &::after
+      display none
+
+  .requestDeclineButton
+    color var(--wren-danger)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+
+  .requestDecline
+    flex-basis 160px
+    width 160px
+    min-width 160px
+    max-width 160px
+    height 48px
+    transform translateY(-1px)
+
+  .requestSignButton
+    color var(--wren-text-inverse)
+    background var(--wren-control-texture-light), var(--wren-accent-primary)
+    border-color var(--wren-control-primary-border)
+    box-shadow var(--wren-control-primary-shadow)
+
+  .requestDecline:not(:disabled):hover .requestDeclineButton
+    border-color var(--wren-border-strong)
+    background var(--wren-control-texture-dark), var(--wren-surface-hover)
+    box-shadow var(--wren-control-shadow-hover)
+
+  .requestSign:not(:disabled):hover .requestSignButton
+    border-color var(--wren-control-primary-border-hover)
+    background var(--wren-control-texture-light), var(--wren-accent-primary-hover)
+    box-shadow var(--wren-control-primary-shadow-hover)
+
+  .requestDecline:not(:disabled):active .requestDeclineButton
+    background var(--wren-control-texture-dark), var(--wren-surface-active)
+    box-shadow var(--wren-control-shadow-pressed)
+
+  .requestSign:not(:disabled):active .requestSignButton
+    background var(--wren-control-texture-light), var(--wren-accent-primary-active)
+    box-shadow var(--wren-control-primary-shadow-pressed)
+
+  .requestDecline:focus-visible,
+  .requestSign:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  .requestDecline:disabled,
+  .requestSign:disabled
+    opacity .55
+
+.requestNoticeApproval
+  border-top 1px solid var(--wren-ledger-rule)
+  background var(--wren-bg-subtle)
+
+  .approveTransactionWarningBody > .cluster
+    margin 0
+    padding var(--wren-space-3) var(--wren-space-5)
+    border 0
+    border-radius 0
+    background transparent
+
+  .approveTransactionWarningTitle
+    min-height 40px
+    height auto
+    padding var(--wren-space-2)
+    color var(--wren-warning)
+    font-family var(--wren-font-ui)
+    font-size 16px
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+    letter-spacing 0
+    text-transform none
+
+  .approveTransactionWarningIconRight
+    display none
+
+  .approveTransactionWarningMessage
+    height auto
+    min-height 54px
+    padding var(--wren-space-3)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    line-height 19px
+    text-align center
+
+  ._txActionButton
+    height 44px
+    margin 0
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+    font-family var(--wren-font-ui)
+    font-size 14px
+    font-weight 650
+    text-transform none
+
+    &:hover
+      transform none
+      background var(--wren-control-texture-dark), var(--wren-surface-hover)
+      box-shadow var(--wren-control-shadow-hover)
+
+    &:active
+      transform none
+      background var(--wren-control-texture-dark), var(--wren-surface-active)
+      box-shadow var(--wren-control-shadow-pressed)
+
+  ._txActionButtonGood
+    color var(--wren-text-inverse)
+    border-color var(--wren-control-primary-border)
+    background var(--wren-control-texture-light), var(--wren-accent-primary)
+
+  ._txActionButtonBad
+    color var(--wren-danger)
+
+@media (max-width: 560px)
+  .requestNoticeTransactionReview
+    height 132px
+
+  .requestApproveTransaction,
+  .requestApproveSignature,
+  .requestApproveLightweight
+    height auto
+    min-height 132px
+    padding var(--wren-space-4)
+    grid-template-columns 1fr
+    gap var(--wren-space-3)
+
+    .requestActionButtons
+      display grid
+      grid-template-columns 1fr 1fr
+
+    .requestDecline,
+    .requestSign
+      width 100%
+      min-width 0
+      max-width none
+
+    .requestDecline
+      transform translateY(-1px)

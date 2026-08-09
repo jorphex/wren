@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import { safeRemoteImageUrl } from '../../../../../resources/utils/image'
 
-class Inventory extends React.Component {
+export class Inventory extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
@@ -53,11 +53,27 @@ class Inventory extends React.Component {
             .map((id) => {
               const { tokenId, name, img, openSeaLink } = inventory[k].items[id]
               return (
-                <div
+                <button
+                  type='button'
                   key={id}
                   className='inventoryCollectionItem'
+                  aria-label={`Open ${name || `token ${tokenId}`} in browser`}
                   onClick={() => {
                     this.store.notify('openExternal', { url: openSeaLink })
+                  }}
+                  onFocus={() => {
+                    this.setState({
+                      hoverAsset: {
+                        name,
+                        tokenId,
+                        img
+                      }
+                    })
+                  }}
+                  onBlur={() => {
+                    this.setState({
+                      hoverAsset: false
+                    })
                   }}
                   onMouseEnter={() => {
                     this.setState({
@@ -68,10 +84,8 @@ class Inventory extends React.Component {
                       }
                     })
                   }}
-                  onMouseLeave={() => {
-                    this.setState({
-                      hoverAsset: false
-                    })
+                  onMouseLeave={(event) => {
+                    if (document.activeElement !== event.currentTarget) this.setState({ hoverAsset: false })
                   }}
                 >
                   {img ? (
@@ -79,7 +93,7 @@ class Inventory extends React.Component {
                       <img src={safeRemoteImageUrl(img)} loading='lazy' alt={name.toUpperCase()} />
                     </div>
                   ) : null}
-                </div>
+                </button>
               )
             })}
           <div className='inventoryCollectionLine' />

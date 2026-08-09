@@ -1,0 +1,346 @@
+// Message and typed-data signing share the sparse transaction-review language, but retain their
+// complete exact payloads and risk disclosures. Structure recognition is deliberately non-semantic.
+.signingReview
+  width auto
+  margin 0 22px 28px
+  padding 22px 8px 76px
+  border 0
+  border-radius 0
+  color var(--wren-text-primary)
+  background transparent
+  box-shadow none
+
+  .txViewDataHeader
+    margin 0 6px 18px
+    padding 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size 20px
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 660
+    letter-spacing 0
+    line-height 26px
+    text-align left
+    text-transform none
+
+  .typedDataReviewSummary
+    display grid
+    min-height 108px
+    padding 8px 6px 18px
+    grid-template-columns minmax(0, 1fr) 240px
+    align-items center
+    gap var(--wren-space-6)
+
+  .typedDataReviewSummaryMain
+    min-width 0
+
+  .typedDataReviewEyebrow
+    color var(--wren-accent-primary-hover)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    letter-spacing .06em
+    text-transform uppercase
+
+  .typedDataReviewTitle
+    margin-top var(--wren-space-1)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size 25px
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 680
+    line-height 30px
+
+  .typedDataReviewHelp
+    max-width 390px
+    margin-top var(--wren-space-1)
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-small)
+    line-height 18px
+
+  .typedDataReviewRecognition
+    padding-left var(--wren-space-4)
+
+    div
+      color var(--wren-accent-primary-hover)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      line-height 18px
+
+    span
+      display block
+      margin-top var(--wren-space-1)
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-small)
+      line-height 18px
+
+  .signTypedDataInner
+    padding 0
+
+  section
+    margin 0
+
+  .simpleJsonHeader
+    margin 14px 0 0
+    padding 14px 6px 8px
+    border-top 1px solid rgba(43, 53, 45, .68)
+    border-bottom 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+    letter-spacing 0
+    text-transform none
+
+    &.simpleJsonHeaderFirst
+      margin-top 0
+      padding-top var(--wren-space-2)
+      border-top 0
+
+  .simpleJson
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+
+    > .simpleJsonChild
+      display grid
+      width 100%
+      margin 0
+      padding 7px 6px
+      grid-template-columns 160px minmax(0, 1fr)
+      align-items start
+      gap var(--wren-space-4)
+
+  // The first section is identity and authority context, not raw payload data. A compact
+  // two-column ledger gives it the same human review rhythm as the approved signing proof.
+  .simpleJsonHeaderFirst + .simpleJson
+    display grid
+    padding 0 6px var(--wren-space-2)
+    grid-template-columns repeat(2, minmax(0, 1fr))
+    column-gap 34px
+
+    > .simpleJsonChild
+      display block
+      min-width 0
+      padding 6px 0
+
+      > .simpleJsonKey
+        margin-bottom 2px
+        text-transform capitalize
+
+      > .simpleJsonValue
+        min-width 0
+
+  .simpleJsonKey,
+  .simpleJsonKeyTx
+    width auto
+    max-width none
+    padding 0
+    border-radius 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 450
+    letter-spacing 0
+    line-height 18px
+    text-transform none
+
+  .simpleJsonValue
+    width auto
+    max-width none
+    margin 0
+    padding 0
+    border-left 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 400
+    line-height 18px
+    overflow-wrap anywhere
+
+  .simpleJsonCopyValue
+    appearance none
+    width 100%
+    padding 0
+    border 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-accent-primary-hover)
+    background transparent
+    font inherit
+    line-height inherit
+    overflow-wrap anywhere
+    text-align left
+    cursor pointer
+
+    &:hover
+      background var(--wren-ledger-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+    > .simpleJson
+      padding-left var(--wren-space-2)
+
+      > .simpleJsonChild
+        grid-template-columns 120px minmax(0, 1fr)
+        padding 5px 0
+
+  .simpleJsonEmpty
+    margin var(--wren-space-2) var(--wren-space-1)
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+
+  .typedDataWarnings,
+  .messageSigningWarnings
+    margin 14px 0 0
+
+  .typedDataWarning,
+  .messageSigningWarning
+    margin var(--wren-space-2) 0 0
+    padding 11px 12px
+    border 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-danger-soft)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    line-height 18px
+
+  .signingAuthorityGrid,
+  .signingPermissionRow
+    display grid
+    padding 4px 6px
+    grid-template-columns 1fr 1fr 1fr
+    gap var(--wren-space-5)
+
+    > div
+      min-width 0
+
+    strong,
+    small,
+    span
+      display block
+
+    strong
+      margin-top var(--wren-space-1)
+      color var(--wren-text-primary)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      font-weight 500
+      line-height 18px
+      overflow-wrap anywhere
+
+    .signingAuthorityCopy
+      appearance none
+      display block
+      width 100%
+      margin-top var(--wren-space-1)
+      padding 0
+      border 0
+      border-radius var(--wren-radius-sm)
+      color var(--wren-accent-primary-hover)
+      background transparent
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      font-weight 500
+      line-height 18px
+      overflow-wrap anywhere
+      text-align left
+      cursor pointer
+
+      &:hover
+        background var(--wren-ledger-hover)
+
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
+
+    small
+      margin-top var(--wren-space-1)
+      color var(--wren-text-muted)
+      font-size var(--wren-type-caption)
+      line-height 17px
+
+  .signingAuthorityLabel
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+
+  .signingPermissionList
+    margin-top var(--wren-space-3)
+
+  .signingPermissionRow
+    padding-top var(--wren-space-3)
+    padding-bottom var(--wren-space-3)
+
+  .signingPermissionRow + .signingPermissionRow
+    margin-top var(--wren-space-1)
+
+  .signingAuthorityDanger
+    color var(--wren-danger) !important
+
+  .signingRawDisclosure
+    margin-top 14px
+    border-top 1px solid rgba(43, 53, 45, .68)
+
+    summary
+      display flex
+      min-height 48px
+      padding 0 6px
+      align-items center
+      justify-content space-between
+      color var(--wren-text-secondary)
+      cursor pointer
+      font-size var(--wren-type-small)
+      list-style none
+
+      &::-webkit-details-marker
+        display none
+
+      span:last-child
+        color var(--wren-accent-primary-hover)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-caption)
+
+      &:hover
+        background var(--wren-ledger-hover)
+
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset -2px
+
+  .signingRawDisclosureBody
+    padding-bottom var(--wren-space-4)
+
+  .signMessageRaw
+    margin var(--wren-space-2) 6px 0
+    padding 12px
+    border 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    line-height 20px
+
+@media (max-width: 560px)
+  .signingReview
+    margin 0 var(--wren-space-3) var(--wren-space-4)
+    padding-right 0
+    padding-left 0
+
+    .typedDataReviewSummary
+      grid-template-columns 1fr
+      gap var(--wren-space-3)
+
+    .typedDataReviewRecognition
+      padding-left 0
+
+    .simpleJson > .simpleJsonChild
+      grid-template-columns 120px minmax(0, 1fr)
+
+    .simpleJsonHeaderFirst + .simpleJson
+      grid-template-columns 1fr
+
+    .signingAuthorityGrid,
+    .signingPermissionRow
+      grid-template-columns 1fr

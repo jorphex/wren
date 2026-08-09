@@ -5,3 +5,9 @@ The files match the product artwork shown by yearn.fi: yvUSD uses its product
 token logo, while standard allocator vaults use their underlying asset logo.
 This includes native USDC for Base yvUSDC-H and vbUSDC, vbETH, and vbUSDT for
 the Katana vaults. The renderer loads only these bundled files.
+
+Brand attribution asset: yearn-logo-white.svg
+Source: https://presskit.yearn.fi/downloads/YEARN_LOGO_WHITE_RGB.svg
+Downloaded: 2026-08-07
+Usage: official white landscape logo, unmodified, on the dark Earn hero at the
+press kit's recommended minimum screen width of 85 pixels.

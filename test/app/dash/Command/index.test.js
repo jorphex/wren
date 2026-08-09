@@ -16,8 +16,12 @@ it('uses the Contacts title and routes Back and Close actions', () => {
   renderCommand([{ view: 'addressBook', data: {} }])
 
   expect(screen.getByText('Contacts')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+  const back = screen.getByRole('button', { name: 'Back' })
+  const close = screen.getByRole('button', { name: 'Close' })
+  expect(back.classList.contains('wrenShellNav')).toBe(true)
+  expect(close.classList.contains('wrenShellNav')).toBe(true)
+  fireEvent.click(back)
+  fireEvent.click(close)
 
   expect(link.send.mock.calls).toEqual([
     ['tray:action', 'backDash'],

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import onboardingCompanion from 'url:../../../../../asset/ui/onboarding-companion-v4.png'
 import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 
@@ -6,25 +7,21 @@ import { BrowserChoice, BrowserChoices, Slide, SlideBody, SlideItem, Tag } from 
 
 const Extension = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Meet the companion')
+    setTitle('Browser companion')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
   return (
-    <Slide>
+    <Slide $background={onboardingCompanion}>
       <SlideBody>
         <SlideItem>
-          <div>Some dapps only look for a browser wallet.</div>
-          <div>
-            <Tag>Wren Companion</Tag> introduces them to the desktop app.
-          </div>
+          Some dapps only look for a browser wallet. <Tag>Wren Companion</Tag> connects them to Wren on your
+          desktop.
         </SlideItem>
-        <SlideItem>
-          <div>Requests arrive in Wren, where you can read</div>
-          <div>the details and decide what happens next.</div>
-        </SlideItem>
+        <SlideItem>Requests arrive in Wren, where you can review the details before you decide.</SlideItem>
         <BrowserChoices>
           <BrowserChoice
             aria-label='Download Wren Companion for Chrome'
+            className='wrenControl wrenControlGhost wrenControlIcon'
             type='button'
             onClick={() =>
               link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
@@ -34,6 +31,7 @@ const Extension = ({ setTitle, setProceed }) => {
           </BrowserChoice>
           <BrowserChoice
             aria-label='Download Wren Companion for Firefox'
+            className='wrenControl wrenControlGhost wrenControlIcon'
             type='button'
             onClick={() =>
               link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')

@@ -1,0 +1,122 @@
+.wrenSettings
+  .localSettingsWrap
+    padding var(--wren-space-2) var(--wren-space-5) var(--wren-space-8)
+
+  .wrenSettingsSection
+    margin 0
+    padding 0
+
+  .wrenSettingsSection + .wrenSettingsSection
+    margin-top var(--wren-space-5)
+
+  .wrenSettingsSectionTitle
+    margin 0
+    padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 500
+    letter-spacing 0
+    line-height 18px
+    text-transform none
+
+  .localSetting
+    min-height 56px
+    margin 0
+    padding 12px var(--wren-space-2)
+    box-sizing border-box
+    border 0
+    border-bottom 1px solid var(--wren-border-subtle)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:first-of-type
+      border-top 1px solid var(--wren-border-subtle)
+
+    &:hover
+      background var(--wren-surface-hover)
+
+    .signerPermissionControls
+      min-height 32px
+      align-items center
+      gap var(--wren-space-4)
+
+    .signerPermissionSetting
+      max-width none
+      padding 0
+      color var(--wren-text-primary)
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-body)
+      font-weight 500
+      line-height 20px
+
+    .signerPermissionDetails
+      position absolute
+      width 1px
+      height 1px
+      margin -1px
+      padding 0
+      overflow hidden
+      clip rect(0 0 0 0)
+      clip-path inset(50%)
+      white-space nowrap
+
+    .dropdownWrap
+      flex 0 0 auto
+
+    .dropdown
+      min-width 130px
+
+  .localSettingShortcut
+    min-height 72px
+
+    .signerPermissionControls
+      min-height 28px
+
+    .signerPermissionSetting
+      overflow visible
+      white-space normal
+
+    .signerPermissionDetails
+      position static
+      width auto
+      height auto
+      margin 3px 0 0
+      padding 0
+      overflow visible
+      clip auto
+      clip-path none
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-caption)
+      line-height 20px
+      white-space normal
+
+    .keyCommand,
+    .keyCommandLoading
+      min-height 24px
+      height 24px
+      margin-left var(--wren-space-2)
+      padding 0 var(--wren-space-2)
+
+  .connectionCustomInput
+    margin-top var(--wren-space-2)
+
+  .wrenSettingsSection:last-child .localSetting:last-child
+    border-bottom 1px solid var(--wren-border-subtle)
+
+@media (max-height: 760px)
+  .wrenSettings
+    .localSettingsWrap
+      padding-top 0
+
+    .wrenSettingsSection + .wrenSettingsSection
+      margin-top var(--wren-space-3)
+
+    .wrenSettingsSectionTitle
+      padding-top var(--wren-space-3)
+
+    .localSetting
+      min-height 52px
+      padding-top 10px
+      padding-bottom 10px

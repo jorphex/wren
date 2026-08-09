@@ -1,0 +1,113 @@
+// Wren text fields borrow the crisp, sunken construction of a game-menu input without adopting
+// game typography or oversized framing. Components opt in so checkboxes, sliders, and embedded
+// transaction controls keep their purpose-built geometry.
+input.wrenInput,
+textarea.wrenInput,
+select.wrenInput
+  box-sizing border-box
+  border 2px solid #050705
+  border-radius 0
+  outline 0
+  color var(--wren-text-primary)
+  background-color var(--wren-surface-inset)
+  background-image linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
+  box-shadow inset 0 0 0 1px var(--wren-border-subtle), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+  caret-color var(--wren-accent-primary-hover)
+  transition border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), background-color var(--wren-motion-fast) var(--wren-ease)
+
+  &::placeholder
+    color var(--wren-text-muted)
+    opacity 1
+
+  &:hover:not(:disabled):not(:focus)
+    box-shadow inset 0 0 0 1px var(--wren-border-default), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+
+  &:focus,
+  &:focus-visible
+    border-color var(--wren-accent-primary)
+    outline 0
+    box-shadow inset 0 0 0 1px #6f5b3e, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px var(--wren-accent-primary-hover), 0 0 0 2px rgba(166, 138, 97, .12)
+
+  &[aria-invalid='true'],
+  &.wrenInputError
+    border-color var(--wren-danger)
+    background-color var(--wren-danger-soft)
+    box-shadow inset 0 0 0 1px #6f352f, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px #e19a91
+
+  &:disabled,
+  &[aria-disabled='true']
+    color var(--wren-text-disabled)
+    background-color var(--wren-surface-inset)
+    box-shadow inset 0 0 0 1px var(--wren-border-subtle), 0 0 0 1px #171d19
+    cursor default
+    opacity .7
+
+input.wrenInputQuiet,
+textarea.wrenInputQuiet,
+select.wrenInputQuiet
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background-color var(--wren-surface-inset)
+  box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), inset 0 -1px rgba(255, 255, 255, .018)
+
+  &:hover:not(:disabled):not(:focus)
+    border-color var(--wren-border-strong)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), inset 0 -1px rgba(255, 255, 255, .018)
+
+  &:focus,
+  &:focus-visible
+    border-color var(--wren-accent-primary-hover)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), 0 0 0 1px rgba(166, 138, 97, .2)
+
+textarea.wrenInput
+  resize vertical
+
+.wrenInputGroup.wrenInputGroup
+  box-sizing border-box
+  border 2px solid #050705
+  border-radius 0
+  background-color var(--wren-surface-inset)
+  background-image linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
+  box-shadow inset 0 0 0 1px var(--wren-border-subtle), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+  transition border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), background-color var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover:not(:focus-within)
+    box-shadow inset 0 0 0 1px var(--wren-border-default), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+
+  &:focus-within
+    border-color var(--wren-accent-primary)
+    box-shadow inset 0 0 0 1px #6f5b3e, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px var(--wren-accent-primary-hover), 0 0 0 2px rgba(166, 138, 97, .12)
+
+  input.wrenInput,
+  textarea.wrenInput,
+  select.wrenInput
+    border 0
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:hover,
+    &:focus,
+    &:focus-visible
+      border 0
+      outline 0
+      background transparent
+      box-shadow none
+
+  &.wrenInputGroupError
+    border-color var(--wren-danger)
+    background-color var(--wren-danger-soft)
+    box-shadow inset 0 0 0 1px #6f352f, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px #e19a91
+
+.wrenInputGroup.wrenInputGroupQuiet
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), inset 0 -1px rgba(255, 255, 255, .018)
+
+  &:hover:not(:focus-within)
+    border-color var(--wren-border-strong)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), inset 0 -1px rgba(255, 255, 255, .018)
+
+  &:focus-within
+    border-color var(--wren-accent-primary-hover)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), 0 0 0 1px rgba(166, 138, 97, .2)

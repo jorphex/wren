@@ -31,9 +31,12 @@ it('shows the complete signing context and exact message', () => {
     />
   )
 
-  expect(screen.getByText('Message Signing Review')).toBeTruthy()
+  expect(screen.getByText('Sign a message')).toBeTruthy()
+  expect(screen.getByText('Readable text message')).toBeTruthy()
+  expect(screen.getByText('request Network')).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText(account)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy signing account address' })).toBeTruthy()
   expect(screen.getByText('Ethereum (1)')).toBeTruthy()
   expect(screen.getByText('personal_sign')).toBeTruthy()
   expect(screen.getByText('UTF-8 text')).toBeTruthy()

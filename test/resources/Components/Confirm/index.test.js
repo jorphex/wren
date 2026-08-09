@@ -8,6 +8,12 @@ it('renders the confirmation prompt', () => {
   expect(titleSection.textContent).toBe('you sure you wanna do that?')
 })
 
+it('renders an optional consequence below the prompt', () => {
+  render(<Confirm prompt='Remove network?' description='Your assets are not affected.' />)
+
+  expect(screen.getByText('Your assets are not affected.')).toBeTruthy()
+})
+
 it('renders the decline button with provided text', () => {
   render(<Confirm declineText='no way' />)
 

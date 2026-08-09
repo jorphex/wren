@@ -79,8 +79,15 @@ export const PasswordInput = ({
       <div role='heading' aria-level='2' className='addAccountItemOptionTitle'>
         {title}
       </div>
-      <div className='addAccountItemOptionInput addAccountItemOptionInputPassword'>
+      <div
+        className={
+          error && error !== NO_PASSWORD_ENTERED
+            ? 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup wrenInputGroupError'
+            : 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup'
+        }
+      >
         <input
+          className={error && error !== NO_PASSWORD_ENTERED ? 'wrenInput wrenInputError' : 'wrenInput'}
           role='textbox'
           type='password'
           aria-label={title}
@@ -103,7 +110,7 @@ export const PasswordInput = ({
       ) : (
         <button
           type='button'
-          className='addAccountItemOptionSubmit'
+          className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
           disabled={disabled || processing}
           onClick={handleSubmit}
         >
@@ -116,14 +123,14 @@ export const PasswordInput = ({
 
 export const CreatePassword = ({ onCreate, autofocus, active }) => {
   const getError = (password) => {
-    if (password.length < 12) return 'PASSWORD MUST BE 12 OR MORE CHARACTERS'
+    if (password.length < 12) return 'PASSWORD MUST BE AT LEAST 12 CHARACTERS'
     const {
       feedback: { warning },
       score
     } = zxcvbn(password)
     if (score > 2) return
 
-    return (warning || 'PLEASE ENTER A STRONGER PASSWORD').toUpperCase()
+    return (warning || 'PLEASE CHOOSE A STRONGER PASSWORD').toUpperCase()
   }
 
   return (

@@ -22,18 +22,18 @@ export class Notify extends React.Component {
             <div className='notifyWrenIcon'>
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
-            <div className='notifyTitle'>Wren Preview</div>
+            <div className='notifyTitle'>Wren preview</div>
             <div className='notifyBody'>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
-                Wren is independently maintained and derived from the original Frame project.
+                Wren is independently maintained and built from the original Frame project.
               </div>
               <div className='notifyBodyBlock'>
-                Back up your profile, verify release checksums, and test with accounts that do not hold
-                valuable assets before relying on it.
+                Back up your profile, verify release checksums, and test with accounts that hold no valuable
+                assets before relying on Wren.
               </div>
               <div className='notifyBodyBlock'>
-                Use hardware signers for high value accounts and verify all transaction and account details on
-                your signing device
+                Use hardware signers for high-value accounts. Verify every transaction and account detail on
+                the signing device.
               </div>
               <div className='notifyBodyBlock'>
                 <span>Read</span>
@@ -46,10 +46,10 @@ export class Notify extends React.Component {
                 >
                   our license
                 </button>
-                <span>and use Wren at your own risk</span>
+                <span>before using Wren at your own risk.</span>
               </div>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
-                <div>Report problems through community support.</div>
+                <div>Find help or report a problem through community support.</div>
                 <button
                   type='button'
                   className='notifyBodyLink'
@@ -71,7 +71,7 @@ export class Notify extends React.Component {
                   link.send('tray:action', 'backDash')
                 }}
               >
-                <div className='notifyInputOptionText notifyBetaGo'>Let&apos;s go!</div>
+                <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
               </button>
             </div>
           </div>
@@ -84,16 +84,16 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Gas Fee Warning</div>
+          <div className='notifyTitle'>High network fee</div>
           <div className='notifyBody'>
             {feeUSD !== '0.00' ? (
               <>
-                <div className='notifyBodyLine'>The max fee for this transaction is:</div>
+                <div className='notifyBodyLine'>The maximum network fee is:</div>
                 <div className='notifyBodyLine notifyBodyPrice'>{`≈ $${feeUSD} in ${currentSymbol}`}</div>
               </>
             ) : (
               <div className='notifyBodyLine'>
-                We were unable to determine this transaction&apos;s fee in USD.
+                Wren could not estimate this transaction&apos;s fee in USD.
               </div>
             )}
             <div className='notifyBodyQuestion'>Are you sure you want to proceed?</div>
@@ -139,9 +139,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer unavailable for signing!</div>
+          <div className='notifyTitle'>Signer unavailable</div>
           <div className='notifyBody'>
-            <div className='notifyBodyQuestion'>Please check the signer for this account and try again</div>
+            <div className='notifyBodyQuestion'>Check the signer for this account, then try again.</div>
           </div>
           <div className='notifyInput'>
             <button
@@ -163,10 +163,10 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>No Signer Attached!</div>
+          <div className='notifyTitle'>No signer attached</div>
           <div className='notifyBody'>
-            <div className='notifyBodyLine'>No signer attached for this account</div>
-            <div className='notifyBodyQuestion'>Please attach a signer that can sign for this account</div>
+            <div className='notifyBodyLine'>This account does not have a signer.</div>
+            <div className='notifyBodyQuestion'>Attach a signer before submitting a signature.</div>
           </div>
           <div className='notifyInput'>
             <button
@@ -193,16 +193,16 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer Compatibility</div>
+          <div className='notifyTitle'>Signer compatibility</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              {`Your ${capitalize(signer)} is not compatible with ${capitalize(tx)} ${
+              {`Your ${capitalize(signer)} cannot sign ${capitalize(tx)} ${
                 tx === 'london' ? '(EIP-1559) ' : ''
-              }transactions. Your transaction will be converted to a legacy transaction before signing.`}
+              }transactions. Wren will convert this request to a legacy transaction before signing.`}
             </div>
             {['lattice', 'ledger'].includes(signer) ? (
               <div className='notifyBodyUpdate'>
-                {`Update your ${capitalize(signer)} to enable compatibility`}
+                {`Check for a ${capitalize(signer)} update that supports this transaction type.`}
               </div>
             ) : null}
             <div className='notifyBodyQuestion'>Do you want to proceed?</div>
@@ -292,15 +292,15 @@ export class Notify extends React.Component {
       >
         <div className='notifyBox'>
           <div className='notifyTitle'>
-            <div>Blind Signing</div>
-            <div>Disabled</div>
+            <div>Blind signing</div>
+            <div>disabled</div>
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Your Ledger rejected data that it could not fully verify on-device.
+              Your Ledger rejected data it could not fully verify on-device.
             </div>
             <div className='notifyBodyLine'>
-              <span>If this request requires blind signing, open the Ethereum app and go to</span>
+              <span>If you understand and trust this request, open the Ethereum app and go to</span>
               <br />
               <span style={{ fontWeight: 'bold' }}>{'Settings > Blind signing'}</span>
               <br />
@@ -336,12 +336,12 @@ export class Notify extends React.Component {
       >
         <div className='notifyBox'>
           <div className='notifyTitle'>
-            <div>Hot Signer Alpha</div>
+            <div>Experimental hot signer</div>
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Wren hot signers are in alpha! Do not use them with high value accounts and verify your backups
-              are valid. Only proceed if you understand and accept these risks.
+              Wren hot signers are experimental. Do not use them for high-value accounts. Confirm that your
+              backups work before relying on them.
             </div>
           </div>
           <div className='notifyInput'>
@@ -373,7 +373,7 @@ export class Notify extends React.Component {
       >
         <div className='notifyBox'>
           <div className='notifyTitle'>
-            <div>Hot Signer Address Mismatch</div>
+            <div>Hot signer address mismatch</div>
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
@@ -400,10 +400,10 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open External Link</div>
+          <div className='notifyTitle'>Open external link</div>
           <div className='notifyBody'>
             <div className='notifyBodyLineUrl'>{url}</div>
-            <div className='notifyBodyLine'>{'Open Link in Browser?'}</div>
+            <div className='notifyBodyLine'>{'Open this link in your browser?'}</div>
           </div>
           <div className='notifyInput'>
             <button
@@ -423,7 +423,7 @@ export class Notify extends React.Component {
                 link.send('tray:action', 'backDash')
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>Open link</div>
             </button>
           </div>
         </div>
@@ -435,11 +435,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open Block Explorer</div>
+          <div className='notifyTitle'>Open block explorer</div>
           <div className='notifyBody'>
-            <div className='notifyBodyLine'>
-              Wren will open a block explorer in your browser for transaction:
-            </div>
+            <div className='notifyBodyLine'>Open this transaction in a block explorer?</div>
             <div className='notifyBodyHash'>{hash}</div>
           </div>
           <div className='notifyInput'>
@@ -460,7 +458,7 @@ export class Notify extends React.Component {
                 link.send('tray:action', 'backDash')
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>Open explorer</div>
             </button>
           </div>
           <button
@@ -518,7 +516,10 @@ export class Notify extends React.Component {
           <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
             <div className='notifyBoxSlide'>
               <Confirm
-                prompt='Are you sure you want to remove this chain?'
+                prompt={`Remove ${chain.name}?`}
+                description='This removes the network from Wren. Your assets are not affected.'
+                acceptText='Remove network'
+                declineText='Cancel'
                 onAccept={onAccept}
                 onDecline={onDecline}
               />

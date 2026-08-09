@@ -15,16 +15,24 @@ const status = (overrides = {}) => ({
 
 it('renders pending batch identity without approval controls', () => {
   render(
-    <WalletCallsStatus accountId={account} chainName='Ethereum' originName='example.test' status={status()} />
+    <WalletCallsStatus
+      accountId={account}
+      accountName='Workshop'
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='example.test'
+      status={status()}
+    />
   )
 
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Ethereum (0x1)')).toBeTruthy()
-  expect(screen.getByText(account)).toBeTruthy()
-  expect(screen.getByText('batch-id')).toBeTruthy()
+  expect(screen.getByText('Ethereum · 1')).toBeTruthy()
+  expect(screen.getByTitle(account)).toBeTruthy()
+  expect(screen.getByText(/Workshop · 0x111111/)).toBeTruthy()
+  expect(screen.getByTitle('batch-id')).toBeTruthy()
   expect(screen.getByText('Pending')).toBeTruthy()
-  expect(screen.getByText('Non-atomic execution')).toBeTruthy()
-  expect(screen.getByText(/No transaction receipts/i)).toBeTruthy()
+  expect(screen.getByText(/Non-atomic:/i)).toBeTruthy()
+  expect(screen.getByText(/Receipts will appear/i)).toBeTruthy()
   expect(screen.queryByText('Approve')).toBeNull()
   expect(screen.queryByText('Submit Batch')).toBeNull()
 })
@@ -39,6 +47,7 @@ it.each([
     <WalletCallsStatus
       accountId={account}
       chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
       originName='example.test'
       status={status({ status: code })}
     />
@@ -52,11 +61,19 @@ it('renders bounded transaction evidence in receipt order', () => {
     <WalletCallsStatus
       accountId={account}
       chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
       originName='example.test'
       status={status({
         status: 600,
         receipts: [
-          { status: '0x1', blockNumber: '0x10', gasUsed: '0x5208', transactionHash },
+          {
+            status: '0x1',
+            type: '0x2',
+            blockNumber: '0x10',
+            gasUsed: '0x5208',
+            effectiveGasPrice: '0x3b9aca00',
+            transactionHash
+          },
           {
             status: '0x0',
             blockNumber: '0x11',
@@ -70,9 +87,11 @@ it('renders bounded transaction evidence in receipt order', () => {
 
   expect(screen.getByText('Transaction 1')).toBeTruthy()
   expect(screen.getByText('Transaction 2')).toBeTruthy()
-  expect(screen.getByText(transactionHash)).toBeTruthy()
-  expect(screen.getByText('0x10')).toBeTruthy()
-  expect(screen.getByText('0x5208')).toBeTruthy()
+  expect(screen.getByText('0xaaaaaaaa…aaaaaaaa')).toBeTruthy()
+  expect(screen.getByText('16')).toBeTruthy()
+  expect(screen.getByText('21,000')).toBeTruthy()
+  expect(screen.getByText('0.000021 ETH')).toBeTruthy()
+  expect(screen.getByText(/EIP-1559 effective rate/)).toBeTruthy()
   expect(screen.getByText('Confirmed')).toBeTruthy()
   expect(screen.getByText('Reverted')).toBeTruthy()
 })

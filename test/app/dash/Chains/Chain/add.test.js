@@ -2,7 +2,7 @@ import Restore from 'react-restore'
 
 import store from '../../../../../main/store'
 import link from '../../../../../resources/link'
-import { screen, render } from '../../../../componentSetup'
+import { render, screen } from '../../../../componentSetup'
 import ChainComponent from '../../../../../app/dash/Chains/Chain'
 
 jest.mock('../../../../../main/store/persist')
@@ -13,307 +13,181 @@ jest.mock('../../../../../resources/link', () => ({
 
 const Chain = Restore.connect(ChainComponent, store)
 
-beforeAll(() => {
-  store.removeNetwork({ type: 'ethereum', id: 137 })
+const polygon = {
+  id: 31337,
+  type: 'ethereum',
+  name: 'Polygon',
+  symbol: 'POL',
+  explorer: 'https://polygonscan.com',
+  rpcUrls: ['https://polygon.example/rpc'],
+  nativeCurrencyName: 'Polygon Ecosystem Token',
+  nativeCurrencyDecimals: 18
+}
+
+beforeEach(() => {
+  link.send.mockClear()
+  link.invoke.mockClear()
+  link.invoke.mockResolvedValue({ success: true })
 })
 
-describe('rendering', () => {
-  it('renders the first provided RPC as the primary RPC', () => {
-    const chainConfig = { view: 'setup', primaryRpc: 'https://myrpc.polygon.net' }
-    render(<Chain {...chainConfig} />)
+test('renders the quiet network fields without legacy metadata controls', () => {
+  render(<Chain view='setup' {...polygon} />)
 
-    const primaryRpcInput = screen.getByLabelText('Primary RPC')
-    expect(primaryRpcInput.value).toEqual('https://myrpc.polygon.net')
-  })
-
-  it('renders the default primary RPC text', () => {
-    const chainConfig = { view: 'setup' }
-    render(<Chain {...chainConfig} />)
-
-    const primaryRpcInput = screen.getByLabelText('Primary RPC')
-    expect(primaryRpcInput.value).toEqual('Primary Endpoint')
-  })
-
-  it('renders the second provided RPC as the secondary RPC', () => {
-    const chainConfig = { view: 'setup', secondaryRpc: 'https://my-backup-rpc.polygon.net' }
-    render(<Chain {...chainConfig} />)
-
-    const secondaryRpcInput = screen.getByLabelText('Secondary RPC')
-    expect(secondaryRpcInput.value).toEqual('https://my-backup-rpc.polygon.net')
-  })
-
-  it('renders the default secondary RPC text', () => {
-    const chainConfig = { view: 'setup' }
-    render(<Chain {...chainConfig} />)
-
-    const secondaryRpcInput = screen.getByLabelText('Secondary RPC')
-    expect(secondaryRpcInput.value).toEqual('Secondary Endpoint')
-  })
-
-  it('renders the default chain name', () => {
-    const chainConfig = { view: 'setup' }
-    render(<Chain {...chainConfig} />)
-
-    const chainName = screen.getByLabelText('Chain Name')
-    expect(chainName.value).toBe('Chain Name')
-  })
-
-  it('renders the correct chain name', () => {
-    const chainConfig = { view: 'setup', name: 'Polygon' }
-    render(<Chain {...chainConfig} />)
-
-    const titleSection = screen.getByRole('chainName')
-    expect(titleSection.textContent).toBe('Polygon')
-  })
-
-  it('renders the correct chain id', () => {
-    const chainConfig = { view: 'setup', name: 'Polygon', id: 137 }
-    render(<Chain {...chainConfig} />)
-
-    const chainIdInput = screen.getByLabelText('Chain ID')
-    expect(chainIdInput.value).toEqual('137')
-  })
-
-  it('renders the correct native symbol', () => {
-    const chainConfig = { view: 'setup', name: 'Polygon', id: 137, symbol: 'MATIC' }
-    render(<Chain {...chainConfig} />)
-
-    const chainIdInput = screen.getByLabelText('Native Symbol')
-    expect(chainIdInput.value).toEqual('MATIC')
-  })
-
-  it('renders the submit button text', () => {
-    const chainConfig = {
-      view: 'setup',
-      id: 137,
-      name: 'Polygon',
-      symbol: 'MATIC',
-      primaryRpc: 'https://rpc-mainnet.matic.network',
-      secondaryRpc: 'https://polygon-rpc.com',
-      nativeCurrencyName: 'Ether'
-    }
-
-    render(<Chain {...chainConfig} />)
-
-    const submitButton = screen.getByRole('button', { name: 'Add Chain' })
-    expect(submitButton.textContent).toBe('Add Chain')
-  })
-
-  it('renders the correct submit button text when the form is empty', () => {
-    const chainConfig = { view: 'setup', id: 137, name: 'Polygon' }
-    render(<Chain {...chainConfig} />)
-
-    const submitButton = screen.getByRole('button', { name: 'Fill Chain Details' })
-    expect(submitButton.textContent).toBe('Fill Chain Details')
-  })
-
-  it('renders a warning if the entered chain id already exists', () => {
-    const chainConfig = { view: 'setup', id: 1, name: 'Mainnet' }
-    render(<Chain {...chainConfig} />)
-
-    const submitButton = screen.getByRole('button', { name: 'Chain ID Already Exists' })
-    expect(submitButton.textContent).toBe('Chain ID Already Exists')
-  })
-
-  it('renders the testnet toggle as off by default', () => {
-    const chainConfig = { view: 'setup' }
-    render(<Chain {...chainConfig} />)
-
-    const testnetToggle = screen.getByRole('button', { name: 'Enable testnet mode' })
-    expect(testnetToggle.getAttribute('aria-pressed')).toBe('false')
-  })
+  expect(screen.getByRole('heading', { name: 'Add Polygon' })).toBeTruthy()
+  expect(screen.getByLabelText('Network name').value).toBe('Polygon')
+  expect(screen.getByLabelText('Chain ID').value).toBe('31337')
+  expect(screen.getByLabelText('Native currency').value).toBe('POL')
+  expect(screen.getByLabelText('Decimals').value).toBe('18')
+  expect(screen.getByLabelText('RPC URL 1').value).toBe('https://polygon.example/rpc')
+  expect(screen.getByLabelText('Block explorer').value).toBe('https://polygonscan.com')
+  expect(screen.queryByLabelText('RPC URL 2')).toBeNull()
+  expect(screen.queryByText('Chain Color')).toBeNull()
 })
 
-describe('submitting', () => {
-  it('does not allow submit if the chain id already exists', async () => {
-    store.addNetwork({
-      id: 1,
-      type: 'ethereum',
-      name: 'Mainnet',
-      explorer: 'https://etherscan.io',
-      symbol: 'ETH',
-      on: true,
-      connection: {
-        primary: { connected: true }
-      }
-    })
+test('attributes a dapp proposal without passing its origin through approval IPC', async () => {
+  const requestReference = {
+    account: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
+    handlerId: 'e194a121-a42a-4c2f-a8e4-d90b102b2440',
+    origin: 'https://uniswap.org'
+  }
+  const { user } = render(<Chain view='setup' {...polygon} requestReference={requestReference} />)
 
-    const chainConfig = { id: 1, name: 'Mainnet' }
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
+  expect(screen.getByText('Requested by uniswap.org')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Add network' }))
 
-    await user.click(screen.getByRole('button', { name: 'Chain ID Already Exists' }))
-    expect(link.invoke).not.toHaveBeenCalled()
-  })
-
-  it('adds a valid chain', async () => {
-    const chainConfig = {
-      id: 42162,
-      type: 'ethereum',
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      explorer: 'https://rinkeby.arbiscan.io',
-      primaryRpc: 'https://arbitrum-rinkeby.infura.com',
-      secondaryRpc: 'https://myrpc.arbrink.net',
-      isTestnet: false,
-      nativeCurrencyName: 'Ether'
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-
-    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
-
-    expect(link.invoke).toHaveBeenNthCalledWith(1, 'tray:addChain', {
-      id: 42162,
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      primaryColor: 'accent2',
-      explorer: 'https://rinkeby.arbiscan.io',
-      type: 'ethereum',
-      isTestnet: false,
-      primaryRpc: 'https://arbitrum-rinkeby.infura.com',
-      secondaryRpc: 'https://myrpc.arbrink.net',
-      nativeCurrencyName: 'Ether',
-      nativeCurrencyDecimals: 18,
-      nativeCurrencyIcon: '',
-      icon: ''
-    })
-  })
-
-  it('allows the user to change RPCs before submitting', async () => {
-    const chainConfig = {
-      id: 42162,
-      name: 'Arbitrum Rinkeby',
-      symbol: 'arETH',
-      primaryRpc: 'https://arbitrum-rinkeby.infura.com',
-      secondaryRpc: 'https://myrpc.arbrink.net',
-      nativeCurrencyName: 'Ether'
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-
-    const primaryRpcInput = screen.getByLabelText('Primary RPC')
-    await user.clear(primaryRpcInput)
-    await user.type(primaryRpcInput, 'https://arbitrum-rpc.mydomain.com')
-
-    const secondaryRpcInput = screen.getByLabelText('Secondary RPC')
-    await user.clear(secondaryRpcInput)
-    await user.type(secondaryRpcInput, 'https://myrpc-rinkeby.arbitrum.io')
-
-    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
-
-    expect(link.invoke).toHaveBeenNthCalledWith(
-      1,
-      'tray:addChain',
-      expect.objectContaining({
-        primaryRpc: 'https://arbitrum-rpc.mydomain.com',
-        secondaryRpc: 'https://myrpc-rinkeby.arbitrum.io'
-      })
-    )
-  })
-
-  it('does not submit empty input fields as undefined', async () => {
-    const chainConfig = {
-      id: 42162,
-      type: 'ethereum',
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      isTestnet: false,
-      nativeCurrencyName: 'Ether'
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-
-    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
-
-    expect(link.invoke).toHaveBeenNthCalledWith(1, 'tray:addChain', {
-      id: 42162,
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      primaryColor: 'accent2',
-      explorer: '',
-      type: 'ethereum',
-      isTestnet: false,
-      primaryRpc: '',
-      secondaryRpc: '',
-      nativeCurrencyName: 'Ether',
-      nativeCurrencyDecimals: 18,
-      nativeCurrencyIcon: '',
-      icon: ''
-    })
-  })
-
-  it('carries a dapp request reference through final approval', async () => {
-    const requestReference = {
-      account: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
-      handlerId: 'e194a121-a42a-4c2f-a8e4-d90b102b2440'
-    }
-    const chainConfig = {
-      id: 42162,
-      type: 'ethereum',
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      primaryRpc: 'https://arbitrum-rinkeby.infura.com',
-      nativeCurrencyName: 'Ether',
-      requestReference
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
-
-    expect(link.invoke).toHaveBeenCalledWith(
-      'tray:addChain',
-      expect.objectContaining({ id: 42162 }),
-      requestReference
-    )
-  })
-
-  it('does not navigate away when main-process validation fails', async () => {
-    link.invoke.mockResolvedValueOnce({ success: false, error: 'RPC chain mismatch' })
-    const chainConfig = {
-      id: 42162,
-      type: 'ethereum',
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      primaryRpc: 'https://arbitrum-rinkeby.infura.com',
-      nativeCurrencyName: 'Ether'
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-    await user.click(screen.getByRole('button', { name: 'Add Chain' }))
-
-    expect(link.send).not.toHaveBeenCalled()
-    expect(await screen.findByText('RPC chain mismatch')).toBeTruthy()
-  })
-
-  it('requires HTTPS for a dapp-requested RPC', async () => {
-    const chainConfig = {
-      id: 42162,
-      type: 'ethereum',
-      name: 'Arbitrum Rinkeby',
-      symbol: 'ETH',
-      primaryRpc: 'http://localhost:8545',
-      nativeCurrencyName: 'Ether',
-      requestReference: {
-        account: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
-        handlerId: 'e194a121-a42a-4c2f-a8e4-d90b102b2440'
-      }
-    }
-
-    const { user } = render(<Chain view='setup' {...chainConfig} />)
-    const submitButton = screen.getByRole('button', { name: 'Dapp RPC Must Use HTTPS' })
-
-    await user.click(submitButton)
-    expect(link.invoke).not.toHaveBeenCalled()
-  })
+  expect(link.invoke).toHaveBeenCalledWith(
+    'tray:addChain',
+    expect.objectContaining({ id: 31337, rpcUrls: ['https://polygon.example/rpc'] }),
+    { account: requestReference.account, handlerId: requestReference.handlerId }
+  )
 })
 
-describe('updating fields', () => {
-  it('allows the user to mark a chain as a testnet', async () => {
-    const chainConfig = { view: 'setup' }
-    const { user } = render(<Chain {...chainConfig} />)
+test('rejects a pending dapp proposal when the editor is canceled', async () => {
+  const requestReference = {
+    account: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
+    handlerId: 'e194a121-a42a-4c2f-a8e4-d90b102b2440',
+    origin: 'https://uniswap.org'
+  }
+  const { user } = render(<Chain view='setup' {...polygon} requestReference={requestReference} />)
 
-    const testnetToggle = screen.getByRole('button', { name: 'Enable testnet mode' })
-    await user.click(testnetToggle)
-    expect(testnetToggle.getAttribute('aria-pressed')).toBe('true')
-  })
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+  expect(link.send.mock.calls).toEqual([
+    ['tray:rejectRequest', { account: requestReference.account, handlerId: requestReference.handlerId }],
+    ['tray:action', 'backDash']
+  ])
+})
+
+test('keeps proposed fallback endpoints visible and carries the reviewed values', async () => {
+  const { user } = render(
+    <Chain
+      view='setup'
+      {...polygon}
+      rpcUrls={['https://polygon.example/rpc', 'https://polygon.example/fallback']}
+    />
+  )
+
+  expect(screen.getByLabelText('RPC URL 2').value).toBe('https://polygon.example/fallback')
+  await user.click(screen.getByRole('button', { name: 'Add network' }))
+
+  expect(link.invoke).toHaveBeenCalledWith(
+    'tray:addChain',
+    expect.objectContaining({
+      rpcUrls: ['https://polygon.example/rpc', 'https://polygon.example/fallback']
+    })
+  )
+})
+
+test('caps direct endpoint entry at five rows', async () => {
+  const { user } = render(<Chain view='setup' {...polygon} />)
+  const addRpc = screen.getByRole('button', { name: 'Add RPC' })
+
+  await user.click(addRpc)
+  await user.click(addRpc)
+  await user.click(addRpc)
+  await user.click(addRpc)
+
+  expect(screen.getByLabelText('RPC URL 5')).toBeTruthy()
+  expect(screen.queryByLabelText('RPC URL 6')).toBeNull()
+  expect(addRpc.disabled).toBe(true)
+  expect(screen.getByText('Maximum of 5 RPC endpoints')).toBeTruthy()
+})
+
+test('lets the user edit proposal details before approval', async () => {
+  const { user } = render(<Chain view='setup' {...polygon} />)
+  const rpc = screen.getByLabelText('RPC URL 1')
+  const decimals = screen.getByLabelText('Decimals')
+
+  await user.clear(rpc)
+  await user.type(rpc, 'https://polygon.example/new')
+  await user.clear(decimals)
+  await user.type(decimals, '6')
+  await user.click(screen.getByRole('button', { name: 'Add network' }))
+
+  expect(link.invoke).toHaveBeenCalledWith(
+    'tray:addChain',
+    expect.objectContaining({ rpcUrls: ['https://polygon.example/new'], nativeCurrencyDecimals: 6 })
+  )
+})
+
+test('keeps invalid forms quiet and unavailable', async () => {
+  const { user } = render(<Chain view='setup' {...polygon} id='' rpcUrls={['']} />)
+  const add = screen.getByRole('button', { name: 'Add network' })
+
+  expect(add.disabled).toBe(true)
+  expect(screen.queryByText('Enter the required details')).toBeNull()
+  await user.click(add)
+  expect(link.invoke).not.toHaveBeenCalled()
+})
+
+test('shows RPC feedback in the field label after focus leaves', async () => {
+  const { user } = render(<Chain view='setup' {...polygon} />)
+  const rpc = screen.getByLabelText('RPC URL 1')
+
+  await user.clear(rpc)
+  await user.type(rpc, 'not-a-url')
+  await user.tab()
+
+  expect(screen.getByText('Can’t connect')).toBeTruthy()
+  expect(rpc.getAttribute('aria-invalid')).toBe('true')
+})
+
+test('requires HTTPS for a dapp proposal', async () => {
+  const requestReference = {
+    account: '0x22dd63c3619818fdbc262c78baee43cb61e9cccf',
+    handlerId: 'e194a121-a42a-4c2f-a8e4-d90b102b2440'
+  }
+  const { user } = render(
+    <Chain
+      view='setup'
+      {...polygon}
+      rpcUrls={['http://localhost:8545']}
+      requestReference={requestReference}
+    />
+  )
+
+  await user.click(screen.getByLabelText('RPC URL 1'))
+  await user.tab()
+
+  expect(screen.getByText('Use an HTTPS RPC URL')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Add network' }).disabled).toBe(true)
+})
+
+test('uses calm failure copy when verification fails', async () => {
+  link.invoke.mockResolvedValueOnce({ success: false, error: 'RPC chain mismatch' })
+  const { user } = render(<Chain view='setup' {...polygon} />)
+
+  await user.click(screen.getByRole('button', { name: 'Add network' }))
+
+  expect(await screen.findByText('Couldn’t add network')).toBeTruthy()
+  expect(screen.queryByText('RPC chain mismatch')).toBeNull()
+  expect(link.send).not.toHaveBeenCalled()
+})
+
+test('changes the test-network setting', async () => {
+  const { user } = render(<Chain view='setup' {...polygon} />)
+  const toggle = screen.getByRole('button', { name: 'Test network' })
+
+  await user.click(toggle)
+  expect(toggle.getAttribute('aria-pressed')).toBe('true')
 })

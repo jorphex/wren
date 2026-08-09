@@ -29,12 +29,12 @@ class AddHardwareHarness extends AddHardware {
 test('shows accessible discovery guidance while no device is detected', () => {
   const { rerender } = render(<AddHardwareHarness type='trezor' />)
 
-  expect(screen.getByRole('status').textContent).toBe('Looking for a Trezor')
+  expect(screen.getByRole('status').textContent).toBe('Looking for your Trezor')
   expect(screen.getByText('Connect and unlock your device.')).toBeTruthy()
   expect(screen.getByAltText('').getAttribute('aria-hidden')).toBe('true')
 
   rerender(<AddHardwareHarness type='ledger' />)
-  expect(screen.getByRole('status').textContent).toBe('Looking for a Ledger')
+  expect(screen.getByRole('status').textContent).toBe('Looking for your Ledger')
 })
 
 test('renders only detected signers matching the discovery card type', () => {

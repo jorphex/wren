@@ -60,17 +60,17 @@ export class Add extends React.Component {
                     className={state === 'entered' ? 'addAccountMain addAccountMainActive' : 'addAccountMain'}
                   >
                     <div className='addAccountMainInner'>
-                      <div className='addAccountTitle'>Add Account</div>
+                      <div className='addAccountTitle'>Add account</div>
                       <div className='addAccountBreak' />
                       <div className='addAccountSubtitle'>
-                        Add or create a decentralized account to use with any dapp
+                        Add an account you control or an address you want to follow.
                       </div>
                       <div className='addAccountBreak' />
                       <div className='addAccountHeader'>
                         <div style={{ marginRight: '10px' }}>
                           <Icon name='hardware' size={17} />
                         </div>
-                        <div>Hardware Accounts</div>
+                        <div>Hardware accounts</div>
                       </div>
                       <AddHardware index={1} type='ledger' />
                       <AddHardware index={2} type='trezor' />
@@ -79,7 +79,7 @@ export class Add extends React.Component {
                         <div style={{ margin: '-1px 10px 0px 0px' }}>
                           <Icon name='hot' size={18} />
                         </div>
-                        <div>Hot Accounts</div>
+                        <div>Hot accounts</div>
                       </div>
                       <AddPhrase index={4} />
                       <AddRing index={5} />
@@ -87,7 +87,7 @@ export class Add extends React.Component {
                         <div style={{ margin: '-3px 10px 0px 0px' }}>
                           <Icon name='watch' size={21} />
                         </div>
-                        <div>Nonsigning Accounts</div>
+                        <div>Watch-only accounts</div>
                       </div>
                       <AddAddress index={6} />
                       <div className='addAccountBreak' style={{ margin: '40px 0px 0px 0px' }} />
@@ -115,7 +115,9 @@ export class Add extends React.Component {
                     }
                     onClick={() => this.toggleAddAccount(state)}
                   >
-                    <span className='addAccountTriggerIcon'>+</span>
+                    <span className='addAccountTriggerIcon'>
+                      <Icon name='add' size={18} />
+                    </span>
                   </button>
                 </div>
               </div>

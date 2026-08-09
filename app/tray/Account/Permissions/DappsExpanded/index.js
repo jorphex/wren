@@ -1,10 +1,14 @@
 import React from 'react'
 import Restore from 'react-restore'
+
+import emptyConnections from 'url:../../../../../asset/ui/wren-empty-connections-v2.png'
+
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
 import PermissionToggle from '../PermissionToggle'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
 export class DappsPermissionsExpanded extends React.Component {
   constructor(...args) {
@@ -58,26 +62,29 @@ export class DappsPermissionsExpanded extends React.Component {
 
   render() {
     const permissions = this.store('main.permissions', this.props.account) || {}
+    const allPermissionIds = getPermissionIds(permissions)
     let permissionList = getPermissionIds(permissions, this.props.filter)
     if (!this.props.expanded) permissionList = permissionList.slice(0, 3)
 
     return (
-      <div className='accountViewScroll'>
-        <ClusterBox style={{ marginTop: '20px' }}>
-          <Cluster>
-            <div className='moduleMainPermissions'>
-              {permissionList.length === 0 ? (
-                <ClusterRow>
-                  <ClusterValue>
-                    <div className='signerPermission'>
-                      <div className='signerPermissionControls'>
-                        <div className='signerPermissionNoPermissions'>No Permissions Set</div>
-                      </div>
-                    </div>
-                  </ClusterValue>
-                </ClusterRow>
-              ) : (
-                permissionList.map((o) => {
+      <div className='accountViewScroll accountLedgerView'>
+        {permissionList.length === 0 ? (
+          allPermissionIds.length ? (
+            <div className='wrenEmptyFilter'>No matching app permissions</div>
+          ) : (
+            <WrenEmptyState
+              image={emptyConnections}
+              transparentImage={true}
+              title='No connected apps'
+              copy='Apps with access to this account appear here.'
+              expanded
+            />
+          )
+        ) : (
+          <ClusterBox>
+            <Cluster>
+              <div className='moduleMainPermissions'>
+                {permissionList.map((o) => {
                   return (
                     <ClusterRow key={o}>
                       <ClusterValue pointerEvents={true}>
@@ -95,14 +102,14 @@ export class DappsPermissionsExpanded extends React.Component {
                       </ClusterValue>
                     </ClusterRow>
                   )
-                })
-              )}
-            </div>
-          </Cluster>
-        </ClusterBox>
+                })}
+              </div>
+            </Cluster>
+          </ClusterBox>
+        )}
         {permissionList.length === 0 && this.state.clearStatus ? (
           <div className='clearPermissionsStatus' role='status' tabIndex={-1} ref={this.clearStatusRef}>
-            All external permissions cleared.
+            All app permissions cleared.
           </div>
         ) : null}
         {permissionList.length > 0 && (
@@ -115,7 +122,7 @@ export class DappsPermissionsExpanded extends React.Component {
               >
                 <button
                   type='button'
-                  className='moduleButton clearPermissionsAction'
+                  className='clearPermissionsAction wrenControl wrenControlSecondary'
                   disabled={this.state.clearing}
                   onClick={() => this.cancelClear()}
                   ref={this.cancelClearRef}
@@ -124,21 +131,21 @@ export class DappsPermissionsExpanded extends React.Component {
                 </button>
                 <button
                   type='button'
-                  className='moduleButton moduleButtonBad clearPermissionsAction'
+                  className='clearPermissionsAction wrenControl wrenControlDanger'
                   disabled={this.state.clearing}
                   onClick={() => this.confirmClear()}
                 >
-                  {this.state.clearing ? 'Clearing...' : 'Confirm Clear'}
+                  {this.state.clearing ? 'Clearing…' : 'Confirm clear'}
                 </button>
               </div>
             ) : (
               <button
                 type='button'
-                className='moduleButton moduleButtonBad clearPermissionsAction'
+                className='clearPermissionsAction wrenControl wrenControlDanger'
                 onClick={() => this.beginClear()}
                 ref={this.clearButtonRef}
               >
-                Clear All Permissions
+                Clear all permissions
               </button>
             )}
           </div>

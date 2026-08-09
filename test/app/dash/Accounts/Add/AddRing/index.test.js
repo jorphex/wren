@@ -25,14 +25,15 @@ describe('entering private key', () => {
       user,
       getTitle: () => screen.getAllByRole('heading')[0],
       getNextButton: () => screen.getByRole('button', { name: 'Next' }),
-      enterPrivateKey: async (text) => user.type(screen.getByRole('textbox', { name: 'Private Key' }), text)
+      enterPrivateKey: async (text) => user.type(screen.getByRole('textbox', { name: 'Private key' }), text)
     }
   }
 
   it('should display the correct title when entering the private key', () => {
-    const { getTitle } = setupComponent()
+    const { getTitle, getNextButton } = setupComponent()
 
-    expect(getTitle().textContent).toBe('Private Key')
+    expect(getTitle().textContent).toBe('Private key')
+    expect(getNextButton().disabled).toBe(true)
   })
 
   it('should show an error message when private key is an invalid hex string', async () => {
@@ -40,7 +41,7 @@ describe('entering private key', () => {
 
     await enterPrivateKey('INVALID')
 
-    expect(screen.getByRole('alert').textContent).toBe('INVALID PRIVATE KEY')
+    expect(screen.getByRole('alert').textContent).toBe('Enter a valid private key')
   })
 
   it('should show an error message when private key is invalid', async () => {
@@ -48,7 +49,7 @@ describe('entering private key', () => {
 
     await enterPrivateKey('0xffffffffffffffffffffffffffffffffbaaedce6af48a03bbfd25e8cd0364148')
 
-    expect(screen.getByRole('alert').textContent).toBe('INVALID PRIVATE KEY')
+    expect(screen.getByRole('alert').textContent).toBe('Enter a valid private key')
   })
 
   it('should update the navigation with the password entry screen when a private key is submitted', async () => {
@@ -86,15 +87,15 @@ describe('entering private key', () => {
 
   it('unlocks private-key entry when the step is revisited', async () => {
     const view = render(<AddRing accountData={{}} />, { advanceTimersAfterInput: true })
-    const input = screen.getByRole('textbox', { name: 'Private Key' })
+    const input = screen.getByRole('textbox', { name: 'Private key' })
 
     await view.user.type(input, privateKey)
     await view.user.click(screen.getByRole('button', { name: 'Next' }))
     view.rerender(<AddRing accountData={{ secret: privateKey }} />)
     view.rerender(<AddRing accountData={{}} />)
 
-    expect(screen.getByRole('alert').textContent).toBe('Enter Private Key')
-    await view.user.type(screen.getByRole('textbox', { name: 'Private Key' }), privateKey)
+    expect(screen.getByRole('alert').textContent).toBe('Enter private key')
+    await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), privateKey)
     await view.user.click(screen.getByRole('button', { name: 'Next' }))
     expect(link.send).toHaveBeenCalledTimes(2)
   })

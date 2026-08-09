@@ -1,506 +1,360 @@
 @keyframes lit
-  0%
+  from
+    opacity .55
+  to
     opacity 1
-  80%
-    opacity 1
-  100%
-    opacity 0.5
-
-.requestItem::after
-  position absolute
-  content ''
-  top 0
-  bottom 0
-  left 0
-  right 0
-  z-index 20
-  border-radius 12px
-  opacity 1
-  pointer-events none
-
-.requestItem:hover
-  transform translateY(-1px)
-  position relative
-  z-index 300000
-  background var(--ghostB)
-  transform translateY(-1px)
-  border-bottom 2px solid var(--ghostZ)
-  box-shadow 0px 8px 30px -12px var(--ghostX)
-
-  .clusterValue
-    background var(--ghostB) !important
-  
-.requestItem:active
-  transform translateY(0px)
-  box-shadow 0px 2px 4px var(--ghostX)
-  position relative
-  z-index 300000
-  background var(--ghostB)
-  transform translateY(0px)
-  box-shadow 0px 2px 4px var(--ghostX)
-
-.requestItem:first-child
-  border-radius 16px
-  border-bottom-left-radius 8px
-  border-bottom-right-radius 8px
-
-.requestItem:last-child
-  border-radius 16px
-  border-top-left-radius 8px
-  border-top-right-radius 8px
-
-.requestItem:first-child:last-child
-  border-radius 16px
 
 .requestItem
-  cursor pointer
   position relative
   width 100%
-  z-index 1
+  margin-top var(--wren-space-1)
   overflow hidden
-  font-family 'MainFont'
-  font-weight 300
-  cursor pointer
-  position relative
-  width 100%
-  z-index 1
-  margin-top 3px
-  overflow hidden
-  font-family 'MainFont'
-  font-weight 300
-  cursor pointer
-  transition all linear 0.1s
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background var(--wren-surface-card)
+  font-family var(--wren-font-ui)
+  font-weight 400
+  transition background var(--wren-motion-fast) var(--wren-ease)
+
+.requestLedger
+  margin var(--wren-space-2)
+  padding 0
+  border 0
+  border-top 1px solid var(--wren-ledger-rule)
+  border-radius 0
+  background transparent
+
+  .clusterRow
+    gap 0
+
+  .clusterRow + .clusterRow
+    margin-top 0
+
+  .clusterValue
+    border 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+
+  .clusterRow:last-child .clusterValue
+    border-bottom 0
+
+  .clusterValueClickable:not(.clusterValueDisabled):hover
+    border-color var(--wren-ledger-rule)
+    background var(--wren-ledger-hover)
+
+  .requestItem
+    margin-top 0
+    border-radius 0
+    background transparent
+
+.requestItem:hover
+  background var(--wren-surface-hover)
+
+.requestItem:active
+  background var(--wren-surface-active)
+
+.requestItemBackground,
+.requestItemCorner,
+.requestItem::after
+  pointer-events none
 
 .requestItemBackground
   position absolute
-  top 0px
-  left 0px
-  right 0px
-  bottom 0
-  border-radius 1.5px
-  background linear-gradient(90deg, transparent 0%, transparent 100%)
-  opacity 0.05
-  z-index 200
-  border-radius 18px
-  display none
+  inset 0
+  border-radius inherit
+  opacity .06
 
 .requestItemCorner
-  position absolute
-  top -420px
-  left -120px
-  width 460px
-  height 460px
-  transform rotate(65deg)
-  border-radius 6px
-  opacity 0
+  display none
 
 .requestItemNotice
-  position relative
   display flex
   align-items center
   justify-content center
-  text-transform uppercase
-  font-weight 400
-  font-size 11px
-  margin 14px
-  letter-spacing 1px
-  border-top 2px solid var(--ghostZ)
-  padding 12px 12px 0px 12px
+  margin var(--wren-space-3) var(--wren-space-4)
+  padding var(--wren-space-3) 0 0
+  border-top 1px solid var(--wren-border-subtle)
+  color var(--wren-warning)
+  font-size var(--wren-type-small)
+  font-weight 500
+  line-height 18px
+  text-align center
 
 .requestItemNoticeGood
-  color var(--good)
+  color var(--wren-success)
 
 .requestItemNoticeBad
-  color var(--bad)
+  color var(--wren-danger)
 
 .requestItemDetails
-  position relative
   display flex
   align-items center
   justify-content space-between
-  font-weight 400
-  font-size 11px
-  letter-spacing 1px
   width 100px
   height 30px
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+  font-weight 450
+
+  svg
+    margin-left auto
 
   span
-    letter-spacing 1px
-    padding-left 8px
-    top -1px
     position relative
+    top -1px
+    padding-left var(--wren-space-2)
 
-.requestItemDetailsIndicatorStill
-  .requestItemDetailsIndicatorMarker
-    animation none
+.requestItemDetailsGood
+  color var(--wren-success)
+
+.requestItemDetailsBad
+  color var(--wren-danger)
+
+.requestItemDetailsIndicatorStill .requestItemDetailsIndicatorMarker
+  animation none
+
+.requestItemDetailsGood .requestItemDetailsIndicatorMarker
+  background var(--wren-success)
+
+.requestItemDetailsBad .requestItemDetailsIndicatorMarker
+  background var(--wren-danger)
 
 .requestItemDetailsView
   display flex
-  justify-content center
   align-items center
-  margin-right 2px
+  justify-content center
+  margin-right var(--wren-space-1)
+
   .requestItemDetailsViewText
-    font-weight 400
-    margin-right 0px
+    font-weight 500
+
   .requestItemDetailsViewArrow
     display flex
-    justify-content center
     align-items center
-    div 
-      width 8px
+    justify-content center
+
+    div
+      width var(--wren-space-2)
+
     svg
       transform rotate(90deg)
-
-.requestItemDetailsGood
-  .requestItemLine
-    color var(--good)
-  .requestItemLineShadow
-    color var(--ghostX)
-  .requestItemDetailsIndicator
-    .requestItemDetailsIndicatorMarker
-      background var(--good)
-
-.requestItemDetailsBad
-  .requestItemLine
-    color var(--bad)
-  .requestItemLineShadow
-    color var(--ghostX)
-  .requestItemDetailsIndicator
-    .requestItemDetailsIndicatorMarker
-      background var(--bad)
 
 .requestItemRow
   position relative
   z-index 3
-  width 100%
   display flex
+  width 100%
   align-items center
-  margin-bottom 10px
   box-sizing border-box
+  margin-bottom var(--wren-space-2)
 
-  .requestItemRowIcon
-    width 40px
-    height 20px
-    display flex
-    justify-content center
-    align-items center
-    position relative
-    // color var(--good)
-    
+  .requestItemRowIcon,
   .requestItemRowIconLarge
+    display flex
     width 40px
     height 20px
-    display flex
-    justify-content center
     align-items center
-    //color var(--moon)
+    justify-content center
 
   .requestItemRowChainIcon
     position absolute
-    top 0px  
+    top 0
     right 20px
-    bottom 0px
+    bottom 0
     display flex
-    justify-content center
-    align-items center
     width 20px
-    border-radius 10px
+    align-items center
+    justify-content center
+    border-radius var(--wren-radius-sm)
 
-  .requestItemRowTitle
-    position relative
-    margin-left 9px
-    font-size 12px
-    font-weight 400
-
+  .requestItemRowTitle,
   .requestItemRowTitleLarge
     position relative
-    font-weight 300
+    margin-left 9px
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    font-weight 450
+
+  .requestItemRowTitleLarge
     display flex
-    justify-content center
     align-items center
+    justify-content center
 
-
-@keyframes wave
-  0%
-    transform translateX(0)
-  100%
-    transform translateX(16px)
-
-.requestItemLine
-  position absolute
-  top 0px
-  right 0px
-  bottom 0px 
-  left 0px
-  margin 0px
-  box-sizing border-box
-  display flex
-  overflow hidden
-  opacity 1
-  padding 10.5px 0px
-  border-radius 20px
-  background var(--ghostZ)
-  box-shadow inset 0px 0px 4px var(--ghostY)
-  color var(--moon)
-  display none
-  
-  svg
-    width 200%
-    position relative
-    left -100%
-    stroke-width 20px
-    animation wave 1.4s linear infinite
-    will-change transform
-
-.requestItemLineShadow
-  background none
-  color var(--ghostX)
-  box-shadow none
-  display none
-  svg
-    bottom -2px
-    filter blur(1px)
-    
 .requestItemIcon
+  display flex
   width 32px
   height 32px
-  overflow hidden
-  display flex
-  justify-content center
   align-items center
-  border-radius 12px
-  z-index 2
+  justify-content center
+  overflow hidden
+  border-radius var(--wren-radius-sm)
+  color var(--wren-accent-primary-hover)
+  background var(--wren-surface-inset)
+  box-shadow var(--wren-shadow-inset)
   -webkit-app-region no-drag
-  transition none
-  pointer-events auto
-  transform translate3d(0, 0, 0)
 
 .requestItemTitle
   position relative
-  font-family 'MainFont'
-  font-weight 400
   display flex
-  justify-content space-between
   align-items center
-  font-size 16px
-  font-weight 300
-  padding 15px 12px 6px 12px
+  justify-content space-between
+  min-height 58px
+  padding var(--wren-space-3) var(--wren-space-4) var(--wren-space-2)
   overflow hidden
-
-  .requestItemTitleTime
-    position absolute
-    top 12px
-    right 18px
-    bottom 3px
-    display flex
-    justify-content center
-    align-items center
-    z-index 3000
-
-    .requestItemTitleTimeItem
-      height 26px
-      display flex
-      justify-content center
-      align-items center
-      font-size 13px
-      font-weight 400
-      color var(--mint)
-
-  .requestItemMain
-    margin-top 1px
-    display flex
-    justify-content flex-start
-    flex-direction column
-    box-sizing border-box
-
-    .requestItemTitleMain
-      white-space nowrap
-      overflow hidden
-      text-overflow ellipsis
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
 
   .requestItemTitleLeft
     display flex
-    justify-content flex-start
+    min-width 0
     align-items center
-    box-sizing border-box
-    margin-left 0px
 
-  .requestItemTitleMain
-    font-weight 400
-    margin-left 8px
-
-.requestItemTitleSub
-  display flex
-  justify-content flex-start
-  align-items center
-  font-size 11px
-  font-weight 300
-
-  .requestItemTitleSubIcon
-    margin 1px 9px 0px -5px
-    color var(--outerspace)
-
-  .requestItemTitleSubText
-    font-weight 400
-    margin 0px 0px 0px 0px
-
-
-.requestItemSource
-  position absolute
-  top 0px  
-  right 20px
-  bottom 0px
-  font-size 12px
-  font-weight 400
-  display flex
-  justify-content center
-  align-items center
-  //color var(--moon)
-  margin-top -2px
-
-  div
-    margin-right 5px
-  svg
-    position relative
-    top 1px
-
-.requestItemOrigin
-  top 16px
-  right 16px
-  position absolute
-  font-weight 300
-  margin-left 2px
-  display flex
-  align-items center
-  font-size 10px
-  margin-top 3px
-
-  .requestItemOriginIcon
-    position relative
-    top -1px
+  .requestItemMain
     display flex
-    justify-content center
-    align-items center
-
-.requestItemStatus
-  font-size 10px
-  bottom 16px
-  left 64px
-  position absolute
-  font-weight 300
-  margin-left 2px
-
-.requestItemRight
-  width 64px
-  display flex
-  justify-content center
-  align-items center
-  transform scaleX(-1)
-  position relative
-  left 1px
-
-.requestItemDetailsSlide
-  display flex
-  align-items center
-  text-transform uppercase
-  font-size 10px
-  font-weight 500
-  padding-left 6px
-  letter-spacing 1px
-  padding-top 4px
-
-.requestItemWave
-  display absolute
-  top 0
-  left 0
-  bottom 0
-  left 0
-  
-.requestItemWaveDisabled
-  .requestItemLine
-    svg
-      animation-play-state paused
-
-.requestItemDetailsIndicator
-  height 12px
-  width 12px
-  display flex
-  justify-content center
-  align-items center
-  border-radius 6px
-  box-shadow inset 0px 0px 3px var(--ghostX)
-  margin-right 4px
-
-  .requestItemDetailsIndicatorMarker
-    height 6px
-    width 6px
-    border-radius 3px
-    background var(--moon)
-    z-index 4
-    position relative
-    top 0px
-    animation lit infinite ease-in-out alternate 1s
-    will-change opacity
-
-.requestItemSummary
-  display flex
-  justify-content center
-  align-items center
-  padding 8px 16px 18px 16px
-  font-size 12px
-  font-weight 500
-
-.requestItemHeader, .requestItemHeader:hover, .requestItemHeader:active
-  background none
-  box-shadow none
-  border-bottom none
-  transform none
-  margin-top 0px
-  margin-bottom 0px
-  pointer-events none
-
-// Wren request hierarchy
-.requestItem
-  margin-top var(--wren-space-1)
-  border-radius var(--wren-radius-md)
-  font-family var(--wren-font-ui)
-  transition background var(--wren-motion-fast) var(--wren-ease)
-
-.requestItem:hover,
-.requestItem:active
-  z-index 1
-  transform none
-  border-bottom 0
-  background var(--wren-surface-hover)
-  box-shadow none
-
-.requestItemTitle
-  padding var(--wren-space-4) var(--wren-space-4) var(--wren-space-2)
-  color var(--wren-text-primary)
-  font-family var(--wren-font-ui)
-  font-size 15px
+    min-width 0
+    flex-direction column
+    justify-content flex-start
+    margin-top 1px
 
   .requestItemTitleMain
     margin-left var(--wren-space-2)
-    font-weight 500
+    overflow hidden
+    font-weight 550
+    text-overflow ellipsis
+    white-space nowrap
+
+  .requestItemTitleTime
+    position absolute
+    top var(--wren-space-2)
+    right var(--wren-space-4)
+    display flex
+    align-items center
+    justify-content center
+
+    .requestItemTitleTimeItem
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-caption)
+      font-weight 400
 
 .requestItemTitleSub
+  display flex
+  align-items center
+  justify-content flex-start
   margin-top 3px
   color var(--wren-text-tertiary)
-  font-size 11px
+  font-size var(--wren-type-small)
+  font-weight 400
 
   .requestItemTitleSubIcon
     margin 1px var(--wren-space-2) 0 0
     color var(--wren-text-tertiary)
 
-.requestItemNotice
-  margin var(--wren-space-3) var(--wren-space-4)
-  padding var(--wren-space-3) 0 0
-  border-top 1px solid var(--wren-border-subtle)
-  font-size 10px
-  letter-spacing .6px
+  .requestItemTitleSubText
+    font-weight 450
+
+.requestItemSource
+  position absolute
+  top 0
+  right 20px
+  bottom 0
+  display flex
+  align-items center
+  justify-content center
+  margin-top -2px
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  font-weight 450
+
+  div
+    margin-right 5px
+
+  svg
+    position relative
+    top 1px
+
+.requestItemOrigin
+  position absolute
+  top var(--wren-space-4)
+  right var(--wren-space-4)
+  display flex
+  align-items center
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  font-weight 400
+
+  .requestItemOriginIcon
+    display flex
+    align-items center
+    justify-content center
+    margin-right var(--wren-space-1)
+
+.requestItemStatus
+  position absolute
+  bottom var(--wren-space-4)
+  left 64px
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-small)
+  font-weight 400
+
+.requestItemRight
+  position relative
+  left 1px
+  display flex
+  width 64px
+  align-items center
+  justify-content center
+  transform scaleX(-1)
+
+.requestItemDetailsSlide
+  display flex
+  align-items center
+  padding-top var(--wren-space-1)
+  padding-left var(--wren-space-2)
+  color var(--wren-warning)
+  font-size var(--wren-type-small)
+  font-weight 500
+  letter-spacing 0
+
+.requestItemDetailsIndicator
+  display flex
+  width 10px
+  height 10px
+  align-items center
+  justify-content center
+  margin-right var(--wren-space-1)
+  border 1px solid var(--wren-border-default)
+  border-radius 50%
+
+  .requestItemDetailsIndicatorMarker
+    position relative
+    width 5px
+    height 5px
+    border-radius 50%
+    background var(--wren-warning)
+    animation lit 1s ease-in-out infinite alternate
+
+.requestItemWave,
+.requestItemWaveDisabled
+  display none
 
 .requestItemSummary
+  display flex
+  align-items center
+  justify-content center
   padding var(--wren-space-2) var(--wren-space-4) var(--wren-space-4)
   color var(--wren-text-secondary)
-  font-size 12px
+  font-size var(--wren-type-small)
+  font-weight 450
+  text-align center
+
+.requestItemHeader,
+.requestItemHeader:hover,
+.requestItemHeader:active
+  margin 0
+  background transparent
+  pointer-events none

@@ -13,6 +13,84 @@ import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants
 const FEE_WARNING_THRESHOLD_USD = 50
 
 export class Notify extends React.Component {
+  constructor(props, context) {
+    super(props, context)
+    this.dialogRef = React.createRef()
+    this.activeDialog = null
+    this.previousFocus = null
+  }
+
+  componentDidMount() {
+    this.syncDialogFocus()
+  }
+
+  componentDidUpdate() {
+    this.syncDialogFocus()
+  }
+
+  componentWillUnmount() {
+    this.previousFocus?.focus?.()
+  }
+
+  syncDialogFocus() {
+    const dialog = this.dialogRef.current
+
+    if (dialog && dialog !== this.activeDialog) {
+      this.previousFocus = document.activeElement
+      this.activeDialog = dialog
+      const firstControl =
+        dialog.querySelector('[data-dialog-initial-focus]') ||
+        dialog.querySelector('button:not(:disabled), a[href], [tabindex="0"]')
+      ;(firstControl || dialog).focus()
+    } else if (!dialog && this.activeDialog) {
+      this.activeDialog = null
+      this.previousFocus?.focus?.()
+      this.previousFocus = null
+    }
+  }
+
+  handleDialogKeyDown(event, dismissible) {
+    if (event.key === 'Escape' && dismissible) {
+      event.preventDefault()
+      this.store.notify()
+      return
+    }
+
+    if (event.key !== 'Tab' || !this.dialogRef.current) return
+
+    const focusable = Array.from(
+      this.dialogRef.current.querySelectorAll('button:not(:disabled), a[href], [tabindex="0"]')
+    )
+    if (!focusable.length) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
+  renderDialog(content, dismissible = true) {
+    return (
+      <div
+        ref={this.dialogRef}
+        className='notify cardShow'
+        role='dialog'
+        aria-modal='true'
+        aria-labelledby='wren-notify-title'
+        tabIndex={-1}
+        onKeyDown={(event) => this.handleDialogKeyDown(event, dismissible)}
+        onMouseDown={dismissible ? () => this.store.notify() : undefined}
+      >
+        {content}
+      </div>
+    )
+  }
+
   mainnet() {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
@@ -20,11 +98,11 @@ export class Notify extends React.Component {
           <div className='notifyWrenIcon'>
             <img alt='' aria-hidden='true' src={wrenIcon} />
           </div>
-          <div className='notifyTitle'>Welcome to Wren!</div>
-          <div className='notifySubtitle'>System-wide web3</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Welcome to Wren</h2>
+          <div className='notifySubtitle'>Your desktop EVM wallet</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Please read{' '}
+              Read{' '}
               <button
                 type='button'
                 className='notifyBodyLink'
@@ -34,20 +112,20 @@ export class Notify extends React.Component {
               >
                 our license
               </button>
-              , use at your own risk and verify transactions and account details on a signing device whenever
-              possible.
+              . Use Wren at your own risk. When possible, verify transactions and account details on your
+              signing device.
             </div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:action', 'muteWelcomeWarning')
                 this.store.notify()
               }}
             >
-              <div className='notifyInputOptionText'>Let&apos;s go!</div>
+              <div className='notifyInputOptionText'>Continue</div>
             </button>
           </div>
         </div>
@@ -63,10 +141,10 @@ export class Notify extends React.Component {
             <div className='notifyWrenIcon'>
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
-            <div className='notifyTitle'>Wren Preview</div>
+            <h2 id='wren-notify-title' className='notifyTitle'>Wren Preview</h2>
             <div className='notifyBody'>
               <div className='notifyBodyBlock'>
-                <div className='notifySection'>Use hardware signers for high value accounts</div>
+                <div className='notifySection'>Use hardware signers for high-value accounts.</div>
                 <div className='notifySection'>
                   <span>Read</span>
                   <button
@@ -78,10 +156,10 @@ export class Notify extends React.Component {
                   >
                     our license
                   </button>
-                  <span>and use Wren at your own risk</span>
+                  <span>. Use Wren at your own risk.</span>
                 </div>
                 <div className='notifySection'>
-                  <span>Report problems through </span>
+                  <span>Report a problem through </span>
                   <button
                     type='button'
                     className='notifyBodyLink'
@@ -97,13 +175,13 @@ export class Notify extends React.Component {
             <div className='notifyInput'>
               <button
                 type='button'
-                className='notifyInputOption notifyInputSingleButton'
+                className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
                 onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
                   this.store.notify()
                 }}
               >
-                <div className='notifyInputOptionText notifyBetaGo'>Let&apos;s go!</div>
+                <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
               </button>
             </div>
           </div>
@@ -116,7 +194,7 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Gas Fee Warning</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Gas fee warning</h2>
           <div className='notifyBody'>
             {feeUSD !== '0.00' ? (
               <>
@@ -128,12 +206,12 @@ export class Notify extends React.Component {
                 We were unable to determine this transaction&apos;s fee in USD.
               </div>
             )}
-            <div className='notifyBodyQuestion'>Are you sure you want to proceed?</div>
+            <div className='notifyBodyQuestion'>Review the fee before you continue.</div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -142,7 +220,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.rpc('approveRequest', req, () => {})
                 this.store.notify()
@@ -171,14 +249,14 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer unavailable for signing!</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Signer unavailable</h2>
           <div className='notifyBody'>
-            <div className='notifyBodyQuestion'>Please check the signer for this account and try again</div>
+            <div className='notifyBodyQuestion'>Check the signer for this account, then try again.</div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -195,15 +273,15 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>No Signer Attached!</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>No signer attached</h2>
           <div className='notifyBody'>
-            <div className='notifyBodyLine'>No signer attached for this account</div>
-            <div className='notifyBodyQuestion'>Please attach a signer that can sign for this account</div>
+            <div className='notifyBodyLine'>This account does not have a signer.</div>
+            <div className='notifyBodyQuestion'>Attach a signer that can sign for this account.</div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -226,7 +304,7 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer Compatibility</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Signer compatibility</h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               {`Your ${capitalize(signer)} is not compatible with ${capitalize(tx)} ${
@@ -243,7 +321,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -252,7 +330,7 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
@@ -322,10 +400,10 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
-            <div>Blind Signing</div>
-            <div>Disabled</div>
-          </div>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            <div>Blind signing</div>
+            <div>disabled</div>
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               Your Ledger rejected data that it could not fully verify on-device.
@@ -341,7 +419,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -366,19 +444,19 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
-            <div>Hot Signer Alpha</div>
-          </div>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            <div>Hot signer preview</div>
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Wren hot signers are in alpha! Do not use them with high value accounts and verify your backups
-              are valid. Only proceed if you understand and accept these risks.
+              Hot signers are experimental. Do not use them with high-value accounts. Verify your backups
+              before relying on this signer, and proceed only if you understand the risk.
             </div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -403,9 +481,9 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
-            <div>Hot Signer Address Mismatch</div>
-          </div>
+          <h2 id='wren-notify-title' className='notifyTitle'>
+            <div>Hot signer address mismatch</div>
+          </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               The unlocked hot signer did not match the address shown in Wren and has been relocked.
@@ -414,7 +492,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputSingleButton'
+              className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -431,15 +509,15 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open External Link</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Open external link</h2>
           <div className='notifyBody'>
             <div className='notifyBodyLineUrl'>{url}</div>
-            <div className='notifyBodyLine'>{'Open Link in Browser?'}</div>
+            <div className='notifyBodyLine'>Open this link in your browser?</div>
           </div>
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -448,13 +526,13 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExternal', url)
                 this.store.notify()
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>Open link</div>
             </button>
           </div>
         </div>
@@ -467,18 +545,16 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open Block Explorer</div>
+          <h2 id='wren-notify-title' className='notifyTitle'>Open block explorer</h2>
           {hash ? (
             <div className='notifyBody'>
-              <div className='notifyBodyLine'>
-                {'Wren will open a block explorer in your browser for transaction:'}
-              </div>
+              <div className='notifyBodyLine'>{'Wren will open this transaction in your browser:'}</div>
               <div className='notifyBodyHash'>{hash}</div>
             </div>
           ) : (
             <div className='notifyBody'>
-              <div className='notifyBodyLine'>{`Wren will open the ${chainName}`}</div>
-              <div className='notifyBodyLine'>{`block explorer in your browser:`}</div>
+              <div className='notifyBodyLine'>{`Wren will open the ${chainName} block explorer`}</div>
+              <div className='notifyBodyLine'>in your browser:</div>
               <div className='notifyBodyHash'>{explorerUrl}</div>
             </div>
           )}
@@ -486,7 +562,7 @@ export class Notify extends React.Component {
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny'
+              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
                 this.store.notify()
               }}
@@ -495,13 +571,13 @@ export class Notify extends React.Component {
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed'
+              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
                 this.store.notify()
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>Open explorer</div>
             </button>
           </div>
           <button
@@ -526,101 +602,31 @@ export class Notify extends React.Component {
     const notify = this.store('view.notify')
 
     if (notify === 'mainnet') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.mainnet()}
-        </div>
-      )
+      return this.renderDialog(this.mainnet())
     } else if (notify === 'betaDisclosure') {
-      return <div className='notify cardShow'>{this.betaDisclosure()}</div>
+      return this.renderDialog(this.betaDisclosure(), false)
     } else if (notify === 'gasFeeWarning') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.gasFeeWarning(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.gasFeeWarning(this.store('view.notifyData')))
     } else if (notify === 'noSignerWarning') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.noSignerWarning(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.noSignerWarning(this.store('view.notifyData')))
     } else if (notify === 'signerUnavailableWarning') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.signerUnavailableWarning(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.signerUnavailableWarning(this.store('view.notifyData')))
     } else if (notify === 'signerCompatibilityWarning') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.signerCompatibilityWarning(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.signerCompatibilityWarning(this.store('view.notifyData')))
     } else if (notify === 'contractData') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.contractData()}
-        </div>
-      )
+      return this.renderDialog(this.contractData())
     } else if (notify === 'hotAccountWarning') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.hotAccountWarning()}
-        </div>
-      )
+      return this.renderDialog(this.hotAccountWarning())
     } else if (notify === 'hotSignerMismatch') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.hotSignerMismatch()}
-        </div>
-      )
+      return this.renderDialog(this.hotSignerMismatch())
     } else if (notify === 'openExternal') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.openExternal(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.openExternal(this.store('view.notifyData')))
     } else if (notify === 'openExplorer') {
-      return (
-        <div className='notify cardShow' onMouseDown={() => this.store.notify()}>
-          {/* <div className='notifyCloseButton' onMouseDown={() => this.store.notify()}>
-            {'close'}
-          </div> */}
-          {this.openExplorer(this.store('view.notifyData'))}
-        </div>
-      )
+      return this.renderDialog(this.openExplorer(this.store('view.notifyData')))
     } else if (notify === 'extensionConnect') {
       const { browser, extensionId, pairingCode, requestId } = this.store('view.notifyData')
 
-      return (
+      return this.renderDialog(
         <ExtensionConnectNotification
           browser={browser}
           extensionId={extensionId}
@@ -634,7 +640,8 @@ export class Notify extends React.Component {
               this.store.notify()
             }
           }}
-        />
+        />,
+        false
       )
     } else {
       return null

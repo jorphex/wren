@@ -15,7 +15,9 @@ const renderMenu = () => {
 it('opens the dashboard with the current visibility inverted', () => {
   renderMenu()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open dashboard' }))
+  const button = screen.getByRole('button', { name: 'Open dashboard' })
+  expect(button.classList.contains('wrenShellNav')).toBe(true)
+  fireEvent.click(button)
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
 })

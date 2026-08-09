@@ -4,49 +4,32 @@ import styled from 'styled-components'
 import { SlideProceed } from '../../styled'
 
 const ProceedButton = styled.button`
-  width: 180px;
-  height: 48px;
-  padding: 0;
-  border-radius: 24px;
-  border: 0;
-  background: var(--ghostA);
-  border-bottom: 2px solid var(--ghostZ);
-  box-shadow: 0px 2px 6px var(--ghostY);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-  animation: cardShow 400ms linear both;
-  animation-delay: 400ms;
-  color: inherit;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  &:hover {
-    background: var(--ghostB);
-  }
+  min-width: 156px;
+  height: 46px;
 `
 
 export const ProceedSkip = styled.button`
   display: inline-block;
-  height: 32px;
-  font-size: 10px;
-  border-radius: 16px;
-  border: 2px solid var(--ghostX);
-  padding: 8px 16px;
-  background: transparent;
-  box-sizing: border-box;
-  animation: cardShow 400ms linear both;
-  animation-delay: 400ms;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  text-transform: uppercase;
-  color: var(--outerspace08);
-  &:hover {
-    color: var(--outerspace);
-  }
+  min-width: 96px;
+  height: 48px;
+  font-size: 14px;
 `
+
+const BackButton = styled.button`
+  min-width: 96px;
+  height: 48px;
+`
+
+const Back = ({ slide, onClick }) =>
+  slide > 1 ? (
+    <BackButton
+      type='button'
+      className='wrenControl wrenControlSecondary wrenOnboardSecondary'
+      onClick={onClick}
+    >
+      Back
+    </BackButton>
+  ) : null
 
 const clickThrottle = (fn, [block, setBlock]) => {
   return () => {
@@ -63,7 +46,12 @@ export const Proceed = ({ slide, proceed = {}, nextSlide, prevSlide, onComplete 
   if (proceed.action === 'next') {
     return (
       <SlideProceed key={slide}>
-        <ProceedButton type='button' onClick={clickThrottle(nextSlide, blockState)}>
+        <Back slide={slide} onClick={clickThrottle(prevSlide, blockState)} />
+        <ProceedButton
+          type='button'
+          className='wrenControl wrenControlPrimary wrenControlLarge wrenOnboardPrimary'
+          onClick={clickThrottle(nextSlide, blockState)}
+        >
           {proceed.text}
         </ProceedButton>
       </SlideProceed>
@@ -71,7 +59,12 @@ export const Proceed = ({ slide, proceed = {}, nextSlide, prevSlide, onComplete 
   } else if (proceed.action === 'skip') {
     return (
       <SlideProceed key={slide}>
-        <ProceedSkip type='button' onClick={clickThrottle(nextSlide, blockState)}>
+        <Back slide={slide} onClick={clickThrottle(prevSlide, blockState)} />
+        <ProceedSkip
+          type='button'
+          className='wrenControl wrenControlSecondary wrenOnboardSecondary'
+          onClick={clickThrottle(nextSlide, blockState)}
+        >
           {proceed.text}
         </ProceedSkip>
       </SlideProceed>
@@ -79,7 +72,12 @@ export const Proceed = ({ slide, proceed = {}, nextSlide, prevSlide, onComplete 
   } else if (proceed.action === 'complete') {
     return (
       <SlideProceed key={slide}>
-        <ProceedButton type='button' onClick={clickThrottle(onComplete, blockState)}>
+        <Back slide={slide} onClick={clickThrottle(prevSlide, blockState)} />
+        <ProceedButton
+          type='button'
+          className='wrenControl wrenControlPrimary wrenControlLarge wrenOnboardPrimary'
+          onClick={clickThrottle(onComplete, blockState)}
+        >
           {proceed.text}
         </ProceedButton>
       </SlideProceed>

@@ -17,3 +17,9 @@ test('keeps the compact address presentation when no identity is known', () => {
   expect(screen.getByLabelText(address).textContent).toBe('0x000000000001')
   expect(screen.getByText(address)).toBeTruthy()
 })
+
+test('keeps copied feedback visible without requiring hover', () => {
+  render(<AddressIdentity address={address} copied />)
+
+  expect(screen.getByText('Address copied').closest('.clusterAddressRecipientFullCopied')).toBeTruthy()
+})

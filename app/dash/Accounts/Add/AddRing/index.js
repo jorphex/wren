@@ -4,7 +4,7 @@ import { addHexPrefix, isHexString, isValidPrivate } from '@ethereumjs/util'
 const validatePrivateKey = (privateKeyStr) => {
   const prefixed = addHexPrefix(privateKeyStr)
   if (!isHexString(prefixed) || !isValidPrivate(prefixed.slice(2))) {
-    return 'INVALID PRIVATE KEY'
+    return 'Enter a valid private key'
   }
 }
 
@@ -12,10 +12,10 @@ export default function AddRing({ accountData }) {
   return (
     <AddHotAccount
       {...{
-        title: 'Private Key',
-        summary: 'A private key account lets you add accounts from individual private keys',
+        title: 'Private key',
+        summary: 'Import an account from a private key.',
         svgName: 'key',
-        intro: 'Add Keyring Account',
+        intro: 'Add private key account',
         accountData,
         createSignerMethod: 'createFromPrivateKey',
         newAccountType: 'keyring',

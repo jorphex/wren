@@ -4,11 +4,16 @@ import { canApproveWalletCalls, Footer } from '../../../../app/tray/Footer'
 import { render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
 
-jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../resources/link', () => ({
+  invoke: jest.fn(),
+  rpc: jest.fn(),
+  send: jest.fn()
+}))
 
 beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
+  link.invoke.mockReset()
 })
 
 let resizeCallback
@@ -34,12 +39,13 @@ afterAll(() => {
 const request = (overrides = {}) => ({
   type: 'walletCalls',
   handlerId: 'wallet-call-request',
+  calls: [{ to: '0x2222222222222222222222222222222222222222', value: '0x0', data: '0x' }],
   simulation: { status: 'succeeded' },
   preparation: { status: 'succeeded' },
   ...overrides
 })
 
-const renderRequestFooter = (req, signerType = 'ledger') => {
+const renderRequestFooter = (req, signerType = 'ledger', crumbData = {}) => {
   const account = req.account || '0x0000000000000000000000000000000000000001'
   const store = Restore.create(
     {
@@ -54,7 +60,7 @@ const renderRequestFooter = (req, signerType = 'ledger') => {
           nav: [
             {
               view: 'requestView',
-              data: { accountId: account, requestId: req.handlerId, step: 'confirm' }
+              data: { accountId: account, requestId: req.handlerId, step: 'confirm', ...crumbData }
             }
           ]
         }
@@ -119,11 +125,56 @@ it('renders watch-only wallet-call submission as a disabled native button', () =
   expect(screen.getByRole('button', { name: 'Watch-only' }).disabled).toBe(true)
 })
 
+it('applies a valid wallet-call draft through the bounded IPC action', async () => {
+  const account = '0x0000000000000000000000000000000000000001'
+  const req = request({
+    account,
+    chainId: '0x1',
+    preparation: {
+      status: 'succeeded',
+      maxFee: '0x52080',
+      calls: [
+        {
+          transaction: {
+            nonce: '0x5',
+            type: '0x2',
+            gasLimit: '0x5208',
+            maxFeePerGas: '0x10',
+            maxPriorityFeePerGas: '0x1'
+          },
+          maxFee: '0x52080'
+        }
+      ]
+    }
+  })
+  const walletCallsDraft = {
+    startingNonce: '9',
+    calls: [{ mode: 'eip1559', gasLimit: '24576', maxFeePerGas: '32', maxPriorityFeePerGas: '2' }]
+  }
+  link.invoke.mockResolvedValueOnce({ success: true })
+  const { user } = renderRequestFooter(req, 'ledger', {
+    step: 'adjustWalletCalls',
+    walletCallsDraft
+  })
+
+  await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+  expect(link.invoke).toHaveBeenCalledWith('tray:adjustWalletCalls', {
+    account,
+    handlerId: req.handlerId,
+    adjustment: {
+      startingNonce: '0x9',
+      calls: [{ gasLimit: '0x6000', maxFeePerGas: '0x773594000', maxPriorityFeePerGas: '0x77359400' }]
+    }
+  })
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'panel')
+})
+
 it.each([
-  ['access', 'Approve', ['tray:giveAccess', expect.anything(), true]],
+  ['access', 'Allow access', ['tray:giveAccess', expect.anything(), true]],
   [
     'addChain',
-    'Review',
+    'Review network',
     [
       'tray:action',
       'navDash',
@@ -187,7 +238,7 @@ describe('asset suggestion lifecycle', () => {
   it('keeps the suggestion pending while opening token review', async () => {
     const { user } = renderFooter()
 
-    await user.click(screen.getByRole('button', { name: 'Review' }))
+    await user.click(screen.getByRole('button', { name: 'Review token' }))
 
     expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
       view: 'tokens',

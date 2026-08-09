@@ -1,6 +1,7 @@
 import { act, render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
 import { Signer } from '../../../../app/dash/Signer'
+import { getAddress } from '../../../../resources/utils'
 
 jest.mock('../../../../resources/link', () => ({
   send: jest.fn(),
@@ -8,15 +9,20 @@ jest.mock('../../../../resources/link', () => ({
 }))
 
 class SignerHarness extends Signer {
+  renderSignerStatus() {
+    return null
+  }
+
   store(...path) {
     if (path[0] === 'main.signers') {
       return {
         id: this.props.id,
         type: this.props.type,
         status: this.props.status,
-        addresses: []
+        addresses: this.props.addresses || []
       }
     }
+    if (path[0] === 'main.accounts') return this.props.addedAccounts?.[path[1]]
   }
 }
 
@@ -87,7 +93,7 @@ it('submits one normalized Trezor pairing code', async () => {
     pairing: { selectedMethod: 'CodeEntry' }
   })
 
-  expect(screen.getByRole('button', { name: 'Submit Pairing Code' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Submit pairing code' }).disabled).toBe(true)
   await user.type(screen.getByRole('textbox', { name: 'Trezor pairing code' }), 'abc123')
   await user.keyboard('{Enter}{Enter}')
 
@@ -121,4 +127,26 @@ it('keeps a GridPlus pairing code available after an error and retries once', as
   expect(link.rpc).toHaveBeenCalledTimes(2)
   act(() => succeed(null))
   expect(input.value).toBe('')
+})
+
+it('names available signer account actions with their current add or remove behavior', () => {
+  const address = '0x00000000000000000000000000000000000000aa'
+  const checkSummedAddress = getAddress(address)
+  const view = renderSigner({ type: 'ledger', status: 'ok', addresses: [address] })
+
+  expect(screen.getByRole('button', { name: `Add ${checkSummedAddress} as an account` })).toBeTruthy()
+
+  view.rerender(
+    <SignerHarness
+      id='device-1'
+      expanded={true}
+      name='Test signer'
+      type='ledger'
+      status='ok'
+      addresses={[address]}
+      addedAccounts={{ [address]: { address } }}
+    />
+  )
+
+  expect(screen.getByRole('button', { name: `Remove ${checkSummedAddress} from accounts` })).toBeTruthy()
 })

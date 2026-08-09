@@ -4,7 +4,7 @@ import Restore from 'react-restore'
 import { DisplayFiatPrice, DisplayValue } from '../../../../../resources/Components/DisplayValue'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 
-class Balance extends React.Component {
+export class Balance extends React.Component {
   render() {
     const { symbol, balance, i, scanning, chainId } = this.props
     const { priceChange, decimals, balance: balanceValue, usdRate: currencyRate, logoURI } = balance
@@ -31,6 +31,7 @@ class Balance extends React.Component {
     const chainColor = this.store('main.networksMeta.ethereum', chainId, 'primaryColor')
 
     const ethMatch = logoURI?.includes('/coins/images/279/large/ethereum.png')
+    const hideBalances = this.store('selected.hideBalances')
 
     return (
       <div
@@ -54,29 +55,43 @@ class Balance extends React.Component {
             {name}
           </div>
           <div className='signerBalanceValue' title={symbol}>
-            <DisplayValue
-              type='ether'
-              value={balanceValue}
-              valueDataParams={{ decimals }}
-              currencySymbol={symbol}
-            />
+            {hideBalances ? (
+              <span className='signerBalancePrivateValue' aria-label='Balance hidden'>
+                •••• <span>{symbol}</span>
+              </span>
+            ) : (
+              <DisplayValue
+                type='ether'
+                value={balanceValue}
+                valueDataParams={{ decimals }}
+                currencySymbol={symbol}
+              />
+            )}
           </div>
           <div className='signerBalancePrice'>
-            <div className='signerBalanceOk'>
-              <span className='signerBalanceCurrentPrice'>
-                <DisplayFiatPrice decimals={decimals} currencyRate={currencyRate} isTestnet={isTestnet} />
+            {hideBalances ? (
+              <span className='signerBalancePrivatePrice' aria-label='Value hidden'>
+                $••••
               </span>
-              <span className={priceChangeClass}>
-                <span>{displayPriceChange()}</span>
-              </span>
-            </div>
-            <DisplayValue
-              type='fiat'
-              value={balanceValue}
-              valueDataParams={{ decimals, currencyRate, isTestnet }}
-              currencySymbol='$'
-              displayDecimals={false}
-            />
+            ) : (
+              <>
+                <div className='signerBalanceOk'>
+                  <span className='signerBalanceCurrentPrice'>
+                    <DisplayFiatPrice decimals={decimals} currencyRate={currencyRate} isTestnet={isTestnet} />
+                  </span>
+                  <span className={priceChangeClass}>
+                    <span>{displayPriceChange()}</span>
+                  </span>
+                </div>
+                <DisplayValue
+                  type='fiat'
+                  value={balanceValue}
+                  valueDataParams={{ decimals, currencyRate, isTestnet }}
+                  currencySymbol='$'
+                  displayDecimals={false}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

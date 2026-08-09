@@ -50,8 +50,9 @@ export class SettingsExpanded extends React.Component {
             <div className='panelBlockTitle'>Name</div>
             <div className='panelBlockValues panelBlockItem'>
               <input
+                className='wrenInput'
                 type='text'
-                tabIndex='-1'
+                aria-label='Account name'
                 value={this.state.name}
                 onChange={(e) => {
                   this.setState({ name: e.target.value })

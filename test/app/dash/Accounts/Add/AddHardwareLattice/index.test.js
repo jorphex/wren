@@ -17,10 +17,10 @@ jest.mock(
 const renderSetup = () => render(<AddHardwareLattice index={3} />)
 
 async function enterDeviceId(user, deviceId = 'GRID-123') {
-  const name = screen.getByRole('textbox', { name: 'Device Name' })
+  const name = screen.getByRole('textbox', { name: 'Device name' })
   await user.click(name)
   await user.keyboard('{Enter}')
-  const id = screen.getByRole('textbox', { name: 'Enter device id' })
+  const id = screen.getByRole('textbox', { name: 'Enter device ID' })
   await user.type(id, deviceId)
   return id
 }
@@ -31,13 +31,13 @@ it('uses normal keyboard controls while keeping inactive steps hidden', async ()
   const { user } = renderSetup()
 
   await user.tab()
-  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Device Name' }))
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Device name' }))
   await user.keyboard('{Enter}')
 
-  expect(screen.getByRole('textbox', { name: 'Enter device id' })).toBeTruthy()
-  expect(screen.queryByRole('textbox', { name: 'Device Name' })).toBeNull()
+  expect(screen.getByRole('textbox', { name: 'Enter device ID' })).toBeTruthy()
+  expect(screen.queryByRole('textbox', { name: 'Device name' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Create' }).disabled).toBe(true)
-  expect(screen.getByLabelText('Device Name').closest('[inert]')).toBeTruthy()
+  expect(screen.getByLabelText('Device name').closest('[inert]')).toBeTruthy()
 })
 
 it('creates one GridPlus signer with the original RPC payload', async () => {
@@ -98,12 +98,12 @@ it('shows creation errors and allows a clean successful retry', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Create' }))
   expect(screen.getByRole('alert').textContent).toBe('GridPlus unavailable')
-  await user.click(screen.getByRole('button', { name: 'try again' }))
+  await user.click(screen.getByRole('button', { name: 'Try again' }))
 
-  expect(screen.getByRole('textbox', { name: 'Device Name' })).toBeTruthy()
+  expect(screen.getByRole('textbox', { name: 'Device name' })).toBeTruthy()
   expect(screen.queryByRole('alert')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Next' }))
-  expect(screen.getByRole('textbox', { name: 'Enter device id' }).value).toBe('GRID-123')
+  expect(screen.getByRole('textbox', { name: 'Enter device ID' }).value).toBe('GRID-123')
   await user.click(screen.getByRole('button', { name: 'Create' }))
 
   expect(link.rpc).toHaveBeenCalledTimes(2)

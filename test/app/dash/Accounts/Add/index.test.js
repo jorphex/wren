@@ -41,7 +41,7 @@ it('enters through an explicit transition node without findDOMNode', () => {
   act(() => store.setAddAccount(true))
   act(() => jest.runAllTimers())
 
-  expect(screen.getByText('Add Account')).toBeTruthy()
+  expect(screen.getByText('Add account')).toBeTruthy()
   expect(ReactDOM.findDOMNode).not.toHaveBeenCalled()
 })
 

@@ -1,102 +1,89 @@
-// .moduleItemRow
-//   display flex
-//   margin-bottom -3px
-
-// .moduleItemRow:last-child
-//   margin-bottom 0px
-
-// .moduleItem:first-child
-//   border-top-left-radius 17px
-//   border-top-right-radius 17px
-//   margin-top 3px 
-
-// .moduleItem:last-child
-//   border-bottom-left-radius 17px
-//   border-bottom-right-radius 17px
-
-// .moduleItem:first-child:last-child
-//   border-radius 17px
-
-// .moduleItemRow
-//   .moduleItem
-//     margin-right 0px
-//     border-radius 8px
-//     margin-top 3px
-
-//   .moduleItem:first-child
-//     border-top-left-radius 17px
-//     border-bottom-left-radius 17px
-    
-//   .moduleItem:last-child
-//     border-top-right-radius 17px
-//     border-bottom-right-radius 17px
-//     margin-right 3px
-
-//   .moduleItem:first-child:last-child
-//     border-radius 17px
-//     margin-left 3px
-
-//   .moduleItemSpace
-//     justify-content center
-//     padding 20px
-
 .moduleItem
   position relative
-  justify-content center
-  padding 12px
-  font-size 12px
-  font-weight 300
-  transform translateZ(0)
   z-index 2000
-  font-weight 400
   display flex
-  align-items center
-  padding 16px
-  min-height 40px
-  box-sizing border-box
-  text-transform uppercase
   flex 1
-
-  // .moduleSubItem
-  //   background blue
+  align-items center
+  justify-content center
+  min-height 40px
+  padding var(--wren-space-4)
+  box-sizing border-box
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  font-weight 500
+  text-transform none
 
 .moduleItemSignerType
   display flex
-  justify-content center
   align-items center
-  font-weight 300
-  font-size 16px
-  text-transform none
+  justify-content center
+  color var(--wren-text-primary)
+  font-size var(--wren-type-body)
+  font-weight 500
+
+.signerPreviewSummary
+  display flex
+  width 100%
+  min-height 54px
+  padding 0 var(--wren-space-4)
+  box-sizing border-box
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-4)
+
+  .moduleItemSignerType
+    justify-content flex-start
+
+.signerPreviewStatus
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  font-weight 450
+  white-space nowrap
 
 .moduleItemIcon
-  margin-right 8px
+  margin-right var(--wren-space-2)
+  color var(--wren-text-secondary)
 
 .moduleItemInput
-  padding 8px
+  padding var(--wren-space-2)
   overflow hidden
 
 .moduleItemButton
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
   cursor pointer
-  * 
+  transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+  *
     pointer-events none
 
-.moduleItemButton:hover
-  background var(--ghostB)
-  transform translateY(-1px)
-  border-bottom 2px solid var(--ghostZ)
-  box-shadow 0px 8px 30px -12px var(--ghostX)
-   
-.moduleItemButton:active
-  background var(--ghostB)
-  transform translateY(0px)
-  box-shadow 0px 2px 4px var(--ghostX)
+  &:hover
+    border-color var(--wren-border-subtle)
+    color var(--wren-text-primary)
+    background var(--wren-surface-hover)
+
+  &:active
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  &:disabled
+    color var(--wren-text-disabled)
+    cursor default
+    opacity .6
 
 .moduleItemEditNameTitle
   position absolute
   top 28px
   left 30px
-  right 0px
-  font-size 8px
+  right 0
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
 
 .moduleItemEditName
   display flex
@@ -104,47 +91,54 @@
   overflow hidden
 
   input
-    border-radius 0px
-    transition var(--standardFast)
-    font-size 18px
+    width 100%
+    min-width 0
+    padding var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    outline none
 
-  input:hover, input:focus
-    background var(--ghostA)
-    box-shadow 0px 0px 0px 0px var(--ghostZ)
+    &:hover
+      background var(--wren-surface-hover)
+
+    &:focus
+      border-color var(--wren-focus)
+      box-shadow 0 0 0 2px var(--wren-focus)
 
   .moduleItemInputSubmit
-    padding 16px
-    border-radius 12px
-    margin-left 3px
-    background var(--ghostB)
-    border-bottom 2px solid var(--ghostZ)
-    transition var(--standardFast)
-    box-shadow 0px 2px 4px 0px var(--ghostY)
+    margin-left var(--wren-space-2)
+    padding 0 var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-surface-card)
     box-sizing border-box
     cursor pointer
-    margin 8px
+    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+
     *
       pointer-events none
 
-.moduleItemInputSubmit:hover
-  transform translateY(-1px)
-  background var(--ghostC)
-  box-shadow 0px 4px 8px 0px var(--ghostY)
+    &:hover
+      color var(--wren-text-primary)
+      background var(--wren-surface-hover)
 
-.moduleItemInputSubmit:active
-  transform translateY(0px)
-  background var(--ghostC)
-  box-shadow 0px 1px 2px 0px var(--ghostY)
-  color var(--good)
+    &:active
+      background var(--wren-surface-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
 .moduleItemSignerStatus
   display flex
-  display relative
-  top 1px
-
-  svg
-    position relative
-    top -1px
+  align-items center
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
 
   span
-    padding-left 12px
+    padding-left var(--wren-space-2)

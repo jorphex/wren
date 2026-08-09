@@ -148,7 +148,7 @@ export class Signer extends React.Component {
             <div className='signerPinActions'>
               <button
                 type='button'
-                className='signerPinMessage signerPinSubmit'
+                className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
                 disabled={!this.state.tPin || this.state.tPinPending}
                 onClick={() => this.submitPin()}
               >
@@ -158,7 +158,7 @@ export class Signer extends React.Component {
                 <button
                   type='button'
                   aria-label='Delete last PIN position'
-                  className='signerPinDelete'
+                  className='signerPinDelete wrenControl wrenControlSecondary wrenControlIcon'
                   onClick={this.backspacePin.bind(this)}
                 >
                   <Icon name='back' size={18} />
@@ -201,8 +201,9 @@ export class Signer extends React.Component {
       <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
         {active ? (
           <>
-            <div className='trezorPhraseInput'>
+            <div className='trezorPhraseInput wrenInputGroup'>
               <input
+                className='wrenInput'
                 aria-label='Trezor passphrase'
                 type='password'
                 value={this.state.tPhrase}
@@ -214,18 +215,18 @@ export class Signer extends React.Component {
             </div>
             <button
               type='button'
-              className='signerPinMessage signerPinSubmit'
+              className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
               disabled={this.state.tPhrasePending}
               onClick={() => this.submitPhrase()}
             >
-              Submit Passphrase
+              Submit passphrase
             </button>
             {allowsDeviceEntry ? (
               <>
                 <div className='signerPinMessageOr'>{'or'}</div>
                 <button
                   type='button'
-                  className='signerPinMessage signerPinSubmit'
+                  className='signerPinMessage signerPinSubmit wrenControl wrenControlSecondary'
                   disabled={this.state.tPhrasePending}
                   onClick={() => this.submitPhraseOnDevice()}
                 >
@@ -245,16 +246,17 @@ export class Signer extends React.Component {
     const pairing = this.props.pairing || {}
     const isCodeEntry = pairing.selectedMethod === 'CodeEntry' || pairing.selectedMethod === 2
     const title = isCodeEntry
-      ? 'Enter the 6-character pairing code shown on your Trezor'
-      : 'Enter the pairing tag shown on your Trezor'
+      ? 'Enter the 6-character pairing code shown on your Trezor.'
+      : 'Enter the pairing tag shown on your Trezor.'
 
     return (
       <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
         {active ? (
           <>
             <div className='signerLatticePairTitle'>{title}</div>
-            <div className='trezorPhraseInput'>
+            <div className='trezorPhraseInput wrenInputGroup'>
               <input
+                className='wrenInput'
                 aria-label='Trezor pairing code'
                 type='text'
                 autoFocus
@@ -272,11 +274,11 @@ export class Signer extends React.Component {
             </div>
             <button
               type='button'
-              className='signerPinMessage signerPinSubmit'
+              className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
               disabled={!this.state.tPairing || this.state.tPairingPending}
               onClick={() => this.submitPairing()}
             >
-              Submit Pairing Code
+              Submit pairing code
             </button>
           </>
         ) : null}
@@ -294,19 +296,19 @@ export class Signer extends React.Component {
     if (status === 'ok') {
       return (
         <div className='signerStatus'>
-          <div className='signerStatusIndicator signerStatusIndicatorReady'></div>
+          <div className='signerStatusIndicator signerStatusIndicatorReady' aria-hidden='true'></div>
         </div>
       )
     } else if (status === 'locked') {
       return (
         <div className='signerStatus'>
-          <div className='signerStatusIndicator signerStatusIndicatorLocked'></div>
+          <div className='signerStatusIndicator signerStatusIndicatorLocked' aria-hidden='true'></div>
         </div>
       )
     } else {
       return (
         <div className='signerStatus'>
-          <div className='signerStatusIndicator'></div>
+          <div className='signerStatusIndicator' aria-hidden='true'></div>
         </div>
       )
     }
@@ -316,17 +318,33 @@ export class Signer extends React.Component {
     const status = this.getStatus()
 
     if (status === 'ok') {
-      return <div className='signerStatusText signerStatusReady'>{'ready to sign'}</div>
+      return (
+        <div className='signerStatusText signerStatusReady' role='status'>
+          {'Ready to sign'}
+        </div>
+      )
     } else if (status === 'locked') {
       const hwSigner = isHardwareSigner(this.props.type)
-      const lockText = hwSigner ? 'Please unlock your ' + this.props.type : 'locked'
+      const lockText = hwSigner ? 'Unlock your ' + capitalize(this.props.type) : 'Locked'
 
       const classes = hwSigner ? 'signerStatusText' : 'signerStatusText signerStatusIssue'
-      return <div className={classes}>{lockText}</div>
+      return (
+        <div className={classes} role='status'>
+          {lockText}
+        </div>
+      )
     } else if (status === 'addresses') {
-      return <div className='signerStatusText'>{'deriving addresses'}</div>
+      return (
+        <div className='signerStatusText' role='status'>
+          {'Deriving addresses'}
+        </div>
+      )
     } else {
-      return <div className='signerStatusText'>{this.props.status}</div>
+      return (
+        <div className='signerStatusText' role='status'>
+          {this.props.status}
+        </div>
+      )
     }
   }
 
@@ -388,7 +406,7 @@ export class Signer extends React.Component {
     const zIndex = 1000 - this.props.index
 
     return (
-      <div className={signerClass + ' cardShow'} style={{ zIndex }}>
+      <section className={signerClass + ' cardShow'} style={{ zIndex }} aria-label={this.props.name}>
         <div className='signerTop'>
           <div className='signerDetails'>
             <div className='signerIcon'>
@@ -414,12 +432,12 @@ export class Signer extends React.Component {
               })()}
             </div>
             {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
-            <div className='signerName'>{this.props.name}</div>
+            <h2 className='signerName'>{this.props.name}</h2>
           </div>
           <button
             type='button'
             aria-label={`Open ${this.props.name || 'signer'} details`}
-            className='signerExpand'
+            className='signerExpand wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => this.expand(signer.id)}
           >
             <Icon name='details' size={14} />
@@ -430,7 +448,7 @@ export class Signer extends React.Component {
         {status === 'ok' || isLocked ? (
           <>
             <div className='signerAddedAccountTitle'>
-              {addedAccounts.length ? 'active accounts' : 'no active accounts'}
+              {addedAccounts.length ? 'Active accounts' : 'No active accounts'}
             </div>
             <div className='signerAccounts'>
               {addedAccounts.length ? (
@@ -461,8 +479,12 @@ export class Signer extends React.Component {
                   )
                 })
               ) : (
-                <button type='button' className='signerAccountsAdd' onClick={() => this.expand(signer.id)}>
-                  {'View available accounts'}
+                <button
+                  type='button'
+                  className='signerAccountsAdd wrenControl wrenControlSecondary'
+                  onClick={() => this.expand(signer.id)}
+                >
+                  {'Choose accounts'}
                 </button>
               )}
             </div>
@@ -474,7 +496,7 @@ export class Signer extends React.Component {
         ) : (
           <></>
         )}
-      </div>
+      </section>
     )
   }
 
@@ -506,14 +528,15 @@ export class Signer extends React.Component {
     const zIndex = 1000 - index
 
     return (
-      <div className={'expandedSigner cardShow'} style={{ zIndex }}>
+      <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
         {<div style={{ height: '22px' }} />}
         {this.statusText()}
         {type === 'lattice' && status === 'pair' ? (
           <div className='signerLatticePair'>
-            <div className='signerLatticePairTitle'>Please input your Lattice&apos;s pairing code</div>
-            <div className='signerLatticePairInput'>
+            <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
+            <div className='signerLatticePairInput wrenInputGroup'>
               <input
+                className='wrenInput'
                 aria-label='GridPlus pairing code'
                 autoFocus
                 value={this.state.latticePairCode}
@@ -541,7 +564,7 @@ export class Signer extends React.Component {
               type='button'
               disabled={!this.state.latticePairCode || this.state.latticePairPending}
               onClick={() => this.pairToLattice()}
-              className='signerLatticePairSubmit'
+              className='signerLatticePairSubmit wrenControl wrenControlPrimary'
             >
               Pair
             </button>
@@ -549,7 +572,7 @@ export class Signer extends React.Component {
         ) : status === 'ok' || isLocked ? (
           <>
             {this.renderSignerStatus()}
-            <div className='signerAddedAccountTitle'>{'available accounts'}</div>
+            <div className='signerAddedAccountTitle'>{'Available accounts'}</div>
             <div className='signerAccounts'>
               {signer.addresses.slice(startIndex, startIndex + addressLimit).map((address, index) => {
                 const added = this.store('main.accounts', address.toLowerCase())
@@ -558,6 +581,11 @@ export class Signer extends React.Component {
                   <button
                     type='button'
                     key={address}
+                    aria-label={
+                      added
+                        ? `Remove ${checkSummedAddress} from accounts`
+                        : `Add ${checkSummedAddress} as an account`
+                    }
                     className={!added ? 'signerAccount' : 'signerAccount signerAccountAdded'}
                     onClick={() => {
                       if (this.store('main.accounts', address.toLowerCase())) {
@@ -590,7 +618,7 @@ export class Signer extends React.Component {
               <button
                 type='button'
                 aria-label='Previous address page'
-                className='signerBottomPageBack'
+                className='signerBottomPageBack wrenControl wrenControlGhost wrenControlIcon'
                 disabled={page === 0}
                 onClick={() => this.nextPage(true)}
               >
@@ -602,7 +630,7 @@ export class Signer extends React.Component {
               <button
                 type='button'
                 aria-label='Next address page'
-                className='signerBottomPageNext'
+                className='signerBottomPageNext wrenControl wrenControlGhost wrenControlIcon'
                 disabled={startIndex + addressLimit >= signer.addresses.length}
                 onClick={() => this.nextPage()}
               >
@@ -627,23 +655,23 @@ export class Signer extends React.Component {
         <div className='signerControls'>
           {permissionId ? (
             <div className='signerControlDetail'>
-              <div className='signerControlDetailKey'>{'LATTICE PERMISSION ID (LEGACY):'}</div>
+              <div className='signerControlDetailKey'>{'Lattice permission ID (legacy)'}</div>
               <div className='signerControlDetailValue'>{permissionId}</div>
             </div>
           ) : null}
           {canReconnect && <ReloadSignerButton id={id} status={status} />}
           <button
             type='button'
-            className='signerControlOption signerControlOptionImportant'
+            className='signerControlOption signerControlOptionImportant wrenControl wrenControlDanger'
             onClick={() => {
               link.send('dash:removeSigner', id)
               link.send('tray:action', 'backDash')
             }}
           >
-            Remove Signer
+            Remove signer
           </button>
         </div>
-      </div>
+      </section>
     )
   }
 

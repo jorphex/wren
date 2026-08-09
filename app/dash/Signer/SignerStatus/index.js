@@ -82,10 +82,11 @@ export class SignerStatus extends React.Component {
           <div className='signerStatusMain'>
             <div className='signerUnlockWrap'>
               <input
+                id={`signer-password-${signer.id}`}
                 aria-label='Signer password'
                 autoFocus={true}
                 ref={this.inputRef}
-                className='signerUnlockInput'
+                className='signerUnlockInput wrenInput'
                 type='password'
                 value={unlockInput}
                 disabled={unlockPending}
@@ -97,7 +98,9 @@ export class SignerStatus extends React.Component {
                   }
                 }}
               />
-              <div className='signerUnlockInputLabel'>{'Enter password to unlock'}</div>
+              <label className='signerUnlockInputLabel' htmlFor={`signer-password-${signer.id}`}>
+                {'Enter the signer password to unlock'}
+              </label>
               {unlockError ? (
                 <div role='alert' className='signerUnlockError'>
                   {unlockError}
@@ -105,7 +108,7 @@ export class SignerStatus extends React.Component {
               ) : null}
               <button
                 type='button'
-                className='signerUnlockSubmit'
+                className='signerUnlockSubmit wrenControl wrenControlPrimary'
                 disabled={!unlockInput || unlockPending}
                 onClick={this.unlockSubmit.bind(this)}
               >

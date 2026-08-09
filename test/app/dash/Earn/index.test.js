@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '../../../componentSetup'
 import {
   Earn,
   activityPreviewLimit,
+  formatPercentLabel,
   formatReceiptAmount,
   positionsMatchAccount
 } from '../../../../app/dash/Earn'
@@ -28,6 +29,12 @@ jest.mock('../../../../app/dash/Earn/api', () => ({
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 const address = '0x0000000000000000000000000000000000000001'
+
+it('does not repeat an unavailable percentage label', () => {
+  expect(formatPercentLabel(undefined, 'Unavailable')).toBe('Unavailable')
+  expect(formatPercentLabel(0.07, 'Est. APY')).toBe('7% Est. APY')
+})
+
 const makeVault = (id, chainId, chainName, kind = 'direct') => ({
   id,
   chainId,
@@ -242,9 +249,9 @@ const store = Restore.create(
     main: {
       networks: {
         ethereum: {
-          1: { on: true, connection: { primary: { connected: true }, secondary: { connected: false } } },
-          8453: { on: false, connection: { primary: { connected: false }, secondary: { connected: false } } },
-          747474: { on: true, connection: { primary: { connected: true }, secondary: { connected: false } } }
+          1: { on: true, connection: { endpoints: [{ id: 'rpc-1', connected: true }] } },
+          8453: { on: false, connection: { endpoints: [{ id: 'rpc-1', connected: false }] } },
+          747474: { on: true, connection: { endpoints: [{ id: 'rpc-1', connected: true }] } }
         }
       }
     }
@@ -300,6 +307,8 @@ it('shows account positions in a distinct section before the chain-separated vau
   render(<ConnectedEarn />)
 
   const ethereumHeading = await screen.findByRole('heading', { name: 'Ethereum' })
+  expect(screen.getByRole('img', { name: 'Yearn' })).toBeTruthy()
+  expect(screen.getByText('A focused selection of established vaults, separated by chain.')).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Base' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Katana' })).toBeTruthy()
   const positionHeading = screen.getByRole('heading', { name: 'Your positions' })
@@ -653,7 +662,7 @@ it('opens chain settings explicitly instead of activating a chain', async () => 
   const { user } = render(<ConnectedEarn />)
   await screen.findByRole('heading', { name: 'Base' })
 
-  await user.click(screen.getByRole('button', { name: 'Manage chain' }))
+  await user.click(screen.getByRole('button', { name: 'Manage networks' }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'chains', data: {} })
 })

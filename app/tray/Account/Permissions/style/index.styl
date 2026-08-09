@@ -1,92 +1,84 @@
 .clearPermissionsButton
-  padding 6px
+  padding var(--wren-space-2)
 
 .clearPermissionsConfirm
   display flex
-  gap 6px
+  gap var(--wren-space-2)
 
 .clearPermissionsAction
-  appearance none
-  padding 0 12px
-  border 0
-  color inherit
-  font-family inherit
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus, var(--moon))
-    outline-offset 2px
-
-  &:disabled
-    cursor default
-    opacity .55
+  width 100%
 
 .clearPermissionsConfirm .clearPermissionsAction
   flex 1
 
 .clearPermissionsStatus
-  padding 10px 12px
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
   color var(--wren-text-secondary)
+  background var(--wren-surface-inset)
+  font-size var(--wren-type-small)
 
   &:focus-visible
-    outline 2px solid var(--wren-focus, var(--moon))
-    outline-offset -2px
-
-.signerBalanceTotal .signerBalanceShowAll
-  appearance none
-  border 0
-  border-bottom 2px solid var(--ghostZ)
-  color inherit
-  font-family inherit
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus, var(--moon))
+    outline 2px solid var(--wren-focus)
     outline-offset 2px
 
-  &:disabled
-    cursor default
-    opacity .55
+.signerBalanceTotal .signerBalanceShowAll
+  border 1px solid var(--wren-border-default)
+  color inherit
+  font-family var(--wren-font-ui)
 
 .signerPermissionControls .wrenToggle
   margin-top 2px
 
 .moduleMainPermissions
-  border-radius 20px
   overflow auto
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
 .signerPermissionOrigin
-  background transparent
   width 250px
-  direction rtl
-  text-overflow ellipsis
+  margin-top 2px
   overflow hidden
+  color var(--wren-text-primary)
+  direction rtl
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
   text-align left
+  text-overflow ellipsis
   white-space nowrap
-  font-weight 300
-  margin-top 4px
-  
+
+.signerPermissionNoPermissions
+  width 100%
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+  text-align center
+
 .signerPermission
   position relative
-  justify-content space-between
-  padding 12px
-  font-size 15px
-  font-weight 300
-  transform translateZ(0)
   z-index 2000
   width 100%
+  padding var(--wren-space-3)
+  box-sizing border-box
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-primary)
+  font-size var(--wren-type-small)
+
+  &:last-child
+    border-bottom 0
 
   .signerPermissionControls
-    display flex
     position relative
-    justify-content space-between
-    transform translateZ(0)
     z-index 40
+    display flex
+    justify-content space-between
 
   .signerPermissionDetails
-    display flex
     position relative
-    justify-content space-between
-    transform translateZ(0)
-    font-size 13px
-    padding 10px 0px 0px 1px
     z-index 20
-    font-weight 300
+    display flex
+    justify-content space-between
+    padding-top var(--wren-space-2)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-caption)

@@ -21,8 +21,14 @@ const AddressIdentity = ({ address, copied = false, label = '', source = '' }) =
           {checksummed.substring(checksummed.length - 6)}
         </span>
       )}
-      <div className='clusterAddressRecipientFull'>
-        {copied ? <span>{'Address Copied'}</span> : <span className='clusterFira'>{checksummed}</span>}
+      <div
+        className={
+          copied
+            ? 'clusterAddressRecipientFull clusterAddressRecipientFullCopied'
+            : 'clusterAddressRecipientFull'
+        }
+      >
+        {copied ? <span>{'Address copied'}</span> : <span className='clusterFira'>{checksummed}</span>}
       </div>
     </>
   )

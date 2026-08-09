@@ -57,7 +57,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
   const amountSuffix = tokenData.symbol || 'UNKNOWN TOKEN'
 
   return (
-    <div className='approveRequest'>
+    <div className='approveTransaction approvePermit'>
       <div className='approveTransactionPayload'>
         <div className='_txBody'>
           <ClusterBox animationSlot={1}>
@@ -101,7 +101,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
           <TypedDataWarnings context={req.context} />
           <TypedDataDeviceWarning warning={deviceWarning} />
           <ClusterBox title={'Token Permit'} animationSlot={2}>
-            <Cluster>
+            <Cluster className='permitReviewLedger'>
               {tokenData && (
                 <>
                   <ClusterRow>
@@ -110,24 +110,19 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                       pointerEvents={true}
                       onClick={() => copySpender()}
                     >
-                      <div className='clusterAddress'>
-                        <AddressIdentity
-                          address={spender.address}
-                          copied={showCopiedMessage}
-                          label={localIdentity?.label || spender.ens}
-                          source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
-                        />
+                      <div className='permitReviewRow'>
+                        <span className='permitReviewLabel'>Permit spender</span>
+                        <div className='clusterAddress'>
+                          <AddressIdentity
+                            address={spender.address}
+                            copied={showCopiedMessage}
+                            label={localIdentity?.label || spender.ens}
+                            source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
+                          />
+                        </div>
                       </div>
                     </ClusterValue>
                     <ClusterStatus>{showCopiedMessage ? 'Permit spender address copied' : ''}</ClusterStatus>
-                  </ClusterRow>
-                  <ClusterRow>
-                    <ClusterValue>
-                      <div
-                        className='clusterTag'
-                        style={{ color: 'var(--moon)' }}
-                      >{`is requesting permission to spend`}</div>
-                    </ClusterValue>
                   </ClusterRow>
                   <ClusterRow>
                     <ClusterValue
@@ -144,25 +139,23 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                         })
                       }
                     >
-                      <div className='clusterFocus'>
-                        <div className='clusterFocusHighlight'>{`${amountDisplay} ${amountSuffix}`}</div>
+                      <div className='permitReviewRow'>
+                        <span className='permitReviewLabel'>is requesting permission to spend</span>
+                        <span className='permitReviewValue'>{`${amountDisplay} ${amountSuffix}`}</span>
                       </div>
                     </ClusterValue>
                   </ClusterRow>
 
                   <ClusterRow>
                     <ClusterValue>
-                      <div className='clusterTag'>Permit Expires In</div>
-                    </ClusterValue>
-                  </ClusterRow>
-
-                  <ClusterRow>
-                    <ClusterValue>
-                      <Countdown
-                        end={deadline * 1000}
-                        innerClass='clusterFocusHighlight'
-                        titleClass='clusterFocus'
-                      />
+                      <div className='permitReviewRow'>
+                        <span className='permitReviewLabel'>Permit Expires In</span>
+                        <Countdown
+                          end={deadline * 1000}
+                          innerClass='permitReviewValue'
+                          titleClass='permitReviewCountdown'
+                        />
+                      </div>
                     </ClusterValue>
                   </ClusterRow>
                 </>

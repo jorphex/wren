@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import { ensNormalize, isAddress } from 'ethers'
 
 import link from '../../../../../resources/link'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import Icon from '../../../../../resources/Components/Icon'
 
 const normalizeInput = (input) => input.trim()
 
@@ -183,13 +183,13 @@ class AddAddress extends React.Component {
           <div className='addAccountItemTop'>
             <div className='addAccountItemTopType'>
               <div className='addAccountItemIcon'>
-                <RingIcon svgName={'mask'} svgSize={24} />
+                <Icon name='watch' size={24} />
               </div>
-              <div className='addAccountItemTopTitle'>Watch Account</div>
+              <div className='addAccountItemTopTitle'>Watch account</div>
             </div>
             {/* <div className='addAccountItemClose' onClick={() => this.props.close()}>{'Done'}</div> */}
             <div className='addAccountItemSummary'>
-              Watch accounts work like normal accounts but cannot sign
+              Follow balances and activity without adding signing access.
             </div>
           </div>
           <div className='addAccountItemOption'>
@@ -206,10 +206,11 @@ class AddAddress extends React.Component {
                   {!resolvingEnsName ? (
                     <>
                       <label htmlFor='addressInput' className='addAccountItemOptionTitle'>
-                        input address or ENS name
+                        Enter an address or ENS name
                       </label>
-                      <div className='addAccountItemOptionInput address'>
+                      <div className='addAccountItemOptionInput address wrenInputGroup'>
                         <input
+                          className='wrenInput'
                           autoFocus
                           id='addressInput'
                           value={address}
@@ -222,7 +223,8 @@ class AddAddress extends React.Component {
                       </div>
                       <button
                         type='button'
-                        className='addAccountItemOptionSubmit'
+                        className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
+                        disabled={!normalizeInput(address) || resolvingEnsName || creating}
                         onClick={() => this.create()}
                       >
                         Create
@@ -230,16 +232,16 @@ class AddAddress extends React.Component {
                     </>
                   ) : (
                     <div className='addAccountResolvingEns'>
-                      <div className='addAccountItemOptionTitle'>Resolving ENS Name</div>
+                      <div className='addAccountItemOptionTitle'>Resolving ENS name</div>
                       <div className='signerLoading'>
                         <div className='signerLoadingLoader' />
                       </div>
                       <button
                         type='button'
-                        className='addAccountItemOptionSubmit'
+                        className='addAccountItemOptionSubmit wrenControl wrenControlSecondary'
                         onClick={() => this.restart()}
                       >
-                        cancel
+                        Cancel
                       </button>
                     </div>
                   )}
@@ -257,10 +259,10 @@ class AddAddress extends React.Component {
                       </div>
                       <button
                         type='button'
-                        className='addAccountItemOptionSubmit'
+                        className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
                         onClick={() => this.restart()}
                       >
-                        try again
+                        Try again
                       </button>
                     </>
                   ) : creating ? (
@@ -271,13 +273,13 @@ class AddAddress extends React.Component {
                     </>
                   ) : status === 'Successful' ? (
                     <>
-                      <div className='addAccountItemOptionTitle'>{'account added successfully'}</div>
+                      <div className='addAccountItemOptionTitle'>{'Account added successfully'}</div>
                       <button
                         type='button'
-                        className='addAccountItemOptionSubmit'
+                        className='addAccountItemOptionSubmit wrenControl wrenControlSecondary'
                         onClick={() => link.send('nav:back', 'dash', 2)}
                       >
-                        back
+                        Back
                       </button>
                     </>
                   ) : null}

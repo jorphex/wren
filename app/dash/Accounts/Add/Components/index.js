@@ -1,7 +1,7 @@
 import { cloneElement, useEffect, useRef, useState } from 'react'
 
 import useFocusableRef from '../../../../../resources/Hooks/useFocusableRef'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import Icon from '../../../../../resources/Components/Icon'
 import { ConfirmPassword, CreatePassword } from '../../../../../resources/Components/Password'
 import link from '../../../../../resources/link'
 import { debounce } from '../../../../../resources/utils'
@@ -28,7 +28,18 @@ const AddHotAccountWrapper = ({ children, title, svgName, summary, index }) => {
           <div className='addAccountItemTopType'>
             <div className='addAccountItemIcon'>
               <div className='addAccountItemIconType addAccountItemIconHot'>
-                <RingIcon {...{ svgName }} />
+                <Icon
+                  name={
+                    svgName === 'key'
+                      ? 'key'
+                      : svgName === 'file'
+                        ? 'file'
+                        : svgName === 'seedling'
+                          ? 'seedling'
+                          : 'hot'
+                  }
+                  size={svgName === 'seedling' ? 20 : 24}
+                />
               </div>
               <div className='addAccountItemIconHex addAccountItemIconHexHot' />
             </div>
@@ -48,7 +59,7 @@ const AddHotAccountWrapper = ({ children, title, svgName, summary, index }) => {
 }
 
 const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active }) => {
-  const EMPTY_STATE = `Enter ${title}`
+  const EMPTY_STATE = `Enter ${title.charAt(0).toLowerCase()}${title.slice(1)}`
   const inputRef = useFocusableRef(autofocus, 100)
   const [error, setError] = useState(EMPTY_STATE)
   const [submitting, setSubmitting] = useState(false)
@@ -92,8 +103,15 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active 
       <div role='heading' aria-level='2' className='addAccountItemOptionTitle'>
         {title}
       </div>
-      <div className='addAccountItemOptionInput phrase'>
+      <div
+        className={
+          newAccountType === 'keyring'
+            ? 'addAccountItemOptionInput phrase addAccountItemOptionInputSingleLine wrenInputGroup'
+            : 'addAccountItemOptionInput phrase wrenInputGroup'
+        }
+      >
         <textarea
+          className='wrenInput'
           ref={inputRef}
           aria-label={title}
           onChange={(e) => {
@@ -105,20 +123,17 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active 
           }}
         />
       </div>
-      {error ? (
-        <div role='alert' className='addAccountItemOptionError'>
-          {error}
-        </div>
-      ) : (
-        <button
-          type='button'
-          className='addAccountItemOptionSubmit'
-          disabled={submitting}
-          onClick={() => handleSubmit()}
-        >
-          {'Next'}
-        </button>
-      )}
+      <div role={error ? 'alert' : undefined} className='addAccountItemOptionError'>
+        {error}
+      </div>
+      <button
+        type='button'
+        className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
+        disabled={Boolean(error) || submitting}
+        onClick={() => handleSubmit()}
+      >
+        {'Next'}
+      </button>
     </div>
   )
 }
@@ -132,10 +147,10 @@ const Error = ({ error, active }) => {
         </div>
         <button
           type='button'
-          className='addAccountItemOptionSubmit'
+          className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
           onClick={() => link.send('nav:back', 'dash', 3)}
         >
-          try again
+          Try again
         </button>
       </>
     </div>

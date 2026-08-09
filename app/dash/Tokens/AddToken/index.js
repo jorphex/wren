@@ -211,7 +211,7 @@ const EnterAddress = ({ chain }) => {
             <div className='tokenAddress'>
               <input
                 aria-labelledby='newTokenAddressLabel'
-                className='tokenInput tokenInputAddress'
+                className='tokenInput tokenInputAddress wrenInput'
                 value={contractAddress}
                 disabled={isSubmitting}
                 spellCheck={false}
@@ -338,7 +338,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
             <div className='tokenName'>
               <label className='tokenInputLabel'>
                 <input
-                  className={`tokenInput ${name === tokenDetailsDefaults.name ? 'tokenInputDim' : ''}`}
+                  className={`tokenInput wrenInput ${name === tokenDetailsDefaults.name ? 'tokenInputDim' : ''}`}
                   value={name}
                   disabled={isSaving}
                   spellCheck={false}
@@ -362,7 +362,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
             <div className='tokenSymbol'>
               <label className='tokenInputLabel'>
                 <input
-                  className={`tokenInput ${symbol === tokenDetailsDefaults.symbol ? 'tokenInputDim' : ''}`}
+                  className={`tokenInput wrenInput ${symbol === tokenDetailsDefaults.symbol ? 'tokenInputDim' : ''}`}
                   value={symbol}
                   disabled={isSaving}
                   spellCheck={false}
@@ -385,7 +385,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
             <div className='tokenDecimals'>
               <label className='tokenInputLabel'>
                 <input
-                  className={`tokenInput ${
+                  className={`tokenInput wrenInput ${
                     decimals === tokenDetailsDefaults.decimals ? 'tokenInputDim' : ''
                   }`}
                   value={decimals}
@@ -417,7 +417,7 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
             <div className='tokenLogoUri'>
               <label className='tokenInputLabel'>
                 <input
-                  className={`tokenInput ${logoUri === tokenDetailsDefaults.logoURI ? 'tokenInputDim' : ''}`}
+                  className={`tokenInput wrenInput ${logoUri === tokenDetailsDefaults.logoURI ? 'tokenInputDim' : ''}`}
                   value={logoUri}
                   disabled={isSaving}
                   spellCheck={false}

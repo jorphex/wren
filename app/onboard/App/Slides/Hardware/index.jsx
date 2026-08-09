@@ -5,22 +5,22 @@ import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const Extension = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Hardware Signers')
+    setTitle('Hardware signers')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
   return (
     <Slide>
       <SlideBody>
         <SlideItem>
-          <div>Wren supports many hardware signers including</div>
-          <div>Ledger, GridPlus, Trezor and more on the way!</div>
+          <div>Wren supports Ledger, GridPlus, and Trezor</div>
+          <div>hardware signers.</div>
         </SlideItem>
         <SlideItem>
-          <div>For high value accounts be sure to use a hardware signer</div>
-          <div>and verify all transaction details on your device.</div>
+          <div>For high-value accounts, use a hardware signer</div>
+          <div>and verify every transaction detail on the device.</div>
         </SlideItem>
         <SlideItem>
-          <div>Need a hardware signer?</div>
+          <div>Choose the device that suits your account.</div>
         </SlideItem>
         <div
           style={{

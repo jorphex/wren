@@ -1,8 +1,12 @@
 import React from 'react'
 import Restore from 'react-restore'
+import BigNumber from 'bignumber.js'
 
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
+import { getAddress } from '../../../resources/utils'
+import { createBalance, formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
+import { isNetworkConnected } from '../../../resources/utils/chains'
 
 import Default from './Default'
 
@@ -123,6 +127,7 @@ class _AccountMain extends React.Component {
         <div className='panelFilterInput'>
           <input
             aria-label='Filter account details'
+            className='wrenInput wrenInputQuiet'
             type='text'
             spellCheck='false'
             onChange={(e) => {
@@ -136,7 +141,7 @@ class _AccountMain extends React.Component {
           <button
             type='button'
             aria-label='Clear account view filter'
-            className='panelFilterClear'
+            className='panelFilterClear wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => {
               this.setState({ accountModuleFilter: '' })
             }}
@@ -148,20 +153,95 @@ class _AccountMain extends React.Component {
     )
   }
 
+  getTotalBalance(account) {
+    const networks = this.store('main.networks.ethereum') || {}
+    const networksMeta = this.store('main.networksMeta.ethereum') || {}
+    const rates = this.store('main.rates') || {}
+    const balances = this.store('main.balances', account.address) || []
+
+    return balances.reduce((total, balance) => {
+      const network = networks[balance.chainId]
+      if (!network || !isNetworkConnected(network)) return total
+
+      const nativeCurrency = networksMeta[balance.chainId]?.nativeCurrency || {}
+      const native = isNativeCurrency(balance.address)
+      const quote = native ? nativeCurrency : rates[balance.address || balance.symbol]
+      const displayed = createBalance(
+        {
+          ...balance,
+          decimals: native ? nativeCurrency.decimals || 18 : balance.decimals,
+          symbol: native ? nativeCurrency.symbol || balance.symbol : balance.symbol
+        },
+        network.isTestnet ? { price: 0 } : quote
+      )
+
+      return total.plus(displayed.totalValue)
+    }, BigNumber(0))
+  }
+
+  renderHomeHeader() {
+    const account = this.store('main.accounts', this.props.id) || {}
+    const address = getAddress(account.address || this.props.id)
+    const name = account.ensName || account.name || 'Account'
+    const hideBalances = this.store('selected.hideBalances')
+    const total = this.getTotalBalance(account)
+
+    return (
+      <header className='accountHomeHeader'>
+        <div className='accountHomeIdentity'>
+          <div className='accountHomeEyebrow'>Selected account</div>
+          <h1 className='accountHomeTitle'>{name}</h1>
+          <button
+            type='button'
+            className='accountHomeAddress'
+            aria-label='Copy address'
+            onClick={() => link.send('tray:clipboardData', address)}
+          >
+            <span>{address}</span>
+            <Icon name='copy' size={13} />
+          </button>
+        </div>
+        <div className='accountHomeTotal'>
+          <div className='accountHomeTotalLabel'>Total balance</div>
+          <div className='accountHomeTotalValue'>
+            {hideBalances ? (
+              <span aria-label='Total balance hidden'>$••••</span>
+            ) : (
+              `$${formatUsdRate(total, 0)}`
+            )}
+          </div>
+        </div>
+        <div className='accountHomeActions' aria-label='Account actions'>
+          <button
+            type='button'
+            className='wrenControl wrenControlPrimary'
+            onClick={() => {
+              link.send('*:addFrame', 'dappLauncher')
+              link.send('tray:action', 'setDash', { showing: false })
+            }}
+          >
+            <Icon name='send' size={14} />
+            <span>Send</span>
+          </button>
+        </div>
+      </header>
+    )
+  }
+
   render() {
     const accountModules = this.store('panel.account.modules')
     const accountModuleOrder = this.store('panel.account.moduleOrder')
     let slideHeight = 0
     const modules = accountModuleOrder.map((id, i) => {
       const module = accountModules[id] || { height: 0 }
-      slideHeight += module.height + 12
+      slideHeight += module.height
       return (
         <AccountModule
           key={id}
           id={id}
           account={this.props.id}
           module={module}
-          top={slideHeight - module.height - 12}
+          top={slideHeight - module.height}
           index={i}
           filter={this.state.accountModuleFilter}
         />
@@ -171,7 +251,7 @@ class _AccountMain extends React.Component {
     return (
       <div className='accountMain' style={{ bottom: footerHeight + 'px' }}>
         <div className='accountMainScroll'>
-          {this.renderAccountFilter()}
+          {this.renderHomeHeader()}
           <div className='accountMainSlide' style={{ height: slideHeight + 'px' }}>
             {modules}
           </div>
@@ -188,16 +268,17 @@ class _AccountView extends React.Component {
   render() {
     const accountOpen = this.store('selected.open')
     const footerHeight = this.store('windows.panel.footer.height')
+    const { requestMode = false } = this.props
     return (
       <div
-        className='accountView'
-        style={{ top: accountOpen ? '140px' : '80px', bottom: footerHeight + 'px' }}
+        className={requestMode ? 'accountView accountViewRequest' : 'accountView'}
+        style={{ top: requestMode ? '68px' : accountOpen ? '140px' : '80px', bottom: footerHeight + 'px' }}
       >
         <div className='accountViewMenu cardShow'>
           <button
             type='button'
             aria-label='Back'
-            className='accountViewBack'
+            className='accountViewBack wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
             onClick={() => this.props.back()}
           >
             <Icon name='back' size={16} />
@@ -206,6 +287,9 @@ class _AccountView extends React.Component {
             <div className='accountViewIcon'>{this.props.accountViewIcon}</div>
             <div className='accountViewText'>{this.props.accountViewTitle}</div>
           </div>
+          {requestMode && this.props.accountViewMeta ? (
+            <div className='accountViewMeta'>{this.props.accountViewMeta}</div>
+          ) : null}
         </div>
         <div className='accountViewMain cardShow'>{this.props.children}</div>
       </div>
@@ -235,7 +319,16 @@ class _AccountBody extends React.Component {
         chainId,
         chainName: this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`,
         nativeCurrencySymbol: nativeCurrency.symbol || '?',
-        nativeCurrencyDecimals: nativeCurrency.decimals ?? 18
+        nativeCurrencyDecimals: nativeCurrency.decimals ?? 18,
+        nativeCurrencyUsd: nativeCurrency.usd
+      }
+    }
+
+    if (req.type === 'addToken') {
+      const chainId = req.token.chainId
+      return {
+        chainId,
+        chainName: this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`
       }
     }
 
@@ -267,6 +360,7 @@ class _AccountBody extends React.Component {
     const accounts = this.store('main.accounts') || {}
 
     const signingDelay = isHardwareSigner(activeAccount.lastSignerType) ? 200 : 1500
+    const accountName = activeAccount.ensName || activeAccount.name || 'Account'
 
     return (
       <Request
@@ -280,6 +374,8 @@ class _AccountBody extends React.Component {
         addressBook={addressBook}
         accounts={accounts}
         signer={activeSigner}
+        accountName={accountName}
+        requestData={data}
       />
     )
   }
@@ -294,7 +390,18 @@ class _AccountBody extends React.Component {
     if (crumb.view === 'requestView') {
       const { accountId, requestId } = crumb.data
       const req = this.store('main.accounts', accountId, 'requests', requestId)
-      const accountViewTitle = (req && this.getAccountViewTitle(req)) || ''
+      const chainData = req ? this.getChainData(req) : {}
+      const transactionChainId =
+        req?.type === 'transaction' && typeof req.data?.chainId === 'string'
+          ? Number.parseInt(req.data.chainId, 16)
+          : undefined
+      const transactionChainName = Number.isInteger(transactionChainId)
+        ? this.store('main.networks.ethereum', transactionChainId, 'name')
+        : undefined
+      const accountViewTitle =
+        req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
+          ? 'Adjust Batch Settings'
+          : (req && this.getAccountViewTitle(req)) || ''
 
       return (
         <AccountView
@@ -302,7 +409,9 @@ class _AccountBody extends React.Component {
             link.send('nav:back', 'panel')
           }}
           {...this.props}
+          requestMode={true}
           accountViewTitle={accountViewTitle}
+          accountViewMeta={chainData.chainName || chainData.requestChainName || transactionChainName}
         >
           {req && this.renderRequest(req, crumb.data)}
         </AccountView>
@@ -315,6 +424,9 @@ class _AccountBody extends React.Component {
 
       const chainId = Number(BigInt(status.chainId))
       const chainName = this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`
+      const nativeCurrency = this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency') || {}
+      const activeAccount = this.store('main.accounts', accountId) || {}
+      const accountName = activeAccount.ensName || activeAccount.name || ''
 
       return (
         <AccountView
@@ -326,7 +438,9 @@ class _AccountBody extends React.Component {
         >
           <WalletCallsStatus
             accountId={accountId}
+            accountName={accountName}
             chainName={chainName}
+            nativeCurrency={nativeCurrency}
             originName={getOriginDisplayName(originName)}
             status={status}
           />
@@ -389,3 +503,4 @@ class Account extends React.Component {
 }
 
 export default Restore.connect(Account)
+export { _AccountMain as AccountMain }

@@ -8,9 +8,9 @@ html, body
   color var(--outerspace)
   background transparent
 
-div
+button,
+[role='button']
   user-select none
-  cursor default
 
 ::-webkit-scrollbar
   width 0px
@@ -226,7 +226,7 @@ div
         justify-content center
         align-items center
         text-transform uppercase
-        font-size 11px
+        font-size var(--wren-type-caption)
         letter-spacing 1px
         font-weight 300
         padding-bottom 1px
@@ -289,7 +289,7 @@ div
       height 32px
       margin 0px 16px 12px 16px
       box-sizing border-box
-      font-size 12px
+      font-size var(--wren-type-small)
       text-transform uppercase
       letter-spacing 1px
       font-weight 400
@@ -306,7 +306,7 @@ div
       display flex
       justify-content center
       align-items center
-      font-size 11px
+      font-size var(--wren-type-caption)
       font-weight 400
       letter-spacing 2px
       text-transform uppercase
@@ -329,6 +329,7 @@ div
 @import './Tokens/style'
 @import './Earn/style'
 @import './AddressBook/style'
+@import './Settings/style'
 @import './card.styl'
 
 // Wren dashboard shell
@@ -365,43 +366,107 @@ div
       box-shadow none
 
   .dashFooter
-    right 12px
+    display flex
+    align-items center
+    justify-content flex-end
+    right 20px
     bottom 16px
-    left 12px
-    height 64px
+    left 20px
+    height 46px
     padding 0
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-lg)
-    background var(--wren-bg-subtle)
+    border 0
+    border-radius 0
+    background transparent
+    pointer-events none
 
     .dashFooterButton
-      width 100%
-      height 62px
+      width auto
+      min-width 190px
+      height 46px
+      min-height 46px
       padding 0 var(--wren-space-4)
-      border 0
-      border-radius var(--wren-radius-lg)
-      color var(--wren-text-inverse)
-      background var(--wren-accent-primary)
-      box-shadow none
+      border 1px solid var(--wren-accent-primary-hover)
+      border-radius 7px
+      color #11130f
+      background-color var(--wren-accent-primary)
+      background-image var(--wren-control-texture-light)
+      box-shadow var(--wren-control-primary-shadow)
       font-family var(--wren-font-ui)
       font-size 13px
       font-weight 500
       letter-spacing 0
+      pointer-events auto
 
       &:hover
         transform none
-        background var(--wren-accent-primary-hover)
-        box-shadow none
+        border-color var(--wren-control-primary-border-hover)
+        background-color var(--wren-accent-primary-hover)
+        background-image var(--wren-control-texture-light)
+        box-shadow var(--wren-control-primary-shadow-hover)
 
       &:active
-        transform none
-        background var(--wren-accent-primary-active)
+        transform translateY(1px)
+        background-color var(--wren-accent-primary-active)
+        box-shadow var(--wren-control-primary-shadow-pressed)
 
       .newAccountIcon
         position static
         width auto
         height auto
         margin-right var(--wren-space-2)
+
+  // An inactive network is a neutral availability state, not an error.
+  .network .signerPermissionToggle
+    width 42px
+    height 24px
+    margin-top 0
+    border 1px solid var(--wren-border-default)
+    border-radius 6px
+    background var(--wren-surface-inset)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
+    transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
+
+    .signerPermissionToggleSwitch
+      top 3px
+      left 4px
+      bottom auto
+      width 16px
+      height 16px
+      border 0
+      border-radius 4px
+      background var(--wren-text-disabled)
+      box-shadow var(--wren-shadow-sm)
+      transition background var(--wren-motion-fast) var(--wren-ease), opacity var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
+
+  .network .signerPermissionToggleOn
+    border-color var(--wren-border-default)
+    background var(--wren-surface-inset)
+
+    .signerPermissionToggleSwitch
+      background var(--wren-success)
+      transform translateX(16px)
+
+  .network .signerPermissionToggle:disabled
+    opacity 1
+    border-color var(--wren-border-strong)
+    cursor default
+
+    .signerPermissionToggleSwitchLocked
+      inset 0
+      border-radius 6px
+      cursor default
+
+      .signerPermissionToggleSwitch
+        opacity 1
+
+      svg
+        position absolute
+        z-index 1
+        top 6px
+        right 7px
+        opacity 1
+        color var(--wren-text-inverse)
+        transition color var(--wren-motion-fast) var(--wren-ease)
 
 .workspace-edge-right .dash
   border-radius var(--wren-radius-xl) 0 0 var(--wren-radius-xl)
@@ -428,3 +493,189 @@ div
   > .dashFooter
     opacity 0
     transition-duration var(--wren-motion-standard)
+
+// Wren account chooser
+.dash .dashMain .addAccounts.addAccountsChooser
+  display block
+  padding 0 var(--wren-space-5) var(--wren-space-6)
+  box-sizing border-box
+
+  .addAccountsHeader
+    .addAccountsHeaderTitle
+      height auto
+      margin var(--wren-space-5) var(--wren-space-2) var(--wren-space-4)
+      justify-content flex-start
+      color var(--wren-text-secondary)
+      font-size var(--wren-type-body)
+      font-weight 500
+
+  .accountTypeGroup + .accountTypeGroup
+    margin-top var(--wren-space-4)
+
+  .accountTypeGroupTitle
+    margin 0
+    padding var(--wren-space-2)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 500
+    letter-spacing 0
+    line-height 18px
+    text-transform none
+
+  .accountTypeList
+    border-top 1px solid var(--wren-border-subtle)
+
+  .accountTypeSelect
+    width 100%
+    height 56px
+    margin 0
+    padding 0 var(--wren-space-2)
+    justify-content flex-start
+    border 0
+    border-bottom 1px solid var(--wren-border-subtle)
+    border-radius 0
+    color var(--wren-text-primary)
+    background transparent
+    box-shadow none
+    font-family var(--wren-font-ui)
+    font-size 15px
+    font-weight 500
+    text-align left
+    transform none
+    transition background var(--wren-motion-fast) var(--wren-ease)
+
+    .accountTypeSelectIcon
+      display flex
+      width 24px
+      margin-right var(--wren-space-3)
+      align-items center
+      justify-content center
+      color var(--wren-accent-primary-hover)
+
+    &:hover
+      z-index auto
+      transform none
+      background var(--wren-surface-hover)
+      box-shadow none
+
+    &:active
+      transform none
+      background var(--wren-surface-active)
+      box-shadow none
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+.accountsEmpty
+  min-height 620px
+  display flex
+  align-items center
+  justify-content center
+
+  .wrenEmptyStateExpanded
+    min-height 340px
+    padding 0
+    flex-direction column
+    justify-content center
+    background transparent
+    text-align center
+
+    .wrenEmptyStateImage
+      position static
+      width 220px
+      margin 0 0 var(--wren-space-3)
+      transform none
+
+    .wrenEmptyStateText
+      max-width 360px
+
+    .wrenEmptyStateTitle
+      font-size var(--wren-type-body)
+
+    .wrenEmptyStateCopy
+      font-size var(--wren-type-small)
+
+.watchAccounts
+  width 100%
+
+.watchAccount
+  appearance none
+  display flex
+  align-items center
+  width 100%
+  min-height 72px
+  box-sizing border-box
+  padding 0 var(--wren-space-2)
+  border 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+  color var(--wren-text-primary)
+  background transparent
+  font-family var(--wren-font-ui)
+  text-align left
+  cursor pointer
+  transition background var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover
+    background var(--wren-ledger-hover)
+
+  &:active
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  > svg
+    flex none
+    color var(--wren-text-tertiary)
+
+.watchAccountIcon
+  display flex
+  align-items center
+  justify-content center
+  width 38px
+  height 38px
+  flex none
+  margin-right var(--wren-space-3)
+  border 1px solid var(--wren-border-default)
+  border-radius 50%
+  color var(--wren-accent-primary-hover)
+  background var(--wren-bg-elevated)
+
+.watchAccountIdentity
+  display flex
+  min-width 0
+  flex 1
+  flex-direction column
+  gap 3px
+
+.watchAccountName
+  overflow hidden
+  font-size var(--wren-type-body)
+  font-weight 560
+  text-overflow ellipsis
+  white-space nowrap
+
+.watchAccountAddress
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  text-overflow ellipsis
+  white-space nowrap
+
+@media (max-height: 760px)
+  .accountsEmpty
+    min-height 450px
+
+  .dash .dashMain .addAccounts.addAccountsChooser
+    .accountTypeGroup + .accountTypeGroup
+      margin-top var(--wren-space-2)
+
+    .accountTypeSelect
+      height 52px
+
+@import '../../resources/Components/Button'
+@import '../../resources/Components/Input'

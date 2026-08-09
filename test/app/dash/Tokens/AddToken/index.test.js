@@ -20,13 +20,10 @@ beforeAll(() => {
     name: 'Mainnet',
     explorer: 'https://etherscan.io',
     symbol: 'ETH',
-    on: true,
-    connection: {
-      primary: { connected: true }
-    }
+    on: true
   })
 
-  store.setPrimary('ethereum', 1, { connected: false })
+  store.setEndpoint('ethereum', 1, 'rpc-1', { connected: false })
   store.activateNetwork('ethereum', 1, true)
 
   store.removeNetwork({ type: 'ethereum', id: 137 })
@@ -37,13 +34,10 @@ beforeAll(() => {
     explorer: 'https://polygonscan.com',
     symbol: 'MATIC',
     on: true,
-    connection: {
-      primary: { connected: true }
-    },
     primaryColor: 'accent7'
   })
 
-  store.setPrimary('ethereum', 137, { connected: false })
+  store.setEndpoint('ethereum', 137, 'rpc-1', { connected: false })
   store.activateNetwork('ethereum', 137, true)
 })
 
@@ -164,7 +158,7 @@ describe('setting token address', () => {
   })
 
   it('should update add token navigation when a contracts details cannot be validated on-chain', async () => {
-    store.setPrimary('ethereum', 1, { connected: true })
+    store.setEndpoint('ethereum', 1, 'rpc-1', { connected: true })
     link.invoke.mockImplementationOnce((action, address, chainId) => {
       expect(action).toBe('tray:getTokenDetails')
       expect(address).toBe('0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
@@ -466,7 +460,7 @@ describe('setting token details', () => {
   })
 
   it('should populate fields with token data', async () => {
-    store.setPrimary('ethereum', 137, { connected: true })
+    store.setEndpoint('ethereum', 137, 'rpc-1', { connected: true })
 
     const mockToken = { name: 'Frame Test on Polygon', symbol: 'mFRT', decimals: 18, totalSupply: '1066' }
 

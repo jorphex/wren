@@ -47,7 +47,7 @@
     display flex
     justify-content center
     align-items center
-    font-size 11px
+    font-size var(--wren-type-caption)
     letter-spacing 1px
     font-weight 300
     padding-bottom 1px
@@ -174,7 +174,7 @@
     justify-content center
     z-index 9999999
     line-height 22px
-    font-size 11px
+    font-size var(--wren-type-caption)
     text-transform uppercase
     letter-spacing 1px
     text-align justify
@@ -194,7 +194,7 @@
     bottom 0px
     right 0px
     padding 10px
-    font-size 12px
+    font-size var(--wren-type-small)
     text-transform uppercase
     letter-spacing 2px
     margin-top 12px
@@ -230,7 +230,7 @@
     .addAccountItemDeviceStatus
       margin-top 6px
       color var(--wren-text-secondary)
-      font-size 12px
+      font-size var(--wren-type-small)
       display flex
       justify-content center
       align-items center
@@ -295,7 +295,7 @@
     height 34px
     padding 0px 20px
     margin-top 12px
-    font-size 12px
+    font-size var(--wren-type-small)
     color var(--moon)
     text-align center
   
@@ -303,7 +303,7 @@
     height 34px
     padding 0px 20px
     margin-top 12px
-    font-size 12px
+    font-size var(--wren-type-small)
     text-align center
 
   .addAccountItemOptionSubmit
@@ -379,7 +379,7 @@
 
     .actingAccountTag
       font-weight 400
-      font-size 12px
+      font-size var(--wren-type-small)
       text-transform none
       color var(--outerspace08)
 
@@ -462,7 +462,7 @@
       justify-content center
       align-items center
       text-align center
-      font-size 11px
+      font-size var(--wren-type-caption)
       width 100%
       font-weight 300
       letter-spacing 1px
@@ -493,7 +493,7 @@
   .addAccountItemOptionInput.address
 
     input
-      font-size 12px
+      font-size var(--wren-type-small)
       padding 10px 10px
 
   .addAccountItemOptionInputPassword
@@ -536,3 +536,150 @@
   opacity 1
   transform translateY(0px) scale(1) rotateY(0deg)
   transition-delay 0.00s
+
+// Wren account setup surfaces
+.addAccountItem
+  .addAccountItemWrap
+    border-radius 0
+    background var(--wren-bg-canvas)
+
+  .addAccountItemClose,
+  .addAccountItemOptionSubmit
+    min-width 156px
+    min-height 42px
+    padding 0 var(--wren-space-4)
+    border 1px solid var(--wren-accent-primary)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-inverse)
+    background var(--wren-accent-primary)
+    box-shadow var(--wren-shadow-sm)
+    text-transform none
+    letter-spacing 0
+    font-family var(--wren-font-ui)
+    font-size 14px
+    font-weight 600
+
+    &:not(:disabled):hover
+      color var(--wren-text-inverse)
+      border-color var(--wren-accent-primary-hover)
+      background var(--wren-accent-primary-hover)
+
+    &:not(:disabled):active
+      border-color var(--wren-accent-primary-active)
+      background var(--wren-accent-primary-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+    &:disabled
+      border-color var(--wren-border-default)
+      color var(--wren-text-disabled)
+      background var(--wren-bg-panel-strong)
+      box-shadow none
+
+  .addAccountItemTopType
+    color var(--wren-text-primary)
+    font-weight 500
+    font-variation-settings var(--wren-font-heading-settings)
+
+    .addAccountItemTopTitle
+      text-shadow none
+
+    .addAccountItemIcon
+      border 0
+      border-radius 0
+      color var(--wren-accent-primary-hover)
+      background transparent
+
+  .addAccountItemSummary
+    top 76px
+    left 80px
+    right 80px
+    min-height 24px
+    padding 0
+    border 0
+    border-radius 0
+    color var(--wren-text-secondary)
+    background transparent
+    line-height 20px
+
+  .addAccountItemOption
+    top 210px
+    bottom 40px
+
+  .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
+    justify-content flex-start
+    padding 36px var(--wren-space-8) var(--wren-space-5)
+    box-sizing border-box
+
+  .addAccountItemTrezorBridgeWarning,
+  .addAccountItemOption,
+  .addAccountItemDevices
+    text-transform none
+    letter-spacing 0
+
+  .addAccountItemOptionListItem
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-card)
+
+    &:hover
+      border-color var(--wren-border-default)
+      background var(--wren-surface-hover)
+
+  .addAccountItemOptionInput
+    max-width 620px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
+    box-shadow none
+
+    input
+      font-size 16px
+      letter-spacing 0
+
+    textarea
+      color var(--wren-text-primary)
+      font-family var(--wren-font-mono)
+
+  .addAccountItemOptionInput.address input
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size 14px
+
+  .addAccountItemOptionInput.phrase.addAccountItemOptionInputSingleLine
+    height 54px
+
+    textarea
+      padding 15px var(--wren-space-3)
+      overflow hidden
+      white-space nowrap
+
+  .addAccountItemOptionTitle
+    color var(--wren-text-primary)
+    font-size 15px
+    font-weight 500
+    text-transform none
+
+  .addAccountItemOptionError,
+  .addAccountItemOptionProcessing
+    color var(--wren-text-secondary)
+    font-size 13px
+    text-transform none
+
+  .addAccountItemColorBar
+    height 2px
+    border-radius 0
+    background var(--wren-accent-primary)
+
+@media (max-height: 760px)
+  .addAccountItem
+    .addAccountItemSummary
+      top 70px
+
+    .addAccountItemOption
+      top 184px
+
+    .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
+      padding-top var(--wren-space-4)

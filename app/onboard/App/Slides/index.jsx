@@ -50,8 +50,15 @@ const Slides = ({ platform }) => {
 
   return (
     <SlideContainer $immersive={immersive}>
-      {!immersive && <SlideTitle key={title}>{title}</SlideTitle>}
-      <SlideScroller>
+      {!immersive && (
+        <SlideTitle id='onboarding-slide-title' key={title}>
+          {title}
+        </SlideTitle>
+      )}
+      <SlideScroller
+        role={immersive ? undefined : 'region'}
+        aria-labelledby={immersive ? undefined : 'onboarding-slide-title'}
+      >
         <CurrentSlide
           slide={slide}
           platform={platform}

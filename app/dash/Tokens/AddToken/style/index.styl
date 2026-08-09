@@ -5,18 +5,21 @@
   flex-direction column
 
 .addTokenTitle
-  padding 40px 0px 60px 0px
-  font-size 24px
-  font-weight 300
+  padding var(--wren-space-8) 0 var(--wren-space-6)
+  color var(--wren-text-primary)
+  font-size var(--wren-type-title)
+  font-weight 500
 
 .addToken
-  font-size 16px
   position relative
   z-index 3
-  word-break break-word
   width 100%
+  padding-bottom var(--wren-space-8)
   box-sizing border-box
-  padding-bottom 32px
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  word-break break-word
 
 .newTokenView
   min-height 100%
@@ -25,224 +28,293 @@
   justify-content center
   align-items center
   flex-direction column
+  padding var(--wren-space-6)
+  box-sizing border-box
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
 
 .newTokenChainSelectTitle
-  padding-bottom 40px
   display flex
   justify-content center
   align-items center
   flex-direction column
+  padding-bottom var(--wren-space-6)
+  color var(--wren-text-primary)
+  font-size var(--wren-type-heading)
+  font-weight 500
+  text-align center
 
 .newTokenErrorTitle
+  max-width 440px
+  margin-bottom var(--wren-space-5)
+  color var(--wren-danger)
+  font-size var(--wren-type-body)
+  font-weight 500
+  line-height 22px
   text-align center
-  font-size 14px
-  font-weight 300
-  box-sizing border-box
-  margin-bottom 20px
 
 .newTokenChainAddress
-  font-family 'FiraCode'
-  font-size 18px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-body)
+
   svg
-    margin 4px 5px
+    margin 0 var(--wren-space-1)
 
 .newTokenChainSelectChain
   width 100%
+  max-width 480px
+
+.newTokenView .originSwapChainList
+  padding var(--wren-space-1)
+  background var(--wren-bg-elevated)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+
+  .originChainItem
+    appearance none
+    width 100%
+    min-height 48px
+    display flex
+    align-items center
+    padding 0 var(--wren-space-3)
+    border 1px solid transparent
+    border-radius var(--wren-radius-sm)
+    background transparent
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-weight 500
+    text-align left
+    cursor pointer
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+    .originChainItemIcon
+      width 28px
+      height 28px
+      display flex
+      justify-content center
+      align-items center
+      margin-right var(--wren-space-3)
+
+  .originChainItem:hover
+    background var(--wren-surface-hover)
+    border-color var(--wren-border-default)
+
+  .originChainItem:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  .originChainItem:disabled
+    color var(--wren-text-disabled)
+    cursor default
+    opacity .65
+
+  .originChainItem:disabled:hover
+    background transparent
+    border-color transparent
 
 .newTokenChainSelectSubtitle
-  margin-top 3px
-  font-size 10px
-  font-weight 300
-  text-transform uppercase
+  margin-top var(--wren-space-1)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+  font-weight 400
 
 .newTokenChainSelectFooter
-  margin-top 40px
-  margin-bottom: 40px
-  font-size 10px
-  font-weight 300
-  text-align: center
-  text-transform uppercase
+  margin var(--wren-space-6) 0
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-small)
+  line-height 18px
+  text-align center
 
   .newTokenEnableChainLink
     appearance none
-    border 0
     padding 0
+    margin-left var(--wren-space-1)
+    border 0
     background transparent
+    color var(--wren-accent-secondary-hover)
     font-family inherit
-    text-transform inherit
     font-size inherit
-    color: var(--good)
-    margin-left: 4px
-    display: inline-block
-    cursor: pointer
+    font-weight 500
+    cursor pointer
 
   .newTokenEnableChainLink:hover
-    color: var(--goodOver)
+    color var(--wren-accent-primary-hover)
+    text-decoration underline
+
+  .newTokenEnableChainLink:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
 
   .newTokenEnableChainLink:disabled
-    color var(--outerspace05)
+    color var(--wren-text-disabled)
     cursor default
+
+  .newTokenEnableChainLink:disabled:hover
+    color var(--wren-text-disabled)
+    text-decoration none
 
 .tokenRow
   width 100%
   display flex
   justify-content space-between
-  padding 0px 5px 40px 5px
+  gap var(--wren-space-2)
+  padding 0 var(--wren-space-1) var(--wren-space-5)
   box-sizing border-box
 
 .tokenRow:last-child
-  padding 0px 5px 0px 5px
+  padding-bottom 0
 
-.tokenName
-  width 100%
-  text-align center
-
-.tokenAddress
-  width 100%
-  text-align center
-
-.tokenLogoUri
+.tokenName,
+.tokenAddress,
+.tokenLogoUri,
+.tokenExplorer,
+.tokenRpc
   width 100%
   text-align center
 
 .tokenChainId
-  width calc(35% - 5px)
+  width calc(35% - 4px)
 
-.tokenDecimals
-  width calc(50% - 5px)
-  text-align center
-
+.tokenDecimals,
 .tokenSymbol
-  width calc(50% - 5px)
+  width calc(50% - 4px)
   text-align center
-
-.tokenExplorer
-  width 100%
-
-.tokenRpc
-  width 100%  
 
 .tokenInput
-  background transparent
-  outline none
-  border none
-  text-align center
-  font-size 16px
-  padding 0px
   width 100%
-  font-family 'MainFont'
-  background var(--ghostA)
-  border-radius 20px
-  padding 23px 3px 20px 3px
-  font-weight 300
-  color var(--outerspace)
-  
+  min-height 44px
+  padding 0 var(--wren-space-3)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  outline none
+  background var(--wren-surface-inset)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 400
+  text-align center
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
   &.dropdown
-    margin-top: 17px
-    padding: 0px
+    margin-top var(--wren-space-3)
+    padding 0
 
-.tokenInputLabel
-  font-size 12px
-  text-transform uppercase
-  font-weight 300
-  input
-    margin-bottom 5px
-
-.tokenInputDim
-  font-size 16px !important
-  font-weight 300 !important
-  color var(--outerspace03)
-
-.tokenInputAddress
-  font-family 'FiraCode'
-  font-weight 300
-  font-size 14px
+.tokenInput:hover:not(:disabled)
+  border-color var(--wren-border-strong)
+  background var(--wren-bg-elevated)
 
 .tokenInput:focus-visible
-  outline 0
-  box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+  border-color var(--wren-focus)
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
+
+.tokenInput:disabled
+  color var(--wren-text-disabled)
+  cursor default
+  opacity .65
+
+.tokenInputLabel
+  display flex
+  flex-direction column
+  gap var(--wren-space-2)
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+  font-weight 500
+  text-align left
+
+.tokenInputDim
+  color var(--wren-text-tertiary) !important
+
+.tokenInputAddress
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-small)
 
 .tokenSetAddress
   appearance none
-  border 0
-  color inherit
-  font-family inherit
-  font-size 13px
-  text-transform uppercase
-  font-weight 300
-  padding 10px 50px
-  background var(--ghostA)
-  border-radius 12px
+  min-height 38px
+  margin-top var(--wren-space-2)
+  padding 0 var(--wren-space-5)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-bg-elevated)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  font-weight 500
   cursor pointer
-  margin-top 10px
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
 .tokenSetAddress:hover
-  background var(--ghostB)
-
-.tokenSetAddress:disabled,
-.originChainItem:disabled
-  cursor default
-  opacity 0.55
-
-.tokenSetAddress:disabled:hover
-  background var(--ghostA)
-
-.originSwapChainList .originChainItem:disabled:hover
-  background var(--ghostA)
-  box-shadow 0px 2px 4px var(--ghostX)
-  transform translateY(0px)
+  background var(--wren-surface-hover)
+  border-color var(--wren-border-strong)
 
 .tokenSetAddress:focus-visible,
-.newTokenEnableChainLink:focus-visible,
-.originChainItem:focus-visible,
 .addTokenSubmit:focus-visible
-  outline 0
-  box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
+
+.tokenSetAddress:disabled
+  color var(--wren-text-disabled)
+  cursor default
+  opacity .65
+
+.tokenSetAddress:disabled:hover
+  background var(--wren-bg-elevated)
+  border-color var(--wren-border-default)
 
 .addTokenSubmit
   appearance none
-  color inherit
-  font-family inherit
-  background var(--ghostA)
-  margin auto
-  height 64px
-  border-radius 20px
-  font-weight 300
-  box-sizing border-box
-  padding 12px 24px
-  text-align center
+  min-height 44px
   display flex
-  justify-content space-around
+  justify-content center
   align-items center
-  font-size 15px
-  text-transform uppercase
-  border 3px solid var(--ghostZ)
+  margin auto
+  padding 0 var(--wren-space-5)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-bg-elevated)
+  color var(--wren-text-disabled)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 500
+  text-align center
   pointer-events none
 
   span
-    opacity 0.4
+    opacity .65
 
   svg
-    margin-right 10px
-
-.addTokenSubmit:hover
-  background var(--ghostA)
+    margin-right var(--wren-space-2)
 
 .addTokenSubmitEnabled
-  background var(--ghostB)
+  border-color var(--wren-accent-primary)
+  background var(--wren-accent-primary)
+  color var(--wren-text-inverse)
   cursor pointer
   pointer-events auto
-  outline none
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
   span
     pointer-events none
     opacity 1
 
 .addTokenSubmitEnabled:hover
-  background var(--ghostC)
+  background var(--wren-accent-primary-hover)
+  border-color var(--wren-accent-primary-hover)
 
 .addTokenSubmit:disabled
   cursor default
-  opacity 0.55
+  opacity .65
+
+.addTokenSubmitEnabled:disabled
+  border-color var(--wren-border-default)
+  background var(--wren-bg-elevated)
+  color var(--wren-text-disabled)
 
 .addTokenSubmitEnabled:disabled:hover
-  background var(--ghostB)
+  border-color var(--wren-border-default)
+  background var(--wren-bg-elevated)

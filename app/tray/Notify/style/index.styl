@@ -1,114 +1,154 @@
 .notify
   position fixed
-  top 0px
-  right 0px
-  left 0px
-  bottom 0px
+  inset 0
   z-index 9999999999999999
   pointer-events auto
-  transition var(--standard)
   display flex
   justify-content center
   align-items center
   text-align center
-  opacity 1
-  background var(--ghostY)
-  
+  color var(--wren-text-primary)
+  background var(--wren-bg-canvas)
+  font-family var(--wren-font-ui)
+
   ::selection
-    background var(--moon) //  #ffb7b7
+    color var(--wren-text-inverse)
+    background var(--wren-accent-primary)
 
   .notifyCloseButton
     position absolute
-    top 23px
-    width 100px
-    margin-left -50px
+    top var(--wren-space-4)
     left 50%
-    height 25px
-    border-radius 8px
+    width 100px
+    height 28px
+    margin-left -50px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
     display flex
     justify-content center
     align-items center
-    text-transform uppercase
-    font-size 11px
-    font-weight 300
+    background var(--wren-bg-elevated)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-caption)
+    font-weight 500
     cursor pointer
-    background var(--ghostB)
-    color var(--moon)
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      background var(--wren-surface-hover)
+      border-color var(--wren-border-strong)
+      color var(--wren-text-primary)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
     *
       pointer-events none
 
-  // .notifyBox:before
-  //   content ''
-  //   top 0
-  //   right 0
-  //   bottom 3px
-  //   left 0
-  //   position absolute
-  //   border-radius 12px
-  //   background var(--ghostB)
-  //   z-index 2
-
   .notifyBoxWrap
-    border-radius 12px
-    box-sizing border-box
     position absolute
-    top 0px
-    bottom 0px
-    left 0px
-    right 0px
-    padding 8px
-    transition var(--standard)
-    background var(--ghostZ)
+    inset 0
+    box-sizing border-box
     display flex
     justify-content center
-    align-items center
-    text-align center
-    opacity 1
+    align-items flex-start
     overflow-x hidden
+    overflow-y auto
     z-index 4000000000
+    padding var(--wren-space-3)
+    background var(--wren-surface-overlay)
 
     .notifyBoxSlide
-      overflow-y scroll
-      overflow-x hidden
-      max-height 100%
       width 100%
+      max-height 100%
+      overflow-y auto
+      overflow-x hidden
+      margin auto
 
     .notifyClose
       position absolute
-      top 0px
-      right 0px
-      color var(--outerspace)
+      top var(--wren-space-2)
+      right var(--wren-space-2)
       z-index 3
-      height 40px
-      width 40px
+      width 32px
+      height 32px
       display flex
       justify-content center
       align-items center
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-secondary)
+
+      &:hover
+        background var(--wren-surface-hover)
+        color var(--wren-text-primary)
+
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
 
     .notifyBox
       width 100%
+      box-sizing border-box
       overflow hidden
+      margin auto
+      padding var(--wren-space-6) var(--wren-space-3)
+      border 1px solid var(--wren-border-subtle)
+      border-radius var(--wren-radius-md)
+      background var(--wren-surface-card)
+      box-shadow var(--wren-shadow-md)
+
+      &.extensionConnectBox
+        max-width 420px
+
+      .extensionConnectIcon
+        height 56px
+        display flex
+        align-items center
+        justify-content center
+        margin-bottom var(--wren-space-3)
+        color var(--wren-text-secondary)
+
+      .extensionPairingCode
+        margin var(--wren-space-4) 0
+        color var(--wren-success)
+        font-family var(--wren-font-mono)
+        font-size 28px
+        font-weight 550
+        letter-spacing 6px
+
+      .extensionOriginButton
+        width 100%
+        max-width 100%
+        overflow hidden
+        font-family var(--wren-font-mono)
+        font-size var(--wren-type-caption)
+        text-overflow ellipsis
+        white-space nowrap
 
       .notifySection
-        margin 10px
-      
+        margin var(--wren-space-2) 0
+
       .notifyTitle
-        font-size 19px
         position relative
         z-index 3
-        margin-bottom 40px
-        color var(--moon)
+        margin 0 0 var(--wren-space-3)
+        color var(--wren-text-primary)
+        font-size var(--wren-type-heading)
+        font-weight 560
+        font-variation-settings var(--wren-font-heading-settings)
 
       .notifySubtitle
-        font-size 16px
         position relative
         z-index 3
-        margin-bottom 24px
+        margin-bottom var(--wren-space-5)
+        color var(--wren-text-secondary)
+        font-size var(--wren-type-body)
+        line-height 1.45
 
       .notifyWrenIcon
-        height 106px 
         width 100%
+        height 72px
         position relative
         z-index 4
         display flex
@@ -116,237 +156,197 @@
         align-items center
 
         img
-          width 96px
-          height 96px
-          border-radius 24px
-          // box-shadow 0px 30px 24px -10px var(--doubleThick)
+          width 64px
+          height 64px
+          border-radius var(--wren-radius-md)
 
       .notifyBody
-        font-size 14px
         position relative
         z-index 3
-        word-break break-word
         width 100%
         box-sizing border-box
-        padding 8px
+        padding var(--wren-space-2) 0
+        color var(--wren-text-secondary)
+        font-size var(--wren-type-small)
+        font-variation-settings var(--wren-font-body-settings)
+        line-height 1.5
+        word-break break-word
 
         .notifyBodyLine
-          padding 0px 20px
-          font-size 16px
-          font-weight 300
-          font-family 'MainFont'
+          padding 0
+          font-size inherit
+          font-weight 400
 
         .notifyBodyLineUrl
-          padding-bottom 56px
-          font-family 'FiraCode'
-          font-size 14px
+          padding-bottom var(--wren-space-5)
+          font-family var(--wren-font-mono)
+          font-size var(--wren-type-small)
           word-break break-all
- 
+
         .notifyBodyUpdate
-          padding 8px
-          margin-bottom 8px
-          background var(--moon)
-          color var(--moonOver)
-          border-radius 8px
-          margin-top 50px
-          font-size 13px
-          font-weight 300
+          margin-top var(--wren-space-5)
+          margin-bottom var(--wren-space-2)
+          padding var(--wren-space-3)
+          border 1px solid var(--wren-warning)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-warning-soft)
+          color var(--wren-text-primary)
+          font-size var(--wren-type-small)
+
+        .notifyBodyBlock
+          margin-bottom var(--wren-space-2)
+          padding var(--wren-space-3)
+          border 1px solid var(--wren-border-subtle)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-bg-elevated)
+
+        .notifyBodyBlockBig
+          padding var(--wren-space-4)
+          font-size var(--wren-type-small)
 
         .notifyBodyLink
           appearance none
           padding 0
-          color inherit
-          font inherit
-          background transparent
           border 0
+          border-radius var(--wren-radius-sm)
+          background transparent
+          color var(--wren-accent-primary-hover)
+          font inherit
           text-decoration underline
+          text-underline-offset 2px
           cursor pointer
 
+          &:hover
+            color var(--wren-accent-primary)
+
+          &:focus-visible
+            outline 2px solid var(--wren-focus)
+            outline-offset 2px
+
         .notifyBodyHash
-          font-size 14px
-          font-family 'FiraCode'
-          background var(--ghostB)
-          line-height 20px
-          box-shadow inset 0px 2px 14px var(--ghostB)
-          padding 18px
-          border-radius 12px
-          margin-top 28px
-          border 1px solid var(--ghostC)
-          text-shadow 0px 2px 0px var(--ghostB)
           max-height 58px
+          margin-top var(--wren-space-3)
+          padding var(--wren-space-3)
+          overflow auto
+          border 1px solid var(--wren-border-default)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-surface-inset)
+          color var(--wren-text-secondary)
+          font-family var(--wren-font-mono)
+          font-size var(--wren-type-small)
+          line-height 20px
 
         .notifyBodyPrice
-          margin-top 4px
-          font-size 23px
+          margin-top var(--wren-space-1)
+          color var(--wren-warning)
+          font-size var(--wren-type-title)
+          font-weight 540
 
         .notifyBodyQuestion
-          padding-top 40px
-          color var(--moon)
+          padding-top var(--wren-space-5)
+          color var(--wren-text-primary)
 
       .notifyCheck
         appearance none
-        border 0
-        background transparent
-        color inherit
-        font-family inherit
-        cursor pointer
         display flex
         position relative
         justify-content center
         align-items center
-        font-weight 400
-        z-index 3
-        margin-top 16px
-        margin-left 8px
-        padding 0px 30px
+        margin-top var(--wren-space-4)
+        padding var(--wren-space-1) var(--wren-space-3)
+        border 0
+        border-radius var(--wren-radius-sm)
+        background transparent
+        color var(--wren-text-secondary)
+        font-family inherit
+        cursor pointer
 
-        .notifyCheckBox 
-          width 32px
-          height 32px
-          min-width 32px
-          min-height 32px
-          border-radius 16px
-          background var(--ghostC)
-          border 1px solid var(--ghostZ)
-          box-shadow cardDrop, 0px 2px 1px var(--ghostA), 0px 0px 7px 2px var(--ghostB)
-          margin-right 10px
+        &:hover .notifyCheckBox
+          border-color var(--wren-border-strong)
+          background var(--wren-surface-active)
+
+        &:focus-visible
+          outline 2px solid var(--wren-focus)
+          outline-offset 2px
+
+        .notifyCheckBox
+          width 20px
+          height 20px
+          min-width 20px
+          min-height 20px
           box-sizing border-box
           display flex
-          position relative
           justify-content center
           align-items center
-          cursor pointer
+          margin-right var(--wren-space-2)
+          border 1px solid var(--wren-border-default)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-surface-inset)
+          color var(--wren-accent-primary)
+          transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
           *
             pointer-events none
 
-          svg 
-            height 22px
-
-        .notifyCheckBox:hover
-          background var(--ghostD)
+          svg
+            height 16px
 
         .notifyCheckText
-          text-align left
-          font-size 13px
-          line-height 13px
           width 210px
+          text-align left
+          font-size var(--wren-type-small)
+          line-height 1.35
 
       .notifyInput
-        display flex
         position relative
-        justify-content space-between
         z-index 3
-        margin 40px 8px 0px 8px
+        display flex
+        justify-content space-between
+        gap var(--wren-space-2)
+        margin var(--wren-space-6) 0 0
 
         .notifyInputOption
-          appearance none
-          position relative
-          width calc(50% - 1px)
-          display flex
-          justify-content center
-          align-items center
-          box-sizing border-box
-          background var(--ghostA)
-          color var(--wren-text-primary)
-          border 0
-          font-family var(--wren-font-ui)
-          height 40px
-          font-weight 300
-          padding-top 1px
-          box-shadow cardDrop, 0px 2px 1px var(--ghostA), 0px 0px 7px 2px var(--ghostB)
-          text-transform uppercase
-          font-size 14px
-          font-weight 400
-          letter-spacing 1px
-          cursor pointer
+          width calc(50% - 4px)
+          min-height 40px
+
           *
             pointer-events none
 
           .notifyInputOptionText
             position relative
-            z-index 200
-            padding-bottom 2px
-
-        .notifyBetaGo
-          color var(--good)
-
-        .notifyInputOption:hover:before
-          background var(--ghostD)
-
-        .notifyInputDeny:before
-          content ''
-          position absolute
-          top 0
-          left 0
-          right 0
-          bottom 2px
-          background var(--ghostB)
-          z-index 2
-          border-top-left-radius 19px
-          border-bottom-left-radius 19px
-
-        .notifyInputDeny
-          border-top-left-radius 20px
-          border-bottom-left-radius 20px
-
-        .notifyInputProceed:before
-          content ''
-          position absolute
-          top 0
-          left 0
-          right 0
-          bottom 2px
-          background var(--ghostB)
-          z-index 2
-          border-top-right-radius 19px
-          border-bottom-right-radius 19px
-
-        .notifyInputProceed
-          border-top-right-radius 20px
-          border-bottom-right-radius 20px
-
-        .notifyInputSingleButton:before
-          content ''
-          position absolute
-          top 0
-          left 0
-          right 0
-          bottom 2px
-          background var(--ghostC)
-          z-index 2
-          border-radius 19px
+            z-index 2
 
         .notifyInputSingleButton
-          left 50%
-          transform translate(-50%, 0)
-          border-radius 20px
+          width 280px
+          max-width 100%
+          margin auto
 
     .introInstructions
       position relative
       z-index 3
-      margin -10px
-      font-size 12px
-      font-weight 300
-      border-radius 6px
-      text-align cleft
-      line-height 18px
-      font-weight 300
-      color var(--outerspace08)
+      margin calc(var(--wren-space-2) * -1)
+      color var(--wren-text-secondary)
+      font-size var(--wren-type-small)
+      font-weight 400
+      line-height 1.45
+      text-align left
 
       .introInstructionItem
-        margin-bottom 20px
-        padding 0px 20px
+        margin-bottom var(--wren-space-4)
+        padding 0 var(--wren-space-4)
+
         span
-          color var(--pending)
+          color var(--wren-info)
           text-decoration none
 
       .introInstructionList
-        margin 18px 5px 30px 5px
-        border-radius 6px
-        padding 16px
-        font-weight 400
-        background var(--pending)
-        color var(--spacewhite)
+        margin var(--wren-space-4) var(--wren-space-1) var(--wren-space-6)
+        padding var(--wren-space-4)
+        border 1px solid var(--wren-info)
+        border-radius var(--wren-radius-sm)
+        background var(--wren-info-soft)
+        color var(--wren-text-primary)
+
         div
-          font-size 14px
-          line-height 26px
+          font-size var(--wren-type-small)
+          line-height 1.5

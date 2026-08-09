@@ -1,12 +1,16 @@
 import React from 'react'
 import Restore from 'react-restore'
+
+import emptyInventory from 'url:../../../../../asset/ui/wren-empty-inventory-v1.png'
+
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { matchFilter } from '../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
-class Inventory extends React.Component {
+export class InventoryPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
@@ -99,30 +103,27 @@ class Inventory extends React.Component {
           <span>
             <Icon name='inventory' size={12} />
           </span>
-          <span>{'Inventory'}</span>
+          <span>{'Collectibles'}</span>
         </div>
-        <Cluster>
-          {collections.length ? (
-            this.renderInventoryList()
-          ) : inventory ? (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='inventoryNotFound'>No Items Found</div>
-              </ClusterValue>
-            </ClusterRow>
-          ) : (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='inventoryNotFound'>Loading Items..</div>
-              </ClusterValue>
-            </ClusterRow>
-          )}
-        </Cluster>
+        {collections.length && displayCollections.length ? (
+          <Cluster>{this.renderInventoryList()}</Cluster>
+        ) : collections.length ? (
+          <div className='wrenEmptyFilter'>No matching collectibles</div>
+        ) : inventory ? (
+          <WrenEmptyState
+            image={emptyInventory}
+            title='No collectibles yet'
+            copy='Collectibles associated with this account appear here.'
+          />
+        ) : (
+          <div className='inventoryNotFound'>Loading collectibles…</div>
+        )}
         {collections.length ? (
           <div className='signerBalanceTotal'>
             <div className='signerBalanceButtons'>
-              <div
-                className='signerBalanceButton signerBalanceShowAll'
+              <button
+                type='button'
+                className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlSecondary wrenControlCompact'
                 onClick={() => {
                   const crumb = {
                     view: 'expandedModule',
@@ -135,7 +136,7 @@ class Inventory extends React.Component {
                 }}
               >
                 {moreCollections > 0 ? `+${moreCollections} More` : 'More'}
-              </div>
+              </button>
             </div>
           </div>
         ) : null}
@@ -144,4 +145,4 @@ class Inventory extends React.Component {
   }
 }
 
-export default Restore.connect(Inventory)
+export default Restore.connect(InventoryPreview)

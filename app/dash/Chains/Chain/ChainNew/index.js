@@ -3,19 +3,10 @@ import { useState } from 'react'
 import chainDefault from '../chainDefault'
 import link from '../../../../../resources/link'
 import {
-  ChainHeader,
-  EditChainColor,
-  EditChainName,
-  EditChainSymbol,
-  EditChainId,
-  EditChainIcon,
-  EditNativeCurrencyName,
-  EditTestnet,
-  EditChainExplorer,
-  SubmitChainButton,
-  EditNativeCurrencyIcon,
-  EditSecondaryRPC,
-  EditPrimaryRPC
+  NetworkEditorActions,
+  NetworkEditorField,
+  NetworkEditorToggle,
+  RpcEndpointLedger
 } from '../Components'
 
 const isChainFilled = (chain) => {
@@ -27,7 +18,8 @@ const isChainFilled = (chain) => {
     chain.symbol &&
     chain.symbol !== chainDefault.symbol &&
     chain.nativeCurrencyName &&
-    chain.nativeCurrencyName !== chainDefault.nativeCurrencyName
+    chain.nativeCurrencyName !== chainDefault.nativeCurrencyName &&
+    chain.rpcUrls[0]
   )
 }
 
@@ -46,6 +38,14 @@ const isValidRpc = (urlStr) => {
 
 const isValidIcon = (urlStr) => Boolean(getUrl(urlStr))
 
+const displayOrigin = (origin) => {
+  try {
+    return new URL(origin).host
+  } catch {
+    return origin
+  }
+}
+
 export const Chain = ({
   id,
   name = '',
@@ -57,8 +57,7 @@ export const Chain = ({
   icon = '',
   isTestnet = false,
   primaryColor = chainDefault.primaryColor,
-  primaryRpc = '',
-  secondaryRpc = '',
+  rpcUrls = [''],
   nativeCurrencyDecimals = 18,
   requestReference,
   existingChains,
@@ -75,23 +74,35 @@ export const Chain = ({
     icon,
     isTestnet,
     primaryColor,
-    primaryRpc,
-    secondaryRpc,
+    rpcUrls,
     nativeCurrencyDecimals
   }
 
   // state
-  const [currentColor, setPrimaryColor] = useState(newChain.primaryColor)
+  const [currentColor] = useState(newChain.primaryColor)
   const [currentName, setName] = useState(newChain.name)
   const [currentSymbol, setSymbol] = useState(newChain.symbol)
-  const [currentNativeCurrencyName, setNativeCurrencyName] = useState(newChain.nativeCurrencyName)
-  const [currentChainIcon, setChainIcon] = useState(newChain.icon)
-  const [currentCurrencyIcon, setCurrencyIcon] = useState(newChain.nativeCurrencyIcon)
+  const [currentNativeCurrencyName] = useState(newChain.nativeCurrencyName)
+  const [currentChainIcon] = useState(newChain.icon)
+  const [currentCurrencyIcon] = useState(newChain.nativeCurrencyIcon)
   const [currentChainId, setChainId] = useState(newChain.id)
   const [currentExplorer, setExplorer] = useState(newChain.explorer)
   const [currentTestnet, setTestnet] = useState(newChain.isTestnet)
-  const [currentPrimaryRPC, setPrimaryRPC] = useState(newChain.primaryRpc)
-  const [currentSecondaryRPC, setSecondaryRPC] = useState(newChain.secondaryRpc)
+  const [endpoints, setEndpoints] = useState(() =>
+    (newChain.rpcUrls.length ? newChain.rpcUrls : ['']).slice(0, 5).map((url, index) => ({
+      id: `rpc-${index + 1}`,
+      on: Boolean(url),
+      connected: false,
+      current: 'custom',
+      status: 'off',
+      custom: url
+    }))
+  )
+  const [endpointValues, setEndpointValues] = useState(() =>
+    Object.fromEntries(endpoints.map((endpoint) => [endpoint.id, endpoint.custom]))
+  )
+  const [currentDecimals, setDecimals] = useState(newChain.nativeCurrencyDecimals)
+  const [endpointTouched, setEndpointTouched] = useState({})
   const [submissionError, setSubmissionError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -102,104 +113,212 @@ export const Chain = ({
     id: Number(currentChainId),
     name: currentName,
     explorer: currentExplorer,
-    nativeCurrencyName: currentNativeCurrencyName,
+    nativeCurrencyName: currentNativeCurrencyName || currentSymbol,
     nativeCurrencyIcon: currencyIcon,
     icon: chainIcon,
     symbol: currentSymbol,
     isTestnet: currentTestnet,
     primaryColor: currentColor,
-    primaryRpc: currentPrimaryRPC,
-    secondaryRpc: currentSecondaryRPC,
-    nativeCurrencyDecimals
+    rpcUrls: endpoints.map((endpoint) => endpointValues[endpoint.id]).filter(Boolean),
+    nativeCurrencyDecimals: Number(currentDecimals)
   }
 
   const validateChain = (chain) => {
     if (existingChains.includes(parseInt(chain.id))) {
-      return { valid: false, text: 'Chain ID Already Exists' }
+      return { valid: false, text: 'A network with this Chain ID already exists' }
+    }
+
+    if (!Number.isSafeInteger(Number(chain.id)) || Number(chain.id) <= 0) {
+      return { valid: false, text: 'Enter the required details' }
     }
 
     if (!isChainFilled(chain)) {
-      return { valid: false, text: 'Fill Chain Details' }
+      return { valid: false, text: 'Enter the required details' }
     }
 
     if (chain.icon && !isValidIcon(chain.icon)) {
-      return { valid: false, text: 'Invalid Chain Icon' }
+      return { valid: false, text: 'Enter the required details' }
     }
 
     if (chain.nativeCurrencyIcon && !isValidIcon(chain.nativeCurrencyIcon)) {
-      return { valid: false, text: 'Invalid Currency Icon' }
+      return { valid: false, text: 'Enter the required details' }
     }
 
-    if (chain.primaryRpc && !isValidRpc(chain.primaryRpc)) {
-      return { valid: false, text: 'Invalid primary RPC' }
+    if (chain.rpcUrls.some((url) => !isValidRpc(url))) {
+      return { valid: false, text: 'Can’t connect' }
     }
 
-    if (requestReference && getUrl(chain.primaryRpc)?.protocol !== 'https:') {
-      return { valid: false, text: 'Dapp RPC Must Use HTTPS' }
+    if (requestReference && chain.rpcUrls.some((url) => getUrl(url)?.protocol !== 'https:')) {
+      return { valid: false, text: 'Use an HTTPS RPC URL' }
     }
 
-    if (chain.secondaryRpc && !isValidRpc(chain.secondaryRpc)) {
-      return { valid: false, text: 'Invalid secondary RPC' }
+    if (
+      !Number.isInteger(chain.nativeCurrencyDecimals) ||
+      chain.nativeCurrencyDecimals < 0 ||
+      chain.nativeCurrencyDecimals > 255
+    ) {
+      return { valid: false, text: 'Enter the required details' }
     }
 
-    if (requestReference && chain.secondaryRpc && getUrl(chain.secondaryRpc)?.protocol !== 'https:') {
-      return { valid: false, text: 'Dapp RPC Must Use HTTPS' }
-    }
-
-    return { valid: true, text: 'Add Chain' }
+    return { valid: true, text: '' }
   }
 
   const chainValidation = validateChain(updatedChain)
+  const duplicateChain = existingChains.includes(parseInt(updatedChain.id))
+  const endpointStatuses = Object.fromEntries(
+    endpoints.map((endpoint, index) => {
+      const value = endpointValues[endpoint.id]
+      const invalid =
+        (index === 0 && !value) ||
+        (Boolean(value) && (requestReference ? getUrl(value)?.protocol !== 'https:' : !isValidRpc(value)))
+      return [
+        endpoint.id,
+        endpointTouched[endpoint.id] && invalid
+          ? requestReference && value
+            ? 'Use an HTTPS RPC URL'
+            : 'Can’t connect'
+          : ''
+      ]
+    })
+  )
+  const decimalsInvalid =
+    currentDecimals === '' ||
+    !Number.isInteger(Number(currentDecimals)) ||
+    Number(currentDecimals) < 0 ||
+    Number(currentDecimals) > 255
+
+  const moveEndpoint = (endpointId, offset) => {
+    setEndpoints((items) => {
+      const index = items.findIndex((endpoint) => endpoint.id === endpointId)
+      const nextIndex = index + offset
+      if (index < 0 || nextIndex < 0 || nextIndex >= items.length) return items
+      const moved = [...items]
+      const [endpoint] = moved.splice(index, 1)
+      moved.splice(nextIndex, 0, endpoint)
+      return moved
+    })
+  }
+
+  const addEndpoint = () => {
+    if (endpoints.length >= 5) return
+    const used = new Set(endpoints.map(({ id: endpointId }) => endpointId))
+    let suffix = 1
+    while (used.has(`rpc-${suffix}`)) suffix += 1
+    const endpoint = {
+      id: `rpc-${suffix}`,
+      on: false,
+      connected: false,
+      current: 'custom',
+      status: 'off',
+      custom: ''
+    }
+    setEndpoints((items) => [...items, endpoint])
+    setEndpointValues((values) => ({ ...values, [endpoint.id]: '' }))
+  }
+
+  const removeEndpoint = (endpointId) => {
+    setEndpoints((items) => items.filter((endpoint) => endpoint.id !== endpointId))
+  }
 
   return (
-    <div key={'expandedChain'} className='network cardShow'>
-      <ChainHeader type={type} id={id} primaryColor={currentColor} name={currentName} />
-      <EditChainColor currentColor={currentColor} onChange={setPrimaryColor} />
-      <EditChainName currentName={currentName} onChange={setName} />
-      <EditChainId chainId={currentChainId} onChange={setChainId} />
-      <EditChainExplorer currentExplorer={currentExplorer} onChange={setExplorer} />
-      <EditChainSymbol currentSymbol={currentSymbol} onChange={setSymbol} />
-      {/* TODO: change order? */}
-      <EditNativeCurrencyName
-        currentNativeCurrency={currentNativeCurrencyName}
-        onChange={setNativeCurrencyName}
-      />
-      <EditPrimaryRPC currentPrimaryRPC={currentPrimaryRPC} onChange={setPrimaryRPC} />
-      <EditSecondaryRPC currentSecondaryRpc={currentSecondaryRPC} onChange={setSecondaryRPC} />
-      <EditChainIcon currentIcon={currentChainIcon} onChange={setChainIcon} />
-      <EditNativeCurrencyIcon currentCurrencyIcon={currentCurrencyIcon} onChange={setCurrencyIcon} />
-      <EditTestnet testnet={currentTestnet} onChange={setTestnet} />
-      <div className='chainRow chainRowRemove'>
-        <SubmitChainButton
-          text={submitting ? 'Verifying RPC...' : submissionError || chainValidation.text}
-          textColor={chainValidation.valid ? 'var(--good)' : ''}
-          enabled={chainValidation.valid && !submitting}
-          onClick={async () => {
-            if (chainValidation.valid && !submitting) {
-              const nav = store('windows.dash.nav')
-              const args = requestReference
-                ? ['tray:addChain', updatedChain, requestReference]
-                : ['tray:addChain', updatedChain]
-              setSubmitting(true)
-              setSubmissionError('')
-              const result = await link.invoke(...args).catch(() => ({ success: false }))
-              if (!result.success) {
-                setSubmitting(false)
-                setSubmissionError(result.error || 'Could Not Add Chain')
-                return
-              }
-
-              // if previous navItem is the chains panel, go back
-              if (nav[1]?.view === 'chains') {
-                link.send('tray:action', 'backDash')
-              } else {
-                // otherwise update the current navItem to show the chains panel
-                link.send('nav:update', 'dash', { view: 'chains', data: {} }, false)
-              }
-            }
-          }}
-        />
+    <div key='newNetwork' className='networkEditor cardShow'>
+      <div className='networkEditorHeader'>
+        <h1>{currentName ? `Add ${currentName}` : 'Add network'}</h1>
+        {requestReference?.origin && <p>Requested by {displayOrigin(requestReference.origin)}</p>}
       </div>
+      <div className='networkEditorBody'>
+        <div className='networkEditorGrid'>
+          <NetworkEditorField label='Network name' value={currentName} onChange={setName} />
+          <NetworkEditorField
+            label='Chain ID'
+            value={currentChainId}
+            technical
+            inputMode='numeric'
+            error={duplicateChain}
+            status={duplicateChain ? 'A network with this Chain ID already exists' : ''}
+            onChange={setChainId}
+          />
+          <NetworkEditorField label='Native currency' value={currentSymbol} onChange={setSymbol} />
+          <NetworkEditorField
+            label='Decimals'
+            value={currentDecimals}
+            technical
+            inputMode='numeric'
+            error={decimalsInvalid}
+            status={decimalsInvalid ? 'Enter the required details' : ''}
+            onChange={setDecimals}
+          />
+          <div className='networkEditorWide'>
+            <RpcEndpointLedger
+              endpoints={endpoints}
+              values={endpointValues}
+              statuses={endpointStatuses}
+              onValueChange={(endpointId, value) => {
+                setEndpointValues((values) => ({ ...values, [endpointId]: value }))
+                setEndpointTouched((touched) => ({ ...touched, [endpointId]: false }))
+              }}
+              onCommit={(endpointId) => setEndpointTouched((touched) => ({ ...touched, [endpointId]: true }))}
+              onToggle={(endpointId, endpointOn) =>
+                setEndpoints((items) =>
+                  items.map((endpoint) =>
+                    endpoint.id === endpointId ? { ...endpoint, on: endpointOn } : endpoint
+                  )
+                )
+              }
+              onMove={moveEndpoint}
+              onAdd={addEndpoint}
+              onRemove={removeEndpoint}
+            />
+          </div>
+          <div className='networkEditorWide'>
+            <NetworkEditorField
+              label='Block explorer'
+              value={currentExplorer}
+              technical
+              onChange={setExplorer}
+            />
+          </div>
+        </div>
+        <NetworkEditorToggle label='Test network' checked={currentTestnet} onChange={setTestnet} />
+        {submissionError && <div className='networkEditorMessage'>{submissionError}</div>}
+      </div>
+      <NetworkEditorActions
+        primaryLabel={submitting ? 'Verifying network…' : 'Add network'}
+        primaryEnabled={chainValidation.valid && !submitting}
+        onCancel={() => {
+          if (requestReference) {
+            link.send('tray:rejectRequest', {
+              account: requestReference.account,
+              handlerId: requestReference.handlerId
+            })
+          }
+          link.send('tray:action', 'backDash')
+        }}
+        onPrimary={async () => {
+          if (!chainValidation.valid || submitting) return
+          const nav = store('windows.dash.nav')
+          const reference = requestReference
+            ? { account: requestReference.account, handlerId: requestReference.handlerId }
+            : undefined
+          const args = reference
+            ? ['tray:addChain', updatedChain, reference]
+            : ['tray:addChain', updatedChain]
+          setSubmitting(true)
+          setSubmissionError('')
+          const result = await link.invoke(...args).catch(() => ({ success: false }))
+          if (!result.success) {
+            setSubmitting(false)
+            setSubmissionError('Couldn’t add network')
+            return
+          }
+
+          if (nav[1]?.view === 'chains') {
+            link.send('tray:action', 'backDash')
+          } else {
+            link.send('nav:update', 'dash', { view: 'chains', data: {} }, false)
+          }
+        }}
+      />
     </div>
   )
 }

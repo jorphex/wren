@@ -31,12 +31,12 @@ const LocateKeystore = ({ addKeystore, error, setError, active, selectionPending
       ) : (
         <button
           type='button'
-          className='addAccountItemOptionSubmit'
+          className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
           disabled={selectionPending}
           style={{ marginTop: '10px' }}
           onClick={() => addKeystore()}
         >
-          Locate Keystore File (json)
+          Choose keystore JSON file
         </button>
       )}
     </div>
@@ -46,7 +46,7 @@ const LocateKeystore = ({ addKeystore, error, setError, active, selectionPending
 const Locating = ({ active }) => (
   <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
     <div role={'status'} className='addAccountItemOptionTitle' style={{ marginTop: '15px' }}>
-      Locating Keystore file...
+      Opening file picker...
     </div>
   </div>
 )
@@ -60,7 +60,7 @@ const EnterKeystorePassword = ({ keystore, active }) => {
   }
   //TODO: validate keystore password here?
   const getError = () => {}
-  const title = 'Enter Keystore Password'
+  const title = 'Enter keystore password'
   const buttonText = 'Continue'
   return <PasswordInput {...{ next, getError, title, buttonText, active }} />
 }
@@ -134,10 +134,10 @@ const LoadKeystore = ({ accountData, active }) => {
 
 const AddKeystore = ({ accountData }) => (
   <AddHotAccount
-    title='Key Store'
-    summary='A keystore account lets you add accounts from your keystore.json file'
+    title='Keystore file'
+    summary='Import an account from a keystore JSON file.'
     svgName='file'
-    intro='Add KeyStore Account'
+    intro='Add keystore account'
     createSignerMethod='createFromKeystore'
     newAccountType='keystore'
     backSteps={6}

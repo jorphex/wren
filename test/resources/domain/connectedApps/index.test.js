@@ -11,7 +11,7 @@ const chain = (id, on = true, connected = true) => ({
   id,
   name: `Chain ${id}`,
   on,
-  connection: { primary: { connected }, secondary: { connected: false } }
+  connection: { endpoints: [{ id: 'rpc-1', connected }] }
 })
 const origin = (name, chainId, session = {}) => ({
   name,

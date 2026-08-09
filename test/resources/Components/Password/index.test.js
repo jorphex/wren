@@ -27,7 +27,7 @@ describe('creating password', () => {
 
     await enterPassword('INVALID')
 
-    expect(screen.getByRole('alert').textContent).toBe('PASSWORD MUST BE 12 OR MORE CHARACTERS')
+    expect(screen.getByRole('alert').textContent).toBe('PASSWORD MUST BE AT LEAST 12 CHARACTERS')
   })
 
   it('should show the warning when the password is too weak', async () => {

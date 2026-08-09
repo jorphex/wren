@@ -7,13 +7,7 @@ import { GasFeesSource, usesBaseFee } from '../../../../../../resources/domain/t
 import { displayValueData } from '../../../../../../resources/utils/displayValue'
 import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
 import link from '../../../../../../resources/link'
-import {
-  ClusterBox,
-  Cluster,
-  ClusterRow,
-  ClusterValue,
-  ClusterColumn
-} from '../../../../../../resources/Components/Cluster'
+import { ClusterBox } from '../../../../../../resources/Components/Cluster'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -110,52 +104,42 @@ class TxFee extends React.Component {
     })
 
     return (
-      <ClusterBox title='fee' animationSlot={this.props.i}>
-        <Cluster>
-          <ClusterRow>
-            <ClusterColumn>
-              <ClusterValue
-                ariaLabel='Adjust transaction fee'
-                onClick={() => {
-                  link.send('nav:update', 'panel', { data: { step: 'adjustFee' } })
-                }}
-              >
-                <GasDisplay maxFeePerGas={displayValueData(maxFeePerGas)} />
-              </ClusterValue>
-            </ClusterColumn>
-            <ClusterColumn grow={2}>
-              <ClusterValue>
-                <div className='txSendingValue'>
-                  {!maxFee.bn || maxFee.bn.isNaN() ? (
-                    `? ${nativeCurrency.symbol}`
-                  ) : (
-                    <DisplayCoinBalance amount={maxFee} symbol={nativeCurrency.symbol} />
-                  )}
-                </div>
-              </ClusterValue>
-              <ClusterValue>
-                <USDEstimateDisplay minFee={minFee} maxFee={maxFee} nativeCurrency={nativeCurrency} />
-              </ClusterValue>
-            </ClusterColumn>
-          </ClusterRow>
-          {req.feesUpdatedByUser ? (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='clusterTag' style={{ color: 'var(--good)' }}>
-                  {`Gas values set by user`}
-                </div>
-              </ClusterValue>
-            </ClusterRow>
-          ) : req.data.gasFeesSource !== GasFeesSource.Frame ? (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='clusterTag' style={{ color: 'var(--bad)' }}>
-                  {`Gas values set by ${req.data.gasFeesSource}`}
-                </div>
-              </ClusterValue>
-            </ClusterRow>
-          ) : null}
-        </Cluster>
+      <ClusterBox className='transactionReviewFee' title='fee' animationSlot={this.props.i}>
+        <div className='transactionReviewFeeRow'>
+          <span className='transactionReviewMetaLabel'>Network fee</span>
+          <span className='transactionReviewFeeValue'>
+            <span className='transactionReviewFeeTotal'>
+              {!maxFee.bn || maxFee.bn.isNaN() ? (
+                `? ${nativeCurrency.symbol}`
+              ) : (
+                <DisplayCoinBalance amount={maxFee} symbol={nativeCurrency.symbol} />
+              )}
+            </span>
+            <span className='transactionReviewFeeSubline'>
+              <USDEstimateDisplay minFee={minFee} maxFee={maxFee} nativeCurrency={nativeCurrency} />
+              <span aria-hidden='true'>·</span>
+              <GasDisplay maxFeePerGas={displayValueData(maxFeePerGas)} />
+            </span>
+          </span>
+          <button
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlCompact transactionReviewFeeAdjust'
+            onClick={() => {
+              link.send('nav:update', 'panel', { data: { step: 'adjustFee' } })
+            }}
+          >
+            Adjust
+          </button>
+        </div>
+        {req.feesUpdatedByUser ? (
+          <div className='transactionReviewFeeNotice' style={{ color: 'var(--good)' }}>
+            {'Gas values set by user'}
+          </div>
+        ) : req.data.gasFeesSource !== GasFeesSource.Frame ? (
+          <div className='transactionReviewFeeNotice' style={{ color: 'var(--bad)' }}>
+            {`Gas values set by ${req.data.gasFeesSource}`}
+          </div>
+        ) : null}
       </ClusterBox>
     )
   }

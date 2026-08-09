@@ -1,0 +1,540 @@
+.walletCallsSurface
+  position absolute
+  inset 0
+  box-sizing border-box
+  padding 18px 30px 32px
+  overflow-y auto
+  color var(--wren-text-primary)
+  background var(--wren-bg-canvas)
+
+  h2,
+  h3,
+  p
+    margin 0
+
+  h2
+    margin-top 3px
+    font-size 25px
+    font-weight 660
+    line-height 1.18
+
+  h3
+    color var(--wren-text-primary)
+    font-size 13px
+    font-weight 650
+
+  button,
+  input
+    font-family var(--wren-font-ui)
+
+.walletCallsEyebrow
+  color var(--wren-accent-primary-hover)
+  font-family var(--wren-font-utility)
+  font-size 12px
+  font-weight 550
+  letter-spacing .03em
+  text-transform uppercase
+
+.walletCallsSummary
+  display grid
+  min-height 92px
+  padding 7px 0 20px
+  grid-template-columns minmax(0, 1fr) 236px
+  gap 28px
+  align-items end
+
+  p
+    margin-top 7px
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 1.45
+
+.walletCallsAtomicWarning
+  padding-left 17px
+  border-left 1px solid var(--wren-warning)
+
+  strong,
+  span
+    display block
+
+  strong
+    display flex
+    color var(--wren-warning)
+    font-size 13px
+    font-weight 650
+    align-items center
+    gap 7px
+
+  span
+    margin-top 6px
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 1.45
+
+.walletCallsSection
+  padding 18px 0
+  border-top 1px solid var(--wren-ledger-rule)
+
+  > h3
+    margin-bottom 12px
+
+.walletCallsContext
+  display grid
+  grid-template-columns repeat(3, minmax(0, 1fr))
+  gap 22px
+
+  div
+    min-width 0
+
+  span,
+  strong
+    display block
+
+  span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+  strong
+    margin-top 5px
+    overflow hidden
+    color var(--wren-text-secondary)
+    font-size 13px
+    font-weight 570
+    text-overflow ellipsis
+    white-space nowrap
+
+.walletCallsFeeSummary
+  display grid
+  grid-template-columns minmax(0, 1fr) auto 92px
+  gap 24px
+  align-items center
+
+  > span
+    color var(--wren-text-secondary)
+    font-size 13px
+    font-weight 570
+
+  > div
+    text-align right
+
+    strong,
+    small
+      display block
+
+    strong
+      font-family var(--wren-font-utility)
+      font-size 14px
+      font-weight 600
+
+    small
+      margin-top 3px
+      color var(--wren-text-muted)
+      font-size 12px
+
+  > button
+    height 34px
+    padding 0 13px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+    box-shadow var(--wren-control-shadow)
+    font-size 12px
+    font-weight 620
+
+    &:not(:disabled):hover
+      color var(--wren-text-primary)
+      border-color var(--wren-border-strong)
+      background var(--wren-control-texture-dark), var(--wren-surface-hover)
+
+    &:not(:disabled):active
+      background var(--wren-control-texture-dark), var(--wren-surface-active)
+      box-shadow var(--wren-control-shadow-pressed)
+
+    &:disabled
+      opacity .48
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+.walletCallsSectionHeading
+  display flex
+  margin-bottom 7px
+  justify-content space-between
+  align-items baseline
+  gap 16px
+
+  > span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+.walletCallsSimulationState-success
+  color var(--wren-success) !important
+
+.walletCallsSimulationState-warning
+  color var(--wren-warning) !important
+
+.walletCallsSimulationState-danger
+  color var(--wren-danger) !important
+
+.walletCallsList,
+.walletCallsAdjustList
+  gap 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+.walletCall
+  display grid
+  min-height 78px
+  padding 14px 0
+  border-top 1px solid var(--wren-ledger-rule)
+  border-radius 0
+  box-sizing border-box
+  background transparent
+  box-shadow none
+  grid-template-columns 42px minmax(0, 1fr) 142px
+  gap 13px
+  align-items start
+
+  &:hover
+    background linear-gradient(90deg, transparent, rgba(255, 255, 255, .016) 10%, rgba(255, 255, 255, .016) 90%, transparent)
+
+.walletCallsCallNumber
+  padding-top 2px
+  color var(--wren-text-muted)
+  font-family var(--wren-font-utility)
+  font-size 12px
+  font-weight 550
+
+.walletCallsCallBody
+  min-width 0
+
+.walletCallsDestination
+  display block
+  width 100%
+  min-width 0
+  padding 0
+  border 0
+  color inherit
+  background transparent
+  text-align left
+
+  strong,
+  span
+    display block
+
+  strong
+    overflow hidden
+    color var(--wren-text-primary)
+    font-size 14px
+    font-weight 640
+    text-overflow ellipsis
+    white-space nowrap
+
+  span
+    margin-top 4px
+    overflow hidden
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    text-overflow ellipsis
+    white-space nowrap
+
+  &:not(:disabled)
+    cursor copy
+
+  &:not(:disabled):hover span
+    color var(--wren-accent-primary-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 3px
+
+.walletCallsCallEvidence
+  display flex
+  margin-top 10px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size 12px
+  flex-wrap wrap
+  gap 6px 14px
+
+  button
+    padding 0
+    border 0
+    color var(--wren-text-secondary)
+    background transparent
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+    &:hover
+      color var(--wren-accent-primary-hover)
+
+.walletCallsCalldata
+  margin-top 10px
+  padding 10px 12px
+  overflow-wrap anywhere
+  color var(--wren-text-tertiary)
+  background var(--wren-surface-inset)
+  font-family var(--wren-font-utility)
+  font-size 12px
+  line-height 1.5
+  box-shadow inset 0 1px 2px rgba(0, 0, 0, .32)
+
+.walletCallsCallMaximum
+  padding-top 1px
+  text-align right
+
+  span,
+  strong
+    display block
+
+  span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+  strong
+    margin-top 5px
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    font-weight 600
+
+.walletCallsCallWarning,
+.walletCallsEvidenceWarning,
+.walletCallsAdjustError
+  color var(--wren-warning)
+  font-size 12px
+  line-height 1.45
+
+.walletCallsCallWarning
+  margin-top 8px
+
+.walletCallsEvidenceWarning
+  display flex
+  padding 13px 0
+  border-top 1px solid var(--wren-ledger-rule)
+  align-items flex-start
+  gap 9px
+
+.walletCallsEvidenceWarning-danger
+  color var(--wren-danger)
+
+.walletCallsAdjustSummary
+  display grid
+  min-height 92px
+  padding 7px 0 20px
+  grid-template-columns minmax(0, 1fr) auto
+  gap 28px
+  align-items end
+
+  p
+    margin-top 7px
+    color var(--wren-text-secondary)
+    font-size 13px
+
+.walletCallsAdjustTotal
+  text-align right
+
+  span,
+  strong
+    display block
+
+  span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+  strong
+    margin-top 5px
+    font-family var(--wren-font-utility)
+    font-size 14px
+
+.walletCallsNonceSection
+  display flex
+  justify-content space-between
+  align-items center
+  gap 24px
+
+  > div:first-child
+    strong,
+    span
+      display block
+
+    strong
+      font-size 13px
+
+    span
+      margin-top 5px
+      color var(--wren-text-secondary)
+      font-size 12px
+
+.walletCallsNonceControl
+  display grid
+  width 172px
+  height 36px
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+  box-shadow inset 0 2px 3px rgba(0, 0, 0, .38), 0 1px 0 rgba(255, 255, 255, .03)
+  grid-template-columns 35px minmax(0, 1fr) 35px
+
+  button,
+  input
+    min-width 0
+    border 0
+    color var(--wren-text-primary)
+    background transparent
+    font-size 13px
+    text-align center
+
+  button
+    color var(--wren-text-secondary)
+
+    &:hover
+      color var(--wren-accent-primary-hover)
+      background rgba(255, 255, 255, .025)
+
+  input
+    border-right 1px solid var(--wren-border-subtle)
+    border-left 1px solid var(--wren-border-subtle)
+    font-family var(--wren-font-utility)
+
+  input:focus,
+  button:focus
+    outline 0
+
+  &:focus-within
+    border-color var(--wren-accent-primary)
+    box-shadow 0 0 0 1px var(--wren-accent-primary), inset 0 2px 3px rgba(0, 0, 0, .38)
+
+.walletCallsAdjustCall
+  display grid
+  padding 15px 0 17px
+  border-top 1px solid var(--wren-ledger-rule)
+  grid-template-columns 42px minmax(0, 1fr)
+  gap 13px
+
+.walletCallsAdjustCallHeader
+  display flex
+  justify-content space-between
+  gap 16px
+
+  strong
+    overflow hidden
+    font-size 14px
+    font-weight 640
+    text-overflow ellipsis
+    white-space nowrap
+
+  span
+    flex none
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+.walletCallsDestinationAddress
+  margin-top 4px
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-utility)
+  font-size 12px
+  text-overflow ellipsis
+  white-space nowrap
+
+.walletCallsAdjustFields
+  display grid
+  margin-top 13px
+  grid-template-columns repeat(3, minmax(108px, 1fr)) minmax(126px, auto)
+  gap 10px
+  align-items end
+
+  label > span:first-child,
+  .walletCallsAdjustCost > span
+    display block
+    margin-bottom 6px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+  label > input,
+  .walletCallsUnitInput
+    display flex
+    height 36px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    box-sizing border-box
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+    box-shadow inset 0 2px 3px rgba(0, 0, 0, .38), 0 1px 0 rgba(255, 255, 255, .03)
+
+  label > input
+    width 100%
+    padding 0 10px
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+  label > input:focus,
+  .walletCallsUnitInput:focus-within
+    outline 0
+    border-color var(--wren-accent-primary)
+    box-shadow 0 0 0 1px var(--wren-accent-primary), inset 0 2px 3px rgba(0, 0, 0, .38)
+
+.walletCallsUnitInput
+  align-items center
+
+  input
+    min-width 0
+    width 100%
+    height 100%
+    padding 0 5px 0 10px
+    border 0
+    color var(--wren-text-primary)
+    background transparent
+    font-family var(--wren-font-utility)
+    font-size 12px
+
+    &:focus
+      outline 0
+
+  em
+    padding-right 9px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    font-style normal
+
+.walletCallsAdjustCost
+  padding-bottom 5px
+  text-align right
+
+  strong
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    font-weight 600
+
+.walletCallsAdjustError
+  margin-top 12px
+  color var(--wren-danger)
+
+.walletCallsAdjustActions .walletCallsCancelButton
+  color var(--wren-text-secondary)
+
+@media (max-width: 610px)
+  .walletCallsSurface
+    padding-right 22px
+    padding-left 22px
+
+  .walletCallsSummary
+    grid-template-columns minmax(0, 1fr) 205px
+    gap 20px
+
+  .walletCallsAdjustFields
+    grid-template-columns repeat(2, minmax(110px, 1fr))
+
+  .walletCallsAdjustCost
+    text-align left

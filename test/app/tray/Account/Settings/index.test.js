@@ -33,7 +33,6 @@ const renderWithStore = (Component, props = {}) => {
 
 it('saves a normalized account name only after editing completes', () => {
   renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
   fireEvent.click(screen.getByRole('button', { name: 'Update account name' }))
 
   const input = screen.getByDisplayValue('Primary')
@@ -55,20 +54,34 @@ it('restores the persisted name instead of submitting an empty name', () => {
   expect(screen.getByDisplayValue('Primary')).toBeTruthy()
 })
 
+it('keeps the expanded account name editor in the keyboard sequence', async () => {
+  const { user } = renderWithStore(SettingsExpanded, { expanded: true })
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+
+  await user.tab()
+  expect(document.activeElement).toBe(input)
+  await user.clear(input)
+  await user.type(input, 'Treasury{Enter}')
+
+  expect(link.send).toHaveBeenCalledWith('tray:renameAccount', account, 'Treasury')
+})
+
 it('requires a separately armed second action before removing an account', () => {
   renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
 
-  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }), { detail: 1 })
+  const remove = screen.getByRole('button', { name: 'Remove account' })
+  expect(remove.closest('.clusterValue').getAttribute('style')).not.toMatch(/color/)
+  fireEvent.click(remove, { detail: 1 })
   expect(link.rpc).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm remove account' }), { detail: 1 })
+  const confirm = screen.getByRole('button', { name: 'Confirm remove account' })
+  expect(confirm.closest('.settingsPreviewRemovalConfirm')).toBeTruthy()
+  fireEvent.click(confirm, { detail: 1 })
 
   expect(link.rpc).toHaveBeenCalledWith('removeAccount', account, {}, expect.any(Function))
 })
 
 it('does not let one multi-click gesture arm and confirm account removal', () => {
   renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByRole('button', { name: 'Show account settings' }))
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove account' }), { detail: 1 })
   const confirm = screen.getByRole('button', { name: 'Confirm remove account' })
@@ -82,7 +95,6 @@ it('does not let one multi-click gesture arm and confirm account removal', () =>
 
 it('moves keyboard focus to the safe action before account removal can be confirmed', async () => {
   const { user } = renderWithStore(SettingsPreview)
-  await user.click(screen.getByRole('button', { name: 'Show account settings' }))
   const remove = screen.getByRole('button', { name: 'Remove account' })
 
   remove.focus()
@@ -98,7 +110,6 @@ it('moves keyboard focus to the safe action before account removal can be confir
 
 it('disables account removal while the name editor is active', async () => {
   const { user } = renderWithStore(SettingsPreview)
-  await user.click(screen.getByRole('button', { name: 'Show account settings' }))
   await user.click(screen.getByRole('button', { name: 'Update account name' }))
 
   const removeButton = screen.getByRole('button', { name: 'Remove account' })

@@ -1,85 +1,61 @@
 import React from 'react'
 import Restore from 'react-restore'
-import Icon from '../../../../../resources/Components/Icon'
-import { getOriginDisplayName } from '../../../../../resources/domain/origin'
+import {
+  LightweightRequest,
+  RequestFact,
+  RequestFactGrid,
+  RequestNote,
+  RequestPermission,
+  RequestSection
+} from '../LightweightRequest'
 
-class AddTokenRequest extends React.Component {
+const shortAddress = (address = '') =>
+  address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address
+
+export class AddTokenRequest extends React.Component {
   render() {
-    const status = this.props.req.status
-    const notice = this.props.req.notice
+    const { chainData = {}, originName = 'Unknown origin', req } = this.props
+    const { token } = req
+    const symbol = (token.symbol || '').toUpperCase()
+    const tokenName = token.name || symbol || 'Unknown token'
+    const chainName = chainData.chainName || `Chain ${token.chainId}`
 
-    let requestClass = 'signerRequest'
-    if (status === 'success') requestClass += ' signerRequestSuccess'
-    if (status === 'declined') requestClass += ' signerRequestDeclined'
-    if (status === 'pending') requestClass += ' signerRequestPending'
-    if (status === 'error') requestClass += ' signerRequestError'
-
-    const originName = getOriginDisplayName(this.store('main.origins', this.props.req.origin, 'name'))
-    let originClass = 'requestTokenOrigin'
-    if (originName.length > 28) originClass = 'requestTokenOrigin requestTokenOrigin18'
-    if (originName.length > 36) originClass = 'requestTokenOrigin requestTokenOrigin12'
-
-    const mode = this.props.req.mode
-    const height = mode === 'monitor' ? '80px' : '340px'
-    const token = this.props.req.token
     return (
-      <div
-        key={this.props.req.id || this.props.req.handlerId}
-        className={requestClass}
-        style={{ transform: `translateY(${this.props.pos}px)`, height }}
+      <LightweightRequest
+        req={req}
+        icon='tokens'
+        eyebrow='Token suggestion'
+        title={`Add ${symbol || tokenName} to your token list?`}
+        help='The site supplied this token identity. Compare the contract with a source you trust.'
       >
-        <div className='approveRequest'>
-          {notice ? (
-            <div className='requestNotice'>
-              {((_) => {
-                if (status === 'pending') {
-                  return (
-                    <div className='requestNoticeInner scaleIn'>
-                      <div>
-                        <div className='loader' />
-                      </div>
-                    </div>
-                  )
-                } else if (status === 'success') {
-                  return (
-                    <div className='requestNoticeInner scaleIn'>
-                      <Icon name='check' size={80} />
-                    </div>
-                  )
-                } else if (status === 'error' || status === 'declined') {
-                  return (
-                    <div className='requestNoticeInner scaleIn'>
-                      <Icon name='blocked' size={80} />
-                    </div>
-                  )
-                }
-              })()}
-            </div>
-          ) : (
-            <div className='approveTransactionPayload'>
-              {
-                <div className='approveRequestHeader approveTransactionHeader'>
-                  <div className='approveRequestHeaderIcon'>
-                    <Icon name='permissions' size={20} />
-                  </div>
-                  <div className='approveRequestHeaderLabel'> Add Token</div>
-                </div>
-              }
-              <div className='requestToken scaleIn'>
-                <div className='requestTokenInner'>
-                  <div className={originClass}>{originName}</div>
-                  <div className={'requestTokenOriginSub'}>{'wants to add a token'}</div>
-                  <div className='requestTokenInfo'>
-                    <div className='requestTokenSymbol'>{token.symbol.toUpperCase()}</div>
-                    <div className='requestTokenName'>{token.name}</div>
-                    <div className='requestTokenAddress'>{token.address}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        <RequestSection title='Token details'>
+          <RequestFactGrid>
+            <RequestFact label='Token' value={symbol ? `${tokenName} · ${symbol}` : tokenName} />
+            <RequestFact label='Network' value={`${chainName} · ${token.chainId}`} />
+            <RequestFact
+              label='Contract'
+              value={token.address}
+              displayValue={shortAddress(token.address)}
+              copyLabel='Copy proposed token contract'
+            />
+            <RequestFact label='Decimals' value={String(token.decimals)} technical={true} />
+            <RequestFact label='Requested by' value={originName} technical={true} />
+          </RequestFactGrid>
+          <RequestNote icon='alert' warning={true}>
+            <strong>Token names and symbols can be copied.</strong> The contract address is the token’s
+            reliable identity.
+          </RequestNote>
+        </RequestSection>
+        <RequestSection title='What happens next'>
+          <div className='lightweightRequestPermissionList'>
+            <RequestPermission
+              icon='settings'
+              title='Review the full token entry in Wren'
+              detail='Nothing is added until you confirm it in the token editor.'
+            />
+          </div>
+        </RequestSection>
+      </LightweightRequest>
     )
   }
 }

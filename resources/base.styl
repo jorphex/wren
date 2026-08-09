@@ -1,9 +1,4 @@
 @font-face
-  font-family 'VCR'
-  font-weight 100 700
-  src url('./fonts/VCR/VCR.ttf')
-
-@font-face
   font-family 'FiraCode'
   font-weight 100
   src url('./fonts/FiraCode/FiraCode-Light.ttf')
@@ -159,6 +154,17 @@ body
   // Wren foundation. FiraCode remains the provisional technical face.
   --wren-font-ui 'MainFont', sans-serif
   --wren-font-mono 'FiraCode', monospace
+  --wren-font-utility var(--wren-font-mono)
+  --wren-font-body-settings 'CASL' .03, 'CRSV' 0
+  --wren-font-heading-settings 'CASL' .28, 'CRSV' 0
+
+  --wren-type-display 32px
+  --wren-type-title 24px
+  --wren-type-heading 20px
+  --wren-type-body 15px
+  --wren-type-small 13px
+  --wren-type-caption 12px
+  --wren-type-label var(--wren-type-caption)
 
   --wren-space-1 4px
   --wren-space-2 8px
@@ -181,9 +187,18 @@ body
   --wren-shadow-lg 0 12px 28px rgba(0, 0, 0, .28)
   --wren-shadow-inset inset 0 1px 0 rgba(255, 255, 255, .03)
 
+  // Direction-free top light and a deeper lower edge keep controls tactile without patterned noise.
+  --wren-control-texture-dark linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, 0) 55%)
+  --wren-control-texture-light linear-gradient(180deg, rgba(250, 245, 233, .16), rgba(250, 245, 233, 0) 52%)
+  --wren-control-shadow inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 -2px 0 rgba(0, 0, 0, .42), 0 1px 2px rgba(0, 0, 0, .24)
+  --wren-control-shadow-hover inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -2px 0 rgba(0, 0, 0, .38), 0 2px 5px rgba(0, 0, 0, .26)
+  --wren-control-shadow-pressed inset 0 1px 2px rgba(0, 0, 0, .42), 0 1px 1px rgba(0, 0, 0, .18)
+  --wren-control-shadow-disabled inset 0 1px 0 rgba(255, 255, 255, .02)
+
   --wren-motion-fast 120ms
   --wren-motion-standard 180ms
   --wren-motion-slow 240ms
+  --wren-motion-page 260ms
   --wren-ease cubic-bezier(.2, .8, .2, 1)
 
   // Shadows
@@ -202,7 +217,25 @@ body
   --cubic cubic-bezier(.82,0,.12,1)
 
   font-feature-settings 'ss04', 'zero'
-  font-variation-settings 'CASL' .12, 'CRSV' .25
+  font-variation-settings var(--wren-font-body-settings)
+
+h1, h2, h3, h4
+  font-family var(--wren-font-ui)
+  font-variation-settings var(--wren-font-heading-settings)
+  letter-spacing -.01em
+
+[class$='Title'], [class$='Heading'], [class$='Headline']
+  font-variation-settings var(--wren-font-heading-settings)
+
+button, input, select, textarea
+  font-family inherit
+  font-feature-settings inherit
+
+button
+  color inherit
+
+.wrenUtilityText
+  font-family var(--wren-font-utility)
 
 :focus-visible
   outline 2px solid var(--wren-focus, var(--moon))
@@ -439,52 +472,70 @@ body
   // Wren dark-native design tokens
   --wren-bg-canvas #090c0a
   --wren-bg-subtle #0e1210
-  --wren-bg-elevated #131815
+  --wren-bg-elevated #141a16
   --wren-bg-panel #171d19
   --wren-bg-panel-strong #1d251f
-  --wren-surface-card #0d110e
-  --wren-surface-hover #151b17
-  --wren-surface-active #1b241d
+  --wren-surface-card #0f1410
+  --wren-surface-hover #1a211c
+  --wren-surface-active #202a23
   --wren-surface-inset #070a08
   --wren-surface-overlay #0c100e
-  --wren-border-subtle #222a24
-  --wren-border-default #303a32
-  --wren-border-strong #455248
-  --wren-text-primary #f0f3ed
-  --wren-text-secondary #c1c9c0
-  --wren-text-tertiary #929d93
-  --wren-text-muted #6e786f
-  --wren-text-disabled #586159
+  --wren-border-subtle #2b352d
+  --wren-border-default #3d493f
+  --wren-border-strong #5a695c
+  --wren-ledger-rule var(--wren-border-subtle)
+  --wren-ledger-hover var(--wren-surface-hover)
+  --wren-ledger-selected rgba(166, 138, 97, .075)
+  --wren-text-primary #f2f4ef
+  --wren-text-secondary #d0d6ce
+  --wren-text-tertiary #a9b3aa
+  --wren-text-muted #89958b
+  --wren-text-disabled #6e796f
   --wren-text-inverse #12150f
-  --wren-accent-primary #d0a85e
-  --wren-accent-primary-hover #dfba71
-  --wren-accent-primary-active #b8904d
-  --wren-accent-primary-soft #241e14
+  --wren-accent-primary #a68a61
+  --wren-accent-primary-hover #b79a70
+  --wren-accent-primary-active #947953
+  --wren-accent-primary-soft #29231b
   --wren-accent-secondary #87a880
   --wren-accent-secondary-hover #98ba90
   --wren-accent-secondary-active #75956f
   --wren-accent-secondary-soft #172219
-  --wren-success #82ab7a
+  --wren-success #8fb687
   --wren-success-soft #152318
-  --wren-warning #d8aa5b
+  --wren-warning #ddb467
   --wren-warning-soft #281f12
-  --wren-danger #d57468
+  --wren-danger #df8377
   --wren-danger-soft #2a1716
-  --wren-info #7faabc
+  --wren-info #8ab5c7
   --wren-info-soft #142128
-  --wren-focus #e0bd78
+  --wren-focus #bfa77e
+  // Network identity is nominative, never semantic state.
+  --wren-chain-ethereum #7185c2
+  --wren-chain-optimism #bd5d62
+  --wren-chain-gnosis #5f806f
+  --wren-chain-polygon #8872b8
+  --wren-chain-base #5877c6
+  --wren-chain-arbitrum #5689ba
+  --wren-chain-katana #9b8b61
+  --wren-chain-testnet #b39a64
+  --wren-chain-custom #707a72
+  --wren-control-primary-border #b79a70
+  --wren-control-primary-border-hover #c4aa83
+  --wren-control-primary-shadow inset 0 1px 0 rgba(250, 245, 233, .22), inset 0 -2px 0 rgba(56, 43, 26, .4), 0 2px 4px rgba(0, 0, 0, .28)
+  --wren-control-primary-shadow-hover inset 0 1px 0 rgba(250, 245, 233, .26), inset 0 -2px 0 rgba(56, 43, 26, .36), 0 3px 7px rgba(0, 0, 0, .3)
+  --wren-control-primary-shadow-pressed inset 0 2px 3px rgba(56, 43, 26, .4), 0 1px 1px rgba(0, 0, 0, .2)
 
   // Compatibility aliases for inherited components
   --v var(--wren-text-tertiary)
-  --outerspace01 rgba(240, 243, 237, 0.1)
-  --outerspace02 rgba(240, 243, 237, 0.2)
-  --outerspace03 rgba(240, 243, 237, 0.3)
-  --outerspace04 rgba(240, 243, 237, 0.4)
-  --outerspace05 rgba(240, 243, 237, 0.5)
-  --outerspace06 rgba(240, 243, 237, 0.6)
-  --outerspace07 rgba(240, 243, 237, 0.7)
-  --outerspace08 rgba(240, 243, 237, 0.8)
-  --outerspace09 rgba(240, 243, 237, 0.9)
+  --outerspace01 rgba(242, 244, 239, 0.1)
+  --outerspace02 rgba(242, 244, 239, 0.2)
+  --outerspace03 rgba(242, 244, 239, 0.3)
+  --outerspace04 rgba(242, 244, 239, 0.4)
+  --outerspace05 rgba(242, 244, 239, 0.5)
+  --outerspace06 rgba(242, 244, 239, 0.6)
+  --outerspace07 rgba(242, 244, 239, 0.7)
+  --outerspace08 rgba(242, 244, 239, 0.8)
+  --outerspace09 rgba(242, 244, 239, 0.9)
   --outerspace var(--wren-text-primary)
   --nebula var(--wren-border-default)
   --outerspaceLight var(--wren-border-default)
@@ -527,32 +578,32 @@ body
   --good var(--wren-success)
   --goodUp var(--wren-accent-secondary-hover)
   --goodShade var(--wren-accent-secondary-active)
-  --good0 rgba(130, 171, 122, 0)
-  --good01 rgba(130, 171, 122, 0.1)
-  --good02 rgba(130, 171, 122, 0.2)
-  --good03 rgba(130, 171, 122, 0.3)
-  --good04 rgba(130, 171, 122, 0.4)
-  --good06 rgba(130, 171, 122, 0.6)
+  --good0 rgba(143, 182, 135, 0)
+  --good01 rgba(143, 182, 135, 0.1)
+  --good02 rgba(143, 182, 135, 0.2)
+  --good03 rgba(143, 182, 135, 0.3)
+  --good04 rgba(143, 182, 135, 0.4)
+  --good06 rgba(143, 182, 135, 0.6)
   --goodDark var(--wren-success-soft)
 
   --badOver var(--wren-danger-soft)
   --bad var(--wren-danger)
-  --bad0 rgba(213, 116, 104, 0)
-  --bad01 rgba(213, 116, 104, 0.1)
-  --bad04 rgba(213, 116, 104, 0.4)
-  --bad06 rgba(213, 116, 104, 0.6)
+  --bad0 rgba(223, 131, 119, 0)
+  --bad01 rgba(223, 131, 119, 0.1)
+  --bad04 rgba(223, 131, 119, 0.4)
+  --bad06 rgba(223, 131, 119, 0.6)
   --pendingOver var(--wren-info-soft)
   --pending var(--wren-info)
-  --pending04 rgba(127, 170, 188, 0.4)
+  --pending04 rgba(138, 181, 199, 0.4)
   --pendingShade #6995a7
   --pendingShade2 #587f90
   --warning var(--wren-warning)
 
-  --moonHighlight #ecd39f
+  --moonHighlight #c4aa83
   --moonOver var(--wren-text-inverse)
   --moon var(--wren-accent-primary)
   --moonDark var(--wren-accent-primary-active)
-  --moon06 rgba(208, 168, 94, 0.6)
+  --moon06 rgba(166, 138, 97, 0.6)
   --moonLight var(--wren-accent-primary-hover)
   --mint #c7d5c9
   --mintOver #1e291f
@@ -560,7 +611,7 @@ body
   ::selection 
     background-color var(--outerspace02)
 
-  --overlayA rgba(208, 168, 94, 0.025)
+  --overlayA rgba(166, 138, 97, 0.025)
   --overlayB rgba(135, 168, 128, 0.025)
 
   --thinner rgba(0, 0, 10, .1)
@@ -582,291 +633,20 @@ body
 @keyframes cardShow
   0%
     opacity 0
-
-  15.82%
-    opacity 0
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -9.026, 0, 0, 1)
-
-  21.02%
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -19.292, 0, 0, 1)
-
-  35.34%
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -3.681, 0, 0, 1)
-
-  49.55%
-    opacity 1
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2.594, 0, 0, 1)
-
-  78.18%
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -0.018, 0, 0, 1)
+    transform translateY(4px)
 
   100%
-    transform matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-
-
-// @keyframes cardHide
-//   0%
-//     opacity 1
-//     transform translateX(0px)
-
-//   50%
-//     opacity 0
-//     transform translateX(100px)
-
-//   100%
-//     opacity 0
-//     transform translateX(500px)
+    opacity 1
+    transform translateY(0)
 
 .cardShow
   z-index 3000001
-  animation cardShow 400ms linear both
+  animation cardShow var(--wren-motion-page) var(--wren-ease) both
   animation-delay 0s
 
 .cardHide
   opacity 0
   pointer-events none
-
-.glitch
-  position absolute
-  top 0
-  right 0
-  bottom 0
-  left 0
-  display flex
-  justify-content center
-  align-items center
-  color var(--outerspace)
-
-.line
-  display none
-
-.lastLine
-  display block
-  opacity 1
-
-.glitchOn
-  .line
-    display block
-    will-change clip-path
-
-  .line:not(:first-child)
-    position absolute
-
-  .line:nth-child(1)
-    animation clip 3000ms -300ms linear infinite, glitch1 1000ms -228ms linear infinite
-
-  .line:nth-child(2)
-    animation clip 3000ms -600ms linear infinite, glitch2 1000ms -927ms linear infinite
-
- @keyframes glitch1
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(-3px)
-	  color var(--good)
-  90%
-	  transform translateX(0px)
-	  color var(--bad)
-  95%
-	  transform translateX(3px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
- @keyframes glitch2
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(5px)
-	  color var(--good)
-  90%
-	  transform translateX(5px)
-	  color var(--bad)
-  95%
-	  transform translateX(3px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(3)
-  animation clip 3000ms -900ms linear infinite, glitch3 1000ms -496ms linear infinite
-
-@keyframes glitch3
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(-2px)
-	  color var(--good)
-  90%
-	  transform translateX(-4px)
-	  color var(--bad)
-  95%
-	  transform translateX(4px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(4)
-  animation clip 3000ms -1200ms linear infinite, glitch4 1000ms -660ms linear infinite
-
-@keyframes glitch4
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(3px)
-	  color var(--good)
-  90%
-	  transform translateX(1px)
-	  color var(--bad)
-  95%
-	  transform translateX(-2px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(5)
-  animation clip 3000ms -11000ms linear infinite, glitch5 1000ms -399ms linear infinite
-
-@keyframes glitch5
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(-2px)
-	  color var(--good)
-  90%
-	  transform translateX(-3px)
-	  color var(--bad)
-  95%
-	  transform translateX(-4px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(6)
-  animation clip 3000ms -1800ms linear infinite, glitch6 1000ms -657ms linear infinite
-
-@keyframes glitch6
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(-4px)
-	  color var(--good)
-  90%
-	  transform translateX(-4px)
-	  color var(--bad)
-  95%
-	  transform translateX(1px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(7)
-  animation clip 3000ms -2100ms linear infinite, glitch7 1000ms -619ms linear infinite
-
-@keyframes glitch7
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(2px)
-	  color var(--good)
-  90%
-	  transform translateX(-3px)
-	  color var(--bad)
-  95%
-	  transform translateX(4px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(8)
-  animation clip 3000ms -2400ms linear infinite, glitch8 1000ms -380ms linear infinite
-
-@keyframes glitch8
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(0px)
-	  color var(--good)
-  90%
-	  transform translateX(-2px)
-	  color var(--bad)
-  95%
-	  transform translateX(2px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(9)
-  animation clip 3000ms -2700ms linear infinite, glitch9 1000ms -863ms linear infinite
-
-@keyframes glitch9
-  0%
-	  transform translateX(0)
-  80%
-	  transform translateX(0)
-	  color var(--outerspace)
-  85%
-	  transform translateX(-3px)
-	  color var(--good)
-  90%
-	  transform translateX(-1px)
-	  color var(--bad)
-  95%
-	  transform translateX(-4px)
-	  color var(--outerspace)
-  100%
-	  transform translateX(0)
-
-.line:nth-child(10)
-	animation clip 3000ms -3000ms linear infinite, glitch10 1000ms -745ms linear infinite
-
-@keyframes glitch10
-	0%
-		transform translateX(0)
-	80%
-    transform translateX(0)
-    color var(--outerspace)
-	85%
-    transform translateX(-1px)
-    color var(--good)
-	90%
-    transform translateX(-3px)
-    color var(--bad)
-	95%
-    transform translateX(-1px)
-    color var(--outerspace)
-	100%
-		transform translateX(0)
-
-@keyframes clip
-  0%
-    clip-path polygon(0 100%, 100% 100%, 100% 120%, 0 120%)
-  100%
-    clip-path polygon(0 -20%, 100% -20%, 100% 0%, 0 0)
 
 @import './Native/style'
 @import './Components'

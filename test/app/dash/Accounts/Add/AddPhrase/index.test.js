@@ -24,7 +24,7 @@ describe('entering seed phrase', () => {
     return {
       clickNext: async () => user.click(screen.getByRole('button', { name: 'Next' })),
       enterSeedPhrase: async (text) =>
-        await user.type(screen.getByRole('textbox', { name: 'Seed Phrase' }), text)
+        await user.type(screen.getByRole('textbox', { name: 'Recovery phrase' }), text)
     }
   }
 
@@ -32,7 +32,7 @@ describe('entering seed phrase', () => {
     setupComponent()
 
     const title = screen.getAllByRole('heading')[0]
-    expect(title.textContent).toBe('Seed Phrase')
+    expect(title.textContent).toBe('Recovery phrase')
   })
 
   it('should show an error message when an incorrect seed phrase is submitted', async () => {
@@ -40,7 +40,7 @@ describe('entering seed phrase', () => {
 
     await enterSeedPhrase('INVALID')
 
-    expect(screen.getByRole('alert').textContent).toBe('INVALID SEED PHRASE')
+    expect(screen.getByRole('alert').textContent).toBe('Enter a valid recovery phrase')
   })
 
   it('should update the navigation with the password entry screen when a seed phrase is submitted', async () => {
@@ -63,7 +63,7 @@ describe('entering seed phrase', () => {
 
   it('normalizes a multiline pasted seed phrase without concatenating words', async () => {
     const { user } = render(<AddPhrase accountData={{}} />)
-    const input = screen.getByRole('textbox', { name: 'Seed Phrase' })
+    const input = screen.getByRole('textbox', { name: 'Recovery phrase' })
     fireEvent.change(input, { target: { value: phrase.replaceAll(' ', '\n') } })
     act(() => jest.advanceTimersByTime(300))
 

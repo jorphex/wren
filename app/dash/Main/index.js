@@ -1,7 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../resources/Components/Icon'
-import { okPort, okProtocol } from '../../../resources/connections'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import { WREN_COMPANION_RELEASES_URL, WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
@@ -13,19 +12,19 @@ const dashboardSections = [
       {
         view: 'accounts',
         title: 'Accounts',
-        description: 'Manage signing and watch-only accounts',
+        description: 'Manage signing and watch-only accounts.',
         icon: 'accounts'
       },
       {
         view: 'addressBook',
         title: 'Contacts',
-        description: 'Name and verify frequently used addresses',
+        description: 'Label addresses you know and verify often.',
         icon: 'contacts'
       },
       {
         view: 'earn',
         title: 'Earn',
-        description: 'Review selected Yearn vault opportunities',
+        description: 'Review selected Yearn vaults by network.',
         icon: 'earn'
       }
     ]
@@ -36,25 +35,25 @@ const dashboardSections = [
       {
         view: 'chains',
         title: 'Networks',
-        description: 'Configure chains and RPC connections',
+        description: 'Configure networks and RPC connections.',
         icon: 'network'
       },
       {
         view: 'tokens',
         title: 'Tokens',
-        description: 'Control recognized and custom assets',
+        description: 'Manage recognized and custom assets.',
         icon: 'tokens'
       },
       {
         view: 'dapps',
         title: 'Connected apps',
-        description: 'Review dapp access and permissions',
+        description: 'Review app access and permissions.',
         icon: 'apps'
       },
       {
         view: 'settings',
         title: 'Settings',
-        description: 'Desktop behavior, shortcuts, and privacy',
+        description: 'Adjust desktop behavior, shortcuts, and privacy.',
         icon: 'settings'
       }
     ]
@@ -64,25 +63,19 @@ const dashboardSections = [
 export class Main extends React.Component {
   constructor(props, context) {
     super(props, context)
-    this.customMessage = 'Custom Endpoint'
     const latticeEndpoint = context.store('main.latticeSettings.endpointCustom')
     const latticeEndpointMode = context.store('main.latticeSettings.endpointMode')
     this.state = {
-      localShake: {},
       latticeEndpoint,
       latticeEndpointMode,
       resetConfirm: false,
-      expandNetwork: false,
       instanceIdCopied: false
     }
   }
 
   componentWillUnmount() {
     clearTimeout(this.instanceIdCopiedTimeout)
-    clearTimeout(this.customPrimaryInputTimeout)
-    clearTimeout(this.customSecondaryInputTimeout)
     clearTimeout(this.inputLatticeTimeout)
-    clearTimeout(this.localShakeTimeout)
   }
 
   componentDidMount() {
@@ -162,38 +155,6 @@ export class Main extends React.Component {
     )
   }
 
-  customPrimaryFocus() {
-    if (this.state.primaryCustom === this.customMessage) this.setState({ primaryCustom: '' })
-  }
-
-  customPrimaryBlur() {
-    if (this.state.primaryCustom === '') this.setState({ primaryCustom: this.customMessage })
-  }
-
-  inputPrimaryCustom(e) {
-    e.preventDefault()
-    clearTimeout(this.customPrimaryInputTimeout)
-    const value = e.target.value.replace(/\s+/g, '')
-    this.setState({ primaryCustom: value })
-    const { type, id } = this.store('main.currentNetwork')
-    this.customPrimaryInputTimeout = setTimeout(
-      () => link.send('tray:action', 'setPrimaryCustom', type, id, this.state.primaryCustom),
-      1000
-    )
-  }
-
-  inputSecondaryCustom(e) {
-    e.preventDefault()
-    clearTimeout(this.customSecondaryInputTimeout)
-    const value = e.target.value.replace(/\s+/g, '')
-    this.setState({ secondaryCustom: value })
-    const { type, id } = this.store('main.currentNetwork')
-    this.customSecondaryInputTimeout = setTimeout(
-      () => link.send('tray:action', 'setSecondaryCustom', type, id, this.state.secondaryCustom),
-      1000
-    )
-  }
-
   inputLatticeEndpoint(e) {
     e.preventDefault()
     clearTimeout(this.inputLatticeTimeout)
@@ -206,78 +167,6 @@ export class Main extends React.Component {
     )
   }
 
-  localShake(key) {
-    const localShake = Object.assign({}, this.state.localShake)
-    localShake[key] = true
-    this.setState({ localShake })
-    this.localShakeTimeout = setTimeout(() => {
-      const localShake = Object.assign({}, this.state.localShake)
-      localShake[key] = false
-      this.setState({ localShake })
-    }, 1010)
-  }
-
-  status(layer) {
-    const { type, id } = this.store('main.currentNetwork')
-    const connection = this.store('main.networks', type, id, 'connection', layer)
-    let status = connection.status
-    const current = connection.current
-
-    if (current === 'custom') {
-      if (
-        layer === 'primary' &&
-        this.state.primaryCustom !== '' &&
-        this.state.primaryCustom !== this.customMessage
-      ) {
-        if (!okProtocol(this.state.primaryCustom)) status = 'invalid target'
-        else if (!okPort(this.state.primaryCustom)) status = 'invalid port'
-      }
-
-      if (
-        layer === 'secondary' &&
-        this.state.secondaryCustom !== '' &&
-        this.state.secondaryCustom !== this.customMessage
-      ) {
-        if (!okProtocol(this.state.secondaryCustom)) status = 'invalid target'
-        else if (!okPort(this.state.secondaryCustom)) status = 'invalid port'
-      }
-    }
-    if (status === 'connected' && !connection.network) status = 'loading'
-    return (
-      <div className='connectionOptionStatus'>
-        {this.indicator(status)}
-        <div className='connectionOptionStatusText'>{status}</div>
-      </div>
-    )
-  }
-
-  indicator(status) {
-    if (status === 'connected') {
-      return (
-        <div className='connectionOptionStatusIndicator'>
-          <div className='connectionOptionStatusIndicatorGood' />
-        </div>
-      )
-    } else if (status === 'loading' || status === 'syncing' || status === 'pending' || status === 'standby') {
-      return (
-        <div className='connectionOptionStatusIndicator'>
-          <div className='connectionOptionStatusIndicatorPending' />
-        </div>
-      )
-    } else {
-      return (
-        <div className='connectionOptionStatusIndicator'>
-          <div className='connectionOptionStatusIndicatorBad' />
-        </div>
-      )
-    }
-  }
-
-  expandNetwork(e, expand) {
-    e.stopPropagation()
-    this.setState({ expandNetwork: expand !== undefined ? expand : !this.state.expandNetwork })
-  }
-
   render() {
     return (
       <div className={'localSettings cardShow'}>
@@ -285,7 +174,7 @@ export class Main extends React.Component {
           <header className='dashHomeHeader'>
             <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
             <h1>Control center</h1>
-            <p>Manage accounts, networks, permissions, and wallet behavior.</p>
+            <p>Manage accounts, networks, permissions, and desktop behavior.</p>
           </header>
           <nav className='dashModules' aria-label='Wallet management'>
             {dashboardSections.map((section) => (
@@ -295,13 +184,12 @@ export class Main extends React.Component {
                   {section.items.map((item) => (
                     <button
                       type='button'
-                      className='dashModule'
-                      aria-label={item.title}
+                      className='dashModule wrenControl wrenControlGhost'
                       key={item.view}
                       onClick={() => link.send('tray:action', 'navDash', { view: item.view, data: {} })}
                     >
                       <span className='dashModuleIcon'>
-                        <Icon name={item.icon} size={22} />
+                        <Icon name={item.icon} size={20} />
                       </span>
                       <span className='dashModuleCopy'>
                         <strong className='dashModuleTitle'>{item.title}</strong>
@@ -319,13 +207,13 @@ export class Main extends React.Component {
           <section className='dashCompanion' aria-labelledby='dash-companion-title'>
             <div className='dashCompanionCopy'>
               <h2 id='dash-companion-title'>Browser companion</h2>
-              <p>Connect browser dapps to this Wren desktop instance.</p>
+              <p>Connect browser dapps to this Wren desktop wallet.</p>
             </div>
-            <div className='snipItBrowserExtensionIcons'>
+            <div className='dashCompanionBrowserActions'>
               <button
                 type='button'
                 aria-label='Download Chrome companion'
-                className='snipItBrowserExtensionIcon snipItBrowserExtensionIconChrome'
+                className='wrenControl wrenControlGhost wrenControlIcon'
                 onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
                 {svg.chrome(22)}
@@ -333,7 +221,7 @@ export class Main extends React.Component {
               <button
                 type='button'
                 aria-label='Download Firefox companion'
-                className='snipItBrowserExtensionIcon snipItBrowserExtensionIconFirefox'
+                className='wrenControl wrenControlGhost wrenControlIcon'
                 onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
               >
                 {svg.firefox(22)}
@@ -343,17 +231,17 @@ export class Main extends React.Component {
           <div className='dashSupportActions'>
             <button
               type='button'
-              className='requestFeatureButton'
+              className='requestFeatureButton wrenControl wrenControlGhost'
               onClick={() => {
                 link.send('tray:openExternal', WREN_SUPPORT_URL)
               }}
             >
               <Icon name='support' size={15} />
-              Support &amp; feedback
+              Community support
             </button>
             <button
               type='button'
-              className='requestFeatureButton'
+              className='requestFeatureButton wrenControl wrenControlGhost'
               onClick={() => {
                 link.send('tray:action', 'setOnboard', { showing: true })
               }}
@@ -363,7 +251,7 @@ export class Main extends React.Component {
             </button>
             <button
               type='button'
-              className='requestFeatureButton requestFeatureButtonDanger'
+              className='requestFeatureButton wrenControl wrenControlGhost'
               onClick={() => {
                 link.send('tray:quit')
               }}

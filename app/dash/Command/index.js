@@ -57,7 +57,7 @@ export class Command extends React.Component {
           <button
             type='button'
             aria-label='Back'
-            className='commandItem commandItemBack cardShow'
+            className='commandItem commandItemBack cardShow wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
             onClick={() => {
               link.send('tray:action', 'backDash')
             }}
@@ -71,7 +71,7 @@ export class Command extends React.Component {
         <button
           type='button'
           aria-label='Close'
-          className='commandItem commandItemClose'
+          className='commandItem commandItemClose wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           onClick={() => {
             link.send('tray:action', 'closeDash')
           }}

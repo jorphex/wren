@@ -1,53 +1,59 @@
 import React from 'react'
 import Restore from 'react-restore'
-import Icon from '../../../../../resources/Components/Icon'
+import {
+  LightweightRequest,
+  RequestFact,
+  RequestFactGrid,
+  RequestNote,
+  RequestSection
+} from '../LightweightRequest'
 
 export class ChainRequest extends React.Component {
   render() {
-    const { status, notice, chain } = this.props.req
-    const origin = this.props.originName || 'Unknown'
+    const { req } = this.props
+    const { chain } = req
+    const originName = this.props.originName || 'Unknown origin'
+    const currency = chain.symbol || chain.nativeCurrencyName || 'Unknown'
+    const decimals = chain.nativeCurrencyDecimals
+    const currencyDisplay = decimals === undefined ? currency : `${currency} · ${decimals} decimals`
 
-    let requestClass = 'signerRequest'
-    if (status === 'success') requestClass += ' signerRequestSuccess'
-    if (status === 'declined') requestClass += ' signerRequestDeclined'
-    if (status === 'pending') requestClass += ' signerRequestPending'
-    if (status === 'error') requestClass += ' signerRequestError'
-
-    let originClass = 'requestProviderOrigin'
-    if (origin.length > 28) originClass = 'requestProviderOrigin requestProviderOrigin18'
-    if (origin.length > 36) originClass = 'requestProviderOrigin requestProviderOrigin12'
     return (
-      <div key={this.props.req.id || this.props.req.handlerId} className={requestClass}>
-        <div className='approveRequest'>
-          {notice ? (
-            <div className='requestNotice'>
-              {status === 'pending' ? (
-                <div className='requestNoticeInner'>
-                  <div>
-                    <div className='loader' />
-                  </div>
-                </div>
-              ) : status === 'success' ? (
-                <div className='requestNoticeInner'>
-                  <Icon name='check' size={80} />
-                </div>
-              ) : status === 'error' || status === 'declined' ? (
-                <div className='requestNoticeInner'>
-                  <Icon name='blocked' size={80} />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className='approveTransactionPayload'>
-              <div className='requestChainInner'>
-                <div className={originClass}>{origin}</div>
-                <div className={'requestChainOriginSub'}>wants to add chain</div>
-                <div className='requestChainName'>{chain.name}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <LightweightRequest
+        req={req}
+        icon='network'
+        eyebrow='Network proposal'
+        title={`Add ${chain.name} to Wren?`}
+        help='Inspect the network identity and endpoints before continuing to Wren’s network editor.'
+      >
+        <RequestSection title='Network details'>
+          <RequestFactGrid>
+            <RequestFact label='Network' value={chain.name} />
+            <RequestFact label='Chain ID' value={String(chain.id)} technical={true} />
+            <RequestFact label='Native currency' value={currencyDisplay} />
+            <RequestFact label='Requested by' value={originName} technical={true} />
+          </RequestFactGrid>
+        </RequestSection>
+        <RequestSection title='Endpoints'>
+          <RequestFactGrid>
+            <RequestFact
+              label='RPC'
+              value={chain.rpcUrls?.[0] || 'Not supplied'}
+              copyLabel={chain.rpcUrls?.[0] ? 'Copy proposed RPC endpoint' : undefined}
+              technical={true}
+            />
+            <RequestFact
+              label='Block explorer'
+              value={chain.explorer || 'Not supplied'}
+              copyLabel={chain.explorer ? 'Copy proposed block explorer' : undefined}
+              technical={true}
+            />
+          </RequestFactGrid>
+          <RequestNote>
+            Nothing is added yet. <strong>Review network</strong> opens Wren’s editor so you can verify and
+            save these settings.
+          </RequestNote>
+        </RequestSection>
+      </LightweightRequest>
     )
   }
 }

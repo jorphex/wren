@@ -1,232 +1,240 @@
 .customTokens
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
 
   .customTokensTitle
-    font-size 16px
-    font-weight 300
-    height 47px
+    min-height 47px
     display flex
     justify-content space-between
-    padding 0px 10px
     align-items center
-    border-radius 6px
-    box-shadow 0px 5px 7px -3px var(--ghostZ)
+    padding 0 var(--wren-space-3)
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+    font-weight 500
+    border-bottom 1px solid var(--wren-border-subtle)
 
     .customTokensAddToken
-      background var(--ghostC)
-      height 30px
-      border-radius 12px
+      appearance none
+      min-height 30px
       display flex
       justify-content center
       align-items center
-      font-size 11px
-      padding 0px 12px
-      letter-spacing 1px
-      font-weight 300
-      text-transform uppercase
+      padding 0 var(--wren-space-3)
+      border 1px solid var(--wren-border-default)
+      border-radius var(--wren-radius-sm)
+      background var(--wren-bg-elevated)
+      color var(--wren-text-primary)
+      font-family inherit
+      font-size var(--wren-type-small)
+      font-weight 500
       cursor pointer
+      transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
       *
         pointer-events none
 
     .customTokensAddToken:hover
-      background var(--ghostD)
+      background var(--wren-surface-hover)
+      border-color var(--wren-border-strong)
+
+    .customTokensAddToken:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
   .customTokensFooter
     position absolute
+    right 0
     bottom 0
     left 0
-    right 0
-    height 64px
-    font-family 'MainFont'
-    font-size 20px
-    font-weight 400
+    min-height 64px
     display flex
     justify-content center
     align-items center
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-body)
+    font-weight 500
 
   .customTokensList
-    // position absolute
-    // top 40px
-    // left 5px
-    // bottom 0px
-    // right 5px
-    // overflow-y scroll
-    padding-top 20px
-    padding-bottom 20px
+    padding var(--wren-space-3) 0
+    border-top 1px solid var(--wren-ledger-rule)
     z-index 2
 
   .customTokensListNoTokens
-    position absolute
-    top 140px
-    left 5px
-    right 5px
-    bottom 0px
     display flex
-    font-size 16px
-    font-weight 300
+    flex-direction column
     justify-content center
     align-items center
-    text-transform uppercase
-    font-family 'MainFont'
-    color var(--outerspace05)
+    gap var(--wren-space-2)
+    min-height 260px
+    padding var(--wren-space-4) var(--wren-space-6) var(--wren-space-6)
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-small)
+    text-align center
+
+    img
+      display block
+      width min(410px, 100%)
+      height 150px
+      object-fit cover
+      object-position center
+
+    strong
+      color var(--wren-text-primary)
+      font-size var(--wren-type-body)
+      font-weight 550
+
+    span
+      max-width 300px
+      line-height 19px
 
   .customTokensListItem
     position relative
-    transition var(--standard)
     box-sizing border-box
-    height 50px
-    padding 0px 4px
+    min-height 58px
     overflow hidden
-    border-bottom 1px solid var(--ghostY)
+    border-bottom 1px solid var(--wren-ledger-rule)
+    background transparent
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+    &:last-child
+      border-bottom 0
 
     .customTokensListItemTitle
+      min-height 58px
       display flex
       justify-content space-between
       align-items center
-      font-size 16px
-      height 50px
+      padding var(--wren-space-2) var(--wren-space-3)
       box-sizing border-box
-      padding 6px
 
       .customTokensListItemExpand
         appearance none
-        text-align center
         width 30px
         height 30px
-        margin-left 10px
-        border-radius 12px
-        cursor pointer
-        padding 7px
+        margin-left var(--wren-space-2)
+        padding 6px
         box-sizing border-box
-        border 0
-        color inherit
-        font-family inherit
-        background var(--ghostB)
-        transition var(--standardFast)
+        border 1px solid var(--wren-border-default)
+        border-radius var(--wren-radius-sm)
+        background var(--wren-bg-elevated)
+        color var(--wren-text-secondary)
+        cursor pointer
+        transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
         transform rotate(-180deg)
-        
+
         *
           pointer-events none
 
       .customTokensListItemExpand:hover
-        background var(--ghostC)
+        background var(--wren-surface-hover)
+        border-color var(--wren-border-strong)
+        color var(--wren-text-primary)
 
       .customTokensListItemExpand:focus-visible
-        outline 0
-        box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
+
+      .customTokensListItemExpand:disabled
+        color var(--wren-text-disabled)
+        cursor default
+        opacity .6
 
       .customTokensListItemExpandActive
         transform rotate(0deg)
 
       .customTokensListItemName
+        min-width 0
         display flex
-        justify-content center
         align-items center
-        font-family 'MainFont'
-        font-weight 300
-
-        img:before
-          content attr(alt)
-          top 0
-          bottom 0
-          left 0
-          right 0
-          border-radius 13px
-          position absolute
-          background var(--outerspace)
-          color var(--ghostD)
-          display flex
-          justify-content center
-          align-items center
-          font-size 11px
-          font-weight 300
-          letter-spacing -0.5px
-          margin-left -0.5px
-          top -0.5px
+        color var(--wren-text-primary)
+        font-weight 500
 
         img
-          position relative
-          height 28px
           width 28px
-          border-radius 20px
-          margin-right 12px
-          border 2px solid var(--ghostC)
-          background var(--ghostC)
-          overflow hidden
+          height 28px
+          margin-right var(--wren-space-3)
+          border 1px solid var(--wren-border-default)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-bg-elevated)
+          object-fit contain
 
         .customTokensListItemText
+          min-width 0
           display flex
           flex-direction column
           align-items flex-start
-          justify-content flex-start
 
         .customTokensListItemSymbol
-          font-weight 300
-          margin-bottom 1px
-          margin-top 2px
-          font-size 16px
-          font-family 'MainFont'
-          line-height 13px
-          letter-spacing 1px
+          max-width 100%
+          overflow hidden
+          color var(--wren-text-primary)
+          font-size var(--wren-type-body)
+          font-weight 500
+          line-height 18px
+          text-overflow ellipsis
+          white-space nowrap
 
         .customTokensListItemSub
-          // margin-left 5px
-          font-weight 300
-          margin-top 4px
-          margin-bottom 1px
-          margin-left 0px
-          font-size 12px
-          font-weight 300
-          font-family 'MainFont'
-          color var(--outerspace05)
-          line-height 12px
+          max-width 100%
+          margin-top 2px
+          overflow hidden
+          color var(--wren-text-tertiary)
+          font-size var(--wren-type-small)
+          line-height 16px
+          text-overflow ellipsis
+          white-space nowrap
 
       .customTokensListItemChain
         display flex
-        justify-content center
         align-items center
-        font-size 18px
-        font-weight 400
+        color var(--wren-text-secondary)
+        font-family var(--wren-font-mono)
+        font-size var(--wren-type-small)
 
     .customTokensListItemChainLabel
-      font-size 10px
-      text-transform uppercase
-      margin 0px 5px 0px 1px
-      font-weight 300
-      margin-top 1px
-      font-weight 300
+      margin-right var(--wren-space-1)
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-small)
 
     .customTokensListItemAddress
       appearance none
+      width calc(100% - 24px)
+      min-height 32px
       display flex
       justify-content center
       align-items center
-      font-size 12.5px
-      height 26px
-      margin 0px 10px
-      border-radius 9px
-      font-family 'FiraCode'
-      color inherit
-      border 0
-      background var(--ghostB)
-      // border-radius 12px
-      // margin 0px 3px 0px 3px
-      padding 1px 0px 0px
+      margin 0 var(--wren-space-3)
+      padding 0 var(--wren-space-2)
+      overflow hidden
+      border 1px solid var(--wren-border-default)
+      border-radius var(--wren-radius-sm)
+      background var(--wren-surface-inset)
+      color var(--wren-text-secondary)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-small)
+      text-overflow ellipsis
+      white-space nowrap
       cursor pointer
-      *
-        pointer-events none
+      transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
     .customTokensListItemAddress:hover
-      background var(--ghostC)
+      background var(--wren-surface-hover)
+      border-color var(--wren-border-strong)
+      color var(--wren-text-primary)
 
     .customTokensListItemAddress:focus-visible
-      outline 0
-      box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
     .customTokensListItemAddress:disabled
+      color var(--wren-text-disabled)
       cursor default
+      opacity .6
 
     .customTokensListItemAddress:disabled:hover
-      background var(--ghostB)
+      background var(--wren-surface-inset)
+      border-color var(--wren-border-default)
 
     .customTokensCopyStatus
       position absolute
@@ -240,68 +248,68 @@
       border 0
 
     .customTokensListItemBottom
-      height 40px
+      height 48px
       display flex
       align-items center
-      padding 0px 10px
-      font-size 12px
+      gap var(--wren-space-2)
+      padding 0 var(--wren-space-3)
 
       .customTokensListItemButton
         appearance none
+        width 50%
+        min-height 30px
         display flex
         justify-content center
         align-items center
-        width 50%
-        height 26px
         box-sizing border-box
-        border-radius 10px
-        cursor pointer
-        text-transform uppercase
-        border 0
-        color inherit
+        padding 0 var(--wren-space-2)
+        border 1px solid var(--wren-border-default)
+        border-radius var(--wren-radius-sm)
+        background var(--wren-bg-elevated)
+        color var(--wren-text-primary)
         font-family inherit
-        padding 0
-        background var(--ghostB)
+        font-size var(--wren-type-small)
+        font-weight 500
+        cursor pointer
+        transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
         *
           pointer-events none
 
       .customTokensListItemButton:hover
-        background var(--ghostC)
+        background var(--wren-surface-hover)
+        border-color var(--wren-border-strong)
 
       .customTokensListItemButton:focus-visible
-        outline 0
-        box-shadow inset 0 0 0 2px var(--wren-focus, var(--moon))
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
 
-      .customTokensListItemButton:disabled
-        opacity .45
-        cursor default
-
-      .customTokensListItemButton:disabled:hover
-        background var(--ghostB)
-
+      .customTokensListItemButton:disabled,
       .customTokensListItemButton[aria-disabled='true']
-        opacity .45
+        color var(--wren-text-disabled)
         cursor default
+        opacity .6
 
+      .customTokensListItemButton:disabled:hover,
       .customTokensListItemButton[aria-disabled='true']:hover
-        background var(--ghostB)
+        background var(--wren-bg-elevated)
+        border-color var(--wren-border-default)
 
       .editButton
-        color var(--good)
-        margin-right 8px
+        color var(--wren-accent-secondary-hover)
 
       .removeButton
-        color var(--bad)
-        margin-left 8px
+        color var(--wren-danger)
 
   .customTokensListItemExpanded
-    height 122px
-    // background var(--ghostY)
+    min-height 146px
+    background var(--wren-bg-elevated)
+    border-color var(--wren-border-default)
 
   .customTokensListItemChainDecimal
     display flex
     justify-content center
     align-items center
-    font-size 18px
-    font-weight 400
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-small)

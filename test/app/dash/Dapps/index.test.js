@@ -19,7 +19,7 @@ const chain = {
   id: 1,
   name: 'Ethereum',
   on: true,
-  connection: { primary: { connected: true }, secondary: { connected: false } }
+  connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
 }
 const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 

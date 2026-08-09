@@ -11,7 +11,7 @@ import {
 } from '../../../../../resources/domain/signer'
 import { accountPanelCrumb, signerPanelCrumb } from '../../../../../resources/domain/nav'
 
-import { Cluster, ClusterRow, ClusterColumn, ClusterValue } from '../../../../../resources/Components/Cluster'
+import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 
 export class Signer extends React.Component {
   constructor(...args) {
@@ -63,7 +63,7 @@ export class Signer extends React.Component {
       if (err) {
         this.setState({ notifySuccess: false, notifyText: err, verifying: false })
       } else {
-        this.setState({ notifySuccess: true, notifyText: 'Address matched!', verifying: false })
+        this.setState({ notifySuccess: true, notifyText: 'Address matched', verifying: false })
       }
       clearTimeout(this.notificationTimer)
       this.notificationTimer = setTimeout(() => {
@@ -84,7 +84,7 @@ export class Signer extends React.Component {
     }
     const signer = activeSigner || getUnavailableSigner()
     if (!signer) {
-      this.setState({ notifySuccess: false, notifyText: 'Signer Unavailable' })
+      this.setState({ notifySuccess: false, notifyText: 'Signer unavailable' })
       clearTimeout(this.unavailableTimer)
       this.unavailableTimer = setTimeout(() => {
         this.setState({ notifySuccess: false, notifyText: '' })
@@ -128,9 +128,6 @@ export class Signer extends React.Component {
     } else {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>
-            <Icon name='watch' size={20} />
-          </div>
           <div>{'Watch-only'}</div>
         </div>
       )
@@ -139,14 +136,11 @@ export class Signer extends React.Component {
 
   getCurrentStatus(activeSigner, hardwareSigner) {
     let status = ''
-    let style = {
-      marginLeft: '10px',
-      padding: '12px'
-    }
+    const style = {}
 
     if (activeSigner && activeSigner.status) {
       if (activeSigner.status.toLowerCase() === 'ok') {
-        status = 'ready to sign'
+        status = 'Ready to sign'
         style.color = 'var(--good)'
       } else if (activeSigner.status.toLowerCase() === 'locked') {
         style.color = 'var(--moon)'
@@ -158,12 +152,12 @@ export class Signer extends React.Component {
       style.color = 'var(--bad)'
       status = 'Disconnected'
     } else {
-      style.color = 'var(--bad)'
-      status = 'No Signer'
+      style.color = 'var(--wren-text-muted)'
+      status = 'No signer'
     }
 
     return (
-      <div className='clusterTag' style={style}>
+      <div className='signerPreviewStatus' style={style}>
         {status}
       </div>
     )
@@ -182,41 +176,35 @@ export class Signer extends React.Component {
     const watchOnly = isWatchOnlyAccountType(activeAccount.lastSignerType)
 
     return (
-      <div className='balancesBlock' ref={this.moduleRef}>
-        <div className='moduleHeader'>
-          <span style={{ position: 'relative', top: '2px' }}>
-            <Icon name='sign' size={19} />
-          </span>
-          <span>{'Signer'}</span>
-        </div>
+      <div className='balancesBlock accountLedgerModule' ref={this.moduleRef}>
         <Cluster>
-          <ClusterRow>
-            <ClusterColumn>
-              <ClusterValue
-                ariaLabel='Open signer details'
-                disabled={this.state.openingDetails}
-                onClick={() => this.openSignerDetails(activeAccount, activeSigner)}
-              >
-                <div
-                  style={{
-                    padding: '20px'
-                  }}
-                >
-                  {this.renderSignerType(activeAccount.lastSignerType)}
-                </div>
-              </ClusterValue>
-              <ClusterValue>{this.getCurrentStatus(activeSigner, hardwareSigner)}</ClusterValue>
-            </ClusterColumn>
+          <ClusterRow className='signerPreviewRow accountLedgerRow'>
+            <div className='accountLedgerLabel'>
+              <span>
+                <Icon name='sign' size={18} />
+              </span>
+              <span>{'Signer'}</span>
+            </div>
+            <ClusterValue
+              ariaLabel='Open signer details'
+              disabled={this.state.openingDetails}
+              onClick={() => this.openSignerDetails(activeAccount, activeSigner)}
+            >
+              <div className='signerPreviewSummary'>
+                {this.renderSignerType(activeAccount.lastSignerType)}
+                {this.getCurrentStatus(activeSigner, hardwareSigner)}
+              </div>
+            </ClusterValue>
             {!watchOnly && (
-              <ClusterColumn width={'80px'}>
-                <ClusterValue
-                  ariaLabel='Verify account address on signer'
-                  disabled={this.state.verifying}
-                  onClick={() => this.verifyAddress(hardwareSigner)}
-                >
-                  <Icon name='verify' size={20} />
-                </ClusterValue>
-              </ClusterColumn>
+              <ClusterValue
+                ariaLabel='Verify account address on signer'
+                disabled={this.state.verifying}
+                grow={0}
+                onClick={() => this.verifyAddress(hardwareSigner)}
+                style={{ flexBasis: '72px' }}
+              >
+                <Icon name='verify' size={20} />
+              </ClusterValue>
             )}
           </ClusterRow>
           {this.state.notifyText && (

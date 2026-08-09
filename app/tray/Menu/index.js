@@ -12,7 +12,7 @@ export class Menu extends React.Component {
       <div className='panelMenu'>
         <button
           type='button'
-          className={'panelMenuItem panelMenuItemOpen'}
+          className='panelMenuItem panelMenuItemOpen wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           aria-label='Open dashboard'
           onClick={() => {
             link.send('tray:action', 'setDash', {
@@ -24,7 +24,7 @@ export class Menu extends React.Component {
         </button>
         <button
           type='button'
-          className={'panelMenuItem panelMenuItemSend'}
+          className='panelMenuItem panelMenuItemSend wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           aria-label='Open Wren Send'
           onClick={() => {
             clearTimeout(this.clickTimer)

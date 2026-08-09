@@ -52,7 +52,7 @@ test('keeps hardware address verification single-flight until its callback settl
   const callback = link.rpc.mock.calls[0][1]
   act(() => callback(null))
 
-  expect(screen.getByText('Address matched!')).toBeTruthy()
+  expect(screen.getByText('Address matched')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Verify account address on signer' }).disabled).toBe(false)
 })
 

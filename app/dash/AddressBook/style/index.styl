@@ -1,159 +1,217 @@
 .addressBook, .addressBookEditor
-  padding 24px 20px 32px
-  box-sizing border-box
   min-height 100%
-  color var(--outerspace)
+  box-sizing border-box
+  padding var(--wren-space-6) var(--wren-space-5) var(--wren-space-8)
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
 
 .addressBookHeader, .addressBookEditorHeader
   display flex
   align-items flex-start
   justify-content space-between
-  gap 16px
-  padding 8px 4px 20px
+  gap var(--wren-space-4)
+  padding 0 var(--wren-space-1) var(--wren-space-5)
 
   h2
-    margin 0 0 7px
+    margin 0 0 var(--wren-space-2)
+    color var(--wren-text-primary)
     font-size 20px
     font-weight 500
+    font-variation-settings var(--wren-font-heading-settings)
+    line-height 24px
 
   p
+    max-width 310px
     margin 0
-    max-width 285px
-    color var(--outerspace05)
-    font-size 12px
-    line-height 18px
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 19px
 
 .addressBookCount
-  min-width 38px
-  height 38px
-  border-radius 19px
+  min-width 32px
+  height 32px
   display flex
   align-items center
   justify-content center
-  background var(--ghostB)
-  font-family 'FiraCode'
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-bg-elevated)
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
   font-size 13px
 
 .addressBookToolbar
   display grid
-  grid-template-columns 1fr 72px
-  gap 8px
-  margin-bottom 16px
+  grid-template-columns minmax(0, 1fr) 72px
+  gap var(--wren-space-2)
+  margin-bottom var(--wren-space-4)
 
   input, button
-    height 44px
+    height 42px
     box-sizing border-box
-    border 0
-    border-radius 14px
-    color var(--outerspace)
-    font-family 'MainFont'
+    border-radius var(--wren-radius-md)
+    font-family var(--wren-font-ui)
+    font-size 14px
 
   input
     min-width 0
-    padding 0 15px
-    background var(--ghostB)
-    font-size 13px
+    padding 0 var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
     outline none
+    background var(--wren-surface-inset)
+    color var(--wren-text-primary)
+    transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
 
-  input:focus
-    box-shadow 0 0 0 2px var(--accent1)
+    &::placeholder
+      color var(--wren-text-muted)
+
+    &:hover
+      border-color var(--wren-border-strong)
+      background var(--wren-bg-subtle)
+
+    &:focus-visible
+      border-color var(--wren-focus)
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
   button
-    background var(--accent1)
-    color var(--phase)
+    border 1px solid var(--wren-accent-primary)
+    background var(--wren-accent-primary)
+    color var(--wren-text-inverse)
     cursor pointer
-    font-size 12px
     font-weight 600
-    text-transform uppercase
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
-  button:hover
-    filter brightness(1.08)
+    &:hover
+      border-color var(--wren-accent-primary-hover)
+      background var(--wren-accent-primary-hover)
+
+    &:active
+      border-color var(--wren-accent-primary-active)
+      background var(--wren-accent-primary-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
 .addressBookList
   display flex
   flex-direction column
-  gap 8px
+  border-top 1px solid var(--wren-ledger-rule)
+  gap 0
 
 .addressBookCard
   display grid
-  grid-template-columns minmax(0, 1fr) 72px
-  min-height 78px
+  grid-template-columns minmax(0, 1fr) 76px
+  min-height 80px
   overflow hidden
-  border-radius 18px
-  background var(--ghostAZ)
-  box-shadow 0 2px 4px var(--ghostY)
+  border 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+  border-radius 0
+  background transparent
+
+  &:last-child
+    border-bottom 0
 
 .addressBookCardMain, .addressBookRemove
   border 0
   color inherit
-  font-family 'MainFont'
+  font-family var(--wren-font-ui)
   cursor pointer
 
 .addressBookCardMain
   min-width 0
   display flex
   align-items center
-  gap 13px
-  padding 12px
+  gap var(--wren-space-3)
+  padding var(--wren-space-3)
   background transparent
   text-align left
+  transition background var(--wren-motion-fast) var(--wren-ease)
 
-.addressBookCardMain:hover
-  background var(--ghostA)
+  &:hover
+    background var(--wren-surface-hover)
+
+  &:active
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    position relative
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
 
 .addressBookAvatar
-  flex 0 0 42px
-  width 42px
-  height 42px
-  border-radius 50%
+  flex 0 0 40px
+  width 40px
+  height 40px
   display flex
   align-items center
   justify-content center
-  background var(--ghostC)
-  color var(--accent1)
-  font-family 'FiraCode'
-  font-size 12px
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-bg-elevated)
+  color var(--wren-accent-primary)
+  font-size 13px
+  font-weight 600
 
 .addressBookIdentity
   min-width 0
   display flex
   flex-direction column
-  gap 3px
+  gap 2px
 
   strong
     overflow hidden
-    text-overflow ellipsis
-    white-space nowrap
+    color var(--wren-text-primary)
     font-size 15px
     font-weight 500
+    line-height 19px
+    text-overflow ellipsis
+    white-space nowrap
 
 .addressBookAddress
-  color var(--accent1)
-  font-family 'FiraCode'
-  font-size 11px
+  color var(--wren-accent-primary-hover)
+  font-family var(--wren-font-mono)
+  font-size 13px
+  line-height 18px
 
 .addressBookNote
   overflow hidden
+  color var(--wren-text-secondary)
+  font-size 13px
+  line-height 18px
   text-overflow ellipsis
   white-space nowrap
-  color var(--outerspace05)
-  font-size 11px
 
 .addressBookRemove
+  border-left 0
   background transparent
-  color var(--outerspace05)
-  font-size 9px
-  font-weight 600
-  letter-spacing .5px
-  text-transform uppercase
+  color var(--wren-text-tertiary)
+  font-size 13px
+  transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
-.addressBookRemove:hover
-  color var(--bad)
-  background var(--ghostB)
+  &:hover:not(:disabled)
+    background var(--wren-danger-soft)
+    color var(--wren-danger)
+
+  &:active:not(:disabled)
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    position relative
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    background transparent
+    color var(--wren-text-disabled)
+    cursor not-allowed
 
 .addressBookRemoveConfirm
-  color var(--bad)
-  background var(--ghostB)
+  background var(--wren-danger-soft)
+  color var(--wren-danger)
 
 .addressBookEmpty
   min-height 230px
@@ -161,180 +219,210 @@
   flex-direction column
   align-items center
   justify-content center
-  gap 8px
-  color var(--outerspace05)
+  gap var(--wren-space-2)
+  color var(--wren-text-secondary)
   text-align center
 
   .addressBookEmptyArtwork
     width 168px
     max-width 100%
     height 126px
-    margin-bottom 2px
+    margin-bottom var(--wren-space-1)
     object-fit contain
-    image-rendering auto
 
   .addressBookEmptyIcon
     height 32px
     display flex
     align-items center
     justify-content center
+    color var(--wren-text-tertiary)
 
   strong
-    color var(--outerspace)
-    font-size 15px
+    color var(--wren-text-primary)
+    font-size 16px
     font-weight 500
+    line-height 22px
 
   span
-    max-width 245px
-    font-size 12px
-    line-height 18px
+    max-width 260px
+    font-size 13px
+    line-height 19px
 
 .addressBookTransfer
   display flex
   justify-content center
-  gap 18px
-  padding 24px 0 8px
+  gap var(--wren-space-2)
+  padding var(--wren-space-5) 0 var(--wren-space-2)
 
   button
-    border 0
-    background transparent
-    color var(--accent1)
-    cursor pointer
-    font-family 'MainFont'
-    font-size 11px
-    text-decoration underline
-    text-underline-offset 3px
-
-  button:hover
-    color var(--outerspace)
-
-  button:disabled
-    opacity .45
-    cursor default
+    min-width 104px
 
 .addressBookStatus, .addressBookError
-  margin 8px 0
-  padding 10px 12px
-  border-radius 12px
-  background var(--ghostB)
-  font-size 11px
-  line-height 16px
+  margin var(--wren-space-2) 0
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-bg-elevated)
+  color var(--wren-text-secondary)
+  font-size 13px
+  line-height 19px
   text-align center
 
 .addressBookError
-  color var(--bad)
+  border-color var(--wren-danger)
+  background var(--wren-danger-soft)
+  color var(--wren-danger)
 
 .addressBookEditor
   display flex
   flex-direction column
-  gap 14px
+  gap var(--wren-space-4)
 
 .addressBookEditorHeader
   justify-content flex-start
 
 .addressBookEditorIcon
-  width 44px
-  height 44px
-  flex 0 0 44px
-  border-radius 16px
+  width 42px
+  height 42px
+  flex 0 0 42px
   display flex
   align-items center
   justify-content center
-  background var(--ghostB)
-  color var(--accent1)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-bg-elevated)
+  color var(--wren-accent-primary)
 
 .addressBookField
   display flex
   flex-direction column
-  gap 7px
-  font-size 11px
+  gap var(--wren-space-2)
+  color var(--wren-text-secondary)
+  font-size 13px
   font-weight 500
-  letter-spacing .4px
-  text-transform uppercase
+  line-height 18px
 
   input, textarea
-    box-sizing border-box
     width 100%
-    border 0
-    border-radius 14px
-    padding 13px 14px
-    background var(--ghostB)
-    color var(--outerspace)
-    font-family 'MainFont'
-    font-size 13px
-    font-weight 300
-    line-height 18px
+    box-sizing border-box
+    padding var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
     outline none
+    background var(--wren-surface-inset)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size 14px
+    font-weight 400
+    line-height 20px
     resize none
-    text-transform none
+    transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
 
-  input:focus, textarea:focus
-    box-shadow 0 0 0 2px var(--accent1)
+    &::placeholder
+      color var(--wren-text-muted)
 
-  input:disabled, textarea:disabled
-    opacity .65
+    &:hover:not(:disabled)
+      border-color var(--wren-border-strong)
+      background var(--wren-bg-subtle)
+
+    &:focus-visible
+      border-color var(--wren-focus)
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+    &:disabled
+      border-color var(--wren-border-subtle)
+      background var(--wren-bg-subtle)
+      color var(--wren-text-disabled)
+      cursor not-allowed
 
   small
-    color var(--outerspace05)
-    font-size 9px
-    font-weight 300
-    letter-spacing 0
-    line-height 14px
-    text-transform none
+    color var(--wren-text-tertiary)
+    font-size 13px
+    font-weight 400
+    line-height 18px
 
 .addressBookPrimaryButton
-  height 48px
-  margin-top 4px
-  border 0
-  border-radius 16px
-  background var(--accent1)
-  color var(--phase)
+  align-self flex-end
+  width auto
+  min-width 176px
+  height 46px
+  margin-top var(--wren-space-1)
+  border 1px solid var(--wren-accent-primary)
+  border-radius var(--wren-radius-md)
+  outline none
+  background var(--wren-accent-primary)
+  color var(--wren-text-inverse)
   cursor pointer
-  font-family 'MainFont'
-  font-size 12px
+  font-family var(--wren-font-ui)
+  font-size 14px
   font-weight 600
-  letter-spacing .6px
-  text-transform uppercase
+  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
-.addressBookPrimaryButton:hover
-  filter brightness(1.08)
+  &:hover:not(:disabled)
+    border-color var(--wren-accent-primary-hover)
+    background var(--wren-accent-primary-hover)
 
-.addressBookPrimaryButton:disabled
-  cursor wait
-  opacity .65
+  &:active:not(:disabled)
+    border-color var(--wren-accent-primary-active)
+    background var(--wren-accent-primary-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  &:disabled
+    border-color var(--wren-border-default)
+    background var(--wren-bg-panel-strong)
+    color var(--wren-text-disabled)
+    cursor default
 
 .addressBookMissing
   min-height 100%
-  padding 28px
   box-sizing border-box
   display flex
   flex-direction column
   align-items center
   justify-content center
-  gap 10px
-  color var(--outerspace05)
+  gap var(--wren-space-3)
+  padding var(--wren-space-8)
+  color var(--wren-text-secondary)
   text-align center
 
+  > div
+    color var(--wren-text-tertiary)
+
   strong
-    color var(--outerspace)
+    color var(--wren-text-primary)
     font-size 16px
     font-weight 500
+    line-height 22px
 
   span
     max-width 280px
-    font-size 12px
-    line-height 18px
+    font-size 13px
+    line-height 19px
 
   button
-    margin-top 8px
-    border 0
-    background transparent
-    color var(--accent1)
+    margin-top var(--wren-space-1)
+    padding var(--wren-space-2) var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    outline none
+    background var(--wren-bg-elevated)
+    color var(--wren-text-primary)
     cursor pointer
-    font-family 'MainFont'
-    font-size 11px
-    text-decoration underline
-    text-underline-offset 3px
+    font-family var(--wren-font-ui)
+    font-size 13px
+    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
 
-  button:hover
-    color var(--outerspace)
+    &:hover
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-hover)
+
+    &:active
+      background var(--wren-surface-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px

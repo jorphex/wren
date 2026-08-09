@@ -2,8 +2,34 @@ import React from 'react'
 import Restore from 'react-restore'
 import svg from '../../../resources/svg'
 import { safeRemoteImageUrl } from '../../utils/image'
+import WrenIcon from '../Icon'
 
-const Icon = ({ svgName, alt = '', svgSize = 16, img, small }) => {
+const wrenIconNames = Object.freeze({
+  accounts: 'accounts',
+  alert: 'alert',
+  chain: 'network',
+  check: 'check',
+  close: 'close',
+  copy: 'copy',
+  ellipsis: 'ellipsis',
+  file: 'file',
+  gas: 'gas',
+  inbox: 'requests',
+  inventory: 'inventory',
+  key: 'key',
+  lock: 'lock',
+  plug: 'apps',
+  search: 'search',
+  seedling: 'seedling',
+  send: 'send',
+  settings: 'settings',
+  sidebar: 'sidebar',
+  sign: 'sign',
+  sync: 'sync',
+  tokens: 'tokens'
+})
+
+export const RingIconGlyph = ({ svgName, alt = '', svgSize = 16, img, small }) => {
   const imageUrl = safeRemoteImageUrl(img)
   if (imageUrl) {
     return <img src={imageUrl} alt={alt} />
@@ -13,6 +39,10 @@ const Icon = ({ svgName, alt = '', svgSize = 16, img, small }) => {
     const ethChains = ['mainnet', 'görli', 'sepolia', 'ropsten', 'rinkeby', 'kovan']
     if (ethChains.includes(iconName)) {
       return svg.eth(small ? 13 : 18)
+    }
+
+    if (wrenIconNames[iconName]) {
+      return <WrenIcon label={alt || undefined} name={wrenIconNames[iconName]} size={svgSize} />
     }
 
     const svgIcon = svg[iconName]
@@ -42,7 +72,7 @@ class RingIcon extends React.Component {
         }}
       >
         <div className='ringIconInner' style={block ? { color } : { background: color }}>
-          <Icon svgName={svgName} svgSize={svgSize} img={img} alt={alt} small={small} />
+          <RingIconGlyph svgName={svgName} svgSize={svgSize} img={img} alt={alt} small={small} />
         </div>
       </div>
     )

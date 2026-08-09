@@ -31,7 +31,7 @@ const EnterShortcut = ({ platform, shortcutName }) => {
   const labelId = `shortcut-${shortcutName.toLowerCase()}-configure`
   return (
     <div style={{ display: 'flex' }}>
-      <label id={labelId}>Enter new keyboard shortcut!</label>
+      <label id={labelId}>Press a new keyboard shortcut</label>
       <div className='loaderWrap'>
         <div className='loader' />
       </div>
@@ -43,7 +43,7 @@ const DisplayShortcut = ({ actionText, modifierKeys, shortcutKey, shortcutName }
   const labelId = `shortcut-${shortcutName.toLowerCase()}-display`
   return (
     <>
-      <label id={labelId}>To {actionText} press</label>
+      <label id={labelId}>To {actionText}, press</label>
 
       <span className='keyCommand' aria-labelledby={labelId}>
         {[...modifierKeys, shortcutKey].map((displayKey, index, displayKeys) =>

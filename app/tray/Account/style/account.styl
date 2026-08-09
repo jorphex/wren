@@ -23,21 +23,17 @@
 @keyframes headShake
   0%
     transform translateX(0)
-  6.5%
-    transform translateX(-6px) rotateY(-9deg)
-  18.5%
-    transform translateX(5px) rotateY(7deg)
-  31.5%
-    transform translateX(-3px) rotateY(-5deg)
-  43.5%
-    transform translateX(2px) rotateY(3deg)
-  50%
+  32%
+    transform translateX(-3px)
+  66%
+    transform translateX(2px)
+  100%
     transform translateX(0)
 
 .headShake
-  animation-duration 1s
+  animation-duration var(--wren-motion-standard)
   animation-fill-mode both
-  animation-timing-function ease-in-out
+  animation-timing-function var(--wren-ease)
   animation-name headShake
   transform translateZ(0)
 
@@ -134,7 +130,7 @@
     z-index 999
 
   .signerAddress
-    font-size 10px
+    font-size var(--wren-type-caption)
     font-family 'FiraCode'
     letter-spacing 0px
     position absolute
@@ -173,7 +169,7 @@
       display flex
       justify-content center
       align-items center
-      font-size 8px
+      font-size var(--wren-type-caption)
       letter-spacing 1px
       opacity 1
       pointer-events none
@@ -517,7 +513,7 @@
       display flex
       justify-content center
       align-items center
-      font-size 12px
+      font-size var(--wren-type-small)
       height 40px
       border-top 1px solid var(--ghostB)
 
@@ -549,7 +545,7 @@
     opacity 0
 
   .signerReady
-    font-size 12px
+    font-size var(--wren-type-small)
     width 100%
 
 .accountModule
@@ -569,14 +565,67 @@
     box-shadow none
     border-radius none
 
+  .accountLedgerView
+    padding-right var(--wren-space-4)
+    padding-left var(--wren-space-4)
+
+    > ._txMain
+      margin 0
+      overflow visible
+      border 0
+      border-radius 0
+      background transparent
+      box-shadow none
+
+    .cluster
+      margin 0
+      padding 0
+      border 0
+      border-top 1px solid var(--wren-ledger-rule)
+      border-radius 0
+      background transparent
+
+      .clusterRow
+        gap 0
+        border-bottom 1px solid var(--wren-ledger-rule)
+
+      .clusterRow + .clusterRow
+        margin-top 0
+
+      .clusterValue
+        min-height 48px
+        border 0
+        border-radius 0
+        background transparent
+
+      .clusterValueClickable:not(.clusterValueDisabled):hover
+        border-color transparent
+        background var(--wren-ledger-hover)
+
+      .clusterValueClickable:not(.clusterValueDisabled):active
+        border-color transparent
+        background var(--wren-surface-active)
+
+    .moduleMainPermissions
+      border 0
+      border-radius 0
+      background transparent
+
 .requestsPreview:hover
   .requestsPreviewArrow
     transform translateX(0px)
 
 .requestsPreview
+  appearance none
+  display block
+  width 100%
+  padding 0
+  border 0
+  color inherit
+  text-align left
   height 52px
   position relative
-  font-size 11px
+  font-size var(--wren-type-caption)
   text-transform uppercase
   letter-spacing 2px
   font-family 'MainFont'
@@ -698,7 +747,7 @@
     
   .moduleHeader
     position relative
-    font-size 11px
+    font-size var(--wren-type-caption)
     text-transform uppercase
     letter-spacing 2px
     padding 16px 90px 10px 20px
@@ -744,7 +793,7 @@
       width 12px
       height 12px
       margin 12px auto
-      font-size 10px
+      font-size 10px // Spinner geometry; no visible text.
       position relative
       text-indent -9999em
       border-top 3px solid var(--ghostZ)
@@ -780,7 +829,7 @@
     padding 16px
 
   .moduleMainSettings
-    font-size 11px
+    font-size var(--wren-type-caption)
     text-transform uppercase
     font-weight 400
 
@@ -793,7 +842,7 @@
     width 100%
     cursor pointer
     text-align center
-    font-size 12px
+    font-size var(--wren-type-small)
     text-transform uppercase
     border-top 1px solid var(--ghostA)
     box-sizing border-box
@@ -913,39 +962,162 @@
 .accountModule
   right var(--wren-space-5)
   left var(--wren-space-5)
-  padding-bottom var(--wren-space-2)
+  padding-bottom 0
 
 .accountModuleInner
   right 0
-  bottom var(--wren-space-2)
+  bottom 0
   left 0
   padding 0
   border-radius var(--wren-radius-sm)
 
   .accountModuleCard
     overflow hidden
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-sm)
-    background var(--wren-surface-card)
-    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+    border 0
+    border-top 1px solid var(--wren-border-subtle)
+    border-radius 0
+    background transparent
+    box-shadow none
 
-  .moduleHeader
-    height 40px
-    padding 13px 76px 10px var(--wren-space-4)
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-ui)
-    font-size 11px
-    font-weight 500
-    letter-spacing 1.2px
+    // Preview modules already have ledger separators. Keep the actual controls
+    // tactile without wrapping them in a second outlined card.
+    .cluster
+      margin 0
+      padding 0
+      border 0
+      border-radius 0
+      background transparent
 
+      .clusterRow
+        gap 0
+
+      .clusterRow + .clusterRow
+        margin-top 0
+        border-top 1px solid var(--wren-ledger-rule)
+
+      .clusterValue
+        border 0
+        border-radius 0
+        background transparent
+
+      .clusterRow > .clusterValue + .clusterValue
+        border-left 1px solid var(--wren-ledger-rule)
+
+      .clusterColumn > .clusterValue + .clusterValue
+        border-top 1px solid var(--wren-ledger-rule)
+
+      .clusterValueClickable:not(.clusterValueDisabled):hover
+        border-color transparent
+        background var(--wren-ledger-hover)
+
+      .clusterValueClickable:not(.clusterValueDisabled):active
+        border-color transparent
+        background var(--wren-surface-active)
+
+    // The compact account illustrations are intentionally opaque RGB assets.
+    // Match their charcoal field to the ledger and feather the crop without
+    // dimming transparent empty-state artwork on other surfaces.
+    .wrenEmptyState
+      background transparent
+
+    .wrenEmptyStateImage
+      opacity .9
+      filter brightness(.7) saturate(.92)
+      -webkit-mask-image radial-gradient(ellipse 66% 57% at 52% 52%, #000 32%, rgba(0, 0, 0, .82) 55%, transparent 88%)
+      mask-image radial-gradient(ellipse 66% 57% at 52% 52%, #000 32%, rgba(0, 0, 0, .82) 55%, transparent 88%)
+
+    .wrenEmptyStateImageTransparent
+      opacity 1
+      filter none
+      -webkit-mask-image none
+      mask-image none
+
+    .wrenEmptyStateTransparent:not(.wrenEmptyStateExpanded)
+      min-height 96px
+
+      .wrenEmptyStateImageTransparent
+        top 45%
+        width 200px
+
+    .accountLedgerModule
+      .accountLedgerRow
+        min-height 52px
+
+      .settingsPreviewRemovalConfirm > .clusterValue:last-child
+        color var(--wren-danger)
+        background var(--wren-danger-soft)
+
+      .settingsPreviewRemovalConfirm > .clusterValue:last-child:not(.clusterValueDisabled):hover,
+      .settingsPreviewRemovalConfirm > .clusterValue:last-child:not(.clusterValueDisabled):active
+        background var(--wren-danger-soft)
+
+      .accountLedgerLabel
+        display flex
+        flex 0 0 112px
+        min-width 112px
+        padding 0 var(--wren-space-4)
+        box-sizing border-box
+        align-items center
+        gap var(--wren-space-2)
+        color var(--wren-text-tertiary)
+        font-family var(--wren-font-ui)
+        font-size var(--wren-type-small)
+        font-weight 560
+
+        svg
+          color var(--wren-text-secondary)
+          vertical-align middle
+
+      .clusterValue
+        min-height 52px
+
+      .moduleItem
+        min-height 52px
+        padding var(--wren-space-3)
+
+      .signerPreviewSummary
+        min-height 52px
+        padding 0 var(--wren-space-3)
+
+    .chainMonitorPreview
+      .clusterRow:first-child > .clusterValue:first-child
+        justify-content flex-end
+
+      .clusterRow:first-child > .clusterValue + .clusterValue
+        min-width 44px !important
+        max-width 44px !important
+        border-left 0
+        flex-basis 44px !important
+        flex-grow 0 !important
+
+      .sliceTileGasPrice
+        justify-content flex-end
+        padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-3) var(--wren-space-3)
+
+.accountMainSlide > .accountModule:first-child
+  .accountModuleCard
+    border-top 0
+
+.accountMainSlide .moduleHeader
+  height 40px
+  padding 13px 76px 10px var(--wren-space-4)
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  font-variation-settings var(--wren-font-heading-settings)
+  font-weight 590
+  letter-spacing .1px
+  text-transform none
+
+.accountMainSlide > .accountModule:first-child
   .moduleMain
     padding var(--wren-space-4)
 
   .moduleFooterAction
     border-top 1px solid var(--wren-border-subtle)
     color var(--wren-text-secondary)
-    background var(--wren-bg-elevated)
-    font-size 12px
+    background transparent
+    font-size var(--wren-type-small)
     text-transform none
 
     &:hover
@@ -954,11 +1126,11 @@
 
 .requestsPreview
   height 48px
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
+  border 0
+  border-radius 0
   color var(--wren-text-secondary)
-  background var(--wren-surface-card)
-  font-size 12px
+  background transparent
+  font-size var(--wren-type-small)
   letter-spacing .4px
   text-transform none
   transition background var(--wren-motion-fast) var(--wren-ease)
@@ -975,6 +1147,12 @@
     padding 0 var(--wren-space-4)
     border-radius var(--wren-radius-sm)
 
+    .requestPreviewContentTitle
+      font-family var(--wren-font-ui)
+      font-variation-settings var(--wren-font-heading-settings)
+      font-weight 590
+      letter-spacing .1px
+
 .accountView
   right 0
   left 0
@@ -984,33 +1162,213 @@
     right var(--wren-space-5)
     left var(--wren-space-5)
     height 52px
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-sm)
-    background var(--wren-bg-elevated)
-    box-shadow var(--wren-shadow-sm)
+    border 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+    box-shadow none
 
     .accountViewTitle
       color var(--wren-text-secondary)
       font-family var(--wren-font-ui)
-      font-size 12px
+      font-size var(--wren-type-small)
       font-weight 500
       letter-spacing .2px
       text-transform none
 
     .accountViewBack
       width 40px
+      min-width 40px
       height 40px
+      min-height 40px
       top 5px
-      left 5px
-      border 1px solid var(--wren-border-subtle)
-      border-radius var(--wren-radius-md)
+      left 0
+      padding 0
+      border 1px solid var(--wren-border-default)
+      border-radius 7px
       color var(--wren-text-secondary)
-      background var(--wren-surface-card)
+      background-color var(--wren-bg-elevated)
+      background-image var(--wren-control-texture-dark)
+      box-shadow var(--wren-control-shadow)
 
       &:hover
         color var(--wren-text-primary)
-        background var(--wren-surface-hover)
+        background-color var(--wren-surface-hover)
+        box-shadow var(--wren-control-shadow-hover)
 
   .accountViewMain
+    top 64px
     right var(--wren-space-5)
     left var(--wren-space-5)
+    padding-top 0
+
+    .accountViewScroll
+      padding-top 0
+
+  &:has(.signerRequest)
+    .accountViewMain
+      top 52px
+
+  &.accountViewRequest
+    &::before
+      display none
+
+    .accountViewMenu
+      top 0
+      right var(--wren-space-5)
+      left var(--wren-space-5)
+
+      .accountViewTitle
+        right 176px
+        left 56px
+        justify-content flex-start
+        color var(--wren-text-primary)
+        font-size 20px
+        font-variation-settings var(--wren-font-heading-settings)
+        font-weight 650
+        line-height 1
+
+        .accountViewText
+          font-family inherit
+          font-size inherit
+          font-weight inherit
+
+      .accountViewMeta
+        position absolute
+        top 10px
+        right 0
+        display flex
+        max-width 152px
+        height 32px
+        padding 0 var(--wren-space-3)
+        box-sizing border-box
+        align-items center
+        overflow hidden
+        border 1px solid var(--wren-border-subtle)
+        border-radius var(--wren-radius-sm)
+        color var(--wren-text-secondary)
+        background var(--wren-bg-subtle)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-caption)
+        text-overflow ellipsis
+        white-space nowrap
+
+    .accountViewMain
+      top 52px
+      right 0
+      left 0
+
+// Account home follows the approved controls study: the selected-account switcher
+// owns the left edge of the header while the persistent Send control remains at right.
+#panel
+  &:has(.accountSelectorOpen) .panelMenuItemOpen,
+  &:has(.accountSelectorOpen) .panelMenuItemSend
+    display none
+
+  .accountSelector.accountSelectorOpen
+    top 6px
+
+  .accountMain
+    top 88px
+    right 0
+    bottom 40px
+    left 0
+    border-radius 0
+    background radial-gradient(circle at 86% 8%, rgba(166, 138, 97, .055), transparent 29%)
+
+    .accountMainScroll
+      border-radius 0
+
+    .accountMainSlide
+      padding-top var(--wren-space-4)
+      padding-right var(--wren-space-5)
+      padding-left var(--wren-space-5)
+
+.accountHomeHeader
+  display grid
+  padding 0 var(--wren-space-5) var(--wren-space-5)
+  border-bottom 1px solid var(--wren-ledger-rule)
+  grid-template-columns minmax(0, 1fr) auto
+  column-gap var(--wren-space-5)
+  row-gap var(--wren-space-4)
+
+.accountHomeEyebrow,
+.accountHomeTotalLabel
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  font-weight 620
+  letter-spacing 1.15px
+  text-transform uppercase
+
+.accountHomeEyebrow
+  color var(--wren-accent-primary)
+
+.accountHomeTitle
+  margin 4px 0 0
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size 25px
+  font-weight 660
+  line-height 1.08
+
+.accountHomeAddress
+  appearance none
+  display inline-flex
+  max-width 100%
+  margin-top 6px
+  padding 0
+  align-items center
+  gap 7px
+  overflow hidden
+  border 0
+  color var(--wren-text-muted)
+  background transparent
+  cursor pointer
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  text-align left
+  transition color var(--wren-motion-fast) var(--wren-ease)
+
+  span
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
+
+  svg
+    flex none
+
+  &:hover
+    color var(--wren-text-secondary)
+
+  &:active
+    color var(--wren-accent-primary)
+
+  &:focus-visible
+    border-radius 2px
+    outline 2px solid var(--wren-focus)
+    outline-offset 3px
+
+.accountHomeTotal
+  align-self end
+  padding-bottom 1px
+  text-align right
+
+.accountHomeTotalValue
+  margin-top 5px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size 20px
+  font-weight 450
+  letter-spacing .04em
+
+.accountHomeActions
+  grid-column 1 / -1
+  display flex
+  flex-wrap wrap
+  align-items center
+  gap var(--wren-space-2)
+
+  .wrenControl
+    svg
+      flex none

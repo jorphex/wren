@@ -1,29 +1,19 @@
 import React, { useEffect } from 'react'
 
-import chainSwitch from 'url:./chainswitch.mp4'
-import { Slide, SlideBody, SlideItem, SlideVideo } from '../../styled'
+import onboardingNetworkChoice from 'url:../../../../../asset/ui/onboarding-network-choice-v3.png'
+import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const SwitchChainsSlide = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Choose the right network')
+    setTitle('Choose a network')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
 
   return (
-    <Slide>
+    <Slide $background={onboardingNetworkChoice}>
       <SlideBody>
         <SlideItem>
-          <SlideVideo>
-            <video loop autoPlay>
-              <source src={chainSwitch} type='video/mp4' />
-            </video>
-          </SlideVideo>
-          <div style={{ fontSize: '13px', lineHeight: '20px' }}>
-            Older dapps do not always ask to change networks.
-          </div>
-          <div style={{ fontSize: '13px', lineHeight: '20px', paddingBottom: '15px' }}>
-            Wren Companion lets you choose one for them.
-          </div>
+          Some dapps do not ask to change networks. Wren Companion lets you choose one when they do not.
         </SlideItem>
       </SlideBody>
     </Slide>

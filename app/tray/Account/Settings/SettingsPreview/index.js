@@ -19,10 +19,7 @@ export class SettingsPreview extends React.Component {
       })
     }
     this.state = {
-      expand: false,
       name: '',
-      showMore: false,
-      newName: '',
       editName: false,
       removeConfirm: false,
       removing: false
@@ -79,97 +76,73 @@ export class SettingsPreview extends React.Component {
   render() {
     return (
       <div ref={this.moduleRef}>
-        <div className='balancesBlock'>
+        <div className='balancesBlock accountLedgerModule'>
           <Cluster>
-            <ClusterRow>
-              <ClusterValue
-                ariaLabel={`${this.state.showMore ? 'Hide' : 'Show'} account settings`}
-                ariaExpanded={this.state.showMore}
-                onClick={() => {
-                  this.setState({
-                    showMore: !this.state.showMore,
-                    editName: false,
-                    removeConfirm: false
-                  })
-                }}
-              >
-                <div className='moduleItem'>{this.state.showMore ? 'less' : 'more'}</div>
-              </ClusterValue>
-            </ClusterRow>
-            {this.state.showMore ? (
-              <>
+            {this.state.removeConfirm ? (
+              <ClusterRow className='settingsPreviewActions settingsPreviewRemovalConfirm accountLedgerRow'>
+                <ClusterValue
+                  actionRef={this.cancelRemoveRef}
+                  ariaLabel='Cancel account removal'
+                  disabled={this.state.removing}
+                  onClick={() => this.resetRemoveConfirmation()}
+                >
+                  <div className='moduleItem cardShow'>Cancel</div>
+                </ClusterValue>
+                <ClusterValue
+                  ariaLabel='Confirm remove account'
+                  disabled={this.state.removing}
+                  onClick={(event) => this.removeAccount(event)}
+                >
+                  <div className='moduleItem cardShow'>Confirm removal</div>
+                </ClusterValue>
+              </ClusterRow>
+            ) : (
+              <ClusterRow className='settingsPreviewActions accountLedgerRow'>
                 {this.state.editName ? (
-                  <ClusterRow>
-                    <ClusterValue pointerEvents={true}>
-                      <div key={'input'} className='moduleItem cardShow moduleItemInput'>
-                        <div className='moduleItemEditName'>
-                          <input
-                            autoFocus
-                            type='text'
-                            tabIndex='-1'
-                            value={this.state.name}
-                            onChange={(e) => {
-                              this.setState({ name: e.target.value })
-                            }}
-                            onBlur={() => this.saveName()}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') e.currentTarget.blur()
-                              if (e.key === 'Escape') {
-                                const name = this.store('main.accounts', this.props.account, 'name') || ''
-                                this.setState({ name, editName: false })
-                              }
-                            }}
-                          />
-                        </div>
+                  <ClusterValue pointerEvents={true}>
+                    <div key={'input'} className='moduleItem cardShow moduleItemInput'>
+                      <div className='moduleItemEditName'>
+                        <input
+                          className='wrenInput'
+                          autoFocus
+                          type='text'
+                          aria-label='Account name'
+                          value={this.state.name}
+                          onChange={(e) => {
+                            this.setState({ name: e.target.value })
+                          }}
+                          onBlur={() => this.saveName()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') e.currentTarget.blur()
+                            if (e.key === 'Escape') {
+                              const name = this.store('main.accounts', this.props.account, 'name') || ''
+                              this.setState({ name, editName: false })
+                            }
+                          }}
+                        />
                       </div>
-                    </ClusterValue>
-                  </ClusterRow>
+                    </div>
+                  </ClusterValue>
                 ) : (
-                  <ClusterRow>
-                    <ClusterValue
-                      ariaLabel='Update account name'
-                      onClick={() => {
-                        this.resetRemoveConfirmation()
-                        this.setState({ editName: true })
-                      }}
-                    >
-                      <div className='moduleItem cardShow'>{'Update Name'}</div>
-                    </ClusterValue>
-                  </ClusterRow>
+                  <ClusterValue
+                    ariaLabel='Update account name'
+                    onClick={() => {
+                      this.resetRemoveConfirmation()
+                      this.setState({ editName: true })
+                    }}
+                  >
+                    <div className='moduleItem cardShow'>{'Update name'}</div>
+                  </ClusterValue>
                 )}
-                {this.state.removeConfirm ? (
-                  <ClusterRow>
-                    <ClusterValue
-                      actionRef={this.cancelRemoveRef}
-                      ariaLabel='Cancel account removal'
-                      disabled={this.state.removing}
-                      onClick={() => this.resetRemoveConfirmation()}
-                    >
-                      <div className='moduleItem cardShow'>Cancel</div>
-                    </ClusterValue>
-                    <ClusterValue
-                      ariaLabel='Confirm remove account'
-                      disabled={this.state.removing}
-                      onClick={(event) => this.removeAccount(event)}
-                      style={{ color: 'var(--bad)' }}
-                    >
-                      <div className='moduleItem cardShow'>Confirm Remove</div>
-                    </ClusterValue>
-                  </ClusterRow>
-                ) : (
-                  <ClusterRow>
-                    <ClusterValue
-                      ariaLabel='Remove account'
-                      disabled={this.state.editName || this.state.removing}
-                      onClick={() => this.armAccountRemoval()}
-                      style={{ color: 'var(--bad)' }}
-                    >
-                      <div className='moduleItem cardShow'>Remove Account</div>
-                    </ClusterValue>
-                  </ClusterRow>
-                )}
-              </>
-            ) : null}
+                <ClusterValue
+                  ariaLabel='Remove account'
+                  disabled={this.state.editName || this.state.removing}
+                  onClick={() => this.armAccountRemoval()}
+                >
+                  <div className='moduleItem cardShow'>Remove account</div>
+                </ClusterValue>
+              </ClusterRow>
+            )}
           </Cluster>
         </div>
       </div>

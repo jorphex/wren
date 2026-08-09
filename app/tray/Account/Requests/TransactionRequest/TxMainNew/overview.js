@@ -39,11 +39,11 @@ const ApproveOverview = ({ amount, decimals, symbol }) => {
   )
 }
 
-const SendOverview = ({ req, symbol, decimals, amount: ammt }) => {
+const SendOverview = ({ req, symbol, decimals, amount: ammt, currencyRate, isTestnet }) => {
   const amount = ammt || req.data.value
   return (
-    <div>
-      <span>{'Send'}</span>
+    <div className='_txDescriptionTransfer'>
+      <span className='_txDescriptionAction'>{'Send'}</span>
       <DisplayValue
         type='ether'
         value={amount}
@@ -51,6 +51,17 @@ const SendOverview = ({ req, symbol, decimals, amount: ammt }) => {
         currencySymbol={symbol}
         currencySymbolPosition='last'
       />
+      {currencyRate && !isTestnet ? (
+        <div className='_txDescriptionFiat'>
+          <span aria-hidden='true'>≈</span>
+          <DisplayValue
+            type='fiat'
+            value={amount}
+            valueDataParams={{ currencyRate, decimals, isTestnet }}
+            currencySymbol='$'
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -125,7 +136,7 @@ function renderRecognizedActions(req) {
 }
 
 const simulationLabels = {
-  pending: 'Checking execution with configured RPC',
+  pending: 'Checking execution with network RPC',
   succeeded: 'RPC execution check passed',
   reverted: 'RPC reports execution will revert',
   unavailable: 'RPC execution check unavailable',
@@ -280,6 +291,22 @@ const BaseOverviews = {
   NATIVE_TRANSFER: SendOverview
 }
 
+export const TransactionDataRow = ({ method }) => (
+  <ClusterRow className='transactionReviewDataRow'>
+    <ClusterValue
+      ariaLabel='View transaction data'
+      onClick={() => {
+        link.send('nav:update', 'panel', { data: { step: 'viewData' } })
+      }}
+    >
+      <div className='_txMainTag _txMainTagWarning transactionDataDisclosure'>
+        <span>Contract data</span>
+        <span>{method || 'Review'} ›</span>
+      </div>
+    </ClusterValue>
+  </ClusterRow>
+)
+
 const TxOverview = ({
   req,
   chainName,
@@ -288,7 +315,9 @@ const TxOverview = ({
   originName,
   replacementStatus,
   simple,
-  valueColor
+  valueColor,
+  currencyRate,
+  isTestnet
 }) => {
   const { data: tx = {}, classification } = req
   const { data: calldata } = tx
@@ -318,7 +347,7 @@ const TxOverview = ({
     )
   } else {
     return (
-      <Cluster>
+      <Cluster className='transactionReviewOverview'>
         <ClusterRow>
           <ClusterValue
             ariaLabel='View transaction data'
@@ -336,9 +365,20 @@ const TxOverview = ({
                   <div className='requestItemTitleSubText'>{originName}</div>
                 </div>
                 <div className='_txDescriptionSummaryMain'>
-                  <Description req={req} decimals={18} symbol={symbol} />
+                  <Description
+                    req={req}
+                    decimals={18}
+                    symbol={symbol}
+                    currencyRate={currencyRate}
+                    isTestnet={isTestnet}
+                  />
                 </div>
               </RequestHeader>
+              {simulation ? (
+                <div className={`transactionReviewSummaryStatus ${simulation.className}`} role='status'>
+                  {simulation.label}
+                </div>
+              ) : null}
             </div>
           </ClusterValue>
         </ClusterRow>
@@ -358,13 +398,6 @@ const TxOverview = ({
               </ClusterValue>
             </ClusterRow>
           ))}
-        {simulation && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${simulation.className}`}>{simulation.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
         {delegation && (
           <ClusterRow>
             <ClusterValue>
@@ -425,13 +458,7 @@ const TxOverview = ({
             </ClusterValue>
           </ClusterRow>
         )}
-        {isNonZeroHex(calldata) && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className='_txMainTag _txMainTagWarning'>{'Transaction includes data'}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
+        {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )
   }

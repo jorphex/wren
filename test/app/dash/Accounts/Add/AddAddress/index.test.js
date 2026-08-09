@@ -15,8 +15,9 @@ const ensName = 'vitalik.eth'
 it('allows a user to enter an address or ENS name', async () => {
   render(<AddAddress />)
 
-  expect(screen.getByText('input address or ENS name')).toBeTruthy()
+  expect(screen.getByText('Enter an address or ENS name')).toBeTruthy()
   expect(screen.getByRole('textbox')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Create' }).disabled).toBe(true)
 })
 
 it('adds an account by address', async () => {
@@ -34,7 +35,7 @@ it('shows the resolving screen when resolving an ENS name', async () => {
   await enterText(ensName)
   await clickCreate()
 
-  expect(screen.getByText('Resolving ENS Name')).toBeTruthy()
+  expect(screen.getByText('Resolving ENS name')).toBeTruthy()
   expect(link.rpc).toHaveBeenCalledWith('resolveEnsName', ensName, expect.any(Function))
 })
 
@@ -51,7 +52,7 @@ it('shows an error screen when ENS name resolution fails', async () => {
   await clickCreate()
 
   expect(await screen.findByText(`Unable to resolve Ethereum address for ${ensName}`)).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'try again' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
 })
 
 it('shows a success screen after adding an account by address', async () => {
@@ -61,8 +62,8 @@ it('shows a success screen after adding an account by address', async () => {
   await enterText(address)
   await clickCreate()
 
-  expect(await screen.findByText('account added successfully')).toBeTruthy()
-  expect(await screen.findByRole('button', { name: 'back' })).toBeTruthy()
+  expect(await screen.findByText('Account added successfully')).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'Back' })).toBeTruthy()
 })
 
 it('shows a success screen after adding an account by ENS name', async () => {
@@ -86,8 +87,8 @@ it('shows a success screen after adding an account by ENS name', async () => {
   })
   act(() => finishCreation(null))
 
-  expect(screen.getByText('account added successfully')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'back' })).toBeTruthy()
+  expect(screen.getByText('Account added successfully')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
 })
 
 it('does not report success before watch-account creation completes', async () => {
@@ -97,7 +98,7 @@ it('does not report success before watch-account creation completes', async () =
   await clickCreate()
 
   expect(screen.getByRole('status').textContent).toBe('Adding watch account...')
-  expect(screen.queryByRole('button', { name: 'back' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
 })
 
 it('rejects malformed input before calling account creation', async () => {
@@ -143,9 +144,9 @@ it('restarts when a users cancels an ENS lookup', async () => {
 
   await enterText(ensName)
   await clickCreate()
-  await user.click(screen.getByRole('button', { name: 'cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-  expect(screen.getByText('input address or ENS name')).toBeTruthy()
+  expect(screen.getByText('Enter an address or ENS name')).toBeTruthy()
   expect(screen.getByRole('textbox')).toBeTruthy()
 })
 
@@ -157,7 +158,7 @@ it('preserves a new failure when a watch-account retry fails immediately', async
 
   await enterText(ensName)
   await clickCreate()
-  await user.click(await screen.findByRole('button', { name: 'try again' }))
+  await user.click(await screen.findByRole('button', { name: 'Try again' }))
   await enterText('alice.xyz')
   await clickCreate()
   await screen.findByRole('alert')
@@ -171,7 +172,7 @@ function setupComponent() {
 
   return {
     user,
-    enterText: async (text) => user.type(screen.getByLabelText('input address or ENS name'), text),
+    enterText: async (text) => user.type(screen.getByLabelText('Enter an address or ENS name'), text),
     clickCreate: async () => user.click(screen.getByRole('button', { name: 'Create' }))
   }
 }

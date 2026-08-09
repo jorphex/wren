@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
+import onboardingAccess from 'url:../../../../../asset/ui/onboarding-access-v2.png'
 import { Slide, SlideBody, SlideItem, Shortcut } from '../../styled'
 
 import link from '../../../../../resources/link'
@@ -32,7 +33,7 @@ const Access = ({ setTitle, setProceed, platform }) => {
 
   useEffect(() => {
     if (trayOpen && !shortcutActivated) {
-      setTitle('Wren, when you need it')
+      setTitle('Wren when you need it')
       setProceed({ action: 'skip', text: 'Skip' })
     } else if (!trayOpen) {
       setTitle('Bring Wren back')
@@ -44,12 +45,11 @@ const Access = ({ setTitle, setProceed, platform }) => {
   }, [trayOpen, shortcutActivated])
 
   return (
-    <Slide>
+    <Slide $background={onboardingAccess}>
       {trayOpen && !shortcutActivated ? (
         <SlideBody key={1}>
           <SlideItem>
-            <div>Keep Wren close without keeping it in the way.</div>
-            <div>One shortcut opens or dismisses the wallet.</div>
+            Keep Wren close without keeping it in the way. One shortcut opens or dismisses the wallet.
           </SlideItem>
           <SlideItem>
             <span>{'Try dismissing Wren with '}</span>
@@ -66,8 +66,7 @@ const Access = ({ setTitle, setProceed, platform }) => {
       ) : (
         <SlideBody key={3}>
           <SlideItem>
-            <div>When your work is done, auto-hide moves Wren</div>
-            <div>aside. Your shortcut keeps it one step away.</div>
+            When you are done, auto-hide moves Wren aside. Your shortcut keeps it within reach.
           </SlideItem>
         </SlideBody>
       )}

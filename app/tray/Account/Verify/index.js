@@ -32,7 +32,7 @@ class Verify extends React.Component {
         this.setState({
           verifyInProgress: false,
           verifyAddressSuccess: true,
-          verifyAddressResponse: 'Address matched!'
+          verifyAddressResponse: 'Address matched'
         })
       }
 
@@ -66,9 +66,9 @@ class Verify extends React.Component {
 
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
-        <div className='moduleHeader'>{'Verify Address'}</div>
+        <div className='moduleHeader'>{'Verify address'}</div>
         <div className='moduleMain'>
-          <div className='signerVerifyText'>Verify that the address displayed in Wren is correct</div>
+          <div className='signerVerifyText'>Check that the address shown in Wren matches your signer.</div>
           {this.state.verifyAddressResponse ? (
             <div
               className={

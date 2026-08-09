@@ -7,21 +7,17 @@
 @keyframes headShake
   0%
     transform translateX(0)
-  6.5%
-    transform translateX(-6px) rotateY(-9deg)
-  18.5%
-    transform translateX(5px) rotateY(7deg)
-  31.5%
-    transform translateX(-3px) rotateY(-5deg)
-  43.5%
-    transform translateX(2px) rotateY(3deg)
-  50%
+  32%
+    transform translateX(-3px)
+  66%
+    transform translateX(2px)
+  100%
     transform translateX(0)
 
 .headShake
-  animation-duration 1s
+  animation-duration var(--wren-motion-standard)
   animation-fill-mode both
-  animation-timing-function ease-in-out
+  animation-timing-function var(--wren-ease)
   animation-name headShake
   transform translateZ(0)
 
@@ -55,6 +51,7 @@
     padding 0px 0px 5px 0px
 
   .signerDetailsFullAddress
+    appearance none
     position absolute
     display flex
     justify-content center
@@ -66,6 +63,14 @@
     bottom 0px
     cursor pointer
     pointer-events auto
+    width 100%
+    box-sizing border-box
+    padding 0 var(--wren-space-3)
+    border 0
+    border-radius inherit
+    color var(--wren-text-primary)
+    background transparent
+    font-family inherit
     // animation slideUp linear 0.2s
     *
       pointer-events none
@@ -91,6 +96,13 @@
       position relative
       cursor pointer
 
+    &:hover
+      color var(--wren-accent-primary-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -3px
+
   .signerDetails
     position absolute
     display flex
@@ -98,11 +110,12 @@
     flex-direction column
     top 0
     left 60px
-    right 120px
+    right 58px
     bottom 0px
     pointer-events none
 
     .signerDetailsENSName
+      appearance none
       font-family 'FiraCode'
       letter-spacing -1px
       font-size 16px
@@ -110,6 +123,18 @@
       margin-top 5px
       pointer-events auto
       max-width fit-content
+      padding 0
+      border 0
+      color inherit
+      background transparent
+      cursor pointer
+
+      &:hover
+        color var(--wren-accent-primary-hover)
+
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
 
     .signerDetailsName
       font-family 'MainFont'
@@ -127,6 +152,7 @@
       display none
 
     .signerDetailsAddress
+      appearance none
       display flex
       align-items center
       max-width fit-content
@@ -140,6 +166,9 @@
       cursor pointer
       left -1px
       transition all linear 500ms
+      border 0
+      color inherit
+      background transparent
       *
         pointer-events none
 
@@ -148,7 +177,11 @@
          padding 0px 1px 0px 2px
     
     .signerDetailsAddress:hover
-      color var(--moon)
+      color var(--wren-accent-primary-hover)
+
+    .signerDetailsAddress:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
 
   .signerAddress
     font-family 'FiraCode'
@@ -181,7 +214,7 @@
       display flex
       justify-content center
       align-items center
-      font-size 8px
+      font-size var(--wren-type-caption)
       letter-spacing 1px
       opacity 1
       pointer-events none
@@ -237,14 +270,14 @@
     position relative
     opacity 1
     z-index 3030000
-    border-radius 26px
+    border-radius var(--wren-radius-sm)
     transition var(--standard), background 0.2s linear
     z-index 9999000
     height 74px
-    background var(--ghostA)
+    background var(--wren-surface-card)
     margin 0px 0px 6px 0px
-    box-shadow 0px 4px 8px var(--ghostY)
-    border-bottom 2px solid var(--ghostZ)
+    box-shadow var(--wren-shadow-inset)
+    border 1px solid var(--wren-border-subtle)
     cursor pointer
     overflow hidden
 
@@ -253,31 +286,27 @@
 
     .accountNotificationBadge
       position absolute 
-      top 19px
-      right 64px
-      width 60px
+      top 21px
+      right 58px
       z-index 300000
-      height 39px
-      width 38px
-      padding-left 2px
+      height 32px
+      width 32px
+      padding 0
       box-sizing border-box
-      border-top-left-radius 13px
-      border-bottom-left-radius 13px
-      border-top-right-radius 8px
-      border-bottom-right-radius 8px
+      border-radius var(--wren-radius-sm)
       display flex
       justify-content center
       align-items center
       -webkit-app-region no-drag
       transform translate3d(0, 0, 0)
-      background var(--ghostA)
+      background var(--wren-surface-inset)
       position absolute
-      color var(--outerspace01)
-      font-size 16px
-      font-weight 400
+      color var(--wren-text-muted)
+      font-size 13px
+      font-weight 600
       transition var(--standardFast)
-      box-shadow 0px 2px 2px var(--ghostY)
-      border-bottom 2px solid var(--ghostZ)
+      box-shadow var(--wren-shadow-inset)
+      border 1px solid var(--wren-border-subtle)
       z-index 999999999
       pointer-events none
       
@@ -286,26 +315,21 @@
         z-index 4000
 
     .accountNotificationBadgeReady
-      color var(--outerspace)
-      background var(--ghostB)
+      color var(--wren-text-primary)
+      background var(--wren-bg-elevated)
 
     .accountNotificationBadgeActive
-      border-bottom none
       span
-        color var(--goodOver)
+        color var(--wren-text-inverse)
 
     .accountNotificationBadgeActive::before
       content ''
       position absolute
       z-index 3
       inset 0px
-      background var(--good)
-      border-top-left-radius 13px
-      border-bottom-left-radius 13px
-      border-top-right-radius 8px
-      border-bottom-right-radius 8px
-      border-bottom 2px solid var(--goodShade)
-      box-shadow 0px 2px 2px var(--ghostY)
+      background var(--wren-success)
+      border-radius var(--wren-radius-sm)
+      box-shadow var(--wren-shadow-inset)
 
     .transactionToAddress
       .transactionToAddressLarge
@@ -316,58 +340,43 @@
       appearance none
       padding 0
       color inherit
-      border 0
+      border 1px solid var(--wren-border-default)
       position absolute 
-      top 16px
-      right 10px
+      top 18px
+      right 12px
       z-index 300000
-      border-radius 16px
-      height 44px
-      width 95px
+      border-radius var(--wren-radius-sm)
+      height 38px
+      min-height 38px
+      width 38px
+      min-width 38px
       -webkit-app-region no-drag
-      transition none
+      transition background-color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
       transform translate3d(0, 0, 0)
-      background var(--ghostZ)
       cursor pointer
 
       .signerSelectButton
         position absolute 
-        top 3px
-        right 3px
-        bottom 2px
+        inset 0
         z-index 300000
-        border-radius 13px
-        width 48px
-        background var(--ghostA)
+        border-radius inherit
+        width auto
+        background transparent
         display flex
         justify-content center
         align-items center
-        border-top-right-radius 13px
-        border-bottom-right-radius 13px
-        border-top-left-radius 8px
-        border-bottom-left-radius 8px
-        padding-right 4px
+        padding 0
         box-sizing border-box
-        border-bottom 2px solid var(--ghostZ)
-        box-shadow 0px 2px 2px var(--ghostY)
+        border 0
+        box-shadow none
         transform translateY(0px)
         cursor pointer
         transition background 0.1s linear
         *
           pointer-events none
       
-      .signerSelectButton:hover
-        background var(--ghostC)
-        transform translateY(-1px)
-        box-shadow 0px 2px 4px var(--ghostX)
-
-      .signerSelectButton:active
-        background var(--ghostC)
-        transform translateY(0px)
-        box-shadow 0px 2px 1px var(--ghostX)
-      
       .signerSelectIconWrap
-        padding 1px 0px 0px 2px
+        padding 0
         pointer-events none
 
         div, svg
@@ -384,7 +393,7 @@
       position absolute
       top 5px 
       bottom 5px
-      right 110px
+      right 60px
       width 19px
       color var(--ghostX)
       cursor grab
@@ -510,7 +519,7 @@
         justify-content center
         align-items center
         text-transform uppercase
-        font-size 11px
+        font-size var(--wren-type-caption)
         line-height 10px
         font-weight 300
         letter-spacing 2px
@@ -522,9 +531,6 @@
 
   .signerTop:hover
     background var(--ghostB)
-    .signerSelect
-      .signerSelectButton
-        background var(--ghostB)
 
   // .signerTopActive:hover
   //   background var(--ghostA)
@@ -851,7 +857,7 @@
       display flex
       justify-content center
       align-items center
-      font-size 12px
+      font-size var(--wren-type-small)
       height 40px
       border-top 1px solid var(--ghostB)
 
@@ -883,7 +889,7 @@
     opacity 0
 
   .signerReady
-    font-size 12px
+    font-size var(--wren-type-small)
     width 100%
 
   .openSigner
@@ -903,9 +909,7 @@
       .signerSelect
         .signerSelectButton
           pointer-events auto !important
-          background var(--ghostA)
-        .signerSelectButton:hover
-          background var(--ghostB)
+          background transparent
 
   .signerSelectDown.signerSelectRight
     right 0
@@ -1036,5 +1040,5 @@
   .signerTop:hover
     background var(--wren-surface-hover)
 
-  .openSigner .signerTop:hover
+  &.openSigner .signerTop:hover
     background var(--wren-surface-card) !important
