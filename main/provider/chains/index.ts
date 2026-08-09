@@ -93,7 +93,7 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
         chainId: id,
         networkId: id,
         name,
-        connected: chain.connection.primary.connected || chain.connection.secondary.connected,
+        connected: chain.connection.endpoints.some((endpoint) => endpoint.connected),
         nativeCurrency: {
           name: currencyName,
           symbol,

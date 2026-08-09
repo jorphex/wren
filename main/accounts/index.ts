@@ -197,11 +197,13 @@ export class Accounts extends EventEmitter {
       const created = 'new:' + Date.now()
       const accountMetaId = uuidv5(address, accountNS)
       const accountMeta = store('main.accountsMeta', accountMetaId) || { name }
-      this.accounts[address] = new FrameAccount(
+      const createdAccount = new FrameAccount(
         { address, name: accountMeta.name, created, options, active: false },
         this
       )
-      account = this.accounts[address]
+      this.accounts[address] = createdAccount
+      account = createdAccount
+      createdAccount.update()
     }
 
     return cb(null, account)
@@ -833,6 +835,17 @@ export class Accounts extends EventEmitter {
     if (!account) throw new Error('Could not locate wallet-call account')
 
     return account.claimWalletCallsRequest(handlerId)
+  }
+
+  adjustWalletCallsRequest(accountId: string, handlerId: string, adjustment: unknown) {
+    if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
+      throw new Error('Invalid wallet-call request identity')
+    }
+
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account) throw new Error('Could not locate wallet-call account')
+
+    return account.adjustWalletCalls(handlerId, adjustment)
   }
 
   claimWalletCallsRequestWithResponse(accountId: string, handlerId: string) {

@@ -100,6 +100,7 @@ describe('persisted state schema compatibility', () => {
   it.each(['degraded', 'pending', 'syncing'])('persists the %s runtime connection status', (status) => {
     expect(
       ConnectionSchema.parse({
+        id: 'rpc-1',
         on: true,
         connected: false,
         current: 'custom',
@@ -111,6 +112,7 @@ describe('persisted state schema compatibility', () => {
 
   it('accepts PublicNode and rejects the retired Pylon preset', () => {
     const connection = {
+      id: 'rpc-1',
       on: true,
       connected: false,
       status: 'loading',

@@ -1025,8 +1025,7 @@ describe('#send', () => {
               name: 'Bizarro Polygon',
               symbol: 'NEW',
               nativeCurrencyName: 'New',
-              primaryRpc: 'https://pylon.link',
-              secondaryRpc: undefined,
+              rpcUrls: ['https://pylon.link'],
               explorer: 'https://explorer.pylon.link',
               nativeCurrencyDecimals: 18,
               icon: '',
@@ -1865,14 +1864,14 @@ describe('#send', () => {
           name: 'polygon',
           id: 137,
           explorer: 'https://polygonscan.com',
-          connection: { primary: { connected: true }, secondary: { connected: false } },
+          connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
           on: true
         },
         1: {
           name: 'mainnet',
           id: 1,
           explorer: 'https://etherscan.io',
-          connection: { primary: { connected: true }, secondary: { connected: false } },
+          connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
           on: true
         }
       })
@@ -1928,14 +1927,14 @@ describe('#send', () => {
           name: 'polygon',
           id: 137,
           explorer: 'https://polygonscan.com',
-          connection: { primary: { connected: false }, secondary: { connected: false } },
+          connection: { endpoints: [{ id: 'rpc-1', connected: false }] },
           on: false
         },
         1: {
           name: 'mainnet',
           id: 1,
           explorer: 'https://etherscan.io',
-          connection: { primary: { connected: true }, secondary: { connected: false } },
+          connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
           on: true
         }
       })
@@ -3750,7 +3749,7 @@ describe('state change events', () => {
         name: 'test',
         id: 1,
         explorer: 'https://etherscan.io',
-        connection: { primary: { connected: true }, secondary: { connected: false } },
+        connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
         on: true
       }
     }
@@ -3823,7 +3822,7 @@ describe('state change events', () => {
       name: 'Polygon',
       id: 137,
       explorer: 'https://polygonscan.com',
-      connection: { primary: { connected: true }, secondary: { connected: false } },
+      connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
       on: true
     }
 

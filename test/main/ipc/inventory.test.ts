@@ -125,10 +125,8 @@ test('every static renderer event, invoke, and store action has a schema', () =>
   expect([...new Set([...invokeChannels, 'tray:addChain'])].sort()).toEqual(
     [...rendererIpcChannels.invoke].sort()
   )
-  expect([...new Set([...actions, 'setPrimaryCustom', 'setSecondaryCustom'])].sort()).toEqual(
-    [...rendererActionNames].sort()
-  )
-  expect(dynamicActions).toEqual(['app/dash/Chains/Chain/Connection/index.js:Identifier'])
+  expect([...new Set(actions)].sort()).toEqual([...rendererActionNames].sort())
+  expect(dynamicActions).toEqual([])
 })
 
 test('main notifications, preload listeners, and renderer consumers have an exact inventory match', () => {

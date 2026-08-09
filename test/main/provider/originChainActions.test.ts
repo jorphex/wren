@@ -11,7 +11,7 @@ const chain = {
   id: 137,
   name: 'Polygon',
   on: true,
-  connection: { primary: {}, secondary: {} },
+  connection: { endpoints: [] },
   isTestnet: false,
   explorer: ''
 }

@@ -14,12 +14,16 @@ export function createWalletCallStatusViewData({
   originName,
   status
 }: ShowWalletCallStatusInput): WalletCallStatusViewData {
-  const receipts = status.receipts?.map(({ status, blockNumber, gasUsed, transactionHash }) => ({
-    status,
-    blockNumber,
-    gasUsed,
-    transactionHash
-  }))
+  const receipts = status.receipts?.map(
+    ({ status, type, blockNumber, gasUsed, effectiveGasPrice, transactionHash }) => ({
+      status,
+      ...(type ? { type } : {}),
+      blockNumber,
+      gasUsed,
+      ...(effectiveGasPrice ? { effectiveGasPrice } : {}),
+      transactionHash
+    })
+  )
 
   return {
     accountId: account.toLowerCase(),

@@ -1,5 +1,5 @@
 // status = Network Mismatch, Not Connected, Connected, Standby, Syncing
-const { powerMonitor } = require('electron')
+const { Notification, powerMonitor } = require('electron')
 const EventEmitter = require('events')
 const { addHexPrefix } = require('@ethereumjs/util')
 const { Hardfork } = require('@ethereumjs/common')
@@ -63,15 +63,8 @@ class ChainConnection extends EventEmitter {
     // TODO: maybe this can be tied into chain config somehow
     this.gasCalculator = createGasCalculator(this.chainId)
 
-    this.primary = {
-      status: 'off',
-      network: '',
-      type: '',
-      currentTarget: '',
-      connected: false
-    }
-
-    this.secondary = {
+    this.active = {
+      id: '',
       status: 'off',
       network: '',
       type: '',
@@ -85,21 +78,18 @@ class ChainConnection extends EventEmitter {
     })
   }
 
-  _createProvider(target, priority) {
-    log.debug('createProvider', { chainId: this.chainId, priority })
+  _createProvider(target, endpointId) {
+    log.debug('createProvider', { chainId: this.chainId, endpointId })
 
-    this.update(priority)
-
-    this[priority].provider = provider(target, {
-      name: priority,
+    this.active.provider = provider(target, {
+      name: endpointId,
       origin: 'wren'
     })
-
-    this[priority].blockMonitor = this._createBlockMonitor(this[priority].provider, priority)
+    this.active.blockMonitor = this._createBlockMonitor(this.active.provider)
   }
 
-  _handleConnection(priority) {
-    this._updateStatus(priority, 'connected')
+  _handleConnection(endpointId) {
+    this._updateStatus(endpointId, 'connected')
     this.emit('connect')
   }
 
@@ -258,7 +248,7 @@ class ChainConnection extends EventEmitter {
     return monitor
   }
 
-  update(priority) {
+  update(endpointId) {
     const network = store('main.networks', this.type, this.chainId)
 
     if (!network) {
@@ -267,17 +257,10 @@ class ChainConnection extends EventEmitter {
       return
     }
 
-    if (priority === 'primary') {
-      const { status, connected, type, network } = this.primary
-      const details = { status, connected, type, network }
-      log.info(`Updating primary connection for chain ${this.chainId}`, details)
-      store.setPrimary(this.type, this.chainId, details)
-    } else if (priority === 'secondary') {
-      const { status, connected, type, network } = this.secondary
-      const details = { status, connected, type, network }
-      log.info(`Updating secondary connection for chain ${this.chainId}`, details)
-      store.setSecondary(this.type, this.chainId, details)
-    }
+    const { status, connected, type, network: endpointNetwork, latencyMs } = this.active
+    const details = { status, connected, type, network: endpointNetwork, latencyMs }
+    log.info(`Updating endpoint ${endpointId} for chain ${this.chainId}`, details)
+    store.setEndpoint(this.type, this.chainId, endpointId, details)
   }
 
   getNetwork(provider, cb) {
@@ -296,38 +279,30 @@ class ChainConnection extends EventEmitter {
     provider.sendAsync({ jsonrpc: '2.0', method: 'web3_clientVersion', params: [], id: 1 }, cb)
   }
 
-  _updateStatus(priority, status) {
-    log.debug('Chains.updateStatus', { priority, status })
+  _updateStatus(endpointId, status) {
+    log.debug('Chains.updateStatus', { endpointId, status })
 
-    this[priority].status = status
-    this.update(priority)
+    this.active.status = status
+    this.update(endpointId)
 
     this.emit('update', { type: 'status', status })
   }
 
-  resetConnection(priority /* 'primary' | 'secondary' */, status, target) {
-    log.debug('resetConnection', { priority, status, endpoint: summarizeRpcEndpoint(target) })
+  resetConnection(status = 'off', target = '', endpointId = this.active.id) {
+    log.debug('resetConnection', { endpointId, status, endpoint: summarizeRpcEndpoint(target) })
 
-    const provider = this[priority].provider
-
-    this.killProvider(provider)
-    this[priority].provider = null
-    this[priority].connected = false
-    this[priority].type = ''
-
-    this.stopBlockMonitor(priority)
-
-    if (['off', 'disconnected', 'standby'].includes(status)) {
-      if (this[priority].status !== status) {
-        if (['off', 'disconnected'].includes(status)) {
-          this[priority].network = ''
-        }
-
-        this._updateStatus(priority, status)
-      }
-    } else {
-      this[priority].currentTarget = target
-      this[priority].status = status
+    this.killProvider(this.active.provider)
+    this.stopBlockMonitor()
+    this.active = {
+      id: endpointId || '',
+      provider: null,
+      blockMonitor: null,
+      connected: false,
+      type: '',
+      network: '',
+      currentTarget: target,
+      status,
+      latencyMs: undefined
     }
   }
 
@@ -335,212 +310,164 @@ class ChainConnection extends EventEmitter {
     log.debug('killProvider', { configured: !!provider })
 
     if (provider) {
-      provider.close()
       provider.removeAllListeners()
+      provider.close()
     }
   }
 
-  stopBlockMonitor(priority) {
-    log.debug('stopBlockMonitor', { chainId: this.chainId, priority })
+  stopBlockMonitor() {
+    log.debug('stopBlockMonitor', { chainId: this.chainId, endpointId: this.active.id })
 
-    if (this[priority].blockMonitor) {
-      this[priority].blockMonitor.stop()
-      this[priority].blockMonitor.removeAllListeners()
-      this[priority].blockMonitor = null
+    if (this.active.blockMonitor) {
+      this.active.blockMonitor.stop()
+      this.active.blockMonitor.removeAllListeners()
+      this.active.blockMonitor = null
     }
   }
 
   connect(chain) {
-    const connection = chain.connection
+    const endpoints = chain.connection.endpoints || []
+    const enabled = endpoints.filter((endpoint) => endpoint.on)
 
-    log.info(this.type + ':' + this.chainId + "'s connection has been updated")
-
-    if (this.network !== connection.network) {
-      this.killProvider(this.primary.provider)
-      this.primary.provider = null
-      this.killProvider(this.secondary.provider)
-      this.secondary.provider = null
-      this.primary = { status: 'loading', network: '', type: '', connected: false }
-      this.secondary = { status: 'loading', network: '', type: '', connected: false }
-      this.update('primary')
-      this.update('secondary')
-      log.info('Network changed from ' + this.network + ' to ' + connection.network)
-      this.network = connection.network
-    }
-
-    const currentPresets = { ...NETWORK_PRESETS.ethereum.default, ...NETWORK_PRESETS.ethereum[this.chainId] }
-
-    const { primary, secondary } = store('main.networks', this.type, this.chainId, 'connection')
-    const secondaryTarget =
-      secondary.current === 'custom' ? secondary.custom : currentPresets[secondary.current]
-
-    if (chain.on && connection.secondary.on) {
-      log.info('Secondary connection: ON')
-
-      if (connection.primary.on && connection.primary.status === 'connected') {
-        // Connection is on Standby
-        log.info('Secondary connection on STANDBY', connection.secondary.status === 'standby')
-
-        this.resetConnection('secondary', 'standby')
-      } else if (!secondaryTarget) {
-        // if no target is provided automatically set state to disconnected
-        this.resetConnection('secondary', 'disconnected')
-      } else if (!this.secondary.provider || this.secondary.currentTarget !== secondaryTarget) {
-        log.info("Creating secondary connection because it didn't exist or the target changed", {
-          endpoint: summarizeRpcEndpoint(secondaryTarget)
-        })
-
-        this.resetConnection('secondary', 'loading', secondaryTarget)
-        this._createProvider(secondaryTarget, 'secondary')
-
-        this.secondary.provider.on('connect', () => {
-          log.info('Secondary connection connected')
-          this.getNetwork(this.secondary.provider, (err, response) => {
-            if (err) {
-              this.primary.connected = false
-              this.primary.type = ''
-              this.primary.status = 'error'
-              this.update('secondary')
-
-              this._updateStatus('secondary', 'error')
-            } else {
-              this.secondary.network = !err && response && !response.error ? response.result : ''
-              if (this.secondary.network && this.secondary.network !== this.chainId) {
-                this.secondary.connected = false
-                this.secondary.type = ''
-                this._updateStatus('secondary', 'chain mismatch')
-              } else {
-                this.secondary.connected = true
-                this.secondary.type = ''
-
-                this._handleConnection('secondary')
-              }
-            }
+    if (!chain.on || enabled.length === 0) {
+      const wasActive = Boolean(this.active.provider || this.active.connected)
+      this.close(false)
+      endpoints.forEach((endpoint) => {
+        if (endpoint.connected || endpoint.status !== 'off' || endpoint.latencyMs !== undefined) {
+          store.setEndpoint(this.type, this.chainId, endpoint.id, {
+            connected: false,
+            status: 'off',
+            latencyMs: undefined
           })
-        })
-        this.secondary.provider.on('close', () => {
-          log.info('Secondary connection close')
-          this.secondary.connected = false
-          this.secondary.type = ''
-          this.secondary.network = ''
-          this.update('secondary')
-          this.emit('close')
-        })
-        this.secondary.provider.on('status', (status) => {
-          if (status === 'connected' && this.secondary.network && this.secondary.network !== this.chainId) {
-            this.secondary.connected = false
-            this.secondary.type = ''
-            this._updateStatus('secondary', 'chain mismatch')
-          } else if (this.secondary.status !== status) {
-            this._updateStatus('secondary', status)
-          }
-        })
-        this.secondary.provider.on('data', (data) => this.emit('data', data))
-        this.secondary.provider.on('error', (err) => this.emit('error', err))
-      }
-    } else {
-      // Secondary connection is set to OFF by the user
-      log.info('Secondary connection: OFF')
-
-      this.resetConnection('secondary', 'off')
+        }
+      })
+      if (wasActive) this.emit('close')
+      return
     }
 
-    const primaryTarget = primary.current === 'custom' ? primary.custom : currentPresets[primary.current]
-
-    if (chain.on && connection.primary.on) {
-      log.info('Primary connection: ON')
-
-      if (!primaryTarget) {
-        // if no target is provided automatically set state to disconnected
-        this.resetConnection('primary', 'disconnected')
-      } else if (!this.primary.provider || this.primary.currentTarget !== primaryTarget) {
-        log.info("Creating primary connection because it didn't exist or the target changed", {
-          endpoint: summarizeRpcEndpoint(primaryTarget)
-        })
-
-        this.resetConnection('primary', 'loading', primaryTarget)
-        this._createProvider(primaryTarget, 'primary')
-
-        this.primary.provider.on('connect', () => {
-          log.info(`    Primary connection for network ${this.chainId} connected`)
-          this.getNetwork(this.primary.provider, (err, response) => {
-            if (err) {
-              this.primary.connected = false
-              this.primary.type = ''
-
-              this._updateStatus('primary', 'error')
-            } else {
-              this.primary.network = !err && response && !response.error ? response.result : ''
-              if (this.primary.network && this.primary.network !== this.chainId) {
-                this.primary.connected = false
-                this.primary.type = ''
-                this._updateStatus('primary', 'chain mismatch')
-              } else {
-                this.primary.connected = true
-                this.primary.type = ''
-
-                this._handleConnection('primary')
-              }
-            }
-          })
-        })
-        this.primary.provider.on('close', () => {
-          log.info('Primary connection close')
-          this.primary.connected = false
-          this.primary.type = ''
-          this.primary.network = ''
-
-          this.update('primary')
-          this.emit('close')
-        })
-        this.primary.provider.on('status', (status) => {
-          if (status === 'connected' && this.primary.network && this.primary.network !== this.chainId) {
-            this.primary.connected = false
-            this.primary.type = ''
-
-            this._updateStatus('primary', 'chain mismatch')
-          } else if (this.primary.status !== status) {
-            this._updateStatus('primary', status)
-          }
-        })
-        this.primary.provider.on('data', (data) => this.emit('data', data))
-        this.primary.provider.on('error', (err) => this.emit('error', err))
-      }
-    } else {
-      log.info('Primary connection: OFF')
-      this.resetConnection('primary', 'off')
+    const current = enabled.find((endpoint) => endpoint.id === this.active.id)
+    const target = current && this.endpointTarget(current)
+    const currentIndex = enabled.findIndex((endpoint) => endpoint.id === this.active.id)
+    const failedStatuses = ['disconnected', 'error', 'chain mismatch']
+    const earlierEndpointsFailed = enabled
+      .slice(0, currentIndex)
+      .every((endpoint) => failedStatuses.includes(endpoint.status))
+    if (
+      this.active.provider &&
+      current &&
+      target === this.active.currentTarget &&
+      earlierEndpointsFailed
+    ) {
+      return
     }
+
+    this.connectEndpoint(enabled, 0)
   }
 
-  close(update = true) {
-    log.verbose(`closing chain ${this.chainId}`, { update })
+  endpointTarget(endpoint) {
+    const presets = { ...NETWORK_PRESETS.ethereum.default, ...NETWORK_PRESETS.ethereum[this.chainId] }
+    return endpoint.current === 'custom' ? endpoint.custom : presets[endpoint.current]
+  }
 
-    if (this.observer) this.observer.remove()
+  connectEndpoint(endpoints, index, failoverFrom = '') {
+    const endpoint = endpoints[index]
+    if (!endpoint) {
+      this.resetConnection('disconnected')
+      this.emit('close')
+      return
+    }
 
-    this.killProvider(this.primary.provider)
-    this.stopBlockMonitor('primary')
-    this.primary.provider = null
+    const target = this.endpointTarget(endpoint)
+    if (!target) {
+      store.setEndpoint(this.type, this.chainId, endpoint.id, {
+        connected: false,
+        status: 'disconnected',
+        latencyMs: undefined
+      })
+      this.connectEndpoint(endpoints, index + 1, failoverFrom || endpoint.id)
+      return
+    }
 
-    this.killProvider(this.secondary.provider)
-    this.stopBlockMonitor('secondary')
-    this.secondary.provider = null
+    this.resetConnection('loading', target, endpoint.id)
+    endpoints.slice(index + 1).forEach((standby) =>
+      store.setEndpoint(this.type, this.chainId, standby.id, {
+        connected: false,
+        status: 'standby',
+        latencyMs: undefined
+      })
+    )
 
-    if (update) {
-      this.primary = { status: 'loading', network: '', type: '', connected: false }
-      this.secondary = { status: 'loading', network: '', type: '', connected: false }
-      this.update('primary')
-      this.update('secondary')
+    const startedAt = Date.now()
+    this._createProvider(target, endpoint.id)
+    const activeProvider = this.active.provider
+    this.update(endpoint.id)
+
+    const failover = (status) => {
+      if (this.active.id !== endpoint.id) return
+      store.setEndpoint(this.type, this.chainId, endpoint.id, {
+        connected: false,
+        status,
+        latencyMs: undefined
+      })
+      this.killProvider(this.active.provider)
+      this.stopBlockMonitor()
+      this.active.provider = null
+      this.connectEndpoint(endpoints, index + 1, failoverFrom || endpoint.id)
+    }
+
+    activeProvider.on('connect', () => {
+      if (this.active.id !== endpoint.id) return
+      this.getNetwork(activeProvider, (err, response) => {
+        if (err) return failover('error')
+        this.active.network = response && !response.error ? response.result : ''
+        if (!this.active.network || this.active.network !== this.chainId) return failover('chain mismatch')
+
+        this.active.connected = true
+        this.active.type = ''
+        this.active.latencyMs = Date.now() - startedAt
+        if (failoverFrom) {
+          this.emit('failover', { from: failoverFrom, to: endpoint.id, chainId: this.chainId })
+        }
+        this._handleConnection(endpoint.id)
+      })
+    })
+    activeProvider.on('close', () => failover('disconnected'))
+    activeProvider.on('status', (status) => {
+      if (['disconnected', 'error'].includes(status)) return failover(status)
+      if (this.active.status !== status && status !== 'connected') this._updateStatus(endpoint.id, status)
+    })
+    activeProvider.on('data', (data) => this.emit('data', data))
+    activeProvider.on('error', (err) => this.emit('error', err))
+  }
+
+  close(update = true, removeObserver = false) {
+    log.verbose(`closing chain ${this.chainId}`, { update, removeObserver })
+
+    if (removeObserver && this.observer) this.observer.remove()
+
+    const endpointId = this.active.id
+    this.killProvider(this.active.provider)
+    this.stopBlockMonitor()
+    this.active = {
+      id: endpointId || '',
+      provider: null,
+      blockMonitor: null,
+      connected: false,
+      type: '',
+      network: '',
+      currentTarget: '',
+      status: update ? 'loading' : 'off',
+      latencyMs: undefined
+    }
+
+    if (update && endpointId) {
+      this.update(endpointId)
     }
   }
 
   send(payload, res) {
-    if (this.primary.provider && this.primary.connected) {
-      this.primary.provider.sendAsync(payload, (err, result) => {
-        if (err) return resError(err, payload, res)
-        res(result)
-      })
-    } else if (this.secondary.provider && this.secondary.connected) {
-      this.secondary.provider.sendAsync(payload, (err, result) => {
+    if (this.active.provider && this.active.connected) {
+      this.active.provider.sendAsync(payload, (err, result) => {
         if (err) return resError(err, payload, res)
         res(result)
       })
@@ -554,11 +481,30 @@ class Chains extends EventEmitter {
   constructor() {
     super()
     this.connections = {}
+    this.lastFailoverNotice = new Map()
+
+    const notifyFailover = (type, chainId, { from, to }) => {
+      const key = `${type}:${chainId}`
+      const now = Date.now()
+      if (now - (this.lastFailoverNotice.get(key) || 0) < 30000) return
+      this.lastFailoverNotice.set(key, now)
+
+      const chain = store('main.networks', type, chainId)
+      const endpoints = chain?.connection?.endpoints || []
+      const fromIndex = endpoints.findIndex((endpoint) => endpoint.id === from)
+      const toIndex = endpoints.findIndex((endpoint) => endpoint.id === to)
+      if (fromIndex < 0 || toIndex < 0 || !Notification?.isSupported?.()) return
+
+      new Notification({
+        title: 'Connection switched',
+        body: `Wren lost connection to RPC ${fromIndex + 1} on ${chain.name} and switched to RPC ${toIndex + 1}. Manage endpoint order and availability in the network editor.`
+      }).show()
+    }
 
     const removeConnection = (chainId, type = 'ethereum') => {
       if (type in this.connections && chainId in this.connections[type]) {
         this.connections[type][chainId].removeAllListeners()
-        this.connections[type][chainId].close(false)
+        this.connections[type][chainId].close(false, true)
         delete this.connections[type][chainId]
       }
     }
@@ -600,9 +546,14 @@ class Chains extends EventEmitter {
             this.connections[type][chainId].on('error', (...args) => {
               this.emit('error', { type, id: chainId }, ...args)
             })
+
+            this.connections[type][chainId].on('failover', (event) => {
+              notifyFailover(type, chainId, event)
+              this.emit('failover', { type, id: chainId }, event)
+            })
           } else if (!chainConfig.on && this.connections[type][chainId]) {
             this.connections[type][chainId].removeAllListeners()
-            this.connections[type][chainId].close()
+            this.connections[type][chainId].close(true, true)
             delete this.connections[type][chainId]
           }
         })

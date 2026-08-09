@@ -203,24 +203,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: true
       },
@@ -238,24 +232,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -273,24 +261,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: 'https://rpc.gnosischain.com'
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: false,
+              current: 'custom',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: 'https://rpc.gnosischain.com'
+            }
+          ]
         },
         on: false
       },
@@ -308,24 +290,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -343,24 +319,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -378,24 +348,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: 'https://rpc.katana.network/'
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'custom',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: 'https://rpc.katana.network/'
+            }
+          ]
         },
         on: false
       },
@@ -413,24 +377,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -448,24 +406,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -483,24 +435,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       },
@@ -518,24 +464,18 @@ const mainState = {
           }
         },
         connection: {
-          primary: {
-            on: true,
-            current: 'publicnode',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: ''
-          }
+          endpoints: [
+            {
+              id: 'rpc-1',
+              on: true,
+              current: 'publicnode',
+              status: 'loading',
+              connected: false,
+              type: '',
+              network: '',
+              custom: ''
+            }
+          ]
         },
         on: false
       }
@@ -873,6 +813,7 @@ const initial = {
     },
     addresses: [],
     showAccounts: false,
+    hideBalances: false,
     accountPage: 0,
     position: {
       scrollTop: 0,
@@ -911,8 +852,11 @@ function clearSessionState(state: z.infer<typeof StateSchema>) {
   })
 
   Object.values(state.main.networks.ethereum).forEach((chain) => {
-    chain.connection.primary = { ...chain.connection.primary, connected: false }
-    chain.connection.secondary = { ...chain.connection.secondary, connected: false }
+    chain.connection.endpoints = chain.connection.endpoints.map((endpoint) => ({
+      ...endpoint,
+      connected: false,
+      latencyMs: undefined
+    }))
   })
 
   Object.values(state.main.networksMeta.ethereum).forEach((chainMeta) => {

@@ -21,6 +21,30 @@ export interface WalletCallReceiptOutcome {
   reason?: string
 }
 
+function receiptEvidence(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+  const receipt = value as Record<string, unknown>
+  const logs = Array.isArray(receipt['logs'])
+    ? receipt['logs'].map((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+        const log = value as Record<string, unknown>
+        return { address: log['address'], data: log['data'], topics: log['topics'] }
+      })
+    : receipt['logs']
+  return {
+    logs,
+    status: receipt['status'],
+    ...(receipt['type'] !== undefined ? { type: receipt['type'] } : {}),
+    blockHash: receipt['blockHash'],
+    blockNumber: receipt['blockNumber'],
+    gasUsed: receipt['gasUsed'],
+    ...(receipt['effectiveGasPrice'] !== undefined
+      ? { effectiveGasPrice: receipt['effectiveGasPrice'] }
+      : {}),
+    transactionHash: receipt['transactionHash']
+  }
+}
+
 export async function collectWalletCallReceipt(
   candidate: WalletCallTransactionCandidate,
   dependencies: WalletCallReceiptDependencies
@@ -41,7 +65,7 @@ export async function collectWalletCallReceipt(
 
   if (receipt === null || receipt === undefined) return { status: 'pending' }
 
-  const parsed = WalletCallReceiptSchema.safeParse(receipt)
+  const parsed = WalletCallReceiptSchema.safeParse(receiptEvidence(receipt))
   if (!parsed.success || parsed.data.transactionHash !== target.hash) {
     return {
       status: 'error',

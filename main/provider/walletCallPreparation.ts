@@ -1,6 +1,7 @@
 import { GasFeesSource, type TransactionData } from '../../resources/domain/transaction'
 import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { maxFee } from '../transaction'
+import type { WalletCallBatchAdjustment, WalletCallFeeAdjustment } from './walletCallAdjustment'
 import { snapshotWalletCalls } from './walletCallExecution'
 import type { WalletCall } from './walletCalls'
 
@@ -13,6 +14,7 @@ export interface WalletCallPreparationInput {
   chainId: string
   pendingNonce: string
   calls: readonly WalletCall[]
+  adjustment?: Readonly<WalletCallBatchAdjustment>
 }
 
 export interface FilledWalletCallTransaction {
@@ -29,6 +31,10 @@ interface WalletCallPreparationDependencies {
       to?: string
       data: string
       value: string
+      gasLimit?: string
+      gasPrice?: string
+      maxFeePerGas?: string
+      maxPriorityFeePerGas?: string
     }>,
     index: number
   ): Promise<FilledWalletCallTransaction>
@@ -58,7 +64,7 @@ function snapshotInput(input: WalletCallPreparationInput) {
   }
 
   const chainId = parseRpcQuantity(input.chainId)
-  const pendingNonce = parseRpcQuantity(input.pendingNonce)
+  const pendingNonce = parseRpcQuantity(input.adjustment?.startingNonce ?? input.pendingNonce)
   if (chainId === undefined || chainId === 0n || chainId > MAX_SAFE_CHAIN_ID) {
     throw new Error('Invalid wallet call preparation chain')
   }
@@ -69,11 +75,48 @@ function snapshotInput(input: WalletCallPreparationInput) {
     throw new Error('Wallet call nonce range exceeds uint256')
   }
 
+  let feeAdjustments: readonly Readonly<WalletCallFeeAdjustment>[] | undefined
+  if (input.adjustment !== undefined) {
+    if (!Array.isArray(input.adjustment.calls) || input.adjustment.calls.length !== calls.length) {
+      throw new Error('Wallet call fee adjustment does not match calls')
+    }
+    feeAdjustments = Object.freeze(
+      input.adjustment.calls.map((adjustment) => {
+        const gasLimit = parseRpcQuantity(adjustment?.gasLimit)
+        const gasPrice = parseRpcQuantity(adjustment?.gasPrice)
+        const maxFeePerGas = parseRpcQuantity(adjustment?.maxFeePerGas)
+        const maxPriorityFeePerGas = parseRpcQuantity(adjustment?.maxPriorityFeePerGas)
+        const legacy =
+          gasPrice !== undefined && maxFeePerGas === undefined && maxPriorityFeePerGas === undefined
+        const baseFee =
+          gasPrice === undefined && maxFeePerGas !== undefined && maxPriorityFeePerGas !== undefined
+        if (
+          gasLimit === undefined ||
+          gasLimit === 0n ||
+          (!legacy && !baseFee) ||
+          (baseFee && (maxPriorityFeePerGas as bigint) > (maxFeePerGas as bigint))
+        ) {
+          throw new Error('Invalid wallet call fee adjustment')
+        }
+        return Object.freeze({
+          gasLimit: toRpcQuantity(gasLimit),
+          ...(legacy
+            ? { gasPrice: toRpcQuantity(gasPrice as bigint) }
+            : {
+                maxFeePerGas: toRpcQuantity(maxFeePerGas as bigint),
+                maxPriorityFeePerGas: toRpcQuantity(maxPriorityFeePerGas as bigint)
+              })
+        })
+      })
+    )
+  }
+
   return Object.freeze({
     account: input.account.toLowerCase(),
     chainId: toRpcQuantity(chainId),
     pendingNonce,
-    calls: Object.freeze(calls)
+    calls: Object.freeze(calls),
+    feeAdjustments
   })
 }
 
@@ -86,7 +129,8 @@ function prepareFilledTransaction(
     to?: string
     data: string
     value: string
-  }>
+  }>,
+  feeAdjustment?: Readonly<WalletCallFeeAdjustment>
 ) {
   if (!filled || typeof filled !== 'object' || Array.isArray(filled)) {
     throw new Error('Transaction preparation returned invalid metadata')
@@ -151,6 +195,23 @@ function prepareFilledTransaction(
     throw new Error('Prepared transaction has invalid gas fees')
   }
 
+  if (feeAdjustment) {
+    const expectedGasLimit = parseRpcQuantity(feeAdjustment.gasLimit)
+    const expectedGasPrice = parseRpcQuantity(feeAdjustment.gasPrice)
+    const expectedMaxFeePerGas = parseRpcQuantity(feeAdjustment.maxFeePerGas)
+    const expectedPriorityFee = parseRpcQuantity(feeAdjustment.maxPriorityFeePerGas)
+    const expectedBaseFee =
+      expectedGasPrice === undefined &&
+      expectedMaxFeePerGas !== undefined &&
+      expectedPriorityFee !== undefined
+    const feesMatch = expectedBaseFee
+      ? baseFeeTransaction && feePerGas === expectedMaxFeePerGas && priorityFee === expectedPriorityFee
+      : !baseFeeTransaction && feePerGas === expectedGasPrice
+    if (gasLimit !== expectedGasLimit || !feesMatch || tx.gasFeesSource !== GasFeesSource.Dapp) {
+      throw new Error('Prepared transaction changed the adjusted wallet-call fees')
+    }
+  }
+
   const transaction = Object.freeze({
     from,
     chainId: intent.chainId,
@@ -197,8 +258,11 @@ export async function prepareWalletCallBatch(
         data: call.data,
         value: call.value
       })
-      const filled = await dependencies.fillTransaction(intent, index)
-      const preparedCall = prepareFilledTransaction(filled, intent)
+      const filled = await dependencies.fillTransaction(
+        Object.freeze({ ...intent, ...(snapshot.feeAdjustments?.[index] || {}) }),
+        index
+      )
+      const preparedCall = prepareFilledTransaction(filled, intent, snapshot.feeAdjustments?.[index])
       aggregateMaxFee += preparedCall.maxFee
       if (aggregateMaxFee > maxFee(preparedCall.transaction)) {
         throw new Error('Wallet call batch maximum fee exceeds Wren hard limit')

@@ -14,11 +14,15 @@ declare class Chains extends EventEmitter {
       [chainId: string]: {
         chainId: string
         chainConfig: Common
-        primary: {
+        active?: {
           connected: boolean
           provider?: CallbackProvider | null
         }
-        secondary: {
+        primary?: {
+          connected: boolean
+          provider?: CallbackProvider | null
+        }
+        secondary?: {
           connected: boolean
           provider?: CallbackProvider | null
         }

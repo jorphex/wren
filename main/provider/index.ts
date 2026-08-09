@@ -436,9 +436,8 @@ export class Provider extends EventEmitter {
     }
 
     const connection = this.connection.connections['ethereum'][txRequest.chainId]
-    const connectedProvider = connection?.primary.connected
-      ? connection.primary.provider
-      : connection?.secondary.provider
+    const activeConnection = connection?.active || connection?.primary || connection?.secondary
+    const connectedProvider = activeConnection?.connected ? activeConnection.provider : undefined
 
     if (!connectedProvider) {
       return 0n
@@ -743,12 +742,8 @@ export class Provider extends EventEmitter {
     if (!Number.isSafeInteger(chainId) || chainId <= 0) return false
     const network = store('main.networks.ethereum', chainId)
     const connection = this.connection.connections?.ethereum?.[chainId]
-    return Boolean(
-      network &&
-      network.on !== false &&
-      connection?.chainConfig &&
-      (connection.primary?.connected || connection.secondary?.connected)
-    )
+    const activeConnection = connection?.active || connection?.primary || connection?.secondary
+    return Boolean(network && network.on !== false && connection?.chainConfig && activeConnection?.connected)
   }
 
   private async getGasEstimate(rawTx: TransactionData) {
@@ -811,9 +806,10 @@ export class Provider extends EventEmitter {
     }
 
     const connection = this.connection.connections['ethereum'][parseInt(newTx.chainId, 16)]
-    const chainConnected = connection && (connection.primary?.connected || connection.secondary?.connected)
+    const activeConnection = connection?.active || connection?.primary || connection?.secondary
+    const chainConnected = activeConnection?.connected
 
-    if (!chainConnected) {
+    if (!connection || !chainConnected) {
       return cb(new Error(`Chain ${newTx.chainId} not connected`))
     }
 
@@ -1307,8 +1303,7 @@ export class Provider extends EventEmitter {
             id: request.id,
             name: request.name,
             symbol: request.symbol,
-            primaryRpc: request.rpcUrls[0],
-            secondaryRpc: request.rpcUrls[1],
+            rpcUrls: request.rpcUrls.slice(0, 5),
             explorer: request.blockExplorerUrls[0] || '',
             nativeCurrencyName: request.nativeCurrencyName,
             nativeCurrencyDecimals: request.nativeCurrencyDecimals,

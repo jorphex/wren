@@ -18,6 +18,7 @@ import migration50 from './migrations/50'
 import migration51 from './migrations/51'
 import migration52 from './migrations/52'
 import migration53 from './migrations/53'
+import migration54 from './migrations/54'
 
 import type { Migration } from '../state'
 
@@ -38,7 +39,8 @@ const migrations: Migration[] = [
   migration50,
   migration51,
   migration52,
-  migration53
+  migration53,
+  migration54
 ].sort((m1, m2) => m1.version - m2.version)
 
 // Version number of latest known migration

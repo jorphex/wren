@@ -16,8 +16,7 @@ export const ChainSchema = z.object({
   name: z.string(),
   on: z.boolean(),
   connection: z.object({
-    primary: ConnectionSchema,
-    secondary: ConnectionSchema
+    endpoints: z.array(ConnectionSchema).min(1).max(5)
   }),
   layer: z.enum(layerValues).optional(),
   isTestnet: z.boolean().default(false),

@@ -14,28 +14,29 @@ const ether = {
   decimals: 18
 }
 
+const connection = (connected = true) => ({
+  endpoints: [{ id: 'rpc-1', connected }]
+})
+
 const chains = {
   1: {
     name: 'Ethereum Mainnet',
     id: 1,
     explorer: 'https://etherscan.io',
-    connection: { primary: { connected: true }, secondary: { connected: false } },
+    connection: connection(),
     on: true
   },
   137: {
     name: 'Polygon',
     id: 137,
-    connection: { primary: { connected: true }, secondary: { connected: false } },
+    connection: connection(),
     on: false
   },
   11155111: {
     name: 'Ethereum Testnet Sepolia',
     id: 11155111,
     explorer: 'https://sepolia.etherscan.io',
-    connection: {
-      primary: { status: 'disconnected', connected: false, on: true },
-      secondary: { status: 'disconnected', connected: false, on: true }
-    },
+    connection: connection(false),
     on: true
   }
 }
@@ -114,7 +115,7 @@ describe('#createChainsObserver', () => {
       name: 'Optimism',
       id: 10,
       explorer: 'https://optimistic.etherscan.io',
-      connection: { primary: { connected: true }, secondary: { connected: false } },
+      connection: connection(),
       on: true
     }
 
@@ -200,7 +201,7 @@ describe('#createChainsObserver', () => {
       name: 'Optimism',
       id: 10,
       explorer: 'https://optimistic.etherscan.io',
-      connection: { primary: { connected: true }, secondary: { connected: false } },
+      connection: connection(),
       on: true
     }
 
@@ -278,7 +279,7 @@ describe('#createOriginChainObserver', () => {
   const originId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
   const frameTestOrigin = {
     name: 'test.frame',
-    chain: { id: 137, type: 'ethereum', connection: { primary: {}, secondary: {} } }
+    chain: { id: 137, type: 'ethereum' }
   }
 
   beforeEach(() => {

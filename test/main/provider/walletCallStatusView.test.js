@@ -28,9 +28,11 @@ const input = () => ({
     receipts: [
       {
         status: '0x1',
+        type: '0x2',
         blockHash: hash('a'),
         blockNumber: '0x10',
         gasUsed: '0x5208',
+        effectiveGasPrice: '0x3b9aca00',
         transactionHash: hash('b'),
         logs: [
           {
@@ -64,8 +66,10 @@ it('creates a bounded presentation without receipt logs or block hashes', () => 
       receipts: [
         {
           status: '0x1',
+          type: '0x2',
           blockNumber: '0x10',
           gasUsed: '0x5208',
+          effectiveGasPrice: '0x3b9aca00',
           transactionHash: hash('b')
         }
       ]

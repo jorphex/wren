@@ -120,8 +120,13 @@ it('does not log an account address when creating an account', () => {
 
     expect(info).toHaveBeenCalledWith('Account not found, creating account')
     expect(info.mock.calls.flat().join(' ')).not.toContain(address)
+    expect(store('main.accounts', address)).toMatchObject({
+      id: address,
+      name: 'Private Account',
+      active: false
+    })
   } finally {
-    delete Accounts.accounts[address]
+    Accounts.remove(address)
     info.mockRestore()
   }
 })

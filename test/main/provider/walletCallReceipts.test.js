@@ -63,6 +63,41 @@ it('records only a schema-valid receipt bound to the submitted hash', async () =
   )
 })
 
+it('selects bounded fee evidence from a full RPC receipt', async () => {
+  const deps = dependencies()
+  deps.getTransactionReceipt.mockResolvedValueOnce(
+    receipt({
+      type: '0x2',
+      effectiveGasPrice: '0x3b9aca00',
+      from: account,
+      cumulativeGasUsed: '0x5208',
+      logs: [
+        {
+          address: account,
+          data: '0x',
+          topics: [],
+          blockNumber: '0x1',
+          transactionHash: hash('1')
+        }
+      ]
+    })
+  )
+
+  await expect(collectWalletCallReceipt(candidate(), deps)).resolves.toEqual({
+    status: 'receipt-recorded'
+  })
+  expect(deps.ledger.recordReceipt).toHaveBeenCalledWith('example.test', account, 'batch-id', {
+    logs: [{ address: account, data: '0x', topics: [] }],
+    status: '0x1',
+    type: '0x2',
+    blockHash: hash('b'),
+    blockNumber: '0x1',
+    gasUsed: '0x5208',
+    effectiveGasPrice: '0x3b9aca00',
+    transactionHash: hash('1')
+  })
+})
+
 it('completes persisted batch status and removes the collected receipt candidate', async () => {
   const ledger = ledgerWithMemoryStorage()
   const now = Date.now()

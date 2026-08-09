@@ -69,7 +69,9 @@ module.exports = {
   accountPage: (u, page) => {
     u('selected.accountPage', () => page)
   },
-  toggleShowAccounts: (u) => u('selected.showAccounts', (_) => !_),
+  toggleShowAccounts: (u, show) =>
+    u('selected.showAccounts', (current) => (typeof show === 'boolean' ? show : !current)),
+  toggleHideBalances: (u) => u('selected.hideBalances', (_) => !_),
   addProviderEvent: (u, payload) => {
     u('provider.events', (events) => {
       events.push(payload.method)

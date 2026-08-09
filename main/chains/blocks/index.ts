@@ -40,6 +40,7 @@ class BlockMonitor extends EventEmitter {
   private connection: Connection
   private subscriptionId: string
   private poller: NodeJS.Timeout | undefined
+  private stopped: boolean
 
   latestBlock: string
 
@@ -54,6 +55,7 @@ class BlockMonitor extends EventEmitter {
 
     this.connection = connection
     this.subscriptionId = ''
+    this.stopped = true
 
     this.latestBlock = '0x0'
 
@@ -62,6 +64,8 @@ class BlockMonitor extends EventEmitter {
   }
 
   start() {
+    if (!this.stopped) return
+    this.stopped = false
     log.verbose(`%cStarting block updates for chain ${this.chainId}`, 'color: green')
 
     this.connection.on('message', this.handleMessage)
@@ -73,9 +77,11 @@ class BlockMonitor extends EventEmitter {
       .send({ id: 1, jsonrpc: '2.0', method: 'eth_subscribe', params: ['newHeads'] })
       .then((subId) => {
         if (typeof subId !== 'string') throw new Error('Received invalid block subscription id')
+        if (this.stopped) return
         this.subscriptionId = subId
       })
       .catch(() => {
+        if (this.stopped) return
         // subscriptions are not supported, poll for block changes instead
         this.clearSubscription()
 
@@ -84,6 +90,7 @@ class BlockMonitor extends EventEmitter {
   }
 
   stop() {
+    this.stopped = true
     log.verbose(`%cStopping block updates for chain ${this.chainId}`, 'color: red')
 
     if (this.subscriptionId) {
@@ -112,8 +119,12 @@ class BlockMonitor extends EventEmitter {
   private getLatestBlock() {
     this.connection
       .send({ id: 1, jsonrpc: '2.0', method: 'eth_getBlockByNumber', params: ['latest', false] })
-      .then((block) => this.handleBlock(block))
-      .catch((err) => this.handleError(`Could not load block for chain ${this.chainId}`, err))
+      .then((block) => {
+        if (!this.stopped) this.handleBlock(block)
+      })
+      .catch((err) => {
+        if (!this.stopped) this.handleError(`Could not load block for chain ${this.chainId}`, err)
+      })
   }
 
   private handleMessage(message: SubscriptionMessage) {

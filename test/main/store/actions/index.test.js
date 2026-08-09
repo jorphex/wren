@@ -102,6 +102,79 @@ it('does not expose the retired Pylon migration actions', () => {
   expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
 })
 
+describe('ordered RPC endpoint actions', () => {
+  const first = {
+    id: 'rpc-1',
+    on: true,
+    connected: true,
+    current: 'custom',
+    status: 'connected',
+    custom: 'https://one.example'
+  }
+  const second = {
+    id: 'rpc-2',
+    on: true,
+    connected: false,
+    current: 'custom',
+    status: 'standby',
+    custom: 'https://two.example'
+  }
+
+  const run = (action, endpoints, ...args) => {
+    let result
+    action(
+      (...updateArgs) => {
+        expect(updateArgs.slice(0, -1)).toEqual(['main.networks', 'ethereum', 1, 'connection.endpoints'])
+        result = updateArgs.at(-1)(endpoints)
+      },
+      'ethereum',
+      1,
+      ...args
+    )
+    return result
+  }
+
+  it('moves an endpoint by one position and clears stale live state', () => {
+    expect(run(storeActions.moveEndpoint, [first, second], 'rpc-2', -1)).toEqual([
+      expect.objectContaining({ id: 'rpc-2', connected: false, status: 'loading' }),
+      expect.objectContaining({ id: 'rpc-1', connected: false, status: 'loading' })
+    ])
+  })
+
+  it('caps additions at five and assigns an unused stable id', () => {
+    const endpoints = [1, 2, 4, 5].map((suffix) => ({ ...first, id: `rpc-${suffix}` }))
+    expect(run(storeActions.addEndpoint, endpoints)).toEqual([
+      ...endpoints,
+      expect.objectContaining({ id: 'rpc-3', on: false, status: 'off' })
+    ])
+
+    const five = [...endpoints, { ...first, id: 'rpc-3' }]
+    expect(run(storeActions.addEndpoint, five)).toBe(five)
+  })
+
+  it('updates a disabled endpoint URL without enabling network traffic', () => {
+    const disabled = { ...second, on: false, connected: false, status: 'off' }
+
+    expect(
+      run(storeActions.setEndpointUrl, [first, disabled], 'rpc-2', 'https://new.example')
+    ).toEqual([
+      first,
+      expect.objectContaining({
+        id: 'rpc-2',
+        custom: 'https://new.example',
+        on: false,
+        connected: false,
+        status: 'off'
+      })
+    ])
+  })
+
+  it('does not remove the first endpoint', () => {
+    expect(run(storeActions.removeEndpoint, [first, second], 'rpc-1')).toEqual([first, second])
+    expect(run(storeActions.removeEndpoint, [first, second], 'rpc-2')).toEqual([first])
+  })
+})
+
 describe('#setGlideSide', () => {
   it('persists only supported display edges', () => {
     const update = jest.fn()
@@ -210,7 +283,7 @@ describe('#addNetwork', () => {
     addNetwork(polygonNetwork)
 
     expect(networks.ethereum['137'].primaryRpc).toBeUndefined()
-    expect(networks.ethereum['137'].connection.primary.custom).toBe('https://polygon-rpc.com')
+    expect(networks.ethereum['137'].connection.endpoints[0].custom).toBe('https://polygon-rpc.com')
   })
 
   it('adds a network with the correct secondary RPC', () => {
@@ -219,7 +292,7 @@ describe('#addNetwork', () => {
     addNetwork(polygonNetwork)
 
     expect(networks.ethereum['137'].secondaryRpc).toBeUndefined()
-    expect(networks.ethereum['137'].connection.secondary.custom).toBe('https://rpc-mainnet.matic.network')
+    expect(networks.ethereum['137'].connection.endpoints[1].custom).toBe('https://rpc-mainnet.matic.network')
   })
 
   it('adds a network with the correct default connection presets', () => {
@@ -228,32 +301,21 @@ describe('#addNetwork', () => {
     expect(networks.ethereum['137'].connection.presets).toEqual({ local: 'direct' })
   })
 
-  it('adds a network with the correct default primary connection settings', () => {
+  it('adds a network with one dormant endpoint when no RPC URL is supplied', () => {
     addNetwork(polygonNetwork)
 
-    expect(networks.ethereum['137'].connection.primary).toEqual({
-      on: true,
-      current: 'custom',
-      status: 'loading',
-      connected: false,
-      type: '',
-      network: '',
-      custom: ''
-    })
-  })
-
-  it('adds a network with the correct default secondary connection settings', () => {
-    addNetwork(polygonNetwork)
-
-    expect(networks.ethereum['137'].connection.secondary).toEqual({
-      on: false,
-      current: 'custom',
-      status: 'loading',
-      connected: false,
-      type: '',
-      network: '',
-      custom: ''
-    })
+    expect(networks.ethereum['137'].connection.endpoints).toEqual([
+      {
+        id: 'rpc-1',
+        on: false,
+        current: 'custom',
+        status: 'off',
+        connected: false,
+        type: '',
+        network: '',
+        custom: ''
+      }
+    ])
   })
 
   it('adds a network with the correct default gas settings', () => {
@@ -1146,9 +1208,28 @@ describe('#updateNetwork', () => {
 
     expect(main.networksMeta.ethereum[4]).toStrictEqual({
       icon,
-      nativeCurrency: { symbol, name: nativeCurrencyName, icon: nativeCurrencyIcon },
+      nativeCurrency: { symbol, name: nativeCurrencyName, icon: nativeCurrencyIcon, decimals: 18 },
       symbol
     })
+  })
+
+  it('should update native currency decimals', () => {
+    updateNetwork(
+      { id: '0x4', type: 'ethereum', name: '', explorer: '', symbol: '' },
+      {
+        id: '0x4',
+        type: 'ethereum',
+        name: 'test',
+        explorer: 'explorer.test',
+        symbol: 'TEST',
+        nativeCurrencyName: 'Test',
+        nativeCurrencyIcon: '',
+        nativeCurrencyDecimals: 6,
+        icon: ''
+      }
+    )
+
+    expect(main.networksMeta.ethereum[4].nativeCurrency.decimals).toBe(6)
   })
 })
 

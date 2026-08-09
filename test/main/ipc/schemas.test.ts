@@ -39,6 +39,44 @@ test('does not coerce chain or token identifiers', () => {
   expect(parseRendererIpcArgs('event', 'tray:removeToken', [{ address, chainId: '1' }]).success).toBe(false)
 })
 
+test('strictly validates bounded wallet-call adjustments and results', () => {
+  const request = {
+    account: address,
+    handlerId,
+    adjustment: {
+      startingNonce: '0x9',
+      calls: [{ gasLimit: '0x6000', maxFeePerGas: '0x20', maxPriorityFeePerGas: '0x2' }]
+    }
+  }
+  expect(parse('invoke', 'tray:adjustWalletCalls', [request])).toEqual([request])
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:adjustWalletCalls', [
+      {
+        ...request,
+        adjustment: {
+          ...request.adjustment,
+          calls: [...request.adjustment.calls, ...Array(16).fill(request.adjustment.calls[0])]
+        }
+      }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:adjustWalletCalls', [
+      {
+        ...request,
+        adjustment: {
+          startingNonce: '0x09',
+          calls: request.adjustment.calls
+        }
+      }
+    ]).success
+  ).toBe(false)
+  expect(parseRendererInvokeResult('tray:adjustWalletCalls', { success: true }).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('tray:adjustWalletCalls', { success: false, error: 'Request changed' }).success
+  ).toBe(true)
+})
+
 test('validates address-book mutations and bounded results', () => {
   const request = { mode: 'add', address, name: 'Treasury', note: 'Operations' }
   expect(parse('invoke', 'addressBook:save', [request])).toEqual([request])
@@ -304,6 +342,38 @@ test('dispatches only recognized store actions with validated arguments', () => 
   )
 })
 
+test('validates native currency decimals in network updates', () => {
+  const existing = {
+    type: 'ethereum',
+    id: 10,
+    name: 'Optimism',
+    explorer: 'https://optimistic.etherscan.io',
+    symbol: 'ETH',
+    isTestnet: false,
+    primaryColor: 'accent2'
+  }
+  const updated = {
+    ...existing,
+    icon: '',
+    nativeCurrencyIcon: '',
+    nativeCurrencyName: 'Ether',
+    nativeCurrencyDecimals: 18
+  }
+
+  expect(parse('event', 'tray:action', ['updateNetwork', existing, updated])).toEqual([
+    'updateNetwork',
+    existing,
+    updated
+  ])
+  expect(
+    parseRendererIpcArgs('event', 'tray:action', [
+      'updateNetwork',
+      existing,
+      { ...updated, nativeCurrencyDecimals: 256 }
+    ]).success
+  ).toBe(false)
+})
+
 test('validates complete add-chain invokes and strips their request reference', () => {
   const chain = {
     type: 'ethereum',
@@ -316,8 +386,7 @@ test('validates complete add-chain invokes and strips their request reference', 
     icon: '',
     nativeCurrencyIcon: '',
     nativeCurrencyName: 'Ether',
-    primaryRpc: 'https://mainnet.optimism.io',
-    secondaryRpc: '',
+    rpcUrls: ['https://mainnet.optimism.io'],
     nativeCurrencyDecimals: 18
   }
 
@@ -359,7 +428,7 @@ test('validates exact invoke result shapes', () => {
 test('reduces explorer snapshots to the selected chain identity', () => {
   expect(
     parse('event', 'tray:openExplorer', [
-      { id: 1, type: 'ethereum', name: 'Mainnet', connection: { primary: {} } },
+      { id: 1, type: 'ethereum', name: 'Mainnet', connection: { endpoints: [] } },
       null,
       address
     ])

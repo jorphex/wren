@@ -45,6 +45,10 @@ import { simulateTransaction, simulateWalletCalls } from '../../transaction/simu
 import { snapshotWalletCalls } from '../../provider/walletCallExecution'
 import { prepareWalletCallBatch } from '../../provider/walletCallPreparation'
 import {
+  snapshotWalletCallBatchAdjustment,
+  type WalletCallBatchAdjustment
+} from '../../provider/walletCallAdjustment'
+import {
   snapshotPreparedWalletCallExecutionInput,
   type PreparedWalletCallExecutionSnapshot
 } from '../../provider/walletCallPreparedExecution'
@@ -105,6 +109,7 @@ type WalletCallsPreparationSnapshot = Readonly<{
   account: string
   chainId: string
   calls: Readonly<ReturnType<typeof snapshotWalletCalls>>
+  adjustment?: Readonly<WalletCallBatchAdjustment>
 }>
 
 class FrameAccount {
@@ -803,6 +808,80 @@ class FrameAccount {
     }, 0)
   }
 
+  private async revealWalletCallDetails(req: WalletCallsRequest) {
+    const calls = snapshotWalletCalls(req.calls)
+    const chainId = Number(parseRpcQuantity(req.chainId))
+
+    const details = await Promise.all(
+      calls.map(async (call) => {
+        if (!call.to || call.data === '0x') return null
+        try {
+          const decoded = await reveal.decode(call.to, chainId, call.data)
+          if (!decoded) return null
+          if (decoded.contractName !== 'ERC-20') {
+            return {
+              label: decoded.contractName,
+              source: decoded.source,
+              ...(decoded.method ? { method: decoded.method } : {})
+            }
+          }
+
+          try {
+            const token = await new Erc20Contract(call.to, chainId).getTokenData()
+            const label = token.name
+              ? `${token.name}${token.symbol ? ` (${token.symbol})` : ''}`
+              : token.symbol || 'ERC-20 contract'
+            return {
+              label,
+              source: token.name || token.symbol ? 'ERC-20 token metadata' : decoded.source,
+              ...(decoded.method ? { method: decoded.method } : {})
+            }
+          } catch {
+            return {
+              label: 'ERC-20 contract',
+              source: decoded.source,
+              ...(decoded.method ? { method: decoded.method } : {})
+            }
+          }
+        } catch (error) {
+          log.warn('unable to resolve wallet-call destination', { error, handlerId: req.handlerId })
+          return null
+        }
+      })
+    )
+
+    const knownRequest = this.requests[req.handlerId]
+    if (knownRequest !== req) return
+    try {
+      const currentCalls = snapshotWalletCalls(req.calls)
+      if (JSON.stringify(currentCalls) !== JSON.stringify(calls)) return
+    } catch {
+      return
+    }
+    req.callDetails = Object.freeze(details.map((detail) => (detail ? Object.freeze(detail) : null)))
+    this.update()
+  }
+
+  adjustWalletCalls(handlerId: string, adjustment: unknown) {
+    const request = this.requests[handlerId]
+    if (!request || request.type !== 'walletCalls') {
+      throw new Error('Wallet-call request is no longer available')
+    }
+    const walletCalls = request as WalletCallsRequest
+    if (walletCalls.locked || walletCalls.status !== undefined) {
+      throw new Error('Wallet-call request can no longer be adjusted')
+    }
+    if (walletCalls.preparation?.status !== 'succeeded') {
+      throw new Error('Wallet-call preparation is not ready for adjustment')
+    }
+
+    walletCalls.adjustment = snapshotWalletCallBatchAdjustment(adjustment, walletCalls.preparation)
+    this.refreshWalletCallsSimulation(walletCalls, false)
+    this.refreshWalletCallsPreparation(walletCalls, false)
+    this.update()
+    return walletCalls.adjustment
+  }
+
   private walletCallsPendingNonce(account: string, chainId: string) {
     return new Promise<string>((resolve, reject) => {
       provider.getNonce({ from: account, chainId } as TransactionData, (response) => {
@@ -834,7 +913,13 @@ class FrameAccount {
     req: WalletCallsRequest,
     snapshot: WalletCallsPreparationSnapshot
   ) {
-    if (req.account !== snapshot.account || req.chainId !== snapshot.chainId) return false
+    if (
+      req.account !== snapshot.account ||
+      req.chainId !== snapshot.chainId ||
+      JSON.stringify(req.adjustment) !== JSON.stringify(snapshot.adjustment)
+    ) {
+      return false
+    }
 
     try {
       const calls = snapshotWalletCalls(req.calls)
@@ -867,7 +952,15 @@ class FrameAccount {
       snapshot = Object.freeze({
         account: req.account,
         chainId: req.chainId,
-        calls: Object.freeze(snapshotWalletCalls(req.calls))
+        calls: Object.freeze(snapshotWalletCalls(req.calls)),
+        ...(req.adjustment
+          ? {
+              adjustment: Object.freeze({
+                startingNonce: req.adjustment.startingNonce,
+                calls: Object.freeze(req.adjustment.calls.map((call) => Object.freeze({ ...call })))
+              })
+            }
+          : {})
       })
     } catch (error) {
       if (publishPending) this.applyWalletCallsPreparationFailure(req, error)
@@ -888,10 +981,17 @@ class FrameAccount {
       delete this.preparationTimers[req.handlerId]
       if (this.requests[req.handlerId] !== req || this.preparationVersions[req.handlerId] !== version) return
 
-      this.walletCallsPendingNonce(snapshot.account, snapshot.chainId)
+      const pendingNonce = snapshot.adjustment?.startingNonce
+        ? Promise.resolve(snapshot.adjustment.startingNonce)
+        : this.walletCallsPendingNonce(snapshot.account, snapshot.chainId)
+      pendingNonce
         .then((pendingNonce) =>
           prepareWalletCallBatch(
-            { ...snapshot, pendingNonce },
+            {
+              ...snapshot,
+              pendingNonce,
+              ...(snapshot.adjustment ? { adjustment: snapshot.adjustment } : {})
+            },
             {
               fillTransaction: (transaction) =>
                 new Promise((resolve, reject) => {
@@ -1050,6 +1150,7 @@ class FrameAccount {
     if (req.type === 'walletCalls') {
       this.refreshWalletCallsSimulation(req as WalletCallsRequest, false)
       this.refreshWalletCallsPreparation(req as WalletCallsRequest, false)
+      this.revealWalletCallDetails(req as WalletCallsRequest)
       return
     }
 
@@ -1137,6 +1238,25 @@ class FrameAccount {
           nav.back('panel')
         } else if (inExpandedRequestsView) {
           nav.back('panel')
+        }
+
+        if (req.type === 'addChain') {
+          requireStoreAction('navDash')({
+            view: 'chains',
+            data: {
+              newChain: req.chain,
+              requestReference: {
+                account: req.account,
+                handlerId: req.handlerId,
+                origin: store('main.origins', req.origin, 'name') || req.origin
+              }
+            }
+          })
+
+          setTimeout(() => {
+            windows.showTray()
+          }, 100)
+          return
         }
 
         nav.forward('panel', {

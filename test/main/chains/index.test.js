@@ -7,7 +7,21 @@ import { gweiToHex } from '../../util'
 
 log.transports.console.level = false
 
+const mockNotification = jest.fn()
 jest.mock('electron', () => ({
+  Notification: class {
+    static isSupported() {
+      return true
+    }
+
+    constructor(options) {
+      this.options = options
+    }
+
+    show() {
+      mockNotification(this.options)
+    }
+  },
   powerMonitor: {
     on: jest.fn()
   }
@@ -62,6 +76,7 @@ class MockConnection extends EventEmitter {
 }
 
 let block, feeHistoryResponse, gasPrice, observer, connectionObserver
+const fallbackTarget = 'https://polygon-fallback.example'
 
 const state = {
   main: {
@@ -76,24 +91,18 @@ const state = {
           type: 'ethereum',
           name: 'Sepolia',
           connection: {
-            primary: {
-              on: false,
-              current: 'publicnode',
-              status: 'loading',
-              connected: false,
-              type: '',
-              network: '',
-              custom: ''
-            },
-            secondary: {
-              on: false,
-              current: 'custom',
-              status: 'loading',
-              connected: false,
-              type: '',
-              network: '',
-              custom: ''
-            }
+            endpoints: [
+              {
+                id: 'rpc-1',
+                on: false,
+                current: 'publicnode',
+                status: 'loading',
+                connected: false,
+                type: '',
+                network: '',
+                custom: ''
+              }
+            ]
           },
           on: true
         },
@@ -102,24 +111,28 @@ const state = {
           type: 'ethereum',
           name: 'Polygon',
           connection: {
-            primary: {
-              on: false,
-              current: 'publicnode',
-              status: 'loading',
-              connected: false,
-              type: '',
-              network: '',
-              custom: ''
-            },
-            secondary: {
-              on: false,
-              current: 'custom',
-              status: 'loading',
-              connected: false,
-              type: '',
-              network: '',
-              custom: ''
-            }
+            endpoints: [
+              {
+                id: 'rpc-1',
+                on: false,
+                current: 'publicnode',
+                status: 'loading',
+                connected: false,
+                type: '',
+                network: '',
+                custom: ''
+              },
+              {
+                id: 'rpc-2',
+                on: false,
+                current: 'custom',
+                status: 'off',
+                connected: false,
+                type: '',
+                network: '',
+                custom: 'https://polygon-fallback.example'
+              }
+            ]
           },
           on: true
         }
@@ -148,7 +161,10 @@ const state = {
   }
 }
 
-const mockEthProvider = jest.fn((target) => mockConnections[target].connection)
+const fallbackConnection = new MockConnection(137)
+const mockEthProvider = jest.fn((target) =>
+  target === fallbackTarget ? fallbackConnection : mockConnections[target].connection
+)
 jest.mock('eth-provider', () => (target, options) => mockEthProvider(target, options))
 jest.mock('../../../main/store/state', () => () => state)
 jest.mock('../../../main/accounts', () => ({ updatePendingFees: jest.fn() }))
@@ -158,7 +174,7 @@ const mockConnections = {
   'https://ethereum-sepolia-rpc.publicnode.com': {
     id: '11155111',
     name: 'sepolia',
-    connection: new MockConnection(5)
+    connection: new MockConnection(11155111)
   },
   'https://polygon-bor-rpc.publicnode.com': {
     id: '137',
@@ -179,10 +195,11 @@ beforeAll(async () => {
 beforeEach(() => {
   block = {}
   feeHistoryResponse = undefined
+  mockNotification.mockClear()
 
   connectionObserver = store.observer(() => {
     Object.values(mockConnections).forEach((chain) => {
-      const primary = store(`main.networks.ethereum.${chain.id}.connection.primary`)
+      const primary = store(`main.networks.ethereum.${chain.id}.connection.endpoints.0`)
 
       if (primary.on) {
         chain.connection.connect()
@@ -217,7 +234,14 @@ afterEach((done) => {
     }
   })
 
-  store.toggleConnection('ethereum', activeConnection.id, 'primary', false)
+  store.toggleEndpoint('ethereum', activeConnection.id, 'rpc-1', false)
+})
+
+afterAll((done) => {
+  Object.values(chains.connections).forEach((byChainId) => {
+    Object.values(byChainId).forEach((connection) => connection.close(false, true))
+  })
+  setTimeout(done, 10)
 })
 
 describe('#send', () => {
@@ -264,9 +288,9 @@ describe('#send', () => {
 
   it('preserves an upstream error code, message, and data', () => {
     const chain = chains.connections.ethereum[137]
-    const primary = chain.primary
+    const active = chain.active
     const error = { message: 'execution reverted', code: -32042, data: { reason: 'denied' } }
-    chain.primary = {
+    chain.active = {
       connected: true,
       provider: { sendAsync: (_request, cb) => cb(error) }
     }
@@ -275,7 +299,7 @@ describe('#send', () => {
     try {
       chains.send(payload, res, { type: 'ethereum', id: 137 })
     } finally {
-      chain.primary = primary
+      chain.active = active
     }
 
     expect(res).toHaveBeenCalledTimes(1)
@@ -287,13 +311,67 @@ it('identifies Wren when creating an upstream RPC provider', (done) => {
   mockEthProvider.mockClear()
   chains.once('connect', () => {
     expect(mockEthProvider).toHaveBeenCalledWith('https://polygon-bor-rpc.publicnode.com', {
-      name: 'primary',
+      name: 'rpc-1',
       origin: 'wren'
     })
     done()
   })
 
-  store.toggleConnection('ethereum', '137', 'primary', true)
+  store.toggleEndpoint('ethereum', '137', 'rpc-1', true)
+})
+
+it('creates a standby provider only after the active endpoint loses connectivity', (done) => {
+  mockEthProvider.mockClear()
+
+  chains.once('connect', ({ id }) => {
+    if (id !== '137') return done(new Error('connected the wrong chain'))
+
+    try {
+      expect(mockEthProvider).toHaveBeenCalledTimes(1)
+      expect(mockEthProvider).toHaveBeenLastCalledWith(
+        'https://polygon-bor-rpc.publicnode.com',
+        expect.any(Object)
+      )
+    } catch (error) {
+      return done(error)
+    }
+
+    chains.once('failover', ({ id: failedChainId }, { from, to }) => {
+      try {
+        expect(failedChainId).toBe('137')
+        expect({ from, to }).toEqual({ from: 'rpc-1', to: 'rpc-2' })
+        expect(mockEthProvider).toHaveBeenCalledTimes(2)
+        expect(mockEthProvider).toHaveBeenLastCalledWith(fallbackTarget, expect.any(Object))
+        expect(mockNotification).toHaveBeenCalledWith({
+          title: 'Connection switched',
+          body: 'Wren lost connection to RPC 1 on Polygon and switched to RPC 2. Manage endpoint order and availability in the network editor.'
+        })
+      } catch (error) {
+        return done(error)
+      }
+
+      chains.once('connect', ({ id: fallbackChainId }) => {
+        if (fallbackChainId !== '137') return done(new Error('fallback connected the wrong chain'))
+
+        chains.once('close', ({ id: closedChainId }) => {
+          try {
+            expect(closedChainId).toBe('137')
+            done()
+          } catch (error) {
+            done(error)
+          }
+        })
+        store.toggleEndpoint('ethereum', '137', 'rpc-1', false)
+        store.toggleEndpoint('ethereum', '137', 'rpc-2', false)
+      })
+    })
+
+    mockConnections['https://polygon-bor-rpc.publicnode.com'].connection.close()
+    process.nextTick(() => fallbackConnection.connect())
+  })
+
+  store.toggleEndpoint('ethereum', '137', 'rpc-1', true)
+  store.toggleEndpoint('ethereum', '137', 'rpc-2', true)
 })
 
 Object.values(mockConnections).forEach((chain) => {
@@ -313,7 +391,7 @@ Object.values(mockConnections).forEach((chain) => {
       }
     })
 
-    store.toggleConnection('ethereum', chain.id, 'primary', true)
+    store.toggleEndpoint('ethereum', chain.id, 'rpc-1', true)
   })
 
   it(`sets fee market prices on a new London block on ${chain.name}`, (done) => {
@@ -340,7 +418,7 @@ Object.values(mockConnections).forEach((chain) => {
       }
     })
 
-    store.toggleConnection('ethereum', chain.id, 'primary', true)
+    store.toggleEndpoint('ethereum', chain.id, 'rpc-1', true)
   })
 })
 
@@ -367,5 +445,5 @@ it('falls back to legacy gas pricing when fee history is malformed', (done) => {
     }
   })
 
-  store.toggleConnection('ethereum', chain.id, 'primary', true)
+  store.toggleEndpoint('ethereum', chain.id, 'rpc-1', true)
 })

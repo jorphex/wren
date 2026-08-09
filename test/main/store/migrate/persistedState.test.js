@@ -151,17 +151,20 @@ it('migrates a representative version 12 profile through application state initi
     configuring: false
   })
   expect(migrated.main.tokens).toEqual({ custom: [], known: {} })
-  expect(migrated.main.networks.ethereum[1].connection.primary).toMatchObject({
+  expect(migrated.main.networks.ethereum[1].connection.endpoints[0]).toMatchObject({
+    id: 'rpc-1',
     current: 'custom',
     custom: ''
   })
-  expect(migrated.main.networks.ethereum[5].connection.primary).toMatchObject({
+  expect(migrated.main.networks.ethereum[5].connection.endpoints[0]).toMatchObject({
+    id: 'rpc-1',
     on: false,
     status: 'off',
     current: 'custom',
     custom: ''
   })
-  expect(migrated.main.networks.ethereum[100].connection.primary).toMatchObject({
+  expect(migrated.main.networks.ethereum[100].connection.endpoints[0]).toMatchObject({
+    id: 'rpc-1',
     current: 'custom',
     custom: 'https://rpc.gnosischain.com'
   })
@@ -176,16 +179,22 @@ it('migrates a representative version 12 profile through application state initi
 it('migrates the version 37 network boundary without losing custom state', async () => {
   const fixture = loadFixture('v37-network-state.json')
   const customChain = clone(fixture.state.main.networks.ethereum[31337])
+  const { connection: customConnection, ...customChainIdentity } = customChain
   const permission = clone(fixture.state.main.permissions[fixtureAccount])
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
 
-  expect(migrated.main.networks.ethereum[31337]).toMatchObject(customChain)
+  expect(migrated.main.networks.ethereum[31337]).toMatchObject(customChainIdentity)
+  expect(migrated.main.networks.ethereum[31337].connection.endpoints).toEqual([
+    expect.objectContaining({ ...customConnection.primary, id: 'rpc-1' }),
+    expect.objectContaining({ ...customConnection.secondary, id: 'rpc-2' })
+  ])
   expect(migrated.main.accounts[fixtureAccount]).toMatchObject({
     lastSignerType: 'trezor',
     signer: 'fixture-safe7'
   })
   expect(migrated.main.permissions[fixtureAccount]).toEqual(permission)
-  expect(migrated.main.networks.ethereum[84531].connection.primary).toMatchObject({
+  expect(migrated.main.networks.ethereum[84531].connection.endpoints[0]).toMatchObject({
+    id: 'rpc-1',
     on: false,
     current: 'custom',
     custom: ''
@@ -201,12 +210,20 @@ it('migrates the version 41 boundary and reloads it without another migration', 
   const fixture = loadFixture('v41-current-state.json')
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
   const expected = clone(fixture.state.main)
+  const { networks: expectedNetworks, ...expectedMain } = expected
+  const expectedChain = expectedNetworks.ethereum[31337]
+  const { connection: expectedConnection, ...expectedChainIdentity } = expectedChain
 
   expect(migrated.main).toMatchObject({
-    ...expected,
+    ...expectedMain,
     _version: migrations.latest,
     walletCallBatches: {}
   })
+  expect(migrated.main.networks.ethereum[31337]).toMatchObject(expectedChainIdentity)
+  expect(migrated.main.networks.ethereum[31337].connection.endpoints).toEqual([
+    expect.objectContaining({ ...expectedConnection.primary, id: 'rpc-1' }),
+    expect.objectContaining({ ...expectedConnection.secondary, id: 'rpc-2' })
+  ])
   expect(migrated.main._version).toBe(migrations.latest)
   expect(reloaded.main).toEqual(migrated.main)
 })
@@ -215,17 +232,20 @@ it('migrates version 52 Pylon presets through application state initialization',
   const fixture = loadFixture('v52-pylon-network-state.json')
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
 
-  expect(migrated.main.networks.ethereum[1].connection).toMatchObject({
-    primary: {
+  expect(migrated.main.networks.ethereum[1].connection.endpoints).toEqual([
+    expect.objectContaining({
+      id: 'rpc-1',
       current: 'publicnode',
       custom: 'https://dormant.example/mainnet'
-    },
-    secondary: {
+    }),
+    expect.objectContaining({
+      id: 'rpc-2',
       current: 'custom',
       custom: 'wss://private.example/mainnet'
-    }
-  })
-  expect(migrated.main.networks.ethereum[5].connection.primary).toMatchObject({
+    })
+  ])
+  expect(migrated.main.networks.ethereum[5].connection.endpoints[0]).toMatchObject({
+    id: 'rpc-1',
     on: false,
     status: 'off',
     current: 'custom',

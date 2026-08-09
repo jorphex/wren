@@ -28,8 +28,7 @@ const chain = {
   explorer: 'https://polygonscan.com',
   icon: '',
   nativeCurrencyIcon: '',
-  primaryRpc: 'https://polygon.example',
-  secondaryRpc: '',
+  rpcUrls: ['https://polygon.example'],
   isTestnet: false,
   primaryColor: 'accent2'
 }
@@ -44,13 +43,13 @@ beforeEach(() => {
   }
   accounts.accounts = { [address]: account }
   store.addNetwork = jest.fn((network) => store.set('main.networks', network.type, network.id, network))
-  verifyRpcChainId.mockResolvedValue(chain.primaryRpc)
+  verifyRpcChainId.mockResolvedValue(chain.rpcUrls[0])
 })
 
 it('verifies, persists, and only then resolves a pending request', async () => {
   await addRequestedChain(chain, reference)
 
-  expect(verifyRpcChainId).toHaveBeenCalledWith([chain.primaryRpc], 137)
+  expect(verifyRpcChainId).toHaveBeenCalledWith(chain.rpcUrls, 137)
   expect(store.addNetwork).toHaveBeenCalledWith(chain)
   expect(account.resolveRequest).toHaveBeenCalledWith(request, null)
   expect(store.addNetwork.mock.invocationCallOrder[0]).toBeLessThan(

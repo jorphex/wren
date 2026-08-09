@@ -114,6 +114,9 @@ const rendererUrl = (id: string) =>
 function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) {
   const window = createWindow(id, opts)
   windows[id] = window
+  window.once('closed', () => {
+    if (windows[id] === window) delete windows[id]
+  })
   window.loadURL(rendererUrl(id).toString())
   return window
 }

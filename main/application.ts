@@ -225,6 +225,20 @@ handleRenderer('tray:getTokenDetails', async (e, contractAddress, chainId) => {
   }
 })
 
+handleRenderer('tray:adjustWalletCalls', async (e, request) => {
+  try {
+    accounts.adjustWalletCallsRequest(request.account, request.handlerId, request.adjustment)
+    return { success: true as const }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Wallet-call adjustment failed'
+    log.warn('Wallet-call adjustment failed', { reason: message.slice(0, 240) })
+    return {
+      success: false as const,
+      error: message.trim().slice(0, 240) || 'Wallet-call adjustment failed'
+    }
+  }
+})
+
 const addressBookMutation = async (operation: () => Promise<unknown> | unknown) => {
   try {
     return await operation()

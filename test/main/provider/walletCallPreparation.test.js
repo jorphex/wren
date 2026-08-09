@@ -111,6 +111,69 @@ it('supports legacy fee transactions while stripping non-signing metadata', asyn
   })
 })
 
+it('applies user fee settings with a new contiguous nonce range', async () => {
+  const adjustment = {
+    startingNonce: '0x9',
+    calls: [
+      { gasLimit: '0x6000', maxFeePerGas: '0x20', maxPriorityFeePerGas: '0x2' },
+      { gasLimit: '0x7000', maxFeePerGas: '0x30', maxPriorityFeePerGas: '0x3' }
+    ]
+  }
+  const deps = dependencies(async (intent) => ({
+    tx: { ...intent, type: '0x2', gasFeesSource: GasFeesSource.Dapp },
+    approvals: []
+  }))
+
+  const prepared = await prepareWalletCallBatch(input({ adjustment }), deps)
+
+  expect(deps.fillTransaction.mock.calls.map(([intent]) => intent)).toEqual([
+    {
+      from: account,
+      chainId: '0x1',
+      nonce: '0x9',
+      to: target,
+      data: '0xabcd',
+      value: '0x0',
+      ...adjustment.calls[0]
+    },
+    {
+      from: account,
+      chainId: '0x1',
+      nonce: '0xa',
+      data: '0x6000',
+      value: '0x2',
+      ...adjustment.calls[1]
+    }
+  ])
+  expect(prepared.calls.map(({ transaction }) => transaction.nonce)).toEqual(['0x9', '0xa'])
+  expect(prepared.calls.map(({ transaction }) => transaction.gasFeesSource)).toEqual([
+    GasFeesSource.Dapp,
+    GasFeesSource.Dapp
+  ])
+})
+
+it('fails when transaction filling changes an adjusted fee or its source', async () => {
+  const adjustment = {
+    startingNonce: '0x9',
+    calls: [{ gasLimit: '0x6000', maxFeePerGas: '0x20', maxPriorityFeePerGas: '0x2' }]
+  }
+  const changedFee = dependencies(async (intent) => ({
+    tx: { ...intent, maxFeePerGas: '0x21', type: '0x2', gasFeesSource: GasFeesSource.Dapp },
+    approvals: []
+  }))
+  await expect(
+    prepareWalletCallBatch(input({ calls: [input().calls[0]], adjustment }), changedFee)
+  ).rejects.toThrow(/changed the adjusted/)
+
+  const changedSource = dependencies(async (intent) => ({
+    tx: { ...intent, type: '0x2', gasFeesSource: GasFeesSource.Frame },
+    approvals: []
+  }))
+  await expect(
+    prepareWalletCallBatch(input({ calls: [input().calls[0]], adjustment }), changedSource)
+  ).rejects.toThrow(/changed the adjusted/)
+})
+
 it.each([
   ['from', '0x3333333333333333333333333333333333333333'],
   ['chainId', '0x2'],

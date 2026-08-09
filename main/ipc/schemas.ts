@@ -31,6 +31,10 @@ const ChainKeySchema = z.union([ChainNumberSchema, z.string().regex(/^[1-9][0-9]
 const NetworkTypeSchema = z.literal('ethereum')
 const BoundedStringSchema = z.string().max(MAX_TEXT)
 const UrlInputSchema = z.string().max(MAX_URL)
+const RpcQuantitySchema = z
+  .string()
+  .max(66)
+  .regex(/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/)
 const WindowIdSchema = z.enum(['dash', 'panel'])
 const AccentSchema = z.enum([
   'accent1',
@@ -98,6 +102,26 @@ const AccountRequestReferenceSchema = z
   .object({ account: AddressSchema, handlerId: HandlerIdSchema })
   .transform(({ account, handlerId }) => ({ account, handlerId }))
 const AssetSuggestionReferenceSchema = AccountRequestReferenceSchema
+const WalletCallFeeAdjustmentSchema = z
+  .object({
+    gasLimit: RpcQuantitySchema,
+    gasPrice: RpcQuantitySchema.optional(),
+    maxFeePerGas: RpcQuantitySchema.optional(),
+    maxPriorityFeePerGas: RpcQuantitySchema.optional()
+  })
+  .strict()
+const WalletCallsAdjustmentSchema = z
+  .object({
+    account: AddressSchema,
+    handlerId: HandlerIdSchema,
+    adjustment: z
+      .object({
+        startingNonce: RpcQuantitySchema,
+        calls: z.array(WalletCallFeeAdjustmentSchema).min(1).max(16)
+      })
+      .strict()
+  })
+  .strict()
 const AddChainRequestReferenceSchema = AccountRequestReferenceSchema
 const AccessReferenceSchema = z
   .object({
@@ -124,11 +148,11 @@ const ExistingNetworkSchema = NetworkBaseSchema.strict()
 const UpdatedNetworkSchema = NetworkBaseSchema.extend({
   icon: UrlInputSchema,
   nativeCurrencyIcon: UrlInputSchema,
-  nativeCurrencyName: z.string().trim().max(128)
+  nativeCurrencyName: z.string().trim().max(128),
+  nativeCurrencyDecimals: z.number().int().min(0).max(255)
 }).strict()
 const AddChainSchema = UpdatedNetworkSchema.extend({
-  primaryRpc: UrlInputSchema,
-  secondaryRpc: UrlInputSchema,
+  rpcUrls: z.array(UrlInputSchema).min(1).max(5),
   nativeCurrencyDecimals: z.number().int().min(0).max(255)
 }).strict()
 
@@ -149,7 +173,9 @@ const TokenSchema = z
 const ShortcutSchema = StoredShortcutSchema.required().strict()
 
 const noArgs = z.tuple([])
+const EndpointIdSchema = z.string().min(1).max(64)
 const actionSchemas = {
+  addEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema]),
   activateNetwork: z.tuple([NetworkTypeSchema, ChainKeySchema, z.boolean()]),
   backDash: z.tuple([z.number().int().min(1).max(32).optional()]),
   clearPermissions: z.tuple([AddressSchema]),
@@ -159,13 +185,11 @@ const actionSchemas = {
   navDash: z.tuple([BreadcrumbSchema]),
   navReplace: z.tuple([z.literal('dash'), z.array(BreadcrumbSchema).max(32).optional()]),
   removeNetwork: z.tuple([NetworkReferenceSchema]),
-  selectPrimary: z.tuple([NetworkTypeSchema, ChainKeySchema, IdSchema]),
-  selectSecondary: z.tuple([NetworkTypeSchema, ChainKeySchema, IdSchema]),
+  removeEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema]),
   setAccountCloseLock: z.tuple([z.boolean()]),
   setAccountFilter: z.tuple([z.string().max(256)]),
   setAccountSignerStatusOpen: z.tuple([z.boolean()]),
   setAutohide: z.tuple([z.boolean()]),
-  setChainColor: z.tuple([ChainKeySchema, AccentSchema]),
   setDash: z.tuple([z.object({ showing: z.boolean() }).strict()]),
   setFooterHeight: z.tuple([z.literal('panel'), z.number().finite().min(0).max(4096)]),
   setGlideSide: z.tuple([z.enum(['left', 'right'])]),
@@ -178,17 +202,17 @@ const actionSchemas = {
   setLiveAccountLimit: z.tuple([z.number().int().min(1).max(100)]),
   setMenubarGasPrice: z.tuple([z.boolean()]),
   setOnboard: z.tuple([z.object({ showing: z.boolean() }).strict()]),
-  setPrimaryCustom: z.tuple([NetworkTypeSchema, ChainKeySchema, UrlInputSchema]),
-  setSecondaryCustom: z.tuple([NetworkTypeSchema, ChainKeySchema, UrlInputSchema]),
+  setEndpointUrl: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema, UrlInputSchema]),
   setShortcut: z.tuple([z.literal('summon'), ShortcutSchema]),
   setTrezorDerivation: z.tuple([z.enum(['standard', 'legacy', 'testnet'])]),
   switchOriginChain: z.tuple([HandlerIdSchema, ChainNumberSchema, NetworkTypeSchema]),
   toggleAccess: z.tuple([AddressSchema, HandlerIdSchema, z.boolean()]),
-  toggleConnection: z.tuple([
+  toggleEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema, z.boolean().optional()]),
+  moveEndpoint: z.tuple([
     NetworkTypeSchema,
     ChainKeySchema,
-    z.enum(['primary', 'secondary']),
-    z.boolean().optional()
+    EndpointIdSchema,
+    z.union([z.literal(-1), z.literal(1)])
   ]),
   toggleExplorerWarning: noArgs,
   toggleGasFeeWarning: noArgs,
@@ -290,7 +314,8 @@ const invokeSchemas = {
   'yearn:cancelWorkflow': z.tuple([YearnWorkflowIdRequestSchema]),
   'yearn:revokeWorkflow': z.tuple([YearnWorkflowIdRequestSchema]),
   'tray:addChain': z.tuple([AddChainSchema, AddChainRequestReferenceSchema.nullish()]),
-  'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema])
+  'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema]),
+  'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema])
 } satisfies Record<string, z.ZodType>
 
 const invokeResultSchemas = {
@@ -339,7 +364,11 @@ const invokeResultSchemas = {
         .regex(/^(?:0|[1-9][0-9]{0,77})$/)
         .optional()
     })
-    .strict()
+    .strict(),
+  'tray:adjustWalletCalls': z.union([
+    z.object({ success: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ])
 } satisfies Record<keyof typeof invokeSchemas, z.ZodType>
 
 export const assertRendererIpcSchema = (method: Exclude<BridgeMethod, 'rpc'>, channel: string) => {

@@ -27,8 +27,10 @@ export interface WalletCallStatusViewData {
     atomic: false
     receipts?: Array<{
       status: '0x0' | '0x1'
+      type?: '0x0' | '0x1' | '0x2'
       blockNumber: string
       gasUsed: string
+      effectiveGasPrice?: string
       transactionHash: string
     }>
   }

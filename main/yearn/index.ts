@@ -63,8 +63,7 @@ const getPositions = createYearnPositionsService({
     if (!network) return null
     return {
       on: network.on === true,
-      connected:
-        network.connection?.primary?.connected === true || network.connection?.secondary?.connected === true
+      connected: network.connection.endpoints.some((endpoint) => endpoint.connected)
     }
   },
   readContract
@@ -133,9 +132,7 @@ const workflowService = createYearnWorkflowService({
     return network
       ? {
           on: network.on === true,
-          connected:
-            network.connection?.primary?.connected === true ||
-            network.connection?.secondary?.connected === true
+          connected: network.connection.endpoints.some((endpoint) => endpoint.connected)
         }
       : null
   },

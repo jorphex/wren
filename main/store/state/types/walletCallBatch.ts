@@ -39,9 +39,11 @@ export const WalletCallReceiptSchema = z
   .object({
     logs: z.array(WalletCallLogSchema).max(2048),
     status: z.enum(['0x0', '0x1']),
+    type: z.enum(['0x0', '0x1', '0x2']).optional(),
     blockHash: HashSchema,
     blockNumber: QuantitySchema,
     gasUsed: QuantitySchema,
+    effectiveGasPrice: QuantitySchema.optional(),
     transactionHash: HashSchema
   })
   .strict()

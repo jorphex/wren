@@ -47,6 +47,7 @@ export const requestInvokeChannels = new Set([
   'addressBook:remove',
   'addressBook:save',
   'tray:addChain',
+  'tray:adjustWalletCalls',
   'tray:getTokenDetails',
   'yearn:getCatalog',
   'yearn:getPositions',

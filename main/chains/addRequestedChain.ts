@@ -30,8 +30,7 @@ const requestedChainSchema = z.object({
   explorer: optionalHttpsUrlSchema,
   icon: optionalHttpsUrlSchema,
   nativeCurrencyIcon: optionalHttpsUrlSchema,
-  primaryRpc: httpsUrlSchema,
-  secondaryRpc: optionalHttpsUrlSchema,
+  rpcUrls: z.array(httpsUrlSchema).min(1).max(5),
   isTestnet: z.boolean(),
   primaryColor: z.string()
 })
@@ -58,8 +57,7 @@ export async function addRequestedChain(chainData: unknown, requestReference: un
 
   if (chain.id !== expectedChainId) throw new Error('Chain ID cannot be changed for a dapp request')
 
-  const rpcUrls = [chain.primaryRpc, chain.secondaryRpc].filter(Boolean)
-  await verifyRpcChainId(rpcUrls, expectedChainId)
+  await verifyRpcChainId(chain.rpcUrls, expectedChainId)
 
   requireStoreAction('addNetwork')(chain)
   if (!store('main.networks', chain.type, chain.id)) throw new Error('Could not add chain')

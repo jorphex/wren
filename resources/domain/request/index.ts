@@ -27,9 +27,9 @@ export const accountViewTitles: Record<RequestType, string> = {
   sign: 'Sign Message',
   signTypedData: 'Sign Data',
   signErc20Permit: 'Sign Token Permit',
-  transaction: 'Sign Transaction',
-  access: 'Account Access',
-  addChain: 'Add Chain',
-  addToken: 'Add Token',
+  transaction: 'Review transaction',
+  access: 'Review Account Access',
+  addChain: 'Review Network Request',
+  addToken: 'Review Token Request',
   walletCalls: 'Review Call Batch'
 }

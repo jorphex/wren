@@ -36,7 +36,7 @@ const addChainParamsSchema = z.tuple([
       symbol: z.string().trim().min(1),
       decimals: z.number().int().nonnegative()
     }),
-    rpcUrls: z.array(httpsUrlSchema).min(1),
+    rpcUrls: z.array(httpsUrlSchema).min(1).max(5),
     blockExplorerUrls: z.array(httpsUrlSchema).optional().default([]),
     iconUrls: z.array(httpsUrlSchema).optional().default([])
   })
@@ -102,7 +102,7 @@ export async function verifyRpcChainId(
   expectedChainId: number,
   timeout = 5000
 ): Promise<string> {
-  const urls = parseSchema(z.array(httpsUrlSchema).min(1), rpcUrls)
+  const urls = parseSchema(z.array(httpsUrlSchema).min(1).max(5), rpcUrls)
   let reportedDifferentChain = false
 
   for (const url of urls) {

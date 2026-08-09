@@ -42,6 +42,16 @@ function includesToken(tokens, token) {
   return tokens.some((t) => t.address.toLowerCase() === existingAddress && t.chainId === token.chainId)
 }
 
+const endpointPath = (netType, netId) => ['main.networks', netType, netId, 'connection.endpoints']
+
+const updateEndpoint = (u, netType, netId, endpointId, update) => {
+  u(...endpointPath(netType, netId), (endpoints = []) =>
+    endpoints.map((endpoint) =>
+      endpoint.id === endpointId ? { ...endpoint, ...update(endpoint) } : endpoint
+    )
+  )
+}
+
 module.exports = {
   ...panelActions,
   // setSync: (u, key, payload) => u(key, () => payload),
@@ -57,34 +67,63 @@ module.exports = {
       })
     }
   },
-  selectPrimary: (u, netType, netId, value) => {
-    u('main.networks', netType, netId, 'connection.primary.current', () => value)
+  setEndpointUrl: (u, netType, netId, endpointId, target) => {
+    if (!netType || !netId || !endpointId) return
+    updateEndpoint(u, netType, netId, endpointId, (endpoint) => ({
+      current: 'custom',
+      custom: target,
+      connected: false,
+      status: endpoint.on && target ? 'loading' : 'off',
+      latencyMs: undefined
+    }))
   },
-  selectSecondary: (u, netType, netId, value) => {
-    u('main.networks', netType, netId, 'connection.secondary.current', () => value)
+  toggleEndpoint: (u, netType, netId, endpointId, on) => {
+    updateEndpoint(u, netType, netId, endpointId, (endpoint) => ({
+      on: on !== undefined ? on : !endpoint.on,
+      connected: false,
+      status: (on !== undefined ? on : !endpoint.on) ? 'loading' : 'off',
+      latencyMs: undefined
+    }))
   },
-  setPrimaryCustom: (u, netType, netId, target) => {
-    if (!netType || !netId) return
-    u('main.networks', netType, netId, 'connection.primary.custom', () => target)
-  },
-  setSecondaryCustom: (u, netType, netId, target) => {
-    if (!netType || !netId) return
-    u('main.networks', netType, netId, 'connection.secondary.custom', () => target)
-  },
-  toggleConnection: (u, netType, netId, node, on) => {
-    u('main.networks', netType, netId, 'connection', node, 'on', (value) => {
-      return on !== undefined ? on : !value
+  moveEndpoint: (u, netType, netId, endpointId, offset) => {
+    u(...endpointPath(netType, netId), (endpoints = []) => {
+      const index = endpoints.findIndex((endpoint) => endpoint.id === endpointId)
+      const nextIndex = index + offset
+      if (index < 0 || nextIndex < 0 || nextIndex >= endpoints.length) return endpoints
+      const moved = [...endpoints]
+      const [endpoint] = moved.splice(index, 1)
+      moved.splice(nextIndex, 0, endpoint)
+      return moved.map((item) => ({ ...item, connected: false, status: item.on ? 'loading' : 'off' }))
     })
   },
-  setPrimary: (u, netType, netId, status) => {
-    u('main.networks', netType, netId, 'connection.primary', (primary) => {
-      return Object.assign({}, primary, status)
+  addEndpoint: (u, netType, netId) => {
+    u(...endpointPath(netType, netId), (endpoints = []) => {
+      if (endpoints.length >= 5) return endpoints
+      const used = new Set(endpoints.map(({ id }) => id))
+      let suffix = 1
+      while (used.has(`rpc-${suffix}`)) suffix += 1
+      return [
+        ...endpoints,
+        {
+          id: `rpc-${suffix}`,
+          on: false,
+          connected: false,
+          current: 'custom',
+          status: 'off',
+          custom: ''
+        }
+      ]
     })
   },
-  setSecondary: (u, netType, netId, status) => {
-    u('main.networks', netType, netId, 'connection.secondary', (secondary) => {
-      return Object.assign({}, secondary, status)
+  removeEndpoint: (u, netType, netId, endpointId) => {
+    u(...endpointPath(netType, netId), (endpoints = []) => {
+      const index = endpoints.findIndex((endpoint) => endpoint.id === endpointId)
+      if (index <= 0 || endpoints.length <= 1) return endpoints
+      return endpoints.filter((endpoint) => endpoint.id !== endpointId)
     })
+  },
+  setEndpoint: (u, netType, netId, endpointId, status) => {
+    updateEndpoint(u, netType, netId, endpointId, () => status)
   },
   setLaunch: (u, launch) => u('main.launch', () => launch),
   toggleLaunch: (u) => u('main.launch', (launch) => !launch),
@@ -310,10 +349,14 @@ module.exports = {
     try {
       net.id = validateNetworkSettings(net)
 
-      const primaryRpc = net.primaryRpc || ''
-      const secondaryRpc = net.secondaryRpc || ''
+      const rpcUrls = Array.isArray(net.rpcUrls)
+        ? net.rpcUrls.slice(0, 5)
+        : net.secondaryRpc
+          ? [net.primaryRpc || '', net.secondaryRpc]
+          : [net.primaryRpc].filter(Boolean)
       delete net.primaryRpc
       delete net.secondaryRpc
+      delete net.rpcUrls
 
       const defaultNetwork = {
         id: 0,
@@ -329,24 +372,16 @@ module.exports = {
         },
         connection: {
           presets: { local: 'direct' },
-          primary: {
-            on: true,
+          endpoints: (rpcUrls.length ? rpcUrls : ['']).map((custom, index) => ({
+            id: `rpc-${index + 1}`,
+            on: Boolean(custom),
             current: 'custom',
-            status: 'loading',
+            status: custom ? 'loading' : 'off',
             connected: false,
             type: '',
             network: '',
-            custom: primaryRpc
-          },
-          secondary: {
-            on: false,
-            current: 'custom',
-            status: 'loading',
-            connected: false,
-            type: '',
-            network: '',
-            custom: secondaryRpc
-          }
+            custom
+          }))
         },
         on: true
       }
@@ -398,7 +433,8 @@ module.exports = {
           }
         })
 
-        const { nativeCurrencyName, nativeCurrencyIcon, icon, ...updatedNetwork } = update
+        const { nativeCurrencyName, nativeCurrencyIcon, nativeCurrencyDecimals, icon, ...updatedNetwork } =
+          update
 
         delete main.networks[net.type][net.id]
         main.networks[updatedNetwork.type][updatedNetwork.id] = updatedNetwork
@@ -420,7 +456,8 @@ module.exports = {
             ...networkCurrency,
             symbol: update.symbol,
             name: nativeCurrencyName,
-            icon: nativeCurrencyIcon
+            icon: nativeCurrencyIcon,
+            decimals: nativeCurrencyDecimals ?? networkCurrency.decimals ?? 18
           }
         }
 
@@ -590,16 +627,6 @@ module.exports = {
         chainsMeta[chainId] = { ...chainsMeta[chainId], blockHeight }
       } else {
         log.error(`Action Error: setBlockHeight chainId: ${chainId} not found in chainsMeta`)
-      }
-      return chainsMeta
-    })
-  },
-  setChainColor: (u, chainId, color) => {
-    u('main.networksMeta.ethereum', (chainsMeta) => {
-      if (chainsMeta[chainId]) {
-        chainsMeta[chainId] = { ...chainsMeta[chainId], primaryColor: color }
-      } else {
-        log.error(`Action Error: setChainColor chainId: ${chainId} not found in chainsMeta`)
       }
       return chainsMeta
     })

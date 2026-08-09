@@ -25,7 +25,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   store.set('main.tokens.known', address, knownTokens)
-  store.set('main.networks.ethereum.10', { id: 10, connection: { primary: { connected: true } } })
+  store.set('main.networks.ethereum.10', {
+    id: 10,
+    connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
+  })
 
   balances = BalancesScanner(store)
   balances.start()
@@ -68,7 +71,10 @@ it('scans for balances every 10 minutes when paused', () => {
 })
 
 it('tracks curated Yearn assets and shares without adding them as custom tokens', () => {
-  store.set('main.networks.ethereum.1', { id: 1, connection: { primary: { connected: true } } })
+  store.set('main.networks.ethereum.1', {
+    id: 1,
+    connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
+  })
   balancesController.isRunning.mockReturnValue(true)
   balances.setAddress(address)
 
@@ -84,7 +90,10 @@ it('prefers explicit custom token metadata over hidden Yearn metadata', () => {
   const systemToken = YEARN_SYSTEM_TOKENS.find(({ chainId }) => chainId === 1)
   const customToken = { ...systemToken, name: 'My token', symbol: 'MINE' }
   store.set('main.tokens.custom', [customToken])
-  store.set('main.networks.ethereum.1', { id: 1, connection: { primary: { connected: true } } })
+  store.set('main.networks.ethereum.1', {
+    id: 1,
+    connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
+  })
   balancesController.isRunning.mockReturnValue(true)
   balances.setAddress(address)
 

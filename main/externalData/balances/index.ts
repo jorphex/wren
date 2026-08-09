@@ -25,9 +25,7 @@ export default function (store: Store) {
       store('main.networksMeta.ethereum', id, 'nativeCurrency', 'symbol') as string,
     getConnectedNetworks: () => {
       const networks = Object.values(store('main.networks.ethereum') || {}) as Chain[]
-      return networks.filter(
-        (n) => (n.connection.primary || {}).connected || (n.connection.secondary || {}).connected
-      )
+      return networks.filter((n) => n.connection.endpoints.some((endpoint) => endpoint.connected))
     },
     getCustomTokens: () => (store('main.tokens.custom') || []) as Token[],
     getKnownTokens: (address?: Address): Token[] => (address && store('main.tokens.known', address)) || [],

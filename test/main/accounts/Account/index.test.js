@@ -3,11 +3,13 @@ import provider from '../../../../main/provider'
 import { Interface } from 'ethers'
 import reveal from '../../../../main/reveal'
 import { fetchContract } from '../../../../main/contracts'
+import Erc20Contract from '../../../../main/contracts/erc20'
 import { simulateTransaction, simulateWalletCalls } from '../../../../main/transaction/simulation'
 import { ApprovalType } from '../../../../resources/constants'
 import { GasFeesSource } from '../../../../resources/domain/transaction'
 import signers from '../../../../main/signers'
 import store from '../../../../main/store'
+import { flushPromises } from '../../../util'
 
 jest.mock('../../../../main/reveal')
 jest.mock('../../../../main/transaction/simulation', () => ({
@@ -49,6 +51,7 @@ jest.mock('../../../../main/store', () => {
   store.setPermission = jest.fn()
   store.setSignerView = jest.fn()
   store.setPanelView = jest.fn()
+  store.navDash = jest.fn()
   store.navClearReq = jest.fn()
   store.observer = jest.fn()
   return store
@@ -189,6 +192,7 @@ beforeEach(() => {
   jest.clearAllTimers()
   store.mockImplementation(() => undefined)
   store.setPermission.mockClear()
+  store.navDash.mockClear()
   provider.accountsChanged.mockClear()
   accounts.getSelectedAddresses.mockReturnValue([accountState.address.toLowerCase()])
   simulateTransaction.mockImplementation(() => new Promise(() => {}))
@@ -209,6 +213,43 @@ beforeEach(() => {
   )
   account = new Account(accountState, accounts)
   fetchContract.mockResolvedValueOnce(undefined)
+})
+
+it('opens a dapp network proposal directly in the editable network decision', () => {
+  const request = {
+    handlerId: 'add-chain-request',
+    type: 'addChain',
+    account: accountState.address,
+    origin: 'origin-id',
+    chain: {
+      type: 'ethereum',
+      id: 31337,
+      name: 'Garden Testnet',
+      symbol: 'ETH',
+      rpcUrls: ['https://rpc.garden.example']
+    }
+  }
+
+  store.mockImplementation((...path) => {
+    const key = path.join('.')
+    if (key === 'selected.current') return accountState.address
+    if (key === 'windows.panel.nav') return []
+    if (key === 'main.origins.origin-id.name') return 'https://garden.example'
+  })
+
+  account.addRequest(request)
+
+  expect(store.navDash).toHaveBeenCalledWith({
+    view: 'chains',
+    data: {
+      newChain: request.chain,
+      requestReference: {
+        account: request.account,
+        handlerId: request.handlerId,
+        origin: 'https://garden.example'
+      }
+    }
+  })
 })
 
 it('publishes account visibility after resolving access for the selected account', () => {
@@ -521,6 +562,103 @@ describe('#addRequest', () => {
     await jest.advanceTimersByTimeAsync(1)
 
     expect(request.preparation).toEqual({ status: 'failed', reason: 'x'.repeat(240) })
+    expect(provider.fillTransaction).not.toHaveBeenCalled()
+  })
+
+  it('resolves contract and ERC-20 names for wallet-call rows', async () => {
+    const secondTarget = '0x4444444444444444444444444444444444444444'
+    const request = walletCallsRequest('named-wallet-calls')
+    request.calls[1] = { to: secondTarget, value: '0x0', data: '0x12345678' }
+    reveal.decode
+      .mockResolvedValueOnce({
+        contractAddress: tokenContract,
+        contractName: 'ERC-20',
+        source: 'Generic ERC-20',
+        method: 'transfer',
+        args: []
+      })
+      .mockResolvedValueOnce({
+        contractAddress: secondTarget,
+        contractName: '1inch Router',
+        source: 'Sourcify',
+        method: 'swap',
+        args: []
+      })
+    const tokenData = jest
+      .spyOn(Erc20Contract.prototype, 'getTokenData')
+      .mockResolvedValueOnce({ name: 'USD Coin', symbol: 'USDC', decimals: 6 })
+
+    account.addRequest(request)
+    await flushPromises()
+
+    expect(request.callDetails).toEqual([
+      { label: 'USD Coin (USDC)', source: 'ERC-20 token metadata', method: 'transfer' },
+      { label: '1inch Router', source: 'Sourcify', method: 'swap' }
+    ])
+    tokenData.mockRestore()
+  })
+
+  it('applies wallet-call fee and nonce settings, then reruns both checks', async () => {
+    const request = readyWalletCallsRequest('adjusted-wallet-calls')
+    account.requests[request.handlerId] = request
+    simulateWalletCalls.mockResolvedValueOnce({
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      calls: request.calls.map(() => ({ status: 'succeeded', source: 'eth_simulateV1' }))
+    })
+    provider.fillTransaction.mockImplementation((transaction, callback) =>
+      callback(null, {
+        tx: { ...transaction, type: '0x2', gasFeesSource: GasFeesSource.Dapp },
+        approvals: []
+      })
+    )
+    const adjustment = {
+      startingNonce: '0x9',
+      calls: [
+        { gasLimit: '0x6000', maxFeePerGas: '0x20', maxPriorityFeePerGas: '0x2' },
+        { gasLimit: '0x7000', maxFeePerGas: '0x30', maxPriorityFeePerGas: '0x3' }
+      ]
+    }
+
+    expect(account.adjustWalletCalls(request.handlerId, adjustment)).toEqual(adjustment)
+    expect(request.simulation).toEqual({ status: 'pending', calls: [] })
+    expect(request.preparation).toEqual({ status: 'pending' })
+    expect(provider.getNonce).not.toHaveBeenCalled()
+
+    await jest.advanceTimersByTimeAsync(1)
+
+    expect(provider.fillTransaction.mock.calls.map(([transaction]) => transaction.nonce)).toEqual([
+      '0x9',
+      '0xa'
+    ])
+    expect(provider.fillTransaction.mock.calls.map(([transaction]) => transaction.gasLimit)).toEqual([
+      '0x6000',
+      '0x7000'
+    ])
+    expect(request.preparation.status).toBe('succeeded')
+    expect(request.preparation.calls.map(({ transaction }) => transaction.nonce)).toEqual(['0x9', '0xa'])
+    expect(request.simulation.status).toBe('succeeded')
+  })
+
+  it('rejects invalid or immutable wallet-call adjustments without mutation', () => {
+    const request = readyWalletCallsRequest('invalid-adjusted-wallet-calls')
+    account.requests[request.handlerId] = request
+    const originalPreparation = request.preparation
+
+    expect(() =>
+      account.adjustWalletCalls(request.handlerId, {
+        startingNonce: '0x9',
+        calls: [
+          { gasLimit: '0x6000', maxFeePerGas: '0x1', maxPriorityFeePerGas: '0x2' },
+          { gasLimit: '0x7000', maxFeePerGas: '0x30', maxPriorityFeePerGas: '0x3' }
+        ]
+      })
+    ).toThrow(/EIP-1559/)
+    expect(request.preparation).toBe(originalPreparation)
+    expect(request.adjustment).toBeUndefined()
+
+    request.locked = true
+    expect(() => account.adjustWalletCalls(request.handlerId, {})).toThrow(/no longer be adjusted/)
     expect(provider.fillTransaction).not.toHaveBeenCalled()
   })
 
