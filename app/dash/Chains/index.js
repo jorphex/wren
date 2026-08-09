@@ -36,7 +36,7 @@ export class Settings extends React.Component {
         onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
       >
         <span>Need help?</span>
-        <span className='discordLink'>Open community support</span>
+        <span className='discordLink'>Open GitHub Issues</span>
       </button>
     )
   }

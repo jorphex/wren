@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 import { RingIconGlyph } from '../../../../resources/Components/RingIcon'
 
@@ -13,4 +13,13 @@ test.each([
   const glyph = screen.getByRole('img', { name: legacyName })
   expect(glyph.getAttribute('viewBox')).toBe(viewBox)
   expect(glyph.getAttribute('width')).toBe('19')
+})
+
+test('uses a symbol initial when a remote token image fails', () => {
+  render(<RingIconGlyph alt='USDC' fallback='U' img='https://assets.coingecko.com/usdc.png' />)
+
+  fireEvent.error(screen.getByRole('img', { name: 'USDC' }))
+
+  expect(screen.getByText('U')).toBeTruthy()
+  expect(screen.queryByRole('img', { name: 'USDC' })).toBeNull()
 })

@@ -1,6 +1,5 @@
 import { ChainHeader } from '../Components'
 import Connection from '../Connection'
-import Gas from '../../../../../resources/Components/Monitor'
 import { Cluster } from '../../../../../resources/Components/Cluster'
 
 const ChainPreview = (props) => {
@@ -22,9 +21,6 @@ const ChainPreview = (props) => {
         <div className='chainModules'>
           <Cluster>
             <Connection {...props} />
-            <div className='networkGasRows'>
-              <Gas chainId={id} />
-            </div>
           </Cluster>
         </div>
       )}

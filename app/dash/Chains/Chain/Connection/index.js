@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 
 import Icon from '../../../../../resources/Components/Icon'
 import { ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import Gas from '../../../../../resources/Components/Monitor'
 import { NETWORK_PRESETS } from '../../../../../resources/constants'
 
 export function presetLabel(key) {
@@ -67,6 +68,7 @@ export class ChainModule extends React.Component {
                 <Icon name='server' size={14} />
               </div>
               <div>{blockHeight}</div>
+              <Gas chainId={id} inline={true} />
             </div>
           </div>
         </ClusterValue>

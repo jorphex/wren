@@ -49,7 +49,7 @@ export class Notify extends React.Component {
                 <span>before using Wren at your own risk.</span>
               </div>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
-                <div>Find help or report a problem through community support.</div>
+                <div>Need help or found a problem? Open a GitHub issue.</div>
                 <button
                   type='button'
                   className='notifyBodyLink'

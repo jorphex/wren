@@ -8,7 +8,7 @@ jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
 jest.mock('../../../../../resources/Components/RingIcon', () => {
   const RingIconMock = () => <span data-testid='ring-icon' />
   RingIconMock.displayName = 'RingIconMock'
-  return RingIconMock
+  return { __esModule: true, default: RingIconMock, RingIconGlyph: RingIconMock }
 })
 
 const account = 'account-1'

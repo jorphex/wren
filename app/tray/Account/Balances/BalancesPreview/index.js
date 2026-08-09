@@ -150,7 +150,7 @@ export class BalancesPreview extends React.Component {
               <div className='signerBalanceButtons'>
                 <button
                   type='button'
-                  className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlSecondary wrenControlCompact'
+                  className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlGhost wrenControlCompact'
                   onClick={() => {
                     const crumb = {
                       view: 'expandedModule',

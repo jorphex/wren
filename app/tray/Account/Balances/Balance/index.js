@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import { DisplayFiatPrice, DisplayValue } from '../../../../../resources/Components/DisplayValue'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import { RingIconGlyph } from '../../../../../resources/Components/RingIcon'
 
 export class Balance extends React.Component {
   render() {
@@ -42,10 +42,17 @@ export class Balance extends React.Component {
         {scanning && <div className='signerBalanceLoading' style={{ animationDelay: 0.15 * i + 's' }} />}
         <div className='signerBalanceInner' style={{ opacity: !scanning ? 1 : 0 }}>
           <div className='signerBalanceIcon'>
-            <RingIcon
+            <RingIconGlyph
               img={symbol.toUpperCase() !== 'ETH' && !isTestnet && !ethMatch && logoURI}
               alt={symbol.toUpperCase()}
-              color={chainColor ? `var(--${chainColor})` : ''}
+              fallback={symbol.slice(0, 1).toUpperCase()}
+              svgName={symbol.toUpperCase() === 'ETH' || ethMatch ? 'mainnet' : undefined}
+              svgSize={18}
+            />
+            <span
+              className='signerBalanceChainIcon'
+              aria-hidden='true'
+              style={{ background: chainColor ? `var(--${chainColor})` : 'var(--wren-text-muted)' }}
             />
           </div>
           <div className='signerBalanceChain' style={{ color: chainColor ? `var(--${chainColor})` : '' }}>

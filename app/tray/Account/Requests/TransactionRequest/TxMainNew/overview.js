@@ -213,7 +213,7 @@ export function getCallTracePresentation(simulation) {
 
   return {
     className: failures ? '_txMainTagBad' : '_txMainTagWarning',
-    label: `${count} RPC-reported execution frame${count === 1 ? '' : 's'}${
+    label: `${count} RPC-reported execution trace${count === 1 ? '' : 's'}${
       details.length ? ` (${details.join(', ')})` : ''
     }${evidence.truncated ? ' (truncated)' : ''}`
   }

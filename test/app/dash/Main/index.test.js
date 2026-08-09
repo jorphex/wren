@@ -73,7 +73,7 @@ it.each(['Download Chrome companion', 'Download Firefox companion'])(
 it('routes support, tutorial, quit, and license actions', () => {
   renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Community support' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Report an issue' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
   fireEvent.click(screen.getByRole('button', { name: 'View License' }))

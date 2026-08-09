@@ -232,15 +232,14 @@
 
   .signerBalanceChainIcon
     position absolute
-    top 9px
-    left -6px
-    z-index 2
-    width 16px
-    height 16px
+    top -2px
+    left -2px
+    z-index 3
+    width 11px
+    height 11px
     overflow hidden
     border-radius 50%
-    background var(--wren-surface-card)
-    box-shadow 0 0 0 1px var(--wren-border-subtle)
+    box-shadow 0 0 0 2px var(--wren-bg-canvas)
 
   .signerBalanceIcon
     position absolute
@@ -249,25 +248,36 @@
     z-index 1
     width 30px
     height 30px
-    overflow hidden
+    display flex
+    overflow visible
+    align-items center
+    justify-content center
     border-radius 50%
     background var(--wren-surface-inset)
+    box-shadow 0 0 0 1px var(--wren-border-subtle)
 
-    img,
-    img:before
-      width 30px
-      height 30px
+    > img
+      display block
+      width 28px
+      height 28px
+      object-fit cover
       border-radius 50%
 
-    img:before
-      content attr(alt)
-      position absolute
+    > svg
+      color var(--wren-text-secondary)
+
+    .ringIconFallback
       display flex
+      width 28px
+      height 28px
       align-items center
       justify-content center
-      color var(--wren-text-muted)
+      border-radius 50%
+      color var(--wren-text-secondary)
       background var(--wren-surface-inset)
-      font-size var(--wren-type-caption)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-small)
+      font-weight 600
 
   .signerBalanceValue
     position absolute

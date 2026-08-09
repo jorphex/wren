@@ -1,3 +1,5 @@
+import Restore from 'react-restore'
+
 import { ChainHeader } from '../../../../../app/dash/Chains/Chain/Components'
 import { ChainModule, connectionTarget, presetLabel } from '../../../../../app/dash/Chains/Chain/Connection'
 import link from '../../../../../resources/link'
@@ -50,18 +52,16 @@ function renderConnection(primary = {}) {
           }
         }
       },
-      networksMeta: { ethereum: { 1: { blockHeight: 21_000_000 } } }
+      networksMeta: {
+        ethereum: {
+          1: { blockHeight: 21_000_000, gas: { price: { levels: { fast: '0x3b9aca00' } } } }
+        }
+      }
     }
   }
-  const store = (...path) =>
-    path.flatMap((segment) => String(segment).split('.')).reduce((value, segment) => value?.[segment], state)
-  class TestChainModule extends ChainModule {
-    store(...path) {
-      return store(...path)
-    }
-  }
+  const ConnectedChainModule = Restore.connect(ChainModule, Restore.create(state, {}))
 
-  return render(<TestChainModule id={1} type='ethereum' />)
+  return render(<ConnectedChainModule id={1} type='ethereum' />)
 }
 
 test('presents provider names cleanly', () => {
@@ -81,6 +81,7 @@ test('keeps the network-list connection summary non-interactive', () => {
 
   expect(screen.getByText('PublicNode')).toBeTruthy()
   expect(screen.getByText('21000000')).toBeTruthy()
+  expect(screen.getByLabelText('Current gas price 1 gwei')).toBeTruthy()
   expect(screen.getByTestId('globe-icon')).toBeTruthy()
   expect(screen.getByTestId('server-icon')).toBeTruthy()
   expect(screen.queryByRole('button', { name: /RPC connection details/ })).toBeNull()

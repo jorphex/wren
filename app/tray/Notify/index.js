@@ -163,7 +163,7 @@ export class Notify extends React.Component {
                   <span>. Use Wren at your own risk.</span>
                 </div>
                 <div className='notifySection'>
-                  <span>Report a problem through </span>
+                  <span>Report a problem </span>
                   <button
                     type='button'
                     className='notifyBodyLink'
@@ -171,7 +171,7 @@ export class Notify extends React.Component {
                       link.send('tray:openExternal', WREN_SUPPORT_URL)
                     }}
                   >
-                    community support
+                    on GitHub Issues
                   </button>
                 </div>
               </div>

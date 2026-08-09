@@ -64,7 +64,7 @@ it('groups settings into a short, semantic ledger', () => {
     'Accounts and signing',
     'Browser companions'
   ])
-  expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Summon shortcut'))).toBe(
+  expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Wallet shortcut'))).toBe(
     true
   )
   expect(
@@ -75,7 +75,7 @@ it('groups settings into a short, semantic ledger', () => {
 it.each([
   ['Auto-hide', 'Auto-hide', ['tray:action', 'setAutohide', true]],
   ['Run on startup', 'Run on startup', ['tray:action', 'toggleLaunch']],
-  ['Glide', 'Glide', ['tray:action', 'toggleReveal']],
+  ['Reveal from screen edge', 'Reveal from screen edge', ['tray:action', 'toggleReveal']],
   ['Show account name with ENS', 'Show account name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]
 ])('routes the %s toggle to its store action', (name, accessibleName, expected) => {
   renderSettings()
@@ -88,7 +88,7 @@ it.each([
 it('routes every settings dropdown to its matching store action', () => {
   renderSettings()
   const selections = [
-    ['Glide edge', 'left', ['tray:action', 'setGlideSide', 'left']],
+    ['Wallet side', 'left', ['tray:action', 'setGlideSide', 'left']],
     ['Trezor derivation', 'legacy', ['tray:action', 'setTrezorDerivation', 'legacy']],
     ['Ledger derivation', 'standard', ['tray:action', 'setLedgerDerivation', 'standard']],
     ['Ledger Live accounts', 10, ['tray:action', 'setLiveAccountLimit', 10]],

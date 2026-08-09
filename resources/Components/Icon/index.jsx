@@ -171,6 +171,7 @@ const wrenGlyphs = Object.freeze({
   ),
   check: createWrenGlyph(<path d='m5 12 4.5 4.5L19 7' />),
   chevronDown: createWrenGlyph(<path d='m6.5 9 5.5 5.5L17.5 9' />),
+  chevronLeft: createWrenGlyph(<path d='m15 6.5-5.5 5.5 5.5 5.5' />),
   chevronRight: createWrenGlyph(<path d='m9 6.5 5.5 5.5L9 17.5' />),
   chevronUp: createWrenGlyph(<path d='m6.5 15 5.5-5.5 5.5 5.5' />),
   copy: createWrenGlyph(
@@ -339,6 +340,7 @@ const icons = Object.freeze({
   browser: wrenGlyphs.browser,
   check: wrenGlyphs.check,
   'chevron-down': wrenGlyphs.chevronDown,
+  'chevron-left': wrenGlyphs.chevronLeft,
   'chevron-right': wrenGlyphs.chevronRight,
   'chevron-up': wrenGlyphs.chevronUp,
   close: wrenGlyphs.close,

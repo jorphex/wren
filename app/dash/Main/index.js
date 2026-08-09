@@ -237,7 +237,7 @@ export class Main extends React.Component {
               }}
             >
               <Icon name='support' size={15} />
-              Community support
+              Report an issue
             </button>
             <button
               type='button'

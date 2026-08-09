@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '../../../componentSetup'
+import { render, screen } from '../../../componentSetup'
 
 import link from '../../../../resources/link'
 import { ChainSummaryComponent } from '../../../../resources/Components/Monitor'
@@ -33,25 +33,16 @@ test('renders account monitoring without background account-code requests or sta
   expect(screen.getByText('gwei')).toBeTruthy()
 })
 
-test('opens gas explanations for keyboard focus and closes them on blur', () => {
+test('shows one quiet fee-market summary without explanation controls', () => {
   render(<FeeMarketMonitorHarness chainId={1} color='var(--good)' />)
-  fireEvent.click(screen.getByRole('button', { name: 'Expand gas details' }))
-  const baseFeeButton = screen.getByRole('button', { name: 'Explain current base fee' })
 
-  fireEvent.focus(baseFeeButton)
-  expect(screen.getByText(/Wren adds a buffer to the current base fee/)).toBeTruthy()
-
-  fireEvent.blur(baseFeeButton)
-  expect(screen.queryByText(/Wren adds a buffer to the current base fee/)).toBeNull()
+  expect(screen.getByLabelText('Current gas price 2 gwei')).toBeTruthy()
+  expect(screen.queryByRole('button')).toBeNull()
 })
 
-test('exposes and toggles gas disclosure state with the keyboard', async () => {
-  const { user } = render(<MonitorHarness chainId={1} color='var(--good)' />)
-  const disclosure = screen.getByRole('button', { name: 'Expand gas details' })
+test('does not expose fee expansion, estimates, or explorer actions', () => {
+  render(<MonitorHarness chainId={1} color='var(--good)' />)
 
-  expect(disclosure.getAttribute('aria-expanded')).toBe('false')
-  disclosure.focus()
-  await user.keyboard(' ')
-
-  expect(screen.getByRole('button', { name: 'Collapse gas details' })).toBeTruthy()
+  expect(screen.queryByRole('button')).toBeNull()
+  expect(screen.queryByText(/Send ETH|Send Tokens|DEX Swap/)).toBeNull()
 })

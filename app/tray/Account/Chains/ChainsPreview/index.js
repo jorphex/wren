@@ -4,8 +4,6 @@ import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
 
-import { Cluster } from '../../../../../resources/Components/Cluster'
-
 class ChainsPreview extends React.Component {
   constructor(...args) {
     super(...args)
@@ -48,7 +46,6 @@ class ChainsPreview extends React.Component {
   }
 
   render() {
-    const { address } = this.store('main.accounts', this.props.account)
     const existingChains = Object.keys(this.store('main.networks.ethereum') || []).filter((chain) => {
       return chain && this.store('main.networks.ethereum', chain, 'on')
     })
@@ -61,10 +58,13 @@ class ChainsPreview extends React.Component {
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
         <div className='moduleHeader'>
-          <span style={{ marginLeft: '-2px' }}>
-            <Icon name='network' size={16} />
-          </span>
-          <span>{`${name} Monitor`}</span>
+          <div className='chainMonitorIdentity'>
+            <span>
+              <Icon name='network' size={16} />
+            </span>
+            <span>{`${name} Monitor`}</span>
+          </div>
+          <Monitor inline chainId={currentChain.id} color={`var(--${primaryColor})`} />
           {existingChains.length > 1 && (
             <div className='chainMonitorSwitch'>
               <button
@@ -73,7 +73,7 @@ class ChainsPreview extends React.Component {
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index - 1)}
               >
-                <Icon name='back' size={18} />
+                <Icon name='chevron-left' size={18} />
               </button>
               <button
                 type='button'
@@ -86,9 +86,6 @@ class ChainsPreview extends React.Component {
             </div>
           )}
         </div>
-        <Cluster>
-          <Monitor address={address} chainId={currentChain.id} color={`var(--${primaryColor})`} />
-        </Cluster>
       </div>
     )
   }

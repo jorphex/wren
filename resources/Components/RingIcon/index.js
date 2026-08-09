@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Restore from 'react-restore'
 import svg from '../../../resources/svg'
 import { safeRemoteImageUrl } from '../../utils/image'
@@ -29,10 +29,12 @@ const wrenIconNames = Object.freeze({
   tokens: 'tokens'
 })
 
-export const RingIconGlyph = ({ svgName, alt = '', svgSize = 16, img, small }) => {
+export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, img, small }) => {
   const imageUrl = safeRemoteImageUrl(img)
-  if (imageUrl) {
-    return <img src={imageUrl} alt={alt} />
+  const [failedImageUrl, setFailedImageUrl] = useState('')
+
+  if (imageUrl && imageUrl !== failedImageUrl) {
+    return <img src={imageUrl} alt={alt} onError={() => setFailedImageUrl(imageUrl)} />
   }
   if (svgName) {
     const iconName = svgName.toLowerCase()
@@ -47,6 +49,14 @@ export const RingIconGlyph = ({ svgName, alt = '', svgSize = 16, img, small }) =
 
     const svgIcon = svg[iconName]
     return svgIcon ? svgIcon(svgSize) : null
+  }
+
+  if (fallback) {
+    return (
+      <span className='ringIconFallback' aria-hidden='true'>
+        {fallback}
+      </span>
+    )
   }
 
   return svg.eth(small ? 13 : 18)

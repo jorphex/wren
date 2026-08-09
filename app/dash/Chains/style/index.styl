@@ -68,9 +68,6 @@
     padding-right var(--wren-space-4)
 
   .chainModules
-    .networkGasRows
-      display contents
-
     .cluster
       margin 0
       padding 0
@@ -91,19 +88,6 @@
       border 0
       border-radius 0
       background transparent
-
-    .networkGasRows .clusterRow:first-child > .clusterValue:first-child
-      justify-content flex-end
-
-    .networkGasRows .clusterRow:first-child > .clusterValue + .clusterValue
-      flex 0 0 44px !important
-      min-width 44px !important
-      max-width 44px !important
-      border-left 0
-
-    .networkGasRows .sliceTileGasPrice
-      justify-content flex-end
-      padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-3) var(--wren-space-3)
 
     .clusterValueClickable:not(.clusterValueDisabled):hover
       border-color transparent
@@ -364,6 +348,16 @@
 
   .sliceTileChainId
     padding-right var(--wren-space-3)
+
+  .sliceTileGasPrice
+    padding 0 0 0 var(--wren-space-3)
+
+    .sliceTileGasPriceIcon
+      margin-right var(--wren-space-1)
+
+    .sliceTileGasPriceNumber,
+    .sliceTileGasPriceUnit
+      font-size var(--wren-type-caption)
 
 .networkConnectionSummary
   display flex

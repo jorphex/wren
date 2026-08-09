@@ -822,7 +822,7 @@ describe('simulation review', () => {
     ).toBeNull()
   })
 
-  it('summarizes and renders bounded configured-RPC execution frames', () => {
+  it('summarizes and renders bounded configured-RPC execution traces', () => {
     const target = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     const created = '0xcccccccccccccccccccccccccccccccccccccccc'
     const evidence = {
@@ -852,7 +852,7 @@ describe('simulation review', () => {
 
     expect(getCallTracePresentation({ callTrace: evidence })).toEqual({
       className: '_txMainTagBad',
-      label: '2 RPC-reported execution frames (1 creation, 1 failed) (truncated)'
+      label: '2 RPC-reported execution traces (1 creation, 1 failed) (truncated)'
     })
     render(<SimulationCallTrace simulation={{ callTrace: evidence }} />)
 

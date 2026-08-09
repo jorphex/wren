@@ -1191,10 +1191,26 @@ button.earnVariant.wrenControl.wrenControlSecondary
   color var(--wren-text-muted)
 
 button.earnYearnLink.wrenControl.wrenControlGhost,
-button.earnReceiptLink.wrenControl.wrenControlGhost
+button.earnReceiptLink.wrenControl.wrenControlGhost,
+button.earnMoreButton.wrenControl.wrenControlGhost
   width auto
   min-height 32px
   padding 0 var(--wren-space-2)
+
+button.earnMoreButton.wrenControl.wrenControlGhost
+  width 100%
+  border-color transparent
+  color var(--wren-text-secondary)
+  background-color transparent
+  background-image none
+  box-shadow none
+
+  &:hover:not(:disabled)
+    border-color var(--wren-border-subtle)
+    color var(--wren-text-primary)
+    background-color var(--wren-surface-hover)
+    background-image none
+    box-shadow none
 
 .earnTabs button.wrenControl:focus-visible,
 button.earnVariant.wrenControl:focus-visible,

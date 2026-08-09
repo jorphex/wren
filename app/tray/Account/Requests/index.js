@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v1.png'
+import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v2.png'
 // import { CSSTransitionGroup } from 'react-transition-group'
 
 // import ProviderRequest from './ProviderRequest'
@@ -17,7 +17,7 @@ import RequestItem from '../../../../resources/Components/RequestItem'
 import Icon from '../../../../resources/Components/Icon'
 import WrenEmptyState from '../../../../resources/Components/WrenEmptyState'
 
-import { ClusterBox, Cluster } from '../../../../resources/Components/Cluster'
+import { Cluster } from '../../../../resources/Components/Cluster'
 
 import link from '../../../../resources/link'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
@@ -58,7 +58,7 @@ export class Requests extends React.Component {
       <div ref={this.moduleRef} className='balancesBlock'>
         <button
           type='button'
-          className={'requestsPreview'}
+          className='requestsPreview'
           onClick={() => {
             const crumb = {
               view: 'expandedModule',
@@ -69,26 +69,18 @@ export class Requests extends React.Component {
             }
             link.send('nav:forward', 'panel', crumb)
           }}
-          style={reqCount ? { background: 'var(--ghostA)' } : {}}
         >
           <div className={'requestPreviewContent'}>
             <div className={'requestPreviewContentTitle'}>
               <span style={reqCount ? { color: 'var(--good)' } : {}}>
                 <Icon name='requests' size={13} />
               </span>
-              <span>{reqCount ? (reqCount === 1 ? '1 Request' : reqCount + ' Requests') : 'Requests'}</span>
+              <span>{reqCount ? (reqCount === 1 ? '1 request' : reqCount + ' requests') : 'Requests'}</span>
             </div>
             <div className={'requestPreviewContentArrow'} style={reqCount ? { color: 'var(--good)' } : {}}>
               <Icon name='next' size={14} />
             </div>
           </div>
-          <div className={'requestsPreviewArrow'}>
-            <div
-              className={'requestsPreviewArrow1'}
-              style={reqCount ? { background: 'var(--ghostB)' } : {}}
-            />
-          </div>
-          <div className={'requestsPreviewOverlay'} style={reqCount ? { opacity: '1' } : { opacity: '0' }} />
         </button>
       </div>
     )
@@ -98,7 +90,7 @@ export class Requests extends React.Component {
     const groupName = getOriginDisplayName(this.store('main.origins', origin, 'name'))
 
     return (
-      <ClusterBox key={origin}>
+      <section className='requestGroupBlock' key={origin}>
         <div className='requestGroup'>
           <div className='requestGroupMain'>
             <div style={{ marginRight: '8px' }}>
@@ -133,7 +125,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Account Access'}
+                  title={'Account access'}
                   color={'var(--outerspace)'}
                   svgName={'accounts'}
                 >
@@ -148,7 +140,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Sign Message'}
+                  title={'Sign message'}
                   color={'var(--outerspace)'}
                   svgName={'sign'}
                 >
@@ -163,7 +155,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Sign Data'}
+                  title={'Sign typed data'}
                   color={'var(--outerspace)'}
                   svgName={'sign'}
                 >
@@ -182,7 +174,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={`${chainName} Token Permit`}
+                  title={`${chainName} token permit`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}
                 >
@@ -197,7 +189,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Add Chain'}
+                  title={'Add network'}
                   color={'var(--outerspace)'}
                   svgName={'chain'}
                 >
@@ -212,7 +204,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={'Add Token'}
+                  title={'Add token'}
                   color={'var(--outerspace)'}
                   svgName={'tokens'}
                 >
@@ -235,7 +227,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={`${chainName} Transaction`}
+                  title={`${chainName} transaction`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}
                 >
@@ -260,7 +252,7 @@ export class Requests extends React.Component {
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={i}
-                  title={`${chainName} Call Batch`}
+                  title={`${chainName} call batch`}
                   color={metadata.primaryColor ? `var(--${metadata.primaryColor})` : 'var(--outerspace)'}
                   img={metadata.icon}
                 >
@@ -272,7 +264,7 @@ export class Requests extends React.Component {
             }
           })}
         </Cluster>
-      </ClusterBox>
+      </section>
     )
   }
 
@@ -293,15 +285,16 @@ export class Requests extends React.Component {
     const groups = Object.keys(originSortedRequests)
 
     return (
-      <div className='accountViewScroll' style={{ paddingTop: '40px' }}>
+      <div className='accountViewScroll'>
         {groups.length === 0 ? (
           <div className='requestContainerWrap'>
             <div className='requestContainerEmpty'>
               <WrenEmptyState
                 image={emptyRequests}
                 title='No pending requests'
-                copy='Connection and signing requests will appear here.'
+                copy='Requests from connected apps will appear here.'
                 expanded
+                transparentImage
               />
             </div>
           </div>

@@ -150,6 +150,8 @@ const Metric = ({ label, value }) => (
 
 const VaultCard = ({ vault, position, onSelect }) => {
   const unavailable = vault.status !== 'available'
+  const formattedApy = formatPercent(vault.apy.value)
+  const showApyLabel = formattedApy.toLowerCase() !== vault.apy.label.toLowerCase()
   return (
     <button
       type='button'
@@ -168,8 +170,8 @@ const VaultCard = ({ vault, position, onSelect }) => {
           </div>
         </div>
         <div className='earnApy'>
-          <strong>{formatPercent(vault.apy.value)}</strong>
-          <span>{vault.apy.label}</span>
+          <strong>{formattedApy}</strong>
+          {showApyLabel ? <span>{vault.apy.label}</span> : null}
         </div>
       </div>
       <div className='earnVaultMetrics'>
@@ -574,7 +576,7 @@ class ActivityPreview extends React.Component {
         {hidden > 0 ? (
           <button
             type='button'
-            className='earnMoreButton wrenControl wrenControlSecondary wrenControlCompact'
+            className='earnMoreButton wrenControl wrenControlGhost wrenControlCompact'
             ref={(element) => {
               this.more = element
             }}
@@ -665,7 +667,9 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
             />
             <button
               type='button'
-              className={`wrenControl wrenControlSecondary wrenControlCompact ${form.max ? 'active' : ''}`}
+              className={`wrenControl wrenControlSecondary wrenControlCompact ${
+                form.max ? 'active wrenControlSelected' : ''
+              }`}
               aria-pressed={form.max}
               disabled={form.busy || disabled || (!form.max && !maxAvailable)}
               onClick={() =>
@@ -796,7 +800,7 @@ const VaultDetails = ({
               <button
                 type='button'
                 className={`earnVariant wrenControl wrenControlSecondary ${
-                  selectedVariant === variant.id ? 'earnVariantSelected' : ''
+                  selectedVariant === variant.id ? 'earnVariantSelected wrenControlSelected' : ''
                 }`}
                 aria-pressed={selectedVariant === variant.id}
                 key={variant.id}
@@ -806,10 +810,10 @@ const VaultDetails = ({
                 <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
                 <p>
                   {variant.id === 'locked'
-                    ? `Higher yield with a ${durationDays(
-                        cooldown?.cooldownDuration,
-                        '14-day'
-                      )} cooldown and ${durationDays(cooldown?.withdrawalWindow, '5-day')} withdrawal window.`
+                    ? `A ${durationDays(cooldown?.cooldownDuration, '14-day')} cooldown and ${durationDays(
+                        cooldown?.withdrawalWindow,
+                        '5-day'
+                      )} withdrawal window; the current displayed APY is higher.`
                     : 'Deposit and withdraw without a cooldown.'}
                 </p>
               </button>

@@ -213,21 +213,32 @@
       font-size var(--wren-type-caption)
       line-height 1
 
+.requestGroupBlock
+  border-top 1px solid var(--wren-ledger-rule)
+
+  &:first-child
+    border-top 0
+
+  > .cluster
+    margin 0
+    padding 0
+    border 0
+    border-radius 0
+    background transparent
+
 .requestContainerWrap
-  margin 12px 6px
-  padding 0px 3px 21px 3px
+  width 100%
+  min-height 100%
+  margin 0
+  padding 0
   box-sizing border-box
   overflow auto
-  background var(--ghostZ)
+  background transparent
   position relative
-  min-height calc(100% - 25px)
 
   .requestContainerEmpty
     position absolute
-    top 0
-    right 0
-    bottom 100px
-    left 0
+    inset 0
     display flex
     justify-content center
     align-items center

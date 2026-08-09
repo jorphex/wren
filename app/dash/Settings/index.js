@@ -112,7 +112,7 @@ export class Settings extends Component {
               <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>
                   <span style={{ position: 'relative' }}>
-                    Summon shortcut
+                    Wallet shortcut
                     <div>
                       {summonShortcut.configuring ? (
                         <EditShortcut
@@ -145,7 +145,7 @@ export class Settings extends Component {
 
                 <Toggle
                   checked={summonShortcut.enabled}
-                  label='Enable summon shortcut'
+                  label='Enable wallet shortcut'
                   onChange={(enabled) => {
                     link.send('tray:action', 'setShortcut', 'summon', {
                       ...summonShortcut,
@@ -156,7 +156,7 @@ export class Settings extends Component {
               </div>
               <div className='signerPermissionDetails'>
                 <KeyboardShortcutConfigurator
-                  actionText='summon Wren'
+                  actionText='open or dismiss Wren'
                   shortcut={summonShortcut}
                   shortcutName='summon'
                   platform={platform}
@@ -189,22 +189,22 @@ export class Settings extends Component {
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 211 }}>
               <div className='signerPermissionControls'>
-                <div className='signerPermissionSetting'>Glide</div>
+                <div className='signerPermissionSetting'>Reveal from screen edge</div>
                 <Toggle
                   checked={this.store('main.reveal')}
-                  label='Glide'
+                  label='Reveal from screen edge'
                   onChange={() => link.send('tray:action', 'toggleReveal')}
                 />
               </div>
-              <div className='signerPermissionDetails'>{`Move the pointer to the display's ${this.store(
+              <div className='signerPermissionDetails'>{`Show Wren when the pointer rests at the display's ${this.store(
                 'main.glideSide'
-              )} edge to summon Wren.`}</div>
+              )} edge.`}</div>
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 210 }}>
               <div className='signerPermissionControls'>
-                <div className='signerPermissionSetting'>Glide edge</div>
+                <div className='signerPermissionSetting'>Wallet side</div>
                 <Dropdown
-                  label='Glide edge'
+                  label='Wallet side'
                   syncValue={this.store('main.glideSide')}
                   onChange={(value) => link.send('tray:action', 'setGlideSide', value)}
                   options={[
@@ -213,7 +213,9 @@ export class Settings extends Component {
                   ]}
                 />
               </div>
-              <div className='signerPermissionDetails'>Choose which display edge summons Wren.</div>
+              <div className='signerPermissionDetails'>
+                Choose the display edge that reveals Wren and where the wallet appears.
+              </div>
             </div>
 
             {this.store('platform') === 'darwin' ? (
