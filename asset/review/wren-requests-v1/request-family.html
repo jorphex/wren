@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren lightweight request family</title>
+    <style>
+      @font-face {
+        font-family: Wren;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2');
+      }
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Retina.ttf');
+      }
+      :root {
+        --canvas: #090c0a;
+        --elevated: #141a16;
+        --hover: #1a211c;
+        --rule: #2b352d;
+        --section-rule: #202822;
+        --border: #3d493f;
+        --primary: #f2f4ef;
+        --secondary: #d0d6ce;
+        --tertiary: #a9b3aa;
+        --muted: #89958b;
+        --gold: #a68a61;
+        --gold-hover: #b79a70;
+        --warning: #ddb467;
+        --warning-soft: #211b10;
+        --danger: #df8377;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body,
+      button {
+        color: var(--primary);
+        font-family: Wren, sans-serif;
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+      body {
+        background: var(--canvas);
+      }
+      button {
+        font: inherit;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      .topbar {
+        display: grid;
+        height: 70px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--rule);
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .iconButton,
+      .secondaryButton,
+      .primaryButton {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%), var(--elevated);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.045),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+          0 2px 4px rgba(0, 0, 0, 0.28);
+      }
+      .iconButton {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        color: var(--secondary);
+        place-items: center;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+      .pixelIcon {
+        fill: currentColor;
+        stroke: none;
+        shape-rendering: crispEdges;
+      }
+      h1 {
+        font-size: 20px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 660;
+        line-height: 24px;
+      }
+      .origin,
+      .technical,
+      .eyebrow,
+      .factValueTechnical,
+      .footerContext small {
+        font-family: WrenMono, monospace;
+      }
+      .origin {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .accountContext {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--secondary);
+        font-size: 13px;
+      }
+      .contextMark {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .contextMark svg {
+        width: 17px;
+        height: 17px;
+      }
+      main {
+        height: 708px;
+        padding: 30px 30px 22px;
+      }
+      .summary {
+        display: grid;
+        min-height: 126px;
+        padding: 6px 6px 24px;
+        grid-template-columns: 42px minmax(0, 1fr);
+        align-items: start;
+        gap: 16px;
+      }
+      .summaryGlyph {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        margin-top: 3px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .summaryGlyph svg {
+        width: 28px;
+        height: 28px;
+      }
+      .eyebrow {
+        color: var(--gold-hover);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .summary h2 {
+        margin-top: 6px;
+        font-size: 25px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 680;
+        line-height: 30px;
+      }
+      .summaryHelp {
+        max-width: 560px;
+        margin-top: 6px;
+        color: var(--tertiary);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .section {
+        padding: 0 6px;
+      }
+      .section + .section {
+        margin-top: 18px;
+        padding-top: 17px;
+        border-top: 1px solid var(--section-rule);
+      }
+      .sectionTitle {
+        margin-bottom: 12px;
+        font-size: 15px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 650;
+      }
+      .factGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 34px;
+      }
+      .fact {
+        min-width: 0;
+      }
+      .factLabel {
+        display: block;
+        color: var(--tertiary);
+        font-size: 12px;
+      }
+      .factValue {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--primary);
+        font-size: 15px;
+        font-weight: 590;
+        line-height: 20px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .factValueTechnical {
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 400;
+      }
+      .copyValue {
+        color: var(--gold-hover);
+      }
+      .permissionList {
+        display: grid;
+        gap: 13px;
+      }
+      .permission {
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+      }
+      .permission svg {
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        color: var(--gold-hover);
+      }
+      .permission strong {
+        display: block;
+        color: var(--secondary);
+        font-size: 14px;
+        font-weight: 590;
+        line-height: 19px;
+      }
+      .permission span {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .note {
+        display: grid;
+        margin-top: 18px;
+        padding: 12px 13px;
+        border-radius: 6px;
+        color: var(--secondary);
+        background: var(--hover);
+        grid-template-columns: 19px minmax(0, 1fr);
+        align-items: start;
+        gap: 10px;
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .note svg {
+        width: 17px;
+        height: 17px;
+        margin-top: 1px;
+        color: var(--gold-hover);
+      }
+      .note.warning {
+        background: var(--warning-soft);
+      }
+      .note.warning svg,
+      .note.warning strong {
+        color: var(--warning);
+      }
+      footer {
+        display: grid;
+        height: 122px;
+        padding: 0 24px;
+        border-top: 1px solid var(--rule);
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .footerContext {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+      }
+      .footerContext .contextMark {
+        width: 36px;
+        height: 36px;
+      }
+      .footerContext strong {
+        display: block;
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 620;
+      }
+      .footerContext small {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .secondaryButton,
+      .primaryButton {
+        height: 46px;
+        padding: 0 26px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .secondaryButton {
+        min-width: 160px;
+        height: 48px;
+        transform: translateY(-1px);
+        color: var(--danger);
+      }
+      .primaryButton {
+        min-width: 156px;
+        border-color: #b69a70;
+        color: #17130d;
+        background:
+          repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 5px),
+          linear-gradient(180deg, #b79a70, var(--gold));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.24),
+          inset 0 -2px 0 rgba(69, 52, 31, 0.38),
+          0 3px 6px rgba(0, 0, 0, 0.32);
+      }
+      .view {
+        display: none;
+      }
+      body[data-view='access'] .access,
+      body[data-view='token'] .token {
+        display: contents;
+      }
+      body[data-view='access'] button.access,
+      body[data-view='token'] button.token,
+      body[data-view='access'] svg.access,
+      body[data-view='token'] svg.token {
+        display: block;
+      }
+      body[data-view='token'] .summary {
+        min-height: 118px;
+      }
+    </style>
+  </head>
+  <body data-view="access">
+    <header class="topbar">
+      <button class="iconButton" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7M8 12h11" /></svg>
+      </button>
+      <div class="view access">
+        <div>
+          <h1>Review account access</h1>
+          <p class="origin">app.uniswap.org · requested now</p>
+        </div>
+      </div>
+      <div class="view token">
+        <div>
+          <h1>Review token request</h1>
+          <p class="origin">app.uniswap.org · requested now</p>
+        </div>
+      </div>
+      <div class="accountContext">
+        <span class="contextMark">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3" />
+            <path d="M5 20v-2.5C5 14.5 7.5 13 12 13s7 1.5 7 4.5V20M8 4h8" />
+          </svg>
+        </span>
+        <span>Workshop</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="view access">
+        <section class="summary">
+          <span class="summaryGlyph">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 5h16v11H9l-4 3v-3H4V5Z" />
+              <path d="M8 10h8M8 13h5" />
+            </svg>
+          </span>
+          <div>
+            <p class="eyebrow">Connection request</p>
+            <h2>Share Workshop with this site?</h2>
+            <p class="summaryHelp">
+              This connects one account. Wren will still ask before every signature or transaction.
+            </p>
+          </div>
+        </section>
+        <section class="section">
+          <h3 class="sectionTitle">Account being shared</h3>
+          <div class="factGrid">
+            <div class="fact">
+              <span class="factLabel">Account</span>
+              <span class="factValue">Workshop</span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Network</span>
+              <span class="factValue">Ethereum · 1</span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Public address</span>
+              <span class="factValue factValueTechnical copyValue">0x690B…C990</span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Site</span>
+              <span class="factValue factValueTechnical">app.uniswap.org</span>
+            </div>
+          </div>
+        </section>
+        <section class="section">
+          <h3 class="sectionTitle">This site can</h3>
+          <div class="permissionList">
+            <div class="permission">
+              <svg viewBox="0 0 24 24">
+                <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z" />
+                <circle cx="12" cy="12" r="2.5" />
+              </svg>
+              <div>
+                <strong>See this public account address</strong
+                ><span>Balances and activity tied to a public address can be viewed onchain.</span>
+              </div>
+            </div>
+            <div class="permission">
+              <svg viewBox="0 0 24 24"><path d="M5 19 19 5M10 5h9v9M5 12v7h7" /></svg>
+              <div>
+                <strong>Ask Wren to sign messages and transactions</strong
+                ><span>Each request appears separately for your review.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="view token">
+        <section class="summary">
+          <span class="summaryGlyph">
+            <svg class="pixelIcon" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M6 2h8v1h2v1h1v2h1v8h-1v2h-1v1h-2v1H6v-1H4v-1H3v-2H2V6h1V4h1V3h2V2Zm1 2H6v1H5v2H4v6h1v2h1v1h8v-1h1v-2h1V7h-1V5h-1V4H7Z"
+              />
+              <path d="M9 7h2v1h1v1h1v2h-1v1h-1v1H9v-1H8v-1H7V9h1V8h1V7Z" />
+            </svg>
+          </span>
+          <div>
+            <p class="eyebrow">Token suggestion</p>
+            <h2>Add USDC to your token list?</h2>
+            <p class="summaryHelp">
+              The site supplied this token identity. Compare the contract with a source you trust.
+            </p>
+          </div>
+        </section>
+        <section class="section">
+          <h3 class="sectionTitle">Token details</h3>
+          <div class="factGrid">
+            <div class="fact">
+              <span class="factLabel">Token</span>
+              <span class="factValue">USD Coin <span class="technical">· USDC</span></span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Network</span>
+              <span class="factValue">Ethereum · 1</span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Contract</span>
+              <span class="factValue factValueTechnical copyValue">0xA0b8…eB48</span>
+            </div>
+            <div class="fact">
+              <span class="factLabel">Decimals</span>
+              <span class="factValue factValueTechnical">6</span>
+            </div>
+          </div>
+          <div class="note warning">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3 21 20H3L12 3Z" />
+              <path d="M12 9v5M12 17.5v.5" />
+            </svg>
+            <span
+              ><strong>Token names and symbols can be copied.</strong> The contract address is the token’s
+              reliable identity.</span
+            >
+          </div>
+        </section>
+        <section class="section">
+          <h3 class="sectionTitle">What happens next</h3>
+          <div class="permissionList">
+            <div class="permission">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 6h5M13 6h7M4 12h10M18 12h2M4 18h2M10 18h10" />
+                <rect x="9" y="4" width="4" height="4" rx=".5" />
+                <rect x="14" y="10" width="4" height="4" rx=".5" />
+                <rect x="6" y="16" width="4" height="4" rx=".5" />
+              </svg>
+              <div>
+                <strong>Review the full token entry in Wren</strong
+                ><span>Nothing is added until you confirm it in the token editor.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <div class="footerContext">
+        <span class="contextMark">
+          <svg class="view access" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="3" />
+            <path d="M5 20v-2.5C5 14.5 7.5 13 12 13s7 1.5 7 4.5V20M8 4h8" />
+          </svg>
+          <svg class="view token pixelIcon" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M6 2h8v1h2v1h1v2h1v8h-1v2h-1v1h-2v1H6v-1H4v-1H3v-2H2V6h1V4h1V3h2V2Zm1 2H6v1H5v2H4v6h1v2h1v1h8v-1h1v-2h1V7h-1V5h-1V4H7Z"
+            />
+            <path d="M9 7h2v1h1v1h1v2h-1v1h-1v1H9v-1H8v-1H7V9h1V8h1V7Z" />
+          </svg>
+        </span>
+        <div class="view access">
+          <div><strong>Workshop</strong><small>Only this account</small></div>
+        </div>
+        <div class="view token">
+          <div><strong>Token suggestion</strong><small>Review before adding</small></div>
+        </div>
+      </div>
+      <button class="secondaryButton">Decline</button>
+      <button class="primaryButton view access">Allow access</button>
+      <button class="primaryButton view token">Review token</button>
+    </footer>
+    <script>
+      const view = new URLSearchParams(window.location.search).get('view')
+      if (['access', 'token'].includes(view)) document.body.dataset.view = view
+    </script>
+  </body>
+</html>

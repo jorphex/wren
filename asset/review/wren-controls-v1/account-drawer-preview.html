@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren account drawer and private balances</title>
+    <style>
+      @font-face {
+        font-family: WrenUI;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2') format('woff2');
+      }
+
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Regular.ttf') format('truetype');
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --canvas: #090c0a;
+        --drawer: #111612;
+        --surface: #151b16;
+        --hover: #1b221c;
+        --inset: #0b0f0c;
+        --line: #273129;
+        --strong: #3d493f;
+        --text: #e7eee8;
+        --secondary: #b6c1b7;
+        --muted: #758078;
+        --faint: #4f5951;
+        --feather: #a68a61;
+        --feather-hover: #b79a70;
+        --moss: #7e9b73;
+      }
+
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+        color: var(--text);
+        background: var(--canvas);
+        font-family: WrenUI, sans-serif;
+        font-variation-settings: 'CASL' 0.16;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        color: inherit;
+      }
+
+      .shell {
+        position: relative;
+        width: 760px;
+        height: 900px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 86% 8%, rgba(166, 138, 97, 0.055), transparent 29%), var(--canvas);
+      }
+
+      body:has(#home:target) .drawer,
+      body:has(#home:target) .homeVeil {
+        display: none;
+      }
+
+      .home {
+        position: absolute;
+        inset: 0;
+        padding: 22px 24px;
+      }
+
+      .homeTop {
+        display: flex;
+        height: 45px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .accountTrigger {
+        appearance: none;
+        display: flex;
+        min-height: 40px;
+        padding: 0 10px;
+        border: 1px solid var(--strong);
+        border-radius: 7px;
+        align-items: center;
+        gap: 9px;
+        color: var(--text);
+        background-color: var(--surface);
+        background-image:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(166, 138, 97, 0.018) 0,
+            rgba(166, 138, 97, 0.018) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.045),
+          inset 0 -1px rgba(0, 0, 0, 0.42),
+          0 1px 1px rgba(0, 0, 0, 0.28);
+        text-align: left;
+      }
+
+      .accountTriggerIcon,
+      .itemGlyph {
+        display: grid;
+        width: 24px;
+        height: 24px;
+        color: var(--feather-hover);
+        place-items: center;
+      }
+
+      .accountTriggerIcon svg,
+      .itemGlyph svg,
+      .iconButton svg,
+      .privacyToggle svg,
+      .searchIcon,
+      .checkIcon,
+      .closeIcon {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: square;
+        stroke-linejoin: miter;
+      }
+
+      .triggerName {
+        display: block;
+        font-size: 12px;
+        font-weight: 630;
+      }
+
+      .triggerAddress {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+      }
+
+      .triggerArrow {
+        width: 10px;
+        height: 10px;
+        color: var(--muted);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+      }
+
+      .homeActions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .privacyToggle,
+      .iconButton {
+        appearance: none;
+        display: grid;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 1px solid var(--strong);
+        border-radius: 7px;
+        color: var(--secondary);
+        background-color: var(--surface);
+        background-image:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(166, 138, 97, 0.018) 0,
+            rgba(166, 138, 97, 0.018) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.045),
+          inset 0 -1px rgba(0, 0, 0, 0.42),
+          0 1px 1px rgba(0, 0, 0, 0.28);
+        place-items: center;
+      }
+
+      .privacyToggle {
+        color: var(--feather-hover);
+        border-color: rgba(183, 154, 112, 0.48);
+        background-color: rgba(166, 138, 97, 0.11);
+      }
+
+      .privacyLabel {
+        color: var(--muted);
+        font-size: 9px;
+      }
+
+      .homeBody {
+        padding-top: 25px;
+      }
+
+      .homeHeading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+
+      .eyebrow {
+        color: var(--feather);
+        font-size: 9px;
+        font-weight: 620;
+        letter-spacing: 1.15px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 5px 0 0;
+        font-size: 25px;
+        font-weight: 660;
+      }
+
+      .fullAddress {
+        margin-top: 5px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 9px;
+      }
+
+      .totalLabel {
+        color: var(--muted);
+        font-size: 9px;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .privateValue {
+        margin-top: 4px;
+        color: var(--secondary);
+        font-family: WrenMono, monospace;
+        font-size: 20px;
+        letter-spacing: 2px;
+      }
+
+      .quickActions {
+        display: flex;
+        margin-top: 16px;
+        gap: 8px;
+      }
+
+      .tactileButton {
+        appearance: none;
+        display: inline-flex;
+        min-height: 36px;
+        padding: 0 13px;
+        border: 1px solid var(--strong);
+        border-radius: 7px;
+        align-items: center;
+        gap: 7px;
+        color: var(--secondary);
+        background-color: var(--surface);
+        background-image:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(166, 138, 97, 0.018) 0,
+            rgba(166, 138, 97, 0.018) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        box-shadow:
+          inset 0 1px rgba(255, 255, 255, 0.045),
+          inset 0 -1px rgba(0, 0, 0, 0.42),
+          0 1px 1px rgba(0, 0, 0, 0.28);
+        font-size: 11px;
+        font-weight: 570;
+      }
+
+      .tactileButton svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .tactileButton.primary {
+        border-color: var(--feather-hover);
+        color: #11130f;
+        background-color: var(--feather);
+        background-image:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(56, 43, 26, 0.045) 0,
+            rgba(56, 43, 26, 0.045) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        box-shadow:
+          inset 0 1px rgba(255, 246, 220, 0.2),
+          inset 0 -2px rgba(57, 39, 20, 0.25),
+          0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .sectionRule {
+        height: 1px;
+        margin-top: 21px;
+        background: var(--line);
+      }
+
+      .balanceArea {
+        position: relative;
+        min-height: 230px;
+        padding-top: 20px;
+        overflow: hidden;
+      }
+
+      .sectionTitle {
+        font-size: 12px;
+        font-weight: 630;
+      }
+
+      .sectionTitleRow {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .pixelIcon {
+        width: 16px;
+        height: 16px;
+        color: var(--feather-hover);
+        fill: currentColor;
+        shape-rendering: crispEdges;
+      }
+
+      .balanceRows {
+        position: relative;
+        z-index: 1;
+        width: 48%;
+        margin-top: 15px;
+      }
+
+      .balanceRow {
+        display: grid;
+        min-height: 52px;
+        border-bottom: 1px solid rgba(39, 49, 41, 0.72);
+        grid-template-columns: 30px 1fr auto;
+        align-items: center;
+      }
+
+      .tokenIcon {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        color: var(--secondary);
+        background: var(--surface);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+        place-items: center;
+      }
+
+      .tokenName {
+        display: block;
+        font-size: 11px;
+        font-weight: 590;
+      }
+      .tokenNetwork {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 8px;
+      }
+      .tokenPrivate {
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 10px;
+        letter-spacing: 1.5px;
+      }
+
+      .balanceArtwork {
+        position: absolute;
+        right: -4px;
+        bottom: -5px;
+        width: 320px;
+        height: 205px;
+        object-fit: contain;
+        opacity: 0.72;
+        -webkit-mask-image: radial-gradient(ellipse at 58% 61%, #000 38%, transparent 76%);
+        mask-image: radial-gradient(ellipse at 58% 61%, #000 38%, transparent 76%);
+      }
+
+      .decoSymbol {
+        flex: none;
+        width: 42px;
+        height: 42px;
+        background-image: url('../../review/wren-icon-language-v1/02-decorative-symbols.png');
+        background-repeat: no-repeat;
+        background-size: 400% 300%;
+      }
+
+      .decoBranch {
+        position: absolute;
+        right: 20px;
+        bottom: 8px;
+        width: 250px;
+        height: 190px;
+        opacity: 0.32;
+        background-position: 66.666% 0;
+        -webkit-mask-image: radial-gradient(ellipse at center, #000 42%, transparent 79%);
+        mask-image: radial-gradient(ellipse at center, #000 42%, transparent 79%);
+      }
+
+      .decoFootprints {
+        width: 36px;
+        height: 36px;
+        opacity: 0.58;
+        background-position: 100% 0;
+        mix-blend-mode: screen;
+        -webkit-mask-image: radial-gradient(circle, #000 34%, transparent 76%);
+        mask-image: radial-gradient(circle, #000 34%, transparent 76%);
+      }
+
+      .decoLantern {
+        width: 54px;
+        height: 54px;
+        background-position: 33.333% 50%;
+        mix-blend-mode: screen;
+        -webkit-mask-image: radial-gradient(circle, #000 37%, transparent 77%);
+        mask-image: radial-gradient(circle, #000 37%, transparent 77%);
+      }
+
+      .lower {
+        display: grid;
+        margin-top: 3px;
+        border-top: 1px solid var(--line);
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+      }
+
+      .lowerSection {
+        min-height: 150px;
+        padding-top: 16px;
+      }
+
+      .lowerHeading {
+        display: flex;
+        height: 26px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .infoList {
+        margin-top: 8px;
+      }
+
+      .infoRow {
+        display: grid;
+        min-height: 45px;
+        border-bottom: 1px solid rgba(39, 49, 41, 0.62);
+        grid-template-columns: 24px minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .infoGlyph {
+        display: grid;
+        width: 18px;
+        height: 18px;
+        color: var(--moss);
+        place-items: center;
+      }
+
+      .infoGlyph svg {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+        shape-rendering: crispEdges;
+      }
+      .infoTitle {
+        display: block;
+        overflow: hidden;
+        font-size: 10px;
+        font-weight: 580;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .infoMeta {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 8px;
+      }
+      .infoEnd {
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+      }
+
+      .requestsBand {
+        display: grid;
+        min-height: 82px;
+        border-top: 1px solid var(--line);
+        grid-template-columns: 58px 1fr auto;
+        align-items: center;
+      }
+
+      .requestsTitle {
+        display: block;
+        font-size: 11px;
+        font-weight: 610;
+      }
+      .requestsCopy {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 9px;
+      }
+
+      .homeVeil {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        background: rgba(4, 7, 5, 0.2);
+      }
+
+      .drawer {
+        position: absolute;
+        inset: 0 auto 0 0;
+        z-index: 4;
+        width: 336px;
+        padding: 23px 18px 20px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 18% 92%, rgba(166, 138, 97, 0.055), transparent 29%), var(--drawer);
+        box-shadow: 18px 0 45px rgba(0, 0, 0, 0.46);
+      }
+
+      .drawerHeader {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .drawerTitle {
+        font-size: 17px;
+        font-weight: 650;
+      }
+
+      .drawerCount {
+        margin-left: 7px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+      }
+
+      .close {
+        appearance: none;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        color: var(--muted);
+        background: transparent;
+        place-items: center;
+      }
+
+      .closeIcon {
+        width: 13px;
+        height: 13px;
+      }
+
+      .drawerSearch {
+        position: relative;
+        z-index: 1;
+        margin-top: 17px;
+      }
+
+      .searchIcon {
+        position: absolute;
+        top: 11px;
+        left: 9px;
+        width: 14px;
+        height: 14px;
+        color: var(--muted);
+      }
+
+      .drawerSearch input {
+        width: 100%;
+        height: 36px;
+        padding: 0 9px 0 31px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        border-radius: 0;
+        outline: 0;
+        color: var(--text);
+        background: var(--inset);
+        font-size: 11px;
+      }
+
+      .accountList {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        margin-top: 14px;
+        gap: 4px;
+      }
+
+      .accountItem {
+        appearance: none;
+        display: grid;
+        width: 100%;
+        height: 54px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 5px;
+        color: var(--text);
+        background: transparent;
+        grid-template-columns: 29px minmax(0, 1fr) 24px;
+        align-items: center;
+        text-align: left;
+      }
+
+      .accountItem.selected {
+        background: rgba(166, 138, 97, 0.09);
+      }
+      .accountItem:hover {
+        background: var(--hover);
+      }
+
+      .itemGlyph {
+        color: var(--secondary);
+      }
+      .accountItem.selected .itemGlyph {
+        color: var(--feather-hover);
+      }
+      .itemGlyph svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .itemIdentity {
+        min-width: 0;
+      }
+      .itemName {
+        display: block;
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 610;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .itemAddress {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .itemEnd {
+        display: grid;
+        justify-items: end;
+      }
+      .checkIcon {
+        width: 15px;
+        height: 15px;
+        color: var(--feather);
+      }
+
+      .requestCount {
+        display: grid;
+        width: 19px;
+        height: 19px;
+        border-radius: 5px;
+        color: #11130f;
+        background: var(--moss);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+        font-weight: 700;
+        place-items: center;
+      }
+
+      .addAccount {
+        appearance: none;
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        height: 38px;
+        margin-top: 13px;
+        padding: 0 13px;
+        border: 1px solid var(--feather-hover);
+        border-radius: 7px;
+        align-items: center;
+        color: #11130f;
+        background-color: var(--feather);
+        background-image:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(56, 43, 26, 0.045) 0,
+            rgba(56, 43, 26, 0.045) 1px,
+            transparent 1px,
+            transparent 4px
+          );
+        box-shadow:
+          inset 0 1px rgba(255, 246, 220, 0.2),
+          inset 0 -2px rgba(57, 39, 20, 0.25),
+          0 1px 2px rgba(0, 0, 0, 0.3);
+        font-size: 11px;
+        font-weight: 610;
+        text-align: left;
+      }
+
+      .drawerActions {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .drawerHint {
+        position: absolute;
+        right: 18px;
+        bottom: 22px;
+        left: 18px;
+        z-index: 1;
+        color: var(--faint);
+        font-size: 8px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body data-unexpected-overflow="pending">
+    <span id="home" hidden></span>
+    <main class="shell">
+      <section class="home">
+        <header class="homeTop">
+          <button type="button" class="accountTrigger">
+            <span class="accountTriggerIcon"
+              ><svg viewBox="0 0 20 20">
+                <path
+                  d="M10 2c1 3-1 4-1 6 0 1 1 2 2 2-1-2 2-3 2-5 3 2 4 5 3 8a6 6 0 0 1-12 0c0-3 1-5 4-8 0 3 1 4 2 5-1-3 1-5 0-8Z"
+                /></svg></span
+            ><span
+              ><span class="triggerName">Workshop</span><span class="triggerAddress">0x690B…C990</span></span
+            ><svg class="triggerArrow" viewBox="0 0 12 12"><path d="m2 4 4 4 4-4" /></svg>
+          </button>
+          <div class="homeActions">
+            <span class="privacyLabel">Balances hidden</span
+            ><button type="button" class="privacyToggle" aria-label="Show balances">
+              <svg viewBox="0 0 24 24">
+                <path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z" />
+                <circle cx="12" cy="12" r="2.5" />
+                <path d="M4 4l16 16" />
+              </svg></button
+            ><button type="button" class="iconButton" aria-label="Open workspace">
+              <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5zM12 5v14M15 9h2M15 13h2" /></svg>
+            </button>
+          </div>
+        </header>
+        <section class="homeBody">
+          <div class="homeHeading">
+            <div>
+              <div class="eyebrow">Selected account</div>
+              <h1>Workshop</h1>
+              <div class="fullAddress">0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990</div>
+            </div>
+            <div>
+              <div class="totalLabel">Total balance</div>
+              <div class="privateValue">$••••••</div>
+            </div>
+          </div>
+          <div class="quickActions">
+            <button type="button" class="tactileButton primary">
+              <svg viewBox="0 0 24 24"><path d="M5 19 19 5M10 5h9v9M5 12v7h7" /></svg>Send
+            </button>
+            <button type="button" class="tactileButton">
+              <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 9v9h9" /></svg>Receive
+            </button>
+            <button type="button" class="tactileButton">
+              <svg viewBox="0 0 24 24">
+                <rect x="8" y="8" width="11" height="12" rx="1" />
+                <path d="M16 8V4H5v12h3" /></svg
+              >Copy address
+            </button>
+          </div>
+          <div class="sectionRule"></div>
+          <section class="balanceArea">
+            <div class="sectionTitleRow">
+              <svg class="pixelIcon" viewBox="0 0 16 16">
+                <path
+                  fill-rule="evenodd"
+                  d="M5 1h6v1h2v2h2v8h-2v2h-2v1H5v-1H3v-2H1V4h2V2h2V1Zm1 2H5v1H4v1H3v6h1v1h1v1h6v-1h1v-1h1V5h-1V4h-1V3H6Z"
+                />
+                <path d="M7 5h2v1h1v1h1v2h-1v1H9v1H7v-1H6V9H5V7h1V6h1V5Z" />
+              </svg>
+              <div class="sectionTitle">Balances</div>
+            </div>
+            <div class="balanceRows">
+              <div class="balanceRow">
+                <span class="tokenIcon">E</span
+                ><span><span class="tokenName">Ethereum</span><span class="tokenNetwork">Mainnet</span></span
+                ><span class="tokenPrivate">•••• ETH</span>
+              </div>
+              <div class="balanceRow">
+                <span class="tokenIcon">U</span
+                ><span><span class="tokenName">USD Coin</span><span class="tokenNetwork">Base</span></span
+                ><span class="tokenPrivate">•••• USDC</span>
+              </div>
+              <div class="balanceRow">
+                <span class="tokenIcon">Y</span
+                ><span
+                  ><span class="tokenName">Yearn position</span
+                  ><span class="tokenNetwork">Ethereum</span></span
+                ><span class="tokenPrivate">•••• yvUSDC</span>
+              </div>
+            </div>
+            <span class="decoSymbol decoBranch" aria-hidden="true"></span>
+          </section>
+          <div class="lower">
+            <section class="lowerSection">
+              <div class="lowerHeading">
+                <div class="sectionTitle">Activity</div>
+                <span class="decoSymbol decoFootprints" aria-hidden="true"></span>
+              </div>
+              <div class="infoList">
+                <div class="infoRow">
+                  <span class="infoGlyph"
+                    ><svg viewBox="0 0 16 16">
+                      <path d="M2 8h2v2h2v2h2v-2h2V8h2V6h2v2h-1v2h-2v2H9v2H6v-2H4v-2H2V8Z" /></svg></span
+                  ><span
+                    ><span class="infoTitle">Received ETH</span
+                    ><span class="infoMeta">Today · Mainnet</span></span
+                  ><span class="infoEnd">•••• ETH</span>
+                </div>
+                <div class="infoRow">
+                  <span class="infoGlyph"
+                    ><svg viewBox="0 0 16 16">
+                      <path d="M1 14h14v1H1v-1Zm3-4h1v4H4v-4Zm3-3h1v7H7V7Zm3-4h1v11h-1V3Z" /></svg></span
+                  ><span
+                    ><span class="infoTitle">Vault deposit</span
+                    ><span class="infoMeta">Yesterday · Ethereum</span></span
+                  ><span class="infoEnd">Completed</span>
+                </div>
+              </div>
+            </section>
+            <section class="lowerSection">
+              <div class="lowerHeading"><div class="sectionTitle">Connected apps</div></div>
+              <div class="infoList">
+                <div class="infoRow">
+                  <span class="infoGlyph"
+                    ><svg viewBox="0 0 16 16">
+                      <path d="M5 2h1v4h4V2h1v4h2v2h-1v2h-2v4H6v-4H4V8H3V6h2V2Z" /></svg></span
+                  ><span
+                    ><span class="infoTitle">yearn.fi</span
+                    ><span class="infoMeta">Ethereum · Active now</span></span
+                  ><span class="infoEnd">Manage</span>
+                </div>
+                <div class="infoRow">
+                  <span class="infoGlyph"
+                    ><svg viewBox="0 0 16 16">
+                      <path d="M5 2h1v4h4V2h1v4h2v2h-1v2h-2v4H6v-4H4V8H3V6h2V2Z" /></svg></span
+                  ><span
+                    ><span class="infoTitle">safe.global</span
+                    ><span class="infoMeta">Base · 2h ago</span></span
+                  ><span class="infoEnd">Manage</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <section class="requestsBand">
+            <span class="decoSymbol decoLantern" aria-hidden="true"></span
+            ><span
+              ><span class="requestsTitle">No pending requests</span
+              ><span class="requestsCopy">Wren will keep connection and signing requests here.</span></span
+            ><button type="button" class="tactileButton">View activity</button>
+          </section>
+        </section>
+      </section>
+
+      <div class="homeVeil"></div>
+      <aside class="drawer" aria-label="Switch account">
+        <header class="drawerHeader">
+          <div><span class="drawerTitle">Accounts</span><span class="drawerCount">6</span></div>
+          <button type="button" class="close" aria-label="Close">
+            <svg class="closeIcon" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5 5 15" /></svg>
+          </button>
+        </header>
+        <label class="drawerSearch"
+          ><svg class="searchIcon" viewBox="0 0 24 24">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m15.5 15.5 5 5" /></svg
+          ><input aria-label="Filter accounts" placeholder="Find an account"
+        /></label>
+        <div class="accountList">
+          <button type="button" class="accountItem selected">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20">
+                <path
+                  d="M10 2c1 3-1 4-1 6 0 1 1 2 2 2-1-2 2-3 2-5 3 2 4 5 3 8a6 6 0 0 1-12 0c0-3 1-5 4-8 0 3 1 4 2 5-1-3 1-5 0-8Z"
+                /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Workshop</span
+              ><span class="itemAddress">0x690B…C990 · Local</span></span
+            ><span class="itemEnd"
+              ><svg class="checkIcon" viewBox="0 0 20 20"><path d="m4 10 4 4 8-9" /></svg
+            ></span>
+          </button>
+          <button type="button" class="accountItem">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20"><path d="M4 16V7l6-3 6 3v9M4 8l6 3 6-3M10 11v6" /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Hardware</span
+              ><span class="itemAddress">0xA06E…591D · Ledger</span></span
+            ><span class="itemEnd"><span class="requestCount">3</span></span>
+          </button>
+          <button type="button" class="accountItem">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20">
+                <circle cx="10" cy="7" r="3" />
+                <path d="M4 17v-1c0-3 2-5 6-5s6 2 6 5v1" /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Treasury watch</span
+              ><span class="itemAddress">0x48C2…00A7 · Watch</span></span
+            ><span class="itemEnd"></span>
+          </button>
+          <button type="button" class="accountItem">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20">
+                <path
+                  d="M10 2c1 3-1 4-1 6 0 1 1 2 2 2-1-2 2-3 2-5 3 2 4 5 3 8a6 6 0 0 1-12 0c0-3 1-5 4-8 0 3 1 4 2 5-1-3 1-5 0-8Z"
+                /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Vault steward</span
+              ><span class="itemAddress">0x6D11…82F0 · Local</span></span
+            ><span class="itemEnd"></span>
+          </button>
+          <button type="button" class="accountItem">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20"><path d="M4 16V7l6-3 6 3v9M4 8l6 3 6-3M10 11v6" /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Cold storage</span
+              ><span class="itemAddress">0x91D4…7B03 · Trezor</span></span
+            ><span class="itemEnd"></span>
+          </button>
+          <button type="button" class="accountItem">
+            <span class="itemGlyph"
+              ><svg viewBox="0 0 20 20">
+                <circle cx="10" cy="7" r="3" />
+                <path d="M4 17v-1c0-3 2-5 6-5s6 2 6 5v1" /></svg></span
+            ><span class="itemIdentity"
+              ><span class="itemName">Public delegate</span
+              ><span class="itemAddress">0x33F1…D92C · Watch</span></span
+            ><span class="itemEnd"></span>
+          </button>
+        </div>
+        <div class="drawerActions"><button type="button" class="addAccount">+ Add account</button></div>
+        <div class="drawerHint">Switching accounts does not reveal hidden balances.</div>
+      </aside>
+    </main>
+  </body>
+</html>

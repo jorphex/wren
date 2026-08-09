@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren wallet-call review family</title>
+    <style>
+      @font-face {
+        font-family: Wren;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2');
+      }
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Retina.ttf');
+      }
+      :root {
+        --canvas: #090c0a;
+        --elevated: #141a16;
+        --hover: #1a211c;
+        --rule: #2b352d;
+        --section-rule: #202822;
+        --border: #3d493f;
+        --primary: #f2f4ef;
+        --secondary: #d0d6ce;
+        --tertiary: #a9b3aa;
+        --muted: #89958b;
+        --gold: #a68a61;
+        --gold-hover: #b79a70;
+        --success: #8fb687;
+        --warning: #ddb467;
+        --warning-soft: #211b10;
+        --danger: #df8377;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body,
+      button {
+        color: var(--primary);
+        font-family: Wren, sans-serif;
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+      body {
+        background: var(--canvas);
+      }
+      button {
+        font: inherit;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      dl,
+      dd {
+        margin: 0;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+      .topbar {
+        display: grid;
+        height: 70px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--rule);
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .iconButton,
+      .secondaryButton,
+      .primaryButton {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%), var(--elevated);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.045),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+          0 2px 4px rgba(0, 0, 0, 0.28);
+      }
+      .iconButton {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        color: var(--secondary);
+        place-items: center;
+      }
+      h1 {
+        font-size: 20px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 660;
+        line-height: 24px;
+      }
+      .origin,
+      .eyebrow,
+      .technical,
+      .contextValue,
+      .callEvidence,
+      .footerContext small,
+      .statusCode {
+        font-family: WrenMono, monospace;
+      }
+      .origin {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .network {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--secondary);
+        font-size: 13px;
+      }
+      .networkMark,
+      .footerMark {
+        display: grid;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .networkMark {
+        width: 26px;
+        height: 26px;
+      }
+      .networkMark svg {
+        width: 10px;
+        height: 16px;
+        fill: currentColor;
+        stroke: none;
+      }
+      main {
+        height: 708px;
+        padding: 22px 30px 20px;
+      }
+      .summary {
+        display: grid;
+        min-height: 112px;
+        padding: 8px 6px 18px;
+        grid-template-columns: minmax(0, 1fr) 218px;
+        align-items: center;
+        gap: 28px;
+      }
+      .eyebrow {
+        color: var(--gold-hover);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .summary h2 {
+        margin-top: 6px;
+        font-size: 25px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 680;
+        line-height: 30px;
+      }
+      .summaryHelp {
+        margin-top: 5px;
+        color: var(--tertiary);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .atomicState {
+        padding-left: 16px;
+      }
+      .atomicState strong {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--warning);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .atomicState svg {
+        width: 17px;
+        height: 17px;
+      }
+      .atomicState p {
+        margin-top: 7px;
+        color: var(--tertiary);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .section {
+        padding: 0 6px;
+      }
+      .section + .section {
+        margin-top: 15px;
+        padding-top: 14px;
+        border-top: 1px solid var(--section-rule);
+      }
+      .sectionTitle {
+        margin-bottom: 10px;
+        font-size: 15px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 650;
+      }
+      .sectionHeading {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .sectionHeading .sectionTitle {
+        margin-bottom: 0;
+      }
+      .sectionState {
+        color: var(--success);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .contextGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+      }
+      .contextLabel {
+        display: block;
+        color: var(--tertiary);
+        font-size: 12px;
+      }
+      .contextValue {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--secondary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .feeRow {
+        display: grid;
+        min-height: 62px;
+        padding: 2px 6px 0;
+        grid-template-columns: 160px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 18px;
+      }
+      .feeLabel {
+        color: var(--tertiary);
+        font-size: 13px;
+      }
+      .feeValue strong,
+      .feeValue span {
+        display: block;
+      }
+      .feeValue strong {
+        color: var(--primary);
+        font-family: WrenMono, monospace;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .feeValue span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .feeDetails {
+        padding: 5px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--secondary);
+        background: var(--elevated);
+        font-size: 12px;
+      }
+      .checkRow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+      }
+      .check {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        align-items: start;
+        gap: 9px;
+      }
+      .check svg {
+        width: 17px;
+        height: 17px;
+        margin-top: 1px;
+        color: var(--success);
+      }
+      .check strong,
+      .check span {
+        display: block;
+      }
+      .check strong {
+        color: var(--secondary);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .check span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .calls {
+        border-top: 1px solid var(--section-rule);
+      }
+      .call {
+        display: grid;
+        min-height: 94px;
+        padding: 13px 6px;
+        grid-template-columns: 45px minmax(0, 1fr) 145px;
+        align-items: start;
+        gap: 12px;
+      }
+      .call + .call {
+        border-top: 1px solid var(--section-rule);
+      }
+      .callNumber {
+        color: var(--gold-hover);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .callTitle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--primary);
+        font-size: 14px;
+        font-weight: 630;
+      }
+      .callTitle svg {
+        width: 16px;
+        height: 16px;
+        color: var(--gold-hover);
+      }
+      .callDestination {
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--secondary);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .callEvidence {
+        display: flex;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        gap: 13px;
+      }
+      .callFeeDetails {
+        display: none;
+        margin-top: 7px;
+        color: var(--tertiary);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        gap: 16px;
+      }
+      body[data-fees='open'] .call {
+        min-height: 112px;
+      }
+      body[data-fees='open'] .callFeeDetails {
+        display: flex;
+      }
+      .callData {
+        color: var(--gold-hover);
+      }
+      .callResult {
+        text-align: right;
+      }
+      .callResult strong,
+      .callResult span {
+        display: block;
+      }
+      .callResult .callFeeLabel {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .callResult .callFeeValue {
+        margin-top: 3px;
+        color: var(--tertiary);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .riskNote {
+        display: grid;
+        margin-top: 11px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        color: var(--secondary);
+        background: var(--warning-soft);
+        grid-template-columns: 19px minmax(0, 1fr);
+        align-items: start;
+        gap: 9px;
+        font-size: 12px;
+        line-height: 17px;
+      }
+      .riskNote svg,
+      .riskNote strong {
+        color: var(--warning);
+      }
+      .riskNote svg {
+        width: 17px;
+        height: 17px;
+      }
+      footer {
+        display: grid;
+        height: 122px;
+        padding: 0 24px;
+        border-top: 1px solid var(--rule);
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .footerContext {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+      }
+      .footerMark {
+        width: 36px;
+        height: 36px;
+      }
+      .footerMark svg {
+        width: 18px;
+        height: 18px;
+      }
+      .footerContext strong,
+      .footerContext small {
+        display: block;
+      }
+      .footerContext strong {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 620;
+      }
+      .footerContext small {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .secondaryButton,
+      .primaryButton {
+        height: 46px;
+        padding: 0 23px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .secondaryButton {
+        width: 160px;
+        height: 48px;
+        transform: translateY(-1px);
+        color: var(--danger);
+      }
+      .primaryButton {
+        width: 156px;
+        border-color: #b69a70;
+        color: #17130d;
+        background:
+          repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 5px),
+          linear-gradient(180deg, #b79a70, var(--gold));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.24),
+          inset 0 -2px 0 rgba(69, 52, 31, 0.38),
+          0 3px 6px rgba(0, 0, 0, 0.32);
+      }
+      .cancelButton {
+        color: var(--secondary);
+      }
+
+      .view {
+        display: none;
+      }
+      body[data-view='review'] .review,
+      body[data-view='status'] .status,
+      body[data-view='adjust'] .adjust {
+        display: contents;
+      }
+      body[data-view='review'] button.review,
+      body[data-view='status'] button.status,
+      body[data-view='adjust'] button.adjust,
+      body[data-view='review'] svg.review,
+      body[data-view='status'] svg.status,
+      body[data-view='adjust'] svg.adjust {
+        display: block;
+      }
+      body[data-view='review'] header.review,
+      body[data-view='status'] header.status,
+      body[data-view='review'] footer.review,
+      body[data-view='adjust'] footer.adjust {
+        display: grid !important;
+      }
+
+      /* Fee and nonce editor */
+      .adjustSummary {
+        display: grid;
+        min-height: 116px;
+        padding: 8px 6px 18px;
+        grid-template-columns: minmax(0, 1fr) 170px;
+        align-items: center;
+        gap: 28px;
+      }
+      .adjustSummary h2 {
+        margin-top: 6px;
+        font-size: 25px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 680;
+        line-height: 30px;
+      }
+      .adjustSummary p:not(.eyebrow) {
+        margin-top: 5px;
+        color: var(--tertiary);
+        font-size: 13px;
+      }
+      .adjustTotal {
+        text-align: right;
+      }
+      .adjustTotal span,
+      .adjustTotal strong {
+        display: block;
+      }
+      .adjustTotal span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .adjustTotal strong {
+        margin: 4px 0 2px;
+        color: var(--primary);
+        font-family: WrenMono, monospace;
+        font-size: 17px;
+        font-weight: 500;
+      }
+      .nonceRow {
+        display: grid;
+        min-height: 68px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 20px;
+      }
+      .nonceRow strong,
+      .nonceRow span {
+        display: block;
+      }
+      .nonceRow strong {
+        color: var(--secondary);
+        font-size: 13px;
+        font-weight: 620;
+      }
+      .nonceRow span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .nonceControl {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .nonceValue,
+      .stepButton,
+      .numberField {
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--elevated);
+        box-shadow:
+          inset 0 1px 2px rgba(0, 0, 0, 0.5),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.025);
+      }
+      .nonceValue {
+        display: grid;
+        width: 72px;
+        height: 36px;
+        color: var(--primary);
+        font-family: WrenMono, monospace;
+        font-size: 13px;
+        place-items: center;
+      }
+      .stepButton {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        color: var(--secondary);
+      }
+      .adjustCalls {
+        border-top: 1px solid var(--section-rule);
+      }
+      .adjustCall {
+        display: grid;
+        min-height: 135px;
+        padding: 13px 6px 14px;
+        grid-template-columns: 45px minmax(0, 1fr);
+        align-items: start;
+        gap: 12px;
+      }
+      .adjustCall + .adjustCall {
+        border-top: 1px solid var(--section-rule);
+      }
+      .adjustCallHeader {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .adjustCallHeader strong {
+        color: var(--primary);
+        font-size: 14px;
+        font-weight: 630;
+      }
+      .adjustCallHeader span {
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .adjustDestination {
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .adjustFields {
+        display: grid;
+        margin-top: 12px;
+        grid-template-columns: 132px 132px 132px minmax(0, 1fr);
+        align-items: end;
+        gap: 10px;
+      }
+      .adjustFieldLabel,
+      .adjustCostLabel {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .numberField {
+        display: grid;
+        height: 36px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+      }
+      .numberField input {
+        min-width: 0;
+        height: 34px;
+        padding: 0 9px;
+        border: 0;
+        outline: 0;
+        color: var(--primary);
+        background: transparent;
+        font-family: WrenMono, monospace;
+        font-size: 13px;
+      }
+      .numberField span {
+        padding-right: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .adjustCost {
+        padding-bottom: 7px;
+        text-align: right;
+      }
+      .adjustCost strong {
+        color: var(--secondary);
+        font-family: WrenMono, monospace;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* Status view */
+      body[data-view='status'] main {
+        height: 830px;
+        padding-top: 25px;
+      }
+      .statusSummary {
+        display: grid;
+        min-height: 128px;
+        padding: 10px 6px 22px;
+        grid-template-columns: minmax(0, 1fr) 190px;
+        align-items: center;
+        gap: 28px;
+      }
+      .statusSummary h2 {
+        margin-top: 6px;
+        font-size: 25px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 680;
+        line-height: 30px;
+      }
+      .statusSummary p {
+        margin-top: 5px;
+        color: var(--tertiary);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .statusCount {
+        text-align: right;
+      }
+      .statusCount strong {
+        display: block;
+        color: var(--warning);
+        font-family: WrenMono, monospace;
+        font-size: 22px;
+        font-weight: 500;
+      }
+      .statusCount span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .receiptList {
+        border-top: 1px solid var(--section-rule);
+      }
+      .receipt {
+        display: grid;
+        min-height: 120px;
+        padding: 15px 6px;
+        grid-template-columns: 44px minmax(0, 1fr) 110px;
+        align-items: start;
+        gap: 12px;
+      }
+      .receipt + .receipt {
+        border-top: 1px solid var(--section-rule);
+      }
+      .receiptTitle {
+        color: var(--primary);
+        font-size: 14px;
+        font-weight: 630;
+      }
+      .receiptHash {
+        margin-top: 4px;
+        color: var(--gold-hover);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .receiptFacts {
+        display: flex;
+        margin-top: 12px;
+        gap: 24px;
+      }
+      .receiptFact span,
+      .receiptFact strong {
+        display: block;
+      }
+      .receiptFact span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .receiptFact strong {
+        margin-top: 2px;
+        color: var(--secondary);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        font-weight: 400;
+      }
+      .receiptFeeModel {
+        margin-top: 8px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .receiptState {
+        text-align: right;
+      }
+      .receiptState strong {
+        color: var(--success);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .receiptStateBad strong {
+        color: var(--danger);
+      }
+      .statusMeta {
+        display: grid;
+        margin-top: 15px;
+        padding: 14px 6px 0;
+        border-top: 1px solid var(--section-rule);
+        grid-template-columns: 1.2fr 0.8fr 0.8fr;
+        gap: 24px;
+      }
+    </style>
+  </head>
+  <body data-view="review">
+    <header class="topbar">
+      <button class="iconButton" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7M8 12h11" /></svg>
+      </button>
+      <div>
+        <h1 id="pageTitle">Review call batch</h1>
+        <p class="origin" id="pageOrigin">app.uniswap.org · requested now</p>
+      </div>
+      <div class="network">
+        <span class="networkMark">
+          <svg viewBox="0 0 12 20">
+            <path d="M6 0 0 10l6 3.4L12 10 6 0Zm0 14.7L0 11.3 6 20l6-8.7-6 3.4Z" />
+          </svg>
+        </span>
+        <span>Ethereum</span>
+      </div>
+    </header>
+    <main>
+      <div class="view review">
+        <section class="summary">
+          <div>
+            <p class="eyebrow">2 ordered calls</p>
+            <h2>Submit two transactions?</h2>
+            <p class="summaryHelp">Wren will submit these calls in order from Workshop.</p>
+          </div>
+          <div class="atomicState">
+            <strong>
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3 21 20H3L12 3Z" />
+                <path d="M12 9v5M12 17.5v.5" />
+              </svg>
+              Partial execution possible
+            </strong>
+            <p>An earlier transaction can succeed even if a later one fails.</p>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="sectionTitle">Batch context</h3>
+          <div class="contextGrid">
+            <div>
+              <span class="contextLabel">Origin</span><span class="contextValue">app.uniswap.org</span>
+            </div>
+            <div>
+              <span class="contextLabel">Account</span
+              ><span class="contextValue">Workshop · 0x690B…C990</span>
+            </div>
+            <div><span class="contextLabel">Network</span><span class="contextValue">Ethereum · 1</span></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="feeRow">
+            <span class="feeLabel">Total maximum network fees</span>
+            <span class="feeValue">
+              <strong>0.006 ETH</strong>
+              <span>≈ $20.84 across 2 transactions</span>
+            </span>
+            <button class="feeDetails" id="feeDetails">Adjust ›</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeading">
+            <h3 class="sectionTitle">Calls execute in this order</h3>
+            <span class="sectionState">Simulation found no failures</span>
+          </div>
+          <div class="calls">
+            <div class="call">
+              <span class="callNumber">01</span>
+              <div>
+                <div class="callTitle">
+                  <svg viewBox="0 0 24 24"><path d="M5 19 19 5M10 5h9v9M5 12v7h7" /></svg>
+                  1inch Aggregation Router
+                </div>
+                <div class="callDestination">
+                  Verified contract · 0x1111111254EEB25477B68fb85Ed929f73A960582
+                </div>
+                <div class="callEvidence">
+                  <span>Contract call</span><span>Value · 0 ETH</span
+                  ><span class="callData">Calldata · 228 bytes ›</span>
+                </div>
+                <div class="callFeeDetails">
+                  <span>Gas limit · 125,000</span><span>Max rate · 32 Gwei</span
+                  ><span>Priority · 1.5 Gwei</span>
+                </div>
+              </div>
+              <div class="callResult">
+                <span class="callFeeLabel">Maximum cost</span><span class="callFeeValue">0.004 ETH</span>
+              </div>
+            </div>
+            <div class="call">
+              <span class="callNumber">02</span>
+              <div>
+                <div class="callTitle">
+                  <svg viewBox="0 0 24 24"><path d="M5 19 19 5M10 5h9v9M5 12v7h7" /></svg>
+                  USD Coin (USDC)
+                </div>
+                <div class="callDestination">
+                  ERC-20 token metadata · 0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+                </div>
+                <div class="callEvidence">
+                  <span>Contract call</span><span>Value · 0 ETH</span
+                  ><span class="callData">Calldata · 68 bytes ›</span>
+                </div>
+                <div class="callFeeDetails">
+                  <span>Gas limit · 62,500</span><span>Max rate · 32 Gwei</span
+                  ><span>Priority · 1.5 Gwei</span>
+                </div>
+              </div>
+              <div class="callResult">
+                <span class="callFeeLabel">Maximum cost</span><span class="callFeeValue">0.002 ETH</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="view adjust">
+        <section class="adjustSummary">
+          <div>
+            <p class="eyebrow">Batch settings</p>
+            <h2>Adjust gas and nonce</h2>
+            <p>Each transaction keeps its own gas limit and fee ceiling.</p>
+          </div>
+          <div class="adjustTotal">
+            <span>Total maximum</span>
+            <strong>0.006 ETH</strong>
+            <span>≈ $20.84</span>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="nonceRow">
+            <div>
+              <strong>Starting nonce</strong>
+              <span>The two transactions will use nonces 184 and 185.</span>
+            </div>
+            <div class="nonceControl">
+              <button class="stepButton" aria-label="Decrease starting nonce">−</button>
+              <div class="nonceValue">184</div>
+              <button class="stepButton" aria-label="Increase starting nonce">+</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHeading">
+            <h3 class="sectionTitle">Transaction settings</h3>
+            <span class="sectionState">EIP-1559</span>
+          </div>
+          <div class="adjustCalls">
+            <div class="adjustCall">
+              <span class="callNumber">01</span>
+              <div>
+                <div class="adjustCallHeader">
+                  <strong>1inch Aggregation Router</strong><span>Nonce 184</span>
+                </div>
+                <div class="adjustDestination">0x1111111254EEB25477B68fb85Ed929f73A960582</div>
+                <div class="adjustFields">
+                  <label>
+                    <span class="adjustFieldLabel">Gas limit</span>
+                    <span class="numberField"><input value="125000" aria-label="1inch gas limit" /></span>
+                  </label>
+                  <label>
+                    <span class="adjustFieldLabel">Max fee</span>
+                    <span class="numberField"
+                      ><input value="32" aria-label="1inch maximum fee per gas" /><span>Gwei</span></span
+                    >
+                  </label>
+                  <label>
+                    <span class="adjustFieldLabel">Priority fee</span>
+                    <span class="numberField"
+                      ><input value="1.5" aria-label="1inch priority fee" /><span>Gwei</span></span
+                    >
+                  </label>
+                  <div class="adjustCost">
+                    <span class="adjustCostLabel">Maximum cost</span><strong>0.004 ETH</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="adjustCall">
+              <span class="callNumber">02</span>
+              <div>
+                <div class="adjustCallHeader"><strong>USD Coin (USDC)</strong><span>Nonce 185</span></div>
+                <div class="adjustDestination">0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48</div>
+                <div class="adjustFields">
+                  <label>
+                    <span class="adjustFieldLabel">Gas limit</span>
+                    <span class="numberField"><input value="62500" aria-label="USDC gas limit" /></span>
+                  </label>
+                  <label>
+                    <span class="adjustFieldLabel">Max fee</span>
+                    <span class="numberField"
+                      ><input value="32" aria-label="USDC maximum fee per gas" /><span>Gwei</span></span
+                    >
+                  </label>
+                  <label>
+                    <span class="adjustFieldLabel">Priority fee</span>
+                    <span class="numberField"
+                      ><input value="1.5" aria-label="USDC priority fee" /><span>Gwei</span></span
+                    >
+                  </label>
+                  <div class="adjustCost">
+                    <span class="adjustCostLabel">Maximum cost</span><strong>0.002 ETH</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="view status">
+        <section class="statusSummary">
+          <div>
+            <p class="eyebrow">Batch partially executed</p>
+            <h2>1 of 2 transactions confirmed</h2>
+            <p>The first transaction is onchain. The second reverted.</p>
+          </div>
+          <div class="statusCount">
+            <strong>1 / 2</strong>
+            <span>submitted transactions confirmed</span>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="sectionTitle">Batch context</h3>
+          <div class="contextGrid">
+            <div>
+              <span class="contextLabel">Account</span
+              ><span class="contextValue">Workshop · 0x690B…C990</span>
+            </div>
+            <div><span class="contextLabel">Network</span><span class="contextValue">Ethereum · 1</span></div>
+            <div>
+              <span class="contextLabel">Execution</span
+              ><span class="contextValue" style="color: var(--warning)">Non-atomic</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="sectionTitle">Transaction evidence</h3>
+          <div class="receiptList">
+            <div class="receipt">
+              <span class="callNumber">01</span>
+              <div>
+                <div class="receiptTitle">Transaction confirmed</div>
+                <div class="receiptHash">0xaaaa…aaaa</div>
+                <div class="receiptFacts">
+                  <div class="receiptFact"><span>Block</span><strong>1,280,591</strong></div>
+                  <div class="receiptFact"><span>Gas used</span><strong>21,000</strong></div>
+                  <div class="receiptFact"><span>Fee paid</span><strong>0.00042 ETH</strong></div>
+                </div>
+                <div class="receiptFeeModel">EIP-1559 · 20 gwei effective</div>
+              </div>
+              <div class="receiptState"><strong>Confirmed</strong></div>
+            </div>
+            <div class="receipt">
+              <span class="callNumber">02</span>
+              <div>
+                <div class="receiptTitle">Transaction reverted</div>
+                <div class="receiptHash">0xbbbb…bbbb</div>
+                <div class="receiptFacts">
+                  <div class="receiptFact"><span>Block</span><strong>1,280,592</strong></div>
+                  <div class="receiptFact"><span>Gas used</span><strong>50,000</strong></div>
+                  <div class="receiptFact"><span>Fee paid</span><strong>0.0011 ETH</strong></div>
+                </div>
+                <div class="receiptFeeModel">EIP-1559 · 22 gwei effective</div>
+              </div>
+              <div class="receiptState receiptStateBad"><strong>Reverted</strong></div>
+            </div>
+          </div>
+          <div class="riskNote">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3 21 20H3L12 3Z" />
+              <path d="M12 9v5M12 17.5v.5" />
+            </svg>
+            <span
+              ><strong>This batch was non-atomic.</strong> Confirmed transactions remain onchain even when a
+              later transaction reverts.</span
+            >
+          </div>
+        </section>
+
+        <div class="statusMeta">
+          <div><span class="contextLabel">Batch ID</span><span class="contextValue">0x018f…f42d</span></div>
+          <div><span class="contextLabel">Version</span><span class="contextValue">2.0.0</span></div>
+          <div>
+            <span class="contextLabel">Status code</span><span class="contextValue statusCode">600</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="view review">
+      <div class="footerContext">
+        <span class="footerMark">
+          <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1" /></svg>
+        </span>
+        <div><strong>2 separate transactions</strong><small>Submitted in order, one by one</small></div>
+      </div>
+      <button class="secondaryButton">Decline</button>
+      <button class="primaryButton">Submit batch</button>
+    </footer>
+
+    <footer class="view adjust">
+      <div class="footerContext">
+        <span class="footerMark">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" /></svg>
+        </span>
+        <div>
+          <strong>Fresh checks required</strong><small>Changes rerun preparation and simulation</small>
+        </div>
+      </div>
+      <button class="secondaryButton cancelButton">Cancel</button>
+      <button class="primaryButton">Apply changes</button>
+    </footer>
+
+    <script>
+      const view = new URLSearchParams(window.location.search).get('view')
+      if (['review', 'status', 'adjust'].includes(view)) document.body.dataset.view = view
+      if (view === 'status') {
+        document.getElementById('pageTitle').textContent = 'Batch status'
+        document.getElementById('pageOrigin').textContent = 'app.uniswap.org · updated now'
+      }
+      if (view === 'adjust') {
+        document.getElementById('pageTitle').textContent = 'Adjust batch settings'
+        document.getElementById('pageOrigin').textContent = 'app.uniswap.org · 2 transactions'
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren pixel-authored icons redraw</title>
+    <style>
+      @font-face { font-family: WrenUI; src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2') format('woff2'); }
+      @font-face { font-family: WrenMono; src: url('../../../resources/fonts/FiraCode/FiraCode-Regular.ttf') format('truetype'); }
+      * { box-sizing: border-box; }
+      :root {
+        --canvas: #090c0a; --surface: #0d110e; --raised: #151a17; --border: #2b342d; --strong: #455248;
+        --text: #e7eee8; --secondary: #b7c3b8; --muted: #7e897f; --feather: #a68a61; --feather-hover: #b79a70;
+        --moss: #82ab7a; --clay: #d57468; --straw: #d8aa5b; --mist: #7faabc;
+      }
+      html, body { width: 100%; min-height: 100%; margin: 0; overflow: hidden; color: var(--text); background: var(--canvas); font-family: WrenUI, sans-serif; font-variation-settings: 'CASL' .14; }
+      .shell { width: min(100vw, 760px); min-height: 900px; padding: 24px 28px 30px; }
+      .eyebrow, .section-label, .size-label, .caption { color: var(--muted); font-size: 10px; letter-spacing: 1.1px; text-transform: uppercase; }
+      h1 { margin: 4px 0 3px; font-size: 23px; font-weight: 640; letter-spacing: -.02em; }
+      .lead { max-width: 650px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+      .section { margin-top: 22px; padding-top: 15px; border-top: 1px solid var(--border); }
+      .section-label { margin-bottom: 11px; }
+      .size-label { margin-bottom: 8px; color: #887a68; }
+      .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+      button { appearance: none; border: 1px solid var(--border); border-radius: 7px; color: var(--secondary); background: var(--raised); box-shadow: inset 0 1px rgba(255,255,255,.045), inset 0 -1px rgba(0,0,0,.36), 0 1px 2px rgba(0,0,0,.24); font: 560 12px/1 WrenUI, sans-serif; }
+      .nav-button { display: grid; min-width: 0; height: 54px; padding: 0 12px; grid-template-columns: 30px 1fr; align-items: center; text-align: left; }
+      .nav-button svg { width: 20px; height: 20px; color: var(--feather); }
+      .nav-title { display: block; color: var(--text); font-size: 12px; }
+      .nav-copy { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+      .pixel { fill: currentColor; shape-rendering: crispEdges; }
+      .status-row, .compact-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+      .status { display: inline-flex; min-height: 34px; padding: 0 10px; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 6px; color: var(--secondary); background: var(--surface); font-size: 11px; }
+      .status svg { width: 20px; height: 20px; }
+      .pending svg { color: var(--mist); } .failed svg { color: var(--clay); } .verified svg { color: var(--moss); }
+      .compact-example { display: flex; min-width: 0; height: 42px; padding: 0 12px; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 7px; color: var(--secondary); background: var(--surface); font-size: 11px; }
+      .compact-example svg { width: 16px; height: 16px; flex: none; }
+      .compact-example strong { color: var(--text); font-weight: 560; }
+      .compact-example .value { color: var(--muted); font: 10px/1 WrenMono, monospace; }
+      .micro-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+      .micro { display: flex; min-width: 0; height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font: 9px/1 WrenMono, monospace; }
+      .micro svg { width: 16px; height: 16px; color: var(--secondary); }
+      .caption { margin-top: 11px; color: #786f61; }
+    </style>
+  </head>
+  <body data-unexpected-overflow="pending">
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+      <defs>
+        <!-- Dedicated 20 px optical masters -->
+        <symbol id="earn20" viewBox="0 0 20 20"><path d="M2 18h16v1H2v-1Zm3-5h2v5H5v-5Zm4-4h2v9H9V9Zm4-5h2v14h-2V4Z"/></symbol>
+        <symbol id="network20" viewBox="0 0 20 20"><path d="M2 8h4v4H2V8Zm14-5h3v4h-3V3Zm0 11h3v4h-3v-4ZM6 9h4V6h6v1h-5v3H6V9Zm4 1h1v6h5v1h-6v-7Z"/></symbol>
+        <symbol id="tokens20" viewBox="0 0 20 20" fill-rule="evenodd"><path d="M6 2h8v1h2v1h1v2h1v8h-1v2h-1v1h-2v1H6v-1H4v-1H3v-2H2V6h1V4h1V3h2V2Zm1 2H6v1H5v2H4v6h1v2h1v1h8v-1h1v-2h1V7h-1V5h-1V4H7Z"/><path d="M9 7h2v1h1v1h1v2h-1v1h-1v1H9v-1H8v-1H7V9h1V8h1V7Z"/></symbol>
+        <symbol id="recovery20" viewBox="0 0 20 20"><path d="M10 8h1v9h-1V8ZM4 6h4v1h1v3H7V9H5V8H4V6Zm7-2h1V3h5v3h-1v1h-2v1h-3V4ZM5 17h10v1H5v-1Z"/></symbol>
+        <symbol id="pending20" viewBox="0 0 20 20"><path d="M4 2h12v1H4V2Zm1 1h1v4h1v1h1v1h4V8h1V7h1V3h1v4h-1v2h-1v1h-1v1h1v1h1v2h1v4h-1v-4h-1v-1h-1v-1H8v1H7v1H6v4H5v-4h1v-2h1v-1h1v-1H7V9H6V7H5V3Zm-1 15h12v1H4v-1Z"/></symbol>
+        <symbol id="failed20" viewBox="0 0 20 20"><path d="M4 3h2v2h1v1h1v1h4V6h1V5h1V3h2v3h-1v1h-1v1h-1v1h-1v2h1v1h1v1h1v1h1v3h-2v-2h-1v-1h-1v-1H8v1H7v1H6v2H4v-3h1v-1h1v-1h1v-1h1V9H7V8H6V7H5V6H4V3Z"/></symbol>
+        <symbol id="verified20" viewBox="0 0 20 20" fill-rule="evenodd"><path d="M5 2h10v1h3v9h-1v3h-2v2h-2v2H7v-2H5v-2H3v-3H2V3h3V2Zm1 2H4v8h1v2h2v2h2v1h2v-1h2v-2h2v-2h1V4h-2V3H6v1Z"/><path d="M6 9h1v2h2v-1h1V9h1V8h1V7h2v2h-1v1h-1v1h-1v1h-1v1H8v-1H7v-1H6V9Z"/></symbol>
+
+        <!-- Dedicated simplified 16 px optical masters; never scaled from the 20 px paths -->
+        <symbol id="earn16" viewBox="0 0 16 16"><path d="M1 14h14v1H1v-1Zm3-4h1v4H4v-4Zm3-3h1v7H7V7Zm3-4h1v11h-1V3Z"/></symbol>
+        <symbol id="network16" viewBox="0 0 16 16"><path d="M1 6h3v3H1V6Zm12-4h2v3h-2V2Zm0 10h2v3h-2v-3ZM4 7h3V4h6v1H8v3H4V7Zm3 1h1v5h5v1H7V8Z"/></symbol>
+        <symbol id="tokens16" viewBox="0 0 16 16" fill-rule="evenodd"><path d="M5 1h6v1h2v2h2v8h-2v2h-2v1H5v-1H3v-2H1V4h2V2h2V1Zm1 2H5v1H4v1H3v6h1v1h1v1h6v-1h1v-1h1V5h-1V4h-1V3H6Z"/><path d="M7 5h2v1h1v1h1v2h-1v1H9v1H7v-1H6V9H5V7h1V6h1V5Z"/></symbol>
+        <symbol id="recovery16" viewBox="0 0 16 16"><path d="M8 7h1v7H8V7ZM3 5h4v1h1v3H6V8H4V7H3V5Zm6-2h1V2h4v3h-1v1h-1v1H9V3ZM4 14h8v1H4v-1Z"/></symbol>
+        <symbol id="pending16" viewBox="0 0 16 16"><path d="M3 1h10v1H3V1Zm1 1h1v3h1v1h1v1h2V6h1V5h1V2h1v3h-1v2h-1v1h1v1h1v2h1v3h-1v-3h-1v-1h-1V9H6v1H5v1H4v3H3v-3h1V9h1V8H6V7H5V6H4V5H3V2h1Zm-1 12h10v1H3v-1Z"/></symbol>
+        <symbol id="failed16" viewBox="0 0 16 16"><path d="M3 2h2v2h1v1h4V4h1V2h2v3h-1v1h-1v1h-1v2h1v1h1v1h1v3h-2v-2h-1v-1H6v1H5v2H3v-3h1v-1h1V9h1V7H5V6H4V5H3V2Z"/></symbol>
+        <symbol id="verified16" viewBox="0 0 16 16" fill-rule="evenodd"><path d="M4 1h8v1h3v7h-1v2h-2v2h-1v2H5v-2H4v-2H2V9H1V2h3V1Zm1 2H3v6h1v1h2v2h1v1h2v-1h1v-2h2V9h1V3h-2V2H5v1Z"/><path d="M4 7h1v2h2V8h1V7h1V6h2v2h-1v1H9v1H8v1H6v-1H5V9H4V7Z"/></symbol>
+      </defs>
+    </svg>
+
+    <main class="shell">
+      <div class="eyebrow">Wren interface study · lighter redraw</div>
+      <h1>Pixel-authored icons, reduced weight</h1>
+      <p class="lead">The heavy filled forms are discarded. These redraws preserve the aliased grid with one-pixel counters, lighter silhouettes, and separate 16 px masters.</p>
+
+      <section class="section">
+        <div class="section-label">Navigation · dedicated 20 px masters</div>
+        <div class="nav-grid">
+          <button class="nav-button"><svg class="pixel"><use href="#earn20"/></svg><span><span class="nav-title">Earn</span><span class="nav-copy">Simple rising value bars</span></span></button>
+          <button class="nav-button"><svg class="pixel"><use href="#network20"/></svg><span><span class="nav-title">Networks</span><span class="nav-copy">Three nodes with orthogonal links</span></span></button>
+          <button class="nav-button"><svg class="pixel"><use href="#tokens20"/></svg><span><span class="nav-title">Tokens</span><span class="nav-copy">Faceted token with inset diamond</span></span></button>
+          <button class="nav-button"><svg class="pixel"><use href="#recovery20"/></svg><span><span class="nav-title">Recovery phrase</span><span class="nav-copy">Light asymmetric sprout</span></span></button>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Status · dedicated 20 px masters</div>
+        <div class="status-row">
+          <span class="status pending"><svg class="pixel"><use href="#pending20"/></svg>Pending</span>
+          <span class="status failed"><svg class="pixel"><use href="#failed20"/></svg>Failed</span>
+          <span class="status verified"><svg class="pixel"><use href="#verified20"/></svg>Verified</span>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">Compact product context · dedicated 16 px masters</div>
+        <div class="compact-row">
+          <div class="compact-example"><svg class="pixel" style="color:var(--feather)"><use href="#earn16"/></svg><strong>Earn</strong><span class="value">4.82%</span></div>
+          <div class="compact-example"><svg class="pixel" style="color:var(--feather)"><use href="#network16"/></svg><strong>Ethereum</strong><span class="value">connected</span></div>
+          <div class="compact-example"><svg class="pixel" style="color:var(--feather)"><use href="#tokens16"/></svg><strong>Tokens</strong><span class="value">12 assets</span></div>
+          <div class="compact-example"><svg class="pixel" style="color:var(--feather)"><use href="#recovery16"/></svg><strong>Recovery</strong></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-label">16 px isolation test</div>
+        <div class="micro-grid">
+          <div class="micro"><svg class="pixel"><use href="#earn16"/></svg><span>earn</span></div>
+          <div class="micro"><svg class="pixel"><use href="#network16"/></svg><span>network</span></div>
+          <div class="micro"><svg class="pixel"><use href="#tokens16"/></svg><span>tokens</span></div>
+          <div class="micro"><svg class="pixel"><use href="#recovery16"/></svg><span>recovery</span></div>
+          <div class="micro"><svg class="pixel" style="color:var(--mist)"><use href="#pending16"/></svg><span>pending</span></div>
+          <div class="micro"><svg class="pixel" style="color:var(--clay)"><use href="#failed16"/></svg><span>failed</span></div>
+          <div class="micro"><svg class="pixel" style="color:var(--moss)"><use href="#verified16"/></svg><span>verified</span></div>
+        </div>
+        <div class="caption">Separate optical drawings · integer placement · no browser downscaling</div>
+      </section>
+    </main>
+    <script>
+      requestAnimationFrame(() => {
+        const offenders = [...document.querySelectorAll('.shell *')].filter((element) => element.scrollWidth > element.clientWidth + 1)
+        document.body.dataset.unexpectedOverflow = String(offenders.length)
+        document.body.dataset.overflowElements = offenders.map((element) => element.className || element.tagName.toLowerCase()).join(',')
+      })
+    </script>
+  </body>
+</html>

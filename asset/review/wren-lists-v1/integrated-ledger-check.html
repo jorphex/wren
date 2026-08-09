@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren integrated ledger rows</title>
+    <style>
+      @font-face {
+        font-family: Wren;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2');
+      }
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Retina.ttf');
+      }
+      :root {
+        --canvas: #090c0a;
+        --surface: #0f1410;
+        --hover: #1a211c;
+        --active: #202a23;
+        --rule: #2b352d;
+        --primary: #f2f4ef;
+        --secondary: #d0d6ce;
+        --tertiary: #a9b3aa;
+        --muted: #89958b;
+        --gold: #a68a61;
+        --success: #8fb687;
+        --warning: #ddb467;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        padding: 24px 30px 28px;
+        color: var(--primary);
+        background: var(--canvas);
+        font-family: Wren, sans-serif;
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 24px;
+        font-variation-settings:
+          'CASL' 0.28,
+          'CRSV' 0;
+      }
+      .intro {
+        margin-top: 4px;
+        color: var(--secondary);
+        font-size: 13px;
+      }
+      .columns {
+        display: grid;
+        margin-top: 18px;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .section + .section {
+        margin-top: 18px;
+      }
+      .sectionHead {
+        display: flex;
+        min-height: 28px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h2 {
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.28,
+          'CRSV' 0;
+      }
+      .sectionMeta,
+      .meta,
+      .value,
+      .status {
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .sectionMeta,
+      .meta {
+        color: var(--muted);
+      }
+      .ledger {
+        border-top: 1px solid var(--rule);
+      }
+      .row {
+        display: grid;
+        width: 100%;
+        min-height: 58px;
+        padding: 7px 8px;
+        border: 0;
+        border-bottom: 1px solid var(--rule);
+        color: var(--primary);
+        background: transparent;
+        grid-template-columns: 30px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .row.selected {
+        background: rgba(166, 138, 97, 0.075);
+      }
+      .row.hovered {
+        background: var(--hover);
+      }
+      .icon {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--rule);
+        border-radius: 5px;
+        place-items: center;
+        color: var(--gold);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .identity {
+        min-width: 0;
+      }
+      .label {
+        display: block;
+        overflow: hidden;
+        font-size: 13px;
+        font-weight: 620;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .meta {
+        display: block;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .end {
+        min-width: 0;
+        text-align: right;
+      }
+      .value {
+        display: block;
+        color: var(--secondary);
+      }
+      .status {
+        display: block;
+        margin-top: 2px;
+        color: var(--success);
+      }
+      .warning {
+        color: var(--warning);
+      }
+      .mark {
+        margin-left: 5px;
+        color: var(--gold);
+      }
+      .action {
+        min-height: 30px;
+        padding: 0 8px;
+        border: 0;
+        border-radius: 5px;
+        color: var(--tertiary);
+        background: transparent;
+        font-family: Wren, sans-serif;
+        font-size: 13px;
+      }
+      .foot {
+        margin-top: 18px;
+        padding-top: 9px;
+        border-top: 1px solid var(--rule);
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ruled ledger in working contexts</h1>
+    <p class="intro">
+      Flat rest states, fine dividers, whole-row feedback, and no side accents or per-item cards.
+    </p>
+
+    <main class="columns">
+      <div>
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Accounts</h2>
+            <span class="sectionMeta">3 accounts</span>
+          </div>
+          <div class="ledger">
+            <button class="row selected">
+              <span class="icon">W</span>
+              <span class="identity"
+                ><span class="label">Workshop</span><span class="meta">0x6D11…82F0</span></span
+              >
+              <span class="end"><span class="value">$4,820.18</span><span class="mark">✓</span></span>
+            </button>
+            <button class="row">
+              <span class="icon">V</span>
+              <span class="identity"
+                ><span class="label">Vault steward</span><span class="meta">0x4A20…13BC</span></span
+              >
+              <span class="end"><span class="value">$500.00</span></span>
+            </button>
+            <button class="row">
+              <span class="icon">R</span>
+              <span class="identity"
+                ><span class="label">Recovery</span><span class="meta">0x7830…90A1</span></span
+              >
+              <span class="end"><span class="value">—</span></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Assets</h2>
+            <span class="sectionMeta">2 visible</span>
+          </div>
+          <div class="ledger">
+            <button class="row">
+              <span class="icon">E</span>
+              <span class="identity"
+                ><span class="label">Ethereum</span><span class="meta">Mainnet · updated now</span></span
+              >
+              <span class="end"><span class="value">1.42 ETH</span><span class="meta">$4,320.18</span></span>
+            </button>
+            <button class="row hovered">
+              <span class="icon">U</span>
+              <span class="identity"><span class="label">USD Coin</span><span class="meta">Base</span></span>
+              <span class="end"><span class="value">500 USDC</span><span class="meta">$500.00</span></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Contacts</h2>
+            <span class="sectionMeta">2 saved</span>
+          </div>
+          <div class="ledger">
+            <div class="row">
+              <span class="icon">AM</span>
+              <span class="identity"
+                ><span class="label">Alex Morgan</span><span class="meta">0x291A…40D7 · Treasury</span></span
+              >
+              <button class="action">Remove</button>
+            </div>
+            <div class="row">
+              <span class="icon">YC</span>
+              <span class="identity"
+                ><span class="label">Yearn contributor</span><span class="meta">0x77C2…913F</span></span
+              >
+              <button class="action">Remove</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div>
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Connected apps</h2>
+            <span class="sectionMeta">Ethereum</span>
+          </div>
+          <div class="ledger">
+            <button class="row">
+              <span class="icon">Y</span>
+              <span class="identity"
+                ><span class="label">Yearn</span><span class="meta">Connected</span></span
+              >
+              <span class="end"><span class="value">1.24</span><span class="meta">avg reqs/min</span></span>
+            </button>
+            <button class="row">
+              <span class="icon">U</span>
+              <span class="identity"
+                ><span class="label">Uniswap</span><span class="meta">Access granted</span></span
+              >
+              <span class="end"><span class="value">0.18</span><span class="meta">avg reqs/min</span></span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Earn vaults</h2>
+            <span class="sectionMeta">Base · 2 curated</span>
+          </div>
+          <div class="ledger">
+            <button class="row">
+              <span class="icon">U</span>
+              <span class="identity"
+                ><span class="label">USDC Auto Vault</span
+                ><span class="meta">$12.8m TVL · Low risk</span></span
+              >
+              <span class="end"
+                ><span class="value warning">6.42%</span><span class="meta">Net APY</span></span
+              >
+            </button>
+            <button class="row">
+              <span class="icon">E</span>
+              <span class="identity"
+                ><span class="label">WETH Vault</span><span class="meta">$8.4m TVL · Medium risk</span></span
+              >
+              <span class="end"
+                ><span class="value warning">4.18%</span><span class="meta">Net APY</span></span
+              >
+            </button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sectionHead">
+            <h2>Requests</h2>
+            <span class="sectionMeta">2 pending</span>
+          </div>
+          <div class="ledger">
+            <button class="row">
+              <span class="icon">↗</span>
+              <span class="identity"
+                ><span class="label">Ethereum transaction</span
+                ><span class="meta">app.yearn.fi · now</span></span
+              >
+              <span class="end"><span class="status warning">Pending</span></span>
+            </button>
+            <button class="row">
+              <span class="icon">S</span>
+              <span class="identity"
+                ><span class="label">Sign message</span><span class="meta">Uniswap · 2m ago</span></span
+              >
+              <span class="end"><span class="status">Verified</span></span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="foot">
+      760 × 900 · approved contrast · corrected hybrid typography · ledger rest/hover/selected
+    </div>
+  </body>
+</html>

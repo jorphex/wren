@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren quiet network editor</title>
+    <style>
+      @font-face {
+        font-family: Wren;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2');
+      }
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Regular.ttf');
+      }
+      :root {
+        --canvas: #090c0a;
+        --elevated: #141a16;
+        --well: #070a08;
+        --rule: #2b352d;
+        --border: #3d493f;
+        --primary: #f2f4ef;
+        --secondary: #d0d6ce;
+        --muted: #89958b;
+        --disabled: #6e796f;
+        --gold: #a68a61;
+        --gold-hover: #b79a70;
+        --success: #8fb687;
+        --danger: #df8377;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body,
+      button,
+      input {
+        color: var(--primary);
+        font-family: Wren, sans-serif;
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+      body {
+        background: var(--canvas);
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: default;
+      }
+      h1,
+      p {
+        margin: 0;
+      }
+      .technical,
+      .subtitle,
+      .fieldState {
+        font-family: WrenMono, monospace;
+      }
+      .topbar {
+        display: grid;
+        height: 70px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--rule);
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .iconButton,
+      .secondaryButton,
+      .primaryButton {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%),
+          var(--elevated);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.045),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+          0 2px 4px rgba(0, 0, 0, 0.28);
+      }
+      .iconButton {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        color: var(--secondary);
+        place-items: center;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+      h1 {
+        font-size: 20px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 660;
+        line-height: 24px;
+      }
+      .subtitle {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .accountContext {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--secondary);
+        font-size: 13px;
+      }
+      .accountMark {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .accountMark svg {
+        width: 17px;
+        height: 17px;
+      }
+      main {
+        position: relative;
+        height: 708px;
+        padding: 36px 60px 28px;
+        overflow: hidden;
+      }
+      .view {
+        display: none;
+        position: relative;
+        z-index: 1;
+      }
+      body[data-view='add'] .viewAdd,
+      body[data-view='error'] .viewError,
+      body[data-view='edit'] .viewEdit {
+        display: block;
+      }
+      .form {
+        width: 100%;
+        max-width: 640px;
+      }
+      .fieldRow {
+        display: grid;
+        margin-bottom: 24px;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      .fieldRow.full {
+        display: block;
+      }
+      .field {
+        display: block;
+        min-width: 0;
+      }
+      .fieldLabel {
+        display: flex;
+        min-height: 20px;
+        color: var(--secondary);
+        font-size: 12px;
+        font-weight: 590;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .fieldState {
+        color: var(--success);
+        font-size: 11px;
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .fieldState.error {
+        color: var(--danger);
+      }
+      .well {
+        position: relative;
+        display: block;
+        height: 39px;
+        padding: 2px;
+        background: #050705;
+        box-shadow:
+          inset 1px 1px #020302,
+          inset -1px -1px #4a554c,
+          0 1px 0 rgba(255, 255, 255, 0.025);
+      }
+      .well::after {
+        position: absolute;
+        inset: 2px;
+        border: 1px solid #1d251f;
+        content: '';
+        pointer-events: none;
+      }
+      .well input {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 0;
+        outline: 0;
+        color: var(--primary);
+        caret-color: var(--gold-hover);
+        background: var(--well);
+        box-shadow:
+          inset 1px 1px 0 rgba(0, 0, 0, 0.74),
+          inset -1px -1px 0 rgba(255, 255, 255, 0.015);
+        font-size: 13px;
+      }
+      .well.technical input {
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+      }
+      .well:focus-within,
+      .well.focused {
+        background: var(--gold);
+        box-shadow:
+          inset 1px 1px #6f5b3e,
+          inset -1px -1px #c2a77e,
+          0 0 0 1px rgba(166, 138, 97, 0.12);
+      }
+      .field.invalid .well {
+        background: var(--danger);
+        box-shadow:
+          inset 1px 1px #6f352f,
+          inset -1px -1px #e19a91;
+      }
+      .field.locked .well input {
+        color: var(--muted);
+      }
+      .toggleRow {
+        display: flex;
+        width: 100%;
+        min-height: 44px;
+        color: var(--secondary);
+        font-size: 13px;
+        font-weight: 590;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .toggle {
+        position: relative;
+        width: 42px;
+        height: 24px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--well);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+      }
+      .toggle::after {
+        position: absolute;
+        top: 3px;
+        left: 4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        background: var(--disabled);
+        content: '';
+      }
+      .toggle.on::after {
+        left: 20px;
+        background: var(--gold);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+      }
+      .decoBranch {
+        position: absolute;
+        right: -16px;
+        bottom: -12px;
+        width: 250px;
+        height: 190px;
+        opacity: 0.23;
+        background-image: url('../wren-icon-language-v1/02-decorative-symbols.png');
+        background-position: 66.666% 0;
+        background-repeat: no-repeat;
+        background-size: 400% 300%;
+        -webkit-mask-image: radial-gradient(ellipse at center, #000 38%, transparent 77%);
+        mask-image: radial-gradient(ellipse at center, #000 38%, transparent 77%);
+        pointer-events: none;
+      }
+      footer {
+        display: flex;
+        height: 122px;
+        padding: 0 24px;
+        border-top: 1px solid var(--rule);
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .secondaryButton,
+      .primaryButton {
+        flex: 0 0 156px;
+        width: 156px;
+        height: 46px;
+        min-width: 156px;
+        max-width: 156px;
+        padding: 0 19px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .secondaryButton {
+        flex-basis: 160px;
+        width: 160px;
+        min-width: 160px;
+        max-width: 160px;
+        height: 48px;
+        transform: translateY(-1px);
+        color: var(--secondary);
+      }
+      .primaryButton {
+        border-color: var(--gold-hover);
+        color: #12150f;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(56, 43, 26, 0.045) 0,
+            rgba(56, 43, 26, 0.045) 1px,
+            transparent 1px,
+            transparent 4px
+          ),
+          var(--gold);
+        box-shadow:
+          inset 0 1px 0 rgba(250, 245, 233, 0.18),
+          inset 0 -1px 0 rgba(56, 43, 26, 0.38),
+          0 2px 4px rgba(0, 0, 0, 0.28);
+      }
+      .primaryButton:disabled {
+        border-color: var(--border);
+        color: var(--disabled);
+        background: var(--elevated);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.025),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+      }
+    </style>
+  </head>
+  <body data-view="add">
+    <header class="topbar">
+      <button class="iconButton" aria-label="Back">
+        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7M8 12h11" /></svg>
+      </button>
+      <div>
+        <h1 id="pageTitle">Add Polygon</h1>
+        <div class="subtitle" id="pageSubtitle">Requested by uniswap.org</div>
+      </div>
+      <div class="accountContext">
+        <span class="accountMark">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3" /><path d="M5 20v-2.5C5 14.5 7.5 13 12 13s7 1.5 7 4.5V20M8 4h8" /></svg>
+        </span>
+        Workshop
+      </div>
+    </header>
+
+    <main>
+      <section class="view viewAdd">
+        <form class="form">
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Network name</span>
+              <span class="well"><input value="Polygon" /></span>
+            </label>
+            <label class="field">
+              <span class="fieldLabel">Chain ID</span>
+              <span class="well technical"><input value="137" inputmode="numeric" /></span>
+            </label>
+          </div>
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Native currency</span>
+              <span class="well"><input value="POL" /></span>
+            </label>
+            <label class="field">
+              <span class="fieldLabel">Decimals</span>
+              <span class="well technical"><input value="18" inputmode="numeric" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field rpcField">
+              <span class="fieldLabel">RPC URL <span class="fieldState">Connected</span></span>
+              <span class="well technical focused"><input class="rpcInput" value="https://polygon.example/rpc" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field">
+              <span class="fieldLabel">Block explorer</span>
+              <span class="well technical"><input value="https://explorer.example" /></span>
+            </label>
+          </div>
+          <div class="toggleRow"><span>Test network</span><span class="toggle" aria-label="Test network off"></span></div>
+        </form>
+      </section>
+
+      <section class="view viewError">
+        <form class="form">
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Network name</span>
+              <span class="well"><input value="Polygon" /></span>
+            </label>
+            <label class="field">
+              <span class="fieldLabel">Chain ID</span>
+              <span class="well technical"><input value="137" inputmode="numeric" /></span>
+            </label>
+          </div>
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Native currency</span>
+              <span class="well"><input value="POL" /></span>
+            </label>
+            <label class="field">
+              <span class="fieldLabel">Decimals</span>
+              <span class="well technical"><input value="18" inputmode="numeric" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field rpcField invalid">
+              <span class="fieldLabel">RPC URL <span class="fieldState error">Chain ID 1 · expected 137</span></span>
+              <span class="well technical"><input class="rpcInput" value="https://rpc.example.invalid" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field">
+              <span class="fieldLabel">Block explorer</span>
+              <span class="well technical"><input value="https://explorer.example" /></span>
+            </label>
+          </div>
+          <div class="toggleRow"><span>Test network</span><span class="toggle" aria-label="Test network off"></span></div>
+        </form>
+      </section>
+
+      <section class="view viewEdit">
+        <form class="form">
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Network name</span>
+              <span class="well"><input value="Polygon" /></span>
+            </label>
+            <label class="field locked">
+              <span class="fieldLabel">Chain ID</span>
+              <span class="well technical"><input value="137" readonly /></span>
+            </label>
+          </div>
+          <div class="fieldRow">
+            <label class="field">
+              <span class="fieldLabel">Native currency</span>
+              <span class="well"><input value="POL" /></span>
+            </label>
+            <label class="field">
+              <span class="fieldLabel">Decimals</span>
+              <span class="well technical"><input value="18" inputmode="numeric" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field rpcField">
+              <span class="fieldLabel">RPC URL <span class="fieldState">Connected</span></span>
+              <span class="well technical"><input class="rpcInput" value="https://polygon.example/primary" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field rpcField">
+              <span class="fieldLabel">Fallback RPC <span class="fieldState">Connected</span></span>
+              <span class="well technical"><input class="rpcInput" value="https://polygon.example/fallback" /></span>
+            </label>
+          </div>
+          <div class="fieldRow full">
+            <label class="field">
+              <span class="fieldLabel">Block explorer</span>
+              <span class="well technical"><input value="https://explorer.example" /></span>
+            </label>
+          </div>
+          <div class="toggleRow"><span>Use this network</span><span class="toggle on" aria-label="Network enabled"></span></div>
+        </form>
+      </section>
+
+      <span class="decoBranch" aria-hidden="true"></span>
+    </main>
+
+    <footer>
+      <button class="secondaryButton">Cancel</button>
+      <button class="primaryButton" id="primaryAction">Add network</button>
+    </footer>
+
+    <script>
+      const requestedView = new URLSearchParams(location.search).get('view') || 'add'
+      const view = ['add', 'error', 'edit'].includes(requestedView) ? requestedView : 'add'
+      document.body.dataset.view = view
+
+      const page = {
+        add: { title: 'Add Polygon', subtitle: 'Requested by uniswap.org', action: 'Add network' },
+        error: { title: 'Add Polygon', subtitle: 'Requested by uniswap.org', action: 'Add network', disabled: true },
+        edit: { title: 'Edit Polygon', subtitle: 'Chain ID 137', action: 'Save changes' }
+      }[view]
+
+      document.getElementById('pageTitle').textContent = page.title
+      document.getElementById('pageSubtitle').textContent = page.subtitle
+      const primaryAction = document.getElementById('primaryAction')
+      primaryAction.textContent = page.action
+      primaryAction.disabled = Boolean(page.disabled)
+
+      document.querySelectorAll('.rpcInput').forEach((input) => {
+        input.addEventListener('blur', () => {
+          const field = input.closest('.rpcField')
+          const state = field.querySelector('.fieldState')
+          const valid = /^https:\/\/.+/.test(input.value)
+          field.classList.toggle('invalid', !valid)
+          state.classList.toggle('error', !valid)
+          state.textContent = valid ? 'Connected' : 'Enter a valid URL'
+          primaryAction.disabled = !valid
+        })
+      })
+    </script>
+  </body>
+</html>

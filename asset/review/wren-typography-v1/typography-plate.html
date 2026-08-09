@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren typography directions</title>
+    <style>
+      @font-face {
+        font-family: WrenRecursive;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2') format('woff2');
+      }
+
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Regular.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: WrenPixel;
+        src: url('../../../resources/fonts/VCR/VCR.ttf') format('truetype');
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --canvas: #090c0a;
+        --surface: #0d110e;
+        --well: #070a08;
+        --line: #222a24;
+        --line-strong: #455248;
+        --text: #f0f3ed;
+        --secondary: #c1c9c0;
+        --tertiary: #929d93;
+        --muted: #6e786f;
+        --feather: #a68a61;
+        --feather-light: #b79a70;
+        --moss: #87a880;
+      }
+
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+        color: var(--text);
+        background: var(--canvas);
+        font-family: WrenRecursive, sans-serif;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 90% 6%, rgba(166, 138, 97, 0.055), transparent 26%),
+          radial-gradient(circle at 5% 96%, rgba(135, 168, 128, 0.035), transparent 25%), var(--canvas);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .plate {
+        width: 100%;
+        height: 100%;
+        padding: 27px 31px 24px;
+      }
+
+      .plateKicker {
+        color: var(--feather);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+        letter-spacing: 1.35px;
+        text-transform: uppercase;
+      }
+
+      .plateTitle {
+        margin: 7px 0 0;
+        font-size: 25px;
+        font-variation-settings:
+          'CASL' 0.4,
+          'CRSV' 0.25;
+        font-weight: 670;
+        letter-spacing: -0.35px;
+      }
+
+      .plateIntro {
+        width: 640px;
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 10px;
+        font-variation-settings:
+          'CASL' 0.1,
+          'CRSV' 0.25;
+        line-height: 1.5;
+      }
+
+      .grid {
+        display: grid;
+        margin-top: 20px;
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .direction {
+        min-width: 0;
+        min-height: 336px;
+        padding: 15px 17px 16px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .directionHeader {
+        display: flex;
+        min-height: 36px;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.1,
+          'CRSV' 0.25;
+      }
+
+      .directionNumber {
+        color: var(--feather);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+      }
+
+      .directionName {
+        margin-top: 3px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .directionTag {
+        padding-top: 2px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 7px;
+        letter-spacing: 0.45px;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .sample {
+        min-height: 264px;
+        padding: 13px 13px 12px;
+        color: var(--text);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.008), transparent 40%), var(--surface);
+      }
+
+      .sampleEyebrow {
+        color: var(--feather);
+        font-size: 8px;
+        font-weight: 620;
+        letter-spacing: 1.05px;
+        text-transform: uppercase;
+      }
+
+      .sampleTitle {
+        margin: 4px 0 0;
+        font-size: 21px;
+        font-weight: 670;
+        letter-spacing: -0.22px;
+        line-height: 1.08;
+      }
+
+      .sampleBody {
+        min-height: 30px;
+        margin: 6px 0 0;
+        color: var(--secondary);
+        font-size: 10px;
+        line-height: 1.45;
+      }
+
+      .identity {
+        display: grid;
+        min-height: 48px;
+        margin-top: 10px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        align-items: center;
+      }
+
+      .identityGlyph {
+        color: var(--feather-light);
+        font-size: 13px;
+      }
+
+      .identityName {
+        display: block;
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .identityAddress {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 7px;
+      }
+
+      .identityValue {
+        color: var(--secondary);
+        font-family: WrenMono, monospace;
+        font-size: 9px;
+      }
+
+      .sectionHeading {
+        display: flex;
+        height: 30px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sectionHeading strong {
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .sectionHeading span {
+        color: var(--muted);
+        font-size: 8px;
+      }
+
+      .field {
+        display: grid;
+        height: 35px;
+        padding: 0 8px;
+        border: 2px solid #050705;
+        color: var(--text);
+        background: var(--well);
+        box-shadow:
+          inset 0 0 0 1px #222a24,
+          inset 1px 1px 2px rgba(0, 0, 0, 0.6),
+          0 0 0 1px var(--line-strong);
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+
+      .fieldValue {
+        font-size: 9px;
+      }
+
+      .fieldUnit {
+        color: var(--muted);
+        font-family: WrenMono, monospace;
+        font-size: 8px;
+      }
+
+      .sampleFooter {
+        display: flex;
+        margin-top: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .microStatus {
+        color: var(--moss);
+        font-size: 8px;
+      }
+
+      .sampleButton {
+        display: inline-flex;
+        height: 31px;
+        padding: 0 10px;
+        border: 1px solid #b79a70;
+        border-radius: 5px;
+        align-items: center;
+        color: #12150f;
+        background: var(--feather);
+        box-shadow:
+          inset 0 1px rgba(250, 245, 233, 0.18),
+          inset 0 -2px rgba(56, 43, 26, 0.3),
+          0 1px 2px rgba(0, 0, 0, 0.25);
+        font-size: 9px;
+        font-weight: 630;
+      }
+
+      /* 01 — current production axis split. */
+      .current .sample {
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.12,
+          'CRSV' 0.25;
+      }
+
+      .current .sampleTitle,
+      .current .sectionHeading strong,
+      .current .identityName {
+        font-variation-settings:
+          'CASL' 0.65,
+          'CRSV' 0.25;
+      }
+
+      /* 02 — same family with less casual curvature and tighter hierarchy. */
+      .sharp .sample {
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+
+      .sharp .sampleTitle,
+      .sharp .sectionHeading strong,
+      .sharp .identityName {
+        font-variation-settings:
+          'CASL' 0.28,
+          'CRSV' 0;
+      }
+
+      .sharp .sampleBody {
+        letter-spacing: -0.05px;
+      }
+
+      /* 03 — the user's proposed mono/pixel-like identity treatment. */
+      .monoForward .sampleTitle,
+      .monoForward .identityName,
+      .monoForward .sectionHeading strong,
+      .monoForward .sampleButton {
+        font-family: WrenMono, monospace;
+        font-weight: 500;
+        letter-spacing: -0.2px;
+      }
+
+      .monoForward .sampleTitle {
+        font-size: 18px;
+      }
+
+      .monoForward .sampleBody,
+      .monoForward .fieldValue {
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.08,
+          'CRSV' 0;
+      }
+
+      /* 04 — true pixel face, restricted to identity and micro accents. */
+      .pixelAccent .sampleEyebrow,
+      .pixelAccent .identityName,
+      .pixelAccent .sectionHeading strong,
+      .pixelAccent .microStatus {
+        font-family: WrenPixel, monospace;
+        font-weight: 400;
+        letter-spacing: 0.1px;
+      }
+
+      .pixelAccent .identityName,
+      .pixelAccent .sectionHeading strong {
+        font-size: 10px;
+      }
+
+      .pixelAccent .sampleTitle {
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.28,
+          'CRSV' 0;
+      }
+
+      .pixelAccent .sampleBody,
+      .pixelAccent .fieldValue,
+      .pixelAccent .sampleButton {
+        font-family: WrenRecursive, sans-serif;
+        font-variation-settings:
+          'CASL' 0.04,
+          'CRSV' 0;
+      }
+
+      .plateFooter {
+        display: grid;
+        min-height: 61px;
+        padding-top: 15px;
+        grid-template-columns: 170px 1fr;
+        gap: 14px;
+      }
+
+      .plateFooter strong {
+        color: var(--feather-light);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .plateFooter p {
+        margin: 0;
+        color: var(--secondary);
+        font-size: 9px;
+        line-height: 1.5;
+      }
+
+      .plateFooter span {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="plate">
+      <div class="plateKicker">Wren interface study · typography</div>
+      <h1 class="plateTitle">Type hierarchy in context</h1>
+      <p class="plateIntro">
+        The same wallet surface in four systems. Each keeps Fira Code for addresses and numeric values so the
+        decision is specifically about names, headings, labels, body copy, and actions.
+      </p>
+
+      <section class="grid">
+        <article class="direction current">
+          <header class="directionHeader">
+            <div>
+              <div class="directionNumber">01</div>
+              <div class="directionName">Current Wren</div>
+            </div>
+            <div class="directionTag">casual recursive</div>
+          </header>
+          <div class="sample">
+            <div class="sampleEyebrow">Selected account</div>
+            <div class="sampleTitle">Workshop</div>
+            <p class="sampleBody">Review balances, connected apps, and requests for this account.</p>
+            <div class="identity">
+              <span class="identityGlyph">◇</span
+              ><span
+                ><span class="identityName">Vault steward</span
+                ><span class="identityAddress">0x6D11…82F0 · Local</span></span
+              ><span class="identityValue">$4,820</span>
+            </div>
+            <div class="sectionHeading"><strong>Send assets</strong><span>Available 1.42 ETH</span></div>
+            <div class="field"><span class="fieldValue">0.25</span><span class="fieldUnit">ETH</span></div>
+            <div class="sampleFooter">
+              <span class="microStatus">Ready to review</span
+              ><button class="sampleButton">Review transaction</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction sharp">
+          <header class="directionHeader">
+            <div>
+              <div class="directionNumber">02</div>
+              <div class="directionName">Sharper Recursive</div>
+            </div>
+            <div class="directionTag">same family · quieter</div>
+          </header>
+          <div class="sample">
+            <div class="sampleEyebrow">Selected account</div>
+            <div class="sampleTitle">Workshop</div>
+            <p class="sampleBody">Review balances, connected apps, and requests for this account.</p>
+            <div class="identity">
+              <span class="identityGlyph">◇</span
+              ><span
+                ><span class="identityName">Vault steward</span
+                ><span class="identityAddress">0x6D11…82F0 · Local</span></span
+              ><span class="identityValue">$4,820</span>
+            </div>
+            <div class="sectionHeading"><strong>Send assets</strong><span>Available 1.42 ETH</span></div>
+            <div class="field"><span class="fieldValue">0.25</span><span class="fieldUnit">ETH</span></div>
+            <div class="sampleFooter">
+              <span class="microStatus">Ready to review</span
+              ><button class="sampleButton">Review transaction</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction monoForward">
+          <header class="directionHeader">
+            <div>
+              <div class="directionNumber">03</div>
+              <div class="directionName">Mono-forward</div>
+            </div>
+            <div class="directionTag">pixel-like names + titles</div>
+          </header>
+          <div class="sample">
+            <div class="sampleEyebrow">Selected account</div>
+            <div class="sampleTitle">Workshop</div>
+            <p class="sampleBody">Review balances, connected apps, and requests for this account.</p>
+            <div class="identity">
+              <span class="identityGlyph">◇</span
+              ><span
+                ><span class="identityName">Vault steward</span
+                ><span class="identityAddress">0x6D11…82F0 · Local</span></span
+              ><span class="identityValue">$4,820</span>
+            </div>
+            <div class="sectionHeading"><strong>Send assets</strong><span>Available 1.42 ETH</span></div>
+            <div class="field"><span class="fieldValue">0.25</span><span class="fieldUnit">ETH</span></div>
+            <div class="sampleFooter">
+              <span class="microStatus">Ready to review</span
+              ><button class="sampleButton">Review transaction</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction pixelAccent">
+          <header class="directionHeader">
+            <div>
+              <div class="directionNumber">04</div>
+              <div class="directionName">Pixel accent</div>
+            </div>
+            <div class="directionTag">true pixel · restricted</div>
+          </header>
+          <div class="sample">
+            <div class="sampleEyebrow">Selected account</div>
+            <div class="sampleTitle">Workshop</div>
+            <p class="sampleBody">Review balances, connected apps, and requests for this account.</p>
+            <div class="identity">
+              <span class="identityGlyph">◇</span
+              ><span
+                ><span class="identityName">Vault steward</span
+                ><span class="identityAddress">0x6D11…82F0 · Local</span></span
+              ><span class="identityValue">$4,820</span>
+            </div>
+            <div class="sectionHeading"><strong>Send assets</strong><span>Available 1.42 ETH</span></div>
+            <div class="field"><span class="fieldValue">0.25</span><span class="fieldUnit">ETH</span></div>
+            <div class="sampleFooter">
+              <span class="microStatus">Ready to review</span
+              ><button class="sampleButton">Review transaction</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <footer class="plateFooter">
+        <strong>My starting point</strong>
+        <p>
+          <b>02 Sharper Recursive</b>, with the possibility of borrowing the pixel treatment from 04 only for
+          occasional micro-labels.
+          <span
+            >03 directly tests pixel-like names and titles; it is included because that is the meaningful
+            alternative, not as a straw man.</span
+          >
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

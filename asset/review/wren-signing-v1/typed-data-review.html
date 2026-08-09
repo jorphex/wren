@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wren typed-data review</title>
+    <style>
+      @font-face {
+        font-family: Wren;
+        src: url('../../../resources/fonts/Recursive/Recursive_VF_1.085.woff2');
+      }
+      @font-face {
+        font-family: WrenMono;
+        src: url('../../../resources/fonts/FiraCode/FiraCode-Retina.ttf');
+      }
+      :root {
+        --canvas: #090c0a;
+        --elevated: #141a16;
+        --hover: #1a211c;
+        --rule: #2b352d;
+        --section-rule: #202822;
+        --border: #3d493f;
+        --primary: #f2f4ef;
+        --secondary: #d0d6ce;
+        --tertiary: #a9b3aa;
+        --muted: #89958b;
+        --gold: #a68a61;
+        --gold-hover: #b79a70;
+        --success: #8fb687;
+        --warning: #ddb467;
+        --danger: #df8377;
+        --danger-soft: #2a1716;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 760px;
+        height: 900px;
+        margin: 0;
+        overflow: hidden;
+      }
+      body,
+      button {
+        color: var(--primary);
+        font-family: Wren, sans-serif;
+        font-size: 15px;
+        font-variation-settings:
+          'CASL' 0.03,
+          'CRSV' 0;
+      }
+      body {
+        background: var(--canvas);
+      }
+      button {
+        font: inherit;
+      }
+      .topbar {
+        display: grid;
+        height: 70px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--rule);
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+      }
+      .iconButton,
+      .secondaryButton,
+      .primaryButton {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 52%), var(--elevated);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.045),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+          0 2px 4px rgba(0, 0, 0, 0.28);
+      }
+      .iconButton {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        color: var(--secondary);
+        place-items: center;
+      }
+      svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 20px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 660;
+        line-height: 24px;
+      }
+      .origin,
+      .technical,
+      .eyebrow,
+      .contextValue,
+      .signerIdentity span {
+        font-family: WrenMono, monospace;
+      }
+      .origin {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .network {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--secondary);
+        font-size: 13px;
+      }
+      .networkMark {
+        display: grid;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .networkMark svg {
+        width: 10px;
+        height: 16px;
+        fill: currentColor;
+        stroke: none;
+      }
+      main {
+        height: 708px;
+        padding: 22px 30px 20px;
+      }
+      .summary {
+        display: grid;
+        min-height: 108px;
+        padding: 8px 6px 18px;
+        grid-template-columns: minmax(0, 1fr) 240px;
+        align-items: center;
+        gap: 30px;
+      }
+      .eyebrow {
+        color: var(--gold-hover);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .summary h2 {
+        margin-top: 6px;
+        font-size: 25px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 680;
+        line-height: 30px;
+      }
+      .summaryHelp {
+        margin-top: 5px;
+        color: var(--tertiary);
+        font-size: 13px;
+      }
+      .decodeState {
+        padding-left: 18px;
+      }
+      .decodeState strong {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gold-hover);
+        font-family: WrenMono, monospace;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .decodeState p {
+        margin-top: 7px;
+        color: var(--tertiary);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .section {
+        margin-top: 16px;
+      }
+      .section + .section {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--section-rule);
+      }
+      .sectionTitle {
+        padding: 0 6px 8px;
+        font-size: 15px;
+        font-variation-settings: 'CASL' 0.28;
+        font-weight: 650;
+      }
+      .contextGrid {
+        display: grid;
+        padding: 2px 6px 0;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 28px;
+      }
+      .contextLabel {
+        display: block;
+        color: var(--tertiary);
+        font-size: 12px;
+      }
+      .contextValue {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--secondary);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .permissionGrid {
+        display: grid;
+        padding: 2px 6px 0;
+        grid-template-columns: 1.15fr 0.85fr 0.85fr;
+        gap: 24px;
+      }
+      .permissionValue {
+        display: block;
+        margin-top: 4px;
+        color: var(--primary);
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .permissionValueDanger {
+        color: var(--danger);
+      }
+      .permissionEvidence {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--gold-hover);
+        font-family: WrenMono, monospace;
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .warning {
+        margin-top: 14px;
+        padding: 11px 12px;
+        border-radius: 6px;
+        color: var(--secondary);
+        background: var(--danger-soft);
+        font-size: 13px;
+        line-height: 18px;
+      }
+      .warning strong {
+        color: var(--danger);
+        font-weight: 650;
+      }
+      .disclosure {
+        display: flex;
+        width: 100%;
+        height: 44px;
+        padding: 0 6px;
+        border: 0;
+        color: var(--secondary);
+        background: transparent;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .disclosure:hover {
+        background: var(--hover);
+      }
+      .actionShelf {
+        display: grid;
+        height: 122px;
+        padding: 18px 24px;
+        border-top: 1px solid var(--rule);
+        background: #0b0f0c;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 24px;
+      }
+      .signerState {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 11px;
+      }
+      .signerIcon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        color: var(--gold-hover);
+        place-items: center;
+      }
+      .signerIdentity strong,
+      .signerIdentity span {
+        display: block;
+      }
+      .signerIdentity strong {
+        font-size: 14px;
+        font-weight: 630;
+      }
+      .signerIdentity span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .secondaryButton,
+      .primaryButton {
+        flex: 0 0 156px;
+        width: 156px;
+        min-width: 156px;
+        max-width: 156px;
+        height: 46px;
+        padding: 0 18px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .secondaryButton {
+        flex-basis: 160px;
+        width: 160px;
+        min-width: 160px;
+        max-width: 160px;
+        height: 48px;
+        color: var(--danger);
+        transform: translateY(-1px);
+      }
+      .primaryButton {
+        border-color: var(--gold-hover);
+        color: #12150f;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 48%),
+          repeating-linear-gradient(
+            135deg,
+            rgba(56, 43, 26, 0.045) 0,
+            rgba(56, 43, 26, 0.045) 1px,
+            transparent 1px,
+            transparent 4px
+          ),
+          var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <button class="iconButton" aria-label="Back">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7M8 12h11" /></svg>
+      </button>
+      <div>
+        <h1>Review typed data</h1>
+        <div class="origin">app.uniswap.org · requested now</div>
+      </div>
+      <div class="network">
+        <span class="networkMark" aria-hidden="true">
+          <svg viewBox="0 0 320 512">
+            <path
+              d="M311.9 260.8 160 353.6 8 260.8 160 0l151.9 260.8ZM160 383.4 8 290.6 160 512l152-221.4-152 92.8Z"
+            />
+          </svg>
+        </span>
+        <span>Ethereum</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary">
+        <div>
+          <div class="eyebrow">Permit2 allowance</div>
+          <h2>Authorize token spending</h2>
+          <p class="summaryHelp">This signature can grant spending authority without a transaction.</p>
+        </div>
+        <div class="decodeState">
+          <strong>
+            <svg width="21" height="21" viewBox="0 0 24 24">
+              <path d="M8 6h11M8 12h11M8 18h11" />
+              <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+            </svg>
+            Permit2 structure recognized
+          </strong>
+          <p>Verify the permission and signer before approving.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="sectionTitle">Signing context</h2>
+        <div class="contextGrid">
+          <div><span class="contextLabel">Origin</span><span class="contextValue">app.uniswap.org</span></div>
+          <div><span class="contextLabel">Network</span><span class="contextValue">Ethereum · 1</span></div>
+          <div>
+            <span class="contextLabel">Account</span><span class="contextValue">Workshop · 0x690B…C990</span>
+          </div>
+          <div>
+            <span class="contextLabel">Primary type</span><span class="contextValue">PermitSingle</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="sectionTitle">Permission</h2>
+        <div class="permissionGrid">
+          <div>
+            <span class="contextLabel">Spender</span><span class="permissionValue">Universal Router</span
+            ><span class="permissionEvidence">0x3fC9…7FAD</span>
+          </div>
+          <div>
+            <span class="contextLabel">Token</span><span class="permissionValue">USDC</span
+            ><span class="permissionEvidence">0xA0b8…eB48</span>
+          </div>
+          <div>
+            <span class="contextLabel">Allowance</span
+            ><span class="permissionValue permissionValueDanger">Unlimited</span
+            ><span class="permissionEvidence">expires in 30 days</span>
+          </div>
+        </div>
+        <div class="warning">
+          <strong>Unlimited allowance.</strong> This spender can move any current or future USDC held by this
+          account until the permission expires or is revoked.
+        </div>
+      </section>
+
+      <section class="section">
+        <button class="disclosure">
+          <span>Exact signed data</span><span class="technical">Domain, message, and types ›</span>
+        </button>
+      </section>
+    </main>
+
+    <footer class="actionShelf">
+      <div class="signerState">
+        <span class="signerIcon">
+          <svg width="19" height="19" viewBox="0 0 24 24">
+            <path d="m5 16-1 4 4-1L19 8l-3-3L5 16Z" />
+            <path d="m14 7 3 3" />
+          </svg>
+        </span>
+        <span class="signerIdentity"
+          ><strong>Ledger Nano</strong><span>Ready to sign · verify on device</span></span
+        >
+      </div>
+      <div class="actions">
+        <button class="secondaryButton">Decline</button><button class="primaryButton">Sign message</button>
+      </div>
+    </footer>
+  </body>
+</html>
