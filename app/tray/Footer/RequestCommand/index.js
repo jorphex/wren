@@ -361,34 +361,6 @@ export class RequestCommand extends React.Component {
     )
   }
 
-  renderPopBar() {
-    const { req } = this.props
-    return (
-      <div
-        className={
-          req.automaticFeeUpdateNotice ? 'automaticFeeUpdate automaticFeeUpdateActive' : 'automaticFeeUpdate'
-        }
-      >
-        <div className='txActionButtons'>
-          <div className='txActionButtonsRow' style={{ padding: '0px 60px' }}>
-            <div className='txActionText'>{'Fee Updated'}</div>
-            <button
-              type='button'
-              className='txActionButton txActionButtonGood'
-              onClick={() => {
-                link.rpc('removeFeeUpdateNotice', req.account, req.handlerId, (e) => {
-                  if (e) console.error(e)
-                })
-              }}
-            >
-              {'Ok'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   renderTxCommand() {
     const { req } = this.props
     const { notice, mode } = req
@@ -414,7 +386,6 @@ export class RequestCommand extends React.Component {
         <div className={commandClass}>
           <div className='requestNoticeInner'>
             <TxBar req={req} infoPane={(type) => this.setState({ infoPane: type })} />
-            {!notice && this.renderPopBar()}
             {infoPane ? this.infoPane() : notice ? this.sentStatus() : this.signOrDecline()}
             <TxConfirmations req={req} />
           </div>

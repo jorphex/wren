@@ -717,7 +717,7 @@ class FrameAccount {
 
     const version = (this.simulationVersions[req.handlerId] || 0) + 1
     this.simulationVersions[req.handlerId] = version
-    req.simulation = { status: 'pending' }
+    if (publishPending) req.simulation = { status: 'pending' }
     if (!preserveApproval) this.removeSimulationApprovals(req)
 
     if (publishPending) this.update()

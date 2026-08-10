@@ -888,6 +888,27 @@ describe('#addRequest', () => {
     expect(request.simulation.status).toBe('succeeded')
   })
 
+  it('keeps the completed execution check visible during a silent fee refresh', async () => {
+    let resolveRefresh
+    const completed = { status: 'succeeded', source: 'eth_call' }
+    simulateTransaction.mockImplementationOnce(() => new Promise((resolve) => (resolveRefresh = resolve)))
+    const request = {
+      handlerId: 'silent-fee-simulation',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208' },
+      simulation: completed
+    }
+
+    account.requests[request.handlerId] = request
+    account.refreshTransactionSimulation(request, false, true)
+    expect(request.simulation).toBe(completed)
+
+    jest.advanceTimersByTime(1)
+    resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1' })
+    await jest.advanceTimersByTimeAsync(0)
+    expect(request.simulation).toEqual({ status: 'succeeded', source: 'eth_simulateV1' })
+  })
+
   it('requires explicit approval for a reported revert and invalidates it on edits', async () => {
     simulateTransaction.mockResolvedValueOnce({
       status: 'reverted',

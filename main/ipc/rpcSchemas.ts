@@ -124,10 +124,6 @@ const rpcSchemas = {
     request: z.tuple([AddressSchema, z.object({}).strict()]),
     response: actionResult
   },
-  removeFeeUpdateNotice: {
-    request: z.tuple([AddressSchema, HandlerIdSchema]),
-    response: actionResult
-  },
   resolveEnsName: {
     request: z.tuple([z.string().min(1).max(255)]),
     response: result(AddressSchema)

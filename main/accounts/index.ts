@@ -36,7 +36,6 @@ import {
   TypedMessage,
   PermitSignatureRequest,
   ApprovalData,
-  PreviousFee,
   WalletCallsRequest,
   WalletCallsResponder
 } from './types'
@@ -1441,36 +1440,17 @@ export class Accounts extends EventEmitter {
     }
   }
 
-  private completeTxFeeUpdate(
-    currentAccount: FrameAccount,
-    handlerId: string,
-    userUpdate: boolean,
-    previousFee: PreviousFee | undefined
-  ) {
+  private completeTxFeeUpdate(currentAccount: FrameAccount, handlerId: string, userUpdate: boolean) {
     const txRequest = this.getTransactionRequest(currentAccount, handlerId)
 
-    if (userUpdate) {
-      txRequest.feesUpdatedByUser = true
-      delete txRequest.automaticFeeUpdateNotice
-    } else {
-      if (!txRequest.automaticFeeUpdateNotice && previousFee) {
-        txRequest.automaticFeeUpdateNotice = { previousFee }
-      }
-    }
+    if (userUpdate) txRequest.feesUpdatedByUser = true
 
-    currentAccount.refreshTransactionSimulation(txRequest, true, !userUpdate)
+    currentAccount.refreshTransactionSimulation(txRequest, userUpdate, !userUpdate)
   }
 
   setBaseFee(baseFee: string, handlerId: string, userUpdate: boolean, accountId?: string) {
-    const {
-      currentAccount,
-      input,
-      maxPriorityFeePerGas,
-      gasLimit,
-      currentBaseFee,
-      baseFeeTransaction,
-      txType
-    } = this.txFeeUpdate(baseFee, handlerId, userUpdate, accountId)
+    const { currentAccount, input, maxPriorityFeePerGas, gasLimit, currentBaseFee, baseFeeTransaction } =
+      this.txFeeUpdate(baseFee, handlerId, userUpdate, accountId)
     if (!baseFeeTransaction) throw new Error('Cannot set a base fee on a legacy transaction')
 
     // New value
@@ -1490,25 +1470,12 @@ export class Accounts extends EventEmitter {
     tx.maxFeePerGas = toRpcQuantity(limitedBaseFee + limitedPriorityFee)
 
     // Complete update
-    const previousFee = {
-      type: txType,
-      baseFee: toRpcQuantity(currentBaseFee),
-      priorityFee: toRpcQuantity(maxPriorityFeePerGas)
-    }
-
-    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate, previousFee)
+    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate)
   }
 
   setPriorityFee(priorityFee: string, handlerId: string, userUpdate: boolean, accountId?: string) {
-    const {
-      currentAccount,
-      input,
-      maxPriorityFeePerGas,
-      gasLimit,
-      currentBaseFee,
-      baseFeeTransaction,
-      txType
-    } = this.txFeeUpdate(priorityFee, handlerId, userUpdate, accountId)
+    const { currentAccount, input, maxPriorityFeePerGas, gasLimit, currentBaseFee, baseFeeTransaction } =
+      this.txFeeUpdate(priorityFee, handlerId, userUpdate, accountId)
     if (!baseFeeTransaction) throw new Error('Cannot set a priority fee on a legacy transaction')
 
     // New values
@@ -1526,18 +1493,12 @@ export class Accounts extends EventEmitter {
     tx.maxPriorityFeePerGas = toRpcQuantity(limitedPriorityFee)
     tx.maxFeePerGas = toRpcQuantity(limitedBaseFee + limitedPriorityFee)
 
-    const previousFee = {
-      type: txType,
-      baseFee: toRpcQuantity(currentBaseFee),
-      priorityFee: toRpcQuantity(maxPriorityFeePerGas)
-    }
-
     // Complete update
-    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate, previousFee)
+    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate)
   }
 
   setGasPrice(price: string, handlerId: string, userUpdate: boolean, accountId?: string) {
-    const { currentAccount, input, gasLimit, gasPrice, baseFeeTransaction, txType } = this.txFeeUpdate(
+    const { currentAccount, input, gasLimit, gasPrice, baseFeeTransaction } = this.txFeeUpdate(
       price,
       handlerId,
       userUpdate,
@@ -1555,13 +1516,8 @@ export class Accounts extends EventEmitter {
     const tx = txRequest.data
     tx.gasPrice = toRpcQuantity(this.limitedQuantity(newGasPrice, this.maxFeePerGasFor(gasLimit, tx)))
 
-    const previousFee = {
-      type: txType,
-      gasPrice: toRpcQuantity(gasPrice)
-    }
-
     // Complete update
-    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate, previousFee)
+    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate)
   }
 
   setGasLimit(limit: string, handlerId: string, userUpdate: boolean, accountId?: string) {
@@ -1582,20 +1538,7 @@ export class Accounts extends EventEmitter {
     tx.gasLimit = toRpcQuantity(this.limitedQuantity(newGasLimit, feeLimitedGas))
 
     // Complete update
-    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate, undefined)
-  }
-
-  removeFeeUpdateNotice(handlerId: string, cb: Callback<void>, accountId?: string) {
-    const currentAccount = this.requestAccount(handlerId, accountId)
-    if (!currentAccount) return cb(new Error('No account selected while removing fee notice'))
-
-    const txRequest = this.getTransactionRequest(currentAccount, handlerId)
-    if (!txRequest) return cb(new Error(`Could not find request ${handlerId}`))
-
-    delete txRequest.automaticFeeUpdateNotice
-    currentAccount.update()
-
-    cb(null)
+    this.completeTxFeeUpdate(currentAccount, handlerId, userUpdate)
   }
 
   adjustNonce(handlerId: string, nonceAdjust: number, accountId?: string) {

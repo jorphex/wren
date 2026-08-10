@@ -294,9 +294,6 @@ const rpc = {
   setGasLimit(accountId, limit, handlerId, cb) {
     callbackWhenDone(() => accounts.setGasLimit(limit, handlerId, true, accountId), cb)
   },
-  removeFeeUpdateNotice(accountId, handlerId, cb) {
-    accounts.removeFeeUpdateNotice(handlerId, cb, accountId)
-  },
   signerCompatibility(accountId, handlerId, cb) {
     accounts.signerCompatibility(handlerId, cb, accountId)
   }

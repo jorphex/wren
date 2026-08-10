@@ -79,8 +79,6 @@ test('binds request mutations to an account and request', () => {
   expect(parseRendererRpcRequest(wire(1, 'updateRequest', handlerId, { amount: '1' }, null)).success).toBe(
     false
   )
-  expect(parseRendererRpcRequest(wire(1, 'removeFeeUpdateNotice', address, handlerId)).success).toBe(true)
-  expect(parseRendererRpcRequest(wire(1, 'removeFeeUpdateNotice', handlerId)).success).toBe(false)
 })
 
 test('accepts the ERC-1967 implementation-slot approval type', () => {

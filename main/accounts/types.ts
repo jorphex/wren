@@ -81,9 +81,6 @@ export interface Approval {
   approve: (data?: ApprovalData) => void
 }
 
-export type PreviousFee =
-  { type: string; baseFee: string; priorityFee: string } | { type: string; gasPrice: string }
-
 export interface Permit {
   deadline: string | number
   spender: string
@@ -117,9 +114,6 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   }
   approvals: Approval[]
   locked?: boolean
-  automaticFeeUpdateNotice?: {
-    previousFee: PreviousFee
-  }
   recipient?: string // resolved ENS name; local labels are applied by the renderer
   updatedFees?: boolean
   feeAtTime?: string

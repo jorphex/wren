@@ -13,7 +13,12 @@ import { ApprovalType } from '../../../resources/constants'
 import { gweiToHex } from '../../util'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 
-jest.mock('../../../main/provider', () => ({ send: jest.fn(), emit: jest.fn(), on: jest.fn(), off: jest.fn() }))
+jest.mock('../../../main/provider', () => ({
+  send: jest.fn(),
+  emit: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn()
+}))
 jest.mock('../../../main/signers', () => ({ get: jest.fn() }))
 jest.mock('../../../main/windows', () => ({ broadcast: jest.fn(), showTray: jest.fn() }))
 jest.mock('../../../main/windows/nav', () => ({ on: jest.fn(), forward: jest.fn() }))
@@ -143,10 +148,12 @@ describe('#updatePendingFees', () => {
 
   it('updates the pending fees for a transaction', () => {
     Accounts.addRequest(request)
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
     Accounts.updatePendingFees(parseInt(request.data.chainId))
 
     expect(request.data.maxFeePerGas).toBe(gweiToHex(11))
     expect(request.data.maxPriorityFeePerGas).toBe(gweiToHex(2))
+    expect(refresh).toHaveBeenCalledWith(request, false, true)
   })
 
   it('does not update a transaction with gas fees provided by a dapp', () => {
