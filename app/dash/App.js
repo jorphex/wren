@@ -7,7 +7,6 @@ import Accounts from './Accounts'
 import Signer from './Signer'
 import Chains from './Chains'
 import Notify from './Notify'
-import Dapps from './Dapps'
 import Tokens from './Tokens'
 import Settings from './Settings'
 import Earn from './Earn'
@@ -65,7 +64,6 @@ class Dash extends React.Component {
       return <Signer key={signerId} expanded={true} {...signer} />
     }
     if (view === 'chains') return <Chains data={data} />
-    if (view === 'dapps') return <Dapps data={data} />
     if (view === 'tokens') return <Tokens data={data} />
     if (view === 'settings') return <Settings data={data} />
     if (view === 'notify') return <Notify data={data} />

@@ -39,7 +39,6 @@ it.each([
   ['Earn', 'earn'],
   ['Networks', 'chains'],
   ['Tokens', 'tokens'],
-  ['Connected apps', 'dapps'],
   ['Settings', 'settings']
 ])('opens %s from the dashboard', (label, view) => {
   renderMain()
@@ -47,6 +46,12 @@ it.each([
   fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}\\b`) }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
+})
+
+it('keeps connected-app controls scoped to the selected account surface', () => {
+  renderMain()
+
+  expect(screen.queryByText('Connected apps')).toBeNull()
 })
 
 it('includes each destination description in its accessible name', () => {

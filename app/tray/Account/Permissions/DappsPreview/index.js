@@ -102,7 +102,7 @@ export class DappsPermissionsPreview extends React.Component {
             <div className='signerBalanceButtons'>
               <button
                 type='button'
-                className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlSecondary wrenControlCompact'
+                className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlGhost wrenControlCompact'
                 disabled={this.state.navigating}
                 onClick={() => this.openExpanded()}
               >

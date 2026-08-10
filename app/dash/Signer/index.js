@@ -434,6 +434,7 @@ export class Signer extends React.Component {
             {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
             <h2 className='signerName'>{this.props.name}</h2>
           </div>
+          {this.statusText()}
           <button
             type='button'
             aria-label={`Open ${this.props.name || 'signer'} details`}
@@ -444,7 +445,6 @@ export class Signer extends React.Component {
           </button>
           {/* {this.status()} */}
         </div>
-        {this.statusText()}
         {status === 'ok' || isLocked ? (
           <>
             <div className='signerAddedAccountTitle'>

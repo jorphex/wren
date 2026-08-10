@@ -563,11 +563,8 @@ button.requestFeatureButton:focus-visible
 
 .dashModuleList
   display grid
-  grid-template-columns repeat(2, minmax(0, 1fr))
-  gap var(--wren-space-2)
-
-.dashModuleSection:first-child .dashModuleList
   grid-template-columns repeat(3, minmax(0, 1fr))
+  gap var(--wren-space-2)
 
 button.dashModule.wrenControl
   position relative
@@ -671,7 +668,7 @@ button.dashModule.wrenControl.wrenControlGhost
     color var(--wren-text-secondary)
     transform translateX(2px)
 
-.dashModuleSection:first-child button.dashModule
+.dashModuleSection button.dashModule
   height 60px
 
   .dashModuleDescription

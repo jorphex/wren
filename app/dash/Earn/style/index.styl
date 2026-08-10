@@ -1093,8 +1093,13 @@ button.earnVariant.wrenControl.wrenControlSecondary + button.earnVariant.wrenCon
   box-shadow none
 
 button.earnVariant.wrenControl.wrenControlSecondary.earnVariantSelected,
-button.earnVariant.wrenControl.wrenControlSecondary:hover:not(:disabled)
+button.earnVariant.wrenControl.wrenControlSecondary.earnVariantSelected:hover:not(:disabled)
   background-color var(--wren-surface-active)
+  background-image none
+  box-shadow var(--wren-shadow-sm)
+
+button.earnVariant.wrenControl.wrenControlSecondary:not(.earnVariantSelected):hover:not(:disabled)
+  background-color var(--wren-surface-hover)
   background-image none
   box-shadow none
 
@@ -1122,19 +1127,41 @@ button.earnVariant.wrenControl.wrenControlSecondary:hover:not(:disabled)
   background var(--wren-warning-soft)
 
 .earnActions
-  button
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-md)
+  gap 0
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+
+  button.wrenControl
+    border 0
+    border-radius 0
     color var(--wren-text-secondary)
-    background var(--wren-surface-card)
+    background transparent
+    background-image none
     box-shadow none
     font-family var(--wren-font-ui)
 
-  button.active
+  button.wrenControl + button.wrenControl
+    border-left 1px solid var(--wren-border-subtle)
+
+  button.wrenControl:not(.active):hover:not(:disabled)
+    background var(--wren-surface-hover)
+
+  button.wrenControl.active
     color var(--wren-text-primary)
-    border-color var(--wren-accent-primary)
-    background var(--wren-accent-primary-soft, #29231b)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm)
+
+  button.wrenControl:disabled
+    background transparent
+    background-image none
     box-shadow none
+
+.earnAmountField .wrenInputGroup button.wrenControlSelected,
+.earnAmountField .wrenInputGroup button.wrenControlSelected:hover:not(:disabled)
+  color var(--wren-text-primary)
+  background var(--wren-surface-active)
+  box-shadow var(--wren-shadow-sm)
 
 .earnAmountField > label
   color var(--wren-text-tertiary)

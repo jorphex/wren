@@ -45,12 +45,6 @@ const dashboardSections = [
         icon: 'tokens'
       },
       {
-        view: 'dapps',
-        title: 'Connected apps',
-        description: 'Review app access and permissions.',
-        icon: 'apps'
-      },
-      {
         view: 'settings',
         title: 'Settings',
         description: 'Adjust desktop behavior, shortcuts, and privacy.',

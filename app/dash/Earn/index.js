@@ -792,10 +792,7 @@ const VaultDetails = ({
         <p>{vault.description}</p>
       </div>
       <div className='earnDetailsMetrics'>
-        <Metric
-          label='Est. APY'
-          value={formatPercent(displayVariant?.apy.value)}
-        />
+        <Metric label='Est. APY' value={formatPercent(displayVariant?.apy.value)} />
         <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} />
         <Metric
           label={selectedVariant === 'locked' ? 'Underlying vault risk' : 'Risk'}
@@ -885,8 +882,8 @@ const VaultDetails = ({
         <button
           type='button'
           aria-pressed={form?.action === 'deposit'}
-          className={`wrenControl wrenControlPrimary wrenControlLarge ${
-            form?.action === 'deposit' ? 'active' : ''
+          className={`wrenControl wrenControlGhost wrenControlLarge ${
+            form?.action === 'deposit' ? 'active wrenControlSelected' : ''
           }`}
           disabled={!canDeposit}
           onClick={() => onOpenAction('deposit', selectedVariant)}
@@ -896,8 +893,8 @@ const VaultDetails = ({
         <button
           type='button'
           aria-pressed={form?.action === 'withdraw'}
-          className={`wrenControl wrenControlSecondary wrenControlLarge ${
-            form?.action === 'withdraw' ? 'active' : ''
+          className={`wrenControl wrenControlGhost wrenControlLarge ${
+            form?.action === 'withdraw' ? 'active wrenControlSelected' : ''
           }`}
           disabled={!canWithdrawSelected}
           onClick={() => onOpenAction('withdraw', selectedVariant)}

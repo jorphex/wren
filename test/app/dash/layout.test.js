@@ -4,6 +4,7 @@ const baseStyle = fs.readFileSync('resources/base.styl', 'utf8')
 const buttonStyle = fs.readFileSync('resources/Components/Button/index.styl', 'utf8')
 const commandStyle = fs.readFileSync('app/dash/Command/style/index.styl', 'utf8')
 const earnStyle = fs.readFileSync('app/dash/Earn/style/index.styl', 'utf8')
+const mainStyle = fs.readFileSync('app/dash/Main/style/index.styl', 'utf8')
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
@@ -16,11 +17,22 @@ test('keeps disabled semantic controls visually neutral', () => {
   )
 })
 
+test('keeps shell navigation flat at rest and tactile on interaction', () => {
+  expect(buttonStyle).toMatch(
+    /button\.wrenControl\.wrenShellNav[\s\S]*?border-color transparent[\s\S]*?background-color transparent[\s\S]*?box-shadow none[\s\S]*?&:hover:not\(:disabled\)[\s\S]*?background-color var\(--wren-surface-hover\)/
+  )
+})
+
 test('contains long expanded-signer names inside the dashboard chrome', () => {
   expect(commandStyle).toMatch(/\.commandTitle[\s\S]*?min-width 0[\s\S]*?overflow hidden/)
   expect(commandStyle).toMatch(
     /> \.expandedSignerTitle[\s\S]*?max-width 100%[\s\S]*?\.signerName[\s\S]*?text-overflow ellipsis[\s\S]*?white-space nowrap/
   )
+})
+
+test('keeps both dashboard destination groups on balanced three-item rows', () => {
+  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns repeat\(3, minmax\(0, 1fr\)\)/)
+  expect(mainStyle).toMatch(/\.dashModuleSection button\.dashModule[\s\S]*?height 60px/)
 })
 
 test('uses ruled Earn detail regions and the shared focus treatment', () => {
@@ -32,6 +44,9 @@ test('uses ruled Earn detail regions and the shared focus treatment', () => {
   )
   expect(earnStyle).toMatch(
     /button\.earnVariant\.wrenControl\.wrenControlSecondary[\s\S]*?flex-direction column/
+  )
+  expect(earnStyle).toMatch(
+    /\.earnActions[\s\S]*?gap 0[\s\S]*?button\.wrenControl \+ button\.wrenControl[\s\S]*?border-left 1px solid var\(--wren-border-subtle\)[\s\S]*?button\.wrenControl\.active[\s\S]*?background var\(--wren-surface-active\)/
   )
 })
 
