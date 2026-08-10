@@ -128,6 +128,9 @@ it('requires confirmation before revoking a companion pairing', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(link.rpc).not.toHaveBeenCalled()
+  expect(screen.getByRole('alertdialog', { name: 'Revoke Firefox pairing?' }).textContent).toContain(
+    'This disconnects the Firefox Companion pairing from Wren. A new pairing code will be required to connect it again.'
+  )
   fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))
 
   expect(link.rpc).toHaveBeenCalledWith(
@@ -135,6 +138,45 @@ it('requires confirmation before revoking a companion pairing', () => {
     'companion-fingerprint',
     expect.any(Function)
   )
+})
+
+it('cancels companion revocation and restores focus to its trigger', async () => {
+  const { user } = renderSettings()
+  const revoke = screen.getByRole('button', { name: 'Revoke' })
+
+  revoke.focus()
+  await user.keyboard('{Enter}')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+  await user.keyboard('{Enter}')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke' }))
+
+  await user.keyboard('{Enter}')
+  await user.keyboard('{Escape}')
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke' }))
+})
+
+it('guards companion revocation while pending and recovers in place after failure', () => {
+  renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
+  const confirm = screen.getByRole('button', { name: 'Confirm revoke' })
+
+  fireEvent.click(confirm)
+  fireEvent.click(confirm)
+
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Revoking pairing\u2026' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true)
+
+  act(() => link.rpc.mock.calls[0][2](new Error('revoke failed')))
+
+  expect(screen.getByRole('alert').textContent).toBe(
+    'Couldn\u2019t revoke pairing. The pairing is unchanged. Try again.'
+  )
+  expect(screen.getByRole('button', { name: 'Confirm revoke' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect(link.rpc).toHaveBeenCalledTimes(2)
 })
 
 it('exposes shortcut editing as a native action', () => {

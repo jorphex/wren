@@ -1,4 +1,4 @@
-import { Component } from 'react'
+import { Component, createRef } from 'react'
 import Restore from 'react-restore'
 
 import link from '../../../resources/link'
@@ -39,16 +39,130 @@ const RevokeCompanion = styled.button`
   margin-left: 16px;
 `
 
+const CompanionRevokeDialog = styled.div`
+  margin-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--wren-border-subtle);
+  border-radius: var(--wren-radius-sm);
+  background: var(--wren-bg-elevated);
+`
+
+const CompanionRevokeTitle = styled.h3`
+  margin: 0;
+  color: var(--wren-text-primary);
+  font-family: var(--wren-font-ui);
+  font-size: var(--wren-type-body);
+  font-weight: 600;
+  line-height: 20px;
+`
+
+const CompanionRevokeBody = styled.p`
+  margin: 6px 0 0;
+  color: var(--wren-text-secondary);
+  font-family: var(--wren-font-ui);
+  font-size: var(--wren-type-small);
+  line-height: 18px;
+`
+
+const CompanionRevokeError = styled.div`
+  margin-top: 8px;
+  color: var(--wren-danger);
+  font-family: var(--wren-font-ui);
+  font-size: var(--wren-type-small);
+  line-height: 18px;
+`
+
+const CompanionRevokeActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--wren-space-2);
+  margin-top: 12px;
+
+  button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+`
+
 export class Settings extends Component {
   constructor(props, context) {
     super(props, context)
     const latticeEndpoint = context.store('main.latticeSettings.endpointCustom')
     const latticeEndpointMode = context.store('main.latticeSettings.endpointMode')
+    this.revokeCancelRef = createRef()
+    this.revokeTriggerRefs = {}
     this.state = {
       latticeEndpoint,
       latticeEndpointMode,
       resetConfirm: false,
-      revokeCompanionConfirm: undefined
+      revokeCompanionConfirm: undefined,
+      revokeCompanionPending: false,
+      revokeCompanionError: ''
+    }
+  }
+
+  componentDidMount() {
+    this.mounted = true
+  }
+
+  componentWillUnmount() {
+    this.mounted = false
+    clearTimeout(this.inputLatticeTimeout)
+  }
+
+  armCompanionRevocation(credential) {
+    if (this.revokeCompanionPending) return
+    this.setState(
+      {
+        revokeCompanionConfirm: credential.fingerprint,
+        revokeCompanionPending: false,
+        revokeCompanionError: ''
+      },
+      () => this.revokeCancelRef.current?.focus()
+    )
+  }
+
+  cancelCompanionRevocation(fingerprint) {
+    if (this.revokeCompanionPending) return
+    this.setState(
+      {
+        revokeCompanionConfirm: undefined,
+        revokeCompanionPending: false,
+        revokeCompanionError: ''
+      },
+      () => this.revokeTriggerRefs[fingerprint]?.current?.focus()
+    )
+  }
+
+  revokeCompanion(credential) {
+    if (this.revokeCompanionPending || this.state.revokeCompanionPending) return
+
+    this.revokeCompanionPending = true
+    this.setState({ revokeCompanionPending: true, revokeCompanionError: '' })
+    link.rpc('revokeExtensionCredential', credential.fingerprint, (error) => {
+      this.revokeCompanionPending = false
+      if (!this.mounted) return
+
+      if (error) {
+        this.setState({
+          revokeCompanionPending: false,
+          revokeCompanionError: 'Couldn\u2019t revoke pairing. The pairing is unchanged. Try again.'
+        })
+      } else {
+        this.setState({
+          revokeCompanionConfirm: undefined,
+          revokeCompanionPending: false,
+          revokeCompanionError: ''
+        })
+      }
+    })
+  }
+
+  handleCompanionRevokeKeyDown(event, fingerprint) {
+    if (event.key === 'Escape' && !this.state.revokeCompanionPending) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.cancelCompanionRevocation(fingerprint)
     }
   }
 
@@ -369,6 +483,12 @@ export class Settings extends Component {
               </h2>
               {companionCredentials.map((credential, index) => {
                 const confirm = this.state.revokeCompanionConfirm === credential.fingerprint
+                if (!this.revokeTriggerRefs[credential.fingerprint]) {
+                  this.revokeTriggerRefs[credential.fingerprint] = createRef()
+                }
+                const dialogSuffix = String(credential.fingerprint).replace(/[^a-zA-Z0-9_-]/g, '')
+                const titleId = `revoke-companion-title-${dialogSuffix}`
+                const bodyId = `revoke-companion-body-${dialogSuffix}`
                 return (
                   <div
                     className='signerPermission localSetting'
@@ -381,25 +501,62 @@ export class Settings extends Component {
                         <CompanionIdentity>{credential.extensionId}</CompanionIdentity>
                         <CompanionIdentity>{credential.fingerprint}</CompanionIdentity>
                       </CompanionDetails>
-                      <RevokeCompanion
-                        type='button'
-                        className={confirm ? 'wrenControl wrenControlDanger' : 'wrenControl wrenControlGhost'}
-                        onClick={() => {
-                          if (!confirm) {
-                            this.setState({ revokeCompanionConfirm: credential.fingerprint })
-                            return
-                          }
-                          link.rpc('revokeExtensionCredential', credential.fingerprint, (error) => {
-                            if (!error) this.setState({ revokeCompanionConfirm: undefined })
-                          })
-                        }}
-                      >
-                        {confirm ? 'Confirm revoke' : 'Revoke'}
-                      </RevokeCompanion>
+                      {!confirm ? (
+                        <RevokeCompanion
+                          ref={this.revokeTriggerRefs[credential.fingerprint]}
+                          type='button'
+                          className='wrenControl wrenControlGhost'
+                          onClick={() => this.armCompanionRevocation(credential)}
+                        >
+                          Revoke
+                        </RevokeCompanion>
+                      ) : null}
                     </div>
                     <div className='signerPermissionDetails'>
                       Remove this pairing. A new code confirmation is required on reconnect.
                     </div>
+                    {confirm ? (
+                      <CompanionRevokeDialog
+                        role='alertdialog'
+                        aria-labelledby={titleId}
+                        aria-describedby={bodyId}
+                        aria-busy={this.state.revokeCompanionPending}
+                        onKeyDown={(event) =>
+                          this.handleCompanionRevokeKeyDown(event, credential.fingerprint)
+                        }
+                      >
+                        <CompanionRevokeTitle id={titleId}>
+                          {`Revoke ${credential.browser} pairing?`}
+                        </CompanionRevokeTitle>
+                        <CompanionRevokeBody id={bodyId}>
+                          {`This disconnects the ${credential.browser} Companion pairing from Wren. A new pairing code will be required to connect it again.`}
+                        </CompanionRevokeBody>
+                        {this.state.revokeCompanionError ? (
+                          <CompanionRevokeError role='alert'>
+                            {this.state.revokeCompanionError}
+                          </CompanionRevokeError>
+                        ) : null}
+                        <CompanionRevokeActions>
+                          <button
+                            type='button'
+                            ref={this.revokeCancelRef}
+                            className='wrenControl wrenControlGhost'
+                            disabled={this.state.revokeCompanionPending}
+                            onClick={() => this.cancelCompanionRevocation(credential.fingerprint)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type='button'
+                            className='wrenControl wrenControlDanger'
+                            disabled={this.state.revokeCompanionPending}
+                            onClick={() => this.revokeCompanion(credential)}
+                          >
+                            {this.state.revokeCompanionPending ? 'Revoking pairing\u2026' : 'Confirm revoke'}
+                          </button>
+                        </CompanionRevokeActions>
+                      </CompanionRevokeDialog>
+                    ) : null}
                   </div>
                 )
               })}

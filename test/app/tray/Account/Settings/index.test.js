@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import { SettingsPreview } from '../../../../../app/tray/Account/Settings/SettingsPreview'
 import { SettingsExpanded } from '../../../../../app/tray/Account/Settings/SettingsExpanded'
 import link from '../../../../../resources/link'
-import { fireEvent, render, screen } from '../../../../componentSetup'
+import { act, fireEvent, render, screen } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
@@ -61,8 +61,8 @@ it('requires a separately armed second action before removing an account', () =>
   expect(remove.closest('.clusterValue').getAttribute('style')).not.toMatch(/color/)
   fireEvent.click(remove, { detail: 1 })
   expect(link.rpc).not.toHaveBeenCalled()
-  const confirm = screen.getByRole('button', { name: 'Confirm remove account' })
-  expect(confirm.closest('.settingsPreviewRemovalConfirm')).toBeTruthy()
+  const confirm = screen.getByRole('button', { name: 'Confirm removal' })
+  expect(confirm.closest('[role="alertdialog"]')).toBeTruthy()
   fireEvent.click(confirm, { detail: 1 })
 
   expect(link.rpc).toHaveBeenCalledWith('removeAccount', account, {}, expect.any(Function))
@@ -72,7 +72,7 @@ it('does not let one multi-click gesture arm and confirm account removal', () =>
   renderWithStore(SettingsPreview)
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove account' }), { detail: 1 })
-  const confirm = screen.getByRole('button', { name: 'Confirm remove account' })
+  const confirm = screen.getByRole('button', { name: 'Confirm removal' })
   fireEvent.click(confirm, { detail: 2 })
   expect(link.rpc).not.toHaveBeenCalled()
 
@@ -88,12 +88,55 @@ it('moves keyboard focus to the safe action before account removal can be confir
   remove.focus()
   await user.keyboard('{Enter}')
 
-  const cancel = screen.getByRole('button', { name: 'Cancel account removal' })
+  const cancel = screen.getByRole('button', { name: 'Cancel' })
   expect(document.activeElement).toBe(cancel)
   await user.keyboard('{Enter}')
 
   expect(link.rpc).not.toHaveBeenCalled()
-  expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove account' }))
+})
+
+it('names the account and consequence in a separate removal confirmation', () => {
+  renderWithStore(SettingsPreview)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }))
+
+  const dialog = screen.getByRole('alertdialog', { name: 'Remove Primary?' })
+  expect(dialog.textContent).toContain(
+    `This removes Primary (${account}) from Wren. Funds remain onchain, but this account and its signer connection will no longer be available here.`
+  )
+})
+
+it('cancels account removal with Escape and restores trigger focus', () => {
+  renderWithStore(SettingsPreview)
+  const remove = screen.getByRole('button', { name: 'Remove account' })
+
+  remove.focus()
+  fireEvent.click(remove)
+  fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' })
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove account' }))
+})
+
+it('guards account removal while pending and recovers in place after failure', () => {
+  renderWithStore(SettingsPreview)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }))
+  const confirm = screen.getByRole('button', { name: 'Confirm removal' })
+
+  fireEvent.click(confirm)
+  fireEvent.click(confirm)
+
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Removing account\u2026' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true)
+
+  act(() => link.rpc.mock.calls[0][3](new Error('remove failed')))
+
+  expect(screen.getByRole('alert').textContent).toBe('Couldn\u2019t remove account. Try again.')
+  expect(screen.getByRole('button', { name: 'Confirm removal' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm removal' }))
+  expect(link.rpc).toHaveBeenCalledTimes(2)
 })
 
 it('keeps the compact account action row focused on safe removal', () => {
