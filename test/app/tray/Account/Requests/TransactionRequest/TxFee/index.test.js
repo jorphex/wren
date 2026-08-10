@@ -116,3 +116,19 @@ describe('usd estimate display', () => {
     expect(baseFeeInput.textContent).toBe('=$?in MATIC')
   })
 })
+
+it.each([
+  ['locked', { locked: true }],
+  ['terminal', { status: 'declined' }],
+  ['monitoring', { mode: 'monitor' }]
+])('keeps fee adjustment inert for a %s request', async (_label, requestState) => {
+  const { user } = render(<TxFee req={{ ...req, ...requestState }} initiallyExpanded={true} />)
+  const adjust = screen.getByRole('button', { name: 'Adjust' })
+
+  expect(adjust.disabled).toBe(true)
+  expect(adjust.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
+
+  await user.click(adjust)
+  expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
+})

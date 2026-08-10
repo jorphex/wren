@@ -1,8 +1,13 @@
-import React, { Component, useState } from 'react'
+import React, { Component, useEffect, useRef, useState } from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import link from '../../../../../../resources/link'
+import {
+  clearTransactionFeeDraftSafety,
+  isRequestInteractionLocked,
+  setTransactionFeeDraftSafety
+} from '../../../../../../resources/domain/request'
 import { usesBaseFee } from '../../../../../../resources/domain/transaction'
 
 const numberFormat = { groupSeparator: '', decimalSeparator: '.' }
@@ -62,22 +67,98 @@ const totalFee = ({ gasPrice, baseFee, priorityFee, gasLimit }) =>
 
 const limitGasUnits = (bn) => limitRange(bn, 0, 12.5e6)
 
-let submitTimeout = null
+const feeStateFromData = ({ gasLimit, maxPriorityFeePerGas, maxFeePerGas, gasPrice }) => {
+  const maxFee = BigNumber(maxFeePerGas, 16)
+  const priorityFee = BigNumber(maxPriorityFeePerGas, 16)
 
-const FeeOverlayInput = ({ initialValue, labelText, tabIndex, decimals, onReceiveValue, limiter }) => {
+  return {
+    gasLimit: BigNumber(gasLimit, 16),
+    gasPrice: BigNumber(gasPrice, 16),
+    baseFee: maxFee.minus(priorityFee),
+    priorityFee
+  }
+}
+
+const FeeOverlayInput = ({
+  decimals,
+  draftKey,
+  initialValue,
+  labelText,
+  limiter,
+  onDraftSafetyChange,
+  onReceiveValue,
+  tabIndex
+}) => {
   const [value, setValue] = useState(initialValue)
+  const authoritativeValue = useRef(initialValue)
+  const dirty = useRef(false)
+  const submitTimer = useRef()
+  const valueRef = useRef(initialValue)
+  const latest = useRef({ decimals, limiter, onDraftSafetyChange, onReceiveValue })
   const labelId = `txFeeOverlayLabel_${tabIndex}`
 
-  const submitValue = (newValueStr, newValue) => {
-    setValue(newValueStr)
+  const cancelSubmit = () => {
+    clearTimeout(submitTimer.current)
+    submitTimer.current = undefined
+  }
 
-    clearTimeout(submitTimeout)
+  const setDraftValue = (newValue, safe) => {
+    valueRef.current = newValue
+    setValue(newValue)
+    latest.current.onDraftSafetyChange(draftKey, safe)
+  }
 
-    submitTimeout = setTimeout(() => {
-      const limitedValue = limiter(decimals ? gweiToWei(trimGwei(newValue)) : newValue)
-      onReceiveValue(limitedValue)
-      setValue(formatForInput(limitedValue, decimals, true))
-    }, 500)
+  const parseDraft = (draft) => {
+    if (draft === '' || draft === '.') return null
+    const parsed = BigNumber(draft)
+    return parsed.isNaN() ? null : parsed
+  }
+
+  const commitDraft = (draft = valueRef.current, parsed = parseDraft(draft)) => {
+    cancelSubmit()
+    if (!parsed) return false
+
+    const current = latest.current
+    const limitedValue = current.limiter(current.decimals ? gweiToWei(trimGwei(parsed)) : parsed)
+    const formattedValue = formatForInput(limitedValue, current.decimals, true)
+
+    dirty.current = false
+    current.onReceiveValue(limitedValue)
+    setDraftValue(formattedValue, true)
+    return true
+  }
+
+  const scheduleSubmit = (newValue) => {
+    cancelSubmit()
+    dirty.current = true
+    setDraftValue(newValue, false)
+    submitTimer.current = setTimeout(() => commitDraft(), 500)
+  }
+
+  useEffect(() => {
+    latest.current = { decimals, limiter, onDraftSafetyChange, onReceiveValue }
+  }, [decimals, limiter, onDraftSafetyChange, onReceiveValue])
+
+  useEffect(() => {
+    authoritativeValue.current = initialValue
+    if (!dirty.current) {
+      valueRef.current = initialValue
+      setValue(initialValue)
+      onDraftSafetyChange(draftKey, true)
+    }
+  }, [draftKey, initialValue, onDraftSafetyChange])
+
+  useEffect(
+    () => () => {
+      clearTimeout(submitTimer.current)
+    },
+    []
+  )
+
+  const revertInvalidDraft = () => {
+    cancelSubmit()
+    dirty.current = false
+    setDraftValue(authoritativeValue.current, true)
   }
 
   return (
@@ -92,21 +173,29 @@ const FeeOverlayInput = ({ initialValue, labelText, tabIndex, decimals, onReceiv
             const parsedInput = (decimals ? /[0-9.]*/ : /[0-9]*/).exec(e.target.value)
             const enteredValue = parsedInput[0] || ''
 
-            if (enteredValue === '.' || enteredValue === '') return setValue(enteredValue)
+            if (enteredValue === '.' || enteredValue === '') {
+              cancelSubmit()
+              dirty.current = true
+              return setDraftValue(enteredValue, false)
+            }
 
             const numericValue = BigNumber(e.target.value)
             if (numericValue.isNaN()) return
-
-            clearTimeout(submitTimeout)
 
             // prevent decimal point being overwritten as user is typing a float
             if (enteredValue.endsWith('.')) {
               const formattedNum = formatForInput(enteredValue.slice(0, -1), decimals)
 
-              return setValue(`${formattedNum}.`)
+              cancelSubmit()
+              dirty.current = true
+              return setDraftValue(`${formattedNum}.`, false)
             }
 
-            submitValue(enteredValue, numericValue)
+            scheduleSubmit(enteredValue)
+          }}
+          onBlur={() => {
+            if (!dirty.current) return
+            if (!commitDraft()) revertInvalidDraft()
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -129,8 +218,7 @@ const FeeOverlayInput = ({ initialValue, labelText, tabIndex, decimals, onReceiv
                   ? parsedValue.decimalPlaces(9, BigNumber.ROUND_FLOOR).minus(1)
                   : parsedValue.minus(1000)
               }
-              const limitedValue = limiter(newValue)
-              submitValue(limitedValue.toString(), limitedValue)
+              scheduleSubmit(newValue.toString())
             }
           }}
         />
@@ -142,10 +230,12 @@ const FeeOverlayInput = ({ initialValue, labelText, tabIndex, decimals, onReceiv
   )
 }
 
-const GasLimitInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
+const GasLimitInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabIndex, limiter }) => (
   <div className='txFeeOverlayLimit'>
     <FeeOverlayInput
+      draftKey='gasLimit'
       initialValue={initialValue}
+      onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Gas Limit (UNITS)'
       tabIndex={tabIndex}
@@ -155,10 +245,12 @@ const GasLimitInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
   </div>
 )
 
-const GasPriceInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
+const GasPriceInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabIndex, limiter }) => (
   <div className='txFeeOverlayGasPrice'>
     <FeeOverlayInput
+      draftKey='gasPrice'
       initialValue={initialValue}
+      onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Gas Price (GWEI)'
       tabIndex={tabIndex}
@@ -168,10 +260,12 @@ const GasPriceInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
   </div>
 )
 
-const BaseFeeInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
+const BaseFeeInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabIndex, limiter }) => (
   <div className='txFeeOverlayBaseFee'>
     <FeeOverlayInput
+      draftKey='baseFee'
       initialValue={initialValue}
+      onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Base Fee (GWEI)'
       tabIndex={tabIndex}
@@ -181,10 +275,12 @@ const BaseFeeInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
   </div>
 )
 
-const PriorityFeeInput = ({ initialValue, onReceiveValue, tabIndex, limiter }) => (
+const PriorityFeeInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabIndex, limiter }) => (
   <div className='txFeeOverlayPriorityFee'>
     <FeeOverlayInput
+      draftKey='priorityFee'
       initialValue={initialValue}
+      onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Max Priority Fee (GWEI)'
       tabIndex={tabIndex}
@@ -203,14 +299,24 @@ class TxFeeOverlay extends Component {
       }
     } = props
     this.moduleRef = React.createRef()
-    const maxFee = BigNumber(maxFeePerGas, 16)
-    const priorityFee = BigNumber(maxPriorityFeePerGas, 16)
-    this.state = {
-      gasLimit: BigNumber(gasLimit, 16),
-      gasPrice: BigNumber(gasPrice, 16),
-      baseFee: maxFee.minus(priorityFee),
-      priorityFee
+    this.draftSafety = {}
+    this.state = feeStateFromData({ gasLimit, maxPriorityFeePerGas, maxFeePerGas, gasPrice })
+  }
+
+  componentDidUpdate(previousProps) {
+    const feeKeys = ['gasLimit', 'gasPrice', 'maxFeePerGas', 'maxPriorityFeePerGas']
+    if (feeKeys.some((key) => previousProps.req.data[key] !== this.props.req.data[key])) {
+      this.setState(feeStateFromData(this.props.req.data))
     }
+  }
+
+  componentWillUnmount() {
+    clearTransactionFeeDraftSafety(this.props.req?.handlerId)
+  }
+
+  updateDraftSafety = (draftKey, safe) => {
+    this.draftSafety[draftKey] = safe
+    setTransactionFeeDraftSafety(this.props.req?.handlerId, Object.values(this.draftSafety).every(Boolean))
   }
 
   render() {
@@ -267,6 +373,8 @@ class TxFeeOverlay extends Component {
     }
 
     const receiveValueHandler = (value, name) => {
+      if (isRequestInteractionLocked(this.props.req)) return
+
       this.setState({
         [name]: value
       })
@@ -291,12 +399,14 @@ class TxFeeOverlay extends Component {
           <>
             <BaseFeeInput
               initialValue={displayBaseFee}
+              onDraftSafetyChange={this.updateDraftSafety}
               onReceiveValue={(value) => receiveValueHandler(value, 'baseFee')}
               limiter={baseFeeLimiter}
               tabIndex={0}
             />
             <PriorityFeeInput
               initialValue={displayPriorityFee}
+              onDraftSafetyChange={this.updateDraftSafety}
               onReceiveValue={(value) => receiveValueHandler(value, 'priorityFee')}
               limiter={priorityFeeLimiter}
               tabIndex={1}
@@ -305,6 +415,7 @@ class TxFeeOverlay extends Component {
         ) : (
           <GasPriceInput
             initialValue={displayGasPrice}
+            onDraftSafetyChange={this.updateDraftSafety}
             onReceiveValue={(value) => receiveValueHandler(value, 'gasPrice')}
             limiter={gasPriceLimiter}
             tabIndex={0}
@@ -312,6 +423,7 @@ class TxFeeOverlay extends Component {
         )}
         <GasLimitInput
           initialValue={displayGasLimit}
+          onDraftSafetyChange={this.updateDraftSafety}
           onReceiveValue={(value) => receiveValueHandler(value, 'gasLimit')}
           limiter={gasLimitLimiter}
           tabIndex={2}

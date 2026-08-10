@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 import Icon from '../../../../../resources/Components/Icon'
 import useCopiedMessage from '../../../../../resources/Hooks/useCopiedMessage'
 
@@ -13,7 +11,7 @@ export const getLightweightRequestClass = ({ status }) => {
 }
 
 const LightweightRequestNotice = ({ notice, status }) => (
-  <div className='requestNotice'>
+  <div className='requestNotice' role={status === 'error' ? 'alert' : 'status'}>
     {status === 'pending' ? (
       <div className='requestNoticeInner'>
         <div className='loader' />
@@ -22,9 +20,14 @@ const LightweightRequestNotice = ({ notice, status }) => (
       <div className='requestNoticeInner'>
         <Icon name='check' size={80} />
       </div>
-    ) : status === 'error' || status === 'declined' ? (
+    ) : status === 'error' ? (
       <div className='requestNoticeInner'>
         <Icon name='blocked' size={80} />
+        {notice ? <div className='requestNoticeInnerText'>{notice}</div> : null}
+      </div>
+    ) : status === 'declined' ? (
+      <div className='requestNoticeInner'>
+        <Icon name='close' size={80} />
         {notice ? <div className='requestNoticeInnerText'>{notice}</div> : null}
       </div>
     ) : null}
@@ -34,7 +37,7 @@ const LightweightRequestNotice = ({ notice, status }) => (
 export const LightweightRequest = ({ children, eyebrow, help, icon, req, title }) => (
   <div key={req.id || req.handlerId} className={getLightweightRequestClass(req)}>
     <div className='approveRequest lightweightRequest'>
-      {req.notice ? (
+      {req.notice || ['declined', 'error', 'pending', 'success'].includes(req.status) ? (
         <LightweightRequestNotice notice={req.notice} status={req.status} />
       ) : (
         <div className='approveTransactionPayload'>
@@ -64,7 +67,6 @@ export const RequestSection = ({ children, title }) => (
 
 const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
   const [copied, copyValue] = useCopiedMessage(value)
-  const [revealed, setRevealed] = useState(false)
 
   return (
     <button
@@ -72,13 +74,15 @@ const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
       className='lightweightRequestFactValue lightweightRequestFactValueTechnical lightweightRequestCopy'
       aria-label={copyLabel}
       title={value}
-      onBlur={() => setRevealed(false)}
       onClick={() => copyValue()}
-      onFocus={() => setRevealed(true)}
-      onMouseEnter={() => setRevealed(true)}
-      onMouseLeave={() => setRevealed(false)}
     >
-      {copied ? 'Copied' : revealed ? value : displayValue || value}
+      <span className='lightweightRequestCopyValue'>{displayValue || value}</span>
+      <span
+        className={`lightweightRequestCopyFeedback${copied ? ' lightweightRequestCopyFeedbackVisible' : ''}`}
+        role='status'
+      >
+        {copied ? 'Copied' : ''}
+      </span>
     </button>
   )
 }

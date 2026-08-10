@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import { DisplayCoinBalance, DisplayValue } from '../../../../../../resources/Components/DisplayValue'
+import { isRequestInteractionLocked } from '../../../../../../resources/domain/request'
 import { usesBaseFee } from '../../../../../../resources/domain/transaction'
 import { displayValueData } from '../../../../../../resources/utils/displayValue'
 import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
@@ -57,11 +58,18 @@ const USDEstimateDisplay = ({ minFee, maxFee, nativeCurrency }) => {
 export class TxFee extends React.Component {
   constructor(props, context) {
     super(props, context)
-    this.state = { expanded: Boolean(props.initiallyExpanded) }
+    this.state = {
+      expanded: Boolean(props.initiallyExpanded) && !isRequestInteractionLocked(props.req)
+    }
   }
 
   componentDidUpdate(previousProps) {
-    if (!previousProps.initiallyExpanded && this.props.initiallyExpanded && !this.state.expanded) {
+    if (
+      !isRequestInteractionLocked(this.props.req) &&
+      !previousProps.initiallyExpanded &&
+      this.props.initiallyExpanded &&
+      !this.state.expanded
+    ) {
       this.setState({ expanded: true })
     }
   }
@@ -78,6 +86,7 @@ export class TxFee extends React.Component {
 
   render() {
     const req = this.props.req
+    const adjustmentLocked = isRequestInteractionLocked(req)
     const chain = {
       type: 'ethereum',
       id: parseInt(req.data.chainId, 16)
@@ -131,8 +140,11 @@ export class TxFee extends React.Component {
           <button
             type='button'
             aria-expanded={this.state.expanded}
+            disabled={adjustmentLocked}
             className='wrenControl wrenControlSecondary wrenControlCompact transactionReviewFeeAdjust'
-            onClick={() => this.setState((state) => ({ expanded: !state.expanded }))}
+            onClick={() => {
+              if (!adjustmentLocked) this.setState((state) => ({ expanded: !state.expanded }))
+            }}
           >
             Adjust
           </button>
@@ -142,7 +154,7 @@ export class TxFee extends React.Component {
             {'Gas values set by user'}
           </div>
         ) : null}
-        {this.state.expanded ? <AdjustFee inline={true} req={req} /> : null}
+        {this.state.expanded && !adjustmentLocked ? <AdjustFee inline={true} req={req} /> : null}
       </ClusterBox>
     )
   }

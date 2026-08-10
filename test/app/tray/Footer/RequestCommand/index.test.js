@@ -1,9 +1,13 @@
 import React from 'react'
 
-import { RequestCommand } from '../../../../../app/tray/Footer/RequestCommand'
+import { getReceiptFeeUsd, RequestCommand } from '../../../../../app/tray/Footer/RequestCommand'
 import { Time } from '../../../../../app/tray/Footer/Time'
 import { act, render, screen } from '../../../../componentSetup'
 import link from '../../../../../resources/link'
+import {
+  clearTransactionFeeDraftSafety,
+  setTransactionFeeDraftSafety
+} from '../../../../../resources/domain/request'
 
 jest.mock('../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
@@ -85,6 +89,7 @@ const renderCommandResult = (command, method) => {
 beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
+  clearTransactionFeeDraftSafety(request.handlerId)
 })
 
 const commandWithStore = () => {
@@ -174,6 +179,21 @@ it('keeps signing disabled while simulation is pending after decline becomes ava
   command.componentWillUnmount()
 })
 
+it('keeps signing disabled while a fee field has an uncommitted or invalid draft', () => {
+  const req = transaction()
+  const view = renderMountedCommand(req, 'signOrDecline', commandStore(), 0)
+  act(() => jest.advanceTimersByTime(0))
+
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
+
+  act(() => setTransactionFeeDraftSafety(req.handlerId, false))
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)
+
+  act(() => setTransactionFeeDraftSafety(req.handlerId, true))
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
+  view.unmount()
+})
+
 it('uses native disabled decisions for signatures until input is allowed', async () => {
   const req = { ...request, type: 'sign' }
   const view = renderMountedCommand(req, 'renderSignDataCommand', commandStore())
@@ -252,6 +272,15 @@ it('disables explorer access without a configured explorer', () => {
   expect(screen.getByRole('button', { name: 'Open Explorer' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Copy Hash' }).disabled).toBe(false)
   command.componentWillUnmount()
+})
+
+it('calculates receipt fees without losing integer precision', () => {
+  const receipt = {
+    blockNumber: '0x1',
+    gasUsed: '0x20000000000001',
+    effectiveGasPrice: '0x3b9aca00'
+  }
+  expect(getReceiptFeeUsd(receipt, transaction().data, 2000)).toBe('18014398509.48')
 })
 
 it('keeps the pending signature cancellation action keyboard accessible', async () => {

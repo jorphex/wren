@@ -117,7 +117,10 @@
 
 .lightweightRequestCopy
   appearance none
-  width auto
+  display grid
+  grid-template-columns minmax(0, 1fr) 48px
+  gap var(--wren-space-2)
+  width 100%
   max-width 100%
   justify-self end
   padding 0
@@ -134,6 +137,20 @@
   &:focus-visible
     outline 2px solid var(--wren-focus)
     outline-offset 2px
+
+.lightweightRequestCopyValue
+  min-width 0
+  overflow-wrap anywhere
+
+.lightweightRequestCopyFeedback
+  color var(--wren-success)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  opacity 0
+  transition opacity var(--wren-motion-fast) var(--wren-ease)
+
+.lightweightRequestCopyFeedbackVisible
+  opacity 1
 
 .lightweightRequestPermissionList
   display grid

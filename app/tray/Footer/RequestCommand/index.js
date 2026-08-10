@@ -11,13 +11,32 @@ import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 
 import { usesBaseFee } from '../../../../resources/domain/transaction'
-import { isCancelableRequest, isSignatureRequest } from '../../../../resources/domain/request'
+import {
+  isCancelableRequest,
+  isSignatureRequest,
+  isTransactionFeeDraftSafe,
+  subscribeToTransactionFeeDraftSafety
+} from '../../../../resources/domain/request'
 import { WATCH_ONLY_SIGNING_ERROR } from '../../../../resources/domain/signer'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
-export function canApproveTransaction(allowInput, simulation) {
-  return allowInput && simulation?.status !== 'pending'
+export function canApproveTransaction(allowInput, simulation, feeDraftSafe = true) {
+  return allowInput && simulation?.status !== 'pending' && feeDraftSafe
+}
+
+export function getReceiptFeeUsd(receipt, transactionData, nativeUSD) {
+  if (!receipt || !nativeUSD) return null
+
+  const paidGas =
+    receipt.effectiveGasPrice || (parseInt(transactionData.type) < 2 ? transactionData.gasPrice : null)
+  if (!paidGas) return null
+
+  return BigNumber(receipt.gasUsed, 16)
+    .multipliedBy(BigNumber(paidGas, 16))
+    .shiftedBy(-18)
+    .multipliedBy(nativeUSD)
+    .toFixed(2, BigNumber.ROUND_HALF_UP)
 }
 
 export function getRequiredRequestApproval(req) {
@@ -34,6 +53,7 @@ export class RequestCommand extends React.Component {
     this.state = {
       allowInput: false,
       dataView: false,
+      feeDraftSafe: isTransactionFeeDraftSafe(props.req?.handlerId),
       signerLocked: false,
       infoPane: ''
     }
@@ -55,11 +75,19 @@ export class RequestCommand extends React.Component {
     }, delay)
   }
 
+  componentDidMount() {
+    this.unsubscribeFeeDraftSafety = subscribeToTransactionFeeDraftSafety((handlerId) => {
+      if (handlerId !== this.props.req?.handlerId) return
+      this.setState({ feeDraftSafe: isTransactionFeeDraftSafe(handlerId) })
+    })
+  }
+
   componentWillUnmount() {
     ;['allowInputTimer', 'txHashCopiedTimer', 'signerLockedTimer'].forEach((name) => {
       clearTimeout(this[name])
       this[name] = undefined
     })
+    if (this.unsubscribeFeeDraftSafety) this.unsubscribeFeeDraftSafety()
   }
 
   approve(reqId, req) {
@@ -126,19 +154,8 @@ export class RequestCommand extends React.Component {
 
     let feeAtTime = '?.??'
 
-    if (req && req.tx && req.tx.receipt && nativeUSD) {
-      const { gasUsed, effectiveGasPrice } = req.tx.receipt
-      const { type, gasPrice } = req.data
-
-      const paidGas = effectiveGasPrice || (parseInt(type) < 2 ? gasPrice : null)
-
-      if (paidGas) {
-        const feeInWei = parseInt(gasUsed, 'hex') * parseInt(paidGas, 'hex')
-        const feeInEth = feeInWei / 1e18
-        const feeInUsd = feeInEth * nativeUSD
-        feeAtTime = (Math.round(feeInUsd * 100) / 100).toFixed(2)
-      }
-    }
+    const receiptFeeUsd = getReceiptFeeUsd(req?.tx?.receipt, req.data, nativeUSD)
+    if (receiptFeeUsd) feeAtTime = receiptFeeUsd
 
     const displayNotice = (notice || '').toLowerCase()
     let displayStatus = (req.status || 'pending').toLowerCase()
@@ -283,7 +300,11 @@ export class RequestCommand extends React.Component {
 
   signOrDecline() {
     const { req } = this.props
-    const allowApproval = canApproveTransaction(this.state.allowInput, req.simulation)
+    const allowApproval = canApproveTransaction(
+      this.state.allowInput,
+      req.simulation,
+      this.state.feeDraftSafe
+    )
     const chain = {
       type: 'ethereum',
       id: parseInt(req.data.chainId, 'hex')

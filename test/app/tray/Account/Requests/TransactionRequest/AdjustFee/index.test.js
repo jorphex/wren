@@ -3,8 +3,9 @@ import { addHexPrefix, intToHex } from '@ethereumjs/util'
 
 import store from '../../../../../../../main/store'
 import link from '../../../../../../../resources/link'
-import { screen, render, actAndWait } from '../../../../../../componentSetup'
+import { screen, render, act, actAndWait, fireEvent } from '../../../../../../componentSetup'
 import AdjustFeeComponent from '../../../../../../../app/tray/Account/Requests/TransactionRequest/AdjustFee'
+import { isTransactionFeeDraftSafe } from '../../../../../../../resources/domain/request'
 import { gweiToHex } from '../../../../../../util'
 
 jest.mock('../../../../../../../main/store/persist')
@@ -41,6 +42,63 @@ it('renders the priority fee input', () => {
 it('renders the gas limit input', () => {
   const { getGasLimitInput } = setupComponent(req)
   expect(getGasLimitInput().value).toBe('25000')
+})
+
+it('submits independent field drafts without one timer cancelling another', () => {
+  render(<AdjustFee req={req} />)
+  const baseFee = screen.getByLabelText('Base Fee (GWEI)')
+  const priorityFee = screen.getByLabelText('Max Priority Fee (GWEI)')
+
+  fireEvent.change(baseFee, { target: { value: '8' } })
+  fireEvent.change(priorityFee, { target: { value: '4' } })
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  act(() => jest.advanceTimersByTime(500))
+
+  expect(link.rpc).toHaveBeenCalledTimes(2)
+  expect(link.rpc).toHaveBeenCalledWith('setBaseFee', account, gweiToHex(8), '1', expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('setPriorityFee', account, gweiToHex(4), '1', expect.any(Function))
+})
+
+it('cancels pending field submission when the fee editor unmounts', async () => {
+  const view = render(<AdjustFee req={req} />)
+
+  await view.user.clear(screen.getByLabelText('Base Fee (GWEI)'))
+  await view.user.type(screen.getByLabelText('Base Fee (GWEI)'), '8')
+  view.unmount()
+  act(() => jest.advanceTimersByTime(500))
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(isTransactionFeeDraftSafe(req.handlerId)).toBe(true)
+})
+
+it('marks incomplete drafts unsafe and restores the authoritative value on blur', async () => {
+  const { user } = render(<AdjustFee req={req} />)
+  const baseFee = screen.getByLabelText('Base Fee (GWEI)')
+
+  await user.clear(baseFee)
+  expect(isTransactionFeeDraftSafe(req.handlerId)).toBe(false)
+
+  await user.tab()
+  expect(baseFee.value).toBe('4')
+  expect(isTransactionFeeDraftSafe(req.handlerId)).toBe(true)
+  expect(link.rpc).not.toHaveBeenCalled()
+})
+
+it('resyncs clean inputs when authoritative fee values refresh', () => {
+  const view = render(<AdjustFee req={req} />)
+  expect(screen.getByLabelText('Base Fee (GWEI)').value).toBe('4')
+
+  const updatedReq = {
+    ...req,
+    data: {
+      ...req.data,
+      maxFeePerGas: gweiToHex(11)
+    }
+  }
+  view.rerender(<AdjustFee req={updatedReq} />)
+
+  expect(screen.getByLabelText('Base Fee (GWEI)').value).toBe('8')
 })
 
 describe('base fee input', () => {

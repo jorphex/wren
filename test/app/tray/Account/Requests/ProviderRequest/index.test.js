@@ -23,12 +23,12 @@ it('explains account visibility boundaries and copies the shared address', async
   const copyAddress = screen.getByRole('button', { name: 'Copy shared account address' })
   expect(copyAddress.textContent).toBe('0x0000…0001')
   await user.hover(copyAddress)
-  expect(copyAddress.textContent).toBe(address)
+  expect(copyAddress.textContent).toBe('0x0000…0001')
   await user.unhover(copyAddress)
   expect(copyAddress.textContent).toBe('0x0000…0001')
 
   fireEvent.focus(copyAddress)
-  expect(copyAddress.textContent).toBe(address)
+  expect(copyAddress.textContent).toBe('0x0000…0001')
   fireEvent.blur(copyAddress)
   expect(copyAddress.textContent).toBe('0x0000…0001')
 
