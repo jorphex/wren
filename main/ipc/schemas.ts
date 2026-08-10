@@ -35,6 +35,11 @@ const RpcQuantitySchema = z
   .string()
   .max(66)
   .regex(/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/)
+const DecimalAmountSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/)
 const WindowIdSchema = z.enum(['dash', 'panel'])
 const AccentSchema = z.enum([
   'accent1',
@@ -306,6 +311,19 @@ const invokeSchemas = {
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'send:maxAmount': z.tuple([ChainNumberSchema, AddressSchema, AddressSchema.optional()]),
+  'send:queue': z.tuple([
+    z
+      .object({
+        account: AddressSchema,
+        amount: DecimalAmountSchema,
+        assetAddress: AddressSchema,
+        chainId: ChainNumberSchema,
+        recipient: AddressSchema
+      })
+      .strict()
+  ]),
+  'send:resolveRecipient': z.tuple([z.string().trim().min(1).max(255)]),
   'yearn:getCatalog': z.tuple([z.object({ force: z.boolean() }).strict()]),
   'yearn:getPositions': z.tuple([]),
   'yearn:getWorkflows': z.tuple([]),
@@ -341,6 +359,20 @@ const invokeResultSchemas = {
   ]),
   'addressBook:save': z.union([
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'send:maxAmount': z.union([
+    z.object({ success: z.literal(true), amount: z.string().regex(/^(?:0|[1-9][0-9]{0,77})$/) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'send:queue': z.union([
+    z.object({ success: z.literal(true), handlerId: IdSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'send:resolveRecipient': z.union([
+    z
+      .object({ success: z.literal(true), address: AddressSchema, name: z.string().max(255).optional() })
+      .strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'yearn:getCatalog': YearnCatalogResultSchema,

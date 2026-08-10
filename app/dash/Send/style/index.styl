@@ -1,33 +1,419 @@
-.sendRouteStatus
-  position absolute
-  inset 0
+.sendComposer,
+.sendPicker,
+.sendRequestState,
+.sendUnavailable
+  box-sizing border-box
+  min-height 100%
+  color var(--wren-text-primary)
+  background var(--wren-bg-canvas)
+  font-family var(--wren-font-ui)
+
+.sendComposer
+  display flex
+  flex-direction column
+
+.sendLedger
+  flex 1
+  padding 12px 24px 0
+
+.sendLedgerRow
+  position relative
+  width 100%
+  min-height 76px
+  box-sizing border-box
+  border 0
+  border-bottom 1px solid var(--wren-border-subtle)
+  color inherit
+  background transparent
+  font inherit
+  text-align left
+
+.sendAssetRow
+  display flex
+  min-height 86px
+  align-items stretch
+  justify-content center
+  flex-direction column
+  gap 8px
+  padding 12px 0 10px
+  cursor pointer
+
+  &:hover .sendAssetValue,
+  &:focus-visible .sendAssetValue
+    color var(--wren-text-primary)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.sendRowLabel
+  color var(--wren-text-muted)
+  font-size var(--wren-type-caption)
+  font-weight 560
+  letter-spacing .055em
+  text-transform uppercase
+
+.sendRowValue
+  display flex
+  align-items center
+  gap 10px
+
+.sendAssetValue
+  width 100%
+  justify-content space-between
+  color var(--wren-text-secondary)
+
+  .sendAssetIdentityCluster
+    display flex
+    min-width 0
+    align-items center
+    gap 10px
+
+    > span:not(.assetMark)
+      display flex
+      min-width 70px
+      flex-direction column
+      align-items flex-start
+      gap 2px
+
+  strong
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+    font-weight 620
+
+  small
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+.sendInputRow
+  display grid
+  grid-template-columns 1fr auto
+  grid-template-rows 24px minmax(42px, auto) 24px
+  align-items center
+  padding 15px 0 8px
+
+  .sendRowLabel
+    grid-column 1
+    grid-row 1
+
+.sendInputWrap
+  display flex
+  min-width 0
+  grid-column 1 / -1
+  grid-row 2
+  align-items center
+
+  input
+    min-width 0
+    flex 1
+    border 0
+    outline 0
+    color var(--wren-text-primary)
+    background transparent
+    font-family var(--wren-font-ui)
+    font-size 19px
+    font-weight 510
+
+    &::placeholder
+      color var(--wren-text-disabled)
+      font-family var(--wren-font-ui)
+      font-weight 430
+
+.sendRecipientInput
+  font-family var(--wren-font-mono) !important
+  font-size 15px !important
+
+.sendRowHint
+  overflow hidden
+  grid-column 1 / -1
+  grid-row 3
+  color var(--wren-text-muted)
+  font-size var(--wren-type-caption)
+  text-overflow ellipsis
+  white-space nowrap
+
+.sendAmountHints
+  display flex
+  align-items center
+  gap var(--wren-space-3)
+
+.sendAvailableHint
+  flex none
+
+.sendMaxReason
+  overflow hidden
+  min-width 0
+  padding-left var(--wren-space-3)
+  border-left 1px solid var(--wren-border-subtle)
+  text-overflow ellipsis
+
+.sendRowError
+  .sendRowHint
+    color var(--wren-danger)
+
+.sendInlineAction,
+.sendMaxAction
+  border 0
+  color var(--wren-text-secondary)
+  background transparent
+  font-family var(--wren-font-ui)
+  cursor pointer
+
+  &:hover
+    color var(--wren-text-primary)
+
+  &:focus-visible
+    border-radius 4px
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.sendInlineAction
+  display flex
+  width 30px
+  height 30px
+  align-items center
+  justify-content center
+
+.sendAmountRow
+  min-height 126px
+
+.sendAmountInput
+  font-family var(--wren-font-mono) !important
+  font-size 30px !important
+  font-weight 580 !important
+  letter-spacing -.035em
+
+.sendAmountSymbol
+  margin-left 12px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-body)
+  font-weight 620
+
+.sendMaxAction
+  min-width 0
+  height 30px
+  margin-left 10px
+  padding 0 9px
+  font-size var(--wren-type-caption)
+  font-weight 620
+
+.sendFeeRow
+  display grid
+  min-height 88px
+  grid-template-columns 120px 1fr
+  grid-template-rows 40px 28px
+  align-items end
+  padding 8px 0 10px
+
+  .sendRowLabel
+    grid-column 1
+    grid-row 1
+
+  .sendRowHint
+    grid-column 1 / -1
+    grid-row 2
+
+.sendFeeValue
+  overflow hidden
+  grid-column 2
+  grid-row 1
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-small)
+  text-align right
+  text-overflow ellipsis
+  white-space nowrap
+
+.sendComposerError
+  margin 12px 24px 0
+  padding 10px 12px
+  border-left 3px solid var(--wren-danger)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-inset)
+  font-size var(--wren-type-small)
+  line-height 1.45
+
+.sendActionShelf
+  position sticky
+  z-index 5
+  bottom 0
+  display flex
+  min-height 76px
+  align-items center
+  justify-content flex-end
+  box-sizing border-box
+  margin-top 12px
+  padding 14px 24px 16px
+  border-top 1px solid var(--wren-border-subtle)
+  background var(--wren-bg-canvas)
+  backdrop-filter blur(10px)
+
+  button
+    min-width 164px
+
+.sendPicker
+  padding 14px 24px 24px
+
+.sendPickerHeader
+  display flex
+  min-height 52px
+  align-items center
+  border-bottom 1px solid var(--wren-border-subtle)
+
+  h2
+    margin 0
+    font-size 17px
+    font-weight 610
+
+.sendPickerSearch
+  display flex
+  height 48px
+  align-items center
+  gap 10px
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-muted)
+
+  input.wrenInput
+    min-width 0
+    height 38px
+    flex 1
+    padding 0
+    border 0
+    background transparent
+    box-shadow none
+
+    &::placeholder
+      color var(--wren-text-disabled)
+      font-family var(--wren-font-ui)
+      font-weight 430
+
+.sendAssetList
+  display flex
+  flex-direction column
+
+.sendAssetOption
+  display grid
+  min-height 68px
+  grid-template-columns 42px minmax(90px, 1fr) minmax(100px, auto) 22px
+  align-items center
+  gap 10px
+  padding 8px 2px
+  border 0
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-primary)
+  background transparent
+  font-family var(--wren-font-ui)
+  text-align left
+  cursor pointer
+
+  &:hover
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.sendAssetSelection
+  display flex
+  width 22px
+  align-items center
+  justify-content center
+
+.sendAssetIdentity,
+.sendAssetBalance
+  display flex
+  min-width 0
+  flex-direction column
+  gap 3px
+
+  strong,
+  span
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
+
+  strong
+    font-size var(--wren-type-body)
+    font-weight 610
+
+  span
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+.sendAssetBalance
+  align-items flex-end
+  text-align right
+
+.sendPickerEmpty,
+.sendUnavailable
   display flex
   align-items center
   justify-content center
-  flex-direction column
-  gap var(--wren-space-5)
-  color var(--wren-text-secondary)
-  background var(--wren-bg-canvas)
-
-  .loader,
-  .loader:after
-    width 72px
-    height 72px
-    border-radius 50%
-
-  .loader
-    box-sizing border-box
-    border 3px solid var(--wren-border-subtle)
-    border-left-color var(--wren-accent-primary)
-    animation sendRouteSpin 0.58s linear infinite
-
-.sendRouteMessage
-  font-family var(--wren-font-ui)
+  color var(--wren-text-muted)
   font-size var(--wren-type-body)
-  font-weight 450
-  line-height 1.45
+
+.sendUnavailableAsset
+  gap var(--wren-space-5)
+  padding var(--wren-space-6)
+  flex-direction column
   text-align center
 
-@keyframes sendRouteSpin
-  to
-    transform rotate(360deg)
+.sendPickerEmpty
+  min-height 180px
+
+.sendRequestState
+  display flex
+  min-height 100%
+  align-items center
+  justify-content center
+  flex-direction column
+  padding 40px
+  text-align center
+
+  h2
+    margin 18px 0 8px
+    font-size 20px
+    font-weight 620
+
+  p
+    max-width 340px
+    margin 0 0 26px
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-body)
+    line-height 1.5
+
+.sendRequestGlyph
+  display flex
+  width 58px
+  height 58px
+  align-items center
+  justify-content center
+  border 1px solid var(--wren-border-strong)
+  border-radius 12px
+  color var(--wren-accent-primary)
+  background var(--wren-surface-inset)
+
+.sendRequestStateSuccess .sendRequestGlyph
+  color var(--wren-success)
+
+@media (max-height: 760px)
+  .sendLedger
+    padding-top 6px
+
+  .sendLedgerRow
+    min-height 66px
+
+  .sendInputRow
+    padding-top 10px
+
+  .sendAmountRow
+    min-height 108px
+
+  .sendFeeRow
+    min-height 74px
+
+  .sendActionShelf
+    min-height 66px
+    padding-top 10px
+    padding-bottom 10px

@@ -746,7 +746,7 @@ export class Provider extends EventEmitter {
     return Boolean(network && network.on !== false && connection?.chainConfig && activeConnection?.connected)
   }
 
-  private async getGasEstimate(rawTx: TransactionData) {
+  async estimateGas(rawTx: Pick<TransactionData, 'chainId' | 'data' | 'from' | 'nonce' | 'to' | 'value'>) {
     const { from, to, value, data, nonce } = rawTx
     const txParams = { from, to, value, data, nonce }
 
@@ -821,7 +821,7 @@ export class Provider extends EventEmitter {
 
       const estimateGasLimit = async () => {
         try {
-          return await this.getGasEstimate(rawTx)
+          return await this.estimateGas(rawTx)
         } catch (error) {
           approvals.push({
             type: ApprovalType.GasLimitApproval,

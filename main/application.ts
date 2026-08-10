@@ -33,6 +33,7 @@ import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
 import yearn from './yearn'
+import send from './send'
 import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
 
@@ -283,6 +284,12 @@ handleRenderer('yearn:resumeWorkflow', async (e, request) => yearnMutation(() =>
 handleRenderer('yearn:cancelWorkflow', async (e, request) => yearnMutation(() => yearn.cancel(request)))
 handleRenderer('yearn:revokeWorkflow', async (e, request) => yearnMutation(() => yearn.revoke(request)))
 
+handleRenderer('send:resolveRecipient', async (e, value) => send.resolveRecipient(value))
+handleRenderer('send:maxAmount', async (e, chainId, assetAddress, recipient) =>
+  send.maxAmount(chainId, assetAddress, recipient)
+)
+handleRenderer('send:queue', async (e, draft) => send.queue(draft))
+
 onRenderer('tray:addToken', (e, token, req) => {
   if (token) {
     log.info('adding custom token', token)
@@ -337,20 +344,9 @@ onRenderer('frame:unmax', (e) => {
   windows.unmax(e)
 })
 
-dapps.add({
-  ens: 'send.frame.eth',
-  checkStatusRetryCount: 0,
-  openWhenReady: false,
-  config: {
-    key: 'value'
-  },
-  status: 'initial'
-})
-
 onRenderer('*:addFrame', (e, id) => {
   if (id !== 'dappLauncher') return
   requireStoreAction('navDash')({ view: 'send', data: {} })
-  if (!windows.focusEmbeddedDapp('send.frame.eth')) dapps.openEmbedded('send.frame.eth')
 })
 
 app.on('ready', () => {

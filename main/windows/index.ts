@@ -389,7 +389,7 @@ class Dash {
       this.setShellJoined(joined)
       if (showing) this.revealWorkspaceContent()
       this.syncEmbeddedDapp(focusWhenShown)
-      if (showing && focusWhenShown && !this.isSendRoute()) this.workspace.focus()
+      if (showing && focusWhenShown && (!this.isSendRoute() || !this.embeddedDapp)) this.workspace.focus()
     })
     if (animate) this.setShellJoined(shouldJoinWorkspace(layout, showing, true))
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
@@ -435,7 +435,7 @@ class Dash {
       tray.reposition(animate, true)
     }
     if (!animate) {
-      if (this.isSendRoute()) this.embeddedDapp?.focus()
+      if (this.isSendRoute() && this.embeddedDapp) this.embeddedDapp.focus()
       else this.workspace.focus()
     }
     if (devToolsEnabled) this.workspace.openDevTools()

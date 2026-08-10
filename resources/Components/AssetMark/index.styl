@@ -1,0 +1,45 @@
+.assetMark
+  position relative
+  display inline-flex
+  width 32px
+  height 32px
+  flex 0 0 32px
+  align-items center
+  justify-content center
+  box-sizing border-box
+  color var(--wren-text-primary)
+
+.assetMarkGlyph
+  display flex
+  width 30px
+  height 30px
+  align-items center
+  justify-content center
+  overflow hidden
+  box-sizing border-box
+  border 1px solid var(--wren-border-strong)
+  border-radius 50%
+  background var(--wren-surface-inset)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  font-weight 650
+
+  img
+    width 100%
+    height 100%
+    object-fit cover
+
+  svg
+    width 17px
+    height 17px
+
+.assetMarkChain
+  position absolute
+  right -2px
+  bottom -2px
+  width 8px
+  height 8px
+  box-sizing content-box
+  border 2px solid var(--wren-bg-canvas)
+  border-radius 50%
+  background var(--asset-mark-chain-color)

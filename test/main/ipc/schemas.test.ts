@@ -95,6 +95,42 @@ test('validates address-book mutations and bounded results', () => {
   ).toBe(false)
 })
 
+test('strictly bounds native Send requests and results', () => {
+  const recipient = '0x0000000000000000000000000000000000000002'
+  const draft = {
+    account: address,
+    amount: '0.25',
+    assetAddress: '0x0000000000000000000000000000000000000000',
+    chainId: 1,
+    recipient
+  }
+
+  expect(parse('invoke', 'send:queue', [draft])).toEqual([draft])
+  expect(parseRendererIpcArgs('invoke', 'send:queue', [{ ...draft, amount: '1e18' }]).success).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'send:queue', [{ ...draft, data: '0x' }]).success).toBe(false)
+  expect(parse('invoke', 'send:maxAmount', [1, draft.assetAddress, draft.recipient])).toEqual([
+    1,
+    draft.assetAddress,
+    draft.recipient
+  ])
+  expect(parse('invoke', 'send:resolveRecipient', ['name.eth'])).toEqual(['name.eth'])
+  expect(parseRendererIpcArgs('invoke', 'send:resolveRecipient', ['x'.repeat(256)]).success).toBe(false)
+
+  expect(
+    parseRendererInvokeResult('send:resolveRecipient', {
+      success: true,
+      address: recipient,
+      name: 'name.eth'
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('send:maxAmount', { success: true, amount: '1000000000000000000' }).success
+  ).toBe(true)
+  expect(parseRendererInvokeResult('send:queue', { success: true, handlerId: 'send-request' }).success).toBe(
+    true
+  )
+})
+
 test('requires explicit Yearn catalog options and validates returned metadata', () => {
   expect(parse('invoke', 'yearn:getCatalog', [{ force: false }])).toEqual([{ force: false }])
   expect(parseRendererIpcArgs('invoke', 'yearn:getCatalog', [{}]).success).toBe(false)

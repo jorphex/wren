@@ -291,37 +291,6 @@ it('does not publish account visibility when resolving access for a non-selected
   expect(provider.accountsChanged).not.toHaveBeenCalled()
 })
 
-it('grants the built-in Send dapp only at its concrete local origin', () => {
-  expect(store.setPermission).toHaveBeenCalledWith(accountState.address.toLowerCase(), {
-    handlerId: 'send-dapp-native',
-    origin: 'http://send.frame.eth.localhost:8421',
-    provider: true
-  })
-})
-
-it('moves a disabled legacy Send grant without re-enabling it', () => {
-  store.mockImplementation((path) =>
-    path === 'main.permissions'
-      ? {
-          'send-dapp-native': {
-            handlerId: 'send-dapp-native',
-            origin: 'send.frame.eth',
-            provider: false
-          }
-        }
-      : undefined
-  )
-  store.setPermission.mockClear()
-
-  new Account(accountState, accounts)
-
-  expect(store.setPermission).toHaveBeenCalledWith(accountState.address.toLowerCase(), {
-    handlerId: 'send-dapp-native',
-    origin: 'http://send.frame.eth.localhost:8421',
-    provider: false
-  })
-})
-
 it('normalizes legacy watch-only account casing in its persisted summary', () => {
   const watchAccount = new Account({ ...accountState, lastSignerType: 'Address' }, accounts)
 

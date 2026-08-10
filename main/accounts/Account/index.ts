@@ -64,30 +64,17 @@ import type {
 } from '../types'
 import type { Breadcrumb } from '../../windows/nav/breadcrumb'
 import { RequestStatus } from '../types'
-import type { Permission } from '../../store/state'
 import type { TransactionSimulation, WalletCallsSimulationResult } from '../../transaction/simulation'
 import type Signer from '../../signers/Signer'
 import { parseErc20ApprovalIntent } from '../../../resources/domain/transaction/allowance'
 import { getRequestSignal } from '../../provider/requestSignal'
 import { applyPermissionAction } from '../../provider/permissionEvents'
-import { FRAME_SEND_ORIGIN } from '../../../resources/domain/origin'
 
 const nebula = nebulaApi()
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
-
-const storeApi = {
-  getPermissions: function (address: Address) {
-    return (store('main.permissions', address) || {}) as Record<string, Permission>
-  }
-}
-
-const SEND_DAPP_PERMISSION = {
-  handlerId: 'send-dapp-native',
-  origin: FRAME_SEND_ORIGIN
-} as const
 
 interface SignerOptions {
   type?: string
@@ -153,20 +140,6 @@ class FrameAccount {
 
     this.signer = '' // Matched Signer ID
     this.signerStatus = ''
-
-    const existingPermissions = storeApi.getPermissions(this.address)
-    const currentSendDappPermission =
-      existingPermissions[SEND_DAPP_PERMISSION.handlerId] ||
-      Object.values(existingPermissions).find(
-        (permission) => permission.origin === SEND_DAPP_PERMISSION.origin
-      )
-
-    if (currentSendDappPermission?.origin !== SEND_DAPP_PERMISSION.origin) {
-      requireStoreAction('setPermission')(this.address, {
-        ...SEND_DAPP_PERMISSION,
-        provider: currentSendDappPermission?.provider ?? true
-      })
-    }
 
     this.update()
 
