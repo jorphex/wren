@@ -6,6 +6,7 @@ import TxRequestComponent from '../../../../../../app/tray/Account/Requests/Tran
 import { TransactionRequest } from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TxMain } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
 import TxRecipientComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxRecipient'
+import { TxFee } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxFee'
 import { TxSending as TxValue } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxValue'
 import {
   getYearnIntentLines,
@@ -146,6 +147,52 @@ describe('confirm', () => {
 
     expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
     expect(screen.getByText('Transaction recipient address copied')).toBeTruthy()
+    expect(screen.getByText(recipient)).toBeTruthy()
+    expect(screen.getByText('Address copied').classList.contains('transactionReviewCopyFeedbackVisible')).toBe(
+      true
+    )
+  })
+
+  it('expands fee adjustment inside the transaction details ledger', async () => {
+    class TxFeeHarness extends TxFee {
+      store(...path) {
+        const key = path.join('.')
+        if (key === 'main.networks.ethereum.1') return { isTestnet: false }
+        if (key === 'main.networksMeta.ethereum.1') {
+          return { nativeCurrency: { symbol: 'ETH', usd: 2000 } }
+        }
+      }
+    }
+    const ConnectedTxFee = Restore.connect(TxFeeHarness, store)
+
+    const { user } = render(
+      <ConnectedTxFee
+        i={0}
+        req={{
+          account,
+          handlerId: 'inline-fee-request',
+          data: {
+            chainId: '0x1',
+            gasLimit: '0x5208',
+            maxFeePerGas: '0x6fc23ac00',
+            maxPriorityFeePerGas: '0x77359400',
+            type: '0x2'
+          }
+        }}
+      />
+    )
+
+    const adjust = screen.getByRole('button', { name: 'Adjust' })
+    expect(adjust.getAttribute('aria-expanded')).toBe('false')
+    await user.click(adjust)
+
+    expect(adjust.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByLabelText('Base Fee (GWEI)')).toBeTruthy()
+    expect(screen.getByLabelText('Max Priority Fee (GWEI)')).toBeTruthy()
+    expect(screen.getByLabelText('Gas Limit (UNITS)')).toBeTruthy()
+    expect(link.send).not.toHaveBeenCalledWith('nav:update', 'panel', {
+      data: { step: 'adjustFee' }
+    })
   })
 
   it('shows a saved contact label with full recipient evidence', () => {
@@ -236,6 +283,25 @@ describe('confirm', () => {
     const notice = screen.getByText('confirming')
     expect(notice.getAttribute('role')).toBe('status')
     expect(notice.textContent).toBe('confirming')
+  })
+
+  it('keeps a declined transaction document visible and inert without error styling', () => {
+    const req = {
+      handlerId: 'declined-req',
+      type: 'transaction',
+      status: 'declined',
+      data: { chainId: '0x89' },
+      classification: TxClassification.NATIVE_TRANSFER
+    }
+
+    addRequest(req)
+    render(<TxRequest req={req} step='confirm' />)
+
+    const request = screen.getByText('declined').closest('.signerRequest')
+    expect(request).toBeTruthy()
+    expect(request.classList.contains('signerRequestError')).toBe(false)
+    expect(request.getAttribute('aria-disabled')).toBe('true')
+    expect(request.hasAttribute('inert')).toBe(true)
   })
 
   it('shows the friendly built-in Send source on transaction review', () => {
@@ -999,6 +1065,104 @@ describe('simulation review', () => {
     expect(rendered.indexOf(firstAddress)).toBeLessThan(rendered.indexOf(secondAddress))
     expect(rendered.indexOf(firstKey)).toBeLessThan(rendered.indexOf(secondKey))
     expect(rendered).toBe(JSON.stringify(accessList, null, 2))
+  })
+
+  it('groups decoded, permission, execution, and raw contract evidence without hiding warnings', () => {
+    const token = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    const delegate = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    const recipient = '0xcccccccccccccccccccccccccccccccccccccccc'
+
+    render(
+      <ViewData
+        req={{
+          account,
+          data: { chainId: '0x1', to: recipient, data: '0x1234', type: '0x2' },
+          decodedData: {
+            source: 'local',
+            contractName: 'Example Contract',
+            method: 'execute',
+            args: [{ name: 'recipient', type: 'address', value: recipient }]
+          },
+          simulation: {
+            status: 'succeeded',
+            source: 'eth_simulateV1',
+            effects: [
+              {
+                type: 'transfer',
+                standard: 'erc20',
+                token,
+                from: account,
+                to: recipient,
+                amount: '1'
+              }
+            ],
+            allowance: {
+              token,
+              owner: account,
+              spender: recipient,
+              currentAmount: '0',
+              requestedAmount: '1'
+            },
+            delegation: { status: 'delegated', source: 'eth_getCode', account, delegate },
+            callTrace: {
+              calls: [
+                {
+                  type: 'CALL',
+                  depth: 1,
+                  from: account,
+                  to: recipient,
+                  value: '0',
+                  inputBytes: 4,
+                  failure: 'execution reverted'
+                }
+              ]
+            }
+          }
+        }}
+      />
+    )
+
+    expect(screen.getByRole('region', { name: 'Actions' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Permissions' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Execution' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Raw data' })).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Execution' }).open).toBe(true)
+    expect(screen.getByRole('region', { name: 'Raw data' }).open).toBe(false)
+    expect(screen.getByText('Example Contract')).toBeTruthy()
+    expect(screen.getByText('RPC-Reported Current Allowance')).toBeTruthy()
+    expect(screen.getByText('RPC-Reported Execution Trace')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toMatch(/delegated code|execution reverted/i)
+    expect(screen.getByText('0x1234')).toBeTruthy()
+    expect(screen.getByText('0x2')).toBeTruthy()
+  })
+
+  it('collapses routine execution and raw evidence until requested', () => {
+    render(
+      <ViewData
+        req={{
+          account,
+          data: { chainId: '0x1', to: account, data: '0x1234' },
+          simulation: {
+            status: 'succeeded',
+            callTrace: {
+              calls: [
+                {
+                  type: 'CALL',
+                  depth: 1,
+                  from: account,
+                  to: account,
+                  value: '0',
+                  inputBytes: 4
+                }
+              ]
+            }
+          }
+        }}
+      />
+    )
+
+    expect(screen.getByRole('region', { name: 'Execution' }).open).toBe(false)
+    expect(screen.getByRole('region', { name: 'Raw data' }).open).toBe(false)
   })
 })
 

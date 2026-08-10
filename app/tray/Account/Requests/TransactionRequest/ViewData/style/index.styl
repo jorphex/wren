@@ -1,183 +1,234 @@
-.decodedDataContract
-  padding 32px 11px 11px 11px
-  position relative
-  border-radius 8px
-  background var(--ghostA)
-
-.dataUnverified
-  position absolute
-  color var(--bad)
-  top 9px
-  right 15px
-  font-size var(--wren-type-caption)
-  font-weight 400
-  font-family 'MainFont'
-  text-transform uppercase
-
-.dataSource
-  position absolute
-  top 9px
-  left 15px
-  font-size var(--wren-type-caption)
-  font-weight 400
-  font-family 'MainFont'
-  text-transform uppercase
-
-.decodedDataContractTarget
-  position relative
-  // border-top 1px solid var(--thick)
-  height 70px
-  padding 0px
+.transactionEvidenceView
+  padding 0 var(--wren-space-5) var(--wren-space-8)
   box-sizing border-box
-  display flex
-  flex-direction column
-  align-items center
-  justify-content center
+
+  .transactionEvidenceGroup
+    margin 0
+    padding var(--wren-space-5) 0 0
+    border-top 1px solid var(--wren-ledger-rule)
+
+    &:first-child
+      border-top 0
+
+  .transactionEvidenceGroupTitle
+    margin 0 0 var(--wren-space-3)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+    line-height 22px
+
+  .transactionEvidenceGroupSummary
+    display flex
+    min-height 38px
+    margin 0
+    padding 0
+    color var(--wren-text-primary)
+    cursor pointer
+    list-style none
+    align-items flex-start
+    justify-content space-between
+
+    &::-webkit-details-marker
+      display none
+
+    &:hover
+      color var(--wren-accent-primary-hover)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -2px
+
+    .transactionEvidenceGroupTitle
+      margin 0
+
+  .transactionEvidenceGroupChevron
+    flex 0 0 auto
+    margin-top 3px
+    color var(--wren-text-tertiary)
+    transition transform var(--wren-motion-fast) var(--wren-ease)
+
+  .transactionEvidenceGroupDisclosure[open]
+    .transactionEvidenceGroupSummary
+      margin-bottom var(--wren-space-3)
+
+    .transactionEvidenceGroupChevron
+      transform rotate(180deg)
+
+  .transactionEvidenceGroupBody
+    > .txViewData + .txViewData
+      border-top 1px solid var(--wren-ledger-rule)
+
+  .txViewData
+    margin 0
+    padding 0 0 var(--wren-space-5)
+    border 0
+    border-radius 0
+    background transparent
+    box-shadow none
+
+  .txViewDataHeader
+    margin 0 0 var(--wren-space-3)
+    padding 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    letter-spacing 0
+    line-height 18px
+    text-align left
+    text-transform none
+
+  .decodedDataContract
+    position relative
+    padding 0 0 var(--wren-space-4)
+
+  .dataUnverified,
+  .dataSource
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+  .dataUnverified
+    color var(--wren-danger)
+
+  .decodedDataContractTarget
+    display grid
+    min-height 58px
+    padding var(--wren-space-3) 0
+    border-top 1px solid var(--wren-ledger-rule)
+    border-bottom 1px solid var(--wren-ledger-rule)
+    box-sizing border-box
+    place-items center
 
   .decodedDataSync
-    position absolute
-    svg 
-      transform rotate(90deg)
-
-  .decodedDataSyncLeft
-    left 14px
-    top 28px
-    width 8px
-    overflow hidden
-    transform rotate(-10deg)
-    svg 
-      transform rotate(90deg) scaleX(-1)
-
-  .decodedDataSyncRight
-    right 14px
-    top 28px
-    width 8px
-    overflow hidden
-    transform rotate(190deg)
-    svg 
-      transform rotate(90deg)
+    display none
 
   .decodedDataContractName
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 650
+    line-height 18px
     text-align center
-    font-size 17px
-    font-family 'MainFont'
-    font-weight 300
 
   .decodedDataContractMethod
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
     text-align center
-    font-family 'MainFont'
-    font-weight 300
-    font-size 16px
-    color var(--moon)
 
-.decodedDataContractArgHeader
-  font-size var(--wren-type-small)
-  text-transform uppercase
-  letter-spacing 2px
-  font-weight 300
-  color var(--moon)
-  text-align center
-  height 30px
-  display flex
-  align-items center
-  justify-content center
-  // border-top 1px solid var(--thick)
-  background var(--ghostB)
-  border-radius 8px
+  .decodedDataContractArgHeader
+    padding var(--wren-space-3) 0 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    line-height 18px
 
-.decodedDataContractArg
-  position relative
-  text-align center
-  padding 10px 10px 25px 10px
-  // border-top 1px solid var(--thick)
-  font-size 17px
+  .decodedDataContractArg
+    padding var(--wren-space-3) 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
 
-.decodedDataSubtitle
-  position absolute
-  left 0
-  bottom 0
-  right 0
-  height 30px
-  font-size var(--wren-type-small)
-  font-weight 400
-  font-family 'MainFont'
-  display flex
-  align-items center
-  justify-content center
+  .decodedDataSubtitle
+    margin-top var(--wren-space-2)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 18px
 
-.overflowBox
-  width 100%
-  height auto
-  overflow-x scroll
-  overflow-y hidden
-  word-wrap normal
-  margin-bottom -15px
-  div
-    user-select all
+  .overflowBox
+    overflow-x auto
+    overflow-y hidden
+    overflow-wrap anywhere
+    white-space pre-wrap
 
+    div
+      user-select all
 
-.rawDataHeader
-  font-family 'MainFont'
-  text-align center
-  font-size 16px
-  margin-top 20px
-  margin-bottom 5px
+  .simulationEffectsNotice,
+  .simulationEffectsEmpty,
+  .simulationEffectsTruncated
+    margin 0 0 var(--wren-space-4)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 18px
+    text-align left
 
-.txDataOverlayRaw
-  padding 0px 13px 40px 20px
+  .simulationEffectsTruncated
+    color var(--wren-danger)
 
-.txDataOverlayRawTitle
-  padding-bottom 20px
-  text-align center
+  .simulationEffect
+    margin 0
+    padding var(--wren-space-4) 0
+    border-top 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
 
-.txDataOverlayRawData
-  font-size 14px
-  position relative
-  cursor pointer
-  max-width 100%
-  *
-    pointer-events none
+  .simulationEffectTitle
+    margin 0 0 var(--wren-space-3)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 650
+    letter-spacing 0
+    line-height 18px
+    text-align left
+    text-transform none
 
-.simulationEffectsNotice, .simulationEffectsEmpty, .simulationEffectsTruncated
-  margin 0px 12px 24px 12px
-  line-height 1.45
-  text-align center
-  color var(--moon)
+  .simulationEffectRisk
+    color var(--wren-danger)
 
-.simulationEffectsTruncated
-  margin-top 24px
-  color var(--bad)
+  .simpleJsonChild
+    display grid
+    width 100%
+    margin 0
+    padding var(--wren-space-3) 0
+    border-top 1px solid var(--wren-ledger-rule)
+    box-sizing border-box
+    grid-template-columns 136px minmax(0, 1fr)
+    align-items start
+    column-gap var(--wren-space-5)
 
-.simulationEffect
-  margin 0px 6px 18px 6px
-  padding 14px 8px
-  border-radius 10px
-  background var(--ghostB)
+  .simpleJsonKey,
+  .simpleJsonKeyTx
+    width auto
+    max-width none
+    padding 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    letter-spacing 0
+    line-height 18px
+    text-transform none
 
-.simulationEffectTitle
-  margin-bottom 12px
-  text-align center
-  font-family 'MainFont'
-  font-size 14px
-  text-transform uppercase
-  letter-spacing 1px
+  .simpleJsonValue
+    width 100%
+    max-width none
+    min-width 0
+    margin 0
+    padding 0
+    border 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-weight 400
+    line-height 18px
+    overflow-wrap anywhere
 
-.simulationEffectRisk
-  color var(--bad)
+  .simpleJsonStructuredValue
+    margin 0
+    white-space pre-wrap
 
-.txModuleDataBodyCopied
-  position absolute
-  top -5px
-  left -5px
-  right -5px
-  bottom -5px
-  display flex
-  justify-content center
-  align-items center
-  font-size 16px
-  letter-spacing 0px
-  border-radius 12px
-  background var(--ghostB)
-
-  svg
-    margin -3px 0px 0px 10px
+@media (max-width: 560px)
+  .transactionEvidenceView .simpleJsonChild
+    grid-template-columns 104px minmax(0, 1fr)

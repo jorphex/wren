@@ -8,7 +8,6 @@ import TxValue from './TxValue'
 import TxFee from './TxFee'
 import TxAction from './TxAction'
 import TxRecipient from './TxRecipient'
-import AdjustFee from './AdjustFee'
 import ViewData from './ViewData'
 import NonceControl from './NonceControl'
 import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
@@ -16,11 +15,6 @@ import link from '../../../../../resources/link'
 import { erc20Interface } from '../../../../../resources/contracts'
 
 export class TransactionRequest extends React.Component {
-  renderAdjustFee() {
-    const { req } = this.props
-    return <AdjustFee req={req} />
-  }
-
   decodeRequested(req) {
     const calldata = req.payload.params[0].data
     const [spender, amount] = erc20Interface.decodeFunctionData('approve', calldata)
@@ -57,16 +51,18 @@ export class TransactionRequest extends React.Component {
     return <ViewData {...this.props} />
   }
 
-  renderTx() {
+  renderTx(feeInitiallyExpanded = false) {
     const { req } = this.props
     if (!req) return null
 
     let requestClass = 'signerRequest cardShow'
     const success = req.status === 'confirming' || req.status === 'confirmed'
-    const error = req.status === 'error' || req.status === 'declined'
+    const error = req.status === 'error'
+    const declined = req.status === 'declined'
     if (success) requestClass += ' signerRequestSuccess'
     if (req.status === 'confirmed') requestClass += ' signerRequestConfirmed'
     else if (error) requestClass += ' signerRequestError'
+    else if (declined) requestClass += ' signerRequestDeclined'
 
     const chain = {
       type: 'ethereum',
@@ -77,18 +73,36 @@ export class TransactionRequest extends React.Component {
     const isNativeTransfer = req.classification === 'NATIVE_TRANSFER'
 
     return (
-      <div key={req.handlerId} className={requestClass}>
+      <div
+        key={req.handlerId}
+        className={requestClass}
+        aria-disabled={declined || undefined}
+        inert={declined || undefined}
+      >
         {req.type === 'transaction' ? (
           <div className='approveTransaction'>
             <div className='approveTransactionPayload'>
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
-                {!isNativeTransfer && <TxValue i={1} {...this.props} req={req} chain={chain} />}
+                <TxRecipient i={1} {...this.props} req={req} />
+                <TxFee
+                  i={2}
+                  {...this.props}
+                  req={req}
+                  initiallyExpanded={feeInitiallyExpanded}
+                />
+                <div className='_txMain transactionReviewNonce'>
+                  <div className='transactionReviewNonceRow'>
+                    <span className='transactionReviewMetaLabel'>Nonce</span>
+                    <NonceControl req={req} hint='Transaction sequence' />
+                  </div>
+                </div>
+                {!isNativeTransfer && <TxValue i={3} {...this.props} req={req} chain={chain} />}
                 {recognizedActions.map((action, i) => {
                   return (
                     <TxAction
                       key={'action' + action.type + i}
-                      i={2 + i}
+                      i={4 + i}
                       {...this.props}
                       req={req}
                       chain={chain}
@@ -96,14 +110,6 @@ export class TransactionRequest extends React.Component {
                     />
                   )
                 })}
-                <TxRecipient i={3 + recognizedActions.length} {...this.props} req={req} />
-                <TxFee i={4 + recognizedActions.length} {...this.props} req={req} />
-                <div className='_txMain transactionReviewNonce'>
-                  <div className='transactionReviewNonceRow'>
-                    <span className='transactionReviewMetaLabel'>Nonce</span>
-                    <NonceControl req={req} hint='Transaction sequence' />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -117,7 +123,7 @@ export class TransactionRequest extends React.Component {
     const { step } = this.props
     switch (step) {
       case 'adjustFee':
-        return this.renderAdjustFee()
+        return this.renderTx(true)
       case 'adjustApproval':
         return this.renderTokenSpend()
       case 'viewData':

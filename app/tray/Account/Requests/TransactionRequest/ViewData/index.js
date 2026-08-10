@@ -36,13 +36,13 @@ export const SimpleTxJSON = ({ json }) => {
   return (
     <div className='simpleJson'>
       {Object.keys(json)
-        .filter((f) => {
-          return txFieldPriority.indexOf(f) !== -1
-        })
         .sort((a, b) => {
           const aIndex = txFieldPriority.indexOf(a)
           const bIndex = txFieldPriority.indexOf(b)
-          return aIndex > bIndex ? 1 : aIndex < bIndex ? -1 : 0
+          if (aIndex === -1 && bIndex === -1) return 0
+          if (aIndex === -1) return 1
+          if (bIndex === -1) return -1
+          return aIndex - bIndex
         })
         .map((key, o) => {
           return (
@@ -59,6 +59,33 @@ export const SimpleTxJSON = ({ json }) => {
 }
 
 export class ViewData extends React.Component {
+  renderEvidenceGroup(title, children, className = '', disclosure = {}) {
+    const groupClassName = `transactionEvidenceGroup ${className}`.trim()
+    if (disclosure.collapsible) {
+      return (
+        <details
+          className={`${groupClassName} transactionEvidenceGroupDisclosure`}
+          aria-label={title}
+          open={disclosure.open}
+          role='region'
+        >
+          <summary className='transactionEvidenceGroupSummary'>
+            <span className='transactionEvidenceGroupTitle'>{title}</span>
+            <Icon className='transactionEvidenceGroupChevron' name='chevron-down' size={15} />
+          </summary>
+          <div className='transactionEvidenceGroupBody'>{children}</div>
+        </details>
+      )
+    }
+
+    return (
+      <section className={groupClassName} aria-label={title}>
+        <h2 className='transactionEvidenceGroupTitle'>{title}</h2>
+        <div className='transactionEvidenceGroupBody'>{children}</div>
+      </section>
+    )
+  }
+
   renderDecodedData() {
     const { req } = this.props
     return req.decodedData ? (
@@ -83,7 +110,7 @@ export class ViewData extends React.Component {
           return (
             <div key={a.name} className='decodedDataContractArg'>
               <div className='overflowBox'>
-                {a.type.indexOf('[]') ? (
+                {a.type.includes('[]') ? (
                   a.value.split(',').map((i) => <div key={i}>{i}</div>)
                 ) : (
                   <div>{a.value}</div>
@@ -128,23 +155,72 @@ export class ViewData extends React.Component {
     const { req } = this.props
     const { data } = req
     const tx = { nonce: 'TBD', ...data }
+    const { simulation = {} } = req
+    const showActions = Boolean(req.decodedData) || (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
+    const showPermissions =
+      Boolean(simulation.allowance) ||
+      simulation.delegation?.status === 'delegated' ||
+      simulation.delegation?.status === 'unavailable'
+    const showExecution =
+      Boolean(simulation.nativeBalanceChanges) ||
+      (Boolean(simulation.proxyImplementationCheck) &&
+        (simulation.proxyImplementationCheck.status !== 'succeeded' ||
+          simulation.proxyImplementationCheck.changes.length > 0)) ||
+      Boolean(simulation.callTrace?.calls.length || simulation.callTrace?.truncated)
+    const executionNeedsAttention =
+      Boolean(
+        simulation.nativeBalanceChanges &&
+          (simulation.nativeBalanceChanges.status !== 'succeeded' || simulation.nativeBalanceChanges.truncated)
+      ) ||
+      Boolean(
+        simulation.proxyImplementationCheck &&
+          (simulation.proxyImplementationCheck.status !== 'succeeded' ||
+            simulation.proxyImplementationCheck.changes.length > 0 ||
+            simulation.proxyImplementationCheck.truncated)
+      ) ||
+      Boolean(
+        simulation.callTrace &&
+          (simulation.callTrace.truncated || (simulation.callTrace.calls || []).some((call) => call.failure))
+      )
 
     return (
       <div className='accountViewScroll cardShow transactionEvidenceView'>
-        <SimulationDelegation simulation={req.simulation} />
-        <SimulationProxyImplementationChanges simulation={req.simulation} />
-        <SimulationAllowance simulation={req.simulation} />
-        <SimulationCallTrace simulation={req.simulation} />
-        <SimulationNativeBalanceChanges simulation={req.simulation} />
-        <SimulationEffects account={req.account} simulation={req.simulation} />
-        {/* <div className='txViewData'>
-          <div className='txViewDataHeader'>{'Decoded Data'}</div>
-          {this.renderDecodedData()}
-        </div> */}
-        <div className='txViewData'>
-          <div className='txViewDataHeader'>{'Raw Transaction'}</div>
-          <SimpleTxJSON json={this.decodeRawTx(tx)} req={req} />
-        </div>
+        {showActions &&
+          this.renderEvidenceGroup(
+            'Actions',
+            <>
+              {req.decodedData && <div className='txViewData'>{this.renderDecodedData()}</div>}
+              <SimulationEffects account={req.account} simulation={simulation} />
+            </>
+          )}
+        {showPermissions &&
+          this.renderEvidenceGroup(
+            'Permissions',
+            <>
+              <SimulationDelegation simulation={simulation} />
+              <SimulationAllowance simulation={simulation} />
+            </>
+          )}
+        {showExecution &&
+          this.renderEvidenceGroup(
+            'Execution',
+            <>
+              <SimulationProxyImplementationChanges simulation={simulation} />
+              <SimulationCallTrace simulation={simulation} />
+              <SimulationNativeBalanceChanges simulation={simulation} />
+            </>,
+            '',
+            { collapsible: true, open: executionNeedsAttention }
+          )}
+        {this.renderEvidenceGroup(
+          'Raw data',
+          <div className='txViewData'>
+            <div className='txViewDataHeader'>{'Raw Transaction'}</div>
+            <SimpleTxJSON json={this.decodeRawTx(tx)} req={req} />
+          </div>,
+          'transactionEvidenceGroupRaw',
+          { collapsible: true, open: false }
+        )}
       </div>
     )
   }

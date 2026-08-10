@@ -86,7 +86,7 @@ const FeeOverlayInput = ({ initialValue, labelText, tabIndex, decimals, onReceiv
         <input
           tabIndex={tabIndex}
           value={value}
-          className='txFeeOverlayInput'
+          className='txFeeOverlayInput wrenInput'
           aria-labelledby={labelId}
           onChange={(e) => {
             const parsedInput = (decimals ? /[0-9.]*/ : /[0-9]*/).exec(e.target.value)
@@ -283,7 +283,7 @@ class TxFeeOverlay extends Component {
     }
 
     return (
-      <div className='txAdjustFee cardShow' ref={this.moduleRef}>
+      <div className={`txAdjustFee${this.props.inline ? ' txAdjustFeeInline' : ' cardShow'}`} ref={this.moduleRef}>
         {usesBaseFee(data) ? (
           <>
             <BaseFeeInput

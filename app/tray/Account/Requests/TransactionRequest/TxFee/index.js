@@ -6,8 +6,8 @@ import { DisplayCoinBalance, DisplayValue } from '../../../../../../resources/Co
 import { usesBaseFee } from '../../../../../../resources/domain/transaction'
 import { displayValueData } from '../../../../../../resources/utils/displayValue'
 import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
-import link from '../../../../../../resources/link'
 import { ClusterBox } from '../../../../../../resources/Components/Cluster'
+import AdjustFee from '../AdjustFee'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -54,9 +54,16 @@ const USDEstimateDisplay = ({ minFee, maxFee, nativeCurrency }) => {
   )
 }
 
-class TxFee extends React.Component {
+export class TxFee extends React.Component {
   constructor(props, context) {
     super(props, context)
+    this.state = { expanded: Boolean(props.initiallyExpanded) }
+  }
+
+  componentDidUpdate(previousProps) {
+    if (!previousProps.initiallyExpanded && this.props.initiallyExpanded && !this.state.expanded) {
+      this.setState({ expanded: true })
+    }
   }
 
   getOptimismFee = (l2Price, l2Limit, chainData) => {
@@ -79,7 +86,7 @@ class TxFee extends React.Component {
     const { nativeCurrency } = this.store('main.networksMeta', chain.type, chain.id)
 
     const maxGas = BigNumber(req.data.gasLimit, 16)
-    const maxFeePerGas = BigNumber(req.data[usesBaseFee(req.data) ? 'maxFeePerGas' : 'gasPrice'])
+    const maxFeePerGas = BigNumber(req.data[usesBaseFee(req.data) ? 'maxFeePerGas' : 'gasPrice'], 16)
     const maxFeeSourceValue = chainUsesOptimismFees(chain.id)
       ? this.getOptimismFee(maxFeePerGas, maxGas, req.chainData?.optimism)
       : maxFeePerGas.multipliedBy(maxGas)
@@ -123,10 +130,9 @@ class TxFee extends React.Component {
           </span>
           <button
             type='button'
+            aria-expanded={this.state.expanded}
             className='wrenControl wrenControlSecondary wrenControlCompact transactionReviewFeeAdjust'
-            onClick={() => {
-              link.send('nav:update', 'panel', { data: { step: 'adjustFee' } })
-            }}
+            onClick={() => this.setState((state) => ({ expanded: !state.expanded }))}
           >
             Adjust
           </button>
@@ -136,6 +142,7 @@ class TxFee extends React.Component {
             {'Gas values set by user'}
           </div>
         ) : null}
+        {this.state.expanded ? <AdjustFee inline={true} req={req} /> : null}
       </ClusterBox>
     )
   }

@@ -58,6 +58,57 @@
     text-transform uppercase
     font-weight 300
 
+.txAdjustFeeInline
+  display grid
+  padding var(--wren-space-4) 0 var(--wren-space-3) 136px
+  border-top 1px solid var(--wren-ledger-rule)
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-3)
+
+  > div:last-child:nth-child(odd)
+    grid-column 1 / -1
+
+  .txFeeOverlayBaseFee,
+  .txFeeOverlayPriorityFee,
+  .txFeeOverlayGasPrice,
+  .txFeeOverlayLimit
+    width auto
+    min-width 0
+
+  .txFeeOverlayInput
+    width 100%
+
+  input.txFeeOverlayInput
+    width 100%
+    height 39px
+    box-sizing border-box
+    margin 0
+    border 2px solid #050705
+    border-radius 0
+    color var(--wren-text-primary)
+    background-color var(--wren-surface-inset)
+    background-image linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
+    box-shadow inset 0 0 0 1px var(--wren-border-subtle), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
+    text-align left
+    padding 0 var(--wren-space-3)
+    transform none
+
+  input.txFeeOverlayInput:focus
+    border-color var(--wren-accent-primary)
+    box-shadow inset 0 0 0 1px #6f5b3e, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px var(--wren-accent-primary-hover), 0 0 0 2px rgba(166, 138, 97, .12)
+    transform none
+
+  .txFeeOverlayLabel
+    justify-content flex-start
+    padding var(--wren-space-1) 0 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-caption)
+    font-weight 450
+    text-transform none
+
 // .txModuleDataBodyCopied
 //   position absolute
 //   top 0

@@ -73,12 +73,17 @@ class TxRecipient extends React.Component {
               <div className='clusterAddress'>
                 <AddressIdentity
                   address={address}
-                  copied={this.state.copied}
                   label={localIdentity?.label || ensName}
                   revealOnHover={false}
                   source={localIdentity?.source || (ensName ? 'ENS' : '')}
                 />
               </div>
+              <span
+                aria-hidden='true'
+                className={`transactionReviewCopyFeedback${this.state.copied ? ' transactionReviewCopyFeedbackVisible' : ''}`}
+              >
+                Address copied
+              </span>
             </ClusterValue>
             <ClusterStatus>{this.state.copied ? 'Transaction recipient address copied' : ''}</ClusterStatus>
           </ClusterRow>

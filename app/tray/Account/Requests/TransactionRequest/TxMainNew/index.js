@@ -99,11 +99,16 @@ export class TxMain extends React.Component {
                 <span className='transactionReviewAddressValue clusterAddress'>
                   <AddressIdentity
                     address={fromAddress}
-                    copied={this.state.copied}
                     label={fromIdentity?.label}
                     revealOnHover={false}
                     source={fromIdentity?.source}
                   />
+                </span>
+                <span
+                  aria-hidden='true'
+                  className={`transactionReviewCopyFeedback${this.state.copied ? ' transactionReviewCopyFeedbackVisible' : ''}`}
+                >
+                  Address copied
                 </span>
               </button>
             ) : null}

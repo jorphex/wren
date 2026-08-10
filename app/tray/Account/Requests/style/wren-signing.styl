@@ -154,7 +154,7 @@
       display grid
       min-height 56px
       padding 0
-      grid-template-columns 112px minmax(0, 1fr)
+      grid-template-columns 112px minmax(0, 1fr) auto
       align-items center
       justify-content stretch
       column-gap var(--wren-space-6)
@@ -497,7 +497,7 @@
     border-bottom 0
     color var(--wren-text-primary)
     background transparent
-    grid-template-columns 112px minmax(0, 1fr)
+    grid-template-columns 112px minmax(0, 1fr) auto
     align-items center
     column-gap var(--wren-space-6)
     text-align left
@@ -527,6 +527,18 @@
 
     .clusterAddressEvidence
       color var(--wren-accent-primary-hover)
+
+  .transactionReviewCopyFeedback
+    min-width 88px
+    color var(--wren-success)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    text-align right
+    opacity 0
+    transition opacity var(--wren-motion-fast) var(--wren-ease)
+
+  .transactionReviewCopyFeedbackVisible
+    opacity 1
 
   .transactionReviewMetaLabel
     color var(--wren-text-tertiary)
@@ -643,6 +655,38 @@
   .txProgressSuccessCurrency
     margin-right 1px
     font-size var(--wren-type-caption)
+
+.requestNoticeDeclined
+  height 114px
+  border-top 1px solid var(--wren-ledger-rule)
+  background var(--wren-bg-subtle)
+
+  .requestNoticeDeclinedInner
+    align-items flex-start
+    padding 16px 24px
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    text-align left
+
+    strong,
+    span
+      display block
+
+    strong
+      color var(--wren-text-primary)
+      font-size 14px
+      font-weight 650
+      letter-spacing 0
+      text-transform none
+
+    span
+      margin-top 4px
+      color var(--wren-text-muted)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      letter-spacing 0
+      line-height 16px
+      text-transform none
 
 .requestApproveTransaction,
 .requestApproveSignature,
