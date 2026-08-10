@@ -84,6 +84,71 @@ export const AccountAddressActions = ({ address, explorerChain }) => {
   )
 }
 
+export class AccountNameEditor extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { editing: false, draft: props.name }
+    this.renameButtonRef = React.createRef()
+  }
+
+  componentDidUpdate(previousProps) {
+    if (!this.state.editing && previousProps.name !== this.props.name && this.state.draft !== this.props.name) {
+      this.setState({ draft: this.props.name })
+    }
+  }
+
+  beginEdit() {
+    this.setState({ editing: true, draft: this.props.name })
+  }
+
+  finishEdit(save) {
+    const name = this.state.draft.trim()
+    if (save && name && name !== this.props.name) link.send('tray:renameAccount', this.props.account, name)
+    this.setState({ editing: false, draft: name || this.props.name }, () => {
+      window.setTimeout(() => this.renameButtonRef.current?.focus(), 0)
+    })
+  }
+
+  render() {
+    return (
+      <div className='accountHomeNameRow'>
+        {this.state.editing ? (
+          <input
+            autoFocus
+            type='text'
+            className='accountHomeNameInput wrenInput'
+            aria-label='Account name'
+            maxLength={128}
+            value={this.state.draft}
+            onChange={(event) => this.setState({ draft: event.target.value })}
+            onBlur={() => this.finishEdit(true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur()
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                this.finishEdit(false)
+              }
+            }}
+          />
+        ) : (
+          <>
+            <h1 className='accountHomeTitle'>{this.props.name}</h1>
+            <button
+              ref={this.renameButtonRef}
+              type='button'
+              className='accountHomeRename wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
+              aria-label='Update account name'
+              onClick={() => this.beginEdit()}
+            >
+              <Icon name='pencil' size={14} />
+            </button>
+          </>
+        )}
+      </div>
+    )
+  }
+}
+
 class _AccountModule extends React.Component {
   getModule(moduleId, account, expanded, expandedData, filter) {
     const Module = modules[moduleId] || Default
@@ -227,7 +292,7 @@ class _AccountMain extends React.Component {
       <header className='accountHomeHeader'>
         <div className='accountHomeIdentity'>
           <div className='accountHomeEyebrow'>Selected account</div>
-          <h1 className='accountHomeTitle'>{name}</h1>
+          <AccountNameEditor account={this.props.id} name={name} />
           <AccountAddressActions address={address} explorerChain={this.getAddressExplorerChain()} />
         </div>
         <div className='accountHomeTotal'>
@@ -296,17 +361,27 @@ class _AccountView extends React.Component {
   render() {
     const accountOpen = this.store('selected.open')
     const footerHeight = this.store('windows.panel.footer.height')
-    const { requestMode = false } = this.props
+    const { compactTop = false, requestMode = false } = this.props
+    const className = [
+      'accountView',
+      requestMode ? 'accountViewRequest' : '',
+      compactTop ? 'accountViewCompact' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
     return (
       <div
-        className={requestMode ? 'accountView accountViewRequest' : 'accountView'}
-        style={{ top: requestMode ? '68px' : accountOpen ? '140px' : '80px', bottom: footerHeight + 'px' }}
+        className={className}
+        style={{
+          top: requestMode || compactTop ? '68px' : accountOpen ? '140px' : '80px',
+          bottom: footerHeight + 'px'
+        }}
       >
         <div className='accountViewMenu cardShow'>
           <button
             type='button'
             aria-label='Back'
-            className='accountViewBack wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
+            className='accountViewBack wrenControl wrenControlIcon wrenShellNav'
             onClick={() => this.props.back()}
           >
             <Icon name='back' size={16} />
@@ -481,20 +556,19 @@ class _AccountBody extends React.Component {
             link.send('nav:back', 'panel')
           }}
           {...this.props}
+          compactTop={crumb.data.id === 'requests'}
           accountViewTitle={crumb.data.id === 'requests' ? 'Requests' : crumb.data.id}
         >
-          <div className='accountsModuleExpand cardShow'>
-            <div className='moduleExpanded'>
-              <AccountModule
-                id={crumb.data.id}
-                account={crumb.data.account}
-                module={{ height: 'auto' }}
-                top={0}
-                index={0}
-                expanded={true}
-                expandedData={crumb.data}
-              />
-            </div>
+          <div className='moduleExpanded'>
+            <AccountModule
+              id={crumb.data.id}
+              account={crumb.data.account}
+              module={{ height: 'auto' }}
+              top={0}
+              index={0}
+              expanded={true}
+              expandedData={crumb.data}
+            />
           </div>
         </AccountView>
       )

@@ -1199,20 +1199,21 @@
       top 5px
       left 0
       padding 0
-      border 1px solid var(--wren-border-default)
-      border-radius 7px
+      border 1px solid var(--wren-border-subtle)
+      border-radius 6px
       color var(--wren-text-secondary)
       background-color var(--wren-bg-elevated)
-      background-image var(--wren-control-texture-dark)
-      box-shadow var(--wren-control-shadow)
+      background-image none
+      box-shadow none
 
       &:hover
-        color var(--wren-text-primary)
+        border-color var(--wren-border-default)
+        color var(--wren-accent-primary-hover)
         background-color var(--wren-surface-hover)
-        box-shadow var(--wren-control-shadow-hover)
+        box-shadow none
 
   .accountViewMain
-    top 64px
+    top 52px
     right var(--wren-space-5)
     left var(--wren-space-5)
     padding-top 0
@@ -1223,6 +1224,10 @@
   &:has(.signerRequest)
     .accountViewMain
       top 52px
+
+  &.accountViewCompact
+    .accountViewMenu
+      top 0
 
   &.accountViewRequest
     &::before
@@ -1320,12 +1325,42 @@
   color var(--wren-accent-primary)
 
 .accountHomeTitle
-  margin 4px 0 0
+  min-width 0
+  margin 0
+  overflow hidden
   color var(--wren-text-primary)
   font-family var(--wren-font-ui)
   font-size 25px
   font-weight 660
   line-height 1.08
+  text-overflow ellipsis
+  white-space nowrap
+
+.accountHomeNameRow
+  display flex
+  min-width 0
+  min-height 32px
+  margin-top 4px
+  align-items center
+  gap var(--wren-space-2)
+
+.accountHomeRename
+  flex none
+  width 32px !important
+  min-width 32px !important
+  height 32px !important
+  min-height 32px !important
+  transform translateY(-1px)
+
+.accountHomeNameInput
+  width min(320px, 100%)
+  min-width 180px
+  height 32px
+  min-height 32px
+  padding 0 var(--wren-space-3)
+  box-sizing border-box
+  font-size 18px
+  font-weight 620
 
 .accountHomeAddressActions
   display flex

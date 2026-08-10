@@ -365,6 +365,7 @@ const icons = Object.freeze({
   network: wrenGlyphs.network,
   next: wrenGlyphs.next,
   pending: pixelGlyphs.pending,
+  pencil: wrenGlyphs.pencil,
   permissions: wrenGlyphs.shield,
   pulse: wrenGlyphs.pulse,
   receive: wrenGlyphs.receive,

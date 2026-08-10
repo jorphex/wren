@@ -19,8 +19,6 @@ export class SettingsPreview extends React.Component {
       })
     }
     this.state = {
-      name: '',
-      editName: false,
       removeConfirm: false,
       removing: false
     }
@@ -29,16 +27,11 @@ export class SettingsPreview extends React.Component {
   componentDidMount() {
     this.mounted = true
     if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
-    this.nameObs = this.store.observer(() => {
-      const name = this.store('main.accounts', this.props.account, 'name')
-      if (name !== this.state.name) this.setState({ name })
-    })
   }
 
   componentWillUnmount() {
     this.mounted = false
     if (this.resizeObserver) this.resizeObserver.disconnect()
-    this.nameObs.remove()
   }
 
   resetRemoveConfirmation() {
@@ -46,7 +39,7 @@ export class SettingsPreview extends React.Component {
   }
 
   removeAccount(event) {
-    if (this.state.editName || this.state.removing || this.removePending) return
+    if (this.state.removing || this.removePending) return
     // A browser increments detail for clicks in one multi-click gesture.
     if (event.detail > 1) return
 
@@ -61,16 +54,8 @@ export class SettingsPreview extends React.Component {
   }
 
   armAccountRemoval() {
-    if (this.state.editName || this.state.removing || this.removePending) return
+    if (this.state.removing || this.removePending) return
     this.setState({ removeConfirm: true }, () => this.cancelRemoveRef.current?.focus())
-  }
-
-  saveName() {
-    const currentName = this.store('main.accounts', this.props.account, 'name') || ''
-    const name = this.state.name.trim()
-
-    if (name && name !== currentName) link.send('tray:renameAccount', this.props.account, name)
-    this.setState({ name: name || currentName, editName: false })
   }
 
   render() {
@@ -98,45 +83,9 @@ export class SettingsPreview extends React.Component {
               </ClusterRow>
             ) : (
               <ClusterRow className='settingsPreviewActions accountLedgerRow'>
-                {this.state.editName ? (
-                  <ClusterValue pointerEvents={true}>
-                    <div key={'input'} className='moduleItem cardShow moduleItemInput'>
-                      <div className='moduleItemEditName'>
-                        <input
-                          className='wrenInput'
-                          autoFocus
-                          type='text'
-                          aria-label='Account name'
-                          value={this.state.name}
-                          onChange={(e) => {
-                            this.setState({ name: e.target.value })
-                          }}
-                          onBlur={() => this.saveName()}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') e.currentTarget.blur()
-                            if (e.key === 'Escape') {
-                              const name = this.store('main.accounts', this.props.account, 'name') || ''
-                              this.setState({ name, editName: false })
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </ClusterValue>
-                ) : (
-                  <ClusterValue
-                    ariaLabel='Update account name'
-                    onClick={() => {
-                      this.resetRemoveConfirmation()
-                      this.setState({ editName: true })
-                    }}
-                  >
-                    <div className='moduleItem cardShow'>{'Update name'}</div>
-                  </ClusterValue>
-                )}
                 <ClusterValue
                   ariaLabel='Remove account'
-                  disabled={this.state.editName || this.state.removing}
+                  disabled={this.state.removing}
                   onClick={() => this.armAccountRemoval()}
                 >
                   <div className='moduleItem cardShow'>Remove account</div>

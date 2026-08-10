@@ -22,6 +22,8 @@ import { Cluster } from '../../../../resources/Components/Cluster'
 import link from '../../../../resources/link'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
 
+let restorePreviewFocus = false
+
 export class Requests extends React.Component {
   constructor(props, context) {
     super(props, context)
@@ -29,6 +31,7 @@ export class Requests extends React.Component {
       minimized: false
     }
     this.moduleRef = React.createRef()
+    this.previewRef = React.createRef()
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
@@ -46,6 +49,10 @@ export class Requests extends React.Component {
 
   componentDidMount() {
     if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
+    if (!this.props.expanded && restorePreviewFocus) {
+      restorePreviewFocus = false
+      window.setTimeout(() => this.previewRef.current?.focus(), 0)
+    }
   }
 
   componentWillUnmount() {
@@ -57,9 +64,11 @@ export class Requests extends React.Component {
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <button
+          ref={this.previewRef}
           type='button'
           className='requestsPreview'
           onClick={() => {
+            restorePreviewFocus = true
             const crumb = {
               view: 'expandedModule',
               data: {
@@ -285,19 +294,15 @@ export class Requests extends React.Component {
     const groups = Object.keys(originSortedRequests)
 
     return (
-      <div className='accountViewScroll'>
+      <div className={`accountViewScroll requestViewScroll${groups.length === 0 ? ' requestViewScrollEmpty' : ''}`}>
         {groups.length === 0 ? (
-          <div className='requestContainerWrap'>
-            <div className='requestContainerEmpty'>
-              <WrenEmptyState
-                image={emptyRequests}
-                title='No pending requests'
-                copy='Requests from connected apps will appear here.'
-                expanded
-                transparentImage
-              />
-            </div>
-          </div>
+          <WrenEmptyState
+            image={emptyRequests}
+            title='No pending requests'
+            copy='Requests from connected apps will appear here.'
+            expanded
+            transparentImage
+          />
         ) : (
           groups.map((origin) => {
             return this.renderRequestGroup(origin, originSortedRequests[origin])

@@ -226,69 +226,46 @@
     border-radius 0
     background transparent
 
-.requestContainerWrap
-  width 100%
-  min-height 100%
-  margin 0
-  padding 0
-  box-sizing border-box
-  overflow auto
+.requestViewScroll
   background transparent
-  position relative
 
-  .requestContainerEmpty
-    position absolute
-    inset 0
-    display flex
-    justify-content center
-    align-items center
-    color var(--wren-text-secondary)
-    font-family var(--wren-font-ui)
-    font-size 14px
-    letter-spacing .2px
-    font-weight 500
+.requestViewScrollEmpty
+  display flex
+  min-height 100%
+  align-items center
+  justify-content center
 
-  .requestContainer
-    width 100%
-    position relative
+  .wrenEmptyState
+    flex none
 
-  .noRequests
-    font-size var(--wren-type-caption)
-    text-transform uppercase
-    font-weight 400
-    letter-spacing 1px
-    padding-left 1px
-    display flex
-    justify-content center
-    align-items center
-    transition var(--standard)
-    background var(--ghostA)
-    color var(--outerspace04)
-    margin-top 3px
-    height 48px
-    font-weight 400
-    border-radius 17px
-    padding-top 2px
-    border-bottom 2px solid var(--ghostZ)
-    box-shadow 0px 2px 4px var(--ghostY)
+.noRequests
+  display flex
+  height 48px
+  padding 0 var(--wren-space-4)
+  align-items center
+  justify-content center
+  border-top 1px solid var(--wren-ledger-rule)
+  color var(--wren-text-tertiary)
+  background transparent
+  font-size var(--wren-type-caption)
 
-  .recentRequests
-    position absolute
-    top 1px
-    left 11px
-    right 11px
-    height 20px
-    pointer-events none
-    justify-content space-between
-    align-items center
-    display flex
-    text-transform uppercase
-    font-size var(--wren-type-caption)
-    line-height 10px
-    font-weight 300
-    letter-spacing 2px
-    transition var(--standard)
-    color var(--outerspace08)
+.recentRequests
+  position absolute
+  top 1px
+  right 11px
+  left 11px
+  display flex
+  height 20px
+  align-items center
+  justify-content space-between
+  color var(--outerspace08)
+  font-size var(--wren-type-caption)
+  font-weight 300
+  letter-spacing 2px
+  line-height 10px
+  pointer-events none
+  text-transform uppercase
+  transition var(--standard)
 
 .signerRequestItems
   overflow scroll

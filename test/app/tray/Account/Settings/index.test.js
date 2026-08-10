@@ -31,18 +31,6 @@ const renderWithStore = (Component, props = {}) => {
   return render(<TestComponent account={account} moduleId='settings' {...props} />)
 }
 
-it('saves a normalized account name only after editing completes', () => {
-  renderWithStore(SettingsPreview)
-  fireEvent.click(screen.getByRole('button', { name: 'Update account name' }))
-
-  const input = screen.getByDisplayValue('Primary')
-  fireEvent.change(input, { target: { value: ' Treasury ' } })
-  expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', expect.anything(), expect.anything())
-  fireEvent.blur(input)
-
-  expect(link.send).toHaveBeenCalledWith('tray:renameAccount', account, 'Treasury')
-})
-
 it('restores the persisted name instead of submitting an empty name', () => {
   renderWithStore(SettingsExpanded, { expanded: true })
   const input = screen.getByDisplayValue('Primary')
@@ -108,13 +96,9 @@ it('moves keyboard focus to the safe action before account removal can be confir
   expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
 })
 
-it('disables account removal while the name editor is active', async () => {
-  const { user } = renderWithStore(SettingsPreview)
-  await user.click(screen.getByRole('button', { name: 'Update account name' }))
+it('keeps the compact account action row focused on safe removal', () => {
+  renderWithStore(SettingsPreview)
 
-  const removeButton = screen.getByRole('button', { name: 'Remove account' })
-  expect(removeButton.disabled).toBe(true)
-  await user.click(removeButton)
-
-  expect(link.rpc).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: 'Update account name' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
 })

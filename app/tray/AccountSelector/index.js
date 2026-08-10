@@ -196,6 +196,7 @@ export class AccountSelector extends React.Component {
 
   renderCurrentAccount(currentAccount) {
     const hideBalances = this.store('selected.hideBalances')
+    const workspaceOpen = Boolean(this.store('windows.dash.showing'))
     const address = getAddress(currentAccount.address || currentAccount.id)
     const displayName = currentAccount.ensName || currentAccount.name || 'Account'
     const shortAddress = `${address.substring(0, 6)}…${address.slice(-4)}`
@@ -221,22 +222,33 @@ export class AccountSelector extends React.Component {
             <Icon name={this.store('selected.showAccounts') ? 'chevron-up' : 'chevron-down'} size={14} />
           </span>
         </button>
-        <div className='accountSwitcherPrivacy'>
-          <span className='accountSwitcherPrivacyLabel'>
-            {hideBalances ? 'Balances hidden' : 'Balances visible'}
-          </span>
+        <div className='accountSwitcherControls'>
+          <div className='accountSwitcherPrivacy'>
+            <span className='accountSwitcherPrivacyLabel'>
+              {hideBalances ? 'Balances hidden' : 'Balances visible'}
+            </span>
+            <button
+              type='button'
+              className={
+                hideBalances
+                  ? 'accountPrivacyToggle accountPrivacyToggleHidden wrenControl wrenControlGhost wrenControlIcon'
+                  : 'accountPrivacyToggle wrenControl wrenControlGhost wrenControlIcon'
+              }
+              aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
+              aria-pressed={hideBalances}
+              onClick={() => this.store.toggleHideBalances()}
+            >
+              <Icon name='eye' size={18} />
+            </button>
+          </div>
           <button
             type='button'
-            className={
-              hideBalances
-                ? 'accountPrivacyToggle accountPrivacyToggleHidden wrenControl wrenControlGhost wrenControlIcon'
-                : 'accountPrivacyToggle wrenControl wrenControlGhost wrenControlIcon'
-            }
-            aria-label={hideBalances ? 'Show balances' : 'Hide balances'}
-            aria-pressed={hideBalances}
-            onClick={() => this.store.toggleHideBalances()}
+            className='accountWorkspaceToggle wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
+            aria-label={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
+            aria-pressed={workspaceOpen}
+            onClick={() => link.send('tray:action', 'setDash', { showing: !workspaceOpen })}
           >
-            <Icon name='eye' size={18} />
+            <Icon name='sidebar' size={19} />
           </button>
         </div>
       </div>

@@ -53,7 +53,9 @@ test('keeps ordered wallet calls on a flat ruled ledger', () => {
 })
 
 test('keeps transaction review on one flat details ledger', () => {
-  expect(accountSource).toMatch(/style=\{\{ top: requestMode \? '68px' : accountOpen \? '140px' : '80px'/)
+  expect(accountSource).toMatch(
+    /style=\{\{[\s\S]*?top: requestMode \|\| compactTop \? '68px' : accountOpen \? '140px' : '80px'/
+  )
   expect(accountSource).toMatch(/requestMode=\{true\}/)
   expect(accountStyle).toMatch(
     /\.accountView[\s\S]*?&:has\(\.signerRequest\)[\s\S]*?\.accountViewMain[\s\S]*?top 52px/

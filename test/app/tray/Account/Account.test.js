@@ -1,4 +1,4 @@
-import { render, screen } from '../../../componentSetup'
+import { render, screen, waitFor } from '../../../componentSetup'
 import { AccountMain } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
@@ -43,4 +43,32 @@ it('keeps Send and copy address actions connected to their existing tray behavio
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(link.send).toHaveBeenCalledWith('*:addFrame', 'dappLauncher')
+})
+
+it('edits the account name from the header and returns focus after saving', async () => {
+  const main = accountMain()
+  const { user } = render(main.renderHomeHeader())
+
+  await user.click(screen.getByRole('button', { name: 'Update account name' }))
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+  await user.clear(input)
+  await user.type(input, 'Treasury{Enter}')
+
+  expect(link.send).toHaveBeenCalledWith('tray:renameAccount', address, 'Treasury')
+  const rename = screen.getByRole('button', { name: 'Update account name' })
+  await waitFor(() => expect(document.activeElement).toBe(rename))
+})
+
+it('cancels header name editing without changing the account', async () => {
+  const main = accountMain()
+  const { user } = render(main.renderHomeHeader())
+
+  await user.click(screen.getByRole('button', { name: 'Update account name' }))
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+  await user.clear(input)
+  await user.type(input, 'Discarded{Escape}')
+
+  expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', expect.anything(), expect.anything())
+  const rename = screen.getByRole('button', { name: 'Update account name' })
+  await waitFor(() => expect(document.activeElement).toBe(rename))
 })

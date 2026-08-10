@@ -285,10 +285,47 @@
   pointer-events none
 
 .accountSwitcherTrigger,
+.accountSwitcherControls,
 .accountSwitcherPrivacy,
 .accountDrawerScrim,
 .accountDrawer
   pointer-events auto
+
+.accountSwitcherControls
+  display flex
+  flex none
+  align-items center
+  gap var(--wren-space-2)
+
+.accountWorkspaceToggle
+  width 40px
+  height 40px
+  flex none
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background-color var(--wren-bg-elevated)
+  background-image none
+  box-shadow none
+
+  &:hover:not(:disabled)
+    border-color var(--wren-border-default)
+    color var(--wren-accent-primary-hover)
+    background-color var(--wren-surface-hover)
+    background-image none
+    box-shadow none
+
+  &:active:not(:disabled)
+    color var(--wren-accent-primary-active)
+    background-color var(--wren-surface-active)
+    background-image none
+    box-shadow none
+
+  &[aria-pressed='true']
+    color var(--wren-text-primary)
+    background-color var(--wren-surface-active)
+    background-image none
+    box-shadow var(--wren-shadow-sm)
 
 .accountSwitcherTrigger
   display grid
