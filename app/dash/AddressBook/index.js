@@ -46,7 +46,8 @@ export class AddressBookEditor extends React.Component {
   }
 
   componentDidMount() {
-    if (!this.props.entry && completeEnsName(this.state.address)) this.scheduleEnsResolution(this.state.address)
+    if (!this.props.entry && completeEnsName(this.state.address))
+      this.scheduleEnsResolution(this.state.address)
   }
 
   componentWillUnmount() {
@@ -166,7 +167,7 @@ export class AddressBookEditor extends React.Component {
                 ? 'Resolving ENS name…'
                 : this.state.ensStatus === 'resolved'
                   ? 'ENS name resolved'
-                  : "Couldn’t resolve ENS name. Check the name and try again."}
+                  : 'Couldn’t resolve ENS name. Check the name and try again.'}
             </small>
           ) : null}
         </label>

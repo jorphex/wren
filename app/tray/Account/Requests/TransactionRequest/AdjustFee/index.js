@@ -283,7 +283,10 @@ class TxFeeOverlay extends Component {
     }
 
     return (
-      <div className={`txAdjustFee${this.props.inline ? ' txAdjustFeeInline' : ' cardShow'}`} ref={this.moduleRef}>
+      <div
+        className={`txAdjustFee${this.props.inline ? ' txAdjustFeeInline' : ' cardShow'}`}
+        ref={this.moduleRef}
+      >
         {usesBaseFee(data) ? (
           <>
             <BaseFeeInput

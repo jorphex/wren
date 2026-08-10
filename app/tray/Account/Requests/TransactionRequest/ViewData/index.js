@@ -156,7 +156,9 @@ export class ViewData extends React.Component {
     const { data } = req
     const tx = { nonce: 'TBD', ...data }
     const { simulation = {} } = req
-    const showActions = Boolean(req.decodedData) || (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
+    const showActions =
+      Boolean(req.decodedData) ||
+      (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
     const showPermissions =
       Boolean(simulation.allowance) ||
       simulation.delegation?.status === 'delegated' ||
@@ -170,17 +172,17 @@ export class ViewData extends React.Component {
     const executionNeedsAttention =
       Boolean(
         simulation.nativeBalanceChanges &&
-          (simulation.nativeBalanceChanges.status !== 'succeeded' || simulation.nativeBalanceChanges.truncated)
+        (simulation.nativeBalanceChanges.status !== 'succeeded' || simulation.nativeBalanceChanges.truncated)
       ) ||
       Boolean(
         simulation.proxyImplementationCheck &&
-          (simulation.proxyImplementationCheck.status !== 'succeeded' ||
-            simulation.proxyImplementationCheck.changes.length > 0 ||
-            simulation.proxyImplementationCheck.truncated)
+        (simulation.proxyImplementationCheck.status !== 'succeeded' ||
+          simulation.proxyImplementationCheck.changes.length > 0 ||
+          simulation.proxyImplementationCheck.truncated)
       ) ||
       Boolean(
         simulation.callTrace &&
-          (simulation.callTrace.truncated || (simulation.callTrace.calls || []).some((call) => call.failure))
+        (simulation.callTrace.truncated || (simulation.callTrace.calls || []).some((call) => call.failure))
       )
 
     return (

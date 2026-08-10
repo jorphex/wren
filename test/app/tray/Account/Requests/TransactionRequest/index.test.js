@@ -148,9 +148,9 @@ describe('confirm', () => {
     expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
     expect(screen.getByText('Transaction recipient address copied')).toBeTruthy()
     expect(screen.getByText(recipient)).toBeTruthy()
-    expect(screen.getByText('Address copied').classList.contains('transactionReviewCopyFeedbackVisible')).toBe(
-      true
-    )
+    expect(
+      screen.getByText('Address copied').classList.contains('transactionReviewCopyFeedbackVisible')
+    ).toBe(true)
   })
 
   it('expands fee adjustment inside the transaction details ledger', async () => {

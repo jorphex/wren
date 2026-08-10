@@ -83,7 +83,11 @@ const tokenMetadata = (
   address: string
 ) => {
   if (sameAddress(definition.asset.address, address)) {
-    return { symbol: definition.asset.symbol, decimals: definition.asset.decimals, token: getAddress(address) }
+    return {
+      symbol: definition.asset.symbol,
+      decimals: definition.asset.decimals,
+      token: getAddress(address)
+    }
   }
   if (sameAddress(definition.address, address)) {
     const variant = vault?.variants.find(({ address: candidate }) => sameAddress(candidate, address))

@@ -85,12 +85,7 @@ export class TransactionRequest extends React.Component {
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
                 <TxRecipient i={1} {...this.props} req={req} />
-                <TxFee
-                  i={2}
-                  {...this.props}
-                  req={req}
-                  initiallyExpanded={feeInitiallyExpanded}
-                />
+                <TxFee i={2} {...this.props} req={req} initiallyExpanded={feeInitiallyExpanded} />
                 <div className='_txMain transactionReviewNonce'>
                   <div className='transactionReviewNonceRow'>
                     <span className='transactionReviewMetaLabel'>Nonce</span>

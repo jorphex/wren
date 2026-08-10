@@ -294,7 +294,9 @@ export class Requests extends React.Component {
     const groups = Object.keys(originSortedRequests)
 
     return (
-      <div className={`accountViewScroll requestViewScroll${groups.length === 0 ? ' requestViewScrollEmpty' : ''}`}>
+      <div
+        className={`accountViewScroll requestViewScroll${groups.length === 0 ? ' requestViewScrollEmpty' : ''}`}
+      >
         {groups.length === 0 ? (
           <WrenEmptyState
             image={emptyRequests}

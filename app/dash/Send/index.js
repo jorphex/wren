@@ -759,7 +759,10 @@ export class Send extends React.Component {
         </div>
 
         {watchOnly || this.state.queueError ? (
-          <div className={watchOnly ? 'sendComposerError sendComposerNotice' : 'sendComposerError'} role='alert'>
+          <div
+            className={watchOnly ? 'sendComposerError sendComposerNotice' : 'sendComposerError'}
+            role='alert'
+          >
             {watchOnly ? COPY.watchOnly : this.state.queueError}
           </div>
         ) : null}

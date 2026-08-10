@@ -92,7 +92,11 @@ export class AccountNameEditor extends React.Component {
   }
 
   componentDidUpdate(previousProps) {
-    if (!this.state.editing && previousProps.name !== this.props.name && this.state.draft !== this.props.name) {
+    if (
+      !this.state.editing &&
+      previousProps.name !== this.props.name &&
+      this.state.draft !== this.props.name
+    ) {
       this.setState({ draft: this.props.name })
     }
   }
