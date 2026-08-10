@@ -9,7 +9,6 @@ export const SEND_ERROR = Object.freeze({
   AccountChanged: 'account-changed',
   AmountExceedsBalance: 'amount-exceeds-balance',
   AmountInvalid: 'amount-invalid',
-  AmountZero: 'amount-zero',
   AssetUnavailable: 'asset-unavailable',
   FeeUnavailable: 'fee-unavailable',
   NetworkUnavailable: 'network-unavailable',
@@ -82,7 +81,6 @@ export function buildSendTransaction(
 
   const amount = parseTokenDecimalAmount(draft.amount, asset.decimals)
   if (amount === undefined) throw new SendValidationError(SEND_ERROR.AmountInvalid)
-  if (amount === 0n) throw new SendValidationError(SEND_ERROR.AmountZero)
 
   const balance = parseTokenBaseUnitAmount(asset.balance)
   if (balance === undefined || amount > balance) {

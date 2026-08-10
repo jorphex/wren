@@ -109,6 +109,53 @@ it('opens directly on a native asset without a connection step and exposes the a
   expect(screen.getByRole('button', { name: 'Select USDC' })).toBeTruthy()
 })
 
+it('uses the shared illustrated empty-state anatomy when no asset is sendable', () => {
+  renderSend((state) => {
+    state.main.balances[account] = []
+    return state
+  })
+
+  expect(screen.getByText('No sendable assets on this network').closest('.wrenEmptyState')).toBeTruthy()
+})
+
+it('keeps the asset label inert and opens the picker from the asset control only', () => {
+  renderSend()
+
+  fireEvent.click(screen.getByText('Asset'))
+  expect(screen.queryByRole('button', { name: 'Select ETH' })).toBeNull()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  expect(screen.getByRole('button', { name: 'Select ETH' })).toBeTruthy()
+})
+
+it('chooses a saved contact from the recipient field', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  renderSend((state) => {
+    state.main.addressBook[recipient.toLowerCase()] = {
+      address: recipient,
+      createdAt: 1,
+      name: 'Garden Friend',
+      note: '',
+      updatedAt: 1
+    }
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose contact' }))
+  expect(screen.getByRole('heading', { name: 'Choose a contact' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: /Garden Friend/ }))
+
+  expect(screen.getByPlaceholderText('Enter an address').value).toBe(recipient)
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+})
+
+it('uses the canonical chiseled input groups for recipient and amount', () => {
+  renderSend()
+
+  expect(screen.getByPlaceholderText('Enter an address').closest('.wrenInputGroup')).toBeTruthy()
+  expect(screen.getByPlaceholderText('0.00').closest('.wrenInputGroup')).toBeTruthy()
+})
+
 it('validates a recipient and amount before queueing the existing transaction review', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
@@ -133,15 +180,32 @@ it('validates a recipient and amount before queueing the existing transaction re
   expect(await screen.findByText('Transaction queued')).toBeTruthy()
 })
 
+it('queues a zero-value transaction for review', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'zero-send-request' })
+  renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0' } })
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+
+  await waitFor(() => expect(queueSend).toHaveBeenCalledWith(expect.objectContaining({ amount: '0' })))
+})
+
 it('uses the main-process maximum and blocks an amount above the stored balance', async () => {
   maxSendAmount.mockResolvedValue({ success: true, amount: '500000000000000000' })
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   renderSend()
 
-  expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(false)
+  expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-disabled')).toBe('true')
   expect(screen.getByText('Available: 1.00 ETH')).toBeTruthy()
   expect(screen.getByText('Enter a recipient to enable Max so we can estimate gas.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-describedby')).toBe('sendMaxReason')
+  fireEvent.click(screen.getByRole('button', { name: 'Max' }))
+  expect(maxSendAmount).not.toHaveBeenCalled()
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(false))

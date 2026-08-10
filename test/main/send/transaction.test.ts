@@ -95,7 +95,7 @@ it('rejects watch-only and disconnected account contexts', () => {
   )
 })
 
-it('rejects unknown assets, invalid recipients, invalid amounts, zero, and overspend', () => {
+it('rejects unknown assets, invalid recipients, invalid amounts, and overspend', () => {
   expectCode(
     () => buildSendTransaction(draft({ assetAddress: token }), context()),
     SEND_ERROR.AssetUnavailable
@@ -108,6 +108,22 @@ it('rejects unknown assets, invalid recipients, invalid amounts, zero, and overs
     () => buildSendTransaction(draft({ amount: '1.2345678901234567891' }), context()),
     SEND_ERROR.AmountInvalid
   )
-  expectCode(() => buildSendTransaction(draft({ amount: '0' }), context()), SEND_ERROR.AmountZero)
   expectCode(() => buildSendTransaction(draft({ amount: '2' }), context()), SEND_ERROR.AmountExceedsBalance)
+})
+
+it('builds valid zero-value native and token transactions', () => {
+  const native = buildSendTransaction(draft({ amount: '0' }), context())
+  expect(native.amount).toBe(0n)
+  expect(native.transaction.value).toBe('0x0')
+
+  const tokenTransfer = buildSendTransaction(
+    draft({ amount: '0', assetAddress: token }),
+    context({ address: token, balance: '1000000', chainId: 1, decimals: 6 })
+  )
+  const transfer = new Interface(['function transfer(address to,uint256 amount)']).decodeFunctionData(
+    'transfer',
+    tokenTransfer.transaction.data!
+  )
+  expect(transfer[0]).toBe(recipient)
+  expect(transfer[1]).toBe(0n)
 })

@@ -2,8 +2,11 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
+import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
+
 import Icon from '../../../resources/Components/Icon'
 import AssetMark from '../../../resources/Components/AssetMark'
+import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
 import { createBalance, isNativeCurrency, sortByTotalValue } from '../../../resources/domain/balance'
 import { resolveLocalAddressIdentity } from '../../../resources/domain/addressBook/identity'
 import {
@@ -20,11 +23,12 @@ const COPY = Object.freeze({
   amount: 'Amount',
   amountExceedsBalance: 'Amount exceeds available balance',
   amountInvalid: 'Enter a valid amount',
-  amountZero: 'Enter an amount',
   asset: 'Asset',
   assetUnavailable: 'This asset is no longer available to send on this network. Choose another asset.',
   backToAccount: 'Back to account',
   chooseAsset: 'Choose an asset',
+  chooseContact: 'Choose contact',
+  chooseAContact: 'Choose a contact',
   clearRecipient: 'Clear recipient',
   declinedBody: 'The request was declined before it was sent.',
   declinedHeading: 'Transaction declined',
@@ -36,6 +40,7 @@ const COPY = Object.freeze({
   noAccount: 'Select an account to send',
   noAssets: 'No sendable assets on this network',
   noAssetsFound: 'No assets found',
+  noContacts: 'No saved contacts yet.',
   primaryDisabled: 'Enter send details',
   primaryReady: 'Review send',
   primarySubmitting: 'Sending…',
@@ -47,6 +52,7 @@ const COPY = Object.freeze({
   recipientResolved: 'Address verified',
   recipientResolving: 'Checking address…',
   reviewFee: 'Estimated fee; review before signing.',
+  searchContacts: 'Search contacts',
   searchAssets: 'Search assets',
   successBody: 'Your transaction was submitted successfully.',
   successHeading: 'Transaction sent',
@@ -58,7 +64,6 @@ const errorCopy = Object.freeze({
   'account-changed': COPY.accountChanged,
   'amount-exceeds-balance': COPY.amountExceedsBalance,
   'amount-invalid': COPY.amountInvalid,
-  'amount-zero': COPY.amountZero,
   'asset-unavailable': COPY.assetUnavailable,
   'fee-unavailable': COPY.feeUnavailable,
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
@@ -105,6 +110,8 @@ export class Send extends React.Component {
     this.state = {
       amount: '',
       assetFilter: '',
+      contactFilter: '',
+      contactPickerOpen: false,
       pickerOpen: false,
       queueError: '',
       queueing: false,
@@ -138,6 +145,8 @@ export class Send extends React.Component {
     this.recipientSequence += 1
     this.setState({
       amount: '',
+      contactFilter: '',
+      contactPickerOpen: false,
       pickerOpen: false,
       queueError: '',
       queueing: false,
@@ -189,7 +198,6 @@ export class Send extends React.Component {
     if (!this.state.amount) return ''
     const amount = parseTokenDecimalAmount(this.state.amount, asset.decimals)
     if (amount === undefined) return COPY.amountInvalid
-    if (amount === 0n) return COPY.amountZero
     const balance = parseTokenBaseUnitAmount(asset.balance)
     return balance === undefined || amount > balance ? COPY.amountExceedsBalance : ''
   }
@@ -395,6 +403,67 @@ export class Send extends React.Component {
     )
   }
 
+  renderContactPicker() {
+    const filter = this.state.contactFilter.trim().toLowerCase()
+    const contacts = Object.values(this.store('main.addressBook') || {})
+      .filter(({ address = '', name = '', note = '' }) =>
+        !filter ? true : [address, name, note].some((value) => value.toLowerCase().includes(filter))
+      )
+      .sort((left, right) => left.name.localeCompare(right.name) || left.address.localeCompare(right.address))
+
+    return (
+      <section className='sendPicker sendContactPicker cardShow' aria-label={COPY.chooseAContact}>
+        <header className='sendPickerHeader'>
+          <button
+            aria-label='Back'
+            className='sendPickerBack wrenControl wrenControlGhost wrenControlIcon'
+            onClick={() => this.setState({ contactFilter: '', contactPickerOpen: false })}
+            type='button'
+          >
+            <Icon name='back' size={16} />
+          </button>
+          <h2>{COPY.chooseAContact}</h2>
+        </header>
+        <div className='sendPickerSearch'>
+          <Icon name='search' size={15} />
+          <input
+            autoFocus
+            className='wrenInput wrenInputQuiet'
+            onChange={(event) => this.setState({ contactFilter: event.target.value })}
+            placeholder={COPY.searchContacts}
+            value={this.state.contactFilter}
+          />
+        </div>
+        <div className='sendContactList'>
+          {contacts.length ? (
+            contacts.map((contact) => (
+              <button
+                className='sendContactOption'
+                key={contact.address.toLowerCase()}
+                onClick={() => {
+                  this.updateRecipient(contact.address)
+                  this.setState({ contactFilter: '', contactPickerOpen: false })
+                }}
+                type='button'
+              >
+                <span className='sendContactIcon' aria-hidden='true'>
+                  <Icon name='contacts' size={17} />
+                </span>
+                <span className='sendContactIdentity'>
+                  <strong>{contact.name}</strong>
+                  <span>{contact.address}</span>
+                </span>
+                <Icon name='next' size={14} />
+              </button>
+            ))
+          ) : (
+            <div className='sendPickerEmpty'>{COPY.noContacts}</div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
   renderRequestState(request) {
     const status = request?.status
     const declined = status === 'declined'
@@ -447,6 +516,7 @@ export class Send extends React.Component {
     const context = this.getContext()
     const { account, assets, metadata, selected } = context
     if (this.state.pickerOpen) return this.renderAssetPicker(context)
+    if (this.state.contactPickerOpen) return this.renderContactPicker()
 
     if (this.state.requestId) {
       const request = this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId)
@@ -454,8 +524,18 @@ export class Send extends React.Component {
       return this.renderRequestState(request || this.lastRequest)
     }
 
-    if (!account) return <div className='sendUnavailable'>{COPY.noAccount}</div>
-    if (!assets.length) return <div className='sendUnavailable'>{COPY.noAssets}</div>
+    if (!account || !assets.length) {
+      return (
+        <div className='sendUnavailable'>
+          <WrenEmptyState
+            expanded={true}
+            image={emptyBalances}
+            title={account ? COPY.noAssets : COPY.noAccount}
+            transparentImage={true}
+          />
+        </div>
+      )
+    }
     if (!selected) {
       return (
         <div className='sendUnavailable sendUnavailableAsset'>
@@ -491,14 +571,14 @@ export class Send extends React.Component {
     return (
       <form className='sendComposer cardShow' onSubmit={(event) => this.submit(event, context)}>
         <div className='sendLedger'>
-          <button
-            aria-label={COPY.chooseAsset}
-            className='sendLedgerRow sendAssetRow'
-            onClick={() => this.setState({ pickerOpen: true })}
-            type='button'
-          >
+          <div className='sendLedgerRow sendAssetRow'>
             <span className='sendRowLabel'>{COPY.asset}</span>
-            <span className='sendRowValue sendAssetValue'>
+            <button
+              aria-label={COPY.chooseAsset}
+              className='sendRowValue sendAssetValue'
+              onClick={() => this.setState({ pickerOpen: true })}
+              type='button'
+            >
               <span className='sendAssetIdentityCluster'>
                 <AssetMark asset={selected} />
                 <span>
@@ -507,21 +587,35 @@ export class Send extends React.Component {
                 </span>
               </span>
               <Icon name='next' size={17} />
-            </span>
-          </button>
+            </button>
+          </div>
 
-          <label className={`sendLedgerRow sendInputRow ${this.state.recipientError ? 'sendRowError' : ''}`}>
-            <span className='sendRowLabel'>{COPY.recipient}</span>
-            <span className='sendInputWrap'>
+          <div className={`sendLedgerRow sendInputRow ${this.state.recipientError ? 'sendRowError' : ''}`}>
+            <label className='sendRowLabel' htmlFor='send-recipient'>
+              {COPY.recipient}
+            </label>
+            <span
+              className={`sendInputWrap wrenInputGroup ${this.state.recipientError ? 'wrenInputGroupError' : ''}`}
+            >
               <input
                 autoComplete='off'
-                className='sendRecipientInput'
+                aria-invalid={this.state.recipientError ? 'true' : undefined}
+                className='sendRecipientInput wrenInput'
+                id='send-recipient'
                 maxLength={255}
                 onChange={(event) => this.updateRecipient(event.target.value)}
                 placeholder={COPY.recipientPlaceholder}
                 spellCheck={false}
                 value={this.state.recipient}
               />
+              <button
+                aria-label={COPY.chooseContact}
+                className='sendInlineAction'
+                onClick={() => this.setState({ contactFilter: '', contactPickerOpen: true })}
+                type='button'
+              >
+                <Icon name='contacts' size={16} />
+              </button>
               {this.state.recipient ? (
                 <button
                   aria-label={COPY.clearRecipient}
@@ -536,14 +630,18 @@ export class Send extends React.Component {
             <span className='sendRowHint' role={this.state.recipientError ? 'alert' : undefined}>
               {this.state.recipientError || recipientHint}
             </span>
-          </label>
+          </div>
 
-          <label className={`sendLedgerRow sendInputRow sendAmountRow ${amountError ? 'sendRowError' : ''}`}>
-            <span className='sendRowLabel'>{COPY.amount}</span>
-            <span className='sendInputWrap'>
+          <div className={`sendLedgerRow sendInputRow sendAmountRow ${amountError ? 'sendRowError' : ''}`}>
+            <label className='sendRowLabel' htmlFor='send-amount'>
+              {COPY.amount}
+            </label>
+            <span className={`sendInputWrap wrenInputGroup ${amountError ? 'wrenInputGroupError' : ''}`}>
               <input
                 autoComplete='off'
-                className='sendAmountInput'
+                aria-invalid={amountError ? 'true' : undefined}
+                className='sendAmountInput wrenInput'
+                id='send-amount'
                 inputMode='decimal'
                 onChange={(event) => {
                   this.maxSequence += 1
@@ -556,9 +654,11 @@ export class Send extends React.Component {
               <span className='sendAmountSymbol'>{selected.symbol}</span>
               <button
                 aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
+                aria-disabled={maxNeedsRecipient}
                 className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
-                disabled={maxNeedsRecipient}
-                onClick={() => this.setMax(selected)}
+                onClick={() => {
+                  if (!maxNeedsRecipient) this.setMax(selected)
+                }}
                 type='button'
               >
                 Max
@@ -581,7 +681,7 @@ export class Send extends React.Component {
                 </>
               )}
             </span>
-          </label>
+          </div>
 
           <div className='sendLedgerRow sendFeeRow'>
             <span className='sendRowLabel'>{COPY.fee}</span>
@@ -591,7 +691,7 @@ export class Send extends React.Component {
         </div>
 
         {watchOnly || this.state.queueError ? (
-          <div className='sendComposerError' role='alert'>
+          <div className={watchOnly ? 'sendComposerError sendComposerNotice' : 'sendComposerError'} role='alert'>
             {watchOnly ? COPY.watchOnly : this.state.queueError}
           </div>
         ) : null}

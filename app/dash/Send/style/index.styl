@@ -36,15 +36,6 @@
   flex-direction column
   gap 8px
   padding 12px 0 10px
-  cursor pointer
-
-  &:hover .sendAssetValue,
-  &:focus-visible .sendAssetValue
-    color var(--wren-text-primary)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset -2px
 
 .sendRowLabel
   color var(--wren-text-muted)
@@ -59,9 +50,23 @@
   gap 10px
 
 .sendAssetValue
+  appearance none
   width 100%
   justify-content space-between
+  padding 0
+  border 0
   color var(--wren-text-secondary)
+  background transparent
+  font-family var(--wren-font-ui)
+  text-align left
+  cursor pointer
+
+  &:hover
+    color var(--wren-text-primary)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 4px
 
   .sendAssetIdentityCluster
     display flex
@@ -99,9 +104,11 @@
 .sendInputWrap
   display flex
   min-width 0
+  min-height 44px
   grid-column 1 / -1
   grid-row 2
   align-items center
+  padding 0 6px 0 12px
 
   input
     min-width 0
@@ -130,6 +137,7 @@
   color var(--wren-text-muted)
   font-size var(--wren-type-caption)
   text-overflow ellipsis
+  user-select none
   white-space nowrap
 
 .sendAmountHints
@@ -143,8 +151,6 @@
 .sendMaxReason
   overflow hidden
   min-width 0
-  padding-left var(--wren-space-3)
-  border-left 1px solid var(--wren-border-subtle)
   text-overflow ellipsis
 
 .sendRowError
@@ -183,6 +189,10 @@
   font-weight 580 !important
   letter-spacing -.035em
 
+  &::placeholder
+    font-family var(--wren-font-mono) !important
+    font-weight 430 !important
+
 .sendAmountSymbol
   margin-left 12px
   color var(--wren-text-secondary)
@@ -197,6 +207,16 @@
   padding 0 9px
   font-size var(--wren-type-caption)
   font-weight 620
+
+  &[aria-disabled='true'],
+  &[aria-disabled='true']:hover,
+  &[aria-disabled='true']:active
+    border-color transparent
+    color var(--wren-text-disabled)
+    background transparent
+    box-shadow none
+    cursor default
+    transform none
 
 .sendFeeRow
   display grid
@@ -223,16 +243,21 @@
   font-size var(--wren-type-small)
   text-align right
   text-overflow ellipsis
+  user-select none
   white-space nowrap
 
 .sendComposerError
   margin 12px 24px 0
   padding 10px 12px
-  border-left 3px solid var(--wren-danger)
+  border 0
+  border-radius var(--wren-radius-sm)
   color var(--wren-text-secondary)
-  background var(--wren-surface-inset)
+  background var(--wren-danger-soft)
   font-size var(--wren-type-small)
   line-height 1.45
+
+.sendComposerNotice
+  background var(--wren-warning-soft)
 
 .sendActionShelf
   position sticky
@@ -259,12 +284,16 @@
   display flex
   min-height 52px
   align-items center
+  gap var(--wren-space-3)
   border-bottom 1px solid var(--wren-border-subtle)
 
   h2
     margin 0
     font-size 17px
     font-weight 610
+
+.sendPickerBack
+  flex none
 
 .sendPickerSearch
   display flex
@@ -291,6 +320,61 @@
 .sendAssetList
   display flex
   flex-direction column
+
+.sendContactList
+  display flex
+  flex-direction column
+
+.sendContactOption
+  display grid
+  min-height 64px
+  grid-template-columns 36px minmax(0, 1fr) 18px
+  align-items center
+  gap 10px
+  padding 8px 2px
+  border 0
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-primary)
+  background transparent
+  font-family var(--wren-font-ui)
+  text-align left
+  cursor pointer
+
+  &:hover
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.sendContactIcon
+  display flex
+  width 32px
+  height 32px
+  align-items center
+  justify-content center
+  color var(--wren-text-secondary)
+
+.sendContactIdentity
+  display flex
+  min-width 0
+  flex-direction column
+  gap 3px
+
+  strong,
+  span
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
+
+  strong
+    font-size var(--wren-type-body)
+    font-weight 610
+
+  span
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
 
 .sendAssetOption
   display grid
@@ -358,6 +442,23 @@
   padding var(--wren-space-6)
   flex-direction column
   text-align center
+
+.sendUnavailable .wrenEmptyStateExpanded
+  min-height auto
+  padding 0 var(--wren-space-5)
+  flex-direction column
+  justify-content center
+  background transparent
+  text-align center
+
+  .wrenEmptyStateImage
+    position static
+    width 190px
+    margin 0 0 var(--wren-space-3)
+    transform none
+
+  .wrenEmptyStateText
+    max-width 320px
 
 .sendPickerEmpty
   min-height 180px
