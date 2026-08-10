@@ -285,6 +285,7 @@ export class TxSending extends React.Component {
                         address={address}
                         copied={this.state.copied}
                         label={localIdentity?.label || recipientEns}
+                        revealOnHover={false}
                         source={localIdentity?.source || (recipientEns ? 'ENS' : '')}
                       />
                     </div>
@@ -385,6 +386,7 @@ export class TxSending extends React.Component {
                         address={address}
                         copied={this.state.copied}
                         label={localIdentity?.label || spenderEns}
+                        revealOnHover={false}
                         source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
                       />
                     </div>

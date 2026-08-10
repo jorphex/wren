@@ -2,7 +2,6 @@ import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../../../../resources/Components/Icon'
 import { parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
-import NonceControl from '../NonceControl'
 import {
   SimulationAllowance,
   SimulationCallTrace,
@@ -33,7 +32,7 @@ const TextValue = ({ value }) =>
     <span>{value}</span>
   )
 
-export const SimpleTxJSON = ({ json, req }) => {
+export const SimpleTxJSON = ({ json }) => {
   return (
     <div className='simpleJson'>
       {Object.keys(json)
@@ -46,17 +45,12 @@ export const SimpleTxJSON = ({ json, req }) => {
           return aIndex > bIndex ? 1 : aIndex < bIndex ? -1 : 0
         })
         .map((key, o) => {
-          const value =
-            key === 'nonce' ? (
-              <NonceControl nonce={req.data.nonce} displayValue={json[key]} req={req} />
-            ) : (
-              <TextValue value={json[key]} />
-            )
-
           return (
             <div key={key + o} className='simpleJsonChild'>
               <div className=' simpleJsonKey simpleJsonKeyTx'>{key.replace(/([A-Z])/g, ' $1').trim()}</div>
-              <div className='simpleJsonValue'>{value}</div>
+              <div className='simpleJsonValue'>
+                <TextValue value={json[key]} />
+              </div>
             </div>
           )
         })}
@@ -136,7 +130,7 @@ export class ViewData extends React.Component {
     const tx = { nonce: 'TBD', ...data }
 
     return (
-      <div className='accountViewScroll cardShow'>
+      <div className='accountViewScroll cardShow transactionEvidenceView'>
         <SimulationDelegation simulation={req.simulation} />
         <SimulationProxyImplementationChanges simulation={req.simulation} />
         <SimulationAllowance simulation={req.simulation} />

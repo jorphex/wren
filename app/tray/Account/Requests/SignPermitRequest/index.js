@@ -117,6 +117,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                             address={spender.address}
                             copied={showCopiedMessage}
                             label={localIdentity?.label || spender.ens}
+                            revealOnHover={false}
                             source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
                           />
                         </div>

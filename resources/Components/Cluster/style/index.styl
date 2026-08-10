@@ -248,6 +248,16 @@
 .clusterAddressRecipientFullCopied
   opacity 1
 
+.clusterAddressRecipientFullNoHover
+  pointer-events none
+  opacity 0
+
+.clusterValueClickable:hover .clusterAddressRecipientFullNoHover
+  opacity 0
+
+.clusterAddressRecipientFullNoHover.clusterAddressRecipientFullCopied
+  opacity 1
+
 .clusterFira
   position relative
   top 1px

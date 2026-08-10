@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import { DisplayCoinBalance, DisplayValue } from '../../../../../../resources/Components/DisplayValue'
-import { GasFeesSource, usesBaseFee } from '../../../../../../resources/domain/transaction'
+import { usesBaseFee } from '../../../../../../resources/domain/transaction'
 import { displayValueData } from '../../../../../../resources/utils/displayValue'
 import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
 import link from '../../../../../../resources/link'
@@ -134,10 +134,6 @@ class TxFee extends React.Component {
         {req.feesUpdatedByUser ? (
           <div className='transactionReviewFeeNotice' style={{ color: 'var(--good)' }}>
             {'Gas values set by user'}
-          </div>
-        ) : req.data.gasFeesSource !== GasFeesSource.Frame ? (
-          <div className='transactionReviewFeeNotice' style={{ color: 'var(--bad)' }}>
-            {`Gas values set by ${req.data.gasFeesSource}`}
           </div>
         ) : null}
       </ClusterBox>

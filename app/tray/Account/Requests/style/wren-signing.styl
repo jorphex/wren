@@ -60,12 +60,16 @@
 
     ._txDescriptionSummaryMain
       padding-top var(--wren-space-2)
-      font-size 32px
-      line-height 38px
+      min-width 0
+      font-size 26px
+      line-height 32px
+      overflow-wrap anywhere
 
       > div
         display flex
+        min-width 0
         align-items baseline
+        flex-wrap wrap
         gap var(--wren-space-2)
 
       .displayValue
@@ -109,6 +113,11 @@
     .transactionReviewSummaryStatus
       width 224px
       max-width 224px
+      min-height 54px
+      box-sizing border-box
+      padding var(--wren-space-2) 0
+      display flex
+      align-items center
       justify-self end
       font-family var(--wren-font-ui)
       font-size var(--wren-type-small)
@@ -310,9 +319,11 @@
 
     .clusterValue
       min-height 48px
+      justify-content flex-start
       border 0
       border-radius 0
       background transparent
+      text-align left
 
     .clusterValue + .clusterValue,
     .clusterColumn + .clusterColumn
@@ -394,14 +405,16 @@
 
   ._txMainTagBad
     color var(--wren-danger)
-    background var(--wren-danger-soft)
+    background transparent
 
   .txSendingValue
     min-height 52px
+    justify-content flex-start
     color var(--wren-text-primary)
     font-family var(--wren-font-utility)
     font-size 18px
     font-weight 500
+    text-align left
 
   ._txFeeGwei
     min-height 52px
@@ -422,6 +435,8 @@
     ._txFeeGwei
       min-height 0
       padding 0
+      justify-content flex-start
+      text-align left
 
     ._txFeeGweiValue,
     ._txFeeGweiLabel
@@ -452,6 +467,12 @@
   ._txFeeValueDefault
     color var(--wren-text-secondary)
     font-size var(--wren-type-small)
+    text-align left
+
+  .clusterFocus
+    width 100%
+    box-sizing border-box
+    text-align left
 
   .clusterAddress
     padding var(--wren-space-3) var(--wren-space-2)
@@ -708,6 +729,7 @@
     font-size 14px
     font-weight 650
     letter-spacing 0
+    white-space nowrap
     transform none
     animation none
     box-shadow var(--wren-control-shadow)
@@ -720,14 +742,6 @@
   .requestDeclineButton
     color var(--wren-danger)
     background var(--wren-control-texture-dark), var(--wren-bg-elevated)
-
-  .requestDecline
-    flex-basis 160px
-    width 160px
-    min-width 160px
-    max-width 160px
-    height 48px
-    transform translateY(-1px)
 
   .requestSignButton
     color var(--wren-text-inverse)
@@ -850,5 +864,108 @@
       min-width 0
       max-width none
 
-    .requestDecline
-      transform translateY(-1px)
+
+// Transaction evidence is a continuation of the review ledger, not a stack of cards.
+.transactionEvidenceView
+  padding 0 var(--wren-space-5) var(--wren-space-8)
+  box-sizing border-box
+
+  .txViewData
+    margin 0
+    padding var(--wren-space-5) 0
+    border 0
+    border-top 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:first-child
+      border-top 0
+
+  .txViewDataHeader
+    margin 0 0 var(--wren-space-4)
+    padding 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 650
+    letter-spacing 0
+    line-height 22px
+    text-align left
+    text-transform none
+
+  .simulationEffectsNotice,
+  .simulationEffectsEmpty,
+  .simulationEffectsTruncated
+    margin 0 0 var(--wren-space-4)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 18px
+    text-align left
+
+  .simulationEffectsTruncated
+    color var(--wren-danger)
+
+  .simulationEffect
+    margin 0
+    padding var(--wren-space-4) 0
+    border-top 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+
+  .simulationEffectTitle
+    margin 0 0 var(--wren-space-3)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 650
+    letter-spacing 0
+    text-align left
+    text-transform none
+
+  .simpleJsonChild
+    display grid
+    width 100%
+    margin 0
+    padding var(--wren-space-3) 0
+    border-top 1px solid var(--wren-ledger-rule)
+    box-sizing border-box
+    grid-template-columns 136px minmax(0, 1fr)
+    align-items start
+    column-gap var(--wren-space-5)
+
+  .simpleJsonKey,
+  .simpleJsonKeyTx
+    width auto
+    max-width none
+    padding 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    letter-spacing 0
+    line-height 18px
+    text-transform none
+
+  .simpleJsonValue
+    width 100%
+    max-width none
+    min-width 0
+    margin 0
+    padding 0
+    border 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-weight 400
+    line-height 18px
+    overflow-wrap anywhere
+
+  .simpleJsonStructuredValue
+    margin 0
+    white-space pre-wrap
+
+@media (max-width: 560px)
+  .transactionEvidenceView .simpleJsonChild
+    grid-template-columns 104px minmax(0, 1fr)

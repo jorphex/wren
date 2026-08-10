@@ -101,6 +101,7 @@ export class TxMain extends React.Component {
                     address={fromAddress}
                     copied={this.state.copied}
                     label={fromIdentity?.label}
+                    revealOnHover={false}
                     source={fromIdentity?.source}
                   />
                 </span>

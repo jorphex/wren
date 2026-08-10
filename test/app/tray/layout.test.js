@@ -78,6 +78,10 @@ test('keeps transaction review on one flat details ledger', () => {
   expect(signingStyle).toMatch(
     /\.transactionReviewSummaryStatus[\s\S]*?justify-self end[\s\S]*?text-align right/
   )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewSummaryStatus[\s\S]*?min-height 54px[\s\S]*?align-items center/
+  )
+  expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
 })
 
 test('gives collectible buttons the shared visible keyboard focus treatment', () => {

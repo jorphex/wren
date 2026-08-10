@@ -18,6 +18,7 @@ import {
   getDelegationPresentation,
   getNativeBalanceChangesPresentation,
   getProxyImplementationChangesPresentation,
+  getReviewStatusPresentation,
   getSimulationEffectsPresentation,
   getSimulationPresentation,
   TransactionDataRow,
@@ -294,7 +295,9 @@ describe('confirm', () => {
     addRequest(req)
     render(<TxRequest req={req} step='confirm' />)
 
-    expect(screen.getByText('RPC reports execution will revert via eth_simulateV1')).toBeTruthy()
+    expect(
+      screen.getByText('Simulation predicts this transaction will revert via eth_simulateV1')
+    ).toBeTruthy()
   })
 })
 
@@ -430,6 +433,19 @@ describe('simulation review', () => {
     expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', { data: { step: 'viewData' } })
   })
 
+  it('keeps one stable review status and prioritizes the highest-risk evidence', () => {
+    expect(
+      getReviewStatusPresentation([
+        { className: '_txMainTagGood', label: 'Simulation completed' },
+        { className: '_txMainTagWarning', label: '2 RPC-reported token effects' },
+        { className: '_txMainTagBad', label: 'RPC reports broad token approval' }
+      ])
+    ).toEqual({
+      className: '_txMainTagBad',
+      label: 'RPC reports broad token approval'
+    })
+  })
+
   it('renders a trusted Yearn action summary with its decoded amount', () => {
     render(
       <YearnOverview
@@ -495,11 +511,11 @@ describe('simulation review', () => {
   it('qualifies success and failure as configured-RPC results', () => {
     expect(getSimulationPresentation({ status: 'succeeded', source: 'eth_call' })).toEqual({
       className: '_txMainTagGood',
-      label: 'RPC execution check passed via eth_call'
+      label: 'Simulation completed via eth_call'
     })
     expect(getSimulationPresentation({ status: 'failed', source: 'eth_simulateV1' })).toEqual({
       className: '_txMainTagBad',
-      label: 'RPC execution check failed via eth_simulateV1'
+      label: 'Could not complete simulation via eth_simulateV1'
     })
   })
 
@@ -986,7 +1002,7 @@ describe('simulation review', () => {
   })
 })
 
-describe('raw transaction nonce controls', () => {
+describe('transaction nonce presentation', () => {
   const nonceRequest = (overrides = {}) => ({
     account,
     handlerId: 'nonce-request',
@@ -998,7 +1014,7 @@ describe('raw transaction nonce controls', () => {
   it('sends exact adjustment and reset payloads for mutable requests', async () => {
     const req = nonceRequest({ data: { nonce: '0x6' } })
     link.send.mockClear()
-    const { user } = render(<SimpleTxJSON json={{ nonce: 6 }} req={req} />)
+    const { user } = render(<NonceControl req={req} />)
 
     await user.click(screen.getByRole('button', { name: 'Decrease nonce' }))
     await user.click(screen.getByRole('button', { name: 'Increase nonce' }))
@@ -1020,12 +1036,19 @@ describe('raw transaction nonce controls', () => {
   })
 
   it('shows reset only when the nonce differs from the original transaction', () => {
-    const { rerender } = render(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest()} />)
+    const { rerender } = render(<NonceControl req={nonceRequest()} />)
 
     expect(screen.queryByRole('button', { name: 'Reset nonce' })).toBeNull()
 
-    rerender(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest({ payload: { params: [{}] } })} />)
+    rerender(<NonceControl req={nonceRequest({ payload: { params: [{}] } })} />)
     expect(screen.getByRole('button', { name: 'Reset nonce' })).toBeTruthy()
+  })
+
+  it('keeps the raw transaction nonce read-only', () => {
+    render(<SimpleTxJSON json={{ nonce: 5 }} />)
+
+    expect(screen.getByText('5')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /nonce/i })).toBeNull()
   })
 
   it('decodes large transaction quantities without losing display precision', () => {
@@ -1046,7 +1069,7 @@ describe('raw transaction nonce controls', () => {
     ['locked', { locked: true }],
     ['submitted', { status: 'pending' }]
   ])('does not expose nonce mutation for a %s request', (_, state) => {
-    render(<SimpleTxJSON json={{ nonce: 5 }} req={nonceRequest(state)} />)
+    render(<NonceControl req={nonceRequest(state)} />)
 
     expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Increase nonce' })).toBeNull()

@@ -1,7 +1,7 @@
 import Icon from '../Icon'
 import { getAddress } from '../../utils'
 
-const AddressIdentity = ({ address, copied = false, label = '', source = '' }) => {
+const AddressIdentity = ({ address, copied = false, label = '', revealOnHover = true, source = '' }) => {
   const checksummed = getAddress(address)
 
   return (
@@ -22,11 +22,9 @@ const AddressIdentity = ({ address, copied = false, label = '', source = '' }) =
         </span>
       )}
       <div
-        className={
-          copied
-            ? 'clusterAddressRecipientFull clusterAddressRecipientFullCopied'
-            : 'clusterAddressRecipientFull'
-        }
+        className={`clusterAddressRecipientFull${copied ? ' clusterAddressRecipientFullCopied' : ''}${
+          revealOnHover ? '' : ' clusterAddressRecipientFullNoHover'
+        }`}
       >
         {copied ? <span>{'Address copied'}</span> : <span className='clusterFira'>{checksummed}</span>}
       </div>

@@ -13,7 +13,7 @@ import { isBroadTokenAuthorityEffect } from '../../../../../../resources/domain/
 import { summarizeAccessList } from '../../../../../../resources/domain/transaction/accessList'
 
 const SimpleContractCallOverview = ({ method }) => {
-  const body = method ? `Calling Contract Method ${method}` : 'Calling Contract'
+  const body = method ? `Call contract method: ${method}` : 'Call contract'
 
   return <div className='_txDescriptionSummaryLine'>{body}</div>
 }
@@ -46,9 +46,7 @@ const SendOverview = ({ req, symbol, decimals, amount: ammt, currencyRate, isTes
     <div className='_txDescriptionTransfer'>
       <span className='_txDescriptionAction'>{'Send'}</span>
       <div className='transactionReviewAmountLine'>
-        {asset ? (
-          <AssetMark asset={asset} className='transactionReviewAssetMark' showChain={false} />
-        ) : null}
+        {asset ? <AssetMark asset={asset} className='transactionReviewAssetMark' showChain={false} /> : null}
         <DisplayValue
           type='ether'
           value={amount}
@@ -112,8 +110,8 @@ export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals, 
   )
 }
 
-const DeployContractOverview = () => <div>Deploying Contract</div>
-const DataOverview = () => <div>Sending data</div>
+const DeployContractOverview = () => <div>Deploy contract</div>
+const DataOverview = () => <div>Send contract data</div>
 
 const ContractCallOverview = ({ req, assetContext = {} }) => {
   const { decodedData: { method } = {} } = req
@@ -153,18 +151,18 @@ function renderRecognizedActions(req, assetContext) {
   const { recognizedActions: actions = [] } = req
 
   return !actions.length ? (
-    <div className='_txDescriptionSummaryLine'>Calling Contract</div>
+    <div className='_txDescriptionSummaryLine'>Call contract</div>
   ) : (
     actions.map((action, index) => renderActionOverview(action, index, req, assetContext))
   )
 }
 
 const simulationLabels = {
-  pending: 'Checking execution with network RPC',
-  succeeded: 'RPC execution check passed',
-  reverted: 'RPC reports execution will revert',
+  pending: 'Checking transaction simulation',
+  succeeded: 'Simulation completed',
+  reverted: 'Simulation predicts this transaction will revert',
   unavailable: 'RPC execution check unavailable',
-  failed: 'RPC execution check failed'
+  failed: 'Could not complete simulation'
 }
 
 export function getSimulationPresentation(simulation) {
@@ -308,6 +306,24 @@ export function getAccessListPresentation(transaction) {
   return { className: '_txMainTagWarning', label: `Access list: ${entryLabel}, ${keyLabel}` }
 }
 
+export function getReviewStatusPresentation(presentations) {
+  const severity = {
+    _txMainTagBad: 3,
+    _txMainTagWarning: 2,
+    _txMainTagGood: 1
+  }
+  const selected = presentations
+    .filter(Boolean)
+    .map((presentation, index) => ({ ...presentation, index }))
+    .sort((left, right) =>
+      severity[right.className] === severity[left.className]
+        ? left.index - right.index
+        : (severity[right.className] || 0) - (severity[left.className] || 0)
+    )[0]
+  if (!selected) return null
+  return { className: selected.className, label: selected.label }
+}
+
 const BaseOverviews = {
   CONTRACT_DEPLOY: DeployContractOverview,
   CONTRACT_CALL: ContractCallOverview,
@@ -358,6 +374,19 @@ const TxOverview = ({
   const allowance = getAllowancePresentation(req.simulation)
   const delegation = getDelegationPresentation(req.simulation)
   const accessList = getAccessListPresentation(req.data)
+  const reviewStatus = getReviewStatusPresentation([
+    simulation,
+    simulationEffects?.broadApproval
+      ? { className: '_txMainTagBad', label: 'RPC reports broad token approval' }
+      : null,
+    proxyImplementationChanges,
+    delegation,
+    allowance,
+    callTrace,
+    nativeBalanceChanges,
+    simulationEffects ? { className: '_txMainTagWarning', label: simulationEffects.label } : null,
+    accessList
+  ])
 
   const Description = BaseOverviews[classification]
   const chainId = typeof tx.chainId === 'string' ? Number.parseInt(tx.chainId, 16) : Number(tx.chainId)
@@ -375,13 +404,7 @@ const TxOverview = ({
     return (
       <Cluster className='transactionReviewOverview'>
         <ClusterRow>
-          <ClusterValue
-            ariaLabel='View transaction data'
-            onClick={() => {
-              link.send('nav:update', 'panel', { data: { step: 'viewData' } })
-            }}
-            style={{ background: valueColor }}
-          >
+          <ClusterValue style={{ background: valueColor }}>
             <div className='_txDescription'>
               <RequestHeader chain={chainName} chainColor={chainColor}>
                 <div className='requestItemTitleSub'>
@@ -406,11 +429,13 @@ const TxOverview = ({
                   />
                 </div>
               </RequestHeader>
-              {simulation ? (
-                <div className={`transactionReviewSummaryStatus ${simulation.className}`} role='status'>
-                  {simulation.label}
-                </div>
-              ) : null}
+              <div
+                aria-hidden={reviewStatus ? undefined : 'true'}
+                className={`transactionReviewSummaryStatus ${reviewStatus?.className || ''}`.trim()}
+                role={reviewStatus ? 'status' : undefined}
+              >
+                {reviewStatus?.label || ''}
+              </div>
             </div>
           </ClusterValue>
         </ClusterRow>
@@ -430,66 +455,6 @@ const TxOverview = ({
               </ClusterValue>
             </ClusterRow>
           ))}
-        {delegation && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${delegation.className}`}>{delegation.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {proxyImplementationChanges && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${proxyImplementationChanges.className}`}>
-                {proxyImplementationChanges.label}
-              </div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {accessList && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${accessList.className}`}>{accessList.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {simulationEffects && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className='_txMainTag _txMainTagWarning'>{simulationEffects.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {nativeBalanceChanges && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${nativeBalanceChanges.className}`}>
-                {nativeBalanceChanges.label}
-              </div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {callTrace && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${callTrace.className}`}>{callTrace.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {simulationEffects?.broadApproval && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className='_txMainTag _txMainTagBad'>RPC reports broad token approval</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
-        {allowance && (
-          <ClusterRow>
-            <ClusterValue>
-              <div className={`_txMainTag ${allowance.className}`}>{allowance.label}</div>
-            </ClusterValue>
-          </ClusterRow>
-        )}
         {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )

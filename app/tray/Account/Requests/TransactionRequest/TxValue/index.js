@@ -104,6 +104,7 @@ export class TxSending extends React.Component {
                       address={address}
                       copied={this.state.copied}
                       label={localIdentity?.label || ensName}
+                      revealOnHover={false}
                       source={localIdentity?.source || (ensName ? 'ENS' : '')}
                     />
                   </div>
