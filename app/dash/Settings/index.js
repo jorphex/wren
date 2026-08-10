@@ -1,6 +1,7 @@
 import { Component, createRef } from 'react'
 import Restore from 'react-restore'
 
+import { WREN_LICENSE_URL } from '../../../resources/constants'
 import link from '../../../resources/link'
 import Dropdown from '../../../resources/Components/Dropdown'
 import KeyboardShortcutConfigurator from '../../../resources/Components/KeyboardShortcutConfigurator'
@@ -91,10 +92,13 @@ export class Settings extends Component {
     const latticeEndpointMode = context.store('main.latticeSettings.endpointMode')
     this.revokeCancelRef = createRef()
     this.revokeTriggerRefs = {}
+    this.resetTriggerRef = createRef()
+    this.resetCancelRef = createRef()
     this.state = {
       latticeEndpoint,
       latticeEndpointMode,
       resetConfirm: false,
+      instanceIdCopied: false,
       revokeCompanionConfirm: undefined,
       revokeCompanionPending: false,
       revokeCompanionError: ''
@@ -107,7 +111,99 @@ export class Settings extends Component {
 
   componentWillUnmount() {
     this.mounted = false
+    clearTimeout(this.instanceIdCopiedTimeout)
     clearTimeout(this.inputLatticeTimeout)
+  }
+
+  appInfo() {
+    // TODO: move this to global passed over IPC
+    // eslint-disable-next-line
+    const appVersion = require('../../../package.json').version
+    const instanceId = this.store('main.instanceId')
+    return (
+      <div className='appInfo'>
+        <button
+          type='button'
+          className='appInfoLine appInfoLineInstanceId'
+          onMouseLeave={(event) => {
+            event.stopPropagation()
+            event.preventDefault()
+            this.setState({ instanceIdCopied: false })
+          }}
+          onClick={() => {
+            clearTimeout(this.instanceIdCopiedTimeout)
+            link.send('tray:clipboardData', instanceId)
+            this.setState({ instanceIdCopied: true })
+            this.instanceIdCopiedTimeout = setTimeout(() => this.setState({ instanceIdCopied: false }), 1800)
+          }}
+        >
+          {this.state.instanceIdCopied ? (
+            <span className='instanceIdCopied'>{'Instance ID Copied'}</span>
+          ) : (
+            instanceId
+          )}
+        </button>
+        <div className='appInfoLine appInfoLineVersion'>{`v${appVersion}`}</div>
+        <button
+          type='button'
+          className='appInfoViewLicense'
+          onClick={() => link.send('tray:openExternal', WREN_LICENSE_URL)}
+        >
+          View License
+        </button>
+        <div className='appInfoLine appInfoLineReset'>
+          {this.state.resetConfirm ? (
+            <div
+              className='appInfoLineResetConfirm'
+              role='group'
+              aria-labelledby='reset-app-title'
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
+                }
+              }}
+            >
+              <strong id='reset-app-title'>Reset Wren?</strong>
+              <span>
+                This removes local accounts, signers, networks, contacts, custom tokens, permissions, and
+                settings from this device. This cannot be undone.
+              </span>
+              <span className='appInfoLineResetConfirmButtons'>
+                <button
+                  type='button'
+                  ref={this.resetCancelRef}
+                  className='wrenControl wrenControlSecondary'
+                  onClick={() =>
+                    this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
+                  }
+                >
+                  Cancel
+                </button>
+                <button
+                  type='button'
+                  className='wrenControl wrenControlDanger'
+                  onClick={() => link.send('tray:resetAllSettings')}
+                >
+                  Reset Wren
+                </button>
+              </span>
+            </div>
+          ) : (
+            <button
+              type='button'
+              ref={this.resetTriggerRef}
+              className='appInfoLineResetButton'
+              onClick={() =>
+                this.setState({ resetConfirm: true }, () => this.resetCancelRef.current?.focus())
+              }
+            >
+              Reset Wren
+            </button>
+          )}
+        </div>
+      </div>
+    )
   }
 
   armCompanionRevocation(credential) {
@@ -562,6 +658,12 @@ export class Settings extends Component {
               })}
             </section>
           ) : null}
+          <section className='wrenSettingsSection' aria-labelledby='wren-settings-about'>
+            <h2 id='wren-settings-about' className='wrenSettingsSectionTitle'>
+              About
+            </h2>
+            {this.appInfo()}
+          </section>
         </div>
       </div>
     )

@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
-import { WREN_COMPANION_RELEASES_URL, WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
+import { WREN_COMPANION_RELEASES_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 
 const dashboardSections = [
   {
@@ -55,131 +55,9 @@ const dashboardSections = [
 ]
 
 export class Main extends React.Component {
-  constructor(props, context) {
-    super(props, context)
-    const latticeEndpoint = context.store('main.latticeSettings.endpointCustom')
-    const latticeEndpointMode = context.store('main.latticeSettings.endpointMode')
-    this.state = {
-      latticeEndpoint,
-      latticeEndpointMode,
-      resetConfirm: false,
-      instanceIdCopied: false
-    }
-    this.resetTriggerRef = React.createRef()
-    this.resetCancelRef = React.createRef()
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.instanceIdCopiedTimeout)
-    clearTimeout(this.inputLatticeTimeout)
-  }
-
   componentDidMount() {
     const scroll = document.querySelector('.dashMainScroll')
     if (scroll) scroll.scrollTop = 0
-  }
-
-  appInfo() {
-    // TODO: move this to global passed over IPC
-    // eslint-disable-next-line
-    const appVersion = require('../../../package.json').version
-    const instanceId = this.store('main.instanceId')
-    return (
-      <div className='appInfo'>
-        <button
-          type='button'
-          className='appInfoLine appInfoLineInstanceId'
-          onMouseLeave={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            this.setState({ instanceIdCopied: false })
-          }}
-          onClick={() => {
-            clearTimeout(this.instanceIdCopiedTimeout)
-            link.send('tray:clipboardData', instanceId)
-            this.setState({ instanceIdCopied: true })
-            this.instanceIdCopiedTimeout = setTimeout(() => this.setState({ instanceIdCopied: false }), 1800)
-          }}
-        >
-          {this.state.instanceIdCopied ? (
-            <span className='instanceIdCopied'>{'Instance ID Copied'}</span>
-          ) : (
-            instanceId
-          )}
-        </button>
-        <div className='appInfoLine appInfoLineVersion'>{`v${appVersion}`}</div>
-        <button
-          type='button'
-          className='appInfoViewLicense'
-          onClick={() => link.send('tray:openExternal', WREN_LICENSE_URL)}
-        >
-          View License
-        </button>
-        <div className='appInfoLine appInfoLineReset'>
-          {this.state.resetConfirm ? (
-            <div
-              className='appInfoLineResetConfirm'
-              role='group'
-              aria-labelledby='reset-app-title'
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
-                }
-              }}
-            >
-              <strong id='reset-app-title'>Reset app?</strong>
-              <span>
-                This removes local accounts, signers, networks, contacts, custom tokens, permissions, and
-                settings from this device. This cannot be undone.
-              </span>
-              <span className='appInfoLineResetConfirmButtons'>
-                <button
-                  type='button'
-                  ref={this.resetCancelRef}
-                  className='wrenControl wrenControlSecondary'
-                  onClick={() =>
-                    this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
-                  }
-                >
-                  Cancel
-                </button>
-                <button
-                  type='button'
-                  className='wrenControl wrenControlDanger'
-                  onClick={() => link.send('tray:resetAllSettings')}
-                >
-                  Reset app
-                </button>
-              </span>
-            </div>
-          ) : (
-            <button
-              type='button'
-              ref={this.resetTriggerRef}
-              className='appInfoLineResetButton'
-              onClick={() =>
-                this.setState({ resetConfirm: true }, () => this.resetCancelRef.current?.focus())
-              }
-            >
-              Reset app
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  inputLatticeEndpoint(e) {
-    e.preventDefault()
-    clearTimeout(this.inputLatticeTimeout)
-    const value = e.target.value.replace(/\s+/g, '')
-    this.setState({ latticeEndpoint: value })
-    // TODO: Update to target specific Lattice device rather than global
-    this.inputLatticeTimeout = setTimeout(
-      () => link.send('tray:action', 'setLatticeEndpointCustom', this.state.latticeEndpoint),
-      1000
-    )
   }
 
   render() {
@@ -275,7 +153,6 @@ export class Main extends React.Component {
               Quit
             </button>
           </div>
-          {this.appInfo()}
         </div>
       </div>
     )

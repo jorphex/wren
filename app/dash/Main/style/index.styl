@@ -26,128 +26,6 @@
   transform translateZ(0)
   animation load 1.1s infinite linear !important
 
-.requestFeature
-  padding 0px 0px 0px 0px
-  display flex
-  justify-content center
-  align-items center
-
-  .requestFeatureButton:active
-    transform translateY(0px)
-    box-shadow 0px 1px 2px var(--ghostY)
-    background var(--ghostAZ)
-
-  .requestFeatureButton:hover
-    transform translateY(-1px)
-    box-shadow 0px 4px 8px var(--ghostY)
-    background var(--ghostA)
-
-  .requestFeatureButton
-    padding 0px 30px
-    border-radius 26px
-    height 74px
-    font-size 14px
-    display flex
-    justify-content center
-    align-items center
-    width 294px
-    margin-bottom 8px
-    font-weight 400
-    cursor pointer
-    box-sizing border-box
-    background var(--ghostAZ)
-    border-bottom 2px solid var(--ghostZ)
-    border-top 0
-    border-right 0
-    border-left 0
-    box-shadow 0px 2px 4px var(--ghostY)
-    color inherit
-    font-family 'MainFont'
-    *
-      pointer-events none
-
-  .requestFeatureButtonMoon
-    color var(--moon)
-
-  .requestFeatureButtonGood
-    color var(--good)
-
-.snipIt
-  display flex
-  flex-direction column
-  justify-content center
-  align-items center
-  transform translateZ(0)
-  padding 0px 10px
-  font-size 13px
-  font-weight 400
-  font-family 'MainFont'
-  position relative
-  z-index 1
-  line-height 22px
-  margin-bottom 32px
-  margin-top 32px
-
-  @keyframes spin
-    0% 
-      transform rotate(0deg)
-    100%
-      transform rotate(360deg)
-
-  @keyframes spinReverse
-    0% 
-      transform rotate(0deg)
-    100%
-      transform rotate(-360deg)
-
-  .snipItBrowserExtensionIcons
-    display flex
-    justify-content center
-    align-items center
-    padding 10px
-    width 100%
-    
-    .snipItBrowserExtensionIcon:active
-      transform translateY(0px)
-      box-shadow 0px 1px 2px var(--ghostY)
-      background var(--ghostA)
-
-    .snipItBrowserExtensionIcon:hover
-      transform translateY(-1px)
-      box-shadow 0px 4px 8px var(--ghostY)
-      background var(--ghostA)
-
-    .snipItBrowserExtensionIcon
-      display flex
-      justify-content center
-      align-items center
-      height 74px
-      width 74px
-      border-radius 26px
-      margin 8px
-      cursor pointer
-      background var(--ghostAZ)
-      border-bottom 2px solid var(--ghostZ)
-      border-top 0
-      border-right 0
-      border-left 0
-      box-shadow 0px 2px 4px var(--ghostY)
-      color inherit
-      padding 0
-
-      *
-        pointer-events none
-
-// .dashModules
-//   .dashModule:first-child
-//     border-top-left-radius 26px
-//     border-top-right-radius 26px
-//   .dashModule:last-child
-//     border-bottom-left-radius 26px
-//     border-bottom-right-radius 26px
-//   .dashModule:first-child:last-child
-//     border-radius 26px
-
 .dashModule
   height 120px
   margin-bottom 8px
@@ -193,71 +71,8 @@ button.dashModule
 button.dashModule:focus-visible
   box-shadow 0 0 0 2px var(--moon), 0px 2px 4px var(--ghostY)
 
-button.snipItBrowserExtensionIcon:focus-visible,
 button.requestFeatureButton:focus-visible
   box-shadow 0 0 0 2px var(--moon), 0px 2px 4px var(--ghostY)
-
-.signerSettings
-  position absolute
-  top 10px
-  right 0
-  bottom 0
-  left 0
-  transition var(--standard)
-  transform translateZ(0)
-  overflow hidden
-
-  .signerSlide
-    position absolute
-    top 50px
-    right 0
-    left 0
-    bottom 0
-    transition var(--standard)
-    padding-bottom 50px
-    overflow-y scroll
-    overflow-x hidden
-    .signerSubslider
-      width 1000%
-      display flex
-    .signerSubsliderSlide
-      width 10%
-    .signerSubsliderSlideMessage
-      padding 20px
-      display flex
-      flex-direction column
-      justify-content flex-start
-      align-items center
-      text-align center
-    .renameAccountButtonWrap
-      padding 10px
-      display flex
-      justify-content center
-      align-items center
-      text-align center
-
-  .signerSettingsTitle:before
-    content ''
-    position absolute
-    bottom -2px
-    right 10px
-    left 10px
-    height 4px
-    border-radius 2px
-    background var(--thin)
-
-  .signerSettingsTitle
-    position relative
-    display flex
-    align-items flex-end
-    justify-content space-between
-    height 40px
-    font-size 22px
-    padding 0px 10px 10px 10px
-
-.signerSettingsHidden
-  left 100%
-  right -100%
 
 .signerPermission
   position relative
@@ -439,42 +254,6 @@ button.requestFeatureButton:focus-visible
     transform translateX(20px)
 
 .signerPermissionToggle:hover
-  .signerPermissionToggleSwitch
-    background var(--ghostD)
-
-.signerPermissionToggleSmall
-  position relative
-  background var(--bad)
-  height 14px
-  width 30px
-  border-radius 10px
-  transition var(--standard)
-  transform translateZ(0)
-  margin-top 2px
-  margin-right 4px
-  cursor pointer
-
-  .signerPermissionToggleSwitch
-    position absolute
-    top 2px
-    left 2px
-    bottom 2px
-    width 10px
-    border-radius 10px
-    transition var(--standard)
-    background var(--ghostC)
-    transform translateZ(0)
-    box-shadow 0px 3px 3px 0px var(--tripleThick) 
-    pointer-events none
-
-.signerPermissionToggleSmallOn
-  background var(--good)
-
-  .signerPermissionToggleSwitch
-    position absolute
-    transform translateX(16px)
-
-.signerPermissionToggleSmall:hover
   .signerPermissionToggleSwitch
     background var(--ghostD)
 
@@ -708,82 +487,6 @@ button.dashModule.wrenControl.wrenControlGhost
   gap var(--wren-space-2)
   margin-bottom var(--wren-space-6)
 
-.localSettings .appInfo
-  padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
-  border-top 1px solid var(--wren-border-subtle)
-  color var(--wren-text-muted)
-  font-size var(--wren-type-caption)
-
-  .appInfoLineInstanceId
-    width 100%
-    max-width 100%
-    margin 0 0 var(--wren-space-3)
-    overflow hidden
-    color var(--wren-text-muted)
-    font-family var(--wren-font-mono)
-    font-size var(--wren-type-caption)
-    text-align center
-    text-overflow ellipsis
-    text-transform none
-    white-space nowrap
-
-  .appInfoLineVersion
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-mono)
-    font-size var(--wren-type-caption)
-
-  .appInfoViewLicense
-    margin-top var(--wren-space-3)
-    color var(--wren-text-tertiary)
-    font-size var(--wren-type-caption)
-
-  .appInfoLineReset
-    margin var(--wren-space-2) 0 0
-    color var(--wren-text-tertiary)
-    font-size var(--wren-type-caption)
-    line-height 24px
-
-  .appInfoLineResetConfirm
-    display flex
-    max-width 520px
-    margin var(--wren-space-3) auto 0
-    padding var(--wren-space-3)
-    flex-direction column
-    gap var(--wren-space-2)
-    border 1px solid rgba(213, 116, 104, .36)
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-secondary)
-    background var(--wren-danger-soft)
-    font-size var(--wren-type-small)
-    line-height 18px
-    text-align left
-
-    strong
-      color var(--wren-text-primary)
-      font-size 14px
-      font-weight 500
-
-  .appInfoLineResetConfirmButtons
-    display flex
-    justify-content flex-end
-    gap var(--wren-space-2)
-
-    button
-      min-height 40px
-      padding 0 var(--wren-space-4)
-
-  .appInfoLineResetButton
-    padding 0
-    color var(--wren-text-muted)
-    background transparent
-    border 0
-    font-family var(--wren-font-ui)
-    font-size var(--wren-type-caption)
-    cursor pointer
-
-    &:hover
-      color var(--wren-danger)
-
 @media (max-height: 760px)
   .localSettings .localSettingsWrap
     padding-top var(--wren-space-3)
@@ -806,9 +509,6 @@ button.dashModule.wrenControl.wrenControlGhost
 
   .dashSupportActions
     margin-bottom var(--wren-space-2)
-
-  .localSettings .appInfo
-    padding-top var(--wren-space-2)
 
 @media (max-width: 560px)
   .dashModules

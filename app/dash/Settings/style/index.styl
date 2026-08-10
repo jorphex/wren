@@ -108,6 +108,107 @@
   .connectionCustomInput
     margin-top var(--wren-space-2)
 
+  .appInfo
+    display flex
+    padding var(--wren-space-4) var(--wren-space-2)
+    flex-direction column
+    align-items center
+    border-top 1px solid var(--wren-border-subtle)
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+    button
+      appearance none
+      border 0
+      color inherit
+      background transparent
+      font-family inherit
+      cursor pointer
+
+      &:focus-visible
+        outline 2px solid var(--wren-focus)
+        outline-offset 2px
+
+    .appInfoLine
+      display flex
+      align-items center
+      justify-content center
+      text-align center
+
+    .appInfoLineInstanceId
+      width 100%
+      max-width 100%
+      margin 0 0 var(--wren-space-3)
+      overflow hidden
+      color var(--wren-text-muted)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-caption)
+      text-overflow ellipsis
+      text-transform none
+      white-space nowrap
+
+    .instanceIdCopied
+      color var(--wren-success)
+      text-transform none
+
+    .appInfoLineVersion
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-caption)
+
+    .appInfoViewLicense
+      margin-top var(--wren-space-3)
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-caption)
+
+      &:hover
+        color var(--wren-text-primary)
+
+    .appInfoLineReset
+      width 100%
+      margin var(--wren-space-2) 0 0
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-caption)
+      line-height 24px
+
+    .appInfoLineResetConfirm
+      display flex
+      max-width 520px
+      margin var(--wren-space-3) auto 0
+      padding var(--wren-space-3)
+      flex-direction column
+      gap var(--wren-space-2)
+      border 1px solid rgba(213, 116, 104, .36)
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-secondary)
+      background var(--wren-danger-soft)
+      font-size var(--wren-type-small)
+      line-height 18px
+      text-align left
+
+      strong
+        color var(--wren-text-primary)
+        font-size 14px
+        font-weight 500
+
+    .appInfoLineResetConfirmButtons
+      display flex
+      justify-content flex-end
+      gap var(--wren-space-2)
+
+      button
+        min-height 40px
+        padding 0 var(--wren-space-4)
+
+    .appInfoLineResetButton
+      padding 0
+      color var(--wren-text-muted)
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-caption)
+
+      &:hover
+        color var(--wren-danger)
+
   .wrenSettingsSection:last-child .localSetting:last-child
     border-bottom 1px solid var(--wren-border-subtle)
 

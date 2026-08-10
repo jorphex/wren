@@ -1,6 +1,7 @@
 import Restore from 'react-restore'
 
 import { Settings } from '../../../../app/dash/Settings'
+import { WREN_LICENSE_URL } from '../../../../resources/constants'
 import link from '../../../../resources/link'
 import { act, fireEvent, render, screen, within } from '../../../componentSetup'
 
@@ -12,6 +13,7 @@ const state = {
   main: {
     accountCloseLock: false,
     autohide: false,
+    instanceId: '11111111-1111-4111-8111-111111111111',
     extensionCredentials: {
       companion: {
         browser: 'Firefox',
@@ -62,7 +64,8 @@ it('groups settings into a short, semantic ledger', () => {
   expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
     'Desktop behavior',
     'Accounts and signing',
-    'Browser companions'
+    'Browser companions',
+    'About'
   ])
   expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Wallet shortcut'))).toBe(
     true
@@ -70,6 +73,40 @@ it('groups settings into a short, semantic ledger', () => {
   expect(
     screen.getByRole('region', { name: 'Accounts and signing' }).contains(setting('Ledger derivation'))
   ).toBe(true)
+})
+
+it('keeps app identity, license, and reset actions in About', async () => {
+  const { user } = renderSettings()
+  const about = screen.getByRole('region', { name: 'About' })
+  const instanceId = state.main.instanceId
+
+  fireEvent.click(within(about).getByRole('button', { name: instanceId }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', instanceId)
+  expect(within(about).getByText('Instance ID Copied')).toBeTruthy()
+
+  fireEvent.click(within(about).getByRole('button', { name: 'View License' }))
+  expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_LICENSE_URL)
+
+  const reset = within(about).getByRole('button', { name: 'Reset Wren' })
+  await user.click(reset)
+  expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Cancel' }))
+  await user.click(within(about).getByRole('button', { name: 'Cancel' }))
+  expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Reset Wren' }))
+
+  await user.click(within(about).getByRole('button', { name: 'Reset Wren' }))
+  await user.click(within(about).getByRole('button', { name: 'Reset Wren' }))
+  expect(link.send).toHaveBeenCalledWith('tray:resetAllSettings')
+})
+
+it('cancels a staged reset from About with Escape', async () => {
+  const { user } = renderSettings()
+  const about = screen.getByRole('region', { name: 'About' })
+
+  await user.click(within(about).getByRole('button', { name: 'Reset Wren' }))
+  await user.keyboard('{Escape}')
+
+  expect(within(about).queryByRole('group', { name: 'Reset Wren?' })).toBeNull()
+  expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Reset Wren' }))
 })
 
 it.each([
