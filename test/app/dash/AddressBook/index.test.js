@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { render, screen, waitFor } from '../../../componentSetup'
+import { act, render, screen, waitFor } from '../../../componentSetup'
 import { AddressBook, AddressBookEditor } from '../../../../app/dash/AddressBook'
 import {
   exportAddressBook,
@@ -81,6 +81,46 @@ test('resolves ENS once, saves its address, and returns through Dash navigation'
   expect(link.send).toHaveBeenCalledWith('tray:action', 'backDash')
 })
 
+test('resolves a completed ENS name inline and seeds an untouched contact name', async () => {
+  link.rpc.mockImplementation((method, name, callback) => callback(null, address))
+  const { user } = render(<AddressBookEditor />)
+
+  await user.type(screen.getByLabelText('Address or ENS name'), 'treasury.eth')
+  expect(screen.getByText('Resolving ENS name…')).toBeTruthy()
+  await act(async () => jest.advanceTimersByTime(320))
+
+  expect(await screen.findByText('ENS name resolved')).toBeTruthy()
+  expect(screen.getByPlaceholderText('0x... or name.eth').value).toBe(address)
+  expect(screen.getByLabelText('Name').value).toBe('treasury.eth')
+})
+
+test('does not overwrite a deliberate contact name when ENS resolution finishes', async () => {
+  let finishResolution
+  link.rpc.mockImplementation((method, name, callback) => {
+    finishResolution = () => callback(null, address)
+  })
+  const { user } = render(<AddressBookEditor />)
+
+  await user.type(screen.getByLabelText('Address or ENS name'), 'treasury.eth')
+  await act(async () => jest.advanceTimersByTime(320))
+  await user.type(screen.getByLabelText('Name'), 'Operations')
+  await act(async () => finishResolution())
+
+  expect(screen.getByLabelText('Name').value).toBe('Operations')
+})
+
+test('seeds a new contact form from the active search', async () => {
+  const { user } = render(<ConnectedAddressBook data={{}} />)
+
+  await user.type(screen.getByRole('textbox', { name: 'Search contacts' }), 'New teammate')
+  await user.click(screen.getByRole('button', { name: 'Add' }))
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'addressBook',
+    data: { screen: 'edit', seed: 'New teammate' }
+  })
+})
+
 test('requires confirmation before deletion and reports import duplicate counts', async () => {
   removeAddressBookEntry.mockResolvedValue({ success: true })
   importAddressBook.mockResolvedValue({ success: true, imported: 2, skipped: 1 })
@@ -90,7 +130,9 @@ test('requires confirmation before deletion and reports import duplicate counts'
   expect(removeAddressBookEntry).not.toHaveBeenCalled()
   await user.click(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' }))
   await waitFor(() => expect(removeAddressBookEntry).toHaveBeenCalledWith(address))
-  expect(await screen.findByText('Contact removed.')).toBeTruthy()
+  expect(await screen.findByText('Contact removed')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(4000))
+  expect(screen.queryByText('Contact removed')).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Import JSON' }))
   expect(await screen.findByText('Imported 2; skipped 1 existing or excess entry.')).toBeTruthy()

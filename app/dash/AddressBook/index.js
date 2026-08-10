@@ -7,6 +7,8 @@ import link from '../../../resources/link'
 import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddressBookEntry } from './api'
 
 const shortAddress = (address) => `${address.slice(0, 8)}...${address.slice(-6)}`
+const completeEnsName = (value) => /\.[a-z]{2,}$/i.test(value.trim())
+const completeAddress = (value) => /^0x[0-9a-fA-F]{40}$/.test(value.trim())
 const initials = (name) =>
   name
     .split(/\s+/)
@@ -27,14 +29,64 @@ export class AddressBookEditor extends React.Component {
   constructor(props) {
     super(props)
     const entry = props.entry || {}
+    const seed = props.seed?.trim() || ''
+    const seedAddress = completeAddress(seed) || completeEnsName(seed)
+    this.ensSequence = 0
     this.state = {
-      address: entry.address || '',
-      name: entry.name || '',
+      address: entry.address || (seedAddress ? seed : ''),
+      ensInput: '',
+      ensStatus: '',
+      name: entry.name || (seed && !seedAddress ? seed : ''),
+      nameDirty: Boolean(entry.name || (seed && !seedAddress)),
       note: entry.note || '',
       error: '',
       resolving: false,
       saving: false
     }
+  }
+
+  componentDidMount() {
+    if (!this.props.entry && completeEnsName(this.state.address)) this.scheduleEnsResolution(this.state.address)
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.ensTimer)
+    this.ensSequence += 1
+  }
+
+  scheduleEnsResolution(value) {
+    clearTimeout(this.ensTimer)
+    const sequence = ++this.ensSequence
+    this.setState({ ensStatus: 'resolving' })
+    this.ensTimer = setTimeout(() => this.resolveEnsInput(value, sequence), 320)
+  }
+
+  async resolveEnsInput(value, sequence = ++this.ensSequence) {
+    const ensName = value.trim()
+    if (!completeEnsName(ensName)) return
+    this.setState({ ensStatus: 'resolving', error: '', resolving: true })
+    try {
+      const address = await resolveEnsName(ensName)
+      if (sequence !== this.ensSequence || this.state.address.trim() !== ensName) return
+      this.setState((state) => ({
+        address,
+        ensInput: ensName,
+        ensStatus: 'resolved',
+        name: state.nameDirty ? state.name : ensName,
+        resolving: false
+      }))
+      return address
+    } catch {
+      if (sequence !== this.ensSequence || this.state.address.trim() !== ensName) return
+      this.setState({ ensStatus: 'failed', error: '', resolving: false })
+    }
+  }
+
+  updateAddress(address) {
+    clearTimeout(this.ensTimer)
+    this.ensSequence += 1
+    this.setState({ address, ensInput: '', ensStatus: '', error: '', resolving: false })
+    if (completeEnsName(address)) this.scheduleEnsResolution(address)
   }
 
   async submit(event) {
@@ -45,8 +97,11 @@ export class AddressBookEditor extends React.Component {
     try {
       let address = this.state.address.trim()
       if (!this.props.entry && address.includes('.')) {
-        this.setState({ resolving: true, saving: false })
-        address = await resolveEnsName(address)
+        clearTimeout(this.ensTimer)
+        this.ensSequence += 1
+        this.setState({ saving: false })
+        address = await this.resolveEnsInput(address)
+        if (!address) return
         this.setState({ address, resolving: false, saving: true })
       }
 
@@ -87,21 +142,32 @@ export class AddressBookEditor extends React.Component {
           </div>
         </header>
 
-        <label className='addressBookField'>
+        <label
+          className={`addressBookField ${this.state.ensStatus === 'failed' ? 'addressBookFieldError' : ''}`}
+        >
           <span>Address or ENS name</span>
           <input
             className='wrenInput'
             autoComplete='off'
             autoFocus={!editing}
-            disabled={editing || pending}
+            disabled={editing || this.state.saving}
             maxLength={255}
-            onChange={(event) => this.setState({ address: event.target.value, error: '' })}
+            onChange={(event) => this.updateAddress(event.target.value)}
             placeholder='0x... or name.eth'
             spellCheck={false}
             value={this.state.address}
           />
-          {!editing && this.state.address.includes('.') ? (
-            <small>The ENS name will be resolved once; only its address is stored.</small>
+          {!editing && this.state.ensStatus ? (
+            <small
+              className={`addressBookEnsStatus addressBookEnsStatus${this.state.ensStatus}`}
+              role={this.state.ensStatus === 'failed' ? 'alert' : 'status'}
+            >
+              {this.state.ensStatus === 'resolving'
+                ? 'Resolving ENS name…'
+                : this.state.ensStatus === 'resolved'
+                  ? 'ENS name resolved'
+                  : "Couldn’t resolve ENS name. Check the name and try again."}
+            </small>
           ) : null}
         </label>
 
@@ -110,9 +176,9 @@ export class AddressBookEditor extends React.Component {
           <input
             className='wrenInput'
             autoComplete='off'
-            disabled={pending}
+            disabled={this.state.saving}
             maxLength={80}
-            onChange={(event) => this.setState({ name: event.target.value, error: '' })}
+            onChange={(event) => this.setState({ name: event.target.value, nameDirty: true, error: '' })}
             placeholder='Treasury, teammate, protocol'
             value={this.state.name}
           />
@@ -124,7 +190,7 @@ export class AddressBookEditor extends React.Component {
           </span>
           <textarea
             className='wrenInput'
-            disabled={pending}
+            disabled={this.state.saving}
             maxLength={280}
             onChange={(event) => this.setState({ note: event.target.value, error: '' })}
             placeholder='How you use this address'
@@ -142,10 +208,14 @@ export class AddressBookEditor extends React.Component {
 
         <button
           className='addressBookPrimaryButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
-          disabled={pending || !this.state.address.trim() || !this.state.name.trim()}
+          disabled={
+            pending ||
+            (!completeAddress(this.state.address) && !completeEnsName(this.state.address)) ||
+            !this.state.name.trim()
+          }
           type='submit'
         >
-          {this.state.resolving ? 'Resolving ENS...' : this.state.saving ? 'Saving...' : 'Save Contact'}
+          {this.state.resolving ? 'Resolving ENS…' : this.state.saving ? 'Saving…' : 'Save Contact'}
         </button>
       </form>
     )
@@ -158,10 +228,24 @@ export class AddressBook extends React.Component {
     this.state = { filter: '', confirmDelete: '', status: '', working: false }
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.statusTimer)
+  }
+
+  setTransientStatus(status) {
+    clearTimeout(this.statusTimer)
+    this.setState({ status })
+    this.statusTimer = setTimeout(() => this.setState({ status: '' }), 4000)
+  }
+
   openEditor(address) {
     link.send('tray:action', 'navDash', {
       view: 'addressBook',
-      data: { screen: 'edit', ...(address ? { address } : {}) }
+      data: {
+        screen: 'edit',
+        ...(address ? { address } : {}),
+        ...(!address && this.state.filter.trim() ? { seed: this.state.filter.trim() } : {})
+      }
     })
   }
 
@@ -174,7 +258,8 @@ export class AddressBook extends React.Component {
     this.setState({ working: true, status: '' })
     try {
       await removeAddressBookEntry(address)
-      this.setState({ confirmDelete: '', working: false, status: 'Contact removed.' })
+      this.setState({ confirmDelete: '', working: false })
+      this.setTransientStatus('Contact removed')
     } catch (error) {
       this.setState({
         working: false,
@@ -189,15 +274,14 @@ export class AddressBook extends React.Component {
     try {
       const result = operation === 'import' ? await importAddressBook() : await exportAddressBook()
       if (result.canceled) return this.setState({ working: false })
-      this.setState({
-        working: false,
-        status:
-          operation === 'import'
-            ? `Imported ${result.imported}; skipped ${result.skipped} existing or excess entr${
-                result.skipped === 1 ? 'y' : 'ies'
-              }.`
-            : `Exported ${result.exported} contact${result.exported === 1 ? '' : 's'}.`
-      })
+      this.setState({ working: false })
+      this.setTransientStatus(
+        operation === 'import'
+          ? `Imported ${result.imported}; skipped ${result.skipped} existing or excess entr${
+              result.skipped === 1 ? 'y' : 'ies'
+            }.`
+          : `Exported ${result.exported} contact${result.exported === 1 ? '' : 's'}.`
+      )
     } catch (error) {
       this.setState({
         working: false,
@@ -216,23 +300,21 @@ export class AddressBook extends React.Component {
 
     return (
       <div className='addressBook cardShow'>
-        <header className='addressBookHeader'>
-          <div>
-            <h2>Contacts</h2>
-            <p>Local labels help identify recipients during review. Always verify the address.</p>
-          </div>
-          <div className='addressBookCount'>{Object.keys(addressBook).length}</div>
-        </header>
-
         <div className='addressBookToolbar'>
-          <input
-            aria-label='Search contacts'
-            className='wrenInput wrenInputQuiet'
-            onChange={(event) => this.setState({ filter: event.target.value, confirmDelete: '' })}
-            placeholder='Search name, note, or address'
-            spellCheck={false}
-            value={this.state.filter}
-          />
+          <label className='addressBookSearch'>
+            <Icon name='search' size={15} />
+            <input
+              aria-label='Search contacts'
+              className='wrenInput wrenInputQuiet'
+              onChange={(event) => {
+                clearTimeout(this.statusTimer)
+                this.setState({ filter: event.target.value, confirmDelete: '', status: '' })
+              }}
+              placeholder='Search name, note, or address'
+              spellCheck={false}
+              value={this.state.filter}
+            />
+          </label>
           <button
             className='wrenControl wrenControlSecondary'
             onClick={() => this.openEditor()}
@@ -245,7 +327,7 @@ export class AddressBook extends React.Component {
         {entries.length ? (
           <div className='addressBookList'>
             {entries.map((entry) => (
-              <article className='addressBookCard' key={entry.address}>
+              <article className='addressBookRow' key={entry.address}>
                 <button
                   aria-label={`Edit ${entry.name}`}
                   className='addressBookCardMain'
@@ -318,7 +400,7 @@ export class AddressBook extends React.Component {
 
   render() {
     const addressBook = this.store('main.addressBook') || {}
-    const { address, screen } = this.props.data || {}
+    const { address, screen, seed } = this.props.data || {}
     if (screen === 'edit') {
       const entry = address ? addressBook[address.toLowerCase()] : undefined
       if (address && !entry) {
@@ -339,7 +421,7 @@ export class AddressBook extends React.Component {
           </div>
         )
       }
-      return <AddressBookEditor entry={entry} key={address || 'new'} />
+      return <AddressBookEditor entry={entry} key={address || seed || 'new'} seed={seed} />
     }
     return this.renderList(addressBook)
   }

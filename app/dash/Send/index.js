@@ -7,6 +7,7 @@ import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
 import Icon from '../../../resources/Components/Icon'
 import AssetMark from '../../../resources/Components/AssetMark'
 import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
+import link from '../../../resources/link'
 import { createBalance, isNativeCurrency, sortByTotalValue } from '../../../resources/domain/balance'
 import { resolveLocalAddressIdentity } from '../../../resources/domain/addressBook/identity'
 import {
@@ -30,7 +31,8 @@ const COPY = Object.freeze({
   chooseContact: 'Choose contact',
   chooseAContact: 'Choose a contact',
   clearRecipient: 'Clear recipient',
-  declinedBody: 'The request was declined before it was sent.',
+  currentAccount: 'Current account',
+  declinedBody: 'You declined this transaction. Nothing was signed or sent.',
   declinedHeading: 'Transaction declined',
   errorBody: 'The network did not accept this transaction.',
   errorHeading: 'Transaction failed',
@@ -41,6 +43,8 @@ const COPY = Object.freeze({
   noAssets: 'No sendable assets on this network',
   noAssetsFound: 'No assets found',
   noContacts: 'No saved contacts yet.',
+  activeAccounts: 'Active accounts',
+  activeWrenAccount: 'Active Wren account',
   primaryDisabled: 'Enter send details',
   primaryReady: 'Review send',
   primarySubmitting: 'Sending…',
@@ -52,7 +56,8 @@ const COPY = Object.freeze({
   recipientResolved: 'Address verified',
   recipientResolving: 'Checking address…',
   reviewFee: 'Estimated fee; review before signing.',
-  searchContacts: 'Search contacts',
+  savedContacts: 'Saved contacts',
+  searchContacts: 'Search accounts and contacts',
   searchAssets: 'Search assets',
   successBody: 'Your transaction was submitted successfully.',
   successHeading: 'Transaction sent',
@@ -111,13 +116,12 @@ export class Send extends React.Component {
       amount: '',
       assetFilter: '',
       contactFilter: '',
-      contactPickerOpen: false,
-      pickerOpen: false,
       queueError: '',
       queueing: false,
       recipient: '',
       recipientError: '',
       recipientName: '',
+      recipientSource: '',
       recipientResolved: '',
       recipientStatus: '',
       requestAccount: '',
@@ -143,16 +147,17 @@ export class Send extends React.Component {
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
+    const step = this.store('windows.dash.nav')[0]?.data?.step
+    if (step === 'assetPicker' || step === 'contactPicker') link.send('nav:back', 'dash')
     this.setState({
       amount: '',
       contactFilter: '',
-      contactPickerOpen: false,
-      pickerOpen: false,
       queueError: '',
       queueing: false,
       recipient: '',
       recipientError: '',
       recipientName: '',
+      recipientSource: '',
       recipientResolved: '',
       recipientStatus: '',
       requestAccount: '',
@@ -207,6 +212,7 @@ export class Send extends React.Component {
     this.setState({
       recipientError: '',
       recipientName: '',
+      recipientSource: '',
       recipientResolved: '',
       recipientStatus: 'resolving'
     })
@@ -218,14 +224,25 @@ export class Send extends React.Component {
       return
     }
 
-    const identity = resolveLocalAddressIdentity(
-      this.store('main.addressBook'),
-      this.store('main.accounts'),
-      result.address
-    )
+    const accounts = this.store('main.accounts') || {}
+    const resolvedAddress = result.address.toLowerCase()
+    const matchedAccount = Object.values(accounts).find((account) => {
+      const address = account?.address || account?.id
+      return typeof address === 'string' && address.toLowerCase() === resolvedAddress
+    })
+    const identity = resolveLocalAddressIdentity(this.store('main.addressBook'), accounts, result.address)
+    const currentAccount = this.store('selected.current') || ''
+    const matchedAccountId = matchedAccount?.id || matchedAccount?.address || ''
+    const isCurrentAccount =
+      Boolean(matchedAccount) && matchedAccountId.toLowerCase() === currentAccount.toLowerCase()
     this.setState({
       recipientError: '',
-      recipientName: identity?.label || result.name || '',
+      recipientName: matchedAccount?.ensName || matchedAccount?.name || identity?.label || result.name || '',
+      recipientSource: matchedAccount
+        ? isCurrentAccount
+          ? COPY.currentAccount
+          : COPY.activeWrenAccount
+        : identity?.source || '',
       recipientResolved: result.address,
       recipientStatus: 'resolved'
     })
@@ -240,6 +257,7 @@ export class Send extends React.Component {
       recipient,
       recipientError: '',
       recipientName: '',
+      recipientSource: '',
       recipientResolved: '',
       recipientStatus: ''
     })
@@ -328,11 +346,21 @@ export class Send extends React.Component {
   resetRequest(clearDraft = false) {
     this.lastRequest = null
     this.setState({
-      ...(clearDraft ? { amount: '', recipient: '', recipientName: '', recipientResolved: '' } : {}),
+      ...(clearDraft
+        ? { amount: '', recipient: '', recipientName: '', recipientResolved: '', recipientSource: '' }
+        : {}),
       queueError: '',
       requestAccount: '',
       requestId: ''
     })
+  }
+
+  openPicker(step, title) {
+    link.send('nav:update', 'dash', { data: { step, title } })
+  }
+
+  closePicker() {
+    link.send('nav:back', 'dash')
   }
 
   renderAssetPicker(context) {
@@ -344,9 +372,6 @@ export class Send extends React.Component {
     )
     return (
       <section className='sendPicker cardShow' aria-label={COPY.chooseAsset}>
-        <header className='sendPickerHeader'>
-          <h2>{COPY.chooseAsset}</h2>
-        </header>
         <div className='sendPickerSearch'>
           <Icon name='search' size={15} />
           <input
@@ -366,18 +391,18 @@ export class Send extends React.Component {
                   aria-label={`Select ${asset.symbol}`}
                   className='sendAssetOption'
                   key={assetKey(asset)}
-                  onClick={() =>
+                  onClick={() => {
                     this.setState(() => {
                       this.maxSequence += 1
                       return {
                         amount: '',
                         assetFilter: '',
-                        pickerOpen: false,
                         queueError: '',
                         selectedAsset: assetKey(asset)
                       }
                     })
-                  }
+                    this.closePicker()
+                  }}
                   type='button'
                 >
                   <AssetMark asset={asset} />
@@ -405,6 +430,20 @@ export class Send extends React.Component {
 
   renderContactPicker() {
     const filter = this.state.contactFilter.trim().toLowerCase()
+    const accounts = Object.values(this.store('main.accounts') || {})
+      .filter(({ address = '', ensName = '', id = '', name = '', status = 'ok' }) => {
+        if (status !== 'ok') return false
+        return !filter
+          ? true
+          : [address, ensName, id, name].some(
+              (value) => typeof value === 'string' && value.toLowerCase().includes(filter)
+            )
+      })
+      .sort((left, right) =>
+        (left.ensName || left.name || left.address || left.id).localeCompare(
+          right.ensName || right.name || right.address || right.id
+        )
+      )
     const contacts = Object.values(this.store('main.addressBook') || {})
       .filter(({ address = '', name = '', note = '' }) =>
         !filter ? true : [address, name, note].some((value) => value.toLowerCase().includes(filter))
@@ -413,17 +452,6 @@ export class Send extends React.Component {
 
     return (
       <section className='sendPicker sendContactPicker cardShow' aria-label={COPY.chooseAContact}>
-        <header className='sendPickerHeader'>
-          <button
-            aria-label='Back'
-            className='sendPickerBack wrenControl wrenControlGhost wrenControlIcon'
-            onClick={() => this.setState({ contactFilter: '', contactPickerOpen: false })}
-            type='button'
-          >
-            <Icon name='back' size={16} />
-          </button>
-          <h2>{COPY.chooseAContact}</h2>
-        </header>
         <div className='sendPickerSearch'>
           <Icon name='search' size={15} />
           <input
@@ -435,6 +463,41 @@ export class Send extends React.Component {
           />
         </div>
         <div className='sendContactList'>
+          {accounts.length ? (
+            <div className='sendPickerSection'>
+              <h3>{COPY.activeAccounts}</h3>
+              {accounts.map((account) => {
+                const address = account.address || account.id
+                const current =
+                  (account.id || address).toLowerCase() ===
+                  (this.store('selected.current') || '').toLowerCase()
+                return (
+                  <button
+                    className='sendContactOption'
+                    key={`account:${account.id || address}`}
+                    onClick={() => {
+                      this.updateRecipient(address)
+                      this.setState({ contactFilter: '' })
+                      this.closePicker()
+                    }}
+                    type='button'
+                  >
+                    <span className='sendContactIcon' aria-hidden='true'>
+                      <Icon name='accounts' size={17} />
+                    </span>
+                    <span className='sendContactIdentity'>
+                      <strong>{account.ensName || account.name || 'Account'}</strong>
+                      <span>{address}</span>
+                    </span>
+                    <span className='sendContactContext'>
+                      {current ? COPY.currentAccount : COPY.activeWrenAccount}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+          {contacts.length ? <h3 className='sendPickerSectionTitle'>{COPY.savedContacts}</h3> : null}
           {contacts.length ? (
             contacts.map((contact) => (
               <button
@@ -442,7 +505,8 @@ export class Send extends React.Component {
                 key={contact.address.toLowerCase()}
                 onClick={() => {
                   this.updateRecipient(contact.address)
-                  this.setState({ contactFilter: '', contactPickerOpen: false })
+                  this.setState({ contactFilter: '' })
+                  this.closePicker()
                 }}
                 type='button'
               >
@@ -456,9 +520,9 @@ export class Send extends React.Component {
                 <Icon name='next' size={14} />
               </button>
             ))
-          ) : (
+          ) : !accounts.length ? (
             <div className='sendPickerEmpty'>{COPY.noContacts}</div>
-          )}
+          ) : null}
         </div>
       </section>
     )
@@ -468,7 +532,7 @@ export class Send extends React.Component {
     const status = request?.status
     const declined = status === 'declined'
     const failed = status === 'error'
-    const success = ['success', 'sent', 'confirming', 'confirmed'].includes(status)
+    const success = ['success', 'verifying', 'sent', 'confirming', 'confirmed'].includes(status)
     const heading = declined
       ? COPY.declinedHeading
       : failed
@@ -487,7 +551,7 @@ export class Send extends React.Component {
     return (
       <section className={`sendRequestState cardShow ${success ? 'sendRequestStateSuccess' : ''}`}>
         <div className='sendRequestGlyph'>
-          <Icon name={success ? 'check' : failed || declined ? 'alert' : 'pending'} size={28} />
+          <Icon name={success ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
         </div>
         <h2>{heading}</h2>
         <p>{body}</p>
@@ -515,8 +579,9 @@ export class Send extends React.Component {
   render() {
     const context = this.getContext()
     const { account, assets, metadata, selected } = context
-    if (this.state.pickerOpen) return this.renderAssetPicker(context)
-    if (this.state.contactPickerOpen) return this.renderContactPicker()
+    const { data = {} } = this.store('windows.dash.nav')[0] || {}
+    if (data.step === 'assetPicker') return this.renderAssetPicker(context)
+    if (data.step === 'contactPicker') return this.renderContactPicker()
 
     if (this.state.requestId) {
       const request = this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId)
@@ -542,7 +607,7 @@ export class Send extends React.Component {
           <span>{COPY.assetUnavailable}</span>
           <button
             className='wrenControl wrenControlSecondary wrenControlLarge'
-            onClick={() => this.setState({ pickerOpen: true })}
+            onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
             type='button'
           >
             {COPY.chooseAsset}
@@ -564,7 +629,7 @@ export class Send extends React.Component {
         ? COPY.recipientResolving
         : this.state.recipientStatus === 'resolved'
           ? this.state.recipientName
-            ? `Saved address: ${this.state.recipientName}`
+            ? `${this.state.recipientName}${this.state.recipientSource ? ` · ${this.state.recipientSource}` : ''}`
             : COPY.recipientResolved
           : ''
 
@@ -576,7 +641,7 @@ export class Send extends React.Component {
             <button
               aria-label={COPY.chooseAsset}
               className='sendRowValue sendAssetValue'
-              onClick={() => this.setState({ pickerOpen: true })}
+              onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
               type='button'
             >
               <span className='sendAssetIdentityCluster'>
@@ -611,7 +676,10 @@ export class Send extends React.Component {
               <button
                 aria-label={COPY.chooseContact}
                 className='sendInlineAction'
-                onClick={() => this.setState({ contactFilter: '', contactPickerOpen: true })}
+                onClick={() => {
+                  this.setState({ contactFilter: '' })
+                  this.openPicker('contactPicker', COPY.chooseAContact)
+                }}
                 type='button'
               >
                 <Icon name='contacts' size={16} />

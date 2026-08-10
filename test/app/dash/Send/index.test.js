@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import { Send } from '../../../../app/dash/Send'
 import { maxSendAmount, queueSend, resolveSendRecipient } from '../../../../app/dash/Send/api'
 import { NATIVE_CURRENCY } from '../../../../resources/constants'
+import link from '../../../../resources/link'
 import { act, fireEvent, render, screen, waitFor } from '../../../componentSetup'
 
 jest.mock('../../../../app/dash/Send/api', () => ({
@@ -10,6 +11,7 @@ jest.mock('../../../../app/dash/Send/api', () => ({
   queueSend: jest.fn(),
   resolveSendRecipient: jest.fn()
 }))
+jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const recipient = '0x2222222222222222222222222222222222222222'
@@ -17,6 +19,7 @@ const token = '0x3333333333333333333333333333333333333333'
 
 const baseState = () => ({
   selected: { current: account },
+  windows: { dash: { nav: [{ view: 'send', data: {} }] } },
   main: {
     accounts: {
       [account]: { id: account, address: account, name: 'Garden', lastSignerType: 'ring', requests: {} }
@@ -92,19 +95,36 @@ const replaceStore = (store, mutate) => {
   act(() => store.api.replaceState(state))
 }
 
+const setDashStep = (store, step, title) => {
+  replaceStore(store, (state) => {
+    state.windows.dash.nav.unshift({ view: 'send', data: { step, title } })
+  })
+}
+
+const closeDashStep = (store) => {
+  replaceStore(store, (state) => {
+    state.windows.dash.nav.shift()
+  })
+}
+
 beforeEach(() => {
   maxSendAmount.mockReset()
   queueSend.mockReset()
   resolveSendRecipient.mockReset()
+  link.send.mockReset()
 })
 
 it('opens directly on a native asset without a connection step and exposes the asset ledger', async () => {
-  renderSend()
+  const { store } = renderSend()
 
   expect(screen.getByRole('button', { name: 'Choose an asset' }).textContent).toContain('ETH')
   expect(screen.queryByText(/Connect Account/i)).toBeNull()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  expect(link.send).toHaveBeenCalledWith('nav:update', 'dash', {
+    data: { step: 'assetPicker', title: 'Choose an asset' }
+  })
+  setDashStep(store, 'assetPicker', 'Choose an asset')
   expect(screen.getByRole('button', { name: 'Select ETH' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Select USDC' })).toBeTruthy()
 })
@@ -119,18 +139,19 @@ it('uses the shared illustrated empty-state anatomy when no asset is sendable', 
 })
 
 it('keeps the asset label inert and opens the picker from the asset control only', () => {
-  renderSend()
+  const { store } = renderSend()
 
   fireEvent.click(screen.getByText('Asset'))
   expect(screen.queryByRole('button', { name: 'Select ETH' })).toBeNull()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
   expect(screen.getByRole('button', { name: 'Select ETH' })).toBeTruthy()
 })
 
 it('chooses a saved contact from the recipient field', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
-  renderSend((state) => {
+  const { store } = renderSend((state) => {
     state.main.addressBook[recipient.toLowerCase()] = {
       address: recipient,
       createdAt: 1,
@@ -142,11 +163,62 @@ it('chooses a saved contact from the recipient field', async () => {
   })
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose contact' }))
-  expect(screen.getByRole('heading', { name: 'Choose a contact' })).toBeTruthy()
+  setDashStep(store, 'contactPicker', 'Choose a contact')
+  expect(screen.getByRole('region', { name: 'Choose a contact' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: /Garden Friend/ }))
+  closeDashStep(store)
 
   expect(screen.getByPlaceholderText('Enter an address').value).toBe(recipient)
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'dash')
+})
+
+it('lists active accounts and identifies the current recipient account', async () => {
+  resolveSendRecipient.mockImplementation(async (value) => ({ success: true, address: value }))
+  const secondAccount = '0x4444444444444444444444444444444444444444'
+  const { store } = renderSend((state) => {
+    state.main.accounts[secondAccount] = {
+      id: secondAccount,
+      address: secondAccount,
+      name: 'Meadow',
+      lastSignerType: 'trezor',
+      requests: {},
+      status: 'ok'
+    }
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose contact' }))
+  setDashStep(store, 'contactPicker', 'Choose a contact')
+
+  expect(screen.getByText('Active accounts')).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Garden/ }).textContent).toContain('Current account')
+  expect(screen.getByRole('button', { name: /Meadow/ }).textContent).toContain('Active Wren account')
+
+  fireEvent.click(screen.getByRole('button', { name: /Garden/ }))
+  closeDashStep(store)
+  expect(await screen.findByText('Garden · Current account')).toBeTruthy()
+})
+
+it('returns an open picker to the composer when the selected account changes', () => {
+  const { store } = renderSend()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
+  link.send.mockClear()
+
+  replaceStore(store, (state) => {
+    state.selected.current = recipient
+    state.main.accounts[recipient] = {
+      id: recipient,
+      address: recipient,
+      name: 'Meadow',
+      requests: {},
+      status: 'ok'
+    }
+  })
+
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'dash')
 })
 
 it('uses the canonical chiseled input groups for recipient and amount', () => {
@@ -223,7 +295,9 @@ it('preserves an unavailable explicit asset instead of silently sending the fall
   const { store } = renderSend()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
   fireEvent.click(screen.getByRole('button', { name: 'Select USDC' }))
+  closeDashStep(store)
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
@@ -240,13 +314,17 @@ it('preserves an unavailable explicit asset instead of silently sending the fall
 it('ignores a delayed Max result after the selected asset changes', async () => {
   let finishMax
   maxSendAmount.mockReturnValue(new Promise((resolve) => (finishMax = resolve)))
-  renderSend()
+  const { store } = renderSend()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
   fireEvent.click(screen.getByRole('button', { name: 'Select USDC' }))
+  closeDashStep(store)
   fireEvent.click(screen.getByRole('button', { name: 'Max' }))
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
   fireEvent.click(screen.getByRole('button', { name: 'Select ETH' }))
+  closeDashStep(store)
   await act(async () => finishMax({ success: true, amount: '50000000' }))
 
   expect(screen.getByPlaceholderText('0.00').value).toBe('')
@@ -290,6 +368,25 @@ it('retains a terminal request state after the core request is removed', async (
   })
   expect(screen.getByText('Transaction declined')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+})
+
+it('shows the dashboard transaction as sent once broadcast verification begins', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = { status: 'verifying' }
+  })
+
+  expect(screen.getByText('Transaction sent')).toBeTruthy()
+  expect(screen.queryByText('Transaction queued')).toBeNull()
 })
 
 it('ignores a delayed queue result after the selected account changes', async () => {

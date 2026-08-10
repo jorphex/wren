@@ -35,3 +35,13 @@ it('hides Back at the dashboard root while retaining Close', () => {
   expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
 })
+
+it('uses the active crumb title for a nested dashboard surface', () => {
+  renderCommand([
+    { view: 'send', data: { step: 'assetPicker', title: 'Choose an asset' } },
+    { view: 'send', data: {} }
+  ])
+
+  expect(screen.getByText('Choose an asset')).toBeTruthy()
+  expect(screen.getAllByRole('button', { name: 'Back' })).toHaveLength(1)
+})

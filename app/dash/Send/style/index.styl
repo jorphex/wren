@@ -284,21 +284,6 @@
 .sendPicker
   padding 14px 24px 24px
 
-.sendPickerHeader
-  display flex
-  min-height 52px
-  align-items center
-  gap var(--wren-space-3)
-  border-bottom 1px solid var(--wren-border-subtle)
-
-  h2
-    margin 0
-    font-size 17px
-    font-weight 610
-
-.sendPickerBack
-  flex none
-
 .sendPickerSearch
   display flex
   height 48px
@@ -329,10 +314,33 @@
   display flex
   flex-direction column
 
+.sendPickerSection
+  display flex
+  flex-direction column
+
+  h3
+    margin 0
+    padding 18px 2px 8px
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    font-weight 620
+    letter-spacing .055em
+    text-transform uppercase
+
+.sendPickerSectionTitle
+  margin 0
+  padding 22px 2px 8px
+  border-bottom 1px solid var(--wren-border-subtle)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  font-weight 620
+  letter-spacing .055em
+  text-transform uppercase
+
 .sendContactOption
   display grid
   min-height 64px
-  grid-template-columns 36px minmax(0, 1fr) 18px
+  grid-template-columns 36px minmax(0, 1fr) auto
   align-items center
   gap 10px
   padding 8px 2px
@@ -379,6 +387,14 @@
     color var(--wren-text-muted)
     font-family var(--wren-font-mono)
     font-size var(--wren-type-caption)
+
+.sendContactContext
+  max-width 132px
+  overflow hidden
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  text-overflow ellipsis
+  white-space nowrap
 
 .sendAssetOption
   display grid
