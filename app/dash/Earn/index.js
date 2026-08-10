@@ -13,6 +13,8 @@ import {
   revokeYearnWorkflow,
   startYearnWorkflow
 } from './api'
+import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
+import { isNetworkConnected } from '../../../resources/utils/chains'
 
 const CHAINS = [
   { id: 'all', name: 'All' },
@@ -100,6 +102,16 @@ export const positionsMatchAccount = (positions, selected) =>
     selected.toLowerCase() === positions.account.address.toLowerCase()
   )
 
+export const workflowsForAccount = (workflows, vaultId, address) =>
+  typeof address !== 'string'
+    ? []
+    : workflows.filter(
+        (workflow) =>
+          workflow.vaultId === vaultId &&
+          typeof workflow.account === 'string' &&
+          workflow.account.toLowerCase() === address.toLowerCase()
+      )
+
 const chainName = (chainId) => CHAINS.find(({ id }) => id === chainId)?.name || `Chain ${chainId}`
 
 const earnChainColors = Object.freeze({ 1: 'accent1', 8453: 'accent8', 747474: 'accent3' })
@@ -128,7 +140,10 @@ const positionVariantLabel = (vault, variant, cooldown = false) => {
 }
 
 const ChainStatus = ({ chain }) => {
-  if (!chain || ['ready', 'partial'].includes(chain.status)) {
+  if (!chain) {
+    return <div className='earnNotice'>Position data is unavailable.</div>
+  }
+  if (['ready', 'partial'].includes(chain.status)) {
     return chain?.status === 'partial' ? (
       <div className='earnNotice earnNoticeWarn'>
         Some balances could not be read. Available data is shown.
@@ -1310,16 +1325,31 @@ export class Earn extends React.Component {
     }
     const selectedVault = catalog.vaults.find(({ id }) => id === selected)
     if (selectedVault) {
-      const selectedWorkflows = workflows.filter(
-        ({ vaultId, account }) =>
-          vaultId === selectedVault.id &&
-          account.toLowerCase() === currentPositions?.account?.address.toLowerCase()
-      )
+      const selectedAccountId = this.store('selected.current')
+      const selectedAccountRecord = selectedAccountId
+        ? this.store('main.accounts', selectedAccountId)
+        : undefined
+      const selectedAccountAddress =
+        selectedAccountRecord?.address ||
+        selectedAccountRecord?.id ||
+        currentPositions?.account?.address ||
+        ''
+      const selectedAccount = selectedAccountRecord
+        ? {
+            ...selectedAccountRecord,
+            address: selectedAccountAddress,
+            readOnly: isWatchOnlyAccountType(selectedAccountRecord.lastSignerType)
+          }
+        : currentPositions?.account
+      const selectedWorkflows = workflowsForAccount(workflows, selectedVault.id, selectedAccountAddress)
       const selectedChain = currentPositions?.chains.find(({ chainId }) => chainId === selectedVault.chainId)
+      const selectedNetwork = this.store('main.networks.ethereum', selectedVault.chainId)
       const signingAccount =
-        currentPositions?.account &&
-        !currentPositions.account.readOnly &&
-        ['ready', 'partial'].includes(selectedChain?.status)
+        selectedAccount &&
+        !selectedAccount.readOnly &&
+        (selectedNetwork
+          ? isNetworkConnected(selectedNetwork)
+          : ['ready', 'partial'].includes(selectedChain?.status))
       if (this.state.activityExpanded) {
         return (
           <ActivityView
@@ -1341,7 +1371,7 @@ export class Earn extends React.Component {
           vault={selectedVault}
           position={this.positionFor(selectedVault.id)}
           catalogStatus={catalog.status}
-          account={currentPositions?.account}
+          account={selectedAccount}
           chain={selectedChain}
           workflows={selectedWorkflows}
           form={this.state.form}

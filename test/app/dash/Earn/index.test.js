@@ -6,7 +6,8 @@ import {
   activityPreviewLimit,
   formatPercentLabel,
   formatReceiptAmount,
-  positionsMatchAccount
+  positionsMatchAccount,
+  workflowsForAccount
 } from '../../../../app/dash/Earn'
 import {
   getYearnCatalog,
@@ -29,6 +30,17 @@ jest.mock('../../../../app/dash/Earn/api', () => ({
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 const address = '0x0000000000000000000000000000000000000001'
+
+it('keeps selected-account workflows visible without position data', () => {
+  const workflows = [
+    { id: 'selected', vaultId: 'vault-1', account: address.toUpperCase() },
+    { id: 'other-vault', vaultId: 'vault-2', account: address },
+    { id: 'other-account', vaultId: 'vault-1', account: '0x0000000000000000000000000000000000000002' }
+  ]
+
+  expect(workflowsForAccount(workflows, 'vault-1', address)).toEqual([workflows[0]])
+  expect(workflowsForAccount(workflows, 'vault-1', '')).toEqual([])
+})
 
 it('does not repeat an unavailable percentage label', () => {
   expect(formatPercentLabel(undefined, 'Unavailable')).toBe('Unavailable')
