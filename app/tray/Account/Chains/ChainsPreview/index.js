@@ -1,10 +1,12 @@
 import React from 'react'
 import Restore from 'react-restore'
+import BigNumber from 'bignumber.js'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
+import { roundGwei } from '../../../../../resources/utils'
 
-class ChainsPreview extends React.Component {
+export class ChainsPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
@@ -18,6 +20,7 @@ class ChainsPreview extends React.Component {
       })
     }
     this.state = {
+      expanded: false,
       index: 0,
       lockedOn: false
     }
@@ -29,11 +32,11 @@ class ChainsPreview extends React.Component {
       return chain && this.store('main.networks.ethereum', chain, 'on')
     })
     if (newIndex > existingChains.length - 1) {
-      this.setState({ index: 0 })
+      this.setState({ expanded: false, index: 0 })
     } else if (newIndex < 0) {
-      this.setState({ index: existingChains.length - 1 })
+      this.setState({ expanded: false, index: existingChains.length - 1 })
     } else {
-      this.setState({ index: newIndex })
+      this.setState({ expanded: false, index: newIndex })
     }
   }
 
@@ -55,16 +58,39 @@ class ChainsPreview extends React.Component {
     if (!currentChain || !currentChainMeta) return null
     const { name } = currentChain
     const { primaryColor } = currentChainMeta
+    const levels = currentChainMeta.gas?.price?.levels || {}
+    const fees = currentChainMeta.gas?.price?.fees
+    const feeValue =
+      fees?.nextBaseFee && fees?.maxPriorityFeePerGas
+        ? BigNumber(fees.nextBaseFee).plus(BigNumber(fees.maxPriorityFeePerGas)).shiftedBy(-9).toNumber()
+        : levels.fast
+          ? BigNumber(levels.fast).shiftedBy(-9).toNumber()
+          : null
+    const displayFee =
+      feeValue === null ? 'Gas price unavailable' : `${roundGwei(feeValue) || 'under 0.001'} gwei`
+    const gasAction = this.state.expanded ? 'Hide' : 'Show'
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
         <div className='moduleHeader'>
-          <div className='chainMonitorIdentity'>
-            <span>
-              <Icon name='network' size={16} />
+          <button
+            aria-expanded={this.state.expanded}
+            aria-label={`${name}: ${displayFee}. ${gasAction} gas details.`}
+            className='chainMonitorDisclosure'
+            onClick={() => this.setState(({ expanded }) => ({ expanded: !expanded }))}
+            type='button'
+          >
+            <span className='chainMonitorIdentity'>
+              <span>
+                <Icon name='network' size={16} />
+              </span>
+              <span>
+                <strong>Gas</strong>
+                <small>{name}</small>
+              </span>
             </span>
-            <span>{`${name} Monitor`}</span>
-          </div>
-          <Monitor inline chainId={currentChain.id} color={`var(--${primaryColor})`} />
+            <Monitor ariaHidden inline chainId={currentChain.id} color={`var(--${primaryColor})`} />
+            <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={17} />
+          </button>
           {existingChains.length > 1 && (
             <div className='chainMonitorSwitch'>
               <button
@@ -86,6 +112,9 @@ class ChainsPreview extends React.Component {
             </div>
           )}
         </div>
+        {this.state.expanded ? (
+          <Monitor details chainId={currentChain.id} color={`var(--${primaryColor})`} />
+        ) : null}
       </div>
     )
   }

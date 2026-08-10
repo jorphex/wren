@@ -2,12 +2,11 @@
   display flex
   align-items center
   justify-content center
-  padding var(--wren-space-3)
   color var(--wren-text-primary)
 
   .sliceTileGasPriceIcon
+    display flex
     margin-right var(--wren-space-2)
-    color var(--wren-success)
 
   .sliceTileGasPriceNumber
     margin-right var(--wren-space-1)
@@ -21,188 +20,82 @@
     font-size var(--wren-type-small)
     font-weight 450
 
-.sliceGasBlock
-  position relative
+.gasDetails
+  border-top 1px solid var(--wren-border-subtle)
+
+.gasDetailTiers,
+.gasActionEstimates
+  display grid
+  grid-template-columns repeat(3, minmax(0, 1fr))
+
+.gasDetailTiersLegacy
+  grid-template-columns minmax(0, 1fr)
+
+.gasDetailStat,
+.gasActionEstimate
   display flex
-  width 100%
-  justify-content center
-  padding var(--wren-space-5) 0 var(--wren-space-4)
-  border-radius var(--wren-radius-sm)
-  background var(--wren-surface-inset)
-
-  .feeToolTip
-    position absolute
-    top var(--wren-space-1)
-    right var(--wren-space-1)
-    bottom var(--wren-space-1)
-    left 130px
-    z-index 220
-    display flex
-    align-items center
-    justify-content center
-    padding var(--wren-space-3)
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-secondary)
-    background var(--wren-surface-overlay)
-    box-shadow var(--wren-shadow-md)
-    font-size var(--wren-type-small)
-    font-weight 400
-    line-height 18px
-    text-align center
-    pointer-events none
-
-  .feeToolTipPriority
-    right 125px
-    left var(--wren-space-1)
-
-  .gasBlockTag
-    display none
-
-  .gasItem
-    position relative
-    display flex
-    height 64px
-    box-sizing border-box
-    align-items center
-    justify-content center
-    padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-1)
-    color var(--wren-text-primary)
-    flex-direction column
-
-    .gasArrowNotify
-      display none
-
-    .gasLevelLabel
-      display flex
-      align-items center
-      justify-content center
-      padding-top 2px
-      color var(--wren-text-secondary)
-      font-size var(--wren-type-small)
-      font-weight 450
-      line-height 18px
-      text-align center
-
-    .gasLevelTime
-      display none
-
-    .gasGweiNum
-      display flex
-      align-items center
-      justify-content center
-      font-family var(--wren-font-mono)
-      font-size var(--wren-type-body)
-      line-height 20px
-
-      .gasGweiNumIcon
-        margin -1px var(--wren-space-1) 0 -12px
-
-    .gasGweiLabel
-      padding-top 1px
-      color var(--wren-success)
-      font-size var(--wren-type-caption)
-      font-weight 500
-      text-transform lowercase
-
-  .gasItemSmall
-    top -1px
-    width 30%
-    min-width 30%
-    max-width 30%
-
-    .gasGweiNum
-      font-size var(--wren-type-small)
-
-  .gasItemLarge
-    width 40%
-    min-width 40%
-    max-width 40%
-
-.gasArrow
-  position absolute
-  top var(--wren-space-1)
-  left -14px
-  z-index 200
-  width 30px
-  height 30px
-  padding 0
-  border 1px solid transparent
-  border-radius var(--wren-radius-sm)
-  color var(--wren-text-secondary)
-  background transparent
-  cursor pointer
-  font-family inherit
-
-  *
-    pointer-events none !important
-
-  .gasArrowInner
-    position relative
-    top 1px
-    left 4px
-    display flex
-    width 26px
-    height 26px
-    align-items center
-    justify-content center
-
-.gasArrowRight
-  right -14px
-  left auto
-
-.gasArrow:hover
-  border-color var(--wren-border-default)
-  color var(--wren-text-primary)
-  background var(--wren-surface-hover)
-
-.gasArrow:active
-  background var(--wren-surface-active)
-
-.gasArrow:focus-visible
-  outline 2px solid var(--wren-focus)
-  outline-offset 1px
-
-.gasEstimate
-  display flex
-  box-sizing border-box
+  min-width 0
+  min-height 60px
   align-items center
-  justify-content flex-end
+  justify-content center
+  box-sizing border-box
   padding var(--wren-space-2)
   flex-direction column
+  text-align center
 
-  .gasEstimateRange
-    display flex
-    align-items center
-    justify-content center
-    margin-bottom 2px
-    color var(--wren-text-primary)
-    font-family var(--wren-font-mono)
-    font-size var(--wren-type-body)
+  & + &
+    border-left 1px solid var(--wren-border-subtle)
 
-    .gasEstimateRangeCurrency,
-    .gasEstimateRangeDash
-      color var(--wren-text-secondary)
-      font-family var(--wren-font-ui)
-      font-size var(--wren-type-small)
-      font-weight 400
+.gasDetailValue,
+.gasActionEstimateValue
+  overflow hidden
+  max-width 100%
+  color var(--wren-text-primary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-body)
+  text-overflow ellipsis
+  white-space nowrap
 
-    .gasEstimateRangeDash
-      padding 0 6px 0 3px
+  small
+    margin-left var(--wren-space-1)
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-caption)
 
-  .gasEstimateLabel
-    display flex
-    align-items center
-    justify-content center
-    color var(--wren-text-secondary)
-    font-size var(--wren-type-small)
-    font-weight 450
-    line-height 18px
-    text-align center
-    white-space nowrap
-
-.gasEstimateSymbol
+.gasDetailCaption,
+.gasActionEstimateLabel
+  overflow hidden
+  max-width 100%
+  margin-top 3px
   color var(--wren-text-secondary)
-  font-family var(--wren-font-ui)
-  font-size var(--wren-type-small)
-  font-weight 400
+  font-size var(--wren-type-caption)
+  font-weight 500
+  text-overflow ellipsis
+  white-space nowrap
+
+.gasActionEstimates
+  border-top 1px solid var(--wren-border-subtle)
+
+.gasActionEstimate
+  min-height 52px
+
+.gasMonitorStandaloneToggle
+  display flex
+  width 100%
+  min-height 52px
+  align-items center
+  justify-content space-between
+  box-sizing border-box
+  padding 0 var(--wren-space-3)
+  border 0
+  color var(--wren-text-primary)
+  background transparent
+  cursor pointer
+  font inherit
+
+  &:hover
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px

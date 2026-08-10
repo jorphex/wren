@@ -1,4 +1,4 @@
-import { render, screen } from '../../../componentSetup'
+import { fireEvent, render, screen } from '../../../componentSetup'
 
 import link from '../../../../resources/link'
 import { ChainSummaryComponent } from '../../../../resources/Components/Monitor'
@@ -8,8 +8,11 @@ jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn()
 class MonitorHarness extends ChainSummaryComponent {
   store(...path) {
     const key = path.at(-1)
-    if (key === 'gas.price.levels') return { fast: '0x0' }
-    if (key === 'gas.samples') return []
+    if (key === 'gas.price.levels') return { fast: '0x3b9aca00' }
+    if (key === 'gas.samples') {
+      return [{ label: 'Send ETH', estimates: { low: { cost: { usd: 0.42 } } } }]
+    }
+    if (key === 'name') return 'Ethereum'
   }
 }
 
@@ -33,16 +36,21 @@ test('renders account monitoring without background account-code requests or sta
   expect(screen.getByText('gwei')).toBeTruthy()
 })
 
-test('shows one quiet fee-market summary without explanation controls', () => {
+test('shows one quiet fee-market summary with a single disclosure control', () => {
   render(<FeeMarketMonitorHarness chainId={1} color='var(--good)' />)
 
-  expect(screen.getByLabelText('Current gas price 2 gwei')).toBeTruthy()
-  expect(screen.queryByRole('button')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Ethereum: 2 gwei. Show gas details.' })).toBeTruthy()
 })
 
-test('does not expose fee expansion, estimates, or explorer actions', () => {
+test('reveals fee tiers and action estimates with one click and no nested controls', () => {
   render(<MonitorHarness chainId={1} color='var(--good)' />)
 
-  expect(screen.queryByRole('button')).toBeNull()
-  expect(screen.queryByText(/Send ETH|Send Tokens|DEX Swap/)).toBeNull()
+  const disclosure = screen.getByRole('button', { name: 'Ethereum: 1 gwei. Show gas details.' })
+  fireEvent.click(disclosure)
+
+  expect(screen.getByText('Recommended gas price')).toBeTruthy()
+  expect(screen.getByText('Send ETH')).toBeTruthy()
+  expect(screen.getByLabelText('Estimated fees')).toBeTruthy()
+  expect(screen.getAllByRole('button')).toHaveLength(1)
+  expect(disclosure.getAttribute('aria-expanded')).toBe('true')
 })
