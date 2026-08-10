@@ -5,10 +5,14 @@ import { assertReleaseBuildIdentity } from './build-identity.mjs'
 import { readSourceIdentity } from './source-identity.mjs'
 
 const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
-const buildIdentity = JSON.parse(await readFile(path.resolve('compiled/main/build-identity.json'), 'utf8'))
+const compiledBuildIdentity = JSON.parse(
+  await readFile(path.resolve('compiled/main/build-identity.json'), 'utf8')
+)
+const rendererBuildIdentity = JSON.parse(await readFile(path.resolve('bundle/build-identity.json'), 'utf8'))
 const sourceIdentity = readSourceIdentity()
 
-assertReleaseBuildIdentity(buildIdentity, sourceIdentity, packageJson.version)
+assertReleaseBuildIdentity(compiledBuildIdentity, sourceIdentity, packageJson.version)
+assertReleaseBuildIdentity(rendererBuildIdentity, sourceIdentity, packageJson.version)
 
 for (const generatedDirectory of ['compiled', 'bundle']) {
   const stats = await lstat(path.resolve(generatedDirectory))

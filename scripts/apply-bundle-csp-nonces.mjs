@@ -1,9 +1,12 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createBuildIdentity } from './build-identity.mjs'
+import { readWorkingSourceIdentity } from './source-identity.mjs'
 
 const root = fileURLToPath(new URL('../bundle', import.meta.url))
 const scriptTagPattern = /<script\b[^>]*>/gi
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
 export function applyScriptNonce(html, fileName) {
   const nonceMatches = [...html.matchAll(/'nonce-([^']+)'/g)]
@@ -40,4 +43,13 @@ for (const file of readdirSync(root).filter((entry) => entry.endsWith('.html')))
   if (output !== html) writeFileSync(filePath, output)
 }
 
-console.log('Applied CSP nonces to generated renderer scripts.')
+const buildIdentity = createBuildIdentity(readWorkingSourceIdentity(), packageJson.version)
+writeFileSync(join(root, 'build-identity.json'), `${JSON.stringify(buildIdentity, null, 2)}\n`, {
+  mode: 0o600
+})
+
+console.log(
+  `Applied CSP nonces and recorded renderer identity ${buildIdentity.sourceCommit}${
+    buildIdentity.sourceDirty ? ' (dirty)' : ''
+  }.`
+)

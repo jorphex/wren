@@ -140,6 +140,7 @@ const signerCrypto = require(path.join(appRoot, 'compiled/main/signers/hot/crypt
 const sandbox = require(path.join(appRoot, 'compiled/main/security/sandbox.js'))
 const { nodeWorkerEnvironment } = require(path.join(appRoot, 'compiled/main/worker/environment.js'))
 const buildIdentity = require(path.join(appRoot, 'compiled/main/build-identity.json'))
+const rendererBuildIdentity = require(path.join(appRoot, 'bundle/build-identity.json'))
 const packagedMetadata = require(path.join(appRoot, 'package.json'))
 const { Wallet } = require(path.join(appModules, '@ethereumjs/wallet'))
 const walletAddress = Wallet.fromPrivateKey(Buffer.from('46'.repeat(32), 'hex')).getAddressString()
@@ -189,6 +190,7 @@ Promise.all([
     abi: process.versions.modules,
     desktopName: packagedMetadata.desktopName,
     buildIdentity,
+    rendererBuildIdentity,
     noSandboxRejected,
     rendererBundleNoncesValid,
     workerEnvironment: {
@@ -313,6 +315,7 @@ await notarizeHook({})
 assert.equal(probeResult.electron, packageJson.devDependencies.electron)
 assert.equal(probeResult.desktopName, packageJson.desktopName)
 assertReleaseBuildIdentity(probeResult.buildIdentity, sourceIdentity, packageJson.version)
+assertReleaseBuildIdentity(probeResult.rendererBuildIdentity, sourceIdentity, packageJson.version)
 assert.equal(probeResult.noSandboxRejected, true)
 assert.equal(probeResult.rendererBundleNoncesValid, true)
 assert.deepEqual(probeResult.workerEnvironment, {
