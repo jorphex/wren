@@ -314,7 +314,7 @@ class _AccountMain extends React.Component {
             type='button'
             className='wrenControl wrenControlPrimary'
             onClick={() => {
-              link.send('*:addFrame', 'dappLauncher')
+              link.send('tray:action', 'navDash', { view: 'send', data: {} })
             }}
           >
             <Icon name='send' size={14} />

@@ -549,7 +549,8 @@ button.requestFeatureButton:focus-visible
   text-transform uppercase
 
 .dashModuleSection
-  margin-bottom var(--wren-space-5)
+  min-width 0
+  margin 0
 
   h2
     margin 0 var(--wren-space-2) var(--wren-space-2)
@@ -563,8 +564,14 @@ button.requestFeatureButton:focus-visible
 
 .dashModuleList
   display grid
-  grid-template-columns repeat(3, minmax(0, 1fr))
+  grid-template-columns minmax(0, 1fr)
   gap var(--wren-space-2)
+
+.dashModules
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-5)
+  margin-bottom var(--wren-space-5)
 
 button.dashModule.wrenControl
   position relative
@@ -572,7 +579,8 @@ button.dashModule.wrenControl
   grid-template-columns 28px minmax(0, 1fr) 16px
   column-gap var(--wren-space-2)
   width 100%
-  height 68px
+  min-height 72px
+  height auto
   margin 0
   padding var(--wren-space-2)
   align-items center
@@ -645,16 +653,11 @@ button.dashModule.wrenControl.wrenControlGhost
     line-height 18px
 
   .dashModuleDescription
-    overflow hidden
     color var(--wren-text-tertiary)
     font-size var(--wren-type-small)
     font-weight 300
     line-height 16px
-    display -webkit-box
-    min-height 32px
-    overflow hidden
-    -webkit-box-orient vertical
-    -webkit-line-clamp 2
+    white-space normal
 
   .dashModuleArrow
     position static
@@ -667,12 +670,6 @@ button.dashModule.wrenControl.wrenControlGhost
   &:hover .dashModuleArrow
     color var(--wren-text-secondary)
     transform translateX(2px)
-
-.dashModuleSection button.dashModule
-  height 60px
-
-  .dashModuleDescription
-    display none
 
 .dashCompanion
   display flex
@@ -746,6 +743,35 @@ button.dashModule.wrenControl.wrenControlGhost
     font-size var(--wren-type-caption)
     line-height 24px
 
+  .appInfoLineResetConfirm
+    display flex
+    max-width 520px
+    margin var(--wren-space-3) auto 0
+    padding var(--wren-space-3)
+    flex-direction column
+    gap var(--wren-space-2)
+    border 1px solid rgba(213, 116, 104, .36)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-danger-soft)
+    font-size var(--wren-type-small)
+    line-height 18px
+    text-align left
+
+    strong
+      color var(--wren-text-primary)
+      font-size 14px
+      font-weight 500
+
+  .appInfoLineResetConfirmButtons
+    display flex
+    justify-content flex-end
+    gap var(--wren-space-2)
+
+    button
+      min-height 40px
+      padding 0 var(--wren-space-4)
+
   .appInfoLineResetButton
     padding 0
     color var(--wren-text-muted)
@@ -766,11 +792,11 @@ button.dashModule.wrenControl.wrenControlGhost
   .dashHomeHeader
     padding-bottom var(--wren-space-3)
 
-  .dashModuleSection
+  .dashModules
     margin-bottom var(--wren-space-3)
 
   button.dashModule
-    height 62px
+    min-height 68px
 
   .dashCompanion
     min-height 58px
@@ -783,3 +809,8 @@ button.dashModule.wrenControl.wrenControlGhost
 
   .localSettings .appInfo
     padding-top var(--wren-space-2)
+
+@media (max-width: 560px)
+  .dashModules
+    grid-template-columns minmax(0, 1fr)
+    gap var(--wren-space-4)

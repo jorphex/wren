@@ -19,11 +19,23 @@ export class AccountSelector extends React.Component {
       accountFilter: context.store('panel.accountFilter') || ''
     }
     this.accountTriggerRef = React.createRef()
+    this.accountChooserRef = React.createRef()
+    this.accountChooserWasOpen = Boolean(context.store('selected.showAccounts'))
     this.handleDrawerKeyDown = this.handleDrawerKeyDown.bind(this)
   }
 
   componentDidMount() {
     document.addEventListener('keydown', this.handleDrawerKeyDown)
+    if (this.accountChooserWasOpen) this.focusAccountChooser()
+  }
+
+  componentDidUpdate() {
+    const chooserOpen = Boolean(this.store('selected.showAccounts'))
+
+    if (chooserOpen && !this.accountChooserWasOpen) this.focusAccountChooser()
+    if (!chooserOpen && this.accountChooserWasOpen) this.accountTriggerRef.current?.focus()
+
+    this.accountChooserWasOpen = chooserOpen
   }
 
   componentWillUnmount() {
@@ -36,7 +48,47 @@ export class AccountSelector extends React.Component {
     if (event.key === 'Escape') {
       event.preventDefault()
       this.store.toggleShowAccounts(false)
+      return
     }
+
+    if (event.key !== 'Tab') return
+
+    const focusable = this.getAccountChooserFocusable()
+    if (!focusable.length) {
+      event.preventDefault()
+      this.accountChooserRef.current?.focus()
+      return
+    }
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement
+
+    if (!this.accountChooserRef.current?.contains(active)) {
+      event.preventDefault()
+      ;(event.shiftKey ? last : first).focus()
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
+  getAccountChooserFocusable() {
+    if (!this.accountChooserRef.current) return []
+
+    return Array.from(
+      this.accountChooserRef.current.querySelectorAll(
+        'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
+  }
+
+  focusAccountChooser() {
+    const [first] = this.getAccountChooserFocusable()
+    ;(first || this.accountChooserRef.current)?.focus()
   }
 
   reportScroll() {
@@ -224,7 +276,13 @@ export class AccountSelector extends React.Component {
     if (!this.store('selected.showAccounts')) return null
 
     return (
-      <section id='account-switcher-panel' className='accountChooserPanel' aria-label='Accounts'>
+      <section
+        id='account-switcher-panel'
+        ref={this.accountChooserRef}
+        className='accountChooserPanel'
+        aria-label='Accounts'
+        tabIndex={-1}
+      >
         {this.renderAccountFilter()}
         {this.renderAccountList(true)}
         {Object.keys(accounts).length ? (

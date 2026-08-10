@@ -129,6 +129,22 @@ it('opens directly on a native asset without a connection step and exposes the a
   expect(screen.getByRole('button', { name: 'Select USDC' })).toBeTruthy()
 })
 
+it('restores focus to the asset trigger after the picker closes', async () => {
+  const { store, user } = renderSend()
+  const trigger = screen.getByRole('button', { name: 'Choose an asset' })
+
+  await user.click(trigger)
+  setDashStep(store, 'assetPicker', 'Choose an asset')
+  expect(document.activeElement).toBe(screen.getByPlaceholderText('Search assets'))
+
+  await user.click(screen.getByRole('button', { name: 'Select ETH' }))
+  closeDashStep(store)
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Choose an asset' }))
+  )
+})
+
 it('uses the shared illustrated empty-state anatomy when no asset is sendable', () => {
   renderSend((state) => {
     state.main.balances[account] = []

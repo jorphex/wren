@@ -45,3 +45,10 @@ it('uses the active crumb title for a nested dashboard surface', () => {
   expect(screen.getByText('Choose an asset')).toBeTruthy()
   expect(screen.getAllByRole('button', { name: 'Back' })).toHaveLength(1)
 })
+
+it('uses an authored title for the generic notice surface', () => {
+  renderCommand([{ view: 'notify', data: { notify: 'gasFeeWarning' } }])
+
+  expect(screen.getByText('Notice')).toBeTruthy()
+  expect(screen.queryByText('notify')).toBeNull()
+})

@@ -91,17 +91,29 @@ it('routes support, tutorial, quit, and license actions', () => {
   ])
 })
 
-it('requires confirmation before resetting all settings and data', () => {
-  renderMain()
+it('stages app reset, focuses the safe action, and restores focus after cancelling', async () => {
+  const { user } = renderMain()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Reset All Settings & Data' }))
+  const reset = screen.getByRole('button', { name: 'Reset app' })
+  await user.click(reset)
   expect(link.send).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'No' }))
-  expect(screen.getByRole('button', { name: 'Reset All Settings & Data' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reset app' }))
 
-  fireEvent.click(screen.getByRole('button', { name: 'Reset All Settings & Data' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Yes' }))
+  await user.click(screen.getByRole('button', { name: 'Reset app' }))
+  await user.click(screen.getByRole('button', { name: 'Reset app' }))
   expect(link.send).toHaveBeenCalledWith('tray:resetAllSettings')
+})
+
+it('cancels a staged reset with Escape', async () => {
+  const { user } = renderMain()
+
+  await user.click(screen.getByRole('button', { name: 'Reset app' }))
+  await user.keyboard('{Escape}')
+
+  expect(screen.queryByRole('group', { name: 'Reset app?' })).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reset app' }))
 })
 
 it('copies the visible instance ID', () => {

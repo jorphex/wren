@@ -24,7 +24,7 @@ export class Menu extends React.Component {
           className='panelMenuItem panelMenuItemSend wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           aria-label='Open Wren Send'
           onClick={() => {
-            link.send('*:addFrame', 'dappLauncher')
+            link.send('tray:action', 'navDash', { view: 'send', data: {} })
           }}
         >
           <Icon name='send' size={19} />

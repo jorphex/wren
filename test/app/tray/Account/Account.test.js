@@ -42,7 +42,7 @@ it('keeps Send and copy address actions connected to their existing tray behavio
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
-  expect(link.send).toHaveBeenCalledWith('*:addFrame', 'dappLauncher')
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })
 
 it('edits the account name from the header and returns focus after saving', async () => {

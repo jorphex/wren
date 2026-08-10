@@ -1074,11 +1074,11 @@ export class Earn extends React.Component {
     const selected = this.store('selected.current') || ''
     const networks = [1, 8453, 747474].map((id) => {
       const network = this.store('main.networks.ethereum', id) || {}
+      const endpoints = network.connection?.endpoints || []
       return [
         id,
         network.on,
-        network.connection?.primary?.connected,
-        network.connection?.secondary?.connected
+        endpoints.map(({ on, connected, current, custom }) => [on, connected, current, custom])
       ]
     })
     return JSON.stringify([selected, networks])

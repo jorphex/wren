@@ -9,29 +9,11 @@ import Toggle from '../../../resources/Components/Toggle'
 import styled from 'styled-components'
 
 const EditShortcut = styled.button`
-  appearance: none;
-  position: absolute;
-  top: 1px;
-  bottom: 0px;
-  left: calc(100% + 10px);
-  background: var(--wren-surface-inset);
-  height: 20px;
+  flex: none;
+  min-height: 44px;
   min-width: 48px;
   padding: 0 8px;
-  color: var(--wren-text-secondary);
-  font-family: inherit;
-  border-radius: 4px;
-  border: 1px solid var(--wren-border-subtle);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 500;
-  &:hover {
-    color: var(--wren-text-primary);
-    background: var(--wren-surface-hover);
-  }
+  font-size: 12px;
 `
 
 const CompanionDetails = styled.div`
@@ -44,29 +26,17 @@ const CompanionDetails = styled.div`
 const CompanionIdentity = styled.div`
   color: var(--moon);
   font-family: 'FiraCode';
-  font-size: 11px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `
 
 const RevokeCompanion = styled.button`
-  appearance: none;
-  color: ${({ $confirm }) => ($confirm ? 'var(--bad)' : 'var(--moon)')};
-  font-family: inherit;
-  padding: 8px;
-  background: transparent;
-  border: 0;
-  border-radius: var(--wren-radius-sm);
-  cursor: pointer;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.6px;
+  flex: none;
+  min-height: 44px;
+  font-size: 12px;
   margin-left: 16px;
-  &:hover {
-    background: ${({ $confirm }) => ($confirm ? 'var(--wren-danger-soft)' : 'var(--wren-surface-hover)')};
-  }
 `
 
 export class Settings extends Component {
@@ -110,37 +80,35 @@ export class Settings extends Component {
             </h2>
             <div className='signerPermission localSetting localSettingShortcut' style={{ zIndex: 214 }}>
               <div className='signerPermissionControls'>
-                <div className='signerPermissionSetting'>
-                  <span style={{ position: 'relative' }}>
-                    Wallet shortcut
-                    <div>
-                      {summonShortcut.configuring ? (
-                        <EditShortcut
-                          type='button'
-                          onClick={() => {
-                            link.send('tray:action', 'setShortcut', 'summon', {
-                              ...summonShortcut,
-                              configuring: false
-                            })
-                          }}
-                        >
-                          Cancel
-                        </EditShortcut>
-                      ) : (
-                        <EditShortcut
-                          type='button'
-                          onClick={() => {
-                            link.send('tray:action', 'setShortcut', 'summon', {
-                              ...summonShortcut,
-                              configuring: true
-                            })
-                          }}
-                        >
-                          Edit
-                        </EditShortcut>
-                      )}
-                    </div>
-                  </span>
+                <div className='signerPermissionSetting settingsShortcutSetting'>
+                  <span>Wallet shortcut</span>
+                  {summonShortcut.configuring ? (
+                    <EditShortcut
+                      type='button'
+                      className='wrenControl wrenControlGhost'
+                      onClick={() => {
+                        link.send('tray:action', 'setShortcut', 'summon', {
+                          ...summonShortcut,
+                          configuring: false
+                        })
+                      }}
+                    >
+                      Cancel
+                    </EditShortcut>
+                  ) : (
+                    <EditShortcut
+                      type='button'
+                      className='wrenControl wrenControlGhost'
+                      onClick={() => {
+                        link.send('tray:action', 'setShortcut', 'summon', {
+                          ...summonShortcut,
+                          configuring: true
+                        })
+                      }}
+                    >
+                      Edit
+                    </EditShortcut>
+                  )}
                 </div>
 
                 <Toggle
@@ -415,7 +383,7 @@ export class Settings extends Component {
                       </CompanionDetails>
                       <RevokeCompanion
                         type='button'
-                        $confirm={confirm}
+                        className={confirm ? 'wrenControl wrenControlDanger' : 'wrenControl wrenControlGhost'}
                         onClick={() => {
                           if (!confirm) {
                             this.setState({ revokeCompanionConfirm: credential.fingerprint })

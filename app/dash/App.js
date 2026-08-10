@@ -43,7 +43,7 @@ const AddNewItemButton = ({ view, req }) => {
   )
 }
 
-class Dash extends React.Component {
+export class Dash extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.input = React.createRef()
@@ -51,6 +51,22 @@ class Dash extends React.Component {
       showAddAccounts: false,
       selected: 'home'
     }
+    this.onKeyDown = this.onKeyDown.bind(this)
+  }
+
+  componentDidMount() {
+    document.addEventListener('keydown', this.onKeyDown)
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this.onKeyDown)
+  }
+
+  onKeyDown(event) {
+    if (event.key !== 'Escape' || event.defaultPrevented) return
+    event.preventDefault()
+    const nav = this.store('windows.dash.nav') || []
+    link.send('tray:action', nav.length ? 'backDash' : 'closeDash')
   }
 
   renderPanel(view, data) {

@@ -37,5 +37,5 @@ it('opens Wren Send in the dashboard workspace', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
 
-  expect(link.send).toHaveBeenCalledWith('*:addFrame', 'dappLauncher')
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })

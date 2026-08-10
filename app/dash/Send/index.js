@@ -112,6 +112,10 @@ export class Send extends React.Component {
     this.queueSequence = 0
     this.recipientSequence = 0
     this.mounted = false
+    this.assetTriggerRef = React.createRef()
+    this.contactTriggerRef = React.createRef()
+    this.pickerStep = ''
+    this.pickerReturnTarget = null
     this.state = {
       amount: '',
       assetFilter: '',
@@ -133,10 +137,18 @@ export class Send extends React.Component {
   componentDidMount() {
     this.mounted = true
     this.accountId = this.store('selected.current') || ''
+    this.pickerStep = this.store('windows.dash.nav')[0]?.data?.step || ''
     this.lockInitialAsset()
   }
 
   componentDidUpdate() {
+    const step = this.store('windows.dash.nav')[0]?.data?.step || ''
+    if (this.pickerStep && !step) {
+      this.pickerReturnTarget?.current?.focus()
+      this.pickerReturnTarget = null
+    }
+    this.pickerStep = step
+
     const accountId = this.store('selected.current') || ''
     if (accountId === this.accountId) {
       this.lockInitialAsset()
@@ -147,7 +159,6 @@ export class Send extends React.Component {
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
-    const step = this.store('windows.dash.nav')[0]?.data?.step
     if (step === 'assetPicker' || step === 'contactPicker') link.send('nav:back', 'dash')
     this.setState({
       amount: '',
@@ -356,6 +367,7 @@ export class Send extends React.Component {
   }
 
   openPicker(step, title) {
+    this.pickerReturnTarget = step === 'assetPicker' ? this.assetTriggerRef : this.contactTriggerRef
     link.send('nav:update', 'dash', { data: { step, title } })
   }
 
@@ -607,6 +619,7 @@ export class Send extends React.Component {
           <span>{COPY.assetUnavailable}</span>
           <button
             className='wrenControl wrenControlSecondary wrenControlLarge'
+            ref={this.assetTriggerRef}
             onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
             type='button'
           >
@@ -641,6 +654,7 @@ export class Send extends React.Component {
             <button
               aria-label={COPY.chooseAsset}
               className='sendRowValue sendAssetValue'
+              ref={this.assetTriggerRef}
               onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
               type='button'
             >
@@ -676,6 +690,7 @@ export class Send extends React.Component {
               <button
                 aria-label={COPY.chooseContact}
                 className='sendInlineAction'
+                ref={this.contactTriggerRef}
                 onClick={() => {
                   this.setState({ contactFilter: '' })
                   this.openPicker('contactPicker', COPY.chooseAContact)

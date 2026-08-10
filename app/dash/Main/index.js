@@ -65,6 +65,8 @@ export class Main extends React.Component {
       resetConfirm: false,
       instanceIdCopied: false
     }
+    this.resetTriggerRef = React.createRef()
+    this.resetCancelRef = React.createRef()
   }
 
   componentWillUnmount() {
@@ -115,33 +117,52 @@ export class Main extends React.Component {
         </button>
         <div className='appInfoLine appInfoLineReset'>
           {this.state.resetConfirm ? (
-            <>
-              <span className='appInfoLineResetConfirm'>Are you sure you want to reset everything?</span>
+            <div
+              className='appInfoLineResetConfirm'
+              role='group'
+              aria-labelledby='reset-app-title'
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
+                }
+              }}
+            >
+              <strong id='reset-app-title'>Reset app?</strong>
+              <span>
+                This removes local accounts, signers, networks, contacts, custom tokens, permissions, and
+                settings from this device. This cannot be undone.
+              </span>
               <span className='appInfoLineResetConfirmButtons'>
                 <button
                   type='button'
-                  className='appInfoLineResetConfirmButton'
-                  onClick={() => link.send('tray:resetAllSettings')}
+                  ref={this.resetCancelRef}
+                  className='wrenControl wrenControlSecondary'
+                  onClick={() =>
+                    this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
+                  }
                 >
-                  Yes
+                  Cancel
                 </button>
-                <span> / </span>
                 <button
                   type='button'
-                  className='appInfoLineResetConfirmButton'
-                  onClick={() => this.setState({ resetConfirm: false })}
+                  className='wrenControl wrenControlDanger'
+                  onClick={() => link.send('tray:resetAllSettings')}
                 >
-                  No
+                  Reset app
                 </button>
               </span>
-            </>
+            </div>
           ) : (
             <button
               type='button'
+              ref={this.resetTriggerRef}
               className='appInfoLineResetButton'
-              onClick={() => this.setState({ resetConfirm: true })}
+              onClick={() =>
+                this.setState({ resetConfirm: true }, () => this.resetCancelRef.current?.focus())
+              }
             >
-              Reset All Settings & Data
+              Reset app
             </button>
           )}
         </div>

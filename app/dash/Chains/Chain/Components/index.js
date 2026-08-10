@@ -249,9 +249,7 @@ export const ChainHeader = ({
         />
       </div>
       <div className='networkIdentityText'>
-        <div role='chainName' className='signerName'>
-          {name}
-        </div>
+        <span className='signerName'>{name}</span>
         <div className='networkChainId'>Chain ID {id}</div>
       </div>
       {showExpand && (

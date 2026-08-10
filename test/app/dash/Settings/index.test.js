@@ -140,12 +140,28 @@ it('requires confirmation before revoking a companion pairing', () => {
 it('exposes shortcut editing as a native action', () => {
   renderSettings()
 
-  fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+  const edit = screen.getByRole('button', { name: 'Edit' })
+  expect(edit.classList.contains('wrenControl')).toBe(true)
+  expect(edit.closest('span')).toBeNull()
+  fireEvent.click(edit)
 
   expect(link.send).toHaveBeenCalledWith(
     'tray:action',
     'setShortcut',
     'summon',
     expect.objectContaining({ configuring: true })
+  )
+})
+
+it('uses shared controls for companion revocation', () => {
+  renderSettings()
+
+  const revoke = screen.getByRole('button', { name: 'Revoke' })
+  expect(revoke.classList.contains('wrenControl')).toBe(true)
+  expect(revoke.classList.contains('wrenControlGhost')).toBe(true)
+
+  fireEvent.click(revoke)
+  expect(screen.getByRole('button', { name: 'Confirm revoke' }).classList.contains('wrenControlDanger')).toBe(
+    true
   )
 })

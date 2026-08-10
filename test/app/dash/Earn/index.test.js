@@ -545,6 +545,27 @@ it('resets the persistent action to deposit when the selected account changes', 
   })
 })
 
+it('refreshes its store identity when an RPC endpoint connection changes', () => {
+  const component = new Earn({})
+  const endpoints = [
+    { on: true, connected: true, current: 'public', custom: '' },
+    { on: true, connected: false, current: 'fallback', custom: '' }
+  ]
+  component.store = jest.fn((path, id) => {
+    if (path === 'selected.current') return address
+    if (path === 'main.networks.ethereum' && id === 1) {
+      return { on: true, connection: { endpoints } }
+    }
+    return {}
+  })
+
+  const initialKey = component.currentStoreKey()
+  endpoints[0].connected = false
+  endpoints[1].connected = true
+
+  expect(component.currentStoreKey()).not.toBe(initialKey)
+})
+
 it('keeps persisted workflow mutations disabled for a watch-only account', async () => {
   getYearnPositions.mockResolvedValue(makePositions(true))
   const approvalWorkflow = {

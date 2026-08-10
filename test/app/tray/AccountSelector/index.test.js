@@ -1,8 +1,9 @@
 import { render, screen } from '../../../componentSetup'
 import { AccountSelector } from '../../../../app/tray/AccountSelector'
+import { Account as AccountController } from '../../../../app/tray/AccountSelector/AccountController'
 import link from '../../../../resources/link'
 
-jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
 const setupSelector = ({ drawerOpen = true } = {}) => {
   let open = drawerOpen
@@ -14,7 +15,7 @@ const setupSelector = ({ drawerOpen = true } = {}) => {
     if (key === 'selected.open') return true
   }
   store.toggleShowAccounts = jest.fn((next) => {
-    open = next
+    open = typeof next === 'boolean' ? next : !open
   })
   const selector = new AccountSelector({}, { store })
   selector.store = store
@@ -95,4 +96,73 @@ it('uses the emphasized primary treatment for the empty-state action', () => {
   render(selector.renderAccountList())
 
   expect(screen.getByRole('button', { name: 'Add account' }).classList.contains('wrenHeroPrimary')).toBe(true)
+})
+
+it('moves focus into the chooser, wraps Tab, and restores the trigger on Escape', async () => {
+  const { selector, setOpen } = setupSelector({ drawerOpen: false })
+  const account = {
+    id: '0x000000000000000000000000000000000000dead',
+    address: '0x000000000000000000000000000000000000dead',
+    name: 'Watch Account'
+  }
+  const view = (open) => (
+    <>
+      {selector.renderCurrentAccount(account)}
+      {open ? selector.renderAccountPanel({}) : null}
+    </>
+  )
+  const utils = render(view(false))
+  const { user } = utils
+  const trigger = screen.getByRole('button', { name: /Watch Account/i })
+
+  selector.componentDidMount()
+  await user.click(trigger)
+  utils.rerender(view(true))
+  selector.componentDidUpdate()
+  const addAccount = screen.getByRole('button', { name: 'Add account' })
+  expect(document.activeElement).toBe(addAccount)
+
+  await user.tab({ shift: true })
+  expect(document.activeElement).toBe(addAccount)
+  await user.tab()
+  expect(document.activeElement).toBe(addAccount)
+
+  await user.keyboard('{Escape}')
+  setOpen(false)
+  utils.rerender(view(false))
+  selector.componentDidUpdate()
+  expect(screen.queryByRole('region', { name: 'Accounts' })).toBeNull()
+  expect(document.activeElement).toBe(trigger)
+  selector.componentWillUnmount()
+})
+
+it('restores the account trigger after selecting an account', async () => {
+  const { selector, store, setOpen } = setupSelector({ drawerOpen: false })
+  const account = {
+    id: '0x000000000000000000000000000000000000dead',
+    address: '0x000000000000000000000000000000000000dead',
+    name: 'Watch Account'
+  }
+  const view = (open) => (
+    <>
+      {selector.renderCurrentAccount(account)}
+      {open ? selector.renderAccountPanel({}) : null}
+    </>
+  )
+  const utils = render(view(false))
+  const { user } = utils
+  const trigger = screen.getByRole('button', { name: /Watch Account/i })
+
+  await user.click(trigger)
+  utils.rerender(view(true))
+  selector.componentDidUpdate()
+  const accountController = new AccountController({ ...account, status: 'ok' }, { store })
+  accountController.store = store
+  accountController.selectFromDrawer()
+  setOpen(false)
+  utils.rerender(view(false))
+  selector.componentDidUpdate()
+
+  expect(screen.queryByRole('region', { name: 'Accounts' })).toBeNull()
+  expect(document.activeElement).toBe(trigger)
 })
