@@ -127,6 +127,13 @@ const WalletCallsAdjustmentSchema = z
       .strict()
   })
   .strict()
+const WalletCallsStatusRefreshSchema = z
+  .object({
+    account: AddressSchema,
+    id: IdSchema,
+    origin: OriginSchema
+  })
+  .strict()
 const AddChainRequestReferenceSchema = AccountRequestReferenceSchema
 const AccessReferenceSchema = z
   .object({
@@ -264,7 +271,6 @@ const TrayActionArgsSchema = z
   })
 
 const eventSchemas: Record<string, z.ZodType> = {
-  '*:addFrame': z.tuple([IdSchema]),
   '*:contextmenu': z.tuple([z.number().finite(), z.number().finite()]),
   'dash:reloadSigner': z.tuple([IdSchema]),
   'dash:removeSigner': z.tuple([IdSchema]),
@@ -332,7 +338,8 @@ const invokeSchemas = {
   'yearn:revokeWorkflow': z.tuple([YearnWorkflowIdRequestSchema]),
   'tray:addChain': z.tuple([AddChainSchema, AddChainRequestReferenceSchema.nullish()]),
   'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema]),
-  'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema])
+  'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema]),
+  'tray:refreshWalletCallsStatus': z.tuple([WalletCallsStatusRefreshSchema])
 } satisfies Record<string, z.ZodType>
 
 const invokeResultSchemas = {
@@ -397,6 +404,10 @@ const invokeResultSchemas = {
     })
     .strict(),
   'tray:adjustWalletCalls': z.union([
+    z.object({ success: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'tray:refreshWalletCallsStatus': z.union([
     z.object({ success: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ])

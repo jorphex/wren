@@ -132,11 +132,19 @@ const rpc = {
   updateRequest(accountId, reqId, data, actionId, cb) {
     callbackWhenDone(() => applyRequestUpdate(accounts, reqId, data, actionId, accountId), cb)
   },
-  approveRequest(req, cb = () => {}) {
+  approveRequest(req, options, cb = () => {}) {
+    if (typeof options === 'function') {
+      cb = options
+      options = {}
+    }
     if (
       routeWalletCallRequest(req, accounts, (walletCallsRequest) => {
         provider
-          .approveWalletCallsRequest(walletCallsRequest.account, walletCallsRequest.handlerId)
+          .approveWalletCallsRequest(
+            walletCallsRequest.account,
+            walletCallsRequest.handlerId,
+            options?.walletCallsSimulationAcknowledged === true
+          )
           .catch((error) => log.warn('Wallet-call approval failed', error))
       })
     ) {

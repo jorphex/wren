@@ -19,7 +19,8 @@ interface WalletCallLifecycleAccounts {
   ): boolean | void
   claimWalletCallsRequestWithResponse(
     accountId: string,
-    handlerId: string
+    handlerId: string,
+    simulationAcknowledged?: boolean
   ): Readonly<{
     snapshot: Readonly<PreparedWalletCallExecutionSnapshot>
     responder: WalletCallsResponder
@@ -177,8 +178,8 @@ export class WalletCallLifecycleController {
     })
   }
 
-  async approve(accountId: string, handlerId: string) {
-    const approved = this.claimWalletCallsRequestWithResponse(accountId, handlerId)
+  async approve(accountId: string, handlerId: string, simulationAcknowledged = false) {
+    const approved = this.claimWalletCallsRequestWithResponse(accountId, handlerId, simulationAcknowledged)
     const { snapshot, responder } = approved
 
     try {

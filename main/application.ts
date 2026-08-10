@@ -27,6 +27,8 @@ import { openBlockExplorer, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
+import walletCallBatchLedger from './provider/walletCallLedger'
+import { showWalletCallStatus } from './provider/walletCallStatusView'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
 import { applyOriginChainRendererAction } from './provider/originChainActions'
 import { handleRenderer, onRenderer } from './ipc/renderer'
@@ -240,6 +242,25 @@ handleRenderer('tray:adjustWalletCalls', async (e, request) => {
   }
 })
 
+handleRenderer('tray:refreshWalletCallsStatus', async (e, request) => {
+  try {
+    const status = walletCallBatchLedger.getStatus(request.origin, request.account, request.id)
+    showWalletCallStatus({
+      account: request.account,
+      originName: request.origin,
+      status
+    })
+    return { success: true as const }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Wallet-call status refresh failed'
+    log.warn('Wallet-call status refresh failed', { reason: message.slice(0, 240) })
+    return {
+      success: false as const,
+      error: message.trim().slice(0, 240) || 'Wallet-call status refresh failed'
+    }
+  }
+})
+
 const addressBookMutation = async (operation: () => Promise<unknown> | unknown) => {
   try {
     return await operation()
@@ -342,11 +363,6 @@ onRenderer('frame:max', (e) => {
 
 onRenderer('frame:unmax', (e) => {
   windows.unmax(e)
-})
-
-onRenderer('*:addFrame', (e, id) => {
-  if (id !== 'dappLauncher') return
-  requireStoreAction('navDash')({ view: 'send', data: {} })
 })
 
 app.on('ready', () => {

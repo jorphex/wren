@@ -7,7 +7,6 @@ const MAX_ARGUMENTS = 64
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export const requestEventChannels = new Set([
-  '*:addFrame',
   '*:contextmenu',
   'dash:reloadSigner',
   'dash:removeSigner',
@@ -51,6 +50,7 @@ export const requestInvokeChannels = new Set([
   'send:resolveRecipient',
   'tray:addChain',
   'tray:adjustWalletCalls',
+  'tray:refreshWalletCallsStatus',
   'tray:getTokenDetails',
   'yearn:getCatalog',
   'yearn:getPositions',

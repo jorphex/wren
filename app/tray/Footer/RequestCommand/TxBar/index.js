@@ -1,116 +1,107 @@
-import React from 'react'
-import Restore from 'react-restore'
 import Icon from '../../../../../resources/Components/Icon'
 
-class TxBar extends React.Component {
-  render() {
-    const req = this.props.req
-    let position = 0
-    let txBarClass = 'txBar'
-    let progressIconClass = 'txProgressStepIcon'
-    if (req.status === 'pending') position = 1
-    else if (req.status === 'sending') position = 2
-    else if (req.status === 'verifying') position = 3
-    else if (req.status === 'verified') position = 4
-    else if (req.status === 'confirming' || req.status === 'confirmed' || req.status === 'sent') {
-      position = 4
-      progressIconClass += ' txProgressStepIconHidden'
-      txBarClass += ' txBarSuccess'
-    } else if (req.status === 'error') {
-      position = 4
-      progressIconClass += ' txProgressStepIconHidden'
-      txBarClass += ' txBarError'
-    }
-    const slideMap = ['375px', '268.5px', '181px', '93.5px', '0px']
-    const slide = slideMap[position]
+const steps = ['Sending', 'Submitted', 'Confirming', 'Confirmed']
 
-    return (
-      <div className={txBarClass}>
-        <div className='txProgress'>
-          <div className='txProgressBack'>
-            <div className='txProgressLine' />
-            <div className='txProgressSteps'>
-              <div className='txProgressStep'>
-                <button
-                  type='button'
-                  aria-label='Show signing status'
-                  aria-hidden={position >= 4 ? 'true' : undefined}
-                  className={progressIconClass}
-                  disabled={position >= 4}
-                  style={{ padding: '10px 11px' }}
-                  onClick={() => this.props.infoPane('sign')}
-                  onBlur={() => this.props.infoPane('')}
-                  onMouseLeave={() => this.props.infoPane('')}
-                >
-                  <Icon name='sign' size={22} />
-                </button>
-                <div className='txProgressStepMarker' />
-                <div
-                  className={
-                    position > 1 ? 'txProgressStepCenter txProgressStepCenterOn' : 'txProgressStepCenter'
-                  }
-                />
-              </div>
-              <div className='txProgressStep'>
-                <button
-                  type='button'
-                  aria-label='Show broadcast status'
-                  aria-hidden={position >= 4 ? 'true' : undefined}
-                  className={progressIconClass}
-                  disabled={position >= 4}
-                  style={{ padding: '11px 12px' }}
-                  onClick={() => this.props.infoPane('send')}
-                  onBlur={() => this.props.infoPane('')}
-                  onMouseLeave={() => this.props.infoPane('')}
-                >
-                  <Icon name='send' size={15} />
-                </button>
-                <div className='txProgressStepMarker' />
-                <div
-                  className={
-                    position > 2 ? 'txProgressStepCenter txProgressStepCenterOn' : 'txProgressStepCenter'
-                  }
-                />
-              </div>
-              <div className='txProgressStep'>
-                <button
-                  type='button'
-                  aria-label='Show confirmation status'
-                  aria-hidden={position >= 4 ? 'true' : undefined}
-                  className={progressIconClass}
-                  disabled={position >= 4}
-                  style={{ padding: '11px 12px' }}
-                  onClick={() => this.props.infoPane('block')}
-                  onBlur={() => this.props.infoPane('')}
-                  onMouseLeave={() => this.props.infoPane('')}
-                >
-                  <Icon name='check' size={16} />
-                </button>
-                <div className='txProgressStepMarker' />
-                <div
-                  className={
-                    position > 3 ? 'txProgressStepCenter txProgressStepCenterOn' : 'txProgressStepCenter'
-                  }
-                />
-              </div>
-            </div>
-          </div>
-          <div className='txProgressFront'>
-            <div className='txProgressSlide' style={{ right: slide }}>
-              <div className='txProgressTail' />
-              {position < 4 && (
-                <div className='txProgressLoading'>
-                  <div className='txProgressLoadingDot' />
-                  <div className='txProgressLoadingCenter' />
-                  <div className='txProgressLoadingBox' />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+export const transactionLifecyclePresentation = (req, networkName = 'the network') => {
+  switch (req?.status) {
+    case 'pending':
+      return {
+        detail: 'Wren is waiting for your signer to sign this transaction.',
+        icon: 'sign',
+        position: -1,
+        title: 'See signer',
+        tone: 'pending'
+      }
+    case 'sending':
+      return {
+        detail: 'Wren is sending the transaction to the network.',
+        icon: 'send',
+        position: 0,
+        title: 'Sending',
+        tone: 'pending'
+      }
+    case 'verifying':
+    case 'verified':
+    case 'sent':
+      return {
+        detail: 'Wren sent the transaction to the network.',
+        icon: 'send',
+        position: 1,
+        title: 'Submitted',
+        tone: 'pending'
+      }
+    case 'confirming':
+      return {
+        detail: 'The transaction was sent. Wren is waiting for network confirmation.',
+        icon: 'pending',
+        position: 2,
+        title: 'Confirming',
+        tone: 'pending'
+      }
+    case 'confirmed':
+      return {
+        detail: `The transaction is confirmed on ${networkName}.`,
+        icon: 'verified',
+        position: 3,
+        title: 'Confirmed',
+        tone: 'success'
+      }
+    case 'error':
+      return {
+        detail: 'The network did not confirm this transaction.',
+        icon: 'failed',
+        position: req?.tx?.hash ? 1 : 0,
+        title: 'Transaction failed',
+        tone: 'failure'
+      }
+    default:
+      return {
+        detail: 'Wren is sending the transaction to the network.',
+        icon: 'send',
+        position: 0,
+        title: 'Sending',
+        tone: 'pending'
+      }
   }
 }
 
-export default Restore.connect(TxBar)
+const TxBar = ({ networkName, req }) => {
+  const presentation = transactionLifecyclePresentation(req, networkName)
+
+  return (
+    <section
+      className={`txLifecycle txLifecycle-${presentation.tone}`}
+      role={presentation.tone === 'failure' ? 'alert' : 'status'}
+      aria-live={presentation.tone === 'failure' ? 'assertive' : 'polite'}
+      aria-atomic='true'
+    >
+      <div className='txLifecycleSummary'>
+        <span className='txLifecycleMark' aria-hidden='true'>
+          <Icon name={presentation.icon} size={18} />
+        </span>
+        <span className='txLifecycleCopy'>
+          <strong>{presentation.title}</strong>
+          <span>{presentation.detail}</span>
+        </span>
+      </div>
+      <ol className='txLifecycleSteps' aria-label='Transaction progress'>
+        {steps.map((step, index) => {
+          const state =
+            index < presentation.position ? 'complete' : index === presentation.position ? 'current' : 'next'
+          return (
+            <li
+              key={step}
+              className={`txLifecycleStep txLifecycleStep-${state}`}
+              aria-current={state === 'current' ? 'step' : undefined}
+            >
+              <span className='txLifecycleStepMarker' aria-hidden='true' />
+              <span>{step}</span>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
+}
+
+export default TxBar

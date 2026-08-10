@@ -42,6 +42,23 @@ test('reduces request snapshots before approval dispatch', () => {
   })
 })
 
+test('accepts only an explicit wallet-call simulation acknowledgement', () => {
+  const request = { handlerId, account: address, type: 'walletCalls' }
+  expect(
+    parseRendererRpcRequest(wire(1, 'approveRequest', request, { walletCallsSimulationAcknowledged: true }))
+  ).toMatchObject({
+    success: true,
+    data: {
+      args: [request, { walletCallsSimulationAcknowledged: true }]
+    }
+  })
+  expect(
+    parseRendererRpcRequest(wire(1, 'approveRequest', request, { walletCallsSimulationAcknowledged: false }))
+      .success
+  ).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, 'approveRequest', request, {})).success).toBe(false)
+})
+
 test('validates sensitive signer methods without coercion', () => {
   expect(
     parseRendererRpcRequest(wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, 'password')).success

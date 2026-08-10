@@ -20,6 +20,9 @@ const RequestReferenceSchema = z
 const ActionRequestReferenceSchema = z
   .object({ handlerId: HandlerIdSchema, account: AddressSchema, type: z.string().min(1).max(32) })
   .transform(({ handlerId, account, type }) => ({ handlerId, account, type }))
+const WalletCallsApprovalOptionsSchema = z
+  .object({ walletCallsSimulationAcknowledged: z.literal(true) })
+  .strict()
 
 const JsonRecordSchema = z.record(z.string().max(256), z.unknown()).superRefine((value, ctx) => {
   let serialized
@@ -72,7 +75,13 @@ const ActionIdSchema = z
   .nullable()
 
 const rpcSchemas = {
-  approveRequest: { request: z.tuple([ActionRequestReferenceSchema]), response: actionResult },
+  approveRequest: {
+    request: z.union([
+      z.tuple([ActionRequestReferenceSchema]),
+      z.tuple([ActionRequestReferenceSchema, WalletCallsApprovalOptionsSchema])
+    ]),
+    response: actionResult
+  },
   confirmRequestApproval: {
     request: z.tuple([RequestReferenceSchema, ApprovalTypeSchema, z.object({}).strict()]),
     response: actionResult

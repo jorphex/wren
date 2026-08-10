@@ -38,6 +38,13 @@ const presentations = {
   }
 }
 
+const unavailablePresentation = {
+  label: 'Status unavailable',
+  detail: 'Wren cannot verify the current status of this wallet call.',
+  tone: 'warning',
+  icon: 'alert'
+}
+
 const quantity = (value) => {
   if (typeof value !== 'string' || !QUANTITY.test(value)) return
   try {
@@ -85,14 +92,18 @@ export function WalletCallsStatus({
   accountName,
   chainName,
   nativeCurrency = {},
+  origin,
   originName,
   status
 }) {
-  const presentation = presentations[status.status] || presentations[100]
+  const presentation = presentations[status.status] || unavailablePresentation
+  const statusUnavailable = !presentations[status.status]
   const receipts = Array.isArray(status.receipts) ? status.receipts : []
   const confirmed = receipts.filter((receipt) => receipt.status === '0x1').length
   const [copied, setCopied] = useState(-1)
+  const [refreshing, setRefreshing] = useState(false)
   const copyTimer = useRef()
+  const refreshPending = useRef(false)
   const decimals =
     Number.isInteger(nativeCurrency.decimals) &&
     nativeCurrency.decimals >= 0 &&
@@ -115,6 +126,22 @@ export function WalletCallsStatus({
       ? `${confirmed} of ${receipts.length} submitted transactions confirmed.`
       : presentation.detail
 
+  const refreshStatus = async () => {
+    if (refreshPending.current || !origin) return
+    refreshPending.current = true
+    setRefreshing(true)
+    try {
+      await link.invoke('tray:refreshWalletCallsStatus', {
+        account: accountId,
+        id: status.id,
+        origin
+      })
+    } finally {
+      refreshPending.current = false
+      setRefreshing(false)
+    }
+  }
+
   return (
     <div className='walletCallsStatus'>
       <div className='walletCallsStatusScroll'>
@@ -128,6 +155,17 @@ export function WalletCallsStatus({
             <Icon name={presentation.icon} size={20} />
           </span>
         </section>
+
+        {statusUnavailable && (
+          <div className='walletCallsStatusUnavailableActions'>
+            <button type='button' disabled={refreshing || !origin} onClick={refreshStatus}>
+              Refresh
+            </button>
+            <button type='button' onClick={() => link.send('nav:back', 'panel')}>
+              Close
+            </button>
+          </div>
+        )}
 
         <section className='walletCallsStatusSection'>
           <h3>Batch context</h3>

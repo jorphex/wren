@@ -77,6 +77,19 @@ test('strictly validates bounded wallet-call adjustments and results', () => {
   ).toBe(true)
 })
 
+test('strictly validates read-only wallet-call status refreshes and results', () => {
+  const request = { account: address, id: 'batch-id', origin: 'example.test' }
+
+  expect(parse('invoke', 'tray:refreshWalletCallsStatus', [request])).toEqual([request])
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:refreshWalletCallsStatus', [{ ...request, account: '0x1' }]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:refreshWalletCallsStatus', [{ ...request, resubmit: true }]).success
+  ).toBe(false)
+  expect(parseRendererInvokeResult('tray:refreshWalletCallsStatus', { success: true }).success).toBe(true)
+})
+
 test('validates address-book mutations and bounded results', () => {
   const request = { mode: 'add', address, name: 'Treasury', note: 'Operations' }
   expect(parse('invoke', 'addressBook:save', [request])).toEqual([request])

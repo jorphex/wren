@@ -630,7 +630,7 @@ export class Provider extends EventEmitter {
     }
   }
 
-  approveWalletCallsRequest(accountId: string, handlerId: string) {
+  approveWalletCallsRequest(accountId: string, handlerId: string, simulationAcknowledged = false) {
     try {
       const request = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
       if (request.type !== 'walletCalls') throw new Error('Wallet-call request is no longer available')
@@ -653,17 +653,25 @@ export class Provider extends EventEmitter {
         throw Object.assign(new Error(rejection.message), { code: rejection.code })
       }
 
-      return this.createWalletCallLifecycle().approve(accountId, handlerId)
+      return this.createWalletCallLifecycle().approve(accountId, handlerId, simulationAcknowledged)
     } catch (error) {
       return Promise.reject(error)
     }
   }
 
   declineWalletCallsRequest(accountId: string, handlerId: string) {
-    return accounts.rejectRequestForAccount(accountId, handlerId, {
-      code: 4001,
-      message: 'User rejected the wallet-call request'
+    const request = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
+    if (request.type !== 'walletCalls' || !request.res) {
+      throw new Error('Wallet-call request is no longer available')
+    }
+    if (!accounts.declineRequest(handlerId, accountId)) return false
+
+    request.res({
+      id: request.payload.id,
+      jsonrpc: request.payload.jsonrpc,
+      error: { code: 4001, message: 'User rejected the wallet-call request' }
     })
+    return true
   }
 
   getWalletCallsStatus(payload: RPCRequestPayload, res: RPCRequestCallback) {

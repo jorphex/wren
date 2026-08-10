@@ -3,7 +3,6 @@ import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
 import TxBar from './TxBar'
-import TxConfirmations from './TxConfirmations'
 import TxApproval from './TxApproval'
 import Time from '../Time'
 
@@ -54,8 +53,7 @@ export class RequestCommand extends React.Component {
       allowInput: false,
       dataView: false,
       feeDraftSafe: isTransactionFeeDraftSafe(props.req?.handlerId),
-      signerLocked: false,
-      infoPane: ''
+      signerLocked: false
     }
 
     this.scheduleTimer(
@@ -141,14 +139,13 @@ export class RequestCommand extends React.Component {
 
   sentStatus() {
     const { req } = this.props
-    const { notice, status } = req
-    const success = req.status === 'confirming' || req.status === 'confirmed'
+    const { status } = req
     const chain = {
       type: 'ethereum',
       id: parseInt(req.data.chainId, 'hex')
     }
 
-    const { isTestnet, explorer } = this.store('main.networks', chain.type, chain.id)
+    const { isTestnet, explorer } = this.store('main.networks', chain.type, chain.id) || {}
     const nativeCurrency = this.store('main.networksMeta', chain.type, chain.id, 'nativeCurrency')
     const nativeUSD = nativeCurrency && nativeCurrency.usd && !isTestnet ? nativeCurrency.usd.price : 0
 
@@ -157,145 +154,126 @@ export class RequestCommand extends React.Component {
     const receiptFeeUsd = getReceiptFeeUsd(req?.tx?.receipt, req.data, nativeUSD)
     if (receiptFeeUsd) feeAtTime = receiptFeeUsd
 
-    const displayNotice = (notice || '').toLowerCase()
-    let displayStatus = (req.status || 'pending').toLowerCase()
-
-    if (displayStatus === 'pending' && displayNotice === 'see signer') {
-      displayStatus = 'waiting for device signature'
-    } else if (displayStatus === 'verifying') {
-      displayStatus = 'waiting for block'
-    }
+    const hash = req.tx?.hash
+    const receipt = req.tx?.receipt
+    const replaceable = Boolean(hash && !receipt && ['verifying', 'sent'].includes(status))
+    const terminal = ['confirmed', 'error'].includes(status)
 
     return (
-      <div>
-        <div className={req && req.tx && req.tx.hash ? 'requestFooter requestFooterActive' : 'requestFooter'}>
-          <div
-            className='txActionButtons'
-            onMouseLeave={() => {
-              this.setState({ showHashDetails: false })
-            }}
-          >
-            {req && req.tx && req.tx.hash ? (
-              this.state.txHashCopied ? (
-                <div className='txActionButtonsRow'>
-                  <div className={'txActionText'}>Transaction Hash Copied</div>
+      <div className='txLifecycleEvidence'>
+        {(hash || receipt) && (
+          <dl className='txLifecycleFacts'>
+            {hash && (
+              <div>
+                <dt>Transaction hash</dt>
+                <dd title={hash}>{`${hash.slice(0, 10)}…${hash.slice(-8)}`}</dd>
+              </div>
+            )}
+            {typeof req.tx?.confirmations === 'number' && (
+              <div>
+                <dt>Confirmations</dt>
+                <dd>{req.tx.confirmations}</dd>
+              </div>
+            )}
+            {receipt && (
+              <>
+                <div>
+                  <dt>Block</dt>
+                  <dd>{parseInt(receipt.blockNumber, 'hex')}</dd>
                 </div>
-              ) : this.state.showHashDetails || status === 'confirming' ? (
-                <div className='txActionButtonsRow'>
-                  <button
-                    type='button'
-                    className='txActionButton'
-                    disabled={!explorer}
-                    onClick={() => {
-                      if (explorer && req && req.tx && req.tx.hash) {
-                        if (this.store('main.mute.explorerWarning')) {
-                          link.send('tray:openExplorer', chain, req.tx.hash)
-                        } else {
-                          this.store.notify('openExplorer', { hash: req.tx.hash, chain: chain })
-                        }
-                      }
-                    }}
-                  >
-                    Open Explorer
-                  </button>
-                  <button
-                    type='button'
-                    className={'txActionButton'}
-                    onClick={() => {
-                      if (req && req.tx && req.tx.hash) {
-                        link.send('tray:copyTxHash', req.tx.hash)
-                        this.setState({ txHashCopied: true, showHashDetails: false })
-                        this.scheduleTimer(
-                          'txHashCopiedTimer',
-                          () => {
-                            this.setState({ txHashCopied: false })
-                          },
-                          3000
-                        )
-                      }
-                    }}
-                  >
-                    Copy Hash
-                  </button>
+                <div>
+                  <dt>Network fee</dt>
+                  <dd>{feeAtTime ? `$${feeAtTime}` : 'Unavailable'}</dd>
                 </div>
-              ) : (
-                <div className='txActionButtonsRow'>
-                  <button
-                    type='button'
-                    className='txActionButton txActionButtonBad'
-                    onClick={() => {
-                      link.send(
-                        'tray:replaceTx',
-                        { account: req.account, handlerId: req.handlerId },
-                        'cancel'
-                      )
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type='button'
-                    className={'txActionButton'}
-                    onClick={() => {
-                      this.setState({ showHashDetails: true })
-                    }}
-                  >
-                    View Details
-                  </button>
-                  <button
-                    type='button'
-                    className='txActionButton txActionButtonGood'
-                    onClick={() => {
-                      link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'speed')
-                    }}
-                  >
-                    Speed Up
-                  </button>
-                </div>
-              )
-            ) : null}
+              </>
+            )}
+          </dl>
+        )}
+        {receipt && req.completed && <Time time={req.completed} />}
+        <div className='txLifecycleActions'>
+          {replaceable && (
+            <button
+              type='button'
+              className='txLifecycleAction txLifecycleActionBad'
+              onClick={() => {
+                link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'cancel')
+              }}
+            >
+              Cancel
+            </button>
+          )}
+          {hash && (
+            <button
+              type='button'
+              className='txLifecycleAction'
+              aria-expanded={Boolean(this.state.showHashDetails)}
+              onClick={() => this.setState({ showHashDetails: !this.state.showHashDetails })}
+            >
+              View details
+            </button>
+          )}
+          {replaceable && (
+            <button
+              type='button'
+              className='txLifecycleAction txLifecycleActionGood'
+              onClick={() => {
+                link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'speed')
+              }}
+            >
+              Speed Up
+            </button>
+          )}
+          {terminal && (
+            <button
+              type='button'
+              className='txLifecycleAction'
+              onClick={() => link.send('nav:back', 'panel')}
+            >
+              Close
+            </button>
+          )}
+        </div>
+        {this.state.showHashDetails && hash && (
+          <div className='txLifecycleDetails'>
+            <span>{hash}</span>
+            <div>
+              {explorer && (
+                <button
+                  type='button'
+                  onClick={() => {
+                    if (this.store('main.mute.explorerWarning')) {
+                      link.send('tray:openExplorer', chain, hash)
+                    } else {
+                      this.store.notify('openExplorer', { hash, chain })
+                    }
+                  }}
+                >
+                  Open Explorer
+                </button>
+              )}
+              <button
+                type='button'
+                onClick={() => {
+                  link.send('tray:copyTxHash', hash)
+                  this.setState({ txHashCopied: true })
+                  this.scheduleTimer('txHashCopiedTimer', () => this.setState({ txHashCopied: false }), 3000)
+                }}
+              >
+                Copy Hash
+              </button>
+              <span className='txLifecycleCopyStatus' role='status' aria-live='polite'>
+                {this.state.txHashCopied ? 'Transaction hash copied' : ''}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className={success ? 'txProgressSuccess' : 'txProgressSuccess txProgressHidden'}>
-          {req && req.tx && req.tx.receipt ? (
-            <>
-              <div className='txProgressSuccessItem txProgressSuccessItemLeft'>
-                <div className='txProgressSuccessItemLabel'>In Block</div>
-                <div className='txProgressSuccessItemValue'>
-                  {parseInt(req.tx.receipt.blockNumber, 'hex')}
-                </div>
-              </div>
-              <Time time={req.completed} />
-              <div className='txProgressSuccessItem txProgressSuccessItemCenter'>
-                <div className='txProgressSuccessItemLabel'>Fee</div>
-                <div className='txProgressSuccessItemValue'>
-                  <div className='txProgressSuccessCurrency'>$</div>
-                  {feeAtTime || '?.??'}
-                </div>
-              </div>
-            </>
-          ) : null}
-        </div>
-        <div className={'requestNoticeInnerText'} style={{ marginTop: '-30px' }}>
-          {displayStatus}
-        </div>
+        )}
         {isCancelableRequest(status) && (
-          <button type='button' className='cancelRequest' onClick={() => this.decline(req)}>
+          <button type='button' className='txLifecycleCancelRequest' onClick={() => this.decline(req)}>
             Cancel
           </button>
         )}
       </div>
     )
-  }
-
-  infoPane() {
-    const { infoPane } = this.state
-    const info = {
-      sign: 'When Wren is waiting for your signer to sign this transaction',
-      send: 'When Wren is broadcasting this transaction to your selected endpoint',
-      block: 'When Wren is waiting for this transaction to be included into a block'
-    }
-    return <div className='infoPane'>{info[infoPane]}</div>
   }
 
   signOrDecline() {
@@ -402,8 +380,6 @@ export class RequestCommand extends React.Component {
     const { req } = this.props
     const { notice, mode } = req
 
-    const { infoPane } = this.state
-
     if (req.status === 'declined') return this.declinedStatus(true)
 
     const showWarning = mode !== 'monitor'
@@ -418,15 +394,27 @@ export class RequestCommand extends React.Component {
         </div>
       )
     } else {
-      const commandClass = notice
+      const monitoring = notice || req.status !== undefined
+      const commandClass = monitoring
         ? 'requestNotice requestNoticeTransaction requestNoticeTransactionStatus'
         : 'requestNotice requestNoticeTransaction requestNoticeTransactionReview'
       return (
         <div className={commandClass}>
           <div className='requestNoticeInner'>
-            <TxBar req={req} infoPane={(type) => this.setState({ infoPane: type })} />
-            {infoPane ? this.infoPane() : notice ? this.sentStatus() : this.signOrDecline()}
-            <TxConfirmations req={req} />
+            {monitoring ? (
+              <>
+                <TxBar
+                  req={req}
+                  networkName={
+                    this.store('main.networks', 'ethereum', parseInt(req.data.chainId, 'hex'), 'name') ||
+                    'the network'
+                  }
+                />
+                {this.sentStatus()}
+              </>
+            ) : (
+              this.signOrDecline()
+            )}
           </div>
         </div>
       )

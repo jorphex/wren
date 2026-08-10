@@ -15,7 +15,28 @@ const measure = (ref) => {
   return { height: clientHeight, width: clientWidth }
 }
 
-export const canApproveWalletCalls = (req, actionRequestId, accountSignerType) =>
+const walletCallsSimulationWarning = (simulation) => {
+  if (simulation?.status === 'failed') {
+    return {
+      title: 'Simulation failed',
+      detail: 'Wren could not verify what this wallet call may do. Review the call details before deciding.'
+    }
+  }
+  if (simulation?.status === 'reverted') {
+    return {
+      title: 'Simulation reverted',
+      detail: 'The simulated call reverted. The result may differ from an onchain submission.'
+    }
+  }
+  if (simulation?.status === 'unavailable') {
+    return {
+      title: 'Simulation unavailable',
+      detail: 'Wren could not run a simulation for this wallet call.'
+    }
+  }
+}
+
+const canDecideWalletCalls = (req, actionRequestId, accountSignerType) =>
   req?.type === 'walletCalls' &&
   !isWatchOnlyAccountType(accountSignerType) &&
   req.handlerId !== actionRequestId &&
@@ -26,15 +47,28 @@ export const canApproveWalletCalls = (req, actionRequestId, accountSignerType) =
   req.simulation?.delegation?.status !== 'delegated' &&
   req.preparation?.status === 'succeeded'
 
+export const canApproveWalletCalls = (
+  req,
+  actionRequestId,
+  accountSignerType,
+  simulationAcknowledged = false
+) =>
+  canDecideWalletCalls(req, actionRequestId, accountSignerType) &&
+  (req.simulation?.status === 'succeeded' ||
+    (Boolean(walletCallsSimulationWarning(req.simulation)) && simulationAcknowledged))
+
 export class Footer extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
       allowInput: true,
       walletCallsActionId: undefined,
-      walletCallsAdjustmentId: undefined
+      walletCallsAdjustmentId: undefined,
+      walletCallsAcknowledgement: undefined
     }
     this.footerRef = React.createRef()
+    this.walletCallsAcknowledgementRef = React.createRef()
+    this.walletCallsSubmitRef = React.createRef()
     this.lastHeight = undefined
   }
   componentDidMount() {
@@ -54,8 +88,27 @@ export class Footer extends React.Component {
       this.observer.unobserve(this.footerRef.current)
     }
   }
-  approve(reqId, req) {
-    link.rpc('approveRequest', req, () => {}) // Move to link.send
+  componentDidUpdate(_previousProps, previousState) {
+    if (!previousState.walletCallsAcknowledgement && this.state.walletCallsAcknowledgement) {
+      this.walletCallsAcknowledgementRef.current?.focus()
+    } else if (previousState.walletCallsAcknowledgement && !this.state.walletCallsAcknowledgement) {
+      this.walletCallsSubmitRef.current?.focus()
+    }
+
+    const acknowledgement = this.state.walletCallsAcknowledgement
+    if (acknowledgement && acknowledgement === previousState.walletCallsAcknowledgement) {
+      const crumb = this.store('windows.panel.nav')[0] || {}
+      const request = crumb.data?.accountId
+        ? this.store('main.accounts', crumb.data.accountId, 'requests', acknowledgement.handlerId)
+        : undefined
+      if (request?.simulation !== acknowledgement.simulation) {
+        this.setState({ walletCallsAcknowledgement: undefined })
+      }
+    }
+  }
+  approve(reqId, req, options) {
+    if (options) link.rpc('approveRequest', req, options, () => {})
+    else link.rpc('approveRequest', req, () => {}) // Move to link.send
   }
   decline(reqId, req) {
     link.rpc('declineRequest', req, () => {}) // Move to link.send
@@ -134,7 +187,117 @@ export class Footer extends React.Component {
           const actionPending = this.state.walletCallsActionId === req.handlerId
           const watchOnly = isWatchOnlyAccountType(account.lastSignerType)
           const callCount = Array.isArray(req.calls) ? req.calls.length : 0
+          const simulationWarning = walletCallsSimulationWarning(req.simulation)
+          const acknowledgement = this.state.walletCallsAcknowledgement
+          const acknowledgementActive =
+            simulationWarning &&
+            acknowledgement?.handlerId === req.handlerId &&
+            acknowledgement?.simulation === req.simulation
+          const simulationAcknowledged = acknowledgementActive && acknowledgement.checked
           const canApprove = canApproveWalletCalls(
+            req,
+            this.state.walletCallsActionId,
+            account.lastSignerType,
+            simulationAcknowledged
+          )
+
+          if (req.status === 'declined') {
+            return (
+              <div className='requestApprove requestApproveLightweight walletCallsTerminalActions'>
+                <div className='requestActionContext' role='status'>
+                  <span className='requestActionContextIcon'>
+                    <Icon name='blocked' size={19} />
+                  </span>
+                  <span className='requestActionContextCopy'>
+                    <strong>Request declined</strong>
+                    <span>You declined this wallet call. Nothing was submitted.</span>
+                  </span>
+                </div>
+                <div className='requestActionButtons'>
+                  <button
+                    type='button'
+                    className='requestSign'
+                    onClick={() => link.send('nav:back', 'panel')}
+                  >
+                    <span className='requestSignButton _txButton'>
+                      <span>Close</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          if (acknowledgementActive) {
+            return (
+              <div
+                className='requestApprove requestApproveLightweight walletCallsSimulationAcknowledgement'
+                role='region'
+                aria-labelledby='walletCallsSimulationAcknowledgementTitle'
+              >
+                <div className='requestActionContext'>
+                  <span className='requestActionContextIcon'>
+                    <Icon name='alert' size={19} />
+                  </span>
+                  <span className='requestActionContextCopy'>
+                    <strong id='walletCallsSimulationAcknowledgementTitle'>{simulationWarning.title}</strong>
+                    <span>{simulationWarning.detail}</span>
+                    <label className='walletCallsSimulationAcknowledgementCheck'>
+                      <input
+                        ref={this.walletCallsAcknowledgementRef}
+                        type='checkbox'
+                        checked={Boolean(acknowledgement.checked)}
+                        disabled={actionPending}
+                        onChange={(event) =>
+                          this.setState({
+                            walletCallsAcknowledgement: {
+                              ...acknowledgement,
+                              checked: event.target.checked
+                            }
+                          })
+                        }
+                      />
+                      <span>I understand this batch is not simulation-confirmed and want to continue.</span>
+                    </label>
+                  </span>
+                </div>
+                <div className='requestActionButtons'>
+                  <button
+                    type='button'
+                    className='requestDecline'
+                    disabled={actionPending}
+                    onClick={() =>
+                      this.setState({
+                        walletCallsAcknowledgement: undefined
+                      })
+                    }
+                  >
+                    <span className='requestDeclineButton _txButton'>
+                      <span>Back</span>
+                    </span>
+                  </button>
+                  <button
+                    type='button'
+                    className='requestSign'
+                    disabled={!canApprove}
+                    onClick={() => {
+                      if (!canApprove) return
+                      this.setState({ walletCallsActionId: req.handlerId })
+                      this.approve(req.handlerId, req, {
+                        walletCallsSimulationAcknowledged: true
+                      })
+                    }}
+                  >
+                    <span className='requestSignButton _txButton'>
+                      <span>Continue without simulation</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          const canStartDecision = canDecideWalletCalls(
             req,
             this.state.walletCallsActionId,
             account.lastSignerType
@@ -169,11 +332,20 @@ export class Footer extends React.Component {
                   </span>
                 </button>
                 <button
+                  ref={this.walletCallsSubmitRef}
                   type='button'
                   className='requestSign'
-                  disabled={!canApprove}
+                  disabled={simulationWarning ? !canStartDecision : !canApprove}
                   onClick={() => {
-                    if (canApprove) {
+                    if (simulationWarning && canStartDecision) {
+                      this.setState({
+                        walletCallsAcknowledgement: {
+                          checked: false,
+                          handlerId: req.handlerId,
+                          simulation: req.simulation
+                        }
+                      })
+                    } else if (canApprove) {
                       this.setState({ walletCallsActionId: req.handlerId })
                       this.approve(req.handlerId, req)
                     }

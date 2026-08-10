@@ -128,6 +128,13 @@ beforeEach(() => {
     accountRequests.splice(index, 1)
     return true
   })
+  accounts.declineRequest = jest.fn((handlerId, accountId) => {
+    const request = accountRequests.find((candidate) => candidate.handlerId === handlerId)
+    if (!request || request.account !== accountId || request.status !== undefined) return false
+    request.status = 'declined'
+    request.notice = 'Request declined'
+    return true
+  })
 
   connection.send = jest.fn()
   connection.connections = {
@@ -400,7 +407,11 @@ describe('#wallet-call provider boundary', () => {
 
     expect(respond).toHaveBeenCalledWith({ id: 71, jsonrpc: '2.0', result: { id: admitted.id } })
     expect(events).toEqual(['response', 'execute'])
-    expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(address, admitted.handlerId)
+    expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      false
+    )
     expect(executeWalletCallRuntime).toHaveBeenCalledWith(
       expect.objectContaining({ id: admitted.id, origin: originId, account: address, chainId: '0x1' }),
       expect.objectContaining({
@@ -436,9 +447,11 @@ describe('#wallet-call provider boundary', () => {
 
     expect(provider.declineWalletCallsRequest(address, admitted.handlerId)).toBe(true)
 
-    expect(accounts.rejectRequestForAccount).toHaveBeenCalledWith(address, admitted.handlerId, {
-      code: 4001,
-      message: 'User rejected the wallet-call request'
+    expect(accounts.declineRequest).toHaveBeenCalledWith(admitted.handlerId, address)
+    expect(accounts.rejectRequestForAccount).not.toHaveBeenCalled()
+    expect(accounts.getRequestForAccount(address, admitted.handlerId)).toMatchObject({
+      status: 'declined',
+      notice: 'Request declined'
     })
     expect(respond).toHaveBeenCalledWith({
       id: 71,

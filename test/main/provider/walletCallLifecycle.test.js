@@ -166,6 +166,15 @@ it('publishes the id after claim and then executes and settles the exact request
   expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(account, 'handler-id', undefined)
 })
 
+it('threads explicit simulation acknowledgement to the authoritative claim', async () => {
+  const { controller, accounts } = dependencies()
+  controller.admit(input(), jest.fn())
+
+  await expect(controller.approve(account, 'handler-id', true)).resolves.toEqual(['0xhash'])
+
+  expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(account, 'handler-id', true)
+})
+
 it('keeps the published id and reports a terminal execution failure through status', async () => {
   const { controller, ledger, execute, accounts } = dependencies()
   const respond = jest.fn()

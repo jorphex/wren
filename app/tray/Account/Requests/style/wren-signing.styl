@@ -908,6 +908,256 @@
       min-width 0
       max-width none
 
+.requestNoticeTransactionStatus
+  height auto
+  min-height 200px
+
+  .requestNoticeInner
+    display block
+    padding 17px 24px 18px
+    box-sizing border-box
+
+.txLifecycle
+  display grid
+  grid-template-columns minmax(0, 1fr) minmax(330px, .85fr)
+  align-items center
+  gap 26px
+
+.txLifecycleSummary
+  display flex
+  min-width 0
+  align-items center
+  gap 12px
+
+.txLifecycleMark
+  display flex
+  flex 0 0 38px
+  width 38px
+  height 38px
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  color var(--wren-accent-primary-hover)
+  background var(--wren-bg-elevated)
+  align-items center
+  justify-content center
+
+.txLifecycle-success .txLifecycleMark
+  color var(--wren-success)
+
+.txLifecycle-failure .txLifecycleMark
+  color var(--wren-danger)
+
+.txLifecycleCopy
+  display block
+  min-width 0
+
+  strong,
+  span
+    display block
+
+  strong
+    color var(--wren-text-primary)
+    font-size 14px
+    font-weight 650
+
+  span
+    margin-top 3px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 16px
+
+.txLifecycleSteps
+  display grid
+  margin 0
+  padding 0
+  list-style none
+  grid-template-columns repeat(4, minmax(0, 1fr))
+
+.txLifecycleStep
+  position relative
+  min-width 0
+  padding-top 15px
+  color var(--wren-text-muted)
+  font-family var(--wren-font-utility)
+  font-size 10px
+  text-align center
+
+  &::before
+    position absolute
+    top 5px
+    right 50%
+    left -50%
+    height 1px
+    background var(--wren-border-default)
+    content ''
+
+  &:first-child::before
+    display none
+
+.txLifecycleStepMarker
+  position absolute
+  z-index 1
+  top 2px
+  left 50%
+  width 7px
+  height 7px
+  margin-left -4px
+  border 1px solid var(--wren-border-strong)
+  border-radius 50%
+  background var(--wren-bg-subtle)
+
+.txLifecycleStep-complete,
+.txLifecycleStep-current
+  color var(--wren-text-secondary)
+
+  &::before
+    background var(--wren-accent-primary)
+
+  .txLifecycleStepMarker
+    border-color var(--wren-accent-primary)
+    background var(--wren-accent-primary)
+
+.txLifecycle-success
+  .txLifecycleStep-complete::before,
+  .txLifecycleStep-current::before
+    background var(--wren-success)
+
+  .txLifecycleStep-complete .txLifecycleStepMarker,
+  .txLifecycleStep-current .txLifecycleStepMarker
+    border-color var(--wren-success)
+    background var(--wren-success)
+
+.txLifecycle-failure .txLifecycleStep-current .txLifecycleStepMarker
+  border-color var(--wren-danger)
+  background var(--wren-danger)
+
+.txLifecycleEvidence
+  position relative
+  margin-top 16px
+  padding-top 14px
+  border-top 1px solid var(--wren-ledger-rule)
+
+.txLifecycleFacts
+  display grid
+  margin 0
+  padding 0 0 13px
+  grid-template-columns repeat(4, minmax(0, 1fr))
+  gap 16px
+
+  div
+    min-width 0
+
+  dt,
+  dd
+    display block
+    margin 0
+    overflow hidden
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    text-overflow ellipsis
+    white-space nowrap
+
+  dt
+    color var(--wren-text-muted)
+
+  dd
+    margin-top 4px
+    color var(--wren-text-secondary)
+
+.txLifecycleEvidence > .txProgressSuccessItemRight
+  position static
+  display flex
+  margin 0 0 10px
+  color var(--wren-text-muted)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  justify-content flex-end
+  gap 4px
+
+  .txProgressSuccessItemLabel,
+  .txProgressSuccessItemValue
+    font-size inherit
+
+.txLifecycleActions
+  display flex
+  justify-content flex-end
+  gap 8px
+
+.txLifecycleAction,
+.txLifecycleDetails button,
+.txLifecycleCancelRequest
+  height 34px
+  padding 0 13px
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+  box-shadow var(--wren-control-shadow)
+  font-family var(--wren-font-ui)
+  font-size 12px
+  font-weight 620
+
+  &:hover
+    color var(--wren-text-primary)
+    border-color var(--wren-border-strong)
+    background var(--wren-control-texture-dark), var(--wren-surface-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.txLifecycleActionBad
+  color var(--wren-danger)
+
+.txLifecycleActionGood
+  color var(--wren-success)
+
+.txLifecycleDetails
+  margin-top 12px
+  padding 11px 12px
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+
+  > span
+    display block
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 17px
+
+  > div
+    display flex
+    margin-top 9px
+    align-items center
+    gap 8px
+
+.txLifecycleCopyStatus
+  min-height 16px
+  color var(--wren-success)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+
+.txLifecycleCancelRequest
+  display block
+  margin 12px 0 0 auto
+
+@media (max-width: 610px)
+  .txLifecycle
+    grid-template-columns 1fr
+    gap 14px
+
+  .txLifecycleFacts
+    grid-template-columns repeat(2, minmax(0, 1fr))
+
+  .txLifecycleActions
+    justify-content stretch
+
+    .txLifecycleAction
+      flex 1
+
 
 // Transaction evidence is a continuation of the review ledger, not a stack of cards.
 .transactionEvidenceView

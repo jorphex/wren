@@ -1,5 +1,8 @@
 import { screen, render } from '../../../../componentSetup'
 import { WalletCallsStatus } from '../../../../../app/tray/Account/WalletCallsStatus'
+import link from '../../../../../resources/link'
+
+jest.mock('../../../../../resources/link', () => ({ invoke: jest.fn(), send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const transactionHash = `0x${'a'.repeat(64)}`
@@ -11,6 +14,11 @@ const status = (overrides = {}) => ({
   status: 100,
   atomic: false,
   ...overrides
+})
+
+beforeEach(() => {
+  link.invoke.mockReset()
+  link.send.mockReset()
 })
 
 it('renders pending batch identity without approval controls', () => {
@@ -94,4 +102,34 @@ it('renders bounded transaction evidence in receipt order', () => {
   expect(screen.getByText(/EIP-1559 effective rate/)).toBeTruthy()
   expect(screen.getByText('Confirmed')).toBeTruthy()
   expect(screen.getByText('Reverted')).toBeTruthy()
+})
+
+it('does not present an unknown status as pending and only rereads it on refresh', async () => {
+  link.invoke.mockResolvedValueOnce({ success: true })
+  const unknown = status({ status: 999 })
+  const { user } = render(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      origin='example.test'
+      originName='example.test'
+      status={unknown}
+    />
+  )
+
+  expect(screen.getByText('Status unavailable')).toBeTruthy()
+  expect(screen.getByText('Wren cannot verify the current status of this wallet call.')).toBeTruthy()
+  expect(screen.queryByText('Pending')).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: 'Refresh' }))
+  expect(link.invoke).toHaveBeenCalledWith('tray:refreshWalletCallsStatus', {
+    account,
+    id: unknown.id,
+    origin: 'example.test'
+  })
+  expect(link.send).not.toHaveBeenCalled()
+
+  await user.click(screen.getByRole('button', { name: 'Close' }))
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'panel')
 })

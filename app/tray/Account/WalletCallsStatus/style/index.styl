@@ -68,6 +68,35 @@
 .walletCallsStatusSummary-pending .walletCallsStatusMark
   color var(--wren-accent-primary-hover)
 
+.walletCallsStatusUnavailableActions
+  display flex
+  padding 0 0 18px
+  justify-content flex-end
+  gap 8px
+
+  button
+    height 34px
+    padding 0 14px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+    box-shadow var(--wren-control-shadow)
+    font-size 12px
+    font-weight 620
+
+    &:not(:disabled):hover
+      color var(--wren-text-primary)
+      border-color var(--wren-border-strong)
+      background var(--wren-control-texture-dark), var(--wren-surface-hover)
+
+    &:disabled
+      opacity .5
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
 .walletCallsStatusSection
   padding 18px 0
   border-top 1px solid var(--wren-ledger-rule)

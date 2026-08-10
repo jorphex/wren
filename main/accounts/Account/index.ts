@@ -1020,7 +1020,10 @@ class FrameAccount {
     }, 0)
   }
 
-  claimWalletCallsRequest(handlerId: string): Readonly<PreparedWalletCallExecutionSnapshot> {
+  claimWalletCallsRequest(
+    handlerId: string,
+    simulationAcknowledged = false
+  ): Readonly<PreparedWalletCallExecutionSnapshot> {
     const request = this.requests[handlerId]
     if (!request || request.type !== 'walletCalls') {
       throw new Error('Wallet-call request is no longer available')
@@ -1042,6 +1045,13 @@ class FrameAccount {
     }
     if (!walletCalls.simulation || walletCalls.simulation.status === 'pending') {
       throw new Error('Wallet-call execution check is still pending')
+    }
+    if (
+      walletCalls.simulation.status !== 'succeeded' &&
+      (!['failed', 'reverted', 'unavailable'].includes(walletCalls.simulation.status) ||
+        !simulationAcknowledged)
+    ) {
+      throw new Error('Wallet-call simulation requires explicit acknowledgement')
     }
     if (walletCalls.simulation.delegation?.status === 'delegated') {
       throw new Error('Wallet-call batches from delegated accounts are not supported')

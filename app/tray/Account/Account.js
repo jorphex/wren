@@ -548,6 +548,7 @@ class _AccountBody extends React.Component {
             accountName={accountName}
             chainName={chainName}
             nativeCurrency={nativeCurrency}
+            origin={originName}
             originName={getOriginDisplayName(originName)}
             status={status}
           />

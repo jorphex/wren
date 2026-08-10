@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { getReceiptFeeUsd, RequestCommand } from '../../../../../app/tray/Footer/RequestCommand'
+import { transactionLifecyclePresentation } from '../../../../../app/tray/Footer/RequestCommand/TxBar'
 import { Time } from '../../../../../app/tray/Footer/Time'
 import { act, render, screen } from '../../../../componentSetup'
 import link from '../../../../../resources/link'
@@ -40,6 +41,7 @@ const commandStore = ({
   const store = (...path) => {
     const key = path.join('.')
     if (key === 'main.networks.ethereum.1') return { isTestnet, explorer }
+    if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
     if (key === 'main.networksMeta.ethereum.1') {
       return {
         nativeCurrency: {
@@ -179,6 +181,18 @@ it('keeps signing disabled while simulation is pending after decline becomes ava
   command.componentWillUnmount()
 })
 
+it('enters a stable pending lifecycle even when software signing has no notice text', () => {
+  const req = transaction({ notice: '', status: 'pending' })
+  const command = new RequestCommand({ req, signingDelay: 0 })
+  command.store = commandStore()
+  renderCommandResult(command, 'renderTxCommand')
+
+  expect(screen.getByText('See signer')).toBeTruthy()
+  expect(screen.getByText('Wren is waiting for your signer to sign this transaction.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Sign transaction' })).toBeNull()
+  command.componentWillUnmount()
+})
+
 it('keeps signing disabled while a fee field has an uncommitted or invalid draft', () => {
   const req = transaction()
   const view = renderMountedCommand(req, 'signOrDecline', commandStore(), 0)
@@ -259,19 +273,56 @@ it.each([
   expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility'])
 })
 
-it('disables explorer access without a configured explorer', () => {
+it('omits explorer access without a configured explorer while preserving hash copy', async () => {
   const req = transaction({
     notice: 'submitted',
     status: 'confirming',
     tx: { hash: '0x1234' }
   })
-  const command = new RequestCommand({ req, signingDelay: 0 })
-  command.store = commandStore({ explorer: '' })
-  renderCommandResult(command, 'sentStatus')
+  const view = renderMountedCommand(req, 'sentStatus', commandStore({ explorer: '' }))
 
-  expect(screen.getByRole('button', { name: 'Open Explorer' }).disabled).toBe(true)
+  await view.user.click(screen.getByRole('button', { name: 'View details' }))
+  expect(screen.queryByRole('button', { name: 'Open Explorer' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Copy Hash' }).disabled).toBe(false)
-  command.componentWillUnmount()
+  view.unmount()
+})
+
+it.each([
+  ['sending', 'Sending', 'Wren is sending the transaction to the network.'],
+  ['verifying', 'Submitted', 'Wren sent the transaction to the network.'],
+  ['confirming', 'Confirming', 'The transaction was sent. Wren is waiting for network confirmation.'],
+  ['confirmed', 'Confirmed', 'The transaction is confirmed on Ethereum.'],
+  ['error', 'Transaction failed', 'The network did not confirm this transaction.']
+])('maps %s to truthful lifecycle copy', (status, title, detail) => {
+  expect(transactionLifecyclePresentation(transaction({ status }), 'Ethereum')).toMatchObject({
+    title,
+    detail
+  })
+})
+
+it('keeps transaction monitor evidence and actions stable without hover substitution', async () => {
+  const req = transaction({
+    notice: 'Verifying',
+    status: 'verifying',
+    tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 2 }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
+
+  expect(screen.getAllByText('Submitted')).toHaveLength(2)
+  expect(screen.getByText('Wren sent the transaction to the network.')).toBeTruthy()
+  expect(screen.getByRole('list', { name: 'Transaction progress' })).toBeTruthy()
+  expect(screen.getByText('Confirmations')).toBeTruthy()
+  expect(screen.getByText('2')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Speed Up' })).toBeTruthy()
+
+  await view.user.click(screen.getByRole('button', { name: 'View details' }))
+  expect(screen.getByRole('button', { name: 'Open Explorer' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy Hash' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Speed Up' })).toBeTruthy()
+  expect(screen.queryByLabelText('Show signing status')).toBeNull()
+  view.unmount()
 })
 
 it('calculates receipt fees without losing integer precision', () => {

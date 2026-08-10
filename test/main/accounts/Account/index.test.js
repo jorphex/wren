@@ -1746,6 +1746,38 @@ describe('#claimWalletCallsRequest', () => {
     expect(accounts.update).not.toHaveBeenCalled()
   })
 
+  it.each(['failed', 'reverted', 'unavailable'])(
+    'requires explicit acknowledgement for a %s simulation at the claim boundary',
+    (status) => {
+      const request = readyWalletCallsRequest(`acknowledge-${status}`)
+      request.simulation = { status, calls: [] }
+      account.requests[request.handlerId] = request
+      const expected = JSON.parse(JSON.stringify(request))
+      accounts.update.mockClear()
+
+      expect(() => account.claimWalletCallsRequest(request.handlerId)).toThrow(
+        /requires explicit acknowledgement/i
+      )
+      expect(request).toEqual(expected)
+      expect(accounts.update).not.toHaveBeenCalled()
+
+      expect(() => account.claimWalletCallsRequest(request.handlerId, true)).not.toThrow()
+      expect(request).toMatchObject({ locked: true, status: 'pending' })
+    }
+  )
+
+  it('fails closed for an unknown simulation status even with acknowledgement', () => {
+    const request = readyWalletCallsRequest('unknown-simulation-status')
+    request.simulation = { status: 'unknown', calls: [] }
+    account.requests[request.handlerId] = request
+
+    expect(() => account.claimWalletCallsRequest(request.handlerId, true)).toThrow(
+      /requires explicit acknowledgement/i
+    )
+    expect(request.locked).toBeUndefined()
+    expect(request.status).toBeUndefined()
+  })
+
   it.each([
     ['pending simulation', (request) => (request.simulation = { status: 'pending', calls: [] })],
     ['missing simulation', (request) => (request.simulation = undefined)],

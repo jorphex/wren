@@ -76,6 +76,13 @@ it('allows a fully reviewed wallet-call batch to be submitted', () => {
   expect(canApproveWalletCalls(request(), undefined, 'ledger')).toBe(true)
 })
 
+it('requires an explicit acknowledgement before a failed simulation can be submitted', () => {
+  const failed = request({ simulation: { status: 'failed' } })
+
+  expect(canApproveWalletCalls(failed, undefined, 'ledger')).toBe(false)
+  expect(canApproveWalletCalls(failed, undefined, 'ledger', true)).toBe(true)
+})
+
 it('blocks wallet-call submission for watch-only or unknown account types', () => {
   expect(canApproveWalletCalls(request(), undefined, 'address')).toBe(false)
   expect(canApproveWalletCalls(request(), undefined, 'Address')).toBe(false)
@@ -116,6 +123,95 @@ it('exposes native wallet-call decisions and locks actions once submitted', asyn
   expect(link.rpc).toHaveBeenCalledWith('approveRequest', req, expect.any(Function))
   expect(decline.disabled).toBe(true)
   expect(submit.disabled).toBe(true)
+})
+
+it.each([
+  [
+    'failed',
+    'Simulation failed',
+    'Wren could not verify what this wallet call may do. Review the call details before deciding.'
+  ],
+  [
+    'reverted',
+    'Simulation reverted',
+    'The simulated call reverted. The result may differ from an onchain submission.'
+  ],
+  ['unavailable', 'Simulation unavailable', 'Wren could not run a simulation for this wallet call.']
+])('guards a %s simulation with a separate acknowledgement', async (status, title, detail) => {
+  const req = request({
+    account: '0x0000000000000000000000000000000000000001',
+    simulation: { status }
+  })
+  const { user } = renderRequestFooter(req)
+
+  await user.click(screen.getByRole('button', { name: 'Submit Batch' }))
+
+  expect(screen.getByText(title)).toBeTruthy()
+  expect(screen.getByText(detail)).toBeTruthy()
+  const acknowledgement = screen.getByRole('checkbox', {
+    name: 'I understand this batch is not simulation-confirmed and want to continue.'
+  })
+  const proceed = screen.getByRole('button', { name: 'Continue without simulation' })
+  expect(document.activeElement).toBe(acknowledgement)
+  expect(proceed.disabled).toBe(true)
+  expect(link.rpc).not.toHaveBeenCalled()
+
+  await user.click(acknowledgement)
+  expect(proceed.disabled).toBe(false)
+  await user.click(proceed)
+
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(link.rpc).toHaveBeenCalledWith(
+    'approveRequest',
+    req,
+    { walletCallsSimulationAcknowledged: true },
+    expect.any(Function)
+  )
+})
+
+it('returns from the simulation acknowledgement without submitting', async () => {
+  const { user } = renderRequestFooter(request({ simulation: { status: 'failed' } }))
+  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+
+  await user.click(submit)
+  await user.click(screen.getByRole('button', { name: 'Back' }))
+
+  expect(screen.queryByText('Simulation failed')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Submit Batch' })).toBe(document.activeElement)
+  expect(link.rpc).not.toHaveBeenCalled()
+})
+
+it('clears acknowledgement when a fresh simulation replaces its evidence', () => {
+  const previousSimulation = { status: 'failed' }
+  const acknowledgement = {
+    checked: true,
+    handlerId: 'wallet-call-request',
+    simulation: previousSimulation
+  }
+  const footer = new Footer({})
+  footer.state.walletCallsAcknowledgement = acknowledgement
+  footer.setState = jest.fn()
+  footer.store = jest.fn((...path) => {
+    if (path.join('.') === 'windows.panel.nav') {
+      return [{ data: { accountId: '0x0000000000000000000000000000000000000001' } }]
+    }
+    return { simulation: { status: 'failed' } }
+  })
+
+  footer.componentDidUpdate({}, { walletCallsAcknowledgement: acknowledgement })
+
+  expect(footer.setState).toHaveBeenCalledWith({ walletCallsAcknowledgement: undefined })
+})
+
+it('renders neutral terminal feedback after declining a wallet call', async () => {
+  const { user } = renderRequestFooter(request({ status: 'declined' }))
+
+  expect(screen.getByText('Request declined')).toBeTruthy()
+  expect(screen.getByText('You declined this wallet call. Nothing was submitted.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Submit Batch' })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: 'Close' }))
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'panel')
 })
 
 it('renders watch-only wallet-call submission as a disabled native button', () => {

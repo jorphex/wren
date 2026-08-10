@@ -824,7 +824,8 @@ export class Accounts extends EventEmitter {
 
   claimWalletCallsRequest(
     accountId: string,
-    handlerId: string
+    handlerId: string,
+    simulationAcknowledged = false
   ): Readonly<PreparedWalletCallExecutionSnapshot> {
     if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
       throw new Error('Invalid wallet-call request identity')
@@ -833,7 +834,7 @@ export class Accounts extends EventEmitter {
     const account = this.accounts[accountId.toLowerCase()]
     if (!account) throw new Error('Could not locate wallet-call account')
 
-    return account.claimWalletCallsRequest(handlerId)
+    return account.claimWalletCallsRequest(handlerId, simulationAcknowledged)
   }
 
   adjustWalletCallsRequest(accountId: string, handlerId: string, adjustment: unknown) {
@@ -847,7 +848,7 @@ export class Accounts extends EventEmitter {
     return account.adjustWalletCalls(handlerId, adjustment)
   }
 
-  claimWalletCallsRequestWithResponse(accountId: string, handlerId: string) {
+  claimWalletCallsRequestWithResponse(accountId: string, handlerId: string, simulationAcknowledged = false) {
     if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
       throw new Error('Invalid wallet-call request identity')
     }
@@ -869,7 +870,7 @@ export class Accounts extends EventEmitter {
       throw new Error('Wallet-call response is no longer available')
     }
 
-    const snapshot = account.claimWalletCallsRequest(handlerId)
+    const snapshot = account.claimWalletCallsRequest(handlerId, simulationAcknowledged)
     if (account.getRequest(handlerId) !== request) {
       throw new Error('Wallet-call request changed during approval')
     }
