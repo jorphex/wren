@@ -9,7 +9,7 @@ beforeEach(() => link.send.mockReset())
 it('shows a generic cancellable embedded-dapp loading state without network assumptions', async () => {
   const { user } = render(<LoadingDapp />)
 
-  expect(screen.getByRole('status').textContent).toContain('Loading dapp')
+  expect(screen.getByRole('status').textContent).toContain('Loading app')
   expect(screen.queryByText(/Mainnet|ENS|Send/)).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(link.send).toHaveBeenCalledWith('frame:close')
@@ -18,8 +18,8 @@ it('shows a generic cancellable embedded-dapp loading state without network assu
 it('shows a recoverable generic failure and closes the embedded frame', async () => {
   const { user } = render(<FailedToLoad dappId='installed-dapp' />)
 
-  expect(screen.getByRole('alert').textContent).toContain('Could not load dapp')
-  await user.click(screen.getByRole('button', { name: 'Retry' }))
+  expect(screen.getByRole('alert').textContent).toContain('Couldn’t load app')
+  await user.click(screen.getByRole('button', { name: 'Try again' }))
 
   expect(link.send).toHaveBeenNthCalledWith(1, 'tray:action', 'retryDapp', 'installed-dapp')
   expect(link.send).toHaveBeenNthCalledWith(2, 'frame:close')

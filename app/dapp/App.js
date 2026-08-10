@@ -14,8 +14,8 @@ export const FailedToLoad = ({ dappId }) => {
   return (
     <div className='mainDappState' role='alert'>
       <div className='mainDappLoadingText'>
-        <strong>Could not load dapp</strong>
-        <span>Wren could not load this embedded app.</span>
+        <strong>Couldn’t load app</strong>
+        <span>Wren couldn’t load this app.</span>
       </div>
       <div className='mainDappStateActions'>
         <button
@@ -24,7 +24,7 @@ export const FailedToLoad = ({ dappId }) => {
           disabled={!dappId}
           onClick={retry}
         >
-          Retry
+          Try again
         </button>
         <button
           type='button'
@@ -42,8 +42,8 @@ export const LoadingDapp = () => {
   return (
     <div className='mainDappState' role='status'>
       <div className='mainDappLoadingText'>
-        <strong>Loading dapp</strong>
-        <span>Wren is loading the embedded app.</span>
+        <strong>Loading app</strong>
+        <span>Wren is loading this app.</span>
       </div>
       <div className='loader' aria-hidden='true' />
       <button
