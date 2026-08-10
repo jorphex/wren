@@ -1,27 +1,19 @@
 # Wren compact-art language — review v1
 
-Review-source visual development. The original sheets remain here for provenance; selected crops are
-integrated under `asset/ui/`.
+**Purpose:** preserve compact-art provenance and its production placement.
+
+**Status — selected and integrated:** cropped empty-state vignettes:
+`asset/ui/wren-empty-balances-v2.png`, `asset/ui/wren-empty-inventory-v1.png`,
+`asset/ui/wren-empty-connections-v2.png`, and `asset/ui/wren-empty-requests-v2.png`. The surrounding
+wallet remains neutral; signing and transaction review remain art-free.
 
 ## Files
 
-- `01-wallet-state-vignettes.png` — four compact concepts for no balances, no inventory, no
-  connected apps, and no pending requests.
-- `02-decorative-symbols.png` — twelve optional Wren-world accents for empty states, loading, and
-  restrained section decoration. These are not proposed replacements for familiar functional
-  wallet icons.
-- `03-integrated-tray-preview.png` — the approved vignettes placed in Wren's current 760 × 900
-  shell geometry with one boundary per module.
-- `integration-preview.html` — headless review fixture matching the production empty-state
-  component and tray surface tokens.
-- `PROMPTS.md` — generation method, references, and final prompt set.
+- **Selected-source evidence:** `01-wallet-state-vignettes.png` contains the four source vignettes.
+- **Evidence-only:** `02-decorative-symbols.png` contains optional accents for empty states, loading,
+  and restrained decoration; it does not replace familiar functional icons.
+- **Layout-only evidence:** `03-integrated-tray-preview.png` and `integration-preview.html` place the
+  selected vignettes in the 760 × 900 shell.
+- **Provenance:** `PROMPTS.md` records the generation method, references, and verbatim final prompts.
 
-## Intended boundary
-
-The surrounding wallet UI stays materially neutral, clear, and conventional. Warmth and cozy-rural
-character live inside these isolated illustrations and accents. Transaction review and signing
-hierarchy remain art-free.
-
-The approved vignette sheet has been cropped into four production candidates under `asset/ui/` and
-integrated into the matching tray empty states. The decorative-symbol sheet remains unsliced while
-its appropriate placements are evaluated.
+The decorative-symbol sheet remains unsliced while appropriate placements are evaluated.

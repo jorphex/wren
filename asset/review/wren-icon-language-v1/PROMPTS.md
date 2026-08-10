@@ -1,6 +1,11 @@
 # Generation record
 
-Mode: built-in image generation tool.
+**Purpose:** preserve the generation provenance for the retained compact-art sheets.
+
+**Status:** the quoted final prompts are verbatim generation records. The wallet-state sheet is
+selected-source evidence; the decorative-symbol sheet is evidence-only and remains unsliced.
+
+**Mode:** built-in image generation tool.
 
 ## Wallet-state vignettes
 
@@ -11,7 +16,7 @@ Style references:
 - `asset/ui/empty-connections-v6.png` — compact empty-state finish
 - `asset/ui/onboarding-welcome.png` — dusk palette, maturity, atmosphere, and lighting
 
-Final prompt:
+**Final prompt (verbatim):**
 
 > Create one clean presentation sheet containing four distinct, self-contained Wren UI vignettes
 > for no balances/assets, no inventory/collectibles, no connected apps, and no pending requests.
@@ -38,7 +43,7 @@ Style references:
 - `asset/ui/onboarding-networks-v6.png` — rural atmosphere and localized lighting
 - `asset/ui/empty-contacts-v5.png` — compact illustration finish and silhouette clarity
 
-Final prompt:
+**Final prompt (verbatim):**
 
 > Create one clean presentation sheet of twelve original, isolated decorative symbols from the
 > Wren visual world: a feather, short twig, sparse branch tip, tiny wren footprints, curved flight

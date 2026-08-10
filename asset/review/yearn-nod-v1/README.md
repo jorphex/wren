@@ -1,13 +1,15 @@
 # Selected Yearn attribution
 
-Selected attribution reference for Wren's Earn surface. The matching official wordmark is integrated
-in the feature; this folder preserves the reviewed placement and source asset.
+**Purpose:** preserve the selected Yearn attribution for Wren's Earn surface and its source asset.
+
+**Status — selected and integrated:** official white landscape wordmark; Wren remains the primary
+surface and Yearn is the vault provider.
 
 ## Selected treatment
 
-`01-wordmark-attribution.png` keeps Wren in charge of the surface and treats Yearn as the vault provider.
-The official white landscape mark is shown at its recommended minimum screen width (85 px) with clear
-space around it. The symbol-led and text-only alternatives were removed after selection.
+- **Selected evidence:** `01-wordmark-attribution.png` shows the official mark at its recommended
+  85px minimum screen width with clear space.
+- **Rejected:** symbol-led and text-only alternatives were removed after selection.
 
 ## Official assets
 
@@ -15,5 +17,5 @@ space around it. The symbol-led and text-only alternatives were removed after se
 - Source: https://presskit.yearn.fi/
 - Downloaded: 2026-08-07
 
-The source SVG is retained here only to make the selected review reproducible. The same official asset
-is copied into the Earn feature with its source and usage notes.
+The SVG is retained only to reproduce the review. The same asset is copied into the Earn feature with
+source and usage notes.

@@ -1,15 +1,16 @@
-# Migration Fixtures
+# Migration fixtures
 
-These fixtures are synthetic persisted-state inputs. Never copy a real Frame
-profile, signer file, account history, RPC credential, or device identifier into
-this directory.
+**Purpose:** synthetic persisted-state inputs for application-level migration tests.
 
-Each fixture declares its source migration version and is validated before use.
-The validation rejects common plaintext/encrypted signer material, mnemonic
-phrases, credential-bearing URLs, secret-shaped keys, and version mismatches. It
-is a guardrail, not a substitute for reviewing fixture diffs.
+**Status:** every JSON fixture declares format version 1, `synthetic: true`, a title, and a source
+version matching `state.main._version`. Validation rejects malformed fixtures, future versions,
+secret-shaped keys and values, mnemonics, encrypted signer payloads, and credential-bearing URLs.
+It is a guardrail, not a substitute for fixture-diff review.
 
-When adding a migration, update or add the smallest representative fixture that
-exercises it. Tests load fixtures through the application state initializer from
-a temporary mode-`0600` persistence envelope, assert no schema diagnostics, and
-verify that the migrated state remains stable after persistence and reload.
+**Coverage:** `v12-wallet-state.json`, `v37-network-state.json`, `v41-current-state.json`, and
+`v52-pylon-network-state.json` are validated individually. The migration tests load them through the
+application state initializer from a temporary mode-`0600` persistence envelope and verify migration,
+reload stability, and—where applicable—idempotence.
+
+Never copy a real profile, signer file, account history, RPC credential, or device identifier here.
+For a new migration, add or update the smallest representative synthetic fixture that exercises it.

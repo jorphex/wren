@@ -1,18 +1,20 @@
 # Wren quiet network editor — review v2
 
-Production-sized restart of the rejected network-editor v1 study.
+**Purpose:** production-sized restart of the rejected network-editor v1 study.
 
-- `01-add-network.png` — a dapp proposal and editable network form combined into one decision.
-- `02-rpc-mismatch.png` — validation feedback stays in the RPC label instead of adding another notice.
-- `03-edit-network.png` — existing RPC values are editable in place; validation runs when focus leaves
-  the field.
-- `network-editor.html` — shared source; use `?view=add`, `?view=error`, or `?view=edit`.
+**Status — selected:** quiet proposal-and-editor flow. It is the production reference integrated on
+2026-08-08.
 
-This direction deliberately removes section headings, helper captions, metadata controls, status rows,
-RPC `Change` buttons, footer explanation, and the extra proposal-to-editor handoff. Only field labels,
-values, connection state, and the final action remain. The chiseled wells are ordinary editable inputs,
-and the footer actions reuse the approved request/signing geometry and material treatment exactly.
+- **Selected evidence:** `01-add-network.png` combines a dapp proposal and editable network form.
+- **Selected evidence:** `02-rpc-mismatch.png` keeps validation feedback in the RPC label.
+- **Selected evidence:** `03-edit-network.png` makes RPC values editable in place and validates on
+  blur.
+- **Source:** `network-editor.html`; use `?view=add`, `?view=error`, or `?view=edit`.
 
-Warmth comes from pacing, the feather-gold focus/action language, and one low-contrast approved branch
-accent in otherwise quiet space. No new illustration was generated and no routine-settings mascot was
-introduced.
+The selected flow keeps field labels, values, connection state, and the final action. It rejects section
+headings, helper captions, metadata controls, status rows, RPC `Change` buttons, footer explanation,
+and a separate proposal-to-editor handoff. Chiseled wells remain ordinary editable inputs; footer
+actions reuse the approved request/signing geometry and material treatment.
+
+Warmth comes from pacing, feather-gold focus/action treatment, and one low-contrast approved branch
+accent. No new illustration or routine-settings mascot was introduced.

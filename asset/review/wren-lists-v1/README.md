@@ -1,11 +1,12 @@
 # Wren selected list language
 
-Review reference at Wren's 760 × 900 shell size. Nothing in this directory is a runtime dependency;
-the selected Ruled ledger language is integrated in production.
+**Purpose:** document the list-language decision at Wren's 760 × 900 shell size.
 
-- `02-integrated-ledger-check.png` — selected Ruled ledger applied across representative production
-  row types with the approved colors and typography.
-- `integrated-ledger-check.html` — self-contained source for the integrated QA capture.
+**Status — selected and integrated:** Ruled ledger. Nothing here is a runtime dependency.
 
-Ruled ledger uses whole-row selection and excludes side accents, attached tabs, table headers, and
-per-item outlined cards. The superseded multi-direction plate was removed after integration.
+- **Selected evidence:** `02-integrated-ledger-check.png` applies Ruled ledger to representative
+  production rows with approved color and type.
+- **Source:** `integrated-ledger-check.html` reproduces the QA capture.
+
+Ruled ledger uses whole-row selection; side accents, attached tabs, table headers, and per-item
+outlined cards were rejected. The superseded multi-direction plate was removed after integration.
