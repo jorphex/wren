@@ -53,10 +53,44 @@ beforeEach(() => {
     if (path.join('.') === 'main.networks.ethereum.1') {
       return { id: 1, name: 'Ethereum', on: true, connection: { endpoints: [{ connected: true }] } }
     }
+    if (path.join('.') === 'main.networksMeta.ethereum.1.nativeCurrency.decimals') return 18
     if (path.join('.') === 'main.networksMeta.ethereum.1.gas') {
       return { price: { levels: { fast: '0x3b9aca00' } } }
     }
     if (path.join('.') === `main.origins.${originIdForName(FRAME_SEND_ORIGIN)}`) return undefined
+  })
+})
+
+it.each([
+  ['0', '0x0'],
+  ['0.25', '0x3782dace9d90000']
+])('queues native amount %s when stored native decimals need normalization', async (amount, value) => {
+  store.mockImplementation((...path) => {
+    if (path.join('.') === `main.balances.${account}`) {
+      return [
+        {
+          address: NATIVE_CURRENCY,
+          balance: '0xde0b6b3a7640000',
+          chainId: 1,
+          displayBalance: '1.00',
+          name: 'Ether',
+          symbol: 'ETH'
+        }
+      ]
+    }
+    if (path.join('.') === 'main.networks.ethereum.1') {
+      return { id: 1, name: 'Ethereum', on: true, connection: { endpoints: [{ connected: true }] } }
+    }
+    if (path.join('.') === 'main.networksMeta.ethereum.1.nativeCurrency.decimals') return 18
+  })
+  provider.sendTransaction.mockImplementation((payload, response, chain, onQueued) => {
+    expect(payload.params[0].value).toBe(value)
+    onQueued('send-handler')
+  })
+
+  await expect(send.queue({ ...draft, amount })).resolves.toEqual({
+    success: true,
+    handlerId: 'send-handler'
   })
 })
 

@@ -39,6 +39,17 @@ function chainAvailable(chain: Chain | undefined) {
   return Boolean(chain?.on && chain.connection.endpoints.some((endpoint) => endpoint.connected))
 }
 
+function assetsWithNativeDecimals(assets: Balance[], chainId: number): Balance[] {
+  const nativeDecimals = store('main.networksMeta.ethereum', chainId, 'nativeCurrency', 'decimals')
+  if (!Number.isInteger(nativeDecimals) || nativeDecimals < 0) return assets
+
+  return assets.map((asset) =>
+    asset.chainId === chainId && asset.address.toLowerCase() === NATIVE_CURRENCY
+      ? { ...asset, decimals: nativeDecimals }
+      : asset
+  )
+}
+
 function ensureOrigin(chainId: number) {
   const chain = { type: 'ethereum' as const, id: chainId }
   const existing = store('main.origins', sendOriginId)
@@ -61,7 +72,10 @@ function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
   try {
     const account = currentAccount()
     const chain = store('main.networks.ethereum', draft.chainId) as Chain | undefined
-    const assets = (store('main.balances', account.id) || []) as Balance[]
+    const assets = assetsWithNativeDecimals(
+      (store('main.balances', account.id) || []) as Balance[],
+      draft.chainId
+    )
     const { transaction } = buildSendTransaction(draft, {
       account: account.id,
       assets,
