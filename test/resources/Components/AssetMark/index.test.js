@@ -51,7 +51,7 @@ it('centers the native Ethereum artwork without a vertical transform', () => {
 
   const mark = screen.getByTestId('ethereum-mark')
   expect(mark.style.transform).toBe('')
-  expect(mark.getAttribute('width')).toBe('17px')
+  expect(mark.parentElement.parentElement.classList.contains('assetMarkGlyph')).toBe(true)
 })
 
 it('falls back to the asset initial if bundled artwork cannot load', () => {

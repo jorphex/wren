@@ -210,9 +210,16 @@
 .accountSelector:not(.accountSelectorOpen) .accountSelectorScrollWrap
   border-top 1px solid var(--wren-ledger-rule)
 
-.accountChooserItem
-  min-height 60px
-  pointer-events auto
+.accountSelector:not(.accountSelectorOpen)
+  display grid
+  padding 8px var(--wren-space-5) var(--wren-space-4)
+  box-sizing border-box
+  align-items stretch
+  justify-content stretch
+  grid-template-rows auto minmax(0, 1fr)
+
+  .accountDrawerItem
+    pointer-events auto
 
 .accountSelectorEmpty
   width calc(100% - 32px)

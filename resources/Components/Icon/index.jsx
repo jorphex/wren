@@ -321,6 +321,13 @@ const wrenGlyphs = Object.freeze({
       <path d='M10 4v16M14 9l3 3-3 3' />
     </>
   ),
+  workspace: createWrenGlyph(
+    <>
+      <rect x='3.5' y='5' width='9' height='14' rx='1' />
+      <rect x='15.5' y='7' width='5' height='10' rx='1' />
+      <path d='M12.5 12h3' />
+    </>
+  ),
   send: createWrenGlyph(
     <>
       <path d='M5 19 19 5M10 5h9v9' />
@@ -379,6 +386,7 @@ const icons = Object.freeze({
   settings: wrenGlyphs.settings,
   sign: wrenGlyphs.pencil,
   sidebar: wrenGlyphs.sidebar,
+  workspace: wrenGlyphs.workspace,
   support: wrenGlyphs.support,
   sync: wrenGlyphs.sync,
   tokens: wrenGlyphs.tokens,

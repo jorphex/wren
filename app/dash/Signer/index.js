@@ -15,13 +15,27 @@ function isLoading(status = '') {
   return ['loading', 'connecting', 'addresses', 'input', 'pairing'].some((s) => statusToCheck.includes(s))
 }
 
+// Command chrome, account heading, pager, and control shelf remain outside the ledger row budget.
+const signerListReservedHeight = 392
+const signerAddressRowHeight = 44
+const minimumAddressLimit = 8
+const maximumAddressLimit = 11
+
+export function getAddressLimit(viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight) {
+  const height = Number.isFinite(viewportHeight) ? viewportHeight : 900
+  const usableListHeight = Math.max(0, height - signerListReservedHeight)
+  const availableRows = Math.floor(usableListHeight / signerAddressRowHeight)
+
+  return Math.max(minimumAddressLimit, Math.min(maximumAddressLimit, availableRows))
+}
+
 export class Signer extends React.Component {
   constructor(...args) {
     super(...args)
 
     this.state = {
       page: 0,
-      addressLimit: 5,
+      addressLimit: getAddressLimit(),
       latticePairCode: '',
       latticePairError: '',
       latticePairPending: false,
@@ -34,10 +48,16 @@ export class Signer extends React.Component {
     }
     this.pending = { latticePair: false, pin: false, phrase: false, pairing: false }
     this.mounted = true
+    this.updateAddressLimit = this.updateAddressLimit.bind(this)
+  }
+
+  componentDidMount() {
+    window.addEventListener('resize', this.updateAddressLimit)
   }
 
   componentWillUnmount() {
     this.mounted = false
+    window.removeEventListener('resize', this.updateAddressLimit)
   }
 
   componentDidUpdate(previousProps) {
@@ -52,6 +72,17 @@ export class Signer extends React.Component {
       this.pending.pin = false
       this.setState({ tPinPending: false })
     }
+  }
+
+  updateAddressLimit() {
+    const addressLimit = getAddressLimit()
+    if (addressLimit === this.state.addressLimit) return
+
+    const signer = this.store('main.signers', this.props.id) || {}
+    const addressCount = (signer.addresses || []).length
+    const maxPage = Math.max(0, Math.ceil(addressCount / addressLimit) - 1)
+
+    this.setState((state) => ({ addressLimit, page: Math.min(state.page, maxPage) }))
   }
 
   backspacePin(e) {
@@ -351,7 +382,7 @@ export class Signer extends React.Component {
   nextPage(backwards) {
     let page = backwards ? this.state.page - 1 : this.state.page + 1
     const signer = this.store('main.signers', this.props.id)
-    const maxPage = Math.ceil(signer.addresses.length / this.state.addressLimit) - 1
+    const maxPage = Math.max(0, Math.ceil((signer.addresses || []).length / this.state.addressLimit) - 1)
     if (page > maxPage) page = maxPage
     if (page < 0) page = 0
     this.setState({ page })
@@ -525,8 +556,7 @@ export class Signer extends React.Component {
 
     return (
       <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
-        {<div style={{ height: '22px' }} />}
-        {this.statusText()}
+        {status !== 'ok' ? this.statusText() : null}
         {type === 'lattice' && status === 'pair' ? (
           <div className='signerLatticePair'>
             <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
@@ -610,29 +640,31 @@ export class Signer extends React.Component {
                 )
               })}
             </div>
-            <div className='signerBottom'>
-              <button
-                type='button'
-                aria-label='Previous address page'
-                className='signerBottomPageBack wrenControl wrenControlGhost wrenControlIcon'
-                disabled={page === 0}
-                onClick={() => this.nextPage(true)}
-              >
-                <Icon name='back' size={20} />
-              </button>
-              <div className='signerBottomPages'>
-                {page + 1 + ' / ' + Math.ceil(signer.addresses.length / addressLimit)}
+            {signer.addresses.length > addressLimit ? (
+              <div className='signerBottom'>
+                <button
+                  type='button'
+                  aria-label='Previous address page'
+                  className='signerBottomPageBack wrenControl wrenControlGhost wrenControlIcon'
+                  disabled={page === 0}
+                  onClick={() => this.nextPage(true)}
+                >
+                  <Icon name='back' size={20} />
+                </button>
+                <div className='signerBottomPages'>
+                  {page + 1 + ' / ' + Math.ceil(signer.addresses.length / addressLimit)}
+                </div>
+                <button
+                  type='button'
+                  aria-label='Next address page'
+                  className='signerBottomPageNext wrenControl wrenControlGhost wrenControlIcon'
+                  disabled={startIndex + addressLimit >= signer.addresses.length}
+                  onClick={() => this.nextPage()}
+                >
+                  <Icon name='back' size={20} />
+                </button>
               </div>
-              <button
-                type='button'
-                aria-label='Next address page'
-                className='signerBottomPageNext wrenControl wrenControlGhost wrenControlIcon'
-                disabled={startIndex + addressLimit >= signer.addresses.length}
-                onClick={() => this.nextPage()}
-              >
-                <Icon name='back' size={20} />
-              </button>
-            </div>
+            ) : null}
           </>
         ) : type === 'trezor' &&
           (status === 'need pin' || status === 'enter passphrase' || status === 'need pairing code') ? (

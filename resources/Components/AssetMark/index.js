@@ -73,7 +73,6 @@ const AssetMark = ({ asset, className = '', showChain = true, size = 'default' }
           fallback={artwork.fallback}
           img={artwork.img}
           svgName={artwork.svgName}
-          svgSize={17}
           bundledImg={artwork.bundledImg}
         />
       </span>

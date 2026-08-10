@@ -2,6 +2,7 @@
   --asset-mark-size 32px
   --asset-mark-glyph-size 30px
   --asset-mark-chain-size 8px
+  --asset-mark-art-size calc(var(--asset-mark-glyph-size) * .57)
   position relative
   display inline-flex
   width var(--asset-mark-size)
@@ -32,9 +33,12 @@
     height 100%
     object-fit cover
 
+  > div
+    display contents
+
   svg
-    width 17px
-    height 17px
+    width var(--asset-mark-art-size)
+    height var(--asset-mark-art-size)
 
 .assetMarkChain
   position absolute

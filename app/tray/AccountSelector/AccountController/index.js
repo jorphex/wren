@@ -55,9 +55,7 @@ export class Account extends React.Component {
     return (
       <button
         type='button'
-        className={`${current ? 'accountDrawerItem accountDrawerItemSelected' : 'accountDrawerItem'} ${
-          drawer ? 'accountDrawerLedgerItem' : 'accountChooserItem'
-        }`}
+        className={current ? 'accountDrawerItem accountDrawerItemSelected' : 'accountDrawerItem'}
         disabled={status !== 'ok'}
         aria-current={current ? 'true' : undefined}
         onClick={() => (drawer ? this.selectFromDrawer() : this.selectFromChooser())}

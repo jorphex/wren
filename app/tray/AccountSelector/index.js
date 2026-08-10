@@ -54,13 +54,12 @@ export class AccountSelector extends React.Component {
     }, 3000)
   }
 
-  renderAccountFilter(drawer = false) {
+  renderAccountFilter() {
     const accounts = this.store('main.accounts')
-    const open = this.store('selected.open')
-    if (Object.keys(accounts).length === 0 || (open && !drawer)) return null
+    if (Object.keys(accounts).length === 0) return null
 
     return (
-      <div className={drawer ? 'panelFilterMain accountDrawerFilter' : 'panelFilterMain'}>
+      <div className='panelFilterMain accountDrawerFilter'>
         <div className='panelFilterIcon'>
           <Icon name='search' size={12} />
         </div>
@@ -94,7 +93,7 @@ export class AccountSelector extends React.Component {
     )
   }
 
-  renderAccountList(drawer = false) {
+  renderAccountList(closeOnSelect = false) {
     const accounts = this.store('main.accounts')
     const sortedAccounts = Object.values(accounts).sort(byCreation)
     const filter = this.store('panel.accountFilter')
@@ -105,7 +104,7 @@ export class AccountSelector extends React.Component {
 
     return (
       <div
-        className={drawer ? 'accountSelectorScroll accountDrawerScroll' : 'accountSelectorScroll'}
+        className='accountSelectorScroll accountDrawerScroll'
         ref={(ref) => {
           if (ref) this.scroll = ref
         }}
@@ -118,7 +117,7 @@ export class AccountSelector extends React.Component {
                 key={account.id}
                 {...account}
                 index={i}
-                drawer={drawer}
+                drawer={closeOnSelect}
                 reportScroll={() => this.reportScroll()}
                 resetScroll={() => this.resetScroll()}
               />
@@ -214,7 +213,7 @@ export class AccountSelector extends React.Component {
             aria-pressed={workspaceOpen}
             onClick={() => link.send('tray:action', 'setDash', { showing: !workspaceOpen })}
           >
-            <Icon name='sidebar' size={19} />
+            <Icon name='workspace' size={19} />
           </button>
         </div>
       </div>
@@ -226,7 +225,7 @@ export class AccountSelector extends React.Component {
 
     return (
       <section id='account-switcher-panel' className='accountChooserPanel' aria-label='Accounts'>
-        {this.renderAccountFilter(true)}
+        {this.renderAccountFilter()}
         {this.renderAccountList(true)}
         {Object.keys(accounts).length ? (
           <div className='accountDrawerFooter'>

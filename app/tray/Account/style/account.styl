@@ -1005,12 +1005,26 @@
         min-height 52px
 
       .settingsPreviewRemovalConfirm > .clusterValue:last-child
+        min-height 42px
+        margin 5px var(--wren-space-2)
+        border 1px solid rgba(225, 154, 145, .42)
+        border-radius var(--wren-radius-sm)
         color var(--wren-danger)
         background var(--wren-danger-soft)
+        background-image var(--wren-control-texture-dark)
+        box-shadow var(--wren-control-shadow)
+        transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
 
-      .settingsPreviewRemovalConfirm > .clusterValue:last-child:not(.clusterValueDisabled):hover,
+      .settingsPreviewRemovalConfirm > .clusterValue:last-child:not(.clusterValueDisabled):hover
+        border-color var(--wren-danger)
+        background var(--wren-danger-soft)
+        background-image var(--wren-control-texture-dark)
+        box-shadow var(--wren-control-shadow-hover)
+
       .settingsPreviewRemovalConfirm > .clusterValue:last-child:not(.clusterValueDisabled):active
         background var(--wren-danger-soft)
+        box-shadow var(--wren-control-shadow-pressed)
+        transform translateY(1px)
 
       .accountLedgerLabel
         display flex
@@ -1191,27 +1205,6 @@
       letter-spacing .2px
       text-transform none
 
-    .accountViewBack
-      width 40px
-      min-width 40px
-      height 40px
-      min-height 40px
-      top 5px
-      left 0
-      padding 0
-      border 1px solid var(--wren-border-subtle)
-      border-radius 6px
-      color var(--wren-text-secondary)
-      background-color var(--wren-bg-elevated)
-      background-image none
-      box-shadow none
-
-      &:hover
-        border-color var(--wren-border-default)
-        color var(--wren-accent-primary-hover)
-        background-color var(--wren-surface-hover)
-        box-shadow none
-
   .accountViewMain
     top 52px
     right var(--wren-space-5)
@@ -1230,9 +1223,6 @@
       top 0
 
   &.accountViewRequest
-    &::before
-      display none
-
     .accountViewMenu
       top 0
       right var(--wren-space-5)

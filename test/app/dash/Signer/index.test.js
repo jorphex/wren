@@ -1,6 +1,6 @@
 import { act, render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
-import { Signer } from '../../../../app/dash/Signer'
+import { getAddressLimit, Signer } from '../../../../app/dash/Signer'
 import { getAddress } from '../../../../resources/utils'
 
 jest.mock('../../../../resources/link', () => ({
@@ -33,6 +33,12 @@ const renderSigner = (props) =>
 beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
+})
+
+it('derives address capacity from the supported shell heights', () => {
+  expect(getAddressLimit(744)).toBe(8)
+  expect(getAddressLimit(900)).toBe(11)
+  expect(getAddressLimit(2000)).toBe(11)
 })
 
 it('renders the Trezor PIN matrix as named native controls', () => {
@@ -156,6 +162,30 @@ it('names available signer account actions with their current add or remove beha
   )
 
   expect(screen.getByRole('button', { name: `Remove ${checkSummedAddress} from accounts` })).toBeTruthy()
+})
+
+it('keeps all hardware accounts reachable as address capacity responds to shell height', async () => {
+  const originalHeight = window.innerHeight
+  const addresses = Array.from({ length: 12 }, (_, index) => {
+    return `0x${(index + 1).toString(16).padStart(40, '0')}`
+  })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900, writable: true })
+  const { user, unmount } = renderSigner({ type: 'trezor', status: 'ok', addresses })
+
+  expect(screen.queryByText('Ready to sign')).toBeNull()
+  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(11)
+  expect(screen.getByText('1 / 2')).toBeTruthy()
+
+  await user.click(screen.getByRole('button', { name: 'Next address page' }))
+  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(1)
+
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 744, writable: true })
+  act(() => window.dispatchEvent(new Event('resize')))
+  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(4)
+  expect(screen.getByText('2 / 2')).toBeTruthy()
+
+  unmount()
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight, writable: true })
 })
 
 it('selects an active hardware account from the signer preview', async () => {
