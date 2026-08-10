@@ -3651,6 +3651,34 @@ describe('#signAndSend', () => {
         })
       })
 
+      it('returns a signing-time account-code recheck failure without broadcasting', (done) => {
+        const recheck = Object.assign(new Error('Delegation recheck unavailable. Request not sent.'), {
+          code: 'account-code-evidence-unavailable',
+          data: { role: 'target', account: address }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce((_accountId, _tx, cb) => cb(recheck))
+        const handler = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend((error) => {
+          try {
+            expect(error).toBe(recheck)
+            expect(connection.send).not.toHaveBeenCalled()
+            expect(handler).toHaveBeenCalledWith(
+              expect.objectContaining({
+                error: expect.objectContaining({
+                  message: recheck.message,
+                  data: recheck.data
+                })
+              })
+            )
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
       it('responds to a failed transaction request with the payload', (done) => {
         provider.handlers[request.handlerId] = (err) => {
           expect(err.id).toBe(request.payload.id)

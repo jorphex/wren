@@ -17,6 +17,7 @@ export interface ContractSource {
 
 export interface DecodedCallData {
   contractAddress: string
+  codeAddress?: string
   contractName: string
   source: string
   method: string

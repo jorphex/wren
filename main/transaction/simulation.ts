@@ -51,6 +51,177 @@ export interface AccountDelegationCheck {
   reason?: string
 }
 
+export type AccountCodeEvidenceReason =
+  'invalid-address' | 'invalid-chain' | 'timeout' | 'invalid-response' | 'rpc-error' | 'invalid-code'
+
+interface AccountCodeEvidenceBase {
+  source: 'eth_getCode'
+  trust: 'configured-rpc'
+  account: string
+}
+
+export type AccountCodeEvidence = AccountCodeEvidenceBase &
+  (
+    | {
+        status: 'no-code' | 'contract'
+        codeHash: string
+      }
+    | {
+        status: 'delegated'
+        codeHash: string
+        authority: string
+        delegate: string
+        delegateCodeStatus: 'no-code' | 'contract' | 'delegated' | 'unavailable'
+        delegateCodeHash?: string
+        delegateCodeReasonCode?: AccountCodeEvidenceReason
+        delegateCodeReason?: string
+      }
+    | {
+        status: 'unavailable'
+        reasonCode: AccountCodeEvidenceReason
+        reason: string
+      }
+  )
+
+export type SenderAccountCodeEvidence = AccountCodeEvidence & { role: 'sender' }
+export type TargetAccountCodeEvidence = AccountCodeEvidence & {
+  role: 'target'
+  callIndexes: readonly number[]
+}
+
+export interface TransactionAccountCodeEvidence {
+  source: 'configured-rpc'
+  sender: SenderAccountCodeEvidence
+  targets: readonly TargetAccountCodeEvidence[]
+}
+
+export type AccountCodeEvidenceFailureCode =
+  'account-code-evidence-missing' | 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
+
+export interface AccountCodeEvidenceFailureData {
+  role: 'sender' | 'target'
+  account: string
+  expected?: AccountCodeEvidence
+  actual?: AccountCodeEvidence
+}
+
+export class AccountCodeEvidenceError extends Error {
+  readonly code: AccountCodeEvidenceFailureCode
+  readonly data: Readonly<AccountCodeEvidenceFailureData>
+
+  constructor(code: AccountCodeEvidenceFailureCode, data: AccountCodeEvidenceFailureData) {
+    const message =
+      code === 'account-code-evidence-changed'
+        ? `Delegation changed for ${data.account}. Request not sent.`
+        : `Delegation recheck unavailable for ${data.account}. Request not sent.`
+    super(message)
+    this.name = 'AccountCodeEvidenceError'
+    this.code = code
+    this.data = Object.freeze({ ...data })
+  }
+}
+
+function sameAccountCodeEvidence(expected: AccountCodeEvidence, actual: AccountCodeEvidence) {
+  if (expected.status !== actual.status || expected.account !== actual.account) return false
+  if (expected.status === 'unavailable' || actual.status === 'unavailable') return false
+  if (expected.codeHash !== actual.codeHash) return false
+  if (expected.status !== 'delegated' || actual.status !== 'delegated') return true
+  return (
+    expected.delegate === actual.delegate &&
+    expected.authority === actual.authority &&
+    expected.delegateCodeStatus === actual.delegateCodeStatus &&
+    expected.delegateCodeHash === actual.delegateCodeHash
+  )
+}
+
+function accountCodeEvidenceUnavailable(evidence: AccountCodeEvidence) {
+  return (
+    evidence.status === 'unavailable' ||
+    (evidence.status === 'delegated' && evidence.delegateCodeStatus === 'unavailable')
+  )
+}
+
+export function assertAccountCodeEvidenceStable(
+  expected: TransactionAccountCodeEvidence | undefined,
+  actual: TransactionAccountCodeEvidence,
+  expectedCallIndex = 0
+) {
+  const fail = (
+    code: AccountCodeEvidenceFailureCode,
+    role: 'sender' | 'target',
+    account: string,
+    expectedEvidence?: AccountCodeEvidence,
+    actualEvidence?: AccountCodeEvidence
+  ): never => {
+    throw new AccountCodeEvidenceError(code, {
+      role,
+      account,
+      ...(expectedEvidence ? { expected: expectedEvidence } : {}),
+      ...(actualEvidence ? { actual: actualEvidence } : {})
+    })
+  }
+
+  if (!expected) {
+    fail('account-code-evidence-missing', 'sender', actual.sender.account, undefined, actual.sender)
+  }
+  const reviewed = expected as TransactionAccountCodeEvidence
+  if (accountCodeEvidenceUnavailable(reviewed.sender) || accountCodeEvidenceUnavailable(actual.sender)) {
+    fail(
+      'account-code-evidence-unavailable',
+      'sender',
+      actual.sender.account || reviewed.sender.account,
+      reviewed.sender,
+      actual.sender
+    )
+  }
+  if (!sameAccountCodeEvidence(reviewed.sender, actual.sender)) {
+    fail(
+      'account-code-evidence-changed',
+      'sender',
+      actual.sender.account || reviewed.sender.account,
+      reviewed.sender,
+      actual.sender
+    )
+  }
+
+  const reviewedTargets = reviewed.targets.filter((target) => target.callIndexes.includes(expectedCallIndex))
+  const actualTargets = actual.targets.filter((target) => target.callIndexes.includes(0))
+  if (reviewedTargets.length !== actualTargets.length) {
+    const reviewedTarget = reviewedTargets[0]
+    const actualTarget = actualTargets[0]
+    fail(
+      'account-code-evidence-changed',
+      'target',
+      actualTarget?.account || reviewedTarget?.account || '',
+      reviewedTarget,
+      actualTarget
+    )
+  }
+
+  for (let index = 0; index < actualTargets.length; index += 1) {
+    const actualTarget = actualTargets[index]!
+    const reviewedTarget = reviewedTargets[index]!
+    if (accountCodeEvidenceUnavailable(reviewedTarget) || accountCodeEvidenceUnavailable(actualTarget)) {
+      fail(
+        'account-code-evidence-unavailable',
+        'target',
+        actualTarget.account || reviewedTarget.account,
+        reviewedTarget,
+        actualTarget
+      )
+    }
+    if (!sameAccountCodeEvidence(reviewedTarget, actualTarget)) {
+      fail(
+        'account-code-evidence-changed',
+        'target',
+        actualTarget.account || reviewedTarget.account,
+        reviewedTarget,
+        actualTarget
+      )
+    }
+  }
+}
+
 export interface NativeBalanceChange {
   account: string
   before: string
@@ -128,6 +299,7 @@ export interface TransactionSimulation {
   effectsTruncated?: boolean
   allowance?: TokenAllowanceSnapshot
   delegation?: AccountDelegationCheck
+  accountCodeEvidence?: TransactionAccountCodeEvidence
   nativeBalanceChanges?: NativeBalanceChanges
   callTrace?: CallTraceEvidence
   proxyImplementationCheck?: ProxyImplementationCheck
@@ -155,6 +327,7 @@ export interface WalletCallsSimulationResult {
   calls: TransactionSimulation[]
   reason?: string
   delegation?: AccountDelegationCheck
+  accountCodeEvidence?: TransactionAccountCodeEvidence
 }
 
 export type WalletCallsSimulation = { status: 'pending'; calls: [] } | WalletCallsSimulationResult
@@ -829,26 +1002,29 @@ async function readTokenAllowance(
   }
 }
 
-async function readAccountDelegation(
+async function readAccountCodeEvidence(
   account: unknown,
   send: ChainSend,
   targetChain: Chain,
-  timeoutMs: number
-): Promise<AccountDelegationCheck> {
+  timeoutMs: number,
+  requestId: number
+): Promise<AccountCodeEvidence> {
   const normalizedAccount = typeof account === 'string' && ADDRESS.test(account) ? account.toLowerCase() : ''
-  const unavailable = (reason: string): AccountDelegationCheck => ({
+  const unavailable = (reasonCode: AccountCodeEvidenceReason, reason: string): AccountCodeEvidence => ({
     status: 'unavailable',
     source: 'eth_getCode',
+    trust: 'configured-rpc',
     account: normalizedAccount,
+    reasonCode,
     reason
   })
 
-  if (!normalizedAccount) return unavailable('Transaction has an invalid sender address')
+  if (!normalizedAccount) return unavailable('invalid-address', 'Account has an invalid address')
 
   const outcome = await requestRpc(
     send,
     {
-      id: 3,
+      id: requestId,
       jsonrpc: '2.0',
       method: 'eth_getCode',
       params: [normalizedAccount, 'latest']
@@ -856,24 +1032,198 @@ async function readAccountDelegation(
     targetChain,
     timeoutMs
   )
-  if ('timedOut' in outcome) return unavailable('Account delegation check timed out')
-  if (!isRecord(outcome.response)) return unavailable('RPC returned an invalid delegation response')
+  if ('timedOut' in outcome) return unavailable('timeout', 'Account code check timed out')
+  if (!isRecord(outcome.response)) {
+    return unavailable('invalid-response', 'RPC returned an invalid account code response')
+  }
 
   if (outcome.response.error !== undefined) {
     const error = normalizeRpcError(outcome.response.error)
-    return unavailable(boundedMessage(error?.message, 'Account delegation check failed'))
+    return unavailable('rpc-error', boundedMessage(error?.message, 'Account code check failed'))
   }
   const parsed = parseAccountCode(outcome.response.result)
-  if (!parsed) return unavailable('RPC returned invalid account code')
+  if (!parsed) return unavailable('invalid-code', 'RPC returned invalid account code')
 
-  return parsed.status === 'delegated'
-    ? {
-        status: 'delegated',
-        source: 'eth_getCode',
-        account: normalizedAccount,
-        delegate: parsed.delegate
-      }
-    : { status: 'undelegated', source: 'eth_getCode', account: normalizedAccount }
+  if (parsed.status === 'delegated') {
+    return {
+      ...parsed,
+      source: 'eth_getCode',
+      trust: 'configured-rpc',
+      account: normalizedAccount,
+      authority: normalizedAccount,
+      delegateCodeStatus: 'unavailable',
+      delegateCodeReasonCode: 'timeout'
+    }
+  }
+  return {
+    ...parsed,
+    source: 'eth_getCode',
+    trust: 'configured-rpc',
+    account: normalizedAccount
+  }
+}
+
+function unavailableAccountCode(
+  account: unknown,
+  reasonCode: AccountCodeEvidenceReason,
+  reason: string
+): AccountCodeEvidence {
+  return {
+    status: 'unavailable',
+    source: 'eth_getCode',
+    trust: 'configured-rpc',
+    account: typeof account === 'string' && ADDRESS.test(account) ? account.toLowerCase() : '',
+    reasonCode,
+    reason
+  }
+}
+
+async function inspectAccountCodeEvidence(
+  transactions: SimulationCallData[],
+  send: ChainSend,
+  targetChain: Chain,
+  timeoutMs: number
+): Promise<TransactionAccountCodeEvidence> {
+  const senderAddress = transactions[0]?.from
+  const targets = new Map<string, { address: unknown; callIndexes: number[] }>()
+  transactions.forEach((transaction, callIndex) => {
+    if (transaction.to === undefined || transaction.to === null || transaction.to === '') return
+    const normalized =
+      typeof transaction.to === 'string' && ADDRESS.test(transaction.to)
+        ? transaction.to.toLowerCase()
+        : `invalid:${callIndex}`
+    const target = targets.get(normalized)
+    if (target) target.callIndexes.push(callIndex)
+    else targets.set(normalized, { address: transaction.to, callIndexes: [callIndex] })
+  })
+
+  const startedAt = Date.now()
+  const initial = await Promise.all([
+    readAccountCodeEvidence(senderAddress, send, targetChain, timeoutMs, 30),
+    ...Array.from(targets.values(), ({ address }, index) =>
+      readAccountCodeEvidence(address, send, targetChain, timeoutMs, 31 + index)
+    )
+  ])
+  const remainingTimeout = Math.max(0, timeoutMs - (Date.now() - startedAt))
+  const delegates = Array.from(
+    new Set(initial.flatMap((evidence) => (evidence.status === 'delegated' ? [evidence.delegate] : [])))
+  )
+  const delegateEvidence = new Map<string, AccountCodeEvidence>()
+  if (delegates.length && remainingTimeout > 0) {
+    const results = await Promise.all(
+      delegates.map((delegate, index) =>
+        readAccountCodeEvidence(delegate, send, targetChain, remainingTimeout, 64 + index)
+      )
+    )
+    results.forEach((result, index) => {
+      const delegate = delegates[index]
+      if (delegate) delegateEvidence.set(delegate, result)
+    })
+  }
+
+  const withDelegateCode = (evidence: AccountCodeEvidence): AccountCodeEvidence => {
+    if (evidence.status !== 'delegated') return Object.freeze(evidence)
+    const delegate = delegateEvidence.get(evidence.delegate)
+    if (!delegate) {
+      return Object.freeze({
+        ...evidence,
+        delegateCodeStatus: 'unavailable',
+        delegateCodeReasonCode: 'timeout',
+        delegateCodeReason: 'Account code check timed out'
+      })
+    }
+    if (delegate.status === 'unavailable') {
+      return Object.freeze({
+        ...evidence,
+        delegateCodeStatus: 'unavailable',
+        delegateCodeReasonCode: delegate.reasonCode,
+        delegateCodeReason: delegate.reason
+      })
+    }
+    return Object.freeze({
+      ...evidence,
+      delegateCodeStatus: delegate.status,
+      delegateCodeHash: delegate.codeHash
+    })
+  }
+
+  const sender = Object.freeze({ ...withDelegateCode(initial[0]!), role: 'sender' as const })
+  const targetEvidence = Array.from(targets.values(), (target, index) =>
+    Object.freeze({
+      ...withDelegateCode(initial[index + 1]!),
+      role: 'target' as const,
+      callIndexes: Object.freeze([...target.callIndexes])
+    })
+  )
+  return Object.freeze({
+    source: 'configured-rpc' as const,
+    sender,
+    targets: Object.freeze(targetEvidence)
+  })
+}
+
+export async function inspectTransactionAccountCode(
+  transaction: SimulationCallData,
+  dependencies: SimulationDependencies
+): Promise<TransactionAccountCodeEvidence> {
+  const chainId = parseRpcQuantity(transaction.chainId)
+  if (chainId === undefined || chainId === 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+    const sender = Object.freeze({
+      ...unavailableAccountCode(transaction.from, 'invalid-chain', 'Transaction has an invalid chain ID'),
+      role: 'sender' as const
+    })
+    const targets =
+      transaction.to === undefined || transaction.to === null || transaction.to === ''
+        ? []
+        : [
+            Object.freeze({
+              ...unavailableAccountCode(
+                transaction.to,
+                'invalid-chain',
+                'Transaction has an invalid chain ID'
+              ),
+              role: 'target' as const,
+              callIndexes: Object.freeze([0])
+            })
+          ]
+    return Object.freeze({
+      source: 'configured-rpc',
+      sender,
+      targets: Object.freeze(targets)
+    })
+  }
+
+  const configuredTimeout = dependencies.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const timeoutMs =
+    Number.isFinite(configuredTimeout) && configuredTimeout > 0
+      ? Math.min(configuredTimeout, DEFAULT_TIMEOUT_MS)
+      : DEFAULT_TIMEOUT_MS
+  return inspectAccountCodeEvidence(
+    [transaction],
+    dependencies.send,
+    { type: 'ethereum', id: Number(chainId) },
+    timeoutMs
+  )
+}
+
+function legacyDelegationCheck(evidence: SenderAccountCodeEvidence): AccountDelegationCheck {
+  if (evidence.status === 'delegated') {
+    return {
+      status: 'delegated',
+      source: 'eth_getCode',
+      account: evidence.account,
+      delegate: evidence.delegate
+    }
+  }
+  if (evidence.status === 'unavailable') {
+    return {
+      status: 'unavailable',
+      source: 'eth_getCode',
+      account: evidence.account,
+      reason: evidence.reason
+    }
+  }
+  return { status: 'undelegated', source: 'eth_getCode', account: evidence.account }
 }
 
 function parseSimulatedCall(call: unknown): TransactionSimulation | undefined {
@@ -1043,18 +1393,20 @@ export async function simulateTransaction(
 
     return readCallTrace(transaction, send, targetChain, Math.max(0, timeoutMs - (Date.now() - startedAt)))
   })
-  const [simulation, allowance, delegation, prestateTrace, callTrace] = await Promise.all([
+  const [simulation, allowance, accountCodeEvidence, prestateTrace, callTrace] = await Promise.all([
     simulationPromise,
     readTokenAllowance(transaction, send, targetChain, timeoutMs),
-    readAccountDelegation(transaction.from, send, targetChain, timeoutMs),
+    inspectAccountCodeEvidence([transaction], send, targetChain, timeoutMs),
     prestateTracePromise,
     callTracePromise
   ])
+  const delegation = legacyDelegationCheck(accountCodeEvidence.sender)
 
   return {
     ...simulation,
     ...(allowance ? { allowance } : {}),
     ...(delegation.status === 'undelegated' ? {} : { delegation }),
+    accountCodeEvidence,
     ...(prestateTrace ? { nativeBalanceChanges: prestateTrace.nativeBalanceChanges } : {}),
     ...(prestateTrace?.proxyImplementationCheck
       ? { proxyImplementationCheck: prestateTrace.proxyImplementationCheck }
@@ -1135,14 +1487,16 @@ export async function simulateWalletCalls(
     ]
   }
 
-  const [outcome, firstAllowance, delegation] = await Promise.all([
+  const [outcome, firstAllowance, accountCodeEvidence] = await Promise.all([
     requestRpc(dependencies.send, payload, targetChain, timeoutMs),
     readTokenAllowance(firstTransaction, dependencies.send, targetChain, timeoutMs),
-    readAccountDelegation(sender, dependencies.send, targetChain, timeoutMs)
+    inspectAccountCodeEvidence(transactions, dependencies.send, targetChain, timeoutMs)
   ])
+  const delegation = legacyDelegationCheck(accountCodeEvidence.sender)
   const withDelegation = (result: Omit<WalletCallsSimulationResult, 'delegation'>) => ({
     ...result,
-    ...(delegation.status === 'undelegated' ? {} : { delegation })
+    ...(delegation.status === 'undelegated' ? {} : { delegation }),
+    accountCodeEvidence
   })
 
   if ('timedOut' in outcome) {

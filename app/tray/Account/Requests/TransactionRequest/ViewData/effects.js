@@ -301,34 +301,97 @@ export const SimulationAllowance = ({ simulation }) => {
   )
 }
 
+export const transactionAccountCodeEvidence = (simulation) => {
+  const evidence = simulation?.accountCodeEvidence
+  if (evidence) {
+    return {
+      sender: evidence.sender,
+      target: evidence.targets?.find((target) => target.callIndexes?.includes(0))
+    }
+  }
+
+  const legacy = simulation?.delegation
+  return legacy?.status === 'delegated' || legacy?.status === 'unavailable'
+    ? { sender: { ...legacy, role: 'sender', trust: 'configured-rpc' }, target: undefined }
+    : { sender: undefined, target: undefined }
+}
+
+const delegationFields = (evidence) => ({
+  account: evidence.account,
+  ...(evidence.delegate ? { delegate: evidence.delegate } : {}),
+  ...(evidence.codeHash ? { delegationCodeHash: evidence.codeHash } : {}),
+  ...(evidence.delegateCodeHash ? { delegateCodeHash: evidence.delegateCodeHash } : {}),
+  source: 'configured RPC · eth_getCode'
+})
+
+const DelegationEvidence = ({ evidence, subject }) => {
+  if (!evidence || !['delegated', 'unavailable'].includes(evidence.status)) return null
+
+  if (evidence.status === 'unavailable') {
+    const label =
+      subject === 'recipient'
+        ? 'Recipient delegation check unavailable'
+        : 'Sending account delegation check unavailable'
+    return (
+      <div className='accountDelegationEvidence'>
+        <div className='simulationEffectsNotice' role='note'>
+          {label}. {evidence.reason || ''}
+        </div>
+        <SimpleJSON humanizeKeys quoteStrings={false} json={delegationFields(evidence)} />
+      </div>
+    )
+  }
+
+  const target = subject === 'recipient'
+  const delegateUnavailable = target && evidence.delegateCodeStatus === 'unavailable'
+  const delegateHasNoCode = target && evidence.delegateCodeStatus === 'no-code'
+  const delegateIsDelegated = target && evidence.delegateCodeStatus === 'delegated'
+  const headline = target
+    ? delegateUnavailable
+      ? `Delegate code check unavailable for ${evidence.delegate}`
+      : delegateHasNoCode
+        ? `Target delegates to ${evidence.delegate}; RPC returned empty code`
+        : delegateIsDelegated
+          ? `Target delegates to ${evidence.delegate}; nested delegation is not followed`
+          : `Recipient delegates execution to ${evidence.delegate}.`
+    : `This account delegates execution to ${evidence.delegate}. Calls to this account run the delegate’s code in this account’s context. Sending this transaction does not by itself run that code.`
+
+  return (
+    <div className='accountDelegationEvidence'>
+      <div className='simulationEffectsTruncated' role={target ? 'status' : 'alert'}>
+        {headline}
+      </div>
+      {target && delegateIsDelegated && (
+        <div className='simulationEffectsNotice'>
+          EIP-7702 resolves only the first delegate address; it does not follow this delegate’s delegation.
+        </div>
+      )}
+      {target && delegateHasNoCode && (
+        <div className='simulationEffectsNotice'>
+          The configured RPC returned empty code for this delegate. Precompiles can execute without bytecode,
+          and code lookup alone cannot distinguish them from empty accounts.
+        </div>
+      )}
+      {target && !delegateUnavailable && !delegateHasNoCode && !delegateIsDelegated && (
+        <div className='simulationEffectsNotice'>
+          A transaction to this address runs code from {evidence.delegate} in the recipient’s account context.
+        </div>
+      )}
+      <SimpleJSON humanizeKeys quoteStrings={false} json={delegationFields(evidence)} />
+    </div>
+  )
+}
+
 export const SimulationDelegation = ({ simulation }) => {
-  const delegation = simulation?.delegation
-  if (delegation?.status !== 'delegated' && delegation?.status !== 'unavailable') return null
+  const { sender, target } = transactionAccountCodeEvidence(simulation)
+  if (![sender?.status, target?.status].some((status) => ['delegated', 'unavailable'].includes(status)))
+    return null
 
   return (
     <div className='txViewData'>
       <div className='txViewDataHeader'>Account Delegation Check</div>
-      <div
-        className={
-          delegation.status === 'delegated' ? 'simulationEffectsTruncated' : 'simulationEffectsNotice'
-        }
-        role={delegation.status === 'delegated' ? 'alert' : 'note'}
-      >
-        {delegation.status === 'delegated'
-          ? "Your configured RPC reports EIP-7702 delegated code. Transactions execute with the delegate's code and may not behave like ordinary account transactions."
-          : `Wren could not determine whether this account delegates execution. ${
-              delegation.reason || ''
-            }`.trim()}
-      </div>
-      <SimpleJSON
-        humanizeKeys
-        quoteStrings={false}
-        json={{
-          account: delegation.account,
-          ...(delegation.delegate ? { delegate: delegation.delegate } : {}),
-          source: delegation.source
-        }}
-      />
+      <DelegationEvidence evidence={target} subject='recipient' />
+      <DelegationEvidence evidence={sender} subject='sender' />
     </div>
   )
 }

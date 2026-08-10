@@ -41,7 +41,13 @@ import { requiredSignatureRisks } from '../../../resources/domain/signature/risk
 import reveal from '../../reveal'
 import { isTransactionRequest, isTypedMessageSignatureRequest } from '../../../resources/domain/request'
 import Erc20Contract from '../../contracts/erc20'
-import { simulateTransaction, simulateWalletCalls } from '../../transaction/simulation'
+import {
+  AccountCodeEvidenceError,
+  assertAccountCodeEvidenceStable,
+  inspectTransactionAccountCode,
+  simulateTransaction,
+  simulateWalletCalls
+} from '../../transaction/simulation'
 import { snapshotWalletCalls } from '../../provider/walletCallExecution'
 import { prepareWalletCallBatch } from '../../provider/walletCallPreparation'
 import {
@@ -64,7 +70,11 @@ import type {
 } from '../types'
 import type { Breadcrumb } from '../../windows/nav/breadcrumb'
 import { RequestStatus } from '../types'
-import type { TransactionSimulation, WalletCallsSimulationResult } from '../../transaction/simulation'
+import type {
+  TransactionAccountCodeEvidence,
+  TransactionSimulation,
+  WalletCallsSimulationResult
+} from '../../transaction/simulation'
 import type Signer from '../../signers/Signer'
 import { parseErc20ApprovalIntent } from '../../../resources/domain/transaction/allowance'
 import { getRequestSignal } from '../../provider/requestSignal'
@@ -98,6 +108,43 @@ type WalletCallsPreparationSnapshot = Readonly<{
   calls: Readonly<ReturnType<typeof snapshotWalletCalls>>
   adjustment?: Readonly<WalletCallBatchAdjustment>
 }>
+
+type AccountCodeSnapshot = Readonly<{ codeAddress?: string; fingerprint: string }>
+
+function accountCodeSnapshot(
+  simulation: { status: string; accountCodeEvidence?: TransactionAccountCodeEvidence } | undefined,
+  target: string,
+  callIndex: number
+): AccountCodeSnapshot {
+  const evidence = simulation?.accountCodeEvidence
+  if (!evidence) return Object.freeze({ codeAddress: target, fingerprint: `legacy:${target.toLowerCase()}` })
+  const targetEvidence = evidence.targets.find(
+    (candidate) => candidate.account === target.toLowerCase() && candidate.callIndexes.includes(callIndex)
+  )
+  const fingerprint = JSON.stringify(
+    targetEvidence
+      ? {
+          account: targetEvidence.account,
+          status: targetEvidence.status,
+          ...('codeHash' in targetEvidence ? { codeHash: targetEvidence.codeHash } : {}),
+          ...('delegate' in targetEvidence ? { delegate: targetEvidence.delegate } : {}),
+          ...('delegateCodeStatus' in targetEvidence
+            ? { delegateCodeStatus: targetEvidence.delegateCodeStatus }
+            : {}),
+          ...('delegateCodeHash' in targetEvidence && targetEvidence.delegateCodeHash
+            ? { delegateCodeHash: targetEvidence.delegateCodeHash }
+            : {})
+        }
+      : { account: target.toLowerCase(), status: 'missing' }
+  )
+  if (targetEvidence?.status === 'contract') {
+    return Object.freeze({ codeAddress: target, fingerprint })
+  }
+  if (targetEvidence?.status === 'delegated' && targetEvidence.delegateCodeStatus === 'contract') {
+    return Object.freeze({ codeAddress: targetEvidence.delegate, fingerprint })
+  }
+  return Object.freeze({ fingerprint })
+}
 
 class FrameAccount {
   id: Address
@@ -422,15 +469,24 @@ class FrameAccount {
 
   private async decodeCalldata(req: TransactionRequest) {
     const { to, chainId, data: calldata } = req.data
+    const codeSnapshot = to ? accountCodeSnapshot(req.simulation, to, 0) : undefined
+    const codeAddress = codeSnapshot?.codeAddress
 
-    if (to && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
+    if (to && codeAddress && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
       try {
         // Decode calldata
-        const decodedData = await reveal.decode(to, parseInt(chainId, 16), calldata)
+        const decodedData = await reveal.decode(to, parseInt(chainId, 16), calldata, codeAddress)
 
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
+        const knownCodeSnapshot = knownTxRequest
+          ? accountCodeSnapshot(knownTxRequest.simulation, to, 0)
+          : undefined
 
-        if (knownTxRequest && decodedData) {
+        if (
+          knownTxRequest === req &&
+          knownCodeSnapshot?.fingerprint === codeSnapshot.fingerprint &&
+          decodedData
+        ) {
           knownTxRequest.decodedData = decodedData
           this.update()
         }
@@ -442,8 +498,13 @@ class FrameAccount {
 
   private async recognizeActions(req: TransactionRequest) {
     const { to, chainId, data: calldata } = req.data
+    const codeSnapshot = to ? accountCodeSnapshot(req.simulation, to, 0) : undefined
+    const targetEvidence = req.simulation?.accountCodeEvidence?.targets.find(
+      (target) => target.account === to?.toLowerCase() && target.callIndexes.includes(0)
+    )
+    const recognitionAllowed = !req.simulation?.accountCodeEvidence || targetEvidence?.status === 'contract'
 
-    if (to && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
+    if (to && recognitionAllowed && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
       try {
         // Recognize actions
         const actions = await reveal.recog(calldata, {
@@ -454,8 +515,19 @@ class FrameAccount {
         })
 
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
+        const knownTargetEvidence = knownTxRequest?.simulation?.accountCodeEvidence?.targets.find(
+          (target) => target.account === to.toLowerCase() && target.callIndexes.includes(0)
+        )
+        const recognitionStillAllowed =
+          !knownTxRequest?.simulation?.accountCodeEvidence || knownTargetEvidence?.status === 'contract'
+        const knownCodeSnapshot = accountCodeSnapshot(knownTxRequest?.simulation, to, 0)
 
-        if (knownTxRequest && actions) {
+        if (
+          knownTxRequest === req &&
+          recognitionStillAllowed &&
+          knownCodeSnapshot.fingerprint === codeSnapshot?.fingerprint &&
+          actions
+        ) {
           knownTxRequest.recognizedActions = actions
           this.update()
         }
@@ -633,7 +705,7 @@ class FrameAccount {
 
     this.syncManagedApproval(req, ApprovalType.DelegatedAccountRisk, {
       title: 'Delegated Account',
-      message: `Your configured RPC reports that ${delegation.account} delegates execution to ${delegation.delegate}. Transactions from this account execute with the delegate's code and may behave differently from an ordinary account. Verify the delegate before proceeding.`,
+      message: `This account delegates execution to ${delegation.delegate}. Calls to this account run the delegate’s code in this account’s context. Sending this transaction does not by itself run that code.`,
       confirmLabel: 'Sign With Delegated Account',
       account: delegation.account,
       delegate: delegation.delegate
@@ -704,12 +776,16 @@ class FrameAccount {
 
   private applySimulationResult(req: TransactionRequest, simulation: TransactionSimulation) {
     req.simulation = simulation
+    delete req.decodedData
+    req.recognizedActions = []
     this.syncSimulationApproval(req, simulation)
     this.syncTokenApprovalRisk(req, simulation)
     this.syncTokenAllowanceChangeRisk(req, simulation)
     this.syncDelegatedAccountRisk(req, simulation)
     this.syncProxyImplementationChangeRisk(req, simulation)
     this.update()
+    this.decodeCalldata(req)
+    this.recognizeActions(req)
   }
 
   refreshTransactionSimulation(req: TransactionRequest, publishPending = true, preserveApproval = false) {
@@ -751,6 +827,7 @@ class FrameAccount {
   private applyWalletCallsSimulationResult(req: WalletCallsRequest, simulation: WalletCallsSimulationResult) {
     req.simulation = simulation
     this.update()
+    if (simulation.accountCodeEvidence) this.revealWalletCallDetails(req)
   }
 
   refreshWalletCallsSimulation(req: WalletCallsRequest, publishPending = true) {
@@ -797,12 +874,17 @@ class FrameAccount {
   private async revealWalletCallDetails(req: WalletCallsRequest) {
     const calls = snapshotWalletCalls(req.calls)
     const chainId = Number(parseRpcQuantity(req.chainId))
+    const codeSnapshots = calls.map((call, index) =>
+      call.to ? accountCodeSnapshot(req.simulation, call.to, index) : undefined
+    )
 
     const details = await Promise.all(
-      calls.map(async (call) => {
+      calls.map(async (call, index) => {
         if (!call.to || call.data === '0x') return null
+        const codeAddress = codeSnapshots[index]?.codeAddress
+        if (!codeAddress) return null
         try {
-          const decoded = await reveal.decode(call.to, chainId, call.data)
+          const decoded = await reveal.decode(call.to, chainId, call.data, codeAddress)
           if (!decoded) return null
           if (decoded.contractName !== 'ERC-20') {
             return {
@@ -841,6 +923,14 @@ class FrameAccount {
     try {
       const currentCalls = snapshotWalletCalls(req.calls)
       if (JSON.stringify(currentCalls) !== JSON.stringify(calls)) return
+      const currentCodeSnapshots = currentCalls.map((call, index) =>
+        call.to ? accountCodeSnapshot(req.simulation, call.to, index) : undefined
+      )
+      if (
+        JSON.stringify(currentCodeSnapshots.map((snapshot) => snapshot?.fingerprint)) !==
+        JSON.stringify(codeSnapshots.map((snapshot) => snapshot?.fingerprint))
+      )
+        return
     } catch {
       return
     }
@@ -1053,8 +1143,11 @@ class FrameAccount {
     ) {
       throw new Error('Wallet-call simulation requires explicit acknowledgement')
     }
-    if (walletCalls.simulation.delegation?.status === 'delegated') {
-      throw new Error('Wallet-call batches from delegated accounts are not supported')
+    if (
+      walletCalls.simulation.accountCodeEvidence?.sender.status === 'delegated' ||
+      walletCalls.simulation.delegation?.status === 'delegated'
+    ) {
+      throw new Error('Wallet-call batches from delegated sending accounts are not supported.')
     }
     if (!walletCalls.preparation || walletCalls.preparation.status !== 'succeeded') {
       throw new Error('Wallet-call transaction preparation is not ready')
@@ -1402,17 +1495,81 @@ class FrameAccount {
     // if(index === typeof 'object' && cb === typeof 'undefined' && typeof rawTx === 'function') cb = rawTx; rawTx = index; index = 0;
     this.validateTransaction(rawTx, (err) => {
       if (err) return cb(err)
-      if (this.signer) {
-        const s = signers.get(this.signer)
-        if (!s) return cb(new Error(`Cannot find signer for this account`))
+      const reviewed = this.reviewedAccountCodeEvidence(rawTx)
+      inspectTransactionAccountCode(rawTx, {
+        send: (payload, callback, targetChain) => provider.connection.send(payload, callback, targetChain)
+      })
+        .then((actual) => {
+          assertAccountCodeEvidenceStable(reviewed?.evidence, actual, reviewed?.callIndex ?? 0)
+          if (!this.signer) return cb(new Error('No signer found for this account'))
 
-        const index = s.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
-        if (index === -1) return cb(new Error(`Signer cannot sign for this address`))
-        s.signTransaction(index, rawTx, cb)
-      } else {
-        cb(new Error('No signer found for this account'))
-      }
+          const s = signers.get(this.signer)
+          if (!s) return cb(new Error(`Cannot find signer for this account`))
+          const index = s.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
+          if (index === -1) return cb(new Error(`Signer cannot sign for this address`))
+          s.signTransaction(index, rawTx, cb)
+        })
+        .catch((error) => {
+          const failure = error instanceof Error ? error : new Error('account-code-check-failed')
+          if (failure instanceof AccountCodeEvidenceError) {
+            const request = Object.values(this.requests).find(
+              (candidate) => candidate.type === 'transaction' && candidate.data === rawTx
+            ) as TransactionRequest | undefined
+            if (request?.locked && request.status === RequestStatus.Pending) {
+              request.status = RequestStatus.Error
+              request.notice = failure.message
+              this.update()
+            }
+          }
+          cb(failure)
+        })
     })
+  }
+
+  private reviewedAccountCodeEvidence(
+    rawTx: TransactionData
+  ): Readonly<{ evidence?: TransactionAccountCodeEvidence; callIndex: number }> | undefined {
+    const transactionRequest = Object.values(this.requests).find(
+      (request) => request.type === 'transaction' && request.data === rawTx
+    ) as TransactionRequest | undefined
+    if (transactionRequest) {
+      const evidence = transactionRequest.simulation?.accountCodeEvidence
+      return Object.freeze({
+        ...(evidence ? { evidence } : {}),
+        callIndex: 0
+      })
+    }
+
+    const matchingFields: Array<keyof TransactionData> = [
+      'from',
+      'chainId',
+      'nonce',
+      'to',
+      'data',
+      'value',
+      'type',
+      'gasLimit',
+      'gasPrice',
+      'maxFeePerGas',
+      'maxPriorityFeePerGas'
+    ]
+    for (const request of Object.values(this.requests)) {
+      if (request.type !== 'walletCalls' || !request.locked || request.preparation.status !== 'succeeded') {
+        continue
+      }
+      const callIndex = request.preparation.calls.findIndex((prepared) =>
+        matchingFields.every((field) => prepared.transaction[field] === rawTx[field])
+      )
+      if (callIndex >= 0) {
+        const evidence =
+          request.simulation.status === 'pending' ? undefined : request.simulation.accountCodeEvidence
+        return Object.freeze({
+          ...(evidence ? { evidence } : {}),
+          callIndex
+        })
+      }
+    }
+    return undefined
   }
 
   private validateTransaction(rawTx: TransactionData, cb: Callback<void>) {

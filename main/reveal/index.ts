@@ -166,10 +166,10 @@ const surface = {
     return { type, ens }
   },
   resolveEntityType,
-  decode: async (contractAddress = '', chainId: number, calldata: string) => {
+  decode: async (contractAddress = '', chainId: number, calldata: string, codeAddress = contractAddress) => {
     // Decode calldata
     const contractSources: ContractSource[] = [{ name: 'ERC-20', source: 'Generic ERC-20', abi: erc20Abi }]
-    const contractSource = await fetchContract(contractAddress, chainId)
+    const contractSource = await fetchContract(codeAddress, chainId)
 
     if (contractSource) {
       contractSources.push(contractSource)
@@ -181,6 +181,9 @@ const surface = {
       if (decodedCall) {
         return {
           contractAddress: contractAddress.toLowerCase(),
+          ...(codeAddress.toLowerCase() !== contractAddress.toLowerCase()
+            ? { codeAddress: codeAddress.toLowerCase() }
+            : {}),
           contractName: name,
           source,
           ...decodedCall
@@ -188,7 +191,9 @@ const surface = {
       }
     }
 
-    log.warn(`Unable to decode data for contract ${contractAddress}`)
+    log.warn(`Unable to decode data for contract ${contractAddress}`, {
+      ...(codeAddress !== contractAddress ? { codeAddress } : {})
+    })
     return undefined
   },
   recog: async (calldata: string, context: RecognitionContext) => {

@@ -20,8 +20,20 @@ import { WATCH_ONLY_SIGNING_ERROR } from '../../../../resources/domain/signer'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
+export function accountCodeEvidenceReady(simulation) {
+  const evidence = simulation?.accountCodeEvidence
+  if (!evidence) return false
+  return [evidence.sender, ...(evidence.targets || [])].every(
+    (account) =>
+      account?.status !== 'unavailable' &&
+      !(account?.status === 'delegated' && account.delegateCodeStatus === 'unavailable')
+  )
+}
+
 export function canApproveTransaction(allowInput, simulation, feeDraftSafe = true) {
-  return allowInput && simulation?.status !== 'pending' && feeDraftSafe
+  return (
+    allowInput && simulation?.status !== 'pending' && accountCodeEvidenceReady(simulation) && feeDraftSafe
+  )
 }
 
 export function getReceiptFeeUsd(receipt, transactionData, nativeUSD) {

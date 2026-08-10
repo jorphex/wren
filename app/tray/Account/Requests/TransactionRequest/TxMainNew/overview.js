@@ -11,6 +11,7 @@ import RequestHeader from '../../../../../../resources/Components/RequestHeader'
 import BigNumber from 'bignumber.js'
 import { isBroadTokenAuthorityEffect } from '../../../../../../resources/domain/transaction/effects'
 import { summarizeAccessList } from '../../../../../../resources/domain/transaction/accessList'
+import { transactionAccountCodeEvidence } from '../ViewData/effects'
 
 const SimpleContractCallOverview = ({ method }) => {
   const body = method ? `Call contract method: ${method}` : 'Call contract'
@@ -283,15 +284,42 @@ export function getAllowancePresentation(simulation) {
 }
 
 export function getDelegationPresentation(simulation) {
-  const delegation = simulation?.delegation
-  if (delegation?.status === 'delegated' && delegation.delegate) {
+  const { sender, target } = transactionAccountCodeEvidence(simulation)
+  if (target?.status === 'delegated' && target.delegate) {
+    if (target.delegateCodeStatus === 'no-code') {
+      return {
+        className: '_txMainTagWarning',
+        label: `Target delegates to ${target.delegate}; RPC returned empty code`
+      }
+    }
+    if (target.delegateCodeStatus === 'unavailable') {
+      return {
+        className: '_txMainTagWarning',
+        label: `Delegate code check unavailable for ${target.delegate}`
+      }
+    }
+    if (target.delegateCodeStatus === 'delegated') {
+      return {
+        className: '_txMainTagWarning',
+        label: `Target delegates to ${target.delegate}; nested delegation is not followed`
+      }
+    }
     return {
       className: '_txMainTagBad',
-      label: `RPC reports delegated account: ${delegation.delegate}`
+      label: `Recipient delegates execution to ${target.delegate}.`
     }
   }
-  if (delegation?.status === 'unavailable') {
-    return { className: '_txMainTagWarning', label: 'Account delegation check unavailable' }
+  if (target?.status === 'unavailable') {
+    return { className: '_txMainTagWarning', label: 'Recipient delegation check unavailable' }
+  }
+  if (sender?.status === 'delegated' && sender.delegate) {
+    return {
+      className: '_txMainTagBad',
+      label: `Sending account delegated to ${sender.delegate}`
+    }
+  }
+  if (sender?.status === 'unavailable') {
+    return { className: '_txMainTagWarning', label: 'Sending account delegation check unavailable' }
   }
 
   return null

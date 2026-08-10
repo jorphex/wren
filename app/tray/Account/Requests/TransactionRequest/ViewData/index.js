@@ -156,11 +156,17 @@ export class ViewData extends React.Component {
     const { data } = req
     const tx = { nonce: 'TBD', ...data }
     const { simulation = {} } = req
+    const accountCodeEvidence = simulation.accountCodeEvidence
+    const accountCodeNeedsAttention = [
+      accountCodeEvidence?.sender,
+      ...(accountCodeEvidence?.targets || [])
+    ].some((evidence) => evidence?.status === 'delegated' || evidence?.status === 'unavailable')
     const showActions =
       Boolean(req.decodedData) ||
       (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
     const showPermissions =
       Boolean(simulation.allowance) ||
+      accountCodeNeedsAttention ||
       simulation.delegation?.status === 'delegated' ||
       simulation.delegation?.status === 'unavailable'
     const showExecution =

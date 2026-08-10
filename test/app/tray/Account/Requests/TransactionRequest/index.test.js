@@ -585,12 +585,35 @@ describe('simulation review', () => {
     })
   })
 
-  it('blocks approval only while the execution check is pending', () => {
+  it('blocks approval while execution or delegation evidence is not ready', () => {
+    const readyEvidence = {
+      source: 'configured-rpc',
+      sender: { status: 'no-code' },
+      targets: []
+    }
     expect(canApproveTransaction(true, { status: 'pending' })).toBe(false)
-    expect(canApproveTransaction(true, { status: 'reverted' })).toBe(true)
-    expect(canApproveTransaction(true, { status: 'failed' })).toBe(true)
-    expect(canApproveTransaction(true)).toBe(true)
+    expect(canApproveTransaction(true, { status: 'reverted', accountCodeEvidence: readyEvidence })).toBe(true)
+    expect(canApproveTransaction(true, { status: 'failed', accountCodeEvidence: readyEvidence })).toBe(true)
+    expect(canApproveTransaction(true)).toBe(false)
     expect(canApproveTransaction(false, { status: 'succeeded' })).toBe(false)
+    expect(
+      canApproveTransaction(true, {
+        status: 'succeeded',
+        accountCodeEvidence: {
+          sender: { status: 'no-code' },
+          targets: [{ status: 'unavailable' }]
+        }
+      })
+    ).toBe(false)
+    expect(
+      canApproveTransaction(true, {
+        status: 'succeeded',
+        accountCodeEvidence: {
+          sender: { status: 'no-code' },
+          targets: [{ status: 'delegated', delegateCodeStatus: 'contract' }]
+        }
+      })
+    ).toBe(true)
   })
 
   it('renders and confirms an outcome-specific simulation override', async () => {
@@ -997,44 +1020,140 @@ describe('simulation review', () => {
     expect(screen.queryByText('RPC-Reported Current Allowance')).toBeNull()
   })
 
-  it('prominently summarizes and details a configured-RPC delegation report', () => {
+  it('prominently summarizes and details delegated recipient execution', () => {
     const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    const recipient = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
     const simulation = {
       status: 'succeeded',
-      delegation: { status: 'delegated', source: 'eth_getCode', account: account.toLowerCase(), delegate }
+      accountCodeEvidence: {
+        source: 'configured-rpc',
+        sender: { status: 'no-code', account: account.toLowerCase(), role: 'sender' },
+        targets: [
+          {
+            status: 'delegated',
+            account: recipient,
+            role: 'target',
+            callIndexes: [0],
+            delegate,
+            delegateCodeStatus: 'contract'
+          }
+        ]
+      }
     }
 
     expect(getDelegationPresentation(simulation)).toEqual({
       className: '_txMainTagBad',
-      label: `RPC reports delegated account: ${delegate}`
+      label: `Recipient delegates execution to ${delegate}.`
     })
     render(<SimulationDelegation simulation={simulation} />)
 
     expect(screen.getByText('Account Delegation Check')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/transactions execute with the delegate's code/i)
-    expect(screen.getByText(account.toLowerCase())).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe(`Recipient delegates execution to ${delegate}.`)
+    expect(screen.getByText(/transaction to this address runs code/i)).toBeTruthy()
+    expect(screen.getByText(recipient)).toBeTruthy()
     expect(screen.getByText(delegate)).toBeTruthy()
-    expect(screen.getByText('eth_getCode')).toBeTruthy()
+    expect(screen.getByText('configured RPC · eth_getCode')).toBeTruthy()
   })
 
-  it('shows an unavailable delegation check without claiming delegation', () => {
+  it('describes a delegated sender without claiming outbound execution uses the delegate', () => {
+    const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     const simulation = {
       status: 'succeeded',
-      delegation: {
-        status: 'unavailable',
-        source: 'eth_getCode',
-        account: account.toLowerCase(),
-        reason: 'RPC returned invalid account code'
+      accountCodeEvidence: {
+        source: 'configured-rpc',
+        sender: { status: 'delegated', account: account.toLowerCase(), role: 'sender', delegate },
+        targets: []
+      }
+    }
+
+    expect(getDelegationPresentation(simulation)).toEqual({
+      className: '_txMainTagBad',
+      label: `Sending account delegated to ${delegate}`
+    })
+    render(<SimulationDelegation simulation={simulation} />)
+    expect(screen.getByRole('alert').textContent).toMatch(/sending this transaction does not by itself/i)
+    expect(screen.queryByText(/transactions from this account execute/i)).toBeNull()
+  })
+
+  it('shows an unavailable recipient delegation check without claiming delegation', () => {
+    const recipient = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    const simulation = {
+      status: 'succeeded',
+      accountCodeEvidence: {
+        source: 'configured-rpc',
+        sender: { status: 'no-code', account: account.toLowerCase(), role: 'sender' },
+        targets: [
+          {
+            status: 'unavailable',
+            account: recipient,
+            role: 'target',
+            callIndexes: [0],
+            reason: 'RPC returned invalid account code'
+          }
+        ]
       }
     }
 
     expect(getDelegationPresentation(simulation)).toEqual({
       className: '_txMainTagWarning',
-      label: 'Account delegation check unavailable'
+      label: 'Recipient delegation check unavailable'
     })
     render(<SimulationDelegation simulation={simulation} />)
-    expect(screen.getByRole('note').textContent).toMatch(/could not determine/i)
-    expect(screen.queryByText(/delegates execution to/i)).toBeNull()
+    expect(screen.getByRole('note').textContent).toMatch(/recipient delegation check unavailable/i)
+    expect(screen.queryByText(/recipient delegates execution/i)).toBeNull()
+  })
+
+  it('warns that nested delegation stops after the first delegate', () => {
+    const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    const simulation = {
+      accountCodeEvidence: {
+        sender: { status: 'no-code', role: 'sender', account: account.toLowerCase() },
+        targets: [
+          {
+            status: 'delegated',
+            role: 'target',
+            account: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            callIndexes: [0],
+            delegate,
+            delegateCodeStatus: 'delegated'
+          }
+        ]
+      }
+    }
+
+    expect(getDelegationPresentation(simulation)).toEqual({
+      className: '_txMainTagWarning',
+      label: `Target delegates to ${delegate}; nested delegation is not followed`
+    })
+    render(<SimulationDelegation simulation={simulation} />)
+    expect(screen.getByText(/resolves only the first delegate address/i)).toBeTruthy()
+  })
+
+  it('does not treat empty delegate bytecode as proof that nothing can execute', () => {
+    const delegate = '0x0000000000000000000000000000000000000001'
+    const simulation = {
+      accountCodeEvidence: {
+        sender: { status: 'no-code', role: 'sender', account: account.toLowerCase() },
+        targets: [
+          {
+            status: 'delegated',
+            role: 'target',
+            account: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            callIndexes: [0],
+            delegate,
+            delegateCodeStatus: 'no-code'
+          }
+        ]
+      }
+    }
+
+    expect(getDelegationPresentation(simulation)).toEqual({
+      className: '_txMainTagWarning',
+      label: `Target delegates to ${delegate}; RPC returned empty code`
+    })
+    render(<SimulationDelegation simulation={simulation} />)
+    expect(screen.getByText(/precompiles can execute without bytecode/i)).toBeTruthy()
+    expect(screen.getByText(/cannot distinguish them from empty accounts/i)).toBeTruthy()
   })
 
   it('summarizes and renders a complete ordered access list', () => {
@@ -1131,7 +1250,7 @@ describe('simulation review', () => {
     expect(screen.getByText('Example Contract')).toBeTruthy()
     expect(screen.getByText('RPC-Reported Current Allowance')).toBeTruthy()
     expect(screen.getByText('RPC-Reported Execution Trace')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/delegated code|execution reverted/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/sending this transaction does not by itself/i)
     expect(screen.getByText('0x1234')).toBeTruthy()
     expect(screen.getByText('0x2')).toBeTruthy()
   })

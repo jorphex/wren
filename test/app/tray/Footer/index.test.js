@@ -36,11 +36,17 @@ afterAll(() => {
   delete global.ResizeObserver
 })
 
+const readyAccountCodeEvidence = {
+  source: 'configured-rpc',
+  sender: { status: 'no-code' },
+  targets: []
+}
+
 const request = (overrides = {}) => ({
   type: 'walletCalls',
   handlerId: 'wallet-call-request',
   calls: [{ to: '0x2222222222222222222222222222222222222222', value: '0x0', data: '0x' }],
-  simulation: { status: 'succeeded' },
+  simulation: { status: 'succeeded', accountCodeEvidence: readyAccountCodeEvidence },
   preparation: { status: 'succeeded' },
   ...overrides
 })
@@ -77,7 +83,9 @@ it('allows a fully reviewed wallet-call batch to be submitted', () => {
 })
 
 it('requires an explicit acknowledgement before a failed simulation can be submitted', () => {
-  const failed = request({ simulation: { status: 'failed' } })
+  const failed = request({
+    simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence }
+  })
 
   expect(canApproveWalletCalls(failed, undefined, 'ledger')).toBe(false)
   expect(canApproveWalletCalls(failed, undefined, 'ledger', true)).toBe(true)
@@ -99,8 +107,30 @@ it('blocks only the wallet-call request with an action already in flight', () =>
 
 it.each([
   ['missing simulation', { simulation: undefined }],
+  ['missing account-code evidence', { simulation: { status: 'succeeded' } }],
   ['pending simulation', { simulation: { status: 'pending' } }],
-  ['delegated sender', { simulation: { status: 'succeeded', delegation: { status: 'delegated' } } }],
+  [
+    'delegated sender',
+    {
+      simulation: {
+        status: 'succeeded',
+        accountCodeEvidence: readyAccountCodeEvidence,
+        delegation: { status: 'delegated' }
+      }
+    }
+  ],
+  [
+    'unavailable target delegation evidence',
+    {
+      simulation: {
+        status: 'succeeded',
+        accountCodeEvidence: {
+          sender: { status: 'no-code' },
+          targets: [{ status: 'unavailable' }]
+        }
+      }
+    }
+  ],
   ['pending preparation', { preparation: { status: 'pending' } }],
   ['failed preparation', { preparation: { status: 'failed', reason: 'unavailable' } }],
   ['claimed request', { locked: true }],
@@ -140,7 +170,7 @@ it.each([
 ])('guards a %s simulation with a separate acknowledgement', async (status, title, detail) => {
   const req = request({
     account: '0x0000000000000000000000000000000000000001',
-    simulation: { status }
+    simulation: { status, accountCodeEvidence: readyAccountCodeEvidence }
   })
   const { user } = renderRequestFooter(req)
 
@@ -170,7 +200,9 @@ it.each([
 })
 
 it('returns from the simulation acknowledgement without submitting', async () => {
-  const { user } = renderRequestFooter(request({ simulation: { status: 'failed' } }))
+  const { user } = renderRequestFooter(
+    request({ simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence } })
+  )
   const submit = screen.getByRole('button', { name: 'Submit Batch' })
 
   await user.click(submit)
@@ -195,7 +227,7 @@ it('clears acknowledgement when a fresh simulation replaces its evidence', () =>
     if (path.join('.') === 'windows.panel.nav') {
       return [{ data: { accountId: '0x0000000000000000000000000000000000000001' } }]
     }
-    return { simulation: { status: 'failed' } }
+    return { simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence } }
   })
 
   footer.componentDidUpdate({}, { walletCallsAcknowledgement: acknowledgement })

@@ -6,7 +6,7 @@ import link from '../../../resources/link'
 import { isHardwareSigner, isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import { isSignatureRequest } from '../../../resources/domain/request'
 
-import RequestCommand from './RequestCommand'
+import RequestCommand, { accountCodeEvidenceReady } from './RequestCommand'
 import { parseWalletCallsDraft } from '../Account/Requests/WalletCallsRequest/adjustment'
 
 const measure = (ref) => {
@@ -44,6 +44,7 @@ const canDecideWalletCalls = (req, actionRequestId, accountSignerType) =>
   !req.locked &&
   req.simulation !== undefined &&
   req.simulation?.status !== 'pending' &&
+  accountCodeEvidenceReady(req.simulation) &&
   req.simulation?.delegation?.status !== 'delegated' &&
   req.preparation?.status === 'succeeded'
 

@@ -1,4 +1,5 @@
 import {
+  assertAccountCodeEvidenceStable,
   buildEthCall,
   buildSimulationCall,
   parseCallTrace,
@@ -24,6 +25,40 @@ const transaction = {
   maxPriorityFeePerGas: '0x2',
   gasFeesSource: 'Frame'
 }
+
+const emptyCodeHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
+const noCodeEvidence = (account, role, callIndexes) => ({
+  status: 'no-code',
+  source: 'eth_getCode',
+  trust: 'configured-rpc',
+  account,
+  codeHash: emptyCodeHash,
+  role,
+  ...(callIndexes ? { callIndexes } : {})
+})
+const transactionAccountCodeEvidence = {
+  source: 'configured-rpc',
+  sender: noCodeEvidence(transaction.from, 'sender'),
+  targets: [noCodeEvidence(transaction.to, 'target', [0])]
+}
+
+it('binds signing revalidation to exact target presence and reviewed call index', () => {
+  const sender = noCodeEvidence(transaction.from, 'sender')
+  const creationEvidence = { source: 'configured-rpc', sender, targets: [] }
+
+  expect(() => assertAccountCodeEvidenceStable(transactionAccountCodeEvidence, creationEvidence)).toThrow(
+    expect.objectContaining({ code: 'account-code-evidence-changed' })
+  )
+
+  const evidenceForOtherCall = {
+    ...transactionAccountCodeEvidence,
+    targets: [noCodeEvidence(transaction.to, 'target', [1])]
+  }
+  expect(() =>
+    assertAccountCodeEvidenceStable(evidenceForOtherCall, transactionAccountCodeEvidence, 0)
+  ).toThrow(expect.objectContaining({ code: 'account-code-evidence-changed' }))
+  expect(() => assertAccountCodeEvidenceStable(evidenceForOtherCall, creationEvidence, 0)).not.toThrow()
+})
 
 const approvalSpender = '0x3333333333333333333333333333333333333333'
 const approvalAmount = 42n
@@ -558,6 +593,7 @@ it('uses eth_simulateV1 without falling back when it succeeds', async () => {
   const send = jest.fn((payload, callback) => callback({ id: 1, jsonrpc: '2.0', result: simulateSuccess }))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -848,10 +884,18 @@ it('does not request native balance tracing when execution does not succeed', as
 it('attaches exact configured-RPC delegation evidence for the selected sender', async () => {
   const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
   const send = jest.fn((payload, callback) => {
+    const account = payload.params?.[0]
     callback({
       id: payload.id,
       jsonrpc: '2.0',
-      result: payload.method === 'eth_getCode' ? `0xef0100${delegate.slice(2)}` : simulateSuccess
+      result:
+        payload.method !== 'eth_getCode'
+          ? simulateSuccess
+          : account === transaction.from
+            ? `0xef0100${delegate.slice(2)}`
+            : account === delegate
+              ? '0x6000'
+              : '0x'
     })
   })
 
@@ -862,11 +906,23 @@ it('attaches exact configured-RPC delegation evidence for the selected sender', 
       source: 'eth_getCode',
       account: transaction.from,
       delegate
+    },
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: {
+        status: 'delegated',
+        role: 'sender',
+        account: transaction.from,
+        delegate,
+        delegateCodeStatus: 'contract',
+        delegateCodeHash: expect.any(String)
+      },
+      targets: [{ status: 'no-code', role: 'target', account: transaction.to, callIndexes: [0] }]
     }
   })
   expect(send).toHaveBeenCalledWith(
     {
-      id: 3,
+      id: 30,
       jsonrpc: '2.0',
       method: 'eth_getCode',
       params: [transaction.from, 'latest']
@@ -874,6 +930,44 @@ it('attaches exact configured-RPC delegation evidence for the selected sender', 
     expect.any(Function),
     { type: 'ethereum', id: 1 }
   )
+})
+
+it('distinguishes a nondelegated sender from a delegated transaction recipient', async () => {
+  const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const send = jest.fn((payload, callback) => {
+    const account = payload.params?.[0]
+    callback({
+      id: payload.id,
+      jsonrpc: '2.0',
+      result:
+        payload.method !== 'eth_getCode'
+          ? simulateSuccess
+          : account === transaction.to
+            ? `0xef0100${delegate.slice(2)}`
+            : account === delegate
+              ? '0x6000'
+              : '0x'
+    })
+  })
+
+  await expect(simulateTransaction(transaction, { send })).resolves.toMatchObject({
+    status: 'succeeded',
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: { status: 'no-code', role: 'sender', account: transaction.from },
+      targets: [
+        {
+          status: 'delegated',
+          role: 'target',
+          account: transaction.to,
+          callIndexes: [0],
+          delegate,
+          delegateCodeStatus: 'contract',
+          delegateCodeHash: expect.any(String)
+        }
+      ]
+    }
+  })
 })
 
 it('reports malformed configured-RPC account code as unavailable', async () => {
@@ -911,7 +1005,7 @@ it('bounds a nonresponsive account delegation check without weakening execution 
     delegation: {
       status: 'unavailable',
       source: 'eth_getCode',
-      reason: 'Account delegation check timed out'
+      reason: 'Account code check timed out'
     }
   })
 })
@@ -923,6 +1017,7 @@ it.each([-32601, -32004])('falls back to eth_call for unsupported-method code %s
     .mockImplementationOnce((_payload, callback) => callback({ id: 1, jsonrpc: '2.0', result: '0x' }))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'succeeded',
     source: 'eth_call',
     nativeBalanceChanges: unsupportedNativeBalanceChanges,
@@ -940,6 +1035,7 @@ it('does not mask invalid simulation parameters with a fallback', async () => {
   const send = jest.fn((_payload, callback) => callback(rpcError(-32602, 'Invalid parameters')))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'failed',
     source: 'eth_simulateV1',
     reason: 'Invalid parameters'
@@ -954,6 +1050,7 @@ it('reports an eth_call revert after fallback', async () => {
     .mockImplementationOnce((_payload, callback) => callback(rpcError(3, 'execution reverted: denied')))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'reverted',
     source: 'eth_call',
     reason: 'execution reverted: denied'
@@ -964,6 +1061,7 @@ it('reports unsupported fallback as unavailable', async () => {
   const send = jest.fn((_payload, callback) => callback(rpcError(-32601, 'Method not found')))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'unavailable',
     source: 'eth_call',
     reason: 'RPC execution check is unsupported'
@@ -975,6 +1073,7 @@ it('fails closed on malformed simulation output', async () => {
   const send = jest.fn((_payload, callback) => callback({ id: 1, jsonrpc: '2.0', result: [{ calls: [] }] }))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'failed',
     source: 'eth_simulateV1',
     reason: 'RPC returned an invalid simulation result'
@@ -986,6 +1085,7 @@ it('fails closed on malformed provider callbacks and chain IDs', async () => {
   const send = jest.fn((_payload, callback) => callback(undefined))
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'failed',
     source: 'eth_simulateV1',
     reason: 'RPC returned an invalid response'
@@ -1003,6 +1103,7 @@ it('bounds a request that never receives an RPC response', async () => {
   jest.advanceTimersByTime(25)
 
   await expect(pending).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'failed',
     source: 'eth_simulateV1',
     reason: 'RPC execution check timed out'
@@ -1023,6 +1124,7 @@ it('shares one timeout budget with the fallback call', async () => {
   jest.advanceTimersByTime(5)
 
   await expect(pending).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'failed',
     source: 'eth_call',
     reason: 'RPC execution check timed out'
@@ -1037,6 +1139,14 @@ describe('wallet call batches', () => {
     value: '0x2',
     data: '0xabcd'
   }
+  const walletAccountCodeEvidence = {
+    source: 'configured-rpc',
+    sender: noCodeEvidence(transaction.from, 'sender'),
+    targets: [
+      noCodeEvidence(transaction.to, 'target', [0]),
+      noCodeEvidence(secondTransaction.to, 'target', [1])
+    ]
+  }
 
   it('simulates all calls in one ordered evolving-state request', async () => {
     const result = [
@@ -1049,6 +1159,7 @@ describe('wallet call batches', () => {
     await expect(
       simulateWalletCalls([transaction, secondTransaction], { send: withAccountCode(send) })
     ).resolves.toEqual({
+      accountCodeEvidence: walletAccountCodeEvidence,
       status: 'succeeded',
       source: 'eth_simulateV1',
       calls: [
@@ -1124,7 +1235,14 @@ describe('wallet call batches', () => {
       callback({
         id: payload.id,
         jsonrpc: '2.0',
-        result: payload.method === 'eth_getCode' ? `0xef0100${delegate.slice(2)}` : result
+        result:
+          payload.method !== 'eth_getCode'
+            ? result
+            : payload.params[0] === transaction.from
+              ? `0xef0100${delegate.slice(2)}`
+              : payload.params[0] === delegate
+                ? '0x6000'
+                : '0x'
       })
     )
 
@@ -1134,12 +1252,54 @@ describe('wallet call batches', () => {
     })
   })
 
+  it('maps each delegated wallet-call target and preserves duplicate call indexes', async () => {
+    const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    const duplicateTarget = { ...secondTransaction, to: transaction.to }
+    const result = [
+      {
+        calls: [simulateSuccess[0].calls[0], simulateSuccess[0].calls[0]]
+      }
+    ]
+    const send = jest.fn((payload, callback) =>
+      callback({
+        id: payload.id,
+        jsonrpc: '2.0',
+        result:
+          payload.method !== 'eth_getCode'
+            ? result
+            : payload.params[0] === transaction.to
+              ? `0xef0100${delegate.slice(2)}`
+              : payload.params[0] === delegate
+                ? '0x6000'
+                : '0x'
+      })
+    )
+
+    await expect(simulateWalletCalls([transaction, duplicateTarget], { send })).resolves.toMatchObject({
+      status: 'succeeded',
+      accountCodeEvidence: {
+        sender: { status: 'no-code', account: transaction.from },
+        targets: [
+          {
+            status: 'delegated',
+            account: transaction.to,
+            delegate,
+            delegateCodeStatus: 'contract',
+            callIndexes: [0, 1]
+          }
+        ]
+      }
+    })
+    expect(send.mock.calls.filter(([payload]) => payload.method === 'eth_getCode')).toHaveLength(3)
+  })
+
   it('does not substitute independent eth_call checks when stateful simulation is unsupported', async () => {
     const send = jest.fn((_payload, callback) => callback(rpcError(-32601, 'Method not found')))
 
     await expect(
       simulateWalletCalls([transaction, secondTransaction], { send: withAccountCode(send) })
     ).resolves.toEqual({
+      accountCodeEvidence: walletAccountCodeEvidence,
       status: 'unavailable',
       source: 'eth_simulateV1',
       calls: [],
@@ -1155,6 +1315,7 @@ describe('wallet call batches', () => {
     await expect(
       simulateWalletCalls([transaction, secondTransaction], { send: withAccountCode(malformed) })
     ).resolves.toEqual({
+      accountCodeEvidence: walletAccountCodeEvidence,
       status: 'failed',
       source: 'eth_simulateV1',
       calls: [],
@@ -1165,6 +1326,7 @@ describe('wallet call batches', () => {
     await expect(
       simulateWalletCalls([transaction, secondTransaction], { send: withAccountCode(failed) })
     ).resolves.toEqual({
+      accountCodeEvidence: walletAccountCodeEvidence,
       status: 'failed',
       source: 'eth_simulateV1',
       calls: [],
@@ -1209,6 +1371,7 @@ describe('wallet call batches', () => {
     jest.advanceTimersByTime(25)
 
     await expect(pending).resolves.toEqual({
+      accountCodeEvidence: walletAccountCodeEvidence,
       status: 'failed',
       source: 'eth_simulateV1',
       calls: [],
@@ -1266,6 +1429,7 @@ it('attaches an exact configured-RPC allowance read to an approval simulation', 
   })
 
   await expect(simulateTransaction(approvalTransaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -1311,6 +1475,7 @@ it.each([
   )
 
   await expect(simulateTransaction(approvalTransaction, { send: withAccountCode(send) })).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -1333,6 +1498,7 @@ it('bounds a missing allowance response without changing a successful execution 
   jest.advanceTimersByTime(25)
 
   await expect(pending).resolves.toEqual({
+    accountCodeEvidence: transactionAccountCodeEvidence,
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',

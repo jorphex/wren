@@ -1,7 +1,9 @@
 import provider from '../../../main/provider'
 import reveal from '../../../main/reveal'
+import { Interface } from 'ethers'
 import { erc20Interface } from '../../../resources/contracts'
 import store from '../../../main/store'
+import { fetchContract } from '../../../main/contracts'
 
 jest.mock('ethereum-provider', () =>
   jest.fn(() => ({
@@ -15,6 +17,10 @@ jest.mock('../../../main/provider', () => ({
 }))
 jest.mock('../../../main/store')
 jest.mock('../../../main/provider/proxy', () => ({}))
+jest.mock('../../../main/contracts', () => {
+  const real = jest.requireActual('../../../main/contracts')
+  return { ...real, fetchContract: jest.fn() }
+})
 jest.mock('../../../main/contracts/deployments/ens', () => ({ __esModule: true, default: [] }))
 jest.mock('../../../main/nebula', () =>
   jest.fn(() => ({ ens: { reverseLookup: jest.fn().mockResolvedValue(['']) } }))
@@ -25,6 +31,7 @@ const counterparty = '0x2222222222222222222222222222222222222222'
 
 beforeEach(() => {
   store.clear()
+  fetchContract.mockReset().mockResolvedValue(undefined)
   const values = { decimals: 18n, name: 'Frame Token', symbol: 'FRAME', totalSupply: 1000n }
 
   provider.sendAsync.mockImplementation((payload, callback) => {
@@ -32,6 +39,27 @@ beforeEach(() => {
     const fn = erc20Interface.getFunction(data.slice(0, 10)).name
     callback(null, { result: erc20Interface.encodeFunctionResult(fn, [values[fn]]) })
   })
+})
+
+it('decodes an authority call with ABI source from its reviewed delegate', async () => {
+  const authority = '0x3333333333333333333333333333333333333333'
+  const delegate = '0x4444444444444444444444444444444444444444'
+  const contractInterface = new Interface(['function execute(uint256 value)'])
+  const calldata = contractInterface.encodeFunctionData('execute', [42n])
+  fetchContract.mockResolvedValueOnce({
+    name: 'Delegated Executor',
+    source: 'Sourcify',
+    abi: contractInterface.formatJson()
+  })
+
+  await expect(reveal.decode(authority, 1, calldata, delegate)).resolves.toMatchObject({
+    contractAddress: authority,
+    codeAddress: delegate,
+    contractName: 'Delegated Executor',
+    source: 'Sourcify',
+    method: 'execute'
+  })
+  expect(fetchContract).toHaveBeenCalledWith(delegate, 1)
 })
 
 it.each([

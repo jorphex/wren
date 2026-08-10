@@ -19,6 +19,14 @@ must cover both packages, checksums, source-bound SBOM, embedded source identity
 and native hardware modules; the Companion verifier must cover both archives,
 checksums, compatibility metadata, and source-bound SBOM.
 
+The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
+review rejection, sequential EIP-5792 success and partial failure, restart recovery,
+and origin/account status scoping without using live Wren ports or public networks.
+Companion's `npm run qualify:browser` uses disposable temporary builds and profiles
+to exercise protocol 2, EIP-6963, provider requests, and top/frame origin isolation
+in real Chrome and Firefox. These automated checks do not replace the candidate-
+archive and active-desktop checks below.
+
 ## Required operator checks
 
 1. Back up the closed Wren profile and confirm the backup is readable. Close all
@@ -84,6 +92,36 @@ checksums, compatibility metadata, and source-bound SBOM.
    pairing response. The transfer action must remain unavailable unless the
    expected testnet and disposable-account confirmation are active; check its
    hash privately on the matching explorer.
+
+## EIP-5792 and EIP-7702 qualification
+
+Use a new isolated `0700` desktop profile, disposable testnet accounts, a controlled
+local page, the candidate desktop, its configured testnet RPC, and the exact Chrome
+and Firefox candidate archives.
+
+1. Submit a non-atomic `wallet_sendCalls` request with at least two harmless calls.
+   Check ordered targets, values, calldata, simulation, and fee evidence. Reject
+   once, then approve once. Confirm sequential execution, status lookup after
+   restart, truthful partial-failure status, and no advertised atomic or optional
+   capability.
+2. Repeat one successful and one rejected batch through each Companion archive in
+   a clean browser profile. Confirm tab-local results, native Wren review, ordered
+   calls, status lookup, and no stale request after rejection, reload, reconnect,
+   or restart.
+3. With controlled code fixtures or independently recorded testnet state, check a
+   delegated sender, transaction recipient, and wallet-call target. Record the
+   first delegate and code hash. Confirm nested delegation is shown as one hop,
+   empty delegate bytecode is identified, and unavailable lookups are not presented
+   as delegation evidence.
+4. Change or make unavailable the reviewed delegation or delegate code before
+   approval. Confirm the final recheck blocks signing and names the address. Confirm
+   delegated senders cannot submit a sequential batch, ordinary outbound
+   transactions are not described as running the sender's delegate, and type-4 or
+   authorization-list requests are rejected before approval.
+
+This qualifies only the exercised desktop, RPC, testnet state, and exact browser
+archives. It does not audit delegate code, qualify every chain/RPC, qualify atomic
+EIP-5792, or add EIP-7702 delegation management.
 
 ## Earn-only qualification
 

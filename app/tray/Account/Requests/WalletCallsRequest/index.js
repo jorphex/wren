@@ -109,6 +109,26 @@ const destination = (req, index, addressBook, accounts) => {
     : { label: shortAddress(call.to), source: 'Address' }
 }
 
+const targetAccountCodeEvidence = (req, call, index) =>
+  req.simulation?.accountCodeEvidence?.targets?.find(
+    (target) => target.account === call.to?.toLowerCase() && target.callIndexes?.includes(index)
+  )
+
+const targetDelegationCopy = (evidence) => {
+  if (evidence?.status === 'unavailable') return 'Target delegation check unavailable'
+  if (evidence?.status !== 'delegated') return
+  if (evidence.delegateCodeStatus === 'no-code') {
+    return `Target delegates to ${shortAddress(evidence.delegate)}; RPC returned empty code`
+  }
+  if (evidence.delegateCodeStatus === 'unavailable') {
+    return `Delegate code check unavailable for ${shortAddress(evidence.delegate)}`
+  }
+  if (evidence.delegateCodeStatus === 'delegated') {
+    return `Target delegates to ${shortAddress(evidence.delegate)}; nested delegation is not followed`
+  }
+  return `Target delegates execution to ${shortAddress(evidence.delegate)}.`
+}
+
 export class WalletCallsRequest extends React.Component {
   constructor(props) {
     super(props)
@@ -399,6 +419,8 @@ export class WalletCallsRequest extends React.Component {
             {req.calls.map((call, index) => {
               const identity = destination(req, index, this.props.addressBook, this.props.accounts)
               const callSimulation = req.simulation?.calls?.[index]
+              const targetEvidence = targetAccountCodeEvidence(req, call, index)
+              const targetDelegation = targetDelegationCopy(targetEvidence)
               const maximum = preparation.status === 'succeeded' ? preparation.calls[index] : undefined
               const preparedTransaction =
                 preparation.status === 'succeeded' ? req.preparation.calls[index]?.transaction : undefined
@@ -445,6 +467,52 @@ export class WalletCallsRequest extends React.Component {
                         Calldata · {(call.data.length - 2) / 2} bytes {expanded ? '⌃' : '›'}
                       </button>
                     </div>
+                    {targetDelegation && (
+                      <div
+                        className={
+                          targetEvidence.status === 'delegated' &&
+                          targetEvidence.delegateCodeStatus === 'contract'
+                            ? 'walletCallsTargetDelegation walletCallsTargetDelegation-danger'
+                            : 'walletCallsTargetDelegation'
+                        }
+                        role='status'
+                        aria-label={
+                          targetEvidence.status === 'delegated'
+                            ? `Call ${index + 1} target ${targetEvidence.account} delegates execution to ${targetEvidence.delegate}.`
+                            : `Call ${index + 1} target ${targetEvidence.account}. Target delegation check unavailable.`
+                        }
+                      >
+                        <strong>{targetDelegation}</strong>
+                        {expanded &&
+                          targetEvidence.status === 'delegated' &&
+                          targetEvidence.delegateCodeStatus === 'no-code' && (
+                            <span>
+                              The configured RPC returned empty code for this delegate. Precompiles can
+                              execute without bytecode, and code lookup alone cannot distinguish them from
+                              empty accounts.
+                            </span>
+                          )}
+                        {expanded &&
+                          targetEvidence.status === 'delegated' &&
+                          targetEvidence.delegateCodeStatus === 'delegated' && (
+                            <span>
+                              EIP-7702 resolves only the first delegate address; it does not follow this
+                              delegate’s delegation.
+                            </span>
+                          )}
+                        {expanded &&
+                          targetEvidence.status === 'delegated' &&
+                          targetEvidence.delegateCodeStatus === 'contract' && (
+                            <span>
+                              This call runs code from {targetEvidence.delegate} in the target account’s
+                              context.
+                            </span>
+                          )}
+                        {expanded && targetEvidence.status === 'unavailable' && targetEvidence.reason && (
+                          <span>{targetEvidence.reason}</span>
+                        )}
+                      </div>
+                    )}
                     {expanded && <div className='walletCallsCalldata'>{call.data}</div>}
                     {callSimulation && callSimulation.status !== 'succeeded' && (
                       <div className='walletCallsCallWarning'>
@@ -477,17 +545,23 @@ export class WalletCallsRequest extends React.Component {
         {req.simulation?.delegation?.status === 'delegated' && (
           <div className='walletCallsEvidenceWarning walletCallsEvidenceWarning-danger' role='alert'>
             <Icon name='alert' size={17} />
+            <span>Wallet-call batches from delegated sending accounts are not supported.</span>
+          </div>
+        )}
+
+        {req.simulation?.accountCodeEvidence?.sender.status === 'unavailable' && (
+          <div className='walletCallsEvidenceWarning' role='alert'>
+            <Icon name='alert' size={17} />
             <span>
-              Delegated account batch blocked. Wren will not submit through{' '}
-              {shortAddress(req.simulation.delegation.delegate)}.
+              Sending account delegation check unavailable.{' '}
+              {req.simulation.accountCodeEvidence.sender.reason || ''}
             </span>
           </div>
         )}
 
         {(preparation.status === 'failed' ||
           simulation.tone === 'danger' ||
-          simulation.tone === 'warning' ||
-          req.simulation?.delegation?.status === 'unavailable') && (
+          simulation.tone === 'warning') && (
           <div className='walletCallsEvidenceWarning' role='alert'>
             <Icon name='alert' size={17} />
             <span>

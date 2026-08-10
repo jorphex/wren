@@ -4,7 +4,11 @@ import { Interface } from 'ethers'
 import reveal from '../../../../main/reveal'
 import { fetchContract } from '../../../../main/contracts'
 import Erc20Contract from '../../../../main/contracts/erc20'
-import { simulateTransaction, simulateWalletCalls } from '../../../../main/transaction/simulation'
+import {
+  inspectTransactionAccountCode,
+  simulateTransaction,
+  simulateWalletCalls
+} from '../../../../main/transaction/simulation'
 import { ApprovalType } from '../../../../resources/constants'
 import { GasFeesSource } from '../../../../resources/domain/transaction'
 import signers from '../../../../main/signers'
@@ -14,6 +18,8 @@ import { flushPromises } from '../../../util'
 
 jest.mock('../../../../main/reveal')
 jest.mock('../../../../main/transaction/simulation', () => ({
+  ...jest.requireActual('../../../../main/transaction/simulation'),
+  inspectTransactionAccountCode: jest.fn(),
   simulateTransaction: jest.fn(),
   simulateWalletCalls: jest.fn()
 }))
@@ -83,6 +89,29 @@ const tokenInterface = new Interface([
 const tokenContract = '0x2222222222222222222222222222222222222222'
 const delegate = '0x3333333333333333333333333333333333333333'
 const maxTokenAmount = 2n ** 256n - 1n
+const emptyCodeHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
+const accountCodeEvidence = (target = tokenContract) => ({
+  source: 'configured-rpc',
+  sender: {
+    status: 'no-code',
+    source: 'eth_getCode',
+    trust: 'configured-rpc',
+    account: accountState.address.toLowerCase(),
+    codeHash: emptyCodeHash,
+    role: 'sender'
+  },
+  targets: [
+    {
+      status: 'no-code',
+      source: 'eth_getCode',
+      trust: 'configured-rpc',
+      account: target.toLowerCase(),
+      codeHash: emptyCodeHash,
+      role: 'target',
+      callIndexes: [0]
+    }
+  ]
+})
 
 const permitRequest = (value, handlerId = 'token-permit') => ({
   handlerId,
@@ -209,6 +238,7 @@ beforeEach(() => {
   accounts.getSelectedAddresses.mockReturnValue([accountState.address.toLowerCase()])
   simulateTransaction.mockImplementation(() => new Promise(() => {}))
   simulateWalletCalls.mockImplementation(() => new Promise(() => {}))
+  inspectTransactionAccountCode.mockReset().mockResolvedValue(accountCodeEvidence())
   provider.getNonce.mockImplementation((_transaction, callback) => callback({ result: '0x5' }))
   provider.fillTransaction.mockImplementation((transaction, callback) =>
     callback(null, {
@@ -605,6 +635,94 @@ describe('#addRequest', () => {
     tokenData.mockRestore()
   })
 
+  it('decodes delegated target calldata from the delegate ABI while preserving the authority', async () => {
+    const implementation = '0x4444444444444444444444444444444444444444'
+    const request = walletCallsRequest('delegated-target-details')
+    request.calls = [{ to: tokenContract, value: '0x0', data: '0x12345678' }]
+    request.simulation = {
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      calls: [{ status: 'succeeded', source: 'eth_simulateV1' }],
+      accountCodeEvidence: {
+        source: 'configured-rpc',
+        sender: { status: 'no-code', role: 'sender', account: accountState.address },
+        targets: [
+          {
+            status: 'delegated',
+            role: 'target',
+            account: tokenContract,
+            callIndexes: [0],
+            delegate: implementation,
+            delegateCodeStatus: 'contract'
+          }
+        ]
+      }
+    }
+    account.requests[request.handlerId] = request
+    reveal.decode.mockResolvedValueOnce({
+      contractAddress: tokenContract,
+      codeAddress: implementation,
+      contractName: 'Delegated Router',
+      source: 'Sourcify',
+      method: 'execute',
+      args: []
+    })
+
+    await account.revealWalletCallDetails(request)
+
+    expect(reveal.decode).toHaveBeenCalledWith(tokenContract, 1, '0x12345678', implementation)
+    expect(request.callDetails).toEqual([
+      { label: 'Delegated Router', source: 'Sourcify', method: 'execute' }
+    ])
+  })
+
+  it('drops a delayed wallet-call ABI result when delegate code changes at the same address', async () => {
+    const implementation = '0x4444444444444444444444444444444444444444'
+    const request = walletCallsRequest('stale-delegated-target-details')
+    request.calls = [{ to: tokenContract, value: '0x0', data: '0x12345678' }]
+    request.simulation = {
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      calls: [{ status: 'succeeded', source: 'eth_simulateV1' }],
+      accountCodeEvidence: {
+        source: 'configured-rpc',
+        sender: { status: 'no-code', role: 'sender', account: accountState.address },
+        targets: [
+          {
+            status: 'delegated',
+            role: 'target',
+            account: tokenContract,
+            callIndexes: [0],
+            delegate: implementation,
+            codeHash: '0x01',
+            delegateCodeStatus: 'contract',
+            delegateCodeHash: '0x02'
+          }
+        ]
+      }
+    }
+    account.requests[request.handlerId] = request
+    let resolveDecode
+    reveal.decode.mockImplementationOnce(() => new Promise((resolve) => (resolveDecode = resolve)))
+
+    const pending = account.revealWalletCallDetails(request)
+    request.simulation.accountCodeEvidence.targets[0] = {
+      ...request.simulation.accountCodeEvidence.targets[0],
+      delegateCodeHash: '0x03'
+    }
+    resolveDecode({
+      contractAddress: tokenContract,
+      codeAddress: implementation,
+      contractName: 'Stale Router',
+      source: 'Sourcify',
+      method: 'execute',
+      args: []
+    })
+    await pending
+
+    expect(request.callDetails).toBeUndefined()
+  })
+
   it('applies wallet-call fee and nonce settings, then reruns both checks', async () => {
     const request = readyWalletCallsRequest('adjusted-wallet-calls')
     account.requests[request.handlerId] = request
@@ -984,7 +1102,7 @@ describe('#addRequest', () => {
         delegate
       }
     })
-    expect(approval.data.message).toMatch(/execute with the delegate's code/i)
+    expect(approval.data.message).toMatch(/sending this transaction does not by itself run that code/i)
     approval.approve()
 
     account.refreshTransactionSimulation(request, true, true)
@@ -1741,7 +1859,9 @@ describe('#claimWalletCallsRequest', () => {
     const expected = JSON.parse(JSON.stringify(request))
     accounts.update.mockClear()
 
-    expect(() => account.claimWalletCallsRequest(request.handlerId)).toThrow(/delegated accounts/i)
+    expect(() => account.claimWalletCallsRequest(request.handlerId)).toThrow(
+      'Wallet-call batches from delegated sending accounts are not supported.'
+    )
     expect(request).toEqual(expected)
     expect(accounts.update).not.toHaveBeenCalled()
   })
@@ -1867,19 +1987,33 @@ describe('#signTransaction', () => {
     gasFeesSource: GasFeesSource.Frame,
     ...overrides
   })
+  const addReviewedTransaction = (rawTx, evidence = accountCodeEvidence(rawTx.to)) => {
+    const request = {
+      handlerId: 'reviewed-transaction',
+      type: 'transaction',
+      data: rawTx,
+      simulation: { status: 'succeeded', accountCodeEvidence: evidence }
+    }
+    account.requests['reviewed-transaction'] = request
+    return request
+  }
 
-  it('signs once with the matching signer address index', () => {
+  it('signs once with the matching signer address index after stable account-code revalidation', async () => {
     const callback = jest.fn()
+    const rawTx = validTransaction()
     const signer = {
       addresses: [delegate, accountState.address],
       signTransaction: jest.fn((_index, _transaction, cb) => cb(null, '0xsigned'))
     }
     account.signer = 'signer-id'
     signers.get.mockReturnValueOnce(signer)
+    addReviewedTransaction(rawTx)
 
-    account.signTransaction(validTransaction(), callback)
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
 
-    expect(signer.signTransaction).toHaveBeenCalledWith(1, validTransaction(), callback)
+    expect(inspectTransactionAccountCode).toHaveBeenCalledWith(rawTx, expect.any(Object))
+    expect(signer.signTransaction).toHaveBeenCalledWith(1, rawTx, callback)
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback).toHaveBeenCalledWith(null, '0xsigned')
   })
@@ -1900,18 +2034,132 @@ describe('#signTransaction', () => {
     expect(signers.get).not.toHaveBeenCalled()
   })
 
-  it('reports a signer-address mismatch once without signing at index -1', () => {
+  it('reports a signer-address mismatch once without signing at index -1', async () => {
     const callback = jest.fn()
+    const rawTx = validTransaction()
     const signer = { addresses: [delegate], signTransaction: jest.fn() }
     account.signer = 'signer-id'
     signers.get.mockReturnValueOnce(signer)
+    addReviewedTransaction(rawTx)
 
-    account.signTransaction(validTransaction(), callback)
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
 
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback.mock.calls[0][0]).toEqual(
       expect.objectContaining({ message: expect.stringMatching(/cannot sign for this address/i) })
     )
+    expect(signer.signTransaction).not.toHaveBeenCalled()
+  })
+
+  it('fails closed before signing when target account code changed after review', async () => {
+    const callback = jest.fn()
+    const rawTx = validTransaction()
+    const signer = { addresses: [accountState.address], signTransaction: jest.fn() }
+    const changed = accountCodeEvidence()
+    changed.targets[0] = {
+      ...changed.targets[0],
+      status: 'delegated',
+      codeHash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      delegate,
+      delegateCodeStatus: 'contract',
+      delegateCodeHash: '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValue(signer)
+    const request = addReviewedTransaction(rawTx)
+    request.locked = true
+    request.status = 'pending'
+    inspectTransactionAccountCode.mockResolvedValueOnce(changed)
+
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'account-code-evidence-changed',
+        message: `Delegation changed for ${tokenContract}. Request not sent.`
+      })
+    )
+    expect(request).toMatchObject({
+      locked: true,
+      status: 'error',
+      notice: `Delegation changed for ${tokenContract}. Request not sent.`
+    })
+    expect(accounts.update).toHaveBeenCalled()
+    expect(signer.signTransaction).not.toHaveBeenCalled()
+  })
+
+  it('fails closed before signing when fresh target account code is unavailable', async () => {
+    const callback = jest.fn()
+    const rawTx = validTransaction()
+    const signer = { addresses: [accountState.address], signTransaction: jest.fn() }
+    const unavailable = accountCodeEvidence()
+    unavailable.targets[0] = {
+      role: 'target',
+      callIndexes: [0],
+      status: 'unavailable',
+      source: 'eth_getCode',
+      trust: 'configured-rpc',
+      account: tokenContract,
+      reasonCode: 'timeout',
+      reason: 'Account code check timed out'
+    }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValue(signer)
+    addReviewedTransaction(rawTx)
+    inspectTransactionAccountCode.mockResolvedValueOnce(unavailable)
+
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'account-code-evidence-unavailable',
+        message: `Delegation recheck unavailable for ${tokenContract}. Request not sent.`
+      })
+    )
+    expect(signer.signTransaction).not.toHaveBeenCalled()
+  })
+
+  it('uses the reviewed batch evidence when signing each prepared wallet call', async () => {
+    const callback = jest.fn()
+    const request = readyWalletCallsRequest('sign-reviewed-wallet-call')
+    request.simulation.accountCodeEvidence = accountCodeEvidence()
+    account.requests[request.handlerId] = request
+    account.claimWalletCallsRequest(request.handlerId)
+    const rawTx = { ...request.preparation.calls[0].transaction }
+    const signer = {
+      addresses: [accountState.address],
+      signTransaction: jest.fn((_index, _transaction, cb) => cb(null, '0xsigned'))
+    }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValueOnce(signer)
+
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
+
+    expect(signer.signTransaction).toHaveBeenCalledWith(0, rawTx, callback)
+    expect(callback).toHaveBeenCalledWith(null, '0xsigned')
+  })
+
+  it('rejects wallet-call evidence that belongs only to another call index', async () => {
+    const callback = jest.fn()
+    const request = readyWalletCallsRequest('wrong-wallet-call-evidence-index')
+    const reviewed = accountCodeEvidence()
+    reviewed.targets[0].callIndexes = [1]
+    request.simulation.accountCodeEvidence = reviewed
+    account.requests[request.handlerId] = request
+    account.claimWalletCallsRequest(request.handlerId)
+    const rawTx = { ...request.preparation.calls[0].transaction }
+    const signer = { addresses: [accountState.address], signTransaction: jest.fn() }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValue(signer)
+
+    account.signTransaction(rawTx, callback)
+    await flushPromises()
+
+    expect(callback).toHaveBeenCalledWith(expect.objectContaining({ code: 'account-code-evidence-changed' }))
     expect(signer.signTransaction).not.toHaveBeenCalled()
   })
 })

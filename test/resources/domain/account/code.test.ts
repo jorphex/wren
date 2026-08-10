@@ -1,14 +1,19 @@
 import { parseAccountCode, parseDelegationIndicator } from '../../../../resources/domain/account/code'
+import { keccak256 } from 'ethers'
 
 const delegate = 'aAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa'
 
 it('classifies canonical empty, delegated, and contract code', () => {
-  expect(parseAccountCode('0x')).toEqual({ status: 'no-code' })
+  expect(parseAccountCode('0x')).toEqual({ status: 'no-code', codeHash: keccak256('0x') })
   expect(parseAccountCode(`0xEF0100${delegate}`)).toEqual({
     status: 'delegated',
-    delegate: `0x${delegate.toLowerCase()}`
+    delegate: `0x${delegate.toLowerCase()}`,
+    codeHash: keccak256(`0xEF0100${delegate}`)
   })
-  expect(parseAccountCode('0x60006000')).toEqual({ status: 'contract' })
+  expect(parseAccountCode('0x60006000')).toEqual({
+    status: 'contract',
+    codeHash: keccak256('0x60006000')
+  })
 })
 
 it.each([undefined, null, '', '0x0', '0xzz', '6000', `0x${'00'.repeat(128 * 1024 + 1)}`])(

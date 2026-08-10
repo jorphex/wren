@@ -26,7 +26,21 @@ const transaction = (overrides = {}) => ({
     gasLimit: '0x5208',
     maxFeePerGas: '0x3b9aca00'
   },
-  simulation: { status: 'succeeded' },
+  simulation: {
+    status: 'succeeded',
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: {
+        status: 'no-code',
+        source: 'eth_getCode',
+        trust: 'configured-rpc',
+        account: request.account,
+        codeHash: `0x${'00'.repeat(32)}`,
+        role: 'sender'
+      },
+      targets: []
+    }
+  },
   ...overrides
 })
 

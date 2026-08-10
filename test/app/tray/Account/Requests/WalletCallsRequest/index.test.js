@@ -155,19 +155,76 @@ it('blocks delegated-account submission and reports unavailable delegation check
     delegate: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
   }
   render(<WalletCallsRequest originName='example.test' req={delegated} />)
-  expect(screen.getByText(/Delegated account batch blocked/)).toBeTruthy()
+  expect(
+    screen.getByText(/Wallet-call batches from delegated sending accounts are not supported/)
+  ).toBeTruthy()
   cleanup()
 
   const unavailable = preparedRequest()
-  unavailable.simulation.delegation = {
-    status: 'unavailable',
-    source: 'eth_getCode',
-    account,
-    reason: 'Account delegation check timed out'
+  unavailable.simulation.accountCodeEvidence = {
+    source: 'configured-rpc',
+    sender: {
+      status: 'unavailable',
+      role: 'sender',
+      account,
+      reason: 'Account code check timed out'
+    },
+    targets: []
   }
   render(<WalletCallsRequest originName='example.test' req={unavailable} />)
-  expect(screen.getByText('Account delegation check timed out')).toBeTruthy()
-  expect(screen.queryByText(/Delegated account batch blocked/)).toBeNull()
+  expect(screen.getByText(/Sending account delegation check unavailable/)).toBeTruthy()
+  expect(screen.getByText(/Account code check timed out/)).toBeTruthy()
+  expect(screen.queryByText(/Wallet-call batches from delegated sending accounts/)).toBeNull()
+})
+
+it('shows delegated execution evidence on each affected target', async () => {
+  const delegate = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const req = preparedRequest()
+  req.simulation.accountCodeEvidence = {
+    source: 'configured-rpc',
+    sender: { status: 'no-code', role: 'sender', account },
+    targets: [
+      {
+        status: 'delegated',
+        role: 'target',
+        account: target,
+        callIndexes: [0, 1],
+        delegate,
+        delegateCodeStatus: 'contract'
+      }
+    ]
+  }
+
+  const { user } = render(<WalletCallsRequest originName='example.test' req={req} />)
+  expect(screen.getAllByText(/Target delegates execution to/)).toHaveLength(2)
+  expect(screen.getAllByRole('status')).toHaveLength(2)
+
+  await user.click(screen.getAllByRole('button', { name: /Calldata/ })[0])
+  expect(screen.getByText(new RegExp(`This call runs code from ${delegate}`))).toBeTruthy()
+})
+
+it('qualifies empty delegate bytecode instead of implying that execution is impossible', async () => {
+  const delegate = '0x0000000000000000000000000000000000000001'
+  const req = preparedRequest()
+  req.simulation.accountCodeEvidence = {
+    source: 'configured-rpc',
+    sender: { status: 'no-code', role: 'sender', account },
+    targets: [
+      {
+        status: 'delegated',
+        role: 'target',
+        account: target,
+        callIndexes: [0],
+        delegate,
+        delegateCodeStatus: 'no-code'
+      }
+    ]
+  }
+
+  const { user } = render(<WalletCallsRequest originName='example.test' req={req} />)
+  expect(screen.getByText(/RPC returned empty code/)).toBeTruthy()
+  await user.click(screen.getAllByRole('button', { name: /Calldata/ })[0])
+  expect(screen.getByText(/precompiles can execute without bytecode/i)).toBeTruthy()
 })
 
 it('keeps compact reverting-call evidence and qualified token effects', () => {
