@@ -2,6 +2,7 @@ import link from '../../../../../../resources/link'
 import EnsOverview from '../../Ens'
 
 import Icon from '../../../../../../resources/Components/Icon'
+import AssetMark from '../../../../../../resources/Components/AssetMark'
 import { isNonZeroHex } from '../../../../../../resources/utils'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../../resources/Components/Cluster'
@@ -39,18 +40,23 @@ const ApproveOverview = ({ amount, decimals, symbol }) => {
   )
 }
 
-const SendOverview = ({ req, symbol, decimals, amount: ammt, currencyRate, isTestnet }) => {
+const SendOverview = ({ req, symbol, decimals, amount: ammt, currencyRate, isTestnet, asset }) => {
   const amount = ammt || req.data.value
   return (
     <div className='_txDescriptionTransfer'>
       <span className='_txDescriptionAction'>{'Send'}</span>
-      <DisplayValue
-        type='ether'
-        value={amount}
-        valueDataParams={{ decimals }}
-        currencySymbol={symbol}
-        currencySymbolPosition='last'
-      />
+      <div className='transactionReviewAmountLine'>
+        {asset ? (
+          <AssetMark asset={asset} className='transactionReviewAssetMark' showChain={false} />
+        ) : null}
+        <DisplayValue
+          type='ether'
+          value={amount}
+          valueDataParams={{ decimals }}
+          currencySymbol={symbol}
+          currencySymbolPosition='last'
+        />
+      </div>
       {currencyRate && !isTestnet ? (
         <div className='_txDescriptionFiat'>
           <span aria-hidden='true'>≈</span>
@@ -66,7 +72,7 @@ const SendOverview = ({ req, symbol, decimals, amount: ammt, currencyRate, isTes
   )
 }
 
-export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals }) => {
+export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals, asset }) => {
   const unlimitedApproval =
     action === 'approve' &&
     amountRaw === '115792089237316195423570985008687907853269984665640564039457584007913129639935'
@@ -87,13 +93,18 @@ export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals }
     <div>
       <span>{labels[action] || 'Yearn vault action'}</span>
       {amountRaw !== undefined && decimals !== undefined ? (
-        <DisplayValue
-          type='ether'
-          value={amountRaw}
-          valueDataParams={{ decimals }}
-          currencySymbol={symbol || ''}
-          currencySymbolPosition='last'
-        />
+        <div className='transactionReviewAmountLine'>
+          {asset && ['deposit', 'withdraw'].includes(action) ? (
+            <AssetMark asset={asset} className='transactionReviewAssetMark' showChain={false} />
+          ) : null}
+          <DisplayValue
+            type='ether'
+            value={amountRaw}
+            valueDataParams={{ decimals }}
+            currencySymbol={symbol || ''}
+            currencySymbolPosition='last'
+          />
+        </div>
       ) : (
         <span>{vaultName}</span>
       )}
@@ -104,9 +115,9 @@ export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals }
 const DeployContractOverview = () => <div>Deploying Contract</div>
 const DataOverview = () => <div>Sending data</div>
 
-const ContractCallOverview = ({ req }) => {
+const ContractCallOverview = ({ req, assetContext = {} }) => {
   const { decodedData: { method } = {} } = req
-  return renderRecognizedActions(req) || <SimpleContractCallOverview method={method} />
+  return renderRecognizedActions(req, assetContext) || <SimpleContractCallOverview method={method} />
 }
 
 const actionOverviews = {
@@ -116,22 +127,35 @@ const actionOverviews = {
   ens: EnsOverview
 }
 
-const renderActionOverview = (action, index) => {
+const renderActionOverview = (action, index, req, assetContext) => {
   const { id = '', data } = action
   const key = id + index
   const [_actionClass, actionType] = id.split(':')
   const ActionOverview = actionOverviews[id] || actionOverviews[_actionClass] || SimpleContractCallOverview
 
-  return <ActionOverview key={key} type={actionType} {...{ ...data }} />
+  const asset =
+    id === 'erc20:transfer'
+      ? { ...assetContext, address: req.data.to, symbol: data.symbol }
+      : _actionClass === 'yearn'
+        ? {
+            ...assetContext,
+            address: data.token,
+            artworkKey: data.vaultId,
+            chainId: data.chainId || assetContext.chainId,
+            symbol: data.symbol
+          }
+        : undefined
+
+  return <ActionOverview asset={asset} key={key} type={actionType} {...{ ...data }} />
 }
 
-function renderRecognizedActions(req) {
+function renderRecognizedActions(req, assetContext) {
   const { recognizedActions: actions = [] } = req
 
   return !actions.length ? (
     <div className='_txDescriptionSummaryLine'>Calling Contract</div>
   ) : (
-    actions.map(renderActionOverview)
+    actions.map((action, index) => renderActionOverview(action, index, req, assetContext))
   )
 }
 
@@ -336,6 +360,8 @@ const TxOverview = ({
   const accessList = getAccessListPresentation(req.data)
 
   const Description = BaseOverviews[classification]
+  const chainId = typeof tx.chainId === 'string' ? Number.parseInt(tx.chainId, 16) : Number(tx.chainId)
+  const assetContext = { chainId, primaryColor: chainColor }
 
   if (simple) {
     return (
@@ -371,6 +397,12 @@ const TxOverview = ({
                     symbol={symbol}
                     currencyRate={currencyRate}
                     isTestnet={isTestnet}
+                    asset={
+                      classification === 'NATIVE_TRANSFER'
+                        ? { ...assetContext, native: true, symbol }
+                        : undefined
+                    }
+                    assetContext={assetContext}
                   />
                 </div>
               </RequestHeader>

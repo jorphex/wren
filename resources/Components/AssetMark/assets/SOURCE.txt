@@ -1,0 +1,7 @@
+Artwork source: https://github.com/yearn/tokenAssets
+Pinned source commit: 8d11453565e1abcbaba76334649281a97383b882
+
+The files match the product artwork shown by yearn.fi: yvUSD uses its product
+token logo, while standard allocator vaults use their underlying asset logo.
+This includes native USDC for Base yvUSDC-H and vbUSDC, vbETH, and vbUSDT for
+the Katana vaults. The renderer loads only these bundled files.

@@ -2,14 +2,9 @@ import { BalancesExpanded } from '../../../../../app/tray/Account/Balances/Balan
 import { BalancesPreview } from '../../../../../app/tray/Account/Balances/BalancesPreview'
 import { Balance } from '../../../../../app/tray/Account/Balances/Balance'
 import link from '../../../../../resources/link'
-import { render, screen } from '../../../../componentSetup'
+import { render, screen, within } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
-jest.mock('../../../../../resources/Components/RingIcon', () => {
-  const RingIconMock = () => <span data-testid='ring-icon' />
-  RingIconMock.displayName = 'RingIconMock'
-  return { __esModule: true, default: RingIconMock, RingIconGlyph: RingIconMock }
-})
 
 const account = 'account-1'
 const address = '0x0000000000000000000000000000000000000001'
@@ -106,4 +101,37 @@ it('removes asset quantities and fiat values from the DOM while balances are hid
   expect(screen.getByLabelText('Value hidden').textContent).toBe('$••••')
   expect(screen.queryByTestId('display-value')).toBeNull()
   expect(document.body.textContent).not.toContain('2.4')
+})
+
+it.each([
+  ['yvWETH-1', '0xc56413869c6CDf96496f2b1eF801fEDBdFA7dDB0'],
+  ['USDS', '0xdC035D45d973E3EC169d2276DDab16f1e407384F']
+])('renders bundled artwork for a %s balance without a remote logo', (symbol, tokenAddress) => {
+  const balance = new Balance({
+    symbol,
+    balance: {
+      address: tokenAddress,
+      name: symbol,
+      priceChange: '',
+      decimals: 18,
+      balance: '1',
+      usdRate: { price: 1 },
+      logoURI: ''
+    },
+    i: 0,
+    scanning: false,
+    chainId: 1
+  })
+  balance.store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.networks.ethereum.1') return { name: 'Ethereum', isTestnet: false }
+    if (key === 'main.networksMeta.ethereum.1.primaryColor') return 'accent1'
+    if (key === 'selected.hideBalances') return true
+  }
+
+  render(balance.render())
+
+  const mark = screen.getByRole('img', { name: `${symbol} asset` })
+  expect(within(mark).getByAltText('')).toBeTruthy()
+  expect(mark.textContent).not.toBe(symbol.slice(0, 1))
 })

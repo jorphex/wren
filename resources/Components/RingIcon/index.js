@@ -29,8 +29,8 @@ const wrenIconNames = Object.freeze({
   tokens: 'tokens'
 })
 
-export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, img, small }) => {
-  const imageUrl = safeRemoteImageUrl(img)
+export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, img, bundledImg, small }) => {
+  const imageUrl = bundledImg || safeRemoteImageUrl(img)
   const [failedImageUrl, setFailedImageUrl] = useState('')
 
   if (imageUrl && imageUrl !== failedImageUrl) {

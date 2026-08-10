@@ -1,9 +1,12 @@
 .assetMark
+  --asset-mark-size 32px
+  --asset-mark-glyph-size 30px
+  --asset-mark-chain-size 8px
   position relative
   display inline-flex
-  width 32px
-  height 32px
-  flex 0 0 32px
+  width var(--asset-mark-size)
+  height var(--asset-mark-size)
+  flex 0 0 var(--asset-mark-size)
   align-items center
   justify-content center
   box-sizing border-box
@@ -11,8 +14,8 @@
 
 .assetMarkGlyph
   display flex
-  width 30px
-  height 30px
+  width var(--asset-mark-glyph-size)
+  height var(--asset-mark-glyph-size)
   align-items center
   justify-content center
   overflow hidden
@@ -37,9 +40,25 @@
   position absolute
   right -2px
   bottom -2px
-  width 8px
-  height 8px
+  width var(--asset-mark-chain-size)
+  height var(--asset-mark-chain-size)
   box-sizing content-box
   border 2px solid var(--wren-bg-canvas)
   border-radius 50%
   background var(--asset-mark-chain-color)
+
+.assetMark-card
+  --asset-mark-size 34px
+  --asset-mark-glyph-size 32px
+
+.assetMark-position
+  --asset-mark-size 31px
+  --asset-mark-glyph-size 29px
+
+.assetMark-hero
+  --asset-mark-size 48px
+  --asset-mark-glyph-size 46px
+  --asset-mark-chain-size 16px
+
+  .assetMarkGlyph
+    box-shadow 0 4px 12px rgba(0, 0, 0, .28)

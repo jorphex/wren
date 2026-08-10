@@ -1,8 +1,8 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import AssetMark from '../../../../../resources/Components/AssetMark'
 import { DisplayFiatPrice, DisplayValue } from '../../../../../resources/Components/DisplayValue'
-import { RingIconGlyph } from '../../../../../resources/Components/RingIcon'
 
 export class Balance extends React.Component {
   render() {
@@ -30,7 +30,6 @@ export class Balance extends React.Component {
     const { name: chainName = '', isTestnet = false } = chain
     const chainColor = this.store('main.networksMeta.ethereum', chainId, 'primaryColor')
 
-    const ethMatch = logoURI?.includes('/coins/images/279/large/ethereum.png')
     const hideBalances = this.store('selected.hideBalances')
 
     return (
@@ -42,17 +41,16 @@ export class Balance extends React.Component {
         {scanning && <div className='signerBalanceLoading' style={{ animationDelay: 0.15 * i + 's' }} />}
         <div className='signerBalanceInner' style={{ opacity: !scanning ? 1 : 0 }}>
           <div className='signerBalanceIcon'>
-            <RingIconGlyph
-              img={symbol.toUpperCase() !== 'ETH' && !isTestnet && !ethMatch && logoURI}
-              alt={symbol.toUpperCase()}
-              fallback={symbol.slice(0, 1).toUpperCase()}
-              svgName={symbol.toUpperCase() === 'ETH' || ethMatch ? 'mainnet' : undefined}
-              svgSize={18}
-            />
-            <span
-              className='signerBalanceChainIcon'
-              aria-hidden='true'
-              style={{ background: chainColor ? `var(--${chainColor})` : 'var(--wren-text-muted)' }}
+            <AssetMark
+              asset={{
+                ...balance,
+                address: balance.address,
+                chainId,
+                isTestnet,
+                logoURI,
+                primaryColor: chainColor,
+                symbol
+              }}
             />
           </div>
           <div className='signerBalanceChain' style={{ color: chainColor ? `var(--${chainColor})` : '' }}>

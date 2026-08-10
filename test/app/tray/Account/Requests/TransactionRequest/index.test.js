@@ -434,6 +434,11 @@ describe('simulation review', () => {
     render(
       <YearnOverview
         action='withdraw'
+        asset={{
+          address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+          chainId: 8453,
+          symbol: 'USDC'
+        }}
         vaultName='USDC Horizon yVault'
         amountRaw='12500000'
         symbol='USDC'
@@ -444,6 +449,7 @@ describe('simulation review', () => {
     expect(screen.getByText('Withdraw from Yearn')).toBeTruthy()
     expect(screen.getByText(/12.5/)).toBeTruthy()
     expect(screen.getByText(/USDC/)).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'USDC asset' })).toBeTruthy()
   })
 
   it('derives Yearn intent changes from recognized calldata without calling them simulation', () => {

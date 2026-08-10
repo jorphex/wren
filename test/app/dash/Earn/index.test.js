@@ -322,7 +322,7 @@ it('shows account positions in a distinct section before the chain-separated vau
   ).toBeTruthy()
   expect(positionHeading.compareDocumentPosition(firstVault) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(screen.queryByRole('heading', { name: 'Opportunities' })).toBeNull()
-  expect(document.querySelector('.earnVaultArtwork-ethereum-yvusd')).toBeTruthy()
+  expect(screen.getAllByRole('img', { name: 'yvUSDC asset' }).length).toBeGreaterThan(0)
 })
 
 it('shows a direct vault position as a balance without exposing the internal variant name', async () => {

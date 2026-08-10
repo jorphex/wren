@@ -1,7 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import Icon from '../../../../../resources/Components/Icon'
 import { ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import Gas from '../../../../../resources/Components/Monitor'
 import { NETWORK_PRESETS } from '../../../../../resources/constants'
@@ -41,6 +40,11 @@ export function getActiveConnection(endpoints) {
   )
 }
 
+function blockDisplay(blockHeight) {
+  const value = Number(blockHeight)
+  return Number.isFinite(value) ? value.toLocaleString('en-US') : blockHeight
+}
+
 export class ChainModule extends React.Component {
   render() {
     const { id, type } = this.props
@@ -50,6 +54,7 @@ export class ChainModule extends React.Component {
     const active = getActiveConnection(connection.endpoints)
     if (!active) return null
     const blockHeight = this.store('main.networksMeta.ethereum', id, 'blockHeight')
+    const provider = presetLabel(active.current)
 
     return (
       <ClusterRow>
@@ -57,18 +62,18 @@ export class ChainModule extends React.Component {
           <div className='networkConnectionSummary'>
             <div className='networkConnectionState'>
               <ConnectionIndicator connection={active} />
-              <div className='sliceTileConnectionName'>{presetLabel(active.current)}</div>
+              <div className='sliceTileConnectionName'>{provider}</div>
+              <div className='networkConnectionActive'>Active</div>
             </div>
-            <div className='sliceTileBlock'>
-              <div className='sliceTileBlockIcon'>
-                <Icon name='globe' size={14} />
+            <div className='networkConnectionStats'>
+              <div className='networkConnectionStat'>
+                <span className='networkConnectionStatLabel'>Block</span>
+                <span className='networkConnectionStatValue'>{blockDisplay(blockHeight)}</span>
               </div>
-              <div className='sliceTileChainId'>{id}</div>
-              <div className='sliceTileBlockIcon'>
-                <Icon name='server' size={14} />
+              <div className='networkConnectionStat networkConnectionGas'>
+                <span className='networkConnectionStatLabel'>Gas</span>
+                <Gas chainId={id} inline={true} />
               </div>
-              <div>{blockHeight}</div>
-              <Gas chainId={id} inline={true} />
             </div>
           </div>
         </ClusterValue>

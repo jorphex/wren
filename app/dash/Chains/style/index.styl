@@ -30,7 +30,6 @@
     transition background var(--wren-motion-fast) var(--wren-ease)
 
     .signerName
-      flex 1 1 auto
       width auto
       min-width 0
       height auto
@@ -39,6 +38,18 @@
       font-size var(--wren-type-body)
       font-weight 560
       line-height 1.35
+
+    .networkIdentityText
+      flex 1 1 auto
+      min-width 0
+
+    .networkChainId
+      overflow hidden
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-caption)
+      line-height 1.35
+      text-overflow ellipsis
+      white-space nowrap
 
   .networkDetailsTrigger:hover
     background var(--wren-ledger-hover)
@@ -333,43 +344,69 @@
   letter-spacing 0
   text-transform none
 
-.sliceTileBlock, .sliceChainId
-  display flex
-  align-items center
-  font-family var(--wren-font-mono)
-  font-size var(--wren-type-caption)
-
-.sliceTileBlock
-  padding-right var(--wren-space-3)
-
-  .sliceTileBlockIcon
-    padding-right var(--wren-space-1)
-    color var(--wren-success)
-
-  .sliceTileChainId
-    padding-right var(--wren-space-3)
-
-  .sliceTileGasPrice
-    padding 0 0 0 var(--wren-space-3)
-
-    .sliceTileGasPriceIcon
-      margin-right var(--wren-space-1)
-
-    .sliceTileGasPriceNumber,
-    .sliceTileGasPriceUnit
-      font-size var(--wren-type-caption)
-
 .networkConnectionSummary
   display flex
   width 100%
+  min-height 46px
   box-sizing border-box
-  padding 20px
+  padding 0 var(--wren-space-4)
   align-items center
   justify-content space-between
+  gap var(--wren-space-3)
 
 .networkConnectionState
   display flex
+  flex 1 1 auto
+  min-width 0
   align-items center
+
+  .sliceTileConnectionName
+    min-width 0
+    overflow hidden
+    padding 0 0 0 var(--wren-space-2)
+    text-overflow ellipsis
+    white-space nowrap
+
+.networkConnectionActive
+  flex none
+  margin-left var(--wren-space-2)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+
+.networkConnectionStats
+  display flex
+  flex none
+  align-items center
+  gap var(--wren-space-4)
+
+.networkConnectionStat
+  display flex
+  align-items baseline
+  gap var(--wren-space-1)
+  white-space nowrap
+
+.networkConnectionStatLabel
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+
+.networkConnectionStatValue
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  font-variant-numeric tabular-nums
+
+.networkConnectionGas
+  .sliceTileGasPrice
+    padding 0
+
+  .sliceTileGasPriceIcon
+    display none
+
+  .sliceTileGasPriceNumber,
+  .sliceTileGasPriceUnit
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-variant-numeric tabular-nums
 
 .sliceTileIndicator, .sliceTileIndicatorLarge
   width 8px

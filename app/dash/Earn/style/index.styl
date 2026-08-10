@@ -197,66 +197,7 @@
     min-width 0
 
 .earnVaultArtwork
-  position relative
-  display flex
   flex none
-  width 34px
-  height 34px
-  align-items center
-  justify-content center
-  overflow hidden
-  border-radius 50%
-  color #fff
-  background #1265e8
-  background-position center
-  background-size cover
-  box-shadow 0 2px 8px rgba(0, 0, 0, .22)
-  font-family 'FiraCode'
-  font-size var(--wren-type-caption)
-
-.earnVaultArtwork-ethereum-yvusd
-  background-image url('./Earn/assets/ethereum-yvusd.png')
-
-.earnVaultArtwork-ethereum-yvusds-1
-  background-image url('./Earn/assets/ethereum-yvusds-1.png')
-
-.earnVaultArtwork-ethereum-yvweth-1
-  background-image url('./Earn/assets/ethereum-yvweth-1.png')
-
-.earnVaultArtwork-ethereum-ybold
-  background-image url('./Earn/assets/ethereum-ybold.png')
-
-.earnVaultArtwork-base-yvusdc-h
-  background-image url('./Earn/assets/base-yvusdc-h.png')
-
-.earnVaultArtwork-katana-yvvbusdc
-  background-image url('./Earn/assets/katana-yvvbusdc.png')
-
-.earnVaultArtwork-katana-yvvbeth
-  background-image url('./Earn/assets/katana-yvvbeth.png')
-
-.earnVaultArtwork-katana-yvvbusdt
-  background-image url('./Earn/assets/katana-yvvbusdt.png')
-
-.earnVaultArtwork-ethereum-yvusd,
-.earnVaultArtwork-ethereum-yvusds-1,
-.earnVaultArtwork-ethereum-yvweth-1,
-.earnVaultArtwork-ethereum-ybold,
-.earnVaultArtwork-base-yvusdc-h,
-.earnVaultArtwork-katana-yvvbusdc,
-.earnVaultArtwork-katana-yvvbeth,
-.earnVaultArtwork-katana-yvvbusdt
-  > span
-    opacity 0
-
-.earnVaultArtwork-position
-  width 31px
-  height 31px
-
-.earnVaultArtwork-hero
-  width 48px
-  height 48px
-  box-shadow 0 4px 12px rgba(0, 0, 0, .28)
 
 .earnVaultName, .earnPositionName
   font-size 16px
@@ -873,13 +814,14 @@
   color var(--wren-text-primary)
 
 .earnHero, .earnDetailsHero
-  margin 0 0 var(--wren-space-4)
-  padding var(--wren-space-5)
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
+  margin calc(-1 * var(--wren-space-4)) calc(-1 * var(--wren-space-3)) var(--wren-space-5)
+  padding var(--wren-space-5) calc(var(--wren-space-3) + var(--wren-space-2))
+  border 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+  border-radius 0
   color var(--wren-text-primary)
-  background radial-gradient(circle at 92% 8%, rgba(166, 138, 97, .12), transparent 38%), var(--wren-bg-elevated)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  background transparent
+  box-shadow none
 
   h1
     margin var(--wren-space-1) 0 var(--wren-space-2)
@@ -1119,11 +1061,14 @@
   background transparent
   box-shadow none
 
+.earnVariantGrid
+  gap 0
+
 .earnVariant
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-md)
+  border 0
+  border-radius 0
   color var(--wren-text-primary)
-  background var(--wren-bg-elevated)
+  background transparent
   font-family var(--wren-font-ui)
 
   p
@@ -1133,20 +1078,52 @@ button.earnVariant.wrenControl.wrenControlSecondary
   height auto
   min-height 116px
   padding var(--wren-space-3)
+  border 0
+  border-radius 0
   align-items flex-start
   justify-content flex-start
   flex-direction column
-
-.earnVariantSelected
-  border-color var(--wren-accent-primary)
-  background var(--wren-accent-primary-soft, #29231b)
+  background-color transparent
+  background-image none
   box-shadow none
 
-.earnNotice, .earnProductNote, .earnActionSafety
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-md)
+button.earnVariant.wrenControl.wrenControlSecondary + button.earnVariant.wrenControl.wrenControlSecondary
+  border-left 1px solid var(--wren-border-default)
+
+.earnVariantSelected
+  background var(--wren-surface-active)
+  box-shadow none
+
+button.earnVariant.wrenControl.wrenControlSecondary.earnVariantSelected,
+button.earnVariant.wrenControl.wrenControlSecondary:hover:not(:disabled)
+  background-color var(--wren-surface-active)
+  background-image none
+  box-shadow none
+
+.earnNotice, .earnActionSafety, .earnCooldownNotice
+  border 0
+  border-left 3px solid var(--wren-info)
+  border-radius var(--wren-radius-sm)
   color var(--wren-text-secondary)
-  background var(--wren-bg-elevated)
+  background var(--wren-surface-inset)
+
+.earnNoticeWarn
+  border-left-color var(--wren-warning)
+
+.earnProductNote
+  margin var(--wren-space-3) var(--wren-space-2)
+  padding 0
+  border 0
+  border-radius 0
+  color var(--wren-text-secondary)
+  background transparent
+
+.earnProductNote.earnCooldownNotice
+  margin-top var(--wren-space-3)
+  padding var(--wren-space-3) var(--wren-space-4)
+  border-left 3px solid var(--wren-warning)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
 
 .earnActions
   button

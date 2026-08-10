@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import yearnLogo from 'url:./assets/yearn-logo-white.svg'
 
+import AssetMark from '../../../resources/Components/AssetMark'
 import link from '../../../resources/link'
 import {
   cancelYearnWorkflow,
@@ -101,13 +102,22 @@ export const positionsMatchAccount = (positions, selected) =>
 
 const chainName = (chainId) => CHAINS.find(({ id }) => id === chainId)?.name || `Chain ${chainId}`
 
+const earnChainColors = Object.freeze({ 1: 'accent1', 8453: 'accent8', 747474: 'accent3' })
+
 const VaultArtwork = ({ vault, size = 'card' }) => (
-  <span
-    className={`earnVaultArtwork earnVaultArtwork-${size} earnVaultArtwork-${vault.id}`}
-    aria-hidden='true'
-  >
-    <span>{vault.asset.symbol.slice(0, 3)}</span>
-  </span>
+  <AssetMark
+    asset={{
+      ...vault.asset,
+      address: vault.address,
+      artworkKey: vault.id,
+      chainId: vault.chainId,
+      primaryColor: earnChainColors[vault.chainId],
+      symbol: vault.symbol
+    }}
+    className='earnVaultArtwork'
+    showChain={false}
+    size={size}
+  />
 )
 
 const positionVariantLabel = (vault, variant, cooldown = false) => {

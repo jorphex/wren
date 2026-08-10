@@ -80,10 +80,13 @@ test('keeps the network-list connection summary non-interactive', () => {
   renderConnection()
 
   expect(screen.getByText('PublicNode')).toBeTruthy()
-  expect(screen.getByText('21000000')).toBeTruthy()
+  expect(screen.getByText('Active')).toBeTruthy()
+  expect(screen.getByText('Block')).toBeTruthy()
+  expect(screen.getByText('21,000,000')).toBeTruthy()
+  expect(screen.getByText('Gas')).toBeTruthy()
   expect(screen.getByLabelText('Current gas price 1 gwei')).toBeTruthy()
-  expect(screen.getByTestId('globe-icon')).toBeTruthy()
-  expect(screen.getByTestId('server-icon')).toBeTruthy()
+  expect(screen.queryByTestId('globe-icon')).toBeNull()
+  expect(screen.queryByTestId('server-icon')).toBeNull()
   expect(screen.queryByRole('button', { name: /RPC connection details/ })).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
 })
@@ -100,7 +103,8 @@ test('opens network details from the identity region while keeping the toggle se
       showToggle={true}
     />
   )
-  const details = screen.getByRole('button', { name: 'Open Polygon network details' })
+  const details = screen.getByRole('button', { name: 'Polygon, Chain ID 137' })
+  expect(screen.getByText('Chain ID 137')).toBeTruthy()
   const toggle = screen.getByRole('button', { name: 'Disable Polygon' })
 
   expect(details.classList.contains('networkDetailsTrigger')).toBe(true)

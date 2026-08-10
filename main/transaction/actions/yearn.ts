@@ -83,16 +83,24 @@ const tokenMetadata = (
   address: string
 ) => {
   if (sameAddress(definition.asset.address, address)) {
-    return { symbol: definition.asset.symbol, decimals: definition.asset.decimals }
+    return { symbol: definition.asset.symbol, decimals: definition.asset.decimals, token: getAddress(address) }
   }
   if (sameAddress(definition.address, address)) {
     const variant = vault?.variants.find(({ address: candidate }) => sameAddress(candidate, address))
-    return { symbol: variant?.symbol || definition.name, decimals: definition.decimals }
+    return {
+      symbol: variant?.symbol || definition.name,
+      decimals: definition.decimals,
+      token: getAddress(address)
+    }
   }
   const companion = definition.companions?.find(({ address: candidate }) => sameAddress(candidate, address))
   if (!companion) return {}
   const variant = vault?.variants.find(({ address: candidate }) => sameAddress(candidate, address))
-  return { symbol: variant?.symbol || `${definition.name} ${companion.id}`, decimals: companion.decimals }
+  return {
+    symbol: variant?.symbol || `${definition.name} ${companion.id}`,
+    decimals: companion.decimals,
+    token: getAddress(address)
+  }
 }
 
 const outputTokenMetadata = (

@@ -248,8 +248,11 @@ export const ChainHeader = ({
           svgSize={isCustomIdentity ? undefined : 20}
         />
       </div>
-      <div role='chainName' className='signerName'>
-        {name}
+      <div className='networkIdentityText'>
+        <div role='chainName' className='signerName'>
+          {name}
+        </div>
+        <div className='networkChainId'>Chain ID {id}</div>
       </div>
       {showExpand && (
         <span className='networkDetailsChevron' aria-hidden='true'>
@@ -268,7 +271,7 @@ export const ChainHeader = ({
       {showExpand ? (
         <button
           type='button'
-          aria-label={`Open ${name} network details`}
+          aria-label={`${name}, Chain ID ${id}`}
           className='signerDetails networkDetailsTrigger'
           onClick={openDetails}
         >
