@@ -1,4 +1,13 @@
 {
   "roots": ["test/e2e"],
-  "testTimeout": 30000
+  "testEnvironment": "node",
+  "testTimeout": 10000,
+  "setupFiles": ["<rootDir>/test/e2e/setup/isolation.js"],
+  "transform": {
+    "\\.[jt]sx?$": ["babel-jest", { "configFile": "./.babelrc.json" }]
+  },
+  "transformIgnorePatterns": [
+    "/node_modules/(?!(@ethereumjs/wallet|@ethereumjs/util|ethereum-cryptography|@noble/[^/]+|@scure/[^/]+)(/|$))"
+  ],
+  "clearMocks": true
 }

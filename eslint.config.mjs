@@ -15,9 +15,8 @@ export default [
   },
   // Temporary ignored dirs
   // TODO: remove signers on rewrite
-  // TODO: remove e2e on rewrite
   {
-    ignores: ['test/e2e/**/*', 'main/signers/**/*']
+    ignores: ['main/signers/**/*']
   },
   // All files
   {
@@ -51,6 +50,7 @@ export default [
       'resources/**/*.{js,ts}',
       'test/*.js',
       'test/__mocks__/*.js',
+      'test/e2e/**/*.js',
       'test/main/**/*.{js,ts}'
     ],
     ignores: ['resources/Components/**/*', 'resources/Hooks/**/*', 'resources/Native/**/*'],

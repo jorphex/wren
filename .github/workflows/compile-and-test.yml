@@ -37,6 +37,7 @@ jobs:
       - run: npm run lint
       - run: npm run compile
       - run: npm test
+      - run: npm run test:e2e
       - run: npm run test:usbAdapters
 
   package-linux:
