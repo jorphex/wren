@@ -72,7 +72,7 @@ it('keeps filtered misses plain instead of showing empty-account artwork', () =>
   expect(document.querySelector('.wrenEmptyStateImage')).toBeNull()
 })
 
-it('removes asset quantities and fiat values from the DOM while balances are hidden', () => {
+it('hides holdings while keeping public unit prices visible', () => {
   const tokenBalance = {
     name: 'Test token',
     priceChange: '2.4',
@@ -99,8 +99,9 @@ it('removes asset quantities and fiat values from the DOM while balances are hid
 
   expect(screen.getByLabelText('Balance hidden').textContent).toContain('•••• TST')
   expect(screen.getByLabelText('Value hidden').textContent).toBe('$••••')
-  expect(screen.queryByTestId('display-value')).toBeNull()
-  expect(document.body.textContent).not.toContain('2.4')
+  expect(screen.getAllByTestId('display-value')).toHaveLength(1)
+  expect(document.body.textContent).not.toContain('2,500')
+  expect(document.body.textContent).toContain('2.4')
 })
 
 it.each([

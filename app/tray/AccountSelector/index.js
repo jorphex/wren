@@ -172,7 +172,7 @@ export class AccountSelector extends React.Component {
         <button
           type='button'
           ref={this.accountTriggerRef}
-          className='accountSwitcherTrigger wrenControl wrenControlSecondary'
+          className='accountSwitcherTrigger wrenControl wrenControlGhost'
           aria-expanded={this.store('selected.showAccounts')}
           aria-controls='account-switcher-panel'
           onClick={() => this.store.toggleShowAccounts()}

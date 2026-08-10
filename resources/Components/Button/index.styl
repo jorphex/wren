@@ -151,24 +151,32 @@ button.wrenControl.wrenShellNav
   height 40px
   min-height 40px
   padding 0
-  border-color var(--wren-border-default)
+  border-color transparent
   border-radius 7px
   color var(--wren-text-secondary)
-  background-color var(--wren-bg-elevated)
-  background-image var(--wren-control-texture-dark)
-  box-shadow var(--wren-control-shadow)
+  background-color transparent
+  background-image none
+  box-shadow none
 
   &:hover:not(:disabled)
-    color var(--wren-accent-primary-hover)
-    border-color var(--wren-border-strong)
-    background-color var(--wren-bg-panel)
-    background-image var(--wren-control-texture-dark)
-    box-shadow var(--wren-control-shadow-hover)
+    color var(--wren-text-primary)
+    border-color var(--wren-border-subtle)
+    background-color var(--wren-surface-hover)
+    background-image none
+    box-shadow none
 
   &:active:not(:disabled)
     color var(--wren-accent-primary-active)
     background-color var(--wren-surface-active)
-    box-shadow var(--wren-control-shadow-pressed)
+    box-shadow none
+
+  &[aria-pressed='true'],
+  &[aria-expanded='true']
+    color var(--wren-text-primary)
+    border-color var(--wren-border-subtle)
+    background-color var(--wren-surface-active)
+    background-image none
+    box-shadow var(--wren-shadow-sm)
 
 button.wrenControl.wrenControlPrimary:disabled,
 button.wrenControl.wrenControlPrimary[aria-disabled='true'],

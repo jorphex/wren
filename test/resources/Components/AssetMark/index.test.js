@@ -46,6 +46,14 @@ it('requires native identity before selecting the Ethereum glyph', () => {
   expect(resolveAssetArtwork({ chainId: 1, native: true, symbol: 'ETH' }).svgName).toBe('mainnet')
 })
 
+it('centers the native Ethereum artwork without a vertical transform', () => {
+  render(<AssetMark asset={{ chainId: 1, native: true, symbol: 'ETH' }} />)
+
+  const mark = screen.getByTestId('ethereum-mark')
+  expect(mark.style.transform).toBe('')
+  expect(mark.getAttribute('width')).toBe('17px')
+})
+
 it('falls back to the asset initial if bundled artwork cannot load', () => {
   render(<AssetMark asset={yvWeth} size='hero' />)
 

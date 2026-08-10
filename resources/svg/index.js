@@ -345,7 +345,6 @@ export default {
           aria-hidden='true'
           data-testid='ethereum-mark'
           focusable='false'
-          style={{ transform: 'translateY(1px)' }}
         >
           <path
             fill='currentColor'

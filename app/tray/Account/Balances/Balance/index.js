@@ -74,28 +74,26 @@ export class Balance extends React.Component {
             )}
           </div>
           <div className='signerBalancePrice'>
+            <div className='signerBalanceOk'>
+              <span className='signerBalanceCurrentPrice'>
+                <DisplayFiatPrice decimals={decimals} currencyRate={currencyRate} isTestnet={isTestnet} />
+              </span>
+              <span className={priceChangeClass}>
+                <span>{displayPriceChange()}</span>
+              </span>
+            </div>
             {hideBalances ? (
               <span className='signerBalancePrivatePrice' aria-label='Value hidden'>
                 $••••
               </span>
             ) : (
-              <>
-                <div className='signerBalanceOk'>
-                  <span className='signerBalanceCurrentPrice'>
-                    <DisplayFiatPrice decimals={decimals} currencyRate={currencyRate} isTestnet={isTestnet} />
-                  </span>
-                  <span className={priceChangeClass}>
-                    <span>{displayPriceChange()}</span>
-                  </span>
-                </div>
-                <DisplayValue
-                  type='fiat'
-                  value={balanceValue}
-                  valueDataParams={{ decimals, currencyRate, isTestnet }}
-                  currencySymbol='$'
-                  displayDecimals={false}
-                />
-              </>
+              <DisplayValue
+                type='fiat'
+                value={balanceValue}
+                valueDataParams={{ decimals, currencyRate, isTestnet }}
+                currencySymbol='$'
+                displayDecimals={false}
+              />
             )}
           </div>
         </div>

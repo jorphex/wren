@@ -24,10 +24,11 @@ test('uses a symbol initial when a remote token image fails', () => {
   expect(screen.queryByRole('img', { name: 'USDC' })).toBeNull()
 })
 
-test('uses the optically corrected square Ethereum mark for chain and asset identities', () => {
+test('uses the centered square Ethereum mark for chain and asset identities', () => {
   render(<RingIconGlyph svgName='ethereum' />)
   const mark = screen.getByTestId('ethereum-mark')
 
   expect(mark.getAttribute('viewBox')).toBe('0 0 84 84')
-  expect(mark.style.transform).toBe('translateY(1px)')
+  expect(mark.getAttribute('width')).toBe('16px')
+  expect(mark.style.transform).toBe('')
 })
