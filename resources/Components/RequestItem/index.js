@@ -14,6 +14,15 @@ const requestIcons = {
   tokens: 'tokens'
 }
 
+let pendingRequestFocus = null
+
+export const consumePendingRequestFocus = (account) => {
+  if (!pendingRequestFocus || pendingRequestFocus.account !== account) return null
+  const focusTarget = pendingRequestFocus
+  pendingRequestFocus = null
+  return focusTarget
+}
+
 class _RequestItem extends React.Component {
   constructor(props, context) {
     super(props, context)
@@ -46,6 +55,11 @@ class _RequestItem extends React.Component {
   openRequest(account, req) {
     if (this.navigationPending) return
     this.navigationPending = true
+    pendingRequestFocus = {
+      account,
+      handlerId: req.handlerId,
+      index: this.props.i || 0
+    }
     this.setState({ opening: true })
     const crumb = {
       view: 'requestView',
@@ -58,7 +72,7 @@ class _RequestItem extends React.Component {
     link.send('nav:forward', 'panel', crumb)
   }
   render() {
-    const { account, title, svgName, img, color, headerMode, req, children } = this.props
+    const { account, title, svgName, img, color, headerMode, req, children, actionRef } = this.props
 
     let requestItemDetailsClass = 'requestItemDetails'
     let requestItemNoticeClass = 'requestItemNotice'
@@ -92,6 +106,7 @@ class _RequestItem extends React.Component {
       <ClusterRow>
         <ClusterValue
           ariaLabel={!headerMode ? `Review ${title}` : undefined}
+          actionRef={actionRef}
           disabled={!headerMode && this.state.opening}
           onClick={!headerMode ? () => this.openRequest(account, req) : null}
         >

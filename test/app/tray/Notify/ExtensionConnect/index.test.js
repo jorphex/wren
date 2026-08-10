@@ -1,7 +1,7 @@
 import link from '../../../../../resources/link'
 import ExtensionConnectNotification from '../../../../../app/tray/Notify/ExtensionConnect'
 import { Notify } from '../../../../../app/tray/Notify'
-import { render, screen } from '../../../../componentSetup'
+import { act, render, screen, waitFor } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 jest.mock('../../../../../asset/WrenIcon.png', () => 'wren-icon.png')
@@ -63,8 +63,17 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
   const accept = screen.getByRole('button', { name: 'Accept extension connection' })
   accept.focus()
   await user.keyboard('{Enter}')
-  expect(link.rpc).toHaveBeenCalledWith('respondToExtensionRequest', 'pairing-request', true, onClose)
+  expect(link.rpc).toHaveBeenCalledWith(
+    'respondToExtensionRequest',
+    'pairing-request',
+    true,
+    expect.any(Function)
+  )
+  expect(onClose).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'Decline extension connection' }).disabled).toBe(true)
+
+  link.rpc.mock.calls[0][3](null)
+  expect(onClose).toHaveBeenCalledTimes(1)
 })
 
 it('settles one response for duplicate extension authorization input', async () => {
@@ -81,4 +90,32 @@ it('settles one response for duplicate extension authorization input', async () 
   await user.dblClick(screen.getByRole('button', { name: 'Accept extension connection' }))
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
+})
+
+it('keeps pairing open after an RPC error and permits one guarded retry', async () => {
+  const onClose = jest.fn()
+  const { user } = render(
+    <ExtensionConnectNotification
+      browser='chrome'
+      extensionId='cccccccccccccccccccccccccccccccc'
+      pairingCode='111222'
+      requestId='retry-request'
+      onClose={onClose}
+    />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Accept extension connection' }))
+  act(() => link.rpc.mock.calls[0][3](new Error('pairing failed')))
+
+  expect(onClose).not.toHaveBeenCalled()
+  expect(screen.getByRole('heading', { name: 'Could not connect to the extension' })).toBeTruthy()
+  expect(screen.getByText('Wren could not complete pairing with the extension.')).toBeTruthy()
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' })))
+
+  await user.dblClick(screen.getByRole('button', { name: 'Retry' }))
+  expect(link.rpc).toHaveBeenCalledTimes(2)
+  expect(link.rpc.mock.calls[1].slice(0, 3)).toEqual(['respondToExtensionRequest', 'retry-request', true])
+
+  link.rpc.mock.calls[1][3](null)
+  expect(onClose).toHaveBeenCalledTimes(1)
 })

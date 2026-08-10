@@ -9,10 +9,16 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
   const browserIcon = svg[browser] || svg.chrome
   const [copyId, setCopyId] = useState(false)
   const [responding, setResponding] = useState(false)
+  const [responseError, setResponseError] = useState(false)
   const copyTimerRef = useRef()
+  const errorCancelRef = useRef()
   const responsePendingRef = useRef(false)
+  const lastResponseRef = useRef(true)
 
   useEffect(() => () => clearTimeout(copyTimerRef.current), [])
+  useEffect(() => {
+    if (responseError) errorCancelRef.current?.focus()
+  }, [responseError])
 
   const copyExtensionId = () => {
     link.send('tray:clipboardData', extensionId)
@@ -24,8 +30,52 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
   const respond = (accepted) => {
     if (responsePendingRef.current) return
     responsePendingRef.current = true
+    lastResponseRef.current = accepted
     setResponding(true)
-    link.rpc('respondToExtensionRequest', requestId, accepted, onClose)
+    link.rpc('respondToExtensionRequest', requestId, accepted, (error) => {
+      responsePendingRef.current = false
+      if (error) {
+        setResponding(false)
+        setResponseError(true)
+      } else {
+        onClose()
+      }
+    })
+  }
+
+  if (responseError) {
+    return (
+      <div className='notifyBoxWrap' onMouseDown={(event) => event.stopPropagation()}>
+        <div className='notifyBoxSlide'>
+          <div className='notifyBox extensionConnectBox'>
+            <h2 id='wren-notify-title' className='notifyTitle'>
+              Could not connect to the extension
+            </h2>
+            <div className='notifyBody'>Wren could not complete pairing with the extension.</div>
+            <div className='notifyInput'>
+              <button
+                ref={errorCancelRef}
+                type='button'
+                className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
+                data-dialog-initial-focus
+                disabled={responding}
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                type='button'
+                className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
+                disabled={responding}
+                onClick={() => respond(lastResponseRef.current)}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

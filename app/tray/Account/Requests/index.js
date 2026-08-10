@@ -13,7 +13,7 @@ import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v2.png'
 
 import TxOverview from './TransactionRequest/TxMainNew/overview'
 
-import RequestItem from '../../../../resources/Components/RequestItem'
+import RequestItem, { consumePendingRequestFocus } from '../../../../resources/Components/RequestItem'
 import Icon from '../../../../resources/Components/Icon'
 import WrenEmptyState from '../../../../resources/Components/WrenEmptyState'
 
@@ -28,10 +28,17 @@ export class Requests extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      minimized: false
+      minimized: false,
+      clearOrigin: null,
+      clearingOrigin: null
     }
     this.moduleRef = React.createRef()
     this.previewRef = React.createRef()
+    this.inboxHeadingRef = React.createRef()
+    this.clearCancelRef = React.createRef()
+    this.requestRefs = new Map()
+    this.clearButtonRefs = new Map()
+    this.clearPendingOrigins = new Set()
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
@@ -52,11 +59,75 @@ export class Requests extends React.Component {
     if (!this.props.expanded && restorePreviewFocus) {
       restorePreviewFocus = false
       window.setTimeout(() => this.previewRef.current?.focus(), 0)
+    } else if (this.props.expanded) {
+      const focusTarget = consumePendingRequestFocus(this.props.account)
+      if (focusTarget) {
+        window.setTimeout(() => this.restoreRequestFocus(focusTarget), 0)
+      }
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.clearOrigin && prevState.clearOrigin !== this.state.clearOrigin) {
+      window.setTimeout(() => this.clearCancelRef.current?.focus(), 0)
+    }
+
+    if (this.state.clearingOrigin && !this.clearButtonRefs.get(this.state.clearingOrigin)) {
+      this.clearPendingOrigins.delete(this.state.clearingOrigin)
+      this.setState({ clearingOrigin: null }, () => {
+        window.setTimeout(() => this.focusFirstRequestOrHeading(), 0)
+      })
     }
   }
 
   componentWillUnmount() {
     if (this.resizeObserver) this.resizeObserver.disconnect()
+  }
+
+  setRequestRef(handlerId, element) {
+    if (element) this.requestRefs.set(handlerId, element)
+    else this.requestRefs.delete(handlerId)
+  }
+
+  setClearButtonRef(origin, element) {
+    if (element) this.clearButtonRefs.set(origin, element)
+    else this.clearButtonRefs.delete(origin)
+  }
+
+  focusFirstRequestOrHeading() {
+    const firstRequest = this.renderedRequests?.find((request) => this.requestRefs.has(request.handlerId))
+    const target = firstRequest ? this.requestRefs.get(firstRequest.handlerId) : this.inboxHeadingRef.current
+    target?.focus()
+  }
+
+  restoreRequestFocus({ handlerId, index }) {
+    let target = this.requestRefs.get(handlerId)
+
+    if (!target && this.renderedRequests?.length) {
+      const fallbackIndex = Math.min(index, this.renderedRequests.length - 1)
+      target = this.requestRefs.get(this.renderedRequests[fallbackIndex].handlerId)
+    }
+
+    ;(target || this.inboxHeadingRef.current)?.focus()
+  }
+
+  openClearConfirmation(origin) {
+    if (this.clearPendingOrigins.has(origin)) return
+    this.setState({ clearOrigin: origin })
+  }
+
+  cancelClearConfirmation() {
+    const origin = this.state.clearOrigin
+    this.setState({ clearOrigin: null }, () => {
+      window.setTimeout(() => this.clearButtonRefs.get(origin)?.focus(), 0)
+    })
+  }
+
+  confirmClearRequests(origin) {
+    if (this.clearPendingOrigins.has(origin)) return
+    this.clearPendingOrigins.add(origin)
+    this.setState({ clearOrigin: null, clearingOrigin: origin })
+    link.send('tray:clearRequestsByOrigin', this.props.account, origin)
   }
 
   renderPreview() {
@@ -95,8 +166,54 @@ export class Requests extends React.Component {
     )
   }
 
+  renderClearConfirmation(origin, count) {
+    if (this.state.clearOrigin !== origin) return null
+
+    const requestLabel = count === 1 ? 'request' : 'requests'
+
+    return (
+      <div
+        className='requestGroupClearConfirmation'
+        role='alertdialog'
+        aria-labelledby='request-clear-title'
+        aria-describedby='request-clear-body'
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            this.cancelClearConfirmation()
+          }
+        }}
+      >
+        <div id='request-clear-title' className='requestGroupClearTitle'>
+          {`Clear ${count} staged ${requestLabel}?`}
+        </div>
+        <div id='request-clear-body' className='requestGroupClearBody'>
+          {`This removes the staged ${requestLabel} from this list. It does not cancel transactions already submitted.`}
+        </div>
+        <div className='requestGroupClearActions'>
+          <button
+            ref={this.clearCancelRef}
+            type='button'
+            className='wrenControl wrenControlSecondary wrenControlCompact'
+            onClick={() => this.cancelClearConfirmation()}
+          >
+            Cancel
+          </button>
+          <button
+            type='button'
+            className='wrenControl wrenControlDanger wrenControlCompact'
+            onClick={() => this.confirmClearRequests(origin)}
+          >
+            Clear all
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   renderRequestGroup(origin, requests) {
     const groupName = getOriginDisplayName(this.store('main.origins', origin, 'name'))
+    const clearing = this.clearPendingOrigins.has(origin)
 
     return (
       <section className='requestGroupBlock' key={origin}>
@@ -108,24 +225,25 @@ export class Requests extends React.Component {
             <div className='requestGroupName'>{groupName}</div>
           </div>
           <button
+            ref={(element) => this.setClearButtonRef(origin, element)}
             type='button'
             aria-label={`Clear requests from ${groupName}`}
             className='requestGroupButton wrenControl wrenControlGhost wrenControlCompact'
-            onClick={() => {
-              link.send('tray:clearRequestsByOrigin', this.props.account, origin)
-            }}
+            disabled={clearing}
+            onClick={() => this.openClearConfirmation(origin)}
           >
             <Icon name='close' size={14} />
             <span className='requestGroupButtonLabel'>{'Clear all'}</span>
           </button>
         </div>
+        {this.renderClearConfirmation(origin, requests.length)}
         <Cluster className='requestLedger'>
           {!requests.length ? (
             <div key='noReq' className='noRequests'>
               No pending requests
             </div>
           ) : null}
-          {requests.map((req, i) => {
+          {requests.map((req) => {
             if (req.type === 'access') {
               return (
                 <RequestItem
@@ -133,7 +251,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={'Account access'}
                   color={'var(--outerspace)'}
                   svgName={'accounts'}
@@ -148,7 +267,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={'Sign message'}
                   color={'var(--outerspace)'}
                   svgName={'sign'}
@@ -163,7 +283,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={'Sign typed data'}
                   color={'var(--outerspace)'}
                   svgName={'sign'}
@@ -182,7 +303,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={`${chainName} token permit`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}
@@ -197,7 +319,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={'Add network'}
                   color={'var(--outerspace)'}
                   svgName={'chain'}
@@ -212,7 +335,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={'Add token'}
                   color={'var(--outerspace)'}
                   svgName={'tokens'}
@@ -235,7 +359,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={`${chainName} transaction`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}
@@ -260,7 +385,8 @@ export class Requests extends React.Component {
                   req={req}
                   account={this.props.account}
                   handlerId={req.handlerId}
-                  i={i}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   title={`${chainName} call batch`}
                   color={metadata.primaryColor ? `var(--${metadata.primaryColor})` : 'var(--outerspace)'}
                   img={metadata.icon}
@@ -284,6 +410,8 @@ export class Requests extends React.Component {
       if (a.created < b.created) return 1
       return 0
     })
+    this.renderedRequests = requests
+    this.requestIndexes = new Map(requests.map((request, index) => [request.handlerId, index]))
 
     const originSortedRequests = {}
     requests.forEach((req) => {
@@ -297,6 +425,9 @@ export class Requests extends React.Component {
       <div
         className={`accountViewScroll requestViewScroll${groups.length === 0 ? ' requestViewScrollEmpty' : ''}`}
       >
+        <h2 ref={this.inboxHeadingRef} className='requestInboxHeading' tabIndex={-1}>
+          Requests
+        </h2>
         {groups.length === 0 ? (
           <WrenEmptyState
             image={emptyRequests}
