@@ -17,6 +17,7 @@ import AddPhrase from './Add/AddPhrase'
 import AddRing from './Add/AddRing'
 import AddKeystore from './Add/AddKeystore'
 import AddAddress from './Add/AddAddress'
+import { compactAccountAddress } from './address'
 
 export class AddAccounts extends React.Component {
   constructor(...args) {
@@ -250,11 +251,14 @@ export class Dash extends React.Component {
                 {watchAccounts.map((account) => {
                   const address = getAddress(account.address || account.id)
                   const name = account.ensName || account.name || address
+                  const compactAddress = compactAccountAddress(address)
                   return (
                     <button
                       type='button'
                       className='watchAccount'
                       key={account.id}
+                      aria-label={`${name} ${address}`}
+                      title={address}
                       onClick={() => link.rpc('setSigner', account.id, () => {})}
                     >
                       <span className='watchAccountIcon'>
@@ -262,7 +266,7 @@ export class Dash extends React.Component {
                       </span>
                       <span className='watchAccountIdentity'>
                         <span className='watchAccountName'>{name}</span>
-                        <span className='watchAccountAddress'>{address}</span>
+                        <span className='watchAccountAddress'>{compactAddress}</span>
                       </span>
                       <Icon name='next' size={14} />
                     </button>

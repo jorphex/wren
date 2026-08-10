@@ -1,5 +1,6 @@
 import { AddAccounts, Dash } from '../../../../app/dash/Accounts'
 import link from '../../../../resources/link'
+import { getAddress } from '../../../../resources/utils'
 import { fireEvent, render, screen } from '../../../componentSetup'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn(), rpc: jest.fn() }))
@@ -41,7 +42,12 @@ it('keeps each account method a one-click route', () => {
 it('keeps watch-only accounts visible and opens them directly', () => {
   render(<AccountsHarness data={{}} />)
 
-  fireEvent.click(screen.getByRole('button', { name: /Workshop/ }))
+  const checkSummedAddress = getAddress(account)
+  const accountRow = screen.getByRole('button', { name: `Workshop ${checkSummedAddress}` })
+
+  expect(screen.getByText('0x0000…0001')).toBeTruthy()
+  expect(accountRow.title).toBe(checkSummedAddress)
+  fireEvent.click(accountRow)
 
   expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
 })

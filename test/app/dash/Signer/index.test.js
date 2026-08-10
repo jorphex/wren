@@ -145,8 +145,10 @@ it('names available signer account actions with their current add or remove beha
   const address = '0x00000000000000000000000000000000000000aa'
   const checkSummedAddress = getAddress(address)
   const view = renderSigner({ type: 'ledger', status: 'ok', addresses: [address] })
+  const addAccount = screen.getByRole('button', { name: `Add ${checkSummedAddress} as an account` })
 
-  expect(screen.getByRole('button', { name: `Add ${checkSummedAddress} as an account` })).toBeTruthy()
+  expect(screen.getByText('0x0000…00AA')).toBeTruthy()
+  expect(addAccount.title).toBe(checkSummedAddress)
 
   view.rerender(
     <SignerHarness
@@ -161,7 +163,10 @@ it('names available signer account actions with their current add or remove beha
     />
   )
 
-  expect(screen.getByRole('button', { name: `Remove ${checkSummedAddress} from accounts` })).toBeTruthy()
+  const removeAccount = screen.getByRole('button', {
+    name: `Remove ${checkSummedAddress} from accounts`
+  })
+  expect(removeAccount.title).toBe(checkSummedAddress)
 })
 
 it('arms signer removal, returns focus safely, and confirms once', async () => {
@@ -203,6 +208,7 @@ it('keeps the signer overview preview bounded while showing its count', () => {
 
   expect(screen.getByText('Active accounts (8)')).toBeTruthy()
   expect(screen.getAllByRole('button', { name: /^0x/ })).toHaveLength(5)
+  expect(screen.getAllByText(/0x0000…000[1-5]/)).toHaveLength(5)
 })
 
 it('keeps all hardware accounts reachable as address capacity responds to shell height', async () => {

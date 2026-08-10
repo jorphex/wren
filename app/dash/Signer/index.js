@@ -9,6 +9,7 @@ import { isHardwareSigner, getSignerDisplayType } from '../../../resources/domai
 
 import SignerStatus from './SignerStatus'
 import ReloadSignerButton from './ReloadSignerButton'
+import { compactAccountAddress } from '../Accounts/address'
 
 function isLoading(status = '') {
   const statusToCheck = status.toLowerCase()
@@ -526,14 +527,12 @@ export class Signer extends React.Component {
                       type='button'
                       key={address}
                       aria-label={checkSummedAddress}
+                      title={checkSummedAddress}
                       className={`signerAccount signerAccountAdded ${current ? 'signerAccountCurrent' : ''}`}
                       onClick={() => link.rpc('setSigner', account.id, () => {})}
                     >
                       <div className='signerAccountIndex'>{index}</div>
-                      <div className='signerAccountAddress'>
-                        {checkSummedAddress.substr(0, 11)} <Icon name='ellipsis' size={20} />{' '}
-                        {checkSummedAddress.substr(address.length - 10)}
-                      </div>
+                      <div className='signerAccountAddress'>{compactAccountAddress(checkSummedAddress)}</div>
                       <div className='signerAccountCheck' />
                     </button>
                   )
@@ -645,6 +644,7 @@ export class Signer extends React.Component {
                         ? `Remove ${checkSummedAddress} from accounts`
                         : `Add ${checkSummedAddress} as an account`
                     }
+                    title={checkSummedAddress}
                     className={!added ? 'signerAccount' : 'signerAccount signerAccountAdded'}
                     onClick={() => {
                       if (this.store('main.accounts', address.toLowerCase())) {
@@ -664,10 +664,7 @@ export class Signer extends React.Component {
                     }}
                   >
                     <div className='signerAccountIndex'>{index + 1 + startIndex}</div>
-                    <div className='signerAccountAddress'>
-                      {checkSummedAddress.substr(0, 11)} <Icon name='ellipsis' size={20} />{' '}
-                      {checkSummedAddress.substr(address.length - 10)}
-                    </div>
+                    <div className='signerAccountAddress'>{compactAccountAddress(checkSummedAddress)}</div>
                     <div className='signerAccountCheck' />
                   </button>
                 )
