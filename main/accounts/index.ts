@@ -1149,12 +1149,12 @@ export class Accounts extends EventEmitter {
     const currentAccount = this.requestAccount(handlerId, accountId)
 
     if (currentAccount && currentAccount.requests[handlerId]) {
-      const txRequest = this.getTransactionRequest(currentAccount, handlerId)
-      if (!isCancelableRequest(txRequest.status || '')) return false
+      const request = currentAccount.requests[handlerId]
+      if (!isCancelableRequest(request.status || '')) return false
 
-      txRequest.status = RequestStatus.Declined
-      txRequest.notice = 'Signature Declined'
-      txRequest.mode = RequestMode.Monitor
+      request.status = RequestStatus.Declined
+      request.notice = request.type === 'transaction' ? 'Transaction declined' : 'Request declined'
+      request.mode = RequestMode.Monitor
 
       setTimeout(
         () => this.accounts[currentAccount.address] && this.removeRequest(currentAccount, handlerId),

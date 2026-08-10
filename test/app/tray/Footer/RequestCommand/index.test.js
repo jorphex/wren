@@ -268,6 +268,33 @@ it('keeps the pending signature cancellation action keyboard accessible', async 
   command.componentWillUnmount()
 })
 
+it('renders a declined transaction without monitor chrome', () => {
+  const req = transaction({ status: 'declined', notice: 'Signature Declined' })
+  const command = new RequestCommand({ req, signingDelay: 0 })
+  command.store = commandStore()
+  renderCommandResult(command, 'renderTxCommand')
+
+  expect(screen.getByText('Transaction declined')).toBeTruthy()
+  expect(screen.getByText('You declined this transaction. Nothing was signed or sent.')).toBeTruthy()
+  expect(screen.queryByLabelText('Show signing status')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Decline' })).toBeNull()
+  expect(screen.queryByText('Signature Declined')).toBeNull()
+  command.componentWillUnmount()
+})
+
+it('renders a declined signature without a failure symbol', () => {
+  const req = { ...request, type: 'sign', status: 'declined', notice: 'Signature Declined' }
+  const command = new RequestCommand({ req, signingDelay: 0 })
+  command.store = commandStore()
+  renderCommandResult(command, 'renderSignDataCommand')
+
+  expect(screen.getByText('Request declined')).toBeTruthy()
+  expect(screen.getByText('Nothing was signed or sent.')).toBeTruthy()
+  expect(document.querySelector('.requestNoticeInnerSymbol')).toBeNull()
+  expect(screen.queryByText('Signature Declined')).toBeNull()
+  command.componentWillUnmount()
+})
+
 it('stops the completed-transaction clock when unmounted', () => {
   const ref = React.createRef()
   const clearIntervalSpy = jest.spyOn(global, 'clearInterval')

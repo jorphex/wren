@@ -1371,7 +1371,7 @@ describe('account-bound request transitions', () => {
     expect(Accounts.current().id).toBe(account.address)
     expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
       status: 'declined',
-      notice: 'Signature Declined'
+      notice: 'Transaction declined'
     })
   })
 
@@ -1389,7 +1389,7 @@ describe('account-bound request transitions', () => {
     expect(Accounts.setTxSent(explicit.handlerId, `0x${'b'.repeat(64)}`, account2.address)).toBe(false)
     expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
       status: 'declined',
-      notice: 'Signature Declined'
+      notice: 'Request declined'
     })
   })
 

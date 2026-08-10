@@ -4,6 +4,11 @@ import RequestItem from '../../../../resources/Components/RequestItem'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 jest.mock('../../../../resources/Components/RingIcon', () => () => null)
+jest.mock('../../../../resources/Components/Icon', () => {
+  return function MockIcon({ name }) {
+    return <span data-icon={name} />
+  }
+})
 
 const account = '0x0000000000000000000000000000000000000001'
 const handlerId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
@@ -63,4 +68,24 @@ it('keeps header request composition static so nested actions remain valid', () 
 
   expect(screen.queryByRole('button', { name: 'Review Base Sepolia Transaction' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Nested review action' })).toBeTruthy()
+})
+
+it('presents a declined request as neutral and inactive rather than failed', () => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      req={{ created: Date.now(), handlerId, status: 'declined', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  const status = screen.getByText('declined')
+  const title = status.closest('.requestItemTitle')
+  const details = Array.from(title.children).find((child) => child.classList.contains('requestItemDetails'))
+
+  expect(details.classList.contains('requestItemDetailsNeutral')).toBe(true)
+  expect(details.classList.contains('requestItemDetailsBad')).toBe(false)
+  expect(details.querySelector('[data-icon="close"]')).toBeTruthy()
+  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
 })

@@ -95,6 +95,22 @@ export class RequestCommand extends React.Component {
     return bn.toFixed(2, BigNumber.ROUND_UP).toString()
   }
 
+  declinedStatus(isTransaction) {
+    const title = isTransaction ? 'Transaction declined' : 'Request declined'
+    const message = isTransaction
+      ? 'You declined this transaction. Nothing was signed or sent.'
+      : 'Nothing was signed or sent.'
+
+    return (
+      <div className='requestNotice requestNoticeDeclined'>
+        <div className='requestNoticeInner requestNoticeDeclinedInner' role='status'>
+          <strong>{title}</strong>
+          <span>{message}</span>
+        </div>
+      </div>
+    )
+  }
+
   sentStatus() {
     const { req } = this.props
     const { notice, status } = req
@@ -367,6 +383,8 @@ export class RequestCommand extends React.Component {
 
     const { infoPane } = this.state
 
+    if (req.status === 'declined') return this.declinedStatus(true)
+
     const showWarning = mode !== 'monitor'
     const requiredApproval = showWarning && getRequiredRequestApproval(req)
 
@@ -397,6 +415,9 @@ export class RequestCommand extends React.Component {
   renderSignDataCommand() {
     const { req } = this.props
     const { status, notice } = req
+
+    if (status === 'declined') return this.declinedStatus(false)
+
     const requiredApproval = getRequiredRequestApproval(req)
 
     if (requiredApproval) {
@@ -435,7 +456,7 @@ export class RequestCommand extends React.Component {
                     <div className='requestNoticeInnerText'>{notice}</div>
                   </div>
                 )
-              } else if (status === 'error' || status === 'declined') {
+              } else if (status === 'error') {
                 return (
                   <div key={status} className='requestNoticeInner requestNoticeError'>
                     <div className='requestNoticeInnerSymbol'>

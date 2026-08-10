@@ -16,7 +16,7 @@ class TxBar extends React.Component {
       position = 4
       progressIconClass += ' txProgressStepIconHidden'
       txBarClass += ' txBarSuccess'
-    } else if (req.status === 'error' || req.status === 'declined') {
+    } else if (req.status === 'error') {
       position = 4
       progressIconClass += ' txProgressStepIconHidden'
       txBarClass += ' txBarError'

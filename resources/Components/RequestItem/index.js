@@ -66,9 +66,12 @@ class _RequestItem extends React.Component {
     if (['sent', 'sending', 'verifying', 'confirming', 'confirmed'].includes(req.status)) {
       requestItemDetailsClass += ' requestItemDetailsGood'
       requestItemNoticeClass += ' requestItemNoticeGood'
-    } else if (['error', 'declined'].includes(req.status)) {
+    } else if (req.status === 'error') {
       requestItemDetailsClass += ' requestItemDetailsBad'
       requestItemNoticeClass += ' requestItemNoticeBad'
+    } else if (req.status === 'declined') {
+      requestItemDetailsClass += ' requestItemDetailsNeutral'
+      requestItemNoticeClass += ' requestItemNoticeNeutral'
     }
 
     const status = (req.status || 'pending').toLowerCase()
@@ -76,11 +79,14 @@ class _RequestItem extends React.Component {
 
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
     const requestIcon = requestIcons[svgName]
-    const statusIcon = ['error', 'declined'].includes(req.status)
-      ? 'failed'
-      : ['sent', 'sending', 'verifying', 'confirming', 'confirmed'].includes(req.status)
-        ? 'check'
-        : 'pending'
+    const statusIcon =
+      req.status === 'error'
+        ? 'failed'
+        : req.status === 'declined'
+          ? 'close'
+          : ['sent', 'sending', 'verifying', 'confirming', 'confirmed'].includes(req.status)
+            ? 'check'
+            : 'pending'
 
     return (
       <ClusterRow>
