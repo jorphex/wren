@@ -30,9 +30,10 @@ test('contains long expanded-signer names inside the dashboard chrome', () => {
   )
 })
 
-test('keeps both dashboard destination groups on balanced three-item rows', () => {
-  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns repeat\(3, minmax\(0, 1fr\)\)/)
-  expect(mainStyle).toMatch(/\.dashModuleSection button\.dashModule[\s\S]*?height 60px/)
+test('keeps dashboard destination descriptions readable in two balanced columns', () => {
+  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns minmax\(0, 1fr\)/)
+  expect(mainStyle).toMatch(/\.dashModules[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/)
+  expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 72px[\s\S]*?height auto/)
 })
 
 test('uses ruled Earn detail regions and the shared focus treatment', () => {
