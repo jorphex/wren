@@ -246,12 +246,13 @@
   align-items center
   justify-content center
   width calc(100% - 16px)
-  margin var(--wren-space-5) var(--wren-space-2)
-  padding var(--wren-space-3)
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
+  margin var(--wren-space-4) var(--wren-space-2)
+  padding var(--wren-space-3) var(--wren-space-2)
+  border 0
+  border-top 1px solid var(--wren-ledger-rule)
+  border-radius 0
   color var(--wren-text-secondary)
-  background var(--wren-bg-elevated)
+  background transparent
   font-family var(--wren-font-ui)
   font-size var(--wren-type-small)
   cursor pointer
@@ -262,12 +263,12 @@
     color var(--wren-accent-primary-hover)
 
 .discordInvite:hover
-  border-color var(--wren-border-default)
+  border-top-color var(--wren-ledger-rule)
   background var(--wren-surface-hover)
 
 .discordInvite:focus-visible
   outline 2px solid var(--wren-focus)
-  outline-offset 2px
+  outline-offset -2px
 
 .connectionLevels
   position relative

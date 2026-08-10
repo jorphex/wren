@@ -141,7 +141,7 @@ const ChainStatus = ({ chain }) => {
       {['disabled', 'disconnected'].includes(chain.status) ? (
         <button
           type='button'
-          className='wrenControl wrenControlSecondary wrenControlCompact'
+          className='wrenControl wrenControlGhost wrenControlCompact'
           onClick={() => link.send('tray:action', 'navDash', { view: 'chains', data: {} })}
         >
           Manage networks
@@ -793,7 +793,7 @@ const VaultDetails = ({
       </div>
       <div className='earnDetailsMetrics'>
         <Metric
-          label={displayVariant?.apy.label || vault.apy.label}
+          label='Est. APY'
           value={formatPercent(displayVariant?.apy.value)}
         />
         <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} />

@@ -408,6 +408,7 @@ it('opens product details and keeps watch-only transactions disabled', async () 
   await user.click(screen.getByRole('button', { name: 'View yvUSD on Ethereum' }))
 
   expect(screen.getByRole('heading', { name: 'Choose how to earn' })).toBeTruthy()
+  expect(screen.getByText('Est. APY')).toBeTruthy()
   expect(screen.getByText(/14-day cooldown/)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Deposit' }).disabled).toBe(true)
   expect(screen.getByText(/Watch-only accounts/)).toBeTruthy()

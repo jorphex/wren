@@ -9,6 +9,24 @@ export function presetLabel(key) {
   return key === 'publicnode' ? 'PublicNode' : key
 }
 
+export function endpointLabel(chainId, connection) {
+  if (connection?.current !== 'custom') return presetLabel(connection?.current)
+  const target = connectionTarget(chainId, connection)
+  try {
+    return new URL(target).hostname.replace(/^www\./, '')
+  } catch {
+    return target || presetLabel(connection?.current)
+  }
+}
+
+export function connectionHealthLabel(connection) {
+  if (connection?.status === 'degraded') return 'Degraded'
+  if (['loading', 'pending', 'syncing'].includes(connection?.status)) return 'Checking connection…'
+  if (connection?.status === 'standby') return 'Standby'
+  if (connection?.status === 'connected' || connection?.connected) return 'Connected'
+  return 'Unavailable'
+}
+
 export function connectionTarget(chainId, connection) {
   if (!connection) return ''
   if (connection.current === 'custom') return connection.custom || ''
@@ -54,7 +72,8 @@ export class ChainModule extends React.Component {
     const active = getActiveConnection(connection.endpoints)
     if (!active) return null
     const blockHeight = this.store('main.networksMeta.ethereum', id, 'blockHeight')
-    const provider = presetLabel(active.current)
+    const provider = endpointLabel(id, active)
+    const health = connectionHealthLabel(active)
 
     return (
       <ClusterRow>
@@ -63,7 +82,7 @@ export class ChainModule extends React.Component {
             <div className='networkConnectionState'>
               <ConnectionIndicator connection={active} />
               <div className='sliceTileConnectionName'>{provider}</div>
-              <div className='networkConnectionActive'>Active</div>
+              <div className='networkConnectionActive'>{health}</div>
             </div>
             <div className='networkConnectionStats'>
               <div className='networkConnectionStat'>

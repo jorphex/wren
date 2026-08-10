@@ -1,7 +1,13 @@
 import Restore from 'react-restore'
 
 import { ChainHeader } from '../../../../../app/dash/Chains/Chain/Components'
-import { ChainModule, connectionTarget, presetLabel } from '../../../../../app/dash/Chains/Chain/Connection'
+import {
+  ChainModule,
+  connectionHealthLabel,
+  connectionTarget,
+  endpointLabel,
+  presetLabel
+} from '../../../../../app/dash/Chains/Chain/Connection'
 import link from '../../../../../resources/link'
 import { render, screen } from '../../../../componentSetup'
 
@@ -67,6 +73,17 @@ function renderConnection(primary = {}) {
 test('presents provider names cleanly', () => {
   expect(presetLabel('publicnode')).toBe('PublicNode')
   expect(presetLabel('custom')).toBe('custom')
+  expect(endpointLabel(1, { current: 'custom', custom: 'https://rpc.example/path' })).toBe('rpc.example')
+  expect(endpointLabel(1, { current: 'custom', custom: 'https://www.node.example' })).toBe('node.example')
+  expect(endpointLabel(1, { current: 'publicnode' })).toBe('PublicNode')
+})
+
+test('labels the active endpoint with its measured health', () => {
+  expect(connectionHealthLabel({ status: 'connected' })).toBe('Connected')
+  expect(connectionHealthLabel({ status: 'degraded', connected: true })).toBe('Degraded')
+  expect(connectionHealthLabel({ status: 'loading' })).toBe('Checking connection…')
+  expect(connectionHealthLabel({ status: 'standby' })).toBe('Standby')
+  expect(connectionHealthLabel({ status: 'error' })).toBe('Unavailable')
 })
 
 test('resolves preset and custom endpoints for the editor', () => {
@@ -80,7 +97,7 @@ test('keeps the network-list connection summary non-interactive', () => {
   renderConnection()
 
   expect(screen.getByText('PublicNode')).toBeTruthy()
-  expect(screen.getByText('Active')).toBeTruthy()
+  expect(screen.getByText('Connected')).toBeTruthy()
   expect(screen.getByText('Block')).toBeTruthy()
   expect(screen.getByText('21,000,000')).toBeTruthy()
   expect(screen.getByText('Gas')).toBeTruthy()
@@ -89,6 +106,14 @@ test('keeps the network-list connection summary non-interactive', () => {
   expect(screen.queryByTestId('server-icon')).toBeNull()
   expect(screen.queryByRole('button', { name: /RPC connection details/ })).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
+})
+
+test('shows a custom endpoint host and degraded health in the network summary', () => {
+  renderConnection({ current: 'custom', custom: 'https://slow.rpc.example/private', status: 'degraded' })
+
+  expect(screen.getByText('slow.rpc.example')).toBeTruthy()
+  expect(screen.getByText('Degraded')).toBeTruthy()
+  expect(screen.queryByText('custom')).toBeNull()
 })
 
 test('opens network details from the identity region while keeping the toggle separate', async () => {

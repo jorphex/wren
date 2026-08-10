@@ -1028,8 +1028,7 @@
 
 .earnDetailsMetrics
   gap 0
-  border-top 1px solid var(--wren-ledger-rule)
-  border-bottom 1px solid var(--wren-ledger-rule)
+  border 0
 
 .earnMetric
   min-height 70px
@@ -1056,7 +1055,6 @@
   padding var(--wren-space-4) var(--wren-space-2)
   border 0
   border-top 1px solid var(--wren-ledger-rule)
-  border-bottom 1px solid var(--wren-ledger-rule)
   border-radius 0
   background transparent
   box-shadow none
@@ -1102,13 +1100,12 @@ button.earnVariant.wrenControl.wrenControlSecondary:hover:not(:disabled)
 
 .earnNotice, .earnActionSafety, .earnCooldownNotice
   border 0
-  border-left 3px solid var(--wren-info)
   border-radius var(--wren-radius-sm)
   color var(--wren-text-secondary)
   background var(--wren-surface-inset)
 
 .earnNoticeWarn
-  border-left-color var(--wren-warning)
+  background var(--wren-warning-soft)
 
 .earnProductNote
   margin var(--wren-space-3) var(--wren-space-2)
@@ -1121,9 +1118,8 @@ button.earnVariant.wrenControl.wrenControlSecondary:hover:not(:disabled)
 .earnProductNote.earnCooldownNotice
   margin-top var(--wren-space-3)
   padding var(--wren-space-3) var(--wren-space-4)
-  border-left 3px solid var(--wren-warning)
   border-radius var(--wren-radius-sm)
-  background var(--wren-surface-inset)
+  background var(--wren-warning-soft)
 
 .earnActions
   button
