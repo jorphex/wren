@@ -64,17 +64,6 @@ const rpc = {
   //     accounts.balanceScan()
   //   }, 320)
   // },
-  unsetSigner: (id, cb) => {
-    const previousAddresses = accounts.getSelectedAddresses()
-
-    accounts.unsetSigner(cb)
-
-    const currentAddresses = accounts.getSelectedAddresses()
-
-    if (!arraysEqual(previousAddresses, currentAddresses)) {
-      provider.accountsChanged(currentAddresses)
-    }
-  },
   // setSignerIndex: signers.setSignerIndex,
   // unsetSigner: signers.unsetSigner,
   trezorPin: (id, pin, cb) => {
@@ -272,11 +261,6 @@ const rpc = {
     const signer = signers.get(id)
     if (!signer || typeof signer.unlock !== 'function') return cb(new Error('Signer is unavailable'))
     signers.unlock(id, password, cb)
-  },
-  lockSigner(id, cb) {
-    const signer = signers.get(id)
-    if (!signer || typeof signer.lock !== 'function') return cb(new Error('Signer is unavailable'))
-    signers.lock(id, cb)
   },
   async resolveEnsName(name, cb) {
     log.debug('Resolving ENS name', { name })

@@ -38,7 +38,7 @@ export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, 
   }
   if (svgName) {
     const iconName = svgName.toLowerCase()
-    const ethChains = ['mainnet', 'görli', 'sepolia', 'ropsten', 'rinkeby', 'kovan']
+    const ethChains = ['ethereum', 'mainnet', 'görli', 'sepolia', 'ropsten', 'rinkeby', 'kovan']
     if (ethChains.includes(iconName)) {
       return svg.eth(small ? 13 : 18)
     }

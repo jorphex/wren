@@ -1,5 +1,3 @@
-@import '../AccountController/style'
-
 .accountSelector
   position absolute
   top 80px
@@ -208,6 +206,13 @@
 
     .accountSelectorScrollWrap
       padding 24px var(--wren-space-5) 48px
+
+.accountSelector:not(.accountSelectorOpen) .accountSelectorScrollWrap
+  border-top 1px solid var(--wren-ledger-rule)
+
+.accountChooserItem
+  min-height 60px
+  pointer-events auto
 
 .accountSelectorEmpty
   width calc(100% - 32px)
@@ -427,6 +432,21 @@
   background radial-gradient(circle at 16% 92%, rgba(166, 138, 97, .055), transparent 30%), var(--wren-bg-elevated)
   box-shadow 18px 0 45px rgba(0, 0, 0, .46)
 
+.accountChooserPanel
+  position absolute
+  top 60px
+  right 0
+  bottom 0
+  left 0
+  z-index 6
+  display grid
+  padding 8px var(--wren-space-5) var(--wren-space-4)
+  box-sizing border-box
+  overflow hidden
+  grid-template-rows auto minmax(0, 1fr) auto
+  background var(--wren-bg-canvas)
+  pointer-events auto
+
 .accountDrawerHeader
   display flex
   height 34px
@@ -461,13 +481,11 @@
   animation none
 
   .panelFilterInput
-    right 38px
+    right 0
     left 0
 
     input, input:hover, input:focus
-      border-width 0 0 1px
-      border-radius 0
-      box-shadow none
+      padding-right 42px
 
   .panelFilterIcon
     left 0
@@ -527,9 +545,11 @@
   display flex
   color var(--wren-text-secondary)
 
-.accountDrawerItemSelected .accountDrawerItemIcon,
 .accountDrawerItemSelected .accountDrawerItemEnd
   color var(--wren-accent-primary-hover)
+
+.accountDrawerItemSelected .accountDrawerItemIcon
+  color var(--wren-text-secondary)
 
 .accountDrawerItemIdentity
   min-width 0

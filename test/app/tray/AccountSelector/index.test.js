@@ -21,15 +21,16 @@ const setupSelector = ({ drawerOpen = true } = {}) => {
   return { selector, store, setOpen: (next) => (open = next) }
 }
 
-it('exposes the account drawer as a labelled modal dialog', () => {
+it('exposes account switching as an embedded full-panel region', () => {
   const { selector } = setupSelector()
 
-  render(selector.renderDrawer({}))
+  render(selector.renderAccountPanel({}))
 
-  expect(screen.getByRole('dialog', { name: 'Accounts' }).getAttribute('aria-modal')).toBe('true')
+  expect(screen.getByRole('region', { name: 'Accounts' })).toBeTruthy()
+  expect(screen.queryByRole('dialog')).toBeNull()
 })
 
-it('closes the account drawer with Escape', () => {
+it('closes the account panel with Escape', () => {
   const { selector, store } = setupSelector()
   const event = { key: 'Escape', preventDefault: jest.fn() }
 
@@ -37,24 +38,6 @@ it('closes the account drawer with Escape', () => {
 
   expect(event.preventDefault).toHaveBeenCalledTimes(1)
   expect(store.toggleShowAccounts).toHaveBeenCalledWith(false)
-})
-
-it('keeps keyboard focus inside the open account drawer', () => {
-  const { selector } = setupSelector()
-  render(selector.renderDrawer({}))
-  const close = screen
-    .getAllByRole('button', { name: 'Close account drawer' })
-    .find((button) => button.classList.contains('accountDrawerClose'))
-  const add = screen
-    .getAllByRole('button', { name: 'Add account' })
-    .find((button) => button.classList.contains('accountDrawerAdd'))
-  close.focus()
-  const event = { key: 'Tab', shiftKey: true, preventDefault: jest.fn() }
-
-  selector.handleDrawerKeyDown(event)
-
-  expect(event.preventDefault).toHaveBeenCalledTimes(1)
-  expect(document.activeElement).toBe(add)
 })
 
 it('renders the balance privacy control for the current account', () => {

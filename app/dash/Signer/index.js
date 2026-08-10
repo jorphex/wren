@@ -455,19 +455,15 @@ export class Signer extends React.Component {
                 addedAccounts.map((address) => {
                   const index = signer.addresses.indexOf(address) + 1
                   const checkSummedAddress = getAddress(address)
+                  const account = this.store('main.accounts', address.toLowerCase())
+                  const current = this.store('selected.current') === account.id
                   return (
-                    <div
+                    <button
+                      type='button'
                       key={address}
-                      className={'signerAccount signerAccountAdded signerAccountDisabled'}
-                      onClick={() => {
-                        // if (this.store('main.accounts', address.toLowerCase())) {
-                        //   link.rpc('removeAccount', address, {}, () => { })
-                        // } else {
-                        //   link.rpc('createAccount', address, { type: signer.type }, (e) => {
-                        //     if (e) console.error(e)
-                        //   })
-                        // }
-                      }}
+                      aria-label={checkSummedAddress}
+                      className={`signerAccount signerAccountAdded ${current ? 'signerAccountCurrent' : ''}`}
+                      onClick={() => link.rpc('setSigner', account.id, () => {})}
                     >
                       <div className='signerAccountIndex'>{index}</div>
                       <div className='signerAccountAddress'>
@@ -475,7 +471,7 @@ export class Signer extends React.Component {
                         {checkSummedAddress.substr(address.length - 10)}
                       </div>
                       <div className='signerAccountCheck' />
-                    </div>
+                    </button>
                   )
                 })
               ) : (

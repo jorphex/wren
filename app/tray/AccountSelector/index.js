@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import AccountController from './AccountController'
+import AccountController, { AccountTypeMark } from './AccountController'
 
 import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
 import Icon from '../../../resources/Components/Icon'
@@ -19,23 +19,11 @@ export class AccountSelector extends React.Component {
       accountFilter: context.store('panel.accountFilter') || ''
     }
     this.accountTriggerRef = React.createRef()
-    this.drawerRef = React.createRef()
-    this.drawerCloseRef = React.createRef()
-    this.drawerWasOpen = Boolean(context.store('selected.showAccounts'))
     this.handleDrawerKeyDown = this.handleDrawerKeyDown.bind(this)
   }
 
   componentDidMount() {
     document.addEventListener('keydown', this.handleDrawerKeyDown)
-  }
-
-  componentDidUpdate() {
-    const drawerOpen = Boolean(this.store('selected.showAccounts'))
-
-    if (drawerOpen && !this.drawerWasOpen) this.drawerCloseRef.current?.focus()
-    if (!drawerOpen && this.drawerWasOpen) this.accountTriggerRef.current?.focus()
-
-    this.drawerWasOpen = drawerOpen
   }
 
   componentWillUnmount() {
@@ -48,28 +36,6 @@ export class AccountSelector extends React.Component {
     if (event.key === 'Escape') {
       event.preventDefault()
       this.store.toggleShowAccounts(false)
-      return
-    }
-
-    if (event.key !== 'Tab' || !this.drawerRef.current) return
-
-    const focusable = Array.from(
-      this.drawerRef.current.querySelectorAll(
-        'button:not(:disabled), input:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((element) => !element.hidden)
-
-    if (!focusable.length) return
-
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first.focus()
     }
   }
 
@@ -208,11 +174,11 @@ export class AccountSelector extends React.Component {
           ref={this.accountTriggerRef}
           className='accountSwitcherTrigger wrenControl wrenControlSecondary'
           aria-expanded={this.store('selected.showAccounts')}
-          aria-controls='account-switcher-drawer'
+          aria-controls='account-switcher-panel'
           onClick={() => this.store.toggleShowAccounts()}
         >
           <span className='accountSwitcherIcon'>
-            <Icon name='accounts' size={18} />
+            <AccountTypeMark type={currentAccount.lastSignerType} size={18} />
           </span>
           <span className='accountSwitcherIdentity'>
             <span className='accountSwitcherName'>{displayName}</span>
@@ -255,45 +221,14 @@ export class AccountSelector extends React.Component {
     )
   }
 
-  renderDrawer(accounts) {
+  renderAccountPanel(accounts) {
     if (!this.store('selected.showAccounts')) return null
 
     return (
-      <>
-        <button
-          type='button'
-          className='accountDrawerScrim'
-          aria-hidden='true'
-          tabIndex={-1}
-          onClick={() => this.store.toggleShowAccounts(false)}
-        />
-        <aside
-          id='account-switcher-drawer'
-          ref={this.drawerRef}
-          className='accountDrawer'
-          role='dialog'
-          aria-modal='true'
-          aria-labelledby='account-drawer-title'
-        >
-          <div className='accountDrawerHeader'>
-            <div>
-              <span id='account-drawer-title' className='accountDrawerTitle'>
-                Accounts
-              </span>
-              <span className='accountDrawerCount'>{Object.keys(accounts).length}</span>
-            </div>
-            <button
-              type='button'
-              ref={this.drawerCloseRef}
-              className='accountDrawerClose wrenControl wrenControlGhost wrenControlIcon'
-              aria-label='Close account drawer'
-              onClick={() => this.store.toggleShowAccounts(false)}
-            >
-              <Icon name='close' size={14} />
-            </button>
-          </div>
-          {this.renderAccountFilter(true)}
-          {this.renderAccountList(true)}
+      <section id='account-switcher-panel' className='accountChooserPanel' aria-label='Accounts'>
+        {this.renderAccountFilter(true)}
+        {this.renderAccountList(true)}
+        {Object.keys(accounts).length ? (
           <div className='accountDrawerFooter'>
             <button
               type='button'
@@ -304,8 +239,8 @@ export class AccountSelector extends React.Component {
               <span>Add account</span>
             </button>
           </div>
-        </aside>
-      </>
+        ) : null}
+      </section>
     )
   }
 
@@ -319,7 +254,7 @@ export class AccountSelector extends React.Component {
       return (
         <div className='accountSelector accountSelectorOpen'>
           {this.renderCurrentAccount(currentAccount)}
-          {this.renderDrawer(accounts)}
+          {this.renderAccountPanel(accounts)}
         </div>
       )
     }

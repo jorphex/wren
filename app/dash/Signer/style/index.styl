@@ -941,7 +941,7 @@
 
     .signerAccount
       width 100%
-      height 44px
+      height 38px
       margin 0
       border-radius 0
       border-top 1px solid var(--wren-ledger-rule)
@@ -963,13 +963,13 @@
         right 36px
         bottom auto
         top 0
-        height 43px
+        height 37px
         justify-content flex-start
         color var(--wren-text-secondary)
         font-size var(--wren-type-small)
 
       .signerAccountCheck
-        top 18px
+        top 15px
         right 12px
         width 7px
         height 7px
@@ -977,10 +977,13 @@
         background var(--wren-text-disabled)
 
     .signerAccountAdded
-      background var(--wren-ledger-selected)
+      background transparent
 
       .signerAccountCheck
         background var(--wren-success)
+
+    .signerAccountCurrent
+      background var(--wren-ledger-selected)
 
     .signerAccount:not(.signerAccountDisabled):hover
       background var(--wren-ledger-hover)

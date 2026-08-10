@@ -23,11 +23,17 @@ class SignerHarness extends Signer {
       }
     }
     if (path[0] === 'main.accounts') return this.props.addedAccounts?.[path[1]]
+    if (path[0] === 'selected.current') return this.props.currentAccount || ''
   }
 }
 
 const renderSigner = (props) =>
   render(<SignerHarness id='device-1' expanded={true} name='Test signer' {...props} />)
+
+beforeEach(() => {
+  link.rpc.mockReset()
+  link.send.mockReset()
+})
 
 it('renders the Trezor PIN matrix as named native controls', () => {
   renderSigner({ type: 'trezor', status: 'need pin' })
@@ -139,6 +145,7 @@ it('names available signer account actions with their current add or remove beha
   view.rerender(
     <SignerHarness
       id='device-1'
+      index={0}
       expanded={true}
       name='Test signer'
       type='ledger'
@@ -149,4 +156,24 @@ it('names available signer account actions with their current add or remove beha
   )
 
   expect(screen.getByRole('button', { name: `Remove ${checkSummedAddress} from accounts` })).toBeTruthy()
+})
+
+it('selects an active hardware account from the signer preview', async () => {
+  const address = '0x00000000000000000000000000000000000000aa'
+  const accountId = address.toLowerCase()
+  const { user } = render(
+    <SignerHarness
+      id='device-1'
+      index={0}
+      expanded={false}
+      name='Test signer'
+      type='trezor'
+      status='ok'
+      addresses={[address]}
+      addedAccounts={{ [accountId]: { address, id: accountId } }}
+    />
+  )
+
+  await user.click(screen.getByRole('button', { name: getAddress(address) }))
+  expect(link.rpc).toHaveBeenCalledWith('setSigner', accountId, expect.any(Function))
 })

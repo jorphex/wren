@@ -88,7 +88,7 @@
   gap var(--wren-space-4)
 
   + .lightweightRequestFact
-    border-top 1px solid rgba(43, 53, 45, .68)
+    border-top 1px solid var(--wren-ledger-rule)
 
 .lightweightRequestFactLabel
   display block
@@ -117,7 +117,9 @@
 
 .lightweightRequestCopy
   appearance none
-  width 100%
+  width auto
+  max-width 100%
+  justify-self end
   padding 0
   border 0
   border-radius var(--wren-radius-sm)
@@ -127,7 +129,7 @@
   cursor pointer
 
   &:hover
-    background var(--wren-ledger-hover)
+    color var(--wren-text-primary)
 
   &:focus-visible
     outline 2px solid var(--wren-focus)

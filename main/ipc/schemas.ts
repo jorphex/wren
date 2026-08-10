@@ -193,7 +193,6 @@ const actionSchemas = {
   removeEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema]),
   setAccountCloseLock: z.tuple([z.boolean()]),
   setAccountFilter: z.tuple([z.string().max(256)]),
-  setAccountSignerStatusOpen: z.tuple([z.boolean()]),
   setAutohide: z.tuple([z.boolean()]),
   setDash: z.tuple([z.object({ showing: z.boolean() }).strict()]),
   setFooterHeight: z.tuple([z.literal('panel'), z.number().finite().min(0).max(4096)]),

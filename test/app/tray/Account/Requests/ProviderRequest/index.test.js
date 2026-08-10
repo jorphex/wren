@@ -1,4 +1,4 @@
-import { render, screen } from '../../../../../componentSetup'
+import { fireEvent, render, screen } from '../../../../../componentSetup'
 import { ProviderRequest } from '../../../../../../app/tray/Account/Requests/ProviderRequest'
 import link from '../../../../../../resources/link'
 
@@ -20,7 +20,19 @@ it('explains account visibility boundaries and copies the shared address', async
   expect(screen.getByText('This account only')).toBeTruthy()
   expect(screen.getByText('Each request appears separately for your review.')).toBeTruthy()
 
-  await user.click(screen.getByRole('button', { name: 'Copy shared account address' }))
+  const copyAddress = screen.getByRole('button', { name: 'Copy shared account address' })
+  expect(copyAddress.textContent).toBe('0x0000…0001')
+  await user.hover(copyAddress)
+  expect(copyAddress.textContent).toBe(address)
+  await user.unhover(copyAddress)
+  expect(copyAddress.textContent).toBe('0x0000…0001')
+
+  fireEvent.focus(copyAddress)
+  expect(copyAddress.textContent).toBe(address)
+  fireEvent.blur(copyAddress)
+  expect(copyAddress.textContent).toBe('0x0000…0001')
+
+  await user.click(copyAddress)
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)
   expect(screen.getByText('Copied')).toBeTruthy()
 })

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import Icon from '../../../../../resources/Components/Icon'
 import useCopiedMessage from '../../../../../resources/Hooks/useCopiedMessage'
 
@@ -62,6 +64,7 @@ export const RequestSection = ({ children, title }) => (
 
 const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
   const [copied, copyValue] = useCopiedMessage(value)
+  const [revealed, setRevealed] = useState(false)
 
   return (
     <button
@@ -69,9 +72,13 @@ const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
       className='lightweightRequestFactValue lightweightRequestFactValueTechnical lightweightRequestCopy'
       aria-label={copyLabel}
       title={value}
+      onBlur={() => setRevealed(false)}
       onClick={() => copyValue()}
+      onFocus={() => setRevealed(true)}
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
     >
-      {copied ? 'Copied' : displayValue || value}
+      {copied ? 'Copied' : revealed ? value : displayValue || value}
     </button>
   )
 }

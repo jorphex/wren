@@ -119,6 +119,11 @@ class FrameAccount {
   private requestAbortCleanup: Record<string, () => void> = {}
 
   accountObserver: Observer
+  private ensLookupInFlight = false
+  private ensLookupClosed = false
+  private readonly ensStatusHandler = (status: string) => {
+    if (status.toLowerCase() === 'connected') void this.lookupAddress()
+  }
 
   status = 'ok'
   active = false
@@ -189,8 +194,10 @@ class FrameAccount {
       })
     }
 
+    provider.on('status:ethereum:1', this.ensStatusHandler)
+
     if (nebula.ready()) {
-      this.lookupAddress() // We need to recheck this on every network change...
+      void this.lookupAddress()
     } else {
       nebula.once('ready', this.lookupAddress.bind(this))
     }
@@ -199,13 +206,19 @@ class FrameAccount {
   }
 
   async lookupAddress() {
+    if (this.ensLookupClosed || this.ensLookupInFlight) return
+    this.ensLookupInFlight = true
+
     try {
-      this.ensName = (await nebula.ens.reverseLookup(this.address))[0] || ''
-      this.update()
+      const ensName = (await nebula.ens.reverseLookup(this.address))[0] || ''
+      if (!this.ensLookupClosed && ensName !== this.ensName) {
+        this.ensName = ensName
+        this.update()
+      }
     } catch (e) {
       log.error('lookupAddress Error:', e)
-      this.ensName = ''
-      this.update()
+    } finally {
+      this.ensLookupInFlight = false
     }
   }
 
@@ -1329,6 +1342,8 @@ class FrameAccount {
   }
 
   close() {
+    this.ensLookupClosed = true
+    provider.off('status:ethereum:1', this.ensStatusHandler)
     Object.values(this.requestAbortCleanup).forEach((cleanup) => cleanup())
     this.requestAbortCleanup = {}
     Object.values(this.simulationTimers).forEach(clearTimeout)

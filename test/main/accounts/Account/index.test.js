@@ -9,6 +9,7 @@ import { ApprovalType } from '../../../../resources/constants'
 import { GasFeesSource } from '../../../../resources/domain/transaction'
 import signers from '../../../../main/signers'
 import store from '../../../../main/store'
+import nebulaApi from '../../../../main/nebula'
 import { flushPromises } from '../../../util'
 
 jest.mock('../../../../main/reveal')
@@ -27,6 +28,7 @@ jest.mock('../../../../main/contracts', () => {
 
 jest.mock('../../../../main/provider', () => ({
   on: jest.fn(),
+  off: jest.fn(),
   getNonce: jest.fn(),
   fillTransaction: jest.fn(),
   accountsChanged: jest.fn()
@@ -34,13 +36,16 @@ jest.mock('../../../../main/provider', () => ({
 jest.mock('../../../../main/accounts', () => ({ RequestMode: { Normal: 'normal' } }))
 jest.mock('../../../../main/signers', () => ({ get: jest.fn() }))
 jest.mock('../../../../main/windows', () => ({}))
-jest.mock('../../../../main/nebula', () => () => ({
-  ready: jest.fn(),
-  once: jest.fn(),
-  ens: {
-    reverseLookup: async () => ['frame.eth']
-  }
-}))
+jest.mock('../../../../main/nebula', () => {
+  const ready = jest.fn()
+  const once = jest.fn()
+  const reverseLookup = jest.fn()
+  const factory = () => ({ ready, once, ens: { reverseLookup } })
+  factory.ready = ready
+  factory.once = once
+  factory.reverseLookup = reverseLookup
+  return { __esModule: true, default: factory }
+})
 
 jest.mock('../../../../main/windows/nav', () => ({
   forward: jest.fn()
@@ -56,6 +61,10 @@ jest.mock('../../../../main/store', () => {
   store.observer = jest.fn()
   return store
 })
+
+const mockNebulaReady = nebulaApi.ready
+const mockNebulaOnce = nebulaApi.once
+const mockReverseLookup = nebulaApi.reverseLookup
 
 let account
 
@@ -190,6 +199,9 @@ const readyWalletCallsRequest = (handlerId = 'ready-wallet-calls') => {
 
 beforeEach(() => {
   jest.clearAllTimers()
+  mockNebulaReady.mockReset().mockReturnValue(false)
+  mockNebulaOnce.mockReset()
+  mockReverseLookup.mockReset().mockResolvedValue(['wren.eth'])
   store.mockImplementation(() => undefined)
   store.setPermission.mockClear()
   store.navDash.mockClear()
@@ -213,6 +225,32 @@ beforeEach(() => {
   )
   account = new Account(accountState, accounts)
   fetchContract.mockResolvedValueOnce(undefined)
+})
+
+describe('ENS identity', () => {
+  it('refreshes the reverse record when Ethereum reconnects', async () => {
+    const statusHandler = provider.on.mock.calls.find(([event]) => event === 'status:ethereum:1')[1]
+
+    statusHandler('connected')
+    await flushPromises()
+
+    expect(mockReverseLookup).toHaveBeenCalledWith(accountState.address.toLowerCase())
+    expect(account.ensName).toBe('wren.eth')
+  })
+
+  it('preserves a known name when a refresh fails and removes its listener on close', async () => {
+    account.ensName = 'known.eth'
+    mockReverseLookup.mockRejectedValueOnce(new Error('offline'))
+    const statusHandler = provider.on.mock.calls.find(([event]) => event === 'status:ethereum:1')[1]
+
+    statusHandler('connected')
+    await flushPromises()
+    account.accountObserver = { remove: jest.fn() }
+    account.close()
+
+    expect(account.ensName).toBe('known.eth')
+    expect(provider.off).toHaveBeenCalledWith('status:ethereum:1', statusHandler)
+  })
 })
 
 it('opens a dapp network proposal directly in the editable network decision', () => {

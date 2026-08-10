@@ -120,7 +120,6 @@ const rpcSchemas = {
     response: result(z.boolean())
   },
   locateKeystore: { request: noArgs, response: result(JsonRecordSchema) },
-  lockSigner: { request: z.tuple([IdSchema]), response: actionResult },
   removeAccount: {
     request: z.tuple([AddressSchema, z.object({}).strict()]),
     response: actionResult
@@ -170,7 +169,6 @@ const rpcSchemas = {
   trezorPhrase: { request: z.tuple([IdSchema, z.string().max(256)]), response: actionResult },
   trezorPin: { request: z.tuple([IdSchema, z.string().max(64)]), response: actionResult },
   unlockSigner: { request: z.tuple([IdSchema, PasswordSchema]), response: actionResult },
-  unsetSigner: { request: z.tuple([AddressSchema]), response: actionResult },
   updateRequest: {
     request: z.tuple([
       AddressSchema,
