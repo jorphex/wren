@@ -177,8 +177,8 @@
 
 .sendInlineAction
   display flex
-  width 30px
-  height 30px
+  width 44px
+  height 44px
   align-items center
   justify-content center
 
@@ -204,15 +204,15 @@
 
 .sendMaxAction
   min-width 0
-  height 30px
+  height 44px
   margin-left 10px
   padding 0 9px
   font-size var(--wren-type-caption)
   font-weight 620
 
-  &[aria-disabled='true'],
-  &[aria-disabled='true']:hover,
-  &[aria-disabled='true']:active
+  &:disabled,
+  &:disabled:hover,
+  &:disabled:active
     border-color transparent
     color var(--wren-text-disabled)
     background transparent

@@ -13,3 +13,11 @@ test('keeps the short network editor body scrollable above its fixed actions', (
   )
   expect(editorStyle).toMatch(/background-attachment local, scroll/)
 })
+
+test('keeps network editor copy readable and compact controls practically targetable', () => {
+  expect(editorStyle).not.toMatch(/font-size (?:10|11)px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?height 44px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointRemove\n[\s\S]*?width 44px\n\s{2}height 44px/)
+  expect(editorStyle).toMatch(/\.networkEditorToggle\n[\s\S]*?width 44px\n\s{2}height 44px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointAddRow[\s\S]*?button\n[\s\S]*?height 44px/)
+})

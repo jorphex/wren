@@ -28,7 +28,7 @@
   .chainColorSwatch
     appearance none
     flex 1
-    height 18px
+    height 36px
     min-width 0
     padding 0
     border 1px solid transparent
@@ -239,7 +239,7 @@
   overflow hidden
   color var(--wren-success)
   font-family var(--wren-font-mono)
-  font-size 11px
+  font-size 12px
   font-weight 400
   text-overflow ellipsis
   white-space nowrap
@@ -296,11 +296,11 @@ input.networkEditorInputTechnical
 
 .rpcEndpointRow
   display grid
-  min-height 52px
+  min-height 56px
   box-sizing border-box
   border-bottom 1px solid var(--wren-ledger-rule)
   align-items center
-  grid-template-columns 18px 8px minmax(0, 1fr) 112px 60px 42px 28px
+  grid-template-columns 18px 8px minmax(0, 1fr) 120px 72px 44px 44px
   gap 6px
 
 .rpcEndpointRowOff
@@ -312,7 +312,7 @@ input.networkEditorInputTechnical
 .rpcEndpointOrder
   color var(--wren-text-muted)
   font-family var(--wren-font-mono)
-  font-size 11px
+  font-size 12px
   text-align center
 
 .rpcEndpointDot
@@ -339,20 +339,20 @@ input.networkEditorInputTechnical
 
 input.rpcEndpointInput
   width 100%
-  height 34px
+  height 39px
   min-width 0
   box-sizing border-box
   padding 0 9px
   color var(--wren-text-primary)
   font-family var(--wren-font-mono)
-  font-size 11px
+  font-size 12px
   text-align left
 
 .rpcEndpointStatus
   overflow hidden
   color var(--wren-text-muted)
   font-family var(--wren-font-mono)
-  font-size 10px
+  font-size 12px
   text-align right
   text-overflow ellipsis
   white-space nowrap
@@ -362,16 +362,16 @@ input.rpcEndpointInput
 
 .rpcEndpointMove
   display grid
-  width 60px
-  height 32px
-  grid-template-columns repeat(2, 30px)
+  width 72px
+  height 44px
+  grid-template-columns repeat(2, 36px)
 
   button
     appearance none
     display flex
-    width 30px
-    height 32px
-    min-height 32px
+    width 36px
+    height 44px
+    min-height 44px
     padding 0
     border 0
     align-items center
@@ -395,8 +395,8 @@ input.rpcEndpointInput
 .rpcEndpointRemove
   appearance none
   display flex
-  width 28px
-  height 32px
+  width 44px
+  height 44px
   padding 0
   border 0
   align-items center
@@ -414,7 +414,7 @@ input.rpcEndpointInput
     outline-offset -2px
 
 .rpcEndpointRemoveSpacer
-  width 28px
+  width 44px
 
 .rpcEndpointAddRow
   display flex
@@ -426,13 +426,13 @@ input.rpcEndpointInput
   > span
     color var(--wren-text-muted)
     font-family var(--wren-font-utility)
-    font-size 11px
+    font-size 12px
 
   button
     appearance none
     display inline-flex
     min-width 124px
-    height 34px
+    height 44px
     padding 0 12px
     border 1px solid var(--wren-border-default)
     border-radius var(--wren-radius-sm)
@@ -479,19 +479,29 @@ input.rpcEndpointInput
 .networkEditorToggle
   appearance none
   position relative
-  width 42px
-  height 24px
+  width 44px
+  height 44px
   padding 0
-  border 1px solid var(--wren-border-default)
-  border-radius 6px
-  background var(--wren-surface-inset)
-  box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
+  border 0
+  background transparent
   cursor pointer
+
+  &::before
+    content ''
+    position absolute
+    top 10px
+    left 1px
+    width 40px
+    height 22px
+    border 1px solid var(--wren-border-default)
+    border-radius 6px
+    background var(--wren-surface-inset)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
 
   span
     position absolute
-    top 3px
-    left 4px
+    top 14px
+    left 5px
     width 16px
     height 16px
     border-radius 4px
@@ -507,7 +517,7 @@ input.rpcEndpointInput
     opacity .65
 
 .networkEditorToggleOn span
-  left 20px
+  left 21px
   background var(--wren-success)
   box-shadow 0 1px 2px rgba(0, 0, 0, .42)
 
@@ -552,7 +562,7 @@ button.networkEditorCancel
   transform translateY(-1px)
 
 button.networkEditorRemove
-  min-height 38px
+  min-height 44px
 
 // The dash header and the short-shell content padding leave a 656px editor viewport
 // in the supported 760 × 744 shell. Keep the actions anchored while the complete

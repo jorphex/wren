@@ -287,8 +287,7 @@ it('uses the main-process maximum and blocks an amount above the stored balance'
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   renderSend()
 
-  expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(false)
-  expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-disabled')).toBe('true')
+  expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(true)
   expect(screen.getByText('Available: 1.00 ETH')).toBeTruthy()
   expect(screen.getByText('Enter a recipient to enable Max so we can estimate gas.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-describedby')).toBe('sendMaxReason')

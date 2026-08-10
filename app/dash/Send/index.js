@@ -737,10 +737,10 @@ export class Send extends React.Component {
               <span className='sendAmountSymbol'>{selected.symbol}</span>
               <button
                 aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
-                aria-disabled={maxNeedsRecipient}
                 className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
+                disabled={maxNeedsRecipient}
                 onClick={() => {
-                  if (!maxNeedsRecipient) this.setMax(selected)
+                  this.setMax(selected)
                 }}
                 type='button'
               >
