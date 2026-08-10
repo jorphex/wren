@@ -903,6 +903,18 @@ module.exports = {
       return dapps || {}
     })
   },
+  retryDapp: (u, dappId) => {
+    u('main.dapps', (dapps) => {
+      if (dapps?.[dappId]?.status === 'failed') {
+        dapps[dappId] = Object.assign({}, dapps[dappId], {
+          status: 'initial',
+          openWhenReady: true,
+          checkStatusRetryCount: 0
+        })
+      }
+      return dapps || {}
+    })
+  },
   addFrame: (u, frame) => {
     u('main.frames', frame.id, () => frame)
   },

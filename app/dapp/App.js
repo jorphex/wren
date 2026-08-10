@@ -4,20 +4,36 @@ import Restore from 'react-restore'
 import link from '../../resources/link'
 import Native from '../../resources/Native'
 
-export const FailedToLoad = () => {
+export const FailedToLoad = ({ dappId }) => {
+  const retry = () => {
+    if (!dappId) return
+    link.send('tray:action', 'retryDapp', dappId)
+    link.send('frame:close')
+  }
+
   return (
     <div className='mainDappState' role='alert'>
       <div className='mainDappLoadingText'>
         <strong>Could not load dapp</strong>
         <span>Wren could not load this embedded app.</span>
       </div>
-      <button
-        type='button'
-        className='mainDappStateAction wrenControl wrenControlSecondary'
-        onClick={() => link.send('frame:close')}
-      >
-        Close
-      </button>
+      <div className='mainDappStateActions'>
+        <button
+          type='button'
+          className='mainDappStateAction wrenControl wrenControlPrimary'
+          disabled={!dappId}
+          onClick={retry}
+        >
+          Retry
+        </button>
+        <button
+          type='button'
+          className='mainDappStateAction wrenControl wrenControlSecondary'
+          onClick={() => link.send('frame:close')}
+        >
+          Close
+        </button>
+      </div>
     </div>
   )
 }
@@ -59,7 +75,7 @@ class App extends React.Component {
         <div className='main'>
           <div className='mainTop' />
           <div className='mainDappLoading'>
-            {failed ? <FailedToLoad /> : !view?.ready ? <LoadingDapp /> : null}
+            {failed ? <FailedToLoad dappId={view?.dappId} /> : !view?.ready ? <LoadingDapp /> : null}
           </div>
         </div>
       </div>

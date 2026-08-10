@@ -194,6 +194,7 @@ describe('renderer bridge protocol', () => {
     expect(request('dapp', 'rpc', ['getFrameId'])).not.toBeNull()
     expect(request('dapp', 'rpc', ['signTransaction'])).toBeNull()
     expect(request('dapp', 'event', ['tray:action', 'navDash', {}])).not.toBeNull()
+    expect(request('dapp', 'event', ['tray:action', 'retryDapp', 'installed-dapp'])).not.toBeNull()
     expect(request('dapp', 'event', ['tray:action', 'removeAccount'])).toBeNull()
     expect(request('dapp', 'invoke', ['tray:addChain', {}])).toBeNull()
 

@@ -198,6 +198,7 @@ const actionSchemas = {
   navReplace: z.tuple([z.literal('dash'), z.array(BreadcrumbSchema).max(32).optional()]),
   removeNetwork: z.tuple([NetworkReferenceSchema]),
   removeEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema]),
+  retryDapp: z.tuple([IdSchema]),
   setAccountCloseLock: z.tuple([z.boolean()]),
   setAccountFilter: z.tuple([z.string().max(256)]),
   setAutohide: z.tuple([z.boolean()]),

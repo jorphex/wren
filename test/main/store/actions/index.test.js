@@ -102,6 +102,25 @@ it('does not expose the retired Pylon migration actions', () => {
   expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
 })
 
+it('retries only a failed installed dapp from a clean attempt budget', () => {
+  const failed = { id: 'failed', status: 'failed', openWhenReady: false, checkStatusRetryCount: 4 }
+  const ready = { id: 'ready', status: 'ready', openWhenReady: false, checkStatusRetryCount: 0 }
+  let result
+
+  storeActions.retryDapp((path, update) => {
+    expect(path).toBe('main.dapps')
+    result = update({ failed, ready })
+  }, 'failed')
+
+  expect(result.failed).toEqual({
+    ...failed,
+    status: 'initial',
+    openWhenReady: true,
+    checkStatusRetryCount: 0
+  })
+  expect(result.ready).toBe(ready)
+})
+
 describe('ordered RPC endpoint actions', () => {
   const first = {
     id: 'rpc-1',

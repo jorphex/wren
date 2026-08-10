@@ -16,9 +16,14 @@ it('shows a generic cancellable embedded-dapp loading state without network assu
 })
 
 it('shows a recoverable generic failure and closes the embedded frame', async () => {
-  const { user } = render(<FailedToLoad />)
+  const { user } = render(<FailedToLoad dappId='installed-dapp' />)
 
   expect(screen.getByRole('alert').textContent).toContain('Could not load dapp')
+  await user.click(screen.getByRole('button', { name: 'Retry' }))
+
+  expect(link.send).toHaveBeenNthCalledWith(1, 'tray:action', 'retryDapp', 'installed-dapp')
+  expect(link.send).toHaveBeenNthCalledWith(2, 'frame:close')
+  link.send.mockClear()
   await user.click(screen.getByRole('button', { name: 'Close' }))
 
   expect(link.send).toHaveBeenCalledWith('frame:close')

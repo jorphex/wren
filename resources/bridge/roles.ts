@@ -13,7 +13,7 @@ type LimitedCapabilities = {
 
 const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
   dapp: {
-    actions: new Set(['navDash']),
+    actions: new Set(['navDash', 'retryDapp']),
     events: new Set(['*:contextmenu', 'frame:close', 'frame:max', 'frame:min', 'frame:unmax', 'tray:action']),
     rpc: new Set(['getFrameId', 'getState'])
   },
