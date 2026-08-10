@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '../../../componentSetup'
+import { act, fireEvent, render, screen } from '../../../componentSetup'
 import { Notify } from '../../../../app/tray/Notify'
 import link from '../../../../resources/link'
 
@@ -17,18 +17,70 @@ test('exposes warning suppression as a pressed-state button', () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleGasFeeWarning')
 })
 
-test('exposes warning decisions as native actions', () => {
-  const notify = new Notify({})
-  const store = jest.fn((...path) => (path.join('.') === 'main.mute.gasFeeWarning' ? false : undefined))
+test('keeps approval pending until RPC success and permits a truthful retry after failure', () => {
+  const req = { handlerId: 'request' }
+  const store = jest.fn((...path) => {
+    const key = path.join('.')
+    if (key === 'view.notify') return 'gasFeeWarning'
+    if (key === 'view.notifyData') return { req }
+    if (key === 'main.mute.gasFeeWarning') return false
+    return undefined
+  })
   store.notify = jest.fn()
-  notify.store = store
-  render(notify.gasFeeWarning({ req: { handlerId: 'request' } }))
+  class NotifyHarness extends Notify {
+    constructor(props) {
+      super(props)
+      this.store = store
+    }
+  }
+  let approveCallback
+  link.rpc.mockImplementation((_method, _req, callback) => {
+    approveCallback = callback
+  })
+  render(<NotifyHarness />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  const proceed = screen.getByRole('button', { name: 'Proceed' })
+  fireEvent.click(proceed)
+  fireEvent.click(proceed)
+
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true)
+  expect(store.notify).not.toHaveBeenCalled()
+
+  act(() => approveCallback(new Error('approval failed')))
+  expect(screen.getByRole('alert').textContent).toBe('Couldn’t approve this request. It’s still pending.')
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(false)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  expect(link.rpc).toHaveBeenCalledTimes(2)
+  expect(store.notify).not.toHaveBeenCalled()
+
+  act(() => approveCallback(null))
   expect(store.notify).toHaveBeenCalledTimes(1)
+})
+
+test('routes direct signer compatibility approval through the guarded request path', () => {
+  const req = { data: { gasLimit: '0x5208', gasPrice: '0x3b9aca00' } }
+  const notify = new Notify({})
+  notify.approveRequest = jest.fn()
+  notify.store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.networksMeta.ethereum.1') {
+      return { nativeCurrency: { symbol: 'ETH', usd: { price: 1 } } }
+    }
+    if (key === 'main.mute.gasFeeWarning') return true
+    return false
+  }
+  render(
+    notify.signerCompatibilityWarning({
+      req,
+      compatibility: { signer: 'ledger', tx: 'legacy' },
+      chain: { type: 'ethereum', id: '1' }
+    })
+  )
 
   fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
-  expect(link.rpc).toHaveBeenCalledWith('approveRequest', { handlerId: 'request' }, expect.any(Function))
+  expect(notify.approveRequest).toHaveBeenCalledWith(req, expect.any(Function))
 })
 
 test('exposes dismissible warnings as labelled modal dialogs', () => {

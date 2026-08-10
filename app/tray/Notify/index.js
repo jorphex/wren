@@ -15,9 +15,11 @@ const FEE_WARNING_THRESHOLD_USD = 50
 export class Notify extends React.Component {
   constructor(props, context) {
     super(props, context)
+    this.state = { approvalPending: false, approvalError: false }
     this.dialogRef = React.createRef()
     this.activeDialog = null
     this.previousFocus = null
+    this.approvalInFlight = false
   }
 
   componentDidMount() {
@@ -30,6 +32,22 @@ export class Notify extends React.Component {
 
   componentWillUnmount() {
     this.previousFocus?.focus?.()
+  }
+
+  approveRequest(req, onSuccess) {
+    if (this.approvalInFlight) return
+
+    this.approvalInFlight = true
+    this.setState({ approvalPending: true, approvalError: false })
+    link.rpc('approveRequest', req, (error) => {
+      if (error) {
+        this.approvalInFlight = false
+        this.setState({ approvalPending: false, approvalError: true })
+        return
+      }
+
+      onSuccess()
+    })
   }
 
   syncDialogFocus() {
@@ -46,11 +64,15 @@ export class Notify extends React.Component {
       this.activeDialog = null
       this.previousFocus?.focus?.()
       this.previousFocus = null
+      this.approvalInFlight = false
+      if (this.state.approvalPending || this.state.approvalError) {
+        this.setState({ approvalPending: false, approvalError: false })
+      }
     }
   }
 
   handleDialogKeyDown(event, dismissible) {
-    if (event.key === 'Escape' && dismissible) {
+    if (event.key === 'Escape' && dismissible && !this.approvalInFlight) {
       event.preventDefault()
       this.store.notify()
       return
@@ -84,7 +106,13 @@ export class Notify extends React.Component {
         aria-labelledby='wren-notify-title'
         tabIndex={-1}
         onKeyDown={(event) => this.handleDialogKeyDown(event, dismissible)}
-        onMouseDown={dismissible ? () => this.store.notify() : undefined}
+        onMouseDown={
+          dismissible
+            ? () => {
+                if (!this.approvalInFlight) this.store.notify()
+              }
+            : undefined
+        }
       >
         {content}
       </div>
@@ -195,6 +223,8 @@ export class Notify extends React.Component {
   }
 
   gasFeeWarning({ req = {}, feeUSD = '0.00', currentSymbol = 'ETH' }) {
+    const { approvalPending, approvalError } = this.state
+
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
@@ -213,11 +243,18 @@ export class Notify extends React.Component {
               </div>
             )}
             <div className='notifyBodyQuestion'>Review the fee before you continue.</div>
+            {approvalError ? (
+              <div className='notifyBodyLine' role='alert'>
+                Couldn’t approve this request. It’s still pending.
+              </div>
+            ) : null}
           </div>
           <div className='notifyInput'>
             <button
               type='button'
               className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
+              data-dialog-initial-focus
+              disabled={approvalPending}
               onClick={() => {
                 this.store.notify()
               }}
@@ -227,18 +264,17 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
-              onClick={() => {
-                link.rpc('approveRequest', req, () => {})
-                this.store.notify()
-              }}
+              disabled={approvalPending}
+              onClick={() => this.approveRequest(req, () => this.store.notify())}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
           </div>
           <button
             type='button'
             aria-pressed={this.store('main.mute.gasFeeWarning')}
             className='notifyCheck'
+            disabled={approvalPending}
             onClick={() => link.send('tray:action', 'toggleGasFeeWarning')}
           >
             <div className='notifyCheckBox'>
@@ -310,6 +346,7 @@ export class Notify extends React.Component {
 
   signerCompatibilityWarning({ req = {}, compatibility = {}, chain = {} }) {
     const { signer, tx } = compatibility
+    const { approvalPending, approvalError } = this.state
 
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
@@ -329,11 +366,18 @@ export class Notify extends React.Component {
               </div>
             ) : null}
             <div className='notifyBodyQuestion'>Do you want to proceed?</div>
+            {approvalError ? (
+              <div className='notifyBodyLine' role='alert'>
+                Couldn’t approve this request. It’s still pending.
+              </div>
+            ) : null}
           </div>
           <div className='notifyInput'>
             <button
               type='button'
               className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
+              data-dialog-initial-focus
+              disabled={approvalPending}
               onClick={() => {
                 this.store.notify()
               }}
@@ -343,6 +387,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
+              disabled={approvalPending}
               onClick={() => {
                 // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
@@ -378,18 +423,18 @@ export class Notify extends React.Component {
                     currentSymbol
                   })
                 } else {
-                  link.rpc('approveRequest', req, () => {})
-                  this.store.notify()
+                  this.approveRequest(req, () => this.store.notify())
                 }
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
           </div>
           <button
             type='button'
             aria-pressed={this.store('main.mute.signerCompatibilityWarning')}
             className='notifyCheck'
+            disabled={approvalPending}
             onClick={() => link.send('tray:action', 'toggleSignerCompatibilityWarning')}
           >
             <div className='notifyCheckBox'>

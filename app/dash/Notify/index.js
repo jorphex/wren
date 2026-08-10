@@ -14,6 +14,113 @@ const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)
 
 export class Notify extends React.Component {
+  constructor(props, context) {
+    super(props, context)
+    this.state = { approvalPending: false, approvalError: false }
+    this.dialogRef = React.createRef()
+    this.activeDialog = null
+    this.previousFocus = null
+    this.approvalInFlight = false
+  }
+
+  componentDidMount() {
+    this.syncDialogFocus()
+  }
+
+  componentDidUpdate() {
+    this.syncDialogFocus()
+  }
+
+  componentWillUnmount() {
+    this.previousFocus?.focus?.()
+  }
+
+  approveRequest(req, onSuccess) {
+    if (this.approvalInFlight) return
+
+    this.approvalInFlight = true
+    this.setState({ approvalPending: true, approvalError: false })
+    link.rpc('approveRequest', req, (error) => {
+      if (error) {
+        this.approvalInFlight = false
+        this.setState({ approvalPending: false, approvalError: true })
+        return
+      }
+
+      onSuccess()
+    })
+  }
+
+  syncDialogFocus() {
+    const dialog = this.dialogRef.current
+
+    if (dialog && dialog !== this.activeDialog) {
+      this.previousFocus = document.activeElement
+      this.activeDialog = dialog
+      const firstControl =
+        dialog.querySelector('[data-dialog-initial-focus]') ||
+        dialog.querySelector('button:not(:disabled), a[href], [tabindex="0"]')
+      ;(firstControl || dialog).focus()
+    } else if (!dialog && this.activeDialog) {
+      this.activeDialog = null
+      this.previousFocus?.focus?.()
+      this.previousFocus = null
+      this.approvalInFlight = false
+      if (this.state.approvalPending || this.state.approvalError) {
+        this.setState({ approvalPending: false, approvalError: false })
+      }
+    }
+  }
+
+  handleDialogKeyDown(event, dismissible) {
+    if (event.key === 'Escape' && dismissible && !this.approvalInFlight) {
+      event.preventDefault()
+      link.send('tray:action', 'backDash')
+      return
+    }
+
+    if (event.key !== 'Tab' || !this.dialogRef.current) return
+
+    const focusable = Array.from(
+      this.dialogRef.current.querySelectorAll('button:not(:disabled), a[href], [tabindex="0"]')
+    )
+    if (!focusable.length) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
+  renderDialog(content, dismissible = true, ariaLabel) {
+    return (
+      <div
+        ref={this.dialogRef}
+        className='notify cardShow'
+        role='dialog'
+        aria-modal='true'
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : 'wren-dash-notify-title'}
+        tabIndex={-1}
+        onKeyDown={(event) => this.handleDialogKeyDown(event, dismissible)}
+        onMouseDown={
+          dismissible
+            ? () => {
+                if (!this.approvalInFlight) link.send('tray:action', 'backDash')
+              }
+            : undefined
+        }
+      >
+        {content}
+      </div>
+    )
+  }
+
   betaDisclosure() {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
@@ -22,7 +129,9 @@ export class Notify extends React.Component {
             <div className='notifyWrenIcon'>
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
-            <div className='notifyTitle'>Wren preview</div>
+            <div id='wren-dash-notify-title' className='notifyTitle'>
+              Wren preview
+            </div>
             <div className='notifyBody'>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
                 Wren is independently maintained and built from the original Frame project.
@@ -66,6 +175,7 @@ export class Notify extends React.Component {
               <button
                 type='button'
                 className='notifyInputOption notifyInputSingleButton'
+                data-dialog-initial-focus
                 onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
                   link.send('tray:action', 'backDash')
@@ -81,10 +191,14 @@ export class Notify extends React.Component {
   }
 
   gasFeeWarning({ req = {}, feeUSD = '0.00', currentSymbol = 'ETH' }) {
+    const { approvalPending, approvalError } = this.state
+
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>High network fee</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            High network fee
+          </div>
           <div className='notifyBody'>
             {feeUSD !== '0.00' ? (
               <>
@@ -97,11 +211,18 @@ export class Notify extends React.Component {
               </div>
             )}
             <div className='notifyBodyQuestion'>Are you sure you want to proceed?</div>
+            {approvalError ? (
+              <div className='notifyBodyLine' role='alert'>
+                Couldn’t approve this request. It’s still pending.
+              </div>
+            ) : null}
           </div>
           <div className='notifyInput'>
             <button
               type='button'
               className='notifyInputOption notifyInputDeny'
+              data-dialog-initial-focus
+              disabled={approvalPending}
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -111,18 +232,17 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputProceed'
-              onClick={() => {
-                link.rpc('approveRequest', req, () => {})
-                link.send('tray:action', 'backDash')
-              }}
+              disabled={approvalPending}
+              onClick={() => this.approveRequest(req, () => link.send('tray:action', 'backDash'))}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
           </div>
           <button
             type='button'
             aria-pressed={this.store('main.mute.gasFeeWarning')}
             className='notifyCheck'
+            disabled={approvalPending}
             onClick={() => link.send('tray:action', 'toggleGasFeeWarning')}
           >
             <div className='notifyCheckBox'>
@@ -139,7 +259,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer unavailable</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            Signer unavailable
+          </div>
           <div className='notifyBody'>
             <div className='notifyBodyQuestion'>Check the signer for this account, then try again.</div>
           </div>
@@ -147,6 +269,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputSingleButton'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -163,7 +286,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>No signer attached</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            No signer attached
+          </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>This account does not have a signer.</div>
             <div className='notifyBodyQuestion'>Attach a signer before submitting a signature.</div>
@@ -172,6 +297,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputSingleButton'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -190,10 +316,13 @@ export class Notify extends React.Component {
 
   signerCompatibilityWarning({ req = {}, compatibility = {}, chain = {} }) {
     const { signer, tx } = compatibility
+    const { approvalPending, approvalError } = this.state
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Signer compatibility</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            Signer compatibility
+          </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               {`Your ${capitalize(signer)} cannot sign ${capitalize(tx)} ${
@@ -206,11 +335,18 @@ export class Notify extends React.Component {
               </div>
             ) : null}
             <div className='notifyBodyQuestion'>Do you want to proceed?</div>
+            {approvalError ? (
+              <div className='notifyBodyLine' role='alert'>
+                Couldn’t approve this request. It’s still pending.
+              </div>
+            ) : null}
           </div>
           <div className='notifyInput'>
             <button
               type='button'
               className='notifyInputOption notifyInputDeny'
+              data-dialog-initial-focus
+              disabled={approvalPending}
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -220,6 +356,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputProceed'
+              disabled={approvalPending}
               onClick={() => {
                 // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
@@ -257,18 +394,18 @@ export class Notify extends React.Component {
                     }
                   })
                 } else {
-                  link.rpc('approveRequest', req, () => {})
-                  link.send('tray:action', 'backDash')
+                  this.approveRequest(req, () => link.send('tray:action', 'backDash'))
                 }
               }}
             >
-              <div className='notifyInputOptionText'>Proceed</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
           </div>
           <button
             type='button'
             aria-pressed={this.store('main.mute.signerCompatibilityWarning')}
             className='notifyCheck'
+            disabled={approvalPending}
             onClick={() => link.send('tray:action', 'toggleSignerCompatibilityWarning')}
           >
             <div className='notifyCheckBox'>
@@ -291,7 +428,7 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
             <div>Blind signing</div>
             <div>disabled</div>
           </div>
@@ -311,6 +448,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputSingleButton'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -335,7 +473,7 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
             <div>Experimental hot signer</div>
           </div>
           <div className='notifyBody'>
@@ -348,6 +486,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputSingleButton'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -372,7 +511,7 @@ export class Notify extends React.Component {
         }
       >
         <div className='notifyBox'>
-          <div className='notifyTitle'>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
             <div>Hot signer address mismatch</div>
           </div>
           <div className='notifyBody'>
@@ -384,6 +523,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputSingleButton'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -400,7 +540,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open external link</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            Open external link
+          </div>
           <div className='notifyBody'>
             <div className='notifyBodyLineUrl'>{url}</div>
             <div className='notifyBodyLine'>{'Open this link in your browser?'}</div>
@@ -409,6 +551,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputDeny'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -435,7 +578,9 @@ export class Notify extends React.Component {
     return (
       <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
         <div className='notifyBox'>
-          <div className='notifyTitle'>Open block explorer</div>
+          <div id='wren-dash-notify-title' className='notifyTitle'>
+            Open block explorer
+          </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>Open this transaction in a block explorer?</div>
             <div className='notifyBodyHash'>{hash}</div>
@@ -444,6 +589,7 @@ export class Notify extends React.Component {
             <button
               type='button'
               className='notifyInputOption notifyInputDeny'
+              data-dialog-initial-focus
               onClick={() => {
                 link.send('tray:action', 'backDash')
               }}
@@ -482,21 +628,21 @@ export class Notify extends React.Component {
   render() {
     const { notify, notifyData } = this.props.data
     if (notify === 'betaDisclosure') {
-      return <div className='notify cardShow'>{this.betaDisclosure()}</div>
+      return this.renderDialog(this.betaDisclosure(), false)
     } else if (notify === 'gasFeeWarning') {
-      return <div className='notify cardShow'>{this.gasFeeWarning(notifyData)}</div>
+      return this.renderDialog(this.gasFeeWarning(notifyData))
     } else if (notify === 'noSignerWarning') {
-      return <div className='notify cardShow'>{this.noSignerWarning(notifyData)}</div>
+      return this.renderDialog(this.noSignerWarning(notifyData))
     } else if (notify === 'signerUnavailableWarning') {
-      return <div className='notify cardShow'>{this.signerUnavailableWarning(notifyData)}</div>
+      return this.renderDialog(this.signerUnavailableWarning(notifyData))
     } else if (notify === 'signerCompatibilityWarning') {
-      return <div className='notify cardShow'>{this.signerCompatibilityWarning(notifyData)}</div>
+      return this.renderDialog(this.signerCompatibilityWarning(notifyData))
     } else if (notify === 'contractData') {
-      return <div className='notify cardShow'>{this.contractData()}</div>
+      return this.renderDialog(this.contractData())
     } else if (notify === 'hotAccountWarning') {
-      return <div className='notify cardShow'>{this.hotAccountWarning()}</div>
+      return this.renderDialog(this.hotAccountWarning())
     } else if (notify === 'hotSignerMismatch') {
-      return <div className='notify cardShow'>{this.hotSignerMismatch()}</div>
+      return this.renderDialog(this.hotSignerMismatch())
     } else if (notify === 'confirmRemoveChain') {
       const { chain } = notifyData
 
@@ -511,8 +657,8 @@ export class Notify extends React.Component {
         link.send('tray:action', 'backDash')
       }
 
-      return (
-        <div className='notify cardShow'>
+      return this.renderDialog(
+        <>
           <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
             <div className='notifyBoxSlide'>
               <Confirm
@@ -525,12 +671,14 @@ export class Notify extends React.Component {
               />
             </div>
           </div>
-        </div>
+        </>,
+        true,
+        `Remove ${chain.name}?`
       )
     } else if (notify === 'openExternal') {
-      return <div className='notify cardShow'>{this.openExternal(notifyData)}</div>
+      return this.renderDialog(this.openExternal(notifyData))
     } else if (notify === 'openExplorer') {
-      return <div className='notify cardShow'>{this.openExplorer(notifyData)}</div>
+      return this.renderDialog(this.openExplorer(notifyData))
     } else {
       return null
     }
