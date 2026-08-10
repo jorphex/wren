@@ -42,8 +42,13 @@ export const Slide = styled.div`
 export const SlideBody = styled.div`
   position: absolute;
   top: 112px;
+  bottom: 104px;
   left: clamp(36px, 7vw, 54px);
   width: min(320px, 43%);
+  padding-right: var(--wren-space-2);
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   animation: cardShow var(--wren-motion-page) ease both;
   font-weight: 350;
   font-size: 16px;
@@ -51,7 +56,8 @@ export const SlideBody = styled.div`
   color: var(--wren-text-secondary);
 
   @media (max-height: 540px) {
-    top: 104px;
+    top: 96px;
+    bottom: 88px;
     font-size: 15px;
   }
 `
@@ -86,6 +92,10 @@ export const SlideProceed = styled.div`
   align-items: center;
   gap: var(--wren-space-3);
   animation: cardShow var(--wren-motion-page) ease both;
+
+  @media (max-height: 540px) {
+    bottom: 20px;
+  }
 `
 
 export const Shortcut = styled.span`

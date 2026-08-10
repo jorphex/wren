@@ -131,7 +131,17 @@ body
         align-items center
 
       .mainDappLoading
+        .mainDappState
+          display flex
+          max-width 320px
+          flex-direction column
+          align-items center
+          gap var(--wren-space-4)
+
         .mainDappLoadingText
+          display flex
+          flex-direction column
+          gap var(--wren-space-1)
           color var(--wren-text-secondary)
           font-family var(--wren-font-ui)
           font-size var(--wren-type-body)
@@ -139,6 +149,15 @@ body
           text-align center
           line-height 1.45
           letter-spacing 0
+
+          strong
+            color var(--wren-text-primary)
+            font-size 16px
+            font-weight 560
+
+        .mainDappStateAction
+          min-height 44px
+          min-width 112px
 
         .loader,
         .loader:after
@@ -163,9 +182,6 @@ body
             transform rotate(0deg)
           100%
             transform rotate(360deg)
-
-      .mainDappEnableChains
-        margin-top 30px
 
       .mainApps
         width 600px

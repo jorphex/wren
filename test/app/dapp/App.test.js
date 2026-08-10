@@ -1,29 +1,25 @@
-import { MainnetDisconnected } from '../../../app/dapp/App'
+import { FailedToLoad, LoadingDapp } from '../../../app/dapp/App'
 import link from '../../../resources/link'
-import { act, render, screen } from '../../componentSetup'
+import { render, screen } from '../../componentSetup'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
 
-it('opens network settings before closing the built-in dapp window', async () => {
-  const { user } = render(<MainnetDisconnected />)
+beforeEach(() => link.send.mockReset())
 
-  const viewNetworks = screen.getByRole('button', { name: 'View Networks' })
-  expect(viewNetworks.classList.contains('wrenControlPrimary')).toBe(true)
-  await user.click(viewNetworks)
+it('shows a generic cancellable embedded-dapp loading state without network assumptions', async () => {
+  const { user } = render(<LoadingDapp />)
 
-  const openingButton = screen.getByRole('button', { name: 'Opening Networks…' })
-  expect(openingButton.disabled).toBe(true)
-  await user.click(openingButton)
+  expect(screen.getByRole('status').textContent).toContain('Loading dapp')
+  expect(screen.queryByText(/Mainnet|ENS|Send/)).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(link.send).toHaveBeenCalledWith('frame:close')
+})
 
-  expect(link.send).toHaveBeenCalledTimes(1)
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'chains', data: {} })
+it('shows a recoverable generic failure and closes the embedded frame', async () => {
+  const { user } = render(<FailedToLoad />)
 
-  act(() => jest.advanceTimersByTime(99))
-  expect(link.send).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('alert').textContent).toContain('Could not load dapp')
+  await user.click(screen.getByRole('button', { name: 'Close' }))
 
-  act(() => jest.advanceTimersByTime(1))
-  expect(link.send.mock.calls).toEqual([
-    ['tray:action', 'navDash', { view: 'chains', data: {} }],
-    ['frame:close']
-  ])
+  expect(link.send).toHaveBeenCalledWith('frame:close')
 })

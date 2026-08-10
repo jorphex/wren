@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { SlideContainer, Slide, SlideTitle, SlideScroller } from '../styled'
 
 import link from '../../../../resources/link'
@@ -46,12 +46,17 @@ const Slides = ({ platform }) => {
   const [title, setTitle] = useState()
   const [proceed, setProceed] = useState({})
   const [slide, setSlide] = useState(1)
+  const titleRef = useRef()
   const immersive = slide === 1
+
+  useEffect(() => {
+    if (!immersive && title) titleRef.current?.focus()
+  }, [immersive, slide, title])
 
   return (
     <SlideContainer $immersive={immersive}>
       {!immersive && (
-        <SlideTitle id='onboarding-slide-title' key={title}>
+        <SlideTitle id='onboarding-slide-title' key={title} ref={titleRef} tabIndex={-1}>
           {title}
         </SlideTitle>
       )}

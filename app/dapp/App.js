@@ -4,52 +4,41 @@ import Restore from 'react-restore'
 import link from '../../resources/link'
 import Native from '../../resources/Native'
 
-const FailedToLoad = () => {
+export const FailedToLoad = () => {
   return (
-    <div className='mainDappLoadingText'>
-      <div>{'Send is unavailable.'}</div>
+    <div className='mainDappState' role='alert'>
+      <div className='mainDappLoadingText'>
+        <strong>Could not load dapp</strong>
+        <span>Wren could not load this embedded app.</span>
+      </div>
+      <button
+        type='button'
+        className='mainDappStateAction wrenControl wrenControlSecondary'
+        onClick={() => link.send('frame:close')}
+      >
+        Close
+      </button>
     </div>
   )
 }
 
-export const MainnetDisconnected = () => {
-  const openingNetworks = React.useRef(false)
-  const [opening, setOpening] = React.useState(false)
-
-  const openNetworks = () => {
-    if (openingNetworks.current) return
-    openingNetworks.current = true
-    setOpening(true)
-    link.send('tray:action', 'navDash', { view: 'chains', data: {} })
-    setTimeout(() => {
-      link.send('frame:close')
-    }, 100)
-  }
-
+export const LoadingDapp = () => {
   return (
-    <>
+    <div className='mainDappState' role='status'>
       <div className='mainDappLoadingText'>
-        <div>{'Ethereum Mainnet connection required'}</div>
-        <div>{'to resolve ENS for Send'}</div>
+        <strong>Loading dapp</strong>
+        <span>Wren is loading the embedded app.</span>
       </div>
+      <div className='loader' aria-hidden='true' />
       <button
         type='button'
-        className='mainDappEnableChains wrenControl wrenControlPrimary'
-        disabled={opening}
-        onClick={openNetworks}
+        className='mainDappStateAction wrenControl wrenControlSecondary'
+        onClick={() => link.send('frame:close')}
       >
-        {opening ? 'Opening Networks…' : 'View Networks'}
+        Cancel
       </button>
-    </>
+    </div>
   )
-}
-
-const Error = ({ isMainnetConnected }) => {
-  if (!isMainnetConnected) {
-    return <MainnetDisconnected />
-  }
-
-  return <FailedToLoad />
 }
 
 class App extends React.Component {
@@ -59,31 +48,10 @@ class App extends React.Component {
   }
 
   render() {
-    const dapp = this.store(`main.dapp.details.${this.props.id}`)
-    let name = dapp ? dapp.domain : null
-    if (name) {
-      name = name.split('.')
-      name.pop()
-      name.reverse()
-      name.forEach((v, i) => {
-        name[i] = v.charAt(0).toUpperCase() + v.slice(1)
-      })
-      name = name.join(' ')
-    }
-
-    const frame = this.store('main.frames', window.frameId)
-    const { ready } = frame.views[frame.currentView] || {}
-
-    // Hard code send dapp status for now
-    const sendDapp =
-      this.store('main.dapps', '0xe8d705c28f65bc3fe10df8b22f9daa265b99d0e1893b2df49fd38120f0410bca') || {}
-
-    const mainnet = this.store('main.networks.ethereum.1')
-    const isMainnetConnected =
-      mainnet.on && mainnet.connection.endpoints.some((endpoint) => endpoint.connected)
-
-    const shouldDisplayError =
-      (sendDapp.status !== 'ready' && !isMainnetConnected) || sendDapp.status === 'failed'
+    const frame = this.store('main.frames', window.frameId) || {}
+    const view = frame.views?.[frame.currentView]
+    const dapp = view?.dappId ? this.store('main.dapps', view.dappId) || {} : {}
+    const failed = dapp.status === 'failed'
 
     return (
       <div className='splash'>
@@ -91,11 +59,7 @@ class App extends React.Component {
         <div className='main'>
           <div className='mainTop' />
           <div className='mainDappLoading'>
-            {shouldDisplayError ? (
-              <Error isMainnetConnected={isMainnetConnected} />
-            ) : (
-              !ready && <div className='loader' />
-            )}
+            {failed ? <FailedToLoad /> : !view?.ready ? <LoadingDapp /> : null}
           </div>
         </div>
       </div>
