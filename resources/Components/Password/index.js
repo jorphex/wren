@@ -59,8 +59,10 @@ export const PasswordInput = ({
     }
   }
 
-  const getError = () =>
-    inputRef.current.value ? getInputError(inputRef.current.value) || '' : NO_PASSWORD_ENTERED
+  const getError = () => {
+    const value = inputRef.current?.value || ''
+    return value ? getInputError(value) || '' : NO_PASSWORD_ENTERED
+  }
 
   const validateInput = () => {
     const err = getError()
@@ -91,6 +93,9 @@ export const PasswordInput = ({
           role='textbox'
           type='password'
           aria-label={title}
+          autoCapitalize='none'
+          autoComplete='off'
+          spellCheck={false}
           ref={inputRef}
           onChange={validateInput}
           onKeyDown={(e) => {

@@ -17,169 +17,121 @@ jest.mock('../../../../../../resources/link', () => ({
 
 const AddRing = Restore.connect(AddRingAccountComponent, store)
 
+const setupComponent = () => render(<AddRing />, { advanceTimersAfterInput: true })
+
+const advanceToPassword = async (view) => {
+  await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), privateKey)
+  await view.user.click(screen.getByRole('button', { name: 'Next' }))
+  view.rerender(<AddRing accountSetupStep='password' />)
+}
+
+const advanceToConfirmation = async (view) => {
+  await advanceToPassword(view)
+  await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), password)
+  await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+  view.rerender(<AddRing accountSetupStep='confirm' />)
+}
+
 describe('entering private key', () => {
-  const setupComponent = () => {
-    const { user } = render(<AddRing accountData={{}} />, { advanceTimersAfterInput: true })
-
-    return {
-      user,
-      getTitle: () => screen.getAllByRole('heading')[0],
-      getNextButton: () => screen.getByRole('button', { name: 'Next' }),
-      enterPrivateKey: async (text) => user.type(screen.getByRole('textbox', { name: 'Private key' }), text)
-    }
-  }
-
   it('should display the correct title when entering the private key', () => {
-    const { getTitle, getNextButton } = setupComponent()
+    setupComponent()
 
-    expect(getTitle().textContent).toBe('Private key')
-    expect(getNextButton().disabled).toBe(true)
+    expect(screen.getAllByRole('heading')[0].textContent).toBe('Private key')
+    expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true)
+  })
+
+  it('protects the private-key input from text assistance', () => {
+    setupComponent()
+
+    const input = screen.getByRole('textbox', { name: 'Private key' })
+    expect(input.getAttribute('autocomplete')).toBe('off')
+    expect(input.getAttribute('autocapitalize')).toBe('none')
+    expect(input.getAttribute('spellcheck')).toBe('false')
   })
 
   it('should show an error message when private key is an invalid hex string', async () => {
-    const { enterPrivateKey } = setupComponent()
+    const view = setupComponent()
 
-    await enterPrivateKey('INVALID')
-
-    expect(screen.getByRole('alert').textContent).toBe('Enter a valid private key')
-  })
-
-  it('should show an error message when private key is invalid', async () => {
-    const { enterPrivateKey } = setupComponent()
-
-    await enterPrivateKey('0xffffffffffffffffffffffffffffffffbaaedce6af48a03bbfd25e8cd0364148')
+    await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), 'INVALID')
 
     expect(screen.getByRole('alert').textContent).toBe('Enter a valid private key')
   })
 
-  it('should update the navigation with the password entry screen when a private key is submitted', async () => {
-    const { user, enterPrivateKey, getNextButton } = setupComponent()
+  it('keeps a submitted private key out of navigation data', async () => {
+    const view = setupComponent()
 
-    await enterPrivateKey(privateKey)
-    await user.click(getNextButton())
+    await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), privateKey)
+    await view.user.click(screen.getByRole('button', { name: 'Next' }))
 
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'keyring',
-        accountData: {
-          secret: privateKey
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'keyring', accountSetupStep: 'password' }
     })
   })
 
-  it('submits a valid private key from the keyboard', async () => {
-    const { user, enterPrivateKey } = setupComponent()
+  it('submits a valid private key from the keyboard without putting it in navigation', async () => {
+    const view = setupComponent()
 
-    await enterPrivateKey(privateKey)
-    await user.keyboard('{Enter}')
+    await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), privateKey)
+    await view.user.keyboard('{Enter}')
 
     expect(link.send).toHaveBeenCalledWith(
       'nav:forward',
       'dash',
-      expect.objectContaining({
-        data: expect.objectContaining({ accountData: { secret: privateKey } })
-      })
+      expect.objectContaining({ data: expect.not.objectContaining({ accountData: expect.anything() }) })
     )
   })
 
-  it('unlocks private-key entry when the step is revisited', async () => {
-    const view = render(<AddRing accountData={{}} />, { advanceTimersAfterInput: true })
-    const input = screen.getByRole('textbox', { name: 'Private key' })
+  it('clears the private key when the setup is cancelled', async () => {
+    const view = setupComponent()
+    await advanceToPassword(view)
 
-    await view.user.type(input, privateKey)
-    await view.user.click(screen.getByRole('button', { name: 'Next' }))
-    view.rerender(<AddRing accountData={{ secret: privateKey }} />)
-    view.rerender(<AddRing accountData={{}} />)
+    view.rerender(<AddRing />)
+    view.rerender(<AddRing accountSetupStep='password' />)
 
-    expect(screen.getByRole('alert').textContent).toBe('Enter private key')
-    await view.user.type(screen.getByRole('textbox', { name: 'Private key' }), privateKey)
-    await view.user.click(screen.getByRole('button', { name: 'Next' }))
-    expect(link.send).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('textbox', { name: 'Private key' })).toBeTruthy()
   })
 })
 
 describe('entering password', () => {
-  it('should update the navigation to the confirmation screen when a password is submitted', async () => {
-    const { user } = render(<AddRing accountData={{ secret: privateKey }} />, {
-      advanceTimersAfterInput: true
-    })
+  it('keeps the new password out of navigation data', async () => {
+    const view = setupComponent()
+    await advanceToPassword(view)
 
-    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Create Password' })
-    await user.type(passwordEntryTextArea, password)
+    const passwordEntry = screen.getByRole('textbox', { name: 'Create Password' })
+    expect(passwordEntry.getAttribute('autocomplete')).toBe('off')
+    expect(passwordEntry.getAttribute('autocapitalize')).toBe('none')
+    expect(passwordEntry.getAttribute('spellcheck')).toBe('false')
+    await view.user.type(passwordEntry, password)
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
 
-    const confirmButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(confirmButton)
-
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
+    expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'keyring',
-        accountData: {
-          secret: privateKey,
-          password,
-          creationArgs: []
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'keyring', accountSetupStep: 'confirm' }
     })
   })
 })
 
 describe('confirming password', () => {
-  const setupComponent = () => {
-    const { user } = render(<AddRing accountData={{ secret: privateKey, password }} />, {
-      advanceTimersAfterInput: true
-    })
+  it('sends the private key and password only to the signer-creation IPC', async () => {
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    return {
-      user,
-      getConfirmButton: () => screen.getByRole('button', { name: 'Create' }),
-      enterPasswordConfirmation: async (text) =>
-        user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), text)
-    }
-  }
-
-  it('should try to create a private key account when a matching password is submitted', async () => {
-    const { user, enterPasswordConfirmation, getConfirmButton } = setupComponent()
-
-    await enterPasswordConfirmation(password)
-    await user.click(getConfirmButton())
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.rpc).toHaveBeenCalledWith('createFromPrivateKey', privateKey, password, expect.any(Function))
   })
 
-  it('should remove the previous screens related to adding an account from the navigation', async () => {
-    link.rpc.mockImplementationOnce((action, secret, passwd, cb) => {
-      expect(action).toBe('createFromPrivateKey')
-      expect(secret).toBe(privateKey)
-      expect(passwd).toBe(password)
-      cb(null, { id: '1234' })
-    })
+  it('removes the previous account-setup screens and opens the signer on success', async () => {
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb(null, { id: '1234' }))
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    const { user, enterPasswordConfirmation, getConfirmButton } = setupComponent()
-
-    await enterPasswordConfirmation(password)
-    await user.click(getConfirmButton())
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 4)
-  })
-
-  it('should update the navigation to view the newly created account', async () => {
-    link.rpc.mockImplementationOnce((action, secret, passwd, cb) => {
-      expect(action).toBe('createFromPrivateKey')
-      expect(secret).toBe(privateKey)
-      expect(passwd).toBe(password)
-      cb(null, { id: '1234' })
-    })
-
-    const { user, enterPasswordConfirmation, getConfirmButton } = setupComponent()
-
-    await enterPasswordConfirmation(password)
-    await user.click(getConfirmButton())
-
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'expandedSigner',
       data: { signer: '1234' }

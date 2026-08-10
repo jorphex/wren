@@ -99,10 +99,22 @@ const PlainRecordSchema = z.record(z.string().max(128), z.unknown()).superRefine
   }
 })
 
-const BreadcrumbSchema = z.object({ view: z.string().min(1).max(128), data: PlainRecordSchema }).strict()
+const BreadcrumbSchema = z
+  .object({ view: z.string().min(1).max(128), data: PlainRecordSchema })
+  .strict()
+  .superRefine(({ view, data }, ctx) => {
+    if (view === 'accounts' && Object.prototype.hasOwnProperty.call(data, 'accountData')) {
+      ctx.addIssue({ code: 'custom', message: 'account setup data must not be stored in navigation' })
+    }
+  })
 const BreadcrumbUpdateSchema = z
   .object({ view: z.string().min(1).max(128).optional(), data: PlainRecordSchema })
   .strict()
+  .superRefine(({ data }, ctx) => {
+    if (Object.prototype.hasOwnProperty.call(data, 'accountData')) {
+      ctx.addIssue({ code: 'custom', message: 'account setup data must not be stored in navigation' })
+    }
+  })
 const AccountRequestReferenceSchema = z
   .object({ account: AddressSchema, handlerId: HandlerIdSchema })
   .transform(({ account, handlerId }) => ({ account, handlerId }))

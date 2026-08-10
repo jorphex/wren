@@ -6,13 +6,14 @@ import { ConfirmPassword, CreatePassword } from '../../../../../resources/Compon
 import link from '../../../../../resources/link'
 import { debounce } from '../../../../../resources/utils'
 
-const navForward = async (newAccountType, accountData) =>
+const navForward = (newAccountType, accountSetupStep, error) =>
   link.send('nav:forward', 'dash', {
     view: 'accounts',
     data: {
       showAddAccounts: true,
       newAccountType,
-      accountData
+      accountSetupStep,
+      ...(error ? { error } : {})
     }
   })
 
@@ -58,7 +59,7 @@ const AddHotAccountWrapper = ({ children, title, svgName, summary, index }) => {
   )
 }
 
-const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active }) => {
+const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active, onContinue }) => {
   const EMPTY_STATE = `Enter ${title.charAt(0).toLowerCase()}${title.slice(1)}`
   const inputRef = useFocusableRef(autofocus, 100)
   const [error, setError] = useState(EMPTY_STATE)
@@ -95,7 +96,7 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active 
     submittingRef.current = true
     setSubmitting(true)
     clear()
-    return navForward(newAccountType, { secret })
+    return onContinue(secret)
   }
 
   return (
@@ -114,6 +115,9 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active 
           className='wrenInput'
           ref={inputRef}
           aria-label={title}
+          autoCapitalize='none'
+          autoComplete='off'
+          spellCheck={false}
           onChange={(e) => {
             inputRef.current.value = normalizeSecret(e.target.value, newAccountType)
             validateInput(e)
@@ -162,41 +166,80 @@ export function AddHotAccount({
   summary,
   svgName,
   intro,
-  accountData,
+  accountSetupStep,
+  error,
   createSignerMethod,
   newAccountType,
   validateSecret,
   firstStep,
+  firstStepSteps = [],
   backSteps = 4
 }) {
-  const { secret, password, error, creationArgs = [] } = accountData
-  const viewIndex = error ? 3 : !secret ? 0 : !password ? 1 : 2
+  const [draft, setDraft] = useState({})
+  const previousStep = useRef(accountSetupStep)
+  const { secret, password } = draft
+  const viewIndex =
+    error || firstStepSteps.includes(accountSetupStep)
+      ? error
+        ? 3
+        : 0
+      : !secret
+        ? 0
+        : accountSetupStep === 'confirm' && password
+          ? 2
+          : 1
 
-  const onCreate = (password) => {
-    navForward(newAccountType, {
-      secret,
-      password,
-      creationArgs
-    })
+  const clearDraft = () => {
+    setDraft({})
   }
 
-  const onConfirm = () =>
+  useEffect(() => {
+    if (!accountSetupStep && previousStep.current) clearDraft()
+    previousStep.current = accountSetupStep
+  }, [accountSetupStep])
+
+  const advance = (step, update) => {
+    setDraft((currentDraft) => ({ ...currentDraft, ...update }))
+    navForward(newAccountType, step)
+  }
+
+  const onCreate = (password) => {
+    advance('confirm', { password })
+  }
+
+  const onConfirm = () => {
+    const { secret, password, creationArgs = [] } = draft
     link.rpc(createSignerMethod, secret, password, ...creationArgs, (err, signer) => {
       if (err) {
-        return navForward(newAccountType, {
-          error: err
-        })
+        clearDraft()
+        return navForward(newAccountType, 'error', err)
       }
 
+      clearDraft()
       link.send('nav:back', 'dash', backSteps)
       link.send(`nav:forward`, 'dash', {
         view: 'expandedSigner',
         data: { signer: signer.id }
       })
     })
+  }
 
-  const firstFlowStep = firstStep || (
-    <EnterSecret key={0} {...{ validateSecret, title, newAccountType, autofocus: viewIndex === 0 }} />
+  const firstFlowStep = firstStep ? (
+    cloneElement(firstStep, {
+      onContinue: (secret, creationArgs = []) => advance('password', { secret, creationArgs }),
+      secret
+    })
+  ) : (
+    <EnterSecret
+      key={0}
+      {...{
+        validateSecret,
+        title,
+        newAccountType,
+        autofocus: viewIndex === 0,
+        onContinue: (secret) => advance('password', { secret })
+      }}
+    />
   )
 
   const steps = [

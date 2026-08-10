@@ -369,6 +369,15 @@ test('allows partial navigation updates but bounds their data', () => {
     parseRendererIpcArgs('event', 'nav:update', ['panel', { data: { value: 'x'.repeat(256 * 1024) } }])
       .success
   ).toBe(false)
+  expect(
+    parseRendererIpcArgs('event', 'nav:forward', [
+      'dash',
+      { view: 'accounts', data: { newAccountType: 'seed', accountData: { secret: 'sensitive value' } } }
+    ]).success
+  ).toBe(false)
+  expect(parseRendererIpcArgs('event', 'nav:update', ['dash', { data: { accountData: {} } }]).success).toBe(
+    false
+  )
 })
 
 test('dispatches only recognized store actions with validated arguments', () => {

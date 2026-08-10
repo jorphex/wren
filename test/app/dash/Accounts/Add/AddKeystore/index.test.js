@@ -19,50 +19,42 @@ jest.mock('../../../../../../resources/link', () => ({
 
 const AddKeystore = Restore.connect(AddKeystoreAccountComponent, store)
 
+const setupComponent = () => render(<AddKeystore />, { advanceTimersAfterInput: true })
+
+const advanceToKeystorePassword = async (view) => {
+  link.rpc.mockImplementationOnce((action, callback) => callback(null, keystore))
+  await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
+  act(() => jest.advanceTimersByTime(640))
+  view.rerender(<AddKeystore accountSetupStep='keystorePassword' />)
+}
+
+const advanceToSignerPassword = async (view) => {
+  await advanceToKeystorePassword(view)
+  await view.user.type(screen.getByRole('textbox', { name: 'Enter keystore password' }), keystorePassword)
+  await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+  view.rerender(<AddKeystore accountSetupStep='password' />)
+}
+
+const advanceToConfirmation = async (view) => {
+  await advanceToSignerPassword(view)
+  await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), signerPassword)
+  await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+  view.rerender(<AddKeystore accountSetupStep='confirm' />)
+}
+
 describe('selecting a keystore', () => {
-  it('should display any errors raised whilst selecting the keystore file', async () => {
-    link.rpc.mockImplementationOnce((action, cb) => {
-      expect(action).toBe('locateKeystore')
-      cb('ERROR HERE')
-    })
-
-    const { user } = render(<AddKeystore accountData={{}} />, { advanceTimersAfterInput: 650 })
-    const selectKeystoreButton = screen.getByRole('button', { name: 'Choose keystore JSON file' })
-
-    await user.click(selectKeystoreButton)
-
-    expect(screen.getByRole('alert').textContent).toBe('ERROR HERE')
-
-    act(() => jest.advanceTimersByTime(1_500))
-
-    expect(screen.getByRole('button', { name: 'Choose keystore JSON file' })).toBeTruthy()
-  })
-
-  it('should update the navigation with the keystore password entry screen when a keystore file is located', async () => {
-    link.rpc.mockImplementationOnce((action, cb) => {
-      expect(action).toBe('locateKeystore')
-      cb(null, keystore)
-    })
-
-    const { user } = render(<AddKeystore accountData={{}} />, { advanceTimersAfterInput: true })
-    const selectKeystoreButton = screen.getByRole('button', { name: 'Choose keystore JSON file' })
-
-    await user.click(selectKeystoreButton)
+  it('keeps located keystore contents out of navigation data', async () => {
+    const view = render(<AddKeystore />, { advanceTimersAfterInput: 0 })
+    await advanceToKeystorePassword(view)
 
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'keystore',
-        accountData: {
-          keystore
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'keystore', accountSetupStep: 'keystorePassword' }
     })
   })
 
   it('cancels the delayed file picker when the flow unmounts', async () => {
-    const view = render(<AddKeystore accountData={{}} />)
+    const view = render(<AddKeystore />, { advanceTimersAfterInput: 0 })
 
     await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
     view.unmount()
@@ -70,102 +62,34 @@ describe('selecting a keystore', () => {
 
     expect(link.rpc).not.toHaveBeenCalledWith('locateKeystore', expect.any(Function))
   })
-
-  it('cancels the delayed file picker when navigation leaves the locating step', async () => {
-    const view = render(<AddKeystore accountData={{}} />)
-
-    await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
-    view.rerender(<AddKeystore accountData={{ selecting: true }} />)
-    view.rerender(<AddKeystore accountData={{}} />)
-    act(() => jest.advanceTimersByTime(640))
-
-    expect(link.rpc).not.toHaveBeenCalledWith('locateKeystore', expect.any(Function))
-    expect(screen.getByRole('button', { name: 'Choose keystore JSON file' })).toBeTruthy()
-  })
-
-  it('ignores a file picker result after navigation leaves the locating step', async () => {
-    let finishSelection
-    link.rpc.mockImplementationOnce((action, callback) => {
-      expect(action).toBe('locateKeystore')
-      finishSelection = callback
-    })
-    const view = render(<AddKeystore accountData={{}} />)
-
-    await view.user.click(screen.getByRole('button', { name: 'Choose keystore JSON file' }))
-    view.rerender(<AddKeystore accountData={{ selecting: true }} />)
-    act(() => jest.advanceTimersByTime(640))
-    view.rerender(<AddKeystore accountData={{}} />)
-    link.send.mockClear()
-    act(() => finishSelection(null, keystore))
-
-    expect(link.send).not.toHaveBeenCalled()
-  })
 })
 
-describe('entering keystore password', () => {
-  it('should update the navigation to the confirmation screen when a password is submitted', async () => {
-    const { user } = render(<AddKeystore accountData={{ keystore }} />, {
-      advanceTimersAfterInput: true
-    })
-    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Enter keystore password' })
+describe('entering passwords', () => {
+  it('keeps keystore and signer passwords out of navigation data', async () => {
+    const view = setupComponent()
+    await advanceToSignerPassword(view)
 
-    await user.type(passwordEntryTextArea, keystorePassword)
-
-    const continueButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(continueButton)
-
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
+    expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'keystore',
-        accountData: {
-          secret: keystore,
-          creationArgs: [keystorePassword]
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'keystore', accountSetupStep: 'password' }
     })
-  })
-})
 
-describe('entering signer password', () => {
-  it('should update the navigation to the confirmation screen when a password is submitted', async () => {
-    const { user } = render(<AddKeystore accountData={{ secret: keystore }} />, {
-      advanceTimersAfterInput: true
-    })
-    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Create Password' })
+    await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), signerPassword)
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
 
-    await user.type(passwordEntryTextArea, signerPassword)
-
-    const createButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(createButton)
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
+    expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'keystore',
-        accountData: {
-          secret: keystore,
-          password: signerPassword,
-          creationArgs: []
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'keystore', accountSetupStep: 'confirm' }
     })
   })
-})
 
-describe('confirming signer password', () => {
-  it('should try to create keystore account when a matching password is submitted', async () => {
-    const { user } = render(
-      <AddKeystore
-        accountData={{ secret: keystore, password: signerPassword, creationArgs: [keystorePassword] }}
-      />,
-      { advanceTimersAfterInput: true }
-    )
-    const confirmInput = screen.getByRole('textbox', { name: 'Confirm Password' })
-    await user.type(confirmInput, signerPassword)
+  it('sends the secrets only to the signer-creation IPC', async () => {
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), signerPassword)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
+
     expect(link.rpc).toHaveBeenCalledWith(
       'createFromKeystore',
       keystore,
@@ -173,44 +97,5 @@ describe('confirming signer password', () => {
       keystorePassword,
       expect.any(Function)
     )
-  })
-
-  it('should remove the previous screens related to adding an account from the navigation', async () => {
-    const { user } = render(
-      <AddKeystore
-        accountData={{ secret: keystore, password: signerPassword, creationArgs: [keystorePassword] }}
-      />,
-      { advanceTimersAfterInput: true }
-    )
-    const confirmInput = screen.getByRole('textbox', { name: 'Confirm Password' })
-    link.rpc.mockImplementationOnce((action, secret, passwd, keystorePsswd, cb) => {
-      cb(null, { id: '1234' })
-    })
-
-    await user.type(confirmInput, signerPassword)
-
-    await user.click(screen.getByRole('button', { name: 'Create' }))
-    expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 6)
-  })
-
-  it('should update the navigation to view the newly created account', async () => {
-    const { user } = render(
-      <AddKeystore
-        accountData={{ secret: keystore, password: signerPassword, creationArgs: [keystorePassword] }}
-      />,
-      { advanceTimersAfterInput: true }
-    )
-    const confirmInput = screen.getByRole('textbox', { name: 'Confirm Password' })
-    link.rpc.mockImplementationOnce((action, secret, passwd, keystorePsswd, cb) => {
-      cb(null, { id: '1234' })
-    })
-
-    await user.type(confirmInput, signerPassword)
-
-    await user.click(screen.getByRole('button', { name: 'Create' }))
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'expandedSigner',
-      data: { signer: '1234' }
-    })
   })
 })

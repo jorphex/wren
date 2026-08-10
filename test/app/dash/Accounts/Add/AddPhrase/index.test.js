@@ -17,142 +17,131 @@ jest.mock('../../../../../../resources/link', () => ({
 
 const AddPhrase = Restore.connect(AddPhraseAccountComponent, store)
 
+const setupComponent = () => render(<AddPhrase />, { advanceTimersAfterInput: true })
+
+const enterPhrase = (user) => user.type(screen.getByRole('textbox', { name: 'Recovery phrase' }), phrase)
+
+const advanceToPassword = async (view) => {
+  await enterPhrase(view.user)
+  await view.user.click(screen.getByRole('button', { name: 'Next' }))
+  view.rerender(<AddPhrase accountSetupStep='password' />)
+}
+
+const advanceToConfirmation = async (view) => {
+  await advanceToPassword(view)
+  await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), password)
+  await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+  view.rerender(<AddPhrase accountSetupStep='confirm' />)
+}
+
 describe('entering seed phrase', () => {
-  const setupComponent = () => {
-    const { user } = render(<AddPhrase accountData={{}} />, { advanceTimersAfterInput: true })
-
-    return {
-      clickNext: async () => user.click(screen.getByRole('button', { name: 'Next' })),
-      enterSeedPhrase: async (text) =>
-        await user.type(screen.getByRole('textbox', { name: 'Recovery phrase' }), text)
-    }
-  }
-
   it('should display the correct title when entering the seed phrase', () => {
     setupComponent()
 
-    const title = screen.getAllByRole('heading')[0]
-    expect(title.textContent).toBe('Recovery phrase')
+    expect(screen.getAllByRole('heading')[0].textContent).toBe('Recovery phrase')
+  })
+
+  it('protects the recovery-phrase input from text assistance', () => {
+    setupComponent()
+
+    const input = screen.getByRole('textbox', { name: 'Recovery phrase' })
+    expect(input.getAttribute('autocomplete')).toBe('off')
+    expect(input.getAttribute('autocapitalize')).toBe('none')
+    expect(input.getAttribute('spellcheck')).toBe('false')
   })
 
   it('should show an error message when an incorrect seed phrase is submitted', async () => {
-    const { enterSeedPhrase } = setupComponent()
+    const view = setupComponent()
 
-    await enterSeedPhrase('INVALID')
+    await view.user.type(screen.getByRole('textbox', { name: 'Recovery phrase' }), 'INVALID')
 
     expect(screen.getByRole('alert').textContent).toBe('Enter a valid recovery phrase')
   })
 
-  it('should update the navigation with the password entry screen when a seed phrase is submitted', async () => {
-    const { enterSeedPhrase, clickNext } = setupComponent()
+  it('keeps a submitted seed phrase out of navigation data', async () => {
+    const view = setupComponent()
 
-    await enterSeedPhrase(phrase)
-    await clickNext()
+    await enterPhrase(view.user)
+    await view.user.click(screen.getByRole('button', { name: 'Next' }))
 
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'seed',
-        accountData: {
-          secret: phrase
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'seed', accountSetupStep: 'password' }
     })
   })
 
   it('normalizes a multiline pasted seed phrase without concatenating words', async () => {
-    const { user } = render(<AddPhrase accountData={{}} />)
+    const view = setupComponent()
     const input = screen.getByRole('textbox', { name: 'Recovery phrase' })
     fireEvent.change(input, { target: { value: phrase.replaceAll(' ', '\n') } })
     act(() => jest.advanceTimersByTime(300))
 
-    await user.click(screen.getByRole('button', { name: 'Next' }))
+    await view.user.click(screen.getByRole('button', { name: 'Next' }))
 
     expect(link.send).toHaveBeenCalledWith(
       'nav:forward',
       'dash',
-      expect.objectContaining({
-        data: expect.objectContaining({ accountData: { secret: phrase } })
-      })
+      expect.objectContaining({ data: expect.not.objectContaining({ accountData: expect.anything() }) })
     )
   })
 })
 
 describe('entering password', () => {
-  it('should update the navigation to the confirmation screen when a password is submitted', async () => {
-    const { user } = render(<AddPhrase accountData={{ secret: phrase }} />, { advanceTimersAfterInput: true })
+  it('keeps the new password out of navigation data', async () => {
+    const view = setupComponent()
+    await advanceToPassword(view)
 
-    const passwordEntryTextArea = screen.getByRole('textbox', { name: 'Create Password' })
-    await user.type(passwordEntryTextArea, password)
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    const passwordEntry = screen.getByRole('textbox', { name: 'Create Password' })
+    expect(passwordEntry.getAttribute('autocomplete')).toBe('off')
+    expect(passwordEntry.getAttribute('autocapitalize')).toBe('none')
+    expect(passwordEntry.getAttribute('spellcheck')).toBe('false')
 
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
+    await view.user.type(passwordEntry, password)
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
       view: 'accounts',
-      data: {
-        showAddAccounts: true,
-        newAccountType: 'seed',
-        accountData: {
-          secret: phrase,
-          password,
-          creationArgs: []
-        }
-      }
+      data: { showAddAccounts: true, newAccountType: 'seed', accountSetupStep: 'confirm' }
     })
   })
 })
 
 describe('confirming password', () => {
-  const setupComponent = () => {
-    const { user } = render(<AddPhrase accountData={{ secret: phrase, password }} />, {
-      advanceTimersAfterInput: true
-    })
+  it('sends the recovery phrase and password only to the signer-creation IPC', async () => {
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    return {
-      enterPassword: async (text) =>
-        user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), text),
-      clickConfirm: async () => user.click(screen.getByRole('button', { name: 'Create' }))
-    }
-  }
-
-  it('should try to create seed phrase account when a matching password is submitted', async () => {
-    const { enterPassword, clickConfirm } = setupComponent()
-
-    await enterPassword(password)
-    await clickConfirm()
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.rpc).toHaveBeenCalledWith('createFromPhrase', phrase, password, expect.any(Function))
   })
 
-  it('should remove the previous screens related to adding an account from the navigation', async () => {
-    const { enterPassword, clickConfirm } = setupComponent()
+  it('clears the draft before displaying an error', async () => {
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb('ERROR HERE'))
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    link.rpc.mockImplementationOnce((action, secret, passwd, cb) => {
-      expect(action).toBe('createFromPhrase')
-      expect(secret).toBe(phrase)
-      expect(passwd).toBe(password)
-      cb(null, { id: '1234' })
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
+      view: 'accounts',
+      data: { showAddAccounts: true, newAccountType: 'seed', accountSetupStep: 'error', error: 'ERROR HERE' }
     })
-
-    await enterPassword(password)
-    await clickConfirm()
-
-    expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 4)
+    view.rerender(<AddPhrase accountSetupStep='password' />)
+    expect(screen.getByRole('textbox', { name: 'Recovery phrase' })).toBeTruthy()
   })
 
-  it('should update the navigation to view the newly created account', async () => {
-    const { enterPassword, clickConfirm } = setupComponent()
+  it('removes the previous account-setup screens and opens the signer on success', async () => {
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb(null, { id: '1234' }))
+    const view = setupComponent()
+    await advanceToConfirmation(view)
 
-    link.rpc.mockImplementationOnce((action, secret, passwd, cb) => {
-      expect(action).toBe('createFromPhrase')
-      expect(secret).toBe(phrase)
-      expect(passwd).toBe(password)
-      cb(null, { id: '1234' })
-    })
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
-    await enterPassword(password)
-    await clickConfirm()
-
+    expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 4)
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
       view: 'expandedSigner',
       data: { signer: '1234' }

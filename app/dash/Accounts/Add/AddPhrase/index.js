@@ -6,7 +6,7 @@ const validateMnemonic = (mnemonic) => {
   if (mnemonic.split(' ').length < 12) return 'Recovery phrase is too short'
 }
 
-export default function AddPhrase({ accountData }) {
+export default function AddPhrase({ accountSetupStep, error }) {
   return (
     <AddHotAccount
       {...{
@@ -14,7 +14,8 @@ export default function AddPhrase({ accountData }) {
         summary: 'Import an account from a recovery phrase.',
         svgName: 'seedling',
         intro: 'Add seed phrase account',
-        accountData,
+        accountSetupStep,
+        error,
         createSignerMethod: 'createFromPhrase',
         newAccountType: 'seed',
         validateSecret: validateMnemonic

@@ -32,24 +32,24 @@ export class AddAccounts extends React.Component {
       </div>
     )
   }
-  renderAddKeyring({ accountData }) {
+  renderAddKeyring({ accountSetupStep, error }) {
     return (
       <div className='addAccounts cardShow'>
-        <AddRing close={this.props.close} accountData={accountData} />
+        <AddRing close={this.props.close} accountSetupStep={accountSetupStep} error={error} />
       </div>
     )
   }
-  renderAddKeystore({ accountData }) {
+  renderAddKeystore({ accountSetupStep, error }) {
     return (
       <div className='addAccounts cardShow'>
-        <AddKeystore close={this.props.close} accountData={accountData} />
+        <AddKeystore close={this.props.close} accountSetupStep={accountSetupStep} error={error} />
       </div>
     )
   }
-  renderAddSeed({ accountData }) {
+  renderAddSeed({ accountSetupStep, error }) {
     return (
       <div className='addAccounts cardShow'>
-        <AddPhrase close={this.props.close} accountData={accountData} />
+        <AddPhrase close={this.props.close} accountSetupStep={accountSetupStep} error={error} />
       </div>
     )
   }
@@ -174,7 +174,7 @@ export class AddAccounts extends React.Component {
     )
   }
   render() {
-    const { newAccountType, accountData = {} } = this.props.data
+    const { newAccountType, accountSetupStep, error } = this.props.data
 
     if (newAccountType === 'ledger') {
       return this.renderAddLedger()
@@ -183,11 +183,11 @@ export class AddAccounts extends React.Component {
     } else if (newAccountType === 'lattice') {
       return this.renderAddLattice()
     } else if (newAccountType === 'seed') {
-      return this.renderAddSeed({ accountData })
+      return this.renderAddSeed({ accountSetupStep, error })
     } else if (newAccountType === 'keyring') {
-      return this.renderAddKeyring({ accountData })
+      return this.renderAddKeyring({ accountSetupStep, error })
     } else if (newAccountType === 'keystore') {
-      return this.renderAddKeystore({ accountData })
+      return this.renderAddKeystore({ accountSetupStep, error })
     } else if (newAccountType === 'nonsigning') {
       return this.renderAddNonsigning()
     } else {

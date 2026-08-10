@@ -3,13 +3,13 @@ import { AddHotAccount } from '../Components'
 import link from '../../../../../resources/link'
 import { PasswordInput } from '../../../../../resources/Components/Password'
 
-const navForward = (accountData) =>
+const navForward = (accountSetupStep) =>
   link.send('nav:forward', 'dash', {
     view: 'accounts',
     data: {
       showAddAccounts: true,
       newAccountType: 'keystore',
-      accountData
+      accountSetupStep
     }
   })
 
@@ -51,12 +51,9 @@ const Locating = ({ active }) => (
   </div>
 )
 
-const EnterKeystorePassword = ({ keystore, active }) => {
+const EnterKeystorePassword = ({ keystore, active, onContinue }) => {
   const next = (keystorePassword) => {
-    navForward({
-      secret: keystore,
-      creationArgs: [keystorePassword]
-    })
+    onContinue(keystore, [keystorePassword])
   }
   //TODO: validate keystore password here?
   const getError = () => {}
@@ -65,28 +62,35 @@ const EnterKeystorePassword = ({ keystore, active }) => {
   return <PasswordInput {...{ next, getError, title, buttonText, active }} />
 }
 
-const LoadKeystore = ({ accountData, active }) => {
-  const { keystore, selecting, secret } = accountData
-
+const LoadKeystore = ({ accountSetupStep, active, onContinue, secret }) => {
   const [error, setError] = useState('')
   const [selectionPending, setSelectionPending] = useState(false)
   const selectionTimer = useRef()
   const selectionPendingRef = useRef(false)
   const selectionRequest = useRef(0)
-  const observedSelecting = useRef(Boolean(selecting))
+  const observedSelecting = useRef(accountSetupStep === 'locating')
   const mounted = useRef(true)
+  const [selectedKeystore, setSelectedKeystore] = useState('')
+  const selectedKeystoreRef = useRef(selectedKeystore)
+  const previousStep = useRef(accountSetupStep)
+
+  const clearKeystore = () => {
+    selectedKeystoreRef.current = ''
+    setSelectedKeystore('')
+  }
 
   useEffect(
     () => () => {
       mounted.current = false
       selectionRequest.current += 1
       clearTimeout(selectionTimer.current)
+      selectedKeystoreRef.current = ''
     },
     []
   )
 
   useEffect(() => {
-    if (selecting) {
+    if (accountSetupStep === 'locating') {
       observedSelecting.current = true
       return
     }
@@ -98,14 +102,19 @@ const LoadKeystore = ({ accountData, active }) => {
     selectionTimer.current = undefined
     selectionPendingRef.current = false
     setSelectionPending(false)
-  }, [selecting])
+  }, [accountSetupStep])
+
+  useEffect(() => {
+    if (!accountSetupStep && previousStep.current) clearKeystore()
+    previousStep.current = accountSetupStep
+  }, [accountSetupStep])
 
   const addKeystore = () => {
     if (selectionPendingRef.current) return
     selectionPendingRef.current = true
     const request = ++selectionRequest.current
     setSelectionPending(true)
-    navForward({ selecting: true })
+    navForward('locating')
     selectionTimer.current = setTimeout(() => {
       selectionTimer.current = undefined
       link.rpc('locateKeystore', (err, locatedKeystore) => {
@@ -116,23 +125,31 @@ const LoadKeystore = ({ accountData, active }) => {
         if (err) {
           setError(err)
         } else {
-          navForward({ keystore: locatedKeystore })
+          selectedKeystoreRef.current = locatedKeystore
+          setSelectedKeystore(locatedKeystore)
+          navForward('keystorePassword')
         }
       })
     }, 640)
   }
 
-  const viewIndex = secret || keystore ? 2 : selecting ? 1 : 0
+  const keystore = secret || selectedKeystore
+  const viewIndex =
+    accountSetupStep === 'keystorePassword' && keystore ? 2 : accountSetupStep === 'locating' ? 1 : 0
+  const continueWithKeystore = (keystore, creationArgs) => {
+    onContinue(keystore, creationArgs)
+    clearKeystore()
+  }
 
   const steps = [
     <LocateKeystore key={0} {...{ addKeystore, error, setError, selectionPending }} />,
     <Locating key={1} />,
-    <EnterKeystorePassword key={2} keystore={accountData.keystore} />
+    <EnterKeystorePassword key={2} {...{ keystore, onContinue: continueWithKeystore }} />
   ]
   return cloneElement(steps[viewIndex], { active })
 }
 
-const AddKeystore = ({ accountData }) => (
+const AddKeystore = ({ accountSetupStep, error }) => (
   <AddHotAccount
     title='Keystore file'
     summary='Import an account from a keystore JSON file.'
@@ -141,8 +158,10 @@ const AddKeystore = ({ accountData }) => (
     createSignerMethod='createFromKeystore'
     newAccountType='keystore'
     backSteps={6}
-    accountData={accountData}
-    firstStep={<LoadKeystore key={0} accountData={accountData} />}
+    accountSetupStep={accountSetupStep}
+    error={error}
+    firstStepSteps={['locating', 'keystorePassword']}
+    firstStep={<LoadKeystore key={0} accountSetupStep={accountSetupStep} />}
     validateSecret={() => {}}
   />
 )

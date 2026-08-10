@@ -66,7 +66,8 @@ export class Dash extends React.Component {
     if (event.key !== 'Escape' || event.defaultPrevented) return
     event.preventDefault()
     const nav = this.store('windows.dash.nav') || []
-    link.send('tray:action', nav.length ? 'backDash' : 'closeDash')
+    if (nav.length) link.send('tray:action', 'backDash')
+    else link.send('tray:action', 'closeDash')
   }
 
   renderPanel(view, data) {

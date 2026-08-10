@@ -8,7 +8,7 @@ const validatePrivateKey = (privateKeyStr) => {
   }
 }
 
-export default function AddRing({ accountData }) {
+export default function AddRing({ accountSetupStep, error }) {
   return (
     <AddHotAccount
       {...{
@@ -16,7 +16,8 @@ export default function AddRing({ accountData }) {
         summary: 'Import an account from a private key.',
         svgName: 'key',
         intro: 'Add private key account',
-        accountData,
+        accountSetupStep,
+        error,
         createSignerMethod: 'createFromPrivateKey',
         newAccountType: 'keyring',
         validateSecret: validatePrivateKey
