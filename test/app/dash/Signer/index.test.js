@@ -164,6 +164,47 @@ it('names available signer account actions with their current add or remove beha
   expect(screen.getByRole('button', { name: `Remove ${checkSummedAddress} from accounts` })).toBeTruthy()
 })
 
+it('arms signer removal, returns focus safely, and confirms once', async () => {
+  const view = renderSigner({ type: 'ledger', status: 'ok', addresses: [] })
+  const trigger = screen.getByRole('button', { name: 'Remove signer' })
+
+  await view.user.click(trigger)
+  expect(screen.getByRole('heading', { name: 'Remove signer?' })).toBeTruthy()
+  expect(
+    screen.getByText('This removes Test signer from Wren. Accounts using it become watch-only.')
+  ).toBeTruthy()
+  const cancel = screen.getByRole('button', { name: 'Cancel' })
+  expect(document.activeElement).toBe(cancel)
+
+  await view.user.keyboard('{Escape}')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove signer' }))
+  await view.user.click(screen.getByRole('button', { name: 'Remove signer' }))
+  await view.user.dblClick(screen.getByRole('button', { name: 'Remove signer' }))
+
+  expect(link.send).toHaveBeenCalledTimes(2)
+  expect(link.send).toHaveBeenNthCalledWith(1, 'dash:removeSigner', 'device-1')
+  expect(link.send).toHaveBeenNthCalledWith(2, 'tray:action', 'backDash')
+})
+
+it('keeps the signer overview preview bounded while showing its count', () => {
+  const addresses = Array.from({ length: 8 }, (_, index) => `0x${(index + 1).toString(16).padStart(40, '0')}`)
+  const addedAccounts = Object.fromEntries(addresses.map((address) => [address, { id: address }]))
+  render(
+    <SignerHarness
+      id='device-1'
+      expanded={false}
+      name='Test signer'
+      type='ledger'
+      status='ok'
+      addresses={addresses}
+      addedAccounts={addedAccounts}
+    />
+  )
+
+  expect(screen.getByText('Active accounts (8)')).toBeTruthy()
+  expect(screen.getAllByRole('button', { name: /^0x/ })).toHaveLength(5)
+})
+
 it('keeps all hardware accounts reachable as address capacity responds to shell height', async () => {
   const originalHeight = window.innerHeight
   const addresses = Array.from({ length: 12 }, (_, index) => {

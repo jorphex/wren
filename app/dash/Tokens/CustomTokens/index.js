@@ -19,11 +19,14 @@ class CustomTokens extends React.Component {
       copiedTokenIds: [],
       focusAfterRemovalId: null,
       navigatingTokenId: null,
+      removalConfirmTokenId: null,
       removingTokenId: null,
       tokenExpanded: null
     }
     this.copyTimers = new Map()
     this.expandButtons = new Map()
+    this.removeButtons = new Map()
+    this.removeConfirmButtons = new Map()
     this.listRef = React.createRef()
     this.removeTimer = null
     this.removePending = false
@@ -38,7 +41,7 @@ class CustomTokens extends React.Component {
     ) {
       const { focusAfterRemovalId } = this.state
       this.removePending = false
-      this.setState({ focusAfterRemovalId: null, removingTokenId: null }, () => {
+      this.setState({ focusAfterRemovalId: null, removalConfirmTokenId: null, removingTokenId: null }, () => {
         const focusTarget = this.expandButtons.get(focusAfterRemovalId) || this.listRef.current
         focusTarget?.focus()
       })
@@ -49,6 +52,8 @@ class CustomTokens extends React.Component {
     this.copyTimers.forEach((timer) => clearTimeout(timer))
     this.copyTimers.clear()
     this.expandButtons.clear()
+    this.removeButtons.clear()
+    this.removeConfirmButtons.clear()
     clearTimeout(this.removeTimer)
     this.removePending = false
     this.navigationPending = false
@@ -94,9 +99,21 @@ class CustomTokens extends React.Component {
   }
 
   removeToken(token) {
-    if (this.removePending) return
+    if (this.removePending || this.state.removalConfirmTokenId !== null) return
 
     const tokenId = tokenIdentity(token)
+    this.setState({ removalConfirmTokenId: tokenId }, () => this.removeConfirmButtons.get(tokenId)?.focus())
+  }
+
+  cancelTokenRemoval(tokenId) {
+    if (this.removePending || this.state.removalConfirmTokenId !== tokenId) return
+    this.setState({ removalConfirmTokenId: null }, () => this.removeButtons.get(tokenId)?.focus())
+  }
+
+  confirmTokenRemoval(token) {
+    const tokenId = tokenIdentity(token)
+    if (this.removePending || this.state.removalConfirmTokenId !== tokenId) return
+
     const orderedTokenIds = sortTokens(this.store('main.tokens.custom')).map(tokenIdentity)
     const tokenIndex = orderedTokenIds.indexOf(tokenId)
     const focusAfterRemovalId = orderedTokenIds[tokenIndex + 1] || orderedTokenIds[tokenIndex - 1] || null
@@ -110,7 +127,9 @@ class CustomTokens extends React.Component {
 
   render() {
     const tokens = this.store('main.tokens.custom')
-    const { copiedTokenIds, navigatingTokenId, removingTokenId, tokenExpanded } = this.state
+    const { copiedTokenIds, navigatingTokenId, removalConfirmTokenId, removingTokenId, tokenExpanded } =
+      this.state
+    const removalActive = removalConfirmTokenId !== null || removingTokenId !== null
 
     return (
       <div className='cardShow' onMouseDown={(e) => e.stopPropagation()}>
@@ -152,7 +171,7 @@ class CustomTokens extends React.Component {
                           type='button'
                           aria-label={`${expanded ? 'Collapse' : 'Expand'} ${token.symbol} token on chain ${token.chainId}`}
                           aria-expanded={expanded}
-                          disabled={removingTokenId !== null}
+                          disabled={removalActive}
                           className={
                             expanded
                               ? 'customTokensListItemExpand'
@@ -170,7 +189,7 @@ class CustomTokens extends React.Component {
                           type='button'
                           aria-label={`Copy ${token.symbol} token address`}
                           className='customTokensListItemAddress'
-                          disabled={removingTokenId !== null}
+                          disabled={removalActive}
                           onClick={() => this.copyAddress(token)}
                         >
                           {copied ? 'Address Copied' : token.address}
@@ -178,26 +197,61 @@ class CustomTokens extends React.Component {
                         <span className='customTokensCopyStatus' role='status' aria-live='polite'>
                           {copied ? `${token.symbol} token address copied` : ''}
                         </span>
-                        <div className='customTokensListItemBottom'>
-                          <button
-                            type='button'
-                            aria-label={`Edit ${token.symbol} token`}
-                            className='customTokensListItemButton editButton'
-                            disabled={navigatingTokenId !== null || removingTokenId !== null}
-                            onClick={() => this.editToken(token)}
-                          >
-                            {navigatingTokenId === tokenId ? 'Opening token' : 'Edit token'}
-                          </button>
-                          <button
-                            type='button'
-                            aria-label={`Remove ${token.symbol} token`}
-                            aria-disabled={removingTokenId !== null}
-                            className='customTokensListItemButton removeButton'
-                            onClick={() => this.removeToken(token)}
-                          >
-                            {removingTokenId === tokenId ? 'Removing token' : 'Remove token'}
-                          </button>
-                        </div>
+                        {removalConfirmTokenId === tokenId ? (
+                          <div className='customTokensListItemRemoval' role='alertdialog'>
+                            <strong>{`Remove ${token.symbol}?`}</strong>
+                            <span>
+                              This removes the custom token from Wren. On-chain assets are not affected.
+                            </span>
+                            <div className='customTokensListItemRemovalActions'>
+                              <button
+                                ref={(node) => {
+                                  if (node) this.removeConfirmButtons.set(tokenId, node)
+                                  else this.removeConfirmButtons.delete(tokenId)
+                                }}
+                                type='button'
+                                className='customTokensListItemButton'
+                                disabled={removingTokenId !== null}
+                                onClick={() => this.cancelTokenRemoval(tokenId)}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type='button'
+                                className='customTokensListItemButton removeButton'
+                                disabled={removingTokenId !== null}
+                                onClick={() => this.confirmTokenRemoval(token)}
+                              >
+                                Remove token
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className='customTokensListItemBottom'>
+                            <button
+                              type='button'
+                              aria-label={`Edit ${token.symbol} token`}
+                              className='customTokensListItemButton editButton'
+                              disabled={navigatingTokenId !== null || removalActive}
+                              onClick={() => this.editToken(token)}
+                            >
+                              {navigatingTokenId === tokenId ? 'Opening token' : 'Edit token'}
+                            </button>
+                            <button
+                              ref={(node) => {
+                                if (node) this.removeButtons.set(tokenId, node)
+                                else this.removeButtons.delete(tokenId)
+                              }}
+                              type='button'
+                              aria-label={`Remove ${token.symbol} token`}
+                              disabled={removalActive}
+                              className='customTokensListItemButton removeButton'
+                              onClick={() => this.removeToken(token)}
+                            >
+                              Remove token
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

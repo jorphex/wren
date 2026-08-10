@@ -257,7 +257,7 @@
       .customTokensListItemButton
         appearance none
         width 50%
-        min-height 30px
+        min-height 44px
         display flex
         justify-content center
         align-items center
@@ -301,8 +301,32 @@
       .removeButton
         color var(--wren-danger)
 
+    .customTokensListItemRemoval
+      display flex
+      flex-direction column
+      gap var(--wren-space-2)
+      padding var(--wren-space-2) var(--wren-space-3) var(--wren-space-3)
+      color var(--wren-text-secondary)
+      font-size var(--wren-type-small)
+      line-height 18px
+
+      strong
+        color var(--wren-text-primary)
+        font-weight 550
+
+      .customTokensListItemRemovalActions
+        display flex
+        gap var(--wren-space-2)
+
+        .customTokensListItemButton
+          width 50%
+
+          &:disabled
+            cursor default
+            opacity .6
+
   .customTokensListItemExpanded
-    min-height 146px
+    min-height 178px
     background var(--wren-bg-elevated)
     border-color var(--wren-border-default)
 

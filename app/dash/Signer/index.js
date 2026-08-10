@@ -20,6 +20,7 @@ const signerListReservedHeight = 392
 const signerAddressRowHeight = 44
 const minimumAddressLimit = 8
 const maximumAddressLimit = 11
+const signerPreviewAddressLimit = 5
 
 export function getAddressLimit(viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight) {
   const height = Number.isFinite(viewportHeight) ? viewportHeight : 900
@@ -44,20 +45,52 @@ export class Signer extends React.Component {
       tPhrase: '',
       tPhrasePending: false,
       tPairing: '',
-      tPairingPending: false
+      tPairingPending: false,
+      removalArmed: false,
+      removalPending: false
     }
     this.pending = { latticePair: false, pin: false, phrase: false, pairing: false }
     this.mounted = true
     this.updateAddressLimit = this.updateAddressLimit.bind(this)
+    this.handleRemovalKeyDown = this.handleRemovalKeyDown.bind(this)
+    this.signerRemovalTrigger = React.createRef()
+    this.signerRemovalCancel = React.createRef()
   }
 
   componentDidMount() {
     window.addEventListener('resize', this.updateAddressLimit)
+    window.addEventListener('keydown', this.handleRemovalKeyDown)
   }
 
   componentWillUnmount() {
     this.mounted = false
     window.removeEventListener('resize', this.updateAddressLimit)
+    window.removeEventListener('keydown', this.handleRemovalKeyDown)
+  }
+
+  handleRemovalKeyDown(e) {
+    if (e.key === 'Escape' && this.state.removalArmed && !this.state.removalPending) {
+      e.preventDefault()
+      this.cancelRemoval()
+    }
+  }
+
+  armRemoval() {
+    if (this.state.removalPending || this.state.removalArmed) return
+    this.setState({ removalArmed: true }, () => this.signerRemovalCancel.current?.focus())
+  }
+
+  cancelRemoval() {
+    if (!this.state.removalArmed || this.state.removalPending) return
+    this.setState({ removalArmed: false }, () => this.signerRemovalTrigger.current?.focus())
+  }
+
+  confirmRemoval() {
+    if (this.state.removalPending) return
+    this.setState({ removalPending: true }, () => {
+      link.send('dash:removeSigner', this.props.id)
+      link.send('tray:action', 'backDash')
+    })
   }
 
   componentDidUpdate(previousProps) {
@@ -479,11 +512,11 @@ export class Signer extends React.Component {
         {status === 'ok' || isLocked ? (
           <>
             <div className='signerAddedAccountTitle'>
-              {addedAccounts.length ? 'Active accounts' : 'No active accounts'}
+              {addedAccounts.length ? `Active accounts (${addedAccounts.length})` : 'No active accounts'}
             </div>
             <div className='signerAccounts'>
               {addedAccounts.length ? (
-                addedAccounts.map((address) => {
+                addedAccounts.slice(0, signerPreviewAddressLimit).map((address) => {
                   const index = signer.addresses.indexOf(address) + 1
                   const checkSummedAddress = getAddress(address)
                   const account = this.store('main.accounts', address.toLowerCase())
@@ -688,16 +721,50 @@ export class Signer extends React.Component {
             </div>
           ) : null}
           {canReconnect && <ReloadSignerButton id={id} status={status} />}
-          <button
-            type='button'
-            className='signerControlOption signerControlOptionImportant wrenControl wrenControlDanger'
-            onClick={() => {
-              link.send('dash:removeSigner', id)
-              link.send('tray:action', 'backDash')
-            }}
-          >
-            Remove signer
-          </button>
+          {this.state.removalArmed ? (
+            <div className='signerRemovalConfirm' role='alertdialog' aria-labelledby='signer-removal-title'>
+              <div
+                id='signer-removal-title'
+                className='signerRemovalConfirmTitle'
+                role='heading'
+                aria-level='2'
+              >
+                Remove signer?
+              </div>
+              <div className='signerRemovalConfirmDescription'>
+                {`This removes ${this.props.name || 'this signer'} from Wren. Accounts using it become watch-only.`}
+              </div>
+              <div className='signerRemovalConfirmActions'>
+                <button
+                  ref={this.signerRemovalCancel}
+                  type='button'
+                  className='signerControlOption wrenControl wrenControlSecondary'
+                  disabled={this.state.removalPending}
+                  onClick={() => this.cancelRemoval()}
+                >
+                  Cancel
+                </button>
+                <button
+                  type='button'
+                  className='signerControlOption signerControlOptionImportant wrenControl wrenControlDanger'
+                  disabled={this.state.removalPending}
+                  onClick={() => this.confirmRemoval()}
+                >
+                  Remove signer
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              ref={this.signerRemovalTrigger}
+              type='button'
+              className='signerControlOption wrenControl wrenControlGhost'
+              disabled={this.state.removalPending}
+              onClick={() => this.armRemoval()}
+            >
+              Remove signer
+            </button>
+          )}
         </div>
       </section>
     )

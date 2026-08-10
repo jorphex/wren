@@ -119,28 +119,31 @@ test('preserves the edit navigation payload', async () => {
   })
 })
 
-test('deduplicates removal during the exact 100ms delay and sends the original token payload', async () => {
+test('stages removal, focuses the safe action, and deduplicates confirmation', async () => {
   const { store, user } = renderTokens()
   await user.click(screen.getByRole('button', { name: 'Expand ALPHA token on chain 1' }))
   const alphaRemove = screen.getByRole('button', { name: 'Remove ALPHA token' })
 
-  alphaRemove.focus()
-  await user.keyboard('{Enter}')
-  expect(document.activeElement).toBe(alphaRemove)
-  expect(alphaRemove.getAttribute('aria-disabled')).toBe('true')
+  await user.click(alphaRemove)
+  expect(screen.getByText('Remove ALPHA?')).toBeTruthy()
+  expect(
+    screen.getByText('This removes the custom token from Wren. On-chain assets are not affected.')
+  ).toBeTruthy()
+  const cancel = screen.getByRole('button', { name: 'Cancel' })
+  expect(document.activeElement).toBe(cancel)
+  await user.click(cancel)
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove ALPHA token' }))
+  await user.click(screen.getByRole('button', { name: 'Remove ALPHA token' }))
   expect(screen.getByRole('button', { name: 'Expand BETA token on chain 137' }).disabled).toBe(true)
-  alphaRemove.click()
+  const confirm = screen.getByRole('button', { name: 'Remove token' })
+  await user.dblClick(confirm)
+  expect(confirm.disabled).toBe(true)
   act(() => jest.advanceTimersByTime(99))
   expect(link.send).not.toHaveBeenCalled()
   act(() => jest.advanceTimersByTime(1))
 
   expect(link.send).toHaveBeenCalledTimes(1)
   expect(link.send).toHaveBeenCalledWith('tray:removeToken', alpha)
-
-  expect(document.activeElement).toBe(alphaRemove)
-  alphaRemove.click()
-  act(() => jest.advanceTimersByTime(100))
-  expect(link.send).toHaveBeenCalledTimes(1)
 
   act(() => store.setTokens([beta]))
   await waitFor(() =>
@@ -158,6 +161,7 @@ test('cancels pending copy and remove work on unmount', async () => {
   await user.click(screen.getByRole('button', { name: 'Expand ALPHA token on chain 1' }))
   await user.click(screen.getByRole('button', { name: 'Copy ALPHA token address' }))
   await user.click(screen.getByRole('button', { name: 'Remove ALPHA token' }))
+  await user.click(screen.getByRole('button', { name: 'Remove token' }))
   link.send.mockClear()
   unmount()
   act(() => jest.runAllTimers())
