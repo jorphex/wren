@@ -137,7 +137,7 @@
 
 .addressBookRow
   display grid
-  grid-template-columns minmax(0, 1fr) 76px
+  grid-template-columns minmax(0, 1fr) 54px 76px
   min-height 80px
   overflow hidden
   border 0
@@ -148,7 +148,7 @@
   &:last-child
     border-bottom 0
 
-.addressBookCardMain, .addressBookRemove
+.addressBookCardMain, .addressBookEdit, .addressBookRemove
   border 0
   color inherit
   font-family var(--wren-font-ui)
@@ -175,20 +175,6 @@
     z-index 1
     outline 2px solid var(--wren-focus)
     outline-offset -2px
-
-.addressBookAvatar
-  flex 0 0 40px
-  width 40px
-  height 40px
-  display flex
-  align-items center
-  justify-content center
-  border 1px solid var(--wren-border-default)
-  border-radius var(--wren-radius-sm)
-  background var(--wren-bg-elevated)
-  color var(--wren-accent-primary)
-  font-size 13px
-  font-weight 600
 
 .addressBookIdentity
   min-width 0
@@ -219,19 +205,12 @@
   text-overflow ellipsis
   white-space nowrap
 
-.addressBookRemove
+.addressBookEdit, .addressBookRemove
   border-left 0
   background transparent
   color var(--wren-text-tertiary)
   font-size 13px
   transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
-
-  &:hover:not(:disabled)
-    background var(--wren-danger-soft)
-    color var(--wren-danger)
-
-  &:active:not(:disabled)
-    background var(--wren-surface-active)
 
   &:focus-visible
     position relative
@@ -243,6 +222,22 @@
     background transparent
     color var(--wren-text-disabled)
     cursor not-allowed
+
+.addressBookEdit
+  &:hover:not(:disabled)
+    background var(--wren-surface-hover)
+    color var(--wren-text-primary)
+
+  &:active:not(:disabled)
+    background var(--wren-surface-active)
+
+button.addressBookRemove.wrenControl.wrenControlGhost
+  &:hover:not(:disabled)
+    background var(--wren-danger-soft)
+    color var(--wren-danger)
+
+  &:active:not(:disabled)
+    background var(--wren-surface-active)
 
 .addressBookRemoveConfirm
   background var(--wren-danger-soft)

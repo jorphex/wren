@@ -96,7 +96,7 @@ describe('confirm', () => {
     )
 
     expect(screen.getByText('Recipient Account')).toBeTruthy()
-    expect(screen.getByText(recipient)).toBeTruthy()
+    expect(screen.getByLabelText(recipient).classList.contains('clusterAddressRecipientComplete')).toBe(true)
   })
 
   it('keeps a native-transfer recipient in the shared transaction details ledger', () => {
@@ -113,7 +113,7 @@ describe('confirm', () => {
     )
 
     expect(screen.getByText('To')).toBeTruthy()
-    expect(screen.getByText(recipient)).toBeTruthy()
+    expect(screen.getByLabelText(recipient).classList.contains('clusterAddressRecipientComplete')).toBe(true)
     expect(screen.getByRole('button', { name: 'Copy transaction recipient address' })).toBeTruthy()
   })
 
@@ -147,7 +147,7 @@ describe('confirm', () => {
 
     expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
     expect(screen.getByText('Transaction recipient address copied')).toBeTruthy()
-    expect(screen.getByText(recipient)).toBeTruthy()
+    expect(screen.getByLabelText(recipient).classList.contains('clusterAddressRecipientComplete')).toBe(true)
     expect(
       screen.getByText('Address copied').classList.contains('transactionReviewCopyFeedbackVisible')
     ).toBe(true)

@@ -33,11 +33,25 @@ const dependencies = (overrides = {}) => ({
 })
 
 test('imports a completely validated document and reports duplicate skips', async () => {
-  const deps = dependencies({ importEntries: jest.fn(() => ({ imported: 1, skipped: 2 })) })
+  const deps = dependencies({ importEntries: jest.fn(() => undefined) })
   const result = await createAddressBookFileService(deps).importFile()
 
-  expect(result).toEqual({ success: true, imported: 1, skipped: 2 })
+  expect(result).toEqual({ success: true, imported: 1, skipped: 0 })
   expect(deps.importEntries).toHaveBeenCalledWith(document)
+})
+
+test('computes import counts from validated state instead of the store action return value', async () => {
+  const deps = dependencies({
+    current: () => ({ [address.toLowerCase()]: entry }),
+    importEntries: jest.fn(() => undefined)
+  })
+
+  await expect(createAddressBookFileService(deps).importFile()).resolves.toEqual({
+    success: true,
+    imported: 0,
+    skipped: 1
+  })
+  expect(deps.importEntries).toHaveBeenCalledTimes(1)
 })
 
 test('rejects oversized and malformed imports before mutation', async () => {

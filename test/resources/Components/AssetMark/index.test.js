@@ -1,3 +1,4 @@
+import fs from 'fs'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 
 import AssetMark, { resolveAssetArtwork } from '../../../../resources/Components/AssetMark'
@@ -8,6 +9,21 @@ const yvWeth = {
   primaryColor: 'accent1',
   symbol: 'yvWETH-1'
 }
+
+const assetMarkStyle = fs.readFileSync('resources/Components/AssetMark/index.styl', 'utf8')
+
+it('centers every artwork path in one shared inset without moving the chain marker', () => {
+  expect(assetMarkStyle).toMatch(
+    /\.assetMarkGlyph[\s\S]*?img[\s\S]*?width var\(--asset-mark-image-size\)[\s\S]*?height var\(--asset-mark-image-size\)[\s\S]*?object-fit contain[\s\S]*?object-position center/
+  )
+  expect(assetMarkStyle).toMatch(/--asset-mark-art-size var\(--asset-mark-image-size\)/)
+  expect(assetMarkStyle).toMatch(
+    /svg[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?\.ringIconFallback[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?align-items center[\s\S]*?justify-content center/
+  )
+  expect(assetMarkStyle).toMatch(
+    /\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right -2px[\s\S]*?bottom -2px/
+  )
+})
 
 it('resolves bundled vault artwork by normalized chain and token address', () => {
   expect(resolveAssetArtwork(yvWeth).bundledImg).toBeTruthy()

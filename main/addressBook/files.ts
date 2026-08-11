@@ -13,7 +13,7 @@ type FileStat = { isFile(): boolean; size: number }
 
 type AddressBookFileDependencies = {
   current(): unknown
-  importEntries(value: unknown): { imported: number; skipped: number }
+  importEntries(value: unknown): void
   openImport(): Promise<string | undefined>
   openExport(): Promise<string | undefined>
   readFile(path: string): Promise<string>
@@ -48,7 +48,9 @@ export type AddressBookFileResult =
 
 const defaults: AddressBookFileDependencies = {
   current: () => store('main.addressBook'),
-  importEntries: (value) => requireStoreAction('importAddressBook')(value),
+  importEntries: (value) => {
+    requireStoreAction('importAddressBook')(value)
+  },
   openImport: openAddressBookDialog,
   openExport: saveAddressBookDialog,
   readFile: readAddressBookFile,
@@ -83,9 +85,10 @@ export function createAddressBookFileService(overrides: Partial<AddressBookFileD
       throw new Error('Contacts file is not valid JSON')
     }
 
-    // Validate before invoking the store action so malformed imports cannot partially apply.
-    importAddressBookExport(dependencies.current(), parsed)
-    const result = dependencies.importEntries(parsed)
+    // Validate and compute the summary before invoking the store action so malformed imports
+    // cannot partially apply. Restore actions return the store, not their callback's return value.
+    const result = importAddressBookExport(dependencies.current(), parsed)
+    dependencies.importEntries(parsed)
     return { success: true, imported: result.imported, skipped: result.skipped }
   }
 

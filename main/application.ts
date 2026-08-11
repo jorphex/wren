@@ -38,6 +38,7 @@ import yearn from './yearn'
 import send from './send'
 import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
+import { persistAddressBookEntry, persistCustomToken } from './applicationMutations'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -272,10 +273,12 @@ const addressBookMutation = async (operation: () => Promise<unknown> | unknown) 
 }
 
 handleRenderer('addressBook:save', async (e, request) =>
-  addressBookMutation(() => ({
-    success: true as const,
-    entry: requireStoreAction('saveAddressBookEntry')(request)
-  }))
+  addressBookMutation(() =>
+    persistAddressBookEntry(request, {
+      save: (value) => requireStoreAction('saveAddressBookEntry')(value),
+      current: () => store('main.addressBook')
+    })
+  )
 )
 handleRenderer('addressBook:remove', async (e, address) =>
   addressBookMutation(() => {
@@ -310,6 +313,19 @@ handleRenderer('send:maxAmount', async (e, chainId, assetAddress, recipient) =>
   send.maxAmount(chainId, assetAddress, recipient)
 )
 handleRenderer('send:queue', async (e, draft) => send.queue(draft))
+
+handleRenderer('tokens:save', async (e, token, req) => {
+  try {
+    return persistCustomToken(token, req, {
+      save: (tokens) => requireStoreAction('addCustomTokens')(tokens),
+      resolve: (account, handlerId) => accounts.resolveRequestForAccount(account, handlerId)
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown error'
+    log.warn('Could not save custom token', { reason: message.slice(0, 240) })
+    return { success: false as const, error: 'Token could not be saved.' }
+  }
+})
 
 onRenderer('tray:addToken', (e, token, req) => {
   if (token) {

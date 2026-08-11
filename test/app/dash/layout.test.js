@@ -5,6 +5,8 @@ const buttonStyle = fs.readFileSync('resources/Components/Button/index.styl', 'u
 const commandStyle = fs.readFileSync('app/dash/Command/style/index.styl', 'utf8')
 const earnStyle = fs.readFileSync('app/dash/Earn/style/index.styl', 'utf8')
 const mainStyle = fs.readFileSync('app/dash/Main/style/index.styl', 'utf8')
+const settingsStyle = fs.readFileSync('app/dash/Settings/style/index.styl', 'utf8')
+const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl', 'utf8')
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
@@ -56,7 +58,21 @@ test('keeps dashboard add actions compact and inactive network toggles neutral',
     /\.dashFooter[\s\S]*?justify-content flex-end[\s\S]*?height 46px[\s\S]*?background transparent[\s\S]*?\.dashFooterButton[\s\S]*?width auto[\s\S]*?min-width 190px[\s\S]*?height 46px/
   )
   expect(dashStyle).toMatch(
-    /\.network \.signerPermissionToggle[\s\S]*?width 42px[\s\S]*?height 24px[\s\S]*?border-radius 6px[\s\S]*?background var\(--wren-surface-inset\)[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-surface-inset\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
+    /\.network \.signerPermissionToggle[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?&::before[\s\S]*?height 24px[\s\S]*?border-radius var\(--wren-radius-pill\)[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-success-soft\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
+  )
+})
+
+test('renders page actions with their destination instead of delaying the footer', () => {
+  expect(dashStyle).not.toContain('@keyframes showFooter')
+  expect(dashStyle).not.toMatch(/\.dashFooter[\s\S]*?animation showFooter/)
+})
+
+test('keeps local interaction states stronger than the later shared ghost-control rules', () => {
+  expect(settingsStyle).toMatch(
+    /\.interfaceScaleOption[\s\S]*?&\.wrenControlGhost:hover:not\(:disabled\)[\s\S]*?background-color var\(--wren-surface-active\)[\s\S]*?box-shadow inset/
+  )
+  expect(addressBookStyle).toMatch(
+    /button\.addressBookRemove\.wrenControl\.wrenControlGhost[\s\S]*?&:hover:not\(:disabled\)[\s\S]*?background var\(--wren-danger-soft\)[\s\S]*?color var\(--wren-danger\)/
   )
 })
 

@@ -30,6 +30,9 @@ class SignerHarness extends Signer {
 const renderSigner = (props) =>
   render(<SignerHarness id='device-1' expanded={true} name='Test signer' {...props} />)
 
+const renderSignerPreview = (props) =>
+  render(<SignerHarness id='device-1' index={0} expanded={false} name='Test signer' {...props} />)
+
 beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
@@ -39,6 +42,23 @@ it('derives address capacity from the supported shell heights', () => {
   expect(getAddressLimit(744)).toBe(8)
   expect(getAddressLimit(900)).toBe(11)
   expect(getAddressLimit(2000)).toBe(11)
+})
+
+it('maps warning and danger signer status tones to distinct classes', () => {
+  const view = renderSignerPreview({ type: 'trezor', status: 'wrong-app', addresses: [] })
+  expect(screen.getByRole('status').classList.contains('signerStatusWarning')).toBe(true)
+
+  view.rerender(
+    <SignerHarness
+      id='device-1'
+      expanded={false}
+      name='Test signer'
+      type='trezor'
+      status='device-error'
+      addresses={[]}
+    />
+  )
+  expect(screen.getByRole('status').classList.contains('signerStatusDanger')).toBe(true)
 })
 
 it('renders the Trezor PIN matrix as named native controls', () => {
@@ -191,7 +211,7 @@ it('arms signer removal, returns focus safely, and confirms once', async () => {
   expect(link.send).toHaveBeenNthCalledWith(2, 'tray:action', 'backDash')
 })
 
-it('keeps the signer overview preview bounded while showing its count', () => {
+it('keeps the signer overview compact while showing its account count', () => {
   const addresses = Array.from({ length: 8 }, (_, index) => `0x${(index + 1).toString(16).padStart(40, '0')}`)
   const addedAccounts = Object.fromEntries(addresses.map((address) => [address, { id: address }]))
   render(
@@ -206,9 +226,9 @@ it('keeps the signer overview preview bounded while showing its count', () => {
     />
   )
 
-  expect(screen.getByText('Active accounts (8)')).toBeTruthy()
-  expect(screen.getAllByRole('button', { name: /^0x/ })).toHaveLength(5)
-  expect(screen.getAllByText(/0x0000…000[1-5]/)).toHaveLength(5)
+  expect(screen.getByText('8 active accounts')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Manage accounts' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /^0x/ })).toBeNull()
 })
 
 it('keeps all hardware accounts reachable as address capacity responds to shell height', async () => {
@@ -235,7 +255,7 @@ it('keeps all hardware accounts reachable as address capacity responds to shell 
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight, writable: true })
 })
 
-it('selects an active hardware account from the signer preview', async () => {
+it('opens active hardware account management from the signer preview', async () => {
   const address = '0x00000000000000000000000000000000000000aa'
   const accountId = address.toLowerCase()
   const { user } = render(
@@ -251,6 +271,10 @@ it('selects an active hardware account from the signer preview', async () => {
     />
   )
 
-  await user.click(screen.getByRole('button', { name: getAddress(address) }))
-  expect(link.rpc).toHaveBeenCalledWith('setSigner', accountId, expect.any(Function))
+  await user.click(screen.getByRole('button', { name: 'Manage accounts' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'expandedSigner',
+    data: { signer: 'device-1' }
+  })
+  expect(screen.queryByLabelText(getAddress(address))).toBeNull()
 })

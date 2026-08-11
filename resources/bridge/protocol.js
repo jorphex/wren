@@ -48,6 +48,7 @@ export const requestInvokeChannels = new Set([
   'send:maxAmount',
   'send:queue',
   'send:resolveRecipient',
+  'tokens:save',
   'tray:addChain',
   'tray:adjustWalletCalls',
   'tray:refreshWalletCallsStatus',

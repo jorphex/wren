@@ -145,6 +145,15 @@ export class AccountSelector extends React.Component {
     )
   }
 
+  renderWelcome() {
+    return (
+      <header className='accountSelectorWelcome'>
+        <h1>Welcome back</h1>
+        <p>Choose an account to open your wallet.</p>
+      </header>
+    )
+  }
+
   renderAccountList(closeOnSelect = false) {
     const accounts = this.store('main.accounts')
     const sortedAccounts = Object.values(accounts).sort(byCreation)
@@ -164,16 +173,19 @@ export class AccountSelector extends React.Component {
         {/* <div className='accountSelectorScrollWrap' style={current && scrollTop > 0 ? { marginTop: '-' + scrollTop + 'px' } : {}}> */}
         <div className='accountSelectorScrollWrap'>
           {displayAccounts.length ? (
-            displayAccounts.map((account, i) => (
-              <AccountController
-                key={account.id}
-                {...account}
-                index={i}
-                drawer={closeOnSelect}
-                reportScroll={() => this.reportScroll()}
-                resetScroll={() => this.resetScroll()}
-              />
-            ))
+            <>
+              {!closeOnSelect ? this.renderWelcome() : null}
+              {displayAccounts.map((account, i) => (
+                <AccountController
+                  key={account.id}
+                  {...account}
+                  index={i}
+                  drawer={closeOnSelect}
+                  reportScroll={() => this.reportScroll()}
+                  resetScroll={() => this.resetScroll()}
+                />
+              ))}
+            </>
           ) : Object.keys(accounts).length === 0 ? (
             <div className='accountSelectorEmpty'>
               <img alt='' aria-hidden='true' className='accountSelectorEmptyArtwork' src={emptyAccounts} />

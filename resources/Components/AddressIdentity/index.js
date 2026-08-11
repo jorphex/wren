@@ -1,7 +1,14 @@
 import Icon from '../Icon'
 import { getAddress } from '../../utils'
 
-const AddressIdentity = ({ address, copied = false, label = '', revealOnHover = true, source = '' }) => {
+const AddressIdentity = ({
+  address,
+  complete = false,
+  copied = false,
+  label = '',
+  revealOnHover = true,
+  source = ''
+}) => {
   const checksummed = getAddress(address)
 
   return (
@@ -13,6 +20,10 @@ const AddressIdentity = ({ address, copied = false, label = '', revealOnHover = 
             {source ? <small>{source}</small> : null}
           </span>
           <span className='clusterAddressEvidence'>{checksummed}</span>
+        </span>
+      ) : complete ? (
+        <span aria-label={checksummed} className='clusterAddressRecipient clusterAddressRecipientComplete'>
+          {checksummed}
         </span>
       ) : (
         <span aria-label={checksummed} className='clusterAddressRecipient'>

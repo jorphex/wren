@@ -20,6 +20,7 @@ const COPY = Object.freeze({
   noEnabledNetworks: 'No enabled networks',
   openNetworks: 'Open Networks',
   save: 'Save',
+  saveFailed: 'Token could not be saved. Check the details and try again.',
   selectNetwork: 'Select a network',
   symbol: 'Symbol',
   tokenAddress: 'Token contract address',
@@ -308,9 +309,10 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
   )
   const [logoUri, setLogoUri] = useState(tokenData.logoURI || '')
   const [isSaving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const savingRef = useRef(false)
-  const navigationTimerRef = useRef()
+  const mountedRef = useRef(true)
 
   const { address } = tokenData
   const parsedDecimals = decimals === '' ? Number.NaN : Number(decimals)
@@ -319,10 +321,11 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
   const newTokenReady =
     Boolean(name.trim()) && Boolean(symbol.trim()) && Number.isInteger(chain.id) && validDecimals
 
-  const saveAndClose = () => {
+  const saveAndClose = async () => {
     if (!newTokenReady || savingRef.current) return
     savingRef.current = true
     setSaving(true)
+    setSaveError('')
 
     const token = {
       name: name.trim(),
@@ -335,19 +338,33 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
 
     const backSteps = isEdit ? 2 : 4
 
-    link.send('tray:addToken', token, req)
+    let result
+    try {
+      result = await link.invoke('tokens:save', token, req)
+    } catch {
+      result = null
+    }
+    if (!mountedRef.current) return
 
-    navigationTimerRef.current = setTimeout(() => {
-      navBack(backSteps)
-      link.send('nav:forward', 'dash', {
-        view: 'tokens',
-        data: {}
-      })
-    }, 250)
+    if (!result?.success) {
+      savingRef.current = false
+      setSaving(false)
+      setSaveError(COPY.saveFailed)
+      return
+    }
+
+    navBack(backSteps)
+    link.send('nav:forward', 'dash', {
+      view: 'tokens',
+      data: {}
+    })
   }
 
   useEffect(() => {
-    return () => clearTimeout(navigationTimerRef.current)
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
   }, [])
 
   return (
@@ -432,6 +449,11 @@ const TokenDetailsForm = ({ req, chain, tokenData, isEdit }) => {
               onChange={(e) => setLogoUri(e.target.value)}
             />
           </label>
+          {saveError ? (
+            <div className='newTokenSaveError' role='alert'>
+              {saveError}
+            </div>
+          ) : null}
           <div className='newTokenActions'>
             <button
               type='submit'

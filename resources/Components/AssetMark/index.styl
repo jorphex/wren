@@ -2,7 +2,8 @@
   --asset-mark-size 32px
   --asset-mark-glyph-size 30px
   --asset-mark-chain-size 8px
-  --asset-mark-art-size calc(var(--asset-mark-glyph-size) * .57)
+  --asset-mark-image-size calc(var(--asset-mark-glyph-size) * .76)
+  --asset-mark-art-size var(--asset-mark-image-size)
   position relative
   display inline-flex
   width var(--asset-mark-size)
@@ -29,9 +30,11 @@
   font-weight 650
 
   img
-    width 100%
-    height 100%
-    object-fit cover
+    display block
+    width var(--asset-mark-image-size)
+    height var(--asset-mark-image-size)
+    object-fit contain
+    object-position center
 
   > div
     display contents
@@ -39,6 +42,13 @@
   svg
     width var(--asset-mark-art-size)
     height var(--asset-mark-art-size)
+
+  .ringIconFallback
+    display flex
+    width var(--asset-mark-art-size)
+    height var(--asset-mark-art-size)
+    align-items center
+    justify-content center
 
 .assetMarkChain
   position absolute

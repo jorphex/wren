@@ -39,6 +39,27 @@ test('does not coerce chain or token identifiers', () => {
   expect(parseRendererIpcArgs('event', 'tray:removeToken', [{ address, chainId: '1' }]).success).toBe(false)
 })
 
+test('strictly validates acknowledged custom-token saves and results', () => {
+  const token = {
+    address,
+    chainId: 1,
+    name: 'Test token',
+    symbol: 'TEST',
+    decimals: 6,
+    logoURI: ''
+  }
+  const requestReference = { account: address, handlerId }
+
+  expect(parse('invoke', 'tokens:save', [token, requestReference])).toEqual([token, requestReference])
+  expect(parseRendererIpcArgs('invoke', 'tokens:save', [{ ...token, chainId: '1' }]).success).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'tokens:save', [{ ...token, unexpected: true }]).success).toBe(false)
+  expect(parseRendererInvokeResult('tokens:save', { success: true }).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('tokens:save', { success: false, error: 'Token could not be saved' }).success
+  ).toBe(true)
+  expect(parseRendererInvokeResult('tokens:save', { success: false }).success).toBe(false)
+})
+
 test('strictly validates bounded wallet-call adjustments and results', () => {
   const request = {
     account: address,
@@ -92,8 +113,13 @@ test('strictly validates read-only wallet-call status refreshes and results', ()
 
 test('validates address-book mutations and bounded results', () => {
   const request = { mode: 'add', address, name: 'Treasury', note: 'Operations' }
+  const entry = { address, name: 'Treasury', note: 'Operations', createdAt: 1, updatedAt: 1 }
   expect(parse('invoke', 'addressBook:save', [request])).toEqual([request])
   expect(parseRendererIpcArgs('invoke', 'addressBook:save', [{ ...request, address: '0x1' }]).success).toBe(
+    false
+  )
+  expect(parseRendererInvokeResult('addressBook:save', { success: true, entry }).success).toBe(true)
+  expect(parseRendererInvokeResult('addressBook:save', { success: true, entry: jest.fn() }).success).toBe(
     false
   )
   expect(

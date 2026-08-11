@@ -186,8 +186,8 @@ test('uses calm failure copy when verification fails', async () => {
 
 test('changes the test-network setting', async () => {
   const { user } = render(<Chain view='setup' {...polygon} />)
-  const toggle = screen.getByRole('button', { name: 'Test network' })
+  const toggle = screen.getByRole('switch', { name: 'Test network' })
 
   await user.click(toggle)
-  expect(toggle.getAttribute('aria-pressed')).toBe('true')
+  expect(toggle.getAttribute('aria-checked')).toBe('true')
 })

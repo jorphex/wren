@@ -2,23 +2,37 @@
   appearance none
   position relative
   width 44px
-  height 24px
+  height 44px
   flex 0 0 44px
   padding 0
   color inherit
-  background var(--wren-surface-inset)
-  border 1px solid var(--wren-border-default)
-  border-radius var(--wren-radius-pill)
-  box-shadow var(--wren-shadow-inset)
+  border 0
+  background transparent
+  box-shadow none
   cursor pointer
-  transition background var(--wren-motion-fast), border-color var(--wren-motion-fast)
+
+  &::before
+    position absolute
+    top 10px
+    left 0
+    width 44px
+    height 24px
+    box-sizing border-box
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-pill)
+    content ''
+    background var(--wren-surface-inset)
+    box-shadow var(--wren-shadow-inset)
+    transition background var(--wren-motion-fast), border-color var(--wren-motion-fast)
 
   &:hover:not(:disabled)
-    background var(--wren-surface-hover)
-    border-color var(--wren-border-strong)
+    &::before
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-hover)
 
   &:active:not(:disabled)
-    background var(--wren-surface-active)
+    &::before
+      background var(--wren-surface-active)
 
   &:disabled
     opacity .5
@@ -26,8 +40,8 @@
 
   .wrenToggleThumb
     position absolute
-    top 3px
-    left 3px
+    top 14px
+    left 4px
     width 16px
     height 16px
     border-radius 50%
@@ -36,12 +50,14 @@
     transition transform var(--wren-motion-fast), background var(--wren-motion-fast)
 
 .wrenToggleOn
-  background var(--wren-success-soft)
-  border-color var(--wren-success)
+  &::before
+    border-color var(--wren-success)
+    background var(--wren-success-soft)
 
   &:hover:not(:disabled)
-    background var(--wren-accent-secondary-soft)
-    border-color var(--wren-accent-secondary-hover)
+    &::before
+      border-color var(--wren-accent-secondary-hover)
+      background var(--wren-accent-secondary-soft)
 
   .wrenToggleThumb
     background var(--wren-success)

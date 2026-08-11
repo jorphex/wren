@@ -8,11 +8,11 @@ const {
 } = require('../../../../scripts/qualification/ui/policy.cjs')
 const { fixtureFor, rpcReplyFor } = require('../../../../scripts/qualification/ui/state-fixture.cjs')
 
-it('covers shell, delegation, revocation, and onboarding geometry at every supported scale', () => {
+it('covers shell, token management, delegation, revocation, and onboarding at every supported scale', () => {
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(38)
+  expect(scenarios).toHaveLength(44)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -22,6 +22,8 @@ it('covers shell, delegation, revocation, and onboarding geometry at every suppo
         `dash-control-center-short-${scale}`,
         `dash-delegation-full-${scale}`,
         `dash-delegation-short-${scale}`,
+        `dash-tokens-full-${scale}`,
+        `dash-tokens-short-${scale}`,
         `tray-revocation-review-full-${scale}`,
         `tray-revocation-review-short-${scale}`,
         `tray-revocation-monitor-full-${scale}`,
@@ -35,6 +37,18 @@ it('covers shell, delegation, revocation, and onboarding geometry at every suppo
   expect(scenarios.map((scenario) => scenario.id)).toEqual(
     expect.arrayContaining(['dash-delegation-capped-1.5', 'tray-revocation-review-capped-1.5'])
   )
+})
+
+it('keeps the custom-token action present in full and short dashboard geometry', () => {
+  const scenarios = scenarioMatrix().filter(({ state }) => state === 'tokens')
+
+  expect(scenarios).toHaveLength(6)
+  for (const scenario of scenarios) {
+    const state = fixtureFor(scenario)
+    expect(state.windows.dash.nav).toEqual([{ view: 'tokens', data: {} }])
+    expect(state.main.tokens).toEqual({ custom: [], known: {} })
+    expect(scenario.requiredControls).toEqual(['Add New Token'])
+  }
 })
 
 it('keeps physical bounds and renderer zoom aligned to a stable logical viewport', () => {

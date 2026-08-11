@@ -16,8 +16,6 @@ const signerListReservedHeight = 392
 const signerAddressRowHeight = 44
 const minimumAddressLimit = 8
 const maximumAddressLimit = 11
-const signerPreviewAddressLimit = 5
-
 export function getAddressLimit(viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight) {
   const height = Number.isFinite(viewportHeight) ? viewportHeight : 900
   const usableListHeight = Math.max(0, height - signerListReservedHeight)
@@ -326,8 +324,9 @@ export class Signer extends React.Component {
     const signerStatus = this.getStatusMeta()
     const classes = [
       'signerStatusText',
-      signerStatus.ready ? 'signerStatusReady' : '',
-      signerStatus.phase === 'locked' && !isHardwareSigner(this.props.type) ? 'signerStatusIssue' : ''
+      signerStatus.tone === 'positive' ? 'signerStatusReady' : '',
+      signerStatus.tone === 'warning' ? 'signerStatusWarning' : '',
+      signerStatus.tone === 'danger' ? 'signerStatusDanger' : ''
     ]
       .filter(Boolean)
       .join(' ')
@@ -389,7 +388,7 @@ export class Signer extends React.Component {
       return Boolean(this.store('main.accounts', address.toLowerCase()))
     })
 
-    const zIndex = 1000 - this.props.index
+    const zIndex = 1000 - (this.props.index || 0)
 
     return (
       <section className={signerClass + ' cardShow'} style={{ zIndex }} aria-label={this.props.name}>
@@ -418,9 +417,11 @@ export class Signer extends React.Component {
               })()}
             </div>
             {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
-            <h2 className='signerName'>{this.props.name}</h2>
+            <div className='signerIdentity'>
+              <h2 className='signerName'>{this.props.name}</h2>
+              {this.statusText()}
+            </div>
           </div>
-          {this.statusText()}
           <button
             type='button'
             aria-label={`Open ${this.props.name || 'signer'} details`}
@@ -431,43 +432,18 @@ export class Signer extends React.Component {
           </button>
         </div>
         {signerStatus.ready || isLocked ? (
-          <>
-            <div className='signerAddedAccountTitle'>
-              {addedAccounts.length ? `Active accounts (${addedAccounts.length})` : 'No active accounts'}
+          <div className='signerPreviewSummary'>
+            <div className='signerPreviewAccountCount'>
+              {`${addedAccounts.length} active ${addedAccounts.length === 1 ? 'account' : 'accounts'}`}
             </div>
-            <div className='signerAccounts'>
-              {addedAccounts.length ? (
-                addedAccounts.slice(0, signerPreviewAddressLimit).map((address) => {
-                  const index = signer.addresses.indexOf(address) + 1
-                  const checkSummedAddress = getAddress(address)
-                  const account = this.store('main.accounts', address.toLowerCase())
-                  const current = this.store('selected.current') === account.id
-                  return (
-                    <button
-                      type='button'
-                      key={address}
-                      aria-label={checkSummedAddress}
-                      title={checkSummedAddress}
-                      className={`signerAccount signerAccountAdded ${current ? 'signerAccountCurrent' : ''}`}
-                      onClick={() => link.rpc('setSigner', account.id, () => {})}
-                    >
-                      <div className='signerAccountIndex'>{index}</div>
-                      <div className='signerAccountAddress'>{compactAccountAddress(checkSummedAddress)}</div>
-                      <div className='signerAccountCheck' />
-                    </button>
-                  )
-                })
-              ) : (
-                <button
-                  type='button'
-                  className='signerAccountsAdd wrenControl wrenControlSecondary'
-                  onClick={() => this.expand(signer.id)}
-                >
-                  {'Choose accounts'}
-                </button>
-              )}
-            </div>
-          </>
+            <button
+              type='button'
+              className='signerPreviewManage wrenControl wrenControlGhost'
+              onClick={() => this.expand(signer.id)}
+            >
+              Manage accounts
+            </button>
+          </div>
         ) : signerStatus.busy ? (
           <div className='signerLoading'>
             <div className='signerLoadingLoader' />

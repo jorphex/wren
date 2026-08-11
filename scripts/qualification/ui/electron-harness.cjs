@@ -302,6 +302,7 @@ const main = async () => {
         'empty account tray',
         'control center dashboard',
         'selected software account delegation',
+        'custom-token management',
         'delegation revocation review',
         'ambiguous delegation revocation monitoring',
         'onboarding intro',

@@ -40,8 +40,9 @@ window.addEventListener(
           const args = await ipcRenderer.invoke(...data.args)
           postToRenderer({ method: 'invoke', id: data.id, args: args ?? [], source: BRIDGE_SOURCE })
         } catch {
-          const result =
-            data.args[0] === 'tray:addChain' ? { success: false, error: 'Main IPC invocation failed' } : {}
+          const result = ['tokens:save', 'tray:addChain'].includes(data.args[0])
+            ? { success: false, error: 'Main IPC invocation failed' }
+            : {}
           postToRenderer({
             method: 'invoke',
             id: data.id,

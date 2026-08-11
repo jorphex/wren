@@ -98,6 +98,28 @@ const scenarioMatrix = () => [
       requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
     },
     {
+      id: `dash-tokens-full-${scale}`,
+      renderer: 'dash',
+      state: 'tokens',
+      scale,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.customTokens',
+      requiredControls: ['Add New Token'],
+      requiredText: ['No custom tokens']
+    },
+    {
+      id: `dash-tokens-short-${scale}`,
+      renderer: 'dash',
+      state: 'tokens',
+      scale,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.customTokens',
+      requiredControls: ['Add New Token'],
+      requiredText: ['No custom tokens']
+    },
+    {
       id: `tray-revocation-review-full-${scale}`,
       renderer: 'tray',
       state: 'revocation-review',

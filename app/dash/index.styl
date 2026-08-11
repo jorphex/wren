@@ -16,17 +16,6 @@ button,
   width 0px
   background transparent
 
-@keyframes showFooter
-  0%
-    opacity 0
-    transform translateY(4px)
-  60%
-    opacity 0
-    transform translateY(4px)
-  100%
-    opacity 1
-    transform translateY(0px)
-
 .dash
   width 100%
   height 100%
@@ -127,7 +116,6 @@ button,
     right 12px
     border-radius 16px
     padding 3px 3px 1px 3px
-    animation showFooter 0.64s ease-in-out
     box-sizing border-box
 
     .dashFooterButton
@@ -418,30 +406,43 @@ button,
 
   // An inactive network is a neutral availability state, not an error.
   .network .signerPermissionToggle
-    width 42px
-    height 24px
+    width 44px
+    height 44px
     margin-top 0
-    border 1px solid var(--wren-border-default)
-    border-radius 6px
-    background var(--wren-surface-inset)
-    box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
-    transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
+    border 0
+    background transparent
+    box-shadow none
+
+    &::before
+      position absolute
+      top 10px
+      left 0
+      width 44px
+      height 24px
+      box-sizing border-box
+      border 1px solid var(--wren-border-default)
+      border-radius var(--wren-radius-pill)
+      content ''
+      background var(--wren-surface-inset)
+      box-shadow var(--wren-shadow-inset)
+      transition border-color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
 
     .signerPermissionToggleSwitch
-      top 3px
+      top 14px
       left 4px
       bottom auto
       width 16px
       height 16px
       border 0
-      border-radius 4px
-      background var(--wren-text-disabled)
+      border-radius 50%
+      background var(--wren-text-secondary)
       box-shadow var(--wren-shadow-sm)
       transition background var(--wren-motion-fast) var(--wren-ease), opacity var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
 
   .network .signerPermissionToggleOn
-    border-color var(--wren-border-default)
-    background var(--wren-surface-inset)
+    &::before
+      border-color var(--wren-success)
+      background var(--wren-success-soft)
 
     .signerPermissionToggleSwitch
       background var(--wren-success)
@@ -449,12 +450,14 @@ button,
 
   .network .signerPermissionToggle:disabled
     opacity 1
-    border-color var(--wren-border-strong)
     cursor default
+
+    &::before
+      border-color var(--wren-border-strong)
 
     .signerPermissionToggleSwitchLocked
       inset 0
-      border-radius 6px
+      border-radius var(--wren-radius-pill)
       cursor default
 
       .signerPermissionToggleSwitch
@@ -463,10 +466,10 @@ button,
       svg
         position absolute
         z-index 1
-        top 6px
-        right 7px
+        top 17px
+        left 7px
         opacity 1
-        color var(--wren-text-inverse)
+        color var(--wren-text-muted)
         transition color var(--wren-motion-fast) var(--wren-ease)
 
 .workspace-edge-right .dash

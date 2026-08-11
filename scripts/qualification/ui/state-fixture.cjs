@@ -59,6 +59,7 @@ const baseState = () => ({
     rates: {},
     networks: { ethereum: {} },
     networksMeta: { ethereum: {} },
+    tokens: { custom: [], known: {} },
     mute: {
       betaDisclosure: true,
       gasFeeWarning: false,
@@ -162,6 +163,14 @@ const fixtureFor = (scenario) => {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'accounts', data: {} }]
+    }
+  }
+
+  if (scenario.state === 'tokens') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'tokens', data: {} }]
     }
   }
 

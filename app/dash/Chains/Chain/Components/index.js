@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import Icon from '../../../../../resources/Components/Icon'
+import Toggle from '../../../../../resources/Components/Toggle'
 import link from '../../../../../resources/link'
 import RingIcon from '../../../../../resources/Components/RingIcon'
 import chainDefault from '../chainDefault'
@@ -70,16 +71,7 @@ export const NetworkEditorField = ({
 export const NetworkEditorToggle = ({ label, checked, disabled = false, onChange }) => (
   <div className='networkEditorToggleRow'>
     <span>{label}</span>
-    <button
-      type='button'
-      aria-label={label}
-      aria-pressed={checked}
-      className={checked ? 'networkEditorToggle networkEditorToggleOn' : 'networkEditorToggle'}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <span />
-    </button>
+    <Toggle checked={checked} disabled={disabled} label={label} onChange={onChange} />
   </div>
 )
 
@@ -185,15 +177,11 @@ export const RpcEndpointLedger = ({
                 <Icon name='chevron-down' size={13} />
               </button>
             </div>
-            <button
-              type='button'
-              aria-label={`${endpoint.on ? 'Disable' : 'Enable'} RPC endpoint ${index + 1}`}
-              aria-pressed={endpoint.on}
-              className={endpoint.on ? 'networkEditorToggle networkEditorToggleOn' : 'networkEditorToggle'}
-              onClick={() => onToggle(endpoint.id, !endpoint.on)}
-            >
-              <span />
-            </button>
+            <Toggle
+              checked={endpoint.on}
+              label={`${endpoint.on ? 'Disable' : 'Enable'} RPC endpoint ${index + 1}`}
+              onChange={(enabled) => onToggle(endpoint.id, enabled)}
+            />
             {index > 0 ? (
               <button
                 type='button'

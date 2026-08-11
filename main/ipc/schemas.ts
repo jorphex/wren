@@ -343,6 +343,7 @@ const invokeSchemas = {
       .strict()
   ]),
   'send:resolveRecipient': z.tuple([z.string().trim().min(1).max(255)]),
+  'tokens:save': z.tuple([TokenSchema, AssetSuggestionReferenceSchema.optional()]),
   'yearn:getCatalog': z.tuple([z.object({ force: z.boolean() }).strict()]),
   'yearn:getPositions': z.tuple([]),
   'yearn:getWorkflows': z.tuple([]),
@@ -393,6 +394,10 @@ const invokeResultSchemas = {
     z
       .object({ success: z.literal(true), address: AddressSchema, name: z.string().max(255).optional() })
       .strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'tokens:save': z.union([
+    z.object({ success: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'yearn:getCatalog': YearnCatalogResultSchema,

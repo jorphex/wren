@@ -472,6 +472,10 @@ describe('displaying errors', () => {
 })
 
 describe('setting token details', () => {
+  beforeEach(() => {
+    link.invoke.mockResolvedValue({ success: true })
+  })
+
   it('should show the user that they are editing a token', () => {
     render(
       <AddToken
@@ -633,8 +637,8 @@ describe('setting token details', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add token' }))
 
-    expect(link.send).toHaveBeenCalledWith(
-      'tray:addToken',
+    expect(link.invoke).toHaveBeenCalledWith(
+      'tokens:save',
       { ...tokenData, address, chainId: 1 },
       requestReference
     )
@@ -649,7 +653,7 @@ describe('setting token details', () => {
 
     expect(screen.getByLabelText('Decimals').value).toBe('0')
     await user.click(screen.getByRole('button', { name: 'Add token' }))
-    expect(link.send).toHaveBeenCalledWith('tray:addToken', { ...tokenData, address, chainId: 1 }, undefined)
+    expect(link.invoke).toHaveBeenCalledWith('tokens:save', { ...tokenData, address, chainId: 1 }, undefined)
   })
 
   it('accepts only whole-number decimals from 0 through 255', async () => {
@@ -667,8 +671,8 @@ describe('setting token details', () => {
     expect(decimals.value).toBe('255')
     await user.click(screen.getByRole('button', { name: 'Add token' }))
 
-    expect(link.send).toHaveBeenCalledWith(
-      'tray:addToken',
+    expect(link.invoke).toHaveBeenCalledWith(
+      'tokens:save',
       {
         address,
         chainId: 1,
@@ -688,24 +692,46 @@ describe('setting token details', () => {
 
     await user.dblClick(screen.getByRole('button', { name: 'Add token' }))
 
-    expect(link.send.mock.calls.filter(([channel]) => channel === 'tray:addToken')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Adding token…' }).disabled).toBe(true)
+    expect(link.invoke.mock.calls.filter(([channel]) => channel === 'tokens:save')).toHaveLength(1)
   })
 
-  it('cancels delayed post-save navigation after unmount', async () => {
+  it('does not navigate after an in-flight save unmounts', async () => {
     const tokenData = { name: 'Test Token', symbol: 'TEST', decimals: 6, logoURI: '' }
     const address = '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4'
+    let settleSave
+    link.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          settleSave = resolve
+        })
+    )
     const { unmount, user } = render(
       <AddToken data={{ notifyData: { address, chain: { id: 1 }, tokenData } }} />
     )
 
     await user.click(screen.getByRole('button', { name: 'Add token' }))
     unmount()
-    act(() => jest.advanceTimersByTime(250))
+    await act(async () => settleSave({ success: true }))
 
-    expect(link.send.mock.calls).toEqual([
-      ['tray:addToken', { ...tokenData, address, chainId: 1 }, undefined]
-    ])
+    expect(link.send).not.toHaveBeenCalled()
+    expect(link.invoke).toHaveBeenCalledWith('tokens:save', { ...tokenData, address, chainId: 1 }, undefined)
+  })
+
+  it('keeps the form open with a retryable error when saving is unavailable', async () => {
+    const tokenData = { name: 'Test Token', symbol: 'TEST', decimals: 6, logoURI: '' }
+    const address = '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4'
+    link.invoke.mockResolvedValueOnce({ success: false, error: 'Main IPC invocation failed' })
+    const { user } = render(<AddToken data={{ notifyData: { address, chain: { id: 1 }, tokenData } }} />)
+
+    await user.click(screen.getByRole('button', { name: 'Add token' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(
+        'Token could not be saved. Check the details and try again.'
+      )
+    )
+    expect(screen.getByRole('button', { name: 'Add token' }).disabled).toBe(false)
+    expect(link.send).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -721,10 +747,14 @@ describe('setting token details', () => {
       )
 
       await user.click(screen.getByRole('button', { name: buttonName }))
-      act(() => jest.advanceTimersByTime(250))
+      await waitFor(() => expect(link.send).toHaveBeenCalledTimes(2))
 
+      expect(link.invoke).toHaveBeenCalledWith(
+        'tokens:save',
+        { ...tokenData, address, chainId: 1 },
+        undefined
+      )
       expect(link.send.mock.calls).toEqual([
-        ['tray:addToken', { ...tokenData, address, chainId: 1 }, undefined],
         ['nav:back', 'dash', backSteps],
         ['nav:forward', 'dash', { view: 'tokens', data: {} }]
       ])

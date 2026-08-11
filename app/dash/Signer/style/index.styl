@@ -147,6 +147,12 @@
 .signerStatusReady
   color var(--good)
 
+.signerStatusWarning
+  color var(--wren-warning)
+
+.signerStatusDanger
+  color var(--wren-danger)
+
 .signerBottom
   left 0
   right 0
@@ -805,6 +811,38 @@
   font-weight 500
   font-variation-settings var(--wren-font-heading-settings)
 
+.signerIdentity
+  min-width 0
+
+.signerIdentity > .signerStatusText
+  margin var(--wren-space-1) 0 0
+  padding 0
+  text-align left
+  white-space nowrap
+
+.signerPreviewSummary
+  display flex
+  min-height 44px
+  margin 0 var(--wren-space-4)
+  box-sizing border-box
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+
+.signerPreviewAccountCount
+  min-width 0
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  line-height 18px
+
+.signerPreviewManage
+  min-width 132px
+  min-height 44px
+  flex none
+  padding 0 var(--wren-space-3)
+  font-size var(--wren-type-small)
+
 .signerExpand,
 .signerBottom .signerBottomPageBack,
 .signerBottom .signerBottomPageNext,
@@ -883,14 +921,38 @@
     border-bottom 1px solid var(--wren-ledger-rule)
 
   .signerTop
-    min-height 52px
+    display grid
+    min-height 62px
     box-sizing border-box
     padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-2)
+    grid-template-columns minmax(0, 1fr) 44px
+    align-items center
+    column-gap var(--wren-space-3)
 
   .signerDetails
-    flex 1
+    display grid
     min-width 0
-    gap var(--wren-space-3)
+    grid-template-columns 38px minmax(0, 1fr)
+    align-items center
+    gap var(--wren-space-2)
+
+    .signerIcon,
+    .signerIconWrap
+      display flex
+      width 38px
+      height 38px
+      box-sizing border-box
+      align-items center
+      justify-content center
+
+    .signerIcon
+      border 1px solid var(--wren-border-subtle)
+      border-radius 50%
+      color var(--wren-text-secondary)
+      background var(--wren-surface-inset)
+
+    .signerIconHardware
+      transform translateY(-1px)
 
     .signerName
       width auto
@@ -908,18 +970,21 @@
   .signerExpand
     flex none
 
-  .signerTop > .signerStatusText
-    flex none
-    margin 0 var(--wren-space-3) 0 auto
-    padding 0
-    color var(--wren-text-muted)
-    text-align left
-
   .signerStatusReady
     color var(--wren-success)
 
   .signerStatusIssue
     color var(--wren-warning)
+
+  .signerStatusWarning
+    color var(--wren-warning)
+
+  .signerStatusDanger
+    color var(--wren-danger)
+
+  .signerPreviewSummary
+    margin 0 0 0 46px
+    padding 0 var(--wren-space-1) var(--wren-space-2) 0
 
   .signerAddedAccountTitle
     justify-content flex-start

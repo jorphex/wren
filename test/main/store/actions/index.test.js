@@ -678,6 +678,40 @@ describe('#addCustomTokens', () => {
       }
     ])
   })
+
+  it('updates frozen production-shaped balances without mutating them', () => {
+    const account = '0xd0e3872f5fa8ecb49f1911f605c0da90689a484e'
+    const originalBalance = Object.freeze({
+      address: testTokens.badger.address,
+      chainId: testTokens.badger.chainId,
+      symbol: 'BDG',
+      name: 'Old Badger',
+      logoURI: 'http://logo.io'
+    })
+    const originalAccountBalances = Object.freeze([originalBalance])
+    const originalBalances = Object.freeze({ [account]: originalAccountBalances })
+    balances = originalBalances
+
+    addTokens([{ ...testTokens.badger, symbol: 'BADGER', name: 'Badger Token' }])
+
+    expect(balances).not.toBe(originalBalances)
+    expect(balances[account]).not.toBe(originalAccountBalances)
+    expect(balances[account][0]).not.toBe(originalBalance)
+    expect(originalBalance).toEqual({
+      address: testTokens.badger.address,
+      chainId: testTokens.badger.chainId,
+      symbol: 'BDG',
+      name: 'Old Badger',
+      logoURI: 'http://logo.io'
+    })
+    expect(balances[account][0]).toEqual({
+      address: testTokens.badger.address,
+      chainId: testTokens.badger.chainId,
+      symbol: 'BADGER',
+      name: 'Badger Token',
+      logoURI: 'http://logo.io'
+    })
+  })
 })
 
 describe('#removeCustomTokens', () => {

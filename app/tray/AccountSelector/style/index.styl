@@ -210,6 +210,29 @@
 .accountSelector:not(.accountSelectorOpen) .accountSelectorScrollWrap
   border-top 1px solid var(--wren-ledger-rule)
 
+.accountSelectorWelcome
+  padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-5)
+  pointer-events auto
+
+  h1,
+  p
+    margin 0
+
+  h1
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size 20px
+    font-weight 640
+    line-height 26px
+    font-variation-settings var(--wren-font-heading-settings)
+
+  p
+    margin-top var(--wren-space-1)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    line-height 20px
+
 .accountSelector:not(.accountSelectorOpen)
   display grid
   padding 8px var(--wren-space-5) var(--wren-space-4)

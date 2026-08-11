@@ -1,6 +1,7 @@
 import fs from 'fs'
 
 const editorStyle = fs.readFileSync('app/dash/Chains/Chain/style/index.styl', 'utf8')
+const toggleStyle = fs.readFileSync('resources/Components/Toggle/index.styl', 'utf8')
 
 test('keeps the short network editor body scrollable above its fixed actions', () => {
   expect(editorStyle).toMatch(/@media \(max-height: 760px\) and \(min-width: 561px\)/)
@@ -18,6 +19,7 @@ test('keeps network editor copy readable and compact controls practically target
   expect(editorStyle).not.toMatch(/font-size (?:10|11)px/)
   expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?height 44px/)
   expect(editorStyle).toMatch(/\.rpcEndpointRemove\n[\s\S]*?width 44px\n\s{2}height 44px/)
-  expect(editorStyle).toMatch(/\.networkEditorToggle\n[\s\S]*?width 44px\n\s{2}height 44px/)
+  expect(toggleStyle).toMatch(/\.wrenToggle\n[\s\S]*?width 44px\n\s{2}height 44px/)
+  expect(toggleStyle).toMatch(/&::before\n[\s\S]*?width 44px\n\s{4}height 24px/)
   expect(editorStyle).toMatch(/\.rpcEndpointAddRow[\s\S]*?button\n[\s\S]*?height 44px/)
 })

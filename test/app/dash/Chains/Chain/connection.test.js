@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { ChainHeader } from '../../../../../app/dash/Chains/Chain/Components'
+import { ChainHeader, NetworkEditorToggle } from '../../../../../app/dash/Chains/Chain/Components'
 import {
   ChainModule,
   connectionHealthLabel,
@@ -144,6 +144,17 @@ test('opens network details from the identity region while keeping the toggle se
   link.send.mockClear()
   await user.click(toggle)
   expect(link.send).toHaveBeenCalledWith('tray:action', 'activateNetwork', 'ethereum', 137, false)
+})
+
+test('uses the shared switch language in the network editor', async () => {
+  const onChange = jest.fn()
+  const { user } = render(<NetworkEditorToggle label='Test network' checked={true} onChange={onChange} />)
+
+  const toggle = screen.getByRole('switch', { name: 'Test network' })
+  expect(toggle.classList.contains('wrenToggle')).toBe(true)
+  expect(toggle.classList.contains('wrenToggleOn')).toBe(true)
+  await user.click(toggle)
+  expect(onChange).toHaveBeenCalledWith(false)
 })
 
 test('keeps canonical identity colors for known chains', () => {

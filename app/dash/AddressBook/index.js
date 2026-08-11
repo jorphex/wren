@@ -9,13 +9,6 @@ import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddre
 const shortAddress = (address) => `${address.slice(0, 8)}...${address.slice(-6)}`
 const completeEnsName = (value) => /\.[a-z]{2,}$/i.test(value.trim())
 const completeAddress = (value) => /^0x[0-9a-fA-F]{40}$/.test(value.trim())
-const initials = (name) =>
-  name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
 
 const resolveEnsName = (name) =>
   new Promise((resolve, reject) => {
@@ -240,6 +233,8 @@ export class AddressBook extends React.Component {
   }
 
   openEditor(address) {
+    clearTimeout(this.statusTimer)
+    this.setState({ confirmDelete: '', status: '' })
     link.send('tray:action', 'navDash', {
       view: 'addressBook',
       data: {
@@ -250,8 +245,16 @@ export class AddressBook extends React.Component {
     })
   }
 
+  copy(entry) {
+    if (this.state.working) return
+    this.setState({ confirmDelete: '' })
+    link.send('tray:clipboardData', entry.address)
+    this.setTransientStatus(`${entry.name} address copied`)
+  }
+
   async remove(address) {
     if (this.state.confirmDelete !== address) {
+      clearTimeout(this.statusTimer)
       this.setState({ confirmDelete: address, status: '' })
       return
     }
@@ -330,17 +333,26 @@ export class AddressBook extends React.Component {
             {entries.map((entry) => (
               <article className='addressBookRow' key={entry.address}>
                 <button
-                  aria-label={`Edit ${entry.name}`}
+                  aria-label={`Copy ${entry.name} address`}
                   className='addressBookCardMain'
-                  onClick={() => this.openEditor(entry.address)}
+                  disabled={this.state.working}
+                  onClick={() => this.copy(entry)}
                   type='button'
                 >
-                  <span className='addressBookAvatar'>{initials(entry.name)}</span>
                   <span className='addressBookIdentity'>
                     <strong>{entry.name}</strong>
                     <span className='addressBookAddress'>{shortAddress(entry.address)}</span>
                     {entry.note ? <span className='addressBookNote'>{entry.note}</span> : null}
                   </span>
+                </button>
+                <button
+                  aria-label={`Edit ${entry.name}`}
+                  className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
+                  disabled={this.state.working}
+                  onClick={() => this.openEditor(entry.address)}
+                  type='button'
+                >
+                  Edit
                 </button>
                 <button
                   aria-label={`${this.state.confirmDelete === entry.address ? 'Confirm removing' : 'Remove'} ${entry.name}`}
@@ -391,7 +403,7 @@ export class AddressBook extends React.Component {
           </button>
         </div>
         {this.state.status ? (
-          <div className='addressBookStatus' role='status'>
+          <div aria-atomic='true' aria-live='polite' className='addressBookStatus' role='status'>
             {this.state.status}
           </div>
         ) : null}

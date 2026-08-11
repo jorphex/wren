@@ -253,6 +253,20 @@ it('exposes shortcut editing as a native action', () => {
   )
 })
 
+it('orders the wallet shortcut label, edit action, and enable toggle', () => {
+  renderSettings()
+
+  const shortcut = setting('Wallet shortcut')
+  const controls = shortcut.querySelector('.signerPermissionControls')
+  const label = within(shortcut).getByText('Wallet shortcut')
+  const edit = within(shortcut).getByRole('button', { name: 'Edit' })
+  const toggle = within(shortcut).getByRole('switch', { name: 'Enable wallet shortcut' })
+
+  expect(label.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(edit.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(controls.contains(label)).toBe(true)
+})
+
 it('uses shared controls for companion revocation', () => {
   renderSettings()
 

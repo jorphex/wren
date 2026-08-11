@@ -73,6 +73,7 @@ class TxRecipient extends React.Component {
               <div className='clusterAddress'>
                 <AddressIdentity
                   address={address}
+                  complete={true}
                   label={localIdentity?.label || ensName}
                   revealOnHover={false}
                   source={localIdentity?.source || (ensName ? 'ENS' : '')}

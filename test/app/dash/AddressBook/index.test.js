@@ -32,7 +32,7 @@ beforeEach(() => {
   link.send.mockReset()
 })
 
-test('searches contacts and opens native add and edit navigation', async () => {
+test('searches contacts, copies rows, and opens add and edit navigation explicitly', async () => {
   const { user } = render(<ConnectedAddressBook data={{}} />)
 
   expect(screen.getByText('Yearn Treasury')).toBeTruthy()
@@ -41,6 +41,18 @@ test('searches contacts and opens native add and edit navigation', async () => {
   expect(screen.getByText('No contacts match')).toBeTruthy()
 
   await user.clear(screen.getByRole('textbox', { name: 'Search contacts' }))
+  await user.click(screen.getByRole('button', { name: 'Copy Yearn Treasury address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)
+  expect(screen.getByRole('status').textContent).toBe('Yearn Treasury address copied')
+  expect(link.send).not.toHaveBeenCalledWith(
+    'tray:action',
+    'navDash',
+    expect.objectContaining({ data: expect.objectContaining({ address }) })
+  )
+
+  act(() => jest.advanceTimersByTime(4000))
+  expect(screen.queryByRole('status')).toBeNull()
+
   await user.click(screen.getByRole('button', { name: 'Edit Yearn Treasury' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'addressBook',
@@ -52,6 +64,21 @@ test('searches contacts and opens native add and edit navigation', async () => {
     view: 'addressBook',
     data: { screen: 'edit' }
   })
+})
+
+test('orders contact actions as Copy, Edit, then Remove and copy cancels armed removal', async () => {
+  const { user } = render(<ConnectedAddressBook data={{}} />)
+  const copy = screen.getByRole('button', { name: 'Copy Yearn Treasury address' })
+  const edit = screen.getByRole('button', { name: 'Edit Yearn Treasury' })
+  const remove = screen.getByRole('button', { name: 'Remove Yearn Treasury' })
+
+  expect([...copy.closest('.addressBookRow').querySelectorAll('button')]).toEqual([copy, edit, remove])
+
+  await user.click(remove)
+  expect(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' })).toBeTruthy()
+  await user.click(copy)
+  expect(screen.getByRole('button', { name: 'Remove Yearn Treasury' })).toBeTruthy()
+  expect(removeAddressBookEntry).not.toHaveBeenCalled()
 })
 
 test('resolves ENS once, saves its address, and returns through Dash navigation', async () => {

@@ -98,6 +98,15 @@ it('uses the emphasized primary treatment for the empty-state action', () => {
   expect(screen.getByRole('button', { name: 'Add account' }).classList.contains('wrenHeroPrimary')).toBe(true)
 })
 
+it('welcomes returning users before the startup account list', () => {
+  const { selector } = setupSelector()
+
+  render(selector.renderWelcome())
+
+  expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeTruthy()
+  expect(screen.getByText('Choose an account to open your wallet.')).toBeTruthy()
+})
+
 it('moves focus into the chooser, wraps Tab, and restores the trigger on Escape', async () => {
   const { selector, setOpen } = setupSelector({ drawerOpen: false })
   const account = {

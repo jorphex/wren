@@ -18,6 +18,13 @@ test('keeps the compact address presentation when no identity is known', () => {
   expect(screen.getByText(address)).toBeTruthy()
 })
 
+test('shows the complete address when requested', () => {
+  render(<AddressIdentity address={address} complete />)
+
+  expect(screen.getAllByText(address)).toHaveLength(2)
+  expect(screen.getByLabelText(address).classList.contains('clusterAddressRecipientComplete')).toBe(true)
+})
+
 test('keeps copied feedback visible without requiring hover', () => {
   render(<AddressIdentity address={address} copied />)
 

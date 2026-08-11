@@ -116,14 +116,14 @@ test('does not enable a disabled endpoint when its URL changes', () => {
     'rpc-2',
     'https://quiet.example'
   )
-  expect(screen.getByRole('button', { name: 'Enable RPC endpoint 2' })).toBeTruthy()
+  expect(screen.getByRole('switch', { name: 'Enable RPC endpoint 2' })).toBeTruthy()
   expect(screen.queryByText('Checking connection…')).toBeNull()
 })
 
 test('applies endpoint availability, ordering, and removal directly', async () => {
   const { user } = render(<Chain view='expanded' {...chain} />)
 
-  await user.click(screen.getByRole('button', { name: 'Disable RPC endpoint 2' }))
+  await user.click(screen.getByRole('switch', { name: 'Disable RPC endpoint 2' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleEndpoint', 'ethereum', 1337, 'rpc-2', false)
 
   await user.click(screen.getByRole('button', { name: 'Move RPC endpoint 2 up' }))
@@ -169,7 +169,7 @@ test('saves identity, currency decimals, and enabled state together', async () =
   await user.type(screen.getByLabelText('Network name'), 'Updated')
   await user.clear(screen.getByLabelText('Decimals'))
   await user.type(screen.getByLabelText('Decimals'), '6')
-  await user.click(screen.getByRole('button', { name: 'Use this network' }))
+  await user.click(screen.getByRole('switch', { name: 'Use this network' }))
   link.send.mockClear()
   await user.click(screen.getByRole('button', { name: 'Save changes' }))
 

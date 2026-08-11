@@ -476,51 +476,6 @@ input.rpcEndpointInput
   font-size 13px
   font-weight 590
 
-.networkEditorToggle
-  appearance none
-  position relative
-  width 44px
-  height 44px
-  padding 0
-  border 0
-  background transparent
-  cursor pointer
-
-  &::before
-    content ''
-    position absolute
-    top 10px
-    left 1px
-    width 40px
-    height 22px
-    border 1px solid var(--wren-border-default)
-    border-radius 6px
-    background var(--wren-surface-inset)
-    box-shadow inset 0 1px 2px rgba(0, 0, 0, .45)
-
-  span
-    position absolute
-    top 14px
-    left 5px
-    width 16px
-    height 16px
-    border-radius 4px
-    background var(--wren-text-disabled)
-    transition left var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-  &:disabled
-    cursor default
-    opacity .65
-
-.networkEditorToggleOn span
-  left 21px
-  background var(--wren-success)
-  box-shadow 0 1px 2px rgba(0, 0, 0, .42)
-
 .networkEditorMessage
   margin-top var(--wren-space-3)
   color var(--wren-danger)

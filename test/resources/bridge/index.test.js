@@ -125,6 +125,7 @@ describe('preload renderer bridge', () => {
 
   test.each([
     ['tray:addChain', { success: false, error: 'Main IPC invocation failed' }],
+    ['tokens:save', { success: false, error: 'Main IPC invocation failed' }],
     ['tray:getTokenDetails', {}]
   ])('settles rejected %s invokes with its exact failure result', async (channel, result) => {
     mockIpcRenderer.invoke.mockRejectedValue(new Error('sensitive internal failure'))
