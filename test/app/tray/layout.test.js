@@ -30,6 +30,21 @@ test('keeps the first account row and compact account controls free of duplicate
   )
 })
 
+test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {
+  expect(accountSource).not.toMatch(/accountHomeExplorer/)
+  expect(accountStyle).toMatch(
+    /\.chainMonitorNetworkRow,[\s\S]*?\.chainMonitorGasRow[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto/
+  )
+  expect(accountStyle).toMatch(
+    /\.chainMonitorSwitchButton,[\s\S]*?\.chainMonitorExplorer[\s\S]*?min-height 44px/
+  )
+  expect(accountStyle).toMatch(
+    /\.chainMonitorGasEvidence[\s\S]*?justify-content space-between[\s\S]*?\.chainMonitorDisclosure[\s\S]*?min-height 44px/
+  )
+  expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
+  expect(accountSource).toMatch(/wrenControlPrimary wrenControlLarge/)
+})
+
 test('keeps the account selector and privacy control on one optical axis', () => {
   expect(accountSelectorStyle).toMatch(/\.accountSwitcherTrigger[\s\S]*?height 40px/)
   expect(accountSelectorStyle).toMatch(/\.accountPrivacyToggle[\s\S]*?width 40px[\s\S]*?height 40px/)

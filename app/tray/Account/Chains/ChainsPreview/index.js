@@ -1,10 +1,9 @@
 import React from 'react'
 import Restore from 'react-restore'
-import BigNumber from 'bignumber.js'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
-import { roundGwei } from '../../../../../resources/utils'
+import RingIcon from '../../../../../resources/Components/RingIcon'
 
 export class ChainsPreview extends React.Component {
   constructor(...args) {
@@ -57,64 +56,72 @@ export class ChainsPreview extends React.Component {
     const currentChainMeta = this.store('main.networksMeta.ethereum', currentChainId)
     if (!currentChain || !currentChainMeta) return null
     const { name } = currentChain
-    const { primaryColor } = currentChainMeta
-    const levels = currentChainMeta.gas?.price?.levels || {}
-    const fees = currentChainMeta.gas?.price?.fees
-    const feeValue =
-      fees?.nextBaseFee && fees?.maxPriorityFeePerGas
-        ? BigNumber(fees.nextBaseFee).plus(BigNumber(fees.maxPriorityFeePerGas)).shiftedBy(-9).toNumber()
-        : levels.fast
-          ? BigNumber(levels.fast).shiftedBy(-9).toNumber()
-          : null
-    const displayFee =
-      feeValue === null ? 'Gas price unavailable' : `${roundGwei(feeValue) || 'under 0.001'} gwei`
-    const gasAction = this.state.expanded ? 'Hide' : 'Show'
+    const { icon, primaryColor } = currentChainMeta
+    const chain = { type: 'ethereum', id: currentChain.id ?? Number(currentChainId) }
+    const explorerAvailable =
+      typeof currentChain.explorer === 'string' && currentChain.explorer.trim().length > 0
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
-        <div className='moduleHeader'>
-          <button
-            aria-expanded={this.state.expanded}
-            aria-label={`${name}: ${displayFee}. ${gasAction} gas details.`}
-            className='chainMonitorDisclosure'
-            onClick={() => this.setState(({ expanded }) => ({ expanded: !expanded }))}
-            type='button'
-          >
-            <span className='chainMonitorIdentity'>
-              <span>
-                <Icon name='network' size={16} />
-              </span>
-              <span>
-                <strong>Gas</strong>
-                <small>{name}</small>
-              </span>
-            </span>
-            <Monitor ariaHidden inline chainId={currentChain.id} color={`var(--${primaryColor})`} />
-            <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={17} />
-          </button>
-          {existingChains.length > 1 && (
-            <div className='chainMonitorSwitch'>
+        <div className='chainMonitorNetworkRow'>
+          <div className='chainMonitorSwitch' role='group' aria-label='Displayed network'>
+            {existingChains.length > 1 ? (
               <button
                 type='button'
-                aria-label='Previous network'
+                aria-label={`Previous network from ${name}`}
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index - 1)}
               >
                 <Icon name='chevron-left' size={18} />
               </button>
+            ) : null}
+            <span className='chainMonitorIdentity'>
+              <span className='chainMonitorMark'>
+                <RingIcon color={primaryColor ? `var(--${primaryColor})` : 'var(--moon)'} img={icon} small />
+              </span>
+              <strong>{name}</strong>
+            </span>
+            {existingChains.length > 1 ? (
               <button
                 type='button'
-                aria-label='Next network'
+                aria-label={`Next network from ${name}`}
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index + 1)}
               >
                 <Icon name='chevron-right' size={18} />
               </button>
-            </div>
-          )}
+            ) : null}
+          </div>
+          <button
+            type='button'
+            aria-label={
+              explorerAvailable
+                ? `View ${name} account on block explorer`
+                : `Block explorer unavailable for ${name}`
+            }
+            className='chainMonitorExplorer wrenControl wrenControlGhost wrenControlIcon'
+            disabled={!explorerAvailable}
+            onClick={() => link.send('tray:openExplorer', chain, null, this.props.account)}
+          >
+            <Icon name='external' size={15} />
+          </button>
         </div>
-        {this.state.expanded ? (
-          <Monitor details chainId={currentChain.id} color={`var(--${primaryColor})`} />
-        ) : null}
+        <div className='chainMonitorGasRow'>
+          <span className='chainMonitorGasEvidence'>
+            <span>Gas</span>
+            <Monitor inline chainId={chain.id} color={`var(--${primaryColor})`} />
+          </span>
+          <button
+            aria-expanded={this.state.expanded}
+            aria-label={`${this.state.expanded ? 'Hide' : 'Show'} gas details for ${name}`}
+            className='chainMonitorDisclosure wrenControl wrenControlGhost'
+            onClick={() => this.setState(({ expanded }) => ({ expanded: !expanded }))}
+            type='button'
+          >
+            <span>Details</span>
+            <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={17} />
+          </button>
+        </div>
+        {this.state.expanded ? <Monitor details chainId={chain.id} color={`var(--${primaryColor})`} /> : null}
       </div>
     )
   }

@@ -301,6 +301,7 @@ const main = async () => {
       states: [
         'empty account tray',
         'control center dashboard',
+        'selected account network and gas module',
         'selected software account delegation',
         'custom-token management',
         'delegation revocation review',
@@ -312,7 +313,7 @@ const main = async () => {
       scales: [1, 1.25, 1.5]
     },
     uncovered: [
-      'General transaction review and account-home states remain outside this focused matrix.',
+      'General transaction review and account-home modules beyond the controlled Gas surface remain outside this focused matrix.',
       'Hardware prompts, provider requests, and live network content are intentionally excluded.',
       'This harness qualifies renderer scaling; production window placement remains covered by shell-geometry tests.',
       "This host cannot provide Chromium's test sandbox; only trusted local bundles run, with application-level isolation self-tested."

@@ -58,7 +58,7 @@ const modules = {
   settings: Settings
 }
 
-export const AccountAddressActions = ({ address, explorerChain }) => {
+export const AccountAddressActions = ({ address }) => {
   const [copied, copyAddress] = useCopiedMessage(address, 1800)
 
   return (
@@ -67,16 +67,6 @@ export const AccountAddressActions = ({ address, explorerChain }) => {
         <span>{address}</span>
         <Icon name={copied ? 'check' : 'copy'} size={14} />
       </button>
-      {explorerChain ? (
-        <button
-          type='button'
-          className='accountHomeExplorer wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
-          aria-label='Open account in block explorer'
-          onClick={() => link.send('tray:openExplorer', explorerChain, null, address)}
-        >
-          <Icon name='external' size={14} />
-        </button>
-      ) : null}
       <span className='clusterStatus' role='status' aria-live='polite'>
         {copied ? 'Address copied' : ''}
       </span>
@@ -275,16 +265,6 @@ class _AccountMain extends React.Component {
     }, BigNumber(0))
   }
 
-  getAddressExplorerChain() {
-    const networks = this.store('main.networks.ethereum') || {}
-    const entries = Object.entries(networks)
-    const preferred = entries.find(([id, network]) => String(id) === '1' && network?.on && network.explorer)
-    const available = preferred || entries.find(([, network]) => network?.on && network.explorer)
-    if (!available) return null
-    const [id, network] = available
-    return { type: 'ethereum', id: network.id ?? Number(id) }
-  }
-
   renderHomeHeader() {
     const account = this.store('main.accounts', this.props.id) || {}
     const address = getAddress(account.address || this.props.id)
@@ -297,7 +277,7 @@ class _AccountMain extends React.Component {
         <div className='accountHomeIdentity'>
           <div className='accountHomeEyebrow'>Selected account</div>
           <AccountNameEditor account={this.props.id} name={name} />
-          <AccountAddressActions address={address} explorerChain={this.getAddressExplorerChain()} />
+          <AccountAddressActions address={address} />
         </div>
         <div className='accountHomeTotal'>
           <div className='accountHomeTotalLabel'>Total balance</div>
@@ -312,7 +292,7 @@ class _AccountMain extends React.Component {
         <div className='accountHomeActions' aria-label='Account actions'>
           <button
             type='button'
-            className='wrenControl wrenControlPrimary'
+            className='wrenControl wrenControlPrimary wrenControlLarge'
             onClick={() => {
               link.send('tray:action', 'navDash', { view: 'send', data: {} })
             }}

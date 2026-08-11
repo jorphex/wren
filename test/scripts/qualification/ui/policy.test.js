@@ -12,7 +12,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(44)
+  expect(scenarios).toHaveLength(51)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -20,6 +20,8 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `tray-empty-short-${scale}`,
         `dash-control-center-full-${scale}`,
         `dash-control-center-short-${scale}`,
+        `tray-account-home-full-${scale}`,
+        `tray-account-home-short-${scale}`,
         `dash-delegation-full-${scale}`,
         `dash-delegation-short-${scale}`,
         `dash-tokens-full-${scale}`,
@@ -35,8 +37,34 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   }
 
   expect(scenarios.map((scenario) => scenario.id)).toEqual(
-    expect.arrayContaining(['dash-delegation-capped-1.5', 'tray-revocation-review-capped-1.5'])
+    expect.arrayContaining([
+      'dash-control-center-capped-1.5',
+      'dash-delegation-capped-1.5',
+      'tray-revocation-review-capped-1.5'
+    ])
   )
+})
+
+it('qualifies the decorative Control Center Wren and selected-chain explorer geometry', () => {
+  const scenarios = scenarioMatrix()
+  const controlCenters = scenarios.filter(
+    ({ state, logicalWidth }) => state === 'control-center' && logicalWidth === 620
+  )
+  const capped = scenarios.find(({ id }) => id === 'dash-control-center-capped-1.5')
+  const accountHomes = scenarios.filter(({ state }) => state === 'account-home')
+
+  expect(controlCenters).toHaveLength(6)
+  expect(controlCenters.every(({ layoutExpectations }) => layoutExpectations[0].kind === 'size')).toBe(true)
+  expect(capped.layoutExpectations).toEqual([{ kind: 'hidden', selector: '.dashHomeWren' }])
+  expect(accountHomes).toHaveLength(6)
+  expect(accountHomes.every(({ requiredControls }) => requiredControls.length === 4)).toBe(true)
+
+  const state = fixtureFor(accountHomes[0])
+  expect(state.panel.account.moduleOrder).toEqual(['chains'])
+  expect(state.main.networks.ethereum[1]).toMatchObject({
+    name: 'Ethereum Mainnet',
+    explorer: 'https://etherscan.io'
+  })
 })
 
 it('keeps the custom-token action present in full and short dashboard geometry', () => {

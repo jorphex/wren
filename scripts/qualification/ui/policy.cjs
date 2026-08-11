@@ -64,7 +64,8 @@ const scenarioMatrix = () => [
       scale,
       logicalWidth: 620,
       logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.dashModules'
+      ready: '.dashModules',
+      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 42, height: 42 }]
     },
     {
       id: `dash-control-center-short-${scale}`,
@@ -73,7 +74,40 @@ const scenarioMatrix = () => [
       scale,
       logicalWidth: 620,
       logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.dashModules'
+      ready: '.dashModules',
+      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 42, height: 42 }]
+    },
+    {
+      id: `tray-account-home-full-${scale}`,
+      renderer: 'tray',
+      state: 'account-home',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.chainMonitorPreview',
+      requiredControls: [
+        'Previous network from Ethereum Mainnet',
+        'Next network from Ethereum Mainnet',
+        'View Ethereum Mainnet account on block explorer',
+        'Show gas details for Ethereum Mainnet'
+      ],
+      requiredText: ['Ethereum Mainnet', 'Gas']
+    },
+    {
+      id: `tray-account-home-short-${scale}`,
+      renderer: 'tray',
+      state: 'account-home',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.chainMonitorPreview',
+      requiredControls: [
+        'Previous network from Ethereum Mainnet',
+        'Next network from Ethereum Mainnet',
+        'View Ethereum Mainnet account on block explorer',
+        'Show gas details for Ethereum Mainnet'
+      ],
+      requiredText: ['Ethereum Mainnet', 'Gas']
     },
     {
       id: `dash-delegation-full-${scale}`,
@@ -187,6 +221,16 @@ const scenarioMatrix = () => [
       action: { type: 'clickText', text: 'Get started' }
     }
   ]),
+  {
+    id: 'dash-control-center-capped-1.5',
+    renderer: 'dash',
+    state: 'control-center',
+    scale: 1.5,
+    logicalWidth: 530,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.dashModules',
+    layoutExpectations: [{ kind: 'hidden', selector: '.dashHomeWren' }]
+  },
   {
     id: 'dash-delegation-capped-1.5',
     renderer: 'dash',

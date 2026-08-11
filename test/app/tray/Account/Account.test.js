@@ -37,6 +37,7 @@ it('keeps Send and copy address actions connected to their existing tray behavio
 
   const addressCopyTarget = screen.getByRole('button', { name: 'Copy address' })
   expect(addressCopyTarget.textContent).toContain(address)
+  expect(screen.queryByRole('button', { name: /block explorer/i })).toBeNull()
 
   await user.click(addressCopyTarget)
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)

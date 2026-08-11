@@ -51,6 +51,16 @@ it('keeps connected-app controls scoped to the selected account surface', () => 
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 
+it('keeps one non-interactive Wren beside the Control Center title', () => {
+  renderMain()
+  const bird = screen.getByTestId('control-center-wren')
+
+  expect(bird).toBeTruthy()
+  expect(bird.getAttribute('alt')).toBe('')
+  expect(bird.getAttribute('aria-hidden')).toBe('true')
+  expect(screen.getAllByTestId('control-center-wren')).toHaveLength(1)
+})
+
 it('includes each destination description in its accessible name', () => {
   renderMain()
 

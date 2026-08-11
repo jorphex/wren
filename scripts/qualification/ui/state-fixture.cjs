@@ -86,6 +86,44 @@ const qualificationNetwork = () => ({
   connection: { endpoints: [{ connected: true, status: 'connected' }] }
 })
 
+const accountHomeNetworks = () => ({
+  networks: {
+    1: {
+      id: 1,
+      name: 'Ethereum Mainnet',
+      explorer: 'https://etherscan.io',
+      on: true,
+      isTestnet: false,
+      connection: { endpoints: [{ connected: true, status: 'connected' }] }
+    },
+    10: qualificationNetwork()
+  },
+  metadata: {
+    1: {
+      primaryColor: 'wren-chain-ethereum',
+      nativeCurrency: { symbol: 'ETH', decimals: 18, usd: 3200 },
+      gas: {
+        price: {
+          fees: { nextBaseFee: '0x3b9aca00', maxPriorityFeePerGas: '0x3b9aca00' },
+          levels: { fast: '0x77359400' }
+        },
+        samples: []
+      }
+    },
+    10: {
+      primaryColor: 'wren-chain-optimism',
+      nativeCurrency: { symbol: 'ETH', decimals: 18, usd: 3200 },
+      gas: {
+        price: {
+          fees: { nextBaseFee: '0x1dcd6500', maxPriorityFeePerGas: '0x1dcd6500' },
+          levels: { fast: '0x3b9aca00' }
+        },
+        samples: []
+      }
+    }
+  }
+})
+
 const qualificationAccount = (request) => ({
   id: QUALIFICATION_ACCOUNT,
   address: QUALIFICATION_ACCOUNT,
@@ -172,6 +210,15 @@ const fixtureFor = (scenario) => {
       showing: true,
       nav: [{ view: 'tokens', data: {} }]
     }
+  }
+
+  if (scenario.state === 'account-home') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.panel.account.moduleOrder = ['chains']
+    state.panel.account.modules.chains.height = 105
   }
 
   if (scenario.state === 'revocation-review' || scenario.state === 'revocation-monitor') {

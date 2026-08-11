@@ -72,7 +72,14 @@ const auditPage = async ({
   }
 
   for (const expectation of layoutExpectations) {
-    const elements = Array.from(document.querySelectorAll(expectation.selector)).filter(visible)
+    const candidates = Array.from(document.querySelectorAll(expectation.selector))
+    const elements = candidates.filter(visible)
+    if (expectation.kind === 'hidden') {
+      if (elements.length) {
+        violations.push({ kind: 'required-layout', detail: `${expectation.selector} is visible` })
+      }
+      continue
+    }
     if (!elements.length) {
       violations.push({ kind: 'required-layout', detail: `missing ${expectation.selector}` })
       continue
@@ -102,6 +109,16 @@ const auditPage = async ({
           violations.push({
             kind: 'required-layout',
             detail: `${expectation.selector} is ${Math.round(elementRect.width)}px within ${Math.round(containerRect.width)}px`
+          })
+        }
+      }
+    } else if (expectation.kind === 'size') {
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect()
+        if (Math.abs(rect.width - expectation.width) > 1 || Math.abs(rect.height - expectation.height) > 1) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} is ${Math.round(rect.width)}x${Math.round(rect.height)}; expected ${expectation.width}x${expectation.height}`
           })
         }
       }

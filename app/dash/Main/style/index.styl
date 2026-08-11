@@ -305,7 +305,7 @@ button.requestFeatureButton:focus-visible
   padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-5)
 
   h1
-    margin var(--wren-space-1) 0 var(--wren-space-2)
+    margin 0
     color var(--wren-text-primary)
     font-size 28px
     font-weight 500
@@ -318,6 +318,22 @@ button.requestFeatureButton:focus-visible
     color var(--wren-text-secondary)
     font-size 14px
     line-height 20px
+
+.dashHomeTitleRow
+  display flex
+  min-height 42px
+  margin var(--wren-space-1) 0 var(--wren-space-2)
+  align-items center
+  gap var(--wren-space-3)
+
+.dashHomeWren
+  display block
+  width 42px
+  height 42px
+  flex none
+  object-fit contain
+  pointer-events none
+  user-select none
 
 .dashHomeEyebrow
   color var(--wren-accent-primary-hover)
@@ -511,6 +527,9 @@ button.dashModule.wrenControl.wrenControlGhost
     margin-bottom var(--wren-space-2)
 
 @media (max-width: 560px)
+  .dashHomeWren
+    display none
+
   .dashModules
     grid-template-columns minmax(0, 1fr)
     gap var(--wren-space-4)

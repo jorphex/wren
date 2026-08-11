@@ -4,6 +4,7 @@ import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import { WREN_COMPANION_RELEASES_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
+import controlCenterWren from 'url:../../../asset/brand/wren-control-center-v1.png'
 
 const dashboardSections = [
   {
@@ -66,7 +67,16 @@ export class Main extends React.Component {
         <div className='localSettingsWrap'>
           <header className='dashHomeHeader'>
             <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
-            <h1>Control center</h1>
+            <div className='dashHomeTitleRow'>
+              <h1>Control center</h1>
+              <img
+                className='dashHomeWren'
+                src={controlCenterWren}
+                alt=''
+                aria-hidden='true'
+                data-testid='control-center-wren'
+              />
+            </div>
             <p>Manage accounts, networks, permissions, and desktop behavior.</p>
           </header>
           <nav className='dashModules' aria-label='Wallet management'>
