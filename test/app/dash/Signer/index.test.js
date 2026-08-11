@@ -123,7 +123,7 @@ it('keeps a GridPlus pairing code available after an error and retries once', as
     .mockImplementationOnce((_action, _id, _code, callback) => {
       succeed = callback
     })
-  const { user } = renderSigner({ type: 'lattice', status: 'pair' })
+  const { user } = renderSigner({ type: 'lattice', status: 'pairing-code-required' })
   const input = screen.getByRole('textbox', { name: 'GridPlus pairing code' })
 
   expect(screen.getByRole('button', { name: 'Pair' }).disabled).toBe(true)
@@ -144,7 +144,7 @@ it('keeps a GridPlus pairing code available after an error and retries once', as
 it('names available signer account actions with their current add or remove behavior', () => {
   const address = '0x00000000000000000000000000000000000000aa'
   const checkSummedAddress = getAddress(address)
-  const view = renderSigner({ type: 'ledger', status: 'ok', addresses: [address] })
+  const view = renderSigner({ type: 'ledger', status: 'ready', addresses: [address] })
   const addAccount = screen.getByRole('button', { name: `Add ${checkSummedAddress} as an account` })
 
   expect(screen.getByText('0x0000…00AA')).toBeTruthy()
@@ -157,7 +157,7 @@ it('names available signer account actions with their current add or remove beha
       expanded={true}
       name='Test signer'
       type='ledger'
-      status='ok'
+      status='ready'
       addresses={[address]}
       addedAccounts={{ [address]: { address } }}
     />
@@ -170,7 +170,7 @@ it('names available signer account actions with their current add or remove beha
 })
 
 it('arms signer removal, returns focus safely, and confirms once', async () => {
-  const view = renderSigner({ type: 'ledger', status: 'ok', addresses: [] })
+  const view = renderSigner({ type: 'ledger', status: 'ready', addresses: [] })
   const trigger = screen.getByRole('button', { name: 'Remove signer' })
 
   await view.user.click(trigger)
@@ -200,7 +200,7 @@ it('keeps the signer overview preview bounded while showing its count', () => {
       expanded={false}
       name='Test signer'
       type='ledger'
-      status='ok'
+      status='ready'
       addresses={addresses}
       addedAccounts={addedAccounts}
     />
@@ -217,7 +217,7 @@ it('keeps all hardware accounts reachable as address capacity responds to shell 
     return `0x${(index + 1).toString(16).padStart(40, '0')}`
   })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900, writable: true })
-  const { user, unmount } = renderSigner({ type: 'trezor', status: 'ok', addresses })
+  const { user, unmount } = renderSigner({ type: 'trezor', status: 'ready', addresses })
 
   expect(screen.queryByText('Ready to sign')).toBeNull()
   expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(11)
@@ -245,7 +245,7 @@ it('selects an active hardware account from the signer preview', async () => {
       expanded={false}
       name='Test signer'
       type='trezor'
-      status='ok'
+      status='ready'
       addresses={[address]}
       addedAccounts={{ [accountId]: { address, id: accountId } }}
     />

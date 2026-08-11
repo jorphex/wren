@@ -10,8 +10,16 @@ export class SignerAdapter extends EventEmitter {
     this.adapterType = type
   }
 
-  open() {}
-  close(): void | Promise<void> {}
-  remove(signer: Signer) {}
-  reload(signer: Signer) {}
+  open() {
+    // Optional adapter lifecycle hook.
+  }
+  close(): void | Promise<void> {
+    // Optional adapter lifecycle hook.
+  }
+  remove(_signer: Signer) {
+    // Optional adapter lifecycle hook.
+  }
+  reload(_signer: Signer) {
+    // Optional adapter lifecycle hook.
+  }
 }

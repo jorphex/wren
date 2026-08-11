@@ -5,7 +5,7 @@ import link from '../../../../../../resources/link'
 jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
 const account = '0x0000000000000000000000000000000000000001'
-const activeSigner = { id: 'trezor-device', status: 'ok', type: 'trezor' }
+const activeSigner = { id: 'trezor-device', status: 'ready', type: 'trezor' }
 
 const state = {
   main: {

@@ -25,9 +25,9 @@ it('re-enables reload when GridPlus pairing settles in an error state', async ()
   const view = render(<ReloadSignerButton id='device-1' status='disconnected' />)
   await view.user.click(screen.getByRole('button', { name: 'Reload signer' }))
 
-  view.rerender(<ReloadSignerButton id='device-1' status='Pairing' />)
+  view.rerender(<ReloadSignerButton id='device-1' status='pairing' />)
   expect(screen.getByRole('button', { name: 'Reloading signer…' }).disabled).toBe(true)
-  view.rerender(<ReloadSignerButton id='device-1' status='Pairing Failed' />)
+  view.rerender(<ReloadSignerButton id='device-1' status='pairing-failed' />)
 
   expect(screen.getByRole('button', { name: 'Reload signer' }).disabled).toBe(false)
 })

@@ -12,7 +12,7 @@ interface KnownSigners {
   [id: string]: {
     signer: Trezor
     eventHandlers: {
-      [event: string]: (...args: any) => void
+      [event: string]: (...args: unknown[]) => void
     }
   }
 }
@@ -23,15 +23,25 @@ interface TrezorPairingRequest extends TrezorPairing {
 
 export default class TrezorSignerAdapter extends SignerAdapter {
   private knownSigners: KnownSigners = {}
-  private pendingSessionProbes: { [id: string]: boolean } = {}
+  private pendingSessionProbes = new Map<string, symbol>()
+  private timers = new Map<string, Set<ReturnType<typeof setTimeout>>>()
+  private promptStatuses = new Map<string, string>()
+  private connectionGenerations = new Map<string, number>()
   private observer: Observer | undefined
+  private lifecycleGeneration = 0
+  private closed = true
 
   constructor() {
     super('trezor')
   }
 
   override open() {
+    const generation = ++this.lifecycleGeneration
+    this.closed = false
+
     this.observer = store.observer(() => {
+      if (!this.isCurrent(generation)) return
+
       const trezorDerivation = store('main.trezor.derivation')
 
       Object.values(this.knownSigners).forEach((signerInfo) => {
@@ -47,6 +57,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     })
 
     TrezorBridge.on('trezor:detected', (path: string) => {
+      if (!this.isCurrent(generation)) return
+
       // create a new signer whenever a Trezor is detected, but it won't be opened
       // until a connect event with an active device is received
       const id = Trezor.generateId(path)
@@ -58,21 +70,35 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     })
 
     TrezorBridge.on('trezor:connect', async (device: TrezorDevice) => {
+      if (!this.isCurrent(generation)) return
+
       const id = Trezor.generateId(device.path)
       const trezor = this.knownSigners[id]?.signer || this.initTrezor(device.path)
+      const connectionGeneration = (this.connectionGenerations.get(id) || 0) + 1
+      this.connectionGenerations.set(id, connectionGeneration)
 
       trezor.derivation = store('main.trezor.derivation')
 
       try {
         await trezor.open(device)
 
+        if (!this.isConnectionCurrent(trezor, generation, connectionGeneration)) return
+
         const version = [trezor.appVersion.major, trezor.appVersion.minor, trezor.appVersion.patch].join('.')
         log.info(`Trezor ${trezor.id} connected: ${trezor.model}, firmware v${version}`)
 
         // arbitrary delay to attempt to minimize message conflicts on first connection
-        setTimeout(() => trezor.deriveAddresses(), 200)
+        this.setSignerTimer(
+          trezor.id,
+          () => {
+            if (this.isConnectionCurrent(trezor, generation, connectionGeneration)) {
+              void trezor.deriveAddresses()
+            }
+          },
+          200
+        )
       } catch (e) {
-        log.error('could not open Trezor', e)
+        if (this.isRegistered(trezor, generation)) log.error('could not open Trezor', e)
       }
     })
 
@@ -115,12 +141,10 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       const signer = this.knownSigners[deviceId]?.signer
       if (!signer) return
 
-      // const currentStatus = signer.status
-
-      // this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
-      //   signer.status = currentStatus
-      //   this.emit('update', signer)
-      // })
+      this.rememberPromptStatus(signer)
+      this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
+        this.restorePromptStatus(signer)
+      })
 
       signer.status = Status.ENTERING_PASSPHRASE
       this.emit('update', signer)
@@ -130,12 +154,11 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.withSigner(device, (signer) => {
         log.verbose(`Trezor ${signer.id} needs pin`)
 
-        const currentStatus = signer.status
+        this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:pin', () => {
           signer.pinError = undefined
-          signer.status = currentStatus
-          this.emit('update', signer)
+          this.restorePromptStatus(signer)
         })
 
         signer.status = Status.NEEDS_PIN
@@ -157,6 +180,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.withSigner(device, (signer) => {
         log.warn(`Trezor ${signer.id} ended the current PIN attempt sequence`)
 
+        this.promptStatuses.delete(signer.id)
+        delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pin']
         signer.pinError = undefined
         signer.status = Status.NEEDS_RECONNECTION
         this.emit('update', signer)
@@ -167,11 +192,10 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.withSigner(device, (signer) => {
         log.verbose(`Trezor ${signer.id} needs passphrase`, { status: signer.status })
 
-        const currentStatus = signer.status
+        this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
-          signer.status = currentStatus
-          this.emit('update', signer)
+          this.restorePromptStatus(signer)
         })
 
         signer.status = Status.NEEDS_PASSPHRASE
@@ -186,12 +210,11 @@ export default class TrezorSignerAdapter extends SignerAdapter {
           selectedMethod: payload.selectedMethod
         })
 
-        const currentStatus = signer.status
+        this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:pairing', () => {
           signer.pairing = undefined
-          signer.status = currentStatus
-          this.emit('update', signer)
+          this.restorePromptStatus(signer)
         })
 
         signer.pairing = {
@@ -218,6 +241,13 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     })
 
     trezor.on('update', () => {
+      if (!this.isRegistered(trezor, this.lifecycleGeneration)) return
+
+      if (!this.isPromptStatus(trezor.status)) {
+        this.promptStatuses.delete(trezor.id)
+        delete this.knownSigners[trezor.id]?.eventHandlers['trezor:entered:passphrase']
+      }
+
       this.emit('update', trezor)
     })
 
@@ -237,13 +267,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       }
     ])
 
-    setTimeout(() => {
-      if (trezor.status === Status.INITIAL && !trezor.device && !this.pendingSessionProbes[trezor.id]) {
-        // if the trezor hasn't connected in a reasonable amount of time, consider it disconnected
-        trezor.status = Status.DISCONNECTED
-        this.emit('update', trezor)
-      }
-    }, 10_000)
+    const generation = this.lifecycleGeneration
+    this.setSignerTimer(trezor.id, () => this.markDisconnectedAfterProbe(trezor, generation), 10_000)
 
     return trezor
   }
@@ -251,30 +276,49 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   private probeSession(path: string) {
     const id = Trezor.generateId(path)
 
-    if (this.pendingSessionProbes[id]) return
+    if (this.pendingSessionProbes.has(id)) return
 
     const signer = this.knownSigners[id]?.signer
 
     if (!signer || signer.device) return
 
-    this.pendingSessionProbes[id] = true
+    const generation = this.lifecycleGeneration
+    const probe = Symbol(id)
+    this.pendingSessionProbes.set(id, probe)
 
     log.info(`probing Trezor ${id} session`)
 
     TrezorBridge.getFeatures({ path: signer.path as DeviceUniquePath })
       .catch((err) => {
-        log.debug(`initial Trezor session probe finished with error for ${id}`, err)
+        if (this.isCurrent(generation)) {
+          log.debug(`initial Trezor session probe finished with error for ${id}`, err)
+        }
       })
       .finally(() => {
-        delete this.pendingSessionProbes[id]
+        if (this.pendingSessionProbes.get(id) === probe) {
+          this.pendingSessionProbes.delete(id)
+        }
       })
   }
 
   override async close() {
+    if (this.closed) return
+
+    this.closed = true
+    ++this.lifecycleGeneration
+    this.clearAllTimers()
+    this.pendingSessionProbes.clear()
+    this.promptStatuses.clear()
+    this.connectionGenerations.clear()
+
     if (this.observer) {
       this.observer.remove()
       this.observer = undefined
     }
+
+    const signers = Object.values(this.knownSigners).map(({ signer }) => signer)
+    this.knownSigners = {}
+    signers.forEach((signer) => signer.close())
 
     try {
       await TrezorBridge.close()
@@ -288,12 +332,21 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       log.info(`removing Trezor ${trezor.id}`)
 
       delete this.knownSigners[trezor.id]
+      this.clearSignerTimers(trezor.id)
+      this.pendingSessionProbes.delete(trezor.id)
+      this.promptStatuses.delete(trezor.id)
+      this.connectionGenerations.delete(trezor.id)
 
       trezor.close()
     }
   }
 
   override async reload(trezor: Trezor) {
+    const generation = this.lifecycleGeneration
+    if (!this.isRegistered(trezor, generation)) return
+    const connectionGeneration = (this.connectionGenerations.get(trezor.id) || 0) + 1
+    this.connectionGenerations.set(trezor.id, connectionGeneration)
+
     log.info(`reloading Trezor ${trezor.id}`)
 
     trezor.status = Status.INITIAL
@@ -302,36 +355,114 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     try {
       if (trezor.device) {
         await trezor.open(trezor.device)
+        if (!this.isConnectionCurrent(trezor, generation, connectionGeneration)) return
         await trezor.deriveAddresses()
       } else {
         await TrezorBridge.getFeatures({ path: trezor.path as DeviceUniquePath })
       }
     } catch (error) {
+      if (!this.isConnectionCurrent(trezor, generation, connectionGeneration)) return
       log.warn(`could not reload Trezor ${trezor.id}`, error)
       trezor.status = Status.NEEDS_RECONNECTION
       this.emit('update', trezor)
     }
   }
 
-  private addEventHandler(signer: Trezor, event: string, handler: (device: TrezorDevice) => void) {
+  private addEventHandler(signer: Trezor, event: string, handler: (...args: unknown[]) => void) {
     const signerInfo = this.knownSigners[signer.id]
     if (!signerInfo) throw new Error(`Trezor ${signer.id} is not registered`)
     signerInfo.eventHandlers[event] = handler
   }
 
-  private handleEvent(signerId: string, event: string, ...args: any) {
+  private handleEvent(signerId: string, event: string, ...args: unknown[]) {
     const signerInfo = this.knownSigners[signerId]
     if (!signerInfo) return
     const action = signerInfo.eventHandlers[event] || (() => {})
 
     delete signerInfo.eventHandlers[event]
 
-    action(args)
+    action(...args)
   }
 
   private withSigner(device: TrezorDevice, fn: (signer: Trezor) => void) {
     const signer = this.knownSigners[Trezor.generateId(device.path)]?.signer
 
     if (signer) fn(signer)
+  }
+
+  private isCurrent(generation: number) {
+    return !this.closed && generation === this.lifecycleGeneration
+  }
+
+  private isRegistered(signer: Trezor, generation: number) {
+    return this.isCurrent(generation) && this.knownSigners[signer.id]?.signer === signer
+  }
+
+  private isConnectionCurrent(signer: Trezor, generation: number, connectionGeneration: number) {
+    return (
+      this.isRegistered(signer, generation) &&
+      this.connectionGenerations.get(signer.id) === connectionGeneration
+    )
+  }
+
+  private isPromptStatus(status: string) {
+    return [
+      Status.NEEDS_PIN,
+      Status.NEEDS_PASSPHRASE,
+      Status.ENTERING_PASSPHRASE,
+      Status.NEEDS_PAIRING
+    ].includes(status)
+  }
+
+  private rememberPromptStatus(signer: Trezor) {
+    if (!this.promptStatuses.has(signer.id) && !this.isPromptStatus(signer.status)) {
+      this.promptStatuses.set(signer.id, signer.status)
+    }
+  }
+
+  private restorePromptStatus(signer: Trezor) {
+    if (this.knownSigners[signer.id]?.signer !== signer) return
+
+    const status = this.promptStatuses.get(signer.id)
+    this.promptStatuses.delete(signer.id)
+
+    if (status) signer.status = status
+    this.emit('update', signer)
+  }
+
+  private setSignerTimer(id: string, fn: () => void, delay: number) {
+    const signerTimers = this.timers.get(id) || new Set<ReturnType<typeof setTimeout>>()
+    const timer = setTimeout(() => {
+      signerTimers.delete(timer)
+      if (signerTimers.size === 0) this.timers.delete(id)
+      fn()
+    }, delay)
+
+    signerTimers.add(timer)
+    this.timers.set(id, signerTimers)
+  }
+
+  private clearSignerTimers(id: string) {
+    this.timers.get(id)?.forEach((timer) => clearTimeout(timer))
+    this.timers.delete(id)
+  }
+
+  private clearAllTimers() {
+    this.timers.forEach((timers) => timers.forEach((timer) => clearTimeout(timer)))
+    this.timers.clear()
+  }
+
+  private markDisconnectedAfterProbe(trezor: Trezor, generation: number) {
+    if (!this.isRegistered(trezor, generation) || trezor.status !== Status.INITIAL || trezor.device) {
+      return
+    }
+
+    if (this.pendingSessionProbes.has(trezor.id)) {
+      this.setSignerTimer(trezor.id, () => this.markDisconnectedAfterProbe(trezor, generation), 1_000)
+      return
+    }
+
+    trezor.status = Status.DISCONNECTED
+    this.emit('update', trezor)
   }
 }

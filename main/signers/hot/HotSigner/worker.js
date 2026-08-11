@@ -23,24 +23,58 @@ function chainConfig(chain, hardfork) {
 class HotSignerWorker {
   constructor() {
     this.token = crypto.randomBytes(32).toString('hex')
-    process.send({ type: 'token', token: this.token })
+    try {
+      process.send({ type: 'token', token: this.token }, (error) => {
+        if (error) process.exitCode = 1
+      })
+    } catch {
+      process.exitCode = 1
+    }
   }
 
-  handleMessage({ id, method, params, token }) {
-    // Define (pseudo) callback
+  handleMessage(message = {}) {
+    const { id, method, params, token } = message
+    let settled = false
     const pseudoCallback = (error, result) => {
-      // Add correlation id to response
-      const response = { id, error, result, type: 'rpc' }
-      // Send response to parent process
-      process.send(response)
+      if (settled) return
+      settled = true
+
+      const normalizedError = error instanceof Error ? error.message : error
+      try {
+        process.send({ id, error: normalizedError, result, type: 'rpc' }, (sendError) => {
+          if (sendError) process.exitCode = 1
+        })
+      } catch {
+        // The parent process owns worker-disconnect recovery.
+      }
     }
-    // Verify token
-    if (!crypto.timingSafeEqual(Buffer.from(token), Buffer.from(this.token)))
-      return pseudoCallback('Invalid token')
-    // If method exists -> execute
-    if (this[method]) return this[method](params, pseudoCallback)
-    // Else return error
-    pseudoCallback(`Invalid method: '${method}'`)
+
+    try {
+      if (typeof token !== 'string') return pseudoCallback('Invalid token')
+
+      const candidate = Buffer.from(token)
+      const expected = Buffer.from(this.token)
+      if (candidate.length !== expected.length || !crypto.timingSafeEqual(candidate, expected)) {
+        return pseudoCallback('Invalid token')
+      }
+
+      if (
+        typeof method !== 'string' ||
+        method === 'constructor' ||
+        method === 'handleMessage' ||
+        method.startsWith('_') ||
+        typeof this[method] !== 'function'
+      ) {
+        return pseudoCallback(`Invalid method: '${method}'`)
+      }
+
+      const result = this[method](params, pseudoCallback)
+      if (result && typeof result.then === 'function') {
+        result.catch((error) => pseudoCallback(error))
+      }
+    } catch (error) {
+      pseudoCallback(error)
+    }
   }
 
   signMessage(key, message, pseudoCallback) {

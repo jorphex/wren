@@ -1,25 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import link from '../../../../resources/link'
+import { getSignerStatusMeta } from '../../../../resources/domain/signer'
 
-const reloadInProgress = (status = '') =>
-  ['loading', 'connecting', 'addresses', 'pairing'].includes(status.toLowerCase())
+const ReloadSignerButton = ({ id, status, type }) => {
+  const [reloadState, setReloadState] = useState({ busy: false, pending: false })
+  const statusMeta = getSignerStatusMeta({ type, status })
 
-const ReloadSignerButton = ({ id, status }) => {
-  const [pending, setPending] = useState(false)
-  const pendingRef = useRef(false)
-
-  useEffect(() => {
-    if (reloadInProgress(status)) return
-    pendingRef.current = false
-    setPending(false)
-  }, [status])
+  if (reloadState.busy !== statusMeta.busy) {
+    const pending = statusMeta.busy ? reloadState.pending : false
+    setReloadState({ busy: statusMeta.busy, pending })
+  }
 
   const reload = () => {
-    if (pendingRef.current) return
-    pendingRef.current = true
-    setPending(true)
+    if (reloadState.pending) return
+    setReloadState({ busy: statusMeta.busy, pending: true })
     link.send('dash:reloadSigner', id)
   }
+
+  const pending = reloadState.pending
 
   return (
     <button

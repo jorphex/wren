@@ -365,6 +365,24 @@ it('normalizes legacy watch-only account casing in its persisted summary', () =>
   expect(watchAccount.summary().lastSignerType).toBe('address')
 })
 
+it('prefers a ready signer over a higher-priority unavailable signer', () => {
+  const address = accountState.address.toLowerCase()
+  const readySeed = { id: 'ready-seed', type: 'seed', status: 'ok', addresses: [address] }
+  const unavailableLattice = {
+    id: 'offline-lattice',
+    type: 'lattice',
+    status: 'disconnected',
+    addresses: [address]
+  }
+  store.mockImplementation((path) =>
+    path === 'main.signers'
+      ? { [readySeed.id]: readySeed, [unavailableLattice.id]: unavailableLattice }
+      : undefined
+  )
+
+  expect(account.findSigner(address)).toBe(readySeed)
+})
+
 describe('#addRequest', () => {
   it('simulates exact wallet calls under the selected account and chain', async () => {
     const result = {

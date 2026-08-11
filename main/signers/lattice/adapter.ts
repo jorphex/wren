@@ -21,6 +21,10 @@ interface PersistedLatticeSettings {
 
 interface LatticeSettings extends GlobalLatticeSettings, PersistedLatticeSettings {}
 
+interface StoreObserver {
+  remove(): void
+}
+
 function getLatticeSettings(deviceId: string): LatticeSettings {
   const { baseUrl, derivation, accountLimit } = getGlobalLatticeSettings()
   const device = store('main.lattice', deviceId)
@@ -41,8 +45,10 @@ function getGlobalLatticeSettings(): GlobalLatticeSettings {
 export default class LatticeAdapter extends SignerAdapter {
   private knownSigners: { [deviceId: string]: Lattice }
 
-  private signerObserver: any
-  private settingsObserver: any
+  private signerObserver: StoreObserver | null = null
+  private settingsObserver: StoreObserver | null = null
+  private closed = true
+  private lifecycleGeneration = 0
 
   constructor() {
     super('lattice')
@@ -51,7 +57,14 @@ export default class LatticeAdapter extends SignerAdapter {
   }
 
   override open() {
+    if (!this.closed) return
+
+    this.closed = false
+    const generation = ++this.lifecycleGeneration
+
     this.settingsObserver = store.observer(() => {
+      if (!this.isCurrent(generation)) return
+
       const { baseUrl, derivation, accountLimit } = getGlobalLatticeSettings()
 
       Object.values(this.knownSigners).forEach((lattice) => {
@@ -75,9 +88,9 @@ export default class LatticeAdapter extends SignerAdapter {
         }
         if (baseUrl !== lattice.connection.baseUrl) {
           // if any connection settings have changed, re-connect
-          this.reload(lattice)
+          void this.reload(lattice)
         } else if (reloadAddresses) {
-          lattice.deriveAddresses()
+          void lattice.deriveAddresses()
         } else if (needsUpdate) {
           this.emit('update', lattice)
         }
@@ -85,6 +98,8 @@ export default class LatticeAdapter extends SignerAdapter {
     }, 'latticeSettings')
 
     this.signerObserver = store.observer(() => {
+      if (!this.isCurrent(generation)) return
+
       const devices: Record<string, PersistedLatticeSettings> = store('main.lattice') || {}
 
       Object.entries(devices).forEach(([deviceId, device]) => {
@@ -98,10 +113,15 @@ export default class LatticeAdapter extends SignerAdapter {
         lattice.accountLimit = accountLimit
 
         const emitUpdate = () => this.emit('update', lattice)
+        const isActive = () => this.isCurrent(generation) && this.knownSigners[deviceId] === lattice
 
-        lattice.on('update', emitUpdate)
+        lattice.on('update', () => {
+          if (isActive()) emitUpdate()
+        })
 
         lattice.on('connect', (paired: boolean) => {
+          if (!isActive()) return
+
           requireStoreAction('updateLattice')(deviceId, { paired })
 
           if (paired) {
@@ -109,20 +129,24 @@ export default class LatticeAdapter extends SignerAdapter {
             // client is already paired between sessions
             const { derivation } = getLatticeSettings(deviceId)
 
-            lattice.deriveAddresses(derivation)
+            void lattice.deriveAddresses(derivation)
           }
         })
 
         lattice.on('paired', (hasActiveWallet: boolean) => {
+          if (!isActive()) return
+
           requireStoreAction('updateLattice')(deviceId, { paired: true })
 
           if (hasActiveWallet) {
             const { derivation } = getLatticeSettings(deviceId)
-            lattice.deriveAddresses(derivation)
+            void lattice.deriveAddresses(derivation)
           }
         })
 
         lattice.on('error', () => {
+          if (!isActive()) return
+
           if (lattice.connection && !lattice.connection.isPaired) {
             requireStoreAction('updateLattice')(deviceId, { paired: false })
           }
@@ -133,6 +157,8 @@ export default class LatticeAdapter extends SignerAdapter {
         })
 
         lattice.on('close', () => {
+          if (!isActive()) return
+
           delete this.knownSigners[deviceId]
 
           this.emit('remove', lattice.id)
@@ -145,7 +171,7 @@ export default class LatticeAdapter extends SignerAdapter {
           // don't attempt to automatically connect if the Lattice isn't
           // paired as this could happen without the user noticing
           lattice.connect(baseUrl, privKey).catch(() => {
-            requireStoreAction('updateLattice')(deviceId, { paired: false })
+            if (isActive()) requireStoreAction('updateLattice')(deviceId, { paired: false })
           })
         }
       })
@@ -153,6 +179,11 @@ export default class LatticeAdapter extends SignerAdapter {
   }
 
   override close() {
+    if (this.closed) return
+
+    this.closed = true
+    ++this.lifecycleGeneration
+
     if (this.signerObserver) {
       this.signerObserver.remove()
       this.signerObserver = null
@@ -163,7 +194,15 @@ export default class LatticeAdapter extends SignerAdapter {
       this.settingsObserver = null
     }
 
+    const signers = Object.values(this.knownSigners)
     this.knownSigners = {}
+    signers.forEach((lattice) => {
+      try {
+        lattice.close()
+      } catch (error) {
+        log.error(`could not close Lattice ${lattice.deviceId}`, error)
+      }
+    })
   }
 
   override remove(lattice: Lattice) {
@@ -188,5 +227,9 @@ export default class LatticeAdapter extends SignerAdapter {
     } catch (e) {
       log.error('could not reload Lattice', e)
     }
+  }
+
+  private isCurrent(generation: number) {
+    return !this.closed && generation === this.lifecycleGeneration
   }
 }

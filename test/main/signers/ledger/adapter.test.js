@@ -13,21 +13,21 @@ jest.mock('../../../../main/signers/ledger/Ledger', () => {
 
   const constructor = function (devicePath, model) {
     const ledger = new L.default(devicePath, model)
-    ledger.open = async function () {}
+    ledger.open = jest.fn(async function () {})
 
-    ledger.connect = async function () {
+    ledger.connect = jest.fn(async function () {
       this.status = L.Status.OK
       this.emit('update')
-    }
+    })
 
-    ledger.disconnect = async function () {
+    ledger.disconnect = jest.fn(async function () {
       this.status = L.Status.DISCONNECTED
       this.emit('update')
-    }
+    })
 
-    ledger.close = async function () {
+    ledger.close = jest.fn(async function () {
       this.emit('close')
-    }
+    })
 
     return ledger
   }
@@ -59,8 +59,8 @@ beforeEach(() => {
   adapter.open()
 })
 
-afterEach(() => {
-  adapter.close()
+afterEach(async () => {
+  await adapter.close()
 })
 
 afterAll(() => {
@@ -102,6 +102,75 @@ it('stops polling when the adapter closes', () => {
   jest.advanceTimersByTime(1000)
 
   expect(onAdd).not.toHaveBeenCalled()
+})
+
+it('awaits every owned Ledger on close without late events or device resurrection', async () => {
+  let ledger
+  let finishClose
+  const onAdd = jest.fn()
+  const onRemove = jest.fn()
+  const onUpdate = jest.fn()
+
+  adapter.on('add', (addedLedger) => {
+    ledger = addedLedger
+    onAdd(addedLedger)
+  })
+  adapter.on('remove', onRemove)
+  adapter.on('update', onUpdate)
+
+  simulateLedgerConnection('shutdown-ledger-path')
+  adapter.handleDeviceChanges()
+  await Promise.resolve()
+  onUpdate.mockClear()
+
+  ledger.close = jest.fn(
+    () =>
+      new Promise((resolve) => {
+        finishClose = () => {
+          ledger.emit('update')
+          ledger.emit('close')
+          resolve()
+        }
+      })
+  )
+
+  let closed = false
+  const close = adapter.close().then(() => {
+    closed = true
+  })
+
+  expect(ledger.close).toHaveBeenCalledTimes(1)
+  expect(adapter.knownSigners).toEqual({})
+  expect(closed).toBe(false)
+
+  simulateLedgerConnection('late-ledger-path')
+  jest.advanceTimersByTime(6000)
+  expect(onAdd).toHaveBeenCalledTimes(1)
+
+  finishClose()
+  await close
+
+  expect(closed).toBe(true)
+  expect(onRemove).not.toHaveBeenCalled()
+  expect(onUpdate).not.toHaveBeenCalled()
+})
+
+it('recovers to a truthful disconnected status when reload fails', async () => {
+  let ledger
+  adapter.once('add', (addedLedger) => {
+    ledger = addedLedger
+  })
+
+  simulateLedgerConnection('reload-failure-path')
+  adapter.handleDeviceChanges()
+  await Promise.resolve()
+
+  ledger.open.mockRejectedValueOnce(new Error('transport unavailable'))
+
+  await expect(adapter.reload(ledger)).resolves.toBeUndefined()
+  expect(ledger.disconnect).toHaveBeenCalledTimes(2)
+  expect(ledger.status).toBe(Status.DISCONNECTED)
+  expect(adapter.knownSigners['reload-failure-path']).toBe(ledger)
 })
 
 it('does not queue a disconnected Ledger more than once while polling', () => {

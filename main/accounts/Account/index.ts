@@ -29,6 +29,7 @@ import {
   WATCH_ONLY_SIGNING_ERROR,
   getAccountSignerType,
   getSignerType,
+  isSignerReady,
   isWatchOnlyAccountType,
   type AccountSignerType
 } from '../../../resources/domain/signer'
@@ -273,11 +274,10 @@ class FrameAccount {
     const signers = store('main.signers') as Record<string, Signer>
 
     const signerOrdinal = (signer: Signer) => {
-      const isOk = signer.status === 'ok' ? 2 : 1
       const signerIndex = Object.values(SignerType).findIndex((type) => type === signer.type)
       const typeIndex = Math.max(signerIndex, 0)
 
-      return isOk * typeIndex
+      return (isSignerReady(signer) ? 1 : 0) * 100 + typeIndex
     }
 
     const availableSigners = Object.values(signers)
@@ -1384,7 +1384,7 @@ class FrameAccount {
   verifyAddress(display: boolean, cb: Callback<boolean>) {
     const signer = signers.get(this.signer)
 
-    if (signer?.verifyAddress && signer.status === 'ok') {
+    if (signer?.verifyAddress && isSignerReady(signer)) {
       const index = signer.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
       if (index > -1) {
         signer.verifyAddress(index, this.address, display, cb)

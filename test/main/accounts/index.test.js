@@ -12,6 +12,7 @@ import { GasFeesSource } from '../../../resources/domain/transaction'
 import { ApprovalType } from '../../../resources/constants'
 import { gweiToHex } from '../../util'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
+import { SignerUserRejectedError } from '../../../main/signers/errors'
 
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
@@ -1323,6 +1324,26 @@ describe('account-bound request transitions', () => {
     expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
       status: 'error',
       notice: 'Device declined'
+    })
+  })
+
+  it('presents an on-device rejection as a neutral declined request', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('account-bound-device-decline')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+
+    Accounts.setRequestPending(explicit)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new SignerUserRejectedError('Sign request rejected by user'),
+      account2.address
+    )
+
+    expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+      status: 'declined',
+      notice: 'Request declined',
+      mode: 'monitor'
     })
   })
 

@@ -35,7 +35,7 @@ class RingSigner extends HotSigner {
     let wallet
     try {
       wallet = Wallet.fromPrivateKey(Buffer.from(key, 'hex'))
-    } catch (e) {
+    } catch {
       return cb(new Error('Invalid private key'))
     }
     const address = wallet.getAddressString()
@@ -89,7 +89,6 @@ class RingSigner extends HotSigner {
     })
   }
 
-  // TODO: Encrypt all keys together so that they all get the same password
   async addKeystore(keystore, keystorePassword, password, cb) {
     let wallet
     // Try to generate wallet from keystore

@@ -5,16 +5,11 @@ import link from '../../../resources/link'
 import Icon from '../../../resources/Components/Icon'
 import svg from '../../../resources/svg'
 import { capitalize, getAddress } from '../../../resources/utils'
-import { isHardwareSigner, getSignerDisplayType } from '../../../resources/domain/signer'
+import { getSignerDisplayType, getSignerStatusMeta, isHardwareSigner } from '../../../resources/domain/signer'
 
 import SignerStatus from './SignerStatus'
 import ReloadSignerButton from './ReloadSignerButton'
 import { compactAccountAddress } from '../Accounts/address'
-
-function isLoading(status = '') {
-  const statusToCheck = status.toLowerCase()
-  return ['loading', 'connecting', 'addresses', 'input', 'pairing'].some((s) => statusToCheck.includes(s))
-}
 
 // Command chrome, account heading, pager, and control shelf remain outside the ledger row budget.
 const signerListReservedHeight = 392
@@ -157,34 +152,6 @@ export class Signer extends React.Component {
     this.pending.pairing = true
     this.setState({ tPairing: '', tPairingPending: true })
     link.rpc('trezorPairing', this.props.id, { tag: pairing }, () => {})
-  }
-
-  renderLoadingLive() {
-    if (this.props.type === 'ledger' && this.getStatus() === 'deriving live addresses') {
-      const liveAccountLimit = this.store('main.ledger.liveAccountLimit')
-      const styleWidth = liveAccountLimit === 20 ? 120 : liveAccountLimit === 40 ? 120 : 60
-      const marginTop = liveAccountLimit === 40 ? -8 : 0
-      return (
-        <div
-          className='loadingLiveAddresses'
-          style={{ top: `${marginTop}px`, padding: '20px', width: `${styleWidth}px` }}
-        >
-          {[...Array(liveAccountLimit).keys()]
-            .map((i) => i + 1)
-            .map((i) => {
-              return (
-                <div
-                  key={'loadingLiveAddress' + i}
-                  className='loadingLiveAddress'
-                  style={{ opacity: i <= this.props.liveAddressesFound ? '1' : '0.3' }}
-                />
-              )
-            })}
-        </div>
-      )
-    } else {
-      return null
-    }
   }
 
   renderTrezorPin(active) {
@@ -351,66 +318,25 @@ export class Signer extends React.Component {
     )
   }
 
-  getStatus() {
-    return (this.props.status || '').toLowerCase()
-  }
-
-  status() {
-    const status = this.getStatus()
-
-    if (status === 'ok') {
-      return (
-        <div className='signerStatus'>
-          <div className='signerStatusIndicator signerStatusIndicatorReady' aria-hidden='true'></div>
-        </div>
-      )
-    } else if (status === 'locked') {
-      return (
-        <div className='signerStatus'>
-          <div className='signerStatusIndicator signerStatusIndicatorLocked' aria-hidden='true'></div>
-        </div>
-      )
-    } else {
-      return (
-        <div className='signerStatus'>
-          <div className='signerStatusIndicator' aria-hidden='true'></div>
-        </div>
-      )
-    }
+  getStatusMeta() {
+    return getSignerStatusMeta({ type: this.props.type, status: this.props.status })
   }
 
   statusText() {
-    const status = this.getStatus()
+    const signerStatus = this.getStatusMeta()
+    const classes = [
+      'signerStatusText',
+      signerStatus.ready ? 'signerStatusReady' : '',
+      signerStatus.phase === 'locked' && !isHardwareSigner(this.props.type) ? 'signerStatusIssue' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
 
-    if (status === 'ok') {
-      return (
-        <div className='signerStatusText signerStatusReady' role='status'>
-          {'Ready to sign'}
-        </div>
-      )
-    } else if (status === 'locked') {
-      const hwSigner = isHardwareSigner(this.props.type)
-      const lockText = hwSigner ? 'Unlock your ' + capitalize(this.props.type) : 'Locked'
-
-      const classes = hwSigner ? 'signerStatusText' : 'signerStatusText signerStatusIssue'
-      return (
-        <div className={classes} role='status'>
-          {lockText}
-        </div>
-      )
-    } else if (status === 'addresses') {
-      return (
-        <div className='signerStatusText' role='status'>
-          {'Deriving addresses'}
-        </div>
-      )
-    } else {
-      return (
-        <div className='signerStatusText' role='status'>
-          {this.props.status}
-        </div>
-      )
-    }
+    return (
+      <div className={classes} role='status'>
+        {signerStatus.label}
+      </div>
+    )
   }
 
   nextPage(backwards) {
@@ -448,20 +374,15 @@ export class Signer extends React.Component {
 
   renderPreview() {
     const signer = this.store('main.signers', this.props.id)
-    const status = this.getStatus()
+    const signerStatus = this.getStatusMeta()
 
     const hwSigner = isHardwareSigner(this.props.type)
-    const loading = isLoading(status)
-
-    // TODO: create well-defined signer states that drive these UI features
-    // const canReconnect =
-    //   this.props.type !== 'trezor' || status === 'disconnected' || status.includes('reconnect')
 
     // UI changes for this status only apply to hot signers
-    const isLocked = !hwSigner && status === 'locked'
+    const isLocked = !hwSigner && signerStatus.phase === 'locked'
 
     let signerClass = 'signer'
-    if (status === 'ok') signerClass += ' signerOk'
+    if (signerStatus.ready) signerClass += ' signerOk'
     if (isLocked) signerClass += ' signerLocked'
 
     const addedAccounts = signer.addresses.filter((address) => {
@@ -508,9 +429,8 @@ export class Signer extends React.Component {
           >
             <Icon name='details' size={14} />
           </button>
-          {/* {this.status()} */}
         </div>
-        {status === 'ok' || isLocked ? (
+        {signerStatus.ready || isLocked ? (
           <>
             <div className='signerAddedAccountTitle'>
               {addedAccounts.length ? `Active accounts (${addedAccounts.length})` : 'No active accounts'}
@@ -548,7 +468,7 @@ export class Signer extends React.Component {
               )}
             </div>
           </>
-        ) : loading ? (
+        ) : signerStatus.busy ? (
           <div className='signerLoading'>
             <div className='signerLoadingLoader' />
           </div>
@@ -571,25 +491,21 @@ export class Signer extends React.Component {
     const { page, addressLimit } = this.state
     const startIndex = page * addressLimit
 
-    const status = this.getStatus()
+    const signerStatus = this.getStatusMeta()
 
     const hwSigner = isHardwareSigner(type)
-    const loading = isLoading(status)
-
-    // TODO: create well-defined signer states that drive these UI features
-    const canReconnect =
-      hwSigner && (type !== 'trezor' || status === 'disconnected' || status.includes('reconnect'))
+    const canReload = signerStatus.reloadable
 
     // UI changes for this status only apply to hot signers
-    const isLocked = !hwSigner && status === 'locked'
+    const isLocked = !hwSigner && signerStatus.phase === 'locked'
     const permissionId = tag || tag === '' ? 'Frame' + (tag ? `-${tag}` : '') : undefined
 
     const zIndex = 1000 - index
 
     return (
       <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
-        {status !== 'ok' ? this.statusText() : null}
-        {type === 'lattice' && status === 'pair' ? (
+        {!signerStatus.ready ? this.statusText() : null}
+        {type === 'lattice' && signerStatus.input === 'pairingCode' ? (
           <div className='signerLatticePair'>
             <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
             <div className='signerLatticePairInput wrenInputGroup'>
@@ -627,7 +543,7 @@ export class Signer extends React.Component {
               Pair
             </button>
           </div>
-        ) : status === 'ok' || isLocked ? (
+        ) : signerStatus.ready || isLocked ? (
           <>
             {this.renderSignerStatus()}
             <div className='signerAddedAccountTitle'>{'Available accounts'}</div>
@@ -696,14 +612,13 @@ export class Signer extends React.Component {
               </div>
             ) : null}
           </>
-        ) : type === 'trezor' &&
-          (status === 'need pin' || status === 'enter passphrase' || status === 'need pairing code') ? (
+        ) : type === 'trezor' && signerStatus.input ? (
           <div className='signerInterface'>
-            {this.renderTrezorPin(this.props.type === 'trezor' && status === 'need pin')}
-            {this.renderTrezorPhrase(this.props.type === 'trezor' && status === 'enter passphrase')}
-            {this.renderTrezorPairing(this.props.type === 'trezor' && status === 'need pairing code')}
+            {this.renderTrezorPin(signerStatus.input === 'pin')}
+            {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}
+            {this.renderTrezorPairing(signerStatus.input === 'pairingCode')}
           </div>
-        ) : loading ? (
+        ) : signerStatus.busy ? (
           <div className='signerLoading'>
             <div className='signerLoadingLoader' />
           </div>
@@ -717,7 +632,7 @@ export class Signer extends React.Component {
               <div className='signerControlDetailValue'>{permissionId}</div>
             </div>
           ) : null}
-          {canReconnect && <ReloadSignerButton id={id} status={status} />}
+          {canReload && <ReloadSignerButton id={id} status={this.props.status} type={type} />}
           {this.state.removalArmed ? (
             <div className='signerRemovalConfirm' role='alertdialog' aria-labelledby='signer-removal-title'>
               <div

@@ -93,28 +93,20 @@ describe('#connect', () => {
       })
     })
 
-    it('detects that the app is locked', (done) => {
+    it('detects that the app is locked', async () => {
       const stateFlow = []
 
       Eth.mock.instances[0].getAddress.mockRejectedValue({ statusCode: 27404 })
 
       ledger.on('update', () => {
         stateFlow.push(ledger.status)
-
-        verify(done, () => {
-          expect(stateFlow).toEqual([Status.INITIAL])
-          expect(ledger.status).toBe(Status.INITIAL)
-        })
       })
 
-      ledger.once('lock', () => {
-        verifyDone(done, () => {
-          expect(ledger.status).toBe(Status.LOCKED)
-          expect(ledger.eth).toBeDefined()
-        })
-      })
+      await ledger.connect()
 
-      ledger.connect()
+      expect(stateFlow).toEqual([Status.INITIAL])
+      expect(ledger.status).toBe(Status.LOCKED)
+      expect(ledger.eth).toBeDefined()
     })
 
     it('derives addresses after connecting', (done) => {
@@ -266,11 +258,6 @@ describe('#verifyAddress', () => {
       expectedError: 'Address does not match device'
     },
     {
-      testCase: 'the verification request is rejected by the user',
-      expectedError: 'Verify request rejected by user',
-      setup: () => Eth.mock.instances[0].getAddress.mockRejectedValue({ statusCode: 27013 })
-    },
-    {
       testCase: 'there is a communication error',
       setup: () => Eth.mock.instances[0].getAddress.mockRejectedValue({ statusCode: -1 })
     },
@@ -307,6 +294,28 @@ describe('#verifyAddress', () => {
 
       return Promise.all([statusUpdate, callback])
     })
+  })
+
+  it('reports user rejection without disconnecting the signer', async () => {
+    Eth.mock.instances[0].getAddress.mockRejectedValue({ statusCode: 27013 })
+
+    const callback = jest.fn()
+    ledger.verifyAddress(1, addresses[0], true, callback)
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0]).toMatchObject({
+      code: 4001,
+      message: 'Verify request rejected by user'
+    })
+    expect(ledger.status).toBe(Status.OK)
   })
 })
 
@@ -358,6 +367,7 @@ signingMethods.forEach((signingMethod) => {
           expect(ledger.status).toBe(Status.OK)
           expect(signature).toBeUndefined()
           expect(err.message).toBe('Sign request rejected by user')
+          expect(err.code).toBe(4001)
         })
       })
 
@@ -449,6 +459,7 @@ describe('#signTypedData', () => {
         expect(ledger.status).toBe(Status.OK)
         expect(signature).toBeUndefined()
         expect(err.message).toBe('Sign request rejected by user')
+        expect(err.code).toBe(4001)
       })
     })
 
@@ -516,6 +527,215 @@ describe('#signTypedData', () => {
       runNextRequest()
 
       return Promise.all([statusUpdate, callback])
+    })
+  })
+})
+
+describe('request lifecycle', () => {
+  beforeEach(async () => {
+    await connectEthApp()
+  })
+
+  it('settles active work once when disconnected and ignores its stale result', async () => {
+    let resolveSignature
+    Eth.mock.instances[0].signMessage.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSignature = resolve
+        })
+    )
+
+    const callback = jest.fn()
+    ledger.signMessage(0, 'hello', callback)
+    runNextRequest()
+    await Promise.resolve()
+
+    await ledger.disconnect()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0].message).toBe('Ledger disconnected before request completed')
+    expect(ledger.status).toBe(Status.DISCONNECTED)
+
+    resolveSignature('0xstale')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(ledger.status).toBe(Status.DISCONNECTED)
+  })
+
+  it('serializes reconnection and ignores results from the old transport', async () => {
+    let resolveOldSignature
+    const oldEth = Eth.mock.instances[0]
+    oldEth.signMessage.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveOldSignature = resolve
+        })
+    )
+
+    const callback = jest.fn()
+    ledger.signMessage(0, 'hello', callback)
+    runNextRequest()
+    await Promise.resolve()
+
+    await ledger.disconnect()
+    await ledger.open()
+
+    const reconnectedEth = Eth.mock.instances[1]
+    reconnectedEth.getAppConfiguration.mockResolvedValue({ version: '2.0.1' })
+    reconnectedEth.getAddress.mockResolvedValue({ address: addresses[0] })
+    reconnectedEth.deriveAddresses.mockResolvedValue(addresses)
+
+    await ledger.connect()
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ledger.status).toBe(Status.OK)
+    expect(ledger.addresses).toEqual(addresses)
+
+    resolveOldSignature('0xstale')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0].message).toBe('Ledger disconnected before request completed')
+    expect(ledger.status).toBe(Status.OK)
+    expect(ledger.addresses).toEqual(addresses)
+  })
+
+  it('keeps queued signing work when the derivation changes', async () => {
+    const callback = jest.fn()
+    Eth.mock.instances[0].signMessage.mockResolvedValue('0xsigned')
+
+    ledger.signMessage(0, 'hello', callback)
+    ledger.derivation = Derivation.standard
+    ledger.deriveAddresses()
+
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+    runNextRequest()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback).toHaveBeenCalledWith(null, '0xsigned')
+    expect(Eth.mock.instances[0].deriveAddresses).toHaveBeenLastCalledWith(Derivation.standard)
+  })
+
+  it('does not let stale derivation results restore addresses after disconnect', async () => {
+    let resolveAddresses
+    Eth.mock.instances[0].deriveAddresses.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAddresses = resolve
+        })
+    )
+
+    ledger.addresses = []
+    ledger.deriveAddresses()
+    runNextRequest()
+    await Promise.resolve()
+
+    await ledger.disconnect()
+    resolveAddresses(addresses)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ledger.status).toBe(Status.DISCONNECTED)
+    expect(ledger.addresses).toEqual([])
+  })
+
+  it('closes the transport, cancels queued work, and stops device access', async () => {
+    const callback = jest.fn()
+    const eth = Eth.mock.instances[0]
+    const addressCalls = eth.getAddress.mock.calls.length
+
+    ledger.signMessage(0, 'hello', callback)
+    await ledger.close()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0].message).toBe('Ledger closed before request completed')
+    expect(eth.close).toHaveBeenCalledTimes(1)
+    expect(ledger.status).toBe(Status.DISCONNECTED)
+
+    ledger.deriveAddresses()
+    const afterCloseCallback = jest.fn()
+    ledger.signMessage(0, 'after close', afterCloseCallback)
+    jest.advanceTimersByTime(10000)
+    await Promise.resolve()
+
+    expect(afterCloseCallback).toHaveBeenCalledTimes(1)
+    expect(eth.getAddress).toHaveBeenCalledTimes(addressCalls)
+  })
+})
+
+describe('status transitions', () => {
+  const allowed = {
+    [Status.INITIAL]: [
+      Status.INITIAL,
+      Status.LOADING,
+      Status.DERIVING,
+      Status.LOCKED,
+      Status.WRONG_APP,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION
+    ],
+    [Status.LOADING]: [
+      Status.LOADING,
+      Status.INITIAL,
+      Status.DERIVING,
+      Status.LOCKED,
+      Status.WRONG_APP,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION
+    ],
+    [Status.DERIVING]: [
+      Status.DERIVING,
+      Status.OK,
+      Status.LOADING,
+      Status.LOCKED,
+      Status.WRONG_APP,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION
+    ],
+    [Status.OK]: [
+      Status.OK,
+      Status.DERIVING,
+      Status.LOCKED,
+      Status.WRONG_APP,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION
+    ],
+    [Status.LOCKED]: [
+      Status.LOCKED,
+      Status.INITIAL,
+      Status.WRONG_APP,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION
+    ],
+    [Status.WRONG_APP]: [Status.WRONG_APP, Status.INITIAL, Status.DISCONNECTED],
+    [Status.DISCONNECTED]: [Status.DISCONNECTED, Status.INITIAL],
+    [Status.NEEDS_RECONNECTION]: [Status.NEEDS_RECONNECTION, Status.INITIAL, Status.DISCONNECTED]
+  }
+
+  it('accepts only the explicit transition matrix, including recovery paths', () => {
+    Object.values(Status).forEach((from) => {
+      Object.values(Status).forEach((to) => {
+        ledger.status = from
+
+        expect(ledger.updateStatus(to)).toBe(allowed[from].includes(to))
+        expect(ledger.status).toBe(allowed[from].includes(to) ? to : from)
+      })
     })
   })
 })

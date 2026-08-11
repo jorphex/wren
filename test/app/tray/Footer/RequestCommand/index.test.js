@@ -369,7 +369,7 @@ it('renders a declined transaction without monitor chrome', () => {
   renderCommandResult(command, 'renderTxCommand')
 
   expect(screen.getByText('Transaction declined')).toBeTruthy()
-  expect(screen.getByText('You declined this transaction. Nothing was signed or sent.')).toBeTruthy()
+  expect(screen.getByText('Nothing was signed or sent.')).toBeTruthy()
   expect(screen.queryByLabelText('Show signing status')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Decline' })).toBeNull()
   expect(screen.queryByText('Signature Declined')).toBeNull()

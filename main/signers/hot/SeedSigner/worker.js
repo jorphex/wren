@@ -27,16 +27,17 @@ class SeedSignerWorker extends HotSignerWorker {
       })
       if (!addressesMatch) throw new Error('Seed does not match addresses')
 
-      this.seed = plaintext
+      this._clearSeed()
+      this.seed = Buffer.from(plaintext, 'hex')
       const result = version === 1 ? { encryptedSeed: this._encrypt(plaintext, password) } : undefined
       pseudoCallback(null, result)
-    } catch (e) {
+    } catch {
       pseudoCallback('Invalid password')
     }
   }
 
   lock(_, pseudoCallback) {
-    this.seed = null
+    this._clearSeed()
     pseudoCallback(null)
   }
 
@@ -45,7 +46,7 @@ class SeedSignerWorker extends HotSignerWorker {
       const plaintext = seed.toString('hex')
       if (!/^[0-9a-f]{128}$/i.test(plaintext)) throw new Error('Invalid seed')
       pseudoCallback(null, this._encrypt(plaintext, password))
-    } catch (e) {
+    } catch {
       pseudoCallback('Unable to encrypt seed')
     }
   }
@@ -55,8 +56,11 @@ class SeedSignerWorker extends HotSignerWorker {
     if (!this.seed) return pseudoCallback('Signer locked')
     // Derive private key
     const key = this._derivePrivateKey(index)
-    // Sign message
-    super.signMessage(key, message, pseudoCallback)
+    try {
+      super.signMessage(key, message, pseudoCallback)
+    } finally {
+      key.fill(0)
+    }
   }
 
   signTypedData({ index, typedMessage }, pseudoCallback) {
@@ -64,8 +68,11 @@ class SeedSignerWorker extends HotSignerWorker {
     if (!this.seed) return pseudoCallback('Signer locked')
     // Derive private key
     const key = this._derivePrivateKey(index)
-    // Sign message
-    super.signTypedData(key, typedMessage, pseudoCallback)
+    try {
+      super.signTypedData(key, typedMessage, pseudoCallback)
+    } finally {
+      key.fill(0)
+    }
   }
 
   signTransaction({ index, rawTx }, pseudoCallback) {
@@ -73,15 +80,23 @@ class SeedSignerWorker extends HotSignerWorker {
     if (!this.seed) return pseudoCallback('Signer locked')
     // Derive private key
     const key = this._derivePrivateKey(index)
-    // Sign transaction
-    super.signTransaction(key, rawTx, pseudoCallback)
+    try {
+      super.signTransaction(key, rawTx, pseudoCallback)
+    } finally {
+      key.fill(0)
+    }
   }
 
   _derivePrivateKey(index) {
-    let key = HDKey.fromMasterSeed(Buffer.from(this.seed, 'hex'))
+    let key = HDKey.fromMasterSeed(this.seed)
     key = key.derive("m/44'/60'/0'/0/" + index)
     if (!key.privateKey) throw new Error(`Unable to derive private key at index ${index}`)
     return Buffer.from(key.privateKey)
+  }
+
+  _clearSeed() {
+    this.seed?.fill(0)
+    this.seed = null
   }
 }
 

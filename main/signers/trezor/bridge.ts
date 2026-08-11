@@ -17,7 +17,7 @@ import { closeFrameNodeUsbTransports, FrameNodeUsbTransport } from './nodeUsbTra
 import { WREN_REPOSITORY_URL } from '../../../resources/constants'
 
 export class DeviceError extends Error {
-  readonly code
+  readonly code: string | undefined
 
   constructor(msg: string, code?: string) {
     super(msg)
@@ -49,6 +49,9 @@ const config = {
   transports: [FrameNodeUsbTransport as unknown as ConnectSettingsTransport]
 }
 
+type TrezorTypedData = Parameters<typeof TrezorConnect.ethereumSignTypedData>[0]['data']
+type TrezorTransaction = Parameters<typeof TrezorConnect.ethereumSignTransaction>[0]['transaction']
+
 function deviceSelector(device: DeviceReference): NonNullable<CommonParams['device']> {
   return {
     path: device.path,
@@ -67,6 +70,11 @@ async function handleResponse<T>(p: Response<T>) {
 
 class TrezorBridge extends EventEmitter {
   private lifecycleGeneration = 0
+  private requestQueue: Promise<void> = Promise.resolve()
+  private retryDelays = new Set<{
+    timer: ReturnType<typeof setTimeout>
+    reject: (error: Error) => void
+  }>()
 
   async open() {
     const generation = ++this.lifecycleGeneration
@@ -89,6 +97,8 @@ class TrezorBridge extends EventEmitter {
 
   async close() {
     ++this.lifecycleGeneration
+    this.cancelRetryDelays()
+    this.requestQueue = Promise.resolve()
     this.removeAllListeners()
 
     TrezorConnect.removeAllListeners()
@@ -140,12 +150,12 @@ class TrezorBridge extends EventEmitter {
     return result.signature
   }
 
-  async signTypedData(device: DeviceReference, path: string, data: any) {
+  async signTypedData(device: DeviceReference, path: string, data: unknown) {
     const result = await this.makeRequest(() =>
       TrezorConnect.ethereumSignTypedData({
         device: deviceSelector(device),
         path,
-        data,
+        data: data as TrezorTypedData,
         metamask_v4_compat: true
       })
     )
@@ -156,7 +166,7 @@ class TrezorBridge extends EventEmitter {
   async signTypedHash(
     device: DeviceReference,
     path: string,
-    data: any,
+    data: unknown,
     domainSeparatorHash: string,
     messageHash: string
   ) {
@@ -164,7 +174,7 @@ class TrezorBridge extends EventEmitter {
       TrezorConnect.ethereumSignTypedData({
         device: deviceSelector(device),
         path,
-        data,
+        data: data as TrezorTypedData,
         domain_separator_hash: domainSeparatorHash,
         message_hash: messageHash,
         metamask_v4_compat: true
@@ -174,12 +184,12 @@ class TrezorBridge extends EventEmitter {
     return result.signature
   }
 
-  async signTransaction(device: DeviceReference, path: string, tx: any) {
+  async signTransaction(device: DeviceReference, path: string, tx: unknown) {
     const result = await this.makeRequest(() =>
       TrezorConnect.ethereumSignTransaction({
         device: deviceSelector(device),
         path,
-        transaction: tx
+        transaction: tx as TrezorTransaction
       })
     )
 
@@ -222,11 +232,30 @@ class TrezorBridge extends EventEmitter {
     this.emit('trezor:entered:pairing', deviceId)
   }
 
-  private async makeRequest<T>(fn: () => Response<T>, retries = 20) {
+  private makeRequest<T>(fn: () => Response<T>, retries = 20) {
+    const generation = this.lifecycleGeneration
+    const request = this.requestQueue
+      .catch(() => undefined)
+      .then(() => this.runRequest(fn, retries, generation))
+
+    this.requestQueue = request.then(
+      () => undefined,
+      () => undefined
+    )
+
+    return request
+  }
+
+  private async runRequest<T>(fn: () => Response<T>, retries: number, generation: number): Promise<T> {
+    this.ensureCurrent(generation)
+
     try {
       const result = await handleResponse(fn())
+      this.ensureCurrent(generation)
       return result
     } catch (e: unknown) {
+      this.ensureCurrent(generation)
+
       if (retries === 0) {
         throw new Error('Trezor unreachable, please try again')
       }
@@ -234,16 +263,47 @@ class TrezorBridge extends EventEmitter {
       const err = e as DeviceError
 
       if (err.code === 'Device_CallInProgress') {
-        return new Promise<T>((resolve) => {
-          setTimeout(() => {
-            log.warn('request conflict, trying again in 400ms', err)
-            resolve(this.makeRequest(fn, retries - 1))
-          }, 400)
-        })
+        await this.retryDelay(generation)
+        log.warn('request conflict, trying again in 400ms', err)
+        return this.runRequest(fn, retries - 1, generation)
       } else {
         throw err
       }
     }
+  }
+
+  private retryDelay(generation: number) {
+    return new Promise<void>((resolve, reject) => {
+      const pending = {
+        timer: setTimeout(() => {
+          this.retryDelays.delete(pending)
+
+          try {
+            this.ensureCurrent(generation)
+            resolve()
+          } catch (error) {
+            reject(error)
+          }
+        }, 400),
+        reject
+      }
+
+      this.retryDelays.add(pending)
+    })
+  }
+
+  private cancelRetryDelays() {
+    const error = new Error('Trezor bridge closed')
+
+    this.retryDelays.forEach((pending) => {
+      clearTimeout(pending.timer)
+      pending.reject(error)
+    })
+    this.retryDelays.clear()
+  }
+
+  private ensureCurrent(generation: number) {
+    if (generation !== this.lifecycleGeneration) throw new Error('Trezor bridge closed')
   }
 
   // listeners for events coming from a Trezor device

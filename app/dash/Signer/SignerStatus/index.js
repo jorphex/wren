@@ -1,7 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 import link from '../../../../resources/link'
-import { isHardwareSigner } from '../../../../resources/domain/signer'
+import { getSignerStatusMeta, isHardwareSigner } from '../../../../resources/domain/signer'
 
 export class SignerStatus extends React.Component {
   constructor(...args) {
@@ -75,8 +75,9 @@ export class SignerStatus extends React.Component {
     const { shake, unlockInput, unlockError, unlockPending } = this.state
 
     const signer = this.props.signer || {}
+    const signerStatus = getSignerStatusMeta(signer)
 
-    return !isHardwareSigner(signer) && signer.id && signer.status === 'locked' ? (
+    return !isHardwareSigner(signer) && signer.id && signerStatus.phase === 'locked' ? (
       <div className={shake ? 'signerStatus headShake' : 'signerStatus'} ref={this.statusRef}>
         <div className='signerStatusWrap'>
           <div className='signerStatusMain'>

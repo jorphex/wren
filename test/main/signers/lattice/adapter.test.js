@@ -75,6 +75,56 @@ describe('#close', () => {
     expect(adapter.signerObserver).toBe(null)
     expect(store.getObserver('latticeSigners')).toBe(undefined)
   })
+
+  it('closes every known signer and clears the registry', () => {
+    const first = { close: jest.fn() }
+    const second = { close: jest.fn() }
+    adapter.knownSigners = { first, second }
+
+    adapter.close()
+
+    expect(first.close).toHaveBeenCalledTimes(1)
+    expect(second.close).toHaveBeenCalledTimes(1)
+    expect(adapter.knownSigners).toEqual({})
+  })
+
+  it('continues closing signers if one close fails', () => {
+    const first = {
+      deviceId: 'first',
+      close: jest.fn(() => {
+        throw new Error('close failed')
+      })
+    }
+    const second = { deviceId: 'second', close: jest.fn() }
+    adapter.knownSigners = { first, second }
+
+    adapter.close()
+
+    expect(first.close).toHaveBeenCalledTimes(1)
+    expect(second.close).toHaveBeenCalledTimes(1)
+    expect(adapter.knownSigners).toEqual({})
+  })
+
+  it('ignores signer events after shutdown', () => {
+    const signer = new EventEmitter()
+    signer.id = 'lattice-NBaJ8e'
+    signer.deviceId = 'NBaJ8e'
+    signer.connect = jest.fn(() => Promise.resolve())
+    signer.deriveAddresses = jest.fn()
+    signer.disconnect = jest.fn()
+    signer.close = jest.fn()
+    Lattice.mockImplementationOnce(() => signer)
+
+    const updateHandler = jest.fn()
+    adapter.on('update', updateHandler)
+
+    const signerObserver = store.getObserver('latticeSigners')
+    signerObserver.fire()
+    adapter.close()
+    signer.emit('update')
+
+    expect(updateHandler).not.toHaveBeenCalled()
+  })
 })
 
 describe('#remove', () => {
@@ -240,6 +290,7 @@ describe('signer device changes', () => {
     latticeSigner.connect = jest.fn(() => Promise.resolve())
     latticeSigner.disconnect = jest.fn()
     latticeSigner.deriveAddresses = jest.fn()
+    latticeSigner.close = jest.fn()
 
     Lattice.mockImplementation((deviceId, deviceName) => {
       latticeSigner.deviceId = deviceId
@@ -320,6 +371,25 @@ describe('signer device changes', () => {
       }
 
       signerObserver.fire()
+    })
+
+    it('does not update persisted state when auto-connect fails after close', async () => {
+      let rejectConnect
+      latticeSigner.connect.mockImplementation(
+        () =>
+          new Promise((_, reject) => {
+            rejectConnect = reject
+          })
+      )
+
+      signerObserver.fire()
+      store.updateLattice.mockClear()
+      adapter.close()
+      rejectConnect(new Error('late connection failure'))
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(store.updateLattice).not.toHaveBeenCalled()
     })
   })
 

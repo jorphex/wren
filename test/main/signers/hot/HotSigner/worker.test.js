@@ -110,3 +110,87 @@ describe('#signTransaction', () => {
     })
   }, 200)
 })
+
+describe('#handleMessage', () => {
+  beforeEach(() => {
+    jest.spyOn(process, 'send').mockClear()
+  })
+
+  it('returns an authentication error for a malformed token', () => {
+    expect(() =>
+      worker.handleMessage({ id: 'request-1', method: 'lock', params: {}, token: 'short' })
+    ).not.toThrow()
+
+    expect(process.send.mock.calls[0][0]).toEqual({
+      id: 'request-1',
+      error: 'Invalid token',
+      result: undefined,
+      type: 'rpc'
+    })
+  })
+
+  it('returns synchronous dispatch exceptions and responds once', () => {
+    worker.syntheticFailure = () => {
+      throw new Error('synthetic worker failure')
+    }
+
+    expect(() =>
+      worker.handleMessage({
+        id: 'request-2',
+        method: 'syntheticFailure',
+        params: {},
+        token: worker.token
+      })
+    ).not.toThrow()
+
+    expect(process.send).toHaveBeenCalledTimes(1)
+    expect(process.send.mock.calls[0][0]).toEqual({
+      id: 'request-2',
+      error: 'synthetic worker failure',
+      result: undefined,
+      type: 'rpc'
+    })
+  })
+
+  it('ignores a second callback from a worker method', () => {
+    worker.syntheticDoubleResponse = (_params, callback) => {
+      callback(null, 'first')
+      callback(null, 'second')
+    }
+
+    worker.handleMessage({
+      id: 'request-3',
+      method: 'syntheticDoubleResponse',
+      params: {},
+      token: worker.token
+    })
+
+    expect(process.send).toHaveBeenCalledTimes(1)
+    expect(process.send.mock.calls[0][0]).toEqual({
+      id: 'request-3',
+      error: null,
+      result: 'first',
+      type: 'rpc'
+    })
+  })
+
+  it('returns an asynchronous dispatch rejection', async () => {
+    worker.syntheticAsyncFailure = () => Promise.reject(new Error('synthetic async failure'))
+
+    worker.handleMessage({
+      id: 'request-4',
+      method: 'syntheticAsyncFailure',
+      params: {},
+      token: worker.token
+    })
+    await Promise.resolve()
+
+    expect(process.send).toHaveBeenCalledTimes(1)
+    expect(process.send.mock.calls[0][0]).toEqual({
+      id: 'request-4',
+      error: 'synthetic async failure',
+      result: undefined,
+      type: 'rpc'
+    })
+  })
+})

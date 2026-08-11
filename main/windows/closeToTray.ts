@@ -1,5 +1,12 @@
 import type { App, BrowserWindow, Event } from 'electron'
 
+const closeToTrayListeners = new Set<() => void>()
+
+export function onCloseToTray(listener: () => void) {
+  closeToTrayListeners.add(listener)
+  return () => closeToTrayListeners.delete(listener)
+}
+
 export function installCloseToTray(app: App, window: BrowserWindow, hide: () => void) {
   let quitting = false
 
@@ -10,6 +17,7 @@ export function installCloseToTray(app: App, window: BrowserWindow, hide: () => 
     if (quitting) return
 
     event.preventDefault()
+    closeToTrayListeners.forEach((listener) => listener())
     hide()
   }
   const cleanup = () => {

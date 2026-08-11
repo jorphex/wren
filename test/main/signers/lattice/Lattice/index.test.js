@@ -1,8 +1,9 @@
-import Lattice from '../../../../../main/signers/lattice/Lattice'
+import Lattice, { Status } from '../../../../../main/signers/lattice/Lattice'
 import { Client } from 'gridplus-sdk'
 import log from 'electron-log'
 import { Derivation } from '../../../../../main/signers/Signer/derive'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
+import { USER_REJECTED_REQUEST } from '../../../../../main/signers/errors'
 
 jest.mock('gridplus-sdk')
 
@@ -24,15 +25,14 @@ beforeEach(() => {
   lattice.on('error', jest.fn())
 })
 
-async function waitForNextPromise(fn, numPromisesInQueue = 1) {
-  while (numPromisesInQueue > 0) {
-    await Promise.resolve()
-    numPromisesInQueue -= 1
-  }
+function deferred() {
+  let resolve, reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
 
-  fn()
-
-  jest.runAllTimers()
+  return { promise, resolve, reject }
 }
 
 describe('#connect', () => {
@@ -97,7 +97,7 @@ describe('#connect', () => {
       if (stateFlow.length === 2) {
         try {
           expect(stateFlow[0]).toBe('connecting')
-          expect(stateFlow[1]).toBe('pair')
+          expect(stateFlow[1]).toBe(Status.READY_FOR_PAIRING)
           done()
         } catch (e) {
           done(e)
@@ -157,7 +157,7 @@ describe('#connect', () => {
 
       lattice.once('error', () => {
         try {
-          expect(lattice.status.toLowerCase()).toMatch(/unknown device error/)
+          expect(lattice.status).toBe(Status.UNKNOWN_ERROR)
           resolve()
         } catch (e) {
           reject(e)
@@ -184,6 +184,55 @@ describe('#connect', () => {
       patch: 4
     })
   })
+
+  it('allows only the latest concurrent connection to update state', async () => {
+    const first = deferred()
+    const second = deferred()
+    const firstClient = {
+      connect: jest.fn(() => first.promise),
+      getFwVersion: () => ({ major: 0, minor: 10, fix: 1 })
+    }
+    const secondClient = {
+      connect: jest.fn(() => second.promise),
+      getFwVersion: () => ({ major: 1, minor: 2, fix: 3 })
+    }
+    Client.mockImplementationOnce(() => firstClient).mockImplementationOnce(() => secondClient)
+
+    const connectEvents = jest.fn()
+    lattice.on('connect', connectEvents)
+
+    const firstConnect = lattice.connect('https://first.example', 'first-key')
+    const secondConnect = lattice.connect('https://second.example', 'second-key')
+
+    second.resolve(true)
+    await expect(secondConnect).resolves.toBe(true)
+
+    first.resolve(false)
+    await expect(firstConnect).rejects.toThrow(/connection changed/)
+
+    expect(lattice.connection).toBe(secondClient)
+    expect(lattice.appVersion).toEqual({ major: 1, minor: 2, patch: 3 })
+    expect(connectEvents).toHaveBeenCalledTimes(1)
+    expect(connectEvents).toHaveBeenCalledWith(true)
+  })
+
+  it('does not publish a late connection after close', async () => {
+    const pending = deferred()
+    Client.mockImplementationOnce(() => ({
+      connect: jest.fn(() => pending.promise),
+      getFwVersion: () => ({ major: 1, minor: 0, fix: 0 })
+    }))
+    const connectEvents = jest.fn()
+    lattice.on('connect', connectEvents)
+
+    const connecting = lattice.connect(baseUrl, privateKey)
+    lattice.close()
+    pending.resolve(true)
+
+    await expect(connecting).rejects.toThrow(/connection changed/)
+    expect(connectEvents).not.toHaveBeenCalled()
+    expect(lattice.connection).toBe(null)
+  })
 })
 
 describe('#pair', () => {
@@ -201,7 +250,7 @@ describe('#pair', () => {
   it('emits an update with pairing status', (done) => {
     lattice.once('update', () => {
       try {
-        expect(lattice.status).toBe('Pairing')
+        expect(lattice.status).toBe(Status.PAIRING)
         done()
       } catch (e) {
         done(e)
@@ -230,6 +279,7 @@ describe('#pair', () => {
     const hasActiveWallet = await lattice.pair(pairingCode)
 
     expect(hasActiveWallet).toBe(false)
+    expect(lattice.status).toBe(Status.NO_ACTIVE_WALLET)
   })
 
   it('does not write the pairing code to logs', async () => {
@@ -249,7 +299,7 @@ describe('#pair', () => {
 
       lattice.once('error', () => {
         try {
-          expect(lattice.status.toLowerCase()).toBe('pairing failed')
+          expect(lattice.status).toBe(Status.PAIRING_FAILED)
           resolve()
         } catch (e) {
           reject(e)
@@ -265,6 +315,70 @@ describe('#pair', () => {
     }
 
     return handler
+  })
+
+  it('serializes concurrent pairing prompts', async () => {
+    const first = deferred()
+    const second = deferred()
+    lattice.connection.pair
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+
+    const firstPair = lattice.pair('FIRST')
+    const secondPair = lattice.pair('SECOND')
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(lattice.connection.pair).toHaveBeenCalledTimes(1)
+
+    first.resolve(true)
+    await expect(firstPair).resolves.toBe(true)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(lattice.connection.pair).toHaveBeenCalledTimes(2)
+
+    second.resolve(true)
+    await expect(secondPair).resolves.toBe(true)
+  })
+
+  it('normalizes a declined pairing request without emitting a device error', async () => {
+    lattice.connection.pair.mockRejectedValue({
+      name: 'LatticeResponseError',
+      responseCode: 132,
+      errorMessage: 'Request declined by user'
+    })
+    const errorHandler = jest.fn()
+    lattice.removeAllListeners('error')
+    lattice.on('error', errorHandler)
+
+    await expect(lattice.pair(pairingCode)).rejects.toMatchObject({ code: USER_REJECTED_REQUEST })
+    expect(lattice.status).toBe(Status.READY_FOR_PAIRING)
+    expect(errorHandler).not.toHaveBeenCalled()
+  })
+
+  it('invalidates an active pairing prompt when a new connection starts', async () => {
+    const pairing = deferred()
+    const connecting = deferred()
+    lattice.connection.pair.mockImplementationOnce(() => pairing.promise)
+    Client.mockImplementationOnce(() => ({
+      connect: jest.fn(() => connecting.promise),
+      getFwVersion: () => ({ major: 1, minor: 0, fix: 0 })
+    }))
+    const pairedHandler = jest.fn()
+    lattice.on('paired', pairedHandler)
+
+    const pairingRequest = lattice.pair(pairingCode)
+    await Promise.resolve()
+    await Promise.resolve()
+    const connectionRequest = lattice.connect('https://replacement.example', 'replacement-key')
+
+    await expect(pairingRequest).rejects.toThrow(/connection changed/)
+    pairing.resolve(true)
+    connecting.resolve(false)
+    await expect(connectionRequest).resolves.toBe(false)
+
+    expect(pairedHandler).not.toHaveBeenCalled()
+    expect(lattice.status).toBe(Status.READY_FOR_PAIRING)
   })
 })
 
@@ -334,7 +448,7 @@ describe('#deriveAddresses', () => {
   it('emits an update with deriving status', (done) => {
     lattice.once('update', () => {
       try {
-        expect(lattice.status).toBe('addresses')
+        expect(lattice.status).toBe(Status.DERIVING)
         done()
       } catch (e) {
         done(e)
@@ -347,7 +461,7 @@ describe('#deriveAddresses', () => {
   it('derives new addresses', async () => {
     await lattice.deriveAddresses()
 
-    expect(lattice.status).toBe('ok')
+    expect(lattice.status).toBe(Status.OK)
     expect(lattice.addresses).toStrictEqual(['0xaddr0', '0xaddr1', '0xaddr2', '0xaddr3', '0xaddr4'])
   })
 
@@ -357,7 +471,7 @@ describe('#deriveAddresses', () => {
 
     await lattice.deriveAddresses()
 
-    expect(lattice.status).toBe('ok')
+    expect(lattice.status).toBe(Status.OK)
     expect(lattice.addresses).toStrictEqual([
       '0xaddr0',
       '0xaddr1',
@@ -384,7 +498,7 @@ describe('#deriveAddresses', () => {
     expect(lattice.addresses.length).toBe(10)
   })
 
-  it('retries on failure', (done) => {
+  it('retries on failure', async () => {
     let requestNum = 0
 
     lattice.connection.getAddresses.mockImplementation(async () => {
@@ -394,21 +508,15 @@ describe('#deriveAddresses', () => {
       return ['addr1', 'addr2', 'addr3', 'addr4', 'addr5']
     })
 
-    lattice.once('error', () => done('should not emit an error!'))
-    lattice.on('update', () => {
-      if (lattice.status === 'ok') {
-        try {
-          expect(lattice.addresses).toHaveLength(5)
-          done()
-        } catch (e) {
-          done(e)
-        }
-      }
-    })
+    const errorHandler = jest.fn()
+    lattice.on('error', errorHandler)
 
-    lattice.deriveAddresses()
+    const deriving = lattice.deriveAddresses()
+    await jest.advanceTimersByTimeAsync(3000)
+    await deriving
 
-    waitForNextPromise(() => jest.advanceTimersByTime(3000), 3)
+    expect(errorHandler).not.toHaveBeenCalled()
+    expect(lattice.addresses).toHaveLength(5)
   })
 
   it('emits an error event on failure', (done) => {
@@ -417,7 +525,7 @@ describe('#deriveAddresses', () => {
     })
 
     lattice.on('update', () => {
-      if (lattice.status === 'ok') done('should not have derived!')
+      if (lattice.status === Status.OK) done('should not have derived!')
     })
 
     lattice.once('error', () => {
@@ -431,6 +539,67 @@ describe('#deriveAddresses', () => {
     })
 
     lattice.deriveAddresses(Derivation.standard, 0)
+  })
+
+  it('discards a stale derivation when a newer derivation starts', async () => {
+    const first = deferred()
+    lattice.connection.getAddresses
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(async (opts) =>
+        Array(opts.n)
+          .fill()
+          .map((_, i) => `legacy${opts.startPath[3] + i}`)
+      )
+
+    const standard = lattice.deriveAddresses(Derivation.standard, 0)
+    await Promise.resolve()
+    await Promise.resolve()
+    const legacy = lattice.deriveAddresses(Derivation.legacy, 0)
+
+    first.resolve(['standard0', 'standard1', 'standard2', 'standard3', 'standard4'])
+    await standard
+    await legacy
+
+    expect(lattice.derivation).toBe(Derivation.legacy)
+    expect(lattice.addresses).toEqual(['0xlegacy0', '0xlegacy1', '0xlegacy2', '0xlegacy3', '0xlegacy4'])
+  })
+
+  it('uses the derivation and account limit captured before awaiting the device', async () => {
+    const addresses = deferred()
+    lattice.connection.getAddresses.mockImplementationOnce(() => addresses.promise)
+
+    const deriving = lattice.deriveAddresses(Derivation.standard, 0)
+    await Promise.resolve()
+    await Promise.resolve()
+    lattice.derivation = Derivation.legacy
+    lattice.accountLimit = 10
+    addresses.resolve(['addr0', 'addr1', 'addr2', 'addr3', 'addr4'])
+    await deriving
+
+    expect(lattice.connection.getAddresses).toHaveBeenCalledTimes(1)
+    expect(lattice.connection.getAddresses).toHaveBeenCalledWith(
+      expect.objectContaining({ startPath: [0x8000002c, 0x8000003c, 0x80000000, 0, 0], n: 5 })
+    )
+    expect(lattice.addresses).toHaveLength(5)
+  })
+
+  it('does not commit addresses after disconnect', async () => {
+    const addresses = deferred()
+    lattice.connection.getAddresses.mockImplementationOnce(() => addresses.promise)
+
+    const deriving = lattice.deriveAddresses(Derivation.standard, 0)
+    await Promise.resolve()
+    await Promise.resolve()
+    lattice.disconnect()
+    await deriving
+
+    addresses.resolve(['late0', 'late1', 'late2', 'late3', 'late4'])
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(lattice.connection).toBe(null)
+    expect(lattice.addresses).toEqual([])
+    expect(lattice.status).toBe('disconnected')
   })
 })
 
@@ -473,7 +642,7 @@ describe('#verifyAddress', () => {
 
     lattice.verifyAddress(2, 'addr3', false, (err, result) => {
       try {
-        expect(err.message.toLowerCase()).toBe('verify address error')
+        expect(err.message.toLowerCase()).toContain('could not derive addresses: error!')
         expect(result).toBe(undefined)
         done()
       } catch (e) {
@@ -544,6 +713,87 @@ describe('#signMessage', () => {
         done(e)
       }
     })
+  })
+
+  it('normalizes a device rejection to provider code 4001', (done) => {
+    lattice.connection.sign.mockRejectedValue({
+      name: 'LatticeResponseError',
+      responseCode: 132,
+      errorMessage: 'Request declined by user'
+    })
+
+    lattice.signMessage(4, 'sign this please', (err, res) => {
+      try {
+        expect(err.code).toBe(USER_REJECTED_REQUEST)
+        expect(res).toBe(undefined)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('preserves non-rejection device errors', (done) => {
+    const deviceError = new Error('relay unavailable')
+    lattice.connection.sign.mockRejectedValue(deviceError)
+
+    lattice.signMessage(4, 'sign this please', (err, res) => {
+      try {
+        expect(err).toBe(deviceError)
+        expect(res).toBe(undefined)
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
+
+  it('settles once with a disconnect error when a pending prompt is invalidated', async () => {
+    const pending = deferred()
+    lattice.connection.sign.mockImplementationOnce(() => pending.promise)
+    const callback = jest.fn()
+
+    lattice.signMessage(4, 'sign this please', callback)
+    await Promise.resolve()
+    await Promise.resolve()
+    lattice.disconnect()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0].message).toMatch(/disconnected/)
+
+    pending.resolve({ sig: { r: '0x1', s: '0x2', v: 27 } })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it('serializes concurrent signing prompts', async () => {
+    const first = deferred()
+    const second = deferred()
+    lattice.connection.sign
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+
+    const firstCallback = jest.fn()
+    const secondCallback = jest.fn()
+    const firstSigning = lattice.signMessage(4, 'first', firstCallback)
+    const secondSigning = lattice.signMessage(4, 'second', secondCallback)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(lattice.connection.sign).toHaveBeenCalledTimes(1)
+
+    first.resolve({ sig: { r: '0x1', s: '0x2', v: 27 } })
+    await firstSigning
+    await Promise.resolve()
+    expect(lattice.connection.sign).toHaveBeenCalledTimes(2)
+
+    second.resolve({ sig: { r: '0x3', s: '0x4', v: 28 } })
+    await secondSigning
+    expect(firstCallback).toHaveBeenCalledTimes(1)
+    expect(secondCallback).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -720,11 +970,43 @@ describe('#signTransaction', () => {
       }
     })
   })
+
+  it('uses the ETH currency for modern generic transaction signing', (done) => {
+    lattice.connection.getFwVersion = () => ({ major: 0, minor: 15, fix: 0 })
+    const txToSign = { ...tx, type: '0x0' }
+
+    lattice.connection.sign.mockImplementation(async (opts) => {
+      try {
+        expect(opts.currency).toBe('ETH')
+        expect(opts.data.payload).toBeTruthy()
+        expect(opts.data.signerPath[4]).toBe(4)
+
+        return {
+          sig: {
+            ...expectedSignature.sig,
+            v: 27n
+          }
+        }
+      } catch (e) {
+        done(e)
+      }
+    })
+
+    lattice.signTransaction(4, txToSign, (err, res) => {
+      try {
+        expect(err).toBe(null)
+        expect(res).toBe('0xcf8080808080801b833ea8cd8396f7a0')
+        done()
+      } catch (e) {
+        done(e)
+      }
+    })
+  })
 })
 
 describe('#disconnect', () => {
   it('emits an update if Lattice was connected', () => {
-    lattice.status = 'ok'
+    lattice.status = Status.OK
 
     const updateHandler = jest.fn()
     lattice.once('update', updateHandler)
@@ -761,6 +1043,14 @@ describe('#disconnect', () => {
     lattice.disconnect()
 
     expect(lattice.addresses).toHaveLength(0)
+  })
+
+  it('normalizes an interrupted operation state to disconnected', () => {
+    lattice.status = Status.PAIRING
+
+    lattice.disconnect()
+
+    expect(lattice.status).toBe('disconnected')
   })
 })
 

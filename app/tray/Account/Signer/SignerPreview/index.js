@@ -6,6 +6,7 @@ import link from '../../../../../resources/link'
 import svg from '../../../../../resources/svg'
 import {
   findUnavailableSigners,
+  getSignerStatusMeta,
   isHardwareSigner,
   isWatchOnlyAccountType
 } from '../../../../../resources/domain/signer'
@@ -135,25 +136,24 @@ export class Signer extends React.Component {
   }
 
   getCurrentStatus(activeSigner, hardwareSigner) {
-    let status = ''
     const style = {}
+    let status = 'No signer'
 
-    if (activeSigner && activeSigner.status) {
-      if (activeSigner.status.toLowerCase() === 'ok') {
-        status = 'Ready to sign'
+    if (activeSigner) {
+      const signerStatus = getSignerStatusMeta(activeSigner)
+      status = signerStatus.label
+      if (signerStatus.tone === 'positive') {
         style.color = 'var(--good)'
-      } else if (activeSigner.status.toLowerCase() === 'locked') {
+      } else if (signerStatus.tone === 'warning') {
         style.color = 'var(--moon)'
-        status = activeSigner.status
-      } else {
-        status = activeSigner.status
+      } else if (signerStatus.tone === 'danger') {
+        style.color = 'var(--bad)'
       }
     } else if (hardwareSigner) {
       style.color = 'var(--bad)'
-      status = 'Disconnected'
+      status = 'Device disconnected'
     } else {
       style.color = 'var(--wren-text-muted)'
-      status = 'No signer'
     }
 
     return (

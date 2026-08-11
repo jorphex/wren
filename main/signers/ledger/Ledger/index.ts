@@ -10,18 +10,69 @@ import { Derivation, getDerivationPath } from '../../Signer/derive'
 import { TransactionData } from '../../../../resources/domain/transaction'
 import { signerCompatibility, londonToLegacy } from '../../../transaction'
 import type { TypedMessage } from '../../../accounts/types'
+import { SignerUserRejectedError } from '../../errors'
 
 const ns = '3bbcee75-cecc-5b56-8031-b6641c1ed1f1'
 
 export const Status = {
-  INITIAL: 'Connecting',
-  OK: 'ok',
+  INITIAL: 'connecting',
+  OK: 'ready',
   LOADING: 'loading',
-  DERIVING: 'addresses',
+  DERIVING: 'loading-addresses',
   LOCKED: 'locked',
-  WRONG_APP: 'Open your Ledger and select the Ethereum application',
-  DISCONNECTED: 'Disconnected',
-  NEEDS_RECONNECTION: 'Please reconnect this Ledger device'
+  WRONG_APP: 'wrong-app',
+  DISCONNECTED: 'disconnected',
+  NEEDS_RECONNECTION: 'reconnect-required'
+} as const
+
+type LedgerStatus = (typeof Status)[keyof typeof Status]
+
+const validStatusTransitions: Record<LedgerStatus, ReadonlySet<LedgerStatus>> = {
+  [Status.INITIAL]: new Set([
+    Status.INITIAL,
+    Status.LOADING,
+    Status.DERIVING,
+    Status.LOCKED,
+    Status.WRONG_APP,
+    Status.DISCONNECTED,
+    Status.NEEDS_RECONNECTION
+  ]),
+  [Status.LOADING]: new Set([
+    Status.LOADING,
+    Status.INITIAL,
+    Status.DERIVING,
+    Status.LOCKED,
+    Status.WRONG_APP,
+    Status.DISCONNECTED,
+    Status.NEEDS_RECONNECTION
+  ]),
+  [Status.DERIVING]: new Set([
+    Status.DERIVING,
+    Status.OK,
+    Status.LOADING,
+    Status.LOCKED,
+    Status.WRONG_APP,
+    Status.DISCONNECTED,
+    Status.NEEDS_RECONNECTION
+  ]),
+  [Status.OK]: new Set([
+    Status.OK,
+    Status.DERIVING,
+    Status.LOCKED,
+    Status.WRONG_APP,
+    Status.DISCONNECTED,
+    Status.NEEDS_RECONNECTION
+  ]),
+  [Status.LOCKED]: new Set([
+    Status.LOCKED,
+    Status.INITIAL,
+    Status.WRONG_APP,
+    Status.DISCONNECTED,
+    Status.NEEDS_RECONNECTION
+  ]),
+  [Status.WRONG_APP]: new Set([Status.WRONG_APP, Status.INITIAL, Status.DISCONNECTED]),
+  [Status.DISCONNECTED]: new Set([Status.DISCONNECTED, Status.INITIAL]),
+  [Status.NEEDS_RECONNECTION]: new Set([Status.NEEDS_RECONNECTION, Status.INITIAL, Status.DISCONNECTED])
 }
 
 interface Address {
@@ -76,6 +127,11 @@ export class DeviceError extends Error {
 
 export default class Ledger extends Signer {
   private eth: LedgerEthereumApp | undefined
+  private closed = false
+  private lifecycleVersion = 0
+  private derivationVersion = 0
+  private lifecycle = Promise.resolve()
+  private closePromise: Promise<void> | undefined
 
   devicePath: string
 
@@ -100,139 +156,226 @@ export default class Ledger extends Signer {
   }
 
   override async open() {
-    const transport = await TransportNodeHid.open(this.devicePath)
+    const version = ++this.lifecycleVersion
 
-    this.eth = new LedgerEthereumApp(transport)
+    return this.serializeLifecycle(async () => {
+      if (this.closed || version !== this.lifecycleVersion) return
 
-    this.requestQueue.start()
+      if (this.eth) {
+        this.stopWork(new Error('Ledger transport reopened before request completed'))
+      }
+      await this.closeTransport()
+      if (this.closed || version !== this.lifecycleVersion) return
+
+      const transport = await TransportNodeHid.open(this.devicePath)
+
+      if (this.closed || version !== this.lifecycleVersion) {
+        await transport.close()
+        return
+      }
+
+      this.eth = new LedgerEthereumApp(transport)
+
+      this.requestQueue.start()
+    })
   }
 
-  override close() {
+  override async close() {
+    if (this.closePromise) return this.closePromise
+
+    this.closed = true
+    this.lifecycleVersion++
+    this.derivationVersion++
+    this.stopWork(new Error('Ledger closed before request completed'))
+    this.updateStatus(Status.DISCONNECTED)
+
+    this.closePromise = this.serializeLifecycle(async () => {
+      await this.closeTransport()
+    })
+
     this.emit('close')
     this.removeAllListeners()
 
-    super.close()
+    await this.closePromise
   }
 
   async connect() {
-    try {
-      // since the Ledger doesn't provide information about whether the eth app is open or if
-      // the device is locked, the order of these checks is important in order to correctly determine
-      // the exact status based on the returned error codes
-      //  1. getAppConfiguration
-      //  2. checkDeviceStatus
-      //  3. deriveAddresses
+    const version = ++this.lifecycleVersion
 
-      const config = await this.getAppConfiguration()
+    return this.serializeLifecycle(async () => {
+      if (!this.isCurrent(version)) return
 
-      this.updateStatus(Status.INITIAL)
-      this.emit('update')
+      try {
+        // since the Ledger doesn't provide information about whether the eth app is open or if
+        // the device is locked, the order of these checks is important in order to correctly determine
+        // the exact status based on the returned error codes
+        //  1. getAppConfiguration
+        //  2. checkDeviceStatus
+        //  3. deriveAddresses
 
-      // during connection is the only time we can access the device without
-      // enqueuing the request, since no other requests should be active before
-      // the device is connected
-      await this.checkDeviceStatus()
+        const config = await this.getAppConfiguration()
+        if (!this.isCurrent(version)) return
 
-      if (this.isReady()) {
-        const [major = 0, minor = 0, patch = 0] = (config.version || '1.6.1')
-          .split('.')
-          .map((n) => parseInt(n))
-        const version = { major, minor, patch }
+        this.updateStatus(Status.INITIAL)
+        this.emit('update')
 
-        this.appVersion = version
+        // during connection is the only time we can access the device without
+        // enqueuing the request, since no other requests should be active before
+        // the device is connected
+        await this.checkDeviceStatus(version)
+        if (!this.isCurrent(version)) return
 
-        this.deriveAddresses()
+        if (this.isReady()) {
+          const [major = 0, minor = 0, patch = 0] = (config.version || '1.6.1')
+            .split('.')
+            .map((n) => parseInt(n))
+          const appVersion = { major, minor, patch }
+
+          this.appVersion = appVersion
+
+          this.deriveAddresses()
+        }
+      } catch (err) {
+        if (!this.isCurrent(version)) return
+
+        this.handleError(err as DeviceError)
+
+        if (this.status !== Status.LOCKED) {
+          if (this.lifecycleVersion === version) {
+            this.stopWork(new Error('Ledger connection failed before request completed'))
+          }
+          await this.disconnectTransport()
+        }
       }
-    } catch (err) {
-      this.handleError(err as DeviceError)
-
-      if (this.status !== Status.LOCKED) {
-        return this.disconnect()
-      }
-    }
+    })
   }
 
   async disconnect() {
-    if (this.status === Status.OK) {
+    if (this.closed) {
+      await this.closePromise
+      return
+    }
+
+    this.lifecycleVersion++
+    this.derivationVersion++
+    this.stopWork(new Error('Ledger disconnected before request completed'))
+
+    if (
+      this.status === Status.INITIAL ||
+      this.status === Status.DERIVING ||
+      this.status === Status.OK ||
+      this.status === Status.LOCKED
+    ) {
       this.updateStatus(Status.DISCONNECTED)
       this.emit('update')
     }
 
-    this.requestQueue.close()
+    return this.serializeLifecycle(async () => {
+      await this.disconnectTransport()
+    })
+  }
 
+  private serializeLifecycle<T>(operation: () => Promise<T>) {
+    const result = this.lifecycle.then(operation, operation)
+    this.lifecycle = result.then(
+      () => undefined,
+      () => undefined
+    )
+    return result
+  }
+
+  private isCurrent(version: number) {
+    return !this.closed && version === this.lifecycleVersion
+  }
+
+  private stopWork(error: Error) {
     clearTimeout(this.statusPoller)
+    this.requestQueue.close(error)
+  }
 
-    if (this.eth) {
-      await this.eth.close()
-      this.eth = undefined
-    }
+  private async closeTransport() {
+    const eth = this.eth
+    this.eth = undefined
+    if (eth) await eth.close()
+  }
+
+  private async disconnectTransport() {
+    await this.closeTransport()
   }
 
   private isReady() {
-    const readyStatuses = [Status.INITIAL, Status.OK]
-
-    return readyStatuses.includes(this.status)
+    return this.status === Status.INITIAL || this.status === Status.OK
   }
 
   private handleError(err: DeviceError) {
+    if (this.closed) return
+
     const errorStatus = getStatusForError(err)
 
     if (errorStatus === Status.LOCKED && this.status !== Status.LOCKED) {
-      this.updateStatus(Status.LOCKED)
-      this.emit('lock')
+      if (this.updateStatus(Status.LOCKED)) {
+        this.emit('lock')
+      }
       return
     }
 
-    if (errorStatus !== this.status) {
-      this.updateStatus(errorStatus)
+    if (errorStatus !== this.status && this.updateStatus(errorStatus)) {
       this.emit('update')
 
       if (this.status === Status.NEEDS_RECONNECTION) {
-        this.disconnect()
+        void this.disconnect().catch((error) => log.warn('failed to disconnect Ledger transport', error))
       }
     }
   }
 
-  private isValidStatusTransition(status: string) {
-    // TODO: outline all valid state transitions
-    if (status === Status.DERIVING) {
-      return [Status.OK, Status.INITIAL].includes(this.status)
+  private isValidStatusTransition(status: string): status is LedgerStatus {
+    const current = validStatusTransitions[this.status as LedgerStatus]
+    return !!current?.has(status as LedgerStatus)
+  }
+
+  updateStatus(status: string) {
+    if (!this.isValidStatusTransition(status)) return false
+
+    this.status = status
+
+    if (this.status === Status.OK) {
+      clearTimeout(this.statusPoller)
+      this.pollDeviceStatus(5000)
+    }
+
+    if (this.status === Status.LOCKED) {
+      clearTimeout(this.statusPoller)
+      this.pollDeviceStatus(500)
     }
 
     return true
   }
 
-  updateStatus(status: string) {
-    if (this.isValidStatusTransition(status)) {
-      this.status = status
-    }
+  private async checkDeviceStatus(version = this.lifecycleVersion) {
+    if (!this.isCurrent(version) || !this.eth) return -1
 
-    if (this.status === Status.OK) {
-      clearInterval(this.statusPoller)
-      this.pollDeviceStatus(5000)
-    }
-
-    if (this.status === Status.LOCKED) {
-      clearInterval(this.statusPoller)
-      this.pollDeviceStatus(500)
-    }
-  }
-
-  private async checkDeviceStatus() {
-    const check = new Promise(async (resolve: (err: DeviceError | undefined) => void) => {
-      setTimeout(() => {
-        resolve(new DeviceError('status check timed out'))
-      }, 3000)
-
-      try {
-        await this.eth?.getAddress("44'/60'/0'/0", false, false)
-        resolve(undefined)
-      } catch (e) {
-        resolve(e as DeviceError)
+    const eth = this.eth
+    const check = new Promise<DeviceError | undefined>((resolve) => {
+      let settled = false
+      const settle = (err: DeviceError | undefined) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve(err)
       }
+      const timeout = setTimeout(() => settle(new DeviceError('status check timed out')), 3000)
+
+      Promise.resolve()
+        .then(() => eth.getAddress("44'/60'/0'/0", false, false))
+        .then(
+          () => settle(undefined),
+          (error) => settle(error as DeviceError)
+        )
     })
 
     return check.then((err) => {
+      if (!this.isCurrent(version)) return -1
+
       if (!err) {
         // success, handle different status state transitions
 
@@ -253,8 +396,11 @@ export default class Ledger extends Signer {
 
   private async pollDeviceStatus(frequency: number) {
     const lastStatus = this.status
+    const version = this.lifecycleVersion
 
     this.statusPoller = setTimeout(() => {
+      if (!this.isCurrent(version) || !this.eth) return
+
       const lastRequest = this.requestQueue.peekBack()
 
       // prevent spamming eth app checks
@@ -262,23 +408,33 @@ export default class Ledger extends Signer {
         this.enqueueRequests({
           type: 'checkDeviceStatus',
           execute: async () => {
-            if (lastStatus !== this.status) {
+            if (!this.isCurrent(version) || lastStatus !== this.status) {
               // check if the status changed since this event was enqueued, this
               // will prevent unintended status transitions
               return true
             }
 
-            return this.checkDeviceStatus()
+            return this.checkDeviceStatus(version)
           }
         })
       }
 
-      this.pollDeviceStatus(frequency)
+      if (this.isCurrent(version)) this.pollDeviceStatus(frequency)
     }, frequency)
   }
 
   private enqueueRequests(...requests: Request[]) {
     requests.forEach((req) => this.requestQueue.add(req))
+  }
+
+  private settleOnce<T>(cb: Callback<T>) {
+    let settled = false
+
+    return (err: Error | null, value: T | undefined) => {
+      if (settled) return
+      settled = true
+      cb(err, value)
+    }
   }
 
   private getPath(index: number) {
@@ -292,21 +448,30 @@ export default class Ledger extends Signer {
   // *** request enqueuing methods *** //
 
   deriveAddresses() {
-    this.requestQueue.clear()
+    if (this.closed || !this.eth) return
+
+    const version = ++this.derivationVersion
+    this.requestQueue.cancelWhere(
+      (request) => request.type === 'deriveAddresses',
+      new Error('Ledger derivation changed before request completed'),
+      true
+    )
     this.addresses = []
 
-    this.updateStatus(Status.DERIVING)
+    if (!this.updateStatus(Status.DERIVING)) return
     this.emit('update')
 
     if (this.derivation === Derivation.live) {
-      this.deriveLiveAddresses()
+      this.deriveLiveAddresses(version)
     } else {
-      this.deriveHardwareAddresses()
+      this.deriveHardwareAddresses(version)
     }
   }
 
-  private deriveLiveAddresses() {
+  private deriveLiveAddresses(version: number) {
     const requests = []
+    const lifecycleVersion = this.lifecycleVersion
+    const targetDerivation = this.derivation
 
     for (let i = 0; i < this.accountLimit; i++) {
       requests.push({
@@ -317,6 +482,13 @@ export default class Ledger extends Signer {
 
             const path = this.getPath(i)
             const { address } = await this.eth.getAddress(path, false, false)
+
+            if (
+              !this.isCurrent(lifecycleVersion) ||
+              version !== this.derivationVersion ||
+              this.derivation !== targetDerivation
+            )
+              return
 
             log.verbose(`Found Ledger Live address #${i}: ${address}`)
 
@@ -331,7 +503,9 @@ export default class Ledger extends Signer {
               this.emit('update')
             }
           } catch (e) {
-            this.handleError(e as DeviceError)
+            if (this.isCurrent(lifecycleVersion) && version === this.derivationVersion) {
+              this.handleError(e as DeviceError)
+            }
           }
         }
       })
@@ -340,8 +514,9 @@ export default class Ledger extends Signer {
     this.enqueueRequests(...requests)
   }
 
-  private deriveHardwareAddresses() {
+  private deriveHardwareAddresses(version: number) {
     const targetDerivation = this.derivation
+    const lifecycleVersion = this.lifecycleVersion
 
     this.enqueueRequests({
       type: 'deriveAddresses',
@@ -354,7 +529,11 @@ export default class Ledger extends Signer {
 
           const addresses = await this.eth.deriveAddresses(this.derivation)
 
-          if (this.derivation === targetDerivation) {
+          if (
+            this.isCurrent(lifecycleVersion) &&
+            version === this.derivationVersion &&
+            this.derivation === targetDerivation
+          ) {
             // don't update if the derivation was changed while this request was running
             if (this.status === Status.DERIVING) {
               this.updateStatus(Status.OK)
@@ -365,73 +544,92 @@ export default class Ledger extends Signer {
             this.emit('update')
           }
         } catch (e) {
-          this.handleError(e as DeviceError)
+          if (this.isCurrent(lifecycleVersion) && version === this.derivationVersion) {
+            this.handleError(e as DeviceError)
+          }
         }
       }
     })
   }
 
   override verifyAddress(index: number, currentAddress: string, display = false, cb: Callback<boolean>) {
+    const lifecycleVersion = this.lifecycleVersion
+    const settle = this.settleOnce(cb)
+
     this.enqueueRequests({
       type: 'verifyAddress',
+      cancel: (error) => settle(error, undefined),
       execute: async () => {
         try {
+          if (!this.isCurrent(lifecycleVersion)) return
           if (!this.eth) throw new Error('attempted to verify address but Eth app is not connected!')
           if (!this.derivation) throw new Error('attempted to verify address with unknown derivation!')
 
           const path = this.getPath(index)
           const result = await this.getAddress(path, display, true)
+          if (!this.isCurrent(lifecycleVersion)) return
           const address = currentAddress.toLowerCase()
 
           if (result.address.toLowerCase() !== address) {
             const err = new Error('Address does not match device')
             log.error(err)
 
+            settle(err, undefined)
             this.handleError(new DeviceError('failed to verify device address'))
 
-            return cb(err, undefined)
+            return
           }
 
           log.info(`address ${address} matches device`)
 
-          cb(null, true)
+          settle(null, true)
         } catch (e) {
+          if (!this.isCurrent(lifecycleVersion)) return
+
           const err = e as DeviceError
           const message = wasRequestRejected(err) ? 'Verify request rejected by user' : 'Verify address error'
 
-          // if the address couldn't be verified for any reason the signer can no longer
-          // be used, so force it to be closed by setting the status code to unhandled error
-          this.handleError(new DeviceError(message))
-          log.error('error verifying message on Ledger', err.toString())
+          const error = wasRequestRejected(err) ? new SignerUserRejectedError(message) : new Error(message)
+          settle(error, undefined)
 
-          cb(new Error(message), undefined)
+          this.handleError(wasRequestRejected(err) ? err : new DeviceError(message))
+          log.error('error verifying message on Ledger', err.toString())
         }
       }
     })
   }
 
   override signMessage(index: number, message: string, cb: Callback<string>) {
+    const lifecycleVersion = this.lifecycleVersion
+    const settle = this.settleOnce(cb)
+
     this.enqueueRequests({
       type: 'signMessage',
+      cancel: (error) => settle(error, undefined),
       execute: async () => {
         try {
+          if (!this.isCurrent(lifecycleVersion)) return
           if (!this.eth) throw new Error('attempted to sign message but Eth app is not connected!')
           if (!this.derivation) throw new Error('attempted to sign message with unknown derivation!')
 
           const path = this.getPath(index)
           const signedMessage = await this.eth.signMessage(path, message)
+          if (!this.isCurrent(lifecycleVersion)) return
 
           log.info('successfully signed message on Ledger')
 
-          cb(null, signedMessage)
+          settle(null, signedMessage)
         } catch (e) {
+          if (!this.isCurrent(lifecycleVersion)) return
+
           const err = e as DeviceError
           const message = wasRequestRejected(err) ? 'Sign request rejected by user' : 'Sign message error'
 
+          const error = wasRequestRejected(err) ? new SignerUserRejectedError(message) : new Error(message)
+          settle(error, undefined)
+
           this.handleError(err)
           log.error('error signing message on Ledger', err.toString())
-
-          cb(new Error(message), undefined)
         }
       }
     })
@@ -442,29 +640,38 @@ export default class Ledger extends Signer {
     typedMessage: TypedMessage<SignTypedDataVersion.V4>,
     cb: Callback<string>
   ) {
+    const lifecycleVersion = this.lifecycleVersion
+    const settle = this.settleOnce(cb)
+
     this.enqueueRequests({
       type: 'signTypedData',
+      cancel: (error) => settle(error, undefined),
       execute: async () => {
         try {
+          if (!this.isCurrent(lifecycleVersion)) return
           if (!this.eth) throw new Error('attempted to sign typed data but Eth app is not connected!')
           if (!this.derivation) throw new Error('attempted to sign typed data with unknown derivation!')
 
           const path = this.getPath(index)
           const signedData = await this.eth.signTypedData(path, typedMessage.data)
+          if (!this.isCurrent(lifecycleVersion)) return
 
           log.info('successfully signed typed data on Ledger')
 
-          cb(null, signedData)
+          settle(null, signedData)
         } catch (e) {
+          if (!this.isCurrent(lifecycleVersion)) return
+
           const err = e as DeviceError
           const message = wasRequestRejected(err)
             ? 'Sign request rejected by user'
             : `Sign message error: ${err.message}`
 
+          const error = wasRequestRejected(err) ? new SignerUserRejectedError(message) : new Error(message)
+          settle(error, undefined)
+
           this.handleError(err)
           log.error('error signing typed data on Ledger', message)
-
-          cb(new Error(message), undefined)
         }
       }
     })
@@ -473,28 +680,36 @@ export default class Ledger extends Signer {
   override signTransaction(index: number, rawTx: TransactionData, cb: Callback<string>) {
     const compatibility = signerCompatibility(rawTx, this.summary())
     const ledgerTx = compatibility.compatible ? { ...rawTx } : londonToLegacy(rawTx)
+    const lifecycleVersion = this.lifecycleVersion
+    const settle = this.settleOnce(cb)
 
     this.enqueueRequests({
       type: 'signTransaction',
+      cancel: (error) => settle(error, undefined),
       execute: async () => {
         try {
+          if (!this.isCurrent(lifecycleVersion)) return
           if (!this.eth) throw new Error('attempted to sign transaction but Eth app is not connected!')
           if (!this.derivation) throw new Error('attempted to sign transaction with unknown derivation!')
 
           const path = this.getPath(index)
           const signedTx = await this.eth.signTransaction(path, ledgerTx)
+          if (!this.isCurrent(lifecycleVersion)) return
 
           log.info('successfully signed transaction on Ledger')
 
-          cb(null, signedTx)
+          settle(null, signedTx)
         } catch (e) {
+          if (!this.isCurrent(lifecycleVersion)) return
+
           const err = e as DeviceError
           const message = wasRequestRejected(err) ? 'Sign request rejected by user' : 'Sign transaction error'
 
+          const error = wasRequestRejected(err) ? new SignerUserRejectedError(message) : new Error(message)
+          settle(error, undefined)
+
           this.handleError(err)
           log.error('error signing transaction on Ledger', err.toString())
-
-          cb(new Error(message), undefined)
         }
       }
     })

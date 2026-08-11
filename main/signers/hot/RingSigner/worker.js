@@ -25,16 +25,17 @@ class RingSignerWorker extends HotSignerWorker {
       )
         throw new Error('Private keys do not match addresses')
 
+      this._clearKeys()
       this.keys = keys.map((key) => Buffer.from(key, 'hex'))
       const result = version === 1 ? { encryptedKeys: this._encryptKeys(keys, password) } : undefined
       pseudoCallback(null, result)
-    } catch (e) {
+    } catch {
       pseudoCallback('Invalid password')
     }
   }
 
   lock(_, pseudoCallback) {
-    this.keys = null
+    this._clearKeys()
     pseudoCallback(null)
   }
 
@@ -48,7 +49,7 @@ class RingSignerWorker extends HotSignerWorker {
       // Encrypt and return list of keys
       encryptedKeys = this._encryptKeys(keys, password)
       pseudoCallback(null, encryptedKeys)
-    } catch (e) {
+    } catch {
       pseudoCallback('Invalid password')
     }
   }
@@ -63,7 +64,7 @@ class RingSignerWorker extends HotSignerWorker {
       // Return encrypted list (or null if empty)
       const result = keys.length > 0 ? this._encryptKeys(keys, password) : null
       pseudoCallback(null, result)
-    } catch (e) {
+    } catch {
       pseudoCallback('Invalid password')
     }
   }
@@ -105,6 +106,11 @@ class RingSignerWorker extends HotSignerWorker {
     }
     const keyString = keys.join(':')
     return this._encrypt(keyString, password)
+  }
+
+  _clearKeys() {
+    this.keys?.forEach((key) => key.fill(0))
+    this.keys = null
   }
 }
 

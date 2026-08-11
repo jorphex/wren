@@ -13,14 +13,9 @@ export default [
   {
     ignores: ['dist/**/*', 'compiled/**/*', 'bundle/**/*']
   },
-  // Temporary ignored dirs
-  // TODO: remove signers on rewrite
-  {
-    ignores: ['main/signers/**/*']
-  },
   // All files
   {
-    files: ['**/*.{js,mjs,ts,tsx}'],
+    files: ['**/*.{js,mjs,ts,tsx}', 'app/dash/Signer/ReloadSignerButton/index.jsx'],
     languageOptions: {
       ecmaVersion: 'latest',
       globals: {
@@ -64,6 +59,7 @@ export default [
   {
     files: [
       'app/**/*.js',
+      'app/dash/Signer/ReloadSignerButton/index.jsx',
       'main/dapps/server/inject/*.js',
       'resources/keyboard/**/*.js',
       'resources/Components/**/*.js',
@@ -129,10 +125,10 @@ export default [
     }
   },
   // React / JSX files
-  // TODO: simplify as '**/*.{jsx,tsx}'
   {
     files: [
       'app/**/*.js',
+      'app/dash/Signer/ReloadSignerButton/index.jsx',
       'resources/Components/**/*.js',
       'resources/Hooks/**/*.js',
       'resources/Native/**/*.js',

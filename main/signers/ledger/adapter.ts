@@ -29,9 +29,11 @@ export default class LedgerSignerAdapter extends SignerAdapter {
   private knownSigners: { [devicePath: string]: Ledger }
   private disconnections: Disconnection[]
 
-  private observer: any
+  private observer: Observer | undefined
   private scanTimer: NodeJS.Timeout | null = null
   private scanFailureReported = false
+  private running = false
+  private closePromise: Promise<void> | undefined
 
   constructor() {
     super('ledger')
@@ -41,6 +43,10 @@ export default class LedgerSignerAdapter extends SignerAdapter {
   }
 
   override open() {
+    if (this.running) return
+
+    this.running = true
+    this.closePromise = undefined
     this.observer = store.observer(() => {
       const ledgerDerivation = store('main.ledger.derivation')
       const liveAccountLimit = store('main.ledger.liveAccountLimit')
@@ -63,10 +69,14 @@ export default class LedgerSignerAdapter extends SignerAdapter {
     super.open()
   }
 
-  override close() {
+  override async close() {
+    if (this.closePromise) return this.closePromise
+
+    this.running = false
+
     if (this.observer) {
       this.observer.remove()
-      this.observer = null
+      this.observer = undefined
     }
 
     if (this.scanTimer) {
@@ -74,13 +84,27 @@ export default class LedgerSignerAdapter extends SignerAdapter {
       this.scanTimer = null
     }
 
+    const ledgers = new Set([
+      ...Object.values(this.knownSigners),
+      ...this.disconnections.map(({ device }) => device)
+    ])
+
     this.disconnections.forEach(({ timeout }) => clearTimeout(timeout))
     this.disconnections = []
+    this.knownSigners = {}
 
     super.close()
+
+    this.closePromise = Promise.all(Array.from(ledgers, (ledger) => this.closeLedger(ledger))).then(
+      () => undefined
+    )
+
+    await this.closePromise
   }
 
   private scanForDeviceChanges() {
+    if (!this.running) return
+
     try {
       this.handleDeviceChanges()
       this.scanFailureReported = false
@@ -92,30 +116,45 @@ export default class LedgerSignerAdapter extends SignerAdapter {
     }
   }
 
-  override remove(ledger: Ledger) {
-    if (ledger.devicePath in this.knownSigners) {
+  override async remove(ledger: Ledger) {
+    const path = this.getOwnedPath(ledger)
+
+    if (path) {
       log.info(`removing Ledger ${ledger.model} attached at ${ledger.devicePath}`)
 
-      delete this.knownSigners[ledger.devicePath]
+      delete this.knownSigners[path]
+      if (this.running) this.emit('remove', ledger.id)
 
-      ledger.close()
+      await this.closeLedger(ledger)
     }
   }
 
-  override reload(ledger: Ledger) {
+  override async reload(ledger: Ledger) {
     log.info(`reloading  Ledger ${ledger.model} attached at ${ledger.devicePath}`)
 
-    const signer = this.knownSigners[ledger.devicePath]
+    const signer = this.getOwnedPath(ledger) ? ledger : undefined
 
     if (signer) {
-      signer
-        .disconnect()
-        .then(() => signer.open())
-        .then(() => signer.connect())
+      try {
+        await signer.disconnect()
+        if (!this.owns(signer)) return
+
+        await signer.open()
+        if (!this.owns(signer)) {
+          await this.closeLedger(signer)
+          return
+        }
+
+        await signer.connect()
+      } catch (error) {
+        await this.handleConnectionFailure(signer, error)
+      }
     }
   }
 
   private handleDeviceChanges() {
+    if (!this.running) return
+
     const { attachedDevices, detachedLedgers, reconnections, pendingDisconnections } =
       this.detectDeviceChanges()
 
@@ -127,22 +166,31 @@ export default class LedgerSignerAdapter extends SignerAdapter {
   }
 
   private async handleAttachedDevice(device: ConnectedDevice) {
+    if (!this.running) return
+
     log.info(`Ledger ${device.product} attached at ${device.path}`)
 
     const ledger = new Ledger(device.path, device.product)
 
-    const emitUpdate = () => this.emit('update', ledger)
+    const emitUpdate = () => {
+      if (this.owns(ledger)) this.emit('update', ledger)
+    }
 
     ledger.on('update', emitUpdate)
     ledger.on('error', emitUpdate)
     ledger.on('lock', emitUpdate)
 
     ledger.on('close', () => {
+      const path = this.getOwnedPath(ledger)
+      if (!this.running || !path) return
+
+      delete this.knownSigners[path]
       this.emit('remove', ledger.id)
     })
 
     ledger.on('unlock', () => {
-      ledger.connect()
+      if (!this.owns(ledger)) return
+      void ledger.connect().catch((error) => this.handleConnectionFailure(ledger, error))
     })
 
     this.knownSigners[ledger.devicePath] = ledger
@@ -161,14 +209,27 @@ export default class LedgerSignerAdapter extends SignerAdapter {
       }
     ])
 
-    await this.handleConnectedDevice(ledger)
+    try {
+      await this.handleConnectedDevice(ledger)
+    } catch (error) {
+      await this.handleConnectionFailure(ledger, error)
+    }
   }
 
   private async handleConnectedDevice(ledger: Ledger) {
+    if (!this.owns(ledger)) return
+
     updateDerivation(ledger)
 
     await ledger.open()
+    if (!this.owns(ledger)) {
+      await this.closeLedger(ledger)
+      return
+    }
+
     await ledger.connect()
+
+    if (!this.owns(ledger)) await this.closeLedger(ledger)
   }
 
   private async handleReconnectedDevice(disconnection: Disconnection) {
@@ -176,7 +237,11 @@ export default class LedgerSignerAdapter extends SignerAdapter {
 
     clearTimeout(disconnection.timeout)
 
-    this.handleConnectedDevice(disconnection.device)
+    try {
+      await this.handleConnectedDevice(disconnection.device)
+    } catch (error) {
+      await this.handleConnectionFailure(disconnection.device, error)
+    }
   }
 
   handleDisconnectedDevice(ledger: Ledger) {
@@ -184,7 +249,9 @@ export default class LedgerSignerAdapter extends SignerAdapter {
 
     log.info(`Ledger ${ledger.model} disconnected from ${ledger.devicePath}`)
 
-    ledger.disconnect()
+    void ledger
+      .disconnect()
+      .catch((error) => log.warn(`failed to disconnect Ledger at ${ledger.devicePath}`, error))
 
     // when a user exits the eth app, it takes a few seconds for the
     // main ledger to reconnect via USB, so attempt to wait for this event
@@ -197,9 +264,37 @@ export default class LedgerSignerAdapter extends SignerAdapter {
 
         log.info(`Ledger ${ledger.model} detached from ${ledger.devicePath}`)
 
-        this.remove(ledger)
+        void this.remove(ledger)
       }, 5000)
     })
+  }
+
+  private owns(ledger: Ledger) {
+    return this.running && !!this.getOwnedPath(ledger)
+  }
+
+  private getOwnedPath(ledger: Ledger) {
+    return Object.entries(this.knownSigners).find(([, signer]) => signer === ledger)?.[0]
+  }
+
+  private async closeLedger(ledger: Ledger) {
+    try {
+      await ledger.close()
+    } catch (error) {
+      log.warn(`failed to close Ledger at ${ledger.devicePath}`, error)
+    }
+  }
+
+  private async handleConnectionFailure(ledger: Ledger, error: unknown) {
+    log.warn(`failed to connect Ledger at ${ledger.devicePath}`, error)
+
+    try {
+      await ledger.disconnect()
+    } catch (disconnectError) {
+      log.warn(`failed to recover Ledger at ${ledger.devicePath}`, disconnectError)
+    }
+
+    if (this.owns(ledger)) this.emit('update', ledger)
   }
 
   private detectDeviceChanges() {

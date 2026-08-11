@@ -11,6 +11,7 @@ import { requireStoreAction } from '../store/action'
 import FrameAccount from './Account'
 import ExternalDataScanner, { DataScanner } from '../externalData'
 import Signer from '../signers/Signer'
+import { SignerUserRejectedError, USER_REJECTED_REQUEST } from '../signers/errors'
 import { signerCompatibility as transactionCompatibility, maxFee, SignerCompatibility } from '../transaction'
 
 import { weiIntToEthInt, hexToInt } from '../../resources/utils'
@@ -1208,6 +1209,22 @@ export class Accounts extends EventEmitter {
 
     if (currentAccount && currentAccount.requests[handlerId]) {
       if (currentAccount.requests[handlerId].status === RequestStatus.Declined) return false
+
+      if (
+        err instanceof SignerUserRejectedError ||
+        (typeof err === 'object' && err && 'code' in err && err.code === USER_REJECTED_REQUEST)
+      ) {
+        currentAccount.requests[handlerId].status = RequestStatus.Declined
+        currentAccount.requests[handlerId].notice = 'Request declined'
+        currentAccount.requests[handlerId].mode = RequestMode.Monitor
+        setTimeout(
+          () => this.accounts[currentAccount.address] && this.removeRequest(currentAccount, handlerId),
+          2000
+        )
+        currentAccount.update()
+        return true
+      }
+
       currentAccount.requests[handlerId].status = RequestStatus.Error
       const errorMessage = (err.message || '').toLowerCase()
 

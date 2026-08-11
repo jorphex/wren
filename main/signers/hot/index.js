@@ -18,6 +18,9 @@ const USER_DATA = app
 const SIGNERS_PATH = path.resolve(USER_DATA, 'signers')
 
 const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const trackSigner = (signers, signer) =>
+  typeof signers.trackHotSigner !== 'function' || signers.trackHotSigner(signer)
+const untrackSigner = (signers, signer) => signers.untrackHotSigner?.(signer)
 
 module.exports = {
   newPhrase: (cb) => {
@@ -29,12 +32,18 @@ module.exports = {
     if (password.length < 12) return cb(new Error('Hot account password is too short'))
     if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
     const signer = new SeedSigner()
-    signer.addSeed(seed, password, (err, result) => {
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
+    signer.addSeed(seed, password, (err) => {
       if (err) {
         signer.close()
+        untrackSigner(signers, signer)
         return cb(err)
       }
-      signers.add(signer)
+      if (signers.add(signer) === false) {
+        untrackSigner(signers, signer)
+        return cb(new Error('Signer manager is closed'))
+      }
+      untrackSigner(signers, signer)
       cb(null, signer)
     })
   },
@@ -44,12 +53,18 @@ module.exports = {
     if (password.length < 12) return cb(new Error('Hot account password is too short'))
     if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
     const signer = new SeedSigner()
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
     signer.addPhrase(phrase, password, (err) => {
       if (err) {
         signer.close()
+        untrackSigner(signers, signer)
         return cb(err)
       }
-      signers.add(signer)
+      if (signers.add(signer) === false) {
+        untrackSigner(signers, signer)
+        return cb(new Error('Signer manager is closed'))
+      }
+      untrackSigner(signers, signer)
       cb(null, signer)
     })
   },
@@ -61,13 +76,19 @@ module.exports = {
     if (password.length < 12) return cb(new Error('Hot account password is too short'))
     if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
     const signer = new RingSigner()
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
 
     signer.addPrivateKey(privateKeyHex, password, (err) => {
       if (err) {
         signer.close()
+        untrackSigner(signers, signer)
         return cb(err)
       }
-      signers.add(signer)
+      if (signers.add(signer) === false) {
+        untrackSigner(signers, signer)
+        return cb(new Error('Signer manager is closed'))
+      }
+      untrackSigner(signers, signer)
       cb(null, signer)
     })
   },
@@ -78,19 +99,29 @@ module.exports = {
     if (password.length < 12) return cb(new Error('Hot account password is too short'))
     if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
     const signer = new RingSigner()
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
     signer.addKeystore(keystore, keystorePassword, password, (err) => {
       if (err) {
         signer.close()
+        untrackSigner(signers, signer)
         return cb(err)
       }
-      signers.add(signer)
+      if (signers.add(signer) === false) {
+        untrackSigner(signers, signer)
+        return cb(new Error('Signer manager is closed'))
+      }
+      untrackSigner(signers, signer)
       cb(null, signer)
     })
   },
-  scan: (signers) => {
-    const storedSigners = {}
+  createScanner: (signers, delay = 4000) => {
+    let closed = false
 
     const scan = async () => {
+      if (closed) return
+
+      const storedSigners = {}
+
       // Ensure signer directory exists
       ensureDirSync(SIGNERS_PATH)
 
@@ -101,14 +132,16 @@ module.exports = {
           try {
             const signer = JSON.parse(fs.readFileSync(path.resolve(SIGNERS_PATH, file), 'utf8'))
             storedSigners[signer.id] = signer
-          } catch (e) {
+          } catch {
             log.error(`Corrupt signer file: ${file}`)
           }
         })
 
       // Add stored signers
       for (const id of Object.keys(storedSigners)) {
+        if (closed) return
         await wait(100)
+        if (closed) return
         const { addresses, encryptedKeys, encryptedSeed, type, network } = storedSigners[id]
         if (addresses && addresses.length) {
           const id = crypt.stringToKey(addresses.join()).toString('hex')
@@ -123,9 +156,21 @@ module.exports = {
       }
     }
 
-    // Delay creating child process until after initial load
-    setTimeout(scan, 4000)
+    const timer = setTimeout(scan, delay)
+    timer.unref?.()
 
+    return {
+      close: () => {
+        closed = true
+        clearTimeout(timer)
+      },
+      scan
+    }
+  },
+  scan: (signers) => {
+    const scanner = module.exports.createScanner(signers)
+    const scan = scanner.scan
+    scan.close = scanner.close
     return scan
   }
 }

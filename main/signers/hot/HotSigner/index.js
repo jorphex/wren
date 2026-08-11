@@ -9,21 +9,36 @@ const { v4: uuid } = require('uuid')
 const Signer = require('../../Signer').default
 const store = require('../../../store').default
 const { nodeWorkerEnvironment } = require('../../../worker/environment')
-// Mock windows module during tests
-const windows = app ? require('../../../windows') : { broadcast: () => {} }
 // Mock user data dir during tests
 const USER_DATA = app
   ? app.getPath('userData')
   : path.resolve(path.dirname(require.main.filename), '../.userData')
 const SIGNERS_PATH = path.resolve(USER_DATA, 'signers')
+const DEFAULT_RPC_TIMEOUT_MS = 30_000
+
+const workerFailure = (reason) => {
+  if (reason instanceof Error && reason.message) return reason
+  if (typeof reason === 'string' && reason) return new Error(reason)
+  return new Error('Hot signer worker stopped')
+}
 
 class HotSigner extends Signer {
-  constructor(signer, workerPath) {
+  constructor(signer, workerPath, options = {}) {
     super()
     this.status = 'locked'
     this.addresses = signer ? signer.addresses : []
-    this._worker = fork(workerPath, [], { env: nodeWorkerEnvironment() })
-    this._getToken()
+    this._worker = options.worker || fork(workerPath, [], { env: nodeWorkerEnvironment() })
+    this._rpcTimeoutMs = options.rpcTimeoutMs || DEFAULT_RPC_TIMEOUT_MS
+    this._pending = new Map()
+    this._closed = false
+    this._handleWorkerMessage = this._handleWorkerMessage.bind(this)
+    this._handleWorkerError = this._handleWorkerError.bind(this)
+    this._handleWorkerExit = this._handleWorkerExit.bind(this)
+    this._handleWorkerDisconnect = this._handleWorkerDisconnect.bind(this)
+    this._worker.on('message', this._handleWorkerMessage)
+    this._worker.once('error', this._handleWorkerError)
+    this._worker.once('exit', this._handleWorkerExit)
+    this._worker.once('disconnect', this._handleWorkerDisconnect)
     this.ready = false
   }
 
@@ -58,11 +73,15 @@ class HotSigner extends Signer {
       if (descriptor !== undefined) {
         try {
           fs.closeSync(descriptor)
-        } catch {}
+        } catch {
+          // The original write failure is the useful error.
+        }
       }
       try {
         if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath)
-      } catch {}
+      } catch {
+        // The original write failure is the useful error.
+      }
       throw error
     }
 
@@ -96,7 +115,8 @@ class HotSigner extends Signer {
   }
 
   lock(cb) {
-    this._callWorker({ method: 'lock' }, () => {
+    this._callWorker({ method: 'lock' }, (err) => {
+      if (err) return cb(err)
       this.status = 'locked'
       this.update()
       log.info('Signer locked')
@@ -132,11 +152,25 @@ class HotSigner extends Signer {
     }
   }
 
-  close() {
-    if (this.ready) this._worker.disconnect()
-    else this.once('ready', () => this._worker.disconnect())
+  close(cb = () => {}) {
+    if (this._closed) {
+      cb(null)
+      return
+    }
+
+    this._closed = true
+    this._failPending(new Error('Hot signer closed'))
+    this._removeWorkerListeners({ keepErrorListener: true })
+
+    try {
+      if (this._worker.connected) this._worker.disconnect()
+    } catch (error) {
+      log.warn('Unable to disconnect hot signer worker', error)
+    }
+
     store.removeSigner(this.id)
     log.info('Signer closed')
+    cb(null)
   }
 
   update() {
@@ -204,35 +238,107 @@ class HotSigner extends Signer {
     })
   }
 
-  _getToken() {
-    const listener = ({ type, token }) => {
-      if (type === 'token') {
-        this._token = token
-        this._worker.removeListener('message', listener)
-        this.ready = true
-        this.emit('ready')
+  _handleWorkerMessage(response) {
+    if (this._closed || !response || typeof response !== 'object') return
+
+    if (response.type === 'token') {
+      if (this._token || typeof response.token !== 'string' || !response.token) return
+
+      this._token = response.token
+      this.ready = true
+      this.emit('ready')
+
+      for (const [id, pending] of this._pending) {
+        if (!pending.sent) this._dispatchWorkerCall(id, pending)
       }
+      return
     }
-    this._worker.addListener('message', listener)
+
+    if (response.type !== 'rpc' || typeof response.id !== 'string') return
+
+    const error = response.error ? new Error(String(response.error)) : null
+    this._settlePending(response.id, error, response.result)
+  }
+
+  _handleWorkerError(error) {
+    this._stopWorker(workerFailure(error))
+  }
+
+  _handleWorkerExit(code, signal) {
+    const detail = signal ? `signal ${signal}` : `code ${code}`
+    this._stopWorker(new Error(`Hot signer worker exited (${detail})`))
+  }
+
+  _handleWorkerDisconnect() {
+    this._stopWorker(new Error('Hot signer worker disconnected'))
+  }
+
+  _stopWorker(error) {
+    if (this._closed) return
+
+    this._closed = true
+    this.ready = false
+    this.status = 'error'
+    this._failPending(error)
+    this._removeWorkerListeners()
+    if (this.id) store.updateSigner(this.summary())
+  }
+
+  _removeWorkerListeners({ keepErrorListener = false } = {}) {
+    this._worker.removeListener('message', this._handleWorkerMessage)
+    if (!keepErrorListener) this._worker.removeListener('error', this._handleWorkerError)
+    this._worker.removeListener('exit', this._handleWorkerExit)
+    this._worker.removeListener('disconnect', this._handleWorkerDisconnect)
+  }
+
+  _failPending(error) {
+    for (const id of [...this._pending.keys()]) {
+      this._settlePending(id, error)
+    }
+  }
+
+  _settlePending(id, error, result) {
+    const pending = this._pending.get(id)
+    if (!pending) return
+
+    this._pending.delete(id)
+    clearTimeout(pending.timeout)
+    pending.cb(error, result)
+  }
+
+  _dispatchWorkerCall(id, pending) {
+    if (this._closed) {
+      this._settlePending(id, new Error('Hot signer worker is not running'))
+      return
+    }
+
+    pending.sent = true
+
+    try {
+      this._worker.send({ id, token: this._token, ...pending.payload }, (error) => {
+        if (error) this._settlePending(id, workerFailure(error))
+      })
+    } catch (error) {
+      this._settlePending(id, workerFailure(error))
+    }
   }
 
   _callWorker(payload, cb) {
-    if (!this._worker) throw Error('Worker not running')
-    // If token not yet received -> retry in 100 ms
-    if (!this._token) return setTimeout(() => this._callWorker(payload, cb), 100)
-    // Generate message id
-    const id = uuid()
-    // Handle response
-    const listener = (response) => {
-      if (response.type === 'rpc' && response.id === id) {
-        const error = response.error ? new Error(response.error) : null
-        cb(error, response.result)
-        this._worker.removeListener('message', listener)
-      }
+    if (this._closed) {
+      cb(new Error('Hot signer worker is not running'))
+      return
     }
-    this._worker.addListener('message', listener)
-    // Make RPC call
-    this._worker.send({ id, token: this._token, ...payload })
+
+    const id = uuid()
+    const timeout = setTimeout(() => {
+      this._settlePending(id, new Error('Hot signer worker request timed out'))
+    }, this._rpcTimeoutMs)
+    timeout.unref?.()
+
+    const pending = { cb, payload, sent: false, timeout }
+    this._pending.set(id, pending)
+
+    if (this._token) this._dispatchWorkerCall(id, pending)
   }
 }
 

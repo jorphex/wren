@@ -7,50 +7,84 @@ import { SignerAdapter } from './adapters'
 import LedgerAdapter from './ledger/adapter'
 import TrezorAdapter from './trezor/adapter'
 import LatticeAdapter from './lattice/adapter'
+import HotSignerAdapter from './hot/adapter'
 
 import hot from './hot'
 import RingSigner from './hot/RingSigner'
-import HotSigner from './hot/HotSigner'
 
 import store from '../store'
 import { requireStoreAction } from '../store/action'
-
-const registeredAdapters = [new LedgerAdapter(), new TrezorAdapter(), new LatticeAdapter()]
+import { onCloseToTray } from '../windows/closeToTray'
+import { isSignerReady } from '../../resources/domain/signer'
 
 interface AdapterSpec {
   [key: string]: {
     adapter: SignerAdapter
     listeners: {
       event: string
-      handler: (p: any) => void
+      handler: Parameters<SignerAdapter['removeListener']>[1]
     }[]
   }
 }
 
 type Keystore = string | { version: number }
 
-class Signers extends EventEmitter {
+interface ManagedHotSigner extends Signer {
+  lock(cb: Callback<Signer>): void
+  unlock(password: string, cb: Callback<Signer>): void
+}
+
+export class Signers extends EventEmitter {
   private adapters: AdapterSpec
-  private scans: { [key: string]: any }
-
   private signers: { [id: string]: Signer }
+  private pendingHotSigners = new Set<Signer>()
+  private pendingCloseLocks = new Set<string>()
+  private removeCloseToTrayListener: () => boolean
+  private closed = false
 
-  constructor() {
+  constructor(adapters?: SignerAdapter[]) {
     super()
 
     this.signers = {}
     this.adapters = {}
 
-    // TODO: convert these scans to adapters
-    this.scans = {
-      hot: hot.scan(this)
-    }
+    const registeredAdapters = adapters || [
+      new HotSignerAdapter((id) => this.exists(id)),
+      new LedgerAdapter(),
+      new TrezorAdapter(),
+      new LatticeAdapter()
+    ]
 
     registeredAdapters.forEach(this.addAdapter.bind(this))
+    this.removeCloseToTrayListener = onCloseToTray(() => this.lockHotSignersOnClose())
   }
 
   async close() {
-    await Promise.all(registeredAdapters.map((adapter) => adapter.close()))
+    if (this.closed) return
+    this.closed = true
+    this.removeCloseToTrayListener()
+
+    const hotSigners = new Set([
+      ...Object.values(this.signers).filter((signer) => this.isHotSigner(signer)),
+      ...this.pendingHotSigners
+    ])
+    const adapterSpecs = Object.values(this.adapters)
+    const adapters = adapterSpecs.map(({ adapter }) => adapter)
+
+    adapterSpecs.forEach(({ adapter, listeners }) => {
+      listeners.forEach(({ event, handler }) => adapter.removeListener(event, handler))
+    })
+
+    try {
+      await Promise.all([
+        ...[...hotSigners].map((signer) => Promise.resolve().then(() => signer.close())),
+        ...adapters.map((adapter) => Promise.resolve().then(() => adapter.close()))
+      ])
+    } finally {
+      this.signers = {}
+      this.pendingHotSigners.clear()
+      this.adapters = {}
+    }
   }
 
   addAdapter(adapter: SignerAdapter) {
@@ -99,6 +133,12 @@ class Signers extends EventEmitter {
   }
 
   add(signer: Signer) {
+    if (this.closed) {
+      signer.close()
+      return false
+    }
+
+    this.pendingHotSigners.delete(signer)
     const id = signer.id
 
     if (!(id in this.signers)) {
@@ -106,6 +146,22 @@ class Signers extends EventEmitter {
 
       requireStoreAction('newSigner')(signer.summary())
     }
+
+    return true
+  }
+
+  trackHotSigner(signer: Signer) {
+    if (this.closed) {
+      signer.close()
+      return false
+    }
+
+    this.pendingHotSigners.add(signer)
+    return true
+  }
+
+  untrackHotSigner(signer: Signer) {
+    this.pendingHotSigners.delete(signer)
   }
 
   remove(id: string) {
@@ -146,16 +202,8 @@ class Signers extends EventEmitter {
 
     if (signer) {
       const type = signer.type === 'ring' || signer.type === 'seed' ? 'hot' : signer.type
-
-      const scan = this.scans[type]
-      if (typeof scan === 'function') {
-        signer.close()
-        delete this.signers[id]
-
-        scan()
-      } else {
-        this.adapters[type]?.adapter.reload(signer)
-      }
+      if (type === 'hot') delete this.signers[id]
+      this.adapters[type]?.adapter.reload(signer)
     }
   }
 
@@ -219,21 +267,42 @@ class Signers extends EventEmitter {
   lock(id: string, cb: Callback<Signer>) {
     const signer = this.get(id)
 
-    // @ts-ignore
-    if (signer && signer.lock) {
-      ;(signer as HotSigner).lock(cb)
-    }
+    if (signer && this.isHotSigner(signer)) signer.lock(cb)
   }
 
   unlock(id: string, password: string, cb: Callback<Signer>) {
     const signer = this.signers[id]
 
-    // @ts-ignore
-    if (signer && signer.unlock) {
-      ;(signer as HotSigner).unlock(password, cb)
+    if (signer && this.isHotSigner(signer)) {
+      signer.unlock(password, cb)
     } else {
       log.error('Signer not unlockable via password, no unlock method')
     }
+  }
+
+  private isHotSigner(signer: Signer): signer is ManagedHotSigner {
+    const candidate = signer as Partial<ManagedHotSigner>
+    return (
+      (signer.type === 'ring' || signer.type === 'seed') &&
+      typeof candidate.lock === 'function' &&
+      typeof candidate.unlock === 'function'
+    )
+  }
+
+  private lockHotSignersOnClose() {
+    if (!store('main.accountCloseLock')) return
+
+    Object.values(this.signers).forEach((signer) => {
+      if (!this.isHotSigner(signer) || !isSignerReady(signer) || this.pendingCloseLocks.has(signer.id)) {
+        return
+      }
+
+      this.pendingCloseLocks.add(signer.id)
+      signer.lock((error: Error | null) => {
+        this.pendingCloseLocks.delete(signer.id)
+        if (error) log.warn('Unable to lock hot signer when closing Wren', error)
+      })
+    })
   }
 
   unsetSigner() {

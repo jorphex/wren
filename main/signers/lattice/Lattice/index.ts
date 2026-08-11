@@ -12,6 +12,7 @@ import { hexToInt } from '../../../../resources/utils'
 
 import type { TypedData, TypedMessage } from '../../../accounts/types'
 import type { TransactionData } from '../../../../resources/domain/transaction'
+import { SignerUserRejectedError } from '../../errors'
 
 const ADDRESS_LIMIT = 10
 const HARDENED_OFFSET = 0x80000000
@@ -36,19 +37,38 @@ type LatticeResponseError = {
 }
 
 type SigningPayload = Parameters<InstanceType<typeof Client>['sign']>[0]['data']
+type LatticeSignOptions = Parameters<InstanceType<typeof Client>['sign']>[0]
 type SignProtocol = 'eip712' | 'signPersonal'
 
+interface LatticeUnsignedTransaction extends Record<string, unknown> {
+  chainId: string
+  nonce: number
+  gasLimit: number
+  useEIP155: boolean
+  signerPath: number[]
+}
+
 export const Status = {
-  OK: 'ok',
+  OK: 'ready',
   CONNECTING: 'connecting',
-  DERIVING: 'addresses',
-  READY_FOR_PAIRING: 'pair',
+  DERIVING: 'loading-addresses',
+  READY_FOR_PAIRING: 'pairing-code-required',
   LOCKED: 'locked',
-  PAIRING: 'Pairing',
-  PAIRING_FAILED: 'Pairing Failed',
-  UNKNOWN_ERROR: 'Unknown Device Error',
+  PAIRING: 'pairing',
+  PAIRING_FAILED: 'pairing-failed',
+  NO_ACTIVE_WALLET: 'no-active-wallet',
+  UNKNOWN_ERROR: 'device-error',
   DISCONNECTED: 'disconnected',
-  NEEDS_RECONNECTION: 'Please reload this Lattice1 device'
+  NEEDS_RECONNECTION: 'reconnect-required'
+}
+
+const USER_DECLINED_RESPONSE = 132
+
+class StaleLatticeOperationError extends Error {
+  constructor(message = 'Lattice connection changed before request completed') {
+    super(message)
+    this.name = 'StaleLatticeOperationError'
+  }
 }
 
 function devicePermission(tag: string) {
@@ -105,6 +125,30 @@ function getSigningErrorMessage(err: unknown) {
   return 'Unknown Lattice signing error'
 }
 
+function isUserRejection(err: unknown) {
+  if (err instanceof SignerUserRejectedError) return true
+  if (!err || typeof err !== 'object') return false
+
+  const { responseCode } = err as Partial<LatticeResponseError>
+  return responseCode === USER_DECLINED_RESPONSE
+}
+
+function toSignerError(err: unknown) {
+  if (isUserRejection(err)) return new SignerUserRejectedError()
+  if (err instanceof Error) return err
+  return new Error(getSigningErrorMessage(err))
+}
+
+function once<T>(cb: Callback<T>) {
+  let called = false
+
+  return (error: Error | null, result?: T) => {
+    if (called) return
+    called = true
+    cb(error, result)
+  }
+}
+
 export default class Lattice extends Signer {
   deviceId: string
   derivation: Derivation | undefined
@@ -112,6 +156,13 @@ export default class Lattice extends Signer {
 
   accountLimit = 5
   tag = ''
+
+  private closed = false
+  private connectionGeneration = 0
+  private derivationGeneration = 0
+  private deviceQueue: Promise<void> = Promise.resolve()
+  private retryTimers = new Map<ReturnType<typeof setTimeout>, (error: Error) => void>()
+  private operationCancellations = new Set<(error: Error) => void>()
 
   constructor(deviceId: string, name: string, tag: string) {
     super()
@@ -126,21 +177,36 @@ export default class Lattice extends Signer {
   }
 
   async connect(baseUrl: string, privateKey: string) {
+    if (this.closed) throw new Error('Lattice signer is closed')
+
+    this.cancelOperations(new StaleLatticeOperationError())
+    const generation = ++this.connectionGeneration
+    ++this.derivationGeneration
+    this.cancelRetryTimers(new StaleLatticeOperationError())
+
     this.status = Status.CONNECTING
     this.emit('update')
 
     log.info('connecting to Lattice', { name: this.name, baseUrl })
 
-    this.connection = new Client({
-      name: devicePermission(this.tag),
-      baseUrl,
-      privKey: privateKey
-    })
-
     try {
-      const paired = await this.connection.connect(this.deviceId)
+      const connection = new Client({
+        name: devicePermission(this.tag),
+        baseUrl,
+        privKey: privateKey
+      })
+      this.connection = connection
 
-      const { fix: patch, minor, major } = this.connection.getFwVersion() || { fix: 0, major: 0, minor: 0 }
+      const connecting = connection.connect(this.deviceId)
+      this.deviceQueue = connecting.then(
+        () => undefined,
+        () => undefined
+      )
+
+      const paired = await connecting
+      this.assertCurrentConnection(generation, connection)
+
+      const { fix: patch, minor, major } = connection.getFwVersion() || { fix: 0, major: 0, minor: 0 }
 
       log.info(
         `Connected to Lattice with deviceId=${this.deviceId} paired=${paired}, firmware v${major}.${minor}.${patch}`
@@ -157,7 +223,14 @@ export default class Lattice extends Signer {
 
       return paired
     } catch (e) {
+      if (e instanceof StaleLatticeOperationError || generation !== this.connectionGeneration) {
+        throw toSignerError(e)
+      }
+
       const errorMessage = this.handleError('could not connect to Lattice', e as Error)
+
+      this.connection = null
+      this.cancelOperations(new Error(errorMessage))
 
       this.emit('error')
 
@@ -166,7 +239,23 @@ export default class Lattice extends Signer {
   }
 
   disconnect() {
-    if (this.status === Status.OK) {
+    this.cancelOperations(new StaleLatticeOperationError('Lattice disconnected before request completed'))
+    ++this.connectionGeneration
+    ++this.derivationGeneration
+    this.deviceQueue = Promise.resolve()
+    this.cancelRetryTimers(new StaleLatticeOperationError('Lattice disconnected before request completed'))
+
+    const operationalStatuses = new Set([
+      Status.OK,
+      Status.CONNECTING,
+      Status.DERIVING,
+      Status.READY_FOR_PAIRING,
+      Status.PAIRING,
+      Status.NO_ACTIVE_WALLET,
+      Status.DISCONNECTED
+    ])
+
+    if (this.status !== Status.DISCONNECTED && operationalStatuses.has(this.status)) {
       this.status = Status.DISCONNECTED
       this.emit('update')
     }
@@ -177,6 +266,9 @@ export default class Lattice extends Signer {
   }
 
   override close() {
+    if (this.closed) return
+    this.closed = true
+
     this.emit('close')
     this.removeAllListeners()
 
@@ -188,19 +280,36 @@ export default class Lattice extends Signer {
   async pair(pairingCode: string) {
     log.info(`pairing to Lattice ${this.deviceId}`)
 
-    this.status = Status.PAIRING
-    this.emit('update')
-
     try {
-      const connection = this.connection as Client
-      const hasActiveWallet = await connection.pair(pairingCode)
+      const { connection, generation } = this.connectionSnapshot()
+      const hasActiveWallet = await this.enqueueDeviceRequest(connection, generation, async () => {
+        this.status = Status.PAIRING
+        this.emit('update')
+
+        return connection.pair(pairingCode)
+      })
+
+      this.assertCurrentConnection(generation, connection)
 
       log.info(`successfully paired to Lattice ${this.deviceId}`)
+
+      if (!hasActiveWallet) {
+        this.status = Status.NO_ACTIVE_WALLET
+        this.emit('update')
+      }
 
       this.emit('paired', hasActiveWallet)
 
       return hasActiveWallet
     } catch (e) {
+      if (e instanceof StaleLatticeOperationError) throw e
+
+      if (isUserRejection(e)) {
+        this.status = Status.READY_FOR_PAIRING
+        this.emit('update')
+        throw toSignerError(e)
+      }
+
       const errorMessage = this.handleError('could not pair to Lattice', e as Error)
 
       this.emit('error')
@@ -210,56 +319,85 @@ export default class Lattice extends Signer {
   }
 
   async deriveAddresses(derivation?: Derivation, retries = 2) {
-    this.status = Status.DERIVING
-    this.emit('update')
-
-    log.info(`deriving addresses for Lattice ${(this.connection as Client).getAppName()}`)
-
     try {
-      await this.derive({ ...(derivation !== undefined && { derivation }), retries })
+      const { connection, generation: connectionGeneration } = this.connectionSnapshot()
+      this.cancelRetryTimers(new StaleLatticeOperationError('Lattice derivation was replaced'))
+      const generation = ++this.derivationGeneration
+      const selectedDerivation = derivation ?? this.derivation
+
+      if (!selectedDerivation) throw new Error('attempted to derive addresses with unknown derivation')
+
+      this.derivation = selectedDerivation
+      this.status = Status.DERIVING
+      this.emit('update')
+
+      log.info(`deriving addresses for Lattice ${connection.getAppName()}`)
+
+      const addresses = await this.derive(
+        { derivation: selectedDerivation, retries },
+        { connection, connectionGeneration, derivationGeneration: generation }
+      )
+
+      this.assertCurrentDerivation(generation, connectionGeneration, connection)
+      this.addresses = addresses
+      this.status = Status.OK
+      this.emit('update')
     } catch (e) {
+      if (e instanceof StaleLatticeOperationError) return
       this.emit('error', e)
     }
   }
 
-  private async derive(opts: DeriveOptions) {
-    const { derivation, retries } = opts
+  private async derive(
+    opts: DeriveOptions,
+    context?: { connection: Client; connectionGeneration: number; derivationGeneration: number }
+  ): Promise<string[]> {
+    const { retries } = opts
+    const derivation = opts.derivation ?? this.derivation
+
+    if (!derivation) throw new Error('attempted to derive addresses with unknown derivation')
+
+    const activeConnection = this.connectionSnapshot()
+    const snapshot = context ?? {
+      connection: activeConnection.connection,
+      connectionGeneration: activeConnection.generation,
+      derivationGeneration: this.derivationGeneration
+    }
+    const { connection, connectionGeneration, derivationGeneration } = snapshot
+    const accountLimit = this.accountLimit
+    const addresses = [...this.addresses]
 
     try {
-      this.derivation = derivation || this.derivation
+      const addressLimit = derivation === Derivation.live ? 1 : ADDRESS_LIMIT
 
-      const connection = this.connection as Client
-
-      const addressLimit = this.derivation === Derivation.live ? 1 : ADDRESS_LIMIT
-
-      while (this.addresses.length < this.accountLimit) {
+      while (addresses.length < accountLimit) {
         const req = {
-          startPath: this.getPath(this.addresses.length),
-          n: Math.min(addressLimit, this.accountLimit - this.addresses.length)
+          startPath: this.getPath(addresses.length, derivation),
+          n: Math.min(addressLimit, accountLimit - addresses.length)
         }
 
-        const loadedAddresses = await connection.getAddresses(req)
-        this.addresses = [...this.addresses, ...loadedAddresses].map((addr) => addHexPrefix(addr.toString()))
+        const loadedAddresses = await this.enqueueDeviceRequest(connection, connectionGeneration, () =>
+          connection.getAddresses(req)
+        )
+        this.assertCurrentDerivation(derivationGeneration, connectionGeneration, connection)
+        addresses.push(...loadedAddresses.map((addr) => addHexPrefix(addr.toString())))
       }
 
-      this.status = 'ok'
-      this.emit('update')
-
-      return this.addresses
+      return addresses.map((addr) => addHexPrefix(addr.toString()))
     } catch (e) {
       const err = e as Error
 
+      if (err instanceof StaleLatticeOperationError) throw err
+
       if (retries > 0) {
         log.verbose(
-          `Deriving ${this.derivation} Lattice addresses failed, trying ${retries} more times, error:`,
+          `Deriving ${derivation} Lattice addresses failed, trying ${retries} more times, error:`,
           err.message
         )
 
-        return new Promise<string[]>((resolve) => {
-          setTimeout(() => {
-            resolve(this.derive({ ...opts, retries: retries - 1 }))
-          }, 3000)
-        })
+        await this.waitForRetry(3000)
+        this.assertCurrentDerivation(derivationGeneration, connectionGeneration, connection)
+        return this.derive({ derivation, retries: retries - 1 }, snapshot)
       }
 
       const errorMessage = this.handleError('could not derive addresses', err)
@@ -268,41 +406,59 @@ export default class Lattice extends Signer {
     }
   }
 
-  override async verifyAddress(index: number, currentAddress: string, display = true, cb: Callback<boolean>) {
-    const connection = this.connection as Client
-
-    log.info(`verifying address ${currentAddress} for Lattice ${connection.getAppName()}`)
+  override async verifyAddress(
+    index: number,
+    currentAddress: string,
+    _display = true,
+    cb: Callback<boolean>
+  ) {
+    const settle = once(cb)
 
     try {
-      const addresses = await this.derive({ retries: 0 })
+      const { connection, generation: connectionGeneration } = this.connectionSnapshot()
+      const derivationGeneration = this.derivationGeneration
+      const derivation = this.derivation
+      if (!derivation) throw new Error('attempted to verify address with unknown derivation')
 
-      const address = (addresses[index] || '').toLowerCase()
+      log.info(`verifying address ${currentAddress} for Lattice ${connection.getAppName()}`)
 
-      if (address !== currentAddress) {
+      const addresses = await this.derive(
+        { derivation, retries: 0 },
+        { connection, connectionGeneration, derivationGeneration }
+      )
+      this.assertCurrentDerivation(derivationGeneration, connectionGeneration, connection)
+
+      const address = stripHexPrefix(addresses[index] || '').toLowerCase()
+
+      if (address !== stripHexPrefix(currentAddress).toLowerCase()) {
         throw new Error('Address does not match device')
       }
 
       log.info(`address ${currentAddress} matches device`)
 
-      cb(null, true)
+      settle(null, true)
     } catch (e) {
       const err = e as Error
 
-      this.handleError('could not verify address', err)
-      this.emit('error')
+      if (!(err instanceof StaleLatticeOperationError)) {
+        this.handleError('could not verify address', err)
+        this.emit('error')
+      }
 
-      cb(err.message === 'Address does not match device' ? err : new Error('Verify Address Error'))
+      settle(err)
     }
   }
 
   override async signMessage(index: number, message: string, cb: Callback<string>) {
+    const settle = once(cb)
+
     try {
       const signature = await this.sign(index, 'signPersonal', message)
 
-      return cb(null, signature)
+      return settle(null, signature)
     } catch (err) {
       log.error('failed to sign message with Lattice', err)
-      return cb(new Error(getSigningErrorMessage(err)))
+      return settle(toSignerError(err))
     }
   }
 
@@ -311,34 +467,44 @@ export default class Lattice extends Signer {
     typedMessage: TypedMessage<SignTypedDataVersion.V4>,
     cb: Callback<string>
   ) {
+    const settle = once(cb)
+
     try {
       const signature = await this.sign(index, 'eip712', typedMessage.data)
 
-      return cb(null, signature)
+      return settle(null, signature)
     } catch (err) {
       log.error('failed to sign typed data with Lattice', err)
-      return cb(new Error(getSigningErrorMessage(err)))
+      return settle(toSignerError(err))
     }
   }
 
   override async signTransaction(index: number, rawTx: TransactionData, cb: Callback<string>) {
+    const settle = once(cb)
+
     try {
-      const connection = this.connection as Client
+      const { connection, generation } = this.connectionSnapshot()
       const compatibility = signerCompatibility(rawTx, this.summary())
       const latticeTx = compatibility.compatible ? { ...rawTx } : londonToLegacy(rawTx)
+      const derivation = this.derivation
+      if (!derivation) throw new Error('attempted to sign transaction with unknown derivation')
 
       const signedTx = await sign(latticeTx, async (tx) => {
-        const unsignedTx = this.createTransaction(index, latticeTx.chainId, tx)
-        const signingOptions = await this.createTransactionSigningOptions(tx, unsignedTx)
+        const unsignedTx = this.createTransaction(index, latticeTx.chainId, tx, derivation)
+        const signingOptions = await this.createTransactionSigningOptions(connection, tx, unsignedTx)
+        this.assertCurrentConnection(generation, connection)
 
-        const signedTx = await connection.sign(signingOptions)
+        const signedTx = await this.enqueueDeviceRequest(connection, generation, () =>
+          connection.sign(signingOptions)
+        )
+        this.assertCurrentConnection(generation, connection)
         return normalizeSignature(signedTx?.sig)
       })
 
-      cb(null, addHexPrefix(signedTx.serialize().toString('hex')))
+      settle(null, addHexPrefix(signedTx.serialize().toString('hex')))
     } catch (err) {
       log.error('error signing transaction with Lattice', err)
-      return cb(new Error(getSigningErrorMessage(err)))
+      return settle(toSignerError(err))
     }
   }
 
@@ -353,14 +519,16 @@ export default class Lattice extends Signer {
   }
 
   private async sign(index: number, protocol: SignProtocol, payload: string | TypedData) {
-    const connection = this.connection as Client
+    const { connection, generation } = this.connectionSnapshot()
+    const derivation = this.derivation
+    if (!derivation) throw new Error('attempted to sign with unknown derivation')
 
     const data = {
       protocol,
       payload,
       curveType: Constants.SIGNING.CURVES.SECP256K1,
       hashType: Constants.SIGNING.HASHES.KECCAK256,
-      signerPath: this.getPath(index)
+      signerPath: this.getPath(index, derivation)
     } as SigningPayload
 
     const signOpts = {
@@ -368,7 +536,8 @@ export default class Lattice extends Signer {
       data: data
     }
 
-    const result = await connection.sign(signOpts)
+    const result = await this.enqueueDeviceRequest(connection, generation, () => connection.sign(signOpts))
+    this.assertCurrentConnection(generation, connection)
     const sig = normalizeSignature(result?.sig)
 
     const signature = [sig.r, sig.s, sig.v].join('')
@@ -376,10 +545,10 @@ export default class Lattice extends Signer {
     return addHexPrefix(signature)
   }
 
-  private createTransaction(index: number, chainId: string, tx: TypedTransaction) {
+  private createTransaction(index: number, chainId: string, tx: TypedTransaction, derivation: Derivation) {
     const { value, to, data, ...txJson } = tx.toJSON()
 
-    const unsignedTx: any = {
+    const unsignedTx: LatticeUnsignedTransaction = {
       to,
       value,
       data,
@@ -387,31 +556,35 @@ export default class Lattice extends Signer {
       nonce: hexToInt(txJson.nonce || ''),
       gasLimit: hexToInt(txJson.gasLimit || ''),
       useEIP155: true,
-      signerPath: this.getPath(index)
+      signerPath: this.getPath(index, derivation)
     }
 
     if (tx.type) {
-      unsignedTx.type = tx.type
+      unsignedTx['type'] = tx.type
     }
 
     if ('accessList' in txJson) {
-      unsignedTx.accessList = txJson.accessList
+      unsignedTx['accessList'] = txJson.accessList
     }
 
     const optionalFields = ['gasPrice', 'maxFeePerGas', 'maxPriorityFeePerGas']
 
     optionalFields.forEach((field) => {
       if (field in txJson) {
-        // @ts-ignore
-        unsignedTx[field] = hexToInt(txJson[field])
+        const value = txJson[field as keyof typeof txJson]
+        unsignedTx[field] = hexToInt(value?.toString() || '')
       }
     })
 
     return unsignedTx
   }
 
-  private async createTransactionSigningOptions(tx: TypedTransaction, unsignedTx: any) {
-    const fwVersion = (this.connection as Client).getFwVersion()
+  private async createTransactionSigningOptions(
+    connection: Client,
+    tx: TypedTransaction,
+    unsignedTx: LatticeUnsignedTransaction
+  ): Promise<LatticeSignOptions> {
+    const fwVersion = connection.getFwVersion()
 
     if (fwVersion && (fwVersion.major > 0 || fwVersion.minor >= 15)) {
       const payload = tx.type ? tx.getMessageToSign(false) : encode(tx.getMessageToSign(false))
@@ -431,18 +604,16 @@ export default class Lattice extends Signer {
         ...(callDataDecoder && { decoder: Buffer.from(callDataDecoder.def) })
       }
 
-      return { data, currency: unsignedTx.currency }
+      return { data, currency: 'ETH' as const }
     }
 
-    return { currency: 'ETH' as const, data: unsignedTx }
+    return { currency: 'ETH' as const, data: unsignedTx } as unknown as LatticeSignOptions
   }
 
-  private getPath(index: number) {
-    if (!this.derivation) {
-      throw new Error('attempted to get base path with unknown derivation!')
-    }
+  private getPath(index: number, derivation = this.derivation) {
+    if (!derivation) throw new Error('attempted to get base path with unknown derivation!')
 
-    const path = getDerivationPath(this.derivation, index)
+    const path = getDerivationPath(derivation, index)
 
     return path.split('/').map((element) => {
       if (element.endsWith("'")) {
@@ -463,5 +634,103 @@ export default class Lattice extends Signer {
     this.status = status
 
     return fullMessage
+  }
+
+  private connectionSnapshot() {
+    if (this.closed) throw new Error('Lattice signer is closed')
+    if (!this.connection) throw new Error('Lattice is disconnected')
+
+    return { connection: this.connection, generation: this.connectionGeneration }
+  }
+
+  private isCurrentConnection(generation: number, connection: Client) {
+    return !this.closed && generation === this.connectionGeneration && connection === this.connection
+  }
+
+  private assertCurrentConnection(generation: number, connection: Client) {
+    if (!this.isCurrentConnection(generation, connection)) throw new StaleLatticeOperationError()
+  }
+
+  private assertCurrentDerivation(
+    derivationGeneration: number,
+    connectionGeneration: number,
+    connection: Client
+  ) {
+    this.assertCurrentConnection(connectionGeneration, connection)
+    if (derivationGeneration !== this.derivationGeneration) throw new StaleLatticeOperationError()
+  }
+
+  private enqueueDeviceRequest<T>(connection: Client, generation: number, request: () => Promise<T>) {
+    const previous = this.deviceQueue
+    const queued = this.withOperationCancellation(generation, connection, async () => {
+      await previous
+      this.assertCurrentConnection(generation, connection)
+      return request()
+    })
+
+    this.deviceQueue = queued.then(
+      () => undefined,
+      () => undefined
+    )
+
+    return queued
+  }
+
+  private withOperationCancellation<T>(generation: number, connection: Client, request: () => Promise<T>) {
+    return new Promise<T>((resolve, reject) => {
+      let settled = false
+
+      const finish = (settle: () => void) => {
+        if (settled) return
+        settled = true
+        this.operationCancellations.delete(cancel)
+        settle()
+      }
+      const cancel = (error: Error) => finish(() => reject(error))
+
+      this.operationCancellations.add(cancel)
+
+      Promise.resolve()
+        .then(() => {
+          this.assertCurrentConnection(generation, connection)
+          return request()
+        })
+        .then(
+          (result) => {
+            try {
+              this.assertCurrentConnection(generation, connection)
+              finish(() => resolve(result))
+            } catch (error) {
+              finish(() => reject(error))
+            }
+          },
+          (error) => finish(() => reject(error))
+        )
+    })
+  }
+
+  private cancelOperations(error: Error) {
+    const cancellations = [...this.operationCancellations]
+    this.operationCancellations.clear()
+    cancellations.forEach((cancel) => cancel(error))
+  }
+
+  private waitForRetry(delay: number) {
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.retryTimers.delete(timer)
+        resolve()
+      }, delay)
+
+      this.retryTimers.set(timer, reject)
+    })
+  }
+
+  private cancelRetryTimers(error: Error) {
+    this.retryTimers.forEach((reject, timer) => {
+      clearTimeout(timer)
+      reject(error)
+    })
+    this.retryTimers.clear()
   }
 }

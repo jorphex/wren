@@ -79,7 +79,7 @@ export default class Signer extends EventEmitter {
     }
   }
 
-  open(device?: any) {
+  open(_device?: unknown) {
     log.warn(`Signer: ${this.type} did not implement an open method`)
   }
 
@@ -91,16 +91,20 @@ export default class Signer extends EventEmitter {
     log.warn(`Signer: ${this.type} did not implement a delete method`)
   }
 
-  update(options = {}) {
+  update(_options: Record<string, unknown> = {}) {
     log.warn(`Signer: ${this.type} did not implement an update method`)
   }
 
   signMessage(index: number, message: string, cb: Callback<string>) {
-    log.warn(`Signer: ${this.type} did not implement a signMessage method`)
+    const error = new Error(`Signer: ${this.type} did not implement a signMessage method`)
+    log.warn(error.message)
+    cb(error, undefined)
   }
 
   signTransaction(index: number, rawTx: TransactionData, cb: Callback<string>) {
-    log.warn(`Signer: ${this.type} did not implement a signTransaction method`)
+    const error = new Error(`Signer: ${this.type} did not implement a signTransaction method`)
+    log.warn(error.message)
+    cb(error, undefined)
   }
 
   signTypedData(index: number, typedMessage: TypedMessage, cb: Callback<string>) {

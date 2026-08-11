@@ -27,8 +27,8 @@ beforeEach((done) => {
   TrezorBridge.open()
 })
 
-afterEach(() => {
-  TrezorBridge.close()
+afterEach(async () => {
+  await TrezorBridge.close()
 })
 
 describe('connect events', () => {
@@ -226,6 +226,45 @@ describe('ui events', () => {
 })
 
 describe('requests', () => {
+  it('serializes device requests so prompts cannot cross over', async () => {
+    let resolveFeatures
+    TrezorConnect.getFeatures.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFeatures = resolve
+      })
+    )
+    TrezorConnect.ethereumGetAddress.mockResolvedValueOnce({
+      id: 2,
+      success: true,
+      payload: { address: '0xabc' }
+    })
+
+    const features = TrezorBridge.getFeatures({ path: '41' })
+    const address = TrezorBridge.getAddress({ path: '41' }, "m/44'/60'/0'/0/0")
+    await Promise.resolve()
+
+    expect(TrezorConnect.ethereumGetAddress).not.toHaveBeenCalled()
+
+    resolveFeatures({ id: 1, success: true, payload: { model: 'T' } })
+    await expect(features).resolves.toEqual({ model: 'T' })
+    await expect(address).resolves.toBe('0xabc')
+  })
+
+  it('cancels a delayed conflict retry when the bridge closes', async () => {
+    TrezorConnect.getFeatures.mockResolvedValueOnce({
+      id: 1,
+      success: false,
+      payload: { error: 'Call in progress', code: 'Device_CallInProgress' }
+    })
+
+    const features = TrezorBridge.getFeatures({ path: '41' })
+    await Promise.resolve()
+    await Promise.resolve()
+    await TrezorBridge.close()
+
+    await expect(features).rejects.toThrow('Trezor bridge closed')
+  })
+
   it('loads features for a given device', async () => {
     const features = { vendor: 'trezor.io', device_id: 'G89EDFE91829DACC6B43' }
 

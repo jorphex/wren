@@ -135,9 +135,7 @@ export class RequestCommand extends React.Component {
 
   declinedStatus(isTransaction) {
     const title = isTransaction ? 'Transaction declined' : 'Request declined'
-    const message = isTransaction
-      ? 'You declined this transaction. Nothing was signed or sent.'
-      : 'Nothing was signed or sent.'
+    const message = 'Nothing was signed or sent.'
 
     return (
       <div className='requestNotice requestNoticeDeclined'>
