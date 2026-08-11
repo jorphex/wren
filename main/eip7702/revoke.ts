@@ -31,6 +31,15 @@ export type Eip7702RevokePreflight = Readonly<{
   pendingNonce: unknown
 }>
 
+export type Eip7702RevokeEvidence = Readonly<{
+  source: 'eth_getCode'
+  authority: string
+  delegate: string
+  codeHash: string
+  latestNonce: string
+  pendingNonce: string
+}>
+
 export type Eip7702RevocationResult = Readonly<{
   receiptStatus: 'success' | 'failed' | 'unavailable'
   revocationStatus: 'cleared' | 'skipped' | 'unavailable'
@@ -87,6 +96,53 @@ export function assertEip7702RevokePreflight(nonce: bigint, preflight: Eip7702Re
   }
   if (latestNonce !== nonce || pendingNonce !== nonce) {
     throw new Error('EIP-7702 revocation requires a stable account nonce')
+  }
+}
+
+export function inspectEip7702RevokePreflight(
+  authority: string,
+  preflight: Eip7702RevokePreflight
+): Eip7702RevokeEvidence {
+  const normalizedAuthority = normalizeAddress(authority)
+  if (!normalizedAuthority) throw new Error('Invalid EIP-7702 authority')
+
+  const accountCode = parseAccountCode(preflight.authorityCode)
+  if (accountCode?.status !== 'delegated') throw new Error('EIP-7702 authority is not delegated')
+  const latestNonce = parseRpcQuantity(preflight.latestNonce)
+  const pendingNonce = parseRpcQuantity(preflight.pendingNonce)
+  if (
+    latestNonce === undefined ||
+    pendingNonce === undefined ||
+    toRpcQuantity(latestNonce) !== preflight.latestNonce ||
+    toRpcQuantity(pendingNonce) !== preflight.pendingNonce ||
+    latestNonce !== pendingNonce
+  ) {
+    throw new Error('EIP-7702 revocation requires a stable account nonce')
+  }
+
+  return Object.freeze({
+    source: 'eth_getCode',
+    authority: normalizedAuthority.toLowerCase(),
+    delegate: accountCode.delegate,
+    codeHash: accountCode.codeHash,
+    latestNonce: toRpcQuantity(latestNonce),
+    pendingNonce: toRpcQuantity(pendingNonce)
+  })
+}
+
+export function assertEip7702RevokeEvidenceStable(
+  reviewed: Eip7702RevokeEvidence,
+  actual: Eip7702RevokeEvidence
+) {
+  if (
+    reviewed.source !== actual.source ||
+    reviewed.authority !== actual.authority ||
+    reviewed.delegate !== actual.delegate ||
+    reviewed.codeHash !== actual.codeHash ||
+    reviewed.latestNonce !== actual.latestNonce ||
+    reviewed.pendingNonce !== actual.pendingNonce
+  ) {
+    throw new Error('EIP-7702 delegation or nonce changed after review')
   }
 }
 

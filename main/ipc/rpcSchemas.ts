@@ -14,6 +14,7 @@ const QuantitySchema = z
   .regex(/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/)
   .max(66)
 const AmountSchema = z.string().regex(/^(?:0|[1-9][0-9]{0,77})$/)
+const ChainIdSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 const RequestReferenceSchema = z
   .object({ handlerId: HandlerIdSchema, account: AddressSchema })
   .transform(({ handlerId, account }) => ({ handlerId, account }))
@@ -22,6 +23,31 @@ const ActionRequestReferenceSchema = z
   .transform(({ handlerId, account, type }) => ({ handlerId, account, type }))
 const WalletCallsApprovalOptionsSchema = z
   .object({ walletCallsSimulationAcknowledged: z.literal(true) })
+  .strict()
+const Eip7702EligibilityBase = {
+  account: AddressSchema,
+  chainId: ChainIdSchema
+}
+const Eip7702EligibilitySchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('eligible'),
+      ...Eip7702EligibilityBase,
+      source: z.literal('eth_getCode'),
+      delegate: AddressSchema,
+      codeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/)
+    })
+    .strict(),
+  ...(['not-delegated', 'unavailable', 'unsupported-signer', 'disconnected'] as const).map((status) =>
+    z.object({ status: z.literal(status), ...Eip7702EligibilityBase }).strict()
+  )
+])
+const Eip7702RequestReferenceSchema = z
+  .object({
+    handlerId: HandlerIdSchema,
+    account: AddressSchema,
+    type: z.literal('eip7702Revoke')
+  })
   .strict()
 
 const JsonRecordSchema = z.record(z.string().max(256), z.unknown()).superRefine((value, ctx) => {
@@ -123,6 +149,10 @@ const rpcSchemas = {
   },
   declineRequest: { request: z.tuple([ActionRequestReferenceSchema]), response: actionResult },
   getFrameId: { request: noArgs, response: result(IdSchema) },
+  getEip7702RevocationEligibility: {
+    request: z.tuple([AddressSchema, ChainIdSchema]),
+    response: result(Eip7702EligibilitySchema)
+  },
   getState: { request: noArgs, response: result(JsonRecordSchema) },
   latticePair: {
     request: z.tuple([IdSchema, z.string().min(1).max(128)]),
@@ -131,6 +161,14 @@ const rpcSchemas = {
   locateKeystore: { request: noArgs, response: result(JsonRecordSchema) },
   removeAccount: {
     request: z.tuple([AddressSchema, z.object({}).strict()]),
+    response: actionResult
+  },
+  requestEip7702Revocation: {
+    request: z.tuple([AddressSchema, ChainIdSchema]),
+    response: result(Eip7702RequestReferenceSchema)
+  },
+  stopEip7702RevocationMonitoring: {
+    request: z.tuple([ActionRequestReferenceSchema]),
     response: actionResult
   },
   resolveEnsName: {

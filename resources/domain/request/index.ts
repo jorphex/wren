@@ -69,5 +69,6 @@ export const accountViewTitles: Record<RequestType, string> = {
   access: 'Review Account Access',
   addChain: 'Review Network Request',
   addToken: 'Review Token Request',
-  walletCalls: 'Review Call Batch'
+  walletCalls: 'Review Call Batch',
+  eip7702Revoke: 'Review delegation revocation'
 }

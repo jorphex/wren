@@ -40,7 +40,7 @@ export type TypedSignatureRequestType = 'signTypedData' | 'signErc20Permit'
 export type SignatureRequestType = 'sign' | TypedSignatureRequestType
 
 export type RequestType =
-  SignatureRequestType | 'transaction' | 'access' | 'addChain' | 'addToken' | 'walletCalls'
+  SignatureRequestType | 'transaction' | 'access' | 'addChain' | 'addToken' | 'walletCalls' | 'eip7702Revoke'
 
 interface Request {
   type: RequestType
@@ -316,6 +316,45 @@ export interface WalletCallsRequest extends AccountRequest<'walletCalls'> {
   res?: WalletCallsResponder | RPCRequestCallback
 }
 
+export interface Eip7702RevokeRequest extends AccountRequest<'eip7702Revoke'> {
+  version: '1'
+  chainId: string
+  evidence: Readonly<{
+    source: 'eth_getCode'
+    authority: string
+    delegate: string
+    codeHash: string
+    latestNonce: string
+    pendingNonce: string
+  }>
+  fees: {
+    gasLimit: string
+    maxFeePerGas: string
+    maxPriorityFeePerGas: string
+    maxFee: string
+  }
+  feesUpdatedByUser: boolean
+  locked?: boolean
+  operationVersion: number
+  failureReason?: 'evidence-changed' | 'not-delegated' | 'unavailable'
+  submission?: Readonly<{
+    status: 'unconfirmed'
+    detail: string
+  }>
+  tx?: {
+    hash: string
+    receipt?: TransactionReceipt
+    confirmations: number
+  }
+  result?: Readonly<{
+    receiptStatus: 'success' | 'failed' | 'unavailable'
+    revocationStatus: 'cleared' | 'skipped' | 'unavailable'
+    reason: 'code-cleared' | 'code-remains' | 'receipt-unavailable' | 'code-unavailable'
+    checkedAtBlock?: string
+  }>
+  completed?: number
+}
+
 export interface WalletCallsResponder {
   (response?: RPCResponsePayload): void
   readonly walletCallsLifecycle: true
@@ -329,6 +368,7 @@ export type AnyAccountRequest =
   | AddChainRequest
   | AddTokenRequest
   | WalletCallsRequest
+  | Eip7702RevokeRequest
 
 export type WalletCallsPreparation =
   | { status: 'pending' }

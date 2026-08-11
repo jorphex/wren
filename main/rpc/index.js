@@ -37,6 +37,21 @@ const rpc = {
   getState: (cb) => {
     cb(null, store())
   },
+  getEip7702RevocationEligibility(account, chainId, cb) {
+    accounts.getEip7702RevocationEligibility(account, chainId).then(
+      (eligibility) => cb(null, eligibility),
+      (error) => cb(error)
+    )
+  },
+  requestEip7702Revocation(account, chainId, cb) {
+    accounts.requestEip7702Revocation(account, chainId).then(
+      (reference) => cb(null, reference),
+      (error) => cb(error)
+    )
+  },
+  stopEip7702RevocationMonitoring(req, cb) {
+    callbackWhenDone(() => accounts.stopEip7702RevocationMonitoring(req.account, req.handlerId), cb)
+  },
   getFrameId(window, cb) {
     if (window.frameId) {
       cb(null, window.frameId)
@@ -159,6 +174,15 @@ const rpc = {
     const storedRequest = currentAccount.getRequest(req.handlerId)
     if (!storedRequest) return cb(new Error('Request is no longer pending'))
     req = storedRequest
+    if (req.type === 'eip7702Revoke') {
+      try {
+        accounts.approveEip7702Revocation(req.account, req.handlerId)
+        cb(null)
+      } catch (error) {
+        cb(error)
+      }
+      return
+    }
     const permissions = store('main.permissions', req.account) || {}
     const authorizationError = enforceRequestOriginAuthorization(
       req,
@@ -210,6 +234,14 @@ const rpc = {
     const storedRequest = currentAccount.getRequest(req.handlerId)
     if (!storedRequest) return cb(new Error('Request is no longer pending'))
     req = storedRequest
+
+    if (req.type === 'eip7702Revoke') {
+      if (!accounts.declineRequest(req.handlerId, req.account)) {
+        return cb(new Error('Request can no longer be cancelled'))
+      }
+      cb(null)
+      return
+    }
 
     if (req.type === 'transaction' || isSignatureRequest(req)) {
       if (!accounts.declineRequest(req.handlerId, req.account)) {

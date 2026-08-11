@@ -2,7 +2,7 @@ import EventEmitter from 'events'
 import log from 'electron-log'
 import { Notification } from 'electron'
 import { addHexPrefix } from '@ethereumjs/util'
-import { v5 as uuidv5 } from 'uuid'
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid'
 import { toBeHex } from 'ethers'
 
 import provider from '../provider'
@@ -38,7 +38,8 @@ import {
   PermitSignatureRequest,
   ApprovalData,
   WalletCallsRequest,
-  WalletCallsResponder
+  WalletCallsResponder,
+  Eip7702RevokeRequest
 } from './types'
 
 import type { Chain } from '../chains'
@@ -50,9 +51,36 @@ import { chainUsesOptimismFees } from '../../resources/utils/chains'
 import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { parseTokenBaseUnitAmount } from '../../resources/domain/token/amount'
 import type { PreparedWalletCallExecutionSnapshot } from '../provider/walletCallPreparedExecution'
+import {
+  assertEip7702RevokeEvidenceStable,
+  inspectEip7702RevokePreflight,
+  prepareSoftwareEip7702Revoke,
+  signSoftwareEip7702Revoke,
+  verifyEip7702RevocationResult,
+  type Eip7702RevokeEvidence,
+  type Eip7702RevokePreflight,
+  type SoftwareEip7702RevokeSigner
+} from '../eip7702'
+import { EIP7702_REVOKE_INTRINSIC_GAS } from '../transaction/eip7702'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
+const EIP7702_REVOKE_GAS_LIMIT = 50_000n
+const EIP7702_RPC_TIMEOUT_MS = 30_000
+const EIP7702_CONFIRMATIONS = 12
+const EIP7702_MONITOR_INTERVAL_MS = 15_000
+const EIP7702_SUBMISSION_UNCLEAR_NOTICE = 'Submission status unclear'
+const EIP7702_SUBMISSION_UNCLEAR_DETAIL =
+  'Wren is monitoring the expected transaction hash, and this account’s request queue is paused until its status is known.'
+
+class Eip7702EligibilityError extends Error {
+  constructor(
+    readonly status: Exclude<Eip7702RevocationEligibility['status'], 'eligible'>,
+    message: string
+  ) {
+    super(message)
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -121,8 +149,41 @@ export {
   SignTypedDataRequest,
   AddChainRequest,
   AddTokenRequest,
-  WalletCallsRequest
+  WalletCallsRequest,
+  Eip7702RevokeRequest
 } from './types'
+
+type Eip7702RevocationEligibilityBase = Readonly<{
+  account: string
+  chainId: number
+}>
+
+export type Eip7702RevocationEligibility = Eip7702RevocationEligibilityBase &
+  Readonly<
+    | { status: 'eligible'; source: 'eth_getCode'; delegate: string; codeHash: string }
+    | { status: 'not-delegated' | 'unavailable' | 'unsupported-signer' | 'disconnected' }
+  >
+
+export type Eip7702RevocationRequestReference = Readonly<{
+  handlerId: string
+  account: string
+  type: 'eip7702Revoke'
+}>
+
+type Eip7702Admission = Readonly<{
+  account: FrameAccount
+  signer: SoftwareEip7702RevokeSigner
+  signerIndex: number
+  chainId: number
+  preflight: Eip7702RevokePreflight
+  evidence: Eip7702RevokeEvidence
+  fees: Eip7702RevokeRequest['fees']
+}>
+
+type Eip7702Block = Readonly<{
+  number: string
+  hash: string
+}>
 
 type RequestWithId = [string, TransactionRequest]
 
@@ -138,6 +199,8 @@ export class Accounts extends EventEmitter {
 
   private readonly dataScanner: DataScanner
   private readonly pendingNonceAdjustments = new Map<string, PendingNonceAdjustment>()
+  private readonly eip7702MonitorTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly eip7702Admissions = new Set<string>()
 
   constructor() {
     super()
@@ -225,6 +288,625 @@ export class Accounts extends EventEmitter {
 
   current() {
     return this._current ? this.accounts[this._current] : null
+  }
+
+  private eip7702OperationKey(accountId: string, handlerId: string) {
+    return `${accountId.toLowerCase()}:${handlerId}`
+  }
+
+  cancelEip7702Operation(accountId: string, handlerId: string) {
+    const key = this.eip7702OperationKey(accountId, handlerId)
+    const timer = this.eip7702MonitorTimers.get(key)
+    if (timer) clearTimeout(timer)
+    this.eip7702MonitorTimers.delete(key)
+
+    const request = this.accounts[accountId.toLowerCase()]?.getRequest<Eip7702RevokeRequest>(handlerId)
+    if (request?.type === 'eip7702Revoke') request.operationVersion += 1
+  }
+
+  private eip7702ChainConnected(chainId: number) {
+    const network = store('main.networks.ethereum', chainId)
+    const connection = provider.connection.connections?.ethereum?.[chainId]
+    const active = connection?.active || connection?.primary || connection?.secondary
+    return Boolean(network && network.on !== false && connection?.chainConfig && active?.connected)
+  }
+
+  private sendEip7702Rpc<T>(chainId: number, method: string, params: unknown[] = []) {
+    return new Promise<T>((resolve, reject) => {
+      let settled = false
+      const finish = (error?: Error, value?: T) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        if (error) reject(error)
+        else resolve(value as T)
+      }
+      const timeout = setTimeout(
+        () => finish(new Error(`Configured RPC timed out during ${method}`)),
+        EIP7702_RPC_TIMEOUT_MS
+      )
+      timeout.unref?.()
+
+      try {
+        provider.connection.send(
+          { id: 1, jsonrpc: '2.0', method, params },
+          (response: RPCResponsePayload) => {
+            if (response?.error)
+              return finish(new Error(response.error.message || `Configured RPC ${method} failed`))
+            finish(undefined, response?.result as T)
+          },
+          { type: 'ethereum', id: chainId }
+        )
+      } catch (error) {
+        finish(error instanceof Error ? error : new Error(`Configured RPC ${method} failed`))
+      }
+    })
+  }
+
+  private eip7702Signer(account: FrameAccount) {
+    const signer = account.getSigner() as (Signer & Partial<SoftwareEip7702RevokeSigner>) | undefined
+    if (
+      !signer ||
+      (signer.type !== 'ring' && signer.type !== 'seed') ||
+      !isSignerReady(signer) ||
+      typeof signer.signEip7702Revoke !== 'function'
+    ) {
+      return undefined
+    }
+    const signerIndex = signer.addresses.findIndex((address) => address.toLowerCase() === account.id)
+    if (signerIndex < 0) return undefined
+    return { signer: signer as unknown as SoftwareEip7702RevokeSigner, signerIndex }
+  }
+
+  private eip7702FeeSnapshot(chainId: number): Eip7702RevokeRequest['fees'] {
+    const feeMarket = store('main.networksMeta', 'ethereum', chainId, 'gas.price.fees') || {}
+    const maxBaseFeePerGas = parseRpcQuantity(feeMarket.maxBaseFeePerGas)
+    const maxPriorityFeePerGas = parseRpcQuantity(feeMarket.maxPriorityFeePerGas)
+    if (
+      maxBaseFeePerGas === undefined ||
+      maxPriorityFeePerGas === undefined ||
+      maxBaseFeePerGas === 0n ||
+      maxPriorityFeePerGas > MAX_FEE_PER_GAS
+    ) {
+      throw new Error(`Network ${chainId} has no current EIP-1559 fee estimate`)
+    }
+    const maxFeePerGas = maxBaseFeePerGas + maxPriorityFeePerGas
+    const chainFeeCap = maxFee({ chainId: toRpcQuantity(BigInt(chainId)) } as TransactionData)
+    if (maxFeePerGas > MAX_FEE_PER_GAS || EIP7702_REVOKE_GAS_LIMIT * maxFeePerGas > chainFeeCap) {
+      throw new Error('Current EIP-7702 fee estimate exceeds the safety cap')
+    }
+    return {
+      gasLimit: toRpcQuantity(EIP7702_REVOKE_GAS_LIMIT),
+      maxFeePerGas: toRpcQuantity(maxFeePerGas),
+      maxPriorityFeePerGas: toRpcQuantity(maxPriorityFeePerGas),
+      maxFee: toRpcQuantity(EIP7702_REVOKE_GAS_LIMIT * maxFeePerGas)
+    }
+  }
+
+  private async eip7702Preflight(account: FrameAccount, chainId: number) {
+    const [authorityCode, latestNonce, pendingNonce] = await Promise.all([
+      this.sendEip7702Rpc<unknown>(chainId, 'eth_getCode', [account.id, 'latest']),
+      this.sendEip7702Rpc<unknown>(chainId, 'eth_getTransactionCount', [account.id, 'latest']),
+      this.sendEip7702Rpc<unknown>(chainId, 'eth_getTransactionCount', [account.id, 'pending'])
+    ])
+    const preflight = Object.freeze({ authorityCode, latestNonce, pendingNonce })
+    return Object.freeze({ preflight, evidence: inspectEip7702RevokePreflight(account.id, preflight) })
+  }
+
+  private assertEip7702ReadinessStillCurrent(
+    account: FrameAccount,
+    chainId: number,
+    requireAdmissionReservation: boolean
+  ) {
+    if (this.current() !== account || this.accounts[account.id] !== account) {
+      throw new Eip7702EligibilityError('unavailable', 'EIP-7702 revocation requires the selected account')
+    }
+    const signerMatch = this.eip7702Signer(account)
+    if (!signerMatch) {
+      throw new Eip7702EligibilityError(
+        'unsupported-signer',
+        'EIP-7702 revocation requires an unlocked Ring or Seed signer'
+      )
+    }
+    if (!this.eip7702ChainConnected(chainId)) {
+      throw new Eip7702EligibilityError('disconnected', `Chain ${chainId} is disconnected`)
+    }
+    if (Object.values(account.requests).some((request) => request.type === 'eip7702Revoke')) {
+      throw new Eip7702EligibilityError(
+        'unavailable',
+        'An EIP-7702 revocation is already active for this account'
+      )
+    }
+    if (requireAdmissionReservation && !this.eip7702Admissions.has(account.id)) {
+      throw new Eip7702EligibilityError('unavailable', 'EIP-7702 revocation admission expired')
+    }
+    if (!requireAdmissionReservation && this.eip7702Admissions.has(account.id)) {
+      throw new Eip7702EligibilityError(
+        'unavailable',
+        'An EIP-7702 revocation is already being prepared for this account'
+      )
+    }
+    return signerMatch
+  }
+
+  private async eip7702Readiness(
+    accountId: string,
+    chainId: number,
+    requireAdmissionReservation = false
+  ): Promise<Eip7702Admission> {
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Eip7702EligibilityError('unavailable', 'Invalid EIP-7702 chain')
+    }
+    const account = this.current()
+    if (!account || account.id !== accountId.toLowerCase()) {
+      throw new Eip7702EligibilityError('unavailable', 'EIP-7702 revocation requires the selected account')
+    }
+    const signerMatch = this.eip7702Signer(account)
+    if (!signerMatch) {
+      throw new Eip7702EligibilityError(
+        'unsupported-signer',
+        'EIP-7702 revocation requires an unlocked Ring or Seed signer'
+      )
+    }
+    if (!this.eip7702ChainConnected(chainId)) {
+      throw new Eip7702EligibilityError('disconnected', `Chain ${chainId} is disconnected`)
+    }
+    if (Object.values(account.requests).some((request) => request.type === 'eip7702Revoke')) {
+      throw new Eip7702EligibilityError(
+        'unavailable',
+        'An EIP-7702 revocation is already active for this account'
+      )
+    }
+    if (!requireAdmissionReservation && this.eip7702Admissions.has(account.id)) {
+      throw new Eip7702EligibilityError(
+        'unavailable',
+        'An EIP-7702 revocation is already being prepared for this account'
+      )
+    }
+
+    let fees: Eip7702RevokeRequest['fees']
+    let preflight: Eip7702RevokePreflight
+    let evidence: Eip7702RevokeEvidence
+    try {
+      fees = this.eip7702FeeSnapshot(chainId)
+      const inspected = await this.eip7702Preflight(account, chainId)
+      preflight = inspected.preflight
+      evidence = inspected.evidence
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'EIP-7702 evidence unavailable'
+      const status = message === 'EIP-7702 authority is not delegated' ? 'not-delegated' : 'unavailable'
+      throw new Eip7702EligibilityError(status, message)
+    }
+    const currentSignerMatch = this.assertEip7702ReadinessStillCurrent(
+      account,
+      chainId,
+      requireAdmissionReservation
+    )
+    const input = {
+      authority: account.id,
+      chainId: BigInt(chainId),
+      nonce: BigInt(evidence.latestNonce),
+      gasLimit: BigInt(fees.gasLimit),
+      maxFeePerGas: BigInt(fees.maxFeePerGas),
+      maxPriorityFeePerGas: BigInt(fees.maxPriorityFeePerGas)
+    }
+    prepareSoftwareEip7702Revoke(currentSignerMatch.signer, currentSignerMatch.signerIndex, input, preflight)
+    return Object.freeze({ account, chainId, preflight, evidence, fees, ...currentSignerMatch })
+  }
+
+  private async eip7702Admission(accountId: string, chainId: number): Promise<Eip7702Admission> {
+    return this.eip7702Readiness(accountId, chainId, true)
+  }
+
+  async getEip7702RevocationEligibility(
+    accountId: string,
+    chainId: number
+  ): Promise<Eip7702RevocationEligibility> {
+    const base = { account: accountId.toLowerCase(), chainId }
+    try {
+      const { evidence } = await this.eip7702Readiness(accountId, chainId)
+      return Object.freeze({
+        ...base,
+        status: 'eligible',
+        source: evidence.source,
+        delegate: evidence.delegate,
+        codeHash: evidence.codeHash
+      })
+    } catch (error) {
+      const status = error instanceof Eip7702EligibilityError ? error.status : 'unavailable'
+      return Object.freeze({ ...base, status })
+    }
+  }
+
+  async requestEip7702Revocation(
+    accountId: string,
+    chainId: number
+  ): Promise<Eip7702RevocationRequestReference> {
+    const reservation = accountId.toLowerCase()
+    if (this.eip7702Admissions.has(reservation)) {
+      throw new Error('An EIP-7702 revocation is already being prepared for this account')
+    }
+    this.eip7702Admissions.add(reservation)
+    try {
+      const admission = await this.eip7702Admission(accountId, chainId)
+      const handlerId = uuidv4()
+      const request: Eip7702RevokeRequest = {
+        type: 'eip7702Revoke',
+        version: '1',
+        handlerId,
+        origin: frameOriginId,
+        account: admission.account.id,
+        payload: {
+          id: 1,
+          jsonrpc: '2.0',
+          method: 'wren_revokeEip7702Delegation',
+          params: [admission.account.id, toRpcQuantity(BigInt(chainId))]
+        },
+        chainId: toRpcQuantity(BigInt(chainId)),
+        evidence: admission.evidence,
+        fees: { ...admission.fees },
+        feesUpdatedByUser: false,
+        operationVersion: 0
+      }
+      this.addRequestForAccount(admission.account.id, request)
+      return Object.freeze({ handlerId, account: admission.account.id, type: 'eip7702Revoke' })
+    } finally {
+      this.eip7702Admissions.delete(reservation)
+    }
+  }
+
+  private activeEip7702Operation(
+    account: FrameAccount,
+    request: Eip7702RevokeRequest,
+    operationVersion: number
+  ) {
+    return (
+      this.accounts[account.id] === account &&
+      account.getRequest<Eip7702RevokeRequest>(request.handlerId) === request &&
+      request.operationVersion === operationVersion
+    )
+  }
+
+  private failEip7702Revocation(
+    account: FrameAccount,
+    request: Eip7702RevokeRequest,
+    operationVersion: number,
+    error: unknown
+  ) {
+    if (!this.activeEip7702Operation(account, request, operationVersion)) return
+    const message = error instanceof Error ? error.message : 'EIP-7702 revocation failed'
+    request.status = RequestStatus.Error
+    request.failureReason =
+      message === 'EIP-7702 authority is not delegated'
+        ? 'not-delegated'
+        : message.includes('changed after review') || message.includes('stable account nonce')
+          ? 'evidence-changed'
+          : 'unavailable'
+    request.notice = message.slice(0, 240)
+    request.mode = RequestMode.Monitor
+    account.update()
+    account.releaseRequestReview(request.handlerId)
+    const timer = setTimeout(() => {
+      if (this.activeEip7702Operation(account, request, operationVersion)) {
+        account.clearRequest(request.handlerId)
+      }
+    }, 8000)
+    timer.unref?.()
+    this.eip7702MonitorTimers.set(this.eip7702OperationKey(account.id, request.handlerId), timer)
+  }
+
+  approveEip7702Revocation(accountId: string, handlerId: string) {
+    const account = this.current()
+    if (!account || account.id !== accountId.toLowerCase()) {
+      throw new Error('EIP-7702 revocation requires the selected account')
+    }
+    const request = account.getActiveReviewRequest<Eip7702RevokeRequest>(handlerId)
+    if (!request || request.type !== 'eip7702Revoke') throw new Error('Request is waiting for review')
+    if (request.status !== undefined || request.locked)
+      throw new Error('Request is already pending or complete')
+    if (!this.eip7702Signer(account)) {
+      throw new Error('EIP-7702 revocation requires an unlocked Ring or Seed signer')
+    }
+
+    request.locked = true
+    request.status = RequestStatus.Pending
+    request.notice = 'Checking delegation'
+    request.operationVersion += 1
+    const operationVersion = request.operationVersion
+    account.update()
+    void this.executeEip7702Revocation(account, request, operationVersion).catch((error) => {
+      this.failEip7702Revocation(account, request, operationVersion, error)
+    })
+    return true
+  }
+
+  stopEip7702RevocationMonitoring(accountId: string, handlerId: string) {
+    const account = this.current()
+    if (!account || account.id !== accountId.toLowerCase()) {
+      throw new Error('EIP-7702 revocation requires the selected account')
+    }
+    const request = account.getActiveReviewRequest<Eip7702RevokeRequest>(handlerId)
+    if (!request || request.type !== 'eip7702Revoke') throw new Error('Request is no longer active')
+    if (
+      request.mode !== RequestMode.Monitor ||
+      !request.tx?.hash ||
+      ![RequestStatus.Verifying, RequestStatus.Confirming].includes(request.status as RequestStatus)
+    ) {
+      throw new Error('Revocation submission monitoring cannot be stopped')
+    }
+
+    account.clearRequest(request.handlerId)
+    return true
+  }
+
+  private async executeEip7702Revocation(
+    account: FrameAccount,
+    request: Eip7702RevokeRequest,
+    operationVersion: number
+  ) {
+    const chainId = Number(BigInt(request.chainId))
+    if (!this.eip7702ChainConnected(chainId)) throw new Error(`Chain ${chainId} is disconnected`)
+    const signerMatch = this.eip7702Signer(account)
+    if (!signerMatch) throw new Error('EIP-7702 revocation requires an unlocked Ring or Seed signer')
+
+    const { preflight, evidence } = await this.eip7702Preflight(account, chainId)
+    if (!this.activeEip7702Operation(account, request, operationVersion)) return
+    assertEip7702RevokeEvidenceStable(request.evidence, evidence)
+
+    const input = {
+      authority: account.id,
+      chainId: BigInt(chainId),
+      nonce: BigInt(request.evidence.latestNonce),
+      gasLimit: BigInt(request.fees.gasLimit),
+      maxFeePerGas: BigInt(request.fees.maxFeePerGas),
+      maxPriorityFeePerGas: BigInt(request.fees.maxPriorityFeePerGas)
+    }
+    const signingRequest = prepareSoftwareEip7702Revoke(
+      signerMatch.signer,
+      signerMatch.signerIndex,
+      input,
+      preflight
+    )
+    const signed = await signSoftwareEip7702Revoke(
+      signerMatch.signer,
+      signerMatch.signerIndex,
+      signingRequest,
+      preflight
+    )
+    if (!this.activeEip7702Operation(account, request, operationVersion)) return
+
+    request.status = RequestStatus.Sending
+    request.notice = 'Sending'
+    request.mode = RequestMode.Monitor
+    request.tx = { hash: signed.evidence.transactionHash.toLowerCase(), confirmations: 0 }
+    account.update()
+
+    let submissionUnconfirmed = false
+    try {
+      const returnedHash = await this.sendEip7702Rpc<unknown>(chainId, 'eth_sendRawTransaction', [
+        signed.rawTransaction
+      ])
+      if (
+        typeof returnedHash !== 'string' ||
+        !/^0x[0-9a-fA-F]{64}$/.test(returnedHash) ||
+        returnedHash.toLowerCase() !== signed.evidence.transactionHash.toLowerCase()
+      ) {
+        submissionUnconfirmed = true
+      }
+    } catch {
+      submissionUnconfirmed = true
+    }
+    if (!this.activeEip7702Operation(account, request, operationVersion)) return
+
+    request.status = RequestStatus.Verifying
+    request.notice = submissionUnconfirmed ? EIP7702_SUBMISSION_UNCLEAR_NOTICE : 'Verifying delegation'
+    if (submissionUnconfirmed) {
+      request.submission = Object.freeze({
+        status: 'unconfirmed',
+        detail: EIP7702_SUBMISSION_UNCLEAR_DETAIL
+      })
+    }
+    account.update()
+    void this.monitorEip7702Revocation(account, request, operationVersion)
+  }
+
+  private parseEip7702Receipt(value: unknown, expectedHash: string): TransactionReceipt | undefined {
+    if (value === null || value === undefined) return undefined
+    if (!isRecord(value)) throw new Error('Invalid EIP-7702 receipt response')
+    const transactionHash = value['transactionHash']
+    const blockHash = value['blockHash']
+    const blockNumber = value['blockNumber']
+    const status = value['status']
+    const gasUsed = value['gasUsed']
+    if (
+      typeof transactionHash !== 'string' ||
+      transactionHash.toLowerCase() !== expectedHash.toLowerCase() ||
+      typeof blockHash !== 'string' ||
+      !/^0x[0-9a-fA-F]{64}$/.test(blockHash) ||
+      parseRpcQuantity(blockNumber) === undefined ||
+      toRpcQuantity(parseRpcQuantity(blockNumber) as bigint) !== blockNumber ||
+      parseRpcQuantity(gasUsed) === undefined ||
+      toRpcQuantity(parseRpcQuantity(gasUsed) as bigint) !== gasUsed ||
+      (status !== '0x0' && status !== '0x1')
+    ) {
+      throw new Error('Invalid EIP-7702 receipt response')
+    }
+    return Object.freeze({
+      transactionHash: transactionHash.toLowerCase(),
+      blockHash: blockHash.toLowerCase(),
+      blockNumber,
+      gasUsed,
+      status
+    })
+  }
+
+  private parseEip7702Block(value: unknown): Eip7702Block {
+    if (!isRecord(value)) throw new Error('Invalid EIP-7702 block response')
+    const number = value['number']
+    const hash = value['hash']
+    const parsedNumber = parseRpcQuantity(number)
+    if (
+      parsedNumber === undefined ||
+      toRpcQuantity(parsedNumber) !== number ||
+      typeof hash !== 'string' ||
+      !/^0x[0-9a-fA-F]{64}$/.test(hash)
+    ) {
+      throw new Error('Invalid EIP-7702 block response')
+    }
+    return Object.freeze({ number, hash: hash.toLowerCase() })
+  }
+
+  private async monitorEip7702Revocation(
+    account: FrameAccount,
+    request: Eip7702RevokeRequest,
+    operationVersion: number
+  ) {
+    if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+    const chainId = Number(BigInt(request.chainId))
+    const key = this.eip7702OperationKey(account.id, request.handlerId)
+
+    try {
+      const receiptValue = await this.sendEip7702Rpc<unknown>(chainId, 'eth_getTransactionReceipt', [
+        request.tx.hash
+      ])
+      if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+      const receipt = this.parseEip7702Receipt(receiptValue, request.tx.hash)
+      if (!receipt) {
+        if (request.tx.receipt) {
+          delete request.tx.receipt
+          request.tx.confirmations = 0
+          delete request.result
+          request.status = RequestStatus.Verifying
+          request.notice = 'Rechecking after chain reorganization'
+          account.update()
+        }
+        this.scheduleEip7702Monitor(account, request, operationVersion)
+        return
+      }
+      delete request.submission
+
+      const [receiptBlockValue, latestBlockValue] = await Promise.all([
+        this.sendEip7702Rpc<unknown>(chainId, 'eth_getBlockByNumber', [receipt.blockNumber, false]),
+        this.sendEip7702Rpc<unknown>(chainId, 'eth_getBlockByNumber', ['latest', false])
+      ])
+      if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+      const canonicalReceiptBlock = this.parseEip7702Block(receiptBlockValue)
+      const latestBlock = this.parseEip7702Block(latestBlockValue)
+      if (
+        canonicalReceiptBlock.number !== receipt.blockNumber ||
+        canonicalReceiptBlock.hash !== receipt['blockHash']
+      ) {
+        delete request.tx.receipt
+        request.tx.confirmations = 0
+        delete request.result
+        delete request.completed
+        request.status = RequestStatus.Verifying
+        request.notice = 'Rechecking after chain reorganization'
+        account.update()
+        this.scheduleEip7702Monitor(account, request, operationVersion)
+        return
+      }
+      const blockNumber = parseRpcQuantity(latestBlock.number)
+      const receiptBlock = parseRpcQuantity(receipt.blockNumber)
+      if (blockNumber === undefined || receiptBlock === undefined || blockNumber < receiptBlock) {
+        throw new Error('Invalid EIP-7702 confirmation response')
+      }
+
+      const authorityCode = await this.sendEip7702Rpc<unknown>(chainId, 'eth_getCode', [
+        account.id,
+        { blockHash: latestBlock.hash, requireCanonical: true }
+      ])
+      if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+
+      const [confirmedReceiptBlockValue, confirmedLatestBlockValue] = await Promise.all([
+        this.sendEip7702Rpc<unknown>(chainId, 'eth_getBlockByNumber', [receipt.blockNumber, false]),
+        this.sendEip7702Rpc<unknown>(chainId, 'eth_getBlockByNumber', [latestBlock.number, false])
+      ])
+      if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+      const confirmedReceiptBlock = this.parseEip7702Block(confirmedReceiptBlockValue)
+      const confirmedLatestBlock = this.parseEip7702Block(confirmedLatestBlockValue)
+      if (
+        confirmedReceiptBlock.number !== canonicalReceiptBlock.number ||
+        confirmedReceiptBlock.hash !== canonicalReceiptBlock.hash ||
+        confirmedLatestBlock.number !== latestBlock.number ||
+        confirmedLatestBlock.hash !== latestBlock.hash
+      ) {
+        delete request.tx.receipt
+        request.tx.confirmations = 0
+        delete request.result
+        delete request.completed
+        request.status = RequestStatus.Verifying
+        request.notice = 'Rechecking after chain reorganization'
+        account.update()
+        this.scheduleEip7702Monitor(account, request, operationVersion)
+        return
+      }
+
+      const result = await verifyEip7702RevocationResult(receipt, async () => authorityCode)
+      if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+      const confirmations = Number(blockNumber - receiptBlock + 1n)
+      request.tx = { ...request.tx, receipt, confirmations }
+      request.result = Object.freeze({ ...result, checkedAtBlock: toRpcQuantity(blockNumber) })
+      request.completed = Date.now()
+
+      if (confirmations < EIP7702_CONFIRMATIONS || result.revocationStatus === 'unavailable') {
+        request.status = RequestStatus.Confirming
+        request.notice =
+          result.revocationStatus === 'cleared'
+            ? 'Delegation removed; confirming'
+            : result.revocationStatus === 'skipped'
+              ? 'Delegation still present; rechecking'
+              : 'Delegation state unavailable; rechecking'
+        account.update()
+        this.scheduleEip7702Monitor(account, request, operationVersion)
+        return
+      }
+
+      request.status = result.revocationStatus === 'cleared' ? RequestStatus.Confirmed : RequestStatus.Error
+      request.notice =
+        result.revocationStatus === 'cleared'
+          ? 'Delegation removed'
+          : result.revocationStatus === 'skipped'
+            ? 'Delegation remains'
+            : 'Could not verify delegation'
+      account.update()
+      account.releaseRequestReview(request.handlerId)
+      const timer = setTimeout(() => {
+        if (this.activeEip7702Operation(account, request, operationVersion)) {
+          account.clearRequest(request.handlerId)
+        }
+      }, 8000)
+      timer.unref?.()
+      this.eip7702MonitorTimers.set(key, timer)
+    } catch (error) {
+      if (!this.activeEip7702Operation(account, request, operationVersion)) return
+      log.warn('EIP-7702 revocation monitor check failed', {
+        handlerId: request.handlerId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      if (request.submission?.status !== 'unconfirmed') {
+        request.notice = 'Waiting to verify delegation'
+      }
+      account.update()
+      this.scheduleEip7702Monitor(account, request, operationVersion)
+    }
+  }
+
+  private scheduleEip7702Monitor(
+    account: FrameAccount,
+    request: Eip7702RevokeRequest,
+    operationVersion: number
+  ) {
+    if (!this.activeEip7702Operation(account, request, operationVersion)) return
+    const key = this.eip7702OperationKey(account.id, request.handlerId)
+    const currentTimer = this.eip7702MonitorTimers.get(key)
+    if (currentTimer) clearTimeout(currentTimer)
+    const timer = setTimeout(
+      () => void this.monitorEip7702Revocation(account, request, operationVersion),
+      EIP7702_MONITOR_INTERVAL_MS
+    )
+    timer.unref?.()
+    this.eip7702MonitorTimers.set(key, timer)
   }
 
   private requestAccount(handlerId: string, accountId?: string) {
@@ -1203,10 +1885,17 @@ export class Accounts extends EventEmitter {
     const request = currentAccount?.getActiveReviewRequest(handlerId)
 
     if (currentAccount && request) {
+      if (request.type === 'eip7702Revoke' && request.status !== undefined) return false
       if (!isCancelableRequest(request.status || '')) return false
 
+      if (request.type === 'eip7702Revoke') this.cancelEip7702Operation(currentAccount.id, handlerId)
       request.status = RequestStatus.Declined
-      request.notice = request.type === 'transaction' ? 'Transaction declined' : 'Request declined'
+      request.notice =
+        request.type === 'transaction'
+          ? 'Transaction declined'
+          : request.type === 'eip7702Revoke'
+            ? 'Delegation revocation declined'
+            : 'Request declined'
       request.mode = RequestMode.Monitor
 
       setTimeout(
@@ -1528,7 +2217,72 @@ export class Accounts extends EventEmitter {
     currentAccount.refreshTransactionSimulation(txRequest, userUpdate, !userUpdate)
   }
 
+  private updateEip7702Fee(
+    kind: 'baseFee' | 'priorityFee' | 'gasLimit',
+    value: string,
+    handlerId: string,
+    accountId?: string
+  ) {
+    const input = this.requiredQuantity(value, 'EIP-7702 fee update value')
+    const account = accountId ? this.accounts[accountId.toLowerCase()] : this.current()
+    if (!account) throw new Error('No account selected while updating EIP-7702 fees')
+    const request = account.getActiveReviewRequest<Eip7702RevokeRequest>(handlerId)
+    if (!request || request.type !== 'eip7702Revoke') throw new Error('Request is waiting for review')
+    if (request.locked || request.status !== undefined) {
+      throw new Error('EIP-7702 revocation has already been approved')
+    }
+
+    const gasLimit = BigInt(request.fees.gasLimit)
+    const maxFeePerGas = BigInt(request.fees.maxFeePerGas)
+    const priorityFee = BigInt(request.fees.maxPriorityFeePerGas)
+    if (priorityFee > maxFeePerGas) throw new Error('Invalid reviewed EIP-7702 fees')
+    const chainFeeCap = maxFee({ chainId: request.chainId } as TransactionData)
+
+    let nextGasLimit = gasLimit
+    let nextMaxFeePerGas = maxFeePerGas
+    let nextPriorityFee = priorityFee
+    if (kind === 'gasLimit') {
+      if (input < EIP7702_REVOKE_INTRINSIC_GAS) {
+        throw new Error('EIP-7702 gas limit is below the intrinsic minimum')
+      }
+      const affordableGas = maxFeePerGas === 0n ? MAX_GAS_LIMIT : chainFeeCap / maxFeePerGas
+      nextGasLimit = this.limitedQuantity(input, this.limitedQuantity(MAX_GAS_LIMIT, affordableGas))
+      if (nextGasLimit < EIP7702_REVOKE_INTRINSIC_GAS) {
+        throw new Error('EIP-7702 fees exceed the account safety cap')
+      }
+    } else {
+      const perGasCap = this.limitedQuantity(MAX_FEE_PER_GAS, chainFeeCap / gasLimit)
+      if (kind === 'baseFee') {
+        nextPriorityFee = this.limitedQuantity(priorityFee, perGasCap)
+        nextMaxFeePerGas = nextPriorityFee + this.limitedQuantity(input, perGasCap - nextPriorityFee)
+      } else {
+        const baseFee = maxFeePerGas - priorityFee
+        const limitedBaseFee = this.limitedQuantity(baseFee, perGasCap)
+        nextPriorityFee = this.limitedQuantity(input, perGasCap - limitedBaseFee)
+        nextMaxFeePerGas = limitedBaseFee + nextPriorityFee
+      }
+      if (nextMaxFeePerGas === 0n) throw new Error('EIP-7702 maximum fee must be nonzero')
+    }
+
+    this.cancelEip7702Operation(account.id, handlerId)
+    request.fees = {
+      gasLimit: toRpcQuantity(nextGasLimit),
+      maxFeePerGas: toRpcQuantity(nextMaxFeePerGas),
+      maxPriorityFeePerGas: toRpcQuantity(nextPriorityFee),
+      maxFee: toRpcQuantity(nextGasLimit * nextMaxFeePerGas)
+    }
+    request.feesUpdatedByUser = true
+    account.update()
+    return request.fees
+  }
+
   setBaseFee(baseFee: string, handlerId: string, userUpdate: boolean, accountId?: string) {
+    const account = accountId ? this.accounts[accountId.toLowerCase()] : this.current()
+    if (account?.getRequest<Eip7702RevokeRequest>(handlerId)?.type === 'eip7702Revoke') {
+      if (!userUpdate) return
+      this.updateEip7702Fee('baseFee', baseFee, handlerId, accountId)
+      return
+    }
     const { currentAccount, input, maxPriorityFeePerGas, gasLimit, currentBaseFee, baseFeeTransaction } =
       this.txFeeUpdate(baseFee, handlerId, userUpdate, accountId)
     if (!baseFeeTransaction) throw new Error('Cannot set a base fee on a legacy transaction')
@@ -1554,6 +2308,12 @@ export class Accounts extends EventEmitter {
   }
 
   setPriorityFee(priorityFee: string, handlerId: string, userUpdate: boolean, accountId?: string) {
+    const account = accountId ? this.accounts[accountId.toLowerCase()] : this.current()
+    if (account?.getRequest<Eip7702RevokeRequest>(handlerId)?.type === 'eip7702Revoke') {
+      if (!userUpdate) return
+      this.updateEip7702Fee('priorityFee', priorityFee, handlerId, accountId)
+      return
+    }
     const { currentAccount, input, maxPriorityFeePerGas, gasLimit, currentBaseFee, baseFeeTransaction } =
       this.txFeeUpdate(priorityFee, handlerId, userUpdate, accountId)
     if (!baseFeeTransaction) throw new Error('Cannot set a priority fee on a legacy transaction')
@@ -1578,6 +2338,10 @@ export class Accounts extends EventEmitter {
   }
 
   setGasPrice(price: string, handlerId: string, userUpdate: boolean, accountId?: string) {
+    const account = accountId ? this.accounts[accountId.toLowerCase()] : this.current()
+    if (account?.getRequest<Eip7702RevokeRequest>(handlerId)?.type === 'eip7702Revoke') {
+      throw new Error('EIP-7702 revocation does not use a legacy gas price')
+    }
     const { currentAccount, input, gasLimit, gasPrice, baseFeeTransaction } = this.txFeeUpdate(
       price,
       handlerId,
@@ -1601,6 +2365,12 @@ export class Accounts extends EventEmitter {
   }
 
   setGasLimit(limit: string, handlerId: string, userUpdate: boolean, accountId?: string) {
+    const account = accountId ? this.accounts[accountId.toLowerCase()] : this.current()
+    if (account?.getRequest<Eip7702RevokeRequest>(handlerId)?.type === 'eip7702Revoke') {
+      if (!userUpdate) return
+      this.updateEip7702Fee('gasLimit', limit, handlerId, accountId)
+      return
+    }
     const { currentAccount, input, maxFeePerGas, gasPrice, baseFeeTransaction } = this.txFeeUpdate(
       limit,
       handlerId,

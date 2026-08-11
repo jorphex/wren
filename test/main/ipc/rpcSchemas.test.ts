@@ -84,6 +84,100 @@ test('validates fee quantities and request identifiers', () => {
   expect(parseRendererRpcRequest(wire(1, 'setGasLimit', address, '0x5208', '1')).success).toBe(false)
 })
 
+test('bounds wallet-owned EIP-7702 renderer requests', () => {
+  expect(parseRendererRpcRequest(wire(1, 'getEip7702RevocationEligibility', address, 1))).toMatchObject({
+    success: true,
+    data: { args: [address, 1] }
+  })
+  expect(parseRendererRpcRequest(wire(1, 'requestEip7702Revocation', address, 1))).toMatchObject({
+    success: true,
+    data: { args: [address, 1] }
+  })
+  expect(parseRendererRpcRequest(wire(1, 'requestEip7702Revocation', address, 0)).success).toBe(false)
+  expect(
+    parseRendererRpcRequest(wire(1, 'requestEip7702Revocation', address, 1, { authorizationList: [] }))
+      .success
+  ).toBe(false)
+
+  expect(
+    parseRendererRpcResponse('getEip7702RevocationEligibility', [
+      null,
+      {
+        status: 'eligible',
+        account: address,
+        chainId: 1,
+        source: 'eth_getCode',
+        delegate: '0x0000000000000000000000000000000000000002',
+        codeHash: `0x${'a'.repeat(64)}`
+      }
+    ]).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcResponse('getEip7702RevocationEligibility', [
+      null,
+      { status: 'eligible', account: address, chainId: 1 }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererRpcResponse('getEip7702RevocationEligibility', [
+      null,
+      {
+        status: 'not-delegated',
+        account: address,
+        chainId: 1,
+        source: 'eth_getCode',
+        delegate: '0x0000000000000000000000000000000000000002',
+        codeHash: `0x${'a'.repeat(64)}`
+      }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererRpcResponse('getEip7702RevocationEligibility', [
+      null,
+      { status: 'not-delegated', account: address, chainId: 1 }
+    ]).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcResponse('requestEip7702Revocation', [
+      null,
+      {
+        handlerId,
+        account: address,
+        type: 'eip7702Revoke',
+        rawTransaction: '0x04'
+      }
+    ]).success
+  ).toBe(false)
+
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'stopEip7702RevocationMonitoring', {
+        handlerId,
+        account: address,
+        type: 'eip7702Revoke',
+        submission: { status: 'unconfirmed' }
+      })
+    )
+  ).toEqual({
+    success: true,
+    data: {
+      id: 1,
+      method: 'stopEip7702RevocationMonitoring',
+      args: [{ handlerId, account: address, type: 'eip7702Revoke' }]
+    }
+  })
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'stopEip7702RevocationMonitoring', {
+        handlerId: 'not-a-uuid',
+        account: address,
+        type: 'eip7702Revoke'
+      })
+    ).success
+  ).toBe(false)
+  expect(parseRendererRpcResponse('stopEip7702RevocationMonitoring', [null]).success).toBe(true)
+})
+
 test('binds signer compatibility checks to an account and request', () => {
   expect(parseRendererRpcRequest(wire(1, 'signerCompatibility', address, handlerId)).success).toBe(true)
   expect(parseRendererRpcRequest(wire(1, 'signerCompatibility', handlerId)).success).toBe(false)

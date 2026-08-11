@@ -361,6 +361,7 @@ class FrameAccount {
 
     const clearedActiveReview = this.activeReviewHandlerId === handlerId
     this.accounts.clearPendingNonceAdjustment?.(this, handlerId)
+    this.accounts.cancelEip7702Operation?.(this.id, handlerId)
     this.requestAbortCleanup[handlerId]?.()
     delete this.requestAbortCleanup[handlerId]
     delete this.requests[handlerId]
@@ -1361,9 +1362,10 @@ class FrameAccount {
     }
 
     if (summon) {
-      setTimeout(() => {
+      const summonTimer = setTimeout(() => {
         windows.showTray()
       }, 100)
+      summonTimer.unref?.()
     }
   }
 
@@ -1405,11 +1407,11 @@ class FrameAccount {
   }
 
   addRequest(req: AnyAccountRequest, res: RPCRequestCallback | WalletCallsResponder = () => {}) {
-    if (
-      req?.type === 'walletCalls' &&
-      (typeof req.account !== 'string' || req.account.toLowerCase() !== this.address)
-    ) {
-      throw new Error('Wallet-call request is not owned by this account')
+    if (typeof req.account !== 'string' || req.account.toLowerCase() !== this.address) {
+      if (req?.type === 'walletCalls') throw new Error('Wallet-call request is not owned by this account')
+      if (req?.type === 'eip7702Revoke') {
+        throw new Error('EIP-7702 revocation request is not owned by this account')
+      }
     }
 
     const signal = getRequestSignal(res)
@@ -1520,6 +1522,9 @@ class FrameAccount {
 
   close() {
     this.ensLookupClosed = true
+    Object.keys(this.requests).forEach((handlerId) =>
+      this.accounts.cancelEip7702Operation?.(this.id, handlerId)
+    )
     provider.off('status:ethereum:1', this.ensStatusHandler)
     Object.values(this.requestAbortCleanup).forEach((cleanup) => cleanup())
     this.requestAbortCleanup = {}

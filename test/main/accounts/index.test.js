@@ -14,12 +14,15 @@ import { gweiToHex } from '../../util'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { SignerUserRejectedError } from '../../../main/signers/errors'
 import nav from '../../../main/windows/nav'
+import { computeAddress, SigningKey, Transaction } from 'ethers'
+import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
   emit: jest.fn(),
   on: jest.fn(),
-  off: jest.fn()
+  off: jest.fn(),
+  connection: { connections: { ethereum: {} }, send: jest.fn() }
 }))
 jest.mock('../../../main/signers', () => ({ get: jest.fn() }))
 jest.mock('../../../main/windows', () => ({ broadcast: jest.fn(), showTray: jest.fn() }))
@@ -2141,5 +2144,753 @@ describe('#setRequestPending', () => {
 
     expect(() => Accounts.setRequestPending(addChainRequest)).not.toThrow()
     expect(addChainRequest.status).toBe('pending')
+  })
+})
+
+describe('wallet-owned EIP-7702 revocation', () => {
+  const privateKey = '0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356'
+  const authority = computeAddress(new SigningKey(privateKey).publicKey).toLowerCase()
+  const delegation = '0xef01001111111111111111111111111111111111111111'
+  const signer = {
+    id: 'eip7702-seed',
+    type: 'seed',
+    status: 'ok',
+    addresses: [authority],
+    signEip7702Revoke: jest.fn((_index, signingRequest, cb) => {
+      cb(null, signEip7702RevokeRequest(privateKey, signingRequest))
+    })
+  }
+
+  let code = delegation
+  let receiptStatus = '0x0'
+  let latestNonce = '0x3'
+  let pendingNonce = '0x3'
+  let pendingSignerCallback
+
+  const flush = async () => {
+    for (let index = 0; index < 8; index += 1) await new Promise((resolve) => setImmediate(resolve))
+  }
+
+  beforeEach(async () => {
+    signer.type = 'seed'
+    code = delegation
+    receiptStatus = '0x0'
+    latestNonce = '0x3'
+    pendingNonce = '0x3'
+    pendingSignerCallback = undefined
+    provider.connection.connections.ethereum[1] = {
+      chainConfig: {},
+      active: { connected: true }
+    }
+    store.setGasFees('ethereum', 1, {
+      maxBaseFeePerGas: '0x77359400',
+      maxPriorityFeePerGas: '0x3b9aca00'
+    })
+    await new Promise((resolve, reject) =>
+      Accounts.add(authority, 'Revocation Account', { type: 'seed' }, (error, created) => {
+        if (error) return reject(error)
+        created.signer = signer.id
+        Accounts.setSigner(authority, (setError) => (setError ? reject(setError) : resolve()))
+      })
+    )
+    Accounts.current().signer = signer.id
+    Accounts.current().lastSignerType = 'seed'
+    signers.get.mockImplementation((id) => (id === signer.id ? signer : undefined))
+    provider.connection.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_getCode') return callback({ result: code })
+      if (payload.method === 'eth_getTransactionCount') {
+        return callback({ result: payload.params[1] === 'pending' ? pendingNonce : latestNonce })
+      }
+      if (payload.method === 'eth_sendRawTransaction') {
+        return callback({ result: Transaction.from(payload.params[0]).hash })
+      }
+      if (payload.method === 'eth_getTransactionReceipt') {
+        const rawHash = provider.connection.send.mock.calls.find(
+          ([candidate]) => candidate.method === 'eth_sendRawTransaction'
+        )?.[0]?.params?.[0]
+        const hash = rawHash ? Transaction.from(rawHash).hash : `0x${'0'.repeat(64)}`
+        return callback({
+          result: {
+            transactionHash: hash,
+            blockHash: `0x${'b'.repeat(64)}`,
+            blockNumber: '0x5',
+            gasUsed: '0xb3b0',
+            status: receiptStatus
+          }
+        })
+      }
+      if (payload.method === 'eth_getBlockByNumber') {
+        const number = payload.params[0] === 'latest' ? '0x10' : payload.params[0]
+        const hash = number === '0x5' ? `0x${'b'.repeat(64)}` : `0x${'c'.repeat(64)}`
+        return callback({ result: { number, hash } })
+      }
+      return callback({ error: { code: -32601, message: 'unsupported test method' } })
+    })
+  })
+
+  afterEach(async () => {
+    const active = Accounts.accounts[authority]
+    if (active) {
+      Object.keys(active.requests).forEach((handlerId) => active.clearRequest(handlerId))
+      await new Promise((resolve) => Accounts.setSigner(account.id, () => resolve()))
+      Accounts.remove(authority)
+    }
+    delete provider.connection.connections.ethereum[1]
+    provider.connection.send.mockReset()
+    signer.signEip7702Revoke.mockClear()
+    signers.get.mockReset()
+  })
+
+  it('exposes bounded eligibility and admits one safe FIFO request', async () => {
+    await expect(Accounts.getEip7702RevocationEligibility(authority, 1)).resolves.toMatchObject({
+      status: 'eligible',
+      account: authority,
+      chainId: 1,
+      source: 'eth_getCode',
+      delegate: '0x1111111111111111111111111111111111111111',
+      codeHash: expect.stringMatching(/^0x[0-9a-f]{64}$/)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    const admitted = Accounts.current().getRequest(reference.handlerId)
+    expect(admitted).toMatchObject({
+      type: 'eip7702Revoke',
+      account: authority,
+      chainId: '0x1',
+      evidence: {
+        source: 'eth_getCode',
+        authority,
+        delegate: '0x1111111111111111111111111111111111111111',
+        latestNonce: '0x3',
+        pendingNonce: '0x3'
+      },
+      fees: {
+        gasLimit: '0xc350',
+        maxFeePerGas: '0xb2d05e00',
+        maxPriorityFeePerGas: '0x3b9aca00',
+        maxFee: '0x886c98b76000'
+      }
+    })
+    expect(JSON.stringify(admitted)).not.toMatch(/rawTransaction|authorizationList|signature/i)
+  })
+
+  it('serializes same-tick admission and rejects a duplicate reservation', async () => {
+    let releaseCode
+    provider.connection.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => callback({ result: delegation })
+        return
+      }
+      callback({ result: payload.params?.[1] === 'pending' ? '0x3' : '0x3' })
+    })
+    const first = Accounts.requestEip7702Revocation(authority, 1)
+    await expect(Accounts.requestEip7702Revocation(authority, 1)).rejects.toThrow('already being prepared')
+    releaseCode()
+    await expect(first).resolves.toMatchObject({ type: 'eip7702Revoke' })
+  })
+
+  it('does not report eligibility during a concurrent admission', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const admission = Accounts.requestEip7702Revocation(authority, 1)
+    await expect(Accounts.getEip7702RevocationEligibility(authority, 1)).resolves.toMatchObject({
+      status: 'unavailable'
+    })
+    releaseCode()
+    await expect(admission).resolves.toMatchObject({ type: 'eip7702Revoke' })
+  })
+
+  it('rejects eligibility when the selected account changes during preflight', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const eligibility = Accounts.getEip7702RevocationEligibility(authority, 1)
+    await new Promise((resolve) => Accounts.setSigner(account.id, () => resolve()))
+    releaseCode()
+    await expect(eligibility).resolves.toMatchObject({ status: 'unavailable' })
+  })
+
+  it('rejects admission when signer readiness changes during preflight', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const admission = Accounts.requestEip7702Revocation(authority, 1)
+    signer.status = 'locked'
+    releaseCode()
+    await expect(admission).rejects.toThrow(/unlocked Ring or Seed signer/)
+    signer.status = 'ok'
+    expect(Object.values(Accounts.current().requests)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'eip7702Revoke' })])
+    )
+  })
+
+  it('rejects admission when its reservation expires during preflight', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const admission = Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.eip7702Admissions.clear()
+    releaseCode()
+    await expect(admission).rejects.toThrow('admission expired')
+  })
+
+  it('rejects eligibility when the configured chain disconnects during preflight', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const eligibility = Accounts.getEip7702RevocationEligibility(authority, 1)
+    delete provider.connection.connections.ethereum[1]
+    releaseCode()
+    await expect(eligibility).resolves.toMatchObject({ status: 'disconnected' })
+  })
+
+  it('rejects admission when another revocation becomes active during preflight', async () => {
+    let releaseCode
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getCode') {
+        releaseCode = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+
+    const admission = Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.addRequestForAccount(authority, {
+      ...request,
+      type: 'eip7702Revoke',
+      handlerId: 'competing-eip7702-revocation',
+      account: authority
+    })
+    releaseCode()
+    await expect(admission).rejects.toThrow('already active')
+  })
+
+  it('revalidates reviewed code before signer invocation', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    code = '0xef01002222222222222222222222222222222222222222'
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const request = Accounts.current().getRequest(reference.handlerId)
+    expect(request).toMatchObject({
+      status: 'error',
+      failureReason: 'evidence-changed',
+      notice: 'EIP-7702 delegation or nonce changed after review',
+      mode: 'monitor'
+    })
+    expect(signer.signEip7702Revoke).not.toHaveBeenCalled()
+  })
+
+  it('rejects a pending nonce change before signer invocation', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    pendingNonce = '0x4'
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    expect(Accounts.current().getRequest(reference.handlerId)).toMatchObject({
+      status: 'error',
+      failureReason: 'evidence-changed',
+      notice: 'EIP-7702 revocation requires a stable account nonce'
+    })
+    expect(signer.signEip7702Revoke).not.toHaveBeenCalled()
+  })
+
+  it('reports a bounded not-delegated failure when delegation clears after review', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    code = '0x'
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    expect(Accounts.current().getRequest(reference.handlerId)).toMatchObject({
+      status: 'error',
+      failureReason: 'not-delegated'
+    })
+    expect(signer.signEip7702Revoke).not.toHaveBeenCalled()
+  })
+
+  it('binds broadcast and receipt to the inspected hash and reports failed-but-cleared truthfully', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    code = '0x'
+    await flush()
+
+    const request = Accounts.current().getRequest(reference.handlerId)
+    expect(request).toMatchObject({
+      status: 'confirmed',
+      notice: 'Delegation removed',
+      tx: { confirmations: 12 },
+      result: {
+        receiptStatus: 'failed',
+        revocationStatus: 'cleared',
+        reason: 'code-cleared',
+        checkedAtBlock: '0x10'
+      }
+    })
+    expect(provider.connection.send).toHaveBeenCalledWith(
+      expect.objectContaining({ method: 'eth_sendRawTransaction', params: [expect.stringMatching(/^0x04/)] }),
+      expect.any(Function),
+      { type: 'ethereum', id: 1 }
+    )
+    expect(provider.connection.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'eth_getCode',
+        params: [authority, { blockHash: `0x${'c'.repeat(64)}`, requireCanonical: true }]
+      }),
+      expect.any(Function),
+      { type: 'ethereum', id: 1 }
+    )
+  })
+
+  it('keeps monitoring when the receipt block is no longer canonical', async () => {
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === '0x5') {
+        return callback({ result: { number: '0x5', hash: `0x${'f'.repeat(64)}` } })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    expect(revoke).toMatchObject({ status: 'verifying', tx: { confirmations: 0 } })
+    expect(revoke.result).toBeUndefined()
+    expect(Accounts.current().getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+  })
+
+  it('discards evidence when the receipt block changes after the block-bound code read', async () => {
+    let receiptBlockReads = 0
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === '0x5') {
+        receiptBlockReads += 1
+        const hash = receiptBlockReads === 1 ? `0x${'b'.repeat(64)}` : `0x${'f'.repeat(64)}`
+        return callback({ result: { number: '0x5', hash } })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Rechecking after chain reorganization',
+      tx: { confirmations: 0 }
+    })
+    expect(revoke.result).toBeUndefined()
+    expect(Accounts.current().getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+  })
+
+  it('discards evidence when the latest block changes after the block-bound code read', async () => {
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === '0x10') {
+        return callback({ result: { number: '0x10', hash: `0x${'f'.repeat(64)}` } })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Rechecking after chain reorganization',
+      tx: { confirmations: 0 }
+    })
+    expect(revoke.result).toBeUndefined()
+    expect(Accounts.current().getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+  })
+
+  it('ignores a late signer callback after the exact request is cleared', async () => {
+    signer.signEip7702Revoke.mockImplementationOnce((_index, signingRequest, callback) => {
+      pendingSignerCallback = () => callback(null, signEip7702RevokeRequest(privateKey, signingRequest))
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+    Accounts.current().clearRequest(reference.handlerId)
+    pendingSignerCallback()
+    await flush()
+
+    expect(
+      provider.connection.send.mock.calls.filter(([payload]) => payload.method === 'eth_sendRawTransaction')
+    ).toHaveLength(0)
+  })
+
+  it('keeps the review claimed and rejects decline while broadcast is in flight', async () => {
+    let releaseBroadcast
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_sendRawTransaction') {
+        releaseBroadcast = () => normalSend(payload, callback, chain)
+        return
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    expect(Accounts.current().getRequest(reference.handlerId).status).toBe('sending')
+    expect(Accounts.declineRequest(reference.handlerId, authority)).toBe(false)
+    expect(() => Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)).toThrow(
+      'cannot be stopped'
+    )
+    releaseBroadcast()
+    await flush()
+  })
+
+  it('ignores a mismatched broadcast hash and monitors the locally inspected hash', async () => {
+    let receiptAvailable = false
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_sendRawTransaction') return callback({ result: `0x${'f'.repeat(64)}` })
+      if (payload.method === 'eth_getTransactionReceipt' && !receiptAvailable) {
+        return callback({ result: null })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const accountInstance = Accounts.current()
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    const rawTransaction = provider.connection.send.mock.calls.find(
+      ([payload]) => payload.method === 'eth_sendRawTransaction'
+    )[0].params[0]
+    const inspectedHash = Transaction.from(rawTransaction).hash.toLowerCase()
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Submission status unclear',
+      submission: {
+        status: 'unconfirmed',
+        detail:
+          'Wren is monitoring the expected transaction hash, and this account’s request queue is paused until its status is known.'
+      },
+      tx: { hash: inspectedHash, confirmations: 0 }
+    })
+    expect(
+      provider.connection.send.mock.calls.find(
+        ([payload]) => payload.method === 'eth_getTransactionReceipt'
+      )[0].params[0]
+    ).toBe(inspectedHash)
+    expect(accountInstance.getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+
+    receiptAvailable = true
+    code = '0x'
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+    expect(revoke).toMatchObject({
+      status: 'confirmed',
+      tx: { hash: inspectedHash },
+      result: { revocationStatus: 'cleared' }
+    })
+  })
+
+  it('ignores a late duplicate callback and monitors the expected hash after a broadcast error', async () => {
+    let receiptAvailable = false
+    let lateBroadcastCallback
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_sendRawTransaction') {
+        callback({ error: { code: -32000, message: 'broadcast unavailable' } })
+        lateBroadcastCallback = () => callback({ result: `0x${'a'.repeat(64)}` })
+        return
+      }
+      if (payload.method === 'eth_getTransactionReceipt' && !receiptAvailable) {
+        return callback({ result: null })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const accountInstance = Accounts.current()
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    const rawTransaction = provider.connection.send.mock.calls.find(
+      ([payload]) => payload.method === 'eth_sendRawTransaction'
+    )[0].params[0]
+    const inspectedHash = Transaction.from(rawTransaction).hash.toLowerCase()
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Submission status unclear',
+      submission: { status: 'unconfirmed' },
+      tx: { hash: inspectedHash, confirmations: 0 }
+    })
+    expect(
+      provider.connection.send.mock.calls.filter(([payload]) => payload.method === 'eth_sendRawTransaction')
+    ).toHaveLength(1)
+
+    lateBroadcastCallback()
+    await flush()
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Submission status unclear',
+      submission: { status: 'unconfirmed' },
+      tx: { hash: inspectedHash }
+    })
+
+    receiptAvailable = true
+    code = '0x'
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+    expect(revoke).toMatchObject({ status: 'confirmed', result: { revocationStatus: 'cleared' } })
+    expect(revoke.submission).toBeUndefined()
+  })
+
+  it('stays fail-closed after an uncertain submission until trusted stop advances the FIFO', async () => {
+    let receiptReads = 0
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_sendRawTransaction') {
+        return callback({ error: { code: -32000, message: 'broadcast unavailable' } })
+      }
+      if (payload.method === 'eth_getTransactionReceipt') {
+        receiptReads += 1
+        return callback({ result: null })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    const accountInstance = Accounts.current()
+    const queued = { ...request, handlerId: 'after-uncertain-revocation', account: authority }
+    Accounts.addRequestForAccount(authority, queued)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    const operationVersion = revoke.operationVersion
+    expect(revoke).toMatchObject({
+      status: 'verifying',
+      notice: 'Submission status unclear',
+      submission: { status: 'unconfirmed' }
+    })
+    expect(accountInstance.getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBeUndefined()
+
+    expect(() => Accounts.stopEip7702RevocationMonitoring(account.id, reference.handlerId)).toThrow(
+      'requires the selected account'
+    )
+    expect(() => Accounts.stopEip7702RevocationMonitoring(authority, queued.handlerId)).toThrow(
+      'no longer active'
+    )
+
+    Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)
+    expect(accountInstance.getRequest(reference.handlerId)).toBeUndefined()
+    expect(revoke.operationVersion).toBe(operationVersion + 1)
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBe(queued)
+    expect(() => Accounts.stopEip7702RevocationMonitoring(authority, queued.handlerId)).toThrow(
+      'no longer active'
+    )
+    const readsAfterClear = receiptReads
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, operationVersion)
+    expect(receiptReads).toBe(readsAfterClear)
+    expect(() => Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)).toThrow(
+      'no longer active'
+    )
+  })
+
+  it('rejects stopping an EIP-7702 review before signing', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    expect(() => Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)).toThrow(
+      'cannot be stopped'
+    )
+    expect(Accounts.current().getActiveReviewRequest(reference.handlerId)).toBeDefined()
+  })
+
+  it('holds unavailable post-confirmation evidence until trusted stop advances the FIFO', async () => {
+    let monitorCodeUnavailable = false
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (
+        payload.method === 'eth_getCode' &&
+        typeof payload.params[1] === 'object' &&
+        monitorCodeUnavailable
+      ) {
+        return callback({ result: undefined })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    const accountInstance = Accounts.current()
+    const queued = { ...request, handlerId: 'after-unavailable-revocation', account: authority }
+    Accounts.addRequestForAccount(authority, queued)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    monitorCodeUnavailable = true
+    await flush()
+
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    expect(revoke).toMatchObject({
+      status: 'confirming',
+      tx: { confirmations: 12 },
+      result: { revocationStatus: 'unavailable' }
+    })
+    expect(revoke.submission).toBeUndefined()
+    expect(accountInstance.getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBeUndefined()
+
+    Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBe(queued)
+  })
+
+  it('removes stale receipt truth during a reorg and reaches terminal state only after re-inclusion', async () => {
+    let receiptReads = 0
+    let blockReads = 0
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getTransactionReceipt') {
+        receiptReads += 1
+        if (receiptReads === 2) return callback({ result: null })
+        const rawHash = provider.connection.send.mock.calls.find(
+          ([candidate]) => candidate.method === 'eth_sendRawTransaction'
+        )?.[0]?.params?.[0]
+        return callback({
+          result: {
+            transactionHash: Transaction.from(rawHash).hash,
+            blockHash: `0x${(receiptReads === 1 ? 'b' : 'c').repeat(64)}`,
+            blockNumber: receiptReads === 1 ? '0x5' : '0x6',
+            gasUsed: '0xb3b0',
+            status: '0x1'
+          }
+        })
+      }
+      if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === 'latest') {
+        blockReads += 1
+        const number = blockReads === 1 ? '0x5' : '0x11'
+        const hash = number === '0x5' ? `0x${'b'.repeat(64)}` : `0x${'d'.repeat(64)}`
+        return callback({ result: { number, hash } })
+      }
+      if (payload.method === 'eth_getBlockByNumber') {
+        const number = payload.params[0]
+        const hash =
+          number === '0x5'
+            ? `0x${'b'.repeat(64)}`
+            : number === '0x11'
+              ? `0x${'d'.repeat(64)}`
+              : `0x${'c'.repeat(64)}`
+        return callback({ result: { number, hash } })
+      }
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    code = '0x'
+    await flush()
+    const accountInstance = Accounts.current()
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    expect(revoke).toMatchObject({ status: 'confirming', tx: { confirmations: 1 } })
+    const queued = { ...request, handlerId: 'blocked-through-confirmation', account: authority }
+    Accounts.addRequestForAccount(authority, queued)
+    expect(accountInstance.getActiveReviewRequest(reference.handlerId)).toBe(revoke)
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBeUndefined()
+
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+    expect(revoke).toMatchObject({ status: 'verifying', tx: { confirmations: 0 } })
+    expect(revoke.result).toBeUndefined()
+
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+    expect(revoke).toMatchObject({
+      status: 'confirmed',
+      tx: { confirmations: 12 },
+      result: { revocationStatus: 'cleared', checkedAtBlock: '0x11' }
+    })
+    expect(accountInstance.getActiveReviewRequest(queued.handlerId)).toBe(queued)
+  })
+
+  it('reports bounded ineligibility for unsupported, disconnected, and non-delegated states', async () => {
+    signer.type = 'ledger'
+    await expect(Accounts.getEip7702RevocationEligibility(authority, 1)).resolves.toMatchObject({
+      status: 'unsupported-signer'
+    })
+    signer.type = 'seed'
+    delete provider.connection.connections.ethereum[1]
+    await expect(Accounts.getEip7702RevocationEligibility(authority, 1)).resolves.toMatchObject({
+      status: 'disconnected'
+    })
+    provider.connection.connections.ethereum[1] = { chainConfig: {}, active: { connected: true } }
+    code = '0x'
+    await expect(Accounts.getEip7702RevocationEligibility(authority, 1)).resolves.toMatchObject({
+      status: 'not-delegated'
+    })
+    signer.type = 'seed'
+  })
+
+  it('rejects forged queued fee mutation and keeps the fixed envelope', async () => {
+    const blocker = { ...request, handlerId: 'queued-before-revoke', account: authority }
+    Accounts.addRequestForAccount(authority, blocker)
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    expect(() => Accounts.setGasLimit('0xb3b0', reference.handlerId, true, authority)).toThrow(
+      'waiting for review'
+    )
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    expect(revoke.fees.gasLimit).toBe('0xc350')
+  })
+
+  it('edits only active EIP-1559 fees within the fixed revocation envelope', async () => {
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    const initialOperationVersion = revoke.operationVersion
+
+    Accounts.setBaseFee('0x1', reference.handlerId, true, authority)
+    Accounts.setPriorityFee('0x2', reference.handlerId, true, authority)
+    Accounts.setGasLimit('0xb3b0', reference.handlerId, true, authority)
+
+    expect(revoke).toMatchObject({
+      feesUpdatedByUser: true,
+      fees: {
+        gasLimit: '0xb3b0',
+        maxFeePerGas: '0x3',
+        maxPriorityFeePerGas: '0x2'
+      }
+    })
+    expect(BigInt(revoke.fees.maxFee)).toBe(BigInt(revoke.fees.gasLimit) * BigInt(revoke.fees.maxFeePerGas))
+    expect(revoke.operationVersion).toBeGreaterThan(initialOperationVersion)
+    expect(() => Accounts.setGasLimit('0xb3af', reference.handlerId, true, authority)).toThrow(
+      'below the intrinsic minimum'
+    )
+    expect(() => Accounts.setGasPrice('0x1', reference.handlerId, true, authority)).toThrow(
+      'does not use a legacy gas price'
+    )
   })
 })

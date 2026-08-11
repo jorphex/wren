@@ -2,6 +2,8 @@ import { computeAddress, SigningKey } from 'ethers'
 
 import {
   assertSoftwareEip7702RevokeSigner,
+  assertEip7702RevokeEvidenceStable,
+  inspectEip7702RevokePreflight,
   prepareSoftwareEip7702Revoke,
   signSoftwareEip7702Revoke,
   verifyEip7702RevocationResult,
@@ -39,6 +41,23 @@ function createSigner(overrides: Partial<SoftwareEip7702RevokeSigner> = {}) {
 }
 
 describe('software EIP-7702 revocation', () => {
+  it('creates stable reviewed evidence without retaining raw code', () => {
+    const evidence = inspectEip7702RevokePreflight(AUTHORITY, preflight)
+    expect(evidence).toEqual({
+      source: 'eth_getCode',
+      authority: AUTHORITY.toLowerCase(),
+      delegate: '0x1111111111111111111111111111111111111111',
+      codeHash: expect.stringMatching(/^0x[0-9a-f]{64}$/),
+      latestNonce: '0x3',
+      pendingNonce: '0x3'
+    })
+    expect(evidence).not.toHaveProperty('authorityCode')
+    expect(() => assertEip7702RevokeEvidenceStable(evidence, evidence)).not.toThrow()
+    expect(() => assertEip7702RevokeEvidenceStable(evidence, { ...evidence, pendingNonce: '0x4' })).toThrow(
+      'changed after review'
+    )
+  })
+
   it.each(['ring', 'seed'])('prepares the fixed request for an unlocked %s signer', (type) => {
     const request = prepareSoftwareEip7702Revoke(createSigner({ type }), 0, input, preflight)
     expect(request.authority).toBe(AUTHORITY)
