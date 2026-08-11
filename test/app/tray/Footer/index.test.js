@@ -1,8 +1,12 @@
 import Restore from 'react-restore'
 
 import { canApproveWalletCalls, Footer } from '../../../../app/tray/Footer'
-import { render, screen } from '../../../componentSetup'
+import { act, render, screen, waitFor } from '../../../componentSetup'
 import link from '../../../../resources/link'
+import {
+  clearTransactionFeeDraftSafety,
+  setTransactionFeeDraftSafety
+} from '../../../../resources/domain/request'
 
 jest.mock('../../../../resources/link', () => ({
   invoke: jest.fn(),
@@ -14,6 +18,7 @@ beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
   link.invoke.mockReset()
+  clearTransactionFeeDraftSafety('revoke-1')
 })
 
 let resizeCallback
@@ -57,7 +62,11 @@ const renderRequestFooter = (req, signerType = 'ledger', crumbData = {}) => {
     {
       main: {
         accounts: {
-          [account]: { lastSignerType: signerType, requests: { [req.handlerId]: req } }
+          [account]: {
+            lastSignerType: signerType,
+            activeRequestId: req.handlerId,
+            requests: { [req.handlerId]: req }
+          }
         }
       },
       windows: {
@@ -77,6 +86,225 @@ const renderRequestFooter = (req, signerType = 'ledger', crumbData = {}) => {
   const ConnectedFooter = Restore.connect(Footer, store)
   return render(<ConnectedFooter />)
 }
+
+it('submits an active delegation revocation with the reduced request reference', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' }
+  }
+  const { user } = renderRequestFooter(req, 'ring')
+
+  expect(screen.getByText('Review delegation revocation')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Revoke delegation' }))
+
+  expect(link.rpc).toHaveBeenCalledWith(
+    'approveRequest',
+    { handlerId: req.handlerId, account: req.account, type: req.type },
+    expect.any(Function)
+  )
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true)
+})
+
+it('keeps a waiting delegation revocation non-actionable', () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' }
+  }
+  const accountId = req.account
+  const store = Restore.create(
+    {
+      main: {
+        accounts: {
+          [accountId]: {
+            lastSignerType: 'ring',
+            activeRequestId: 'earlier-request',
+            requests: { [req.handlerId]: req }
+          }
+        }
+      },
+      windows: {
+        panel: {
+          footer: { height: 80 },
+          nav: [
+            {
+              view: 'requestView',
+              data: { accountId, requestId: req.handlerId, step: 'confirm' }
+            }
+          ]
+        }
+      }
+    },
+    {}
+  )
+  const ConnectedFooter = Restore.connect(Footer, store)
+  render(<ConnectedFooter />)
+
+  expect(screen.getByText('Waiting in request queue')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Revoke delegation' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+})
+
+it('confirms stopping ambiguous-submission monitoring and restores focus on Escape', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' },
+    status: 'verifying',
+    mode: 'monitor',
+    notice: 'Submission status unclear',
+    submission: { status: 'unconfirmed' },
+    tx: { hash: '0x1234', confirmations: 0 }
+  }
+  const { user } = renderRequestFooter(req, 'ring')
+
+  expect(screen.getByText('Submission status unclear')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'Wren is monitoring the expected transaction hash, and this account’s request queue is paused until its status is known.'
+    )
+  ).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Revoke delegation' })).toBeNull()
+  const trigger = screen.getByRole('button', { name: 'Stop monitoring' })
+  await user.click(trigger)
+
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
+  expect(screen.getByText('Stop monitoring this revocation?')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'Wren does not yet know whether this revocation was submitted. Stopping monitoring cannot cancel a transaction that may already be on the network.'
+    )
+  ).toBeTruthy()
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Keep monitoring' }))
+  )
+
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+})
+
+it.each(['sending', 'error'])('does not offer stop monitoring in the %s state', (status) => {
+  renderRequestFooter(
+    {
+      type: 'eip7702Revoke',
+      handlerId: 'revoke-1',
+      account: '0x0000000000000000000000000000000000000001',
+      evidence: { delegate: '0x0000000000000000000000000000000000000002' },
+      status,
+      mode: 'monitor',
+      tx: { hash: '0x1234', confirmations: 0 }
+    },
+    'ring'
+  )
+
+  expect(screen.queryByRole('button', { name: 'Stop monitoring' })).toBeNull()
+})
+
+it('stops known-submission monitoring once and reports the unverified terminal state', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' },
+    status: 'confirming',
+    mode: 'monitor',
+    tx: { hash: '0x1234', confirmations: 4 }
+  }
+  let callback
+  link.rpc.mockImplementation((_method, _reference, onResult) => {
+    callback = onResult
+  })
+  const { user } = renderRequestFooter(req, 'ring')
+
+  await user.click(screen.getByRole('button', { name: 'Stop monitoring' }))
+  expect(screen.getByText('Stop monitoring this submitted revocation?')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'Wren knows the revocation was submitted but can’t verify whether delegation was cleared. Stopping monitoring cannot cancel the transaction or prove that delegation was cleared. Your account request queue will continue.'
+    )
+  ).toBeTruthy()
+
+  const commit = screen.getByRole('button', { name: 'Stop monitoring and continue requests' })
+  await user.click(commit)
+  expect(link.rpc).toHaveBeenCalledWith(
+    'stopEip7702RevocationMonitoring',
+    { handlerId: req.handlerId, account: req.account, type: req.type },
+    expect.any(Function)
+  )
+  expect(commit.disabled).toBe(true)
+  await user.click(commit)
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+
+  act(() => callback(null, true))
+  expect(screen.getByText('Monitoring stopped')).toBeTruthy()
+  expect(
+    screen.getByText('The revocation remains unverified, and queued account requests will continue.')
+  ).toBeTruthy()
+})
+
+it('recovers the stop-monitoring dialog after an RPC failure', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' },
+    status: 'verifying',
+    mode: 'monitor',
+    submission: { status: 'unconfirmed' },
+    tx: { hash: '0x1234', confirmations: 0 }
+  }
+  let callback
+  link.rpc.mockImplementation((_method, _reference, onResult) => {
+    callback = onResult
+  })
+  const { user } = renderRequestFooter(req, 'ring')
+
+  await user.click(screen.getByRole('button', { name: 'Stop monitoring' }))
+  await user.click(screen.getByRole('button', { name: 'Stop monitoring and continue requests' }))
+  act(() => callback(new Error('bridge failed')))
+
+  expect(screen.getByRole('alert').textContent).toBe('Monitoring could not be stopped. Try again.')
+  expect(screen.getByRole('button', { name: 'Stop monitoring and continue requests' }).disabled).toBe(false)
+})
+
+it('blocks delegation revocation while its visible fee draft is invalid', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' }
+  }
+  setTransactionFeeDraftSafety(req.handlerId, false)
+  renderRequestFooter(req, 'ring')
+
+  expect(screen.getByRole('button', { name: 'Revoke delegation' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(false)
+  expect(screen.getByText('Finish or correct the fee before signing.')).toBeTruthy()
+
+  act(() => setTransactionFeeDraftSafety(req.handlerId, true))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Revoke delegation' }).disabled).toBe(false))
+})
+
+it('recovers delegation decision controls after an RPC failure', async () => {
+  const req = {
+    type: 'eip7702Revoke',
+    handlerId: 'revoke-1',
+    account: '0x0000000000000000000000000000000000000001',
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' }
+  }
+  link.rpc.mockImplementation((_method, _reference, callback) => callback(new Error('bridge failed')))
+  const { user } = renderRequestFooter(req, 'ring')
+
+  await user.click(screen.getByRole('button', { name: 'Revoke delegation' }))
+
+  expect((await screen.findByRole('alert')).textContent).toBe('Request could not be updated. Try again.')
+  expect(screen.getByRole('button', { name: 'Revoke delegation' }).disabled).toBe(false)
+})
 
 it('allows a fully reviewed wallet-call batch to be submitted', () => {
   expect(canApproveWalletCalls(request(), undefined, 'ledger')).toBe(true)

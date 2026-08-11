@@ -667,6 +667,113 @@ button,
   text-overflow ellipsis
   white-space nowrap
 
+.delegationRevocation
+  width 100%
+  box-sizing border-box
+  margin var(--wren-space-5) 0 0
+  padding var(--wren-space-4) var(--wren-space-2) 0
+  border-top 1px solid var(--wren-ledger-rule)
+  border-bottom 1px solid var(--wren-ledger-rule)
+  color var(--wren-text-primary)
+  background transparent
+
+.delegationRevocationHeader
+  display flex
+  align-items flex-start
+  justify-content space-between
+  padding-bottom var(--wren-space-3)
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+  h2
+    margin 0
+    font-family var(--wren-font-heading)
+    font-size var(--wren-type-body)
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 600
+
+  p
+    margin var(--wren-space-1) 0 0
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 1.45
+
+.delegationRevocationSelectors
+  display grid
+  grid-template-columns minmax(0, 1.35fr) minmax(160px, .65fr)
+  gap var(--wren-space-3)
+  padding var(--wren-space-3) 0
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+  label
+    display flex
+    min-width 0
+    flex-direction column
+    gap var(--wren-space-1)
+    color var(--wren-text-secondary)
+    font-size 12px
+
+    small
+      color var(--wren-text-muted)
+      font-size 12px
+      line-height 1.4
+
+  select
+    width 100%
+    min-height 44px
+    box-sizing border-box
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+
+.delegationRevocationMessage
+  min-height 44px
+  box-sizing border-box
+  margin 0
+  padding var(--wren-space-3) 0 0
+  color var(--wren-text-secondary)
+  font-size 12px
+  line-height 1.5
+
+.delegationRevocationEligible
+  display flex
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-4)
+  padding-top var(--wren-space-3)
+
+  > button
+    min-height 44px
+    flex none
+
+.delegationRevocationIdentity
+  display flex
+  min-width 0
+  flex-direction column
+  gap 3px
+
+  span,
+  small
+    color var(--wren-text-secondary)
+    font-size 12px
+
+  strong
+    overflow hidden
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 500
+    text-overflow ellipsis
+    white-space nowrap
+
+@media (max-width: 540px)
+  .delegationRevocationSelectors
+    grid-template-columns 1fr
+
+  .delegationRevocationEligible
+    align-items stretch
+    flex-direction column
+
+    > button
+      width 100%
+
 @media (max-height: 760px)
   .accountsEmpty
     min-height 450px

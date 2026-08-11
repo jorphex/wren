@@ -59,3 +59,13 @@ test('keeps dashboard add actions compact and inactive network toggles neutral',
     /\.network \.signerPermissionToggle[\s\S]*?width 42px[\s\S]*?height 24px[\s\S]*?border-radius 6px[\s\S]*?background var\(--wren-surface-inset\)[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-surface-inset\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
   )
 })
+
+test('keeps delegation recovery flat, ruled, and responsive', () => {
+  expect(dashStyle).toMatch(
+    /\.delegationRevocation[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?background transparent/
+  )
+  expect(dashStyle).toMatch(/\.delegationRevocationSelectors[\s\S]*?select[\s\S]*?min-height 44px/)
+  expect(dashStyle).toMatch(
+    /@media \(max-width: 540px\)[\s\S]*?\.delegationRevocationSelectors[\s\S]*?grid-template-columns 1fr[\s\S]*?\.delegationRevocationEligible[\s\S]*?flex-direction column/
+  )
+})

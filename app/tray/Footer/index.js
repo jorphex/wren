@@ -4,10 +4,15 @@ import Restore from 'react-restore'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { isHardwareSigner, isWatchOnlyAccountType } from '../../../resources/domain/signer'
-import { isSignatureRequest } from '../../../resources/domain/request'
+import {
+  isSignatureRequest,
+  isTransactionFeeDraftSafe,
+  subscribeToTransactionFeeDraftSafety
+} from '../../../resources/domain/request'
 
 import RequestCommand, { accountCodeEvidenceReady } from './RequestCommand'
 import { parseWalletCallsDraft } from '../Account/Requests/WalletCallsRequest/adjustment'
+import { revokeLifecyclePresentation } from '../Account/Requests/Eip7702RevokeRequest'
 
 const measure = (ref) => {
   if (!ref || !ref.current) return { height: 0, width: 0 }
@@ -65,14 +70,28 @@ export class Footer extends React.Component {
       allowInput: true,
       walletCallsActionId: undefined,
       walletCallsAdjustmentId: undefined,
-      walletCallsAcknowledgement: undefined
+      walletCallsAcknowledgement: undefined,
+      eip7702ActionId: undefined,
+      eip7702ActionError: undefined,
+      eip7702MonitoringDialog: undefined,
+      eip7702MonitoringPending: undefined,
+      eip7702MonitoringError: undefined,
+      eip7702MonitoringStopped: undefined
     }
     this.footerRef = React.createRef()
     this.walletCallsAcknowledgementRef = React.createRef()
     this.walletCallsSubmitRef = React.createRef()
+    this.eip7702StopMonitoringTriggerRef = React.createRef()
+    this.eip7702KeepMonitoringRef = React.createRef()
     this.lastHeight = undefined
   }
   componentDidMount() {
+    this.mounted = true
+    this.unsubscribeEip7702FeeSafety = subscribeToTransactionFeeDraftSafety(() => {
+      if (this.mounted) {
+        this.setState((state) => ({ eip7702FeeRevision: (state.eip7702FeeRevision || 0) + 1 }))
+      }
+    })
     this.observer = new ResizeObserver(() => {
       const size = measure(this.footerRef)
       if (size.height !== this.lastHeight) {
@@ -83,6 +102,9 @@ export class Footer extends React.Component {
     if (this.observer) this.observer.observe(this.footerRef.current)
   }
   componentWillUnmount() {
+    this.mounted = false
+    this.eip7702MonitoringRpcId = undefined
+    if (this.unsubscribeEip7702FeeSafety) this.unsubscribeEip7702FeeSafety()
     if (this.observer?.disconnect) {
       this.observer.disconnect()
     } else if (this.footerRef.current && this.observer) {
@@ -168,6 +190,258 @@ export class Footer extends React.Component {
       </div>
     )
   }
+  renderEip7702RevocationFooter(req, account) {
+    if (this.state.eip7702MonitoringStopped?.handlerId === req.handlerId) {
+      return this.renderEip7702MonitoringStopped()
+    }
+
+    const active = req.mode === 'monitor' || account.activeRequestId === req.handlerId
+    const presentation = revokeLifecyclePresentation(req, active)
+    const actionPending = this.state.eip7702ActionId === req.handlerId
+    const feeDraftSafe = isTransactionFeeDraftSafe(req.handlerId)
+    const decisionAvailable = active && !req.status && !req.locked
+    const canCancel = decisionAvailable && !actionPending
+    const canDecide = decisionAvailable && !actionPending && feeDraftSafe
+    const canStopMonitoring =
+      active &&
+      req.mode === 'monitor' &&
+      Boolean(req.tx?.hash) &&
+      ['verifying', 'confirming'].includes(req.status)
+    const terminal = ['verified', 'unverified', 'changed', 'skipped', 'unavailable', 'declined'].includes(
+      presentation.kind
+    )
+
+    if (this.state.eip7702MonitoringDialog?.handlerId === req.handlerId) {
+      return this.renderEip7702StopMonitoringDialog(req)
+    }
+
+    return (
+      <div className='requestApprove requestApproveLightweight eip7702RevokeActions'>
+        <div className='requestActionContext' role='status' aria-live='polite'>
+          <span className='requestActionContextIcon'>
+            <Icon
+              name={
+                presentation.kind === 'verified'
+                  ? 'check'
+                  : presentation.kind === 'waiting'
+                    ? 'pending'
+                    : 'permissions'
+              }
+              size={19}
+            />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>{presentation.title}</strong>
+            <span>{presentation.detail}</span>
+            {!feeDraftSafe && !req.status ? (
+              <span role='alert'>Finish or correct the fee before signing.</span>
+            ) : null}
+            {this.state.eip7702ActionError?.handlerId === req.handlerId ? (
+              <span role='alert'>{this.state.eip7702ActionError.message}</span>
+            ) : null}
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          {decisionAvailable ? (
+            <>
+              <button
+                type='button'
+                className='requestDecline'
+                disabled={!canCancel}
+                onClick={() => {
+                  if (!canCancel) return
+                  this.submitEip7702Decision('declineRequest', req)
+                }}
+              >
+                <span className='requestDeclineButton _txButton'>
+                  <span>Cancel</span>
+                </span>
+              </button>
+              <button
+                type='button'
+                className='requestSign'
+                disabled={!canDecide}
+                onClick={() => {
+                  if (!canDecide) return
+                  this.submitEip7702Decision('approveRequest', req)
+                }}
+              >
+                <span className='requestSignButton _txButton'>
+                  <span>Revoke delegation</span>
+                </span>
+              </button>
+            </>
+          ) : canStopMonitoring ? (
+            <button
+              ref={this.eip7702StopMonitoringTriggerRef}
+              type='button'
+              className='requestDecline'
+              onClick={() => this.openEip7702StopMonitoringDialog(req)}
+            >
+              <span className='requestDeclineButton _txButton'>
+                <span>Stop monitoring</span>
+              </span>
+            </button>
+          ) : terminal || presentation.kind === 'waiting' ? (
+            <button type='button' className='requestSign' onClick={() => link.send('nav:back', 'panel')}>
+              <span className='requestSignButton _txButton'>
+                <span>Close</span>
+              </span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+  openEip7702StopMonitoringDialog(req) {
+    if (this.eip7702MonitoringRpcId || !this.mounted) return
+    const ambiguous = req.submission?.status === 'unconfirmed'
+    this.setState(
+      {
+        eip7702MonitoringDialog: { handlerId: req.handlerId, ambiguous },
+        eip7702MonitoringError: undefined
+      },
+      () => this.eip7702KeepMonitoringRef.current?.focus()
+    )
+  }
+  closeEip7702StopMonitoringDialog() {
+    if (this.eip7702MonitoringRpcId || !this.mounted) return
+    this.setState({ eip7702MonitoringDialog: undefined, eip7702MonitoringError: undefined }, () =>
+      this.eip7702StopMonitoringTriggerRef.current?.focus()
+    )
+  }
+  stopEip7702RevocationMonitoring(req) {
+    if (this.eip7702MonitoringRpcId || !this.mounted) return
+    const rpcId = `${req.account}:${req.handlerId}`
+    const reference = { handlerId: req.handlerId, account: req.account, type: req.type }
+    this.eip7702MonitoringRpcId = rpcId
+    this.setState({ eip7702MonitoringPending: req.handlerId, eip7702MonitoringError: undefined })
+    let settled = false
+    link.rpc('stopEip7702RevocationMonitoring', reference, (error) => {
+      if (settled) return
+      settled = true
+      if (!this.mounted || this.eip7702MonitoringRpcId !== rpcId) return
+      this.eip7702MonitoringRpcId = undefined
+      if (error) {
+        this.setState({
+          eip7702MonitoringPending: undefined,
+          eip7702MonitoringError: {
+            handlerId: req.handlerId,
+            message: 'Monitoring could not be stopped. Try again.'
+          }
+        })
+        return
+      }
+      this.setState({
+        eip7702MonitoringDialog: undefined,
+        eip7702MonitoringPending: undefined,
+        eip7702MonitoringError: undefined,
+        eip7702MonitoringStopped: { account: req.account, handlerId: req.handlerId }
+      })
+    })
+  }
+  renderEip7702StopMonitoringDialog(req) {
+    const dialog = this.state.eip7702MonitoringDialog
+    const pending = this.state.eip7702MonitoringPending === req.handlerId
+    const error = this.state.eip7702MonitoringError
+    const title = dialog.ambiguous
+      ? 'Stop monitoring this revocation?'
+      : 'Stop monitoring this submitted revocation?'
+    const detail = dialog.ambiguous
+      ? 'Wren does not yet know whether this revocation was submitted. Stopping monitoring cannot cancel a transaction that may already be on the network.'
+      : 'Wren knows the revocation was submitted but can’t verify whether delegation was cleared. Stopping monitoring cannot cancel the transaction or prove that delegation was cleared. Your account request queue will continue.'
+
+    return (
+      <div
+        className='requestApprove requestApproveLightweight eip7702StopMonitoringDialog'
+        role='alertdialog'
+        aria-modal='true'
+        aria-labelledby='eip7702-stop-monitoring-title'
+        aria-describedby='eip7702-stop-monitoring-detail'
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && !pending) {
+            event.preventDefault()
+            this.closeEip7702StopMonitoringDialog()
+          }
+        }}
+      >
+        <div className='requestActionContext'>
+          <span className='requestActionContextIcon'>
+            <Icon name='alert' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong id='eip7702-stop-monitoring-title'>{title}</strong>
+            <span id='eip7702-stop-monitoring-detail'>{detail}</span>
+            {error?.handlerId === req.handlerId ? <span role='alert'>{error.message}</span> : null}
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          <button
+            ref={this.eip7702KeepMonitoringRef}
+            type='button'
+            className='requestDecline'
+            disabled={pending}
+            onClick={() => this.closeEip7702StopMonitoringDialog()}
+          >
+            <span className='requestDeclineButton _txButton'>
+              <span>Keep monitoring</span>
+            </span>
+          </button>
+          <button
+            type='button'
+            className='requestSign'
+            disabled={pending}
+            onClick={() => this.stopEip7702RevocationMonitoring(req)}
+          >
+            <span className='requestSignButton _txButton'>
+              <span>Stop monitoring and continue requests</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+  renderEip7702MonitoringStopped() {
+    return (
+      <div className='requestApprove requestApproveLightweight eip7702MonitoringStopped'>
+        <div className='requestActionContext' role='status' aria-live='polite'>
+          <span className='requestActionContextIcon'>
+            <Icon name='check' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>Monitoring stopped</strong>
+            <span>The revocation remains unverified, and queued account requests will continue.</span>
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          <button type='button' className='requestSign' onClick={() => link.send('nav:back', 'panel')}>
+            <span className='requestSignButton _txButton'>
+              <span>Close</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+  submitEip7702Decision(method, req) {
+    if (this.state.eip7702ActionId === req.handlerId || !this.mounted) return
+    const reference = { handlerId: req.handlerId, account: req.account, type: req.type }
+    this.setState({ eip7702ActionId: req.handlerId, eip7702ActionError: undefined })
+    const onResult = (error) => {
+      if (!this.mounted || !error) return
+      const current = this.store('main.accounts', req.account, 'requests', req.handlerId)
+      if (!current || current.status || current.locked || current.mode === 'monitor') return
+      this.setState({
+        eip7702ActionId: undefined,
+        eip7702ActionError: {
+          handlerId: req.handlerId,
+          message: 'Request could not be updated. Try again.'
+        }
+      })
+    }
+    if (method === 'approveRequest') link.rpc('approveRequest', reference, onResult)
+    else link.rpc('declineRequest', reference, onResult)
+  }
   renderFooter() {
     const crumb = this.store('windows.panel.nav')[0] || {}
 
@@ -175,8 +449,17 @@ export class Footer extends React.Component {
       const { accountId, requestId } = crumb.data
       const account = this.store('main.accounts', accountId)
       const req = this.store('main.accounts', accountId, 'requests', requestId)
+      if (
+        !req &&
+        this.state.eip7702MonitoringStopped?.account === accountId &&
+        this.state.eip7702MonitoringStopped?.handlerId === requestId
+      ) {
+        return this.renderEip7702MonitoringStopped()
+      }
       if (req) {
-        if (req.type === 'transaction' && crumb.data.step === 'confirm') {
+        if (req.type === 'eip7702Revoke' && crumb.data.step === 'confirm') {
+          return this.renderEip7702RevocationFooter(req, account)
+        } else if (req.type === 'transaction' && crumb.data.step === 'confirm') {
           return (
             <RequestCommand
               key={req.handlerId}

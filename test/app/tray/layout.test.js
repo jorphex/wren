@@ -9,6 +9,7 @@ const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
+const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 
 test('keeps account collection and balance interiors on one ruled ledger', () => {
   expect(accountStyle).toMatch(
@@ -91,6 +92,18 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
   )
   expect(signingStyle).toMatch(
     /@media \(max-width: 560px\)[\s\S]*?\.approveTransaction \.transactionReviewMain[\s\S]*?\._txDescription[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.transactionReviewSummaryStatus[\s\S]*?width 100%[\s\S]*?max-width none/
+  )
+})
+
+test('keeps delegation revocation readable and operable at scaled narrow widths', () => {
+  expect(revokeStyle).toMatch(
+    /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/
+  )
+  expect(revokeStyle).toMatch(
+    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?min-height 44px/
+  )
+  expect(revokeStyle).toMatch(
+    /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/
   )
 })
 

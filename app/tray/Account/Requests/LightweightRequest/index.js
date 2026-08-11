@@ -65,7 +65,7 @@ export const RequestSection = ({ children, title }) => (
   </section>
 )
 
-const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
+export const CopyableRequestValue = ({ copyLabel, displayValue, value }) => {
   const [copied, copyValue] = useCopiedMessage(value)
 
   return (

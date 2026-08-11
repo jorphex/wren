@@ -385,6 +385,39 @@ export class Requests extends React.Component {
                   <div style={{ height: '10px' }} />
                 </RequestItem>
               )
+            } else if (req.type === 'eip7702Revoke') {
+              const chainId = Number(req.chainId)
+              const chainName = this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`
+              const metadata = this.store('main.networksMeta.ethereum', chainId) || {}
+              const delegate = req.evidence?.delegate || ''
+              return (
+                <RequestItem
+                  key={req.handlerId}
+                  req={req}
+                  {...this.requestQueueProps(req)}
+                  account={this.props.account}
+                  handlerId={req.handlerId}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
+                  title={`${chainName} delegation revocation`}
+                  color={metadata.primaryColor ? `var(--${metadata.primaryColor})` : 'var(--outerspace)'}
+                  img={metadata.icon}
+                  svgName='accounts'
+                >
+                  <div className='eip7702RevokeRequestSummary'>
+                    {delegate ? (
+                      <>
+                        Current delegate{' '}
+                        <span>
+                          {delegate.slice(0, 8)}…{delegate.slice(-6)}
+                        </span>
+                      </>
+                    ) : (
+                      'Review current delegation'
+                    )}
+                  </div>
+                </RequestItem>
+              )
             } else if (req.type === 'transaction') {
               const chainId = parseInt(req.data.chainId, 16)
               const chainName = this.store('main.networks.ethereum', chainId, 'name')

@@ -29,6 +29,7 @@ import AddTokenRequest from './Requests/AddTokenRequest'
 import SignTypedDataRequest from './Requests/SignTypedDataRequest'
 import SignPermitRequest from './Requests/SignPermitRequest'
 import WalletCallsRequest from './Requests/WalletCallsRequest'
+import Eip7702RevokeRequest from './Requests/Eip7702RevokeRequest'
 import WalletCallsStatus from './WalletCallsStatus'
 import { isHardwareSigner } from '../../../resources/domain/signer'
 import { accountViewTitles } from '../../../resources/domain/request'
@@ -42,7 +43,8 @@ const requests = {
   access: ProviderRequest,
   addChain: ChainRequest,
   addToken: AddTokenRequest,
-  walletCalls: WalletCallsRequest
+  walletCalls: WalletCallsRequest,
+  eip7702Revoke: Eip7702RevokeRequest
 }
 
 const modules = {
@@ -417,6 +419,18 @@ class _AccountBody extends React.Component {
   }
 
   getChainData(req) {
+    if (req.type === 'eip7702Revoke') {
+      const chainId = Number(req.chainId)
+      const nativeCurrency = this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency') || {}
+      return {
+        chainId,
+        chainName: this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`,
+        nativeCurrencySymbol: nativeCurrency.symbol || '?',
+        nativeCurrencyDecimals: nativeCurrency.decimals ?? 18,
+        nativeCurrencyUsd: nativeCurrency.usd
+      }
+    }
+
     if (req.type === 'walletCalls') {
       const chainId = parseInt(req.chainId, 16)
       const nativeCurrency = this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency') || {}

@@ -18,6 +18,7 @@ import AddRing from './Add/AddRing'
 import AddKeystore from './Add/AddKeystore'
 import AddAddress from './Add/AddAddress'
 import { compactAccountAddress } from './address'
+import { DelegationRevocation } from './DelegationRevocation'
 
 export class AddAccounts extends React.Component {
   constructor(...args) {
@@ -292,6 +293,14 @@ export class Dash extends React.Component {
                 ? hotSigners.map((signer, index) => <Signer index={index} key={signer.id} {...signer} />)
                 : null}
             </div>
+            {!empty ? (
+              <DelegationRevocation
+                accounts={accounts}
+                currentAccount={this.store('selected.current')}
+                networks={this.store('main.networks.ethereum') || {}}
+                signers={signers}
+              />
+            ) : null}
             {empty ? (
               <div className='accountsEmpty'>
                 <WrenEmptyState

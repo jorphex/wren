@@ -195,6 +195,33 @@ it('does not infer a current request when the account has not exposed one', () =
   expect(screen.getByText('2 requests waiting')).toBeTruthy()
 })
 
+it('renders wallet-owned delegation revocations in the same active FIFO ledger', () => {
+  const revoke = {
+    handlerId: 'revoke',
+    created: 1,
+    origin: 'wren',
+    queueIndex: 1,
+    type: 'eip7702Revoke',
+    chainId: 1,
+    evidence: { delegate: '0x0000000000000000000000000000000000000002' }
+  }
+
+  render(
+    <ExpandedRequestsHarness
+      expanded
+      account='0xabc'
+      activeRequestId='revoke'
+      moduleId='requests'
+      requests={{ revoke }}
+    />
+  )
+
+  expect(screen.getByRole('button', { name: 'Review Chain 1 delegation revocation. Current' })).toBeTruthy()
+  const summary = document.querySelector('.eip7702RevokeRequestSummary')
+  expect(summary.textContent).toBe('Current delegate 0x000000…000002')
+  expect(summary.querySelector('span').textContent).toBe('0x000000…000002')
+})
+
 it('opens pending requests from a native keyboard-operable button and restores focus on return', async () => {
   const requests = new Requests({ expanded: true, account: '0xabc', moduleId: 'requests' })
   requests.props = { expanded: false, account: '0xabc', moduleId: 'requests' }
