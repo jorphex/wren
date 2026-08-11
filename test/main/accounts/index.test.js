@@ -1432,7 +1432,8 @@ describe('account-bound request transitions', () => {
     expect(Accounts.current().id).toBe(account.address)
     expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
       status: 'error',
-      notice: 'Device declined'
+      notice: 'Device declined',
+      retainedPreBroadcastError: { responderPending: false }
     })
   })
 
@@ -1454,6 +1455,170 @@ describe('account-bound request transitions', () => {
       notice: 'Request declined',
       mode: 'monitor'
     })
+  })
+
+  it('retains a recoverable pre-sign safety failure as the active review', () => {
+    jest.useFakeTimers()
+    try {
+      const targetAccount = Accounts.accounts[account2.address]
+      const explicit = targetRequest('recoverable-account-code-failure')
+      targetAccount.addRequest(explicit)
+      explicit.simulation = { status: 'succeeded', calls: [] }
+      Accounts.setRequestPending(explicit)
+      Accounts.lockRequest(explicit.handlerId, account2.address)
+
+      Accounts.setRequestError(
+        explicit.handlerId,
+        Object.assign(new Error('Delegation recheck unavailable. Request not sent.'), {
+          code: 'account-code-evidence-unavailable',
+          data: { role: 'target', account: account2.address }
+        }),
+        account2.address
+      )
+      jest.advanceTimersByTime(30_000)
+
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'error',
+        locked: true,
+        recoverableError: {
+          code: 'account-code-evidence-unavailable',
+          data: { role: 'target', account: account2.address }
+        },
+        retainedPreBroadcastError: { responderPending: true }
+      })
+      expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('rechecks fresh simulation evidence before a recoverable request can be signed again', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('retry-account-code-failure')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      Object.assign(new Error('Delegation changed. Request not sent.'), {
+        code: 'account-code-evidence-changed'
+      }),
+      account2.address
+    )
+    const refresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
+
+    expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+
+    expect(explicit.locked).toBeUndefined()
+    expect(explicit.status).toBeUndefined()
+    expect(explicit.notice).toBeUndefined()
+    expect(explicit.recoverableError).toBeUndefined()
+    expect(explicit.retainedPreBroadcastError).toBeUndefined()
+    expect(explicit.data.nonce).toBe(explicit.payload.params[0].nonce)
+    expect(explicit.simulation).toEqual({ status: 'pending' })
+    expect(refresh).toHaveBeenCalledWith(explicit, true, false)
+    expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+    refresh.mockRestore()
+  })
+
+  it('drops a wallet-filled nonce before rechecking a recoverable request', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('retry-wallet-filled-nonce')
+    explicit.payload = {
+      ...explicit.payload,
+      params: [{ ...explicit.payload.params[0] }]
+    }
+    delete explicit.payload.params[0].nonce
+    explicit.data = { ...explicit.data, nonce: '0x9' }
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      Object.assign(new Error('Delegation changed. Request not sent.'), {
+        code: 'account-code-evidence-changed'
+      }),
+      account2.address
+    )
+    const refresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
+
+    expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+
+    expect(explicit.data.nonce).toBeUndefined()
+    expect(refresh).toHaveBeenCalledWith(explicit, true, false)
+    refresh.mockRestore()
+  })
+
+  it('closes a recoverable pre-sign failure with the original responder and advances the queue', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const response = jest.fn()
+    const explicit = targetRequest('close-account-code-failure')
+    const next = targetRequest('request-after-account-code-failure', 'sign')
+    targetAccount.addRequest(explicit, response)
+    targetAccount.addRequest(next)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      Object.assign(new Error('Delegation recheck unavailable. Request not sent.'), {
+        code: 'account-code-evidence-unavailable'
+      }),
+      account2.address
+    )
+
+    expect(Accounts.closeFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+
+    expect(targetAccount.requests[explicit.handlerId]).toBeUndefined()
+    expect(targetAccount.summary().activeRequestId).toBe(next.handlerId)
+    expect(response).toHaveBeenCalledWith({
+      id: request.payload.id,
+      jsonrpc: request.payload.jsonrpc,
+      error: {
+        code: -32603,
+        message: 'Delegation recheck unavailable. Request not sent.',
+        data: { reason: 'account-code-evidence-unavailable' }
+      }
+    })
+  })
+
+  it('retains a terminal pre-sign failure until Close without responding twice', () => {
+    jest.useFakeTimers()
+    try {
+      const targetAccount = Accounts.accounts[account2.address]
+      const response = jest.fn()
+      const explicit = targetRequest('trezor-disconnected-before-signing')
+      const next = targetRequest('request-after-trezor-disconnect', 'sign')
+      targetAccount.addRequest(explicit, response)
+      targetAccount.addRequest(next)
+      explicit.simulation = { status: 'succeeded', calls: [] }
+      Accounts.setRequestPending(explicit)
+      response({
+        id: request.payload.id,
+        jsonrpc: request.payload.jsonrpc,
+        error: { code: -32603, message: 'Trezor is disconnected' }
+      })
+
+      Accounts.setRequestError(explicit.handlerId, new Error('Trezor is disconnected'), account2.address)
+      jest.advanceTimersByTime(30_000)
+
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'error',
+        notice: 'Trezor is disconnected',
+        retainedPreBroadcastError: { responderPending: false }
+      })
+      expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+      expect(response).toHaveBeenCalledTimes(1)
+
+      expect(Accounts.closeFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+
+      expect(targetAccount.requests[explicit.handlerId]).toBeUndefined()
+      expect(targetAccount.summary().activeRequestId).toBe(next.handlerId)
+      expect(response).toHaveBeenCalledTimes(1)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('claims a request for approval only once', () => {
@@ -1519,6 +1684,27 @@ describe('account-bound request transitions', () => {
       status: 'declined',
       notice: 'Transaction declined'
     })
+  })
+
+  it('does not repeat delayed decline cleanup after the request was already cleared', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('decline-cleared-before-timer')
+    const remove = jest.spyOn(Accounts, 'removeRequest')
+    targetAccount.addRequest(explicit)
+
+    try {
+      expect(Accounts.declineRequest(explicit.handlerId, account2.address)).toBe(true)
+      Accounts.removeRequest(targetAccount, explicit.handlerId)
+      remove.mockClear()
+
+      jest.advanceTimersByTime(2000)
+
+      expect(remove).not.toHaveBeenCalled()
+    } finally {
+      remove.mockRestore()
+      jest.useRealTimers()
+    }
   })
 
   it('keeps a declined request terminal when signer callbacks arrive late', () => {
@@ -1626,6 +1812,38 @@ describe('#cancelUnapprovedRequestForAccount', () => {
         message: 'Requesting client disconnected'
       })
     ).toBe(false)
+  })
+
+  it('removes a retained pre-broadcast failure when its transport aborts', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const controller = new AbortController()
+    const response = bindRequestSignal(jest.fn(), controller.signal)
+    const recoverable = {
+      ...request,
+      handlerId: 'aborted-account-code-retry',
+      account: account2.address,
+      data: { ...request.data, from: account2.address },
+      simulation: { status: 'succeeded', calls: [] }
+    }
+    Accounts.addRequestForAccount(account2.address, recoverable, response)
+    Accounts.setRequestPending(recoverable)
+    Accounts.lockRequest(recoverable.handlerId, account2.address)
+    Accounts.setRequestError(
+      recoverable.handlerId,
+      Object.assign(new Error('Delegation recheck unavailable. Request not sent.'), {
+        code: 'account-code-evidence-unavailable'
+      }),
+      account2.address
+    )
+
+    controller.abort()
+
+    expect(targetAccount.requests[recoverable.handlerId]).toBeUndefined()
+    expect(response).toHaveBeenCalledWith({
+      id: request.payload.id,
+      jsonrpc: request.payload.jsonrpc,
+      error: { code: 4900, message: 'Requesting client disconnected' }
+    })
   })
 })
 

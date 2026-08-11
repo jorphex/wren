@@ -21,6 +21,9 @@ const RequestReferenceSchema = z
 const ActionRequestReferenceSchema = z
   .object({ handlerId: HandlerIdSchema, account: AddressSchema, type: z.string().min(1).max(32) })
   .transform(({ handlerId, account, type }) => ({ handlerId, account, type }))
+const TransactionRequestReferenceSchema = z
+  .object({ handlerId: HandlerIdSchema, account: AddressSchema, type: z.literal('transaction') })
+  .transform(({ handlerId, account, type }) => ({ handlerId, account, type }))
 const WalletCallsApprovalOptionsSchema = z
   .object({ walletCallsSimulationAcknowledged: z.literal(true) })
   .strict()
@@ -106,6 +109,14 @@ const rpcSchemas = {
       z.tuple([ActionRequestReferenceSchema]),
       z.tuple([ActionRequestReferenceSchema, WalletCallsApprovalOptionsSchema])
     ]),
+    response: actionResult
+  },
+  retryTransactionRequest: {
+    request: z.tuple([TransactionRequestReferenceSchema]),
+    response: actionResult
+  },
+  closeFailedTransactionRequest: {
+    request: z.tuple([TransactionRequestReferenceSchema]),
     response: actionResult
   },
   confirmRequestApproval: {

@@ -217,6 +217,28 @@ const rpc = {
     }
     cb(null)
   },
+  retryTransactionRequest(req, cb) {
+    const currentAccount = accounts.current()
+    if (
+      req.type !== 'transaction' ||
+      !currentAccount ||
+      currentAccount.id.toLowerCase() !== req.account.toLowerCase()
+    ) {
+      return cb(new Error('Request account is no longer selected'))
+    }
+    callbackWhenDone(() => accounts.retryFailedTransaction(req.handlerId, req.account), cb)
+  },
+  closeFailedTransactionRequest(req, cb) {
+    const currentAccount = accounts.current()
+    if (
+      req.type !== 'transaction' ||
+      !currentAccount ||
+      currentAccount.id.toLowerCase() !== req.account.toLowerCase()
+    ) {
+      return cb(new Error('Request account is no longer selected'))
+    }
+    callbackWhenDone(() => accounts.closeFailedTransaction(req.handlerId, req.account), cb)
+  },
   declineRequest(req, cb) {
     if (
       routeWalletCallRequest(req, accounts, (walletCallsRequest) =>

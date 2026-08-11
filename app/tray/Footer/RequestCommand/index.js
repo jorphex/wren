@@ -66,7 +66,9 @@ export class RequestCommand extends React.Component {
       allowInput: false,
       dataView: false,
       feeDraftSafe: isTransactionFeeDraftSafe(props.req?.handlerId),
-      signerLocked: false
+      signerLocked: false,
+      requestActionPending: false,
+      requestActionError: ''
     }
 
     this.scheduleTimer(
@@ -87,6 +89,7 @@ export class RequestCommand extends React.Component {
   }
 
   componentDidMount() {
+    this.mounted = true
     this.unsubscribeFeeDraftSafety = subscribeToTransactionFeeDraftSafety((handlerId) => {
       if (handlerId !== this.props.req?.handlerId) return
       this.setState({ feeDraftSafe: isTransactionFeeDraftSafe(handlerId) })
@@ -94,6 +97,7 @@ export class RequestCommand extends React.Component {
   }
 
   componentWillUnmount() {
+    this.mounted = false
     ;['allowInputTimer', 'txHashCopiedTimer', 'signerLockedTimer'].forEach((name) => {
       clearTimeout(this[name])
       this[name] = undefined
@@ -102,11 +106,36 @@ export class RequestCommand extends React.Component {
   }
 
   approve(_reqId, req) {
-    link.rpc('approveRequest', requestReference(req), () => {}) // Move to link.send
+    this.runRequestAction('approveRequest', req)
   }
 
   decline(req) {
     link.rpc('declineRequest', requestReference(req), () => {}) // Move to link.send
+  }
+
+  runRequestAction(method, req) {
+    if (this.state.requestActionPending) return
+
+    this.setState({ requestActionPending: true, requestActionError: '' })
+    const onResult = (error) => {
+      if (!this.mounted) return
+      if (error) {
+        this.setState({
+          requestActionPending: false,
+          requestActionError: 'Wren could not update this request. It is still pending.'
+        })
+      } else {
+        this.setState({ requestActionPending: false, requestActionError: '' })
+      }
+    }
+    const reference = requestReference(req)
+    if (method === 'approveRequest') link.rpc('approveRequest', reference, onResult)
+    else if (method === 'retryTransactionRequest') link.rpc('retryTransactionRequest', reference, onResult)
+    else if (method === 'closeFailedTransactionRequest') {
+      link.rpc('closeFailedTransactionRequest', reference, onResult)
+    } else {
+      onResult(new Error('Unsupported request action'))
+    }
   }
 
   handleSignerCompatibilityFailure(error, compatibility, req) {
@@ -289,11 +318,9 @@ export class RequestCommand extends React.Component {
 
   signOrDecline() {
     const { req } = this.props
-    const allowApproval = canApproveTransaction(
-      this.state.allowInput,
-      req.simulation,
-      this.state.feeDraftSafe
-    )
+    const allowApproval =
+      !this.state.requestActionPending &&
+      canApproveTransaction(this.state.allowInput, req.simulation, this.state.feeDraftSafe)
     const chain = {
       type: 'ethereum',
       id: parseInt(req.data.chainId, 'hex')
@@ -324,6 +351,11 @@ export class RequestCommand extends React.Component {
               {req.simulation?.status === 'pending' ? 'Checking transaction' : 'Ready for review'}
             </strong>
             <span>Verify these details on your signer before approving.</span>
+            {this.state.requestActionError ? (
+              <span className='requestActionError' role='alert'>
+                {this.state.requestActionError}
+              </span>
+            ) : null}
           </span>
         </div>
         <div className='requestActionButtons'>
@@ -392,6 +424,9 @@ export class RequestCommand extends React.Component {
     const { notice, mode } = req
 
     if (req.status === 'declined') return this.declinedStatus(true)
+    if (req.status === 'error' && req.retainedPreBroadcastError) {
+      return this.retainedPreBroadcastFailureStatus(req)
+    }
 
     const showWarning = mode !== 'monitor'
     const requiredApproval = showWarning && getRequiredRequestApproval(req)
@@ -430,6 +465,66 @@ export class RequestCommand extends React.Component {
         </div>
       )
     }
+  }
+
+  retainedPreBroadcastFailureStatus(req) {
+    const recoverable = Boolean(req.recoverableError)
+    const changed = req.recoverableError?.code === 'account-code-evidence-changed'
+    const pending = this.state.requestActionPending
+
+    return (
+      <div className='requestApprove requestApproveTransaction requestApproveRecoverable'>
+        <div className='requestActionContext' role='alert'>
+          <span className='requestActionContextIcon'>
+            <Icon name='alert' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>
+              {recoverable
+                ? changed
+                  ? 'Transaction state changed'
+                  : 'Safety check unavailable'
+                : 'Signing did not complete'}
+            </strong>
+            <span>{req.notice || 'The transaction could not be signed.'}</span>
+            <span>
+              {recoverable
+                ? 'Nothing was signed or sent. Recheck to load fresh details before signing again.'
+                : 'No transaction was sent. Close this request when you are ready.'}
+            </span>
+            {this.state.requestActionError ? (
+              <span className='requestActionError' role='alert'>
+                {this.state.requestActionError}
+              </span>
+            ) : null}
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          <button
+            type='button'
+            className='requestDecline'
+            disabled={pending}
+            onClick={() => this.runRequestAction('closeFailedTransactionRequest', req)}
+          >
+            <span className='requestDeclineButton _txButton'>
+              <span>Close request</span>
+            </span>
+          </button>
+          {recoverable ? (
+            <button
+              type='button'
+              className='requestSign'
+              disabled={pending}
+              onClick={() => this.runRequestAction('retryTransactionRequest', req)}
+            >
+              <span className='requestSignButton _txButton'>
+                <span>{pending ? 'Rechecking…' : 'Recheck'}</span>
+              </span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   renderSignDataCommand() {

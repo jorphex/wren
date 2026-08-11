@@ -42,6 +42,19 @@ test('reduces request snapshots before approval dispatch', () => {
   })
 })
 
+test.each(['retryTransactionRequest', 'closeFailedTransactionRequest'])(
+  'bounds %s to an account-owned request reference',
+  (method) => {
+    const request = { handlerId, account: address, type: 'transaction', notice: 'private details' }
+    expect(parseRendererRpcRequest(wire(1, method, request))).toEqual({
+      success: true,
+      data: { id: 1, method, args: [{ handlerId, account: address, type: 'transaction' }] }
+    })
+    expect(parseRendererRpcRequest(wire(1, method, { ...request, handlerId: 'forged' })).success).toBe(false)
+    expect(parseRendererRpcRequest(wire(1, method, { ...request, type: 'sign' })).success).toBe(false)
+  }
+)
+
 test('accepts only an explicit wallet-call simulation acknowledgement', () => {
   const request = { handlerId, account: address, type: 'walletCalls' }
   expect(

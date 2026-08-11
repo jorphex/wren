@@ -181,6 +181,108 @@ it('uses native disabled decisions until the transaction signing delay completes
   view.unmount()
 })
 
+it('keeps an approval RPC failure visible and allows another attempt', async () => {
+  const req = transaction()
+  const view = renderMountedCommand(req, 'signOrDecline', commandStore(), 0)
+  act(() => jest.advanceTimersByTime(0))
+  link.rpc.mockImplementation((method, ...args) => {
+    const callback = args.at(-1)
+    if (method === 'signerCompatibility') callback(null, { compatible: true })
+    if (method === 'approveRequest') callback('Request account is no longer selected')
+  })
+
+  await view.user.click(screen.getByRole('button', { name: 'Sign transaction' }))
+
+  expect(screen.getByRole('alert').textContent).toMatch(/still pending/i)
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
+  view.unmount()
+})
+
+it('fails closed without dispatching an unknown request action', () => {
+  const command = new RequestCommand({ req: transaction(), signingDelay: 0 })
+  command.store = commandStore()
+  command.mounted = true
+  command.setState = jest.fn((update) => Object.assign(command.state, update))
+
+  command.runRequestAction('unknownRequestAction', transaction())
+
+  expect(link.rpc).not.toHaveBeenCalled()
+  expect(command.setState).toHaveBeenLastCalledWith({
+    requestActionPending: false,
+    requestActionError: 'Wren could not update this request. It is still pending.'
+  })
+  command.componentWillUnmount()
+})
+
+it('retains a recoverable pre-sign failure with explicit recheck and close actions', async () => {
+  const req = transaction({
+    status: 'error',
+    notice: `Delegation recheck unavailable for ${request.account}. Request not sent.`,
+    recoverableError: {
+      code: 'account-code-evidence-unavailable',
+      message: `Delegation recheck unavailable for ${request.account}. Request not sent.`
+    },
+    retainedPreBroadcastError: { responderPending: true }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  expect(screen.getByRole('alert').textContent).toMatch(/safety check unavailable/i)
+  expect(screen.getByText(/nothing was signed or sent/i)).toBeTruthy()
+  await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
+
+  expect(link.rpc).toHaveBeenCalledWith(
+    'retryTransactionRequest',
+    { account: request.account, handlerId: request.handlerId, type: 'transaction' },
+    expect.any(Function)
+  )
+  view.unmount()
+})
+
+it('closes a retained pre-sign failure only through the explicit close action', async () => {
+  const req = transaction({
+    status: 'error',
+    notice: 'Delegation changed. Request not sent.',
+    recoverableError: {
+      code: 'account-code-evidence-changed',
+      message: 'Delegation changed. Request not sent.'
+    },
+    retainedPreBroadcastError: { responderPending: true }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  await view.user.click(screen.getByRole('button', { name: 'Close request' }))
+
+  expect(link.rpc).toHaveBeenCalledWith(
+    'closeFailedTransactionRequest',
+    { account: request.account, handlerId: request.handlerId, type: 'transaction' },
+    expect.any(Function)
+  )
+  view.unmount()
+})
+
+it('retains a terminal pre-sign failure with its real notice and Close only', async () => {
+  const req = transaction({
+    status: 'error',
+    notice: 'Trezor is disconnected',
+    retainedPreBroadcastError: { responderPending: false }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  expect(screen.getByRole('alert').textContent).toMatch(/signing did not complete/i)
+  expect(screen.getByText('Trezor is disconnected')).toBeTruthy()
+  expect(screen.getByText(/no transaction was sent/i)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Recheck' })).toBeNull()
+
+  await view.user.click(screen.getByRole('button', { name: 'Close request' }))
+
+  expect(link.rpc).toHaveBeenCalledWith(
+    'closeFailedTransactionRequest',
+    { account: request.account, handlerId: request.handlerId, type: 'transaction' },
+    expect.any(Function)
+  )
+  view.unmount()
+})
+
 it('keeps signing disabled while simulation is pending after decline becomes available', () => {
   const command = new RequestCommand({
     req: transaction({ simulation: { status: 'pending' } }),

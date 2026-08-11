@@ -121,6 +121,11 @@ export class AccountCodeEvidenceError extends Error {
   }
 }
 
+export function isRecoverableAccountCodeEvidenceError(error: unknown) {
+  if (!error || typeof error !== 'object' || !('code' in error)) return false
+  return ['account-code-evidence-unavailable', 'account-code-evidence-changed'].includes(String(error.code))
+}
+
 function sameAccountCodeEvidence(expected: AccountCodeEvidence, actual: AccountCodeEvidence) {
   if (expected.status !== actual.status || expected.account !== actual.account) return false
   if (expected.status === 'unavailable' || actual.status === 'unavailable') return false

@@ -3777,14 +3777,32 @@ describe('#signAndSend', () => {
           try {
             expect(error).toBe(recheck)
             expect(connection.send).not.toHaveBeenCalled()
+            expect(handler).not.toHaveBeenCalled()
+            expect(provider.handlers[request.handlerId]).toBe(handler)
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
+      it('settles a generic pre-sign failure before retaining its review', (done) => {
+        const disconnected = new Error('Trezor is disconnected')
+        accounts.signTransactionForAccount.mockImplementationOnce((_accountId, _tx, cb) => cb(disconnected))
+        const handler = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend((error) => {
+          try {
+            expect(error).toBe(disconnected)
+            expect(connection.send).not.toHaveBeenCalled()
+            expect(handler).toHaveBeenCalledTimes(1)
             expect(handler).toHaveBeenCalledWith(
               expect.objectContaining({
-                error: expect.objectContaining({
-                  message: recheck.message,
-                  data: recheck.data
-                })
+                error: expect.objectContaining({ message: 'Trezor is disconnected' })
               })
             )
+            expect(provider.handlers[request.handlerId]).toBeUndefined()
             done()
           } catch (assertionError) {
             done(assertionError)

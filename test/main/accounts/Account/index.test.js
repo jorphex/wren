@@ -2259,10 +2259,9 @@ describe('#signTransaction', () => {
     )
     expect(request).toMatchObject({
       locked: true,
-      status: 'error',
-      notice: `Delegation changed for ${tokenContract}. Request not sent.`
+      status: 'pending'
     })
-    expect(accounts.update).toHaveBeenCalled()
+    expect(request.notice).toBeUndefined()
     expect(signer.signTransaction).not.toHaveBeenCalled()
   })
 

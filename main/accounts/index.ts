@@ -62,6 +62,7 @@ import {
   type SoftwareEip7702RevokeSigner
 } from '../eip7702'
 import { EIP7702_REVOKE_INTRINSIC_GAS } from '../transaction/eip7702'
+import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -233,6 +234,13 @@ export class Accounts extends EventEmitter {
 
   clearPendingNonceAdjustment(account: FrameAccount, handlerId: string) {
     this.pendingNonceAdjustments.delete(this.nonceAdjustmentKey(account, handlerId))
+  }
+
+  private restoreRequestedNonce(request: TransactionRequest) {
+    request.data = { ...request.data }
+    const requestedNonce = request.payload.params?.[0]?.nonce
+    if (requestedNonce) request.data.nonce = requestedNonce
+    else delete request.data.nonce
   }
 
   private clearPendingNonceAdjustmentsForAccount(account: FrameAccount) {
@@ -1584,11 +1592,28 @@ export class Accounts extends EventEmitter {
 
     const account = this.accounts[accountId.toLowerCase()]
     const request = account?.getRequest<AnyAccountRequest>(handlerId)
-    if (!account || !request || request.status !== undefined || ('locked' in request && request.locked)) {
+    const retainedPreBroadcastFailure =
+      request?.type === 'transaction' &&
+      request.status === RequestStatus.Error &&
+      Boolean(request.retainedPreBroadcastError)
+    if (
+      !account ||
+      !request ||
+      (!retainedPreBroadcastFailure &&
+        (request.status !== undefined || ('locked' in request && request.locked)))
+    ) {
       return false
     }
 
-    account.rejectRequest(request, error)
+    if (
+      request.type === 'transaction' &&
+      request.retainedPreBroadcastError &&
+      !request.retainedPreBroadcastError.responderPending
+    ) {
+      account.clearRequest(handlerId)
+    } else {
+      account.rejectRequest(request, error)
+    }
     return true
   }
 
@@ -1898,10 +1923,13 @@ export class Accounts extends EventEmitter {
             : 'Request declined'
       request.mode = RequestMode.Monitor
 
-      setTimeout(
-        () => this.accounts[currentAccount.address] && this.removeRequest(currentAccount, handlerId),
-        2000
-      )
+      const declineTimer = setTimeout(() => {
+        const account = this.accounts[currentAccount.address]
+        if (account?.requests[handlerId]?.status === RequestStatus.Declined) {
+          this.removeRequest(account, handlerId)
+        }
+      }, 2000)
+      declineTimer.unref?.()
       currentAccount.update()
       return true
     }
@@ -1953,10 +1981,18 @@ export class Accounts extends EventEmitter {
     if (currentAccount && currentAccount.requests[handlerId]) {
       if (currentAccount.requests[handlerId].status === RequestStatus.Declined) return false
 
+      const failedRequest = currentAccount.requests[handlerId]
+      const failedBeforeBroadcast =
+        failedRequest.type === 'transaction' && failedRequest.status === RequestStatus.Pending
+
       if (
         err instanceof SignerUserRejectedError ||
         (typeof err === 'object' && err && 'code' in err && err.code === USER_REJECTED_REQUEST)
       ) {
+        if (failedRequest.type === 'transaction') {
+          delete failedRequest.recoverableError
+          delete failedRequest.retainedPreBroadcastError
+        }
         currentAccount.requests[handlerId].status = RequestStatus.Declined
         currentAccount.requests[handlerId].notice = 'Request declined'
         currentAccount.requests[handlerId].mode = RequestMode.Monitor
@@ -1966,6 +2002,33 @@ export class Accounts extends EventEmitter {
         )
         currentAccount.update()
         return true
+      }
+
+      if (failedBeforeBroadcast && isRecoverableAccountCodeEvidenceError(err)) {
+        const recoverableError = err as Error & {
+          code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
+          data?: unknown
+        }
+        failedRequest.status = RequestStatus.Error
+        failedRequest.notice =
+          recoverableError.message || 'The transaction safety check could not be repeated.'
+        failedRequest.recoverableError = {
+          code: recoverableError.code,
+          message: failedRequest.notice,
+          ...(recoverableError.data === undefined ? {} : { data: recoverableError.data })
+        }
+        failedRequest.retainedPreBroadcastError = { responderPending: true }
+        currentAccount.update()
+        return true
+      }
+
+      if (failedRequest.type === 'transaction') {
+        delete failedRequest.recoverableError
+        if (failedBeforeBroadcast) {
+          failedRequest.retainedPreBroadcastError = { responderPending: false }
+        } else {
+          delete failedRequest.retainedPreBroadcastError
+        }
       }
 
       currentAccount.requests[handlerId].status = RequestStatus.Error
@@ -1991,8 +2054,13 @@ export class Accounts extends EventEmitter {
         currentAccount.requests[handlerId].notice = notice
       }
 
+      if (failedBeforeBroadcast) {
+        currentAccount.update()
+        return true
+      }
+
       if (currentAccount.requests[handlerId].type === 'transaction') {
-        setTimeout(() => {
+        const transitionTimer = setTimeout(() => {
           if (
             this.accounts[currentAccount.address] === currentAccount &&
             currentAccount.requests[handlerId]
@@ -2001,19 +2069,24 @@ export class Accounts extends EventEmitter {
             currentAccount.update()
             currentAccount.releaseRequestReview(handlerId)
 
-            setTimeout(
-              () =>
+            const removalTimer = setTimeout(() => {
+              if (
                 this.accounts[currentAccount.address] === currentAccount &&
-                this.removeRequest(currentAccount, handlerId),
-              8000
-            )
+                currentAccount.requests[handlerId]
+              ) {
+                this.removeRequest(currentAccount, handlerId)
+              }
+            }, 8000)
+            removalTimer.unref?.()
           }
         }, 1500)
+        transitionTimer.unref?.()
       } else {
-        setTimeout(
-          () => this.accounts[currentAccount.address] && this.removeRequest(currentAccount, handlerId),
-          3300
-        )
+        const removalTimer = setTimeout(() => {
+          const account = this.accounts[currentAccount.address]
+          if (account?.requests[handlerId]) this.removeRequest(account, handlerId)
+        }, 3300)
+        removalTimer.unref?.()
       }
 
       currentAccount.update()
@@ -2021,6 +2094,64 @@ export class Accounts extends EventEmitter {
     }
 
     return false
+  }
+
+  retryFailedTransaction(handlerId: string, accountId: string) {
+    const currentAccount = this.requestAccount(handlerId, accountId)
+    const request = currentAccount?.getActiveReviewRequest<TransactionRequest>(handlerId)
+    if (
+      !currentAccount ||
+      !request ||
+      request.type !== 'transaction' ||
+      request.status !== RequestStatus.Error ||
+      !request.recoverableError
+    ) {
+      throw new Error('Transaction request is not available for another review')
+    }
+
+    this.clearPendingNonceAdjustment(currentAccount, handlerId)
+    this.restoreRequestedNonce(request)
+    delete request.locked
+    delete request.status
+    delete request.notice
+    delete request.recoverableError
+    delete request.retainedPreBroadcastError
+    request.mode = RequestMode.Normal
+    currentAccount.refreshTransactionSimulation(request, true, false)
+    return true
+  }
+
+  closeFailedTransaction(handlerId: string, accountId: string) {
+    const currentAccount = this.requestAccount(handlerId, accountId)
+    const request = currentAccount?.getActiveReviewRequest<TransactionRequest>(handlerId)
+    if (
+      !currentAccount ||
+      !request ||
+      request.type !== 'transaction' ||
+      request.status !== RequestStatus.Error ||
+      !request.retainedPreBroadcastError
+    ) {
+      throw new Error('Failed transaction request is no longer available')
+    }
+
+    const retainedFailure = request.retainedPreBroadcastError
+    const recoverableFailure = request.recoverableError
+    if (retainedFailure.responderPending) {
+      if (!recoverableFailure) {
+        throw new Error('Failed transaction response is no longer available')
+      }
+      currentAccount.rejectRequest(request, {
+        code: -32603,
+        message: recoverableFailure.message,
+        data: {
+          reason: recoverableFailure.code,
+          ...(recoverableFailure.data === undefined ? {} : { evidence: recoverableFailure.data })
+        }
+      })
+    } else {
+      currentAccount.clearRequest(handlerId)
+    }
+    return true
   }
 
   setTxSigned(handlerId: string, cb: Callback<void>, accountId?: string) {
@@ -2473,12 +2604,7 @@ export class Accounts extends EventEmitter {
     if (!txRequest) return log.warn('Ignoring nonce reset for immutable transaction request')
 
     this.clearPendingNonceAdjustment(currentAccount, handlerId)
-    const initialNonce = txRequest.payload.params?.[0]?.nonce
-    if (initialNonce) {
-      txRequest.data.nonce = initialNonce
-    } else {
-      delete txRequest.data.nonce
-    }
+    this.restoreRequestedNonce(txRequest)
     currentAccount.refreshTransactionSimulation(txRequest)
   }
 

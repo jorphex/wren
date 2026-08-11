@@ -54,6 +54,7 @@ import { showWalletCallStatus } from './walletCallStatusView'
 import { isUnsafeRpcForwardingMethod } from './rpcForwarding'
 import { getRequestSignal, inheritRequestSignal } from './requestSignal'
 import { summarizeRpcError } from '../security/rpcLogging'
+import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
 
 import { Subscription, SubscriptionType, hasSubscriptionPermission } from './subscriptions'
 import {
@@ -493,7 +494,10 @@ export class Provider extends EventEmitter {
       accounts.signTransactionForAccount(req.account, rawTx, (err, signedTx) => {
         // Sign Transaction
         if (err) {
-          resError(err, payload, res)
+          // A fresh account-code check happens before the signer is invoked. Keep the
+          // original request responder alive when that check needs to be repeated so
+          // the user can review fresh evidence and retry the same request.
+          if (!isRecoverableAccountCodeEvidenceError(err)) resError(err, payload, res)
           cb(err)
         } else {
           accounts.setTxSigned(
@@ -543,12 +547,21 @@ export class Provider extends EventEmitter {
   }
 
   approveTransactionRequest(req: TransactionRequest, cb: Callback<string>) {
+    const failBeforeBroadcast = (request: TransactionRequest, error: Error) => {
+      if (request.payload) {
+        resError(error, request.payload, (response) => {
+          this.respondToRequest(request.handlerId, response)
+        })
+      }
+      cb(error)
+    }
+
     if (req.simulation?.status === 'pending') {
-      return cb(new Error('Transaction execution check is still pending'))
+      return failBeforeBroadcast(req, new Error('Transaction execution check is still pending'))
     }
 
     if ((req.approvals || []).some((approval) => !approval.approved)) {
-      return cb(new Error('Transaction has an unconfirmed required approval'))
+      return failBeforeBroadcast(req, new Error('Transaction has an unconfirmed required approval'))
     }
 
     let storedRequest: AccountRequest | undefined
@@ -558,14 +571,20 @@ export class Provider extends EventEmitter {
       storedRequest = undefined
     }
     if (!storedRequest || storedRequest.type !== 'transaction') {
-      return cb(new Error('Transaction request is no longer available'))
+      return failBeforeBroadcast(req, new Error('Transaction request is no longer available'))
     }
     const transactionRequest = storedRequest as TransactionRequest
     if (transactionRequest.simulation?.status === 'pending') {
-      return cb(new Error('Transaction execution check is still pending'))
+      return failBeforeBroadcast(
+        transactionRequest,
+        new Error('Transaction execution check is still pending')
+      )
     }
     if ((transactionRequest.approvals || []).some((approval) => !approval.approved)) {
-      return cb(new Error('Transaction has an unconfirmed required approval'))
+      return failBeforeBroadcast(
+        transactionRequest,
+        new Error('Transaction has an unconfirmed required approval')
+      )
     }
 
     const signAndSend = (requestToSign: TransactionRequest) => {
@@ -589,7 +608,7 @@ export class Provider extends EventEmitter {
       }
 
       if (typeof response.result !== 'string' || parseRpcQuantity(response.result) === undefined) {
-        return cb(new Error('Invalid transaction nonce response'))
+        return failBeforeBroadcast(transactionRequest, new Error('Invalid transaction nonce response'))
       }
       const updatedReq = accounts.updateNonce(
         transactionRequest.handlerId,
@@ -601,7 +620,7 @@ export class Provider extends EventEmitter {
         signAndSend(updatedReq)
       } else {
         log.error(`could not find request with handlerId="${transactionRequest.handlerId}"`)
-        cb(new Error('could not find request'))
+        failBeforeBroadcast(transactionRequest, new Error('could not find request'))
       }
     })
   }

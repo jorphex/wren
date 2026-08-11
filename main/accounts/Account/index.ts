@@ -43,7 +43,6 @@ import reveal from '../../reveal'
 import { isTransactionRequest, isTypedMessageSignatureRequest } from '../../../resources/domain/request'
 import Erc20Contract from '../../contracts/erc20'
 import {
-  AccountCodeEvidenceError,
   assertAccountCodeEvidenceStable,
   inspectTransactionAccountCode,
   simulateTransaction,
@@ -1590,16 +1589,6 @@ class FrameAccount {
         })
         .catch((error) => {
           const failure = error instanceof Error ? error : new Error('account-code-check-failed')
-          if (failure instanceof AccountCodeEvidenceError) {
-            const request = Object.values(this.requests).find(
-              (candidate) => candidate.type === 'transaction' && candidate.data === rawTx
-            ) as TransactionRequest | undefined
-            if (request?.locked && request.status === RequestStatus.Pending) {
-              request.status = RequestStatus.Error
-              request.notice = failure.message
-              this.update()
-            }
-          }
           cb(failure)
         })
     })

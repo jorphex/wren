@@ -124,6 +124,14 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   recognizedActions: Action<unknown>[]
   classification: TxClassification
   simulation: TransactionSimulation
+  recoverableError?: {
+    code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
+    message: string
+    data?: unknown
+  }
+  retainedPreBroadcastError?: {
+    responderPending: boolean
+  }
 }
 
 export interface SignRequest extends AccountRequest<'sign'> {
