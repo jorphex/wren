@@ -40,9 +40,11 @@ test('keeps dashboard destination descriptions readable in two balanced columns'
 
 test('keeps the Control Center Wren decorative, fixed beside the title, and absent at the narrow fallback', () => {
   expect(mainStyle).toMatch(
-    /\.dashHomeTitleRow[\s\S]*?min-height 42px[\s\S]*?align-items center[\s\S]*?\.dashHomeWren[\s\S]*?width 42px[\s\S]*?height 42px[\s\S]*?pointer-events none/
+    /\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\) 96px[\s\S]*?align-items center[\s\S]*?\.dashHomeWren[\s\S]*?width 96px[\s\S]*?height 96px[\s\S]*?justify-self end[\s\S]*?pointer-events none/
   )
-  expect(mainStyle).toMatch(/@media \(max-width: 560px\)[\s\S]*?\.dashHomeWren[\s\S]*?display none/)
+  expect(mainStyle).toMatch(
+    /@media \(max-width: 560px\)[\s\S]*?\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.dashHomeWren[\s\S]*?display none/
+  )
 })
 
 test('uses ruled Earn detail regions and the shared focus treatment', () => {

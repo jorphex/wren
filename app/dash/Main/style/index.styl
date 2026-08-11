@@ -302,10 +302,14 @@ button.requestFeatureButton:focus-visible
     margin-bottom 0
 
 .dashHomeHeader
+  display grid
   padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-5)
+  grid-template-columns minmax(0, 1fr) 96px
+  align-items center
+  column-gap var(--wren-space-4)
 
   h1
-    margin 0
+    margin var(--wren-space-1) 0 var(--wren-space-2)
     color var(--wren-text-primary)
     font-size 28px
     font-weight 500
@@ -319,18 +323,15 @@ button.requestFeatureButton:focus-visible
     font-size 14px
     line-height 20px
 
-.dashHomeTitleRow
-  display flex
-  min-height 42px
-  margin var(--wren-space-1) 0 var(--wren-space-2)
-  align-items center
-  gap var(--wren-space-3)
+.dashHomeIntro
+  min-width 0
 
 .dashHomeWren
   display block
-  width 42px
-  height 42px
+  width 96px
+  height 96px
   flex none
+  justify-self end
   object-fit contain
   pointer-events none
   user-select none
@@ -527,6 +528,10 @@ button.dashModule.wrenControl.wrenControlGhost
     margin-bottom var(--wren-space-2)
 
 @media (max-width: 560px)
+  .dashHomeHeader
+    grid-template-columns minmax(0, 1fr)
+    column-gap 0
+
   .dashHomeWren
     display none
 

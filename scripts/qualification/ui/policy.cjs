@@ -65,7 +65,7 @@ const scenarioMatrix = () => [
       logicalWidth: 620,
       logicalHeight: FULL_SHELL_HEIGHT,
       ready: '.dashModules',
-      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 42, height: 42 }]
+      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
     },
     {
       id: `dash-control-center-short-${scale}`,
@@ -75,7 +75,7 @@ const scenarioMatrix = () => [
       logicalWidth: 620,
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.dashModules',
-      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 42, height: 42 }]
+      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
     },
     {
       id: `tray-account-home-full-${scale}`,

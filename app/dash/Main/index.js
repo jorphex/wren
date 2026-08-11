@@ -66,18 +66,18 @@ export class Main extends React.Component {
       <div className={'localSettings cardShow'}>
         <div className='localSettingsWrap'>
           <header className='dashHomeHeader'>
-            <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
-            <div className='dashHomeTitleRow'>
+            <div className='dashHomeIntro'>
+              <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
               <h1>Control center</h1>
-              <img
-                className='dashHomeWren'
-                src={controlCenterWren}
-                alt=''
-                aria-hidden='true'
-                data-testid='control-center-wren'
-              />
+              <p>Manage accounts, networks, permissions, and desktop behavior.</p>
             </div>
-            <p>Manage accounts, networks, permissions, and desktop behavior.</p>
+            <img
+              className='dashHomeWren'
+              src={controlCenterWren}
+              alt=''
+              aria-hidden='true'
+              data-testid='control-center-wren'
+            />
           </header>
           <nav className='dashModules' aria-label='Wallet management'>
             {dashboardSections.map((section) => (
