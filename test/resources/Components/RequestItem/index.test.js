@@ -53,6 +53,58 @@ it('opens a request only once for duplicate activation', async () => {
   expect(link.send).toHaveBeenCalledTimes(1)
 })
 
+it('keeps queued requests visible but unavailable until they become current', async () => {
+  const { user } = render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      queued
+      req={{ created: Date.now(), handlerId, status: 'pending', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  const requestButton = screen.getByRole('button', { name: 'Base Sepolia Transaction. Waiting' })
+  expect(requestButton.disabled).toBe(true)
+  expect(screen.getByRole('status').textContent).toBe('waiting')
+
+  await user.click(requestButton)
+  expect(link.send).not.toHaveBeenCalled()
+})
+
+it('marks the current request without replacing its lifecycle status', () => {
+  render(
+    <RequestItem
+      account={account}
+      active
+      color='var(--outerspace)'
+      req={{ created: Date.now(), handlerId, status: 'pending', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  expect(screen.getByText('Current')).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toBe('pending')
+  expect(screen.getByRole('button', { name: 'Review Base Sepolia Transaction. Current' }).disabled).toBe(
+    false
+  )
+})
+
+it('preserves a terminal lifecycle status on a later queue row', () => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      queued
+      req={{ created: Date.now(), handlerId, status: 'declined', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  expect(screen.getByRole('status').textContent).toBe('declined')
+  expect(screen.getByRole('button', { name: 'Base Sepolia Transaction. declined' }).disabled).toBe(true)
+})
+
 it('keeps header request composition static so nested actions remain valid', () => {
   render(
     <RequestItem

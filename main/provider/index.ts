@@ -353,7 +353,12 @@ export class Provider extends EventEmitter {
       this.respondToRequest(req.handlerId, data)
     }
 
-    const storedRequest = accounts.current()?.getRequest(req.handlerId)
+    let storedRequest: AccountRequest | undefined
+    try {
+      storedRequest = accounts.getActiveRequestForAccount(req.account, req.handlerId)
+    } catch (_) {
+      storedRequest = undefined
+    }
     if (!storedRequest || storedRequest.type !== 'sign') {
       const error = new Error('Message signing request is no longer available')
       resError(error.message, req.payload, res)
@@ -399,7 +404,27 @@ export class Provider extends EventEmitter {
       return cb(new Error('Typed signature approval state is missing or unconfirmed'))
     }
 
-    const { payload, typedMessage } = req
+    let storedRequest: AccountRequest | undefined
+    try {
+      storedRequest = accounts.getActiveRequestForAccount(req.account, req.handlerId)
+    } catch (_) {
+      storedRequest = undefined
+    }
+    if (
+      !storedRequest ||
+      (storedRequest.type !== 'signTypedData' && storedRequest.type !== 'signErc20Permit')
+    ) {
+      return cb(new Error('Typed signature request is no longer available'))
+    }
+    const signRequest = storedRequest as SignTypedDataRequest
+    if (
+      !Array.isArray(signRequest.approvals) ||
+      signRequest.approvals.some((approval) => !approval.approved)
+    ) {
+      return cb(new Error('Typed signature approval state is missing or unconfirmed'))
+    }
+
+    const { payload, typedMessage } = signRequest
     const [address] = payload.params
     if (typeof address !== 'string') return cb(new Error('Typed signature address is missing'))
 
@@ -526,6 +551,23 @@ export class Provider extends EventEmitter {
       return cb(new Error('Transaction has an unconfirmed required approval'))
     }
 
+    let storedRequest: AccountRequest | undefined
+    try {
+      storedRequest = accounts.getActiveRequestForAccount(req.account, req.handlerId)
+    } catch (_) {
+      storedRequest = undefined
+    }
+    if (!storedRequest || storedRequest.type !== 'transaction') {
+      return cb(new Error('Transaction request is no longer available'))
+    }
+    const transactionRequest = storedRequest as TransactionRequest
+    if (transactionRequest.simulation?.status === 'pending') {
+      return cb(new Error('Transaction execution check is still pending'))
+    }
+    if ((transactionRequest.approvals || []).some((approval) => !approval.approved)) {
+      return cb(new Error('Transaction has an unconfirmed required approval'))
+    }
+
     const signAndSend = (requestToSign: TransactionRequest) => {
       log.info('approveRequest', {
         handlerId: requestToSign.handlerId,
@@ -535,13 +577,13 @@ export class Provider extends EventEmitter {
       this.signAndSend(requestToSign, cb)
     }
 
-    accounts.lockRequest(req.handlerId, req.account)
+    accounts.lockRequest(transactionRequest.handlerId, transactionRequest.account)
 
-    if (req.data.nonce) return signAndSend(req)
+    if (transactionRequest.data.nonce) return signAndSend(transactionRequest)
 
-    this.getNonce(req.data, (response) => {
+    this.getNonce(transactionRequest.data, (response) => {
       if (response.error) {
-        this.respondToRequest(req.handlerId, response)
+        this.respondToRequest(transactionRequest.handlerId, response)
 
         return cb(new Error(response.error.message))
       }
@@ -549,12 +591,16 @@ export class Provider extends EventEmitter {
       if (typeof response.result !== 'string' || parseRpcQuantity(response.result) === undefined) {
         return cb(new Error('Invalid transaction nonce response'))
       }
-      const updatedReq = accounts.updateNonce(req.handlerId, response.result, req.account)
+      const updatedReq = accounts.updateNonce(
+        transactionRequest.handlerId,
+        response.result,
+        transactionRequest.account
+      )
 
       if (updatedReq) {
         signAndSend(updatedReq)
       } else {
-        log.error(`could not find request with handlerId="${req.handlerId}"`)
+        log.error(`could not find request with handlerId="${transactionRequest.handlerId}"`)
         cb(new Error('could not find request'))
       }
     })
@@ -967,9 +1013,12 @@ export class Provider extends EventEmitter {
             ...unclassifiedReq,
             classification
           }
+          const requestResponder = inheritRequestSignal(res, (response: RPCResponsePayload) => {
+            this.respondToRequest(handlerId, response)
+          })
 
           try {
-            accounts.addRequestForAccount((currentAccount as FrameAccount).id, req, res)
+            accounts.addRequestForAccount((currentAccount as FrameAccount).id, req, requestResponder)
           } catch (error) {
             return resError((error as Error).message, payload, (response) =>
               this.respondToRequest(handlerId, response)
@@ -1051,7 +1100,11 @@ export class Provider extends EventEmitter {
       this.respondToRequest(req.handlerId, data)
     })
 
-    accounts.addRequest(req, _res)
+    try {
+      accounts.addRequest(req, _res)
+    } catch (error) {
+      resError(error as Error, normalizedPayload, _res)
+    }
   }
 
   signTypedData(
@@ -1205,9 +1258,17 @@ export class Provider extends EventEmitter {
         approvals: []
       }
 
-      accounts.addRequest(permitRequest, requestResponder)
+      try {
+        accounts.addRequest(permitRequest, requestResponder)
+      } catch (error) {
+        resError(error as Error, payload, requestResponder)
+      }
     } else {
-      accounts.addRequest(req, requestResponder)
+      try {
+        accounts.addRequest(req, requestResponder)
+      } catch (error) {
+        resError(error as Error, payload, requestResponder)
+      }
     }
   }
 

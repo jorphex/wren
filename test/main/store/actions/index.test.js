@@ -208,13 +208,21 @@ describe('#setGlideSide', () => {
 describe('#notify', () => {
   it('uses serializable empty notification state when dismissed', () => {
     const updates = []
-    const update = (path, value) => updates.push([path, value()])
+    const update = (path, value) => updates.push([path, value({ notify: '', notifyData: {} })])
 
     notifyAction(update)
 
     expect(updates).toEqual([
-      ['view.notify', ''],
-      ['view.notifyData', {}]
+      [
+        'view',
+        expect.objectContaining({
+          notify: '',
+          notifyData: {},
+          notifyId: '',
+          notifyOwner: '',
+          notifyQueue: []
+        })
+      ]
     ])
   })
 })
@@ -1550,22 +1558,26 @@ describe('#navClearReq', () => {
   })
 
   it('should remove a specific request from the nav', () => {
+    const accountId = '0xaccount-a'
     nav = [
       {
         view: 'requestView',
         data: {
+          accountId,
           requestId: '1a'
         }
       },
       {
         view: 'requestView',
         data: {
+          accountId,
           requestId: '2b'
         }
       },
       {
         view: 'expandedModule',
         data: {
+          account: accountId,
           id: 'requests'
         }
       }
@@ -1573,30 +1585,49 @@ describe('#navClearReq', () => {
 
     const [req1, , inbox] = nav
 
-    clearRequest('2b')
+    clearRequest(accountId, '2b')
 
     expect(nav).toStrictEqual([req1, inbox])
   })
 
   it('should remove the request inbox when not requested', () => {
+    const accountId = '0xaccount-a'
     nav = [
       {
         view: 'requestView',
         data: {
+          accountId,
           requestId: '1c'
         }
       },
       {
         view: 'expandedModule',
         data: {
+          account: accountId,
           id: 'requests'
         }
       }
     ]
 
-    clearRequest('1c', false)
+    clearRequest(accountId, '1c', false)
 
     expect(nav).toStrictEqual([])
+  })
+
+  it('keeps the same handler identity and inbox for another account', () => {
+    nav = [
+      { view: 'requestView', data: { accountId: '0xaccount-a', requestId: 'shared' } },
+      { view: 'expandedModule', data: { account: '0xaccount-a', id: 'requests' } },
+      { view: 'requestView', data: { accountId: '0xaccount-b', requestId: 'shared' } },
+      { view: 'expandedModule', data: { account: '0xaccount-b', id: 'requests' } }
+    ]
+
+    clearRequest('0xaccount-a', 'shared', false)
+
+    expect(nav).toStrictEqual([
+      { view: 'requestView', data: { accountId: '0xaccount-b', requestId: 'shared' } },
+      { view: 'expandedModule', data: { account: '0xaccount-b', id: 'requests' } }
+    ])
   })
 })
 

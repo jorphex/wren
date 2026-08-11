@@ -9,6 +9,7 @@ import { capitalize } from '../../../resources/utils'
 import wrenIcon from '../../../asset/WrenIcon.png'
 import ExtensionConnectNotification from './ExtensionConnect'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
+import { EXTENSION_OWNER_PREFIX, requestReference } from '../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -34,27 +35,63 @@ export class Notify extends React.Component {
     this.previousFocus?.focus?.()
   }
 
+  activeNotificationId() {
+    return this.store('view.notifyId') || ''
+  }
+
+  dismissNotification(expectedId = this.activeNotificationId()) {
+    this.store.notify('', {}, { expectedId })
+  }
+
+  replaceNotification(type, data, replaceId = this.activeNotificationId()) {
+    this.store.notify(type, data, { replaceId })
+  }
+
+  deferredPairingContext() {
+    const queue = this.store('view.notifyQueue') || []
+    const extensionWaiting = queue.some(({ owner }) => owner?.startsWith(EXTENSION_OWNER_PREFIX))
+    if (!extensionWaiting) return null
+
+    return (
+      <div className='notifyQueueContext' role='status'>
+        <span>Extension pairing will continue after this request.</span>
+      </div>
+    )
+  }
+
   approveRequest(req, onSuccess) {
     if (this.approvalInFlight) return
 
+    const expectedId = this.activeNotificationId()
     this.approvalInFlight = true
     this.setState({ approvalPending: true, approvalError: false })
-    link.rpc('approveRequest', req, (error) => {
+    link.rpc('approveRequest', requestReference(req), (error) => {
+      if (this.activeNotificationId() !== expectedId) return
       if (error) {
         this.approvalInFlight = false
         this.setState({ approvalPending: false, approvalError: true })
         return
       }
 
-      onSuccess()
+      onSuccess(expectedId)
     })
   }
 
   syncDialogFocus() {
     const dialog = this.dialogRef.current
+    const notificationId = this.activeNotificationId()
+    const notificationChanged = notificationId !== this.focusedNotificationId
 
-    if (dialog && dialog !== this.activeDialog) {
-      this.previousFocus = document.activeElement
+    if (notificationChanged) {
+      this.focusedNotificationId = notificationId
+      this.approvalInFlight = false
+      if (this.state.approvalPending || this.state.approvalError) {
+        this.setState({ approvalPending: false, approvalError: false })
+      }
+    }
+
+    if (dialog && (dialog !== this.activeDialog || notificationChanged)) {
+      if (!this.activeDialog) this.previousFocus = document.activeElement
       this.activeDialog = dialog
       const firstControl =
         dialog.querySelector('[data-dialog-initial-focus]') ||
@@ -74,7 +111,7 @@ export class Notify extends React.Component {
   handleDialogKeyDown(event, dismissible) {
     if (event.key === 'Escape' && dismissible && !this.approvalInFlight) {
       event.preventDefault()
-      this.store.notify()
+      this.dismissNotification()
       return
     }
 
@@ -109,7 +146,7 @@ export class Notify extends React.Component {
         onMouseDown={
           dismissible
             ? () => {
-                if (!this.approvalInFlight) this.store.notify()
+                if (!this.approvalInFlight) this.dismissNotification()
               }
             : undefined
         }
@@ -152,7 +189,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:action', 'muteWelcomeWarning')
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Continue</div>
@@ -210,7 +247,7 @@ export class Notify extends React.Component {
                 className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
                 onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
-                  this.store.notify()
+                  this.dismissNotification()
                 }}
               >
                 <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
@@ -231,6 +268,7 @@ export class Notify extends React.Component {
           <h2 id='wren-notify-title' className='notifyTitle'>
             Gas fee warning
           </h2>
+          {this.deferredPairingContext()}
           <div className='notifyBody'>
             {feeUSD !== '0.00' ? (
               <>
@@ -256,7 +294,7 @@ export class Notify extends React.Component {
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -265,7 +303,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               disabled={approvalPending}
-              onClick={() => this.approveRequest(req, () => this.store.notify())}
+              onClick={() => this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))}
             >
               <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
@@ -294,6 +332,7 @@ export class Notify extends React.Component {
           <h2 id='wren-notify-title' className='notifyTitle'>
             Signer unavailable
           </h2>
+          {this.deferredPairingContext()}
           <div className='notifyBody'>
             <div className='notifyBodyQuestion'>Check the signer for this account, then try again.</div>
           </div>
@@ -302,7 +341,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -320,6 +359,7 @@ export class Notify extends React.Component {
           <h2 id='wren-notify-title' className='notifyTitle'>
             No signer attached
           </h2>
+          {this.deferredPairingContext()}
           <div className='notifyBody'>
             <div className='notifyBodyLine'>This account does not have a signer.</div>
             <div className='notifyBodyQuestion'>Attach a signer that can sign for this account.</div>
@@ -329,7 +369,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -354,6 +394,7 @@ export class Notify extends React.Component {
           <h2 id='wren-notify-title' className='notifyTitle'>
             Signer compatibility
           </h2>
+          {this.deferredPairingContext()}
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
               {`Your ${capitalize(signer)} is not compatible with ${capitalize(tx)} ${
@@ -379,7 +420,7 @@ export class Notify extends React.Component {
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -389,7 +430,6 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               disabled={approvalPending}
               onClick={() => {
-                // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
                 const {
                   nativeCurrency,
@@ -417,13 +457,13 @@ export class Notify extends React.Component {
                     this.toDisplayUSD(maxFeeUSD) === '0.00') &&
                   !this.store('main.mute.gasFeeWarning')
                 ) {
-                  this.store.notify('gasFeeWarning', {
+                  this.replaceNotification('gasFeeWarning', {
                     req,
                     feeUSD: this.toDisplayUSD(maxFeeUSD),
                     currentSymbol
                   })
                 } else {
-                  this.approveRequest(req, () => this.store.notify())
+                  this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))
                 }
               }}
             >
@@ -478,7 +518,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -515,7 +555,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -551,7 +591,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputSingleButton wrenControl wrenControlPrimary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -578,7 +618,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -588,7 +628,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExternal', url)
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Open link</div>
@@ -625,7 +665,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
               onClick={() => {
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -635,7 +675,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
               onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
-                this.store.notify()
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Open explorer</div>
@@ -686,6 +726,7 @@ export class Notify extends React.Component {
       return this.renderDialog(this.openExplorer(this.store('view.notifyData')))
     } else if (notify === 'extensionConnect') {
       const { browser, extensionId, pairingCode, requestId } = this.store('view.notifyData')
+      const notificationId = this.activeNotificationId()
 
       return this.renderDialog(
         <ExtensionConnectNotification
@@ -693,14 +734,7 @@ export class Notify extends React.Component {
           extensionId={extensionId}
           pairingCode={pairingCode}
           requestId={requestId}
-          onClose={() => {
-            if (
-              this.store('view.notify') === 'extensionConnect' &&
-              this.store('view.notifyData.requestId') === requestId
-            ) {
-              this.store.notify()
-            }
-          }}
+          onClose={() => this.dismissNotification(notificationId)}
         />,
         false
       )

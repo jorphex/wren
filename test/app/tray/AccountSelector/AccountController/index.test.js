@@ -44,6 +44,29 @@ test('shows pending work in a chooser row without restoring the legacy card', ()
   expect(screen.queryByText('Show account activity')).toBeNull()
 })
 
+test('counts only actionable requests in the account chooser badge', () => {
+  const id = '0x0000000000000000000000000000000000000002'
+  const account = new Account({ id, name: 'Garden', status: 'ok', lastSignerType: 'seed' })
+  account.store = (...path) => {
+    if (path.join('.') === `main.accounts.${id}`) {
+      return {
+        address: id,
+        name: 'Garden',
+        requests: {
+          first: { mode: 'normal' },
+          second: { mode: 'normal' },
+          submitted: { mode: 'monitor' }
+        }
+      }
+    }
+    return ''
+  }
+
+  render(account.render())
+
+  expect(screen.getByRole('status', { name: '2 pending account requests' }).textContent).toBe('2')
+})
+
 test('switches directly from the account drawer without collapsing the account view', () => {
   const account = new Account({
     id: '0x0000000000000000000000000000000000000002',

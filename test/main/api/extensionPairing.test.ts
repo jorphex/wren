@@ -10,6 +10,7 @@ import {
 import type { ExtensionPairingCandidate } from '../../../main/api/extensionAuth'
 import { extensionKeyFingerprint } from '../../../main/api/extensionAuth'
 import { registerAuthenticatedExtension } from '../../../main/api/extensionConnections'
+import { transitionNotification } from '../../../resources/store/notifications'
 
 jest.mock('../../../main/store')
 
@@ -51,7 +52,16 @@ function candidate(marker: string, overrides = {}): ExtensionPairingCandidate {
 beforeEach(() => {
   store.clear()
   store.set('main.extensionCredentials', {})
-  store.notify = jest.fn()
+  store.set('view', {
+    notify: '',
+    notifyData: {},
+    notifyId: '',
+    notifyOwner: '',
+    notifyQueue: []
+  })
+  store.notify = jest.fn((type = '', data = {}, options = {}) => {
+    store.set('view', transitionNotification(store('view'), type, data, options))
+  })
   store.setExtensionCredential = jest.fn()
   store.removeExtensionCredential = jest.fn()
 })
@@ -194,7 +204,7 @@ it('caches a rejection for the process lifetime and cancels abandoned consent', 
   respondToExtensionPairing(rejectionRequest.requestId, false)
   await expect(first).resolves.toBe(false)
   await expect(authorizeExtension(rejected)).resolves.toBe(false)
-  expect(store.notify).toHaveBeenCalledTimes(1)
+  expect(store.notify).toHaveBeenCalledTimes(2)
 
   const abandoned = candidate('e')
   const controller = new AbortController()
@@ -204,20 +214,40 @@ it('caches a rejection for the process lifetime and cancels abandoned consent', 
   store.set('view.notifyData', abandonedRequest)
   controller.abort()
   await expect(waiting).resolves.toBe(false)
-  expect(store.notify).toHaveBeenLastCalledWith()
+  expect(store.notify).toHaveBeenLastCalledWith('', {}, { expectedId: expect.any(String) })
 })
 
-it('rejects without clearing when another workflow replaces the pairing notification', async () => {
+it('keeps a queued pairing active while another notification is visible', async () => {
+  store.notify('gasFeeWarning', { message: 'Review this fee' }, { id: 'fee-warning' })
   const waiting = authorizeExtension(candidate('k'))
-  const request = store.notify.mock.calls[0][1]
-  store.set('view.notify', 'gasFeeWarning')
-  store.set('view.notifyData', { requestId: 'different-request' })
+  const request = store.notify.mock.calls[1][1]
+  store.notify.mockClear()
+
+  store.getObserver(`extension-pairing:${request.requestId}`).fire()
+
+  expect(store('view.notify')).toBe('gasFeeWarning')
+  expect(store('view.notifyQueue')).toHaveLength(2)
+  expect(store.notify).not.toHaveBeenCalled()
+
+  respondToExtensionPairing(request.requestId, false)
+  await expect(waiting).resolves.toBe(false)
+  expect(store('view.notifyQueue')).toHaveLength(1)
+  expect(store('view.notifyId')).toBe('fee-warning')
+})
+
+it('rejects without clearing another workflow when its queued pairing is removed', async () => {
+  store.notify('gasFeeWarning', { message: 'Review this fee' }, { id: 'fee-warning' })
+  const waiting = authorizeExtension(candidate('r'))
+  const request = store.notify.mock.calls[1][1]
+  const pairing = store('view.notifyQueue')[1]
+  store.notify('', {}, { expectedId: pairing.id })
   store.notify.mockClear()
 
   store.getObserver(`extension-pairing:${request.requestId}`).fire()
 
   await expect(waiting).resolves.toBe(false)
   expect(store.notify).not.toHaveBeenCalled()
+  expect(store('view.notifyId')).toBe('fee-warning')
 })
 
 it('exposes explicit credential revocation', () => {

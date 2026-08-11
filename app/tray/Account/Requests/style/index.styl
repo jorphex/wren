@@ -260,6 +260,27 @@
 .requestViewScroll
   background transparent
 
+.requestQueueStatus
+  position sticky
+  top 0
+  z-index 2
+  display flex
+  min-height 40px
+  align-items center
+  justify-content space-between
+  padding 0 var(--wren-space-4)
+  border-bottom 1px solid var(--wren-ledger-rule)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-card)
+  font-size 12px
+
+.requestQueueStatusTitle
+  color var(--wren-text-primary)
+  font-weight 560
+
+.requestQueueStatusWaiting
+  font-weight 450
+
 .requestViewScrollEmpty
   display flex
   min-height 100%

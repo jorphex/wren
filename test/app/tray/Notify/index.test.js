@@ -93,5 +93,106 @@ test('exposes dismissible warnings as labelled modal dialogs', () => {
   const dialog = screen.getByRole('dialog', { name: 'Gas fee warning' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
   fireEvent.keyDown(dialog, { key: 'Escape' })
-  expect(store.notify).toHaveBeenCalledTimes(1)
+  expect(store.notify).toHaveBeenCalledWith('', {}, { expectedId: '' })
+})
+
+test('uses a narrow request reference and ignores a stale approval callback', () => {
+  const req = {
+    handlerId: '11111111-1111-4111-8111-111111111111',
+    account: '0x0000000000000000000000000000000000000001',
+    type: 'transaction',
+    data: { not: 'forwarded' }
+  }
+  let activeId = 'notice-1'
+  const store = jest.fn((...path) => {
+    const key = path.join('.')
+    if (key === 'view.notify') return 'gasFeeWarning'
+    if (key === 'view.notifyId') return activeId
+    if (key === 'view.notifyData') return { req }
+    if (key === 'main.mute.gasFeeWarning') return false
+    return undefined
+  })
+  store.notify = jest.fn()
+  class NotifyHarness extends Notify {
+    constructor(props) {
+      super(props)
+      this.store = store
+    }
+  }
+  let approveCallback
+  link.rpc.mockImplementation((_method, _reference, callback) => {
+    approveCallback = callback
+  })
+  render(<NotifyHarness />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'approveRequest',
+    { handlerId: req.handlerId, account: req.account, type: req.type },
+    expect.any(Function)
+  )
+
+  activeId = 'notice-2'
+  act(() => approveCallback(null))
+  expect(store.notify).not.toHaveBeenCalled()
+})
+
+test('resets approval errors and initial focus when the active notification changes', () => {
+  const req = {
+    handlerId: '11111111-1111-4111-8111-111111111111',
+    account: '0x0000000000000000000000000000000000000001',
+    type: 'transaction'
+  }
+  let activeId = 'notice-1'
+  const store = jest.fn((...path) => {
+    const key = path.join('.')
+    if (key === 'view.notify') return 'gasFeeWarning'
+    if (key === 'view.notifyId') return activeId
+    if (key === 'view.notifyData') return { req }
+    if (key === 'main.mute.gasFeeWarning') return false
+    return undefined
+  })
+  store.notify = jest.fn()
+  class NotifyHarness extends Notify {
+    constructor(props) {
+      super(props)
+      this.store = store
+    }
+  }
+  let approveCallback
+  link.rpc.mockImplementation((_method, _reference, callback) => {
+    approveCallback = callback
+  })
+  const { rerender } = render(<NotifyHarness tick={0} />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  act(() => approveCallback(new Error('failed')))
+  expect(screen.getByRole('alert')).toBeTruthy()
+
+  activeId = 'notice-2'
+  rerender(<NotifyHarness tick={1} />)
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+})
+
+test('shows deferred extension context without offering to skip the active request', () => {
+  const notify = new Notify({})
+  const store = jest.fn((...path) => {
+    const key = path.join('.')
+    if (key === 'view.notifyId') return 'first'
+    if (key === 'view.notifyQueue') {
+      return [
+        { id: 'first', owner: 'request:first' },
+        { id: 'second', owner: 'request:second' },
+        { id: 'pairing', owner: 'extension:pairing' }
+      ]
+    }
+    return undefined
+  })
+  store.notify = jest.fn()
+  notify.store = store
+  render(notify.deferredPairingContext())
+
+  expect(screen.getByText('Extension pairing will continue after this request.')).toBeTruthy()
+  expect(screen.queryByRole('button')).toBeNull()
 })

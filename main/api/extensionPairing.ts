@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 
+import { EXTENSION_OWNER_PREFIX, notificationByOwner } from '../../resources/store/notifications'
 import store from '../store'
 import { requireStoreAction } from '../store/action'
 import { ExtensionCredentialSchema, type ExtensionCredential } from '../store/state/types/extensionCredential'
@@ -21,6 +22,12 @@ const rejectedIdentities = new Set<string>()
 
 const pairingIdentity = ({ browser, extensionId, installationId }: ExtensionPairingCandidate) =>
   `${browser}:${extensionId}:${installationId}`
+
+const pairingNotification = (requestId: string) =>
+  notificationByOwner(
+    (store('view.notifyQueue') || []) as Array<{ id: string; owner: string }>,
+    `${EXTENSION_OWNER_PREFIX}${requestId}`
+  )
 
 function credentialMatches(candidate: ExtensionPairingCandidate, credential: ExtensionCredential) {
   return (
@@ -61,12 +68,8 @@ function finishPairing(pending: PendingPairing, approved: boolean) {
   activeByIdentity.delete(pairingIdentity(pending.candidate))
   pending.notificationObserver?.remove()
   delete pending.notificationObserver
-  if (
-    store('view.notify') === 'extensionConnect' &&
-    store('view.notifyData.requestId') === pending.requestId
-  ) {
-    requireStoreAction('notify')()
-  }
+  const notification = pairingNotification(pending.requestId)
+  if (notification) requireStoreAction('notify')('', {}, { expectedId: notification.id })
   pending.settle(approved)
 }
 
@@ -141,12 +144,7 @@ export async function authorizeExtension(
   })
   pending.notificationObserver = store.observer(() => {
     if (activeByRequest.get(pending.requestId) !== pending) return
-    if (
-      store('view.notify') !== 'extensionConnect' ||
-      store('view.notifyData.requestId') !== pending.requestId
-    ) {
-      finishPairing(pending, false)
-    }
+    if (!pairingNotification(pending.requestId)) finishPairing(pending, false)
   }, `extension-pairing:${pending.requestId}`)
   return waitForPairing(pending, signal)
 }

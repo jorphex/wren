@@ -13,6 +13,7 @@ import { ApprovalType } from '../../../resources/constants'
 import { gweiToHex } from '../../util'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { SignerUserRejectedError } from '../../../main/signers/errors'
+import nav from '../../../main/windows/nav'
 
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
@@ -992,6 +993,7 @@ describe('#updateRequest', () => {
     const simulation = jest.spyOn(activeAccount, 'refreshTransactionSimulation')
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
+    activeAccount.activeReviewHandlerId = request.handlerId
 
     const updated = Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')
 
@@ -1006,6 +1008,7 @@ describe('#updateRequest', () => {
     const simulation = jest.spyOn(activeAccount, 'refreshTransactionSimulation')
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
+    activeAccount.activeReviewHandlerId = request.handlerId
 
     expect(Accounts.updateRequest(request.handlerId, { amount: '-1' }, 'erc20:approve')).toBe(false)
     request.locked = true
@@ -1026,6 +1029,7 @@ describe('#updateRequest', () => {
     const simulation = jest.spyOn(activeAccount, 'refreshTransactionSimulation')
     request.recognizedActions = [{ id: 'erc20:approve', update }]
     activeAccount.requests[request.handlerId] = request
+    activeAccount.activeReviewHandlerId = request.handlerId
 
     expect(Accounts.updateRequest(request.handlerId, { amount: '42' }, 'erc20:approve')).toBe(false)
     expect(simulation).not.toHaveBeenCalled()
@@ -1048,6 +1052,7 @@ describe('#updateRequest', () => {
       tokenData: { symbol: 'TKN' }
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
+    activeAccount.activeReviewHandlerId = permitRequest.handlerId
 
     const updated = Accounts.updateRequest(
       permitRequest.handlerId,
@@ -1081,6 +1086,7 @@ describe('#updateRequest', () => {
       permit: { value: '1' }
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
+    activeAccount.activeReviewHandlerId = permitRequest.handlerId
     update.mockClear()
 
     Accounts.updateRequest(permitRequest.handlerId, { amount: '1e2' }, null)
@@ -1101,6 +1107,7 @@ describe('#updateRequest', () => {
       typedMessage: { data: { message: { value: '1' } } }
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
+    activeAccount.activeReviewHandlerId = permitRequest.handlerId
     update.mockClear()
 
     Accounts.updateRequest(permitRequest.handlerId, { amount: '42' }, null)
@@ -1119,6 +1126,7 @@ describe('#updateRequest', () => {
       approvals: []
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
+    activeAccount.activeReviewHandlerId = permitRequest.handlerId
     const max = (2n ** 256n - 1n).toString(10)
 
     Accounts.updateRequest(permitRequest.handlerId, { amount: max }, null)
@@ -1146,14 +1154,112 @@ describe('#updateRequest', () => {
       approvals: [{ type: ApprovalType.TokenPermitRisk, approved: false, approve }]
     }
     activeAccount.requests[permitRequest.handlerId] = permitRequest
+    activeAccount.activeReviewHandlerId = permitRequest.handlerId
 
     Accounts.confirmRequestApproval(permitRequest.handlerId, ApprovalType.TokenPermitRisk, {})
 
     expect(approve).not.toHaveBeenCalled()
   })
+
+  it('rejects approval confirmation for a forged queued request reference', () => {
+    const activeAccount = Accounts.current()
+    const active = { handlerId: 'active-approval', type: 'transaction' }
+    const approve = jest.fn()
+    const queued = {
+      handlerId: 'queued-approval',
+      type: 'transaction',
+      approvals: [{ type: ApprovalType.TokenPermitRisk, approved: false, approve }]
+    }
+    activeAccount.requests[active.handlerId] = active
+    activeAccount.requests[queued.handlerId] = queued
+    activeAccount.activeReviewHandlerId = active.handlerId
+
+    expect(() => Accounts.confirmRequestApproval(queued.handlerId, ApprovalType.TokenPermitRisk, {})).toThrow(
+      'Request is waiting for review'
+    )
+    expect(approve).not.toHaveBeenCalled()
+  })
+
+  it('rejects forged queued action, nonce, and user fee mutations', () => {
+    const activeAccount = Accounts.current()
+    const active = {
+      ...request,
+      handlerId: 'active-mutation',
+      account: activeAccount.id,
+      data: { ...request.data }
+    }
+    const actionUpdate = jest.fn().mockReturnValue(true)
+    const queued = {
+      ...request,
+      handlerId: 'queued-mutation',
+      account: activeAccount.id,
+      data: { ...request.data, type: '0x0', gasPrice: '0x1' },
+      recognizedActions: [{ id: 'erc20:approve', update: actionUpdate }]
+    }
+    activeAccount.requests[active.handlerId] = active
+    activeAccount.requests[queued.handlerId] = queued
+    activeAccount.activeReviewHandlerId = active.handlerId
+    const initialData = { ...queued.data }
+
+    expect(Accounts.updateRequest(queued.handlerId, { amount: '42' }, 'erc20:approve')).toBe(false)
+    expect(() => Accounts.updateNonce(queued.handlerId, '0x9')).toThrow('Request is waiting for review')
+    Accounts.adjustNonce(queued.handlerId, 1)
+    Accounts.resetNonce(queued.handlerId)
+    expect(() => Accounts.setGasPrice('0x2', queued.handlerId, true, activeAccount.id)).toThrow(
+      'Request is waiting for review'
+    )
+
+    expect(actionUpdate).not.toHaveBeenCalled()
+    expect(queued.data).toEqual(initialData)
+  })
 })
 
 describe('#addRequestForAccount', () => {
+  it('assigns deterministic independent FIFO order to 20 requests across 3 accounts', () => {
+    const account3Address = '0x3333333333333333333333333333333333333333'
+    Accounts.add(account3Address, 'Test Account 3', { type: 'ring' })
+    const accountIds = [account.address, account2.address, account3Address]
+    const expectedByAccount = new Map(accountIds.map((id) => [id, []]))
+    const now = jest.spyOn(Date, 'now').mockReturnValue(100)
+    nav.forward.mockClear()
+
+    try {
+      for (let index = 0; index < 20; index += 1) {
+        const accountId = accountIds[index % accountIds.length]
+        const queued = {
+          handlerId: `stress-${index}`,
+          type: 'access',
+          account: accountId,
+          origin: 'stress-origin',
+          payload: { id: index, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+        }
+        Accounts.addRequestForAccount(accountId, queued)
+        expectedByAccount.get(accountId).push(queued)
+      }
+
+      expectedByAccount.forEach((requests, accountId) => {
+        const queueIndexes = requests.map(({ queueIndex }) => queueIndex)
+        expect(
+          queueIndexes.every((value, index) => index === 0 || value === queueIndexes[index - 1] + 1)
+        ).toBe(true)
+        expect(
+          Object.values(Accounts.accounts[accountId].requests)
+            .sort((a, b) => a.queueIndex - b.queueIndex)
+            .map(({ handlerId }) => handlerId)
+        ).toEqual(requests.map(({ handlerId }) => handlerId))
+      })
+
+      const activeAccountRequestViews = nav.forward.mock.calls
+        .map(([, crumb]) => crumb)
+        .filter(({ view }) => view === 'requestView')
+      expect(activeAccountRequestViews).toHaveLength(1)
+      expect(activeAccountRequestViews[0].data.requestId).toBe('stress-0')
+    } finally {
+      now.mockRestore()
+      Accounts.remove(account3Address)
+    }
+  })
+
   it('admits through the explicit account while another account remains current', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicitRequest = { ...request, handlerId: 'explicit-request', account: account2.address }
@@ -1358,6 +1464,22 @@ describe('account-bound request transitions', () => {
     expect(targetAccount.requests[explicit.handlerId].status).toBe('pending')
   })
 
+  it('rejects forged approval and decline actions for a queued request', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const active = targetRequest('active-review', 'sign')
+    const queued = targetRequest('queued-review', 'sign')
+    targetAccount.addRequest(active)
+    targetAccount.addRequest(queued)
+
+    expect(() => Accounts.setRequestPending(queued)).toThrow(/waiting for review/i)
+    expect(Accounts.declineRequest(queued.handlerId, account2.address)).toBe(false)
+    expect(() => Accounts.getActiveRequestForAccount(account2.address, queued.handlerId)).toThrow(
+      /waiting for review/i
+    )
+    expect(queued.status).toBeUndefined()
+    expect(targetAccount.requests[active.handlerId]).toBe(active)
+  })
+
   it('settles access on its originating account rather than the selected account', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const response = jest.fn()
@@ -1519,6 +1641,7 @@ describe('#removeRequest', () => {
 
 describe('#clearRequestsByOrigin', () => {
   beforeEach(() => {
+    nav.forward.mockClear()
     Accounts.addRequest(request)
     Accounts.addRequest({ ...request, handlerId: '2' })
     Accounts.addRequest({ ...request, handlerId: '3', origin: '07h3r' })
@@ -1527,6 +1650,12 @@ describe('#clearRequestsByOrigin', () => {
   it('should remove any request from a given origin', () => {
     Accounts.clearRequestsByOrigin(account.id, request.origin)
     expect(Object.keys(Accounts.accounts[account.id].requests)).toHaveLength(1)
+    expect(
+      nav.forward.mock.calls
+        .map(([, crumb]) => crumb)
+        .filter(({ view }) => view === 'requestView')
+        .map(({ data }) => data.requestId)
+    ).toEqual([request.handlerId, '3'])
   })
 })
 
@@ -1717,10 +1846,23 @@ describe('#claimWalletCallsRequest', () => {
     }
   }
 
+  const admitReadyRequest = (targetAccount, request, responder) => {
+    const simulation = request.simulation
+    const preparation = request.preparation
+    const revealDetails = jest.spyOn(targetAccount, 'revealDetails').mockImplementationOnce(() => {})
+    try {
+      targetAccount.addRequest(request, responder)
+    } finally {
+      revealDetails.mockRestore()
+    }
+    request.simulation = simulation
+    request.preparation = preparation
+  }
+
   it('claims from the explicit account while another account remains current', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const request = readyRequest()
-    targetAccount.requests[request.handlerId] = request
+    admitReadyRequest(targetAccount, request)
 
     const snapshot = Accounts.claimWalletCallsRequest(account2.address.toUpperCase(), request.handlerId)
 
@@ -1743,8 +1885,7 @@ describe('#claimWalletCallsRequest', () => {
     const responder = jest.fn()
     responder.walletCallsLifecycle = true
     responder.accept = jest.fn()
-    request.res = responder
-    targetAccount.requests[request.handlerId] = request
+    admitReadyRequest(targetAccount, request, responder)
 
     const claimed = Accounts.claimWalletCallsRequestWithResponse(
       account2.address.toUpperCase(),
@@ -1761,8 +1902,7 @@ describe('#claimWalletCallsRequest', () => {
   it('does not claim a request without its specialized lifecycle responder', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const request = readyRequest('wallet-calls-no-response')
-    request.res = jest.fn()
-    targetAccount.requests[request.handlerId] = request
+    admitReadyRequest(targetAccount, request, jest.fn())
 
     expect(() => Accounts.claimWalletCallsRequestWithResponse(account2.address, request.handlerId)).toThrow(
       /response is no longer available/i
@@ -1776,7 +1916,7 @@ describe('#claimWalletCallsRequest', () => {
     try {
       const targetAccount = Accounts.accounts[account2.address]
       const request = readyRequest('wallet-calls-settlement')
-      targetAccount.requests[request.handlerId] = request
+      admitReadyRequest(targetAccount, request)
       Accounts.claimWalletCallsRequest(account2.address, request.handlerId)
 
       expect(Accounts.settleWalletCallsRequest(account2.address, request.handlerId)).toBe(true)
@@ -1806,8 +1946,9 @@ describe('#claimWalletCallsRequest', () => {
   it('restores the pending request when publishing its outcome fails', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const request = readyRequest('wallet-calls-outcome-store-failure')
-    targetAccount.requests[request.handlerId] = request
+    admitReadyRequest(targetAccount, request)
     Accounts.claimWalletCallsRequest(account2.address, request.handlerId)
+    delete request.res
     const expected = JSON.parse(JSON.stringify(request))
     const update = jest.spyOn(targetAccount, 'update').mockImplementationOnce(() => {
       throw new Error('account store unavailable')
@@ -1818,6 +1959,20 @@ describe('#claimWalletCallsRequest', () => {
     )
     expect(request).toEqual(expected)
     update.mockRestore()
+  })
+
+  it('rejects a forged claim for a queued batch', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const active = readyRequest('wallet-calls-active')
+    const queued = readyRequest('wallet-calls-queued')
+    admitReadyRequest(targetAccount, active)
+    admitReadyRequest(targetAccount, queued)
+
+    expect(() => Accounts.claimWalletCallsRequest(account2.address, queued.handlerId)).toThrow(
+      /waiting for review/i
+    )
+    expect(queued.locked).toBeUndefined()
+    expect(queued.status).toBeUndefined()
   })
 })
 
@@ -1955,6 +2110,7 @@ describe('#setRequestPending', () => {
       simulation: { status: 'pending', calls: [] }
     }
     currentAccount.requests[pendingSimulation.handlerId] = pendingSimulation
+    currentAccount.activeReviewHandlerId = pendingSimulation.handlerId
 
     expect(() => Accounts.setRequestPending(pendingSimulation)).toThrow(/execution check is still pending/i)
     expect(pendingSimulation.status).toBeUndefined()
@@ -1968,6 +2124,7 @@ describe('#setRequestPending', () => {
       const signingRequest = { ...request, handlerId: `watch-only-${type}`, type }
       currentAccount.lastSignerType = 'address'
       currentAccount.requests[signingRequest.handlerId] = signingRequest
+      currentAccount.activeReviewHandlerId = signingRequest.handlerId
 
       expect(() => Accounts.setRequestPending(signingRequest)).toThrow(/watch-only accounts cannot sign/i)
       expect(signingRequest.status).toBeUndefined()
@@ -1980,6 +2137,7 @@ describe('#setRequestPending', () => {
     const addChainRequest = { ...request, handlerId: 'watch-only-add-chain', type: 'addChain' }
     currentAccount.lastSignerType = 'address'
     currentAccount.requests[addChainRequest.handlerId] = addChainRequest
+    currentAccount.activeReviewHandlerId = addChainRequest.handlerId
 
     expect(() => Accounts.setRequestPending(addChainRequest)).not.toThrow()
     expect(addChainRequest.status).toBe('pending')

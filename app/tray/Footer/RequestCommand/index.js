@@ -17,6 +17,7 @@ import {
   subscribeToTransactionFeeDraftSafety
 } from '../../../../resources/domain/request'
 import { WATCH_ONLY_SIGNING_ERROR } from '../../../../resources/domain/signer'
+import { requestReference } from '../../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -100,12 +101,12 @@ export class RequestCommand extends React.Component {
     if (this.unsubscribeFeeDraftSafety) this.unsubscribeFeeDraftSafety()
   }
 
-  approve(reqId, req) {
-    link.rpc('approveRequest', req, () => {}) // Move to link.send
+  approve(_reqId, req) {
+    link.rpc('approveRequest', requestReference(req), () => {}) // Move to link.send
   }
 
   decline(req) {
-    link.rpc('declineRequest', req, () => {}) // Move to link.send
+    link.rpc('declineRequest', requestReference(req), () => {}) // Move to link.send
   }
 
   handleSignerCompatibilityFailure(error, compatibility, req) {

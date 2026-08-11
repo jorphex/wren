@@ -62,6 +62,7 @@ export interface AccountRequest<T extends RequestType = RequestType> extends Req
   mode?: RequestMode
   notice?: string
   created?: number
+  queueIndex?: number
   res?: RPCRequestCallback
 }
 

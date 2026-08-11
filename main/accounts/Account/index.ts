@@ -80,6 +80,7 @@ import type Signer from '../../signers/Signer'
 import { parseErc20ApprovalIntent } from '../../../resources/domain/transaction/allowance'
 import { getRequestSignal } from '../../provider/requestSignal'
 import { applyPermissionAction } from '../../provider/permissionEvents'
+import { notificationByOwner, requestNotificationOwner } from '../../../resources/store/notifications'
 
 const nebula = nebulaApi()
 
@@ -165,6 +166,9 @@ class FrameAccount {
   private preparationVersions: Record<string, number> = {}
   private preparationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   private requestAbortCleanup: Record<string, () => void> = {}
+  private nextRequestQueueIndex = 0
+  private activeReviewHandlerId: string | undefined
+  private requestPresentationDeferrals = 0
 
   accountObserver: Observer
   private ensLookupInFlight = false
@@ -313,17 +317,25 @@ class FrameAccount {
     return this.requests[id] as T
   }
 
+  getActiveReviewRequest<T extends AccountRequest>(handlerId: string) {
+    if (this.activeReviewHandlerId !== handlerId) return undefined
+    return this.requests[handlerId] as T | undefined
+  }
+
   resolveRequest({ handlerId }: AccountRequest, result?: unknown) {
     const knownRequest = this.requests[handlerId]
 
     if (knownRequest) {
       const payload = knownRequest.payload
-      if (knownRequest.res && payload) {
-        const { id, jsonrpc } = payload
-        knownRequest.res({ id, jsonrpc, result })
+      const responder = knownRequest.res
+      try {
+        this.clearRequest(knownRequest.handlerId)
+      } finally {
+        if (responder && payload) {
+          const { id, jsonrpc } = payload
+          responder({ id, jsonrpc, result })
+        }
       }
-
-      this.clearRequest(knownRequest.handlerId)
     }
   }
 
@@ -332,18 +344,22 @@ class FrameAccount {
 
     if (knownRequest) {
       const payload = knownRequest.payload
-      if (knownRequest.res && payload) {
-        const { id, jsonrpc } = payload
-        knownRequest.res({ id, jsonrpc, error })
+      const responder = knownRequest.res
+      try {
+        this.clearRequest(knownRequest.handlerId)
+      } finally {
+        if (responder && payload) {
+          const { id, jsonrpc } = payload
+          responder({ id, jsonrpc, error })
+        }
       }
-
-      this.clearRequest(knownRequest.handlerId)
     }
   }
 
   clearRequest(handlerId: string) {
     log.info(`clearRequest(${handlerId}) for account ${this.id}`)
 
+    const clearedActiveReview = this.activeReviewHandlerId === handlerId
     this.accounts.clearPendingNonceAdjustment?.(this, handlerId)
     this.requestAbortCleanup[handlerId]?.()
     delete this.requestAbortCleanup[handlerId]
@@ -354,17 +370,45 @@ class FrameAccount {
     delete this.preparationVersions[handlerId]
     clearTimeout(this.preparationTimers[handlerId])
     delete this.preparationTimers[handlerId]
-    requireStoreAction('navClearReq')(handlerId, Object.keys(this.requests).length > 0)
+    const notificationQueue = store('view.notifyQueue')
+    const notification = notificationByOwner(
+      Array.isArray(notificationQueue) ? notificationQueue : [],
+      requestNotificationOwner(this.id, handlerId)
+    )
+    if (notification) {
+      requireStoreAction('notify')('', {}, { expectedId: notification.id })
+    }
+    requireStoreAction('navClearReq')(this.id, handlerId, Object.keys(this.requests).length > 0)
+
+    if (clearedActiveReview) {
+      this.activeReviewHandlerId = undefined
+      if (this.requestPresentationDeferrals === 0) this.presentNextRequest(false)
+    }
 
     this.update()
   }
 
-  clearRequestsByOrigin(origin: string) {
-    Object.entries(this.requests).forEach(([_handlerId, req]) => {
-      if (req.origin === origin) {
-        const err = { code: 4001, message: 'User rejected the request' }
-        this.rejectRequest(req, err)
+  private deferRequestPresentation(action: () => void) {
+    this.requestPresentationDeferrals += 1
+    try {
+      action()
+    } finally {
+      this.requestPresentationDeferrals -= 1
+      if (this.requestPresentationDeferrals === 0 && !this.activeReviewHandlerId) {
+        this.presentNextRequest(false)
+        this.update()
       }
+    }
+  }
+
+  clearRequestsByOrigin(origin: string) {
+    this.deferRequestPresentation(() => {
+      Object.values(this.requests).forEach((req) => {
+        if (req.origin === origin) {
+          const err = { code: 4001, message: 'User rejected the request' }
+          this.rejectRequest(req, err)
+        }
+      })
     })
   }
 
@@ -388,26 +432,34 @@ class FrameAccount {
       return undefined
     }
 
-    Object.values(this.requests).forEach((request) => {
-      if (request.origin === origin && request.status === undefined && requestChainId(request) === chainId) {
-        this.rejectRequest(request, {
-          code: 4901,
-          message: `Request cancelled because the origin switched away from chain ${chainId}`
-        })
-      }
+    this.deferRequestPresentation(() => {
+      Object.values(this.requests).forEach((request) => {
+        if (
+          request.origin === origin &&
+          request.status === undefined &&
+          requestChainId(request) === chainId
+        ) {
+          this.rejectRequest(request, {
+            code: 4901,
+            message: `Request cancelled because the origin switched away from chain ${chainId}`
+          })
+        }
+      })
     })
   }
 
   rejectUnapprovedRequestsForOrigins(origins: readonly string[]) {
     const revokedOrigins = new Set(origins)
-    Object.values(this.requests).forEach((request) => {
-      if (
-        revokedOrigins.has(request.origin) &&
-        request.status === undefined &&
-        !('locked' in request && request.locked)
-      ) {
-        this.rejectRequest(request, { code: 4100, message: 'Request origin access was revoked' })
-      }
+    this.deferRequestPresentation(() => {
+      Object.values(this.requests).forEach((request) => {
+        if (
+          revokedOrigins.has(request.origin) &&
+          request.status === undefined &&
+          !('locked' in request && request.locked)
+        ) {
+          this.rejectRequest(request, { code: 4100, message: 'Request origin access was revoked' })
+        }
+      })
     })
   }
 
@@ -1248,133 +1300,154 @@ class FrameAccount {
     }
   }
 
+  private orderedRequests() {
+    return Object.values(this.requests)
+      .filter((request) => request.mode !== RequestMode.Monitor)
+      .sort((a, b) => {
+        const aIndex = a.queueIndex ?? Number.MAX_SAFE_INTEGER
+        const bIndex = b.queueIndex ?? Number.MAX_SAFE_INTEGER
+        if (aIndex !== bIndex) return aIndex - bIndex
+
+        const aCreated = a.created ?? Number.MAX_SAFE_INTEGER
+        const bCreated = b.created ?? Number.MAX_SAFE_INTEGER
+        if (aCreated !== bCreated) return aCreated - bCreated
+
+        return a.handlerId.localeCompare(b.handlerId)
+      })
+  }
+
+  private presentRequest(req: AnyAccountRequest, summon: boolean) {
+    requireStoreAction('setSignerView')('default')
+    requireStoreAction('setPanelView')('default')
+
+    const accountOpen = store('selected.current') === req.account
+    if (accountOpen) {
+      if (req.type === 'addChain') {
+        requireStoreAction('navDash')({
+          view: 'chains',
+          data: {
+            newChain: req.chain,
+            requestReference: {
+              account: req.account,
+              handlerId: req.handlerId,
+              origin: store('main.origins', req.origin, 'name') || req.origin
+            }
+          }
+        })
+      } else {
+        const panelNav: Breadcrumb[] = store('windows.panel.nav') || []
+        const currentRequestData = panelNav.find((crumb) => crumb.view === 'requestView')?.data
+        const currentRequestId = isRecord(currentRequestData) ? currentRequestData['requestId'] : undefined
+        const currentAccountId = isRecord(currentRequestData) ? currentRequestData['accountId'] : undefined
+
+        if (currentRequestId !== req.handlerId || currentAccountId !== req.account) {
+          nav.forward('panel', {
+            view: 'expandedModule',
+            data: {
+              id: 'requests',
+              account: req.account
+            }
+          })
+          nav.forward('panel', {
+            view: 'requestView',
+            data: {
+              step: 'confirm',
+              accountId: req.account,
+              requestId: req.handlerId
+            }
+          })
+        }
+      }
+    }
+
+    if (summon) {
+      setTimeout(() => {
+        windows.showTray()
+      }, 100)
+    }
+  }
+
+  private presentNextRequest(summon: boolean) {
+    const knownActive = this.activeReviewHandlerId ? this.requests[this.activeReviewHandlerId] : undefined
+    if (knownActive) return knownActive
+
+    const next = this.orderedRequests()[0]
+    this.activeReviewHandlerId = next?.handlerId
+    if (next) this.presentRequest(next, summon)
+    return next
+  }
+
+  presentActiveRequest() {
+    const active = this.activeReviewHandlerId ? this.requests[this.activeReviewHandlerId] : undefined
+    if (active) this.presentRequest(active, false)
+    else {
+      this.presentNextRequest(false)
+      this.update()
+    }
+  }
+
+  releaseRequestReview(handlerId: string) {
+    if (this.activeReviewHandlerId !== handlerId) return false
+
+    this.activeReviewHandlerId = undefined
+    try {
+      requireStoreAction('navClearReq')(this.id, handlerId, Object.keys(this.requests).length > 0)
+      this.presentNextRequest(false)
+    } catch (error) {
+      log.warn('Unable to advance request review queue', {
+        handlerId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    } finally {
+      this.update()
+    }
+    return true
+  }
+
   addRequest(req: AnyAccountRequest, res: RPCRequestCallback | WalletCallsResponder = () => {}) {
     if (
       req?.type === 'walletCalls' &&
       (typeof req.account !== 'string' || req.account.toLowerCase() !== this.address)
     ) {
-      const payload = req.payload || {}
-      res({
-        id: payload.id,
-        jsonrpc: payload.jsonrpc,
-        error: { code: 4100, message: 'Wallet-call request is not owned by this account' }
-      })
-      return
+      throw new Error('Wallet-call request is not owned by this account')
     }
 
     const signal = getRequestSignal(res)
     if (signal?.aborted) {
-      const payload = req.payload || {}
-      res({
-        id: payload.id,
-        jsonrpc: payload.jsonrpc,
-        error: { code: 4900, message: 'Requesting client disconnected' }
-      })
-      return
+      throw new Error('Requesting client disconnected')
     }
 
-    const add = (r: AnyAccountRequest) => {
-      r.mode = RequestMode.Normal
-      r.created = Date.now()
-      r.res = res
-      this.requests[r.handlerId] = r
+    req.mode = RequestMode.Normal
+    req.created = Date.now()
+    req.queueIndex = this.nextRequestQueueIndex++
+    req.res = res
+    this.requests[req.handlerId] = req
 
-      if (signal) {
-        const abort = () => {
-          const request = this.requests[r.handlerId]
-          if (request !== r) return
-          this.accounts.cancelUnapprovedRequestForAccount(this.id, r.handlerId, {
-            code: 4900,
-            message: 'Requesting client disconnected'
-          })
-        }
-        signal.addEventListener('abort', abort, { once: true })
-        this.requestAbortCleanup[r.handlerId] = () => signal.removeEventListener('abort', abort)
-      }
-
-      if (req.type === 'sign' || req.type === 'signTypedData' || req.type === 'signErc20Permit') {
-        req.approvals = req.approvals || []
-        this.syncSignatureApprovalRisk(req)
-      }
-      if (req.type === 'signErc20Permit') {
-        this.syncPermitApprovalRisk(req)
-      }
-
-      this.revealDetails(req)
-
-      this.update()
-      requireStoreAction('setSignerView')('default')
-      requireStoreAction('setPanelView')('default')
-
-      // Display request
-      const { account } = req
-
-      // Check if this account is open
-      const accountOpen = store('selected.current') === account
-
-      // Does the current panel nav include a 'requestView'
-      const panelNav: Breadcrumb[] = store('windows.panel.nav') || []
-      const firstPanelData = panelNav[0]?.data
-      const inExpandedRequestsView =
-        panelNav[0]?.view === 'expandedModule' &&
-        isRecord(firstPanelData) &&
-        firstPanelData['id'] === 'requests'
-      const inRequestView = panelNav.map((crumb) => crumb.view).includes('requestView')
-
-      if (accountOpen) {
-        if (inRequestView) {
-          nav.back('panel')
-          nav.back('panel')
-        } else if (inExpandedRequestsView) {
-          nav.back('panel')
-        }
-
-        if (req.type === 'addChain') {
-          requireStoreAction('navDash')({
-            view: 'chains',
-            data: {
-              newChain: req.chain,
-              requestReference: {
-                account: req.account,
-                handlerId: req.handlerId,
-                origin: store('main.origins', req.origin, 'name') || req.origin
-              }
-            }
-          })
-
-          setTimeout(() => {
-            windows.showTray()
-          }, 100)
-          return
-        }
-
-        nav.forward('panel', {
-          view: 'expandedModule',
-          data: {
-            id: 'requests',
-            account: account
-          }
+    if (signal) {
+      const abort = () => {
+        const request = this.requests[req.handlerId]
+        if (request !== req) return
+        this.accounts.cancelUnapprovedRequestForAccount(this.id, req.handlerId, {
+          code: 4900,
+          message: 'Requesting client disconnected'
         })
-
-        if (!store('tray.open') || !inRequestView) {
-          const crumb = {
-            view: 'requestView',
-            data: {
-              step: 'confirm',
-              accountId: account,
-              requestId: req.handlerId
-            }
-          } as const
-          nav.forward('panel', crumb)
-        }
       }
-
-      setTimeout(() => {
-        windows.showTray()
-      }, 100)
+      signal.addEventListener('abort', abort, { once: true })
+      this.requestAbortCleanup[req.handlerId] = () => signal.removeEventListener('abort', abort)
     }
 
-    add(req)
+    if (req.type === 'sign' || req.type === 'signTypedData' || req.type === 'signErc20Permit') {
+      req.approvals = req.approvals || []
+      this.syncSignatureApprovalRisk(req)
+    }
+    if (req.type === 'signErc20Permit') {
+      this.syncPermitApprovalRisk(req)
+    }
+
+    this.revealDetails(req)
+    this.presentNextRequest(true)
+    this.update()
+    return true
   }
 
   getSigner() {
@@ -1417,6 +1490,7 @@ class FrameAccount {
         active: this.active,
         signer: this.signer,
         requests: this.requests,
+        activeRequestId: this.activeReviewHandlerId || null,
         ensName: this.ensName,
         created: this.created
       })

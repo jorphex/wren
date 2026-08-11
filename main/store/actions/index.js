@@ -816,14 +816,18 @@ module.exports = {
   navClearSigner: (u, signerId) => {
     u('windows.dash.nav', (nav) => nav.filter((navItem) => navItem?.data?.signer !== signerId))
   },
-  navClearReq: (u, handlerId, showRequestInbox = true) => {
+  navClearReq: (u, accountId, handlerId, showRequestInbox = true) => {
     u('windows.panel.nav', (nav) => {
       const newNav = nav.filter((navItem) => {
         // remove the filtered request
-        const isClearedRequest = navItem?.data?.requestId === handlerId
+        const isClearedRequest =
+          navItem?.data?.accountId === accountId && navItem?.data?.requestId === handlerId
 
         // remove the request inbox from the nav if not requested
-        const isRequestInbox = navItem?.data?.id === 'requests' && navItem?.view === 'expandedModule'
+        const isRequestInbox =
+          navItem?.data?.account === accountId &&
+          navItem?.data?.id === 'requests' &&
+          navItem?.view === 'expandedModule'
 
         return !isClearedRequest && (showRequestInbox || !isRequestInbox)
       })

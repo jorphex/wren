@@ -2,6 +2,7 @@
 
 const { v4 } = require('uuid')
 const { URL } = require('url')
+const { transitionNotification } = require('./notifications')
 
 let trayInitial = true
 
@@ -41,9 +42,8 @@ module.exports = {
     u('panel.show', () => true)
   },
   setBalance: (u, account, balance) => u('balances', account, () => balance),
-  notify: (u, type = '', data = {}) => {
-    u('view.notify', () => type)
-    u('view.notifyData', () => data)
+  notify: (u, type = '', data = {}, options = {}) => {
+    u('view', (view) => transitionNotification(view, type, data, options))
   },
   clickGuard: (u, on) => u('view.clickGuard', () => on),
   toggleAddAccount: (u) => u('view.addAccount', (show) => !show),

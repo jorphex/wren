@@ -48,6 +48,7 @@ describe('persisted state schema compatibility', () => {
         name: 'Hardware account',
         active: false,
         requests: {},
+        activeRequestId: null,
         balances: { lastUpdated: 123 },
         legacyMarker: 'preserved'
       })
@@ -55,12 +56,14 @@ describe('persisted state schema compatibility', () => {
       name: 'Hardware account',
       active: false,
       requests: {},
+      activeRequestId: null,
       balances: { lastUpdated: 123 },
       legacyMarker: 'preserved'
     })
 
     expect(() => AccountSchema.parse({ active: 'yes' })).toThrow()
     expect(() => AccountSchema.parse({ requests: [] })).toThrow()
+    expect(() => AccountSchema.parse({ activeRequestId: 1 })).toThrow()
     expect(() => AccountSchema.parse({ balances: { lastUpdated: -1 } })).toThrow()
   })
 

@@ -74,6 +74,39 @@ test('routes direct signer compatibility approval through the guarded request pa
   expect(notify.approveRequest).toHaveBeenCalledWith(req, expect.any(Function))
 })
 
+test('replaces signer compatibility with a fee warning instead of stacking request dialogs', () => {
+  const req = { data: { gasLimit: '0x5208', gasPrice: '0x3b9aca00' } }
+  const notify = new Notify({})
+  notify.store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.networksMeta.ethereum.1') {
+      return { nativeCurrency: { symbol: 'ETH', usd: { price: 10_000_000 } } }
+    }
+    if (key === 'main.mute.gasFeeWarning') return false
+    return false
+  }
+  render(
+    notify.signerCompatibilityWarning({
+      req,
+      compatibility: { signer: 'ledger', tx: 'legacy' },
+      chain: { type: 'ethereum', id: '1' }
+    })
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+
+  expect(link.send).toHaveBeenCalledWith(
+    'nav:update',
+    'dash',
+    expect.objectContaining({
+      view: 'notify',
+      data: expect.objectContaining({ notify: 'gasFeeWarning' })
+    }),
+    false
+  )
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'navDash', expect.anything())
+})
+
 test('renders a labelled modal with safe focus, trapped focus, Escape cancellation, and focus restore', () => {
   const previousControl = document.createElement('button')
   previousControl.textContent = 'Previous control'
@@ -124,4 +157,57 @@ test.each(['mainnet', 'addToken'])('ignores the removed %s notification route', 
 
   expect(container.firstChild).toBeNull()
   expect(link.send).not.toHaveBeenCalled()
+})
+
+test('uses a narrow request reference and ignores a stale approval callback', () => {
+  const req = {
+    handlerId: '11111111-1111-4111-8111-111111111111',
+    account: '0x0000000000000000000000000000000000000001',
+    type: 'transaction',
+    data: { not: 'forwarded' }
+  }
+  const store = createStore()
+  const NotifyHarness = createHarness(store)
+  let approveCallback
+  link.rpc.mockImplementation((_method, _reference, callback) => {
+    approveCallback = callback
+  })
+  const { rerender } = render(
+    <NotifyHarness data={{ notifyId: 'notice-1', notify: 'gasFeeWarning', notifyData: { req } }} />
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'approveRequest',
+    { handlerId: req.handlerId, account: req.account, type: req.type },
+    expect.any(Function)
+  )
+
+  rerender(<NotifyHarness data={{ notifyId: 'notice-2', notify: 'gasFeeWarning', notifyData: { req } }} />)
+  act(() => approveCallback(null))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'backDash')
+})
+
+test('resets approval errors and initial focus for a new notification identity', () => {
+  const req = {
+    handlerId: '11111111-1111-4111-8111-111111111111',
+    account: '0x0000000000000000000000000000000000000001',
+    type: 'transaction'
+  }
+  const NotifyHarness = createHarness(createStore())
+  let approveCallback
+  link.rpc.mockImplementation((_method, _reference, callback) => {
+    approveCallback = callback
+  })
+  const { rerender } = render(
+    <NotifyHarness data={{ notifyId: 'notice-1', notify: 'gasFeeWarning', notifyData: { req } }} />
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  act(() => approveCallback(new Error('failed')))
+  expect(screen.getByRole('alert')).toBeTruthy()
+
+  rerender(<NotifyHarness data={{ notifyId: 'notice-2', notify: 'gasFeeWarning', notifyData: { req } }} />)
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 })

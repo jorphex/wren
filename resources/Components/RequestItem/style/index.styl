@@ -230,11 +230,24 @@
     margin-top 1px
 
   .requestItemTitleMain
+    display flex
+    min-width 0
+    align-items center
+    gap var(--wren-space-2)
     margin-left var(--wren-space-2)
     overflow hidden
     font-weight 550
-    text-overflow ellipsis
     white-space nowrap
+
+    > span:first-child
+      overflow hidden
+      text-overflow ellipsis
+
+  .requestItemQueueState
+    flex none
+    color var(--wren-text-secondary)
+    font-size 12px
+    font-weight 500
 
   .requestItemTitleTime
     position absolute
@@ -249,6 +262,19 @@
       font-family var(--wren-font-mono)
       font-size var(--wren-type-caption)
       font-weight 400
+
+.requestItemQueueActive
+  box-shadow inset 2px 0 0 var(--wren-accent-primary)
+
+.requestItemQueueWaiting
+  color var(--wren-text-secondary)
+
+  .requestItemDetailsSlide
+    color var(--wren-text-tertiary)
+
+  .requestItemDetailsIndicatorMarker
+    background var(--wren-text-tertiary)
+    animation none
 
 .requestItemTitleSub
   display flex

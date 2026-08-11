@@ -14,7 +14,10 @@ import { GasFeesSource } from '../../../../resources/domain/transaction'
 import signers from '../../../../main/signers'
 import store from '../../../../main/store'
 import nebulaApi from '../../../../main/nebula'
+import windows from '../../../../main/windows'
+import nav from '../../../../main/windows/nav'
 import { flushPromises } from '../../../util'
+import { transitionNotification } from '../../../../resources/store/notifications'
 
 jest.mock('../../../../main/reveal')
 jest.mock('../../../../main/transaction/simulation', () => ({
@@ -39,9 +42,11 @@ jest.mock('../../../../main/provider', () => ({
   fillTransaction: jest.fn(),
   accountsChanged: jest.fn()
 }))
-jest.mock('../../../../main/accounts', () => ({ RequestMode: { Normal: 'normal' } }))
+jest.mock('../../../../main/accounts', () => ({
+  RequestMode: { Normal: 'normal', Monitor: 'monitor' }
+}))
 jest.mock('../../../../main/signers', () => ({ get: jest.fn() }))
-jest.mock('../../../../main/windows', () => ({}))
+jest.mock('../../../../main/windows', () => ({ showTray: jest.fn() }))
 jest.mock('../../../../main/nebula', () => {
   const ready = jest.fn()
   const once = jest.fn()
@@ -64,6 +69,7 @@ jest.mock('../../../../main/store', () => {
   store.setPanelView = jest.fn()
   store.navDash = jest.fn()
   store.navClearReq = jest.fn()
+  store.notify = jest.fn()
   store.observer = jest.fn()
   return store
 })
@@ -234,6 +240,9 @@ beforeEach(() => {
   store.mockImplementation(() => undefined)
   store.setPermission.mockClear()
   store.navDash.mockClear()
+  store.notify.mockReset()
+  windows.showTray.mockClear()
+  nav.forward.mockClear()
   provider.accountsChanged.mockClear()
   accounts.getSelectedAddresses.mockReturnValue([accountState.address.toLowerCase()])
   simulateTransaction.mockImplementation(() => new Promise(() => {}))
@@ -384,6 +393,157 @@ it('prefers a ready signer over a higher-priority unavailable signer', () => {
 })
 
 describe('#addRequest', () => {
+  it('queues same-tick arrivals without replacing the active review', () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(100)
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+    })
+    const first = request('first')
+    const second = request('second')
+
+    account.addRequest(first)
+    account.addRequest(second)
+    jest.advanceTimersByTime(100)
+
+    expect(first.queueIndex).toBe(0)
+    expect(second.queueIndex).toBe(1)
+    expect(
+      nav.forward.mock.calls
+        .map(([, crumb]) => crumb)
+        .filter(({ view }) => view === 'requestView')
+        .map(({ data }) => data.requestId)
+    ).toEqual(['first'])
+    expect(windows.showTray).toHaveBeenCalledTimes(1)
+    expect(account.summary().activeRequestId).toBe('first')
+    expect(accounts.update).toHaveBeenLastCalledWith(expect.objectContaining({ activeRequestId: 'first' }))
+
+    account.clearRequest(first.handlerId)
+
+    expect(
+      nav.forward.mock.calls
+        .map(([, crumb]) => crumb)
+        .filter(({ view }) => view === 'requestView')
+        .map(({ data }) => data.requestId)
+    ).toEqual(['first', 'second'])
+    expect(windows.showTray).toHaveBeenCalledTimes(1)
+    expect(account.summary().activeRequestId).toBe('second')
+    expect(accounts.update).toHaveBeenLastCalledWith(expect.objectContaining({ activeRequestId: 'second' }))
+
+    second.mode = 'monitor'
+    expect(account.releaseRequestReview(second.handlerId)).toBe(true)
+    expect(account.summary().activeRequestId).toBeNull()
+    expect(accounts.update).toHaveBeenLastCalledWith(expect.objectContaining({ activeRequestId: null }))
+    now.mockRestore()
+  })
+
+  it('dismisses only notifications owned by the cleared request', () => {
+    const owner = (handlerId) => `request:${accountState.address.toLowerCase()}:${handlerId}`
+    let notificationView = {
+      notifyQueue: [
+        { id: 'first-warning', owner: owner('first'), type: 'requestWarning', data: {} },
+        { id: 'other-notice', owner: 'extension:other', type: 'extensionConnect', data: {} },
+        { id: 'second-warning', owner: owner('second'), type: 'requestWarning', data: {} }
+      ],
+      notifyId: 'first-warning',
+      notifyOwner: owner('first'),
+      notify: 'requestWarning',
+      notifyData: {}
+    }
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+      if (key === 'view.notifyQueue') return notificationView.notifyQueue
+    })
+    store.notify.mockImplementation((type, data, options) => {
+      notificationView = transitionNotification(notificationView, type, data, options)
+    })
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    account.addRequest(request('first'))
+    account.addRequest(request('second'))
+
+    account.clearRequest('second')
+
+    expect(notificationView.notifyQueue.map(({ id }) => id)).toEqual(['first-warning', 'other-notice'])
+    expect(notificationView.notifyId).toBe('first-warning')
+
+    account.clearRequest('first')
+
+    expect(notificationView.notifyQueue.map(({ id }) => id)).toEqual(['other-notice'])
+    expect(notificationView.notifyId).toBe('other-notice')
+    expect(store.notify.mock.calls.map(([, , options]) => options.expectedId)).toEqual([
+      'second-warning',
+      'first-warning'
+    ])
+  })
+
+  it('cleans request identity before invoking a late or throwing responder', () => {
+    const first = {
+      handlerId: 'throwing-response',
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: 1, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    }
+    const response = jest.fn(() => {
+      expect(account.requests[first.handlerId]).toBeUndefined()
+      throw new Error('transport closed')
+    })
+    account.addRequest(first, response)
+
+    expect(() => account.resolveRequest(first, [])).toThrow('transport closed')
+    account.resolveRequest(first, [])
+
+    expect(response).toHaveBeenCalledTimes(1)
+    expect(account.requests[first.handlerId]).toBeUndefined()
+  })
+
+  it('advances past a request after it enters monitor mode', () => {
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+    })
+    const first = request('monitoring')
+    const second = request('next-review')
+    account.addRequest(first)
+    account.addRequest(second)
+    first.mode = 'monitor'
+
+    expect(account.releaseRequestReview(first.handlerId)).toBe(true)
+
+    expect(
+      nav.forward.mock.calls
+        .map(([, crumb]) => crumb)
+        .filter(({ view }) => view === 'requestView')
+        .map(({ data }) => data.requestId)
+    ).toEqual(['monitoring', 'next-review'])
+    expect(account.getActiveReviewRequest(second.handlerId)).toBe(second)
+    expect(account.getActiveReviewRequest(first.handlerId)).toBeUndefined()
+  })
+
   it('simulates exact wallet calls under the selected account and chain', async () => {
     const result = {
       status: 'succeeded',
@@ -570,14 +730,12 @@ describe('#addRequest', () => {
     const request = walletCallsRequest('wrong-wallet-calls-account')
     request.account = '0x4444444444444444444444444444444444444444'
 
-    account.addRequest(request, response)
+    expect(() => account.addRequest(request, response)).toThrow(
+      'Wallet-call request is not owned by this account'
+    )
 
     expect(account.requests[request.handlerId]).toBeUndefined()
-    expect(response).toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: { code: 4100, message: 'Wallet-call request is not owned by this account' }
-      })
-    )
+    expect(response).not.toHaveBeenCalled()
     expect(provider.getNonce).not.toHaveBeenCalled()
   })
 

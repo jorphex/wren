@@ -120,6 +120,11 @@ beforeEach(() => {
     if (!request || request.account !== accountId) throw new Error('wallet-call request unavailable')
     return request
   })
+  accounts.getActiveRequestForAccount = jest.fn((accountId, handlerId) => {
+    const request = accountRequests.find((candidate) => candidate.handlerId === handlerId)
+    if (!request || request.account !== accountId) throw new Error('request is waiting for review')
+    return request
+  })
   accounts.rejectRequestForAccount = jest.fn((accountId, handlerId, error) => {
     const index = accountRequests.findIndex((candidate) => candidate.handlerId === handlerId)
     const request = accountRequests[index]
@@ -269,6 +274,42 @@ describe('#approveSign', () => {
       expect(error.message).toMatch(/missing or unconfirmed/i)
       expect(accounts.signMessage).not.toHaveBeenCalled()
       done()
+    })
+  })
+
+  it.each([
+    ['success', null, '0xsignature'],
+    ['error', new Error('signer unavailable'), undefined]
+  ])('releases the message handler exactly once on %s', (_label, signerError, signature, done) => {
+    const handlerId = `message-${_label}`
+    const response = jest.fn()
+    const request = {
+      handlerId,
+      type: 'sign',
+      account: address,
+      payload: { id: 2, jsonrpc: '2.0', method: 'personal_sign', params: [address, '0x01'] },
+      data: { rawMessage: '0x01' },
+      approvals: []
+    }
+    accountRequests.push(request)
+    provider.handlers[handlerId] = response
+    accounts.signMessage = jest.fn((_address, _message, callback) => callback(signerError, signature))
+    const verify = jest
+      .spyOn(provider, 'verifySignature')
+      .mockImplementation((_signature, _message, _address, callback) => callback(null, true))
+
+    provider.approveSign(request, (error) => {
+      try {
+        if (signerError) expect(error).toBe(signerError)
+        else expect(error).toBeNull()
+        expect(response).toHaveBeenCalledTimes(1)
+        expect(provider.handlers).toEqual({})
+        done()
+      } catch (testError) {
+        done(testError)
+      } finally {
+        verify.mockRestore()
+      }
     })
   })
 })
@@ -2403,6 +2444,49 @@ describe('#send', () => {
       )
     })
 
+    it('releases a transaction handler exactly once through its account responder', (done) => {
+      let settle
+      const response = jest.fn()
+      accounts.addRequestForAccount.mockImplementationOnce((_accountId, req, responder) => {
+        req.res = responder
+        accountRequests.push(req)
+        settle = responder
+        return true
+      })
+      const payload = {
+        jsonrpc: '2.0',
+        id: 10,
+        method: 'eth_sendTransaction',
+        params: [tx],
+        _origin: '8073729a-5e59-53b7-9e69-5d9bcff94087'
+      }
+
+      provider.sendTransaction(payload, response, { type: 'ethereum', id: 1 }, (handlerId) => {
+        try {
+          expect(provider.handlers).toHaveProperty(handlerId)
+          settle({
+            id: payload.id,
+            jsonrpc: payload.jsonrpc,
+            error: { code: 4001, message: 'User rejected the request' }
+          })
+          settle({
+            id: payload.id,
+            jsonrpc: payload.jsonrpc,
+            error: { code: 4001, message: 'late duplicate' }
+          })
+
+          expect(response).toHaveBeenCalledTimes(1)
+          expect(response).toHaveBeenCalledWith(
+            expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+          )
+          expect(provider.handlers).toEqual({})
+          done()
+        } catch (error) {
+          done(error)
+        }
+      })
+    })
+
     it('maintains transaction chain id if no target chain provided with the request', (done) => {
       tx.chainId = '0x89'
 
@@ -2790,6 +2874,20 @@ describe('#send', () => {
       expect(callback).not.toHaveBeenCalled()
     })
 
+    it('responds and releases its handler when message-request admission fails', () => {
+      const callback = jest.fn()
+      accounts.addRequest.mockImplementationOnce(() => {
+        throw new Error('request UI failed')
+      })
+
+      send({ method: 'personal_sign', params: [hexMessage, address, password] }, callback)
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.objectContaining({ message: 'request UI failed' }) })
+      )
+      expect(provider.handlers).toEqual({})
+    })
+
     it('does not submit a request from an account other than the current one', (done) => {
       const params = [message, '0xa4581bfe76201f3aa147cce8e360140582260441']
 
@@ -3164,6 +3262,20 @@ describe('#send', () => {
         })
       )
       expect(accountRequests).toHaveLength(0)
+      expect(provider.handlers).toEqual({})
+    })
+
+    it('responds and releases its handler when typed-data admission fails', () => {
+      const response = jest.fn()
+      accounts.addRequest.mockImplementationOnce(() => {
+        throw new Error('typed request UI failed')
+      })
+
+      send({ method: 'eth_signTypedData_v4', params: [address, typedData] }, response)
+
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.objectContaining({ message: 'typed request UI failed' }) })
+      )
       expect(provider.handlers).toEqual({})
     })
 
@@ -3627,6 +3739,7 @@ describe('#signAndSend', () => {
         provider.handlers[request.handlerId] = (response) => {
           try {
             expect(response.result).toBe(txHash)
+            expect(provider.handlers).toEqual({})
             done()
           } catch (e) {
             done(e)
@@ -3684,6 +3797,7 @@ describe('#signAndSend', () => {
           expect(err.id).toBe(request.payload.id)
           expect(err.jsonrpc).toBe(request.payload.jsonrpc)
           expect(err.error.message).toBe(errorMessage)
+          expect(provider.handlers).toEqual({})
           done()
         }
 

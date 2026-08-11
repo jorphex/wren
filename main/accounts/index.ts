@@ -246,7 +246,8 @@ export class Accounts extends EventEmitter {
     const currentAccount = this.requestAccount(reqId, accountId)
 
     if (currentAccount) {
-      const txRequest = this.getTransactionRequest(currentAccount, reqId)
+      const txRequest = currentAccount.getActiveReviewRequest<TransactionRequest>(reqId)
+      if (!txRequest) throw new Error('Request is waiting for review')
 
       txRequest.data.nonce = nonce
       currentAccount.update()
@@ -266,7 +267,10 @@ export class Accounts extends EventEmitter {
     log.info('confirmRequestApproval', reqId, approvalType)
 
     const currentAccount = this.requestAccount(reqId, accountId)
-    const request = currentAccount?.getRequest(reqId) as
+    if (currentAccount && !currentAccount.getActiveReviewRequest(reqId)) {
+      throw new Error('Request is waiting for review')
+    }
+    const request = currentAccount?.getActiveReviewRequest(reqId) as
       (TransactionRequest | PermitSignatureRequest) | undefined
     if (currentAccount && request && request.status === undefined) {
       const approval = (request.approvals || []).find((a) => a.type === approvalType)
@@ -282,7 +286,7 @@ export class Accounts extends EventEmitter {
     log.verbose('updateRequest', { reqId, actionId })
 
     const currentAccount = this.requestAccount(reqId, accountId)
-    const request = currentAccount?.getRequest(reqId)
+    const request = currentAccount?.getActiveReviewRequest(reqId)
     if (!currentAccount || !request) return false
     if (request.status !== undefined) return false
 
@@ -664,6 +668,7 @@ export class Accounts extends EventEmitter {
     }
 
     requireStoreAction('setAccount')(summary)
+    currentAccount.presentActiveRequest()
 
     if (currentAccount.status === 'ok')
       this.verifyAddress(false, (err, verified) => {
@@ -834,8 +839,13 @@ export class Accounts extends EventEmitter {
 
     const account = this.accounts[accountId.toLowerCase()]
     if (!account) throw new Error('Could not locate wallet-call account')
+    if (!account.getActiveReviewRequest(handlerId)) {
+      throw new Error('Wallet-call request is waiting for review')
+    }
 
-    return account.claimWalletCallsRequest(handlerId, simulationAcknowledged)
+    const snapshot = account.claimWalletCallsRequest(handlerId, simulationAcknowledged)
+    account.releaseRequestReview(handlerId)
+    return snapshot
   }
 
   adjustWalletCallsRequest(accountId: string, handlerId: string, adjustment: unknown) {
@@ -845,6 +855,9 @@ export class Accounts extends EventEmitter {
 
     const account = this.accounts[accountId.toLowerCase()]
     if (!account) throw new Error('Could not locate wallet-call account')
+    if (!account.getActiveReviewRequest(handlerId)) {
+      throw new Error('Wallet-call request is waiting for review')
+    }
 
     return account.adjustWalletCalls(handlerId, adjustment)
   }
@@ -856,6 +869,9 @@ export class Accounts extends EventEmitter {
 
     const account = this.accounts[accountId.toLowerCase()]
     if (!account) throw new Error('Could not locate wallet-call account')
+    if (!account.getActiveReviewRequest(handlerId)) {
+      throw new Error('Wallet-call request is waiting for review')
+    }
 
     const request = account.getRequest<WalletCallsRequest>(handlerId)
     const responder = request?.res as WalletCallsResponder | undefined
@@ -876,6 +892,7 @@ export class Accounts extends EventEmitter {
       throw new Error('Wallet-call request changed during approval')
     }
     delete request.res
+    account.releaseRequestReview(handlerId)
 
     return Object.freeze({ snapshot, responder })
   }
@@ -1008,7 +1025,7 @@ export class Accounts extends EventEmitter {
 
   setAccess(req: AccessRequest, access: boolean) {
     const currentAccount = this.requestAccount(req.handlerId, req.account)
-    const request = currentAccount?.getRequest<AccessRequest>(req.handlerId)
+    const request = currentAccount?.getActiveReviewRequest<AccessRequest>(req.handlerId)
     if (!currentAccount || !request || request.type !== 'access') return false
     currentAccount.setAccess(request, access)
     return true
@@ -1083,12 +1100,46 @@ export class Accounts extends EventEmitter {
     return request
   }
 
+  getActiveRequestForAccount<T extends AccountRequest = AccountRequest>(
+    accountId: string,
+    handlerId: string
+  ) {
+    const request = this.getRequestForAccount<T>(accountId, handlerId)
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account?.getActiveReviewRequest(handlerId)) {
+      throw new Error('Request is waiting for review')
+    }
+    return request
+  }
+
   addRequest(req: AnyAccountRequest, res?: RPCRequestCallback) {
     log.info('addRequest', { handlerId: req.handlerId, type: req.type })
 
     const currentAccount = this.current()
-    if (currentAccount && !currentAccount.requests[req.handlerId]) {
+    if (!currentAccount) throw new Error('Could not locate request account')
+    if (req.account === undefined) req.account = currentAccount.id
+    if (typeof req.account !== 'string' || req.account.toLowerCase() !== currentAccount.id) {
+      throw new Error('Request does not belong to current account')
+    }
+    if (currentAccount.requests[req.handlerId]) throw new Error('Request handler is already in use')
+
+    try {
       currentAccount.addRequest(req, res)
+      if (currentAccount.requests[req.handlerId] !== req) throw new Error('Account did not admit request')
+      return true
+    } catch (error) {
+      if (currentAccount.requests[req.handlerId] === req) {
+        try {
+          currentAccount.clearRequest(req.handlerId)
+        } catch (cleanupError) {
+          const admissionMessage = error instanceof Error ? error.message : String(error)
+          const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+          throw new Error(
+            `Account request admission failed: ${admissionMessage}; cleanup failed: ${cleanupMessage}`
+          )
+        }
+      }
+      throw error
     }
   }
 
@@ -1149,9 +1200,9 @@ export class Accounts extends EventEmitter {
 
   declineRequest(handlerId: string, accountId?: string) {
     const currentAccount = this.requestAccount(handlerId, accountId)
+    const request = currentAccount?.getActiveReviewRequest(handlerId)
 
-    if (currentAccount && currentAccount.requests[handlerId]) {
-      const request = currentAccount.requests[handlerId]
+    if (currentAccount && request) {
       if (!isCancelableRequest(request.status || '')) return false
 
       request.status = RequestStatus.Declined
@@ -1179,6 +1230,9 @@ export class Accounts extends EventEmitter {
 
     const storedRequest = currentAccount.getRequest(handlerId)
     if (!storedRequest) throw new Error('Request is no longer pending')
+    if (!currentAccount.getActiveReviewRequest(handlerId)) {
+      throw new Error('Request is waiting for review')
+    }
     if (storedRequest.status !== undefined) {
       throw new Error('Request is already pending or complete')
     }
@@ -1256,6 +1310,7 @@ export class Accounts extends EventEmitter {
           ) {
             currentAccount.requests[handlerId].mode = RequestMode.Monitor
             currentAccount.update()
+            currentAccount.releaseRequestReview(handlerId)
 
             setTimeout(
               () =>
@@ -1311,6 +1366,7 @@ export class Accounts extends EventEmitter {
       currentAccount.requests[handlerId].notice = 'Verifying'
       currentAccount.requests[handlerId].mode = RequestMode.Monitor
       currentAccount.update()
+      currentAccount.releaseRequestReview(handlerId)
 
       this.txMonitor(currentAccount, handlerId, hash)
       return true
@@ -1337,6 +1393,9 @@ export class Accounts extends EventEmitter {
       }
 
       currentAccount.update()
+      if (currentAccount.requests[handlerId].type === 'transaction') {
+        currentAccount.releaseRequestReview(handlerId)
+      }
       return true
     }
 
@@ -1415,6 +1474,9 @@ export class Accounts extends EventEmitter {
     const request = this.getTransactionRequest(currentAccount, handlerId)
     if (!request || request.type !== 'transaction')
       throw new Error(`Could not find transaction request with handlerId ${handlerId}`)
+    if (userUpdate && !currentAccount.getActiveReviewRequest(handlerId)) {
+      throw new Error('Request is waiting for review')
+    }
     if (request.locked) throw new Error('Request has already been approved by the user')
     if (request.feesUpdatedByUser && !userUpdate) throw new Error('Fee has been updated by user')
 
@@ -1564,6 +1626,9 @@ export class Accounts extends EventEmitter {
 
     if (nonceAdjust !== 1 && nonceAdjust !== -1) return log.error('Invalid nonce adjustment', nonceAdjust)
     if (!currentAccount) return log.error('No account selected during nonce adjustement', nonceAdjust)
+    if (!currentAccount.getActiveReviewRequest(handlerId)) {
+      return log.warn('Ignoring nonce adjustment for a queued transaction request')
+    }
 
     const txRequest = this.mutableTransactionRequest(currentAccount, handlerId)
     if (!txRequest) return log.warn('Ignoring nonce adjustment for immutable transaction request')
@@ -1606,7 +1671,8 @@ export class Accounts extends EventEmitter {
 
         if (
           this.accounts[currentAccount.id] !== currentAccount ||
-          this.mutableTransactionRequest(currentAccount, handlerId) !== txRequest
+          this.mutableTransactionRequest(currentAccount, handlerId) !== txRequest ||
+          currentAccount.getActiveReviewRequest(handlerId) !== txRequest
         ) {
           return
         }
@@ -1629,6 +1695,9 @@ export class Accounts extends EventEmitter {
   resetNonce(handlerId: string, accountId?: string) {
     const currentAccount = this.requestAccount(handlerId, accountId)
     if (!currentAccount) return log.error('No account selected during nonce reset')
+    if (!currentAccount.getActiveReviewRequest(handlerId)) {
+      return log.warn('Ignoring nonce reset for a queued transaction request')
+    }
 
     const txRequest = this.mutableTransactionRequest(currentAccount, handlerId)
     if (!txRequest) return log.warn('Ignoring nonce reset for immutable transaction request')

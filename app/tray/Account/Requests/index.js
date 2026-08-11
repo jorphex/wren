@@ -24,12 +24,32 @@ import { getOriginDisplayName } from '../../../../resources/domain/origin'
 
 let restorePreviewFocus = false
 
+const queueNumber = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : null)
+
+export const byRequestQueue = (a, b) => {
+  const aQueueIndex = queueNumber(a.queueIndex)
+  const bQueueIndex = queueNumber(b.queueIndex)
+
+  if (aQueueIndex !== null || bQueueIndex !== null) {
+    if (aQueueIndex === null) return 1
+    if (bQueueIndex === null) return -1
+    if (aQueueIndex !== bQueueIndex) return aQueueIndex - bQueueIndex
+  }
+
+  const aCreated = Number.isFinite(a.created) ? a.created : Number.MAX_SAFE_INTEGER
+  const bCreated = Number.isFinite(b.created) ? b.created : Number.MAX_SAFE_INTEGER
+  if (aCreated !== bCreated) return aCreated - bCreated
+
+  return String(a.handlerId || '').localeCompare(String(b.handlerId || ''))
+}
+
 export class Requests extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
       minimized: false,
       clearOrigin: null,
+      clearGroupKey: null,
       clearingOrigin: null
     }
     this.moduleRef = React.createRef()
@@ -72,7 +92,10 @@ export class Requests extends React.Component {
       window.setTimeout(() => this.clearCancelRef.current?.focus(), 0)
     }
 
-    if (this.state.clearingOrigin && !this.clearButtonRefs.get(this.state.clearingOrigin)) {
+    const clearingOriginStillPresent = this.renderedRequests?.some(
+      (request) => request.origin === this.state.clearingOrigin
+    )
+    if (this.state.clearingOrigin && !clearingOriginStillPresent) {
       this.clearPendingOrigins.delete(this.state.clearingOrigin)
       this.setState({ clearingOrigin: null }, () => {
         window.setTimeout(() => this.focusFirstRequestOrHeading(), 0)
@@ -89,9 +112,9 @@ export class Requests extends React.Component {
     else this.requestRefs.delete(handlerId)
   }
 
-  setClearButtonRef(origin, element) {
-    if (element) this.clearButtonRefs.set(origin, element)
-    else this.clearButtonRefs.delete(origin)
+  setClearButtonRef(groupKey, element) {
+    if (element) this.clearButtonRefs.set(groupKey, element)
+    else this.clearButtonRefs.delete(groupKey)
   }
 
   focusFirstRequestOrHeading() {
@@ -102,31 +125,37 @@ export class Requests extends React.Component {
 
   restoreRequestFocus({ handlerId, index }) {
     let target = this.requestRefs.get(handlerId)
+    if (target?.disabled) target = null
 
     if (!target && this.renderedRequests?.length) {
       const fallbackIndex = Math.min(index, this.renderedRequests.length - 1)
       target = this.requestRefs.get(this.renderedRequests[fallbackIndex].handlerId)
+      if (target?.disabled) {
+        target = this.renderedRequests
+          .map((request) => this.requestRefs.get(request.handlerId))
+          .find((requestTarget) => requestTarget && !requestTarget.disabled)
+      }
     }
 
     ;(target || this.inboxHeadingRef.current)?.focus()
   }
 
-  openClearConfirmation(origin) {
+  openClearConfirmation(origin, groupKey) {
     if (this.clearPendingOrigins.has(origin)) return
-    this.setState({ clearOrigin: origin })
+    this.setState({ clearOrigin: origin, clearGroupKey: groupKey })
   }
 
   cancelClearConfirmation() {
-    const origin = this.state.clearOrigin
-    this.setState({ clearOrigin: null }, () => {
-      window.setTimeout(() => this.clearButtonRefs.get(origin)?.focus(), 0)
+    const groupKey = this.state.clearGroupKey
+    this.setState({ clearOrigin: null, clearGroupKey: null }, () => {
+      window.setTimeout(() => this.clearButtonRefs.get(groupKey)?.focus(), 0)
     })
   }
 
   confirmClearRequests(origin) {
     if (this.clearPendingOrigins.has(origin)) return
     this.clearPendingOrigins.add(origin)
-    this.setState({ clearOrigin: null, clearingOrigin: origin })
+    this.setState({ clearOrigin: null, clearGroupKey: null, clearingOrigin: origin })
     link.send('tray:clearRequestsByOrigin', this.props.account, origin)
   }
 
@@ -166,8 +195,8 @@ export class Requests extends React.Component {
     )
   }
 
-  renderClearConfirmation(origin, count) {
-    if (this.state.clearOrigin !== origin) return null
+  renderClearConfirmation(origin, count, groupKey) {
+    if (this.state.clearOrigin !== origin || this.state.clearGroupKey !== groupKey) return null
 
     const requestLabel = count === 1 ? 'request' : 'requests'
 
@@ -211,12 +240,18 @@ export class Requests extends React.Component {
     )
   }
 
-  renderRequestGroup(origin, requests) {
+  requestQueueProps(req) {
+    if (req.mode === 'monitor') return { active: false, queued: false }
+    const active = req.handlerId === this.activeRequestId
+    return { active, queued: !active }
+  }
+
+  renderRequestGroup(origin, requests, groupKey, originCount) {
     const groupName = getOriginDisplayName(this.store('main.origins', origin, 'name'))
     const clearing = this.clearPendingOrigins.has(origin)
 
     return (
-      <section className='requestGroupBlock' key={origin}>
+      <section className='requestGroupBlock' key={groupKey}>
         <div className='requestGroup'>
           <div className='requestGroupMain'>
             <div style={{ marginRight: '8px' }}>
@@ -225,18 +260,18 @@ export class Requests extends React.Component {
             <div className='requestGroupName'>{groupName}</div>
           </div>
           <button
-            ref={(element) => this.setClearButtonRef(origin, element)}
+            ref={(element) => this.setClearButtonRef(groupKey, element)}
             type='button'
             aria-label={`Clear requests from ${groupName}`}
             className='requestGroupButton wrenControl wrenControlGhost wrenControlCompact'
             disabled={clearing}
-            onClick={() => this.openClearConfirmation(origin)}
+            onClick={() => this.openClearConfirmation(origin, groupKey)}
           >
             <Icon name='close' size={14} />
             <span className='requestGroupButtonLabel'>{'Clear all'}</span>
           </button>
         </div>
-        {this.renderClearConfirmation(origin, requests.length)}
+        {this.renderClearConfirmation(origin, originCount, groupKey)}
         <Cluster className='requestLedger'>
           {!requests.length ? (
             <div key='noReq' className='noRequests'>
@@ -249,6 +284,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -265,6 +301,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -281,6 +318,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -301,6 +339,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -317,6 +356,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -333,6 +373,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -357,6 +398,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -383,6 +425,7 @@ export class Requests extends React.Component {
                 <RequestItem
                   key={req.handlerId}
                   req={req}
+                  {...this.requestQueueProps(req)}
                   account={this.props.account}
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
@@ -405,21 +448,31 @@ export class Requests extends React.Component {
 
   renderExpanded() {
     const activeAccount = this.store('main.accounts', this.props.account)
-    const requests = Object.values(activeAccount.requests || {}).sort((a, b) => {
-      if (a.created > b.created) return -1
-      if (a.created < b.created) return 1
-      return 0
-    })
+    const requests = Object.values(activeAccount.requests || {}).sort(byRequestQueue)
     this.renderedRequests = requests
+    const reviewQueue = requests.filter((request) => request.mode !== 'monitor')
+    this.activeRequestId = activeAccount.activeRequestId
     this.requestIndexes = new Map(requests.map((request, index) => [request.handlerId, index]))
 
-    const originSortedRequests = {}
+    const originCounts = {}
     requests.forEach((req) => {
-      const origin = req.origin
-      originSortedRequests[origin] = originSortedRequests[origin] || []
-      originSortedRequests[origin].push(req)
+      originCounts[req.origin] = (originCounts[req.origin] || 0) + 1
     })
-    const groups = Object.keys(originSortedRequests)
+
+    const groups = requests.reduce((result, req) => {
+      const previous = result[result.length - 1]
+      if (previous?.origin === req.origin) previous.requests.push(req)
+      else result.push({ key: `${req.origin}:${req.handlerId}`, origin: req.origin, requests: [req] })
+      return result
+    }, [])
+
+    const waitingCount = reviewQueue.filter((request) => request.handlerId !== this.activeRequestId).length
+    const waitingCopy =
+      waitingCount === 0
+        ? 'No requests waiting'
+        : waitingCount === 1
+          ? '1 request waiting'
+          : `${waitingCount} requests waiting`
 
     return (
       <div
@@ -428,6 +481,12 @@ export class Requests extends React.Component {
         <h2 ref={this.inboxHeadingRef} className='requestInboxHeading' tabIndex={-1}>
           Requests
         </h2>
+        {requests.length ? (
+          <div className='requestQueueStatus' role='status' aria-live='polite'>
+            <span className='requestQueueStatusTitle'>{`Requests (${requests.length})`}</span>
+            <span className='requestQueueStatusWaiting'>{waitingCopy}</span>
+          </div>
+        ) : null}
         {groups.length === 0 ? (
           <WrenEmptyState
             image={emptyRequests}
@@ -437,8 +496,13 @@ export class Requests extends React.Component {
             transparentImage
           />
         ) : (
-          groups.map((origin) => {
-            return this.renderRequestGroup(origin, originSortedRequests[origin])
+          groups.map((group) => {
+            return this.renderRequestGroup(
+              group.origin,
+              group.requests,
+              group.key,
+              originCounts[group.origin]
+            )
           })
         )}
       </div>

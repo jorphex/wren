@@ -9,6 +9,7 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 import Confirm from '../../../resources/Components/Confirm'
 import wrenIcon from '../../../asset/WrenIcon.png'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
+import { notificationIdentity, requestReference } from '../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)
@@ -35,27 +36,50 @@ export class Notify extends React.Component {
     this.previousFocus?.focus?.()
   }
 
+  activeNotificationId() {
+    const { notify, notifyData = {}, notifyId } = this.props.data || {}
+    return notificationIdentity(notify, notifyData, notifyId)
+  }
+
+  dismissNotification(expectedId = this.activeNotificationId(), count = 1) {
+    if (this.activeNotificationId() !== expectedId) return
+    if (count === 1) link.send('tray:action', 'backDash')
+    else link.send('tray:action', 'backDash', count)
+  }
+
   approveRequest(req, onSuccess) {
     if (this.approvalInFlight) return
 
+    const expectedId = this.activeNotificationId()
     this.approvalInFlight = true
     this.setState({ approvalPending: true, approvalError: false })
-    link.rpc('approveRequest', req, (error) => {
+    link.rpc('approveRequest', requestReference(req), (error) => {
+      if (this.activeNotificationId() !== expectedId) return
       if (error) {
         this.approvalInFlight = false
         this.setState({ approvalPending: false, approvalError: true })
         return
       }
 
-      onSuccess()
+      onSuccess(expectedId)
     })
   }
 
   syncDialogFocus() {
     const dialog = this.dialogRef.current
+    const notificationId = this.activeNotificationId()
+    const notificationChanged = notificationId !== this.focusedNotificationId
 
-    if (dialog && dialog !== this.activeDialog) {
-      this.previousFocus = document.activeElement
+    if (notificationChanged) {
+      this.focusedNotificationId = notificationId
+      this.approvalInFlight = false
+      if (this.state.approvalPending || this.state.approvalError) {
+        this.setState({ approvalPending: false, approvalError: false })
+      }
+    }
+
+    if (dialog && (dialog !== this.activeDialog || notificationChanged)) {
+      if (!this.activeDialog) this.previousFocus = document.activeElement
       this.activeDialog = dialog
       const firstControl =
         dialog.querySelector('[data-dialog-initial-focus]') ||
@@ -75,7 +99,7 @@ export class Notify extends React.Component {
   handleDialogKeyDown(event, dismissible) {
     if (event.key === 'Escape' && dismissible && !this.approvalInFlight) {
       event.preventDefault()
-      link.send('tray:action', 'backDash')
+      this.dismissNotification()
       return
     }
 
@@ -111,7 +135,7 @@ export class Notify extends React.Component {
         onMouseDown={
           dismissible
             ? () => {
-                if (!this.approvalInFlight) link.send('tray:action', 'backDash')
+                if (!this.approvalInFlight) this.dismissNotification()
               }
             : undefined
         }
@@ -178,7 +202,7 @@ export class Notify extends React.Component {
                 data-dialog-initial-focus
                 onClick={() => {
                   link.send('tray:action', 'muteBetaDisclosure')
-                  link.send('tray:action', 'backDash')
+                  this.dismissNotification()
                 }}
               >
                 <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
@@ -224,7 +248,7 @@ export class Notify extends React.Component {
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -233,7 +257,7 @@ export class Notify extends React.Component {
               type='button'
               className='notifyInputOption notifyInputProceed'
               disabled={approvalPending}
-              onClick={() => this.approveRequest(req, () => link.send('tray:action', 'backDash'))}
+              onClick={() => this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))}
             >
               <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
             </button>
@@ -271,7 +295,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -299,7 +323,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -348,7 +372,7 @@ export class Notify extends React.Component {
               data-dialog-initial-focus
               disabled={approvalPending}
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -358,7 +382,6 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed'
               disabled={approvalPending}
               onClick={() => {
-                // TODO: Transacionns need a better flow to respond to mutiple notifications after hitting sign
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
                 const {
                   nativeCurrency,
@@ -386,15 +409,20 @@ export class Notify extends React.Component {
                     this.toDisplayUSD(maxFeeUSD) === '0.00') &&
                   !this.store('main.mute.gasFeeWarning')
                 ) {
-                  link.send('tray:action', 'navDash', {
-                    view: 'notify',
-                    data: {
-                      notify: 'gasFeeWarning',
-                      notifyData: { req, feeUSD: this.toDisplayUSD(maxFeeUSD), currentSymbol }
-                    }
-                  })
+                  link.send(
+                    'nav:update',
+                    'dash',
+                    {
+                      view: 'notify',
+                      data: {
+                        notify: 'gasFeeWarning',
+                        notifyData: { req, feeUSD: this.toDisplayUSD(maxFeeUSD), currentSymbol }
+                      }
+                    },
+                    false
+                  )
                 } else {
-                  this.approveRequest(req, () => link.send('tray:action', 'backDash'))
+                  this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))
                 }
               }}
             >
@@ -450,7 +478,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -488,7 +516,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -525,7 +553,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputSingleButton'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>OK</div>
@@ -553,7 +581,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputDeny'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -563,7 +591,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed'
               onClick={() => {
                 link.send('tray:openExternal', url)
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Open link</div>
@@ -591,7 +619,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputDeny'
               data-dialog-initial-focus
               onClick={() => {
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Cancel</div>
@@ -601,7 +629,7 @@ export class Notify extends React.Component {
               className='notifyInputOption notifyInputProceed'
               onClick={() => {
                 link.send('tray:openExplorer', chain, hash)
-                link.send('tray:action', 'backDash')
+                this.dismissNotification()
               }}
             >
               <div className='notifyInputOptionText'>Open explorer</div>
@@ -650,11 +678,11 @@ export class Notify extends React.Component {
         link.send('tray:action', 'removeNetwork', chain)
 
         // if accepted, go back twice to get back to the main chains panel
-        link.send('tray:action', 'backDash', 2)
+        this.dismissNotification(this.activeNotificationId(), 2)
       }
 
       const onDecline = () => {
-        link.send('tray:action', 'backDash')
+        this.dismissNotification()
       }
 
       return this.renderDialog(

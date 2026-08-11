@@ -358,7 +358,11 @@ it('keeps the pending signature cancellation action keyboard accessible', async 
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
   await view.user.keyboard('{Enter}')
 
-  expect(link.rpc).toHaveBeenCalledWith('declineRequest', req, expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'declineRequest',
+    { handlerId: req.handlerId, account: req.account, type: req.type },
+    expect.any(Function)
+  )
   command.componentWillUnmount()
 })
 

@@ -786,6 +786,9 @@ const initial = {
     data: {},
     notify: '',
     notifyData: {},
+    notifyId: '',
+    notifyOwner: '',
+    notifyQueue: [],
     badge: '',
     addAccount: '', // Add view (needs to be merged into Phase)
     addNetwork: false, // Phase view (needs to be merged with Add)

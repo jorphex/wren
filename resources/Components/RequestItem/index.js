@@ -72,7 +72,8 @@ class _RequestItem extends React.Component {
     link.send('nav:forward', 'panel', crumb)
   }
   render() {
-    const { account, title, svgName, img, color, headerMode, req, children, actionRef } = this.props
+    const { account, title, svgName, img, color, headerMode, req, children, actionRef, active, queued } =
+      this.props
 
     let requestItemDetailsClass = 'requestItemDetails'
     let requestItemNoticeClass = 'requestItemNotice'
@@ -92,6 +93,8 @@ class _RequestItem extends React.Component {
     const notice = (req.notice || '').toLowerCase()
 
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
+    const waiting = Boolean(queued) && !inactive
+    const displayedStatus = waiting ? 'waiting' : status
     const requestIcon = requestIcons[svgName]
     const statusIcon =
       req.status === 'error'
@@ -105,12 +108,23 @@ class _RequestItem extends React.Component {
     return (
       <ClusterRow>
         <ClusterValue
-          ariaLabel={!headerMode ? `Review ${title}` : undefined}
+          ariaLabel={
+            !headerMode
+              ? queued
+                ? `${title}. ${waiting ? 'Waiting' : status}`
+                : `Review ${title}${active ? '. Current' : ''}`
+              : undefined
+          }
           actionRef={actionRef}
-          disabled={!headerMode && this.state.opening}
+          disabled={!headerMode && (this.state.opening || Boolean(queued))}
           onClick={!headerMode ? () => this.openRequest(account, req) : null}
         >
-          <div key={req.handlerId} className={headerMode ? 'requestItem requestItemHeader' : 'requestItem'}>
+          <div
+            key={req.handlerId}
+            className={`${headerMode ? 'requestItem requestItemHeader' : 'requestItem'}${
+              active ? ' requestItemQueueActive' : ''
+            }${queued ? ' requestItemQueueWaiting' : ''}`}
+          >
             <div
               className='requestItemBackground'
               style={{
@@ -127,7 +141,10 @@ class _RequestItem extends React.Component {
                   )}
                 </div>
                 <div className='requestItemMain'>
-                  <div className='requestItemTitleMain'>{title}</div>
+                  <div className='requestItemTitleMain'>
+                    <span>{title}</span>
+                    {active && !headerMode ? <span className='requestItemQueueState'>Current</span> : null}
+                  </div>
                   <div className='requestItemDetailsSlide'>
                     <div
                       className={
@@ -138,7 +155,7 @@ class _RequestItem extends React.Component {
                     >
                       <div className='requestItemDetailsIndicatorMarker' />
                     </div>
-                    <span role='status'>{status}</span>
+                    <span role='status'>{displayedStatus}</span>
                   </div>
                 </div>
               </div>
