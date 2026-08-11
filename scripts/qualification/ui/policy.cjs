@@ -37,8 +37,8 @@ const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
   }
 ])
 
-const scenarioMatrix = () =>
-  INTERFACE_SCALES.flatMap((scale) => [
+const scenarioMatrix = () => [
+  ...INTERFACE_SCALES.flatMap((scale) => [
     {
       id: `tray-empty-full-${scale}`,
       renderer: 'tray',
@@ -164,7 +164,51 @@ const scenarioMatrix = () =>
       ready: '[aria-labelledby="onboarding-slide-title"]',
       action: { type: 'clickText', text: 'Get started' }
     }
-  ])
+  ]),
+  {
+    id: 'dash-delegation-capped-1.5',
+    renderer: 'dash',
+    state: 'delegation',
+    scale: 1.5,
+    logicalWidth: 530,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.delegationRevocationEligible',
+    requiredControls: ['Revoke delegation'],
+    requiredText: ['Delegated to', 'Configured RPC · eth_getCode'],
+    layoutExpectations: [
+      { kind: 'stacked', selector: '.delegationRevocationSelectors > label' },
+      {
+        kind: 'full-width',
+        selector: '.delegationRevocationSelectors > label',
+        container: '.delegationRevocationSelectors'
+      },
+      { kind: 'stacked', selector: '.delegationRevocationEligible > *' },
+      {
+        kind: 'full-width',
+        selector: '.delegationRevocationEligible > button',
+        container: '.delegationRevocationEligible'
+      }
+    ]
+  },
+  {
+    id: 'tray-revocation-review-capped-1.5',
+    renderer: 'tray',
+    state: 'revocation-review',
+    scale: 1.5,
+    logicalWidth: 600,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.eip7702RevokeRequest-review',
+    requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+    requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce'],
+    layoutExpectations: [
+      {
+        kind: 'full-width',
+        selector: '.eip7702RevokeFeeRow > button',
+        container: '.eip7702RevokeFeeRow'
+      }
+    ]
+  }
+]
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({
   width: Math.round(logicalWidth * scale),

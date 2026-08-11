@@ -241,6 +241,7 @@ const runScenario = async (scenario) => {
         compactExceptions: COMPACT_TARGET_EXCEPTIONS,
         expectedInitialFocus: scenario.expectedInitialFocus,
         expectedViewport: { width: scenario.logicalWidth, height: scenario.logicalHeight },
+        layoutExpectations: scenario.layoutExpectations,
         requiredControls: scenario.requiredControls,
         requiredText: scenario.requiredText
       })})`,
@@ -306,7 +307,7 @@ const main = async () => {
         'onboarding intro',
         'onboarding access'
       ],
-      geometry: ['full shell', 'short shell', 'onboarding window'],
+      geometry: ['full shell', 'short shell', 'capped-width fallback', 'onboarding window'],
       scales: [1, 1.25, 1.5]
     },
     uncovered: [

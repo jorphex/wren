@@ -4,6 +4,7 @@ const auditPage = async ({
   compactExceptions,
   expectedInitialFocus,
   expectedViewport,
+  layoutExpectations = [],
   requiredControls = [],
   requiredText = []
 }) => {
@@ -68,6 +69,45 @@ const auditPage = async ({
   const pageText = normalizedText(document.body?.innerText)
   for (const text of requiredText) {
     if (!pageText.includes(text)) violations.push({ kind: 'required-text', detail: text })
+  }
+
+  for (const expectation of layoutExpectations) {
+    const elements = Array.from(document.querySelectorAll(expectation.selector)).filter(visible)
+    if (!elements.length) {
+      violations.push({ kind: 'required-layout', detail: `missing ${expectation.selector}` })
+      continue
+    }
+
+    if (expectation.kind === 'stacked') {
+      const rects = elements.map((element) => element.getBoundingClientRect())
+      if (rects.some((rect, index) => index > 0 && rect.top < rects[index - 1].bottom - 1)) {
+        violations.push({ kind: 'required-layout', detail: `${expectation.selector} is not stacked` })
+      }
+    } else if (expectation.kind === 'full-width') {
+      for (const element of elements) {
+        const container = element.closest(expectation.container)
+        if (!container) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} has no ${expectation.container} container`
+          })
+          continue
+        }
+        const elementRect = element.getBoundingClientRect()
+        const containerRect = container.getBoundingClientRect()
+        if (
+          Math.abs(elementRect.left - containerRect.left) > 2 ||
+          Math.abs(elementRect.right - containerRect.right) > 2
+        ) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} is ${Math.round(elementRect.width)}px within ${Math.round(containerRect.width)}px`
+          })
+        }
+      }
+    } else {
+      violations.push({ kind: 'required-layout', detail: `unknown ${expectation.kind}` })
+    }
   }
 
   if (

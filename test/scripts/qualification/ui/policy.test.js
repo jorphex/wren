@@ -12,7 +12,7 @@ it('covers shell, delegation, revocation, and onboarding geometry at every suppo
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(36)
+  expect(scenarios).toHaveLength(38)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -31,6 +31,10 @@ it('covers shell, delegation, revocation, and onboarding geometry at every suppo
       ])
     )
   }
+
+  expect(scenarios.map((scenario) => scenario.id)).toEqual(
+    expect.arrayContaining(['dash-delegation-capped-1.5', 'tray-revocation-review-capped-1.5'])
+  )
 })
 
 it('keeps physical bounds and renderer zoom aligned to a stable logical viewport', () => {
@@ -140,5 +144,37 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
     action: { type: 'clickText', text: 'Stop monitoring' },
     expectedInitialFocus: 'Keep monitoring',
     requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests']
+  })
+})
+
+it('forces the dashboard and tray capped-width fallback layouts at 150%', () => {
+  const scenarios = scenarioMatrix()
+  const dashboard = scenarios.find(({ id }) => id === 'dash-delegation-capped-1.5')
+  const tray = scenarios.find(({ id }) => id === 'tray-revocation-review-capped-1.5')
+
+  expect(dashboard).toMatchObject({
+    scale: 1.5,
+    logicalWidth: 530,
+    logicalHeight: 744,
+    layoutExpectations: expect.arrayContaining([
+      { kind: 'stacked', selector: '.delegationRevocationSelectors > label' },
+      {
+        kind: 'full-width',
+        selector: '.delegationRevocationEligible > button',
+        container: '.delegationRevocationEligible'
+      }
+    ])
+  })
+  expect(tray).toMatchObject({
+    scale: 1.5,
+    logicalWidth: 600,
+    logicalHeight: 744,
+    layoutExpectations: [
+      {
+        kind: 'full-width',
+        selector: '.eip7702RevokeFeeRow > button',
+        container: '.eip7702RevokeFeeRow'
+      }
+    ]
   })
 })
