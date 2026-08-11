@@ -105,6 +105,67 @@
       margin-left var(--wren-space-2)
       padding 0 var(--wren-space-2)
 
+  .interfaceScaleSetting
+    min-height 104px
+
+  .interfaceScaleHeader
+    display flex
+    width 100%
+    min-width 0
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-5)
+
+  .interfaceScaleCopy
+    min-width 0
+
+  .interfaceScaleDescription,
+  .interfaceScaleStatus
+    margin-top var(--wren-space-1)
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size 12px
+    font-weight 400
+    line-height 18px
+
+  .interfaceScaleStatus
+    color var(--wren-text-secondary)
+
+  .interfaceScaleOptions
+    display grid
+    flex none
+    grid-template-columns repeat(3, minmax(56px, 1fr))
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    overflow hidden
+
+  .interfaceScaleOption
+    min-width 56px
+    min-height 44px
+    padding 0 var(--wren-space-2)
+    border 0
+    border-radius 0
+    box-shadow none
+    font-size 12px
+
+    & + .interfaceScaleOption
+      border-left 1px solid var(--wren-border-default)
+
+    &[aria-pressed='true']
+      color var(--wren-text-inverse)
+      background var(--wren-control-texture-light), var(--wren-accent-primary)
+
+  .interfaceScaleAnnouncement
+    position absolute
+    width 1px
+    height 1px
+    margin -1px
+    padding 0
+    overflow hidden
+    clip rect(0 0 0 0)
+    clip-path inset(50%)
+    white-space nowrap
+
   .connectionCustomInput
     margin-top var(--wren-space-2)
 
@@ -227,3 +288,16 @@
       min-height 52px
       padding-top 10px
       padding-bottom 10px
+
+    .interfaceScaleSetting
+      min-height 96px
+
+@media (max-width: 620px)
+  .wrenSettings
+    .interfaceScaleHeader
+      align-items flex-start
+      flex-direction column
+      gap var(--wren-space-3)
+
+    .interfaceScaleOptions
+      width 100%

@@ -972,7 +972,7 @@
   padding-top 15px
   color var(--wren-text-muted)
   font-family var(--wren-font-utility)
-  font-size 10px
+  font-size 12px
   text-align center
 
   &::before
@@ -1079,7 +1079,8 @@
 .txLifecycleAction,
 .txLifecycleDetails button,
 .txLifecycleCancelRequest
-  height 34px
+  min-height 44px
+  height 44px
   padding 0 13px
   border 1px solid var(--wren-border-default)
   border-radius var(--wren-radius-sm)
@@ -1149,6 +1150,23 @@
 
     .txLifecycleAction
       flex 1
+
+@media (max-width: 560px)
+  .approveTransaction .transactionReviewMain
+    ._txDescription
+      grid-template-columns minmax(0, 1fr)
+      gap var(--wren-space-2)
+
+    ._txDescriptionSummaryMain
+      font-size 22px
+      line-height 28px
+
+    .transactionReviewSummaryStatus
+      width 100%
+      max-width none
+      min-height 0
+      padding 0 0 var(--wren-space-2)
+      justify-self stretch
 
 
 // Transaction evidence is a continuation of the review ledger, not a stack of cards.

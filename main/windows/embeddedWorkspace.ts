@@ -28,6 +28,12 @@ export class EmbeddedWorkspace {
     this.view.webContents.on('did-finish-load', handler)
   }
 
+  setZoomFactor(scale: number) {
+    if (!this.destroyed && !this.view.webContents.isDestroyed()) {
+      this.view.webContents.setZoomFactor(scale)
+    }
+  }
+
   processId() {
     if (this.destroyed || this.view.webContents.isDestroyed()) return null
     return this.view.webContents.getOSProcessId()

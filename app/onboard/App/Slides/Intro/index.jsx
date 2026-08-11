@@ -8,7 +8,10 @@ const Welcome = styled.div`
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background:
     linear-gradient(90deg, rgba(7, 11, 10, 0.5) 0%, rgba(7, 11, 10, 0.12) 48%, transparent 66%),
     url(${onboardingWelcome}) center / cover no-repeat;
@@ -23,6 +26,27 @@ const WelcomeContent = styled.div`
   width: 43%;
   transform: translateY(-50%);
   text-align: left;
+
+  @media (max-width: 620px) {
+    right: 28px;
+    left: 28px;
+    width: auto;
+    max-width: 420px;
+  }
+
+  @media (max-height: 480px) {
+    position: relative;
+    top: auto;
+    left: clamp(28px, 7vw, 54px);
+    width: min(420px, calc(100% - 56px));
+    min-height: 100%;
+    padding: 28px 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transform: none;
+  }
 `
 
 const WelcomeTitle = styled.h1`

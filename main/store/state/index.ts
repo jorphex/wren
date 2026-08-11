@@ -7,6 +7,7 @@ import migrations from '../migrate'
 
 import { MainSchema } from './types/main'
 import { clearSessionOnlyOrigins } from './session'
+import { normalizeInterfaceScale } from '../../windows/uiScale'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -150,6 +151,7 @@ const mainState = {
   launch: main('launch', false),
   reveal: main('reveal', false),
   glideSide: main('glideSide', 'right'),
+  interfaceScale: normalizeInterfaceScale(main('interfaceScale', 1)),
   showLocalNameWithENS: main('showLocalNameWithENS', false),
   autohide: main('autohide', false),
   accountCloseLock: main('accountCloseLock', false),
@@ -789,6 +791,7 @@ const initial = {
     notifyId: '',
     notifyOwner: '',
     notifyQueue: [],
+    interfaceScaleEffective: 1,
     badge: '',
     addAccount: '', // Add view (needs to be merged into Phase)
     addNetwork: false, // Phase view (needs to be merged with Add)

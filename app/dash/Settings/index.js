@@ -277,6 +277,14 @@ export class Settings extends Component {
   render() {
     const summonShortcut = this.store('main.shortcuts.summon')
     const platform = this.store('platform')
+    const requestedInterfaceScale = this.store('main.interfaceScale') || 1
+    const effectiveInterfaceScale = this.store('view.interfaceScaleEffective') || requestedInterfaceScale
+    const requestedInterfaceScalePercent = Math.round(requestedInterfaceScale * 100)
+    const effectiveInterfaceScalePercent = Math.round(effectiveInterfaceScale * 100)
+    const interfaceScaleAnnouncement =
+      requestedInterfaceScalePercent === effectiveInterfaceScalePercent
+        ? `Interface scale set to ${effectiveInterfaceScalePercent}%.`
+        : `Interface scale set to ${effectiveInterfaceScalePercent}%. You requested ${requestedInterfaceScalePercent}%, but Wren reduced it to fit the available screen space.`
     const companionCredentials = Object.values(this.store('main.extensionCredentials') || {}).sort(
       (left, right) => right.pairedAt - left.pairedAt
     )
@@ -339,6 +347,41 @@ export class Settings extends Component {
                   shortcutName='summon'
                   platform={platform}
                 />
+              </div>
+            </div>
+            <div className='signerPermission localSetting interfaceScaleSetting' style={{ zIndex: 213 }}>
+              <div className='interfaceScaleHeader'>
+                <div className='interfaceScaleCopy'>
+                  <div id='interface-scale-label' className='signerPermissionSetting'>
+                    Interface scale
+                  </div>
+                  <div className='interfaceScaleDescription'>
+                    Makes Wren’s window and contents larger when your display has room.
+                  </div>
+                </div>
+                <div className='interfaceScaleOptions' role='group' aria-labelledby='interface-scale-label'>
+                  {[
+                    { label: '100%', value: 1 },
+                    { label: '125%', value: 1.25 },
+                    { label: '150%', value: 1.5 }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type='button'
+                      className='wrenControl wrenControlGhost interfaceScaleOption'
+                      aria-pressed={requestedInterfaceScale === option.value}
+                      onClick={() => link.send('tray:action', 'setInterfaceScale', option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className='interfaceScaleStatus' aria-hidden='true'>
+                {`${requestedInterfaceScalePercent}% requested · using ${effectiveInterfaceScalePercent}% to fit this display`}
+              </div>
+              <div className='interfaceScaleAnnouncement' role='status' aria-live='polite' aria-atomic='true'>
+                {interfaceScaleAnnouncement}
               </div>
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 213 }}>

@@ -131,6 +131,12 @@ module.exports = {
   setGlideSide: (u, side) => {
     if (side === 'left' || side === 'right') u('main.glideSide', () => side)
   },
+  setInterfaceScale: (u, scale) => {
+    if ([1, 1.25, 1.5].includes(scale)) u('main.interfaceScale', () => scale)
+  },
+  setInterfaceScaleEffective: (u, scale) => {
+    if ([1, 1.25, 1.5].includes(scale)) u('view.interfaceScaleEffective', () => scale)
+  },
   toggleShowLocalNameWithENS: (u) =>
     u('main.showLocalNameWithENS', (showLocalNameWithENS) => !showLocalNameWithENS),
   setPermission: (u, address, permission) => {

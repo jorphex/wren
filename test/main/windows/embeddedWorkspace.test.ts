@@ -11,7 +11,8 @@ const createSetup = () => {
     on: jest.fn(),
     openDevTools: jest.fn(),
     reload: jest.fn(),
-    send: jest.fn()
+    send: jest.fn(),
+    setZoomFactor: jest.fn()
   }
   const view = {
     setBounds: jest.fn(),
@@ -235,6 +236,14 @@ it('forwards state updates and reloads while active', () => {
 
   expect(webContents.send).toHaveBeenCalledWith('main:action', 'stateSync', '{}')
   expect(webContents.reload).toHaveBeenCalledTimes(1)
+})
+
+it('applies interface zoom to embedded renderer web contents', () => {
+  const { webContents, workspace } = createSetup()
+
+  workspace.setZoomFactor(1.25)
+
+  expect(webContents.setZoomFactor).toHaveBeenCalledWith(1.25)
 })
 
 it('detaches and closes web contents exactly once', () => {

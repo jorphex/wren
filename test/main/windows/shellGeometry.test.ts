@@ -10,6 +10,34 @@ describe('getShellLayout', () => {
     })
   })
 
+  it('scales physical panes while preserving the right wallet edge', () => {
+    const compact = getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'right', false, 1.25)
+    const expanded = getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'right', true, 1.25)
+
+    expect(compact).toEqual({
+      window: { x: 970, y: 12, width: 950, height: 1056 },
+      main: { x: 0, y: 0, width: 950, height: 1056 },
+      workspace: { x: 0, y: 0, width: 0, height: 1056 },
+      workspaceOverlaysMain: false
+    })
+    expect(expanded).toEqual({
+      window: { x: 195, y: 12, width: 1725, height: 1056 },
+      main: { x: 775, y: 0, width: 950, height: 1056 },
+      workspace: { x: 0, y: 0, width: 775, height: 1056 },
+      workspaceOverlaysMain: false
+    })
+    expect(expanded.window.x + expanded.main.x).toBe(compact.window.x)
+  })
+
+  it('scales overlay thresholds and caps target height to the work area margin', () => {
+    expect(getShellLayout({ x: 0, y: 0, width: 1440, height: 1200 }, 'right', true, 1.5)).toEqual({
+      window: { x: 300, y: 12, width: 1140, height: 1176 },
+      main: { x: 0, y: 0, width: 1140, height: 1176 },
+      workspace: { x: 0, y: 0, width: 1140, height: 1176 },
+      workspaceOverlaysMain: true
+    })
+  })
+
   it('collapses a left-edge workspace at the wallet seam', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'left')).toEqual({
       window: { x: 0, y: 90, width: 760, height: 900 },

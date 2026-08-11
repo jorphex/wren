@@ -84,6 +84,16 @@ test('keeps transaction review on one flat details ledger', () => {
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
 })
 
+test('keeps signing evidence readable and operable when the shell is scaled', () => {
+  expect(signingStyle).toMatch(/\.txLifecycleStep[\s\S]*?font-size 12px/)
+  expect(signingStyle).toMatch(
+    /\.txLifecycleAction,[\s\S]*?\.txLifecycleDetails button,[\s\S]*?\.txLifecycleCancelRequest[\s\S]*?min-height 44px[\s\S]*?height 44px/
+  )
+  expect(signingStyle).toMatch(
+    /@media \(max-width: 560px\)[\s\S]*?\.approveTransaction \.transactionReviewMain[\s\S]*?\._txDescription[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.transactionReviewSummaryStatus[\s\S]*?width 100%[\s\S]*?max-width none/
+  )
+})
+
 test('gives collectible buttons the shared visible keyboard focus treatment', () => {
   expect(inventoryStyle).toMatch(
     /\.inventoryCollectionItem[\s\S]*?appearance none[\s\S]*?&:focus-visible[\s\S]*?outline 2px solid var\(--wren-focus\)/

@@ -27,7 +27,9 @@ import {
   notify as notifyAction,
   showWalletCallsStatus as showWalletCallsStatusAction,
   updateTypedDataRequest as updateTypedDataAction,
-  setGlideSide as setGlideSideAction
+  setGlideSide as setGlideSideAction,
+  setInterfaceScale as setInterfaceScaleAction,
+  setInterfaceScaleEffective as setInterfaceScaleEffectiveAction
 } from '../../../../main/store/actions'
 import { toTokenId } from '../../../../resources/domain/balance'
 import * as storeActions from '../../../../main/store/actions'
@@ -202,6 +204,30 @@ describe('#setGlideSide', () => {
     expect(update).toHaveBeenCalledTimes(1)
     expect(update).toHaveBeenCalledWith('main.glideSide', expect.any(Function))
     expect(update.mock.calls[0][1]()).toBe('left')
+  })
+})
+
+describe('#setInterfaceScale', () => {
+  it('persists only supported requested scales', () => {
+    const update = jest.fn()
+
+    setInterfaceScaleAction(update, 1.25)
+    setInterfaceScaleAction(update, 2)
+
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith('main.interfaceScale', expect.any(Function))
+    expect(update.mock.calls[0][1]()).toBe(1.25)
+  })
+
+  it('publishes only supported effective scales to transient state', () => {
+    const update = jest.fn()
+
+    setInterfaceScaleEffectiveAction(update, 1.5)
+    setInterfaceScaleEffectiveAction(update, 0.5)
+
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith('view.interfaceScaleEffective', expect.any(Function))
+    expect(update.mock.calls[0][1]()).toBe(1.5)
   })
 })
 

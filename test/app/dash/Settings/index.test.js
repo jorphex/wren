@@ -10,10 +10,14 @@ jest.mock('../../../../resources/Components/KeyboardShortcutConfigurator', () =>
 
 const state = {
   platform: 'linux',
+  view: {
+    interfaceScaleEffective: 1.25
+  },
   main: {
     accountCloseLock: false,
     autohide: false,
     instanceId: '11111111-1111-4111-8111-111111111111',
+    interfaceScale: 1.5,
     extensionCredentials: {
       companion: {
         browser: 'Firefox',
@@ -73,6 +77,23 @@ it('groups settings into a short, semantic ledger', () => {
   expect(
     screen.getByRole('region', { name: 'Accounts and signing' }).contains(setting('Ledger derivation'))
   ).toBe(true)
+})
+
+it('shows requested and effective interface scale and routes scale changes', () => {
+  renderSettings()
+
+  const scaleSetting = setting('Interface scale')
+  expect(
+    within(scaleSetting).getByText('Makes Wren’s window and contents larger when your display has room.')
+  ).toBeTruthy()
+  expect(within(scaleSetting).getByText('150% requested · using 125% to fit this display')).toBeTruthy()
+  expect(within(scaleSetting).getByRole('status').textContent).toBe(
+    'Interface scale set to 125%. You requested 150%, but Wren reduced it to fit the available screen space.'
+  )
+  expect(within(scaleSetting).getByRole('button', { name: '150%' }).getAttribute('aria-pressed')).toBe('true')
+
+  fireEvent.click(within(scaleSetting).getByRole('button', { name: '125%' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'setInterfaceScale', 1.25)
 })
 
 it('keeps app identity, license, and reset actions in About', async () => {

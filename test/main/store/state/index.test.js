@@ -3,6 +3,7 @@ jest.mock('electron', () => ({ app: { on: jest.fn(), getPath: jest.fn() } }))
 jest.mock('fs')
 
 let mockLatestVersion = 0
+let mockInterfaceScale = 2
 
 jest.mock('../../../../main/store/migrate', () => {
   return {
@@ -31,6 +32,7 @@ jest.mock('../../../../main/store/persist', () => {
             main: {
               _version: 2,
               instanceId: 'test-brand-new-frame',
+              interfaceScale: mockInterfaceScale,
               privacy: { errorReporting: true },
               accounts: {
                 '0x000000000000000000000000000000000000dead': {
@@ -49,6 +51,7 @@ jest.mock('../../../../main/store/persist', () => {
 })
 
 afterEach(() => {
+  mockInterfaceScale = 2
   // ensure modules are reloaded before each test
   jest.resetModules()
 })
@@ -68,6 +71,17 @@ it('loads values from the current version of the state', async () => {
   const { default: state } = await import('../../../../main/store/state')
 
   expect(state().main.instanceId).toBe('test-brand-new-frame')
+  expect(state().main.interfaceScale).toBe(1)
+  expect(state().view.interfaceScaleEffective).toBe(1)
+})
+
+it('restores a supported requested interface scale', async () => {
+  mockLatestVersion = 2
+  mockInterfaceScale = 1.5
+
+  const { default: state } = await import('../../../../main/store/state')
+
+  expect(state().main.interfaceScale).toBe(1.5)
 })
 
 it('uses PublicNode for every built-in network with a public preset', async () => {

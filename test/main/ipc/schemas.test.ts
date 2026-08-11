@@ -389,6 +389,8 @@ test('dispatches only recognized store actions with validated arguments', () => 
   expect(parseRendererIpcArgs('event', 'tray:action', ['setColorway', 'light']).success).toBe(false)
   expect(parse('event', 'tray:action', ['setGlideSide', 'left'])).toEqual(['setGlideSide', 'left'])
   expect(parseRendererIpcArgs('event', 'tray:action', ['setGlideSide', 'top']).success).toBe(false)
+  expect(parse('event', 'tray:action', ['setInterfaceScale', 1.25])).toEqual(['setInterfaceScale', 1.25])
+  expect(parseRendererIpcArgs('event', 'tray:action', ['setInterfaceScale', 2]).success).toBe(false)
   expect(parse('event', 'tray:action', ['toggleAccess', address, handlerId, true])).toEqual([
     'toggleAccess',
     address,

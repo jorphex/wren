@@ -26,6 +26,10 @@ const PreferencesSchema = {
   launch: z.boolean().default(false).describe('Launch Wren on system start'),
   reveal: z.boolean().default(false).describe('Show Wren when user glides mouse to edge of screen'),
   glideSide: z.enum(['left', 'right']).default('right').describe('Display edge used by Glide'),
+  interfaceScale: z
+    .union([z.literal(1), z.literal(1.25), z.literal(1.5)])
+    .default(1)
+    .describe('Requested interface scale'),
   autohide: z.boolean().default(false).describe('Automatically hide Wren when it loses focus'),
   accountCloseLock: z
     .boolean()

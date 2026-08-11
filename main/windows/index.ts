@@ -34,6 +34,7 @@ import { SystemTray, SystemTrayEventHandlers } from './systemTray'
 import { registerShortcut } from '../keyboardShortcuts'
 import { Shortcut } from '../store/state/types/shortcuts'
 import { onRenderer, onceRenderer } from '../ipc/renderer'
+import { getEffectiveInterfaceScale, normalizeInterfaceScale, type InterfaceScale } from './uiScale'
 
 type Windows = {
   tray?: BrowserWindow
@@ -65,14 +66,37 @@ let displayChangeHandler: (() => void) | undefined
 
 const getGlideEdge = (): GlideEdge => (store('main.glideSide') === 'left' ? 'left' : 'right')
 
+const requestedInterfaceScale = () => normalizeInterfaceScale(store('main.interfaceScale'))
+
+const interfaceScaleForArea = (area: Electron.Rectangle) =>
+  getEffectiveInterfaceScale(requestedInterfaceScale(), area)
+
+const setZoomFactor = (contents: WebContents, scale: InterfaceScale) => {
+  if (!contents.isDestroyed()) contents.setZoomFactor(scale)
+}
+
+const synchronizeInterfaceScale = (area: Electron.Rectangle) => {
+  const scale = interfaceScaleForArea(area)
+  const trayWindow = windows.tray
+  if (trayWindow && !trayWindow.isDestroyed()) setZoomFactor(trayWindow.webContents, scale)
+  const onboardWindow = windows.onboard
+  if (onboardWindow && !onboardWindow.isDestroyed()) setZoomFactor(onboardWindow.webContents, scale)
+  dash?.setZoomFactor(scale)
+  if (store('view.interfaceScaleEffective') !== scale) {
+    requireStoreAction('setInterfaceScaleEffective')(scale)
+  }
+  return scale
+}
+
 const getActiveShellLayout = (
   area: Electron.Rectangle,
   edge: GlideEdge,
-  workspaceOpen: boolean
+  workspaceOpen: boolean,
+  scale: InterfaceScale
 ): ShellLayout => {
-  const requested = getShellLayout(area, edge, workspaceOpen)
+  const requested = getShellLayout(area, edge, workspaceOpen, scale)
   if (process.platform !== 'linux' || requested.workspaceOverlaysMain) return requested
-  return getShellLayout(area, edge, true)
+  return getShellLayout(area, edge, true, scale)
 }
 
 const app = {
@@ -95,8 +119,8 @@ const systemTrayEventHandlers: SystemTrayEventHandlers = {
 const systemTray = new SystemTray(systemTrayEventHandlers)
 const getDisplaySummonShortcut = () => store('main.shortcuts.summon.enabled')
 
-const center = (window: BrowserWindow) => {
-  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+const center = (window: BrowserWindow, requestedArea?: Electron.Rectangle) => {
+  const area = requestedArea || screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
   const screenSize = area
   const [windowWidth, windowHeight] = window.getSize()
   if (windowWidth === undefined || windowHeight === undefined) {
@@ -113,26 +137,30 @@ const rendererUrl = (id: string) =>
     ? new URL(`http://localhost:1234/${id}/index.dev.html`)
     : new URL(path.join(process.env.BUNDLE_LOCATION, `${id}.html`), 'file:')
 
-function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions) {
+function initWindow(id: string, opts: Electron.BrowserWindowConstructorOptions, scale: InterfaceScale) {
   const window = createWindow(id, opts)
   windows[id] = window
   window.once('closed', () => {
     if (windows[id] === window) delete windows[id]
   })
+  setZoomFactor(window.webContents, scale)
   window.loadURL(rendererUrl(id).toString())
   return window
 }
 
 function initTrayWindow() {
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+  const scale = interfaceScaleForArea(area)
   const trayOpts: Electron.BrowserWindowConstructorOptions = {
-    width: shellMainTargetWidth,
+    width: shellMainTargetWidth * scale,
     backgroundColor: shellBackgroundColor,
     icon: path.join(__dirname, './AppIcon.png')
   }
   if (isMacOS) {
     trayOpts.type = 'panel'
   }
-  const trayWindow = initWindow('tray', trayOpts)
+  const trayWindow = initWindow('tray', trayOpts, scale)
+  synchronizeInterfaceScale(area)
 
   installCloseToTray(electronApp, trayWindow, () => app.hide())
 
@@ -142,7 +170,7 @@ function initTrayWindow() {
   trayWindow.setResizable(false)
   trayWindow.setMovable(false)
 
-  const { width, height, x, y } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+  const { width, height, x, y } = area
   trayWindow.setPosition(width + x, height + y)
 
   trayWindow.on('show', () => {
@@ -312,9 +340,11 @@ export class Tray {
     })
     trayWindow.setResizable(false)
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    const scale = synchronizeInterfaceScale(area)
+    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'), scale)
     if (dash) dash.applyLayout(layout)
     else trayWindow.setBounds(layout.window, false)
+    onboard?.reposition(scale)
     requireStoreAction('trayOpen')(true)
     if (glide && isMacOS) {
       trayWindow.showInactive()
@@ -343,9 +373,11 @@ export class Tray {
     if (!trayWindow || trayWindow.isDestroyed()) return
 
     const area = screen.getDisplayMatching(trayWindow.getBounds()).workArea
-    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'))
+    const scale = synchronizeInterfaceScale(area)
+    const layout = getActiveShellLayout(area, getGlideEdge(), !!store('windows.dash.showing'), scale)
     if (dash) dash.applyLayout(layout, animate, focusWorkspace)
     else trayWindow.setBounds(layout.window, false)
+    onboard?.reposition(scale)
   }
 
   destroy() {
@@ -369,6 +401,9 @@ class Dash {
     const workspaceView = createRendererView('dash')
     workspaceView.setBackgroundColor('#00000000')
     this.workspace = new EmbeddedWorkspace(trayWindow, workspaceView, electronApp)
+    this.workspace.setZoomFactor(
+      normalizeInterfaceScale(store('view.interfaceScaleEffective') || requestedInterfaceScale())
+    )
     this.workspace.loadURL(rendererUrl('dash').toString())
     this.workspace.onLoaded(() => {
       const processId = this.workspace.processId()
@@ -393,6 +428,10 @@ class Dash {
     })
     if (animate) this.setShellJoined(shouldJoinWorkspace(layout, showing, true))
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
+  }
+
+  setZoomFactor(scale: InterfaceScale) {
+    this.workspace.setZoomFactor(scale)
   }
 
   private setShellJoined(joined: boolean) {
@@ -498,15 +537,45 @@ class Dash {
 
 class Onboard {
   constructor() {
-    initWindow('onboard', {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      titleBarStyle: 'hidden',
-      trafficLightPosition: { x: 10, y: 9 },
-      icon: path.join(__dirname, './AppIcon.png')
-    })
+    const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+    const scale = interfaceScaleForArea(area)
+    initWindow(
+      'onboard',
+      {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        titleBarStyle: 'hidden',
+        trafficLightPosition: { x: 10, y: 9 },
+        icon: path.join(__dirname, './AppIcon.png')
+      },
+      scale
+    )
+    synchronizeInterfaceScale(area)
+  }
+
+  reposition(scale: InterfaceScale, requestedArea?: Electron.Rectangle) {
+    const onboardWindow = windows.onboard
+    if (!onboardWindow || onboardWindow.isDestroyed()) return
+    const area =
+      requestedArea ||
+      (onboardWindow.isVisible()
+        ? screen.getDisplayMatching(onboardWindow.getBounds()).workArea
+        : screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea)
+    const availableHeight = (isDev && !fullheight ? devHeight : area.height) - 48
+    const artworkRatio = 900 / 506
+    const width = Math.max(
+      1,
+      Math.floor(Math.min(720 * scale, area.width - 48, availableHeight * artworkRatio))
+    )
+    const height = Math.max(1, Math.round(width / artworkRatio))
+    const minimumWidth = Math.min(560 * scale, width)
+    onboardWindow.setMinimumSize(minimumWidth, Math.round(minimumWidth / artworkRatio))
+    onboardWindow.setSize(width, height)
+    onboardWindow.setResizable(false)
+    const pos = center(onboardWindow, area)
+    onboardWindow.setPosition(pos.x, pos.y)
   }
 
   public hide() {
@@ -540,16 +609,8 @@ class Onboard {
       onboardWindow.once('close', closeHandler)
 
       const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
-      const availableHeight = (isDev && !fullheight ? devHeight : area.height) - 48
-      const artworkRatio = 900 / 506
-      const width = Math.max(1, Math.floor(Math.min(720, area.width - 48, availableHeight * artworkRatio)))
-      const height = Math.max(1, Math.round(width / artworkRatio))
-      const minimumWidth = Math.min(560, width)
-      onboardWindow.setMinimumSize(minimumWidth, Math.round(minimumWidth / artworkRatio))
-      onboardWindow.setSize(width, height)
-      onboardWindow.setResizable(false)
-      const pos = center(onboardWindow)
-      onboardWindow.setPosition(pos.x, pos.y)
+      const scale = synchronizeInterfaceScale(area)
+      this.reposition(scale, area)
       onboardWindow.show()
       onboardWindow.focus()
       onboardWindow.setVisibleOnAllWorkspaces(false, {
@@ -662,6 +723,16 @@ const init = () => {
   }
 
   // data change events
+  let observedInterfaceScale = requestedInterfaceScale()
+  lifecycleObservers.push(
+    store.observer(() => {
+      const nextScale = requestedInterfaceScale()
+      if (nextScale === observedInterfaceScale) return
+      observedInterfaceScale = nextScale
+      tray.reposition(false)
+    }, 'windows:interfaceScale')
+  )
+
   lifecycleObservers.push(
     store.observer(() => {
       dash.syncEmbeddedDapp()

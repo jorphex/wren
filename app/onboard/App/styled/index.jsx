@@ -19,12 +19,16 @@ export const SlideContainer = styled.div`
   right: 0;
   bottom: 0;
   left: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--wren-bg-canvas);
 `
 
 export const SlideScroller = styled.div`
   position: absolute;
   inset: 0;
+  min-height: 0;
+  overflow: hidden;
 `
 
 export const Slide = styled.div`
@@ -49,6 +53,7 @@ export const SlideBody = styled.div`
   box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   animation: cardShow var(--wren-motion-page) ease both;
   font-weight: 350;
   font-size: 16px;
@@ -59,6 +64,18 @@ export const SlideBody = styled.div`
     top: 96px;
     bottom: 88px;
     font-size: 15px;
+  }
+
+  @media (max-height: 700px) and (min-height: 541px) {
+    top: 100px;
+    bottom: 92px;
+  }
+
+  @media (max-width: 620px) {
+    right: 28px;
+    left: 28px;
+    width: auto;
+    max-width: 420px;
   }
 `
 
@@ -81,6 +98,13 @@ export const SlideTitle = styled.h1`
     top: 48px;
     font-size: 27px;
   }
+
+  @media (max-width: 620px) {
+    right: 28px;
+    left: 28px;
+    width: auto;
+    max-width: 440px;
+  }
 `
 
 export const SlideProceed = styled.div`
@@ -95,6 +119,12 @@ export const SlideProceed = styled.div`
 
   @media (max-height: 540px) {
     bottom: 20px;
+  }
+
+  @media (max-width: 620px) {
+    right: 28px;
+    left: 28px;
+    gap: var(--wren-space-2);
   }
 `
 

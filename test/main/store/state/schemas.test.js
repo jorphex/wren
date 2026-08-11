@@ -26,6 +26,12 @@ describe('persisted state schema compatibility', () => {
     expect(MainSchema.shape.mute.parse({ gasFeeWarning: true })).toStrictEqual({ gasFeeWarning: true })
   })
 
+  it('accepts only supported persisted interface scales', () => {
+    expect(MainSchema.shape.interfaceScale.parse(undefined)).toBe(1)
+    expect(MainSchema.shape.interfaceScale.parse(1.25)).toBe(1.25)
+    expect(() => MainSchema.shape.interfaceScale.parse(2)).toThrow()
+  })
+
   it('accepts cached dapps without a manifest or lifecycle fields', () => {
     expect(
       DappSchema.parse({

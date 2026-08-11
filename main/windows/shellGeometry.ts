@@ -20,15 +20,22 @@ export const shellTargetHeight = 900
 const workspaceMinimumWidth = 400
 const verticalMargin = 12
 
-export function getShellLayout(workArea: Rectangle, edge: GlideEdge, workspaceOpen = false): ShellLayout {
-  const mainWidth = Math.min(shellMainTargetWidth, workArea.width)
-  const height = Math.max(1, Math.min(shellTargetHeight, workArea.height - verticalMargin * 2))
+export function getShellLayout(
+  workArea: Rectangle,
+  edge: GlideEdge,
+  workspaceOpen = false,
+  scale: InterfaceScale = 1
+): ShellLayout {
+  const mainTargetWidth = shellMainTargetWidth * scale
+  const workspaceTargetWidth = shellWorkspaceTargetWidth * scale
+  const mainWidth = Math.min(mainTargetWidth, workArea.width)
+  const height = Math.max(1, Math.min(shellTargetHeight * scale, workArea.height - verticalMargin * 2))
   const adjacentWidth = Math.max(0, workArea.width - mainWidth)
-  const workspaceOverlaysMain = adjacentWidth < workspaceMinimumWidth
+  const workspaceOverlaysMain = adjacentWidth < workspaceMinimumWidth * scale
   const workspaceWidth = workspaceOpen
     ? workspaceOverlaysMain
       ? mainWidth
-      : Math.min(shellWorkspaceTargetWidth, adjacentWidth)
+      : Math.min(workspaceTargetWidth, adjacentWidth)
     : 0
   const windowWidth = workspaceOverlaysMain ? mainWidth : mainWidth + workspaceWidth
   const window = {
@@ -56,3 +63,4 @@ export function getShellLayout(workArea: Rectangle, edge: GlideEdge, workspaceOp
 export function shouldJoinWorkspace(layout: ShellLayout, showing: boolean, transitioning: boolean) {
   return !layout.workspaceOverlaysMain && (showing || transitioning)
 }
+import type { InterfaceScale } from './uiScale'
