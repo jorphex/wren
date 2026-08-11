@@ -22,6 +22,10 @@ checksums, compatibility metadata, and source-bound SBOM.
 The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
+`npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display
+and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
+delegation entry, revocation review, ambiguous monitoring, safe focus,
+reachability, text, and targets.
 Companion's `npm run qualify:browser` uses disposable temporary builds and profiles
 to exercise protocol 2, EIP-6963, provider requests, and top/frame origin isolation
 in real Chrome and Firefox. These automated checks do not replace the candidate-
@@ -118,10 +122,17 @@ and Firefox candidate archives.
    delegated senders cannot submit a sequential batch, ordinary outbound
    transactions are not described as running the sender's delegate, and type-4 or
    authorization-list requests are rejected before approval.
+5. With a disposable Ring or Seed account already delegated on the testnet, open
+   Accounts, choose the exact account and network, and review the revocation.
+   Verify the authority, delegate, code hash, nonce, and EIP-1559 fees before
+   signing. Confirm Wren monitors only the locally inspected transaction hash,
+   survives a restart or temporary RPC failure, and reports clearance only after
+   block-bound code evidence and 12 confirmations. Exercise **Stop monitoring** and
+   confirm it does not claim to cancel the transaction or clear the delegation.
 
 This qualifies only the exercised desktop, RPC, testnet state, and exact browser
 archives. It does not audit delegate code, qualify every chain/RPC, qualify atomic
-EIP-5792, or add EIP-7702 delegation management.
+EIP-5792, create or replace delegation, or qualify EIP-7702 hardware signing.
 
 ## Earn-only qualification
 
