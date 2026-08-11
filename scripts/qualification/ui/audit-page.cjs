@@ -1,6 +1,12 @@
 'use strict'
 
-const auditPage = async ({ compactExceptions, expectedViewport }) => {
+const auditPage = async ({
+  compactExceptions,
+  expectedInitialFocus,
+  expectedViewport,
+  requiredControls = [],
+  requiredText = []
+}) => {
   const violations = []
   const exceptions = []
   const viewport = { width: window.innerWidth, height: window.innerHeight }
@@ -25,8 +31,17 @@ const auditPage = async ({ compactExceptions, expectedViewport }) => {
       rect.height > 0
     )
   }
-  const inViewport = (rect) =>
-    rect.right > 0 && rect.bottom > 0 && rect.left < viewport.width && rect.top < viewport.height
+  const fullyInViewport = (rect) =>
+    rect.left >= -1 &&
+    rect.top >= -1 &&
+    rect.right <= viewport.width + 1 &&
+    rect.bottom <= viewport.height + 1
+  const unobscured = (element, rect) => {
+    const x = Math.min(viewport.width - 1, Math.max(0, rect.left + rect.width / 2))
+    const y = Math.min(viewport.height - 1, Math.max(0, rect.top + rect.height / 2))
+    const hit = document.elementFromPoint(x, y)
+    return Boolean(hit && (hit === element || element.contains(hit)))
+  }
   const accessibleName = (element) =>
     Boolean(
       element.getAttribute('aria-label')?.trim() ||
@@ -35,6 +50,25 @@ const auditPage = async ({ compactExceptions, expectedViewport }) => {
       element.innerText?.trim() ||
       (element.tagName === 'INPUT' && element.getAttribute('placeholder')?.trim())
     )
+
+  const normalizedText = (value) =>
+    String(value || '')
+      .replace(/\s+/gu, ' ')
+      .trim()
+  const initialFocus = normalizedText(
+    document.activeElement?.getAttribute?.('aria-label') || document.activeElement?.innerText
+  )
+  if (expectedInitialFocus && initialFocus !== expectedInitialFocus) {
+    violations.push({
+      kind: 'initial-focus',
+      detail: `expected ${expectedInitialFocus}, got ${initialFocus || '<none>'}`
+    })
+  }
+
+  const pageText = normalizedText(document.body?.innerText)
+  for (const text of requiredText) {
+    if (!pageText.includes(text)) violations.push({ kind: 'required-text', detail: text })
+  }
 
   if (
     Math.abs(viewport.width - expectedViewport.width) > 2 ||
@@ -61,6 +95,13 @@ const auditPage = async ({ compactExceptions, expectedViewport }) => {
     (element) => visible(element) && !element.disabled && element.getAttribute('aria-hidden') !== 'true'
   )
 
+  for (const name of requiredControls) {
+    const matchingControl = controls.find((control) =>
+      normalizedText(control.getAttribute('aria-label') || control.innerText).includes(name)
+    )
+    if (!matchingControl) violations.push({ kind: 'required-control', detail: name })
+  }
+
   for (const control of controls) {
     const label = describe(control)
     let rect = control.getBoundingClientRect()
@@ -70,17 +111,19 @@ const auditPage = async ({ compactExceptions, expectedViewport }) => {
       continue
     }
 
-    if (!inViewport(rect)) {
+    if (!fullyInViewport(rect) || !unobscured(control, rect)) {
       control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       rect = control.getBoundingClientRect()
     }
-    if (!inViewport(rect)) violations.push({ kind: 'control-reachability', detail: label })
+    if (!fullyInViewport(rect) || !unobscured(control, rect)) {
+      violations.push({ kind: 'control-reachability', detail: label })
+    }
 
     control.focus({ preventScroll: true })
     if (document.activeElement !== control && !control.contains(document.activeElement)) {
       violations.push({ kind: 'keyboard-focus', detail: label })
-    } else if (!inViewport(control.getBoundingClientRect())) {
+    } else if (!fullyInViewport(control.getBoundingClientRect())) {
       violations.push({ kind: 'focused-control-hidden', detail: label })
     }
 
@@ -115,7 +158,7 @@ const auditPage = async ({ compactExceptions, expectedViewport }) => {
 
   controls[0]?.focus({ preventScroll: false })
   const focused = document.activeElement
-  if (focused && focused !== document.body && !inViewport(focused.getBoundingClientRect())) {
+  if (focused && focused !== document.body && !fullyInViewport(focused.getBoundingClientRect())) {
     violations.push({ kind: 'final-focus-hidden', detail: describe(focused) })
   }
 

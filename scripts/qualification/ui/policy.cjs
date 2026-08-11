@@ -26,6 +26,11 @@ const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
     reason: 'Paired shell navigation controls use the established compact optical target.'
   },
   {
+    selector: '.accountSwitcherTrigger',
+    minimum: 40,
+    reason: 'The persistent desktop account switcher uses the established compact shell-row target.'
+  },
+  {
     selector: '.requestFeatureButton',
     minimum: 38,
     reason: 'Control-center support links are a compact tertiary utility row.'
@@ -69,6 +74,76 @@ const scenarioMatrix = () =>
       logicalWidth: 620,
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.dashModules'
+    },
+    {
+      id: `dash-delegation-full-${scale}`,
+      renderer: 'dash',
+      state: 'delegation',
+      scale,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.delegationRevocationEligible',
+      requiredControls: ['Revoke delegation'],
+      requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+    },
+    {
+      id: `dash-delegation-short-${scale}`,
+      renderer: 'dash',
+      state: 'delegation',
+      scale,
+      logicalWidth: 620,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.delegationRevocationEligible',
+      requiredControls: ['Revoke delegation'],
+      requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+    },
+    {
+      id: `tray-revocation-review-full-${scale}`,
+      renderer: 'tray',
+      state: 'revocation-review',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.eip7702RevokeRequest-review',
+      requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+    },
+    {
+      id: `tray-revocation-review-short-${scale}`,
+      renderer: 'tray',
+      state: 'revocation-review',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.eip7702RevokeRequest-review',
+      requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+    },
+    {
+      id: `tray-revocation-monitor-full-${scale}`,
+      renderer: 'tray',
+      state: 'revocation-monitor',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.eip7702StopMonitoringDialog',
+      action: { type: 'clickText', text: 'Stop monitoring' },
+      expectedInitialFocus: 'Keep monitoring',
+      requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+      requiredText: ['Submission status unclear', 'cannot cancel a transaction']
+    },
+    {
+      id: `tray-revocation-monitor-short-${scale}`,
+      renderer: 'tray',
+      state: 'revocation-monitor',
+      scale,
+      logicalWidth: 760,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.eip7702StopMonitoringDialog',
+      action: { type: 'clickText', text: 'Stop monitoring' },
+      expectedInitialFocus: 'Keep monitoring',
+      requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+      requiredText: ['Submission status unclear', 'cannot cancel a transaction']
     },
     {
       id: `onboard-intro-${scale}`,

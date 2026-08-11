@@ -6,7 +6,7 @@ const { app, BrowserWindow, ipcMain, session } = require('electron')
 
 const { auditPage } = require('./audit-page.cjs')
 const { COMPACT_TARGET_EXCEPTIONS, physicalSize, scenarioMatrix } = require('./policy.cjs')
-const { fixtureFor } = require('./state-fixture.cjs')
+const { fixtureFor, rpcReplyFor } = require('./state-fixture.cjs')
 
 const projectRoot = path.resolve(__dirname, '../../..')
 const runRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_ROOT || '')
@@ -15,6 +15,7 @@ const screenshotRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_SCREENSHOT
 const bundleRoot = path.join(projectRoot, 'bundle')
 const preload = path.join(bundleRoot, 'bridge.js')
 const stateByWebContents = new Map()
+const scenarioByWebContents = new Map()
 const rendererErrors = new Map()
 const isolation = {
   blockedOutbound: 0,
@@ -180,6 +181,7 @@ const createRendererWindow = (scenario) => {
   window.setResizable(false)
   window.webContents.setZoomFactor(scenario.scale)
   stateByWebContents.set(window.webContents.id, fixtureFor(scenario))
+  scenarioByWebContents.set(window.webContents.id, scenario)
   rendererErrors.set(window.webContents.id, [])
   window.webContents.on('console-message', (details) => {
     if (details.level === 'error') {
@@ -237,7 +239,10 @@ const runScenario = async (scenario) => {
     const audit = await window.webContents.executeJavaScript(
       `(${auditPage.toString()})(${JSON.stringify({
         compactExceptions: COMPACT_TARGET_EXCEPTIONS,
-        expectedViewport: { width: scenario.logicalWidth, height: scenario.logicalHeight }
+        expectedInitialFocus: scenario.expectedInitialFocus,
+        expectedViewport: { width: scenario.logicalWidth, height: scenario.logicalHeight },
+        requiredControls: scenario.requiredControls,
+        requiredText: scenario.requiredText
       })})`,
       true
     )
@@ -255,6 +260,7 @@ const runScenario = async (scenario) => {
     return { ...scenario, audit, screenshot }
   } finally {
     stateByWebContents.delete(window.webContents.id)
+    scenarioByWebContents.delete(window.webContents.id)
     rendererErrors.delete(window.webContents.id)
     window.destroy()
   }
@@ -273,12 +279,14 @@ const main = async () => {
   ipcMain.on('main:rpc', (event, idWire, methodWire) => {
     const id = parseWireValue(idWire)
     const method = parseWireValue(methodWire)
-    if (method !== 'getState') {
+    const scenario = scenarioByWebContents.get(event.sender.id)
+    const reply = scenario ? rpcReplyFor(scenario, method) : undefined
+    if (method !== 'getState' && reply === undefined) {
       event.sender.send('main:rpc', id, JSON.stringify(`Qualification harness does not provide ${method}`))
       return
     }
-    const state = stateByWebContents.get(event.sender.id)
-    event.sender.send('main:rpc', id, null, JSON.stringify(state))
+    const result = method === 'getState' ? stateByWebContents.get(event.sender.id) : reply
+    event.sender.send('main:rpc', id, null, JSON.stringify(result))
   })
 
   const localFileProbe = await runLocalFileSelfTest()
@@ -289,12 +297,20 @@ const main = async () => {
   const report = {
     covered: {
       renderers: ['tray', 'dash', 'onboard'],
-      states: ['empty account tray', 'control center dashboard', 'onboarding intro', 'onboarding access'],
+      states: [
+        'empty account tray',
+        'control center dashboard',
+        'selected software account delegation',
+        'delegation revocation review',
+        'ambiguous delegation revocation monitoring',
+        'onboarding intro',
+        'onboarding access'
+      ],
       geometry: ['full shell', 'short shell', 'onboarding window'],
       scales: [1, 1.25, 1.5]
     },
     uncovered: [
-      'Selected-account and transaction-review states require controlled production state transitions.',
+      'General transaction review and account-home states remain outside this focused matrix.',
       'Hardware prompts, provider requests, and live network content are intentionally excluded.',
       'This harness qualifies renderer scaling; production window placement remains covered by shell-geometry tests.',
       "This host cannot provide Chromium's test sandbox; only trusted local bundles run, with application-level isolation self-tested."
