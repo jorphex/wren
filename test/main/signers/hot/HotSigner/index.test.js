@@ -48,6 +48,23 @@ describe('HotSigner worker lifecycle', () => {
     signer.close()
   })
 
+  it('dispatches EIP-7702 revocation without adding signature fields', () => {
+    const { signer, worker } = createSigner()
+    const callback = jest.fn()
+    const request = { kind: 'eip7702-revoke-v1' }
+    worker.emit('message', { type: 'token', token: 'worker-token' })
+
+    signer.signEip7702Revoke(2, request, callback)
+
+    expect(worker.send).toHaveBeenCalledTimes(1)
+    expect(worker.send.mock.calls[0][0]).toMatchObject({
+      method: 'signEip7702Revoke',
+      params: { index: 2, request }
+    })
+    expect(worker.send.mock.calls[0][0].params).not.toHaveProperty('signature')
+    signer.close()
+  })
+
   it('times out a pre-token call and does not revive it later', () => {
     const { signer, worker } = createSigner(25)
     const callback = jest.fn()

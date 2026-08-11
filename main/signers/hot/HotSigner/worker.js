@@ -117,6 +117,17 @@ class HotSignerWorker {
     pseudoCallback(null, addHexPrefix(serialized))
   }
 
+  signEip7702Revoke(key, request, pseudoCallback) {
+    try {
+      // This module is TypeScript in the source tree and JavaScript in compiled workers.
+      // Loading it only for this method keeps source-mode legacy signer tests bootable.
+      const { signEip7702RevokeRequest } = require('../../../transaction/eip7702')
+      pseudoCallback(null, signEip7702RevokeRequest(key, request))
+    } catch (error) {
+      pseudoCallback(error)
+    }
+  }
+
   verifyAddress({ index, address }, pseudoCallback) {
     const message = '0x' + crypto.randomBytes(32).toString('hex')
     this.signMessage({ index, message }, (err, signedMessage) => {

@@ -90,6 +90,16 @@ class RingSignerWorker extends HotSignerWorker {
     super.signTransaction(this.keys[index], rawTx, pseudoCallback)
   }
 
+  signEip7702Revoke({ index, request }, pseudoCallback) {
+    if (!this.keys) return pseudoCallback('Signer locked')
+    if (!Number.isSafeInteger(index) || index < 0) {
+      return pseudoCallback('Invalid signer address index')
+    }
+    const key = this.keys[index]
+    if (!key) return pseudoCallback('Invalid signer address index')
+    super.signEip7702Revoke(key, request, pseudoCallback)
+  }
+
   _decryptKeys(encryptedKeys, password) {
     if (!encryptedKeys) return null
     const { plaintext, version } = decryptSecret(encryptedKeys, password)

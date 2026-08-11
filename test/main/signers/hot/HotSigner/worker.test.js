@@ -111,6 +111,40 @@ describe('#signTransaction', () => {
   }, 200)
 })
 
+describe('#signEip7702Revoke', () => {
+  it('returns one opaque type-4 transaction', (done) => {
+    const authority = '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'
+    const request = {
+      kind: 'eip7702-revoke-v1',
+      type: '0x4',
+      authority,
+      from: authority,
+      to: authority,
+      delegate: '0x0000000000000000000000000000000000000000',
+      chainId: '0x1',
+      nonce: '0x0',
+      authorizationNonce: '0x1',
+      expectedFinalNonce: '0x2',
+      value: '0x0',
+      data: '0x',
+      gasLimit: '0xc350',
+      maxFeePerGas: '0xb2d05e00',
+      maxPriorityFeePerGas: '0x3b9aca00'
+    }
+
+    worker.signEip7702Revoke(key, request, (err, rawTransaction) => {
+      try {
+        expect(err).toBe(null)
+        expect(rawTransaction).toMatch(/^0x04/)
+        expect(typeof rawTransaction).toBe('string')
+        done()
+      } catch (error) {
+        done(error)
+      }
+    })
+  })
+})
+
 describe('#handleMessage', () => {
   beforeEach(() => {
     jest.spyOn(process, 'send').mockClear()

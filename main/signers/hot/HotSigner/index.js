@@ -214,6 +214,11 @@ class HotSigner extends Signer {
     this._callWorker(payload, cb)
   }
 
+  signEip7702Revoke(index, request, cb) {
+    const payload = { method: 'signEip7702Revoke', params: { index, request } }
+    this._callWorker(payload, cb)
+  }
+
   verifyAddress(index, address, display, cb = () => {}) {
     const payload = { method: 'verifyAddress', params: { index, address } }
     this._callWorker(payload, (err, verified) => {
