@@ -11,7 +11,6 @@ import { isNetworkConnected } from '../../../resources/utils/chains'
 
 import Default from './Default'
 
-import Activity from './Activity'
 import Chains from './Chains'
 import Balances from './Balances'
 import Gas from '../../../resources/Components/Monitor'
@@ -50,7 +49,6 @@ const modules = {
   gas: Gas,
   requests: Requests,
   chains: Chains,
-  activity: Activity,
   inventory: Inventory,
   permissions: Permissions,
   balances: Balances,

@@ -16,7 +16,7 @@
     "setup:native": "electron-rebuild --force --only node-hid",
     "setup": "npm run setup:ci && husky install",
     "start": "npm run launch",
-    "bundle": "npm run bundle:clean && npm run bundle:bridge && npm run bundle:tray && npm run bundle:dash && npm run bundle:dapp && npm run bundle:onboard && npm run bundle:notify && npm run bundle:dapp:inject && npm run bundle:csp && npm run bundle:verify",
+    "bundle": "npm run bundle:clean && npm run bundle:bridge && npm run bundle:tray && npm run bundle:dash && npm run bundle:dapp && npm run bundle:onboard && npm run bundle:dapp:inject && npm run bundle:csp && npm run bundle:verify",
     "bundle:clean": "rimraf bundle .parcel-cache",
     "bundle:csp": "node scripts/apply-bundle-csp-nonces.mjs",
     "bundle:verify": "node scripts/verify-bundle.mjs",
@@ -25,7 +25,6 @@
     "bundle:dash": "npm run parcel:build -- --target dash app/dash/index.html",
     "bundle:dapp": "npm run parcel:build -- --target dapp app/dapp/index.html",
     "bundle:onboard": "npm run parcel:build -- --target onboard app/onboard/index.html",
-    "bundle:notify": "npm run parcel:build -- --target notify app/notify/index.html",
     "bundle:dapp:inject": "npm run parcel:build -- --target inject main/dapps/server/inject/index.js",
     "serve": "npm run bundle:bridge && npm run dev:server & wait-on http://localhost:1234/tray/index.dev.html && npm run compile:watch",
     "dev": "node ./scripts/run-dev.mjs",
@@ -207,7 +206,6 @@
   "dash": "./bundle/dash.html",
   "dapp": "./bundle/dapp.html",
   "onboard": "./bundle/onboard.html",
-  "notify": "./bundle/notify.html",
   "targets": {
     "main": false,
     "bridge": {
@@ -224,9 +222,6 @@
       "context": "browser"
     },
     "onboard": {
-      "context": "browser"
-    },
-    "notify": {
       "context": "browser"
     },
     "inject": {

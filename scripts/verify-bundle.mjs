@@ -7,7 +7,7 @@ import bundleSymbols from './bundle-symbols.cjs'
 const { findUnresolvedParcelImports } = bundleSymbols
 
 const root = fileURLToPath(new URL('../bundle', import.meta.url))
-const renderers = ['tray', 'dash', 'dapp', 'onboard', 'notify']
+const renderers = ['tray', 'dash', 'dapp', 'onboard']
 const deprecatedIdentityPhrases = [
   'Frame Companion',
   'Frame Community Preview',

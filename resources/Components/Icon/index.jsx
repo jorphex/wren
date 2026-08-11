@@ -121,12 +121,6 @@ const pixelGlyphs = Object.freeze({
 
 // Restrained curves and compact geometry keep routine controls precise with a hand-drawn edge.
 const wrenGlyphs = Object.freeze({
-  activity: createWrenGlyph(
-    <>
-      <circle cx='12' cy='12' r='8' />
-      <path d='M12 7v5l3 2M7 4 4-2M17 4l-4-2' />
-    </>
-  ),
   add: createWrenGlyph(<path d='M12 5v14M5 12h14' />),
   alert: createWrenGlyph(
     <>
@@ -339,7 +333,6 @@ const wrenGlyphs = Object.freeze({
 const icons = Object.freeze({
   account: wrenGlyphs.accounts,
   accounts: wrenGlyphs.accounts,
-  activity: wrenGlyphs.activity,
   add: wrenGlyphs.add,
   alert: wrenGlyphs.alert,
   back: wrenGlyphs.back,

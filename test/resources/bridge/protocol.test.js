@@ -175,7 +175,7 @@ describe('renderer bridge protocol', () => {
   })
 
   test('parses exactly one known main-process renderer role', () => {
-    for (const role of ['dash', 'dapp', 'notify', 'onboard', 'tray']) {
+    for (const role of ['dash', 'dapp', 'onboard', 'tray']) {
       expect(getRendererRole(['electron', `--frame-renderer-role=${role}`])).toBe(role)
     }
     expect(getRendererRole(['electron'])).toBeNull()
@@ -183,7 +183,7 @@ describe('renderer bridge protocol', () => {
     expect(getRendererRole(['--frame-renderer-role=tray', '--frame-renderer-role=dash'])).toBeNull()
   })
 
-  test('limits onboard, notify, and dapp request capabilities', () => {
+  test('limits onboard and dapp request capabilities', () => {
     const request = (role, method, args, requestId = id) =>
       decodeBridgeMessage(
         encode({ source: LINK_SOURCE, method, ...(method === 'event' ? {} : { id: requestId }), args }),
@@ -197,10 +197,6 @@ describe('renderer bridge protocol', () => {
     expect(request('dapp', 'event', ['tray:action', 'retryDapp', 'installed-dapp'])).not.toBeNull()
     expect(request('dapp', 'event', ['tray:action', 'removeAccount'])).toBeNull()
     expect(request('dapp', 'invoke', ['tray:addChain', {}])).toBeNull()
-
-    expect(request('notify', 'rpc', ['getState'])).not.toBeNull()
-    expect(request('notify', 'event', ['tray:action', 'mutePylonMigrationNotice'])).toBeNull()
-    expect(request('notify', 'event', ['tray:action', 'navDash'])).toBeNull()
 
     expect(request('onboard', 'event', ['tray:openExternal', 'https://frame.sh'])).not.toBeNull()
     expect(request('onboard', 'event', ['tray:action', 'navReplace', 'dash'])).not.toBeNull()

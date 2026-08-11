@@ -36,7 +36,7 @@ test('authorizes event channels against the registered main-owned role', () => {
   onRenderer('tray:openExternal', listener)
   const dispatch = mockListeners.get('tray:openExternal')
 
-  dispatch(sender('notify'), 'https://frame.sh')
+  dispatch(sender('dapp'), 'https://frame.sh')
   dispatch({ sender: {} }, 'https://frame.sh')
   dispatch(sender('onboard'), 'https://frame.sh')
 
@@ -49,14 +49,14 @@ test('rejects the retired Pylon migration action in the main process', () => {
   const listener = jest.fn()
   onRenderer('tray:action', listener)
   const dispatch = mockListeners.get('tray:action')
-  const notify = sender('notify')
+  const dapp = sender('dapp')
 
-  dispatch(notify, 'mutePylonMigrationNotice')
+  dispatch(dapp, 'mutePylonMigrationNotice')
 
   expect(listener).not.toHaveBeenCalled()
   expect(mockLog.warn).toHaveBeenCalledWith(
     'Rejected unauthorized renderer IPC',
-    expect.objectContaining({ channel: 'tray:action', role: 'notify' })
+    expect.objectContaining({ channel: 'tray:action', role: 'dapp' })
   )
 })
 
@@ -155,14 +155,14 @@ test('authorizes decoded RPC methods and ignores malformed method values', () =>
   const listener = jest.fn()
   onRendererRpc(listener)
   const dispatch = mockListeners.get('main:rpc')
-  const notify = sender('notify')
+  const dapp = sender('dapp')
 
-  expect(() => dispatch(notify, '1', '{')).not.toThrow()
-  dispatch(notify, '1', '"signTransaction"')
-  dispatch(notify, '1', '"getState"')
+  expect(() => dispatch(dapp, '1', '{')).not.toThrow()
+  dispatch(dapp, '1', '"signTransaction"')
+  dispatch(dapp, '1', '"getState"')
 
   expect(listener).toHaveBeenCalledTimes(1)
-  expect(listener).toHaveBeenCalledWith(notify, 1, 'getState')
-  expect(notify.sender.send).toHaveBeenCalledTimes(2)
-  expect(notify.sender.send).toHaveBeenCalledWith('main:rpc', 1, '"Invalid renderer RPC payload"')
+  expect(listener).toHaveBeenCalledWith(dapp, 1, 'getState')
+  expect(dapp.sender.send).toHaveBeenCalledTimes(2)
+  expect(dapp.sender.send).toHaveBeenCalledWith('main:rpc', 1, '"Invalid renderer RPC payload"')
 })

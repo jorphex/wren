@@ -91,7 +91,7 @@ describe('preload renderer bridge', () => {
     dispatch(JSON.stringify({ source: LINK_SOURCE, method: 'rpc', id, args: ['getState'] }))
     expect(mockRpc).not.toHaveBeenCalled()
 
-    loadBridge('notify')
+    loadBridge('onboard')
     dispatch(JSON.stringify({ source: LINK_SOURCE, method: 'rpc', id, args: ['signTransaction'] }))
     dispatch(JSON.stringify({ source: LINK_SOURCE, method: 'rpc', id, args: ['getState'] }))
 

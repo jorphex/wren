@@ -97,7 +97,6 @@ describe('createWindow', () => {
 
   it.each([
     ['dash', 'dash'],
-    ['notify', 'notify'],
     ['onboard', 'onboard'],
     ['tray', 'tray'],
     ['frameInstance', 'dapp']

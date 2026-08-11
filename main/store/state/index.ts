@@ -748,7 +748,6 @@ const initial = {
     account: {
       moduleOrder: [
         'requests',
-        // 'activity',
         // 'gas',
         'chains',
         'balances',
@@ -759,9 +758,6 @@ const initial = {
       ],
       modules: {
         requests: {
-          height: 0
-        },
-        activity: {
           height: 0
         },
         balances: {

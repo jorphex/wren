@@ -1,8 +1,8 @@
-export type RendererRole = 'dash' | 'dapp' | 'notify' | 'onboard' | 'tray'
+export type RendererRole = 'dash' | 'dapp' | 'onboard' | 'tray'
 export type BridgeMethod = 'event' | 'invoke' | 'rpc'
 
 export const RENDERER_ROLE_ARGUMENT = '--frame-renderer-role='
-export const rendererRoles: readonly RendererRole[] = ['dash', 'dapp', 'notify', 'onboard', 'tray']
+export const rendererRoles: readonly RendererRole[] = ['dash', 'dapp', 'onboard', 'tray']
 
 type LimitedRendererRole = Exclude<RendererRole, 'dash' | 'tray'>
 type LimitedCapabilities = {
@@ -16,11 +16,6 @@ const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
     actions: new Set(['navDash', 'retryDapp']),
     events: new Set(['*:contextmenu', 'frame:close', 'frame:max', 'frame:min', 'frame:unmax', 'tray:action']),
     rpc: new Set(['getFrameId', 'getState'])
-  },
-  notify: {
-    actions: new Set(),
-    events: new Set(['*:contextmenu', 'frame:close', 'frame:max', 'frame:min', 'frame:unmax', 'tray:action']),
-    rpc: new Set(['getState'])
   },
   onboard: {
     actions: new Set(['navDash', 'navReplace', 'setKeyboardLayout']),

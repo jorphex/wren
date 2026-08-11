@@ -162,7 +162,7 @@ const workerEnvironment = nodeWorkerEnvironment({
   ELECTRON_RUN_AS_NODE: '0',
   FRAME_PACKAGE_WORKER_PROBE: 'worker'
 })
-const rendererBundles = ['tray', 'dash', 'dapp', 'onboard', 'notify']
+const rendererBundles = ['tray', 'dash', 'dapp', 'onboard']
 const rendererBundleNoncesValid = rendererBundles.every((renderer) => {
   const html = fs.readFileSync(path.join(appRoot, 'bundle', renderer + '.html'), 'utf8')
   const nonceMatches = [...html.matchAll(/'nonce-([^']+)'/g)]
