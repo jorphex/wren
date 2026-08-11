@@ -66,6 +66,9 @@ test('keeps delegation recovery flat, ruled, and responsive', () => {
   )
   expect(dashStyle).toMatch(/\.delegationRevocationSelectors[\s\S]*?select[\s\S]*?min-height 44px/)
   expect(dashStyle).toMatch(
+    /\.delegationRevocationEligible[\s\S]*?> button\.wrenControl\.wrenControlPrimary[\s\S]*?height 44px[\s\S]*?min-height 44px/
+  )
+  expect(dashStyle).toMatch(
     /@media \(max-width: 540px\)[\s\S]*?\.delegationRevocationSelectors[\s\S]*?grid-template-columns 1fr[\s\S]*?\.delegationRevocationEligible[\s\S]*?flex-direction column/
   )
 })
