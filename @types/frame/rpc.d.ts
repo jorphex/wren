@@ -155,7 +155,7 @@ declare namespace RPC {
     interface TxParams {
       nonce?: string
       gasPrice?: string
-      gas?: string // deprecated
+      gas?: string
       maxPriorityFeePerGas?: string
       maxFeePerGas?: string
       gasLimit?: string

@@ -1,4 +1,3 @@
-// @ts-expect-error -- getos does not ship declarations compatible with this TypeScript version.
 import getos from 'getos'
 import path from 'path'
 import { app, screen, BrowserWindow, Menu, KeyboardEvent, Rectangle, Tray as ElectronTray } from 'electron'
@@ -14,17 +13,12 @@ const systemTrayIcon =
       : 'Icon.png'
 let isUbuntu23OrGreater = false
 
-interface LinuxOsInfo {
-  dist?: string
-  release?: string
-}
-
 if (process.platform === 'linux') {
   try {
-    getos((error: Error | null, osInfo: LinuxOsInfo) => {
+    getos((error, osInfo) => {
       if (error) {
         console.error('Could not determine Linux version', error)
-      } else {
+      } else if (osInfo) {
         if (osInfo.dist === 'Ubuntu' && osInfo.release) {
           const majorVersionText = osInfo.release.split('.')[0]
           if (!majorVersionText) return

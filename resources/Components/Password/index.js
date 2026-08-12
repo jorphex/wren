@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import zxcvbn from 'zxcvbn'
 import useFocusableRef from '../../Hooks/useFocusableRef'
 
@@ -25,11 +25,11 @@ export const PasswordInput = ({
 
   useEffect(() => () => clearTimeout(resetTimer.current), [])
 
-  const resetError = () => setError(NO_PASSWORD_ENTERED)
+  const resetError = useCallback(() => setError(NO_PASSWORD_ENTERED), [])
 
-  const clear = () => {
+  const clear = useCallback(() => {
     inputRef.current && (inputRef.current.value = '')
-  }
+  }, [inputRef])
 
   useEffect(() => {
     if (active && !wasActive.current) {
@@ -41,7 +41,7 @@ export const PasswordInput = ({
       clear()
     }
     wasActive.current = active
-  }, [active])
+  }, [active, clear, resetError])
 
   const handleSubmit = () => {
     if (disabled || submitting.current) return

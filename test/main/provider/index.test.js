@@ -3692,7 +3692,11 @@ describe('#signAndSend', () => {
     tx.gasPrice = toBeHex(parseUnits('210', 'gwei'))
     tx.gasLimit = addHexPrefix((1e7).toString(16))
 
-    accounts.signTransactionForAccount.mockImplementation(() => done())
+    accounts.signTransactionForAccount.mockImplementation((accountId, transaction) => {
+      expect(accountId).toBe(address)
+      expect(transaction).toBe(tx)
+      done()
+    })
 
     signAndSend(done)
   })
@@ -3967,11 +3971,12 @@ describe('#assetsChanged', () => {
 
     const assets = { account: address, nativeCurrency: [], erc20: ['tokens'] }
 
-    provider.once('data:subscription', () => {
-      throw new Error('event fired to account without permission!')
-    })
+    const listener = jest.fn()
+    provider.once('data:subscription', listener)
 
     provider.assetsChanged(address, assets)
+
+    expect(listener).not.toHaveBeenCalled()
   })
 })
 

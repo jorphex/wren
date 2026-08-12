@@ -420,12 +420,8 @@ describe('Ring signer', () => {
     }
   })
 
-  test('Close signer', (done) => {
-    try {
-      signer.close()
-      done()
-    } catch (e) {
-      done(e)
-    }
+  test('Close signer', () => {
+    expect(() => signer.close()).not.toThrow()
+    expect(signer.status).toBe('locked')
   })
 })

@@ -175,6 +175,18 @@ export default [
     },
     rules: {
       ...jest.configs.recommended.rules,
+      'jest/expect-expect': [
+        'error',
+        {
+          assertFunctionNames: [
+            'expect',
+            'expectInvalid',
+            'expectInvalidRequest',
+            'expectRpcError',
+            'verifyRequest'
+          ]
+        }
+      ],
       // Legacy callback and parameterized suites intentionally use helper assertions. Keep the
       // unambiguous Jest rules enabled while those suites migrate incrementally.
       'jest/no-conditional-expect': 'off',

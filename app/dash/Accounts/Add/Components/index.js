@@ -1,4 +1,4 @@
-import { cloneElement, useEffect, useRef, useState } from 'react'
+import { cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 
 import useFocusableRef from '../../../../../resources/Hooks/useFocusableRef'
 import Icon from '../../../../../resources/Components/Icon'
@@ -67,12 +67,12 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
   const submittingRef = useRef(false)
   const wasActive = useRef(active)
 
-  const resetError = () => setError(EMPTY_STATE)
+  const resetError = useCallback(() => setError(EMPTY_STATE), [EMPTY_STATE])
 
-  const clear = () => {
+  const clear = useCallback(() => {
     resetError()
     inputRef.current && (inputRef.current.value = '')
-  }
+  }, [inputRef, resetError])
 
   useEffect(() => {
     if (active && !wasActive.current) {
@@ -81,7 +81,7 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
       clear()
     }
     wasActive.current = active
-  }, [active])
+  }, [active, clear])
 
   const validateInput = debounce((e) => {
     const value = normalizeSecret(e.target.value, newAccountType).trim()

@@ -43,5 +43,5 @@ it('ignores an unlock callback after unmount', async () => {
   await view.user.click(screen.getByRole('button', { name: 'Unlock' }))
   view.unmount()
 
-  act(() => finish(new Error('late error')))
+  expect(() => act(() => finish(new Error('late error')))).not.toThrow()
 })
