@@ -8,10 +8,11 @@ import { pipeline } from 'node:stream/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import { assertReleaseBuildIdentity } from './build-identity.mjs'
-import { verifyNativePackage } from './package-verification.mjs'
+import { assertNativeHost, getPackageTarget, verifyNativePackage } from './package-verification.mjs'
 import { readSourceIdentity } from './source-identity.mjs'
 
 const dist = path.resolve('dist')
+assertNativeHost(getPackageTarget('linux-x64'))
 const artifactWaitTimeout = 30_000
 const artifactPollInterval = 250
 const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'))

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   assertNativeHost,
+  assertSafeArchiveEntries,
   getPackageTarget,
   packageTargets,
   selectPackageArtifacts
@@ -83,4 +84,13 @@ test('requires a matching native host before executing the package', () => {
   assert.doesNotThrow(() => assertNativeHost(target, { platform: 'darwin', arch: 'arm64' }))
   assert.throws(() => assertNativeHost(target, { platform: 'linux', arch: 'arm64' }), /requires macOS/)
   assert.throws(() => assertNativeHost(target, { platform: 'darwin', arch: 'x64' }), /requires arm64/)
+})
+
+test('rejects archive entries that could escape their disposable extraction root', () => {
+  assert.doesNotThrow(() => assertSafeArchiveEntries(['Wren/', 'Wren/resources/app.asar']))
+  assert.throws(() => assertSafeArchiveEntries([]), /archive is empty/)
+  assert.throws(() => assertSafeArchiveEntries(['/etc/passwd']), /Absolute package archive entry/)
+  assert.throws(() => assertSafeArchiveEntries(['C:\\Windows\\system.ini']), /Drive-qualified/)
+  assert.throws(() => assertSafeArchiveEntries(['Wren/../../outside']), /escapes extraction root/)
+  assert.throws(() => assertSafeArchiveEntries(['Wren/evil\0name']), /null byte/)
 })

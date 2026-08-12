@@ -65,6 +65,7 @@ export const packageTargets = Object.freeze({
   'windows-x64': {
     platform: 'win32',
     arch: 'x64',
+    nsisPayload: 'app-64.7z',
     unpackedDirectory: 'win-unpacked',
     executable: ['Wren.exe'],
     artifacts: [
@@ -98,6 +99,30 @@ export function assertNativeHost(target, host = { platform: process.platform, ar
     `Package runtime verification requires ${platformNames[target.platform]} (${target.platform})`
   )
   assert.equal(host.arch, target.arch, `Package runtime verification requires ${target.arch}`)
+}
+
+export function assertSafeArchiveEntries(entries) {
+  assert.ok(entries.length > 0, 'Package archive is empty')
+  for (const entry of entries) {
+    const normalized = entry.replaceAll('\\', '/')
+    assert.ok(!normalized.includes('\0'), 'Package archive entry contains a null byte')
+    assert.ok(!path.posix.isAbsolute(normalized), `Absolute package archive entry: ${entry}`)
+    assert.doesNotMatch(normalized, /^[A-Za-z]:\//, `Drive-qualified package archive entry: ${entry}`)
+    assert.ok(
+      !normalized.split('/').includes('..'),
+      `Package archive entry escapes extraction root: ${entry}`
+    )
+  }
+}
+
+function readArchiveEntries(command, args, artifact) {
+  const output = execFileSync(command, args, { encoding: 'utf8' })
+  const entries = output
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .filter((entry) => path.resolve(entry) !== path.resolve(artifact))
+  assertSafeArchiveEntries(entries)
 }
 
 function runPackagedProbe(executable, root) {
@@ -147,8 +172,12 @@ async function probeArtifact(artifact, kind, target, root, temporaryRoot) {
     } else if (kind === 'deb') {
       execFileSync('dpkg-deb', ['--extract', artifact, extraction], { stdio: 'ignore' })
     } else if (kind === 'tar') {
-      execFileSync('tar', ['-xzf', artifact, '-C', extraction], { stdio: 'ignore' })
+      readArchiveEntries('tar', ['-tzf', artifact], artifact)
+      execFileSync('tar', ['-xzf', artifact, '-C', extraction, '--no-same-owner', '--no-same-permissions'], {
+        stdio: 'ignore'
+      })
     } else if (kind === 'zip') {
+      readArchiveEntries('unzip', ['-Z1', artifact], artifact)
       execFileSync('ditto', ['-x', '-k', artifact, extraction], { stdio: 'ignore' })
     } else if (kind === 'dmg') {
       execFileSync('hdiutil', ['attach', artifact, '-readonly', '-nobrowse', '-mountpoint', extraction], {
@@ -156,13 +185,20 @@ async function probeArtifact(artifact, kind, target, root, temporaryRoot) {
       })
       mounted = true
     } else if (kind === 'nsis') {
+      const listing = execFileSync(sevenZip, ['l', '-slt', artifact], { encoding: 'utf8' })
+      const entries = listing
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('Path = '))
+        .map((line) => line.slice('Path = '.length))
+        .filter((entry) => path.resolve(entry) !== path.resolve(artifact))
+      assertSafeArchiveEntries(entries)
       execFileSync(sevenZip, ['x', '-y', `-o${extraction}`, artifact], { stdio: 'ignore' })
       const nested = []
       const visit = async (directory) => {
         for (const entry of await readdir(directory, { withFileTypes: true })) {
           const candidate = path.join(directory, entry.name)
           if (entry.isDirectory()) await visit(candidate)
-          else if (entry.isFile() && /app-64\.7z$/i.test(entry.name)) nested.push(candidate)
+          else if (entry.isFile() && entry.name === target.nsisPayload) nested.push(candidate)
         }
       }
       await visit(extraction)
