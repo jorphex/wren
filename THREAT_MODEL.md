@@ -33,8 +33,8 @@ scope.
 ### Local clients and Companion
 
 HTTP and WebSocket JSON-RPC listen on `127.0.0.1:1248`. Loopback blocks remote
-connections, not another same-user process: CORS accepts any origin and native
-clients can choose `Origin`. Labels and prompts reduce accidents, not establish
+connections, not another same-user process. Legacy/browser-compatible routes
+accept asserted origins; labels and prompts reduce accidents, not establish
 process identity. HTTP requests and WebSocket upgrades require an IPv4/IPv6
 loopback `Host` matching the listening port, which blocks DNS-rebinding
 authorities but does not authenticate a local process. Canonical,
@@ -45,8 +45,9 @@ and removed at startup recovery, so connections cannot inherit legacy host-only
 or shared `Unknown` grants. Protected methods need account permission; passive
 account, asset, and capability probes never open consent UI and fail closed
 (account methods reveal no identity; asset/capability methods return `4100`).
-Permissions are scoped by account, chain, method, and expiry, but are not
-isolated by authenticated process identity.
+Permissions are scoped by account, chain, method, expiry, and invoker identity.
+Legacy direct-local identities remain assertions; authenticated native clients
+and Companion credentials cannot reuse those grants.
 
 RPC bodies, connections, rates, header/body receive time, polls (15 seconds),
 subscription counts, queues/bytes, and idle lifetime are bounded. Client-visible
@@ -54,15 +55,24 @@ subscription IDs are opaque and bound to their WebSocket or canonical HTTP origi
 and original chain. This prevents cross-client cancellation and unbounded
 inactive poll queues, but a poll token or asserted origin is not authentication.
 
-Companion protocol 2 uses browser scheme/ID and connection role only to select a
-handshake. A bounded signed nonce proof binds browser identity, installation UUID,
-P-256 key fingerprint, challenge ID, and expiry. The first control session needs
-matching six-digit user approval; Wren stores the public credential. Known page
-sessions can reuse it but cannot prompt; rotation replaces/disconnects the old
-key, and settings can revoke it. This lets Wren trust browser-derived dapp
-origins, but does not authenticate Wren/localhost to Companion, identify native
-processes, or defend a compromised browser profile or host. A process that owns
-or intercepts port 1248 is trusted.
+Originless native clients can opt into protocol-v3 HTTP or WebSocket authentication.
+Wren and the client exchange signed P-256 challenges, bind the installation,
+role, channel, nonces, expiry, session, request path, and request-body hash, and
+require matching six-digit consent for a new key. Every native request carries a
+short-lived one-use proof. Browser origins cannot access these routes. Exact-key
+reconnects are silent. A newly approved key remains a separate connection even if
+it claims an existing installation identifier; replacing old trust requires manual
+revocation, which invalidates its sessions, transports, polls, subscriptions,
+queued requests, grants, and source identity.
+
+Companion protocol 3 mutually authenticates the Wren desktop and an atomic
+control/page public-key bundle with the same signed transcript family. Only a
+control channel can request pairing; page channels must reuse approved trust.
+The signed final acknowledgement precedes persistence, and an acknowledged
+replacement retains the old bundle until an exact-new reconnect proves adoption.
+Recognizable protocol-v2 clients receive an explicit upgrade error and cannot
+downgrade. This authenticates the two applications and isolates their grants; it
+does not defend a compromised browser profile, native client, or host.
 
 ### Local state and signers
 
