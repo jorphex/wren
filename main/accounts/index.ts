@@ -1108,22 +1108,30 @@ export class Accounts extends EventEmitter {
     provider.send({ id: 1, jsonrpc: '2.0', method, params, chainId, _origin }, cb)
   }
 
+  private sendConfirmationRequest(
+    { method, params }: { method: 'eth_blockNumber' | 'eth_getTransactionReceipt'; params: unknown[] },
+    targetChain: Chain,
+    cb: RPCRequestCallback
+  ) {
+    provider.connection.send({ id: 1, jsonrpc: '2.0', method, params }, cb, targetChain)
+  }
+
   private async confirmations(account: FrameAccount, id: string, hash: string, targetChain: Chain) {
     return new Promise<number>((resolve, reject) => {
       if (!account) return reject(new Error('Unable to determine target account'))
       if (!targetChain || !targetChain.type || !targetChain.id)
         return reject(new Error('Unable to determine target chain'))
-      const targetChainId = addHexPrefix(targetChain.id.toString(16))
-
-      this.sendRequest(
-        { method: 'eth_blockNumber', params: [], chainId: targetChainId },
+      this.sendConfirmationRequest(
+        { method: 'eth_blockNumber', params: [] },
+        targetChain,
         (res: RPCResponsePayload) => {
           if (res.error) return reject(new Error(JSON.stringify(res.error)))
           const blockHeight = parseRpcQuantity(res.result)
           if (blockHeight === undefined) return reject(new Error('Invalid block number response'))
 
-          this.sendRequest(
-            { method: 'eth_getTransactionReceipt', params: [hash], chainId: targetChainId },
+          this.sendConfirmationRequest(
+            { method: 'eth_getTransactionReceipt', params: [hash] },
+            targetChain,
             (receiptRes: RPCResponsePayload) => {
               if (receiptRes.error) return reject(receiptRes.error)
               if (!this.accounts[account.address]) return reject(new Error('account closed'))

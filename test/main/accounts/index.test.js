@@ -1876,6 +1876,11 @@ describe('#removeRequest', () => {
 })
 
 describe('#confirmations', () => {
+  beforeEach(() => {
+    provider.send.mockClear()
+    provider.connection.send.mockReset()
+  })
+
   it('updates the originating account while another account remains selected', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const targetRequest = {
@@ -1889,7 +1894,10 @@ describe('#confirmations', () => {
     Accounts.addRequestForAccount(account2.address, targetRequest)
     expect(Accounts.current().id).toBe(account.id)
 
-    provider.send.mockImplementation((payload, callback) => {
+    provider.connection.send.mockImplementation((payload, callback, targetChain) => {
+      if (targetChain.type !== 'ethereum' || targetChain.id !== 10) {
+        return callback({ error: { code: 4901, message: 'wrong configured chain' } })
+      }
       if (payload.method === 'eth_blockNumber') return callback({ result: '0x10' })
       if (payload.method === 'eth_getTransactionReceipt') {
         return callback({
@@ -1902,7 +1910,7 @@ describe('#confirmations', () => {
     await expect(
       Accounts.confirmations(targetAccount, targetRequest.handlerId, targetRequest.tx.hash, {
         type: 'ethereum',
-        id: 1
+        id: 10
       })
     ).resolves.toBe(11)
 
@@ -1911,9 +1919,12 @@ describe('#confirmations', () => {
       status: '0x0'
     })
     expect(Accounts.current().id).toBe(account.id)
-    expect(provider.send.mock.calls.map(([payload]) => [payload.method, payload.chainId])).toEqual([
-      ['eth_blockNumber', '0x1'],
-      ['eth_getTransactionReceipt', '0x1']
+    expect(provider.send).not.toHaveBeenCalled()
+    expect(
+      provider.connection.send.mock.calls.map(([payload, , targetChain]) => [payload.method, targetChain])
+    ).toEqual([
+      ['eth_blockNumber', { type: 'ethereum', id: 10 }],
+      ['eth_getTransactionReceipt', { type: 'ethereum', id: 10 }]
     ])
   })
 })
