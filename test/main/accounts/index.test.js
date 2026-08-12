@@ -17,6 +17,9 @@ import nav from '../../../main/windows/nav'
 import { computeAddress, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
+import operationLifecycleLedger from '../../../main/operationLifecycle'
+import { OperationLifecycleProjection } from '../../../main/operationLifecycle/projection'
+import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../../../main/store/state/types/operationLifecycle'
 
 jest.mock('electron', () => ({
   Notification: class {
@@ -1778,6 +1781,29 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('fails before signing when durable lifecycle capacity cannot be reserved', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('lifecycle-capacity-before-signing')
+    const callback = jest.fn()
+    targetAccount.addRequest(explicit)
+    const reserve = jest.spyOn(operationLifecycleLedger, 'reserve').mockImplementation(() => {
+      throw new Error('Operation lifecycle limit reached')
+    })
+    const evict = jest.spyOn(operationLifecycleLedger, 'evictOldestHandledTerminal').mockReturnValue(false)
+
+    try {
+      Accounts.setTxSigned(explicit.handlerId, callback, account2.address)
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Operation lifecycle limit reached' })
+      )
+      expect(explicit.status).toBeUndefined()
+      expect(evict).toHaveBeenCalledTimes(1)
+    } finally {
+      reserve.mockRestore()
+      evict.mockRestore()
+    }
+  })
+
   it('contains a rejected durable monitor handoff after broadcast', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('monitor-storage-failure')
@@ -2339,6 +2365,60 @@ describe('#claimWalletCallsRequest', () => {
     }
   })
 
+  it.each([
+    ['successful execution', undefined, 3300],
+    ['uncertain execution', new Error('broadcast outcome is uncertain'), 8000]
+  ])('does not let %s overwrite a durable submitted lifecycle row', (_label, error, delay) => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.accounts[account2.address]
+    const request = readyRequest(`wallet-calls-durable-${delay}`)
+    try {
+      store.clearActivity()
+      admitReadyRequest(targetAccount, request)
+      const now = Date.now()
+      operationLifecycleLedger.put(
+        {
+          id: request.activityId,
+          kind: 'walletCalls',
+          account: account2.address,
+          origin: request.origin,
+          chainId: 1,
+          state: 'submitted',
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: now + 24 * 60 * 60 * 1000,
+          visibleInActivity: true,
+          notification: {},
+          walletCalls: { batchOperationId: request.activityId }
+        },
+        now
+      )
+      store.recordActivity({
+        id: request.activityId,
+        account: account2.address,
+        origin: request.origin,
+        type: 'walletCalls',
+        outcome: 'submitted',
+        createdAt: now,
+        completedAt: now,
+        chainId: 1
+      })
+      Accounts.claimWalletCallsRequest(account2.address, request.handlerId)
+      Accounts.settleWalletCallsRequest(account2.address, request.handlerId, error)
+
+      jest.advanceTimersByTime(delay)
+
+      expect(targetAccount.requests[request.handlerId]).toBeUndefined()
+      expect(store('main.activity').find(({ id }) => id === request.activityId)).toMatchObject({
+        outcome: 'submitted'
+      })
+    } finally {
+      operationLifecycleLedger.remove(request.activityId, -1)
+      store.clearActivity()
+      jest.useRealTimers()
+    }
+  })
+
   it('rejects an outcome for an unclaimed wallet-call request', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const request = readyRequest('wallet-calls-unclaimed-outcome')
@@ -2881,6 +2961,7 @@ describe('wallet-owned EIP-7702 revocation', () => {
   })
 
   it('binds broadcast and receipt to the inspected hash and reports failed-but-cleared truthfully', async () => {
+    store.clearActivity()
     const reference = await Accounts.requestEip7702Revocation(authority, 1)
     Accounts.approveEip7702Revocation(authority, reference.handlerId)
     code = '0x'
@@ -2911,6 +2992,80 @@ describe('wallet-owned EIP-7702 revocation', () => {
       expect.any(Function),
       { type: 'ethereum', id: 1 }
     )
+
+    new OperationLifecycleProjection(operationLifecycleLedger).project(request.activityId)
+    expect(store('main.activity').find(({ id }) => id === request.activityId)).toMatchObject({
+      outcome: 'verified-clearance'
+    })
+    Accounts.current().clearRequest(reference.handlerId)
+    expect(store('main.activity').find(({ id }) => id === request.activityId)).toMatchObject({
+      outcome: 'verified-clearance'
+    })
+    store.clearActivity()
+  })
+
+  it('expires a continuously running live revocation monitor without another RPC or lost evidence', async () => {
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getTransactionReceipt') return callback({ result: null })
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const accountInstance = Accounts.current()
+    const revoke = accountInstance.getRequest(reference.handlerId)
+    const operation = operationLifecycleLedger.listStored().find(({ id }) => id === revoke.activityId)
+    expect(operation).toMatchObject({ state: 'submitted' })
+    const now = Date.now()
+    const expired = {
+      ...operation,
+      createdAt: now - MAX_OPERATION_LIFECYCLE_AGE_MS,
+      updatedAt: now - MAX_OPERATION_LIFECYCLE_AGE_MS,
+      expiresAt: now - 1
+    }
+    store.setOperationLifecycles({ [expired.id]: expired })
+    const readsBeforeExpiry = provider.connection.send.mock.calls.length
+
+    await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+
+    expect(provider.connection.send.mock.calls).toHaveLength(readsBeforeExpiry)
+    expect(accountInstance.getRequest(reference.handlerId)).toBeUndefined()
+    expect(operationLifecycleLedger.listStored()).toEqual([
+      expect.objectContaining({ id: expired.id, state: 'stopped', updatedAt: expired.expiresAt })
+    ])
+    operationLifecycleLedger.remove(expired.id, -1)
+  })
+
+  it('preserves a stopped lifecycle when the user stops just after the live deadline', async () => {
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback, chain) => {
+      if (payload.method === 'eth_getTransactionReceipt') return callback({ result: null })
+      return normalSend(payload, callback, chain)
+    })
+    const reference = await Accounts.requestEip7702Revocation(authority, 1)
+    Accounts.approveEip7702Revocation(authority, reference.handlerId)
+    await flush()
+
+    const revoke = Accounts.current().getRequest(reference.handlerId)
+    const operation = operationLifecycleLedger.listStored().find(({ id }) => id === revoke.activityId)
+    const now = Date.now()
+    const expired = {
+      ...operation,
+      createdAt: now - MAX_OPERATION_LIFECYCLE_AGE_MS,
+      updatedAt: now - MAX_OPERATION_LIFECYCLE_AGE_MS,
+      expiresAt: now - 1
+    }
+    store.setOperationLifecycles({ [expired.id]: expired })
+
+    expect(Accounts.stopEip7702RevocationMonitoring(authority, reference.handlerId)).toBe(true)
+
+    expect(Accounts.current().getRequest(reference.handlerId)).toBeUndefined()
+    expect(operationLifecycleLedger.listStored()).toEqual([
+      expect.objectContaining({ id: expired.id, state: 'stopped', updatedAt: expired.expiresAt })
+    ])
+    operationLifecycleLedger.remove(expired.id, -1)
   })
 
   it('keeps monitoring when the receipt block is no longer canonical', async () => {

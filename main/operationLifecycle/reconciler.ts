@@ -125,7 +125,7 @@ export class OperationLifecycleReconciler {
           candidate.chainId === operation.chainId &&
           candidate.transaction?.nonce === transaction.nonce &&
           candidate.transaction?.hash !== transaction.hash &&
-          candidate.state === 'confirmed'
+          (candidate.state === 'confirmed' || candidate.state === 'failed')
       )
   }
 

@@ -52,7 +52,7 @@ test('extracts only valid transaction and revocation evidence before discarding 
   const migrated = migration.migrate(state) as typeof state & {
     main: { operationLifecycles: Record<string, Record<string, unknown>> }
   }
-  expect(migrated.main.accounts[account]).not.toHaveProperty('requests')
+  expect(migrated.main.accounts[account]).toHaveProperty('requests', {})
   expect(migrated.main.accounts[account]).not.toHaveProperty('activeRequestId')
   expect(Object.keys(migrated.main.operationLifecycles)).toEqual([
     '00000000-0000-4000-8000-000000000002',
@@ -72,7 +72,7 @@ test('extracts only valid transaction and revocation evidence before discarding 
     kind: 'eip7702Revoke',
     chainId: 10,
     state: 'submitted',
-    eip7702Revoke: { hash: `0x${'d'.repeat(64)}`, expectedFinalNonce: '0x10' }
+    eip7702Revoke: { hash: `0x${'d'.repeat(64)}`, expectedFinalNonce: '0x11' }
   })
   expect(JSON.stringify(migrated.main.operationLifecycles)).not.toMatch(
     /must-not-survive|payload|calldata|logs|delegate/
@@ -98,7 +98,7 @@ test('discards unproven request evidence and preserves malformed input for frame
     main: { operationLifecycles: Record<string, unknown> }
   }
   expect(migrated.main.operationLifecycles).toEqual({})
-  expect(migrated.main.accounts[account]).not.toHaveProperty('requests')
+  expect(migrated.main.accounts[account]).toHaveProperty('requests', {})
   expect(migration.migrate(null)).toBeNull()
 })
 

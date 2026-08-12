@@ -65,6 +65,7 @@ import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain
 import { recordRequestActivity } from '../activity'
 import operationLifecycleLedger from '../operationLifecycle'
 import operationLifecycleRuntime from '../operationLifecycle/runtime'
+import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 
@@ -290,7 +291,7 @@ export class Accounts extends EventEmitter {
       notification: {},
       eip7702Revoke: {
         hash: hash.toLowerCase(),
-        expectedFinalNonce: toRpcQuantity(nonce + 1n)
+        expectedFinalNonce: toRpcQuantity(nonce + 2n)
       }
     }
   }
@@ -318,12 +319,66 @@ export class Accounts extends EventEmitter {
           }
         : undefined
     const { receipt: _receipt, ...withoutReceipt } = current
-    this.persistOperationLifecycle({
+    const saved = this.persistOperationLifecycle({
       ...withoutReceipt,
       state,
       updatedAt: now,
       ...(persistedReceipt ? { receipt: persistedReceipt } : {})
     })
+    publishOperationLifecycleObservation({
+      previous: current,
+      current: saved,
+      ...(receipt ? { receipt } : {})
+    })
+  }
+
+  private expireEip7702Lifecycle(request: Eip7702RevokeRequest, now = Date.now()) {
+    if (!request.activityId) return false
+    const previous = operationLifecycleLedger.listStored().find(({ id }) => id === request.activityId)
+    if (
+      !previous ||
+      previous.kind !== 'eip7702Revoke' ||
+      previous.expiresAt > now ||
+      !['submitted', 'confirming', 'reorged'].includes(previous.state)
+    ) {
+      return false
+    }
+
+    operationLifecycleRuntime.release(previous.id)
+    const current = operationLifecycleLedger.put(
+      {
+        ...previous,
+        state: previous.receipt ? 'clearance-unverified' : 'stopped',
+        updatedAt: previous.expiresAt
+      },
+      -1
+    )
+    publishOperationLifecycleObservation({ previous, current })
+    return true
+  }
+
+  isLifecycleActivityManaged(request: AnyAccountRequest) {
+    return Boolean(
+      request.activityId &&
+      (request.type === 'transaction' ||
+        request.type === 'walletCalls' ||
+        request.type === 'eip7702Revoke') &&
+      operationLifecycleLedger.listStored().some(({ id }) => id === request.activityId)
+    )
+  }
+
+  releaseOperationLifecycleAdmission(activityId: string) {
+    operationLifecycleLedger.releaseReservation(activityId)
+  }
+
+  private reserveOperationLifecycleAdmission(activityId: string, now = Date.now()) {
+    try {
+      operationLifecycleLedger.reserve(activityId, now)
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'Operation lifecycle limit reached') throw error
+      if (!operationLifecycleLedger.evictOldestHandledTerminal(now)) throw error
+      operationLifecycleLedger.reserve(activityId, now)
+    }
   }
 
   private observeOperationLifecycle(
@@ -369,7 +424,7 @@ export class Accounts extends EventEmitter {
         revocationStatus: 'cleared',
         reason: 'code-cleared'
       })
-      recordRequestActivity(request, 'confirmed')
+      recordRequestActivity(request, 'verified-clearance')
     } else if (operation.state === 'failed') {
       request.status = RequestStatus.Error
       request.notice = request.type === 'eip7702Revoke' ? 'Delegation remains' : 'Failed'
@@ -836,11 +891,12 @@ export class Accounts extends EventEmitter {
       throw new Error('Revocation submission monitoring cannot be stopped')
     }
 
-    if (request.activityId) {
-      const operation = operationLifecycleLedger.get(request.activityId)
+    if (!this.expireEip7702Lifecycle(request) && request.activityId) {
+      const operation = operationLifecycleLedger.listStored().find(({ id }) => id === request.activityId)
       if (operation && ['submitted', 'confirming', 'reorged'].includes(operation.state)) {
         const now = Date.now()
-        this.persistOperationLifecycle({ ...operation, state: 'stopped', updatedAt: now })
+        const current = this.persistOperationLifecycle({ ...operation, state: 'stopped', updatedAt: now })
+        publishOperationLifecycleObservation({ previous: operation, current })
       }
     }
     account.clearRequest(request.handlerId)
@@ -974,6 +1030,13 @@ export class Accounts extends EventEmitter {
     operationVersion: number
   ) {
     if (!this.activeEip7702Operation(account, request, operationVersion) || !request.tx) return
+    if (this.expireEip7702Lifecycle(request)) {
+      if (this.activeEip7702Operation(account, request, operationVersion)) {
+        account.releaseRequestReview(request.handlerId)
+        account.clearRequest(request.handlerId)
+      }
+      return
+    }
     const chainId = Number(BigInt(request.chainId))
     const key = this.eip7702OperationKey(account.id, request.handlerId)
 
@@ -2309,6 +2372,16 @@ export class Accounts extends EventEmitter {
       ) {
         cb(new Error('Request already declined'))
       } else {
+        const transaction = currentAccount.requests[handlerId]
+        if (!transaction.activityId)
+          return cb(new Error('Transaction is missing its durable activity identity'))
+        try {
+          this.reserveOperationLifecycleAdmission(transaction.activityId)
+        } catch (error) {
+          return cb(
+            error instanceof Error ? error : new Error('Transaction monitoring capacity is unavailable')
+          )
+        }
         currentAccount.requests[handlerId].status = RequestStatus.Sending
         currentAccount.requests[handlerId].notice = 'Sending'
         currentAccount.update()
@@ -2331,6 +2404,10 @@ export class Accounts extends EventEmitter {
       currentAccount.releaseRequestReview(handlerId)
 
       void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
+        const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)
+        if (failedRequest?.activityId) {
+          operationLifecycleLedger.releaseReservation(failedRequest.activityId)
+        }
         log.warn('Transaction lifecycle monitor could not start', {
           handlerId,
           error: error instanceof Error ? error.message : String(error)

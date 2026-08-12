@@ -124,7 +124,7 @@ const migratedOperation = (requestValue: unknown, account: string): OperationLif
     if (!requestChainId || !latestNonce) return
     let expectedFinalNonce: string
     try {
-      expectedFinalNonce = `0x${(BigInt(latestNonce) + 1n).toString(16)}`
+      expectedFinalNonce = `0x${(BigInt(latestNonce) + 2n).toString(16)}`
     } catch (_error) {
       return
     }
@@ -169,7 +169,7 @@ const migrate = (initial: unknown) => {
         }
 
         const { requests: _requests, activeRequestId: _activeRequestId, ...persistedAccount } = accountValue
-        return [accountId, persistedAccount]
+        return [accountId, { ...persistedAccount, requests: {} }]
       })
   )
 

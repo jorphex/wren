@@ -66,6 +66,37 @@ test('fails closed when the durable ledger is at capacity', () => {
   expect(save).not.toHaveBeenCalled()
 })
 
+test('reserves pre-broadcast capacity without allowing another operation to consume it', () => {
+  const rows = Object.fromEntries(
+    Array.from({ length: MAX_OPERATION_LIFECYCLES - 1 }, (_, index) => {
+      const id = `00000000-0000-4000-8000-${(index + 1).toString().padStart(12, '0')}`
+      return [id, { ...operation(), id }]
+    })
+  )
+  let persisted = rows
+  const ledger = new OperationLifecycleLedger({
+    load: () => persisted,
+    save: (value) => {
+      persisted = value
+    }
+  })
+  const reservedId = '00000000-0000-4000-8000-000000000999'
+  const competingId = '00000000-0000-4000-8000-000000000998'
+
+  expect(ledger.reserve(reservedId, 10)).toBe(true)
+  expect(() => ledger.put({ ...operation(), id: competingId }, 10)).toThrow('limit reached')
+  expect(ledger.put({ ...operation(), id: reservedId }, 10)).toMatchObject({ id: reservedId })
+  expect(ledger.releaseReservation(reservedId)).toBe(false)
+})
+
+test('releases an unused pre-broadcast reservation', () => {
+  const ledger = new OperationLifecycleLedger({ load: () => ({}), save: jest.fn() })
+  const id = operation().id
+  expect(ledger.reserve(id, 10)).toBe(true)
+  expect(ledger.releaseReservation(id)).toBe(true)
+  expect(ledger.reserve(id, 10)).toBe(true)
+})
+
 test('capacity eviction removes only the oldest handled terminal row', () => {
   const active = operation()
   const unhandled = {

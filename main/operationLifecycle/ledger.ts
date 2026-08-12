@@ -6,6 +6,8 @@ import {
   pruneOperationLifecycles
 } from '../store/state/types/operationLifecycle'
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+
 export interface OperationLifecycleStorage {
   load(): unknown
   save(operations: OperationLifecycles): void
@@ -14,6 +16,8 @@ export interface OperationLifecycleStorage {
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 export class OperationLifecycleLedger {
+  private readonly admissions = new Set<string>()
+
   constructor(private readonly storage: OperationLifecycleStorage) {}
 
   private read(now = Date.now()) {
@@ -59,7 +63,8 @@ export class OperationLifecycleLedger {
 
     const operations = this.read(now)
     const current = operations[parsed.data.id]
-    if (!current && Object.keys(operations).length >= MAX_OPERATION_LIFECYCLES) {
+    const reservedForOthers = [...this.admissions].filter((id) => id !== parsed.data.id).length
+    if (!current && Object.keys(operations).length + reservedForOthers >= MAX_OPERATION_LIFECYCLES) {
       throw new Error('Operation lifecycle limit reached')
     }
     if (
@@ -78,7 +83,24 @@ export class OperationLifecycleLedger {
 
     const next = { ...operations, [parsed.data.id]: parsed.data }
     this.storage.save(clone(next))
+    this.admissions.delete(parsed.data.id)
     return Object.freeze(clone(parsed.data))
+  }
+
+  reserve(id: string, now = Date.now()) {
+    if (!UUID.test(id)) {
+      throw new Error('Invalid operation lifecycle admission')
+    }
+    if (this.admissions.has(id) || this.read(now)[id]) return false
+    if (Object.keys(this.read(now)).length + this.admissions.size >= MAX_OPERATION_LIFECYCLES) {
+      throw new Error('Operation lifecycle limit reached')
+    }
+    this.admissions.add(id)
+    return true
+  }
+
+  releaseReservation(id: string) {
+    return this.admissions.delete(id)
   }
 
   remove(id: string, now = Date.now()) {

@@ -151,6 +151,23 @@ test('a duplicate lifecycle row for the same transaction hash is not a replaceme
   expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash])
 })
 
+test('a failed canonical same-nonce transaction still replaces the older transaction', async () => {
+  let stored: OperationLifecycles = {
+    [operation().id]: operation(),
+    '00000000-0000-4000-8000-000000000002': operation({
+      id: '00000000-0000-4000-8000-000000000002',
+      transaction: { hash: `0x${'9'.repeat(64)}`, nonce: '0x1' },
+      state: 'failed'
+    })
+  }
+  const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+  const rpc = jest.fn()
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({ state: 'replaced' })
+  expect(rpc).not.toHaveBeenCalled()
+})
+
 test('expiry persists a stopped result until its terminal projection is handled', async () => {
   const expired = operation({ createdAt: 0, updatedAt: 0, expiresAt: 10 })
   const { reconciler, ledger, observer, rpc } = fixture(expired, {})

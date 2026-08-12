@@ -358,7 +358,10 @@ class FrameAccount {
 
     const clearedActiveReview = this.activeReviewHandlerId === handlerId
     const request = this.requests[handlerId]
-    if (request) recordRequestActivity(request, outcome)
+    if (request && !this.accounts.isLifecycleActivityManaged?.(request)) {
+      recordRequestActivity(request, outcome)
+    }
+    if (request?.activityId) this.accounts.releaseOperationLifecycleAdmission?.(request.activityId)
     this.accounts.clearPendingNonceAdjustment?.(this, handlerId)
     this.accounts.cancelEip7702Operation?.(this.id, handlerId)
     this.requestAbortCleanup[handlerId]?.()
