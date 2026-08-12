@@ -26,6 +26,7 @@ export interface WalletCallRuntimeDependencies {
   connection: WalletCallRuntimeConnection
   ledger: WalletCallRuntimeLedger
   evidenceAvailable?(): void
+  recordSubmittedTarget?(address: string, submittedAt: number): void
 }
 
 function runtimeError(error: unknown, fallback: string) {
@@ -60,7 +61,9 @@ export async function executeWalletCallRuntime(
     typeof dependencies.ledger.markTransactionSubmitted !== 'function' ||
     typeof dependencies.ledger.complete !== 'function' ||
     typeof dependencies.ledger.fail !== 'function' ||
-    (dependencies.evidenceAvailable !== undefined && typeof dependencies.evidenceAvailable !== 'function')
+    (dependencies.evidenceAvailable !== undefined && typeof dependencies.evidenceAvailable !== 'function') ||
+    (dependencies.recordSubmittedTarget !== undefined &&
+      typeof dependencies.recordSubmittedTarget !== 'function')
   ) {
     throw new Error('Invalid wallet-call runtime dependencies')
   }
@@ -74,6 +77,7 @@ export async function executeWalletCallRuntime(
   const completeBatch = dependencies.ledger.complete.bind(dependencies.ledger)
   const failBatch = dependencies.ledger.fail.bind(dependencies.ledger)
   const evidenceAvailable = dependencies.evidenceAvailable?.bind(dependencies)
+  const recordSubmittedTarget = dependencies.recordSubmittedTarget?.bind(dependencies)
   const notifyEvidenceAvailable = () => {
     try {
       evidenceAvailable?.()
@@ -117,7 +121,7 @@ export async function executeWalletCallRuntime(
         }
       }),
     broadcast: (rawTransaction, index) =>
-      new Promise((resolve, reject) => {
+      new Promise<string>((resolve, reject) => {
         let settled = false
         const complete = (response: RPCResponsePayload) => {
           if (settled) return
@@ -148,6 +152,16 @@ export async function executeWalletCallRuntime(
             reject(runtimeError(error, 'Wallet-call broadcast failed'))
           }
         }
+      }).then((hash) => {
+        const target = snapshot.calls[index]?.to
+        if (target) {
+          try {
+            recordSubmittedTarget?.(target, Date.now())
+          } catch {
+            // Address memory is observational and must never change broadcast settlement.
+          }
+        }
+        return hash
       })
   })
 }

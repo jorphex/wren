@@ -10,6 +10,7 @@ import { DappSchema } from './dapp'
 import { ExtensionCredentialsSchema } from './extensionCredential'
 import { OriginSchema } from './origin'
 import { OperationLifecyclesSchema } from './operationLifecycle'
+import { OutboundAddressMemorySchema } from './outboundAddressMemory'
 import { DesktopAuthIdentitySchema } from '../../../api/desktopAuthIdentity'
 import { NativePeerCredentialsSchema } from './peerCredential'
 import { PermissionSchema } from './permission'
@@ -83,6 +84,7 @@ export const MainSchema = z.object({
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
   operationLifecycles: OperationLifecyclesSchema,
+  outboundAddressMemory: OutboundAddressMemorySchema,
   addressBook: AddressBookSchema,
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),

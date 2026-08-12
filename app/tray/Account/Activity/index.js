@@ -328,7 +328,9 @@ export class Activity extends React.Component {
                   <strong>Clear activity history?</strong>
                   <span id='activity-clear-description'>
                     This removes activity history for every account on this device. Pending activity may
-                    appear again if Wren receives an update. This cannot be undone.
+                    appear again if Wren receives an update. This also clears Wren’s local outbound-address
+                    memory, so prior-use and lookalike warnings may not appear again until you submit new
+                    transactions. This cannot be undone.
                   </span>
                 </div>
                 <div className='activityClearActions'>

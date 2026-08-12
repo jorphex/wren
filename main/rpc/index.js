@@ -165,6 +165,12 @@ const rpc = {
     }
     if (
       routeWalletCallRequest(req, accounts, (walletCallsRequest) => {
+        try {
+          accounts.refreshRequestAddressSafety(walletCallsRequest.account, walletCallsRequest.handlerId)
+        } catch (error) {
+          cb(error)
+          return
+        }
         provider
           .approveWalletCallsRequest(
             walletCallsRequest.account,
@@ -172,9 +178,9 @@ const rpc = {
             options?.walletCallsSimulationAcknowledged === true
           )
           .catch((error) => log.warn('Wallet-call approval failed', error))
+        cb(null)
       })
     ) {
-      cb(null)
       return
     }
 
@@ -185,6 +191,10 @@ const rpc = {
     const storedRequest = currentAccount.getRequest(req.handlerId)
     if (!storedRequest) return cb(new Error('Request is no longer pending'))
     req = storedRequest
+    if (req.type === 'transaction') {
+      accounts.refreshRequestAddressSafety(req.account, req.handlerId)
+      req = currentAccount.getRequest(req.handlerId)
+    }
     if (req.type === 'eip7702Revoke') {
       try {
         accounts.approveEip7702Revocation(req.account, req.handlerId)

@@ -11,6 +11,7 @@ import { MainSchema } from './types/main'
 import { clearSessionOnlyOrigins } from './session'
 import { normalizeInterfaceScale } from '../../windows/uiScale'
 import { createDesktopAuthIdentity, DesktopAuthIdentitySchema } from '../../api/desktopAuthIdentity'
+import { pruneOutboundAddressMemory } from './types/outboundAddressMemory'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -190,6 +191,7 @@ const mainState = {
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
   operationLifecycles: main('operationLifecycles', {}),
+  outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),
   addressBook: main('addressBook', {}),
   addresses: main('addresses', {}), // Should be removed after 0.5 release
   permissions: main('permissions', {}),

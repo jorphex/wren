@@ -1782,6 +1782,60 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('records the full outbound target only after broadcast returns a transaction hash', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const destination = `0x1234${'a'.repeat(32)}abcd`
+    const explicit = {
+      ...targetRequest('record-outbound-after-broadcast'),
+      data: { ...targetRequest('record-outbound-after-broadcast').data, to: destination }
+    }
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    store.clearActivity()
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+
+    try {
+      expect(store('main.outboundAddressMemory')).toEqual({})
+      targetAccount.requests[explicit.handlerId].status = 'sending'
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+
+      const memory = store('main.outboundAddressMemory')
+      expect(Object.values(memory)).toEqual([
+        expect.objectContaining({ prefix: '1234', suffix: 'abcd', lastSubmittedAt: expect.any(Number) })
+      ])
+      expect(JSON.stringify(memory)).not.toContain(destination.slice(6, -4))
+    } finally {
+      monitor.mockRestore()
+      store.clearActivity()
+    }
+  })
+
+  it('keeps transaction monitoring authoritative when outbound-address persistence fails', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = {
+      ...targetRequest('address-memory-persistence-failure'),
+      data: { ...targetRequest('address-memory-persistence-failure').data, to: `0x${'1'.repeat(40)}` }
+    }
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const record = jest.spyOn(store, 'recordOutboundAddresses').mockImplementation(() => {
+      throw new Error('address memory unavailable')
+    })
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({ status: 'verifying' })
+      expect(monitor).toHaveBeenCalledTimes(1)
+    } finally {
+      record.mockRestore()
+      monitor.mockRestore()
+    }
+  })
+
   it('fails before signing when durable lifecycle capacity cannot be reserved', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('lifecycle-capacity-before-signing')

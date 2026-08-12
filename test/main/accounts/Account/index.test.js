@@ -19,6 +19,7 @@ import nav from '../../../../main/windows/nav'
 import { flushPromises } from '../../../util'
 import { transitionNotification } from '../../../../resources/store/notifications'
 import { createAccountPermission } from '../../../../main/provider/permissions'
+import { recordOutboundAddresses } from '../../../../main/addressSafety'
 
 jest.mock('../../../../main/reveal')
 jest.mock('../../../../main/transaction/simulation', () => ({
@@ -396,6 +397,35 @@ it('prefers a ready signer over a higher-priority unavailable signer', () => {
 })
 
 describe('#addRequest', () => {
+  it('marks a different full address matching a previous destination at both ends without adding an approval', () => {
+    const profile = '00000000-0000-4000-8000-000000000001'
+    const previous = `0x1234${'a'.repeat(32)}abcd`
+    const lookalike = `0x1234${'b'.repeat(32)}abcd`
+    const memory = recordOutboundAddresses({}, profile, [previous], Date.now())
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'main.instanceId') return profile
+      if (key === 'main.outboundAddressMemory') return memory
+    })
+    const request = {
+      handlerId: 'address-lookalike',
+      type: 'transaction',
+      account: accountState.address,
+      origin: 'example.test',
+      data: { from: accountState.address, to: lookalike, chainId: '0x1', value: '0x1' },
+      payload: { id: 1, jsonrpc: '2.0', method: 'eth_sendTransaction', params: [] },
+      approvals: [],
+      recognizedActions: [],
+      simulation: { status: 'pending' }
+    }
+
+    account.addRequest(request)
+
+    expect(request.addressSafety.targets).toEqual([{ address: lookalike, state: 'lookalike' }])
+    expect(request.approvals).toEqual([])
+    account.clearRequest(request.handlerId)
+  })
+
   it('queues same-tick arrivals without replacing the active review', () => {
     const now = jest.spyOn(Date, 'now').mockReturnValue(100)
     const request = (handlerId) => ({
@@ -1108,6 +1138,25 @@ describe('#addRequest', () => {
   })
 
   describe('recognizing requests', () => {
+    it('keeps destination review available while action recognition is unresolved', () => {
+      const request = {
+        handlerId: 'unresolved-recognition',
+        type: 'transaction',
+        data: {
+          chainId: '0x1',
+          to: '0x6887246668a3b87F54DeB3b94Ba47a6f63F32985',
+          data: '0x095ea7b3'
+        }
+      }
+      reveal.recog.mockImplementation(() => new Promise(() => {}))
+
+      account.addRequest(request)
+
+      expect(request.addressSafety).toEqual(expect.objectContaining({ targets: expect.any(Array) }))
+      expect(request).not.toHaveProperty('addressSafetyPending')
+      account.clearRequest(request.handlerId)
+    })
+
     it('recognizes an ERC-20 approval', (done) => {
       const request = {
         handlerId: '123456',

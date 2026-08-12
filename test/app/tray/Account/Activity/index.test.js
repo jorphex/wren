@@ -168,6 +168,7 @@ it('clears all device activity through an explicit accessible confirmation', () 
   const dialog = screen.getByRole('alertdialog', { name: 'Clear activity history?' })
   expect(dialog.textContent).toContain('every account on this device')
   expect(dialog.textContent).toContain('Pending activity may appear again')
+  expect(dialog.textContent).toContain('local outbound-address memory')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   fireEvent.keyDown(dialog, { key: 'Escape' })

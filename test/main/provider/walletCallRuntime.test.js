@@ -114,6 +114,26 @@ it('signs with the pinned account and broadcasts sequentially to the exact chain
   ])
 })
 
+it('records each concrete destination only after its broadcast is accepted', async () => {
+  const deps = dependencies()
+  deps.recordSubmittedTarget = jest.fn()
+
+  await expect(executeWalletCallRuntime(input(), deps)).resolves.toHaveLength(2)
+
+  expect(deps.recordSubmittedTarget).toHaveBeenCalledTimes(1)
+  expect(deps.recordSubmittedTarget).toHaveBeenCalledWith(target, expect.any(Number))
+})
+
+it('does not let outbound-address persistence failures change broadcast settlement', async () => {
+  const deps = dependencies()
+  deps.recordSubmittedTarget = jest.fn(() => {
+    throw new Error('address memory unavailable')
+  })
+
+  await expect(executeWalletCallRuntime(input(), deps)).resolves.toHaveLength(2)
+  expect(deps.ledger.complete).toHaveBeenCalledTimes(1)
+})
+
 it('snapshots input and runtime method references before asynchronous work', async () => {
   const source = input()
   const deps = dependencies()
@@ -229,12 +249,14 @@ it.each([
   ['missing hash', (callback) => callback({ result: undefined })]
 ])('retains the signed reservation after broadcast %s', async (_label, sendResult) => {
   const deps = dependencies()
+  deps.recordSubmittedTarget = jest.fn()
   deps.connection.send.mockImplementation((_payload, callback) => sendResult(callback))
 
   await expect(executeWalletCallRuntime(input(), deps)).rejects.toThrow()
   expect(deps.ledger.reserveTransaction).toHaveBeenCalledTimes(1)
   expect(deps.ledger.markTransactionSubmitted).not.toHaveBeenCalled()
   expect(deps.ledger.fail).not.toHaveBeenCalled()
+  expect(deps.recordSubmittedTarget).not.toHaveBeenCalled()
 })
 
 it('rejects signer output that does not match the prepared account', async () => {

@@ -46,6 +46,20 @@ afterAll(() => {
 
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
 
+describe('#clearActivity', () => {
+  it('clears displayed history and its privacy-preserving outbound-address memory together', () => {
+    const updates = []
+    const update = (path, reducer) => updates.push([path, reducer({ retained: true })])
+
+    storeActions.clearActivity(update)
+
+    expect(updates).toEqual([
+      ['main.activity', []],
+      ['main.outboundAddressMemory', {}]
+    ])
+  })
+})
+
 describe('#showAccountActivity', () => {
   it('selects and opens the target account before routing to the exact activity entry', () => {
     const state = {

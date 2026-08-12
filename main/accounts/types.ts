@@ -12,6 +12,7 @@ import type { Action } from '../transaction/actions'
 import type { TokenData } from '../contracts/erc20'
 import type { Token } from '../store/state'
 import type { TransactionSimulation, WalletCallsSimulation } from '../transaction/simulation'
+import type { AddressSafetyAssessment } from '../addressSafety/types'
 
 export enum ReplacementType {
   Speed = 'speed',
@@ -125,6 +126,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   recognizedActions: Action<unknown>[]
   classification: TxClassification
   simulation: TransactionSimulation
+  addressSafety?: AddressSafetyAssessment
   recoverableError?: {
     code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
     message: string
@@ -324,6 +326,7 @@ export interface WalletCallsRequest extends AccountRequest<'walletCalls'> {
   adjustment?: Readonly<WalletCallBatchAdjustment>
   preparation: WalletCallsPreparation
   simulation: WalletCallsSimulation
+  addressSafety?: AddressSafetyAssessment
   res?: WalletCallsResponder | RPCRequestCallback
 }
 

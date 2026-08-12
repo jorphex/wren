@@ -70,6 +70,11 @@ test('accepts only an explicit wallet-call simulation acknowledgement', () => {
       .success
   ).toBe(false)
   expect(parseRendererRpcRequest(wire(1, 'approveRequest', request, {})).success).toBe(false)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'approveRequest', request, { addressLookalikeFingerprint: 'a'.repeat(64) })
+    ).success
+  ).toBe(false)
 })
 
 test('validates sensitive signer methods without coercion', () => {

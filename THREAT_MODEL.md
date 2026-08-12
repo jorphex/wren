@@ -94,9 +94,18 @@ metadata, addresses, permissions, and networks are unencrypted; unlocked secrets
 exist in memory; and overwrite-before-delete is not secure erasure on modern
 filesystems/SSDs.
 Contacts, notes, addresses, and timestamps are unencrypted relationship metadata.
+The address-safety index is also local unencrypted metadata: it keeps at most 500
+one-year records containing a profile-bound SHA-256 full-address digest, the first
+and last four hexadecimal characters needed for exact-end lookalike comparison,
+and the latest accepted outbound-submission time. A digest is not encryption. The
+index never learns from incoming activity, explorers, RPC history, simulation,
+arbitrary calldata, declines, or failed pre-broadcast work; clearing Activity clears
+the index, and profile backup excludes it. These warnings are evidence for review,
+not an assertion that a destination is safe or malicious.
 User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
 envelopes over an explicit recovery allowlist. They include configuration and
-validated encrypted software-signer records, but exclude activity, pending work,
+validated encrypted software-signer records, but exclude activity, address-safety
+memory, pending work,
 runtime observations, caches, installed dapp content, and Companion credentials;
 hardware devices keep their keys. Export writes a new mode-`0600` regular file.
 Restore keeps the chosen path in main, binds a short-lived single-use token to its

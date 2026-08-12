@@ -68,6 +68,7 @@ import operationLifecycleRuntime from '../operationLifecycle/runtime'
 import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
+import { transactionOutboundTargets } from '../addressSafety'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -2037,6 +2038,15 @@ export class Accounts extends EventEmitter {
     return request
   }
 
+  refreshRequestAddressSafety(accountId: string, handlerId: string) {
+    if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
+      throw new Error('Invalid address-safety request identity')
+    }
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account) throw new Error('Could not locate request account')
+    return account.refreshRequestAddressSafety(handlerId)
+  }
+
   addRequest(req: AnyAccountRequest, res?: RPCRequestCallback) {
     log.info('addRequest', { handlerId: req.handlerId, type: req.type })
 
@@ -2410,6 +2420,19 @@ export class Accounts extends EventEmitter {
 
     const currentAccount = this.requestAccount(handlerId, accountId)
     if (currentAccount && currentAccount.requests[handlerId]?.status === RequestStatus.Sending) {
+      const submittedRequest = currentAccount.requests[handlerId] as TransactionRequest
+      try {
+        requireStoreAction('recordOutboundAddresses')(
+          store('main.instanceId'),
+          transactionOutboundTargets(submittedRequest),
+          Date.now()
+        )
+      } catch (error) {
+        log.warn('Outbound address memory could not be updated', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
       currentAccount.requests[handlerId].status = RequestStatus.Verifying
       currentAccount.requests[handlerId].notice = 'Verifying'
       currentAccount.requests[handlerId].mode = RequestMode.Monitor

@@ -82,6 +82,11 @@ import { parseErc20ApprovalIntent } from '../../../resources/domain/transaction/
 import { getRequestSignal } from '../../provider/requestSignal'
 import { applyPermissionAction } from '../../provider/permissionEvents'
 import { notificationByOwner, requestNotificationOwner } from '../../../resources/store/notifications'
+import {
+  assessOutboundAddresses,
+  transactionOutboundTargets,
+  walletCallsOutboundTargets
+} from '../../addressSafety'
 
 const nebula = nebulaApi()
 
@@ -557,10 +562,8 @@ class FrameAccount {
       (target) => target.account === to?.toLowerCase() && target.callIndexes.includes(0)
     )
     const recognitionAllowed = !req.simulation?.accountCodeEvidence || targetEvidence?.status === 'contract'
-
     if (to && recognitionAllowed && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
       try {
-        // Recognize actions
         const actions = await reveal.recog(calldata, {
           contractAddress: to,
           chainId: parseInt(chainId, 16),
@@ -579,10 +582,11 @@ class FrameAccount {
         if (
           knownTxRequest === req &&
           recognitionStillAllowed &&
-          knownCodeSnapshot.fingerprint === codeSnapshot?.fingerprint &&
+          knownCodeSnapshot?.fingerprint === codeSnapshot?.fingerprint &&
           actions
         ) {
           knownTxRequest.recognizedActions = actions
+          this.syncAddressSafety(knownTxRequest)
           this.update()
         }
       } catch (e) {
@@ -634,6 +638,28 @@ class FrameAccount {
     }
 
     req.approvals = [...(req.approvals || []), approval]
+  }
+
+  private syncAddressSafety(req: TransactionRequest | WalletCallsRequest) {
+    const targets =
+      req.type === 'transaction' ? transactionOutboundTargets(req) : walletCallsOutboundTargets(req)
+    req.addressSafety = assessOutboundAddresses(
+      store('main.outboundAddressMemory'),
+      store('main.instanceId'),
+      targets
+    )
+
+    return req.addressSafety
+  }
+
+  refreshRequestAddressSafety(handlerId: string) {
+    const request = this.getActiveReviewRequest(handlerId)
+    if (!request || (request.type !== 'transaction' && request.type !== 'walletCalls')) {
+      throw new Error('Address safety is unavailable for this request')
+    }
+    const assessment = this.syncAddressSafety(request as TransactionRequest | WalletCallsRequest)
+    this.update()
+    return assessment
   }
 
   private removeSimulationApprovals(req: TransactionRequest) {
@@ -832,6 +858,7 @@ class FrameAccount {
     req.simulation = simulation
     delete req.decodedData
     req.recognizedActions = []
+    this.syncAddressSafety(req)
     this.syncSimulationApproval(req, simulation)
     this.syncTokenApprovalRisk(req, simulation)
     this.syncTokenAllowanceChangeRisk(req, simulation)
@@ -1426,6 +1453,8 @@ class FrameAccount {
     req.queueIndex = this.nextRequestQueueIndex++
     req.res = res
     this.requests[req.handlerId] = req
+
+    if (req.type === 'transaction' || req.type === 'walletCalls') this.syncAddressSafety(req)
 
     if (signal) {
       const abort = () => {

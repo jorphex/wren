@@ -5,8 +5,22 @@ import { OriginSchema } from '../../../../main/store/state/types/origin'
 import { ConnectionSchema } from '../../../../main/store/state/types/connection'
 import { GasSchema } from '../../../../main/store/state/types/gas'
 import { AddressBookSchema } from '../../../../main/store/state/types/addressBook'
+import { OutboundAddressMemorySchema } from '../../../../main/store/state/types/outboundAddressMemory'
 
 describe('persisted state schema compatibility', () => {
+  it('bounds privacy-preserving outbound-address memory records', () => {
+    const digest = 'a'.repeat(64)
+    const entry = { digest, prefix: '1234', suffix: 'abcd', lastSubmittedAt: 1 }
+
+    expect(OutboundAddressMemorySchema.parse({ [digest]: entry })).toEqual({ [digest]: entry })
+    expect(() =>
+      OutboundAddressMemorySchema.parse({ [digest]: { ...entry, digest: 'b'.repeat(64) } })
+    ).toThrow()
+    expect(() =>
+      OutboundAddressMemorySchema.parse({ [digest]: { ...entry, fullAddress: `0x${'1'.repeat(40)}` } })
+    ).toThrow()
+  })
+
   it('validates normalized address-book records', () => {
     const entry = {
       address: '0x0000000000000000000000000000000000000001',

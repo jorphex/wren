@@ -11,6 +11,7 @@ import {
 const panelActions = require('../../../resources/store/actions.panel')
 const { isManagedPermission } = require('../../../resources/domain/permissions')
 const { pruneActivity } = require('../state/types/activity')
+const { recordOutboundAddresses } = require('../../addressSafety')
 const supportedNetworkTypes = ['ethereum']
 
 function switchChainForOrigins(origins, oldChainId, newChainId) {
@@ -193,7 +194,15 @@ module.exports = {
       return pruneActivity([entry, ...activity.filter(({ id }) => id !== entry.id)])
     })
   },
-  clearActivity: (u) => u('main.activity', () => []),
+  recordOutboundAddresses: (u, instanceId, addresses, submittedAt) => {
+    u('main.outboundAddressMemory', (memory = {}) =>
+      recordOutboundAddresses(memory, instanceId, addresses, submittedAt)
+    )
+  },
+  clearActivity: (u) => {
+    u('main.activity', () => [])
+    u('main.outboundAddressMemory', () => ({}))
+  },
   showAccountActivity: (u, account, activityId) => {
     const crumb = {
       view: 'expandedModule',

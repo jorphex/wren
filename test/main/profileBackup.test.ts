@@ -57,6 +57,14 @@ const fixture = () => {
   ]
   fixtureMain.walletCallBatches = { execution: 'private-call-history' }
   fixtureMain.operationLifecycles = { pending: { evidence: 'private-operation-lifecycle' } }
+  fixtureMain.outboundAddressMemory = {
+    ['a'.repeat(64)]: {
+      digest: 'a'.repeat(64),
+      prefix: '1234',
+      suffix: 'abcd',
+      lastSubmittedAt: 1
+    }
+  }
   fixtureMain.yearn = { catalogCache: { private: true }, workflows: { pending: 'private-workflow' } }
   fixtureMain.updater = { dontRemind: ['runtime-update-id'] }
   fixtureMain.dapps = {
@@ -197,6 +205,7 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('activity')
   expect(recoveryMain).not.toHaveProperty('walletCallBatches')
   expect(recoveryMain).not.toHaveProperty('operationLifecycles')
+  expect(recoveryMain).not.toHaveProperty('outboundAddressMemory')
   expect(recoveryMain).not.toHaveProperty('yearn')
   expect(recoveryMain).not.toHaveProperty('updater')
   expect(recoveryMain).not.toHaveProperty('extensionCredentials')

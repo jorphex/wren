@@ -674,7 +674,16 @@ export class Provider extends EventEmitter {
           accounts,
           connection: this.connection,
           ledger: walletCallBatchLedger,
-          evidenceAvailable: () => walletCallEvidenceRuntime.wake()
+          evidenceAvailable: () => walletCallEvidenceRuntime.wake(),
+          recordSubmittedTarget: (address, submittedAt) => {
+            try {
+              requireStoreAction('recordOutboundAddresses')(store('main.instanceId'), [address], submittedAt)
+            } catch (error) {
+              log.warn('Wallet-call address memory could not be updated', {
+                error: error instanceof Error ? error.message : String(error)
+              })
+            }
+          }
         }),
       reportError: (error) => log.error('Wallet-call lifecycle error', error)
     })
@@ -745,6 +754,8 @@ export class Provider extends EventEmitter {
         accounts.rejectRequestForAccount(accountId, handlerId, rejection)
         throw Object.assign(new Error(rejection.message), { code: rejection.code })
       }
+
+      accounts.refreshRequestAddressSafety(accountId, handlerId)
 
       return this.createWalletCallLifecycle().approve(accountId, handlerId, simulationAcknowledged)
     } catch (error) {

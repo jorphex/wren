@@ -125,6 +125,11 @@ beforeEach(() => {
     if (!request || request.account !== accountId) throw new Error('wallet-call request unavailable')
     return request
   })
+  accounts.refreshRequestAddressSafety = jest.fn((accountId, handlerId) => {
+    const request = accounts.getRequestForAccount(accountId, handlerId)
+    request.addressSafety ||= { assessedAt: Date.now(), fingerprint: 'none', targets: [] }
+    return request.addressSafety
+  })
   accounts.getActiveRequestForAccount = jest.fn((accountId, handlerId) => {
     const request = accountRequests.find((candidate) => candidate.handlerId === handlerId)
     if (!request || request.account !== accountId) throw new Error('request is waiting for review')
@@ -498,6 +503,20 @@ describe('#wallet-call provider boundary', () => {
 
     expect(walletCallEvidenceRuntime.wake).toHaveBeenCalledTimes(1)
     expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(address, admitted.handlerId, failure)
+  })
+
+  it('rechecks lookalike evidence at approval without blocking submission', async () => {
+    executeWalletCallRuntime.mockResolvedValueOnce(['0xhash'])
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const stored = accounts.getRequestForAccount(address, admitted.handlerId)
+    stored.addressSafety = {
+      assessedAt: 1,
+      fingerprint: 'a'.repeat(64),
+      targets: [{ address: stored.calls[0].to, state: 'lookalike' }]
+    }
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).resolves.toEqual(['0xhash'])
+    expect(accounts.refreshRequestAddressSafety).toHaveBeenCalledWith(address, admitted.handlerId)
   })
 
   it('declines against the captured account and durably closes the batch', () => {
