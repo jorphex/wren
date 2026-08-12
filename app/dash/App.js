@@ -12,6 +12,7 @@ import Settings from './Settings'
 import Earn from './Earn'
 import Send from './Send'
 import AddressBook from './AddressBook'
+import Dapps from './Dapps'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
@@ -74,6 +75,7 @@ export class Dash extends React.Component {
     if (view === 'accounts') return <Accounts data={data} />
     if (view === 'earn') return <Earn data={data} />
     if (view === 'addressBook') return <AddressBook data={data} />
+    if (view === 'dapps') return <Dapps data={data} />
     if (view === 'expandedSigner' && data.signer) {
       const signerId = data.signer
       const signer = this.store('main.signers', signerId)

@@ -7,8 +7,22 @@ body
   font-weight 300
 
 ::-webkit-scrollbar
-  width 0px
+  width 6px
+  height 6px
   background transparent
+
+::-webkit-scrollbar-track
+  background transparent
+
+::-webkit-scrollbar-thumb
+  border 2px solid transparent
+  border-radius 2px
+  background-color var(--wren-text-muted)
+  background-clip content-box
+
+::-webkit-scrollbar-thumb:hover
+  border-width 1px
+  background-color var(--wren-text-tertiary)
 
 @import '../../../resources/Components/Button'
   

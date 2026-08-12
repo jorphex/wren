@@ -5,6 +5,7 @@ import {
   SlideBody,
   SlideContainer,
   SlideItem,
+  SlideProgress,
   SlideScroller,
   SlideTitle
 } from '../../../../../app/onboard/App/styled'
@@ -29,6 +30,16 @@ it('uses a semantic heading for each onboarding slide title', () => {
   render(<SlideTitle>Choose your networks</SlideTitle>)
 
   expect(screen.getByRole('heading', { level: 1, name: 'Choose your networks' })).toBeTruthy()
+})
+
+it('keeps compact progress above the slide title without adding a decorative rule', () => {
+  render(<SlideProgress>Step 3 of 7</SlideProgress>)
+
+  const progress = screen.getByText('Step 3 of 7')
+  const style = window.getComputedStyle(progress)
+  expect(style.position).toBe('absolute')
+  expect(style.fontSize).toBe('11px')
+  expect(styledSource).not.toMatch(/SlideProgress[\s\S]{0,500}?border-(?:top|bottom)/)
 })
 
 it('keeps onboarding copy scrollable above the action shelf', () => {

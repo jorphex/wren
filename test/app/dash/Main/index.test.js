@@ -32,6 +32,7 @@ const renderMain = () => {
 it.each([
   ['Accounts', 'accounts'],
   ['Contacts', 'addressBook'],
+  ['Connected apps', 'dapps'],
   ['Earn', 'earn'],
   ['Networks', 'chains'],
   ['Tokens', 'tokens'],
@@ -44,10 +45,14 @@ it.each([
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
 })
 
-it('keeps connected-app controls scoped to the selected account surface', () => {
+it('opens the cross-account connected-app view without exposing internal instance controls', () => {
   renderMain()
 
-  expect(screen.queryByText('Connected apps')).toBeNull()
+  expect(
+    screen.getByRole('button', {
+      name: 'Connected apps Review active connections, retained access, and default networks.'
+    })
+  ).toBeTruthy()
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 

@@ -23,6 +23,12 @@ const dashboardSections = [
         icon: 'contacts'
       },
       {
+        view: 'dapps',
+        title: 'Connected apps',
+        description: 'Review active connections, retained access, and default networks.',
+        icon: 'apps'
+      },
+      {
         view: 'earn',
         title: 'Earn',
         description: 'Review selected Yearn vaults by network.',

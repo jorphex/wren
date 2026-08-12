@@ -15,6 +15,15 @@ test('defines every shared dashboard typography role', () => {
   expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
 })
 
+test('shows a narrow blocky scrollbar without drawing a track rule', () => {
+  expect(dashStyle).toMatch(
+    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color var\(--wren-text-muted\)/
+  )
+  expect(dashStyle).toMatch(
+    /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/
+  )
+})
+
 test('keeps disabled semantic controls visually neutral', () => {
   expect(buttonStyle).toMatch(
     /button\.wrenControl\.wrenControlPrimary:disabled,[\s\S]*?button\.wrenControl\.wrenControlDanger\[aria-disabled='true'\][\s\S]*?color var\(--wren-text-disabled\)[\s\S]*?background-color var\(--wren-surface-inset\)[\s\S]*?background-image none/

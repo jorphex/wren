@@ -107,6 +107,27 @@ export const SlideTitle = styled.h1`
   }
 `
 
+export const SlideProgress = styled.div`
+  position: absolute;
+  top: 32px;
+  left: clamp(36px, 7vw, 54px);
+  z-index: 800;
+  color: var(--wren-text-tertiary);
+  font-family: var(--wren-font-utility);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+
+  @media (max-height: 540px) {
+    top: 27px;
+  }
+
+  @media (max-width: 620px) {
+    right: 28px;
+    left: 28px;
+  }
+`
+
 export const SlideProceed = styled.div`
   position: absolute;
   bottom: 34px;

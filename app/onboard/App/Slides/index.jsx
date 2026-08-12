@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { SlideContainer, Slide, SlideTitle, SlideScroller } from '../styled'
+import { SlideContainer, Slide, SlideProgress, SlideTitle, SlideScroller } from '../styled'
 
 import link from '../../../../resources/link'
 
@@ -27,6 +27,9 @@ const CurrentSlide = ({ slide, platform, setTitle, setProceed, nextSlide }) => {
   else return <Slide>{'Cannot find slide'}</Slide>
 }
 
+export const GUIDED_SLIDE_COUNT = 7
+export const guidedStepForSlide = (slide) => Math.min(Math.max(slide - 1, 1), GUIDED_SLIDE_COUNT)
+
 const onComplete = () => {
   link.send('tray:action', 'navReplace', 'dash')
   link.send('frame:close')
@@ -48,6 +51,7 @@ const Slides = ({ platform }) => {
   const [slide, setSlide] = useState(1)
   const titleRef = useRef()
   const immersive = slide === 1
+  const guidedStep = guidedStepForSlide(slide)
 
   useEffect(() => {
     if (!immersive && title) titleRef.current?.focus()
@@ -56,9 +60,20 @@ const Slides = ({ platform }) => {
   return (
     <SlideContainer $immersive={immersive}>
       {!immersive && (
-        <SlideTitle id='onboarding-slide-title' key={title} ref={titleRef} tabIndex={-1}>
-          {title}
-        </SlideTitle>
+        <>
+          <SlideProgress id='onboarding-slide-progress'>
+            {`Step ${guidedStep} of ${GUIDED_SLIDE_COUNT}`}
+          </SlideProgress>
+          <SlideTitle
+            aria-describedby='onboarding-slide-progress'
+            id='onboarding-slide-title'
+            key={title}
+            ref={titleRef}
+            tabIndex={-1}
+          >
+            {title}
+          </SlideTitle>
+        </>
       )}
       <SlideScroller
         role={immersive ? undefined : 'region'}

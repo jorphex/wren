@@ -1,7 +1,5 @@
 import React from 'react'
 import Restore from 'react-restore'
-import BigNumber from 'bignumber.js'
-
 import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
 
 import Icon from '../../../resources/Components/Icon'
@@ -37,7 +35,7 @@ const COPY = Object.freeze({
   errorBody: 'The network did not accept this transaction.',
   errorHeading: 'Transaction failed',
   fee: 'Network fee',
-  feeUnavailable: 'Fee estimate unavailable',
+  feeReview: 'Calculated during review',
   maxNeedsRecipient: 'Enter a recipient to enable Max so we can estimate gas.',
   noAccount: 'Select an account to send',
   noAssets: 'No sendable assets on this network',
@@ -55,7 +53,7 @@ const COPY = Object.freeze({
   recipientPlaceholder: 'Enter an address',
   recipientResolved: 'Address verified',
   recipientResolving: 'Checking address…',
-  reviewFee: 'Estimated fee; review before signing.',
+  reviewFee: 'Wren estimates gas before anything is signed.',
   savedContacts: 'Saved contacts',
   searchContacts: 'Search accounts and contacts',
   searchAssets: 'Search assets',
@@ -70,15 +68,13 @@ const errorCopy = Object.freeze({
   'amount-exceeds-balance': COPY.amountExceedsBalance,
   'amount-invalid': COPY.amountInvalid,
   'asset-unavailable': COPY.assetUnavailable,
-  'fee-unavailable': COPY.feeUnavailable,
+  'fee-unavailable': 'Fee estimate unavailable',
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
   'recipient-invalid': COPY.recipientInvalid,
   'watch-only': COPY.watchOnly
 })
 
 const assetKey = (asset) => `${asset.chainId}:${asset.address.toLowerCase()}`
-const trimNumber = (value) => value.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1')
-
 const displayedAsset = (rawBalance, networks, metadata, rates) => {
   const network = networks[rawBalance.chainId]
   const chainMeta = metadata[rawBalance.chainId] || {}
@@ -207,7 +203,7 @@ export class Send extends React.Component {
       ? assets.find((asset) => assetKey(asset) === this.state.selectedAsset)
       : assets[0]
 
-    return { account, accountId, assets, metadata, networks, selected }
+    return { account, accountId, assets, selected }
   }
 
   amountError(asset) {
@@ -299,17 +295,6 @@ export class Send extends React.Component {
     if (!result.success) return this.setState({ queueError: errorCopy[result.error] || COPY.errorBody })
     const amount = formatTokenBaseUnitAmount(result.amount, asset.decimals)
     this.setState({ amount: amount || '', queueError: '' })
-  }
-
-  feeSummary(asset, metadata) {
-    const gas = metadata[asset.chainId]?.gas
-    const gasPrice = gas?.price?.fees?.maxFeePerGas || gas?.price?.levels?.fast
-    if (!gasPrice) return COPY.feeUnavailable
-    const gasLimit = asset.native ? 21_000 : 65_000
-    const nativeDecimals = metadata[asset.chainId].nativeCurrency.decimals || 18
-    const fee = new BigNumber(gasPrice).times(gasLimit).shiftedBy(-nativeDecimals)
-    if (!fee.isFinite()) return COPY.feeUnavailable
-    return `${trimNumber(fee.toFixed(6))} ${metadata[asset.chainId].nativeCurrency.symbol}`
   }
 
   async submit(event, context) {
@@ -590,7 +575,7 @@ export class Send extends React.Component {
 
   render() {
     const context = this.getContext()
-    const { account, assets, metadata, selected } = context
+    const { account, assets, selected } = context
     const { data = {} } = this.store('windows.dash.nav')[0] || {}
     if (data.step === 'assetPicker') return this.renderAssetPicker(context)
     if (data.step === 'contactPicker') return this.renderContactPicker()
@@ -768,7 +753,7 @@ export class Send extends React.Component {
 
           <div className='sendLedgerRow sendFeeRow'>
             <span className='sendRowLabel'>{COPY.fee}</span>
-            <span className='sendFeeValue'>{this.feeSummary(selected, metadata)}</span>
+            <span className='sendFeeValue'>{COPY.feeReview}</span>
             <span className='sendRowHint'>{COPY.reviewFee}</span>
           </div>
         </div>

@@ -114,6 +114,15 @@ beforeEach(() => {
   link.send.mockReset()
 })
 
+it('defers the network fee to authoritative request review', () => {
+  renderSend()
+
+  expect(screen.getByText('Network fee')).toBeTruthy()
+  expect(screen.getByText('Calculated during review')).toBeTruthy()
+  expect(screen.getByText('Wren estimates gas before anything is signed.')).toBeTruthy()
+  expect(screen.queryByText(/0\.000021 ETH/)).toBeNull()
+})
+
 it('opens directly on a native asset without a connection step and exposes the asset ledger', async () => {
   const { store } = renderSend()
 

@@ -44,6 +44,7 @@ export class Command extends React.Component {
       accounts: 'Accounts',
       addressBook: 'Contacts',
       chains: 'Networks',
+      dapps: 'Connected apps',
       earn: 'Earn',
       notify: 'Notice',
       default: 'Wren',

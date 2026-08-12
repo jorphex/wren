@@ -10,6 +10,16 @@ const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
+const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
+
+test('shows a narrow blocky scrollbar without drawing a track rule', () => {
+  expect(trayStyle).toMatch(
+    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color var\(--wren-text-muted\)/
+  )
+  expect(trayStyle).toMatch(
+    /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/
+  )
+})
 
 test('keeps account collection and balance interiors spacing-led', () => {
   expect(accountStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
