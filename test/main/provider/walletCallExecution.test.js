@@ -1,4 +1,6 @@
 import { executeWalletCallBatch, hashSignedTransaction } from '../../../main/provider/walletCallExecution'
+import { WalletCallBatchLedger } from '../../../main/provider/walletCallBatches'
+import { OperationLifecycleLedger } from '../../../main/operationLifecycle/ledger'
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
@@ -120,6 +122,39 @@ it('stops on signing failure before reserving or broadcasting', async () => {
   expect(events).toEqual(['fail'])
   expect(deps.ledger.reserveTransaction).not.toHaveBeenCalled()
   expect(deps.broadcast).not.toHaveBeenCalled()
+})
+
+it('does not create a terminal lifecycle when signing fails before reservation', async () => {
+  let batches = {}
+  let operations = {}
+  const operationLifecycles = new OperationLifecycleLedger({
+    load: () => structuredClone(operations),
+    save: (value) => {
+      operations = structuredClone(value)
+    }
+  })
+  const ledger = new WalletCallBatchLedger(
+    {
+      load: () => structuredClone(batches),
+      save: (value) => {
+        batches = structuredClone(value)
+      }
+    },
+    operationLifecycles
+  )
+  ledger.create({ id: 'batch-id', origin: 'example.test', account, chainId: '0x1', callCount: 2 }).commit()
+
+  await expect(
+    executeWalletCallBatch(input(), {
+      ledger,
+      signCall: jest.fn(async () => {
+        throw new Error('device declined')
+      }),
+      broadcast: jest.fn()
+    })
+  ).rejects.toThrow('device declined')
+  expect(ledger.getStatus('example.test', account, 'batch-id').status).toBe(400)
+  expect(operationLifecycles.listStored()).toEqual([])
 })
 
 it('fails terminally after a confirmed earlier submission and stops the remainder', async () => {

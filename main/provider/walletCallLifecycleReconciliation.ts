@@ -205,9 +205,13 @@ export class WalletCallLifecycleReconciler {
             minimumConfirmations === undefined || item.confirmations < minimumConfirmations
               ? item.confirmations
               : minimumConfirmations
+          const receiptChanged =
+            item.transaction.receipt !== undefined &&
+            JSON.stringify(item.transaction.receipt) !== JSON.stringify(item.receipt)
           if (JSON.stringify(item.transaction.receipt) !== JSON.stringify(item.receipt)) {
             this.batches.setReceipt(batch.origin, batch.account, batch.id, item.receipt, now)
           }
+          if (receiptChanged) reorged = true
         } else if (item.transaction.receipt) {
           this.batches.clearReceipt(batch.origin, batch.account, batch.id, item.transaction.hash, now)
           reorged = true

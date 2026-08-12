@@ -192,6 +192,46 @@ test('rejects a block-hash mismatch as a reorg instead of replacing trusted rece
   ).toBeUndefined()
 })
 
+test('observes one reorg pass before accepting changed canonical receipt evidence', async () => {
+  const state = fixture(1)
+  const transactionHash = hash('1')
+  const firstReceipt = receipt(transactionHash, '0x1', {
+    blockHash: hash('a'),
+    blockNumber: '0x10'
+  })
+  const movedReceipt = receipt(transactionHash, '0x1', {
+    blockHash: hash('b'),
+    blockNumber: '0x11'
+  })
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, transactionHash, 1_001)
+  state.batches.complete(origin, account, state.admission.batch.id, 1_002)
+  state.batches.recordReceipt(origin, account, state.admission.batch.id, firstReceipt, 1_003)
+  const rpc = jest.fn(async (_chainId: number, method: string, params: readonly unknown[] = []) => {
+    if (method === 'eth_getTransactionReceipt') return movedReceipt
+    if (method === 'eth_getBlockByNumber' && params[0] === 'latest') {
+      return { number: '0x20', hash: hash('c') }
+    }
+    if (method === 'eth_getBlockByNumber') {
+      return { number: '0x11', hash: hash('b') }
+    }
+    throw new Error(`Unexpected ${method}`)
+  })
+  const observer = jest.fn()
+  const reconciler = new WalletCallLifecycleReconciler(state.batches, state.operations, rpc, observer)
+
+  await reconciler.reconcileAll(2_000)
+  expect(state.operations.get(state.operationId, 2_001)?.state).toBe('reorged')
+  expect(
+    state.batches.get(origin, account, state.admission.batch.id, 2_001).transactions[0]?.receipt
+  ).toEqual(movedReceipt)
+  expect(observer).toHaveBeenCalledWith(
+    expect.objectContaining({ current: expect.objectContaining({ state: 'reorged' }) })
+  )
+
+  await reconciler.reconcileAll(3_000)
+  expect(state.operations.get(state.operationId, 3_001)?.state).toBe('confirmed')
+})
+
 test('keeps durable evidence unchanged during an RPC outage', async () => {
   const state = fixture(1)
   state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)

@@ -1,6 +1,7 @@
 import { WalletCallBatchLedger } from '../../../main/provider/walletCallBatches'
 import { WalletCallLifecycleController } from '../../../main/provider/walletCallLifecycle'
 import { bindRequestSignal, getRequestSignal } from '../../../main/provider/requestSignal'
+import { OperationLifecycleLedger } from '../../../main/operationLifecycle/ledger'
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
@@ -53,7 +54,8 @@ function snapshot(request) {
 }
 
 function dependencies() {
-  const ledger = new WalletCallBatchLedger(storage())
+  const operationLifecycles = new OperationLifecycleLedger(storage())
+  const ledger = new WalletCallBatchLedger(storage(), operationLifecycles)
   const requests = new Map()
   const events = []
   const accounts = {
@@ -90,6 +92,7 @@ function dependencies() {
     accounts,
     execute,
     reportError,
+    operationLifecycles,
     requests,
     events,
     controller: new WalletCallLifecycleController(deps),
@@ -121,7 +124,7 @@ it('carries transport ownership onto the admitted account responder', () => {
 })
 
 it('durably closes a rejected review before returning its error exactly once', () => {
-  const { controller, ledger, requests } = dependencies()
+  const { controller, ledger, operationLifecycles, requests } = dependencies()
   const respond = jest.fn()
   const admitted = controller.admit(input(), respond)
   const rejection = {
@@ -140,6 +143,7 @@ it('durably closes a rejected review before returning its error exactly once', (
     jsonrpc: '2.0',
     error: { code: 4001, message: 'User rejected request' }
   })
+  expect(operationLifecycles.listStored()).toEqual([])
 })
 
 it('fails closed when generic account resolution bypasses approval', () => {

@@ -559,6 +559,11 @@ export class WalletCallBatchLedger {
       execution: 'failed',
       updatedAt: Math.max(now, batch.updatedAt)
     })
-    if (batch.operationId) this.ensureOperation(batch as WalletCallBatchWithOperationId, now, 'failed')
+    const operation = batch.operationId
+      ? this.operationLifecycles?.get(batch.operationId, Math.min(now, batch.expiresAt - 1))
+      : undefined
+    if (batch.operationId && (operation || batch.transactions.length > 0)) {
+      this.ensureOperation(batch as WalletCallBatchWithOperationId, now, 'failed')
+    }
   }
 }
