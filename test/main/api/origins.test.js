@@ -2,6 +2,7 @@ import log from 'electron-log'
 
 import {
   createSessionOrigin,
+  isCanonicalExternalOrigin,
   requiresSessionOrigin,
   parseOrigin,
   updateOrigin,
@@ -207,6 +208,17 @@ describe('#updateOrigin', () => {
     })
 
     it.each([
+      ['https://example.test', true],
+      ['chrome-extension://tagxpelsfagzmzljsfgmuipalsfaohgpal', true],
+      ['frame-extension', false],
+      ['frame-internal', false],
+      ['legacy.example', false],
+      [undefined, false]
+    ])('classifies canonical external transport origin %s as %s', (origin, expected) => {
+      expect(isCanonicalExternalOrigin(origin)).toBe(expected)
+    })
+
+    it.each([
       'send.frame.eth',
       'example.test',
       'https://example.test/path',
@@ -371,11 +383,26 @@ describe('#isTrusted', () => {
       })
 
       trustedExtensionMethods.forEach((method) => {
-        it(`trusts all requests for ${method} from the ${origin} origin`, async () => {
+        it(`trusts ${method} only with internal provenance from the ${origin} origin`, async () => {
           const payload = { method, _origin: 'ac93061b-3575-40c5-b526-4932b02e1f3f' }
-          store.set('main.origins', payload._origin, { name: origin, chain: { type: 'ethereum', id: 1 } })
+          store.set('main.origins', payload._origin, {
+            name: origin,
+            chain: { type: 'ethereum', id: 1 },
+            provenance: 'internal'
+          })
 
           return expect(isTrusted(payload)).resolves.toBe(true)
+        })
+
+        it(`does not trust direct provenance claiming ${origin} for ${method}`, async () => {
+          const payload = { method, _origin: 'ac93061b-3575-40c5-b526-4932b02e1f3f' }
+          store.set('main.origins', payload._origin, {
+            name: origin,
+            chain: { type: 'ethereum', id: 1 },
+            provenance: 'direct'
+          })
+
+          return expect(isTrusted(payload)).resolves.toBe(false)
         })
       })
     })

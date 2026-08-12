@@ -143,6 +143,48 @@ beforeEach(async () => {
   ).toBe(true)
   expect(
     options.verifyClient({
+      req: {
+        headers: { host: '127.0.0.1:1248', origin: 'https://example.test' },
+        url: '/other',
+        socket: { localPort: 1248 }
+      }
+    })
+  ).toBe(false)
+  expect(
+    options.verifyClient({
+      req: {
+        headers: { host: '127.0.0.1:1248', origin: 'https://example.test' },
+        url: '/?identity=unknown',
+        socket: { localPort: 1248 }
+      }
+    })
+  ).toBe(false)
+  expect(
+    options.verifyClient({
+      req: {
+        headers: {
+          host: '127.0.0.1:1248',
+          origin: 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf'
+        },
+        url: '/?identity=frame-extension&role=control&extra=true',
+        socket: { localPort: 1248 }
+      }
+    })
+  ).toBe(false)
+  expect(
+    options.verifyClient({
+      req: {
+        headers: {
+          host: '127.0.0.1:1248',
+          origin: 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf'
+        },
+        url: '/?identity=frame-extension',
+        socket: { localPort: 1248 }
+      }
+    })
+  ).toBe(false)
+  expect(
+    options.verifyClient({
       req: { headers: { host: 'wallet.attacker.example:1248' }, socket: { localPort: 1248 } }
     })
   ).toBe(false)
@@ -679,52 +721,62 @@ it('keeps Companion control and page authorization roles separate after authenti
   pageSocket.emit('close')
 })
 
-it('isolates originless, reserved, and schemeless local identities by WebSocket connection', () => {
-  const firstSocket = new EventEmitter()
-  const secondSocket = new EventEmitter()
-  const thirdSocket = new EventEmitter()
-  firstSocket.readyState = WebSocket.OPEN
-  secondSocket.readyState = WebSocket.OPEN
-  thirdSocket.readyState = WebSocket.OPEN
-  firstSocket.send = jest.fn()
-  secondSocket.send = jest.fn()
-  thirdSocket.send = jest.fn()
+it.each([
+  undefined,
+  'null',
+  'Unknown/caller-selected',
+  'legacy.example',
+  'frame-extension',
+  'frame-internal'
+])('requires native protocol 3 for a non-browser WebSocket Origin %s', (origin) => {
+  const socket = new EventEmitter()
+  socket.readyState = WebSocket.OPEN
+  socket.close = jest.fn()
+  socket.send = jest.fn()
 
-  socketConnection.emit('connection', firstSocket, { headers: {} })
-  socketConnection.emit('connection', secondSocket, {
-    headers: { origin: 'Unknown/caller-selected' }
-  })
-  socketConnection.emit('connection', thirdSocket, {
-    headers: { origin: 'legacy.example' }
-  })
+  socketConnection.emit('connection', socket, { headers: origin === undefined ? {} : { origin } })
   const request = JSON.stringify({ id: 9, jsonrpc: '2.0', method: 'eth_chainId', params: [] })
-  firstSocket.emit('message', request)
-  secondSocket.emit('message', request)
-  thirdSocket.emit('message', request)
+  socket.emit('message', request)
 
-  const origins = store.initOrigin.mock.calls.slice(-3).map((call) => call[1])
-  expect(origins).toEqual([
-    expect.objectContaining({ name: expect.stringMatching(/^Unknown\/[0-9a-f-]{36}$/), sessionOnly: true }),
-    expect.objectContaining({ name: expect.stringMatching(/^Unknown\/[0-9a-f-]{36}$/), sessionOnly: true }),
-    expect.objectContaining({ name: expect.stringMatching(/^Unknown\/[0-9a-f-]{36}$/), sessionOnly: true })
-  ])
-  expect(origins[1].name).not.toBe(origins[0].name)
-  expect(origins[2].name).not.toBe(origins[1].name)
-  expect(origins[1].name).not.toBe('Unknown/caller-selected')
-  expect(origins[2].name).not.toBe('legacy.example')
+  expect(JSON.parse(socket.send.mock.calls[0][0])).toMatchObject({
+    id: 9,
+    error: {
+      code: 4100,
+      message: 'Wren requires a paired native protocol 3 client for local requests.'
+    }
+  })
+  expect(socket.close).toHaveBeenCalledWith(1008, 'Native protocol 3 pairing required')
+  expect(store.initOrigin).not.toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ provenance: 'direct' })
+  )
+  expect(provider.send).not.toHaveBeenCalled()
 })
 
 it.each(['caip_request', 'wallet_request'])(
-  'rejects unauthorized %s envelopes before nested method mapping',
+  'returns the provider unsupported-method response for removed %s envelopes',
   (method, done) => {
     accounts.getSelectedAddresses.mockReturnValue(['0xc93452A74e596e81E4f73Ca1AcFF532089AD4c62'])
+    provider.send.mockImplementationOnce((payload, response) =>
+      response({
+        id: payload.id,
+        jsonrpc: '2.0',
+        error: {
+          code: 4200,
+          message: `${method} is no longer supported. Send the inner EIP-1193 method directly and use a top-level hexadecimal chainId.`
+        }
+      })
+    )
     mockSocket.send = (response) => {
       expect(JSON.parse(response)).toMatchObject({
         id: 9,
         jsonrpc: '2.0',
-        error: { code: 4100 }
+        error: { code: 4200 }
       })
-      expect(provider.send).not.toHaveBeenCalled()
+      expect(provider.send).toHaveBeenCalledWith(
+        expect.objectContaining({ method, _origin: expect.any(String) }),
+        expect.any(Function)
+      )
       done()
     }
 

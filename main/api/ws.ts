@@ -12,8 +12,8 @@ import type { Chain } from '../chains'
 import {
   updateOrigin,
   isTrusted,
+  isCanonicalExternalOrigin,
   parseOrigin,
-  createSessionOrigin,
   FrameExtension,
   parseFrameExtension
 } from './origins'
@@ -83,6 +83,7 @@ interface FrameWebSocket extends WebSocket {
   nativeFingerprint?: string
   nativeSessionId?: string
   nativeChallengeId?: string
+  directRpcAuthorized: boolean
 }
 
 const NativeHelloSchema = z
@@ -119,24 +120,55 @@ const NativeRpcEnvelopeSchema = z
   })
   .strict()
 
-const nativeSocketRequest = (req: IncomingMessage) => {
+const socketQuery = (req: IncomingMessage) => {
   try {
-    const query = new URL(req.url || '/', 'ws://localhost').searchParams
-    return (
-      query.get('identity') === 'wren-native' && query.get('role') === 'rpc' && query.get('version') === '3'
-    )
+    return new URL(req.url || '/', 'ws://localhost').searchParams
+  } catch {
+    return
+  }
+}
+
+const exactQuery = (query: URLSearchParams | undefined, expected: Record<string, string>) => {
+  if (!query || [...query].length !== Object.keys(expected).length) return false
+  return Object.entries(expected).every(
+    ([key, value]) => query.getAll(key).length === 1 && query.get(key) === value
+  )
+}
+
+const nativeSocketRequest = (req: IncomingMessage) =>
+  exactQuery(socketQuery(req), { identity: 'wren-native', role: 'rpc', version: '3' })
+
+const extensionSocketRequest = (req: IncomingMessage) => {
+  const query = socketQuery(req)
+  const role = query?.get('role')
+  return (
+    (role === 'control' || role === 'page') &&
+    exactQuery(query, { identity: 'frame-extension', role }) &&
+    !!parseFrameExtension(req)
+  )
+}
+
+const reservedIdentityRequestValid = (req: IncomingMessage) => {
+  const identities = socketQuery(req)?.getAll('identity') || []
+  if (identities.length === 0) return true
+  if (identities.length !== 1) return false
+  if (identities[0] === 'wren-native') return nativeSocketRequest(req) && req.headers.origin === undefined
+  if (identities[0] === 'frame-extension') return extensionSocketRequest(req)
+  return false
+}
+
+const supportedSocketPath = (req: IncomingMessage) => {
+  try {
+    return new URL(req.url || '/', 'ws://localhost').pathname === '/'
   } catch {
     return false
   }
 }
 
-const nativeIdentityRequested = (req: IncomingMessage) => {
-  try {
-    return new URL(req.url || '/', 'ws://localhost').searchParams.get('identity') === 'wren-native'
-  } catch {
-    return false
-  }
-}
+const nativePairingRequired = {
+  code: 4100,
+  message: 'Wren requires a paired native protocol 3 client for local requests.'
+} as const
 
 const terminateSocket = (socket: FrameWebSocket, code: number, reason: string) => {
   socket.disposeSession()
@@ -189,6 +221,8 @@ const handler = (
   socket.origin = req.headers.origin
   socket.frameExtension = parseFrameExtension(req)
   socket.nativeAuth = nativeSocketRequest(req)
+  socket.directRpcAuthorized =
+    !!socket.frameExtension || socket.nativeAuth || isCanonicalExternalOrigin(socket.origin)
   socket.extensionFingerprint = undefined
   socket.authProcessing = false
   socket.authSession = socket.frameExtension
@@ -204,7 +238,6 @@ const handler = (
     socket.authSession || socket.nativeAuth
       ? setTimeout(() => terminateSocket(socket, 1008, 'Peer authentication timed out'), 5000)
       : undefined
-  const sessionOrigin = createSessionOrigin()
   const requests = new FixedWindowRateLimiter(rateLimit)
   const pendingRequests = new Set<AbortController>()
   let disposed = false
@@ -265,6 +298,17 @@ const handler = (
     if (disposed) return
     if (!requests.allow()) {
       terminateSocket(socket, 1013, 'Request rate limit exceeded')
+      return
+    }
+
+    if (!socket.directRpcAuthorized) {
+      const parsedPayload = parsePayload<ExtensionPayload>(data.toString())
+      sendResponse({
+        id: parsedPayload.success ? parsedPayload.payload.id : parsedPayload.id,
+        jsonrpc: '2.0',
+        error: nativePairingRequired
+      })
+      terminateSocket(socket, 1008, 'Native protocol 3 pairing required')
       return
     }
 
@@ -461,7 +505,7 @@ const handler = (
     const extensionConnecting = rawPayload.__extensionConnecting === true
     delete rawPayload.__extensionConnecting
 
-    const origin = socket.nativeAuth ? 'Local app' : parseOrigin(requestOrigin, sessionOrigin)
+    const origin = socket.nativeAuth ? 'Local app' : parseOrigin(requestOrigin)
 
     if (logTraffic(origin))
       log.info(
@@ -512,7 +556,9 @@ const handler = (
       originSessions.extend(payload._origin)
     }
 
-    if (origin === 'frame-extension') {
+    const companionControl =
+      socket.frameExtension?.role === 'control' && socket.authSession?.authenticated === true
+    if (companionControl) {
       // Custom companion action for summoning Wren.
       if (rawPayload.method === 'frame_summon') {
         pendingRequests.delete(controller)
@@ -642,7 +688,8 @@ export default function (server: Server, options: WebSocketServerOptions = {}) {
     perMessageDeflate: false,
     verifyClient: ({ req }: { req: IncomingMessage }) =>
       isAllowedLocalRpcHost(req.headers.host, req.socket.localPort) &&
-      (!nativeIdentityRequested(req) || (nativeSocketRequest(req) && req.headers.origin === undefined))
+      supportedSocketPath(req) &&
+      reservedIdentityRequestValid(req)
   })
   ws.on('connection', (socket: FrameWebSocket, req: IncomingMessage) => {
     if (clients.size >= maxClients) {

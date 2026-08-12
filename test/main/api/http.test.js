@@ -15,9 +15,15 @@ import {
 import { MAX_REQUEST_BYTES } from '../../../main/api/validPayload'
 import provider from '../../../main/provider'
 import accounts from '../../../main/accounts'
-import { createSessionOrigin, isTrusted, updateOrigin } from '../../../main/api/origins'
+import { isTrusted, updateOrigin } from '../../../main/api/origins'
 import { getRequestSignal } from '../../../main/provider/requestSignal'
-import { issueNativeChallenge, proveNativeChallenge } from '../../../main/api/nativeAuth'
+import {
+  NativeRequestProofSchema,
+  authenticateNativeRequest,
+  issueNativeChallenge,
+  proveNativeChallenge
+} from '../../../main/api/nativeAuth'
+import { disconnectPeer, resetPeerConnectionsForTests } from '../../../main/api/peerConnections'
 
 jest.mock('../../../main/provider', () => ({ send: jest.fn(), on: jest.fn() }))
 jest.mock('../../../main/accounts', () => ({ getSelectedAddresses: jest.fn(() => []) }))
@@ -30,16 +36,6 @@ jest.mock('../../../main/api/nativeAuth', () => ({
 }))
 jest.mock('../../../main/api/nativePairing', () => ({ authorizeNativePeer: jest.fn() }))
 jest.mock('../../../main/api/origins', () => ({
-  createSessionOrigin: jest.fn(),
-  requiresSessionOrigin: jest.fn(
-    (origin) =>
-      !origin ||
-      origin === 'null' ||
-      origin === 'Unknown' ||
-      origin.startsWith('Unknown/') ||
-      origin.startsWith('https://Unknown/') ||
-      !/^(?:https?|wss?):\/\//.test(origin)
-  ),
   parseOrigin: jest.fn((origin, sessionOrigin = 'Unknown') =>
     !origin ||
     origin === 'null' ||
@@ -49,6 +45,12 @@ jest.mock('../../../main/api/origins', () => ({
     !/^(?:https?|wss?):\/\//.test(origin)
       ? sessionOrigin
       : origin
+  ),
+  isCanonicalExternalOrigin: jest.fn(
+    (origin) =>
+      typeof origin === 'string' &&
+      /^(?:https?|wss?):\/\//.test(origin) &&
+      !origin.startsWith('https://Unknown/')
   ),
   updateOrigin: jest.fn((payload) => ({
     payload: { ...payload, _origin: 'test-origin' },
@@ -63,8 +65,11 @@ let server
 let port
 
 beforeEach((done) => {
-  let session = 0
-  createSessionOrigin.mockReset().mockImplementation(() => `Unknown/session-${++session}`)
+  resetPeerConnectionsForTests()
+  NativeRequestProofSchema.parse.mockReset()
+  authenticateNativeRequest.mockReset()
+  issueNativeChallenge.mockReset()
+  proveNativeChallenge.mockReset()
   provider.send.mockImplementation((payload, callback) =>
     callback({ id: payload.id, jsonrpc: payload.jsonrpc, result: 'forwarded' })
   )
@@ -86,15 +91,16 @@ afterEach((done) => {
   server.close(done)
 })
 
-const send = ({ body = '', method = 'POST', headers = {}, agent, path } = {}) =>
+const send = ({ body = '', method = 'POST', headers, agent, path } = {}) =>
   new Promise((resolve, reject) => {
+    const requestHeaders = headers ?? (path?.startsWith('/native/') ? {} : { origin: 'https://example.test' })
     const req = request(
       {
         host: '127.0.0.1',
         port,
         method,
         path,
-        headers,
+        headers: requestHeaders,
         agent
       },
       (res) => {
@@ -115,7 +121,8 @@ const sendChunked = (chunks) =>
       {
         host: '127.0.0.1',
         port,
-        method: 'POST'
+        method: 'POST',
+        headers: { origin: 'https://example.test' }
       },
       (res) => {
         const responseChunks = []
@@ -230,6 +237,108 @@ it('binds native proofs to the HTTP transport context', async () => {
   expect(proveNativeChallenge).toHaveBeenCalledWith({}, expect.any(Function), 'http')
 })
 
+it('authenticates native HTTP RPC before creating a fingerprint-scoped origin', async () => {
+  const body = JSON.stringify({ id: 41, jsonrpc: '2.0', method: 'eth_chainId', params: [] })
+  const proof = { sessionId: 'session', nonce: 'nonce' }
+  const proofHeader = Buffer.from(JSON.stringify(proof)).toString('base64url')
+  NativeRequestProofSchema.parse.mockReturnValue(proof)
+  authenticateNativeRequest.mockReturnValue({ fingerprint: 'a'.repeat(43) })
+
+  await expect(
+    send({
+      path: '/native/v3/rpc',
+      body,
+      headers: { 'x-wren-native-proof': proofHeader }
+    })
+  ).resolves.toMatchObject({
+    status: 200,
+    body: { id: 41, result: 'forwarded' }
+  })
+
+  expect(authenticateNativeRequest).toHaveBeenCalledWith(proof, '/native/v3/rpc', Buffer.from(body))
+  expect(updateOrigin).toHaveBeenCalledWith(
+    expect.objectContaining({ method: 'eth_chainId' }),
+    'Local app',
+    false,
+    { provenance: 'native', sourceId: 'a'.repeat(43) }
+  )
+})
+
+it('rejects missing native HTTP proof without provider or origin work', async () => {
+  const body = JSON.stringify({ id: 42, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] })
+
+  await expect(send({ path: '/native/v3/rpc', body })).resolves.toMatchObject({
+    status: 401,
+    body: { error: { code: 4100, message: 'Native request proof is required' } }
+  })
+  expect(authenticateNativeRequest).not.toHaveBeenCalled()
+  expect(updateOrigin).not.toHaveBeenCalled()
+  expect(provider.send).not.toHaveBeenCalled()
+})
+
+it('rejects an invalid native HTTP proof without provider or origin work', async () => {
+  const body = JSON.stringify({ id: 43, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] })
+  const proofHeader = Buffer.from(JSON.stringify({ sessionId: 'invalid' })).toString('base64url')
+  NativeRequestProofSchema.parse.mockImplementation(() => {
+    throw new Error('invalid proof')
+  })
+
+  await expect(
+    send({
+      path: '/native/v3/rpc',
+      body,
+      headers: { 'x-wren-native-proof': proofHeader }
+    })
+  ).resolves.toMatchObject({
+    status: 401,
+    body: { error: { code: 4100, message: 'Native request proof is required' } }
+  })
+  expect(authenticateNativeRequest).not.toHaveBeenCalled()
+  expect(updateOrigin).not.toHaveBeenCalled()
+  expect(provider.send).not.toHaveBeenCalled()
+})
+
+it('removes a native HTTP subscription when its exact peer is disconnected', async () => {
+  const fingerprint = 'b'.repeat(43)
+  const proof = { sessionId: 'session', nonce: 'nonce' }
+  const proofHeader = Buffer.from(JSON.stringify(proof)).toString('base64url')
+  const body = JSON.stringify({
+    id: 44,
+    jsonrpc: '2.0',
+    method: 'eth_subscribe',
+    params: ['newHeads'],
+    pollId: 'native-owner'
+  })
+  NativeRequestProofSchema.parse.mockReturnValue(proof)
+  authenticateNativeRequest.mockReturnValue({ fingerprint })
+  provider.send.mockImplementationOnce((payload, callback) =>
+    callback({ id: payload.id, jsonrpc: payload.jsonrpc, result: 'native-upstream-subscription' })
+  )
+
+  await expect(
+    send({
+      path: '/native/v3/rpc',
+      body,
+      headers: { 'x-wren-native-proof': proofHeader }
+    })
+  ).resolves.toMatchObject({
+    status: 200,
+    body: { id: 44, result: expect.stringMatching(/^0x[0-9a-f]{32}$/) }
+  })
+
+  provider.send.mockReset()
+  disconnectPeer(fingerprint)
+
+  expect(provider.send).toHaveBeenCalledWith({
+    id: 1,
+    jsonrpc: '2.0',
+    method: 'eth_unsubscribe',
+    params: ['native-upstream-subscription'],
+    chainId: '0x1',
+    _origin: 'test-origin'
+  })
+})
+
 it('rejects excess requests before provider forwarding', async () => {
   await restartServer({
     requestRateLimit: { maxRequests: 1, windowMs: 1000 },
@@ -288,7 +397,13 @@ it('returns an invalid-request error with a valid correlation id', async () => {
 
 it('rejects an oversized declared body before buffering it', async () => {
   await expect(
-    send({ body: Buffer.alloc(MAX_REQUEST_BYTES + 1), headers: { 'content-length': MAX_REQUEST_BYTES + 1 } })
+    send({
+      body: Buffer.alloc(MAX_REQUEST_BYTES + 1),
+      headers: {
+        'content-length': MAX_REQUEST_BYTES + 1,
+        origin: 'https://example.test'
+      }
+    })
   ).resolves.toMatchObject({
     status: 413,
     body: {
@@ -352,7 +467,12 @@ it('aborts only the unfinished provider request when its HTTP client disconnects
     markForwarded()
   })
 
-  const client = request({ host: '127.0.0.1', port, method: 'POST' })
+  const client = request({
+    host: '127.0.0.1',
+    port,
+    method: 'POST',
+    headers: { origin: 'https://example.test' }
+  })
   client.on('error', () => {})
   client.end(JSON.stringify({ id: 8, jsonrpc: '2.0', method: 'eth_chainId', params: [] }))
 
@@ -369,39 +489,41 @@ it('aborts only the unfinished provider request when its HTTP client disconnects
   expect(() => forwarded({ id: 8, jsonrpc: '2.0', result: 'late' })).not.toThrow()
 })
 
-it('keeps an originless identity on one socket and isolates separate sockets', async () => {
-  const firstAgent = new Agent({ keepAlive: true, maxSockets: 1 })
-  const secondAgent = new Agent({ keepAlive: true, maxSockets: 1 })
-  const payload = { id: 7, jsonrpc: '2.0', method: 'eth_chainId', params: [] }
-
-  try {
-    await send({ body: JSON.stringify(payload), agent: firstAgent })
-    await send({ body: JSON.stringify(payload), agent: firstAgent })
-    await send({ body: JSON.stringify(payload), agent: secondAgent })
-  } finally {
-    firstAgent.destroy()
-    secondAgent.destroy()
-  }
-
-  expect(updateOrigin.mock.calls.slice(-3).map((call) => call[1])).toEqual([
-    'Unknown/session-1',
-    'Unknown/session-1',
-    'Unknown/session-2'
-  ])
-})
-
-it.each(['Unknown/caller-selected', 'https://Unknown/caller-selected', 'legacy.example'])(
-  'does not let a caller select reserved local-client identity %s',
+it.each([undefined, 'null', 'Unknown/caller-selected', 'https://Unknown/caller-selected', 'legacy.example'])(
+  'requires native protocol 3 for a non-browser local Origin %s',
   async (origin) => {
     const payload = { id: 7, jsonrpc: '2.0', method: 'eth_chainId', params: [] }
+    const headers = origin === undefined ? {} : { origin }
 
-    await send({ body: JSON.stringify(payload), headers: { origin } })
-
-    expect(updateOrigin).toHaveBeenLastCalledWith(payload, 'Unknown/session-1', false, {
-      provenance: 'direct'
+    await expect(send({ body: JSON.stringify(payload), headers })).resolves.toMatchObject({
+      status: 401,
+      body: {
+        id: null,
+        error: {
+          code: 4100,
+          message: 'Wren requires a paired native protocol 3 client for local requests.'
+        }
+      }
     })
+    expect(updateOrigin).not.toHaveBeenCalled()
+    expect(provider.send).not.toHaveBeenCalled()
   }
 )
+
+it.each([
+  ['/native/v2/rpc', 401, 4100],
+  ['/native/v3/typo', 401, 4100],
+  ['/other', 404, -32601]
+])('rejects unsupported local RPC route %s without forwarding', async (path, status, code) => {
+  const payload = { id: 7, jsonrpc: '2.0', method: 'eth_chainId', params: [] }
+
+  await expect(send({ path, body: JSON.stringify(payload), headers: {} })).resolves.toMatchObject({
+    status,
+    body: { error: { code } }
+  })
+  expect(updateOrigin).not.toHaveBeenCalled()
+  expect(provider.send).not.toHaveBeenCalled()
+})
 
 it('rejects a non-canonical target chain before provider forwarding', async () => {
   const payload = { id: 7, jsonrpc: '2.0', method: 'eth_chainId', params: [], chainId: '0x01' }
@@ -455,7 +577,7 @@ it('uses unauthorized rather than user-rejected when a chain switch lacks permis
 })
 
 it.each(['caip_request', 'wallet_request'])(
-  'rejects unauthorized %s envelopes before nested method mapping',
+  'returns the provider unsupported-method response for removed %s envelopes',
   async (method) => {
     accounts.getSelectedAddresses.mockReturnValue(['0xc93452A74e596e81E4f73Ca1AcFF532089AD4c62'])
     const payload = {
@@ -469,11 +591,25 @@ it.each(['caip_request', 'wallet_request'])(
       }
     }
 
+    provider.send.mockImplementationOnce((requestPayload, response) =>
+      response({
+        id: requestPayload.id,
+        jsonrpc: '2.0',
+        error: {
+          code: 4200,
+          message: `${method} is no longer supported. Send the inner EIP-1193 method directly and use a top-level hexadecimal chainId.`
+        }
+      })
+    )
+
     await expect(send({ body: JSON.stringify(payload) })).resolves.toMatchObject({
       status: 200,
-      body: { id: 7, jsonrpc: '2.0', error: { code: 4100 } }
+      body: { id: 7, error: { code: 4200 } }
     })
-    expect(provider.send).not.toHaveBeenCalled()
+    expect(provider.send).toHaveBeenCalledWith(
+      expect.objectContaining({ method, _origin: 'test-origin' }),
+      expect.any(Function)
+    )
   }
 )
 
@@ -623,7 +759,12 @@ it('unsubscribes a late subscription result after its HTTP client disconnects', 
       markForwarded()
     }
   })
-  const client = request({ host: '127.0.0.1', port, method: 'POST' })
+  const client = request({
+    host: '127.0.0.1',
+    port,
+    method: 'POST',
+    headers: { origin: 'https://example.test' }
+  })
   client.on('error', () => {})
   client.end(
     JSON.stringify({

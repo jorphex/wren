@@ -6,7 +6,7 @@ import provider from '../provider'
 import accounts from '../accounts'
 import type { Chain } from '../chains'
 
-import { createSessionOrigin, isTrusted, parseOrigin, requiresSessionOrigin, updateOrigin } from './origins'
+import { isCanonicalExternalOrigin, isTrusted, parseOrigin, updateOrigin } from './origins'
 import parsePayload, { JsonRpcError, MAX_REQUEST_BYTES } from './validPayload'
 import { requiresStandingCapability } from './protectedMethods'
 import { parseChainId } from '../provider/chainRequests'
@@ -52,8 +52,12 @@ interface HTTPPollingPayload extends JSONRPCRequestPayload {
 
 const pollClients = new Map<string, PollClient>()
 const subscriptions = new TransportSubscriptionRegistry<PollClient>()
-const socketOrigins = new WeakMap<IncomingMessage['socket'], string>()
 const nativePaths = new Set(['/native/v3/challenge', '/native/v3/prove', '/native/v3/rpc'])
+const nativePathPrefix = '/native/'
+const nativePairingRequired = {
+  code: 4100,
+  message: 'Wren requires a paired native protocol 3 client for local requests.'
+} as const
 
 export const HTTP_MAX_CONNECTIONS = 128
 export const HTTP_HEADERS_TIMEOUT_MS = 10 * 1000
@@ -74,18 +78,6 @@ export const HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES = 16 * 1024
 interface HTTPServerOptions {
   requestRateLimit?: RateLimitOptions
   socketRateLimit?: RateLimitOptions
-}
-
-const requestOrigin = (req: IncomingMessage) => {
-  if (!requiresSessionOrigin(req.headers.origin)) return parseOrigin(req.headers.origin)
-
-  let origin = socketOrigins.get(req.socket)
-  if (!origin) {
-    origin = createSessionOrigin()
-    socketOrigins.set(req.socket, origin)
-  }
-
-  return parseOrigin(req.headers.origin, origin)
 }
 
 const sendJson = (res: ServerResponse, status: number, payload: unknown) => {
@@ -232,11 +224,24 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
 
   const requestPath = (req.url || '/').split('?')[0] || '/'
   const nativePath = nativePaths.has(requestPath)
+  if (!nativePath && requestPath !== '/') {
+    return sendTransportError(
+      res,
+      requestPath.startsWith(nativePathPrefix) ? 401 : 404,
+      null,
+      requestPath.startsWith(nativePathPrefix)
+        ? nativePairingRequired
+        : { code: -32601, message: 'Local RPC endpoint not found' }
+    )
+  }
   if (nativePath && req.headers.origin !== undefined) {
     return sendTransportError(res, 403, null, {
       code: 4100,
       message: 'Native authentication is not available to browser origins'
     })
+  }
+  if (!nativePath && !isCanonicalExternalOrigin(req.headers.origin)) {
+    return sendTransportError(res, 401, null, nativePairingRequired)
   }
   if (!nativePath) {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -366,7 +371,7 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
           }
         }
 
-        const origin = nativeSession ? nativeOriginName(nativeSession) : requestOrigin(req)
+        const origin = nativeSession ? nativeOriginName(nativeSession) : parseOrigin(req.headers.origin)
         const invoker = nativeSession
           ? { provenance: 'native' as const, sourceId: nativeSession.fingerprint }
           : { provenance: 'direct' as const }

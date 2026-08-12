@@ -901,7 +901,7 @@ describe('#send', () => {
         request: { method: 'personal_sendTransaction', params: [] }
       }
     ]
-  ])('rejects unsafe methods nested in an authorized %s envelope', (method, params) => {
+  ])('rejects removed legacy %s envelopes before inspecting nested methods', (method, params) => {
     const response = jest.fn()
 
     send({ id: 20, jsonrpc: '2.0', method, params }, response)
@@ -909,10 +909,51 @@ describe('#send', () => {
     expect(response).toHaveBeenCalledWith({
       id: 20,
       jsonrpc: '2.0',
-      error: { message: 'Wren does not support personal_sendTransaction', code: 4200 }
+      error: {
+        message: `${method} is no longer supported. Send the inner EIP-1193 method directly and use a top-level hexadecimal chainId.`,
+        code: 4200
+      }
     })
     expect(connection.send).not.toHaveBeenCalled()
   })
+
+  it.each(['caip_request', 'wallet_request'])(
+    'rejects every nested method family in removed %s envelopes without side effects',
+    (method) => {
+      const nestedMethods = [
+        'eth_requestAccounts',
+        'wallet_requestPermissions',
+        'eth_accounts',
+        'eth_subscribe',
+        'eth_pollSubscriptions',
+        'eth_unsubscribe',
+        'wallet_request',
+        'frame_summon',
+        'eth_call'
+      ]
+
+      nestedMethods.forEach((nestedMethod, index) => {
+        const response = jest.fn()
+        const request = { method: nestedMethod, params: [] }
+        const params =
+          method === 'caip_request' ? { chainId: 'eip155:1', session: 'session', request } : { request }
+
+        send({ id: 30 + index, jsonrpc: '2.0', method, params }, response)
+
+        expect(response).toHaveBeenCalledWith({
+          id: 30 + index,
+          jsonrpc: '2.0',
+          error: {
+            code: 4200,
+            message: `${method} is no longer supported. Send the inner EIP-1193 method directly and use a top-level hexadecimal chainId.`
+          }
+        })
+      })
+
+      expect(accounts.addRequest).not.toHaveBeenCalled()
+      expect(connection.send).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     'eth_getProof',

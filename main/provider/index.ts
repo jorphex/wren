@@ -45,7 +45,6 @@ import {
 import Erc20Contract from '../contracts/erc20'
 import { reconcileErc1046TokenData, resolveErc1046Metadata } from './erc1046'
 import { getOriginAccess, hasOriginCapability, requestOriginAccess } from '../api/origins'
-import { requiresStandingCapability } from '../api/protectedMethods'
 import { parseCallsStatus, parseGetCapabilities, parseSendCalls, parseShowCallsStatus } from './walletCalls'
 import { WalletCallLifecycleController } from './walletCallLifecycle'
 import walletCallBatchLedger from './walletCallLedger'
@@ -86,7 +85,7 @@ import {
 import * as sigParser from '../signatures'
 import { parseMessageRequest } from '../signatures/message'
 import { hasAddress } from '../../resources/domain/account'
-import { mapRequest, normalizeTransactionChainId } from '../requests'
+import { isLegacyRequestEnvelope, normalizeTransactionChainId } from '../requests'
 
 import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
@@ -1761,14 +1760,18 @@ export class Provider extends EventEmitter {
   }
 
   send(requestPayload: RPCRequestPayload, res: RPCRequestCallback = () => {}) {
-    let payload: RPCRequestPayload
-    const outerMethod = requestPayload.method
-
-    try {
-      payload = mapRequest(requestPayload)
-    } catch (e) {
-      return resError({ message: (e as Error).message }, requestPayload, res)
+    if (isLegacyRequestEnvelope(requestPayload.method)) {
+      return resError(
+        {
+          code: 4200,
+          message: `${requestPayload.method} is no longer supported. Send the inner EIP-1193 method directly and use a top-level hexadecimal chainId.`
+        },
+        requestPayload,
+        res
+      )
     }
+
+    const payload = requestPayload
 
     const method = payload.method || ''
     const params = Array.isArray(payload.params) ? payload.params : []
@@ -1783,20 +1786,6 @@ export class Provider extends EventEmitter {
       return res({ id: payload.id, jsonrpc: '2.0', result: true }) // Subscription was ours
     if (method === 'wallet_getPermissions') return this.getPermissions(payload, res)
     if (method === 'wallet_requestPermissions') return this.requestPermissions(payload, res)
-    if (
-      (outerMethod === 'caip_request' || outerMethod === 'wallet_request') &&
-      requiresStandingCapability(method)
-    ) {
-      const origin = getPayloadOrigin(payload)
-      const params = Array.isArray(payload.params) ? payload.params : []
-      const requestedChain = ['wallet_switchEthereumChain', 'wallet_sendCalls'].includes(method)
-        ? (params[0] as { chainId?: unknown } | undefined)?.chainId
-        : undefined
-      const chainId = requestedChain === undefined ? payload.chainId || origin?.chain.id : requestedChain
-      if (!hasOriginCapability(payload, { method, chainId: chainId as number | bigint | string })) {
-        return resError({ code: 4100, message: 'Origin is not authorized' }, payload, res)
-      }
-    }
     if (method === 'wallet_addEthereumChain') return this.addEthereumChain(payload, res)
     if (method === 'wallet_switchEthereumChain') return this.switchEthereumChain(payload, res)
     if (method === 'wallet_sendCalls') return this.sendWalletCalls(payload, res)

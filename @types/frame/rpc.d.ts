@@ -6,7 +6,6 @@ type RPCSuccessCallback = RPCCallback<JSONRPCSuccessResponsePayload>
 type RPCRequestCallback = RPCCallback<RPCResponsePayload>
 
 type Address = string // 20 hex bytes, 0x-prefixed
-type Caip2ChainId = string // format: "<namespace>:<chainId>", ex: "eip155:1"
 
 interface RPCId {
   id: number
@@ -15,17 +14,6 @@ interface RPCId {
 
 interface InternalPayload {
   _origin: string
-}
-
-type Caip27JsonRpcRequestPayload = {
-  chainId: Caip2ChainId
-  session: string
-  request: JSONRPCRequestPayload
-}
-
-interface Caip27JsonRpcRequest extends RPCId, InternalPayload {
-  method: 'caip_request'
-  params: Caip27JsonRpcRequestPayload
 }
 
 interface JSONRPCRequestPayload extends RPCId {

@@ -5,9 +5,9 @@ import protectedMethods, {
 } from '../../../main/api/protectedMethods'
 
 it.each(['caip_request', 'wallet_request'])(
-  'requires an authorized origin before unwrapping %s',
+  'leaves removed legacy envelope %s to deterministic provider rejection',
   (method) => {
-    expect(protectedMethods).toContain(method)
+    expect(protectedMethods).not.toContain(method)
   }
 )
 

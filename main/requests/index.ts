@@ -1,15 +1,5 @@
-import mapCaipRequest from './methods/caipRequest'
-import mapWalletRequest from './methods/walletRequest'
 export { normalizeTransactionChainId } from '../../resources/domain/request/transaction'
 
-export function mapRequest(requestPayload: RPCRequestPayload): RPCRequestPayload {
-  if (requestPayload.method === 'caip_request') {
-    return mapCaipRequest(requestPayload)
-  }
+const legacyEnvelopeMethods = new Set(['caip_request', 'wallet_request'])
 
-  if (requestPayload.method === 'wallet_request') {
-    return mapWalletRequest(requestPayload)
-  }
-
-  return requestPayload
-}
+export const isLegacyRequestEnvelope = (method: string) => legacyEnvelopeMethods.has(method)

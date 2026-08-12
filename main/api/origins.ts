@@ -99,6 +99,11 @@ function canonicalOrigin(origin: string | undefined) {
   }
 }
 
+export function isCanonicalExternalOrigin(origin?: string) {
+  const canonical = canonicalOrigin(origin)
+  return !!canonical && !internalOrigins.has(canonical)
+}
+
 export function isSessionOnlyOrigin(origin: string) {
   return origin === 'Unknown' || origin.startsWith(sessionOriginPrefix)
 }
@@ -371,7 +376,7 @@ export async function isTrusted(payload: RPCRequestPayload, signal?: AbortSignal
 
   const originName = origin.name
 
-  if (isTrustedOrigin(originName) && isInternalMethod(payload.method)) {
+  if (origin.provenance === 'internal' && isTrustedOrigin(originName) && isInternalMethod(payload.method)) {
     return true
   }
 
