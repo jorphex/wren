@@ -56,7 +56,7 @@ const notificationTypes = z.enum([
 
 export const MainSchema = z.object({
   _version: z.coerce.number(),
-  instanceId: z.string(), // TODO: uuid
+  instanceId: z.uuid(),
   networks: z.object({
     ethereum: z.record(z.coerce.number(), ChainSchema)
   }),

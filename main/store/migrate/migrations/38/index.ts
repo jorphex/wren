@@ -21,8 +21,8 @@ const chainsToMigrate = [...pylonChainIds, ...retiredChainIds]
 const ParsedChainSchema = z.union([v38ChainSchema, z.boolean()]).catch(false)
 
 const EthereumChainsSchema = z.record(z.coerce.number(), ParsedChainSchema).transform((chains) => {
-  // remove any chains that failed to parse, which will now be set to "false"
-  // TODO: we can insert default chain data here from the state defaults in the future
+  // Remove invalid persisted chains. Runtime defaults are merged after migration instead of
+  // being copied into this historical schema and changing its meaning over time.
   return Object.fromEntries(
     Object.entries(chains).filter(([id, chain]) => {
       if (chain === false) {

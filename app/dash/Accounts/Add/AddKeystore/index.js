@@ -55,7 +55,7 @@ const EnterKeystorePassword = ({ keystore, active, onContinue }) => {
   const next = (keystorePassword) => {
     onContinue(keystore, [keystorePassword])
   }
-  //TODO: validate keystore password here?
+  // The signer worker validates by decrypting the keystore; the renderer never handles key material.
   const getError = () => {}
   const title = 'Enter keystore password'
   const buttonText = 'Continue'

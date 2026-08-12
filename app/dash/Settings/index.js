@@ -116,9 +116,7 @@ export class Settings extends Component {
   }
 
   appInfo() {
-    // TODO: move this to global passed over IPC
-    // eslint-disable-next-line
-    const appVersion = require('../../../package.json').version
+    const appVersion = this.store('version')
     const instanceId = this.store('main.instanceId')
     return (
       <div className='appInfo'>
@@ -267,7 +265,7 @@ export class Settings extends Component {
     clearTimeout(this.inputLatticeTimeout)
     const value = e.target.value.replace(/\s+/g, '')
     this.setState({ latticeEndpoint: value })
-    // TODO: Update to target specific Lattice device rather than global
+    // Lattice relay configuration is global because Wren supports one active Lattice adapter.
     this.inputLatticeTimeout = setTimeout(
       () => link.send('tray:action', 'setLatticeEndpointCustom', value),
       1000

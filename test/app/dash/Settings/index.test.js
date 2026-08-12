@@ -10,6 +10,7 @@ jest.mock('../../../../resources/Components/KeyboardShortcutConfigurator', () =>
 
 const state = {
   platform: 'linux',
+  version: '0.1.0',
   view: {
     interfaceScaleEffective: 1.25
   },
@@ -104,6 +105,7 @@ it('keeps app identity, license, and reset actions in About', async () => {
   fireEvent.click(within(about).getByRole('button', { name: instanceId }))
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', instanceId)
   expect(within(about).getByText('Instance ID Copied')).toBeTruthy()
+  expect(within(about).getByText('v0.1.0')).toBeTruthy()
 
   fireEvent.click(within(about).getByRole('button', { name: 'View License' }))
   expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_LICENSE_URL)

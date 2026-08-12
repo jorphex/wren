@@ -35,6 +35,28 @@ it('rejects state newer than the requested migration boundary', () => {
   )
 })
 
+describe('migration 57', () => {
+  it('preserves an existing UUID instance identity', () => {
+    const instanceId = '11111111-1111-4111-8111-111111111111'
+    state.main._version = 56
+    state.main.instanceId = instanceId
+
+    expect(migrations.apply(state, 57).main.instanceId).toBe(instanceId)
+  })
+
+  it.each([undefined, '', 'legacy-instance-id', 42])(
+    'replaces an invalid instance identity (%s)',
+    (instanceId) => {
+      state.main._version = 56
+      state.main.instanceId = instanceId
+
+      expect(migrations.apply(state, 57).main.instanceId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      )
+    }
+  )
+})
+
 describe('migration 13', () => {
   beforeEach(() => {
     state.main._version = 12

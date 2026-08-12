@@ -2,6 +2,8 @@ import { v4 as generateUuid } from 'uuid'
 import { z } from 'zod'
 import log from 'electron-log'
 
+import packageFile from '../../../package.json'
+
 import persist from '../persist'
 import migrations from '../migrate'
 
@@ -838,6 +840,7 @@ const initial = {
   provider: {
     events: []
   },
+  version: packageFile.version,
   external: {
     rates: {}
   },

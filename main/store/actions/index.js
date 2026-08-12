@@ -668,9 +668,7 @@ module.exports = {
       const balancesByToken = new Map(balances.map((balance) => [toTokenId(balance), balance]))
       newBalances.forEach((balance) => balancesByToken.set(toTokenId(balance), balance))
 
-      // TODO: possibly add an option to filter out zero balances
-      //const withoutZeroBalances = Object.entries(updatedBalances)
-      //.filter(([address, balanceObj]) => !(new BigNumber(balanceObj.balance)).isZero())
+      // Retain known zero balances so custom-token and scanner inventory survives later scans.
       return [...balancesByToken.values()]
     })
   },

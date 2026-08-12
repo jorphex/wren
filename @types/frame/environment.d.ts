@@ -1,4 +1,4 @@
-import { KeyboardLayout } from '../../resources/keyboard'
+import { KeyboardLayoutSource } from '../../resources/keyboard'
 
 declare global {
   namespace NodeJS {
@@ -10,7 +10,7 @@ declare global {
     }
   }
   interface Navigator {
-    keyboard: { getLayoutMap: () => Promise<KeyboardLayout> }
+    keyboard: KeyboardLayoutSource
   }
 }
 

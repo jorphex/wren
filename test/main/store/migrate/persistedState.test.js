@@ -210,7 +210,7 @@ it('migrates the version 41 boundary and reloads it without another migration', 
   const fixture = loadFixture('v41-current-state.json')
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
   const expected = clone(fixture.state.main)
-  const { networks: expectedNetworks, ...expectedMain } = expected
+  const { networks: expectedNetworks, instanceId: _legacyInstanceId, ...expectedMain } = expected
   const expectedChain = expectedNetworks.ethereum[31337]
   const { connection: expectedConnection, ...expectedChainIdentity } = expectedChain
 
@@ -224,6 +224,9 @@ it('migrates the version 41 boundary and reloads it without another migration', 
     expect.objectContaining({ ...expectedConnection.primary, id: 'rpc-1' }),
     expect.objectContaining({ ...expectedConnection.secondary, id: 'rpc-2' })
   ])
+  expect(migrated.main.instanceId).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+  )
   expect(migrated.main._version).toBe(migrations.latest)
   expect(reloaded.main).toEqual(migrated.main)
 })

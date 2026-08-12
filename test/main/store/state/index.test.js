@@ -4,13 +4,15 @@ jest.mock('fs')
 
 let mockLatestVersion = 0
 let mockInterfaceScale = 2
+const firstInstanceId = '11111111-1111-4111-8111-111111111111'
+const currentInstanceId = '22222222-2222-4222-8222-222222222222'
 
 jest.mock('../../../../main/store/migrate', () => {
   return {
     latest: mockLatestVersion,
     apply: (state) => {
       return mockLatestVersion === 2
-        ? { ...state, main: { ...state.main, _version: 2, instanceId: 'test-brand-new-frame' } }
+        ? { ...state, main: { ...state.main, _version: 2, instanceId: currentInstanceId } }
         : { ...state }
     }
   }
@@ -25,13 +27,13 @@ jest.mock('../../../../main/store/persist', () => {
           1: {
             main: {
               _version: 1,
-              instanceId: 'test-frame'
+              instanceId: firstInstanceId
             }
           },
           2: {
             main: {
               _version: 2,
-              instanceId: 'test-brand-new-frame',
+              instanceId: currentInstanceId,
               interfaceScale: mockInterfaceScale,
               privacy: { errorReporting: true },
               accounts: {
@@ -70,7 +72,7 @@ it('loads values from the current version of the state', async () => {
 
   const { default: state } = await import('../../../../main/store/state')
 
-  expect(state().main.instanceId).toBe('test-brand-new-frame')
+  expect(state().main.instanceId).toBe(currentInstanceId)
   expect(state().main.interfaceScale).toBe(1)
   expect(state().view.interfaceScaleEffective).toBe(1)
 })
@@ -141,5 +143,5 @@ it('preserves an older version of the state after creating a newer state entry',
   const writtenState = JSON.parse(fs.__getWrittenData())
 
   expect(writtenState.main.__['1'].main.instanceId).toBe('test-frame')
-  expect(writtenState.main.__['2'].main.instanceId).toBe('test-brand-new-frame')
+  expect(writtenState.main.__['2'].main.instanceId).toBe(currentInstanceId)
 }, 500)

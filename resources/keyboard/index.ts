@@ -6,12 +6,18 @@ export type KeyboardLayout = {
   get: (key: string) => string
 }
 
+export type KeyboardLayoutSource = {
+  getLayoutMap: () => Promise<KeyboardLayout>
+  addEventListener?: (event: 'layoutchange', listener: () => void) => void
+}
+
 // https://www.w3.org/TR/uievents-code/#keyboard-101
 const isUSLayout = () => keyboardLayout?.get('Backslash') === '\\'
 let keyboardLayout: KeyboardLayout | undefined
 
-if (global?.navigator) {
-  navigator.keyboard.getLayoutMap().then((layout) => {
+export async function refreshKeyboardLayout(source: KeyboardLayoutSource) {
+  try {
+    const layout = await source.getLayoutMap()
     keyboardLayout = layout
     if (!('send' in link) || typeof link.send !== 'function') {
       throw new Error('Renderer link does not support sending events')
@@ -19,10 +25,19 @@ if (global?.navigator) {
     link.send('tray:action', 'setKeyboardLayout', {
       isUS: isUSLayout()
     })
-  })
+  } catch {
+    // Shortcut display falls back to physical key codes when layout lookup is unavailable.
+  }
+}
 
-  // TODO: keyboard layoutchange event listener when Electron supports it
-  // navigator.keyboard.addEventListener('layoutchange', () => { keyboardLayout = layout })
+export function watchKeyboardLayout(source: KeyboardLayoutSource) {
+  void refreshKeyboardLayout(source)
+  source.addEventListener?.('layoutchange', () => void refreshKeyboardLayout(source))
+}
+
+const keyboard = global?.navigator?.keyboard
+if (keyboard) {
+  watchKeyboardLayout(keyboard)
 }
 
 export const isShortcutKey = (keyEvent: KeyboardEvent) => keyEvent.code in shortcutKeyMap
