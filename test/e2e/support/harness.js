@@ -5,6 +5,7 @@ import path from 'path'
 import { WalletCallBatchLedger } from '../../../main/provider/walletCallBatches'
 import { WalletCallLifecycleController } from '../../../main/provider/walletCallLifecycle'
 import { executeWalletCallBatch, hashSignedTransaction } from '../../../main/provider/walletCallExecution'
+import { createAccountPermission } from '../../../main/provider/permissions'
 import {
   enforceRequestOriginAuthorization,
   isRequestOriginAuthorized
@@ -166,13 +167,26 @@ export function createReviewHarness({
     originId,
     requests,
     grant() {
-      permissions[originId] = { origin, provider: true }
+      permissions[originId] = createAccountPermission({
+        account: ACCOUNT,
+        chains: [1],
+        handlerId: originId,
+        origin
+      })
     },
     revoke() {
       permissions[originId] = { origin, provider: false }
     },
     isAuthorized() {
-      return isRequestOriginAuthorized({ type: 'transaction', origin: originId }, permissions)
+      return isRequestOriginAuthorized(
+        {
+          type: 'transaction',
+          account: ACCOUNT,
+          origin: originId,
+          payload: { method: 'eth_accounts' }
+        },
+        permissions
+      )
     },
     async handle(payload, requestOrigin) {
       if (requestOrigin !== origin) throw Object.assign(new Error('Origin mismatch'), { code: 4100 })
@@ -182,7 +196,14 @@ export function createReviewHarness({
       }
 
       const handlerId = `review-${++handlerSequence}`
-      rejectUnauthorized({ type: 'walletCalls', account: ACCOUNT, handlerId, origin: originId })
+      rejectUnauthorized({
+        type: 'walletCalls',
+        account: ACCOUNT,
+        handlerId,
+        origin: originId,
+        chainId: payload.params?.[0]?.chainId,
+        payload: { method: payload.method }
+      })
       return new Promise((resolve) => {
         controller.admit({ handlerId, origin, account: ACCOUNT, payload }, (response) =>
           resolve(response.error ? { error: response.error } : { result: response.result })
