@@ -21,6 +21,10 @@ export type OperationReconciliationObservation = Readonly<{
   current: OperationLifecycle
   confirmations?: number
   receipt?: Readonly<Record<string, unknown>>
+  // This process saw enough canonical network evidence to keep a non-terminal
+  // operation under active confirmation. It intentionally is not persisted:
+  // after restart, a fresh reconciliation must establish it again.
+  pendingEvidence?: boolean
 }>
 
 export type OperationReconciliationObserver = (observation: OperationReconciliationObservation) => void
@@ -175,12 +179,15 @@ export class OperationLifecycleReconciler {
           state: operation.kind === 'eip7702Revoke' && operation.receipt ? 'clearance-unverified' : 'stopped',
           updatedAt: operation.expiresAt
         },
-        -1
+        -1,
+        { pendingEvidence: false }
       )
     }
 
     if (this.replacementFor(operation)) {
-      return this.transition(operation, { ...operation, state: 'replaced', updatedAt: now }, now)
+      return this.transition(operation, { ...operation, state: 'replaced', updatedAt: now }, now, {
+        pendingEvidence: false
+      })
     }
 
     try {
@@ -191,15 +198,18 @@ export class OperationLifecycleReconciler {
           : operation.state === 'reorged'
             ? 'submitted'
             : 'submitted'
-        if (state === operation.state && !operation.receipt) return operation
-        return this.transition(operation, withoutReceipt(operation, state, now), now)
+        return this.transition(operation, withoutReceipt(operation, state, now), now, {
+          pendingEvidence: false
+        })
       }
       if ('reorged' in evidence) {
-        return this.transition(operation, withoutReceipt(operation, 'reorged', now), now)
+        return this.transition(operation, withoutReceipt(operation, 'reorged', now), now, {
+          pendingEvidence: false
+        })
       }
 
       const confirmations = Number(evidence.confirmations)
-      const detail = { confirmations, receipt: evidence.receipt.live }
+      const detail = { confirmations, receipt: evidence.receipt.live, pendingEvidence: true }
       const withReceipt = { ...operation, receipt: evidence.receipt.persisted, updatedAt: now }
       const confirmationsRequired =
         operation.kind === 'eip7702Revoke' ? EIP7702_CONFIRMATIONS_REQUIRED : ORDINARY_CONFIRMATIONS_REQUIRED
@@ -214,7 +224,7 @@ export class OperationLifecycleReconciler {
             state: evidence.receipt.persisted.status === '0x1' ? 'confirmed' : 'failed'
           },
           now,
-          detail
+          { ...detail, pendingEvidence: false }
         )
       }
       if (operation.kind !== 'eip7702Revoke') return operation
@@ -235,7 +245,9 @@ export class OperationLifecycleReconciler {
         confirmedLatestBlock.hash !== evidence.latestBlock.hash ||
         confirmedLatestBlock.number !== evidence.latestBlock.number
       ) {
-        return this.transition(operation, withoutReceipt(operation, 'reorged', now), now)
+        return this.transition(operation, withoutReceipt(operation, 'reorged', now), now, {
+          pendingEvidence: false
+        })
       }
       const parsedCode = parseAccountCode(code)
       if (!parsedCode) {
@@ -248,9 +260,10 @@ export class OperationLifecycleReconciler {
           state: parsedCode.status === 'no-code' ? 'verified-clearance' : 'failed'
         },
         now,
-        detail
+        { ...detail, pendingEvidence: false }
       )
     } catch (_error) {
+      this.emit(operation, operation, { pendingEvidence: false })
       return operation
     }
   }

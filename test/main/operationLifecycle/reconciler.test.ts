@@ -117,8 +117,64 @@ test('RPC outages preserve the exact lifecycle state and evidence', async () => 
   })
   await expect(reconciler.reconcile(current.id, 20)).resolves.toEqual(current)
   expect(ledger.get(current.id, 20)).toEqual(current)
-  expect(observer).not.toHaveBeenCalled()
+  expect(observer).toHaveBeenCalledWith(
+    expect.objectContaining({ previous: current, current, pendingEvidence: false })
+  )
 })
+
+test.each([
+  ['ordinary transaction', operation()],
+  [
+    'EIP-7702 revocation',
+    operation({
+      kind: 'eip7702Revoke',
+      transaction: undefined,
+      eip7702Revoke: { hash, expectedFinalNonce: '0x2' }
+    })
+  ]
+] as const)(
+  '%s restart reconciliation reads evidence only and never rebroadcasts',
+  async (_kind, current) => {
+    const rpc = jest.fn(async (_chainId: number, method: string) => {
+      if (method === 'eth_sendRawTransaction') throw new Error('must not rebroadcast')
+      if (method === 'eth_getTransactionReceipt') return null
+      throw new Error(`Unexpected method ${method}`)
+    })
+    let stored: OperationLifecycles = { [current.id]: current }
+    const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+    const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+    await expect(reconciler.reconcileAll(20)).resolves.toBeUndefined()
+    expect(ledger.get(current.id, 20)).toMatchObject({ state: 'submitted' })
+    expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash])
+    expect(rpc.mock.calls.map(([, method]) => method)).not.toContain('eth_sendRawTransaction')
+  }
+)
+
+test.each([
+  ['ordinary transaction', operation(), canonical('0x1', '0x10')],
+  [
+    'EIP-7702 revocation',
+    operation({
+      kind: 'eip7702Revoke',
+      transaction: undefined,
+      eip7702Revoke: { hash, expectedFinalNonce: '0x2' }
+    }),
+    canonical('0x1', '0xf')
+  ]
+] as const)(
+  '%s marks only a canonical nonterminal receipt as positive pending evidence',
+  async (_kind, current, responses) => {
+    const subject = fixture(current, responses)
+    await subject.reconciler.reconcile(current.id, 20)
+    expect(subject.observer).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        current: expect.objectContaining({ state: 'confirming' }),
+        pendingEvidence: true
+      })
+    )
+  }
+)
 
 test('a known confirmed sibling with the same account, chain, and nonce replaces a pending tx', async () => {
   let stored: OperationLifecycles = {

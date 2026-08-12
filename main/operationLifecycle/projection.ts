@@ -36,15 +36,31 @@ const terminalNotification = (
 }
 
 export class OperationLifecycleProjection {
+  private readonly pendingEvidence = new Set<string>()
+
   constructor(private readonly ledger: OperationLifecycleLedger) {}
 
   private record(operation: OperationLifecycle) {
     if (operation.visibleInActivity) requireStoreAction('recordActivity')(activityEntry(operation))
   }
 
-  project(operationId: string, now = Date.now(), recordObservation = true) {
+  project(
+    operationId: string,
+    now = Date.now(),
+    recordObservation = true,
+    reconciliationPendingEvidence?: boolean
+  ) {
+    if (reconciliationPendingEvidence === true) this.pendingEvidence.add(operationId)
+    else if (reconciliationPendingEvidence === false) this.pendingEvidence.delete(operationId)
+
     const operation = this.ledger.listStored().find(({ id }) => id === operationId)
-    if (!operation) return
+    if (!operation) {
+      this.pendingEvidence.delete(operationId)
+      return
+    }
+    if (!['submitted', 'confirming', 'reorged'].includes(operation.state)) {
+      this.pendingEvidence.delete(operation.id)
+    }
     if (operation.expiresAt <= now && ['submitted', 'confirming', 'reorged'].includes(operation.state)) {
       return
     }
@@ -55,6 +71,7 @@ export class OperationLifecycleProjection {
     const pendingDue =
       operation.visibleInActivity &&
       ['submitted', 'confirming', 'reorged'].includes(operation.state) &&
+      this.pendingEvidence.has(operation.id) &&
       notification.longPendingShownAt === undefined &&
       now - operation.createdAt >= LONG_PENDING_NOTIFICATION_MS
 
@@ -86,6 +103,7 @@ export class OperationLifecycleProjection {
       current.expiresAt <= now
     ) {
       this.ledger.remove(current.id, -1)
+      this.pendingEvidence.delete(current.id)
     }
   }
 

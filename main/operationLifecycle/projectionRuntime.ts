@@ -11,8 +11,8 @@ class OperationLifecycleProjectionRuntime {
 
   start() {
     if (this.timer) return
-    this.removeObserver = operationLifecycleRuntime.observe(({ current }) => {
-      this.projection.project(current.id)
+    this.removeObserver = operationLifecycleRuntime.observe(({ current, pendingEvidence }) => {
+      this.projection.project(current.id, Date.now(), true, pendingEvidence)
     })
     this.projection.projectAll()
     this.timer = setInterval(() => this.projection.projectAll(), PROJECTION_INTERVAL_MS)

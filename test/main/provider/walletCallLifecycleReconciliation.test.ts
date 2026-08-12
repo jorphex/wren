@@ -253,6 +253,35 @@ test('keeps durable evidence unchanged during an RPC outage', async () => {
   expect(state.batches.get(origin, account, state.admission.batch.id, 3_001)).toEqual(before)
 })
 
+test('requires a current canonical receipt before reporting Wallet Call pending evidence', async () => {
+  const state = fixture(1)
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)
+  const observer = jest.fn()
+  const missing = new WalletCallLifecycleReconciler(
+    state.batches,
+    state.operations,
+    canonicalRpc({ [hash('1')]: null }),
+    observer
+  )
+
+  await missing.reconcileAll(2_000)
+  expect(observer).toHaveBeenLastCalledWith(expect.objectContaining({ pendingEvidence: false }))
+
+  const canonical = new WalletCallLifecycleReconciler(
+    state.batches,
+    state.operations,
+    canonicalRpc({ [hash('1')]: receipt(hash('1')) }, '0x10'),
+    observer
+  )
+  await canonical.reconcileAll(3_000)
+  expect(observer).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      current: expect.objectContaining({ state: 'confirming' }),
+      pendingEvidence: true
+    })
+  )
+})
+
 test('leaves signed broadcast-unclear evidence pending externally and never rebroadcasts', async () => {
   const state = fixture(1)
   state.batches.reserveTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)

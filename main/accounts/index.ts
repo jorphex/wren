@@ -328,7 +328,8 @@ export class Accounts extends EventEmitter {
     publishOperationLifecycleObservation({
       previous: current,
       current: saved,
-      ...(receipt ? { receipt } : {})
+      ...(receipt ? { receipt } : {}),
+      pendingEvidence: state === 'confirming' && receipt !== undefined
     })
   }
 

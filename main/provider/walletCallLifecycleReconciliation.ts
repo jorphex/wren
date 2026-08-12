@@ -95,15 +95,31 @@ export class WalletCallLifecycleReconciler {
     previous: OperationLifecycle,
     state: OperationLifecycle['state'],
     now: number,
-    confirmations?: number
+    confirmations?: number,
+    pendingEvidence?: boolean
   ) {
-    if (previous.state === state) return previous
+    if (previous.state === state) {
+      this.observer(
+        Object.freeze({
+          previous,
+          current: previous,
+          ...(confirmations === undefined ? {} : { confirmations }),
+          ...(pendingEvidence === undefined ? {} : { pendingEvidence })
+        })
+      )
+      return previous
+    }
     const current = this.operations.put(
       { ...previous, state, updatedAt: Math.max(now, previous.updatedAt) },
       state === 'stopped' ? -1 : now
     )
     this.observer(
-      Object.freeze({ previous, current, ...(confirmations === undefined ? {} : { confirmations }) })
+      Object.freeze({
+        previous,
+        current,
+        ...(confirmations === undefined ? {} : { confirmations }),
+        ...(pendingEvidence === undefined ? {} : { pendingEvidence })
+      })
     )
     return current
   }
@@ -179,16 +195,19 @@ export class WalletCallLifecycleReconciler {
       return { operationId, status: 'unchanged' }
     }
     if (operation.expiresAt <= now) {
-      this.transition(operation, 'stopped', operation.expiresAt)
+      this.transition(operation, 'stopped', operation.expiresAt, undefined, false)
       return { operationId, status: 'updated' }
     }
 
     let batch = this.batches.getByOperationId(operationId, now)
-    if (!batch) return { operationId, status: 'unchanged' }
+    if (!batch) {
+      this.observer(Object.freeze({ previous: operation, current: operation, pendingEvidence: false }))
+      return { operationId, status: 'unchanged' }
+    }
 
     try {
       if (batch.execution === 'failed') {
-        this.transition(operation, 'failed', now)
+        this.transition(operation, 'failed', now, undefined, false)
         return { operationId, status: 'updated' }
       }
 
@@ -230,17 +249,18 @@ export class WalletCallLifecycleReconciler {
       const confirmations = minimumConfirmations === undefined ? undefined : Number(minimumConfirmations)
 
       if (reorged || (operation.state === 'reorged' && !allCanonical)) {
-        this.transition(operation, 'reorged', now, confirmations)
+        this.transition(operation, 'reorged', now, confirmations, false)
       } else if (allCallsSubmitted && allFinal) {
         const state = canonical.every((item) => item.receipt.status === '0x1') ? 'confirmed' : 'failed'
-        this.transition(operation, state, now, confirmations)
+        this.transition(operation, state, now, confirmations, false)
       } else if (hasCanonicalReceipt) {
-        this.transition(operation, 'confirming', now, confirmations)
+        this.transition(operation, 'confirming', now, confirmations, true)
       } else {
-        this.transition(operation, 'submitted', now)
+        this.transition(operation, 'submitted', now, undefined, false)
       }
       return { operationId, status: 'updated' }
     } catch (error) {
+      this.observer(Object.freeze({ previous: operation, current: operation, pendingEvidence: false }))
       return { operationId, status: 'error', reason: errorMessage(error) }
     }
   }

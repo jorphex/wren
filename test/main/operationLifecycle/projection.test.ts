@@ -72,16 +72,66 @@ test('projects one stable privacy-only row for every lifecycle state', () => {
   expect(mocks.notify).not.toHaveBeenCalled()
 })
 
-test('persists at most one long-pending notification across projection restarts', () => {
-  const now = 10 + LONG_PENDING_NOTIFICATION_MS
-  const { ledger, projection } = fixture(operation())
-  projection.project(operation().id, now)
-  new OperationLifecycleProjection(ledger).project(operation().id, now + 1)
+test.each([
+  ['ordinary transaction', {}],
+  [
+    'Wallet Calls',
+    {
+      kind: 'walletCalls' as const,
+      transaction: undefined,
+      walletCalls: { batchOperationId: '00000000-0000-4000-8000-000000000002' }
+    }
+  ],
+  [
+    'EIP-7702 revocation',
+    {
+      kind: 'eip7702Revoke' as const,
+      transaction: undefined,
+      eip7702Revoke: { hash: `0x${'b'.repeat(64)}`, expectedFinalNonce: '0x2' }
+    }
+  ]
+] as const)(
+  '%s requires fresh current-process positive pending evidence after restart',
+  (_kind, overrides) => {
+    const now = 10 + LONG_PENDING_NOTIFICATION_MS
+    const current = operation(overrides)
+    const { ledger, projection } = fixture(current)
 
-  expect(mocks.notify).toHaveBeenCalledTimes(1)
-  expect(mocks.notify).toHaveBeenCalledWith(operation().id, operation().account, 'long-pending')
-  expect(ledger.listStored()[0]?.notification.longPendingShownAt).toBe(now)
-  expect(ledger.listStored()[0]?.updatedAt).toBe(10)
+    // Projection can restore history on startup, but cannot notify from a stale row.
+    projection.projectAll(now)
+    expect(mocks.notify).not.toHaveBeenCalled()
+
+    // An outage or a receipt-null observation removes any prior in-memory proof.
+    projection.project(current.id, now - 1, true, true)
+    projection.project(current.id, now, true, false)
+    expect(mocks.notify).not.toHaveBeenCalled()
+
+    // Restart deliberately loses proof; only a successful current reconciliation can restore it.
+    const restarted = new OperationLifecycleProjection(ledger)
+    restarted.projectAll(now + 2)
+    expect(mocks.notify).not.toHaveBeenCalled()
+    restarted.project(current.id, now + 3, true, true)
+    restarted.project(current.id, now + 4, true, true)
+
+    expect(mocks.notify).toHaveBeenCalledTimes(1)
+    expect(mocks.notify).toHaveBeenCalledWith(current.id, current.account, 'long-pending')
+    expect(ledger.listStored()[0]?.notification.longPendingShownAt).toBe(now + 3)
+    expect(ledger.listStored()[0]?.updatedAt).toBe(10)
+  }
+)
+
+test('clears in-memory pending evidence when a lifecycle becomes terminal without an observer hint', () => {
+  const now = 10 + LONG_PENDING_NOTIFICATION_MS
+  const current = operation()
+  const { ledger, projection } = fixture(current)
+  projection.project(current.id, now - 1, true, true)
+  ledger.put({ ...current, state: 'stopped', updatedAt: now }, now)
+
+  projection.project(current.id, now)
+  ledger.put({ ...current, state: 'submitted', updatedAt: now + 1 }, now + 1)
+  projection.project(current.id, now + 1)
+
+  expect(mocks.notify).not.toHaveBeenCalled()
 })
 
 test.each([
