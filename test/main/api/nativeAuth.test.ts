@@ -25,15 +25,19 @@ import {
   type PeerAuthPublicKey
 } from '../../../main/api/peerAuth'
 import type { NativePeerCredential } from '../../../main/store/state/types/peerCredential'
-import accounts from '../../../main/accounts'
-import provider from '../../../main/provider'
 
 jest.mock('../../../main/store')
 jest.mock('../../../main/accounts', () => ({
-  getSelectedAddresses: jest.fn(() => []),
-  rejectUnapprovedRequestsForOrigins: jest.fn()
+  __esModule: true,
+  default: {
+    getSelectedAddresses: jest.fn(() => []),
+    rejectUnapprovedRequestsForOrigins: jest.fn()
+  }
 }))
-jest.mock('../../../main/provider', () => ({ accountsChanged: jest.fn() }))
+jest.mock('../../../main/provider', () => ({
+  __esModule: true,
+  default: { accountsChanged: jest.fn() }
+}))
 
 const clientInstallationId = '11111111-1111-4111-8111-111111111111'
 const desktopInstallationId = '22222222-2222-4222-8222-222222222222'
@@ -106,7 +110,7 @@ beforeEach(() => {
   installStoreActions()
 })
 
-it('revokes the replaced key principal before committing a rotated credential', async () => {
+it('does not let a newly approved key retire another principal by claiming its installation id', async () => {
   const previous = generatePeerAuthKeyPair()
   const next = generatePeerAuthKeyPair()
   const previousFingerprint = peerAuthFingerprint(previous.publicKey)
@@ -122,18 +126,18 @@ it('revokes the replaced key principal before committing a rotated credential', 
     oldOrigin: { provenance: 'native', sourceId: previousFingerprint }
   })
   store.set('main.permissions', { account: { oldOrigin: { caveats: [] } } })
-  ;(accounts.getSelectedAddresses as jest.Mock).mockReturnValue(['account'])
-
   const challenge = challengeFor(next.publicKey, 1)
   await expect(
     proveNativeChallenge(proofFor(challenge, next.privateKey), () => true, 'test', 1_000)
   ).resolves.toMatchObject({ fingerprint: peerAuthFingerprint(next.publicKey) })
 
-  expect(store.removeNativePeerCredential).toHaveBeenCalledWith(previousFingerprint)
-  expect(store.toggleAccess).toHaveBeenCalledWith('account', 'oldOrigin', false)
-  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith('account', ['oldOrigin'])
-  expect(provider.accountsChanged).toHaveBeenCalledWith(['account'], ['oldOrigin'])
-  expect(store('main.permissions', 'account')).toEqual({})
+  expect(store.removeNativePeerCredential).not.toHaveBeenCalled()
+  expect(store.toggleAccess).not.toHaveBeenCalled()
+  expect(store('main.nativePeerCredentials', previousFingerprint)).toMatchObject({
+    fingerprint: previousFingerprint,
+    installationId: clientInstallationId
+  })
+  expect(store('main.permissions', 'account')).toEqual({ oldOrigin: { caveats: [] } })
 })
 
 afterEach(resetNativeAuthRuntimeForTests)

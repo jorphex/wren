@@ -209,20 +209,6 @@ const credentialMatches = (
   credential.publicKey.x === publicKey.x &&
   credential.publicKey.y === publicKey.y
 
-function retireReplacedCredentials(credential: NativePeerCredential) {
-  const credentials = (store('main.nativePeerCredentials') || {}) as Record<string, unknown>
-  Object.entries(credentials).forEach(([fingerprint, value]) => {
-    const existing = NativePeerCredentialSchema.safeParse(value)
-    if (
-      existing.success &&
-      existing.data.installationId === credential.installationId &&
-      fingerprint !== credential.fingerprint
-    ) {
-      revokeNativePeerAccess(fingerprint, 'Native credential replaced')
-    }
-  })
-}
-
 export async function proveNativeChallenge(
   input: unknown,
   authorize: (credential: NativePeerCredential, code: string) => boolean | Promise<boolean>,
@@ -270,7 +256,6 @@ export async function proveNativeChallenge(
     if (!(await authorize(credential, pairingCode(challenge.transcript)))) {
       throw new NativeAuthError('pairing-denied')
     }
-    retireReplacedCredentials(credential)
     requireStoreAction('setNativePeerCredential')(credential)
   }
 

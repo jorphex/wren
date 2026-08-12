@@ -13,6 +13,7 @@ import {
   stageInspectedProfileRestore,
   writeEncryptedProfileBackup
 } from '../../main/profileBackup'
+import { migratePersistedConfiguration } from '../../main/profileMigration'
 
 const roots: string[] = []
 const password = 'correct horse battery staple'
@@ -209,6 +210,57 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(Buffer.from(payload.files.signers[0].bytes, 'base64').toString('utf8')).toContain(
     'secret-shaped-but-encrypted'
   )
+})
+
+it('drops source-bound origins and grants when peer credentials are excluded', () => {
+  const { profile } = fixture()
+  const configPath = path.join(profile, 'config.json')
+  const current = migratePersistedConfiguration(JSON.parse(fs.readFileSync(configPath, 'utf8')))
+  const account = `0x${'d'.repeat(40)}`
+  const sourceOrigin = (name: string, provenance: 'companion' | 'native', sourceId: string) => ({
+    chain: { type: 'ethereum', id: 1 },
+    name,
+    provenance,
+    sourceId,
+    sessionOnly: false,
+    session: { requests: 0, startedAt: 0, lastUpdatedAt: 0 }
+  })
+  const sourcePermission = (handlerId: string) => ({
+    version: 1,
+    origin: handlerId,
+    provider: true,
+    handlerId,
+    parentCapability: 'eth_accounts',
+    caveats: [
+      {
+        type: 'wren:permissionScope',
+        value: { account, methods: ['eth_accounts'], chains: ['0x1'], expiresAt: 4_102_444_800_000 }
+      }
+    ],
+    grantedAt: 1
+  })
+  current.main.origins = {
+    ...(current.main.origins || {}),
+    companionSource: sourceOrigin('https://companion.example', 'companion', 'companion-fingerprint'),
+    nativeSource: sourceOrigin('Local app', 'native', 'native-fingerprint')
+  }
+  current.main.permissions = {
+    ...(current.main.permissions || {}),
+    [account]: {
+      ...(current.main.permissions?.[account] || {}),
+      companionSource: sourcePermission('companionSource'),
+      nativeSource: sourcePermission('nativeSource')
+    }
+  }
+  fs.writeFileSync(configPath, JSON.stringify({ main: { __: { [current.main._version]: current } } }))
+
+  const payload = decryptTestPayload(createEncryptedProfileBackup(profile, password), password)
+  const recovery = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const recoveryMain = recovery.main.__[Object.keys(recovery.main.__)[0]].main
+  expect(recoveryMain.origins).not.toHaveProperty('companionSource')
+  expect(recoveryMain.origins).not.toHaveProperty('nativeSource')
+  expect(recoveryMain.permissions[account]).not.toHaveProperty('companionSource')
+  expect(recoveryMain.permissions[account]).not.toHaveProperty('nativeSource')
 })
 
 it('rejects wrong passwords and authenticated tampering without creating a profile', () => {

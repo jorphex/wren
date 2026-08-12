@@ -405,8 +405,24 @@ const handler = (
 
     let requestOrigin = socket.origin
     if (socket.frameExtension) {
-      // Request from extension, swap origin
-      if (rawPayload.__frameOrigin !== undefined) {
+      const pageChannel = socket.frameExtension.role === 'page'
+      if (!pageChannel && rawPayload.__frameOrigin !== undefined) {
+        return res({
+          id: rawPayload.id,
+          jsonrpc: rawPayload.jsonrpc,
+          error: { code: -32600, message: 'Companion page origin is not allowed on the control channel' }
+        })
+      }
+      if (pageChannel && rawPayload.__frameOrigin === undefined) {
+        return res({
+          id: rawPayload.id,
+          jsonrpc: rawPayload.jsonrpc,
+          error: { code: -32600, message: 'Companion page origin is required on the page channel' }
+        })
+      }
+      // A page channel must carry the browser-derived page origin. A control
+      // channel is the only Companion channel allowed to use the internal origin.
+      if (pageChannel) {
         if (
           typeof rawPayload.__frameOrigin !== 'string' ||
           !/^https?:\/\//u.test(rawPayload.__frameOrigin) ||

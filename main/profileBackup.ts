@@ -251,7 +251,13 @@ const recoveryOrigins = (value: unknown) =>
   Object.fromEntries(
     Object.entries(recordValue(value)).flatMap(([id, originValue]) => {
       const origin = recordValue(originValue)
-      if (origin['sessionOnly'] === true) return []
+      if (
+        origin['sessionOnly'] === true ||
+        origin['provenance'] === 'companion' ||
+        origin['provenance'] === 'native'
+      ) {
+        return []
+      }
       return [
         [
           id,
@@ -352,7 +358,14 @@ const recoveryMainState = (value: unknown) => {
   const origins = recoveryOrigins(persistedOrigins)
   const droppedOriginIds = new Set(
     Object.entries(persistedOrigins)
-      .filter(([, origin]) => recordValue(origin)['sessionOnly'] === true)
+      .filter(([, originValue]) => {
+        const origin = recordValue(originValue)
+        return (
+          origin['sessionOnly'] === true ||
+          origin['provenance'] === 'companion' ||
+          origin['provenance'] === 'native'
+        )
+      })
       .map(([id]) => id)
   )
   const tokens = recordValue(main['tokens'])

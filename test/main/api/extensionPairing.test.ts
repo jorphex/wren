@@ -243,6 +243,30 @@ it('revokes the exact credential connection and every grant bound to its source 
   expect(store('main.permissions', account)).toEqual({ direct: { handlerId: 'direct' } })
 })
 
+it('rejects ungranted first-access requests when Companion access is revoked', () => {
+  const pairing = candidate('q')
+  commitExtensionPairing(pairing)
+  const granted = '0x1111111111111111111111111111111111111111'
+  const pendingOnly = '0x2222222222222222222222222222222222222222'
+  store.set('main.accounts', { [granted]: {}, [pendingOnly]: {} })
+  store.set('main.origins', {
+    companion: { provenance: 'companion', sourceId: pairing.fingerprint },
+    other: { provenance: 'companion', sourceId: 'another-fingerprint' }
+  })
+  store.set('main.permissions', {
+    [granted]: { companion: { handlerId: 'companion' } }
+  })
+
+  revokeCompanionAccess(pairing.fingerprint)
+
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(granted, ['companion'])
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(pendingOnly, ['companion'])
+  expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalledWith(
+    expect.any(String),
+    expect.arrayContaining(['other'])
+  )
+})
+
 it('binds a role proof to its role key rather than the stable bundle principal', () => {
   const pairing = candidate('h')
   expect(peerAuthFingerprint(pairing.publicKeys.control)).not.toBe(

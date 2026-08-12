@@ -23,12 +23,13 @@ import { createDesktopAuthIdentity } from '../../../main/api/desktopAuthIdentity
 
 let socketConnection, mockSocket, authenticatedResponse
 
-const extensionRequest = {
+const extensionRequestFor = (role = 'control') => ({
   headers: {
     origin: 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf'
   },
-  url: '/?identity=frame-extension&role=control'
-}
+  url: `/?identity=frame-extension&role=${role}`
+})
+const extensionRequest = extensionRequestFor()
 
 const regularRequest = { headers: { origin: 'https://example.test' } }
 const extensionKeyPair = generatePeerAuthKeyPair()
@@ -43,29 +44,32 @@ const flushPromises = async () => {
   for (let index = 0; index < 6; index += 1) await Promise.resolve()
 }
 
-const extensionHello = (keys = extensionPublicKeys) => ({
+const extensionHello = (keys = extensionPublicKeys, channelRole = 'control') => ({
   type: 'frame-auth',
   version: 3,
   step: 'hello',
   peerKind: 'companion',
-  channelRole: 'control',
+  channelRole,
   clientNonce: Buffer.alloc(32, 1).toString('base64url'),
   browser: 'chrome',
   extensionId: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf',
   client: {
     installationId: extensionInstallationId,
     fingerprint: peerAuthClientBundleFingerprint(keys),
-    roleFingerprint: peerAuthFingerprint(keys.control),
+    roleFingerprint: peerAuthFingerprint(keys[channelRole]),
     publicKeys: keys
   }
 })
 
-const authenticateExtension = async (socket) => {
-  socket.emit('message', JSON.stringify(extensionHello()))
+const authenticateExtension = async (socket, channelRole = 'control') => {
+  socket.emit('message', JSON.stringify(extensionHello(extensionPublicKeys, channelRole)))
   await flushPromises()
   const challenge = JSON.parse(socket.send.mock.calls.at(-1)[0])
   const signature = sign('sha256', extensionAuthPayload(challenge, 'client-response'), {
-    key: createPrivateKey({ key: extensionKeyPair.privateKey, format: 'jwk' }),
+    key: createPrivateKey({
+      key: channelRole === 'control' ? extensionKeyPair.privateKey : extensionPageKeyPair.privateKey,
+      format: 'jwk'
+    }),
     dsaEncoding: 'ieee-p1363'
   }).toString('base64url')
   socket.emit(
@@ -75,13 +79,24 @@ const authenticateExtension = async (socket) => {
       version: 3,
       step: 'response',
       peerKind: 'companion',
-      channelRole: 'control',
+      channelRole,
       challengeId: challenge.challengeId,
       signature
     })
   )
   await flushPromises()
   return JSON.parse(socket.send.mock.calls.at(-1)[0])
+}
+
+const createAuthenticatedPageSocket = async () => {
+  const socket = new EventEmitter()
+  socket.readyState = WebSocket.OPEN
+  socket.close = jest.fn()
+  socket.send = jest.fn()
+  socketConnection.emit('connection', socket, extensionRequestFor('page'))
+  await authenticateExtension(socket, 'page')
+  socket.send.mockClear()
+  return socket
 }
 
 jest.mock('ws')
@@ -538,9 +553,9 @@ it('responds to an invalid request with its valid id', (done) => {
 })
 
 it('preserves an exact canonical companion-proxied page origin', async () => {
-  mockSocket.send = jest.fn()
+  const pageSocket = await createAuthenticatedPageSocket()
 
-  mockSocket.emit(
+  pageSocket.emit(
     'message',
     JSON.stringify({
       id: 9,
@@ -557,14 +572,16 @@ it('preserves an exact canonical companion-proxied page origin', async () => {
     expect.any(String),
     expect.objectContaining({ name: 'https://example.test' })
   )
+  pageSocket.emit('close')
 })
 
 it('forwards a passive companion account probe without opening access UI', async () => {
+  const pageSocket = await createAuthenticatedPageSocket()
   provider.send.mockImplementationOnce((payload, callback) =>
     callback({ id: payload.id, jsonrpc: payload.jsonrpc, result: [] })
   )
 
-  mockSocket.emit(
+  pageSocket.emit(
     'message',
     JSON.stringify({
       id: 10,
@@ -581,12 +598,13 @@ it('forwards a passive companion account probe without opening access UI', async
     expect.any(Function)
   )
   expect(store.notify).not.toHaveBeenCalled()
-  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toMatchObject({ result: [] })
+  expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toMatchObject({ result: [] })
+  pageSocket.emit('close')
 })
 
 it('rejects non-canonical companion origins and extension metadata from local clients', async () => {
-  mockSocket.send = jest.fn()
-  mockSocket.emit(
+  const pageSocket = await createAuthenticatedPageSocket()
+  pageSocket.emit(
     'message',
     JSON.stringify({
       id: 9,
@@ -597,10 +615,11 @@ it('rejects non-canonical companion origins and extension metadata from local cl
     })
   )
   await flushPromises()
-  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toMatchObject({
+  expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toMatchObject({
     id: 9,
     error: { code: -32600, message: 'Invalid companion page origin' }
   })
+  pageSocket.emit('close')
 
   const localSocket = new EventEmitter()
   localSocket.readyState = WebSocket.OPEN
@@ -621,6 +640,43 @@ it('rejects non-canonical companion origins and extension metadata from local cl
     id: 10,
     error: { code: -32600, message: 'Extension metadata is not allowed' }
   })
+})
+
+it('keeps Companion control and page authorization roles separate after authentication', async () => {
+  mockSocket.emit(
+    'message',
+    JSON.stringify({
+      id: 14,
+      jsonrpc: '2.0',
+      method: 'eth_chainId',
+      params: [],
+      __frameOrigin: 'https://example.test'
+    })
+  )
+  await flushPromises()
+  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toMatchObject({
+    id: 14,
+    error: {
+      code: -32600,
+      message: 'Companion page origin is not allowed on the control channel'
+    }
+  })
+
+  const pageSocket = await createAuthenticatedPageSocket()
+  pageSocket.emit(
+    'message',
+    JSON.stringify({ id: 15, jsonrpc: '2.0', method: 'wallet_getEthereumChains', params: [] })
+  )
+  await flushPromises()
+  expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toMatchObject({
+    id: 15,
+    error: {
+      code: -32600,
+      message: 'Companion page origin is required on the page channel'
+    }
+  })
+  expect(provider.send).not.toHaveBeenCalled()
+  pageSocket.emit('close')
 })
 
 it('isolates originless, reserved, and schemeless local identities by WebSocket connection', () => {
