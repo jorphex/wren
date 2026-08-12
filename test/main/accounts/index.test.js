@@ -2005,9 +2005,11 @@ describe('ordinary transaction terminal monitoring', () => {
     expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(true)
     expect(target).toMatchObject({ status: 'error', notice: 'Failed' })
     expect(store('main.activity').find(({ id }) => id === target.activityId)).toMatchObject({
-      outcome: 'failed',
-      transactionHash: target.tx.hash
+      outcome: 'failed'
     })
+    expect(store('main.activity').find(({ id }) => id === target.activityId)).not.toHaveProperty(
+      'transactionHash'
+    )
     expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(false)
   })
 
@@ -2039,7 +2041,7 @@ describe('ordinary transaction terminal monitoring', () => {
     expect(otherNonce.status).toBe('verifying')
     expect(otherChain.status).toBe('verifying')
     expect(store('main.activity').find(({ id }) => id === replaced.activityId)).toMatchObject({
-      outcome: 'dropped'
+      outcome: 'replaced'
     })
   })
 })

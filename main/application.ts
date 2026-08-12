@@ -33,6 +33,7 @@ import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
 import operationLifecycleRuntime from './operationLifecycle/runtime'
+import operationLifecycleProjectionRuntime from './operationLifecycle/projectionRuntime'
 import walletCallBatchLedger from './provider/walletCallLedger'
 import { showWalletCallStatus } from './provider/walletCallStatusView'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
@@ -113,6 +114,7 @@ function startOperationLifecycleRuntime() {
     powerMonitor.on('suspend', () => operationLifecycleRuntime.stop())
     powerMonitor.on('resume', () => operationLifecycleRuntime.start())
   }
+  operationLifecycleProjectionRuntime.start()
   operationLifecycleRuntime.start()
 }
 
@@ -467,7 +469,6 @@ onRenderer('tray:resetNonce', (e, request) => {
 
 onRenderer('tray:ready', () => {
   require('./api')
-  startWalletCallEvidenceRuntime()
 
   if (!isDev) {
     startUpdater()
@@ -495,6 +496,7 @@ onRenderer('frame:unmax', (e) => {
 })
 
 app.on('ready', () => {
+  startWalletCallEvidenceRuntime()
   startOperationLifecycleRuntime()
   menu()
   windows.init()
@@ -553,6 +555,7 @@ app.on('activate', () => windows.showTray())
 app.on('before-quit', () => {
   walletCallEvidenceRuntime.stop()
   operationLifecycleRuntime.stop()
+  operationLifecycleProjectionRuntime.stop()
   if (!updater.updateReady) {
     updater.stop()
   }

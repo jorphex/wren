@@ -67,6 +67,7 @@ const WalletCallTransactionSchema = z
 export const WalletCallBatchSchema = z
   .object({
     id: z.string().min(1).max(4096),
+    operationId: z.uuid().optional(),
     origin: z.string().min(1).max(256),
     account: AddressSchema,
     chainId: QuantitySchema,

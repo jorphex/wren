@@ -6,7 +6,11 @@ import { requireStoreAction } from '../store/action'
 import { ActivityEntrySchema, type ActivityEntry } from '../store/state/types/activity'
 import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
 
-export type ActivityOutcome = ActivityEntry['outcome']
+type CanonicalActivityOutcome = ActivityEntry['outcome']
+export type ActivityOutcome = CanonicalActivityOutcome | 'dropped'
+
+const normalizedOutcome = (outcome: ActivityOutcome): CanonicalActivityOutcome =>
+  outcome === 'dropped' ? 'replaced' : outcome
 
 const chainIdFor = (request: AnyAccountRequest) => {
   const valueAt = (source: unknown, ...keys: string[]) => {
@@ -38,7 +42,7 @@ const chainIdFor = (request: AnyAccountRequest) => {
     : undefined
 }
 
-const inferredOutcome = (request: AnyAccountRequest): ActivityOutcome | undefined => {
+const inferredOutcome = (request: AnyAccountRequest): CanonicalActivityOutcome | undefined => {
   if (request.status === RequestStatus.Declined) return 'declined'
   if (request.status === RequestStatus.Error) return 'failed'
   if (request.status === RequestStatus.Confirmed) return 'confirmed'
@@ -55,25 +59,22 @@ const inferredOutcome = (request: AnyAccountRequest): ActivityOutcome | undefine
 
 export const requestActivityEntry = (
   request: AnyAccountRequest,
-  outcome = inferredOutcome(request),
+  outcome: ActivityOutcome | undefined = inferredOutcome(request),
   completedAt = Date.now()
 ): ActivityEntry | undefined => {
   try {
     if (!outcome) return
 
-    const transactionHash =
-      (request.type === 'transaction' || request.type === 'eip7702Revoke') && request.tx?.hash?.toLowerCase()
     const chainId = chainIdFor(request)
     const candidate = {
       id: request.activityId || randomUUID(),
       account: request.account.toLowerCase(),
       origin: request.origin.slice(0, 256),
       type: request.type,
-      outcome,
+      outcome: normalizedOutcome(outcome),
       createdAt: Math.min(request.created ?? completedAt, completedAt),
       completedAt,
-      ...(chainId === undefined ? {} : { chainId }),
-      ...(transactionHash ? { transactionHash } : {})
+      ...(chainId === undefined ? {} : { chainId })
     }
     const parsed = ActivityEntrySchema.safeParse(candidate)
     return parsed.success ? parsed.data : undefined

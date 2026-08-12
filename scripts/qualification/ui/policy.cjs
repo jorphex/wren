@@ -175,6 +175,24 @@ const reviewScenarios = () => [
     requiredText: ['Clear activity history?', 'every account on this device', 'cannot be undone']
   },
   {
+    id: 'tray-account-activity-lifecycle-full-1',
+    renderer: 'tray',
+    state: 'account-activity-lifecycle',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityModuleExpanded',
+    requiredText: [
+      'Submitted',
+      'Confirming',
+      'Reorg detected',
+      'Replaced',
+      'Monitoring stopped',
+      'Clearance not verified',
+      'Delegation removed'
+    ]
+  },
+  {
     id: 'tray-account-ledger-bottom-full-1',
     renderer: 'tray',
     state: 'account-ledger',

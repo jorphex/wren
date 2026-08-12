@@ -4,12 +4,17 @@ import store from '../store'
 import windows from '../windows'
 import { requireStoreAction } from '../store/action'
 
-export type TransactionNotificationOutcome = 'confirmed' | 'failed' | 'dropped'
+export type WalletActivityNotificationOutcome = 'confirmed' | 'failed' | 'replaced' | 'long-pending'
+export type TransactionNotificationOutcome = WalletActivityNotificationOutcome | 'dropped'
 
-const copy: Record<TransactionNotificationOutcome, { title: string; body: string }> = {
-  confirmed: { title: 'Transaction confirmed', body: 'A transaction finished successfully.' },
-  failed: { title: 'Transaction failed', body: 'A transaction did not complete.' },
-  dropped: { title: 'Transaction replaced', body: 'A pending transaction was replaced.' }
+const copy: Record<WalletActivityNotificationOutcome, { title: string; body: string }> = {
+  confirmed: { title: 'Wallet activity confirmed', body: 'A submitted wallet activity completed.' },
+  failed: { title: 'Wallet activity failed', body: 'A submitted wallet activity did not complete.' },
+  replaced: { title: 'Wallet activity replaced', body: 'A submitted wallet activity was replaced.' },
+  'long-pending': {
+    title: 'Wallet activity still pending',
+    body: 'Wren is still checking a submitted wallet activity.'
+  }
 }
 
 const delivered = new Set<string>()
@@ -21,9 +26,11 @@ export function notifyTransactionOutcome(
   account: string,
   outcome: TransactionNotificationOutcome
 ) {
+  const normalizedOutcome = outcome === 'dropped' ? 'replaced' : outcome
+  const deliveryKey = `${activityId}:${normalizedOutcome === 'long-pending' ? 'pending' : 'terminal'}`
   if (
     !activityId ||
-    delivered.has(activityId) ||
+    delivered.has(deliveryKey) ||
     !Notification ||
     typeof Notification.isSupported !== 'function' ||
     !Notification.isSupported() ||
@@ -33,13 +40,13 @@ export function notifyTransactionOutcome(
     return false
   }
 
-  delivered.add(activityId)
-  deliveryOrder.push(activityId)
+  delivered.add(deliveryKey)
+  deliveryOrder.push(deliveryKey)
   if (deliveryOrder.length > MAX_DELIVERED) {
     const expired = deliveryOrder.shift()
     if (expired) delivered.delete(expired)
   }
-  const notification = new Notification(copy[outcome])
+  const notification = new Notification(copy[normalizedOutcome])
   notification.once('click', () => {
     requireStoreAction('showAccountActivity')(account, activityId)
     windows.showTray()
@@ -47,6 +54,12 @@ export function notifyTransactionOutcome(
   notification.show()
   return true
 }
+
+export const notifyWalletActivity = (
+  activityId: string,
+  account: string,
+  outcome: WalletActivityNotificationOutcome
+) => notifyTransactionOutcome(activityId, account, outcome)
 
 export function resetTransactionNotificationDeduplicationForTests() {
   delivered.clear()

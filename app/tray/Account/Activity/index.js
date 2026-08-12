@@ -21,7 +21,7 @@ const FILTERS = Object.freeze([
 
 const TYPE_META = Object.freeze({
   transaction: { category: 'transactions', icon: 'send', label: 'Transaction' },
-  walletCalls: { category: 'transactions', icon: 'details', label: 'Transaction batch' },
+  walletCalls: { category: 'transactions', icon: 'details', label: 'Wallet Calls batch' },
   eip7702Revoke: { category: 'transactions', icon: 'remove', label: 'Delegation revocation' },
   sign: { category: 'signatures', icon: 'sign', label: 'Message signature' },
   signTypedData: { category: 'signatures', icon: 'sign', label: 'Typed-data signature' },
@@ -34,10 +34,25 @@ const TYPE_META = Object.freeze({
 const OUTCOME_LABELS = Object.freeze({
   completed: 'Completed',
   declined: 'Declined',
-  failed: 'Failed',
-  dropped: 'Dropped',
   submitted: 'Submitted',
-  confirmed: 'Confirmed'
+  confirming: 'Confirming',
+  confirmed: 'Confirmed',
+  failed: 'Failed',
+  replaced: 'Replaced',
+  reorged: 'Reorg detected',
+  stopped: 'Monitoring stopped',
+  'clearance-unverified': 'Clearance not verified',
+  'verified-clearance': 'Delegation removed'
+})
+
+const OUTCOME_DETAILS = Object.freeze({
+  submitted: 'Sent to network',
+  confirming: 'Included; waiting for final confirmation',
+  replaced: 'A submitted wallet activity was replaced',
+  reorged: 'A prior confirmation changed; Wren is checking again',
+  stopped: 'Wren stopped checking. The network may still process it.',
+  'clearance-unverified': 'Transaction confirmed. Wren could not verify that the delegation is cleared.',
+  'verified-clearance': 'Wren verified this account no longer delegates execution.'
 })
 
 export const activityTypeMeta = (type) => TYPE_META[type] || TYPE_META.transaction
@@ -60,7 +75,7 @@ export const filterActivity = (entries, category, filter = '') => {
     const meta = activityTypeMeta(entry.type)
     if (category !== 'all' && meta.category !== category) return false
     if (!query) return true
-    return [meta.label, OUTCOME_LABELS[entry.outcome], entry.origin, entry.transactionHash]
+    return [meta.label, OUTCOME_LABELS[entry.outcome], entry.origin]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query))
   })
@@ -77,8 +92,6 @@ const formatTime = (timestamp) =>
 const ActivityRow = ({ entry, networkName, originName, selected }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
-  const explorerAvailable = Boolean(entry.transactionHash && entry.chainId)
-
   return (
     <li
       className={`activityRow${selected ? ' activityRowSelected' : ''}`}
@@ -95,24 +108,15 @@ const ActivityRow = ({ entry, networkName, originName, selected }) => {
           {networkName ? ` · ${networkName}` : ''}
         </span>
       </span>
-      <span className='activityResult'>
+      <span className='activityResult' title={OUTCOME_DETAILS[entry.outcome]}>
         <span className={`activityOutcome activityOutcome-${entry.outcome}`}>
           {OUTCOME_LABELS[entry.outcome]}
         </span>
+        {OUTCOME_DETAILS[entry.outcome] ? (
+          <span className='activityOutcomeDetail'>{OUTCOME_DETAILS[entry.outcome]}</span>
+        ) : null}
         <time dateTime={new Date(entry.completedAt).toISOString()}>{formatTime(entry.completedAt)}</time>
       </span>
-      {explorerAvailable ? (
-        <button
-          type='button'
-          aria-label={`Open ${meta.label.toLowerCase()} on ${networkName || `network ${entry.chainId}`} block explorer`}
-          className='activityExplorer wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
-          onClick={() =>
-            link.send('tray:openExplorer', { type: 'ethereum', id: entry.chainId }, entry.transactionHash)
-          }
-        >
-          <Icon name='external' size={14} />
-        </button>
-      ) : null}
     </li>
   )
 }
@@ -130,7 +134,8 @@ export class Activity extends React.Component {
       clearConfirm: false,
       clearRequested: false,
       clearing: false,
-      clearStatus: false
+      clearStatus: false,
+      missingSelected: false
     }
 
     if (!this.props.expanded) {
@@ -146,6 +151,7 @@ export class Activity extends React.Component {
   componentDidMount() {
     this.resizeObserver?.observe(this.moduleRef.current)
     this.focusSelectedEntry()
+    this.announceMissingSelectedEntry()
   }
 
   componentDidUpdate() {
@@ -156,6 +162,7 @@ export class Activity extends React.Component {
       )
     }
     this.focusSelectedEntry()
+    this.announceMissingSelectedEntry()
   }
 
   componentWillUnmount() {
@@ -172,6 +179,21 @@ export class Activity extends React.Component {
     this.focusedActivityId = activityId
     row.scrollIntoView?.({ block: 'center' })
     row.focus()
+  }
+
+  announceMissingSelectedEntry() {
+    const activityId = this.props.expandedData?.activityId
+    if (!this.props.expanded || !activityId) return
+    const activity = this.store('main.activity') || []
+    if (activity.some((entry) => entry.id === activityId)) {
+      this.missingActivityId = undefined
+      if (this.state.missingSelected) this.setState({ missingSelected: false })
+      return
+    }
+    if (this.missingActivityId === activityId) return
+    this.missingActivityId = activityId
+    this.focusedActivityId = undefined
+    this.setState({ missingSelected: true })
   }
 
   openExpanded() {
@@ -283,6 +305,12 @@ export class Activity extends React.Component {
           </div>
         ) : null}
 
+        {this.props.expanded && this.state.missingSelected ? (
+          <div className='activityClearStatus' role='status'>
+            This activity is no longer in history.
+          </div>
+        ) : null}
+
         {this.props.expanded && allEntries.length ? (
           <div className='activityClear'>
             {this.state.clearConfirm ? (
@@ -299,7 +327,8 @@ export class Activity extends React.Component {
                 <div className='activityClearCopy'>
                   <strong>Clear activity history?</strong>
                   <span id='activity-clear-description'>
-                    This removes activity history for every account on this device. This cannot be undone.
+                    This removes activity history for every account on this device. Pending activity may
+                    appear again if Wren receives an update. This cannot be undone.
                   </span>
                 </div>
                 <div className='activityClearActions'>

@@ -93,8 +93,14 @@ export class OperationLifecycleLedger {
     const candidate = this.listStored()
       .filter(
         (operation) =>
-          ['confirmed', 'failed', 'replaced', 'stopped', 'verified-clearance'].includes(operation.state) &&
-          operation.notification.terminalHandledAt !== undefined
+          [
+            'confirmed',
+            'failed',
+            'replaced',
+            'stopped',
+            'clearance-unverified',
+            'verified-clearance'
+          ].includes(operation.state) && operation.notification.terminalHandledAt !== undefined
       )
       .sort((left, right) => left.updatedAt - right.updatedAt || left.id.localeCompare(right.id))[0]
     return candidate ? this.remove(candidate.id, now) : false

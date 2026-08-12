@@ -83,6 +83,9 @@ it('atomically persists a generated batch and canonical review request', () => {
     handlerId: 'handler-id',
     account,
     origin: 'example.test',
+    activityId: expect.stringMatching(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    ),
     batchId: admitted.id,
     chainId: '0xa',
     calls: [{ to: target, data: '0xabcd', value: '0x0' }],
@@ -174,6 +177,7 @@ it.each([
 it('reports both admission and rollback failures without masking persistence risk', () => {
   const batch = {
     id: 'batch-id',
+    operationId: '00000000-0000-4000-8000-000000000001',
     origin: 'example.test',
     account,
     chainId: '0xa',

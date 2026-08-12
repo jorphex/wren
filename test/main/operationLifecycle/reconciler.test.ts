@@ -78,6 +78,23 @@ test('ordinary transactions require 13 inclusive confirmations and canonical blo
   })
 })
 
+test('same-state confirmation polls preserve lifecycle timestamps while emitting live detail', async () => {
+  const subject = fixture(operation(), canonical('0x1', '0x10'))
+  const first = await subject.reconciler.reconcile(operation().id, 20)
+  expect(first).toMatchObject({ state: 'confirming', updatedAt: 20 })
+
+  const second = await subject.reconciler.reconcile(operation().id, 30)
+  expect(second).toMatchObject({ state: 'confirming', updatedAt: 20 })
+  expect(subject.ledger.get(operation().id, 30)?.updatedAt).toBe(20)
+  expect(subject.observer).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      previous: expect.objectContaining({ updatedAt: 20 }),
+      current: expect.objectContaining({ updatedAt: 20 }),
+      confirmations: 12
+    })
+  )
+})
+
 test('receipt disappearance marks reorg then returns to submitted without fabricating failure', async () => {
   const withReceipt = operation({
     state: 'confirming',
@@ -142,6 +159,24 @@ test('expiry persists a stopped result until its terminal projection is handled'
   expect(observer).toHaveBeenCalledWith(
     expect.objectContaining({ previous: expired, current: expect.objectContaining({ state: 'stopped' }) })
   )
+  expect(rpc).not.toHaveBeenCalled()
+})
+
+test('expired confirmed EIP-7702 evidence becomes clearance-unverified instead of success', async () => {
+  const expired = operation({
+    kind: 'eip7702Revoke',
+    transaction: undefined,
+    eip7702Revoke: { hash, expectedFinalNonce: '0x2' },
+    state: 'confirming',
+    createdAt: 0,
+    updatedAt: 5,
+    expiresAt: 10,
+    receipt: { transactionHash: hash, blockHash, blockNumber: '0x5', status: '0x1' }
+  })
+  const { reconciler, rpc } = fixture(expired, {})
+  await expect(reconciler.reconcile(expired.id, 10)).resolves.toMatchObject({
+    state: 'clearance-unverified'
+  })
   expect(rpc).not.toHaveBeenCalled()
 })
 

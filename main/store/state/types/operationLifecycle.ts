@@ -57,6 +57,7 @@ export const OperationLifecycleSchema = z
       'replaced',
       'reorged',
       'stopped',
+      'clearance-unverified',
       'verified-clearance'
     ]),
     createdAt: z.number().int().nonnegative(),
@@ -98,7 +99,7 @@ export const OperationLifecycleSchema = z
       operation.notification.terminalHandledAt,
       operation.notification.longPendingShownAt
     ]) {
-      if (timestamp !== undefined && (timestamp < operation.createdAt || timestamp > operation.updatedAt)) {
+      if (timestamp !== undefined && (timestamp < operation.createdAt || timestamp > operation.expiresAt)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid notification timestamp' })
       }
     }

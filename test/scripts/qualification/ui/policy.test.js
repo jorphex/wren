@@ -64,6 +64,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const ledger = scenarios.find(({ state }) => state === 'account-ledger')
   const activity = scenarios.find(({ state }) => state === 'account-activity')
   const activityClear = scenarios.find(({ id }) => id === 'tray-account-activity-clear-full-1')
+  const activityLifecycle = scenarios.find(({ id }) => id === 'tray-account-activity-lifecycle-full-1')
   const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
   const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
@@ -104,6 +105,15 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     action: { type: 'clickText', text: 'Clear activity' },
     ready: '[role="alertdialog"]'
   })
+  expect(fixtureFor(activityLifecycle).main.activity.map(({ outcome }) => outcome)).toEqual([
+    'submitted',
+    'confirming',
+    'reorged',
+    'replaced',
+    'stopped',
+    'clearance-unverified',
+    'verified-clearance'
+  ])
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'

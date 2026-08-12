@@ -154,6 +154,95 @@ it('drops malformed persisted entries instead of returning them', () => {
   expect(storage.value()).toEqual({})
 })
 
+it('deterministically upgrades a retained legacy batch with one stable operation id', () => {
+  const key = hash('a')
+  const initial = {
+    [key]: {
+      id: 'legacy-id',
+      origin,
+      account,
+      chainId: '0x1',
+      atomic: false,
+      callCount: 1,
+      execution: 'pending',
+      transactions: [],
+      createdAt: 1000,
+      updatedAt: 1000,
+      expiresAt: 1000 + WALLET_CALL_BATCH_TTL_MS
+    }
+  }
+  const { ledger, storage } = createLedger(initial)
+  const first = ledger.get(origin, account, 'legacy-id', 1001).operationId
+  const second = new WalletCallBatchLedger(storage).get(origin, account, 'legacy-id', 1002).operationId
+
+  expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  expect(second).toBe(first)
+  expect(storage.value()[key].operationId).toBe(first)
+})
+
+it('fails closed before recording a signed reservation when its lifecycle cannot be persisted', () => {
+  const storage = memoryStorage()
+  const operations = {
+    get: jest.fn(),
+    put: jest.fn(() => {
+      throw new Error('operation persistence unavailable')
+    }),
+    remove: jest.fn(),
+    evictOldestHandledTerminal: jest.fn()
+  }
+  const ledger = new WalletCallBatchLedger(storage, operations)
+  ledger.create(batch(), 1000).commit()
+
+  expect(() => ledger.reserveTransaction(origin, account, 'app-id', hash('1'), 1001)).toThrow(
+    /operation persistence unavailable/
+  )
+  expect(ledger.get(origin, account, 'app-id', 1002).transactions).toEqual([])
+  expect(operations.remove).not.toHaveBeenCalled()
+})
+
+it('evicts only a handled terminal lifecycle before retrying a full lifecycle ledger', () => {
+  const storage = memoryStorage()
+  const saved = new Map()
+  let attempts = 0
+  const operations = {
+    get: jest.fn((id) => saved.get(id)),
+    put: jest.fn((operation) => {
+      attempts += 1
+      if (attempts === 1) throw new Error('Operation lifecycle limit reached')
+      saved.set(operation.id, operation)
+      return operation
+    }),
+    remove: jest.fn(),
+    evictOldestHandledTerminal: jest.fn(() => true)
+  }
+  const ledger = new WalletCallBatchLedger(storage, operations)
+  ledger.create(batch(), 1000).commit()
+  ledger.reserveTransaction(origin, account, 'app-id', hash('1'), 2000)
+
+  expect(operations.evictOldestHandledTerminal).toHaveBeenCalledWith(2000)
+  expect(operations.put).toHaveBeenCalledTimes(2)
+  expect(ledger.get(origin, account, 'app-id', 2001).transactions).toHaveLength(1)
+})
+
+it('fails closed at lifecycle capacity when no handled terminal record is evictable', () => {
+  const storage = memoryStorage()
+  const operations = {
+    get: jest.fn(),
+    put: jest.fn(() => {
+      throw new Error('Operation lifecycle limit reached')
+    }),
+    remove: jest.fn(),
+    evictOldestHandledTerminal: jest.fn(() => false)
+  }
+  const ledger = new WalletCallBatchLedger(storage, operations)
+  ledger.create(batch(), 1000).commit()
+
+  expect(() => ledger.reserveTransaction(origin, account, 'app-id', hash('1'), 2000)).toThrow(
+    /Operation lifecycle limit reached/
+  )
+  expect(ledger.get(origin, account, 'app-id', 2001).transactions).toEqual([])
+})
+
 it('bounds retained batches per origin without evicting live records', () => {
   const { ledger } = createLedger()
   for (let index = 0; index < MAX_RETAINED_WALLET_CALL_BATCHES_PER_ORIGIN; index += 1) {

@@ -183,6 +183,26 @@ const qualificationActivity = () => [
   }
 ]
 
+const lifecycleActivity = () =>
+  [
+    ['11111111-1111-4111-8111-111111111111', 'transaction', 'submitted'],
+    ['22222222-2222-4222-8222-222222222222', 'walletCalls', 'confirming'],
+    ['33333333-3333-4333-8333-333333333333', 'transaction', 'reorged'],
+    ['44444444-4444-4444-8444-444444444444', 'transaction', 'replaced'],
+    ['55555555-5555-4555-8555-555555555555', 'walletCalls', 'stopped'],
+    ['66666666-6666-4666-8666-666666666666', 'eip7702Revoke', 'clearance-unverified'],
+    ['77777777-7777-4777-8777-777777777777', 'eip7702Revoke', 'verified-clearance']
+  ].map(([id, type, outcome], index) => ({
+    id,
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: index % 2 ? 'garden' : 'workshop',
+    type,
+    outcome,
+    createdAt: Date.UTC(2026, 7, 12, 12, index),
+    completedAt: Date.UTC(2026, 7, 12, 13, index),
+    chainId: 1
+  }))
+
 const revocationRequest = (monitoring) => ({
   type: 'eip7702Revoke',
   version: '1',
@@ -422,12 +442,13 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'account-activity') {
+  if (scenario.state === 'account-activity' || scenario.state === 'account-activity-lifecycle') {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
-    state.main.activity = qualificationActivity()
+    state.main.activity =
+      scenario.state === 'account-activity-lifecycle' ? lifecycleActivity() : qualificationActivity()
     state.main.origins = {
       workshop: { name: 'workshop.example' },
       garden: { name: 'garden.example' }

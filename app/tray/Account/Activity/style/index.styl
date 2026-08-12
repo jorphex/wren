@@ -28,9 +28,6 @@
   &:hover
     background var(--wren-ledger-hover)
 
-  &:has(.activityExplorer)
-    padding-right 48px
-
 .activityMark
   display flex
   width 28px
@@ -84,21 +81,15 @@
   color var(--wren-success)
 
 .activityOutcome-failed,
-.activityOutcome-dropped
+.activityOutcome-replaced
   color var(--wren-danger)
 
-.activityExplorer
-  position absolute
-  top 50%
-  right var(--wren-space-2)
-  width 32px
-  min-width 32px
-  height 32px
-  min-height 32px
-  transform translateY(-50%)
-
-  &:active
-    transform translateY(calc(-50% + 1px))
+.activityOutcomeDetail
+  max-width 260px
+  margin-bottom 2px
+  color var(--wren-text-tertiary)
+  white-space normal
+  text-align right
 
 .activityFooter
   display flex
@@ -208,9 +199,6 @@
     padding-right var(--wren-space-3)
     padding-left var(--wren-space-3)
 
-    &:has(.activityExplorer)
-      padding-right 52px
-
 @media (max-width: 560px)
   .activityFilters
     grid-template-columns repeat(2, minmax(0, 1fr))
@@ -221,6 +209,9 @@
   .activityResult
     grid-column 2
     align-items flex-start
+
+  .activityOutcomeDetail
+    text-align left
 
   .activityMark
     grid-row 1 / span 2

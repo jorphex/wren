@@ -66,9 +66,10 @@ beforeEach(() => {
 })
 
 it.each([
-  ['confirmed', 'Transaction confirmed', 'A transaction finished successfully.'],
-  ['failed', 'Transaction failed', 'A transaction did not complete.'],
-  ['dropped', 'Transaction replaced', 'A pending transaction was replaced.']
+  ['confirmed', 'Wallet activity confirmed', 'A submitted wallet activity completed.'],
+  ['failed', 'Wallet activity failed', 'A submitted wallet activity did not complete.'],
+  ['replaced', 'Wallet activity replaced', 'A submitted wallet activity was replaced.'],
+  ['long-pending', 'Wallet activity still pending', 'Wren is still checking a submitted wallet activity.']
 ])('shows one immediate privacy-static %s notification', (outcome, title, body) => {
   expect(notifyTransactionOutcome(activityId, account, outcome as never)).toBe(true)
   expect(mockNotifications).toHaveLength(1)
@@ -76,6 +77,25 @@ it.each([
   expect(mockNotifications[0]?.show).toHaveBeenCalledTimes(1)
   expect(JSON.stringify(mockNotifications[0]?.options)).not.toMatch(/0x|example|hash|address/i)
   expect(notifyTransactionOutcome(activityId, account, outcome as never)).toBe(false)
+})
+
+it('normalizes the legacy dropped outcome without changing private copy', () => {
+  expect(notifyTransactionOutcome(activityId, account, 'dropped')).toBe(true)
+  expect(mockNotifications[0]?.options).toEqual({
+    title: 'Wallet activity replaced',
+    body: 'A submitted wallet activity was replaced.'
+  })
+})
+
+it('delivers a later terminal update after one long-pending update for the same activity', () => {
+  expect(notifyTransactionOutcome(activityId, account, 'long-pending')).toBe(true)
+  expect(notifyTransactionOutcome(activityId, account, 'long-pending')).toBe(false)
+  expect(notifyTransactionOutcome(activityId, account, 'confirmed')).toBe(true)
+  expect(notifyTransactionOutcome(activityId, account, 'confirmed')).toBe(false)
+  expect(mockNotifications.map(({ options }) => options.title)).toEqual([
+    'Wallet activity still pending',
+    'Wallet activity confirmed'
+  ])
 })
 
 it('opens the exact persisted activity entry in Wren', () => {

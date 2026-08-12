@@ -187,9 +187,11 @@ module.exports = {
     u('main.operationLifecycles', () => operations)
   },
   recordActivity: (u, entry) => {
-    u('main.activity', (activity = []) =>
-      pruneActivity([entry, ...activity.filter(({ id }) => id !== entry.id)])
-    )
+    u('main.activity', (activity = []) => {
+      const current = activity.find(({ id }) => id === entry.id)
+      if (current && JSON.stringify(current) === JSON.stringify(entry)) return activity
+      return pruneActivity([entry, ...activity.filter(({ id }) => id !== entry.id)])
+    })
   },
   clearActivity: (u) => u('main.activity', () => []),
   showAccountActivity: (u, account, activityId) => {

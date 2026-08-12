@@ -82,16 +82,10 @@ it('filters the complete history by authored activity families', () => {
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
 })
 
-it('offers an explorer action only for a persisted transaction hash', () => {
+it('never exposes a legacy transaction hash or an explorer action from private history', () => {
   render(<ActivityHarness account={account} moduleId='activity' expanded />)
-
-  const explorer = screen.getByRole('button', {
-    name: 'Open transaction on Ethereum Mainnet block explorer'
-  })
-  expect(screen.getAllByRole('button', { name: /block explorer/ })).toHaveLength(1)
-  fireEvent.click(explorer)
-
-  expect(link.send).toHaveBeenCalledWith('tray:openExplorer', { type: 'ethereum', id: 1 }, transactionHash)
+  expect(document.body.textContent).not.toContain(transactionHash)
+  expect(screen.queryByRole('button', { name: /block explorer/ })).toBeNull()
 })
 
 it('focuses the exact activity row requested by native notification navigation', () => {
@@ -107,6 +101,41 @@ it('focuses the exact activity row requested by native notification navigation',
 
   expect(document.activeElement).toBe(screen.getAllByRole('listitem')[2])
   expect(document.activeElement.classList.contains('activityRowSelected')).toBe(true)
+})
+
+it('announces when notification navigation targets cleared history', () => {
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[]}
+      moduleId='activity'
+      expanded
+      expandedData={{ activityId: crypto.randomUUID() }}
+    />
+  )
+
+  expect(screen.getByText('This activity is no longer in history.').getAttribute('role')).toBe('status')
+})
+
+it.each([
+  ['submitted', 'Submitted', 'Sent to network'],
+  ['confirming', 'Confirming', 'Included; waiting for final confirmation'],
+  ['replaced', 'Replaced', 'A submitted wallet activity was replaced'],
+  ['reorged', 'Reorg detected', 'A prior confirmation changed; Wren is checking again'],
+  ['stopped', 'Monitoring stopped', 'The network may still process it.'],
+  ['clearance-unverified', 'Clearance not verified', 'could not verify that the delegation is cleared'],
+  ['verified-clearance', 'Delegation removed', 'no longer delegates execution']
+])('presents the privacy-safe %s lifecycle state', (outcome, label, detail) => {
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[entry({ type: 'eip7702Revoke', outcome, transactionHash: undefined })]}
+      moduleId='activity'
+      expanded
+    />
+  )
+  expect(screen.getByText(label)).toBeTruthy()
+  expect(screen.getByText(new RegExp(detail, 'i'))).toBeTruthy()
 })
 
 it('uses an explicit privacy-preserving empty state', () => {
@@ -138,6 +167,7 @@ it('clears all device activity through an explicit accessible confirmation', () 
 
   const dialog = screen.getByRole('alertdialog', { name: 'Clear activity history?' })
   expect(dialog.textContent).toContain('every account on this device')
+  expect(dialog.textContent).toContain('Pending activity may appear again')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   fireEvent.keyDown(dialog, { key: 'Escape' })

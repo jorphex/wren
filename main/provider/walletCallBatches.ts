@@ -8,6 +8,7 @@ import {
   WalletCallReceiptSchema,
   PERSISTED_WALLET_CALL_BATCH_TTL_MS
 } from '../store/state/types/walletCallBatch'
+import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_WALLET_CALL_ID_BYTES } from './walletCalls'
 
 export const WALLET_CALL_BATCH_TTL_MS = PERSISTED_WALLET_CALL_BATCH_TTL_MS
@@ -23,6 +24,15 @@ export interface WalletCallBatchStorage {
   load(): unknown
   save(batches: WalletCallBatches): void
 }
+
+export interface WalletCallOperationLifecycleLedger {
+  get(id: string, now?: number): OperationLifecycle | undefined
+  put(operation: OperationLifecycle, now?: number): OperationLifecycle
+  remove(id: string, now?: number): boolean
+  evictOldestHandledTerminal(now?: number): boolean
+}
+
+export type WalletCallBatchWithOperationId = WalletCallBatch & { operationId: string }
 
 export interface CreateWalletCallBatch {
   id?: string
@@ -70,6 +80,18 @@ function persistedBytes(value: unknown) {
   }
 }
 
+function operationIdForLegacyBatch(key: string) {
+  const digest = crypto.createHash('sha256').update(`wren:wallet-call:${key}`).digest('hex').slice(0, 32)
+  const versioned = `${digest.slice(0, 12)}4${digest.slice(13, 16)}${(
+    (Number.parseInt(digest[16] || '0', 16) & 0x3) |
+    0x8
+  ).toString(16)}${digest.slice(17)}`
+  return `${versioned.slice(0, 8)}-${versioned.slice(8, 12)}-${versioned.slice(12, 16)}-${versioned.slice(
+    16,
+    20
+  )}-${versioned.slice(20)}`
+}
+
 function normalizeLoadedBatches(value: unknown): WalletCallBatches {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
 
@@ -81,16 +103,19 @@ function normalizeLoadedBatches(value: unknown): WalletCallBatches {
       if (persistedBytes(candidate) > MAX_PERSISTED_WALLET_CALL_BATCH_BYTES) return batches
       const parsed = WalletCallBatchSchema.safeParse(candidate)
       if (!parsed.success) return batches
+      const normalized = parsed.data.operationId
+        ? parsed.data
+        : { ...parsed.data, operationId: operationIdForLegacyBatch(key) }
 
-      const candidateBytes = persistedBytes({ [key]: parsed.data })
+      const candidateBytes = persistedBytes({ [key]: normalized })
       if (
-        persistedBytes(parsed.data) > MAX_PERSISTED_WALLET_CALL_BATCH_BYTES ||
+        persistedBytes(normalized) > MAX_PERSISTED_WALLET_CALL_BATCH_BYTES ||
         totalBytes + candidateBytes > MAX_PERSISTED_WALLET_CALL_LEDGER_BYTES
       ) {
         return batches
       }
 
-      batches[key] = parsed.data
+      batches[key] = normalized
       totalBytes += candidateBytes
       return batches
     }, {})
@@ -126,14 +151,25 @@ function deriveStatus(batch: WalletCallBatch): WalletCallsStatus {
 }
 
 export class WalletCallBatchLedger {
-  constructor(private storage: WalletCallBatchStorage) {}
+  constructor(
+    private storage: WalletCallBatchStorage,
+    private operationLifecycles?: WalletCallOperationLifecycleLedger
+  ) {}
 
   private read(now: number) {
     const loaded = this.storage.load()
     const batches = normalizeLoadedBatches(loaded)
     const loadedCount =
       loaded && typeof loaded === 'object' && !Array.isArray(loaded) ? Object.keys(loaded).length : 0
-    let changed = Object.keys(batches).length !== loadedCount
+    let changed =
+      Object.keys(batches).length !== loadedCount ||
+      (() => {
+        try {
+          return JSON.stringify(loaded) !== JSON.stringify(batches)
+        } catch (_) {
+          return true
+        }
+      })()
 
     Object.entries(batches).forEach(([key, batch]) => {
       if (batch.expiresAt <= now) {
@@ -143,7 +179,65 @@ export class WalletCallBatchLedger {
     })
 
     if (changed) this.storage.save(clone(batches))
+    Object.values(batches).forEach((batch) => {
+      if (batch.transactions.length > 0) this.ensureOperation(batch as WalletCallBatchWithOperationId, now)
+    })
     return batches
+  }
+
+  private operationState(batch: WalletCallBatch): OperationLifecycle['state'] {
+    if (batch.execution === 'failed') return 'failed'
+    return 'submitted'
+  }
+
+  private ensureOperation(
+    batch: WalletCallBatchWithOperationId,
+    now: number,
+    requestedState = this.operationState(batch)
+  ) {
+    if (!this.operationLifecycles) return
+    const current = this.operationLifecycles.get(batch.operationId, Math.min(now, batch.expiresAt - 1))
+    if (current) {
+      if (
+        current.kind !== 'walletCalls' ||
+        current.account !== batch.account ||
+        current.origin !== batch.origin ||
+        current.chainId !== Number(BigInt(batch.chainId)) ||
+        current.walletCalls?.batchOperationId !== batch.operationId
+      ) {
+        throw new Error('Wallet-call operation lifecycle identity does not match its batch')
+      }
+      const terminal = ['confirmed', 'failed', 'replaced', 'stopped', 'verified-clearance'].includes(
+        current.state
+      )
+      if (terminal || current.state === requestedState || requestedState !== 'failed') return current
+      return this.operationLifecycles.put(
+        { ...current, state: requestedState, updatedAt: Math.max(now, current.updatedAt) },
+        now
+      )
+    }
+
+    const operation: OperationLifecycle = {
+      id: batch.operationId,
+      kind: 'walletCalls',
+      account: batch.account,
+      origin: batch.origin,
+      chainId: Number(BigInt(batch.chainId)),
+      state: requestedState,
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: batch.expiresAt,
+      visibleInActivity: true,
+      notification: {},
+      walletCalls: { batchOperationId: batch.operationId }
+    }
+    try {
+      return this.operationLifecycles.put(operation, now)
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'Operation lifecycle limit reached') throw error
+      if (!this.operationLifecycles.evictOldestHandledTerminal(now)) throw error
+      return this.operationLifecycles.put(operation, now)
+    }
   }
 
   private write(batches: WalletCallBatches) {
@@ -184,6 +278,7 @@ export class WalletCallBatchLedger {
     }
     const candidate = WalletCallBatchSchema.safeParse({
       id: input.id ?? 'pending-generated-id',
+      operationId: crypto.randomUUID(),
       origin: input.origin,
       account: input.account,
       chainId: input.chainId,
@@ -258,6 +353,24 @@ export class WalletCallBatchLedger {
     return deriveStatus(this.get(origin, account, id, now))
   }
 
+  getByOperationId(operationId: string, now = Date.now()) {
+    const batch = Object.values(this.read(now)).find((candidate) => candidate.operationId === operationId)
+    return batch ? (clone(batch) as WalletCallBatchWithOperationId) : undefined
+  }
+
+  listLifecycleCandidates(now = Date.now()) {
+    return Object.freeze(
+      Object.values(this.read(now))
+        .filter((batch): batch is WalletCallBatchWithOperationId => Boolean(batch.operationId))
+        .filter((batch) => batch.transactions.length > 0)
+        .sort(
+          (left, right) =>
+            left.createdAt - right.createdAt || left.operationId.localeCompare(right.operationId)
+        )
+        .map((batch) => Object.freeze(clone(batch)))
+    )
+  }
+
   listReconciliationCandidates(now = Date.now()): readonly Readonly<WalletCallTransactionCandidate>[] {
     const candidates = Object.entries(this.read(now))
       .sort((left, right) => left[1].createdAt - right[1].createdAt || left[0].localeCompare(right[0]))
@@ -316,11 +429,20 @@ export class WalletCallBatchLedger {
     }
     if (batch.transactions.length >= batch.callCount) throw new Error('Batch transaction limit reached')
 
-    this.writeBatch(batches, key, {
-      ...batch,
-      transactions: [...batch.transactions, { hash: normalizedHash, state: 'signed' }],
-      updatedAt: Math.max(now, batch.updatedAt)
-    })
+    const operationId = batch.operationId
+    if (!operationId) throw new Error('Wallet-call batch is missing its durable operation identity')
+    const operation = this.operationLifecycles?.get(operationId, Math.min(now, batch.expiresAt - 1))
+    this.ensureOperation(batch as WalletCallBatchWithOperationId, now, 'submitted')
+    try {
+      this.writeBatch(batches, key, {
+        ...batch,
+        transactions: [...batch.transactions, { hash: normalizedHash, state: 'signed' }],
+        updatedAt: Math.max(now, batch.updatedAt)
+      })
+    } catch (error) {
+      if (!operation) this.operationLifecycles?.remove(operationId, now)
+      throw error
+    }
   }
 
   markTransactionSubmitted(origin: string, account: string, id: string, hash: string, now = Date.now()) {
@@ -338,6 +460,9 @@ export class WalletCallBatchLedger {
     const transactions = [...batch.transactions]
     transactions[index] = { ...existingTransaction, state: 'submitted' }
     this.writeBatch(batches, key, { ...batch, transactions, updatedAt: Math.max(now, batch.updatedAt) })
+    if (batch.operationId) {
+      this.ensureOperation(batch as WalletCallBatchWithOperationId, now, 'submitted')
+    }
   }
 
   recordTransaction(origin: string, account: string, id: string, hash: string, now = Date.now()) {
@@ -373,6 +498,39 @@ export class WalletCallBatchLedger {
     this.writeBatch(batches, key, { ...batch, transactions, updatedAt: Math.max(now, batch.updatedAt) })
   }
 
+  setReceipt(origin: string, account: string, id: string, receipt: WalletCallReceipt, now = Date.now()) {
+    if (persistedBytes(receipt) > MAX_PERSISTED_WALLET_CALL_RECEIPT_BYTES) {
+      throw new Error('Wallet call receipt exceeds persistence limit')
+    }
+    const parsed = WalletCallReceiptSchema.safeParse(receipt)
+    if (!parsed.success) throw new Error('Invalid wallet call receipt')
+    const batches = this.read(now)
+    const [key, batch] = this.require(batches, origin, account, id)
+    const index = batch.transactions.findIndex(
+      (transaction) => transaction.hash === parsed.data.transactionHash
+    )
+    if (index < 0) throw new Error('Receipt transaction is not part of this batch')
+    const transaction = batch.transactions[index]
+    if (!transaction) throw new Error('Receipt transaction is missing')
+    const transactions = [...batch.transactions]
+    transactions[index] = { ...transaction, state: 'submitted', receipt: parsed.data }
+    this.writeBatch(batches, key, { ...batch, transactions, updatedAt: Math.max(now, batch.updatedAt) })
+  }
+
+  clearReceipt(origin: string, account: string, id: string, hash: string, now = Date.now()) {
+    const batches = this.read(now)
+    const [key, batch] = this.require(batches, origin, account, id)
+    const normalizedHash = hash.toLowerCase()
+    const index = batch.transactions.findIndex((transaction) => transaction.hash === normalizedHash)
+    if (index < 0) throw new Error('Transaction hash is not part of this batch')
+    const transaction = batch.transactions[index]
+    if (!transaction?.receipt) return
+    const { receipt: _receipt, ...withoutReceipt } = transaction
+    const transactions = [...batch.transactions]
+    transactions[index] = withoutReceipt
+    this.writeBatch(batches, key, { ...batch, transactions, updatedAt: Math.max(now, batch.updatedAt) })
+  }
+
   complete(origin: string, account: string, id: string, now = Date.now()) {
     const batches = this.read(now)
     const [key, batch] = this.require(batches, origin, account, id)
@@ -401,5 +559,6 @@ export class WalletCallBatchLedger {
       execution: 'failed',
       updatedAt: Math.max(now, batch.updatedAt)
     })
+    if (batch.operationId) this.ensureOperation(batch as WalletCallBatchWithOperationId, now, 'failed')
   }
 }

@@ -38,11 +38,15 @@ it('persists only bounded terminal metadata and excludes request payloads', () =
     type: 'transaction',
     outcome: 'confirmed',
     chainId: 1,
-    transactionHash: hash,
     createdAt: 100,
     completedAt: 200
   })
   expect(JSON.stringify(entry)).not.toMatch(/deadbeef|request-secret|eth_sendTransaction/)
+})
+
+it('normalizes legacy dropped outcomes without persisting a transaction hash', () => {
+  expect(requestActivityEntry(transaction(), 'dropped', 200)).toMatchObject({ outcome: 'replaced' })
+  expect(requestActivityEntry(transaction(), 'dropped', 200)).not.toHaveProperty('transactionHash')
 })
 
 it('does not record nonterminal requests without an explicit outcome', () => {

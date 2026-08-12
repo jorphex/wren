@@ -101,13 +101,20 @@ export class OperationLifecycleReconciler {
     now: number,
     detail: Omit<OperationReconciliationObservation, 'previous' | 'current'> = {}
   ) {
+    const sameState = previous.state === current.state
+    const sameReceipt = JSON.stringify(previous.receipt) === JSON.stringify(current.receipt)
+    if (sameState && sameReceipt) {
+      this.emit(previous, previous, detail)
+      return previous
+    }
     const saved = this.ledger.put(current, now)
     this.emit(previous, saved, detail)
     return saved
   }
 
   private replacementFor(operation: OperationLifecycle) {
-    if (!operation.transaction) return
+    const transaction = operation.transaction
+    if (!transaction) return
     return this.ledger
       .listStored()
       .find(
@@ -116,8 +123,8 @@ export class OperationLifecycleReconciler {
           candidate.kind === 'transaction' &&
           candidate.account === operation.account &&
           candidate.chainId === operation.chainId &&
-          candidate.transaction?.nonce === operation.transaction?.nonce &&
-          candidate.transaction.hash !== operation.transaction.hash &&
+          candidate.transaction?.nonce === transaction.nonce &&
+          candidate.transaction?.hash !== transaction.hash &&
           candidate.state === 'confirmed'
       )
   }
@@ -163,7 +170,11 @@ export class OperationLifecycleReconciler {
       // terminal outcome handled. This prevents restart from silently losing "stopped".
       return this.transition(
         operation,
-        { ...operation, state: 'stopped', updatedAt: operation.expiresAt },
+        {
+          ...operation,
+          state: operation.kind === 'eip7702Revoke' && operation.receipt ? 'clearance-unverified' : 'stopped',
+          updatedAt: operation.expiresAt
+        },
         -1
       )
     }

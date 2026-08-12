@@ -123,6 +123,7 @@ export function admitWalletCallBatch(
       batch.data.callCount !== parsed.calls.length ||
       batch.data.execution !== 'pending' ||
       batch.data.transactions.length !== 0 ||
+      !batch.data.operationId ||
       (parsed.id !== undefined && batch.data.id !== parsed.id)
     ) {
       throw new Error('Wallet-call ledger returned mismatched batch metadata')
@@ -134,6 +135,7 @@ export function admitWalletCallBatch(
       type: 'walletCalls',
       account: batch.data.account,
       origin: batch.data.origin,
+      activityId: batch.data.operationId,
       payload: canonicalPayload(input.payload, parsed, batch.data.account),
       version: '2.0.0',
       batchId: batch.data.id,

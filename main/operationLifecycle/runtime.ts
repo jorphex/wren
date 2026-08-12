@@ -3,21 +3,22 @@ import log from 'electron-log'
 import ledger from './index'
 import { operationLifecycleRpc } from './rpc'
 import { OperationLifecycleReconciler, type OperationReconciliationObserver } from './reconciler'
+import { observeOperationLifecycles, publishOperationLifecycleObservation } from './events'
 
 const RECONCILIATION_INTERVAL_MS = 15_000
 
 class OperationLifecycleRuntime {
   private timer: ReturnType<typeof setInterval> | undefined
   private running: Promise<void> | undefined
-  private observers = new Set<OperationReconciliationObserver>()
   private claimed = new Set<string>()
-  private reconciler = new OperationLifecycleReconciler(ledger, operationLifecycleRpc, (observation) => {
-    this.observers.forEach((observer) => observer(observation))
-  })
+  private reconciler = new OperationLifecycleReconciler(
+    ledger,
+    operationLifecycleRpc,
+    publishOperationLifecycleObservation
+  )
 
   observe(observer: OperationReconciliationObserver) {
-    this.observers.add(observer)
-    return () => this.observers.delete(observer)
+    return observeOperationLifecycles(observer)
   }
 
   claim(operationId: string) {
@@ -33,7 +34,7 @@ class OperationLifecycleRuntime {
     this.running = Promise.all(
       ledger
         .listStored()
-        .filter(({ id }) => !this.claimed.has(id))
+        .filter(({ id, kind }) => kind !== 'walletCalls' && !this.claimed.has(id))
         .map(({ id }) => this.reconciler.reconcile(id))
     )
       .then(() => undefined)

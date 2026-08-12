@@ -63,7 +63,6 @@ import { EIP7702_REVOKE_INTRINSIC_GAS } from '../transaction/eip7702'
 import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
 import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain/account/code'
 import { recordRequestActivity } from '../activity'
-import { notifyTransactionOutcome } from '../notifications/transaction'
 import operationLifecycleLedger from '../operationLifecycle'
 import operationLifecycleRuntime from '../operationLifecycle/runtime'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
@@ -380,11 +379,21 @@ export class Accounts extends EventEmitter {
       request.status = RequestStatus.Error
       request.notice = 'Dropped'
       request.completed = operation.updatedAt
-      recordRequestActivity(request, 'dropped')
+      recordRequestActivity(request, 'replaced')
     } else if (operation.state === 'stopped') {
       request.status = RequestStatus.Error
       request.notice = 'Monitoring stopped'
       request.completed = operation.updatedAt
+    } else if (operation.state === 'clearance-unverified' && request.type === 'eip7702Revoke') {
+      request.status = RequestStatus.Error
+      request.notice = 'Clearance not verified'
+      request.completed = operation.updatedAt
+      request.result = Object.freeze({
+        receiptStatus: operation.receipt?.status === '0x1' ? 'success' : 'failed',
+        revocationStatus: 'unavailable',
+        reason: 'code-unavailable'
+      })
+      recordRequestActivity(request, 'clearance-unverified')
     }
     account.update()
   }
@@ -1410,8 +1419,7 @@ export class Accounts extends EventEmitter {
     request.status = receiptStatus === 1n ? RequestStatus.Confirmed : RequestStatus.Error
     request.notice = receiptStatus === 1n ? 'Confirmed' : 'Failed'
     request.completed = Date.now()
-    const entry = recordRequestActivity(request, outcome)
-    if (entry) notifyTransactionOutcome(entry.id, request.account, outcome)
+    recordRequestActivity(request, outcome)
 
     if (receiptStatus === 1n) this.dropReplacedTransactions(account, id)
     account.update()
@@ -1441,11 +1449,10 @@ export class Accounts extends EventEmitter {
       candidate.status = RequestStatus.Error
       candidate.notice = 'Dropped'
       candidate.completed = Date.now()
-      const entry = recordRequestActivity(candidate, 'dropped')
-      if (entry) notifyTransactionOutcome(entry.id, candidate.account, 'dropped')
+      recordRequestActivity(candidate, 'replaced')
       const removalTimer = setTimeout(() => {
         if (this.accounts[account.address]?.requests[candidateId]) {
-          account.clearRequest(candidateId, 'dropped')
+          account.clearRequest(candidateId, 'replaced')
         }
       }, 8000)
       removalTimer.unref?.()
