@@ -1,5 +1,4 @@
 import log from 'electron-log'
-import ethProvider from 'eth-provider'
 
 log.transports.console.format = '[scanWorker] {h}:{i}:{s}.{ms} {text}'
 log.transports.console.level = process.env['LOG_WORKER'] ? 'debug' : 'info'
@@ -11,46 +10,193 @@ import { supportsChain as chainSupportsScan } from '../../multicall'
 import balancesLoader, { BalanceLoader } from './scan'
 import TokenLoader from '../inventory/tokens'
 import { toTokenId } from '../../../resources/domain/balance'
-import { BalancesWorkerEvent, parseBalancesWorkerCommand } from './protocol'
+import {
+  BALANCE_RPC_MAX_IN_FLIGHT,
+  BALANCE_RPC_MAX_QUEUED,
+  BALANCE_RPC_QUEUE_TIMEOUT_MS,
+  BALANCE_RPC_TIMEOUT_MS,
+  BalanceRpcRequest,
+  BalanceRpcResponse,
+  BalancesWorkerEvent,
+  parseBalancesWorkerCommand,
+  parseBalancesWorkerEvent
+} from './protocol'
 import { isYearnSystemToken } from '../../yearn/catalog'
 
 import type { Token } from '../../store/state'
+import type EthereumProvider from 'ethereum-provider'
 
 let heartbeat: NodeJS.Timeout
 let balances: BalanceLoader
 
-const eth = ethProvider('frame', { origin: 'frame-internal', name: 'scanWorker' })
 const tokenLoader = new TokenLoader()
 
-eth.on('error', (e) => {
-  log.error('Error in balances worker', e)
-  disconnect()
-})
+type QueuedRpcRequest = Omit<BalanceRpcRequest, 'id' | 'type'> & {
+  resolve: (result: string) => void
+  reject: (error: Error) => void
+  timer: NodeJS.Timeout
+}
 
-eth.on('connect', async () => {
-  await tokenLoader.start()
+interface PendingRpcRequest {
+  resolve: (result: string) => void
+  reject: (error: Error) => void
+  timer: NodeJS.Timeout
+}
 
-  balances = balancesLoader(eth)
+class BalanceRpcError extends Error {
+  readonly code: number
 
-  sendToMainProcess({ type: 'ready' })
-})
-
-async function getChains() {
-  try {
-    const chains: string[] = await eth.request({ method: 'wallet_getChains' })
-    return chains.map((chain) => parseInt(chain))
-  } catch (e) {
-    log.error('could not load chains', e)
-    return []
+  constructor(code: number, message: string) {
+    super(message)
+    this.code = code
   }
 }
 
-function sendToMainProcess(data: BalancesWorkerEvent) {
-  if (process.send) {
-    return process.send(data)
-  } else {
-    log.error(`cannot send to main process! connected: ${process.connected}`)
+class ParentRpcProvider {
+  private nextRequestId = 0
+  private readonly pending = new Map<number, PendingRpcRequest>()
+  private readonly queued: QueuedRpcRequest[] = []
+
+  request<T>(payload: { method: string; params?: readonly unknown[]; chainId?: string }): Promise<T> {
+    return new Promise<string>((resolve, reject) => {
+      if (this.queued.length >= BALANCE_RPC_MAX_QUEUED) {
+        reject(new BalanceRpcError(-32005, 'Balance RPC queue is full'))
+        return
+      }
+
+      const chainId = parseCanonicalChainId(payload.chainId)
+      const candidate = parseBalancesWorkerEvent({
+        type: 'rpcRequest',
+        id: 1,
+        chainId,
+        method: payload.method,
+        params: payload.params
+      })
+
+      if (!candidate || candidate.type !== 'rpcRequest') {
+        reject(new BalanceRpcError(-32602, 'Unsupported balance RPC request'))
+        return
+      }
+
+      const queued = {
+        chainId: candidate.chainId,
+        method: candidate.method,
+        params: candidate.params,
+        resolve,
+        reject,
+        timer: setTimeout(() => {
+          const index = this.queued.indexOf(queued)
+          if (index < 0) return
+          this.queued.splice(index, 1)
+          reject(new BalanceRpcError(-32002, 'Balance RPC queue timed out'))
+        }, BALANCE_RPC_QUEUE_TIMEOUT_MS)
+      } as QueuedRpcRequest
+      this.queued.push(queued)
+      this.drainQueue()
+    }) as Promise<T>
   }
+
+  handleResponse(response: BalanceRpcResponse) {
+    const request = this.pending.get(response.id)
+    if (!request) {
+      log.warn(`received response for unknown balance RPC request ${response.id}`)
+      return
+    }
+
+    clearTimeout(request.timer)
+    this.pending.delete(response.id)
+
+    if ('result' in response) request.resolve(response.result)
+    else request.reject(new BalanceRpcError(response.error.code, response.error.message))
+
+    this.drainQueue()
+  }
+
+  close(error = new BalanceRpcError(4900, 'Balance RPC channel closed')) {
+    this.pending.forEach((request) => {
+      clearTimeout(request.timer)
+      request.reject(error)
+    })
+    this.pending.clear()
+    this.queued.splice(0).forEach((request) => {
+      clearTimeout(request.timer)
+      request.reject(error)
+    })
+  }
+
+  private drainQueue() {
+    while (this.pending.size < BALANCE_RPC_MAX_IN_FLIGHT) {
+      const queued = this.queued.shift()
+      if (!queued) return
+      clearTimeout(queued.timer)
+
+      const id = this.allocateRequestId()
+      const request = parseBalancesWorkerEvent({
+        type: 'rpcRequest',
+        id,
+        chainId: queued.chainId,
+        method: queued.method,
+        params: queued.params
+      })
+
+      if (!request || request.type !== 'rpcRequest') {
+        queued.reject(new BalanceRpcError(-32602, 'Unsupported balance RPC request'))
+        continue
+      }
+
+      const timer = setTimeout(() => {
+        const pending = this.pending.get(id)
+        if (!pending) return
+        this.pending.delete(id)
+        pending.reject(new BalanceRpcError(-32002, 'Balance RPC request timed out'))
+        this.drainQueue()
+      }, BALANCE_RPC_TIMEOUT_MS)
+
+      this.pending.set(id, { resolve: queued.resolve, reject: queued.reject, timer })
+
+      if (sendToMainProcess(request) === undefined) {
+        clearTimeout(timer)
+        this.pending.delete(id)
+        queued.reject(new BalanceRpcError(4900, 'Balance RPC channel is unavailable'))
+      }
+    }
+  }
+
+  private allocateRequestId() {
+    do {
+      this.nextRequestId = (this.nextRequestId % Number.MAX_SAFE_INTEGER) + 1
+    } while (this.pending.has(this.nextRequestId))
+    return this.nextRequestId
+  }
+}
+
+const rpcProvider = new ParentRpcProvider()
+
+function parseCanonicalChainId(value: string | undefined) {
+  if (!value || value.length > 15 || !/^0x[1-9a-f][0-9a-f]*$/.test(value)) return Number.NaN
+  const parsed = BigInt(value)
+  if (parsed > BigInt(Number.MAX_SAFE_INTEGER)) return Number.NaN
+  return Number(parsed)
+}
+
+async function start() {
+  await tokenLoader.start()
+  balances = balancesLoader(rpcProvider as unknown as EthereumProvider)
+
+  sendToMainProcess({ type: 'ready' })
+}
+
+function sendToMainProcess(data: BalancesWorkerEvent) {
+  if (process.send && process.connected) {
+    try {
+      return process.send(data)
+    } catch (error) {
+      log.error('could not send to main process', error)
+      return undefined
+    }
+  }
+
+  log.error(`cannot send to main process! connected: ${process.connected}`)
 
   return undefined
 }
@@ -69,7 +215,7 @@ async function tokenBalanceScan(address: Address, tokensToOmit: Token[] = [], ch
     // for chains that support multicall, we can attempt to load every token that we know about,
     // for all other chains we need to call each contract individually so don't scan every contract
     const omitSet = new Set(tokensToOmit.map(toTokenId))
-    const eligibleChains = (chains || (await getChains())).filter(chainSupportsScan)
+    const eligibleChains = chains.filter(chainSupportsScan)
     const tokenList = tokenLoader.getTokens(eligibleChains)
     const tokens = tokenList.filter((token) => !omitSet.has(toTokenId(token)))
 
@@ -97,10 +243,9 @@ async function fetchTokenBalances(address: Address, tokens: Token[]) {
   }
 }
 
-async function chainBalanceScan(address: string, chains?: { chainId: number; decimals: number }[]) {
+async function chainBalanceScan(address: string, chains: { chainId: number; decimals: number }[]) {
   try {
-    const availableChains = chains || (await getChains()).map((chainId) => ({ chainId, decimals: 18 }))
-    const chainBalances = await balances.getCurrencyBalances(address, availableChains)
+    const chainBalances = await balances.getCurrencyBalances(address, chains)
 
     sendToMainProcess({ type: 'chainBalances', balances: chainBalances, address })
   } catch (e) {
@@ -109,7 +254,8 @@ async function chainBalanceScan(address: string, chains?: { chainId: number; dec
 }
 
 function disconnect() {
-  process.disconnect()
+  rpcProvider.close()
+  if (process.connected) process.disconnect()
   process.kill(process.pid, 'SIGHUP')
 }
 
@@ -129,11 +275,18 @@ process.on('message', (value: unknown) => {
     return
   }
 
-  log.debug(`received message: ${message.command} [${message.args}]`)
+  if (message.command === 'rpcResponse') {
+    log.debug(`received balance RPC response ${message.args[0].id}`)
+  } else {
+    log.debug(`received message: ${message.command} [${message.args}]`)
+  }
 
   switch (message.command) {
     case 'heartbeat':
       resetHeartbeat()
+      break
+    case 'rpcResponse':
+      rpcProvider.handleResponse(message.args[0])
       break
     case 'updateChainBalance':
       void chainBalanceScan(...message.args)
@@ -148,4 +301,9 @@ process.on('message', (value: unknown) => {
       break
     }
   }
+})
+
+void start().catch((error) => {
+  log.error('could not start balances worker', error)
+  disconnect()
 })
