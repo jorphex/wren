@@ -4,25 +4,6 @@ import log from 'electron-log'
 
 import { openTransportReplayer, RecordStore } from '@ledgerhq/hw-transport-mocker'
 
-// -------------------
-// uncomment this version of eth app creation to record interactions with the Ledger so they can be replayed.
-// when test is done, call `recordStore.toString()` to print ADPU exchange codes.
-// it also seems there is a bug in the `createTransportRecorder()` code, to fix it, change the line
-// (_a = DecoratedTransport.constructor).open.apply(...) in the `open`
-// method definition to (_a = DecoratedTransport).open.apply(...)
-// -------------------
-
-// let recordStore = RecordStore.fromString('')
-
-// async function createEthApp () {
-
-//   const Recorder = createTransportRecorder(TransportNodeHid, recordStore)
-
-//   return Recorder.open(getDevices()[0].path).then(t => {
-//     return new LedgerEthereumApp(t)
-//   })
-// }
-
 beforeAll(() => {
   log.transports.console.level = false
 })

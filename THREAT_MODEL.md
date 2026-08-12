@@ -42,8 +42,8 @@ and removed at startup recovery, so connections cannot inherit legacy host-only
 or shared `Unknown` grants. Protected methods need account permission; passive
 account, asset, and capability probes never open consent UI and fail closed
 (account methods reveal no identity; asset/capability methods return `4100`).
-Permissions are not fully isolated by authenticated process identity, account,
-chain, method, or expiry.
+Permissions are scoped by account, chain, method, and expiry, but are not
+isolated by authenticated process identity.
 
 RPC bodies, connections, rates, header/body receive time, polls (15 seconds),
 subscription counts, queues/bytes, and idle lifetime are bounded. Client-visible

@@ -88,15 +88,6 @@ const rpc = {
       provider.accountsChanged(currentAddresses)
     }
   },
-  // setSignerIndex: (index, cb) => {
-  //   accounts.setSignerIndex(index, cb)
-  //   provider.accountsChanged(accounts.getSelectedAddresses())
-  //   setTimeout(() => {
-  //     accounts.balanceScan()
-  //   }, 320)
-  // },
-  // setSignerIndex: signers.setSignerIndex,
-  // unsetSigner: signers.unsetSigner,
   trezorPin: (id, pin, cb) => {
     cb()
     TrezorBridge.pinEntered(id, pin)

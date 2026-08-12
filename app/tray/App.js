@@ -26,23 +26,6 @@ class Panel extends React.Component {
     }
   }
 
-  // componentDidMount () {
-  //   document.addEventListener('keydown', (event) => {
-  //     console.log('event ky', event.key, this.store('panel.view'))
-  //     const view = this.store('panel.view')
-  //     if (event.key === 'ArrowRight') {
-  //       if (view === 'networks') this.store.setPanelView('settings')
-  //       if (view === 'settings') this.store.setPanelView('default')
-  //       if (view === 'default') this.store.setPanelView('networks')
-  //     } else if (event.key === 'ArrowLeft') {
-  //       if (view === 'networks') this.store.setPanelView('default')
-  //       if (view === 'settings') this.store.setPanelView('networks')
-  //       if (view === 'default') this.store.setPanelView('settings')
-  //     }
-  //     // const key = event.key; // "ArrowRight", "ArrowLeft", "ArrowUp", or "ArrowDown"
-  //   })
-  // }
-
   hexToDisplayGwei(weiHex) {
     return parseInt(weiHex, 'hex') / 1e9 < 1 ? '‹1' : Math.round(parseInt(weiHex, 'hex') / 1e9)
   }
