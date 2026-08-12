@@ -37,244 +37,346 @@ const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
   }
 ])
 
-const scenarioMatrix = () => [
-  ...INTERFACE_SCALES.flatMap((scale) => [
-    {
-      id: `tray-empty-full-${scale}`,
-      renderer: 'tray',
-      state: 'empty',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.accountSelectorEmpty'
-    },
-    {
-      id: `tray-empty-short-${scale}`,
-      renderer: 'tray',
-      state: 'empty',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.accountSelectorEmpty'
-    },
-    {
-      id: `dash-control-center-full-${scale}`,
-      renderer: 'dash',
-      state: 'control-center',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.dashModules',
-      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
-    },
-    {
-      id: `dash-control-center-short-${scale}`,
-      renderer: 'dash',
-      state: 'control-center',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.dashModules',
-      layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
-    },
-    {
-      id: `tray-account-home-full-${scale}`,
-      renderer: 'tray',
-      state: 'account-home',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.chainMonitorPreview',
-      requiredControls: [
-        'Previous network from Ethereum Mainnet',
-        'Next network from Ethereum Mainnet',
-        'View Ethereum Mainnet account on block explorer',
-        'Show gas details for Ethereum Mainnet'
-      ],
-      requiredText: ['Ethereum Mainnet', 'Gas']
-    },
-    {
-      id: `tray-account-home-short-${scale}`,
-      renderer: 'tray',
-      state: 'account-home',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.chainMonitorPreview',
-      requiredControls: [
-        'Previous network from Ethereum Mainnet',
-        'Next network from Ethereum Mainnet',
-        'View Ethereum Mainnet account on block explorer',
-        'Show gas details for Ethereum Mainnet'
-      ],
-      requiredText: ['Ethereum Mainnet', 'Gas']
-    },
-    {
-      id: `dash-delegation-full-${scale}`,
-      renderer: 'dash',
-      state: 'delegation',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.delegationRevocationEligible',
-      requiredControls: ['Revoke delegation'],
-      requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
-    },
-    {
-      id: `dash-delegation-short-${scale}`,
-      renderer: 'dash',
-      state: 'delegation',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.delegationRevocationEligible',
-      requiredControls: ['Revoke delegation'],
-      requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
-    },
-    {
-      id: `dash-tokens-full-${scale}`,
-      renderer: 'dash',
-      state: 'tokens',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.customTokens',
-      requiredControls: ['Add New Token'],
-      requiredText: ['No custom tokens']
-    },
-    {
-      id: `dash-tokens-short-${scale}`,
-      renderer: 'dash',
-      state: 'tokens',
-      scale,
-      logicalWidth: 620,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.customTokens',
-      requiredControls: ['Add New Token'],
-      requiredText: ['No custom tokens']
-    },
-    {
-      id: `tray-revocation-review-full-${scale}`,
-      renderer: 'tray',
-      state: 'revocation-review',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.eip7702RevokeRequest-review',
-      requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
-    },
-    {
-      id: `tray-revocation-review-short-${scale}`,
-      renderer: 'tray',
-      state: 'revocation-review',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.eip7702RevokeRequest-review',
-      requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
-    },
-    {
-      id: `tray-revocation-monitor-full-${scale}`,
-      renderer: 'tray',
-      state: 'revocation-monitor',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: FULL_SHELL_HEIGHT,
-      ready: '.eip7702StopMonitoringDialog',
-      action: { type: 'clickText', text: 'Stop monitoring' },
-      expectedInitialFocus: 'Keep monitoring',
-      requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
-      requiredText: ['Submission status unclear', 'cannot cancel a transaction']
-    },
-    {
-      id: `tray-revocation-monitor-short-${scale}`,
-      renderer: 'tray',
-      state: 'revocation-monitor',
-      scale,
-      logicalWidth: 760,
-      logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.eip7702StopMonitoringDialog',
-      action: { type: 'clickText', text: 'Stop monitoring' },
-      expectedInitialFocus: 'Keep monitoring',
-      requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
-      requiredText: ['Submission status unclear', 'cannot cancel a transaction']
-    },
-    {
-      id: `onboard-intro-${scale}`,
-      renderer: 'onboard',
-      state: 'intro',
-      scale,
-      logicalWidth: 720,
-      logicalHeight: 405,
-      ready: 'button'
-    },
-    {
-      id: `onboard-access-${scale}`,
-      renderer: 'onboard',
-      state: 'access',
-      scale,
-      logicalWidth: 720,
-      logicalHeight: 405,
-      ready: '[aria-labelledby="onboarding-slide-title"]',
-      action: { type: 'clickText', text: 'Get started' }
-    }
-  ]),
+const reviewScenarios = () => [
   {
-    id: 'dash-control-center-capped-1.5',
+    id: 'dash-account-chooser-full-1',
     renderer: 'dash',
-    state: 'control-center',
-    scale: 1.5,
-    logicalWidth: 530,
-    logicalHeight: SHORT_SHELL_HEIGHT,
-    ready: '.dashModules',
-    layoutExpectations: [{ kind: 'hidden', selector: '.dashHomeWren' }]
+    state: 'account-chooser',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.addAccountsChooser',
+    requiredText: ['Watch-only']
   },
   {
-    id: 'dash-delegation-capped-1.5',
+    id: 'dash-settings-full-1',
     renderer: 'dash',
-    state: 'delegation',
-    scale: 1.5,
-    logicalWidth: 530,
-    logicalHeight: SHORT_SHELL_HEIGHT,
-    ready: '.delegationRevocationEligible',
-    requiredControls: ['Revoke delegation'],
-    requiredText: ['Delegated to', 'Configured RPC · eth_getCode'],
-    layoutExpectations: [
-      { kind: 'stacked', selector: '.delegationRevocationSelectors > label' },
-      {
-        kind: 'full-width',
-        selector: '.delegationRevocationSelectors > label',
-        container: '.delegationRevocationSelectors'
-      },
-      { kind: 'stacked', selector: '.delegationRevocationEligible > *' },
-      {
-        kind: 'full-width',
-        selector: '.delegationRevocationEligible > button',
-        container: '.delegationRevocationEligible'
-      }
-    ]
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.wrenSettings',
+    requiredText: ['Desktop behavior', 'Accounts and signing']
   },
   {
-    id: 'tray-revocation-review-capped-1.5',
+    id: 'dash-networks-full-1',
+    renderer: 'dash',
+    state: 'networks',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.networkBreak',
+    requiredText: ['Ethereum Mainnet', 'Optimism Mainnet', 'Sepolia', 'Testnets']
+  },
+  {
+    id: 'dash-network-editor-full-1',
+    renderer: 'dash',
+    state: 'network-editor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
+  },
+  {
+    id: 'tray-account-ledger-full-1',
     renderer: 'tray',
-    state: 'revocation-review',
-    scale: 1.5,
-    logicalWidth: 600,
-    logicalHeight: SHORT_SHELL_HEIGHT,
-    ready: '.eip7702RevokeRequest-review',
-    requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-    requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce'],
-    layoutExpectations: [
-      {
-        kind: 'full-width',
-        selector: '.eip7702RevokeFeeRow > button',
-        container: '.eip7702RevokeFeeRow'
-      }
-    ]
+    state: 'account-ledger',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.settingsPreviewActions',
+    requiredText: ['Ethereum Mainnet', 'Balances', 'Connected apps', 'Signer', 'Remove account']
+  },
+  {
+    id: 'tray-account-ledger-bottom-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.settingsPreviewActions',
+    requiredText: ['Connected apps', 'Signer', 'Remove account'],
+    captureScroll: 'bottom',
+    captureScrollSelector: '.accountMainScroll'
+  },
+  {
+    id: 'tray-account-ledger-no-requests-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    requestsAbsent: true,
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.settingsPreviewActions',
+    requiredText: ['Ethereum Mainnet', 'Balances', 'Connected apps']
+  },
+  {
+    id: 'tray-account-removal-confirm-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Remove account' },
+    ready: '[role="alertdialog"]',
+    requiredText: ['Remove Workshop Software Account With A Long Name?', 'Cancel', 'Confirm removal'],
+    captureScroll: 'bottom',
+    captureScrollSelector: '.accountMainScroll'
+  },
+  {
+    id: 'tray-account-drawer-full-1',
+    renderer: 'tray',
+    state: 'account-drawer',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.accountChooserPanel',
+    requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
   }
 ]
+
+const scenarioMatrix = ({ includeReview = false } = {}) => {
+  const scenarios = [
+    ...INTERFACE_SCALES.flatMap((scale) => [
+      {
+        id: `tray-empty-full-${scale}`,
+        renderer: 'tray',
+        state: 'empty',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.accountSelectorEmpty'
+      },
+      {
+        id: `tray-empty-short-${scale}`,
+        renderer: 'tray',
+        state: 'empty',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.accountSelectorEmpty'
+      },
+      {
+        id: `dash-control-center-full-${scale}`,
+        renderer: 'dash',
+        state: 'control-center',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.dashModules',
+        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+      },
+      {
+        id: `dash-control-center-short-${scale}`,
+        renderer: 'dash',
+        state: 'control-center',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.dashModules',
+        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+      },
+      {
+        id: `tray-account-home-full-${scale}`,
+        renderer: 'tray',
+        state: 'account-home',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.chainMonitorPreview',
+        requiredControls: [
+          'Previous network from Ethereum Mainnet',
+          'Next network from Ethereum Mainnet',
+          'View Ethereum Mainnet account on block explorer',
+          'Show gas details for Ethereum Mainnet'
+        ],
+        requiredText: ['Ethereum Mainnet', 'Gas']
+      },
+      {
+        id: `tray-account-home-short-${scale}`,
+        renderer: 'tray',
+        state: 'account-home',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.chainMonitorPreview',
+        requiredControls: [
+          'Previous network from Ethereum Mainnet',
+          'Next network from Ethereum Mainnet',
+          'View Ethereum Mainnet account on block explorer',
+          'Show gas details for Ethereum Mainnet'
+        ],
+        requiredText: ['Ethereum Mainnet', 'Gas']
+      },
+      {
+        id: `dash-delegation-full-${scale}`,
+        renderer: 'dash',
+        state: 'delegation',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.delegationRevocationEligible',
+        requiredControls: ['Revoke delegation'],
+        requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+      },
+      {
+        id: `dash-delegation-short-${scale}`,
+        renderer: 'dash',
+        state: 'delegation',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.delegationRevocationEligible',
+        requiredControls: ['Revoke delegation'],
+        requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+      },
+      {
+        id: `dash-tokens-full-${scale}`,
+        renderer: 'dash',
+        state: 'tokens',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.customTokens',
+        requiredControls: ['Add New Token'],
+        requiredText: ['No custom tokens']
+      },
+      {
+        id: `dash-tokens-short-${scale}`,
+        renderer: 'dash',
+        state: 'tokens',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.customTokens',
+        requiredControls: ['Add New Token'],
+        requiredText: ['No custom tokens']
+      },
+      {
+        id: `tray-revocation-review-full-${scale}`,
+        renderer: 'tray',
+        state: 'revocation-review',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.eip7702RevokeRequest-review',
+        requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+        requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+      },
+      {
+        id: `tray-revocation-review-short-${scale}`,
+        renderer: 'tray',
+        state: 'revocation-review',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.eip7702RevokeRequest-review',
+        requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+        requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+      },
+      {
+        id: `tray-revocation-monitor-full-${scale}`,
+        renderer: 'tray',
+        state: 'revocation-monitor',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.eip7702StopMonitoringDialog',
+        action: { type: 'clickText', text: 'Stop monitoring' },
+        expectedInitialFocus: 'Keep monitoring',
+        requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+        requiredText: ['Submission status unclear', 'cannot cancel a transaction']
+      },
+      {
+        id: `tray-revocation-monitor-short-${scale}`,
+        renderer: 'tray',
+        state: 'revocation-monitor',
+        scale,
+        logicalWidth: 760,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.eip7702StopMonitoringDialog',
+        action: { type: 'clickText', text: 'Stop monitoring' },
+        expectedInitialFocus: 'Keep monitoring',
+        requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+        requiredText: ['Submission status unclear', 'cannot cancel a transaction']
+      },
+      {
+        id: `onboard-intro-${scale}`,
+        renderer: 'onboard',
+        state: 'intro',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: 'button'
+      },
+      {
+        id: `onboard-access-${scale}`,
+        renderer: 'onboard',
+        state: 'access',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: { type: 'clickText', text: 'Get started' }
+      }
+    ]),
+    {
+      id: 'dash-control-center-capped-1.5',
+      renderer: 'dash',
+      state: 'control-center',
+      scale: 1.5,
+      logicalWidth: 530,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.dashModules',
+      layoutExpectations: [{ kind: 'hidden', selector: '.dashHomeWren' }]
+    },
+    {
+      id: 'dash-delegation-capped-1.5',
+      renderer: 'dash',
+      state: 'delegation',
+      scale: 1.5,
+      logicalWidth: 530,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.delegationRevocationEligible',
+      requiredControls: ['Revoke delegation'],
+      requiredText: ['Delegated to', 'Configured RPC · eth_getCode'],
+      layoutExpectations: [
+        { kind: 'stacked', selector: '.delegationRevocationSelectors > label' },
+        {
+          kind: 'full-width',
+          selector: '.delegationRevocationSelectors > label',
+          container: '.delegationRevocationSelectors'
+        },
+        { kind: 'stacked', selector: '.delegationRevocationEligible > *' },
+        {
+          kind: 'full-width',
+          selector: '.delegationRevocationEligible > button',
+          container: '.delegationRevocationEligible'
+        }
+      ]
+    },
+    {
+      id: 'tray-revocation-review-capped-1.5',
+      renderer: 'tray',
+      state: 'revocation-review',
+      scale: 1.5,
+      logicalWidth: 600,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      ready: '.eip7702RevokeRequest-review',
+      requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce'],
+      layoutExpectations: [
+        {
+          kind: 'full-width',
+          selector: '.eip7702RevokeFeeRow > button',
+          container: '.eip7702RevokeFeeRow'
+        }
+      ]
+    }
+  ]
+  return includeReview ? [...scenarios, ...reviewScenarios()] : scenarios
+}
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({
   width: Math.round(logicalWidth * scale),

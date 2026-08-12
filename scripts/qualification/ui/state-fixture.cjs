@@ -131,6 +131,7 @@ const qualificationAccount = (request) => ({
   lastSignerType: 'ring',
   status: 'ok',
   createdAt: 1,
+  balances: { lastUpdated: '2999-01-01T00:00:00.000Z' },
   activeRequestId: request?.handlerId,
   requests: request ? { [request.handlerId]: request } : {}
 })
@@ -212,6 +213,114 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'account-chooser') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'accounts', data: { showAddAccounts: true } }]
+    }
+  }
+
+  if (scenario.state === 'settings') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'settings', data: {} }]
+    }
+    Object.assign(state.main, {
+      accountCloseLock: false,
+      autohide: false,
+      extensionCredentials: {},
+      instanceId: '11111111-1111-4111-8111-111111111111',
+      interfaceScale: scenario.scale,
+      latticeSettings: {
+        accountLimit: 5,
+        derivation: 'standard',
+        endpointCustom: '',
+        endpointMode: 'default'
+      },
+      launch: false,
+      ledger: { derivation: 'live', liveAccountLimit: 5 },
+      reveal: false,
+      showLocalNameWithENS: false,
+      trezor: { derivation: 'standard' }
+    })
+  }
+
+  if (scenario.state === 'networks') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'chains', data: {} }]
+    }
+    state.main.networks.ethereum = {
+      1: {
+        id: 1,
+        name: 'Ethereum Mainnet',
+        explorer: 'https://etherscan.io',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      },
+      10: qualificationNetwork(),
+      11155111: {
+        id: 11155111,
+        name: 'Sepolia',
+        explorer: 'https://sepolia.etherscan.io',
+        on: false,
+        isTestnet: true,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      }
+    }
+    state.main.networksMeta.ethereum = {
+      1: { nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
+      10: { nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
+      11155111: { nativeCurrency: { symbol: 'ETH', name: 'Sepolia Ether', decimals: 18 } }
+    }
+  }
+
+  if (scenario.state === 'network-editor') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'chains', data: { selectedChain: { id: 1, type: 'ethereum' } } }]
+    }
+    state.main.networks.ethereum = {
+      1: {
+        id: 1,
+        name: 'Ethereum Mainnet',
+        explorer: 'https://etherscan.io',
+        on: true,
+        isTestnet: false,
+        connection: {
+          endpoints: [
+            {
+              id: 'publicnode',
+              current: 'publicnode',
+              on: true,
+              connected: true,
+              status: 'connected'
+            },
+            {
+              id: 'backup',
+              current: 'custom',
+              custom: 'https://rpc.example',
+              on: false,
+              connected: false,
+              status: 'off'
+            }
+          ]
+        }
+      }
+    }
+    state.main.networksMeta.ethereum = {
+      1: {
+        icon: '',
+        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, icon: '' }
+      }
+    }
+  }
+
   if (scenario.state === 'account-home') {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
@@ -219,6 +328,83 @@ const fixtureFor = (scenario) => {
     state.main.networksMeta.ethereum = metadata
     state.panel.account.moduleOrder = ['chains']
     state.panel.account.modules.chains.height = 105
+  }
+
+  if (scenario.state === 'account-ledger') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.balances[QUALIFICATION_ACCOUNT] = [
+      {
+        chainId: 1,
+        address: null,
+        balance: '1250000000000000000',
+        decimals: 18,
+        name: 'Ether',
+        symbol: 'ETH'
+      },
+      {
+        chainId: 10,
+        address: null,
+        balance: '500000000000000000',
+        decimals: 18,
+        name: 'Ether',
+        symbol: 'ETH'
+      }
+    ]
+    state.main.permissions[QUALIFICATION_ACCOUNT] = {
+      workshop: { origin: 'workshop.example', provider: true }
+    }
+    if (scenario.requestsAbsent) {
+      state.panel.account.moduleOrder = state.panel.account.moduleOrder.filter((id) => id !== 'requests')
+    }
+    state.panel.account.modules = {
+      requests: { height: 48 },
+      chains: { height: 104 },
+      balances: { height: 248 },
+      permissions: { height: 168 },
+      signer: { height: 52 },
+      settings: { height: 52 }
+    }
+  }
+
+  if (scenario.state === 'account-drawer') {
+    prepareSelectedAccount(state)
+    const accountTypes = ['ring', 'ledger', 'trezor', 'lattice', 'address', 'ring']
+    const accountNames = [
+      'Primary account',
+      'Hardware account',
+      'Treasury signer',
+      'Lattice vault',
+      'Watch account',
+      'Operations account'
+    ]
+    const accounts = Object.fromEntries(
+      accountNames.map((name, index) => {
+        const address = `0x${String(index + 1).padStart(40, '0')}`
+        return [
+          address,
+          {
+            ...qualificationAccount(),
+            id: address,
+            address,
+            name,
+            lastSignerType: accountTypes[index],
+            created: `${accountNames.length - index}:0`,
+            createdAt: index + 1
+          }
+        ]
+      })
+    )
+    const addresses = Object.keys(accounts)
+    state.main.accounts = accounts
+    state.selected = {
+      ...state.selected,
+      current: addresses[0],
+      addresses,
+      showAccounts: true
+    }
   }
 
   if (scenario.state === 'revocation-review' || scenario.state === 'revocation-monitor') {

@@ -12,6 +12,13 @@ const projectRoot = path.resolve(__dirname, '../../..')
 const runRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_ROOT || '')
 const reportPath = path.resolve(process.env.WREN_UI_QUALIFICATION_REPORT || '')
 const screenshotRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_SCREENSHOTS || '')
+const captureAll = process.env.WREN_UI_QUALIFICATION_CAPTURE_ALL === '1'
+const selectedScenarioIds = new Set(
+  (process.env.WREN_UI_QUALIFICATION_SCENARIOS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+)
 const bundleRoot = path.join(projectRoot, 'bundle')
 const preload = path.join(bundleRoot, 'bridge.js')
 const stateByWebContents = new Map()
@@ -203,7 +210,9 @@ const clickText = async (webContents, text) => {
   const clicked = await webContents.executeJavaScript(
     `(() => {
       const target = Array.from(document.querySelectorAll('button')).find(
-        (button) => button.innerText.trim() === ${JSON.stringify(text)}
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(text)}
       )
       if (!target) return false
       target.click()
@@ -228,7 +237,9 @@ const runScenario = async (scenario) => {
       await waitFor(
         window.webContents,
         `Array.from(document.querySelectorAll('button')).some(
-          (button) => button.innerText.trim() === ${JSON.stringify(scenario.action.text)}
+          (button) =>
+            button.innerText.trim() === ${JSON.stringify(scenario.action.text)} ||
+            button.getAttribute('aria-label') === ${JSON.stringify(scenario.action.text)}
         )`
       )
       await clickText(window.webContents, scenario.action.text)
@@ -253,7 +264,30 @@ const runScenario = async (scenario) => {
     }
 
     let screenshot
-    if (audit.violations.length) {
+    if (captureAll || audit.violations.length) {
+      if (captureAll) {
+        await window.webContents.executeJavaScript(
+          `if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+          for (const element of [document.scrollingElement, ...document.querySelectorAll('*')]) {
+            if (element) {
+              element.scrollTop = 0
+              element.scrollLeft = 0
+            }
+          }`,
+          true
+        )
+        if (scenario.captureScroll === 'bottom') {
+          await window.webContents.executeJavaScript(
+            `(() => {
+              const element = document.querySelector(${JSON.stringify(scenario.captureScrollSelector)})
+              if (!element) throw new Error('Capture scroll target was not found')
+              element.scrollTop = element.scrollHeight
+            })()`,
+            true
+          )
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
       screenshot = path.join(screenshotRoot, `${scenario.id}.png`)
       const image = await window.webContents.capturePage()
       fs.writeFileSync(screenshot, image.toPNG(), { mode: 0o600 })
@@ -292,8 +326,17 @@ const main = async () => {
 
   const localFileProbe = await runLocalFileSelfTest()
   const isolationProbe = await runIsolationSelfTest()
+  const scenarios = scenarioMatrix({ includeReview: captureAll || selectedScenarioIds.size > 0 })
+  if (selectedScenarioIds.size) {
+    const knownIds = new Set(scenarios.map((scenario) => scenario.id))
+    const unknownIds = [...selectedScenarioIds].filter((id) => !knownIds.has(id))
+    if (unknownIds.length) throw new Error(`Unknown UI qualification scenarios: ${unknownIds.join(', ')}`)
+  }
+  const selectedScenarios = selectedScenarioIds.size
+    ? scenarios.filter((scenario) => selectedScenarioIds.has(scenario.id))
+    : scenarios
   const results = []
-  for (const scenario of scenarioMatrix()) results.push(await runScenario(scenario))
+  for (const scenario of selectedScenarios) results.push(await runScenario(scenario))
 
   const report = {
     covered: {

@@ -21,6 +21,33 @@ for (const directory of directories) {
 
 const reportPath = path.join(runRoot, 'report', 'ui-qualification.json')
 const screenshotRoot = path.join(runRoot, 'screenshots')
+const exportRoot = process.env.WREN_UI_QUALIFICATION_EXPORT
+  ? path.resolve(process.env.WREN_UI_QUALIFICATION_EXPORT)
+  : undefined
+
+const assertPrivateExportDirectory = (target) => {
+  const stat = fs.lstatSync(target)
+  if (!stat.isDirectory() || stat.isSymbolicLink()) {
+    throw new Error(`UI qualification export target is not a regular directory: ${target}`)
+  }
+  if (process.platform !== 'win32' && (stat.mode & 0o777) !== 0o700) {
+    throw new Error(`UI qualification export target must use mode 0700: ${target}`)
+  }
+}
+
+const exportArtifacts = (report) => {
+  if (!exportRoot) return
+  assertPrivateExportDirectory(exportRoot)
+  const exportedReport = path.join(exportRoot, 'ui-qualification.json')
+  fs.copyFileSync(reportPath, exportedReport)
+  fs.chmodSync(exportedReport, 0o600)
+  for (const result of report.results || []) {
+    if (!result.screenshot || !fs.existsSync(result.screenshot)) continue
+    const destination = path.join(exportRoot, path.basename(result.screenshot))
+    fs.copyFileSync(result.screenshot, destination)
+    fs.chmodSync(destination, 0o600)
+  }
+}
 
 const terminate = async (child, graceMs = 2000) => {
   if (!child || child.exitCode !== null || child.signalCode !== null) return
@@ -160,6 +187,7 @@ try {
   failureArtifacts = preserveFailures(report)
   if (!report) throw new Error('Electron harness did not write a qualification report')
   if (report.fatal) throw new Error(report.fatal)
+  exportArtifacts(report)
   if (timedOut) throw new Error('Electron UI qualification exceeded 90 seconds')
 
   const passed = report.results.filter((entry) => entry.audit.violations.length === 0).length

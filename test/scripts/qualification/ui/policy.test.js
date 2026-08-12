@@ -45,6 +45,62 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   )
 })
 
+it('fixtures the separator-review surfaces at native scale and geometry', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const chooser = scenarios.find(({ state }) => state === 'account-chooser')
+  const settings = scenarios.find(({ state }) => state === 'settings')
+  const networks = scenarios.find(({ state }) => state === 'networks')
+  const editor = scenarios.find(({ state }) => state === 'network-editor')
+  const ledger = scenarios.find(({ state }) => state === 'account-ledger')
+  const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
+  const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
+  const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
+  const drawer = scenarios.find(({ state }) => state === 'account-drawer')
+
+  expect(
+    [chooser, settings, networks, editor].map(({ logicalWidth, scale }) => [logicalWidth, scale])
+  ).toEqual([
+    [620, 1],
+    [620, 1],
+    [620, 1],
+    [620, 1]
+  ])
+  expect([ledger.logicalWidth, ledger.scale]).toEqual([760, 1])
+  expect(ledgerBottom).toMatchObject({
+    captureScroll: 'bottom',
+    captureScrollSelector: '.accountMainScroll'
+  })
+  expect(fixtureFor(ledgerNoRequests).panel.account.moduleOrder).not.toContain('requests')
+  expect(removalConfirm).toMatchObject({
+    action: { type: 'clickText', text: 'Remove account' },
+    ready: '[role="alertdialog"]',
+    captureScroll: 'bottom'
+  })
+  expect([drawer.logicalWidth, drawer.scale]).toEqual([760, 1])
+  expect(fixtureFor(chooser).windows.dash.nav[0]).toEqual({
+    view: 'accounts',
+    data: { showAddAccounts: true }
+  })
+  expect(fixtureFor(settings).main.instanceId).toBeTruthy()
+  expect(Object.values(fixtureFor(networks).main.networks.ethereum).some(({ isTestnet }) => isTestnet)).toBe(
+    true
+  )
+  expect(fixtureFor(editor).main.networks.ethereum[1].connection.endpoints).toHaveLength(2)
+  expect(Object.keys(fixtureFor(drawer).main.accounts)).toHaveLength(6)
+  expect(fixtureFor(drawer).selected.showAccounts).toBe(true)
+  const ledgerFixture = fixtureFor(ledger)
+  expect(ledgerFixture.panel.account.moduleOrder).toEqual([
+    'requests',
+    'chains',
+    'balances',
+    'permissions',
+    'signer',
+    'settings'
+  ])
+  expect(ledgerFixture.panel.account.modules.balances.height).toBe(248)
+  expect(ledgerFixture.panel.account.modules.permissions.height).toBe(168)
+})
+
 it('qualifies the decorative Control Center Wren and selected-chain explorer geometry', () => {
   const scenarios = scenarioMatrix()
   const controlCenters = scenarios.filter(
