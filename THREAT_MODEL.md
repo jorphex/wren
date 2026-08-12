@@ -79,18 +79,28 @@ unlock or migration keeps the recovery copy. OS suspend and screen-lock events
 relock every unlocked software signer.
 
 Limits: while retained, legacy backup ciphertext is unauthenticated and protected
-by its old password; encryption is neither keychain nor hardware bound; metadata,
-addresses, permissions, and networks are unencrypted; unlocked secrets exist in memory; and
-overwrite-before-delete is not secure erasure on modern filesystems/SSDs.
+by its old password; encryption is neither keychain nor hardware bound; live-profile
+metadata, addresses, permissions, and networks are unencrypted; unlocked secrets
+exist in memory; and overwrite-before-delete is not secure erasure on modern
+filesystems/SSDs.
 Contacts, notes, addresses, and timestamps are unencrypted relationship metadata.
-User-created JSON backups are size-bounded and validated on restore and their
-paths are not returned to the renderer. Names are unverified aliases, never an
-authorization or destination source; review keeps the full address and aliases
-do not alter calldata, recipients, signing, simulation, or broadcast. Trusted
-labels reject Unicode control/format characters; migration removes only invalid
-legacy entries. Prefer hardware signers and independent backups. Encryption
-migrations must stay versioned, address-verified, atomic, tested with non-real
-data, and recoverable without weakening encryption.
+User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
+envelopes over an explicit recovery allowlist. They include configuration and
+validated encrypted software-signer records, but exclude activity, pending work,
+runtime observations, caches, installed dapp content, and Companion credentials;
+hardware devices keep their keys. Export writes a new mode-`0600` regular file.
+Restore keeps the chosen path in main, binds a short-lived single-use token to its
+identity, bytes, and inspected metadata, then requires an explicit replace action.
+The replacement runs before application bootstrap using an atomic swap, receipt,
+and rollback; a target is not committed unless it revalidates. The backup password
+is user-managed, not keychain-bound, and restoring intentionally requires Companion
+re-pairing. Names are unverified aliases, never an authorization or destination
+source; review keeps the full address and aliases do not alter calldata, recipients,
+signing, simulation, or broadcast. Trusted labels reject Unicode control/format
+characters; migration removes only invalid legacy entries. Prefer hardware signers
+and independent backups. Encryption migrations must stay versioned,
+address-verified, atomic, tested with non-real data, and recoverable without
+weakening encryption.
 
 Hardware keys are expected to stay on-device, but Wren controls the presented
 request and depends on firmware, vendor libraries, and USB drivers. Blind or
@@ -111,10 +121,10 @@ expected packaged/development origin, and protocol label. Only registered IPC
 channels are accepted; request IDs and argument counts are bounded; malformed or
 oversized messages stop before Electron IPC. Typed request/response schemas and
 inventory tests require agreement among renderer callsites, handlers, and
-schemas. A main-owned role map independently authorizes the sender: tray/dash
-retain the full bridge; onboarding, notification, and local dapp shell have only
-their enumerated RPC, IPC, and store actions; missing, unknown, or duplicate
-roles fail closed. Remote dapp WebContentsViews lack the bridge. Handler payload
+schemas. A main-owned role map independently authorizes the sender: each surface
+receives only its enumerated RPC, IPC, and store actions, and profile recovery is
+dashboard-only; missing, unknown, or duplicate roles fail closed. Remote dapp
+WebContentsViews lack the bridge. Handler payload
 validation exists, but handler semantics and authorization remain privileged
 main-process work. Compromised tray/dash and broad renderer network/image policy
 remain high-impact; embedded dapps depend on partitioning, session checks, and

@@ -106,6 +106,7 @@ it('uses PublicNode for every built-in network with a public preset', async () =
     'requests',
     'chains',
     'balances',
+    'activity',
     'permissions',
     'signer',
     'settings'

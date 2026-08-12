@@ -311,10 +311,7 @@ handleRenderer('addressBook:remove', async (e, address) =>
 handleRenderer('addressBook:import', async () => addressBookMutation(() => addressBookFiles.importFile()))
 handleRenderer('addressBook:export', async () => addressBookMutation(() => addressBookFiles.exportFile()))
 
-const profileBackupMutation = async (
-  publicError: string,
-  operation: () => Promise<unknown> | unknown
-) => {
+const profileBackupMutation = async (publicError: string, operation: () => Promise<unknown> | unknown) => {
   try {
     return await operation()
   } catch (error) {
