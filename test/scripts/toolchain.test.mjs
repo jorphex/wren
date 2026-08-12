@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { executableForPlatform } from '../../scripts/toolchain.mjs'
+import { npmCliInvocation } from '../../scripts/toolchain.mjs'
 
-test('resolves command shims on Windows without changing Unix commands', () => {
-  assert.equal(executableForPlatform('npm', 'win32'), 'npm.cmd')
-  assert.equal(executableForPlatform('npm', 'linux'), 'npm')
-  assert.equal(executableForPlatform('npm', 'darwin'), 'npm')
+test('runs the npm CLI through Node without relying on platform command shims', () => {
+  assert.deepEqual(npmCliInvocation('/runtime/node.exe', 'C:\\npm\\npm-cli.js'), {
+    executable: '/runtime/node.exe',
+    args: ['C:\\npm\\npm-cli.js', '--version']
+  })
+  assert.throws(() => npmCliInvocation('/runtime/node', ''), /run this check through npm/)
 })
