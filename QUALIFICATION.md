@@ -22,6 +22,12 @@ checksums, compatibility metadata, and source-bound SBOM.
 The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
+The native smoke matrix builds real unsigned Linux arm64, macOS x64/arm64, and
+Windows x64 packages on matching runners, then compares packaged runtime evidence
+from the unpacked application and each extracted archive. These jobs verify source
+identity, runtime architecture, resources, native modules, and existing runtime
+invariants; their retained `unsigned-unqualified` artifacts are not release,
+installer, GUI, hardware, signing, or platform-qualification evidence.
 `npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display
 and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
 delegation entry, revocation review, ambiguous monitoring, safe focus,
@@ -240,10 +246,10 @@ cleanly. Its exercised hashes were AppImage
 implementations did not change. These historical hashes identify only their
 artifact sets; rebuilt candidates need their own identity and `SHA256SUMS` check.
 
-Historical limits remain: packages are unsigned and not reproducible; evidence
-is embedded clean-source identity, SHA-256, SBOM, and GitHub provenance. That run
-qualifies Linux x64 only—not macOS, Windows, Linux arm64, native-Wayland Glide,
-Bluetooth, unlisted hardware, or unexercised Yearn product/signer combinations.
+That historical run did not assess reproducibility; its evidence is embedded
+clean-source identity, SHA-256, SBOM, and GitHub provenance. It qualifies Linux
+x64 only—not macOS, Windows, Linux arm64, native-Wayland Glide, Bluetooth,
+unlisted hardware, or unexercised Yearn product/signer combinations.
 The current release audit reports 19 low-severity transitive findings, no high or
 critical finding, and no compatible upstream fix for the remaining `elliptic`
 path in this release line.

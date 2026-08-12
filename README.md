@@ -32,7 +32,7 @@ Wren `0.1.0` and Wren Companion `0.1.0` are release candidates. They are not pub
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                       |
 | Chrome and Firefox companion | Separate `0.1.0` candidate; release-gated qualification remains                           |
-| macOS, Windows, Linux arm64  | Not produced or qualified here                                                            |
+| macOS, Windows, Linux arm64  | Unsigned native CI smoke packages; not released or qualified                              |
 | Trezor Safe 7 Bluetooth      | Unsupported                                                                               |
 
 See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitations. Trezor Suite is not needed for the qualified Safe 7 USB flow.
@@ -54,7 +54,7 @@ The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPAT
 `v0.1.0` is not yet available to download. When it is published, get `Wren-0.1.0.AppImage` or `wren_0.1.0_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
 
 ```bash
-sha256sum --check --ignore-missing SHA256SUMS
+sha256sum --check SHA256SUMS
 ```
 
 Run the AppImage:
@@ -115,6 +115,7 @@ npm run prod
 npm run compile
 npm run bundle
 npm run package:linux:x64
+npm run package:verify:linux
 ```
 
 A successful local package build is not release qualification; follow [Release Procedure](RELEASE.md).

@@ -166,12 +166,14 @@ client: uncaught main errors stay local and are not sent to upstream Sentry.
 
 Dependencies are locked and install scripts allowlisted; CI actions are pinned.
 Linux release evidence is checksums, SBOM, a reviewed draft workflow, and GitHub
-provenance—not signatures or demonstrated reproducible builds. Companion archives
-are separately source-bound/deterministic with checksums, compatibility metadata,
-and a production SBOM. macOS/Windows signing is absent. The updater uses package
-metadata's repository and needs user action to download/install. Release
-credentials, GitHub administration, CI, npm packages, and maintainer workstations
-are supply-chain boundaries; see [`RELEASE.md`](RELEASE.md).
+provenance—not signatures. Two-build evidence covers identical application
+payloads, native modules, SBOM, and deb bytes, but not AppImage container bytes.
+Companion archives are separately source-bound/deterministic with checksums,
+compatibility metadata, and a production SBOM. macOS/Windows signing is absent.
+The updater uses package metadata's repository and needs user action to
+download/install. Release credentials, GitHub administration, CI, npm packages,
+and maintainer workstations are supply-chain boundaries; see
+[`RELEASE.md`](RELEASE.md).
 
 ## Invariants for new work
 

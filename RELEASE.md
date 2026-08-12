@@ -4,9 +4,16 @@
 
 Wren currently releases Linux x64 AppImage and deb packages. The GitHub workflow
 creates a **new draft** only; it does not update or publish a release. Packages
-are unsigned, byte-for-byte reproducibility has not been demonstrated, and
-macOS notarization and Windows signing are not configured. Glide is qualified on
-X11 only; on native Wayland use the tray or summon shortcut.
+are unsigned, macOS notarization and Windows signing are not configured, and
+Linux x64 remains the only release target. Secret-free CI builds and verifies real
+unsigned Linux arm64, macOS x64/arm64, and Windows x64 smoke packages on matching
+native runners; these artifacts are neither published nor platform-qualified.
+Glide is qualified on X11 only; on native Wayland use the tray or summon shortcut.
+
+The native verifier checks clean source/application identity, packaged resources,
+runtime architecture, native hardware modules, sandbox policy, and matching
+unpacked/archive payload behavior. It does not exercise installers, the graphical
+desktop, hardware, signing, notarization, or operating-system integration.
 
 ## Prepare a candidate
 
@@ -38,6 +45,7 @@ X11 only; on native Wayland use the tray or summon shortcut.
    npm run sbom:verify:linux
    npm run checksums:linux
    npm run release:verify:linux
+   npm run repro:linux -- --output reproducibility-report.json
    ```
 
 4. Review the diff, dependency graph, test output, package names,
@@ -45,6 +53,19 @@ X11 only; on native Wayland use the tray or summon shortcut.
    the AppImage, amd64 deb, and source-bound SBOM; package verification must
    report the embedded identity of the clean compiled source. Do not waive an
    unexplained signing, migration, native-module, or packaging failure.
+
+## Reproducibility evidence
+
+The bounded two-build comparison at commit
+`cb6078a2e2a4ce6c841cf5afa1907947d9a9be21` used the commit epoch with `TZ=UTC`,
+`LANG=C`, and `LC_ALL=C`. Compiled output, renderer bundles, unpacked application,
+extracted AppImage/deb payloads, all native modules, the CycloneDX SBOM, and deb
+package bytes matched. The AppImage container bytes did not; only the AppImage,
+its derived `latest-linux.yml`, and `SHA256SUMS` differed. Identical extracted
+payloads isolate the observed variance to the AppImage container. No low-risk
+repository-local remediation was evidenced, so Wren does not claim byte-for-byte
+AppImage reproducibility. Run the command above on each candidate and retain its
+report with private release evidence.
 
 ## Create and review the draft
 

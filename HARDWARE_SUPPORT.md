@@ -6,18 +6,19 @@ For people deciding whether their signer and platform are within Wren's tested b
 
 ## Current support
 
-| Signer or platform          | Transport/package             | Evidence and release boundary                                                                                                                                   |
-| --------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Trezor Safe 7               | USB, Trezor Connect           | Physical address, message, EIP-712, transaction, broadcast, rejection, and reconnect tests on Linux x64; automated bridge coverage. Workable, at your own risk. |
-| Trezor Model One            | USB, Trezor Connect           | Physical address, message, hash-only EIP-712, rejection, and reconnect on firmware 1.13.1. Qualified with limitations on Linux x64.                             |
-| Other Trezor models         | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                                |
-| Trezor Safe 7 Bluetooth     | Bluetooth                     | No Wren transport; unsupported.                                                                                                                                 |
-| Ledger                      | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                                  |
-| GridPlus Lattice1           | Vendor SDK/network            | Automated adapter/device coverage; not physically requalified.                                                                                                  |
-| Seed, private key, keystore | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                                 |
-| Linux x64 AppImage/deb      | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                           |
-| macOS and Windows           | Electron package              | Inherited configuration only; unverified and unsigned here.                                                                                                     |
-| Linux arm64, snap, tarball  | Electron package              | Legacy configuration only; not produced by current CI.                                                                                                          |
+| Signer or platform              | Transport/package             | Evidence and release boundary                                                                                                                                   |
+| ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trezor Safe 7                   | USB, Trezor Connect           | Physical address, message, EIP-712, transaction, broadcast, rejection, and reconnect tests on Linux x64; automated bridge coverage. Workable, at your own risk. |
+| Trezor Model One                | USB, Trezor Connect           | Physical address, message, hash-only EIP-712, rejection, and reconnect on firmware 1.13.1. Qualified with limitations on Linux x64.                             |
+| Other Trezor models             | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                                |
+| Trezor Safe 7 Bluetooth         | Bluetooth                     | No Wren transport; unsupported.                                                                                                                                 |
+| Ledger                          | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                                  |
+| GridPlus Lattice1               | Vendor SDK/network            | Automated adapter/device coverage; not physically requalified.                                                                                                  |
+| Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                                 |
+| Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                           |
+| macOS x64/arm64 and Windows x64 | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not signed, released, installed, or platform-qualified.                               |
+| Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                                   |
+| Linux snap                      | Electron package              | Legacy configuration only; not produced by current CI.                                                                                                          |
 
 Trezor Suite is not required for the qualified Safe 7 USB flow. Another app holding the device transport can cause contention.
 
