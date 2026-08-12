@@ -32,6 +32,7 @@ import { openBlockExplorer, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
+import operationLifecycleRuntime from './operationLifecycle/runtime'
 import walletCallBatchLedger from './provider/walletCallLedger'
 import { showWalletCallStatus } from './provider/walletCallStatusView'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
@@ -85,6 +86,7 @@ log.info(`Node: v${process.versions.node}`)
 // prevent showing the exit dialog more than once
 let closing = false
 let walletCallEvidenceLifecycleReady = false
+let operationLifecycleReady = false
 let removeSignerPowerLockHandlers = () => {}
 let profileRestoreRelaunchTimer: ReturnType<typeof setTimeout> | undefined
 const PROFILE_INSPECTION_TOKEN_TTL_MS = 5 * 60 * 1000
@@ -103,6 +105,15 @@ function startWalletCallEvidenceRuntime() {
     )
   }
   walletCallEvidenceRuntime.start()
+}
+
+function startOperationLifecycleRuntime() {
+  if (!operationLifecycleReady) {
+    operationLifecycleReady = true
+    powerMonitor.on('suspend', () => operationLifecycleRuntime.stop())
+    powerMonitor.on('resume', () => operationLifecycleRuntime.start())
+  }
+  operationLifecycleRuntime.start()
 }
 
 process.on('uncaughtException', (e) => {
@@ -484,6 +495,7 @@ onRenderer('frame:unmax', (e) => {
 })
 
 app.on('ready', () => {
+  startOperationLifecycleRuntime()
   menu()
   windows.init()
   dapps.setEmbeddedOpener((view) => windows.openEmbeddedDapp(view))
@@ -540,6 +552,7 @@ app.on('activate', () => windows.showTray())
 
 app.on('before-quit', () => {
   walletCallEvidenceRuntime.stop()
+  operationLifecycleRuntime.stop()
   if (!updater.updateReady) {
     updater.stop()
   }

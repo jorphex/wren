@@ -65,3 +65,28 @@ test('fails closed when the durable ledger is at capacity', () => {
   )
   expect(save).not.toHaveBeenCalled()
 })
+
+test('capacity eviction removes only the oldest handled terminal row', () => {
+  const active = operation()
+  const unhandled = {
+    ...operation(),
+    id: '00000000-0000-4000-8000-000000000002',
+    state: 'confirmed' as const
+  }
+  const handled = {
+    ...operation(),
+    id: '00000000-0000-4000-8000-000000000003',
+    state: 'failed' as const,
+    notification: { terminalHandledAt: 10 }
+  }
+  let persisted = { [active.id]: active, [unhandled.id]: unhandled, [handled.id]: handled }
+  const ledger = new OperationLifecycleLedger({
+    load: () => persisted,
+    save: (value) => {
+      persisted = value
+    }
+  })
+  expect(ledger.evictOldestHandledTerminal(10)).toBe(true)
+  expect(ledger.listStored().map(({ id }) => id)).toEqual([unhandled.id, active.id])
+  expect(ledger.evictOldestHandledTerminal(10)).toBe(false)
+})

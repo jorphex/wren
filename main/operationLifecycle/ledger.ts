@@ -18,15 +18,32 @@ export class OperationLifecycleLedger {
 
   private read(now = Date.now()) {
     const loaded = this.storage.load()
-    const operations = pruneOperationLifecycles(loaded, now)
+    const operations = this.normalize(loaded, now)
     const loadedCount =
       loaded && typeof loaded === 'object' && !Array.isArray(loaded) ? Object.keys(loaded).length : 0
     if (Object.keys(operations).length !== loadedCount) this.storage.save(clone(operations))
     return operations
   }
 
+  private normalize(value: unknown, now: number) {
+    const operations = pruneOperationLifecycles(value, -1)
+    return Object.fromEntries(
+      Object.entries(operations).filter(
+        ([_id, operation]) => operation.expiresAt > now || operation.state === 'stopped'
+      )
+    ) as OperationLifecycles
+  }
+
   list(now = Date.now()) {
     return Object.freeze(Object.values(this.read(now)).map((operation) => Object.freeze(clone(operation))))
+  }
+
+  listStored() {
+    return Object.freeze(
+      Object.values(pruneOperationLifecycles(this.storage.load(), -1)).map((operation) =>
+        Object.freeze(clone(operation))
+      )
+    )
   }
 
   get(id: string, now = Date.now()) {
@@ -36,7 +53,7 @@ export class OperationLifecycleLedger {
 
   put(candidate: OperationLifecycle, now = Date.now()) {
     const parsed = OperationLifecycleSchema.safeParse(candidate)
-    if (!parsed.success || parsed.data.expiresAt <= now) {
+    if (!parsed.success || (parsed.data.expiresAt <= now && parsed.data.state !== 'stopped')) {
       throw new Error('Invalid operation lifecycle')
     }
 
@@ -70,5 +87,16 @@ export class OperationLifecycleLedger {
     delete operations[id]
     this.storage.save(clone(operations))
     return true
+  }
+
+  evictOldestHandledTerminal(now = Date.now()) {
+    const candidate = this.listStored()
+      .filter(
+        (operation) =>
+          ['confirmed', 'failed', 'replaced', 'stopped', 'verified-clearance'].includes(operation.state) &&
+          operation.notification.terminalHandledAt !== undefined
+      )
+      .sort((left, right) => left.updatedAt - right.updatedAt || left.id.localeCompare(right.id))[0]
+    return candidate ? this.remove(candidate.id, now) : false
   }
 }

@@ -1778,6 +1778,29 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('contains a rejected durable monitor handoff after broadcast', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('monitor-storage-failure')
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockRejectedValue(new Error('disk unavailable'))
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+      await new Promise(setImmediate)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'sent',
+        notice: 'Sent; monitoring unavailable',
+        mode: 'monitor',
+        tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
+      })
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
   it('does not misdiagnose a generic Ledger invalid-data response', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('ledger-invalid-data')

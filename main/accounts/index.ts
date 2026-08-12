@@ -64,6 +64,10 @@ import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation
 import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain/account/code'
 import { recordRequestActivity } from '../activity'
 import { notifyTransactionOutcome } from '../notifications/transaction'
+import operationLifecycleLedger from '../operationLifecycle'
+import operationLifecycleRuntime from '../operationLifecycle/runtime'
+import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
+import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -199,6 +203,7 @@ export class Accounts extends EventEmitter {
   private readonly pendingNonceAdjustments = new Map<string, PendingNonceAdjustment>()
   private readonly eip7702MonitorTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly eip7702Admissions = new Set<string>()
+  private readonly removeOperationLifecycleObserver: () => void
 
   constructor() {
     super()
@@ -215,6 +220,9 @@ export class Accounts extends EventEmitter {
     this._current = Object.values(this.accounts).find((acct) => acct.active)?.id || ''
 
     this.dataScanner = ExternalDataScanner()
+    this.removeOperationLifecycleObserver = operationLifecycleRuntime.observe((observation) =>
+      this.observeOperationLifecycle(observation.current, observation.confirmations, observation.receipt)
+    )
   }
 
   get(id: string) {
@@ -223,6 +231,162 @@ export class Accounts extends EventEmitter {
 
   private getTransactionRequest(account: FrameAccount, id: string): TransactionRequest {
     return account.getRequest(id)
+  }
+
+  private persistOperationLifecycle(operation: OperationLifecycle) {
+    try {
+      return operationLifecycleLedger.put(operation, operation.updatedAt)
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'Operation lifecycle limit reached') throw error
+      if (!operationLifecycleLedger.evictOldestHandledTerminal(operation.updatedAt)) throw error
+      return operationLifecycleLedger.put(operation, operation.updatedAt)
+    }
+  }
+
+  private operationForTransaction(request: TransactionRequest, hash: string): OperationLifecycle {
+    const now = Date.now()
+    if (!request.activityId) throw new Error('Transaction is missing its durable activity identity')
+    const chainId = parseRpcQuantity(request.data.chainId)
+    const nonce = parseRpcQuantity(request.data.nonce)
+    if (chainId === undefined || chainId <= 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('Transaction is missing its durable chain identity')
+    }
+    if (nonce === undefined) throw new Error('Transaction is missing its durable nonce')
+    return {
+      id: request.activityId,
+      kind: 'transaction',
+      account: request.account.toLowerCase(),
+      origin: request.origin,
+      chainId: Number(chainId),
+      state: 'submitted',
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: { hash: hash.toLowerCase(), nonce: toRpcQuantity(nonce) }
+    }
+  }
+
+  private operationForEip7702(request: Eip7702RevokeRequest, hash: string): OperationLifecycle {
+    const now = Date.now()
+    if (!request.activityId) throw new Error('EIP-7702 revocation is missing its durable activity identity')
+    const chainId = parseRpcQuantity(request.chainId)
+    const nonce = parseRpcQuantity(request.evidence.latestNonce)
+    if (chainId === undefined || chainId <= 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+      throw new Error('EIP-7702 revocation is missing its durable chain identity')
+    }
+    if (nonce === undefined) throw new Error('EIP-7702 revocation is missing its durable nonce')
+    return {
+      id: request.activityId,
+      kind: 'eip7702Revoke',
+      account: request.account.toLowerCase(),
+      origin: request.origin,
+      chainId: Number(chainId),
+      state: 'submitted',
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      eip7702Revoke: {
+        hash: hash.toLowerCase(),
+        expectedFinalNonce: toRpcQuantity(nonce + 1n)
+      }
+    }
+  }
+
+  private updateEip7702Lifecycle(
+    request: Eip7702RevokeRequest,
+    state: OperationLifecycle['state'],
+    receipt?: TransactionReceipt
+  ) {
+    if (!request.activityId) return
+    const current = operationLifecycleLedger.get(request.activityId)
+    if (!current || current.kind !== 'eip7702Revoke') return
+    const now = Date.now()
+    const blockHash = receipt?.['blockHash']
+    const transactionHash = receipt?.['transactionHash']
+    const status =
+      receipt?.status === '0x0' ? ('0x0' as const) : receipt?.status === '0x1' ? ('0x1' as const) : undefined
+    const persistedReceipt =
+      receipt && typeof blockHash === 'string' && typeof transactionHash === 'string' && status
+        ? {
+            transactionHash: transactionHash.toLowerCase(),
+            blockHash: blockHash.toLowerCase(),
+            blockNumber: receipt.blockNumber,
+            status
+          }
+        : undefined
+    const { receipt: _receipt, ...withoutReceipt } = current
+    this.persistOperationLifecycle({
+      ...withoutReceipt,
+      state,
+      updatedAt: now,
+      ...(persistedReceipt ? { receipt: persistedReceipt } : {})
+    })
+  }
+
+  private observeOperationLifecycle(
+    operation: OperationLifecycle,
+    confirmations = 0,
+    receipt?: Readonly<Record<string, unknown>>
+  ) {
+    const account = this.accounts[operation.account]
+    if (!account) return
+    const request = Object.values(account.requests).find(
+      (candidate) => candidate.activityId === operation.id && candidate.type === operation.kind
+    )
+    if (!request || (request.type !== 'transaction' && request.type !== 'eip7702Revoke')) return
+
+    const hash = operation.transaction?.hash ?? operation.eip7702Revoke?.hash
+    if (!hash) return
+    const liveReceipt = receipt && isTransactionReceipt(receipt) ? receipt : request.tx?.receipt
+    request.tx = {
+      hash,
+      confirmations,
+      ...(liveReceipt ? { receipt: liveReceipt } : {})
+    }
+
+    if (operation.state === 'reorged' || operation.state === 'submitted') {
+      delete request.tx.receipt
+      request.tx.confirmations = 0
+      request.status = RequestStatus.Verifying
+      request.notice = operation.state === 'reorged' ? 'Rechecking after chain reorganization' : 'Verifying'
+    } else if (operation.state === 'confirming') {
+      request.status = RequestStatus.Confirming
+      request.notice = request.type === 'eip7702Revoke' ? 'Included; confirming' : 'Confirming'
+    } else if (operation.state === 'confirmed') {
+      request.status = RequestStatus.Confirmed
+      request.notice = 'Confirmed'
+      request.completed = operation.updatedAt
+      recordRequestActivity(request, 'confirmed')
+    } else if (operation.state === 'verified-clearance' && request.type === 'eip7702Revoke') {
+      request.status = RequestStatus.Confirmed
+      request.notice = 'Delegation removed'
+      request.completed = operation.updatedAt
+      request.result = Object.freeze({
+        receiptStatus: operation.receipt?.status === '0x1' ? 'success' : 'failed',
+        revocationStatus: 'cleared',
+        reason: 'code-cleared'
+      })
+      recordRequestActivity(request, 'confirmed')
+    } else if (operation.state === 'failed') {
+      request.status = RequestStatus.Error
+      request.notice = request.type === 'eip7702Revoke' ? 'Delegation remains' : 'Failed'
+      request.completed = operation.updatedAt
+      recordRequestActivity(request, 'failed')
+    } else if (operation.state === 'replaced' && request.type === 'transaction') {
+      request.status = RequestStatus.Error
+      request.notice = 'Dropped'
+      request.completed = operation.updatedAt
+      recordRequestActivity(request, 'dropped')
+    } else if (operation.state === 'stopped') {
+      request.status = RequestStatus.Error
+      request.notice = 'Monitoring stopped'
+      request.completed = operation.updatedAt
+    }
+    account.update()
   }
 
   private nonceAdjustmentKey(account: FrameAccount, handlerId: string) {
@@ -306,7 +470,10 @@ export class Accounts extends EventEmitter {
     this.eip7702MonitorTimers.delete(key)
 
     const request = this.accounts[accountId.toLowerCase()]?.getRequest<Eip7702RevokeRequest>(handlerId)
-    if (request?.type === 'eip7702Revoke') request.operationVersion += 1
+    if (request?.type === 'eip7702Revoke') {
+      request.operationVersion += 1
+      if (request.activityId) operationLifecycleRuntime.release(request.activityId)
+    }
   }
 
   private eip7702ChainConnected(chainId: number) {
@@ -660,6 +827,13 @@ export class Accounts extends EventEmitter {
       throw new Error('Revocation submission monitoring cannot be stopped')
     }
 
+    if (request.activityId) {
+      const operation = operationLifecycleLedger.get(request.activityId)
+      if (operation && ['submitted', 'confirming', 'reorged'].includes(operation.state)) {
+        const now = Date.now()
+        this.persistOperationLifecycle({ ...operation, state: 'stopped', updatedAt: now })
+      }
+    }
     account.clearRequest(request.handlerId)
     return true
   }
@@ -705,6 +879,10 @@ export class Accounts extends EventEmitter {
     request.mode = RequestMode.Monitor
     request.tx = { hash: signed.evidence.transactionHash.toLowerCase(), confirmations: 0 }
     account.update()
+
+    const operation = this.operationForEip7702(request, signed.evidence.transactionHash)
+    this.persistOperationLifecycle(operation)
+    operationLifecycleRuntime.claim(operation.id)
 
     let submissionUnconfirmed = false
     try {
@@ -804,6 +982,7 @@ export class Accounts extends EventEmitter {
           request.status = RequestStatus.Verifying
           request.notice = 'Rechecking after chain reorganization'
           account.update()
+          this.updateEip7702Lifecycle(request, 'reorged')
         }
         this.scheduleEip7702Monitor(account, request, operationVersion)
         return
@@ -828,6 +1007,7 @@ export class Accounts extends EventEmitter {
         request.status = RequestStatus.Verifying
         request.notice = 'Rechecking after chain reorganization'
         account.update()
+        this.updateEip7702Lifecycle(request, 'reorged')
         this.scheduleEip7702Monitor(account, request, operationVersion)
         return
       }
@@ -863,6 +1043,7 @@ export class Accounts extends EventEmitter {
         request.status = RequestStatus.Verifying
         request.notice = 'Rechecking after chain reorganization'
         account.update()
+        this.updateEip7702Lifecycle(request, 'reorged')
         this.scheduleEip7702Monitor(account, request, operationVersion)
         return
       }
@@ -883,6 +1064,7 @@ export class Accounts extends EventEmitter {
               ? 'Delegation still present; rechecking'
               : 'Delegation state unavailable; rechecking'
         account.update()
+        this.updateEip7702Lifecycle(request, 'confirming', receipt)
         this.scheduleEip7702Monitor(account, request, operationVersion)
         return
       }
@@ -895,6 +1077,12 @@ export class Accounts extends EventEmitter {
             ? 'Delegation remains'
             : 'Could not verify delegation'
       account.update()
+      this.updateEip7702Lifecycle(
+        request,
+        result.revocationStatus === 'cleared' ? 'verified-clearance' : 'failed',
+        receipt
+      )
+      if (request.activityId) operationLifecycleRuntime.release(request.activityId)
       account.releaseRequestReview(request.handlerId)
       const timer = setTimeout(() => {
         if (this.activeEip7702Operation(account, request, operationVersion)) {
@@ -1268,144 +1456,12 @@ export class Accounts extends EventEmitter {
     if (!account) return log.error('txMonitor had no target account')
 
     const txRequest = this.getTransactionRequest(account, requestId)
-    const rawTx = txRequest.data
     txRequest.tx = { hash, confirmations: 0 }
     recordRequestActivity(txRequest, 'submitted')
-
     account.update()
-
-    const isChainAvailable = (status: string) => !['disconnected', 'degraded'].includes(status.toLowerCase())
-
-    const setTxSent = () => {
-      txRequest.status = RequestStatus.Sent
-      txRequest.notice = 'Sent'
-
-      if (txRequest.tx) txRequest.tx.confirmations = 0
-      account.update()
-    }
-
-    if (!rawTx.chainId) {
-      log.error('txMonitor had no target chain')
-      setTimeout(() => this.accounts[account.address] && this.removeRequest(account, requestId), 8 * 1000)
-    } else {
-      const targetChain: Chain = {
-        type: 'ethereum',
-        id: parseInt(rawTx.chainId, 16)
-      }
-
-      const targetChainId = addHexPrefix(targetChain.id.toString(16))
-      this.sendRequest(
-        { method: 'eth_subscribe', params: ['newHeads'], chainId: targetChainId },
-        (newHeadRes: RPCResponsePayload) => {
-          if (newHeadRes.error) {
-            log.warn(newHeadRes.error)
-            const monitor = async () => {
-              if (!this.accounts[account.address]) {
-                clearTimeout(monitorTimer)
-                return log.error('txMonitor internal monitor had no target account')
-              }
-
-              let confirmations
-              try {
-                confirmations = await this.confirmations(account, requestId, hash, targetChain)
-                txRequest.tx = { ...txRequest.tx, confirmations }
-
-                account.update()
-
-                if (this.terminalizeTransaction(account, requestId)) {
-                  setTimeout(
-                    () => this.accounts[account.address] && this.removeRequest(account, requestId),
-                    8000
-                  )
-                  clear()
-                }
-              } catch (e) {
-                log.error('error awaiting confirmations', e)
-                clear()
-                setTxSent()
-                setTimeout(
-                  () => this.accounts[account.address] && this.removeRequest(account, requestId),
-                  60 * 1000
-                )
-                return
-              }
-            }
-
-            setTimeout(() => monitor(), 3000)
-            const monitorTimer = setInterval(monitor, 15000)
-
-            const statusHandler = (status: string) => {
-              if (!isChainAvailable(status)) {
-                setTxSent()
-                clear()
-              }
-            }
-
-            const { type, id } = targetChain
-
-            provider.on(`status:${type}:${id}`, statusHandler)
-
-            const clear = () => {
-              clearInterval(monitorTimer)
-              provider.off(`status:${type}:${id}`, statusHandler)
-            }
-          } else if (typeof newHeadRes.result === 'string') {
-            const headSub = newHeadRes.result
-
-            const removeSubscription = async (requestRemoveTimeout: number) => {
-              setTimeout(
-                () => this.accounts[account.address] && this.removeRequest(account, requestId),
-                requestRemoveTimeout
-              )
-              provider.off(`data:${targetChain.type}:${targetChain.id}`, handler)
-              provider.off(`status:${targetChain.type}:${targetChain.id}`, statusHandler)
-              this.sendRequest(
-                { method: 'eth_unsubscribe', chainId: targetChainId, params: [headSub] },
-                (res: RPCResponsePayload) => {
-                  if (res.error) {
-                    log.error('error sending message eth_unsubscribe', res)
-                  }
-                }
-              )
-            }
-
-            const statusHandler = (status: string) => {
-              if (!isChainAvailable(status)) {
-                setTxSent()
-                removeSubscription(60 * 1000)
-              }
-            }
-
-            const handler = async (payload: RPC.Susbcription.Response) => {
-              if (payload.params.subscription === headSub) {
-                // const newHead = payload.params.result
-                let confirmations
-                try {
-                  confirmations = await this.confirmations(account, requestId, hash, targetChain)
-                } catch (e) {
-                  log.error(e)
-
-                  setTxSent()
-                  return removeSubscription(60 * 1000)
-                }
-
-                txRequest.tx = { ...txRequest.tx, confirmations }
-                account.update()
-
-                if (this.terminalizeTransaction(account, requestId)) {
-                  removeSubscription(8000)
-                }
-              }
-            }
-
-            const { type, id } = targetChain
-
-            provider.on(`status:${type}:${id}`, statusHandler)
-            provider.on(`data:${type}:${id}`, handler)
-          }
-        }
-      )
-    }
+    const operation = this.operationForTransaction(txRequest, hash)
+    this.persistOperationLifecycle(operation)
+    await operationLifecycleRuntime.reconcile(operation.id)
   }
 
   // Set Current Account
@@ -1802,6 +1858,9 @@ export class Accounts extends EventEmitter {
 
   close() {
     this.pendingNonceAdjustments.clear()
+    this.removeOperationLifecycleObserver()
+    this.eip7702MonitorTimers.forEach((timer) => clearTimeout(timer))
+    this.eip7702MonitorTimers.clear()
     this.dataScanner.close()
     // usbDetect.stopMonitoring()
   }
@@ -2264,7 +2323,23 @@ export class Accounts extends EventEmitter {
       currentAccount.update()
       currentAccount.releaseRequestReview(handlerId)
 
-      this.txMonitor(currentAccount, handlerId, hash)
+      void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
+        log.warn('Transaction lifecycle monitor could not start', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+        const request = currentAccount.getRequest<TransactionRequest>(handlerId)
+        if (
+          request?.type === 'transaction' &&
+          [RequestStatus.Verifying, RequestStatus.Sent].includes(request.status as RequestStatus)
+        ) {
+          request.status = RequestStatus.Sent
+          request.notice = 'Sent; monitoring unavailable'
+          request.mode = RequestMode.Monitor
+          request.tx = { hash, confirmations: request.tx?.confirmations ?? 0 }
+          currentAccount.update()
+        }
+      })
       return true
     }
 
