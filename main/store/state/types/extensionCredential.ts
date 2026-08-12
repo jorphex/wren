@@ -1,36 +1,59 @@
-import { createHash, createPublicKey } from 'crypto'
 import { z } from 'zod'
 
-export const ExtensionBrowserSchema = z.enum(['chrome', 'firefox', 'safari'])
-export const ExtensionFingerprintSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
-export const ExtensionInstallationIdSchema = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
-const P256CoordinateSchema = z
-  .string()
-  .regex(/^[A-Za-z0-9_-]{43}$/)
-  .refine((value) => {
-    const coordinate = Buffer.from(value, 'base64url')
-    return coordinate.length === 32 && coordinate.toString('base64url') === value
-  }, 'Expected a canonical 32-byte Base64URL coordinate')
+import {
+  PEER_AUTH_VERSION,
+  PeerAuthClientBundleIdentitySchema,
+  PeerAuthClientKeyBundleSchema,
+  PeerAuthFingerprintSchema,
+  PeerAuthInstallationIdSchema,
+  PeerAuthPublicKeySchema,
+  peerAuthClientBundleFingerprint,
+  peerAuthFingerprint
+} from '../../../api/peerAuth'
 
-export const ExtensionPublicKeySchema = z
-  .object({
-    kty: z.literal('EC'),
-    crv: z.literal('P-256'),
-    x: P256CoordinateSchema,
-    y: P256CoordinateSchema,
-    ext: z.literal(true),
-    key_ops: z.tuple([z.literal('verify')])
-  })
-  .strict()
+export const ExtensionBrowserSchema = z.enum(['chrome', 'firefox', 'safari'])
+export const ExtensionFingerprintSchema = PeerAuthFingerprintSchema
+export const ExtensionInstallationIdSchema = PeerAuthInstallationIdSchema
+export const ExtensionPublicKeySchema = PeerAuthPublicKeySchema
+export const ExtensionPublicKeyBundleSchema = PeerAuthClientKeyBundleSchema
 
 export type ExtensionPublicKey = z.infer<typeof ExtensionPublicKeySchema>
+export type ExtensionPublicKeyBundle = z.infer<typeof ExtensionPublicKeyBundleSchema>
 
-export const extensionPublicKeyFingerprint = (publicKey: ExtensionPublicKey) =>
-  createHash('sha256').update(`${publicKey.x}.${publicKey.y}`, 'utf8').digest('base64url')
+// A role key fingerprint is useful for diagnostics, but a persisted principal is
+// always the fingerprint of the complete control + page bundle.
+export const extensionPublicKeyFingerprint = peerAuthFingerprint
+export const extensionPublicKeyBundleFingerprint = peerAuthClientBundleFingerprint
 
 export const ExtensionCredentialSchema = z
+  .object({
+    protocolVersion: z.literal(PEER_AUTH_VERSION),
+    installationId: ExtensionInstallationIdSchema,
+    browser: ExtensionBrowserSchema,
+    extensionId: z.string().min(1).max(128),
+    publicKeys: ExtensionPublicKeyBundleSchema,
+    fingerprint: ExtensionFingerprintSchema,
+    pairedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+  })
+  .strict()
+  .superRefine((credential, context) => {
+    const identity = PeerAuthClientBundleIdentitySchema.safeParse({
+      installationId: credential.installationId,
+      publicKeys: credential.publicKeys,
+      fingerprint: credential.fingerprint
+    })
+    if (!identity.success) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['fingerprint'],
+        message: 'Fingerprint does not match the public-key bundle'
+      })
+    }
+  })
+
+// Kept solely so profiles paired with the retired protocol can still load and
+// show their existing state. v2 records are never accepted by v3 pairing.
+const LegacyExtensionCredentialSchema = z
   .object({
     protocolVersion: z.literal(2),
     installationId: ExtensionInstallationIdSchema,
@@ -38,21 +61,11 @@ export const ExtensionCredentialSchema = z
     extensionId: z.string().min(1).max(128),
     publicKey: ExtensionPublicKeySchema,
     fingerprint: ExtensionFingerprintSchema,
-    pairedAt: z.number().int().nonnegative()
+    pairedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
   })
   .strict()
   .superRefine((credential, context) => {
-    try {
-      createPublicKey({ key: credential.publicKey, format: 'jwk' })
-    } catch {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['publicKey'],
-        message: 'Expected a valid P-256 public key'
-      })
-    }
-
-    if (extensionPublicKeyFingerprint(credential.publicKey) !== credential.fingerprint) {
+    if (peerAuthFingerprint(credential.publicKey) !== credential.fingerprint) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['fingerprint'],
@@ -62,7 +75,7 @@ export const ExtensionCredentialSchema = z
   })
 
 export const ExtensionCredentialsSchema = z
-  .record(ExtensionFingerprintSchema, ExtensionCredentialSchema)
+  .record(ExtensionFingerprintSchema, z.union([ExtensionCredentialSchema, LegacyExtensionCredentialSchema]))
   .superRefine((credentials, context) => {
     Object.entries(credentials).forEach(([fingerprint, credential]) => {
       if (fingerprint !== credential.fingerprint) {

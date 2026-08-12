@@ -41,8 +41,10 @@ function credentialMatches(candidate: ExtensionPairingCandidate, credential: Ext
     credential.browser === candidate.browser &&
     credential.extensionId === candidate.extensionId &&
     credential.fingerprint === candidate.fingerprint &&
-    credential.publicKey.x === candidate.publicKey.x &&
-    credential.publicKey.y === candidate.publicKey.y
+    credential.publicKeys.control.x === candidate.publicKeys.control.x &&
+    credential.publicKeys.control.y === candidate.publicKeys.control.y &&
+    credential.publicKeys.page.x === candidate.publicKeys.page.x &&
+    credential.publicKeys.page.y === candidate.publicKeys.page.y
   )
 }
 
@@ -50,7 +52,7 @@ function storedCredential(fingerprint: string) {
   return ExtensionCredentialSchema.safeParse(store('main.extensionCredentials', fingerprint))
 }
 
-function replaceIdentityCredentials(
+function retireReplacedIdentityCredentials(
   candidate: ExtensionPairingCandidate,
   revokeCredential: (fingerprint: string) => RevokedCompanionAccess[]
 ) {
@@ -159,21 +161,47 @@ export async function authorizeExtension(
 export function respondToExtensionPairing(
   requestId: string,
   approved: boolean,
-  revokeCredential = revokeExtensionCredential
+  _revokeCredential = revokeExtensionCredential
 ) {
   const pending = activeByRequest.get(requestId)
   if (!pending) return false
 
   const identity = pairingIdentity(pending.candidate)
   if (approved) {
-    const { pairingCode: _pairingCode, ...credential } = pending.candidate
-    replaceIdentityCredentials(pending.candidate, revokeCredential)
-    requireStoreAction('setExtensionCredential')(credential)
+    // The session can now send a signed final acknowledgement. Persisting a new
+    // bundle here would rotate trust before that proof exists.
     rejectedIdentities.delete(identity)
   } else {
     rejectedIdentities.add(identity)
   }
   finishPairing(pending, approved)
+  return true
+}
+
+/**
+ * Commits a bundle only after its control connection has completed mutual v3
+ * authentication. Page channels never reach this function because they cannot
+ * request pairing in the first place.
+ */
+export function commitExtensionPairing(
+  candidate: ExtensionPairingCandidate,
+  revokeCredential = revokeExtensionCredential
+) {
+  const { pairingCode: _pairingCode, ...credential } = candidate
+  const parsed = ExtensionCredentialSchema.safeParse(credential)
+  if (!parsed.success) return false
+
+  const existing = storedCredential(candidate.fingerprint)
+  if (existing.success && credentialMatches(candidate, existing.data)) {
+    // A second successful v3 exchange proves that the new bundle has survived
+    // its first final acknowledgement. Only now is the old principal retired,
+    // so a lost acknowledgement leaves the still-active credential usable.
+    retireReplacedIdentityCredentials(candidate, revokeCredential)
+    return true
+  }
+
+  requireStoreAction('setExtensionCredential')(parsed.data)
+  rejectedIdentities.delete(pairingIdentity(candidate))
   return true
 }
 

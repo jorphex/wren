@@ -1,48 +1,35 @@
-import { generateKeyPairSync } from 'crypto'
+import {
+  generatePeerAuthKeyPair,
+  peerAuthClientBundleFingerprint,
+  peerAuthFingerprint
+} from '../../../main/api/peerAuth'
 
 import store from '../../../main/store'
 import {
   authorizeExtension,
+  commitExtensionPairing,
   respondToExtensionPairing,
   revokeExtensionCredential
 } from '../../../main/api/extensionPairing'
-
 import type { ExtensionPairingCandidate } from '../../../main/api/extensionAuth'
-import { extensionKeyFingerprint } from '../../../main/api/extensionAuth'
 import { registerAuthenticatedExtension } from '../../../main/api/extensionConnections'
 import { transitionNotification } from '../../../resources/store/notifications'
 
 jest.mock('../../../main/store')
 
-const publicKeys = new Map<string, ExtensionPairingCandidate['publicKey']>()
 const installationId = '7a86842f-7c01-4d0d-b0f7-fc04e0acfd8f'
 
-function publicKey(marker: string) {
-  const existing = publicKeys.get(marker)
-  if (existing) return existing
-  const exported = generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'jwk' })
-  const key: ExtensionPairingCandidate['publicKey'] = {
-    kty: 'EC',
-    crv: 'P-256',
-    x: exported.x || '',
-    y: exported.y || '',
-    ext: true,
-    key_ops: ['verify']
-  }
-  publicKeys.set(marker, key)
-  return key
-}
-
 function candidate(marker: string, overrides = {}): ExtensionPairingCandidate {
-  const key = publicKey(marker)
-  const fingerprint = extensionKeyFingerprint(key)
+  const control = generatePeerAuthKeyPair()
+  const page = generatePeerAuthKeyPair()
+  const publicKeys = { control: control.publicKey, page: page.publicKey }
   return {
-    protocolVersion: 2,
+    protocolVersion: 3,
     installationId,
     browser: 'chrome',
     extensionId: marker.repeat(32),
-    publicKey: key,
-    fingerprint,
+    publicKeys,
+    fingerprint: peerAuthClientBundleFingerprint(publicKeys),
     pairingCode: '123456',
     pairedAt: 1000,
     ...overrides
@@ -62,8 +49,14 @@ beforeEach(() => {
   store.notify = jest.fn((type = '', data = {}, options = {}) => {
     store.set('view', transitionNotification(store('view'), type, data, options))
   })
-  store.setExtensionCredential = jest.fn()
-  store.removeExtensionCredential = jest.fn()
+  store.setExtensionCredential = jest.fn((credential) => {
+    store.set('main.extensionCredentials', credential.fingerprint, credential)
+  })
+  store.removeExtensionCredential = jest.fn((fingerprint) => {
+    const credentials = { ...(store('main.extensionCredentials') || {}) }
+    delete credentials[fingerprint]
+    store.set('main.extensionCredentials', credentials)
+  })
   store.toggleAccess = jest.fn((account, originId) => {
     const grants = { ...(store('main.permissions', account) || {}) }
     delete grants[originId]
@@ -71,201 +64,135 @@ beforeEach(() => {
   })
 })
 
-it('accepts only an exact persisted browser identity and public key', async () => {
-  const paired = candidate('a')
-  const { pairingCode: _pairingCode, ...credential } = paired
-  store.set('main.extensionCredentials', paired.fingerprint, credential)
-
-  await expect(authorizeExtension(paired)).resolves.toBe(true)
-  expect(store.notify).not.toHaveBeenCalled()
-
-  const changedIdentity = candidate('a', { extensionId: 'b'.repeat(32) })
-  const pending = authorizeExtension(changedIdentity)
-  expect(store.notify).toHaveBeenCalledTimes(1)
+it('stores one atomic control and page key bundle only after consent and final acknowledgement', async () => {
+  const pairing = candidate('a')
+  const waiting = authorizeExtension(pairing)
   const request = store.notify.mock.calls[0][1]
-  expect(respondToExtensionPairing(request.requestId, false)).toBe(true)
-  await expect(pending).resolves.toBe(false)
-})
+  expect(request).toMatchObject({ fingerprint: pairing.fingerprint, pairingCode: pairing.pairingCode })
 
-it('deduplicates concurrent consent and persists the approved credential', async () => {
-  const pairing = candidate('c')
-  const first = authorizeExtension(pairing)
-  const second = authorizeExtension(pairing)
-
-  expect(store.notify).toHaveBeenCalledTimes(1)
-  const request = store.notify.mock.calls[0][1]
-  expect(request).toMatchObject({
-    requestId: expect.any(String),
-    fingerprint: pairing.fingerprint,
-    pairingCode: pairing.pairingCode
-  })
   expect(respondToExtensionPairing(request.requestId, true)).toBe(true)
-  await expect(Promise.all([first, second])).resolves.toEqual([true, true])
-  expect(store.setExtensionCredential).toHaveBeenCalledWith({
-    protocolVersion: 2,
-    installationId: pairing.installationId,
-    browser: pairing.browser,
-    extensionId: pairing.extensionId,
-    publicKey: pairing.publicKey,
-    fingerprint: pairing.fingerprint,
-    pairedAt: pairing.pairedAt
-  })
-  expect(respondToExtensionPairing(request.requestId, true)).toBe(false)
-})
-
-it('never reuses an active prompt for a different challenge code', async () => {
-  const pairing = candidate('q')
-  const first = authorizeExtension(pairing)
-
-  await expect(authorizeExtension({ ...pairing, pairingCode: '654321' })).resolves.toBe(false)
-  expect(store.notify).toHaveBeenCalledTimes(1)
-  expect(store.notify.mock.calls[0][1].pairingCode).toBe(pairing.pairingCode)
-
-  respondToExtensionPairing(store.notify.mock.calls[0][1].requestId, false)
-  await expect(first).resolves.toBe(false)
-})
-
-it('rejects a competing key for an extension identity with an active prompt', async () => {
-  const firstCandidate = candidate('g')
-  const competingCandidate = candidate('h', { extensionId: firstCandidate.extensionId })
-  const first = authorizeExtension(firstCandidate)
-
-  await expect(authorizeExtension(competingCandidate)).resolves.toBe(false)
-  expect(store.notify).toHaveBeenCalledTimes(1)
-
-  const request = store.notify.mock.calls[0][1]
-  respondToExtensionPairing(request.requestId, false)
-  await expect(first).resolves.toBe(false)
-})
-
-it('revokes a previous key when the same extension identity approves a replacement', async () => {
-  const previous = candidate('l')
-  const { pairingCode: _pairingCode, ...previousCredential } = previous
-  store.set('main.extensionCredentials', previous.fingerprint, previousCredential)
-  const staleSocket = {
-    close: jest.fn(),
-    disposeSession: jest.fn(),
-    extensionFingerprint: undefined
-  }
-  registerAuthenticatedExtension(staleSocket, previous.fingerprint)
-
-  const replacement = candidate('m', { extensionId: previous.extensionId })
-  const waiting = authorizeExtension(replacement)
-  const request = store.notify.mock.calls[0][1]
-  expect(respondToExtensionPairing(request.requestId, true)).toBe(true)
-
   await expect(waiting).resolves.toBe(true)
-  expect(store.removeExtensionCredential).toHaveBeenCalledWith(previous.fingerprint)
-  expect(staleSocket.disposeSession).toHaveBeenCalledTimes(1)
-  expect(staleSocket.close).toHaveBeenCalledWith(1008, 'Extension credential revoked')
+  expect(store.setExtensionCredential).not.toHaveBeenCalled()
+  expect(store('main.extensionCredentials')).toEqual({})
+
+  expect(commitExtensionPairing(pairing)).toBe(true)
   expect(store.setExtensionCredential).toHaveBeenCalledWith(
-    expect.objectContaining({ fingerprint: replacement.fingerprint })
+    expect.objectContaining({ protocolVersion: 3, publicKeys: pairing.publicKeys })
+  )
+  expect(store('main.extensionCredentials', pairing.fingerprint)).toEqual(
+    expect.objectContaining({ fingerprint: pairing.fingerprint })
   )
 })
 
-it('keeps credentials for another browser profile with the same extension id', async () => {
-  const firstProfile = candidate('o')
-  const { pairingCode: _pairingCode, ...credential } = firstProfile
-  store.set('main.extensionCredentials', firstProfile.fingerprint, credential)
+it('reuses only an exact bundle silently and never allows a page to open pairing', async () => {
+  const paired = candidate('b')
+  expect(commitExtensionPairing(paired)).toBe(true)
+  await expect(authorizeExtension(paired)).resolves.toBe(true)
+  expect(store.notify).not.toHaveBeenCalled()
 
-  const secondProfile = candidate('p', {
-    extensionId: firstProfile.extensionId,
-    installationId: '9c2853ac-706f-4d6b-ae25-297fc5e5dc48'
-  })
-  const waiting = authorizeExtension(secondProfile)
-  const request = store.notify.mock.calls[0][1]
-  respondToExtensionPairing(request.requestId, true)
-
-  await expect(waiting).resolves.toBe(true)
-  expect(store.removeExtensionCredential).not.toHaveBeenCalled()
+  const unknown = candidate('c')
+  await expect(authorizeExtension(unknown, undefined, false)).resolves.toBe(false)
+  expect(store.notify).not.toHaveBeenCalled()
 })
 
-it('allows only one visible pairing candidate at a time', async () => {
-  const firstCandidate = candidate('i')
-  const first = authorizeExtension(firstCandidate)
+it('deduplicates concurrent consent and an aborted waiter does not cancel another session', async () => {
+  const pairing = candidate('c')
+  const firstController = new AbortController()
+  const first = authorizeExtension(pairing, firstController.signal)
+  const second = authorizeExtension(pairing)
+  const request = store.notify.mock.calls[0][1]
 
-  await expect(authorizeExtension(candidate('j'))).resolves.toBe(false)
+  expect(store.notify).toHaveBeenCalledTimes(1)
+  firstController.abort()
+  await expect(first).resolves.toBe(false)
+  expect(store('view.notify')).toBe('extensionConnect')
+
+  expect(respondToExtensionPairing(request.requestId, true)).toBe(true)
+  await expect(second).resolves.toBe(true)
+})
+
+it('retains the old principal until an exact reconnect confirms the replacement survived its final acknowledgement', async () => {
+  const previous = candidate('d')
+  expect(commitExtensionPairing(previous)).toBe(true)
+  const replacement = candidate('e', { extensionId: previous.extensionId })
+  const waiting = authorizeExtension(replacement)
+  const request = store.notify.mock.calls[0][1]
+
+  expect(respondToExtensionPairing(request.requestId, true)).toBe(true)
+  await expect(waiting).resolves.toBe(true)
+  expect(store.removeExtensionCredential).not.toHaveBeenCalled()
+  expect(store('main.extensionCredentials', previous.fingerprint)).toBeDefined()
+
+  expect(commitExtensionPairing(replacement)).toBe(true)
+  expect(store.removeExtensionCredential).not.toHaveBeenCalled()
+  expect(store('main.extensionCredentials', previous.fingerprint)).toBeDefined()
+  expect(store('main.extensionCredentials', replacement.fingerprint)).toBeDefined()
+
+  expect(commitExtensionPairing(replacement)).toBe(true)
+  expect(store.removeExtensionCredential).toHaveBeenCalledWith(previous.fingerprint)
+  expect(store('main.extensionCredentials', previous.fingerprint)).toBeUndefined()
+})
+
+it('rejects a modified bundle during an active challenge instead of reusing consent', async () => {
+  const first = candidate('f')
+  const waiting = authorizeExtension(first)
+  const replacement = candidate('g', { extensionId: first.extensionId })
+  await expect(authorizeExtension(replacement)).resolves.toBe(false)
+  expect(store.notify).toHaveBeenCalledTimes(1)
+  respondToExtensionPairing(store.notify.mock.calls[0][1].requestId, false)
+  await expect(waiting).resolves.toBe(false)
+})
+
+it('does not reuse an active prompt for another challenge code or competing bundle', async () => {
+  const first = candidate('g')
+  const waiting = authorizeExtension(first)
+  await expect(authorizeExtension({ ...first, pairingCode: '654321' })).resolves.toBe(false)
+  await expect(authorizeExtension(candidate('h', { extensionId: first.extensionId }))).resolves.toBe(false)
   expect(store.notify).toHaveBeenCalledTimes(1)
 
   respondToExtensionPairing(store.notify.mock.calls[0][1].requestId, false)
-  await expect(first).resolves.toBe(false)
-})
-
-it('allows page sessions to reuse trust but never create a pairing prompt', async () => {
-  const unknown = candidate('n')
-  await expect(authorizeExtension(unknown, undefined, false)).resolves.toBe(false)
-  expect(store.notify).not.toHaveBeenCalled()
-
-  const { pairingCode: _pairingCode, ...credential } = unknown
-  store.set('main.extensionCredentials', unknown.fingerprint, credential)
-  await expect(authorizeExtension(unknown, undefined, false)).resolves.toBe(true)
-  expect(store.notify).not.toHaveBeenCalled()
-})
-
-it('caches a rejection for the process lifetime and cancels abandoned consent', async () => {
-  const rejected = candidate('d')
-  const first = authorizeExtension(rejected)
-  const rejectionRequest = store.notify.mock.calls[0][1]
-  respondToExtensionPairing(rejectionRequest.requestId, false)
-  await expect(first).resolves.toBe(false)
-  await expect(authorizeExtension(rejected)).resolves.toBe(false)
-  expect(store.notify).toHaveBeenCalledTimes(2)
-
-  const abandoned = candidate('e')
-  const controller = new AbortController()
-  const waiting = authorizeExtension(abandoned, controller.signal)
-  const abandonedRequest = store.notify.mock.calls.at(-1)[1]
-  store.set('view.notify', 'extensionConnect')
-  store.set('view.notifyData', abandonedRequest)
-  controller.abort()
   await expect(waiting).resolves.toBe(false)
-  expect(store.notify).toHaveBeenLastCalledWith('', {}, { expectedId: expect.any(String) })
 })
 
-it('keeps a queued pairing active while another notification is visible', async () => {
+it('keeps a queued pairing active without clearing another notification workflow', async () => {
   store.notify('gasFeeWarning', { message: 'Review this fee' }, { id: 'fee-warning' })
-  const waiting = authorizeExtension(candidate('k'))
+  const waiting = authorizeExtension(candidate('i'))
   const request = store.notify.mock.calls[1][1]
   store.notify.mockClear()
 
   store.getObserver(`extension-pairing:${request.requestId}`).fire()
-
   expect(store('view.notify')).toBe('gasFeeWarning')
   expect(store('view.notifyQueue')).toHaveLength(2)
   expect(store.notify).not.toHaveBeenCalled()
 
   respondToExtensionPairing(request.requestId, false)
   await expect(waiting).resolves.toBe(false)
-  expect(store('view.notifyQueue')).toHaveLength(1)
   expect(store('view.notifyId')).toBe('fee-warning')
+  expect(store('view.notifyQueue')).toHaveLength(1)
 })
 
-it('rejects without clearing another workflow when its queued pairing is removed', async () => {
+it('rejects a removed queued pairing without clearing another workflow', async () => {
   store.notify('gasFeeWarning', { message: 'Review this fee' }, { id: 'fee-warning' })
-  const waiting = authorizeExtension(candidate('r'))
+  const waiting = authorizeExtension(candidate('j'))
   const request = store.notify.mock.calls[1][1]
   const pairing = store('view.notifyQueue')[1]
   store.notify('', {}, { expectedId: pairing.id })
   store.notify.mockClear()
 
   store.getObserver(`extension-pairing:${request.requestId}`).fire()
-
   await expect(waiting).resolves.toBe(false)
   expect(store.notify).not.toHaveBeenCalled()
   expect(store('view.notifyId')).toBe('fee-warning')
 })
 
-it('exposes explicit credential revocation', () => {
-  const fingerprint = candidate('f').fingerprint
-  revokeExtensionCredential(fingerprint)
-  expect(store.removeExtensionCredential).toHaveBeenCalledWith(fingerprint)
-})
-
-it('revokes every grant bound to the removed Companion credential', () => {
-  const fingerprint = candidate('s').fingerprint
+it('revokes the exact credential connection and every grant bound to its source fingerprint', () => {
+  const pairing = candidate('k')
+  commitExtensionPairing(pairing)
+  const socket = { close: jest.fn(), disposeSession: jest.fn(), extensionFingerprint: undefined }
+  registerAuthenticatedExtension(socket, pairing.fingerprint)
   const account = '0x1111111111111111111111111111111111111111'
   store.set('main.origins', {
-    companion: { provenance: 'companion', sourceId: fingerprint },
+    companion: { provenance: 'companion', sourceId: pairing.fingerprint },
     direct: { provenance: 'direct' }
   })
   store.set('main.permissions', account, {
@@ -273,7 +200,18 @@ it('revokes every grant bound to the removed Companion credential', () => {
     direct: { handlerId: 'direct' }
   })
 
-  expect(revokeExtensionCredential(fingerprint)).toEqual([{ account, originIds: ['companion'] }])
+  expect(revokeExtensionCredential(pairing.fingerprint)).toEqual([{ account, originIds: ['companion'] }])
+  expect(store.removeExtensionCredential).toHaveBeenCalledWith(pairing.fingerprint)
+  expect(socket.disposeSession).toHaveBeenCalledTimes(1)
+  expect(socket.close).toHaveBeenCalledWith(1008, 'Extension credential revoked')
   expect(store.toggleAccess).toHaveBeenCalledWith(account, 'companion', false)
   expect(store('main.permissions', account)).toEqual({ direct: { handlerId: 'direct' } })
+})
+
+it('binds a role proof to its role key rather than the stable bundle principal', () => {
+  const pairing = candidate('h')
+  expect(peerAuthFingerprint(pairing.publicKeys.control)).not.toBe(
+    peerAuthFingerprint(pairing.publicKeys.page)
+  )
+  expect(pairing.fingerprint).toBe(peerAuthClientBundleFingerprint(pairing.publicKeys))
 })
