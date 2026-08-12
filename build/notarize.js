@@ -1,9 +1,14 @@
 const fs = require('fs')
 const { execFileSync } = require('child_process')
 const path = require('path')
+const { readSigningMode, requireEnvironment } = require('./signing-mode.js')
 
 module.exports = async function (params) {
   if (process.platform !== 'darwin') return // Only notarize the app on macOS
+  const mode = readSigningMode('WREN_MAC_NOTARIZATION')
+  if (mode === 'skip') return
+
+  requireEnvironment(['APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID'])
   const { notarize } = await import('@electron/notarize')
   const appId = 'io.github.jorphex.wren' // Same appId in electron-builder
   const appPath = path.join(params.appOutDir, `${params.packager.appInfo.productFilename}.app`)

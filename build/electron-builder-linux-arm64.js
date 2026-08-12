@@ -1,10 +1,11 @@
 // build config for linux arm64
 
-const baseConfig = require('./electron-builder-base.js')
+const baseConfig = require('./electron-builder-linux.js')
 
 const config = {
   ...baseConfig,
   linux: {
+    ...baseConfig.linux,
     target: [
       {
         target: 'AppImage',

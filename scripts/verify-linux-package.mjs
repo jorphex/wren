@@ -294,24 +294,15 @@ const desktopEntry = await readDebFile(
 const builderPackage = JSON.parse(
   await readFile(path.resolve('node_modules/electron-builder/package.json'), 'utf8')
 )
-const notarizePackage = JSON.parse(
-  await readFile(path.resolve('node_modules/@electron/notarize/package.json'), 'utf8')
+const { default: builderConfig } = await import(
+  pathToFileURL(path.resolve('build/electron-builder-linux.js')).href
 )
-const [{ notarize }, { default: notarizeHook }, { default: builderConfig }] = await Promise.all([
-  import('@electron/notarize'),
-  import(pathToFileURL(path.resolve('build/notarize.js')).href),
-  import(pathToFileURL(path.resolve('build/electron-builder-standard.js')).href)
-])
 assert.equal(builderPackage.version, packageJson.devDependencies['electron-builder'])
-assert.equal(notarizePackage.version, packageJson.devDependencies['@electron/notarize'])
-assert.equal(typeof notarize, 'function')
-assert.equal(typeof notarizeHook, 'function')
-assert.equal(builderConfig.win.signtoolOptions, undefined)
-assert.equal(builderConfig.win.publisherName, undefined)
+assert.equal(builderConfig.mac, undefined)
+assert.equal(builderConfig.win, undefined)
 assert.deepEqual(builderConfig.appImage.executableArgs, [])
 assert.equal(builderConfig.linux.syncDesktopName, true)
 assert.equal(builderConfig.linux.category, 'Office;Finance')
-await notarizeHook({})
 assert.equal(probeResult.electron, packageJson.devDependencies.electron)
 assert.equal(probeResult.desktopName, packageJson.desktopName)
 assertReleaseBuildIdentity(probeResult.buildIdentity, sourceIdentity, packageJson.version)
@@ -380,5 +371,5 @@ console.log(
     probeResult.abi
   } hardware-wallet native, Ledger ${
     probeResult.ledgerVersions['@ledgerhq/hw-app-eth']
-  }, source identity, sandbox enforcement, electron-builder 26/notarize 3, React 19/styled-components 6, SIWE, EIP-712, Zod 4, electron-log 5, native fetch, tar-fs 3, ethers 6, EthereumJS wallet, software-signer encryption, and IPFS ESM modules`
+  }, source identity, sandbox enforcement, electron-builder 26, React 19/styled-components 6, SIWE, EIP-712, Zod 4, electron-log 5, native fetch, tar-fs 3, ethers 6, EthereumJS wallet, software-signer encryption, and IPFS ESM modules`
 )
