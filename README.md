@@ -157,6 +157,6 @@ Wren does not follow mutable ENS for the built-in Send app. It activates downloa
 
 Report vulnerabilities privately through [Security Policy](SECURITY.md), not a public issue. The [Threat Model](THREAT_MODEL.md) covers local RPC, renderers, persistence, signers, network, and release boundaries. Only the newest Wren release is considered for security fixes; Wren packages have no support guarantee from the original Frame maintainers.
 
-The current candidate includes local contacts and the first curated Earn milestone. Smart accounts, mobile, and WalletConnect are future direction, not support claims.
+The current candidate includes local contacts and the first curated Earn milestone. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
 
 Wren is a community-maintained continuation of the GPL-licensed [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is distributed under the [GNU GPL v3.0](LICENSE).
