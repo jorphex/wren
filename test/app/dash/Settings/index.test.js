@@ -128,7 +128,7 @@ it('cancels a staged reset from About with Escape', async () => {
   await user.click(within(about).getByRole('button', { name: 'Reset Wren' }))
   await user.keyboard('{Escape}')
 
-  expect(within(about).queryByRole('group', { name: 'Reset Wren?' })).toBeNull()
+  expect(within(about).queryByRole('alertdialog', { name: 'Reset Wren?' })).toBeNull()
   expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Reset Wren' }))
 })
 

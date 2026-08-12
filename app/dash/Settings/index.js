@@ -6,6 +6,7 @@ import link from '../../../resources/link'
 import Dropdown from '../../../resources/Components/Dropdown'
 import KeyboardShortcutConfigurator from '../../../resources/Components/KeyboardShortcutConfigurator'
 import Toggle from '../../../resources/Components/Toggle'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 
 import styled from 'styled-components'
 
@@ -151,16 +152,13 @@ export class Settings extends Component {
         </button>
         <div className='appInfoLine appInfoLineReset'>
           {this.state.resetConfirm ? (
-            <div
+            <DialogSurface
               className='appInfoLineResetConfirm'
-              role='group'
-              aria-labelledby='reset-app-title'
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  this.setState({ resetConfirm: false }, () => this.resetTriggerRef.current?.focus())
-                }
-              }}
+              role='alertdialog'
+              labelledBy='reset-app-title'
+              initialFocusRef={this.resetCancelRef}
+              returnFocusRef={this.resetTriggerRef}
+              onCancel={() => this.setState({ resetConfirm: false })}
             >
               <strong id='reset-app-title'>Reset Wren?</strong>
               <span>
@@ -186,7 +184,7 @@ export class Settings extends Component {
                   Reset Wren
                 </button>
               </span>
-            </div>
+            </DialogSurface>
           ) : (
             <button
               type='button'
@@ -250,14 +248,6 @@ export class Settings extends Component {
         })
       }
     })
-  }
-
-  handleCompanionRevokeKeyDown(event, fingerprint) {
-    if (event.key === 'Escape' && !this.state.revokeCompanionPending) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.cancelCompanionRevocation(fingerprint)
-    }
   }
 
   inputLatticeEndpoint(e) {
@@ -653,14 +643,16 @@ export class Settings extends Component {
                       Remove this pairing. A new code confirmation is required on reconnect.
                     </div>
                     {confirm ? (
-                      <CompanionRevokeDialog
+                      <DialogSurface
+                        as={CompanionRevokeDialog}
+                        className='companionRevokeDialog'
                         role='alertdialog'
-                        aria-labelledby={titleId}
-                        aria-describedby={bodyId}
-                        aria-busy={this.state.revokeCompanionPending}
-                        onKeyDown={(event) =>
-                          this.handleCompanionRevokeKeyDown(event, credential.fingerprint)
-                        }
+                        labelledBy={titleId}
+                        describedBy={bodyId}
+                        busy={this.state.revokeCompanionPending}
+                        initialFocusRef={this.revokeCancelRef}
+                        returnFocusRef={this.revokeTriggerRefs[credential.fingerprint]}
+                        onCancel={() => this.cancelCompanionRevocation(credential.fingerprint)}
                       >
                         <CompanionRevokeTitle id={titleId}>
                           {`Revoke ${credential.browser} pairing?`}
@@ -692,7 +684,7 @@ export class Settings extends Component {
                             {this.state.revokeCompanionPending ? 'Revoking pairing\u2026' : 'Confirm revoke'}
                           </button>
                         </CompanionRevokeActions>
-                      </CompanionRevokeDialog>
+                      </DialogSurface>
                     ) : null}
                   </div>
                 )

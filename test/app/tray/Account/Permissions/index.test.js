@@ -133,6 +133,7 @@ it('requires safe confirmation before clearing all permissions and sends once', 
 
   await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
   expect(link.send).not.toHaveBeenCalled()
+  expect(screen.getByRole('alertdialog', { name: 'Clear all permissions?' })).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   await user.click(screen.getByRole('button', { name: 'Cancel' }))

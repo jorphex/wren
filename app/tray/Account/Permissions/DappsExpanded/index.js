@@ -9,6 +9,7 @@ import PermissionToggle from '../PermissionToggle'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
+import DialogSurface from '../../../../../resources/Components/DialogSurface'
 
 export class DappsPermissionsExpanded extends React.Component {
   constructor(...args) {
@@ -115,10 +116,14 @@ export class DappsPermissionsExpanded extends React.Component {
         {permissionList.length > 0 && (
           <div className='clearPermissionsButton'>
             {this.state.clearConfirm ? (
-              <div
+              <DialogSurface
                 className='clearPermissionsConfirm'
-                role='group'
-                aria-label='Confirm clearing all permissions'
+                role='alertdialog'
+                ariaLabel='Clear all permissions?'
+                busy={this.state.clearing}
+                initialFocusRef={this.cancelClearRef}
+                returnFocusRef={this.clearButtonRef}
+                onCancel={() => this.cancelClear()}
               >
                 <button
                   type='button'
@@ -137,7 +142,7 @@ export class DappsPermissionsExpanded extends React.Component {
                 >
                   {this.state.clearing ? 'Clearing…' : 'Confirm clear'}
                 </button>
-              </div>
+              </DialogSurface>
             ) : (
               <button
                 type='button'
