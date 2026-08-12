@@ -17,6 +17,7 @@ import windows from '../../windows'
 import nav from '../../windows/nav'
 import store from '../../store'
 import { requireStoreAction } from '../../store/action'
+import { recordRequestActivity, type ActivityOutcome } from '../../activity'
 import { TransactionData } from '../../../resources/domain/transaction'
 import { MAX_UINT256, parseRpcQuantity } from '../../../resources/domain/transaction/quantity'
 import { isBroadTokenAuthorityEffect } from '../../../resources/domain/transaction/effects'
@@ -324,7 +325,7 @@ class FrameAccount {
       const payload = knownRequest.payload
       const responder = knownRequest.res
       try {
-        this.clearRequest(knownRequest.handlerId)
+        this.clearRequest(knownRequest.handlerId, 'completed')
       } finally {
         if (responder && payload) {
           const { id, jsonrpc } = payload
@@ -341,7 +342,7 @@ class FrameAccount {
       const payload = knownRequest.payload
       const responder = knownRequest.res
       try {
-        this.clearRequest(knownRequest.handlerId)
+        this.clearRequest(knownRequest.handlerId, error.code === 4001 ? 'declined' : 'failed')
       } finally {
         if (responder && payload) {
           const { id, jsonrpc } = payload
@@ -351,10 +352,12 @@ class FrameAccount {
     }
   }
 
-  clearRequest(handlerId: string) {
+  clearRequest(handlerId: string, outcome?: ActivityOutcome) {
     log.info(`clearRequest(${handlerId}) for account ${this.id}`)
 
     const clearedActiveReview = this.activeReviewHandlerId === handlerId
+    const request = this.requests[handlerId]
+    if (request) recordRequestActivity(request, outcome)
     this.accounts.clearPendingNonceAdjustment?.(this, handlerId)
     this.accounts.cancelEip7702Operation?.(this.id, handlerId)
     this.requestAbortCleanup[handlerId]?.()

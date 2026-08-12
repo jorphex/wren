@@ -16,6 +16,7 @@ export type { Connection } from './types/connection'
 export type { Origin } from './types/origin'
 export type { Permission } from './types/permission'
 export type { Account, AccountMetadata } from './types/account'
+export type { ActivityEntry } from './types/activity'
 export type { AddressBook, AddressBookEntry } from './types/addressBook'
 export type { Balance } from './types/balance'
 export type { WithTokenId, Token } from './types/token'
@@ -177,6 +178,7 @@ const mainState = {
   extensionCredentials: main('extensionCredentials', {}),
   accounts: main('accounts', {}),
   accountsMeta: main('accountsMeta', {}),
+  activity: main('activity', []),
   addressBook: main('addressBook', {}),
   addresses: main('addresses', {}), // Should be removed after 0.5 release
   permissions: main('permissions', {}),

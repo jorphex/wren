@@ -182,6 +182,12 @@ module.exports = {
   setWalletCallBatches: (u, batches) => {
     u('main.walletCallBatches', () => batches)
   },
+  recordActivity: (u, entry) => {
+    u('main.activity', (activity = []) =>
+      [entry, ...activity.filter(({ id }) => id !== entry.id)].slice(0, 500)
+    )
+  },
+  clearActivity: (u) => u('main.activity', () => []),
   setYearnCatalogCache: (u, catalogCache) => {
     u('main.yearn.catalogCache', () => catalogCache)
   },
