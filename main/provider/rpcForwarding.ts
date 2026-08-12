@@ -23,3 +23,14 @@ export function isUnsafeRpcForwardingMethod(method: string) {
     method.startsWith('eth_sign') || UNSAFE_FORWARDING_PREFIXES.some((prefix) => method.startsWith(prefix))
   )
 }
+
+export function unsupportedRawTransactionFamily(payload: RPCRequestPayload) {
+  if (payload.method !== 'eth_sendRawTransaction' || !Array.isArray(payload.params)) return
+  const rawTransaction = payload.params[0]
+  if (typeof rawTransaction !== 'string') return
+
+  const type = rawTransaction.slice(0, 4).toLowerCase()
+  if (type === '0x03') return 'EIP-4844 type-3 transactions'
+  if (type === '0x04') return 'EIP-7702 authorization transactions'
+  return
+}

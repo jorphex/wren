@@ -438,6 +438,20 @@ describe('#wallet-call provider boundary', () => {
     expect(provider.handlers).toEqual({})
   })
 
+  it('rejects required atomicity before allocating review or persistent batch state', () => {
+    const respond = jest.fn()
+
+    expect(provider.sendWalletCalls(payload({ atomicRequired: true }), respond)).toBeUndefined()
+
+    expect(respond).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 5760 }) })
+    )
+    expect(accounts.addRequestForAccount).not.toHaveBeenCalled()
+    expect(accountRequests).toHaveLength(0)
+    expect(store('main.walletCallBatches')).toEqual({})
+    expect(provider.handlers).toEqual({})
+  })
+
   it('approves against the captured account after current-account selection changes', async () => {
     const events = []
     const respond = jest.fn(() => events.push('response'))
@@ -898,6 +912,25 @@ describe('#send', () => {
       on: true
     })
   })
+
+  it.each([
+    ['EIP-4844 type-3', '0x03c0', 'EIP-4844 type-3 transactions'],
+    ['EIP-7702 type-4', '0x04c0', 'EIP-7702 authorization transactions']
+  ])(
+    'rejects externally signed %s transactions without forwarding them',
+    (_family, rawTransaction, reason) => {
+      const response = jest.fn()
+
+      send({ id: 21, jsonrpc: '2.0', method: 'eth_sendRawTransaction', params: [rawTransaction] }, response)
+
+      expect(response).toHaveBeenCalledWith({
+        id: 21,
+        jsonrpc: '2.0',
+        error: { message: `Wren does not support ${reason}`, code: 4200 }
+      })
+      expect(connection.send).not.toHaveBeenCalled()
+    }
+  )
 
   it('returns an error when an unknown chain is given', (done) => {
     const request = { method: 'eth_testFrame', chainId: '0x63' }

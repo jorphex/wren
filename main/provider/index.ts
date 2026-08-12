@@ -52,7 +52,7 @@ import walletCallBatchLedger from './walletCallLedger'
 import { executeWalletCallRuntime } from './walletCallRuntime'
 import walletCallEvidenceRuntime from './walletCallEvidenceRuntime'
 import { showWalletCallStatus } from './walletCallStatusView'
-import { isUnsafeRpcForwardingMethod } from './rpcForwarding'
+import { isUnsafeRpcForwardingMethod, unsupportedRawTransactionFamily } from './rpcForwarding'
 import { getRequestSignal, inheritRequestSignal } from './requestSignal'
 import { summarizeRpcError } from '../security/rpcLogging'
 import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
@@ -1859,6 +1859,11 @@ export class Provider extends EventEmitter {
     // Connection dependent methods need to pass targetChain
     if (method === 'net_version') return this.getNetVersion(payload, res, targetChain)
     if (method === 'eth_chainId') return this.getChainId(payload, res, targetChain)
+
+    const unsupportedRawFamily = unsupportedRawTransactionFamily(payload)
+    if (unsupportedRawFamily) {
+      return resError({ message: `Wren does not support ${unsupportedRawFamily}`, code: 4200 }, payload, res)
+    }
 
     if (isUnsafeRpcForwardingMethod(method)) {
       return resError({ message: `Wren does not support ${method}`, code: 4200 }, payload, res)

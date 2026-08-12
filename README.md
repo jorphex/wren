@@ -47,7 +47,7 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 - Supports a local, allowlisted Yearn Earn catalog on Ethereum, Base, and Katana. See [Yearn Earn](YEARN_EARN.md) for the exact products, workflows, and evidence.
 - Lets users choose EVM RPC and Kubo IPFS endpoints.
 
-The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPATIBILITY.md) and [Supported Ethereum Standards](SUPPORTED_EIPS.md).
+The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPATIBILITY.md), [Supported Ethereum Standards](SUPPORTED_EIPS.md), and [Advanced Execution](EXECUTION_BOUNDARIES.md).
 
 ## Install when `v0.1.0` is published
 

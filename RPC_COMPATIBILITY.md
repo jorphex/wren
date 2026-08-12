@@ -28,7 +28,7 @@ The historical envelope `session` field is syntax only, not an authentication cr
 
 Other names, including ordinary reads such as `eth_call`, `eth_getBalance`, and `eth_getBlockByNumber`, are forwarded to the configured connection after Wren removes internal origin and routing fields. Read-only trace extensions may also be forwarded.
 
-Wren never forwards unknown `wallet_*`, `personal_*`, `account_*`, or `eth_sign*` methods. It blocks `admin_*`, `engine_*`, and `miner_*`. Only a fixed set of raw-inspection and trace `debug_*` methods is forwarded; other debug methods fail closed with EIP-1193 `4200`. `eth_sendRawTransaction` is permission-gated then forwarded unchanged: Wren cannot decode, review, or sign an already signed transaction. A forwarded method does not imply Wren wallet support.
+Wren never forwards unknown `wallet_*`, `personal_*`, `account_*`, or `eth_sign*` methods. It blocks `admin_*`, `engine_*`, and `miner_*`. Only a fixed set of raw-inspection and trace `debug_*` methods is forwarded; other debug methods fail closed with EIP-1193 `4200`. `eth_sendRawTransaction` is permission-gated then forwarded unchanged for supported transaction families: Wren cannot review or sign an already signed transaction, and it rejects type-3 and type-4 payloads. A forwarded method does not imply Wren wallet support.
 
 ## Routing and errors
 
