@@ -18,6 +18,7 @@ import { computeAddress, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import operationLifecycleLedger from '../../../main/operationLifecycle'
+import { observeOperationLifecycles } from '../../../main/operationLifecycle/events'
 import { OperationLifecycleProjection } from '../../../main/operationLifecycle/projection'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../../../main/store/state/types/operationLifecycle'
 
@@ -3002,6 +3003,60 @@ describe('wallet-owned EIP-7702 revocation', () => {
       outcome: 'verified-clearance'
     })
     store.clearActivity()
+  })
+
+  it('clears live pending evidence after an outage without changing the claimed lifecycle', async () => {
+    const observations = []
+    const removeObserver = observeOperationLifecycles((observation) => observations.push(observation))
+    const normalSend = provider.connection.send.getMockImplementation()
+    provider.connection.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === 'latest') {
+        return callback({ result: { number: '0xf', hash: `0x${'c'.repeat(64)}` } })
+      }
+      return normalSend(payload, callback)
+    })
+
+    try {
+      const reference = await Accounts.requestEip7702Revocation(authority, 1)
+      Accounts.approveEip7702Revocation(authority, reference.handlerId)
+      await new Promise(jest.requireActual('timers').setImmediate)
+
+      const accountInstance = Accounts.current()
+      const revoke = accountInstance.getRequest(reference.handlerId)
+      const operation = operationLifecycleLedger.get(revoke.activityId)
+      expect(operation).toMatchObject({ state: 'confirming', receipt: expect.any(Object) })
+      expect(observations).toContainEqual(expect.objectContaining({ pendingEvidence: true }))
+
+      const beforeOutage = operationLifecycleLedger.get(revoke.activityId)
+      provider.connection.send.mockImplementation((payload, callback) => {
+        if (payload.method === 'eth_getTransactionReceipt') {
+          return callback({ error: { code: -32000, message: 'offline' } })
+        }
+        return normalSend(payload, callback)
+      })
+
+      await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+
+      expect(observations.at(-1)).toEqual(
+        expect.objectContaining({
+          previous: beforeOutage,
+          current: beforeOutage,
+          pendingEvidence: false
+        })
+      )
+      expect(operationLifecycleLedger.get(revoke.activityId)).toEqual(beforeOutage)
+
+      provider.connection.send.mockImplementation((payload, callback) => {
+        if (payload.method === 'eth_getBlockByNumber' && payload.params[0] === 'latest') {
+          return callback({ result: { number: '0xf', hash: `0x${'c'.repeat(64)}` } })
+        }
+        return normalSend(payload, callback)
+      })
+      await Accounts.monitorEip7702Revocation(accountInstance, revoke, revoke.operationVersion)
+      expect(observations.at(-1)).toEqual(expect.objectContaining({ pendingEvidence: true }))
+    } finally {
+      removeObserver()
+    }
   })
 
   it('expires a continuously running live revocation monitor without another RPC or lost evidence', async () => {

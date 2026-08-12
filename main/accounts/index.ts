@@ -333,6 +333,15 @@ export class Accounts extends EventEmitter {
     })
   }
 
+  private clearEip7702PendingEvidence(request: Eip7702RevokeRequest) {
+    if (!request.activityId) return
+    const current = operationLifecycleLedger
+      .listStored()
+      .find(({ id, kind }) => id === request.activityId && kind === 'eip7702Revoke')
+    if (!current) return
+    publishOperationLifecycleObservation({ previous: current, current, pendingEvidence: false })
+  }
+
   private expireEip7702Lifecycle(request: Eip7702RevokeRequest, now = Date.now()) {
     if (!request.activityId) return false
     const previous = operationLifecycleLedger.listStored().find(({ id }) => id === request.activityId)
@@ -1056,6 +1065,8 @@ export class Accounts extends EventEmitter {
           request.notice = 'Rechecking after chain reorganization'
           account.update()
           this.updateEip7702Lifecycle(request, 'reorged')
+        } else {
+          this.clearEip7702PendingEvidence(request)
         }
         this.scheduleEip7702Monitor(account, request, operationVersion)
         return
@@ -1166,6 +1177,7 @@ export class Accounts extends EventEmitter {
       this.eip7702MonitorTimers.set(key, timer)
     } catch (error) {
       if (!this.activeEip7702Operation(account, request, operationVersion)) return
+      this.clearEip7702PendingEvidence(request)
       log.warn('EIP-7702 revocation monitor check failed', {
         handlerId: request.handlerId,
         error: error instanceof Error ? error.message : String(error)
