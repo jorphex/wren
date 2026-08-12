@@ -5,6 +5,11 @@ without dropping protocol data or trusting arbitrary execution code. The
 programs below remain deliberately limited until their listed product and trust
 boundaries are selected.
 
+**Planning status:** these are fail-closed reference boundaries, not active tasks.
+Generic delegation creation, atomic batches without an account-owned executor,
+and wallet-authored blob transactions are not planned under the current product
+model; revisit only after their named trust/deployment choices exist.
+
 ## EIP-7702 delegation
 
 ### Current support

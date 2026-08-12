@@ -5,6 +5,10 @@ or ERC-6492 counterfactual signatures. The standards do not define one generic
 account implementation or signature format, so those paths remain fail-closed
 until the product choices below are made and pinned.
 
+**Planning status:** not planned under Wren's current backend-free product model.
+The requirements below preserve an honest re-entry boundary if user demand and a
+privacy-compatible coordination/bundler strategy materially change.
+
 ## Implemented foundation
 
 Wren has an internal ERC-1271 verifier for a future account adapter. It calls
