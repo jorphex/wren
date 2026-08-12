@@ -148,7 +148,8 @@ const auditPage = async ({
 
   const controlSelector =
     'button, a[href], input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])'
-  const controls = Array.from(document.querySelectorAll(controlSelector)).filter(
+  const modalRoot = Array.from(document.querySelectorAll('[aria-modal="true"]')).find(visible)
+  const controls = Array.from((modalRoot || document).querySelectorAll(controlSelector)).filter(
     (element) => visible(element) && !element.disabled && element.getAttribute('aria-hidden') !== 'true'
   )
 

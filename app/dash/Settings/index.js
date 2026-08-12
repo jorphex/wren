@@ -429,7 +429,11 @@ export class Settings extends Component {
                 <span>Hide Wren when it loses focus.</span>
               </div>
             </div>
-            <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
+            <div
+              id='wren-settings-wallet-notifications'
+              className='signerPermission localSetting localSettingExplained'
+              style={{ zIndex: 212 }}
+            >
               <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>Wallet activity notifications</div>
                 <Toggle
@@ -764,7 +768,10 @@ export class Settings extends Component {
                 const titleId = `revoke-native-title-${index}`
                 const bodyId = `revoke-native-body-${index}`
                 return (
-                  <div className='signerPermission localSetting' key={credential.fingerprint}>
+                  <div
+                    className='signerPermission localSetting localSettingExplained'
+                    key={credential.fingerprint}
+                  >
                     <div className='signerPermissionControls'>
                       <CompanionDetails>
                         <div className='signerPermissionSetting'>Local app</div>
@@ -773,7 +780,7 @@ export class Settings extends Component {
                         >{`Connection ID ${shortId}`}</CompanionIdentity>
                         <button
                           type='button'
-                          className='wrenControl wrenControlGhost'
+                          className='localConnectionTarget wrenControl wrenControlGhost'
                           onClick={() => link.send('tray:clipboardData', credential.fingerprint)}
                         >
                           Copy full connection ID
@@ -783,7 +790,7 @@ export class Settings extends Component {
                         <RevokeCompanion
                           ref={this.revokeNativeTriggerRefs[credential.fingerprint]}
                           type='button'
-                          className='wrenControl wrenControlGhost'
+                          className='localConnectionTarget wrenControl wrenControlGhost'
                           aria-label='Revoke local app'
                           onClick={() => this.armNativeRevocation(credential)}
                         >

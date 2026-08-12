@@ -53,6 +53,10 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const scenarios = scenarioMatrix({ includeReview: true })
   const chooser = scenarios.find(({ state }) => state === 'account-chooser')
   const settings = scenarios.find(({ state }) => state === 'settings')
+  const settingsLocalConnections = scenarios.find(({ id }) => id === 'dash-settings-local-connections-full-1')
+  const settingsWalletNotifications = scenarios.find(
+    ({ id }) => id === 'dash-settings-wallet-notifications-full-1'
+  )
   const recovery = scenarios.find(({ id }) => id === 'dash-settings-recovery-full-1')
   const recoveryExport = scenarios.find(({ id }) => id === 'dash-settings-recovery-export-full-1')
   const recoveryRestore = scenarios.find(({ id }) => id === 'dash-settings-recovery-restore-full-1')
@@ -65,6 +69,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const activity = scenarios.find(({ state }) => state === 'account-activity')
   const activityClear = scenarios.find(({ id }) => id === 'tray-account-activity-clear-full-1')
   const activityLifecycle = scenarios.find(({ id }) => id === 'tray-account-activity-lifecycle-full-1')
+  const nativePairing = scenarios.find(({ id }) => id === 'tray-native-pairing-full-1')
   const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
   const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
@@ -114,6 +119,28 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     'clearance-unverified',
     'verified-clearance'
   ])
+  expect(settingsLocalConnections).toMatchObject({
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-local-connections'
+  })
+  expect(settingsWalletNotifications).toMatchObject({
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-wallet-notifications'
+  })
+  expect(fixtureFor(settingsLocalConnections).main).toMatchObject({
+    transactionNotifications: true,
+    nativePeerCredentials: {
+      qualification: { fingerprint: expect.any(String), pairedAt: 1 }
+    }
+  })
+  expect(nativePairing).toMatchObject({
+    ready: '[role="dialog"][aria-labelledby="wren-notify-title"]',
+    expectedInitialFocus: 'Not now'
+  })
+  expect(fixtureFor(nativePairing).view).toMatchObject({
+    notify: 'nativeConnect',
+    notifyData: { pairingCode: '482 731', requestId: 'qualification-native-pairing' }
+  })
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'

@@ -91,7 +91,7 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
             <div className='extensionPairingCode'>{pairingCode}</div>
             <button
               type='button'
-              className='extensionOriginButton wrenControl wrenControlSecondary'
+              className='extensionOriginButton nativeConnectTarget wrenControl wrenControlSecondary'
               aria-label='Copy full connection ID'
               onClick={copyConnectionId}
             >
@@ -104,7 +104,7 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
           <div className='notifyInput'>
             <button
               type='button'
-              className='notifyInputOption notifyInputDeny wrenControl wrenControlSecondary'
+              className='notifyInputOption nativeConnectTarget notifyInputDeny wrenControl wrenControlSecondary'
               aria-label='Not now'
               data-dialog-initial-focus
               disabled={responding}
@@ -114,7 +114,7 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
             </button>
             <button
               type='button'
-              className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
+              className='notifyInputOption nativeConnectTarget notifyInputProceed wrenControl wrenControlPrimary'
               aria-label='Allow'
               disabled={responding}
               onClick={() => respond(true)}

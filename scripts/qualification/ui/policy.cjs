@@ -59,6 +59,41 @@ const reviewScenarios = () => [
     requiredText: ['Desktop behavior', 'Accounts and signing']
   },
   {
+    id: 'dash-settings-local-connections-full-1',
+    renderer: 'dash',
+    state: 'settings-local-connections',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '#wren-settings-local-connections',
+    requiredControls: ['Copy full connection ID', 'Revoke'],
+    requiredText: [
+      'Wallet activity notifications',
+      'Show private updates while Wren is hidden.',
+      'Local connections',
+      'Authenticated software on this computer.'
+    ],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-local-connections'
+  },
+  {
+    id: 'dash-settings-wallet-notifications-full-1',
+    renderer: 'dash',
+    state: 'settings-local-connections',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '#wren-settings-wallet-notifications',
+    requiredControls: ['Wallet activity notifications'],
+    requiredText: [
+      'Wallet activity notifications',
+      'Show private updates while Wren is hidden.',
+      'They never include app, account, network, amounts, addresses, call data, transaction hashes, or delegation details.'
+    ],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-wallet-notifications'
+  },
+  {
     id: 'dash-settings-recovery-full-1',
     renderer: 'dash',
     state: 'settings',
@@ -190,6 +225,22 @@ const reviewScenarios = () => [
       'Monitoring stopped',
       'Clearance not verified',
       'Delegation removed'
+    ]
+  },
+  {
+    id: 'tray-native-pairing-full-1',
+    renderer: 'tray',
+    state: 'native-pairing',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '[role="dialog"][aria-labelledby="wren-notify-title"]',
+    expectedInitialFocus: 'Not now',
+    requiredControls: ['Copy full connection ID', 'Not now', 'Allow'],
+    requiredText: [
+      'Allow local app to connect?',
+      'Compare this code with the app before allowing it.',
+      'Connection ID'
     ]
   },
   {

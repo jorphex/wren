@@ -288,7 +288,7 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'settings') {
+  if (scenario.state === 'settings' || scenario.state === 'settings-local-connections') {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
@@ -312,6 +312,29 @@ const fixtureFor = (scenario) => {
       showLocalNameWithENS: false,
       trezor: { derivation: 'standard' }
     })
+    if (scenario.state === 'settings-local-connections') {
+      state.main.transactionNotifications = true
+      state.main.nativePeerCredentials = {
+        qualification: {
+          fingerprint: 'B7mKnX3q8A2dL5pR9vT4wY6cF1hJ0sUeZgQxN2oC7iM',
+          pairedAt: 1
+        }
+      }
+    }
+  }
+
+  if (scenario.state === 'native-pairing') {
+    state.view = {
+      ...state.view,
+      notify: 'nativeConnect',
+      notifyData: {
+        fingerprint: 'B7mKnX3q8A2dL5pR9vT4wY6cF1hJ0sUeZgQxN2oC7iM',
+        pairingCode: '482 731',
+        requestId: 'qualification-native-pairing'
+      },
+      notifyId: 'native:qualification-native-pairing',
+      notifyOwner: 'native:qualification-native-pairing'
+    }
   }
 
   if (scenario.state === 'networks') {
