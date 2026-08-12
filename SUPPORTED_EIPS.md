@@ -4,6 +4,8 @@ For developers who need Wren's exact desktop support boundary. This is not an au
 
 **Implemented**: Wren owns the path and has automated regression coverage. **Partial**: useful support, with a material omission. **Review-only**: recognizes and explains a format but does not provide its protocol/execution system. **Awareness-only**: detects state but cannot change it. **Unsupported**: no maintained implementation.
 
+These statuses describe usable Wren behavior, not internal groundwork. An `Unsupported` row may mention a tested internal foundation, but that is not a claim that accounts or applications can use the standard end to end.
+
 ## Provider and wallet interfaces
 
 | Standard                                            | Status      | Wren behavior and limit                                                                                                                                                                                                                                                                                                              |
