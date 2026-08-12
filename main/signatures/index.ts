@@ -43,3 +43,5 @@ export const identify = ({ data }: TypedMessage<SignTypedDataVersion>): TypedSig
 }
 
 export { isSignatureRequest } from '../../resources/domain/request'
+export { validateErc1271Signature } from './erc1271'
+export type { Erc1271Validation } from './erc1271'
