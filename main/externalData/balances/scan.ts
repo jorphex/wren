@@ -28,8 +28,13 @@ export interface CurrencyBalance extends ExternalBalance {
   chainId: number
 }
 
+export interface NativeCurrencyTarget {
+  chainId: number
+  decimals: number
+}
+
 export interface BalanceLoader {
-  getCurrencyBalances: (address: Address, chains: number[]) => Promise<CurrencyBalance[]>
+  getCurrencyBalances: (address: Address, chains: NativeCurrencyTarget[]) => Promise<CurrencyBalance[]>
   getTokenBalances: (address: Address, tokens: TokenDefinition[]) => Promise<TokenBalance[]>
 }
 
@@ -54,7 +59,7 @@ export default function (eth: EthereumProvider) {
     }))
   }
 
-  async function getNativeCurrencyBalance(address: string, chainId: number) {
+  async function getNativeCurrencyBalance(address: string, { chainId, decimals }: NativeCurrencyTarget) {
     try {
       const rawBalance: string = await eth.request({
         method: 'eth_getBalance',
@@ -62,8 +67,7 @@ export default function (eth: EthereumProvider) {
         chainId: addHexPrefix(chainId.toString(16))
       })
 
-      // TODO: do all coins have 18 decimals?
-      return { ...createBalance(rawBalance, 18), chainId }
+      return { ...createBalance(rawBalance, decimals), chainId }
     } catch (e) {
       log.error(`error loading native currency balance for chain id: ${chainId}`, e)
       return { balance: '0x0', displayBalance: '0.0', chainId }
@@ -126,7 +130,7 @@ export default function (eth: EthereumProvider) {
   }
 
   return {
-    getCurrencyBalances: async function (address: string, chains: number[]) {
+    getCurrencyBalances: async function (address: string, chains: NativeCurrencyTarget[]) {
       const fetchChainBalance = getNativeCurrencyBalance.bind(null, address)
 
       return Promise.all(chains.map(fetchChainBalance))

@@ -140,4 +140,30 @@ describe('persisted state schema compatibility', () => {
       }).price.fees
     ).toBeNull()
   })
+
+  it('accepts only canonical uint256 EIP-1559 fee quantities', () => {
+    const gas = {
+      samples: [],
+      price: {
+        selected: 'fast',
+        levels: { fast: '0x1' },
+        fees: {
+          nextBaseFee: '0x0',
+          maxBaseFeePerGas: '0x1',
+          maxPriorityFeePerGas: '0xa',
+          maxFeePerGas: `0x${'f'.repeat(64)}`
+        }
+      }
+    }
+
+    expect(GasSchema.parse(gas)).toEqual(gas)
+    for (const value of ['0x00', '1', '0x', '0xgg', `0x1${'0'.repeat(64)}`]) {
+      expect(() =>
+        GasSchema.parse({
+          ...gas,
+          price: { ...gas.price, fees: { ...gas.price.fees, maxFeePerGas: value } }
+        })
+      ).toThrow()
+    }
+  })
 })

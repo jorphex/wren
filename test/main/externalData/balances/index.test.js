@@ -29,6 +29,7 @@ beforeEach(() => {
     id: 10,
     connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
   })
+  store.set('main.networksMeta.ethereum.10.nativeCurrency.decimals', 6)
 
   balances = BalancesScanner(store)
   balances.start()
@@ -45,6 +46,7 @@ it('scans for balances when setting an address if the controller is ready', () =
   jest.advanceTimersByTime(0)
 
   expect(balancesController.updateKnownTokenBalances).toHaveBeenCalled()
+  expect(balancesController.updateChainBalances).toHaveBeenCalledWith(address, [{ chainId: 10, decimals: 6 }])
 })
 
 it('scans for balances as soon as the controller is ready', () => {

@@ -8,6 +8,7 @@ import { nodeWorkerEnvironment } from '../../worker/environment'
 import { BalancesWorkerCommand, parseBalancesWorkerEvent } from './protocol'
 
 import type { Token } from '../../store/state'
+import type { NativeCurrencyTarget } from './scan'
 
 const BOOTSTRAP_TIMEOUT_SECONDS = 20
 
@@ -94,7 +95,7 @@ export default class BalancesWorkerController extends EventEmitter {
     return !!this.heartbeat
   }
 
-  updateChainBalances(address: Address, chains: number[]) {
+  updateChainBalances(address: Address, chains: NativeCurrencyTarget[]) {
     this.sendCommandToWorker({ command: 'updateChainBalance', args: [address, chains] })
   }
 

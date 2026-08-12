@@ -4,23 +4,6 @@ import * as actions from './actions'
 import persist from './persist'
 import { isPersistedStatePath } from './persist/path'
 
-// TODO: Layer persisted op top of initial state
-
-// const get = (path, obj = persist.get('main')) => {
-//   path.split('.').some((key, i) => {
-//     if (typeof obj !== 'object') { obj = undefined } else { obj = obj[key] }
-//     return obj === undefined // Stop navigating the path if we get to undefined value
-//   })
-//   return obj
-// }
-
-// const persistedPaths = []
-
-// persistedPaths.forEach(path => {
-//   const value = get(path)
-//   if (value !== undefined) store.__overwrite(path, value)
-// })
-
 const store = Restore.create(state(), actions)
 
 persist.pruneTransientState()

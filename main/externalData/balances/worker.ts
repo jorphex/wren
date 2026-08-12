@@ -97,9 +97,9 @@ async function fetchTokenBalances(address: Address, tokens: Token[]) {
   }
 }
 
-async function chainBalanceScan(address: string, chains?: number[]) {
+async function chainBalanceScan(address: string, chains?: { chainId: number; decimals: number }[]) {
   try {
-    const availableChains = chains || (await getChains())
+    const availableChains = chains || (await getChains()).map((chainId) => ({ chainId, decimals: 18 }))
     const chainBalances = await balances.getCurrencyBalances(address, availableChains)
 
     sendToMainProcess({ type: 'chainBalances', balances: chainBalances, address })

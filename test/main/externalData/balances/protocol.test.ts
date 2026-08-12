@@ -26,6 +26,18 @@ describe('balances worker protocol', () => {
     expect(
       parseBalancesWorkerCommand({ command: 'updateChainBalance', args: [token.address, ['1']] })
     ).toBeUndefined()
+    expect(
+      parseBalancesWorkerCommand({
+        command: 'updateChainBalance',
+        args: [token.address, [{ chainId: 10, decimals: 18 }]]
+      })
+    ).toBeDefined()
+    expect(
+      parseBalancesWorkerCommand({
+        command: 'updateChainBalance',
+        args: [token.address, [{ chainId: 10, decimals: -1 }]]
+      })
+    ).toBeUndefined()
   })
 
   it('accepts known events and rejects malformed payloads', () => {

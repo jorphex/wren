@@ -203,8 +203,23 @@ describe('#getCurrencyBalances', () => {
     const eth = ethProvider()
     eth.request.mockRejectedValue(new Error('RPC unavailable'))
 
-    await expect(balanceLoader(eth).getCurrencyBalances(ownerAddress, [1])).resolves.toEqual([
-      { balance: '0x0', displayBalance: '0.0', chainId: 1 }
+    await expect(
+      balanceLoader(eth).getCurrencyBalances(ownerAddress, [{ chainId: 1, decimals: 18 }])
+    ).resolves.toEqual([{ balance: '0x0', displayBalance: '0.0', chainId: 1 }])
+  })
+
+  it('uses each network native-currency decimal definition', async () => {
+    const eth = ethProvider()
+    eth.request.mockResolvedValue('0xf4240')
+
+    await expect(
+      balanceLoader(eth).getCurrencyBalances(ownerAddress, [
+        { chainId: 1, decimals: 6 },
+        { chainId: 10, decimals: 18 }
+      ])
+    ).resolves.toEqual([
+      { balance: '0xf4240', displayBalance: '1', chainId: 1 },
+      { balance: '0xf4240', displayBalance: '1e-12', chainId: 10 }
     ])
   })
 })

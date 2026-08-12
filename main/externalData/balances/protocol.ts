@@ -5,6 +5,9 @@ import type { CurrencyBalance, TokenBalance } from './scan'
 
 const AddressSchema = z.string()
 const ChainIdsSchema = z.array(z.number().int().nonnegative())
+const NativeCurrencyTargetsSchema = z.array(
+  z.object({ chainId: z.number().int().positive(), decimals: z.number().int().min(0).max(255) }).strict()
+)
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -54,7 +57,10 @@ const CurrencyBalanceSchema = z.custom<CurrencyBalance>(isCurrencyBalance)
 
 const BalancesWorkerCommandSchema = z.discriminatedUnion('command', [
   z.object({ command: z.literal('heartbeat'), args: z.tuple([]) }),
-  z.object({ command: z.literal('updateChainBalance'), args: z.tuple([AddressSchema, ChainIdsSchema]) }),
+  z.object({
+    command: z.literal('updateChainBalance'),
+    args: z.tuple([AddressSchema, NativeCurrencyTargetsSchema])
+  }),
   z.object({
     command: z.literal('fetchTokenBalances'),
     args: z.tuple([AddressSchema, z.array(WorkerTokenSchema)])

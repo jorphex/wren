@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import { parseRpcQuantity } from '../../../../resources/domain/transaction/quantity'
+
+const RpcQuantitySchema = z.string().refine((value) => parseRpcQuantity(value) !== undefined, {
+  message: 'must be a canonical uint256 RPC quantity'
+})
 
 const GasLevelsSchema = z.object({
   slow: z.string().optional(),
@@ -25,13 +30,12 @@ const GasSampleSchema = z.object({
     .partial()
 })
 
-// TODO: validate these fields as hex amount values
 export const GasFeesSchema = z
   .object({
-    nextBaseFee: z.string(),
-    maxBaseFeePerGas: z.string(),
-    maxPriorityFeePerGas: z.string(),
-    maxFeePerGas: z.string()
+    nextBaseFee: RpcQuantitySchema,
+    maxBaseFeePerGas: RpcQuantitySchema,
+    maxPriorityFeePerGas: RpcQuantitySchema,
+    maxFeePerGas: RpcQuantitySchema
   })
   .partial()
 

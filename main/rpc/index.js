@@ -305,11 +305,11 @@ const rpc = {
           if (err) return cb(err)
           try {
             const parsed = JSON.parse(data)
-            if (typeof parsed.version !== 'number') cb('Invalid keystore file')
-            if (![1, 3].includes(parsed.version)) cb('Invalid keystore version')
-            cb(null, parsed)
+            if (typeof parsed.version !== 'number') return cb(new Error('Invalid keystore file'))
+            if (![1, 3].includes(parsed.version)) return cb(new Error('Invalid keystore version'))
+            return cb(null, parsed)
           } catch (err) {
-            cb(err)
+            return cb(err)
           }
         })
       } else {

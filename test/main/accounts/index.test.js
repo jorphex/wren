@@ -1437,6 +1437,21 @@ describe('account-bound request transitions', () => {
     })
   })
 
+  it.each([
+    ['string errors', 'Device unavailable', 'Device unavailable'],
+    ['message-shaped errors', { message: 'Signer unavailable' }, 'Signer unavailable'],
+    ['null errors', null, 'Unknown Error']
+  ])('normalizes %s without breaking request error handling', (_label, error, notice) => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest(`normalized-error-${notice.replaceAll(' ', '-').toLowerCase()}`)
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+
+    Accounts.setRequestPending(explicit)
+    expect(() => Accounts.setRequestError(explicit.handlerId, error, account2.address)).not.toThrow()
+    expect(targetAccount.requests[explicit.handlerId]).toMatchObject({ status: 'error', notice })
+  })
+
   it('presents an on-device rejection as a neutral declined request', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('account-bound-device-decline')

@@ -1997,7 +1997,7 @@ export class Accounts extends EventEmitter {
     return true
   }
 
-  setRequestError(handlerId: string, err: Error, accountId?: string) {
+  setRequestError(handlerId: string, err: unknown, accountId?: string) {
     log.info('setRequestError', handlerId)
 
     const currentAccount = this.requestAccount(handlerId, accountId)
@@ -2056,12 +2056,18 @@ export class Accounts extends EventEmitter {
       }
 
       currentAccount.requests[handlerId].status = RequestStatus.Error
-      const errorMessage = (err.message || '').toLowerCase()
+      const notice =
+        typeof err === 'string'
+          ? err
+          : isRecord(err) && typeof err['message'] === 'string'
+            ? err['message']
+            : 'Unknown Error'
+      const errorMessage = notice.toLowerCase()
 
       if (errorMessage === 'ledger device: invalid data received (0x6a80)') {
         currentAccount.requests[handlerId].notice = 'Ledger rejected transaction data (0x6a80)'
       } else if (
-        err.message === 'ledger device: condition of use not satisfied (denied by the user?) (0x6985)'
+        errorMessage === 'ledger device: condition of use not satisfied (denied by the user?) (0x6985)'
       ) {
         currentAccount.requests[handlerId].notice = 'Ledger Signature Declined'
       } else if (errorMessage.includes('insufficient funds')) {
@@ -2069,12 +2075,6 @@ export class Accounts extends EventEmitter {
           ? 'insufficient funds for gas'
           : 'insufficient funds'
       } else {
-        const notice =
-          err && typeof err === 'string'
-            ? err
-            : err && typeof err === 'object' && err.message && typeof err.message === 'string'
-              ? err.message
-              : 'Unknown Error' // TODO: Update to normalize input type
         currentAccount.requests[handlerId].notice = notice
       }
 

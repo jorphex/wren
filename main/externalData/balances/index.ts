@@ -23,6 +23,12 @@ export default function (store: Store) {
     getNetwork: (id: number) => (store('main.networks.ethereum', id) || {}) as Chain,
     getNativeCurrencySymbol: (id: number) =>
       store('main.networksMeta.ethereum', id, 'nativeCurrency', 'symbol') as string,
+    getNativeCurrencyDecimals: (id: number) => {
+      const decimals = store('main.networksMeta.ethereum', id, 'nativeCurrency', 'decimals')
+      return typeof decimals === 'number' && Number.isInteger(decimals) && decimals >= 0 && decimals <= 255
+        ? decimals
+        : 18
+    },
     getConnectedNetworks: () => {
       const networks = Object.values(store('main.networks.ethereum') || {}) as Chain[]
       return networks.filter((n) => n.connection.endpoints.some((endpoint) => endpoint.connected))
@@ -195,7 +201,10 @@ export default function (store: Store) {
       workerController?.updateKnownTokenBalances(address, trackedTokens)
     }
 
-    workerController?.updateChainBalances(address, chains)
+    workerController?.updateChainBalances(
+      address,
+      chains.map((chainId) => ({ chainId, decimals: storeApi.getNativeCurrencyDecimals(chainId) }))
+    )
     workerController?.scanForTokenBalances(address, trackedTokens, chains)
   }
 
