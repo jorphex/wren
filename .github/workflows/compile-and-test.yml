@@ -82,6 +82,73 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  package-native-smoke:
+    name: Unsigned ${{ matrix.name }} package smoke
+    needs: quality
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux arm64
+            runner: ubuntu-22.04-arm
+            package-command: npm run package:linux:arm64
+            verify-command: npm run package:verify:linux:arm64
+            artifact-name: wren-linux-arm64
+            artifact-path: |
+              dist/*.AppImage
+              dist/*.tar.gz
+          - name: macOS x64
+            runner: macos-15-intel
+            package-command: npm run package:mac:unsigned:x64
+            verify-command: npm run package:verify:mac:x64
+            artifact-name: wren-macos-x64
+            artifact-path: |
+              dist/*.dmg
+              dist/*.zip
+          - name: macOS arm64
+            runner: macos-15
+            package-command: npm run package:mac:unsigned:arm64
+            verify-command: npm run package:verify:mac:arm64
+            artifact-name: wren-macos-arm64
+            artifact-path: |
+              dist/*.dmg
+              dist/*.zip
+          - name: Windows x64
+            runner: windows-2022
+            package-command: npm run package:windows:unsigned:x64
+            verify-command: npm run package:verify:windows:x64
+            artifact-name: wren-windows-x64
+            artifact-path: dist/*.exe
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm install --global npm@11.12.0
+      - name: Install Linux build prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libudev-dev
+      - run: npm run setup:ci
+      - run: npm run compile
+      - run: npm run bundle
+      - name: Build unsigned native smoke package
+        run: ${{ matrix.package-command }}
+      - name: Verify native package and archive payloads
+        run: ${{ matrix.verify-command }}
+      - name: Upload unsigned, unqualified smoke artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.artifact-name }}-${{ github.sha }}-unsigned-unqualified
+          path: ${{ matrix.artifact-path }}
+          if-no-files-found: error
+          retention-days: 7
+
   dependency-review:
     name: Review dependency changes
     if: github.event_name == 'pull_request'
