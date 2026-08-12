@@ -261,7 +261,7 @@ it('stages grouped clearing, cancels with Escape, and submits confirmation only 
   const clearTrigger = screen.getByRole('button', { name: 'Clear requests from Example' })
   await user.click(clearTrigger)
 
-  expect(screen.getByRole('alertdialog')).toBeTruthy()
+  expect(screen.getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)
   expect(screen.getByText('Clear 2 staged requests?')).toBeTruthy()
   expect(
     screen.getByText(

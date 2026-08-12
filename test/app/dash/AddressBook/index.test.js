@@ -66,7 +66,7 @@ test('searches contacts, copies rows, and opens add and edit navigation explicit
   })
 })
 
-test('orders contact actions as Copy, Edit, then Remove and copy cancels armed removal', async () => {
+test('orders contact actions as Copy, Edit, then Remove and exposes an explicit safe confirmation', async () => {
   const { user } = render(<ConnectedAddressBook data={{}} />)
   const copy = screen.getByRole('button', { name: 'Copy Yearn Treasury address' })
   const edit = screen.getByRole('button', { name: 'Edit Yearn Treasury' })
@@ -75,9 +75,13 @@ test('orders contact actions as Copy, Edit, then Remove and copy cancels armed r
   expect([...copy.closest('.addressBookRow').querySelectorAll('button')]).toEqual([copy, edit, remove])
 
   await user.click(remove)
-  expect(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' })).toBeTruthy()
-  await user.click(copy)
+  const dialog = screen.getByRole('alertdialog', { name: 'Remove Yearn Treasury?' })
+  expect(dialog.getAttribute('aria-modal')).toBeNull()
+  expect(screen.getByText('This removes the saved contact from Wren. Funds are not affected.')).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(screen.getByRole('button', { name: 'Remove Yearn Treasury' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove Yearn Treasury' }))
   expect(removeAddressBookEntry).not.toHaveBeenCalled()
 })
 
@@ -155,7 +159,8 @@ test('requires confirmation before deletion and reports import duplicate counts'
 
   await user.click(screen.getByRole('button', { name: 'Remove Yearn Treasury' }))
   expect(removeAddressBookEntry).not.toHaveBeenCalled()
-  await user.click(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' }))
+  expect(removeAddressBookEntry).toHaveBeenCalledTimes(1)
   await waitFor(() => expect(removeAddressBookEntry).toHaveBeenCalledWith(address))
   expect(await screen.findByText('Contact removed')).toBeTruthy()
   act(() => jest.advanceTimersByTime(4000))
@@ -163,6 +168,32 @@ test('requires confirmation before deletion and reports import duplicate counts'
 
   await user.click(screen.getByRole('button', { name: 'Import JSON' }))
   expect(await screen.findByText('Imported 2; skipped 1 existing or excess entry.')).toBeTruthy()
+})
+
+test('cancels contact removal with Escape but not while the removal is pending', async () => {
+  let finishRemoval
+  removeAddressBookEntry.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishRemoval = resolve
+      })
+  )
+  const { user } = render(<ConnectedAddressBook data={{}} />)
+
+  await user.click(screen.getByRole('button', { name: 'Remove Yearn Treasury' }))
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove Yearn Treasury' }))
+
+  await user.click(screen.getByRole('button', { name: 'Remove Yearn Treasury' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm removing Yearn Treasury' }))
+  const dialog = screen.getByRole('alertdialog', { name: 'Remove Yearn Treasury?' })
+  expect(dialog.getAttribute('aria-busy')).toBe('true')
+  expect(screen.getByRole('button', { name: 'Removing Yearn Treasury' }).disabled).toBe(true)
+  await user.keyboard('{Escape}')
+  expect(screen.getByRole('alertdialog', { name: 'Remove Yearn Treasury?' })).toBeTruthy()
+
+  await act(async () => finishRemoval({ success: true }))
 })
 
 test('surfaces validation and service errors without navigating away', async () => {

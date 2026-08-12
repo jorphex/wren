@@ -14,6 +14,7 @@ import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v2.png'
 import TxOverview from './TransactionRequest/TxMainNew/overview'
 
 import RequestItem, { consumePendingRequestFocus } from '../../../../resources/Components/RequestItem'
+import DialogSurface from '../../../../resources/Components/DialogSurface'
 import Icon from '../../../../resources/Components/Icon'
 import WrenEmptyState from '../../../../resources/Components/WrenEmptyState'
 
@@ -56,6 +57,7 @@ export class Requests extends React.Component {
     this.previewRef = React.createRef()
     this.inboxHeadingRef = React.createRef()
     this.clearCancelRef = React.createRef()
+    this.clearReturnFocusRef = React.createRef()
     this.requestRefs = new Map()
     this.clearButtonRefs = new Map()
     this.clearPendingOrigins = new Set()
@@ -87,11 +89,7 @@ export class Requests extends React.Component {
     }
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.clearOrigin && prevState.clearOrigin !== this.state.clearOrigin) {
-      window.setTimeout(() => this.clearCancelRef.current?.focus(), 0)
-    }
-
+  componentDidUpdate() {
     const clearingOriginStillPresent = this.renderedRequests?.some(
       (request) => request.origin === this.state.clearingOrigin
     )
@@ -142,14 +140,12 @@ export class Requests extends React.Component {
 
   openClearConfirmation(origin, groupKey) {
     if (this.clearPendingOrigins.has(origin)) return
+    this.clearReturnFocusRef.current = this.clearButtonRefs.get(groupKey)
     this.setState({ clearOrigin: origin, clearGroupKey: groupKey })
   }
 
   cancelClearConfirmation() {
-    const groupKey = this.state.clearGroupKey
-    this.setState({ clearOrigin: null, clearGroupKey: null }, () => {
-      window.setTimeout(() => this.clearButtonRefs.get(groupKey)?.focus(), 0)
-    })
+    this.setState({ clearOrigin: null, clearGroupKey: null })
   }
 
   confirmClearRequests(origin) {
@@ -201,17 +197,14 @@ export class Requests extends React.Component {
     const requestLabel = count === 1 ? 'request' : 'requests'
 
     return (
-      <div
+      <DialogSurface
         className='requestGroupClearConfirmation'
         role='alertdialog'
-        aria-labelledby='request-clear-title'
-        aria-describedby='request-clear-body'
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            this.cancelClearConfirmation()
-          }
-        }}
+        labelledBy='request-clear-title'
+        describedBy='request-clear-body'
+        initialFocusRef={this.clearCancelRef}
+        returnFocusRef={this.clearReturnFocusRef}
+        onCancel={() => this.cancelClearConfirmation()}
       >
         <div id='request-clear-title' className='requestGroupClearTitle'>
           {`Clear ${count} staged ${requestLabel}?`}
@@ -236,7 +229,7 @@ export class Requests extends React.Component {
             Clear all
           </button>
         </div>
-      </div>
+      </DialogSurface>
     )
   }
 

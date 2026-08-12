@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import link from '../../../resources/link'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import Icon from '../../../resources/Components/Icon'
 import svg from '../../../resources/svg'
 import { capitalize, getAddress } from '../../../resources/utils'
@@ -46,37 +47,27 @@ export class Signer extends React.Component {
     this.pending = { latticePair: false, pin: false, phrase: false, pairing: false }
     this.mounted = true
     this.updateAddressLimit = this.updateAddressLimit.bind(this)
-    this.handleRemovalKeyDown = this.handleRemovalKeyDown.bind(this)
     this.signerRemovalTrigger = React.createRef()
     this.signerRemovalCancel = React.createRef()
   }
 
   componentDidMount() {
     window.addEventListener('resize', this.updateAddressLimit)
-    window.addEventListener('keydown', this.handleRemovalKeyDown)
   }
 
   componentWillUnmount() {
     this.mounted = false
     window.removeEventListener('resize', this.updateAddressLimit)
-    window.removeEventListener('keydown', this.handleRemovalKeyDown)
-  }
-
-  handleRemovalKeyDown(e) {
-    if (e.key === 'Escape' && this.state.removalArmed && !this.state.removalPending) {
-      e.preventDefault()
-      this.cancelRemoval()
-    }
   }
 
   armRemoval() {
     if (this.state.removalPending || this.state.removalArmed) return
-    this.setState({ removalArmed: true }, () => this.signerRemovalCancel.current?.focus())
+    this.setState({ removalArmed: true })
   }
 
   cancelRemoval() {
     if (!this.state.removalArmed || this.state.removalPending) return
-    this.setState({ removalArmed: false }, () => this.signerRemovalTrigger.current?.focus())
+    this.setState({ removalArmed: false })
   }
 
   confirmRemoval() {
@@ -610,16 +601,26 @@ export class Signer extends React.Component {
           ) : null}
           {canReload && <ReloadSignerButton id={id} status={this.props.status} type={type} />}
           {this.state.removalArmed ? (
-            <div className='signerRemovalConfirm' role='alertdialog' aria-labelledby='signer-removal-title'>
+            <DialogSurface
+              className='signerRemovalConfirm'
+              role='alertdialog'
+              modal={false}
+              labelledBy={`signer-removal-title-${id}`}
+              describedBy={`signer-removal-description-${id}`}
+              busy={this.state.removalPending}
+              initialFocusRef={this.signerRemovalCancel}
+              returnFocusRef={this.signerRemovalTrigger}
+              onCancel={() => this.cancelRemoval()}
+            >
               <div
-                id='signer-removal-title'
+                id={`signer-removal-title-${id}`}
                 className='signerRemovalConfirmTitle'
                 role='heading'
                 aria-level='2'
               >
                 Remove signer?
               </div>
-              <div className='signerRemovalConfirmDescription'>
+              <div id={`signer-removal-description-${id}`} className='signerRemovalConfirmDescription'>
                 {`This removes ${this.props.name || 'this signer'} from Wren. Accounts using it become watch-only.`}
               </div>
               <div className='signerRemovalConfirmActions'>
@@ -641,7 +642,7 @@ export class Signer extends React.Component {
                   Remove signer
                 </button>
               </div>
-            </div>
+            </DialogSurface>
           ) : (
             <button
               ref={this.signerRemovalTrigger}

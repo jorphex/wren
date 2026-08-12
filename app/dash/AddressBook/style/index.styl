@@ -243,6 +243,28 @@ button.addressBookRemove.wrenControl.wrenControlGhost
   background var(--wren-danger-soft)
   color var(--wren-danger)
 
+.addressBookRemovalDialog
+  grid-template-columns minmax(0, 1fr) 64px 84px
+
+.addressBookRemovalCopy
+  min-width 0
+  display flex
+  flex-direction column
+  justify-content center
+  gap 2px
+  padding var(--wren-space-3)
+
+  strong
+    color var(--wren-text-primary)
+    font-size 14px
+    font-weight 600
+    line-height 19px
+
+  span
+    color var(--wren-text-secondary)
+    font-size 12px
+    line-height 17px
+
 .addressBookEmpty
   min-height 230px
   display flex

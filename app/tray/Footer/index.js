@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import Icon from '../../../resources/Components/Icon'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import link from '../../../resources/link'
 import { isHardwareSigner, isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import {
@@ -112,12 +113,6 @@ export class Footer extends React.Component {
     }
   }
   componentDidUpdate(_previousProps, previousState) {
-    if (!previousState.walletCallsAcknowledgement && this.state.walletCallsAcknowledgement) {
-      this.walletCallsAcknowledgementRef.current?.focus()
-    } else if (previousState.walletCallsAcknowledgement && !this.state.walletCallsAcknowledgement) {
-      this.walletCallsSubmitRef.current?.focus()
-    }
-
     const acknowledgement = this.state.walletCallsAcknowledgement
     if (acknowledgement && acknowledgement === previousState.walletCallsAcknowledgement) {
       const crumb = this.store('windows.panel.nav')[0] || {}
@@ -296,13 +291,10 @@ export class Footer extends React.Component {
   openEip7702StopMonitoringDialog(req) {
     if (this.eip7702MonitoringRpcId || !this.mounted) return
     const ambiguous = req.submission?.status === 'unconfirmed'
-    this.setState(
-      {
-        eip7702MonitoringDialog: { handlerId: req.handlerId, ambiguous },
-        eip7702MonitoringError: undefined
-      },
-      () => this.eip7702KeepMonitoringRef.current?.focus()
-    )
+    this.setState({
+      eip7702MonitoringDialog: { handlerId: req.handlerId, ambiguous },
+      eip7702MonitoringError: undefined
+    })
   }
   closeEip7702StopMonitoringDialog() {
     if (this.eip7702MonitoringRpcId || !this.mounted) return
@@ -352,18 +344,15 @@ export class Footer extends React.Component {
       : 'Wren knows the revocation was submitted but can’t verify whether delegation was cleared. Stopping monitoring cannot cancel the transaction or prove that delegation was cleared. Your account request queue will continue.'
 
     return (
-      <div
+      <DialogSurface
         className='requestApprove requestApproveLightweight eip7702StopMonitoringDialog'
         role='alertdialog'
-        aria-modal='true'
-        aria-labelledby='eip7702-stop-monitoring-title'
-        aria-describedby='eip7702-stop-monitoring-detail'
-        onKeyDown={(event) => {
-          if (event.key === 'Escape' && !pending) {
-            event.preventDefault()
-            this.closeEip7702StopMonitoringDialog()
-          }
-        }}
+        labelledBy='eip7702-stop-monitoring-title'
+        describedBy='eip7702-stop-monitoring-detail'
+        busy={pending}
+        initialFocusRef={this.eip7702KeepMonitoringRef}
+        returnFocusRef={this.eip7702StopMonitoringTriggerRef}
+        onCancel={() => this.closeEip7702StopMonitoringDialog()}
       >
         <div className='requestActionContext'>
           <span className='requestActionContextIcon'>
@@ -398,7 +387,7 @@ export class Footer extends React.Component {
             </span>
           </button>
         </div>
-      </div>
+      </DialogSurface>
     )
   }
   renderEip7702MonitoringStopped() {
@@ -514,10 +503,18 @@ export class Footer extends React.Component {
 
           if (acknowledgementActive) {
             return (
-              <div
+              <DialogSurface
                 className='requestApprove requestApproveLightweight walletCallsSimulationAcknowledgement'
                 role='region'
-                aria-labelledby='walletCallsSimulationAcknowledgementTitle'
+                labelledBy='walletCallsSimulationAcknowledgementTitle'
+                busy={actionPending}
+                initialFocusRef={this.walletCallsAcknowledgementRef}
+                returnFocusRef={this.walletCallsSubmitRef}
+                onCancel={() =>
+                  this.setState({
+                    walletCallsAcknowledgement: undefined
+                  })
+                }
               >
                 <div className='requestActionContext'>
                   <span className='requestActionContextIcon'>
@@ -577,7 +574,7 @@ export class Footer extends React.Component {
                     </span>
                   </button>
                 </div>
-              </div>
+              </DialogSurface>
             )
           }
 

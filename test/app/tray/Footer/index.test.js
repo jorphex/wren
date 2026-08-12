@@ -173,6 +173,7 @@ it('confirms stopping ambiguous-submission monitoring and restores focus on Esca
   await user.click(trigger)
 
   expect(screen.getByRole('alertdialog')).toBeTruthy()
+  expect(screen.getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)
   expect(screen.getByText('Stop monitoring this revocation?')).toBeTruthy()
   expect(
     screen.getByText(
@@ -185,7 +186,9 @@ it('confirms stopping ambiguous-submission monitoring and restores focus on Esca
 
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('alertdialog')).toBeNull()
-  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Stop monitoring' }))
+  )
 })
 
 it.each(['sending', 'error'])('does not offer stop monitoring in the %s state', (status) => {
@@ -237,6 +240,8 @@ it('stops known-submission monitoring once and reports the unverified terminal s
     expect.any(Function)
   )
   expect(commit.disabled).toBe(true)
+  await user.keyboard('{Escape}')
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
   await user.click(commit)
   expect(link.rpc).toHaveBeenCalledTimes(1)
 
@@ -438,6 +443,20 @@ it('returns from the simulation acknowledgement without submitting', async () =>
 
   expect(screen.queryByText('Simulation failed')).toBeNull()
   expect(screen.getByRole('button', { name: 'Submit Batch' })).toBe(document.activeElement)
+  expect(link.rpc).not.toHaveBeenCalled()
+})
+
+it('returns from the simulation acknowledgement with Escape', async () => {
+  const { user } = renderRequestFooter(
+    request({ simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence } })
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Submit Batch' }))
+  expect(screen.getByRole('region', { name: 'Simulation failed' }).hasAttribute('aria-modal')).toBe(false)
+  await user.keyboard('{Escape}')
+
+  expect(screen.queryByText('Simulation failed')).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Submit Batch' }))
   expect(link.rpc).not.toHaveBeenCalled()
 })
 

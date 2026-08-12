@@ -119,6 +119,7 @@ export class DappsPermissionsExpanded extends React.Component {
               <DialogSurface
                 className='clearPermissionsConfirm'
                 role='alertdialog'
+                modal={false}
                 ariaLabel='Clear all permissions?'
                 busy={this.state.clearing}
                 initialFocusRef={this.cancelClearRef}

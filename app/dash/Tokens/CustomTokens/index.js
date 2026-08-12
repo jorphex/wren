@@ -1,6 +1,7 @@
 import React from 'react'
 import Restore from 'react-restore'
 import emptyCustomTokens from 'url:../../../../asset/ui/empty-custom-tokens-v1.png'
+import DialogSurface from '../../../../resources/Components/DialogSurface'
 import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
 import { safeRemoteImageUrl } from '../../../../resources/utils/image'
@@ -26,11 +27,13 @@ class CustomTokens extends React.Component {
     this.copyTimers = new Map()
     this.expandButtons = new Map()
     this.removeButtons = new Map()
-    this.removeConfirmButtons = new Map()
+    this.removeCancelRef = React.createRef()
+    this.removeReturnFocusRef = React.createRef()
     this.listRef = React.createRef()
     this.removeTimer = null
     this.removePending = false
     this.navigationPending = false
+    this.removeReturnFocusTokenId = null
   }
 
   componentDidUpdate() {
@@ -53,7 +56,6 @@ class CustomTokens extends React.Component {
     this.copyTimers.clear()
     this.expandButtons.clear()
     this.removeButtons.clear()
-    this.removeConfirmButtons.clear()
     clearTimeout(this.removeTimer)
     this.removePending = false
     this.navigationPending = false
@@ -102,12 +104,14 @@ class CustomTokens extends React.Component {
     if (this.removePending || this.state.removalConfirmTokenId !== null) return
 
     const tokenId = tokenIdentity(token)
-    this.setState({ removalConfirmTokenId: tokenId }, () => this.removeConfirmButtons.get(tokenId)?.focus())
+    this.removeReturnFocusTokenId = tokenId
+    this.removeReturnFocusRef.current = this.removeButtons.get(tokenId)
+    this.setState({ removalConfirmTokenId: tokenId })
   }
 
   cancelTokenRemoval(tokenId) {
     if (this.removePending || this.state.removalConfirmTokenId !== tokenId) return
-    this.setState({ removalConfirmTokenId: null }, () => this.removeButtons.get(tokenId)?.focus())
+    this.setState({ removalConfirmTokenId: null })
   }
 
   confirmTokenRemoval(token) {
@@ -198,17 +202,26 @@ class CustomTokens extends React.Component {
                           {copied ? `${token.symbol} token address copied` : ''}
                         </span>
                         {removalConfirmTokenId === tokenId ? (
-                          <div className='customTokensListItemRemoval' role='alertdialog'>
-                            <strong>{`Remove ${token.symbol}?`}</strong>
-                            <span>
+                          <DialogSurface
+                            className='customTokensListItemRemoval'
+                            role='alertdialog'
+                            modal={false}
+                            labelledBy={`custom-token-removal-title-${tokenId}`}
+                            describedBy={`custom-token-removal-description-${tokenId}`}
+                            busy={removingTokenId !== null}
+                            initialFocusRef={this.removeCancelRef}
+                            returnFocusRef={this.removeReturnFocusRef}
+                            onCancel={() => this.cancelTokenRemoval(tokenId)}
+                          >
+                            <strong id={`custom-token-removal-title-${tokenId}`}>
+                              {`Remove ${token.symbol}?`}
+                            </strong>
+                            <span id={`custom-token-removal-description-${tokenId}`}>
                               This removes the custom token from Wren. On-chain assets are not affected.
                             </span>
                             <div className='customTokensListItemRemovalActions'>
                               <button
-                                ref={(node) => {
-                                  if (node) this.removeConfirmButtons.set(tokenId, node)
-                                  else this.removeConfirmButtons.delete(tokenId)
-                                }}
+                                ref={this.removeCancelRef}
                                 type='button'
                                 className='customTokensListItemButton'
                                 disabled={removingTokenId !== null}
@@ -225,7 +238,7 @@ class CustomTokens extends React.Component {
                                 Remove token
                               </button>
                             </div>
-                          </div>
+                          </DialogSurface>
                         ) : (
                           <div className='customTokensListItemBottom'>
                             <button
@@ -239,8 +252,14 @@ class CustomTokens extends React.Component {
                             </button>
                             <button
                               ref={(node) => {
-                                if (node) this.removeButtons.set(tokenId, node)
-                                else this.removeButtons.delete(tokenId)
+                                if (node) {
+                                  this.removeButtons.set(tokenId, node)
+                                  if (this.removeReturnFocusTokenId === tokenId) {
+                                    this.removeReturnFocusRef.current = node
+                                  }
+                                } else {
+                                  this.removeButtons.delete(tokenId)
+                                }
                               }}
                               type='button'
                               aria-label={`Remove ${token.symbol} token`}

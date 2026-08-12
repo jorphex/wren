@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import emptyContacts from 'url:../../../asset/ui/empty-contacts-v5.png'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddressBookEntry } from './api'
@@ -220,10 +221,16 @@ export class AddressBook extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = { filter: '', confirmDelete: '', status: '', working: false }
+    this.removeButtons = new Map()
+    this.removeCancelRef = React.createRef()
+    this.removeReturnFocusRef = React.createRef()
+    this.removeReturnFocusAddress = ''
+    this.removePending = false
   }
 
   componentWillUnmount() {
     clearTimeout(this.statusTimer)
+    this.removeButtons.clear()
   }
 
   setTransientStatus(status) {
@@ -234,6 +241,7 @@ export class AddressBook extends React.Component {
 
   openEditor(address) {
     clearTimeout(this.statusTimer)
+    this.dismissRemoveConfirmation()
     this.setState({ confirmDelete: '', status: '' })
     link.send('tray:action', 'navDash', {
       view: 'addressBook',
@@ -247,24 +255,51 @@ export class AddressBook extends React.Component {
 
   copy(entry) {
     if (this.state.working) return
+    this.dismissRemoveConfirmation()
     this.setState({ confirmDelete: '' })
     link.send('tray:clipboardData', entry.address)
     this.setTransientStatus(`${entry.name} address copied`)
   }
 
-  async remove(address) {
-    if (this.state.confirmDelete !== address) {
-      clearTimeout(this.statusTimer)
-      this.setState({ confirmDelete: address, status: '' })
-      return
+  setRemoveButtonRef(address, element) {
+    if (element) {
+      this.removeButtons.set(address, element)
+      if (this.removeReturnFocusAddress === address) this.removeReturnFocusRef.current = element
+    } else {
+      this.removeButtons.delete(address)
     }
+  }
 
+  dismissRemoveConfirmation() {
+    this.removeReturnFocusAddress = ''
+    this.removeReturnFocusRef.current = null
+  }
+
+  openRemoveConfirmation(address) {
+    if (this.state.working) return
+    clearTimeout(this.statusTimer)
+    this.removeReturnFocusAddress = address
+    this.removeReturnFocusRef.current = this.removeButtons.get(address)
+    this.setState({ confirmDelete: address, status: '' })
+  }
+
+  cancelRemoveConfirmation() {
+    if (this.state.working || this.removePending) return
+    this.setState({ confirmDelete: '', status: '' }, () => this.removeReturnFocusRef.current?.focus())
+  }
+
+  async confirmRemove(address) {
+    if (this.state.working || this.removePending || this.state.confirmDelete !== address) return
+
+    this.removePending = true
     this.setState({ working: true, status: '' })
     try {
       await removeAddressBookEntry(address)
+      this.removePending = false
       this.setState({ confirmDelete: '', working: false })
       this.setTransientStatus('Contact removed')
     } catch (error) {
+      this.removePending = false
       this.setState({
         working: false,
         status: error instanceof Error ? error.message : 'Contact could not be removed'
@@ -274,6 +309,7 @@ export class AddressBook extends React.Component {
 
   async transfer(operation) {
     if (this.state.working) return
+    this.dismissRemoveConfirmation()
     this.setState({ working: true, status: '', confirmDelete: '' })
     try {
       const result = operation === 'import' ? await importAddressBook() : await exportAddressBook()
@@ -312,6 +348,7 @@ export class AddressBook extends React.Component {
               className='wrenInput wrenInputQuiet'
               onChange={(event) => {
                 clearTimeout(this.statusTimer)
+                this.dismissRemoveConfirmation()
                 this.setState({ filter: event.target.value, confirmDelete: '', status: '' })
               }}
               placeholder='Search name, note, or address'
@@ -330,45 +367,79 @@ export class AddressBook extends React.Component {
 
         {entries.length ? (
           <div className='addressBookList'>
-            {entries.map((entry) => (
-              <article className='addressBookRow' key={entry.address}>
-                <button
-                  aria-label={`Copy ${entry.name} address`}
-                  className='addressBookCardMain'
-                  disabled={this.state.working}
-                  onClick={() => this.copy(entry)}
-                  type='button'
+            {entries.map((entry) =>
+              this.state.confirmDelete === entry.address ? (
+                <DialogSurface
+                  as='article'
+                  className='addressBookRow addressBookRemovalDialog'
+                  key={entry.address}
+                  role='alertdialog'
+                  ariaLabel={`Remove ${entry.name}?`}
+                  busy={this.state.working || this.removePending}
+                  initialFocusRef={this.removeCancelRef}
+                  returnFocusRef={this.removeReturnFocusRef}
+                  onCancel={() => this.cancelRemoveConfirmation()}
                 >
-                  <span className='addressBookIdentity'>
-                    <strong>{entry.name}</strong>
-                    <span className='addressBookAddress'>{shortAddress(entry.address)}</span>
-                    {entry.note ? <span className='addressBookNote'>{entry.note}</span> : null}
+                  <span className='addressBookRemovalCopy'>
+                    <strong>{`Remove ${entry.name}?`}</strong>
+                    <span>This removes the saved contact from Wren. Funds are not affected.</span>
                   </span>
-                </button>
-                <button
-                  aria-label={`Edit ${entry.name}`}
-                  className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
-                  disabled={this.state.working}
-                  onClick={() => this.openEditor(entry.address)}
-                  type='button'
-                >
-                  Edit
-                </button>
-                <button
-                  aria-label={`${this.state.confirmDelete === entry.address ? 'Confirm removing' : 'Remove'} ${entry.name}`}
-                  className={
-                    this.state.confirmDelete === entry.address
-                      ? 'addressBookRemove addressBookRemoveConfirm wrenControl wrenControlDanger wrenControlCompact'
-                      : 'addressBookRemove wrenControl wrenControlGhost wrenControlCompact'
-                  }
-                  disabled={this.state.working}
-                  onClick={() => this.remove(entry.address)}
-                  type='button'
-                >
-                  {this.state.confirmDelete === entry.address ? 'Confirm' : 'Remove'}
-                </button>
-              </article>
-            ))}
+                  <button
+                    ref={this.removeCancelRef}
+                    className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
+                    disabled={this.state.working}
+                    onClick={() => this.cancelRemoveConfirmation()}
+                    type='button'
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    aria-label={`${this.state.working ? 'Removing' : 'Confirm removing'} ${entry.name}`}
+                    className='addressBookRemove addressBookRemoveConfirm wrenControl wrenControlDanger wrenControlCompact'
+                    disabled={this.state.working}
+                    onClick={() => this.confirmRemove(entry.address)}
+                    type='button'
+                  >
+                    {this.state.working ? 'Removing…' : 'Confirm'}
+                  </button>
+                </DialogSurface>
+              ) : (
+                <article className='addressBookRow' key={entry.address}>
+                  <button
+                    aria-label={`Copy ${entry.name} address`}
+                    className='addressBookCardMain'
+                    disabled={this.state.working}
+                    onClick={() => this.copy(entry)}
+                    type='button'
+                  >
+                    <span className='addressBookIdentity'>
+                      <strong>{entry.name}</strong>
+                      <span className='addressBookAddress'>{shortAddress(entry.address)}</span>
+                      {entry.note ? <span className='addressBookNote'>{entry.note}</span> : null}
+                    </span>
+                  </button>
+                  <button
+                    aria-label={`Edit ${entry.name}`}
+                    className='addressBookEdit wrenControl wrenControlGhost wrenControlCompact'
+                    disabled={this.state.working}
+                    onClick={() => this.openEditor(entry.address)}
+                    type='button'
+                  >
+                    Edit
+                  </button>
+                  <button
+                    ref={(element) => this.setRemoveButtonRef(entry.address, element)}
+                    aria-label={`Remove ${entry.name}`}
+                    className='addressBookRemove wrenControl wrenControlGhost wrenControlCompact'
+                    disabled={this.state.working}
+                    onClick={() => this.openRemoveConfirmation(entry.address)}
+                    type='button'
+                  >
+                    Remove
+                  </button>
+                </article>
+              )
+            )}
           </div>
         ) : (
           <div className='addressBookEmpty'>

@@ -2,10 +2,11 @@ import React from 'react'
 import Restore from 'react-restore'
 import styled from 'styled-components'
 import link from '../../../../../resources/link'
+import DialogSurface from '../../../../../resources/Components/DialogSurface'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 
-const RemovalDialog = styled.div`
+const RemovalDialog = styled(DialogSurface)`
   padding: 14px 16px 16px;
   color: var(--wren-text-primary);
 `
@@ -79,6 +80,7 @@ export class SettingsPreview extends React.Component {
 
   resetRemoveConfirmation(restoreFocus = true) {
     if (this.state.removing || this.removePending) return
+    if (!restoreFocus) this.removeTriggerRef.current = null
     this.setState({ removeConfirm: false, removeError: '' }, () => {
       if (restoreFocus) this.removeTriggerRef.current?.focus()
     })
@@ -106,15 +108,7 @@ export class SettingsPreview extends React.Component {
 
   armAccountRemoval() {
     if (this.state.removing || this.removePending) return
-    this.setState({ removeConfirm: true, removeError: '' }, () => this.cancelRemoveRef.current?.focus())
-  }
-
-  handleRemovalKeyDown(event) {
-    if (event.key === 'Escape' && !this.state.removing) {
-      event.preventDefault()
-      event.stopPropagation()
-      this.resetRemoveConfirmation()
-    }
+    this.setState({ removeConfirm: true, removeError: '' })
   }
 
   render() {
@@ -132,10 +126,12 @@ export class SettingsPreview extends React.Component {
             {this.state.removeConfirm ? (
               <RemovalDialog
                 role='alertdialog'
-                aria-labelledby={titleId}
-                aria-describedby={bodyId}
-                aria-busy={this.state.removing}
-                onKeyDown={(event) => this.handleRemovalKeyDown(event)}
+                labelledBy={titleId}
+                describedBy={bodyId}
+                busy={this.state.removing}
+                initialFocusRef={this.cancelRemoveRef}
+                returnFocusRef={this.removeTriggerRef}
+                onCancel={() => this.resetRemoveConfirmation()}
               >
                 <RemovalTitle id={titleId}>{`Remove ${accountDisplayName}?`}</RemovalTitle>
                 <RemovalBody id={bodyId}>

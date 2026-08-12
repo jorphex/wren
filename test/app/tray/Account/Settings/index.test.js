@@ -102,6 +102,7 @@ it('names the account and consequence in a separate removal confirmation', () =>
   fireEvent.click(screen.getByRole('button', { name: 'Remove account' }))
 
   const dialog = screen.getByRole('alertdialog', { name: 'Remove Primary?' })
+  expect(dialog.getAttribute('aria-modal')).toBeNull()
   expect(dialog.textContent).toContain(
     `This removes Primary (${account}) from Wren. Funds remain onchain, but this account and its signer connection will no longer be available here.`
   )
@@ -130,6 +131,8 @@ it('guards account removal while pending and recovers in place after failure', (
   expect(link.rpc).toHaveBeenCalledTimes(1)
   expect(screen.getByRole('button', { name: 'Removing account\u2026' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true)
+  fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' })
+  expect(screen.getByRole('alertdialog')).toBeTruthy()
 
   act(() => link.rpc.mock.calls[0][3](new Error('remove failed')))
 

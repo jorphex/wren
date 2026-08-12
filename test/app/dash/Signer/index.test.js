@@ -194,6 +194,9 @@ it('arms signer removal, returns focus safely, and confirms once', async () => {
   const trigger = screen.getByRole('button', { name: 'Remove signer' })
 
   await view.user.click(trigger)
+  const dialog = screen.getByRole('alertdialog', { name: 'Remove signer?' })
+  expect(dialog.getAttribute('aria-modal')).toBeNull()
+  expect(dialog.getAttribute('aria-describedby')).toBe('signer-removal-description-device-1')
   expect(screen.getByRole('heading', { name: 'Remove signer?' })).toBeTruthy()
   expect(
     screen.getByText('This removes Test signer from Wren. Accounts using it become watch-only.')
