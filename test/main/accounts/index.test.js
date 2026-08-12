@@ -1875,6 +1875,49 @@ describe('#removeRequest', () => {
   })
 })
 
+describe('#confirmations', () => {
+  it('updates the originating account while another account remains selected', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const targetRequest = {
+      ...request,
+      handlerId: 'background-confirmation',
+      account: account2.address,
+      data: { ...request.data, from: account2.address },
+      status: 'verifying',
+      tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
+    }
+    Accounts.addRequestForAccount(account2.address, targetRequest)
+    expect(Accounts.current().id).toBe(account.id)
+
+    provider.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_blockNumber') return callback({ result: '0x10' })
+      if (payload.method === 'eth_getTransactionReceipt') {
+        return callback({
+          result: { blockNumber: '0x5', gasUsed: '0x5208', status: '0x0' }
+        })
+      }
+      return callback({ error: { code: -32601, message: 'unexpected method' } })
+    })
+
+    await expect(
+      Accounts.confirmations(targetAccount, targetRequest.handlerId, targetRequest.tx.hash, {
+        type: 'ethereum',
+        id: 1
+      })
+    ).resolves.toBe(11)
+
+    expect(targetAccount.requests[targetRequest.handlerId].tx.receipt).toMatchObject({
+      blockNumber: '0x5',
+      status: '0x0'
+    })
+    expect(Accounts.current().id).toBe(account.id)
+    expect(provider.send.mock.calls.map(([payload]) => [payload.method, payload.chainId])).toEqual([
+      ['eth_blockNumber', '0x1'],
+      ['eth_getTransactionReceipt', '0x1']
+    ])
+  })
+})
+
 describe('#clearRequestsByOrigin', () => {
   beforeEach(() => {
     nav.forward.mockClear()

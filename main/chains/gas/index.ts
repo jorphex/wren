@@ -1,5 +1,5 @@
-import { chainUsesOptimismFees } from '../../../resources/utils/chains'
 import { toRpcQuantity } from '../../../resources/domain/transaction/quantity'
+import { feeHistoryPolicy } from '../policy'
 
 import type { GasFees } from '../../store/state'
 
@@ -155,14 +155,13 @@ function OpStackGasCalculator() {
 }
 
 export function createGasCalculator(chainId: string | number = 0): GasCalculator {
-  const id = Number(chainId)
-  // TODO: maybe this can be tied into chain config somehow
-  if (id === 137) {
+  const policy = feeHistoryPolicy(chainId)
+  if (policy === 'polygon') {
     // Polygon PoS mainnet requires a minimum priority fee.
     return PolygonGasCalculator()
   }
 
-  if (chainUsesOptimismFees(id)) {
+  if (policy === 'op-stack') {
     return OpStackGasCalculator()
   }
 

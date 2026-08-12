@@ -16,11 +16,11 @@ type DecodeContext = {
   account?: Address
 }
 
-type DecodeFunction<T> = (calldata: string, context?: DecodeContext) => Action<T> | undefined
+type DecodeFunction = (calldata: string, context?: DecodeContext) => Action<unknown> | undefined
 
-export interface DecodableContract<T> {
+export interface DecodableContract {
   name: string
   address: Address
   chainId: number
-  decode: DecodeFunction<T>
+  decode: DecodeFunction
 }

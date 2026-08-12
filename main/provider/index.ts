@@ -26,7 +26,7 @@ import { createRpcProvider, estimateL1GasCost } from '../chains/optimism'
 import reveal from '../reveal'
 import { getSignerType, Type as SignerType } from '../../resources/domain/signer'
 import { getSignerCapabilities } from '../signers/capabilities'
-import { normalizeChainId, TransactionData } from '../../resources/domain/transaction'
+import { TransactionData } from '../../resources/domain/transaction'
 import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { populate as populateTransaction, maxFee, classifyTransaction } from '../transaction'
 import { capitalize } from '../../resources/utils'
@@ -85,7 +85,7 @@ import {
 import * as sigParser from '../signatures'
 import { parseMessageRequest } from '../signatures/message'
 import { hasAddress } from '../../resources/domain/account'
-import { mapRequest } from '../requests'
+import { mapRequest, normalizeTransactionChainId } from '../requests'
 
 import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
@@ -987,7 +987,10 @@ export class Provider extends EventEmitter {
         )
       }
 
-      const normalizedTx = normalizeChainId(txParams, payloadChain ? parseInt(payloadChain, 16) : undefined)
+      const normalizedTx = normalizeTransactionChainId(
+        txParams,
+        payloadChain ? parseInt(payloadChain, 16) : undefined
+      )
       const tx = {
         ...normalizedTx,
         chainId: normalizedTx.chainId || payloadChain || addHexPrefix(targetChain.id.toString(16))
@@ -1159,7 +1162,7 @@ export class Provider extends EventEmitter {
       return resError({ code: -32602, message: 'Invalid params: invalid signing address' }, payload, res)
     }
 
-    // HACK: Standards clearly say, that second param is an object but it seems like in the wild it can be a JSON-string.
+    // Compatibility: widely deployed clients send JSON-string typed data despite the object-shaped standard.
     if (typeof typedData === 'string') {
       try {
         typedData = JSON.parse(typedData) as LegacyTypedData | TypedData
@@ -1234,8 +1237,7 @@ export class Provider extends EventEmitter {
       approvals: []
     }
 
-    // TODO: all of this below code to construct the original request can be added to
-    // a module like the above sigparser which, instead of identifying the request, creates it
+    // The provider owns responder allocation; pure parsing and context live in signatures/typedData.
     const requestResponder = inheritRequestSignal(res, (data: RPCResponsePayload) => {
       this.respondToRequest(req.handlerId, data)
     })
@@ -1671,9 +1673,6 @@ export class Provider extends EventEmitter {
   }
 
   send(requestPayload: RPCRequestPayload, res: RPCRequestCallback = () => {}) {
-    // TODO: in the future this mapping will happen in the requests module so that the handler only ever
-    // has to worry about one shape of request, error handling for each request type will happen
-    // in the request handler for each type of request
     let payload: RPCRequestPayload
 
     try {

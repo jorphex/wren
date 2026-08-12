@@ -7,7 +7,7 @@ export interface Chain {
   type: 'ethereum'
 }
 
-// TODO move this into chains.js when it's converted to TS
+// Typed boundary for the legacy JavaScript connection manager.
 declare class Chains extends EventEmitter {
   connections: {
     ethereum: {

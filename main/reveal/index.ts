@@ -24,15 +24,14 @@ import type { TransactionRequest } from '../accounts'
 import { YearnCatalogCacheSchema } from '../../resources/domain/yearn'
 import store from '../store'
 
-// TODO: fix generic typing here
-const knownContracts: DecodableContract<unknown>[] = [...ensContracts]
+const knownContracts: DecodableContract[] = [...ensContracts]
 
 const erc20Abi = JSON.stringify(erc20)
 
 const nebula = nebulaApi()
 const provider = new EthereumProvider(proxyConnection)
 
-// TODO: Discuss the need to set chain for the proxy connection
+// This is only the provider fallback; every reveal request below carries an explicit chainId.
 provider.setChain('0x1')
 
 type RecognitionContext = {
@@ -50,7 +49,7 @@ async function resolveEntityType(address: string, chainId: number): Promise<Enti
       params: [address, 'latest'],
       jsonrpc: '2.0',
       id: 1,
-      chainId: addHexPrefix(chainId.toString(16)) // TODO: Verify this overrides setChain
+      chainId: addHexPrefix(chainId.toString(16))
     }
 
     const code = await provider.request(payload)
@@ -161,8 +160,7 @@ const surface = {
 
     const type = results[0].status === 'fulfilled' ? results[0].value : ''
     const ens = results[1].status === 'fulfilled' ? results[1].value : ''
-    // TODO: Check the address against various scam dbs
-    // TODO: Check the address against previously verified contracts
+    // External reputation feeds are excluded; identity remains configured-RPC and ENS evidence.
     return { type, ens }
   },
   resolveEntityType,

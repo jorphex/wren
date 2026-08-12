@@ -995,8 +995,12 @@ export class Accounts extends EventEmitter {
     }
   }
 
-  // TODO: can we make this typed for the action type?
-  updateRequest(reqId: string, data: Record<string, unknown> = {}, actionId: ActionType, accountId?: string) {
+  updateRequest(
+    reqId: string,
+    data: Readonly<{ amount?: unknown }> = {},
+    actionId: ActionType | null,
+    accountId?: string
+  ) {
     log.verbose('updateRequest', { reqId, actionId })
 
     const currentAccount = this.requestAccount(reqId, accountId)
@@ -1106,7 +1110,6 @@ export class Accounts extends EventEmitter {
 
   private async confirmations(account: FrameAccount, id: string, hash: string, targetChain: Chain) {
     return new Promise<number>((resolve, reject) => {
-      // TODO: Route to account even if it's not current
       if (!account) return reject(new Error('Unable to determine target account'))
       if (!targetChain || !targetChain.type || !targetChain.id)
         return reject(new Error('Unable to determine target chain'))

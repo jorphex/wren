@@ -469,7 +469,6 @@ class FrameAccount {
     data: ApprovalData = {},
     onApprove: (data?: ApprovalData) => void = () => {}
   ) {
-    // TODO: turn TransactionRequest into its own class
     const approve = (data?: ApprovalData) => {
       const confirmedApproval = req.approvals.find((a) => a.type === type)
 

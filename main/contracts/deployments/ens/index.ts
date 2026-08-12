@@ -13,9 +13,6 @@ import type {
 import type { JsonFragment } from 'ethers'
 import type { DecodableContract } from '../../../transaction/actions'
 
-// TODO: fix typing on contract types
-type EnsContract = DecodableContract<unknown>
-
 declare module ENS {
   export type Register = {
     name: string
@@ -68,7 +65,7 @@ function ethName(name: string) {
   return name.includes('.eth') ? name : `${name}.eth`
 }
 
-const registrar = ({ name = 'ENS Registrar', address, chainId }: DeploymentLocation): EnsContract => {
+const registrar = ({ name = 'ENS Registrar', address, chainId }: DeploymentLocation): DecodableContract => {
   return {
     name,
     chainId,
@@ -112,7 +109,7 @@ const registarController = ({
   name = 'ENS Registrar Controller',
   address,
   chainId
-}: DeploymentLocation): EnsContract => {
+}: DeploymentLocation): DecodableContract => {
   return {
     name,
     chainId,
@@ -161,5 +158,5 @@ const mainnetRegistrarController = registarController({
   chainId: 1
 })
 
-// TODO: in the future the addresses for these contracts can be discovered in real time
+// Pinned deployments are a review boundary; dynamic discovery would add a trusted registry dependency.
 export default [mainnetRegistrar, mainnetRegistrarController]

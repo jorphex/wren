@@ -12,18 +12,11 @@ const { default: BlockMonitor } = require('./blocks')
 const { default: chainConfig } = require('./config')
 const { default: GasMonitor } = require('../transaction/gasMonitor')
 const { createGasCalculator } = require('./gas')
+const { supportsFeeHistory } = require('./policy')
 const { createRpcProvider, estimateL1GasCost } = require('./optimism')
 const { NETWORK_PRESETS } = require('../../resources/constants')
 const { chainUsesOptimismFees } = require('../../resources/utils/chains')
 const { summarizeRpcEndpoint } = require('../security/rpcLogging')
-
-// These chain IDs are known to not support EIP-1559 and will be forced
-// not to use that mechanism
-// TODO: create a more general chain config that can use the block number
-// and ethereumjs/common to determine the state of various EIPs
-// Note that Arbitrum is in the list because it does not currently charge priority fees
-// https://support.arbitrum.io/hc/en-us/articles/4415963644955-How-the-fees-are-calculated-on-Arbitrum
-const legacyChains = [250, 4002, 42161]
 
 const resError = (errorData, payload, res) => {
   const error =
@@ -60,7 +53,6 @@ class ChainConnection extends EventEmitter {
     // to update it to london
     this.chainConfig = chainConfig(parseInt(this.chainId), 'istanbul')
 
-    // TODO: maybe this can be tied into chain config somehow
     this.gasCalculator = createGasCalculator(this.chainId)
 
     this.active = {
@@ -180,7 +172,7 @@ class ChainConnection extends EventEmitter {
 
   _createBlockMonitor(provider) {
     const monitor = new BlockMonitor(provider)
-    const allowEip1559 = !legacyChains.includes(parseInt(this.chainId))
+    const allowEip1559 = supportsFeeHistory(this.chainId)
 
     monitor.on('data', async (block) => {
       log.debug(`Updating to block ${parseInt(block.number)} for chain ${parseInt(this.chainId)}`)
