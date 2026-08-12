@@ -172,11 +172,18 @@ export default [
       globals: {
         ...globals.jest
       }
+    },
+    rules: {
+      ...jest.configs.recommended.rules,
+      // Legacy callback and parameterized suites intentionally use helper assertions. Keep the
+      // unambiguous Jest rules enabled while those suites migrate incrementally.
+      'jest/no-conditional-expect': 'off',
+      'jest/no-done-callback': 'off',
+      'jest/no-identical-title': 'off',
+      'jest/no-standalone-expect': 'off',
+      'jest/valid-expect': 'off',
+      'jest/valid-title': 'off'
     }
-    // TODO: enable jest rules
-    // rules: {
-    //   ...jest.configs.recommended.rules
-    // }
   },
   // Components test files
   {
