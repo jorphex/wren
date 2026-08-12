@@ -1640,6 +1640,34 @@ export class Provider extends EventEmitter {
     res({ id: payload.id, jsonrpc: '2.0', result: [requestedAccountPermission()] })
   }
 
+  private async requestAccounts(payload: RPCRequestPayload, res: RPCRequestCallback) {
+    const initialAccess = getOriginAccess(payload)
+    if (!initialAccess) {
+      return resError({ code: 4100, message: 'No account is available to grant permission' }, payload, res)
+    }
+
+    let granted: boolean
+    try {
+      granted = await requestOriginAccess(payload, initialAccess.address, getRequestSignal(res))
+    } catch (error) {
+      return resError({ code: -32603, message: (error as Error).message }, payload, res)
+    }
+
+    if (!granted) {
+      const currentAccess = getOriginAccess(payload)
+      if (currentAccess?.address.toLowerCase() !== initialAccess.address.toLowerCase()) {
+        return resError({ code: 4100, message: 'Account changed during permission request' }, payload, res)
+      }
+      return resError({ code: 4001, message: 'User rejected the account request' }, payload, res)
+    }
+
+    res({
+      id: payload.id,
+      jsonrpc: payload.jsonrpc,
+      result: accounts.getSelectedAddresses().map((address) => address.toLowerCase())
+    })
+  }
+
   private getAssets(
     payload: RPC.GetAssets.Request,
     currentAccount: FrameAccount | null | undefined,
@@ -1725,7 +1753,7 @@ export class Provider extends EventEmitter {
 
     if (method === 'eth_coinbase') return getCoinbase(payload, res)
     if (method === 'eth_accounts') return getAccounts(payload, res)
-    if (method === 'eth_requestAccounts') return getAccounts(payload, res)
+    if (method === 'eth_requestAccounts') return this.requestAccounts(payload, res)
     if (method === 'eth_sendTransaction')
       return this.sendTransaction(payload as RPC.SendTransaction.Request, res, targetChain)
     if (method === 'eth_getTransactionByHash') return this.getTransactionByHash(payload, res, targetChain)

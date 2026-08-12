@@ -31,7 +31,11 @@ export const passivePermissionMethods = new Set([
   'wallet_getCapabilities'
 ])
 
-export const shouldRequestOriginAccess = (method: string) =>
-  protectedMethods.includes(method) && !passivePermissionMethods.has(method)
+export const capabilityConsentMethods = new Set(['eth_requestAccounts', 'wallet_requestPermissions'])
+
+export const requiresStandingCapability = (method: string) =>
+  protectedMethods.includes(method) &&
+  !passivePermissionMethods.has(method) &&
+  !capabilityConsentMethods.has(method)
 
 export default protectedMethods

@@ -28,7 +28,7 @@ import {
   unregisterAuthenticatedExtension
 } from './extensionConnections'
 import parsePayload, { MAX_REQUEST_BYTES } from './validPayload'
-import { shouldRequestOriginAccess } from './protectedMethods'
+import { requiresStandingCapability } from './protectedMethods'
 import { parseChainId } from '../provider/chainRequests'
 import originSessions from './originSessions'
 import { FixedWindowRateLimiter, RateLimitOptions } from './requestLimiter'
@@ -318,11 +318,11 @@ const handler = (
     }
 
     const trusted =
-      !shouldRequestOriginAccess(payload.method) || (await isTrusted(payload, controller.signal))
+      !requiresStandingCapability(payload.method) || (await isTrusted(payload, controller.signal))
     if (controller.signal.aborted) return
 
     if (!trusted) {
-      let error = { message: 'Permission denied, approve ' + origin + ' in Wren to continue', code: 4100 }
+      let error = { message: 'Origin is not authorized', code: 4100 }
       if (!accounts.getSelectedAddresses()[0]) error = { message: 'No Wren account selected', code: 4100 }
       res({ id: payload.id, jsonrpc: payload.jsonrpc, error })
     } else {

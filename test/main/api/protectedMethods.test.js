@@ -1,6 +1,7 @@
 import protectedMethods, {
+  capabilityConsentMethods,
   passivePermissionMethods,
-  shouldRequestOriginAccess
+  requiresStandingCapability
 } from '../../../main/api/protectedMethods'
 
 it.each(['caip_request', 'wallet_request'])(
@@ -15,13 +16,16 @@ it.each(['eth_accounts', 'eth_coinbase', 'wallet_getAssets', 'wallet_getCapabili
   (method) => {
     expect(protectedMethods).toContain(method)
     expect(passivePermissionMethods).toContain(method)
-    expect(shouldRequestOriginAccess(method)).toBe(false)
+    expect(requiresStandingCapability(method)).toBe(false)
   }
 )
 
 it.each(['eth_requestAccounts', 'eth_sendTransaction', 'wallet_switchEthereumChain'])(
   'requests origin access for interactive method %s',
-  (method) => expect(shouldRequestOriginAccess(method)).toBe(true)
+  (method) =>
+    expect(requiresStandingCapability(method)).toBe(
+      !passivePermissionMethods.has(method) && !capabilityConsentMethods.has(method)
+    )
 )
 
 it.each(['wallet_sendCalls', 'wallet_getCallsStatus', 'wallet_showCallsStatus', 'wallet_getCapabilities'])(

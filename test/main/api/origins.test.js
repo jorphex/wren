@@ -376,7 +376,7 @@ describe('#isTrusted', () => {
     return expect(isTrusted(payload)).resolves.toBe(true)
   })
 
-  it('asks again when an origin was previously denied permission', async () => {
+  it('does not prompt when an origin has no standing permission', async () => {
     const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
     const payload = { method: 'eth_accounts', _origin: frameTestOriginId }
 
@@ -387,21 +387,11 @@ describe('#isTrusted', () => {
         provider: false
       }
     })
-    accounts.addRequest.mockImplementationOnce((_request, callback) => {
-      store.set('main.permissions', address, {
-        [frameTestOriginId]: {
-          origin: 'test.frame.eth',
-          provider: true
-        }
-      })
-      callback()
-    })
-
-    await expect(isTrusted(payload)).resolves.toBe(true)
-    expect(accounts.addRequest).toHaveBeenCalledTimes(1)
+    await expect(isTrusted(payload)).resolves.toBe(false)
+    expect(accounts.addRequest).not.toHaveBeenCalled()
   })
 
-  it('sends a request to grant permission to the user', async () => {
+  it('opens an explicit request to grant permission to the user', async () => {
     const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
     const payload = { method: 'eth_accounts', _origin: frameTestOriginId }
 
@@ -421,14 +411,14 @@ describe('#isTrusted', () => {
       setTimeout(cb, 1000)
     })
 
-    const runTest = isTrusted(payload)
+    const runTest = requestOriginAccess(payload)
 
     jest.runAllTimers()
 
     return expect(runTest).resolves
   })
 
-  it('coalesces explicit and implicit access checks into one prompt', async () => {
+  it('does not let an ordinary capability check join an explicit access prompt', async () => {
     const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
     const implicitPayload = { method: 'eth_accounts', _origin: frameTestOriginId }
     const explicitPayload = { method: 'wallet_requestPermissions', _origin: frameTestOriginId }
@@ -452,7 +442,7 @@ describe('#isTrusted', () => {
     const runTest = Promise.all([isTrusted(implicitPayload), requestOriginAccess(explicitPayload)]).then(
       ([isImplicitTrusted, isExplicitGranted]) => {
         expect(accounts.addRequest).toHaveBeenCalledTimes(1)
-        expect(isImplicitTrusted).toBe(true)
+        expect(isImplicitTrusted).toBe(false)
         expect(isExplicitGranted).toBe(true)
       }
     )
@@ -499,7 +489,7 @@ describe('#isTrusted', () => {
     accounts.current.mockReturnValue({ address })
     accounts.addRequest.mockImplementationOnce(() => {})
 
-    const result = isTrusted(payload, controller.signal)
+    const result = requestOriginAccess(payload, undefined, controller.signal)
     controller.abort()
 
     await expect(result).resolves.toBe(false)
@@ -537,7 +527,7 @@ describe('#isTrusted', () => {
         }, 1000)
       })
 
-      const runTest = isTrusted(payload)
+      const runTest = requestOriginAccess(payload)
 
       jest.runAllTimers()
 

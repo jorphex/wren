@@ -334,6 +334,18 @@ it('forwards passive account probes without opening origin access', async () => 
   expect(provider.send).toHaveBeenCalled()
 })
 
+it('forwards explicit account consent without a standing capability check', async () => {
+  accounts.getSelectedAddresses.mockReturnValue(['0xc93452A74e596e81E4f73Ca1AcFF532089AD4c62'])
+  const payload = { id: 7, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+
+  await expect(send({ body: JSON.stringify(payload) })).resolves.toMatchObject({
+    status: 200,
+    body: { id: 7, jsonrpc: '2.0', result: 'forwarded' }
+  })
+  expect(isTrusted).not.toHaveBeenCalled()
+  expect(provider.send).toHaveBeenCalled()
+})
+
 it('uses unauthorized rather than user-rejected when a chain switch lacks permission', async () => {
   accounts.getSelectedAddresses.mockReturnValue(['0xc93452A74e596e81E4f73Ca1AcFF532089AD4c62'])
   const payload = {

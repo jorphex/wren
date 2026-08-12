@@ -1313,6 +1313,45 @@ describe('#send', () => {
     })
   })
 
+  describe('#eth_requestAccounts', () => {
+    const originId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
+    const request = { method: 'eth_requestAccounts', params: [], _origin: originId }
+
+    beforeEach(() => {
+      store.set('main.origins', originId, { name: 'test.frame', chain: { id: 1, type: 'ethereum' } })
+    })
+
+    it('prompts explicitly and returns the selected account after approval', (done) => {
+      accounts.addRequest.mockImplementationOnce((req, cb) => {
+        accountRequests.push(req)
+        store.set('main.permissions', address, {
+          [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        })
+        cb()
+      })
+
+      send(request, (response) => {
+        expect(response).toMatchObject({ result: [address] })
+        expect(accountRequests[0]).toMatchObject({
+          type: 'access',
+          handlerId: originId,
+          origin: originId,
+          account: address
+        })
+        done()
+      })
+    })
+
+    it('returns user rejection after the explicit access prompt is declined', (done) => {
+      accounts.addRequest.mockImplementationOnce((_req, cb) => cb())
+
+      send(request, (response) => {
+        expect(response.error).toEqual({ code: 4001, message: 'User rejected the account request' })
+        done()
+      })
+    })
+  })
+
   describe('#wallet_requestPermissions', () => {
     const originId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
     const request = {
