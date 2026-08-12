@@ -10,6 +10,7 @@ import {
 
 const panelActions = require('../../../resources/store/actions.panel')
 const { isManagedPermission } = require('../../../resources/domain/permissions')
+const { pruneActivity } = require('../state/types/activity')
 const supportedNetworkTypes = ['ethereum']
 
 function switchChainForOrigins(origins, oldChainId, newChainId) {
@@ -184,7 +185,7 @@ module.exports = {
   },
   recordActivity: (u, entry) => {
     u('main.activity', (activity = []) =>
-      [entry, ...activity.filter(({ id }) => id !== entry.id)].slice(0, 500)
+      pruneActivity([entry, ...activity.filter(({ id }) => id !== entry.id)])
     )
   },
   clearActivity: (u) => u('main.activity', () => []),

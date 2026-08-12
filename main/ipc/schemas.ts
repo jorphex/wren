@@ -203,6 +203,7 @@ const actionSchemas = {
   activateNetwork: z.tuple([NetworkTypeSchema, ChainKeySchema, z.boolean()]),
   backDash: z.tuple([z.number().int().min(1).max(32).optional()]),
   clearPermissions: z.tuple([AddressSchema]),
+  clearActivity: noArgs,
   closeDash: noArgs,
   muteBetaDisclosure: noArgs,
   muteWelcomeWarning: noArgs,

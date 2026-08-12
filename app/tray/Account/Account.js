@@ -13,6 +13,7 @@ import Default from './Default'
 
 import Chains from './Chains'
 import Balances from './Balances'
+import Activity from './Activity'
 import Gas from '../../../resources/Components/Monitor'
 import Inventory from './Inventory'
 import Permissions from './Permissions'
@@ -54,6 +55,7 @@ const modules = {
   inventory: Inventory,
   permissions: Permissions,
   balances: Balances,
+  activity: Activity,
   signer: Signer,
   settings: Settings
 }
@@ -563,7 +565,7 @@ class _AccountBody extends React.Component {
           }}
           {...this.props}
           compactTop={crumb.data.id === 'requests'}
-          accountViewTitle={crumb.data.id === 'requests' ? 'Requests' : crumb.data.id}
+          accountViewTitle={crumb.data.title || (crumb.data.id === 'requests' ? 'Requests' : crumb.data.id)}
         >
           <div className='moduleExpanded'>
             <AccountModule

@@ -757,6 +757,7 @@ const initial = {
         // 'gas',
         'chains',
         'balances',
+        'activity',
         'permissions',
         // 'verify',
         'signer',
@@ -767,6 +768,9 @@ const initial = {
           height: 0
         },
         balances: {
+          height: 0
+        },
+        activity: {
           height: 0
         },
         inventory: {

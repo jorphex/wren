@@ -10,6 +10,7 @@ const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
+const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
 
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {
@@ -46,6 +47,14 @@ test('keeps account modules free of decorative seams', () => {
   expect(accountStyle).toMatch(
     /\.accountLedgerModule[\s\S]*?\.accountLedgerRow[\s\S]*?min-height 52px[\s\S]*?\.accountLedgerLabel[\s\S]*?flex 0 0 112px/
   )
+})
+
+test('keeps activity grouped by spacing and exposes its expanded module', () => {
+  expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
+  expect(accountSource).toMatch(/activity: Activity/)
+  expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
+  expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap var\(--wren-space-1\)/)
+  expect(activityStyle).not.toMatch(/border-(?:top|bottom)|wren-(?:seam|rule)|wren-ledger-rule/)
 })
 
 test('keeps reserved tray bands and revocation evidence free of decorative horizontal rules', () => {
