@@ -8,6 +8,7 @@ import { pipeline } from 'node:stream/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import { assertReleaseBuildIdentity } from './build-identity.mjs'
+import { verifyNativePackage } from './package-verification.mjs'
 import { readSourceIdentity } from './source-identity.mjs'
 
 const dist = path.resolve('dist')
@@ -365,6 +366,8 @@ assert.deepEqual(probeResult.fetchProbe, { runtime: 'native' })
 assert.equal(probeResult.esmModules.length, 2)
 assert.ok(probeResult.esmModules.every((exports) => exports > 0))
 assert.match(probeResult.abi, /^\d+$/)
+
+await verifyNativePackage('linux-x64', { sourceIdentity })
 
 console.log(
   `Verified ${artifacts.join(' and ')} with Electron ${probeResult.electron} ABI ${
