@@ -110,6 +110,15 @@ beforeEach(async () => {
   WebSocket.Server.mockReturnValueOnce(socketConnection)
 
   ws()
+  const options = WebSocket.Server.mock.calls.at(-1)[0]
+  expect(
+    options.verifyClient({ req: { headers: { host: '127.0.0.1:1248' }, socket: { localPort: 1248 } } })
+  ).toBe(true)
+  expect(
+    options.verifyClient({
+      req: { headers: { host: 'wallet.attacker.example:1248' }, socket: { localPort: 1248 } }
+    })
+  ).toBe(false)
   socketConnection.emit('connection', mockSocket, extensionRequest)
   authenticatedResponse = await authenticateExtension(mockSocket)
   mockSocket.send.mockClear()
@@ -263,11 +272,14 @@ it('rate-limits challenge issuance across extension connections', async () => {
 })
 
 it('configures the shared request size limit', () => {
-  expect(WebSocket.Server).toHaveBeenCalledWith({
-    server: undefined,
-    maxPayload: MAX_REQUEST_BYTES,
-    perMessageDeflate: false
-  })
+  expect(WebSocket.Server).toHaveBeenCalledWith(
+    expect.objectContaining({
+      server: undefined,
+      maxPayload: MAX_REQUEST_BYTES,
+      perMessageDeflate: false,
+      verifyClient: expect.any(Function)
+    })
+  )
 })
 
 it('closes a client that exceeds its message rate without processing the excess request', () => {

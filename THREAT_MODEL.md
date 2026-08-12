@@ -35,7 +35,10 @@ scope.
 HTTP and WebSocket JSON-RPC listen on `127.0.0.1:1248`. Loopback blocks remote
 connections, not another same-user process: CORS accepts any origin and native
 clients can choose `Origin`. Labels and prompts reduce accidents, not establish
-process identity. Canonical, scheme-preserving web/extension origins keep
+process identity. HTTP requests and WebSocket upgrades require an IPv4/IPv6
+loopback `Host` matching the listening port, which blocks DNS-rebinding
+authorities but does not authenticate a local process. Canonical,
+scheme-preserving web/extension origins keep
 HTTP/HTTPS and WS/WSS grants separate. Originless, opaque, malformed, oversized,
 and schemeless clients get a per-connection server identity. It is session-only
 and removed at startup recovery, so connections cannot inherit legacy host-only
@@ -63,16 +66,21 @@ or intercepts port 1248 is trusted.
 
 ### Local state and signers
 
-The per-user config and signer files (`signers/`) are mode `0600`. New seed/key
-material uses a versioned, authenticated scrypt-derived AES-256-GCM envelope and
-is decrypted only in an unlocked child process. Legacy AES-256-CBC payloads
-remain readable; after unlock, address derivation is checked, the original JSON
-is retained once as mode-`0600` `.legacy-v1.bak`, and the active file is replaced
-atomically. Backups are ignored during scanning and removed with the signer.
+The per-user config and signer files are mode `0600`; the `signers/` directory is
+mode `0700` on POSIX. New seed/key material uses a versioned, authenticated
+scrypt-derived AES-256-GCM envelope and is decrypted only in an unlocked child
+process launched without inherited credential or Node-injection environment
+variables. Legacy AES-256-CBC payloads remain readable; after unlock, address
+derivation is checked, the original JSON is retained once as mode-`0600`
+`.legacy-v1.bak`, and the active file is replaced atomically. Backups are ignored
+during scanning. They are removed with the signer or after a later successful
+authenticated-envelope unlock proves the replacement can be read; a failed
+unlock or migration keeps the recovery copy. OS suspend and screen-lock events
+relock every unlocked software signer.
 
-Limits: legacy backup ciphertext is unauthenticated and protected by its old
-password; encryption is neither keychain nor hardware bound; metadata, addresses,
-permissions, and networks are unencrypted; unlocked secrets exist in memory; and
+Limits: while retained, legacy backup ciphertext is unauthenticated and protected
+by its old password; encryption is neither keychain nor hardware bound; metadata,
+addresses, permissions, and networks are unencrypted; unlocked secrets exist in memory; and
 overwrite-before-delete is not secure erasure on modern filesystems/SSDs.
 Contacts, notes, addresses, and timestamps are unencrypted relationship metadata.
 User-created JSON backups are size-bounded and validated on restore and their

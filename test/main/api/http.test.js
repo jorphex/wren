@@ -140,6 +140,23 @@ it('configures explicit connection and timeout limits', () => {
   expect(server.requestTimeout).toBeGreaterThan(15 * 1000)
 })
 
+it('rejects a non-loopback Host header before parsing or forwarding', async () => {
+  const payload = { id: 7, jsonrpc: '2.0', method: 'eth_chainId', params: [] }
+
+  await expect(
+    send({ body: JSON.stringify(payload), headers: { host: 'wallet.attacker.example:1248' } })
+  ).resolves.toMatchObject({
+    status: 421,
+    body: {
+      id: null,
+      jsonrpc: '2.0',
+      error: { code: -32600, message: 'Invalid local RPC host' }
+    }
+  })
+  expect(updateOrigin).not.toHaveBeenCalled()
+  expect(provider.send).not.toHaveBeenCalled()
+})
+
 it('rejects excess requests before provider forwarding', async () => {
   await restartServer({
     requestRateLimit: { maxRequests: 1, windowMs: 1000 },

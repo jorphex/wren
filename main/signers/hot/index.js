@@ -123,7 +123,8 @@ module.exports = {
       const storedSigners = {}
 
       // Ensure signer directory exists
-      ensureDirSync(SIGNERS_PATH)
+      ensureDirSync(SIGNERS_PATH, { mode: 0o700 })
+      if (process.platform !== 'win32') fs.chmodSync(SIGNERS_PATH, 0o700)
 
       // Find stored signers, read them from disk and add them to storedSigners
       fs.readdirSync(SIGNERS_PATH)

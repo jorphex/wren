@@ -36,6 +36,7 @@ import { bindRequestSignal } from '../provider/requestSignal'
 import { isFrameSubscriptionType } from '../provider/subscriptions'
 import { toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { isValidUpstreamSubscriptionId, TransportSubscriptionRegistry } from './subscriptionRegistry'
+import { isAllowedLocalRpcHost } from './localHost'
 
 const logTraffic = (origin: string) =>
   process.env['LOG_TRAFFIC'] === 'true' || process.env['LOG_TRAFFIC'] === origin
@@ -440,7 +441,13 @@ export default function (server: Server, options: WebSocketServerOptions = {}) {
   const extensionChallenges = new FixedWindowRateLimiter(
     options.extensionChallengeRateLimit ?? WS_EXTENSION_CHALLENGE_RATE_LIMIT
   )
-  const ws = new WebSocket.Server({ server, maxPayload: MAX_REQUEST_BYTES, perMessageDeflate: false })
+  const ws = new WebSocket.Server({
+    server,
+    maxPayload: MAX_REQUEST_BYTES,
+    perMessageDeflate: false,
+    verifyClient: ({ req }: { req: IncomingMessage }) =>
+      isAllowedLocalRpcHost(req.headers.host, req.socket.localPort)
+  })
   ws.on('connection', (socket: FrameWebSocket, req: IncomingMessage) => {
     if (clients.size >= maxClients) {
       socket.on('error', (err) => log.error(err))

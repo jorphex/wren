@@ -8,13 +8,34 @@ const { v4: uuid } = require('uuid')
 
 const Signer = require('../../Signer').default
 const store = require('../../../store').default
-const { nodeWorkerEnvironment } = require('../../../worker/environment')
+const { signerWorkerEnvironment } = require('../../../worker/environment')
 // Mock user data dir during tests
 const USER_DATA = app
   ? app.getPath('userData')
   : path.resolve(path.dirname(require.main.filename), '../.userData')
 const SIGNERS_PATH = path.resolve(USER_DATA, 'signers')
 const DEFAULT_RPC_TIMEOUT_MS = 30_000
+
+const ensureSignerDirectory = () => {
+  ensureDirSync(SIGNERS_PATH, { mode: 0o700 })
+  if (process.platform !== 'win32') fs.chmodSync(SIGNERS_PATH, 0o700)
+}
+
+const eraseFile = (filePath) => {
+  const size = fs.statSync(filePath).size
+  const descriptor = fs.openSync(filePath, 'r+')
+  const buffer = Buffer.alloc(Math.min(Math.max(size, 1), 64 * 1024))
+  try {
+    for (let offset = 0; offset < size; offset += buffer.length) {
+      fs.writeSync(descriptor, buffer, 0, Math.min(buffer.length, size - offset), offset)
+    }
+    fs.fsyncSync(descriptor)
+  } finally {
+    buffer.fill(0)
+    fs.closeSync(descriptor)
+  }
+  removeSync(filePath)
+}
 
 const workerFailure = (reason) => {
   if (reason instanceof Error && reason.message) return reason
@@ -27,7 +48,7 @@ class HotSigner extends Signer {
     super()
     this.status = 'locked'
     this.addresses = signer ? signer.addresses : []
-    this._worker = options.worker || fork(workerPath, [], { env: nodeWorkerEnvironment() })
+    this._worker = options.worker || fork(workerPath, [], { env: signerWorkerEnvironment() })
     this._rpcTimeoutMs = options.rpcTimeoutMs || DEFAULT_RPC_TIMEOUT_MS
     this._pending = new Map()
     this._closed = false
@@ -48,7 +69,7 @@ class HotSigner extends Signer {
     const signer = { id, addresses, type, network, ...data }
 
     // Ensure signers directory exists
-    ensureDirSync(SIGNERS_PATH)
+    ensureSignerDirectory()
 
     const signerPath = path.resolve(SIGNERS_PATH, `${id}.json`)
     const backupPath = path.resolve(SIGNERS_PATH, `${id}.legacy-v1.bak`)
@@ -95,20 +116,7 @@ class HotSigner extends Signer {
       path.resolve(SIGNERS_PATH, `${this.id}.legacy-v1.bak`)
     ]
 
-    signerPaths.filter(fs.existsSync).forEach((signerPath) => {
-      const size = fs.statSync(signerPath).size
-      const descriptor = fs.openSync(signerPath, 'r+')
-      const buffer = Buffer.alloc(Math.min(Math.max(size, 1), 64 * 1024))
-      try {
-        for (let offset = 0; offset < size; offset += buffer.length) {
-          fs.writeSync(descriptor, buffer, 0, Math.min(buffer.length, size - offset), offset)
-        }
-        fs.fsyncSync(descriptor)
-      } finally {
-        fs.closeSync(descriptor)
-      }
-      removeSync(signerPath)
-    })
+    signerPaths.filter(fs.existsSync).forEach(eraseFile)
 
     // Log
     log.info('Signer erased from disk')
@@ -136,7 +144,10 @@ class HotSigner extends Signer {
   }
 
   persistEncryptionMigration(field, encryptedSecret, cb) {
-    if (!encryptedSecret) return cb(null)
+    if (!encryptedSecret) {
+      this.retireLegacyEncryptionBackup()
+      return cb(null)
+    }
 
     const previousSecret = this[field]
     this[field] = encryptedSecret
@@ -149,6 +160,19 @@ class HotSigner extends Signer {
       this[field] = previousSecret
       log.error('Unable to persist signer encryption upgrade', error)
       this.lock(() => cb(new Error('Unable to upgrade signer encryption')))
+    }
+  }
+
+  retireLegacyEncryptionBackup() {
+    if (!this.id) return
+    const backupPath = path.resolve(SIGNERS_PATH, `${this.id}.legacy-v1.bak`)
+    if (!fs.existsSync(backupPath)) return
+
+    try {
+      eraseFile(backupPath)
+      log.info('Legacy signer encryption recovery copy retired')
+    } catch (error) {
+      log.warn('Unable to retire legacy signer encryption recovery copy', error)
     }
   }
 

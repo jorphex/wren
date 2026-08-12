@@ -142,6 +142,21 @@ describe('Seed signer', () => {
     expect(fs.readFileSync(backupPath, 'utf8')).toBe(legacyFile)
   }, 3_000)
 
+  test('Preserves the recovery copy when authenticated-envelope unlock fails', async () => {
+    const signerPath = path.resolve(SIGNER_PATH, `${signer.id}.json`)
+    const backupPath = path.resolve(SIGNER_PATH, `${signer.id}.legacy-v1.bak`)
+    const activeFile = fs.readFileSync(signerPath, 'utf8')
+    const recoveryFile = fs.readFileSync(backupPath, 'utf8')
+
+    await waitForCallback((cb) => signer.lock(cb))
+    const error = await new Promise((resolve) => signer.unlock('Wrong password', resolve))
+
+    expect(error.message).toBe('Invalid password')
+    expect(signer.status).toBe('locked')
+    expect(fs.readFileSync(signerPath, 'utf8')).toBe(activeFile)
+    expect(fs.readFileSync(backupPath, 'utf8')).toBe(recoveryFile)
+  })
+
   test('Lock', (done) => {
     try {
       signer.lock((err) => {
@@ -153,6 +168,16 @@ describe('Seed signer', () => {
       done(e)
     }
   }, 2000)
+
+  test('Retires the legacy recovery copy after a subsequent verified authenticated unlock', async () => {
+    const backupPath = path.resolve(SIGNER_PATH, `${signer.id}.legacy-v1.bak`)
+    expect(fs.existsSync(backupPath)).toBe(true)
+
+    await waitForCallback((cb) => signer.unlock(PASSWORD, cb))
+
+    expect(fs.existsSync(backupPath)).toBe(false)
+    await waitForCallback((cb) => signer.lock(cb))
+  })
 
   test('Scan for signers', (done) => {
     jest.useFakeTimers()

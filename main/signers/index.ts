@@ -289,20 +289,28 @@ export class Signers extends EventEmitter {
     )
   }
 
-  private lockHotSignersOnClose() {
-    if (!store('main.accountCloseLock')) return
-
+  lockHotSigners(reason = 'security event') {
     Object.values(this.signers).forEach((signer) => {
       if (!this.isHotSigner(signer) || !isSignerReady(signer) || this.pendingCloseLocks.has(signer.id)) {
         return
       }
 
       this.pendingCloseLocks.add(signer.id)
-      signer.lock((error: Error | null) => {
+      try {
+        signer.lock((error: Error | null) => {
+          this.pendingCloseLocks.delete(signer.id)
+          if (error) log.warn(`Unable to lock hot signer after ${reason}`, error)
+        })
+      } catch (error) {
         this.pendingCloseLocks.delete(signer.id)
-        if (error) log.warn('Unable to lock hot signer when closing Wren', error)
-      })
+        log.warn(`Unable to lock hot signer after ${reason}`, error)
+      }
     })
+  }
+
+  private lockHotSignersOnClose() {
+    if (!store('main.accountCloseLock')) return
+    this.lockHotSigners('closing Wren')
   }
 
   unsetSigner() {

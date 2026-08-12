@@ -162,4 +162,48 @@ describe('signer manager lifecycle', () => {
     expect(signer.close).toHaveBeenCalledTimes(1)
     expect(signer.delete).not.toHaveBeenCalled()
   })
+
+  it('locks every ready hot signer after a security event independently of close preferences', async () => {
+    mockCloseLock = false
+    const manager = new Signers([])
+    const first = hotSigner('first')
+    const second = hotSigner('second')
+    const hardware = { ...hotSigner('hardware'), type: 'ledger' }
+    const alreadyLocked = { ...hotSigner('locked'), status: 'locked' }
+
+    manager.add(first)
+    manager.add(second)
+    manager.add(hardware)
+    manager.add(alreadyLocked)
+    manager.lockHotSigners('screen lock')
+
+    expect(first.lock).toHaveBeenCalledTimes(1)
+    expect(second.lock).toHaveBeenCalledTimes(1)
+    expect(hardware.lock).not.toHaveBeenCalled()
+    expect(alreadyLocked.lock).not.toHaveBeenCalled()
+    await manager.close()
+  })
+
+  it('handles a security event when no software signer is present', async () => {
+    const manager = new Signers([])
+
+    expect(() => manager.lockHotSigners('system suspend')).not.toThrow()
+
+    await manager.close()
+  })
+
+  it('contains a synchronous signer lock failure and permits a later retry', async () => {
+    const manager = new Signers([])
+    const signer = hotSigner()
+    signer.lock.mockImplementationOnce(() => {
+      throw new Error('synthetic lock failure')
+    })
+    manager.add(signer)
+
+    expect(() => manager.lockHotSigners('screen lock')).not.toThrow()
+    manager.lockHotSigners('system suspend')
+
+    expect(signer.lock).toHaveBeenCalledTimes(2)
+    await manager.close()
+  })
 })

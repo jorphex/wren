@@ -39,6 +39,7 @@ import send from './send'
 import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
 import { persistAddressBookEntry, persistCustomToken } from './applicationMutations'
+import { installSignerPowerLockHandlers } from './security/signerLockLifecycle'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -73,12 +74,16 @@ log.info(`Node: v${process.versions.node}`)
 // prevent showing the exit dialog more than once
 let closing = false
 let walletCallEvidenceLifecycleReady = false
+let removeSignerPowerLockHandlers = () => {}
 
 function startWalletCallEvidenceRuntime() {
   if (!walletCallEvidenceLifecycleReady) {
     walletCallEvidenceLifecycleReady = true
     powerMonitor.on('suspend', () => walletCallEvidenceRuntime.stop())
     powerMonitor.on('resume', () => walletCallEvidenceRuntime.start())
+    removeSignerPowerLockHandlers = installSignerPowerLockHandlers(powerMonitor, (reason) =>
+      signers.lockHotSigners(reason)
+    )
   }
   walletCallEvidenceRuntime.start()
 }
@@ -449,6 +454,7 @@ installShutdownHandlers(
     log.info('Application closing')
 
     // await clients.stop()
+    removeSignerPowerLockHandlers()
     accounts.close()
     await signers.close()
     log.info('Application resources closed')

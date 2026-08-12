@@ -15,6 +15,7 @@ import { bindRequestSignal } from '../provider/requestSignal'
 import { isFrameSubscriptionType } from '../provider/subscriptions'
 import { toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { isValidUpstreamSubscriptionId, TransportSubscriptionRegistry } from './subscriptionRegistry'
+import { isAllowedLocalRpcHost } from './localHost'
 
 const logTraffic = process.env['LOG_TRAFFIC']
 
@@ -172,6 +173,13 @@ const overflowPollClient = (client: PollClient) => {
 }
 
 const handler = (req: IncomingMessage, res: ServerResponse) => {
+  if (!isAllowedLocalRpcHost(req.headers.host, req.socket.localPort)) {
+    return sendTransportError(res, 421, null, {
+      code: -32600,
+      message: 'Invalid local RPC host'
+    })
+  }
+
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader(
