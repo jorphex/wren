@@ -196,7 +196,7 @@ button.requestFeatureButton:focus-visible
   margin-right 6px
   margin-left 12px
   margin-top 4px
-  border-radius 10px
+  border-radius 2px
   transition var(--standard)
   transform translateZ(0)
   cursor pointer
@@ -210,7 +210,7 @@ button.requestFeatureButton:focus-visible
     left 2px
     bottom 2px
     width 16px
-    border-radius 10px
+    border-radius 1px
     transition var(--standard)
     background var(--ghostC)
     transform translateZ(0)
@@ -223,7 +223,7 @@ button.requestFeatureButton:focus-visible
     left 0px
     bottom 0px
     right 0px
-    border-radius 10px
+    border-radius 2px
     display flex
     align-items center
     justify-content center
@@ -502,6 +502,7 @@ button.dashModule.wrenControl.wrenControlGhost
   display grid
   grid-template-columns repeat(3, minmax(0, 1fr))
   gap var(--wren-space-2)
+  padding-top var(--wren-space-3)
   margin-bottom var(--wren-space-6)
 
 @media (max-height: 760px)

@@ -207,9 +207,6 @@
     .accountSelectorScrollWrap
       padding 24px var(--wren-space-5) 48px
 
-.accountSelector:not(.accountSelectorOpen) .accountSelectorScrollWrap
-  border-top 1px solid var(--wren-ledger-rule)
-
 .accountSelectorWelcome
   padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-5)
   pointer-events auto
@@ -539,7 +536,6 @@
     display grid
     width 100%
     padding 10px 0 18px
-    border-top 1px solid var(--wren-ledger-rule)
     gap 0
     pointer-events auto
 
@@ -550,7 +546,6 @@
   height 54px
   padding 0 9px
   border 0
-  border-bottom 1px solid var(--wren-ledger-rule)
   border-radius 0
   color var(--wren-text-primary)
   background transparent
@@ -561,9 +556,6 @@
 
   &:hover
     background var(--wren-ledger-hover)
-
-  &:last-child
-    border-bottom 0
 
   &:focus-visible
     outline 2px solid var(--wren-focus)

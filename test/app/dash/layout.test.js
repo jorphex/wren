@@ -8,9 +8,11 @@ const mainStyle = fs.readFileSync('app/dash/Main/style/index.styl', 'utf8')
 const settingsStyle = fs.readFileSync('app/dash/Settings/style/index.styl', 'utf8')
 const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl', 'utf8')
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
+const chainsStyle = fs.readFileSync('app/dash/Chains/style/index.styl', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
   expect(baseStyle).toMatch(/--wren-type-label var\(--wren-type-caption\)/)
+  expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
 })
 
 test('keeps disabled semantic controls visually neutral', () => {
@@ -36,6 +38,22 @@ test('keeps dashboard destination descriptions readable in two balanced columns'
   expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns minmax\(0, 1fr\)/)
   expect(mainStyle).toMatch(/\.dashModules[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/)
   expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 72px[\s\S]*?height auto/)
+  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?gap var\(--wren-space-2\)/)
+  expect(mainStyle).not.toMatch(/wren-(?:seam|rule)/)
+})
+
+test('groups chooser, settings, and networks with spacing instead of decorative rules', () => {
+  for (const style of [dashStyle, settingsStyle, chainsStyle]) {
+    expect(style).not.toMatch(/wren-(?:seam|rule)|border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
+  }
+  expect(dashStyle).toMatch(
+    /\.accountTypeGroup \+ \.accountTypeGroup[\s\S]*?margin-top var\(--wren-space-5\)/
+  )
+  expect(settingsStyle).toMatch(
+    /\.wrenSettingsSection \+ \.wrenSettingsSection[\s\S]*?margin-top var\(--wren-space-5\)/
+  )
+  expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-2\)/)
+  expect(chainsStyle).toMatch(/\.networkBreak[\s\S]*?margin-top var\(--wren-space-5\)/)
 })
 
 test('keeps the Control Center Wren decorative, fixed beside the title, and absent at the narrow fallback', () => {
@@ -67,7 +85,7 @@ test('keeps dashboard add actions compact and inactive network toggles neutral',
     /\.dashFooter[\s\S]*?justify-content flex-end[\s\S]*?height 46px[\s\S]*?background transparent[\s\S]*?\.dashFooterButton[\s\S]*?width auto[\s\S]*?min-width 190px[\s\S]*?height 46px/
   )
   expect(dashStyle).toMatch(
-    /\.network \.signerPermissionToggle[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?&::before[\s\S]*?height 24px[\s\S]*?border-radius var\(--wren-radius-pill\)[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-success-soft\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
+    /\.network \.signerPermissionToggle[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?&::before[\s\S]*?height 24px[\s\S]*?border-radius 2px[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?border-bottom 2px solid var\(--wren-border-strong\)[\s\S]*?border-radius 1px[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-success-soft\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
   )
 })
 
@@ -85,10 +103,11 @@ test('keeps local interaction states stronger than the later shared ghost-contro
   )
 })
 
-test('keeps delegation recovery flat, ruled, and responsive', () => {
+test('keeps delegation recovery spacing-led and responsive', () => {
   expect(dashStyle).toMatch(
-    /\.delegationRevocation[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?background transparent/
+    /\.delegationRevocation[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-2\)[\s\S]*?background transparent/
   )
+  expect(dashStyle).not.toMatch(/\.delegationRevocation[\s\S]{0,260}?border-(?:top|bottom)/)
   expect(dashStyle).toMatch(/\.delegationRevocationSelectors[\s\S]*?select[\s\S]*?min-height 44px/)
   expect(dashStyle).toMatch(
     /\.delegationRevocationEligible[\s\S]*?> button\.wrenControl\.wrenControlPrimary[\s\S]*?height 44px[\s\S]*?min-height 44px/

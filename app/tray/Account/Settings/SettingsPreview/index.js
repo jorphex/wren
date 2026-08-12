@@ -7,7 +7,6 @@ import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Comp
 
 const RemovalDialog = styled.div`
   padding: 14px 16px 16px;
-  border-top: 1px solid var(--wren-ledger-rule);
   color: var(--wren-text-primary);
 `
 

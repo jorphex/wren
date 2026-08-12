@@ -11,16 +11,24 @@ const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-w
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 
-test('keeps account collection and balance interiors on one ruled ledger', () => {
-  expect(accountStyle).toMatch(
-    /\.accountLedgerView[\s\S]*?> \._txMain[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?\.cluster[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?\.clusterRow[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
-  )
+test('keeps account collection and balance interiors spacing-led', () => {
+  expect(accountStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(balancesStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(accountStyle).toMatch(/\.clusterRow \+ \.clusterRow[\s\S]*?margin-top var\(--wren-space-2\)/)
 })
 
-test('keeps the first account row and compact account controls free of duplicate rules', () => {
-  expect(accountStyle).toMatch(
-    /\.accountMainSlide > \.accountModule:first-child[\s\S]*?\.accountModuleCard[\s\S]*?border-top 0/
+test('keeps account modules free of decorative seams', () => {
+  expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
+  expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
+  expect(accountSource).toMatch(/const ACCOUNT_MODULE_ATTACHED_GAP = 4/)
+  expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 16/)
+  expect(accountSource).toMatch(
+    /previousId === 'requests' && id === 'chains' \? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP/
   )
+  expect(accountSource).toMatch(
+    /const gap = height > 0 && previousVisibleModuleId \? getAccountModuleGap\(previousVisibleModuleId, id\) : 0/
+  )
+  expect(accountSource).toMatch(/if \(height > 0\) previousVisibleModuleId = id/)
   expect(accountStyle).toMatch(/\.requestsPreview\n {2}height 48px\n {2}border 0\n {2}border-radius 0/)
   expect(signerStyle).toMatch(
     /\.signerPreviewSummary[\s\S]*?display flex[\s\S]*?justify-content space-between/
@@ -28,6 +36,18 @@ test('keeps the first account row and compact account controls free of duplicate
   expect(accountStyle).toMatch(
     /\.accountLedgerModule[\s\S]*?\.accountLedgerRow[\s\S]*?min-height 52px[\s\S]*?\.accountLedgerLabel[\s\S]*?flex 0 0 112px/
   )
+})
+
+test('keeps reserved tray bands and revocation evidence free of decorative horizontal rules', () => {
+  expect(accountStyle).not.toMatch(/footerWrapActive|wren-(?:seam|rule)/)
+  expect(accountSelectorStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
+  expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,100}?border-top/)
+})
+
+test('keeps warnings and balance siblings attached through spacing', () => {
+  expect(balancesStyle).not.toMatch(/\.signerBalanceWarning[\s\S]{0,220}?border-top/)
+  expect(balancesStyle).not.toMatch(/& \+ \.signerBalance[\s\S]{0,100}?border-top/)
 })
 
 test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {
@@ -38,6 +58,7 @@ test('keeps network switching, chain explorer, and gas evidence as distinct cont
   expect(accountStyle).toMatch(
     /\.chainMonitorSwitchButton,[\s\S]*?\.chainMonitorExplorer[\s\S]*?min-height 44px/
   )
+  expect(accountStyle).toMatch(/\.chainMonitorControls[\s\S]*?display flex[\s\S]*?gap var\(--wren-space-1\)/)
   expect(accountStyle).toMatch(
     /\.chainMonitorGasEvidence[\s\S]*?justify-content space-between[\s\S]*?\.chainMonitorDisclosure[\s\S]*?min-height 44px/
   )

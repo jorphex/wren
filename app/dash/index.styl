@@ -421,7 +421,7 @@ button,
       height 24px
       box-sizing border-box
       border 1px solid var(--wren-border-default)
-      border-radius var(--wren-radius-pill)
+      border-radius 2px
       content ''
       background var(--wren-surface-inset)
       box-shadow var(--wren-shadow-inset)
@@ -434,7 +434,8 @@ button,
       width 16px
       height 16px
       border 0
-      border-radius 50%
+      border-bottom 2px solid var(--wren-border-strong)
+      border-radius 1px
       background var(--wren-text-secondary)
       box-shadow var(--wren-shadow-sm)
       transition background var(--wren-motion-fast) var(--wren-ease), opacity var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
@@ -457,7 +458,7 @@ button,
 
     .signerPermissionToggleSwitchLocked
       inset 0
-      border-radius var(--wren-radius-pill)
+      border-radius 2px
       cursor default
 
       .signerPermissionToggleSwitch
@@ -514,7 +515,7 @@ button,
       font-weight 500
 
   .accountTypeGroup + .accountTypeGroup
-    margin-top var(--wren-space-4)
+    margin-top var(--wren-space-5)
 
   .accountTypeGroupTitle
     margin 0
@@ -528,7 +529,7 @@ button,
     text-transform none
 
   .accountTypeList
-    border-top 1px solid var(--wren-border-subtle)
+    border 0
 
   .accountTypeSelect
     width 100%
@@ -537,7 +538,6 @@ button,
     padding 0 var(--wren-space-2)
     justify-content flex-start
     border 0
-    border-bottom 1px solid var(--wren-border-subtle)
     border-radius 0
     color var(--wren-text-primary)
     background transparent
@@ -613,7 +613,6 @@ button,
   box-sizing border-box
   padding 0 var(--wren-space-2)
   border 0
-  border-bottom 1px solid var(--wren-ledger-rule)
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -674,9 +673,7 @@ button,
   width 100%
   box-sizing border-box
   margin var(--wren-space-5) 0 0
-  padding var(--wren-space-4) var(--wren-space-2) 0
-  border-top 1px solid var(--wren-ledger-rule)
-  border-bottom 1px solid var(--wren-ledger-rule)
+  padding var(--wren-space-4) var(--wren-space-2)
   color var(--wren-text-primary)
   background transparent
 
@@ -685,7 +682,7 @@ button,
   align-items flex-start
   justify-content space-between
   padding-bottom var(--wren-space-3)
-  border-bottom 1px solid var(--wren-ledger-rule)
+  margin-bottom var(--wren-space-3)
 
   h2
     margin 0
@@ -705,7 +702,6 @@ button,
   grid-template-columns minmax(0, 1.35fr) minmax(160px, .65fr)
   gap var(--wren-space-3)
   padding var(--wren-space-3) 0
-  border-bottom 1px solid var(--wren-ledger-rule)
 
   label
     display flex

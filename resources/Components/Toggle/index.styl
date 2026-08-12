@@ -19,7 +19,7 @@
     height 24px
     box-sizing border-box
     border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-pill)
+    border-radius 2px
     content ''
     background var(--wren-surface-inset)
     box-shadow var(--wren-shadow-inset)
@@ -35,8 +35,13 @@
       background var(--wren-surface-active)
 
   &:disabled
-    opacity .5
     cursor default
+
+    &::before
+      opacity .55
+
+    .wrenToggleThumb
+      opacity .72
 
   .wrenToggleThumb
     position absolute
@@ -44,7 +49,9 @@
     left 4px
     width 16px
     height 16px
-    border-radius 50%
+    box-sizing border-box
+    border-bottom 2px solid var(--wren-border-strong)
+    border-radius 1px
     background var(--wren-text-secondary)
     box-shadow var(--wren-shadow-sm)
     transition transform var(--wren-motion-fast), background var(--wren-motion-fast)
@@ -62,3 +69,6 @@
   .wrenToggleThumb
     background var(--wren-success)
     transform translateX(20px)
+
+  &:disabled .wrenToggleThumb
+    opacity 1

@@ -3,7 +3,6 @@
   margin 0 var(--wren-space-2)
   overflow hidden
   border 0
-  border-bottom 1px solid var(--wren-ledger-rule)
   border-radius 0
   background transparent
   box-shadow none
@@ -89,7 +88,7 @@
     .clusterRow
       gap 0
       margin 0
-      border-top 1px solid var(--wren-ledger-rule)
+      border 0
 
     .clusterRow:empty
       display none
@@ -107,6 +106,9 @@
     .clusterValueClickable:not(.clusterValueDisabled):active
       border-color transparent
       background var(--wren-surface-active)
+
+.network + .network
+  margin-top var(--wren-space-2)
 
 .phaseNetworkLine
   position relative
@@ -249,21 +251,19 @@
   margin var(--wren-space-4) var(--wren-space-2)
   padding var(--wren-space-3) var(--wren-space-2)
   border 0
-  border-top 1px solid var(--wren-ledger-rule)
   border-radius 0
   color var(--wren-text-secondary)
   background transparent
   font-family var(--wren-font-ui)
   font-size var(--wren-type-small)
   cursor pointer
-  transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+  transition background var(--wren-motion-fast) var(--wren-ease)
 
   .discordLink
     margin-left var(--wren-space-1)
     color var(--wren-accent-primary-hover)
 
 .discordInvite:hover
-  border-top-color var(--wren-ledger-rule)
   background var(--wren-surface-hover)
 
 .discordInvite:focus-visible
@@ -575,10 +575,12 @@
   background var(--wren-surface-hover)
 
 .networkBreak
+  margin-top var(--wren-space-5)
   margin-bottom var(--wren-space-2)
-  padding var(--wren-space-4) var(--wren-space-4) 0
+  padding 0 var(--wren-space-4)
 
 .networkBreakLayer
+  padding-bottom 0
   color var(--wren-text-secondary)
   font-family var(--wren-font-ui)
   font-size var(--wren-type-small)

@@ -581,13 +581,11 @@
       margin 0
       padding 0
       border 0
-      border-top 1px solid var(--wren-ledger-rule)
       border-radius 0
       background transparent
 
       .clusterRow
         gap 0
-        border-bottom 1px solid var(--wren-ledger-rule)
 
       .clusterRow + .clusterRow
         margin-top 0
@@ -927,13 +925,12 @@
   .accountModuleCard
     overflow hidden
     border 0
-    border-top 1px solid var(--wren-border-subtle)
+    border-top 0
     border-radius 0
     background transparent
     box-shadow none
 
-    // Preview modules already have ledger separators. Keep the actual controls
-    // tactile without wrapping them in a second outlined card.
+    // Preview modules use spacing and whole-row feedback instead of card outlines.
     .cluster
       margin 0
       padding 0
@@ -945,19 +942,12 @@
         gap 0
 
       .clusterRow + .clusterRow
-        margin-top 0
-        border-top 1px solid var(--wren-ledger-rule)
+        margin-top var(--wren-space-2)
 
       .clusterValue
         border 0
         border-radius 0
         background transparent
-
-      .clusterRow > .clusterValue + .clusterValue
-        border-left 1px solid var(--wren-ledger-rule)
-
-      .clusterColumn > .clusterValue + .clusterValue
-        border-top 1px solid var(--wren-ledger-rule)
 
       .clusterValueClickable:not(.clusterValueDisabled):hover
         border-color transparent
@@ -1054,9 +1044,8 @@
         grid-template-columns minmax(0, 1fr) auto
         align-items center
 
-      .chainMonitorSwitch
+      .chainMonitorControls
         display flex
-        min-width 0
         align-items center
         gap var(--wren-space-1)
 
@@ -1092,11 +1081,8 @@
         min-height 44px !important
         flex none
 
-      .chainMonitorExplorer
-        margin-right var(--wren-space-1)
-
       .chainMonitorGasRow
-        border-top 1px solid var(--wren-border-subtle)
+        border-top 0
 
       .chainMonitorGasEvidence
         display flex
@@ -1129,10 +1115,6 @@
         justify-content flex-end
         padding 0
 
-.accountMainSlide > .accountModule:first-child
-  .accountModuleCard
-    border-top 0
-
 .accountMainSlide .moduleHeader
   height 40px
   padding 13px 76px 10px var(--wren-space-4)
@@ -1149,7 +1131,7 @@
     padding var(--wren-space-4)
 
   .moduleFooterAction
-    border-top 1px solid var(--wren-border-subtle)
+    margin-top var(--wren-space-2)
     color var(--wren-text-secondary)
     background transparent
     font-size var(--wren-type-small)
@@ -1198,7 +1180,6 @@
     left var(--wren-space-5)
     height 52px
     border 0
-    border-bottom 1px solid var(--wren-ledger-rule)
     border-radius 0
     background transparent
     box-shadow none
@@ -1303,7 +1284,7 @@
 .accountHomeHeader
   display grid
   padding 0 var(--wren-space-5) var(--wren-space-5)
-  border-bottom 1px solid var(--wren-ledger-rule)
+  margin-bottom var(--wren-space-2)
   grid-template-columns minmax(0, 1fr) auto
   column-gap var(--wren-space-5)
   row-gap var(--wren-space-4)

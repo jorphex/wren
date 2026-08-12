@@ -20,6 +20,21 @@ test('keeps network editor copy readable and compact controls practically target
   expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?height 44px/)
   expect(editorStyle).toMatch(/\.rpcEndpointRemove\n[\s\S]*?width 44px\n\s{2}height 44px/)
   expect(toggleStyle).toMatch(/\.wrenToggle\n[\s\S]*?width 44px\n\s{2}height 44px/)
-  expect(toggleStyle).toMatch(/&::before\n[\s\S]*?width 44px\n\s{4}height 24px/)
+  expect(toggleStyle).toMatch(/&::before\n[\s\S]*?width 44px\n\s{4}height 24px[\s\S]*?border-radius 2px/)
+  expect(toggleStyle).toMatch(
+    /\.wrenToggleThumb[\s\S]*?border-bottom 2px solid var\(--wren-border-strong\)[\s\S]*?border-radius 1px/
+  )
+  expect(toggleStyle).toMatch(
+    /&:disabled[\s\S]*?&::before[\s\S]*?opacity \.55[\s\S]*?\.wrenToggleThumb[\s\S]*?opacity \.72/
+  )
+  expect(toggleStyle).toMatch(/&:disabled \.wrenToggleThumb\n\s{4}opacity 1/)
   expect(editorStyle).toMatch(/\.rpcEndpointAddRow[\s\S]*?button\n[\s\S]*?height 44px/)
+})
+
+test('uses spacing and boxed controls instead of decorative editor rules', () => {
+  expect(editorStyle).not.toMatch(
+    /wren-(?:seam|rule)|border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/
+  )
+  expect(editorStyle).toMatch(/\.rpcEndpointRow[\s\S]*?min-height 56px/)
+  expect(editorStyle).toMatch(/\.networkEditorFooter[\s\S]*?padding 26px 24px/)
 })

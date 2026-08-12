@@ -104,6 +104,20 @@ it('opens the selected account on the displayed network explorer', async () => {
   )
 })
 
+it('groups network navigation and explorer controls on the right of the identity', () => {
+  renderMonitor()
+  const controls = screen.getByRole('group', { name: 'Displayed network controls' })
+
+  expect(controls.previousElementSibling.textContent).toContain('Mainnet')
+  expect(
+    Array.from(controls.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))
+  ).toEqual([
+    'Previous network from Mainnet',
+    'Next network from Mainnet',
+    'View Mainnet account on block explorer'
+  ])
+})
+
 it('keeps explorer placement stable and disabled when the displayed network has none', async () => {
   const { user } = renderMonitor({ optimismExplorer: '' })
 

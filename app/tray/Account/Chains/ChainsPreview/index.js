@@ -63,7 +63,13 @@ export class ChainsPreview extends React.Component {
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
         <div className='chainMonitorNetworkRow'>
-          <div className='chainMonitorSwitch' role='group' aria-label='Displayed network'>
+          <span className='chainMonitorIdentity'>
+            <span className='chainMonitorMark'>
+              <RingIcon color={primaryColor ? `var(--${primaryColor})` : 'var(--moon)'} img={icon} small />
+            </span>
+            <strong>{name}</strong>
+          </span>
+          <div className='chainMonitorControls' role='group' aria-label='Displayed network controls'>
             {existingChains.length > 1 ? (
               <button
                 type='button'
@@ -74,12 +80,6 @@ export class ChainsPreview extends React.Component {
                 <Icon name='chevron-left' size={18} />
               </button>
             ) : null}
-            <span className='chainMonitorIdentity'>
-              <span className='chainMonitorMark'>
-                <RingIcon color={primaryColor ? `var(--${primaryColor})` : 'var(--moon)'} img={icon} small />
-              </span>
-              <strong>{name}</strong>
-            </span>
             {existingChains.length > 1 ? (
               <button
                 type='button'
@@ -90,20 +90,20 @@ export class ChainsPreview extends React.Component {
                 <Icon name='chevron-right' size={18} />
               </button>
             ) : null}
+            <button
+              type='button'
+              aria-label={
+                explorerAvailable
+                  ? `View ${name} account on block explorer`
+                  : `Block explorer unavailable for ${name}`
+              }
+              className='chainMonitorExplorer wrenControl wrenControlGhost wrenControlIcon'
+              disabled={!explorerAvailable}
+              onClick={() => link.send('tray:openExplorer', chain, null, this.props.account)}
+            >
+              <Icon name='external' size={15} />
+            </button>
           </div>
-          <button
-            type='button'
-            aria-label={
-              explorerAvailable
-                ? `View ${name} account on block explorer`
-                : `Block explorer unavailable for ${name}`
-            }
-            className='chainMonitorExplorer wrenControl wrenControlGhost wrenControlIcon'
-            disabled={!explorerAvailable}
-            onClick={() => link.send('tray:openExplorer', chain, null, this.props.account)}
-          >
-            <Icon name='external' size={15} />
-          </button>
         </div>
         <div className='chainMonitorGasRow'>
           <span className='chainMonitorGasEvidence'>

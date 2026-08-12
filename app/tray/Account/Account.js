@@ -195,6 +195,10 @@ class _AccountModule extends React.Component {
 }
 
 const AccountModule = Restore.connect(_AccountModule)
+const ACCOUNT_MODULE_ATTACHED_GAP = 4
+const ACCOUNT_MODULE_SECTION_GAP = 16
+const getAccountModuleGap = (previousId, id) =>
+  previousId === 'requests' && id === 'chains' ? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP
 
 // account module is position absolute and with a translateX
 class _AccountMain extends React.Component {
@@ -309,16 +313,21 @@ class _AccountMain extends React.Component {
     const accountModules = this.store('panel.account.modules')
     const accountModuleOrder = this.store('panel.account.moduleOrder')
     let slideHeight = 0
+    let previousVisibleModuleId
     const modules = accountModuleOrder.map((id, i) => {
       const module = accountModules[id] || { height: 0 }
-      slideHeight += module.height
+      const height = module.height || 0
+      const gap = height > 0 && previousVisibleModuleId ? getAccountModuleGap(previousVisibleModuleId, id) : 0
+      const top = slideHeight + gap
+      slideHeight = top + height
+      if (height > 0) previousVisibleModuleId = id
       return (
         <AccountModule
           key={id}
           id={id}
           account={this.props.id}
           module={module}
-          top={slideHeight - module.height}
+          top={top}
           index={i}
           filter={this.state.accountModuleFilter}
         />
