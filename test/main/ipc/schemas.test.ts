@@ -134,6 +134,53 @@ test('validates address-book mutations and bounded results', () => {
   ).toBe(false)
 })
 
+test('keeps profile backup passwords and inspection metadata strictly bounded', () => {
+  const password = 'correct horse battery staple'
+  expect(parse('invoke', 'profile:export', [password])).toEqual([password])
+  expect(parseRendererIpcArgs('invoke', 'profile:export', ['too short']).success).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'profile:inspectBackup', [password, 'extra']).success).toBe(false)
+  expect(
+    parse('invoke', 'profile:stageRestore', [handlerId, password, 'REPLACE_PROFILE_ON_RESTART'])
+  ).toEqual([handlerId, password, 'REPLACE_PROFILE_ON_RESTART'])
+  expect(parseRendererIpcArgs('invoke', 'profile:stageRestore', [handlerId, password, true]).success).toBe(
+    false
+  )
+  expect(parseRendererInvokeResult('profile:export', { success: true, bytes: 128 }).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('profile:inspectBackup', {
+      success: true,
+      restoreToken: handlerId,
+      tokenExpiresAt: '2026-08-12T00:05:00.000Z',
+      backup: { formatVersion: 1, createdAt: '2026-08-12T00:00:00.000Z', signerCount: 2 }
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('profile:inspectBackup', {
+      success: true,
+      restoreToken: handlerId,
+      tokenExpiresAt: '2026-08-12T00:05:00.000Z',
+      backup: {
+        formatVersion: 1,
+        createdAt: '2026-08-12T00:00:00.000Z',
+        signerCount: 2,
+        sourcePath: '/private/profile.wrenbackup'
+      }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('profile:stageRestore', {
+      success: true,
+      restore: {
+        restoreId: handlerId,
+        stagedAt: '2026-08-12T00:00:00.000Z',
+        expiresAt: '2026-08-12T00:10:00.000Z',
+        signerCount: 2,
+        relaunchRequired: true
+      }
+    }).success
+  ).toBe(true)
+})
+
 test('strictly bounds native Send requests and results', () => {
   const recipient = '0x0000000000000000000000000000000000000002'
   const draft = {

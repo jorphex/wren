@@ -1,11 +1,18 @@
 import { app, dialog } from 'electron'
-import { showUnhandledExceptionDialog } from '../../../../main/windows/dialog'
+import {
+  openProfileBackupDialog,
+  saveProfileBackupDialog,
+  showUnhandledExceptionDialog
+} from '../../../../main/windows/dialog'
 
 jest.mock('electron', () => ({
   dialog: {
     showMessageBoxSync: jest.fn(),
-    showErrorBox: jest.fn()
+    showErrorBox: jest.fn(),
+    showOpenDialog: jest.fn(),
+    showSaveDialog: jest.fn()
   },
+  BrowserWindow: { getFocusedWindow: jest.fn(() => 'focused window') },
   app: {
     quit: jest.fn(),
     relaunch: jest.fn()
@@ -61,5 +68,34 @@ describe('#showUnhandledExceptionDialog', () => {
     expect(dialog.showMessageBoxSync).not.toHaveBeenCalled()
     expect(app.relaunch).not.toHaveBeenCalled()
     expect(app.quit).toHaveBeenCalled()
+  })
+})
+
+describe('profile backup dialogs', () => {
+  it('opens only Wren backup files without exposing the selected path elsewhere', async () => {
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/tmp/profile.wrenbackup'] })
+
+    await expect(openProfileBackupDialog()).resolves.toBe('/tmp/profile.wrenbackup')
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+      'focused window',
+      expect.objectContaining({
+        properties: ['openFile'],
+        filters: [{ name: 'Wren profile backup', extensions: ['wrenbackup'] }]
+      })
+    )
+  })
+
+  it('uses a dated non-JSON filename and reports cancellation', async () => {
+    dialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: '/tmp/profile.wrenbackup' })
+    await expect(saveProfileBackupDialog(new Date('2026-08-12T00:00:00.000Z'))).resolves.toBe(
+      '/tmp/profile.wrenbackup'
+    )
+    expect(dialog.showSaveDialog).toHaveBeenCalledWith(
+      'focused window',
+      expect.objectContaining({ defaultPath: 'wren-profile-2026-08-12.wrenbackup' })
+    )
+
+    dialog.showSaveDialog.mockResolvedValueOnce({ canceled: true })
+    await expect(saveProfileBackupDialog()).resolves.toBeUndefined()
   })
 })

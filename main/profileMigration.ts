@@ -20,7 +20,7 @@ const SIGNER_FILE = /^[A-Za-z0-9._-]+(?:\.json|\.legacy-v1\.bak)$/u
 const ADDRESS = /^0x[0-9a-f]{40}$/iu
 const ImportedMainSchema = MainSchema.partial().passthrough()
 
-const SignerRecordSchema = z
+export const SignerRecordSchema = z
   .object({
     id: z.string().min(1).max(256),
     addresses: z.array(z.string().regex(ADDRESS)).min(1).max(1024),
@@ -115,7 +115,7 @@ function readValidatedJson(source: string, maximumBytes: number, label: string) 
   return { bytes, parsed }
 }
 
-function validatePersistedConfiguration(config: unknown) {
+export function migratePersistedConfiguration(config: unknown) {
   if (!config || typeof config !== 'object' || Array.isArray(config)) {
     throw new Error('Frame configuration must contain a JSON object')
   }
@@ -149,9 +149,13 @@ function validatePersistedConfiguration(config: unknown) {
   } catch {
     throw new Error('Frame configuration cannot be migrated safely')
   }
-  if (!ImportedMainSchema.safeParse(migrated.main).success) {
-    throw new Error('Frame configuration is invalid after migration')
-  }
+  const validation = ImportedMainSchema.safeParse(migrated.main)
+  if (!validation.success) throw new Error('Frame configuration is invalid after migration')
+  return migrated
+}
+
+export function validatePersistedConfiguration(config: unknown) {
+  migratePersistedConfiguration(config)
 }
 
 function writePrivateFile(destination: string, bytes: Buffer) {

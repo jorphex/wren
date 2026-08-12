@@ -30,6 +30,7 @@ const ChainNumberSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGE
 const ChainKeySchema = z.union([ChainNumberSchema, z.string().regex(/^[1-9][0-9]{0,15}$/)])
 const NetworkTypeSchema = z.literal('ethereum')
 const BoundedStringSchema = z.string().max(MAX_TEXT)
+const BackupPasswordSchema = z.string().min(12).max(1024)
 const UrlInputSchema = z.string().max(MAX_URL)
 const RpcQuantitySchema = z
   .string()
@@ -331,6 +332,9 @@ const invokeSchemas = {
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'profile:export': z.tuple([BackupPasswordSchema]),
+  'profile:inspectBackup': z.tuple([BackupPasswordSchema]),
+  'profile:stageRestore': z.tuple([z.uuid(), BackupPasswordSchema, z.literal('REPLACE_PROFILE_ON_RESTART')]),
   'send:maxAmount': z.tuple([ChainNumberSchema, AddressSchema, AddressSchema.optional()]),
   'send:queue': z.tuple([
     z
@@ -381,6 +385,47 @@ const invokeResultSchemas = {
   ]),
   'addressBook:save': z.union([
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'profile:export': z.union([
+    z.object({ success: z.literal(true), bytes: z.number().int().positive() }).strict(),
+    z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'profile:inspectBackup': z.union([
+    z
+      .object({
+        success: z.literal(true),
+        restoreToken: z.uuid(),
+        tokenExpiresAt: z.string().datetime(),
+        backup: z
+          .object({
+            formatVersion: z.literal(1),
+            createdAt: z.string().datetime(),
+            signerCount: z.number().int().nonnegative().max(512)
+          })
+          .strict()
+      })
+      .strict(),
+    z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'profile:stageRestore': z.union([
+    z
+      .object({
+        success: z.literal(true),
+        restore: z
+          .object({
+            restoreId: z.uuid(),
+            stagedAt: z.string().datetime(),
+            expiresAt: z.string().datetime(),
+            signerCount: z.number().int().nonnegative().max(512),
+            relaunchRequired: z.literal(true)
+          })
+          .strict()
+      })
+      .strict(),
+    z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:maxAmount': z.union([

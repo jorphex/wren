@@ -204,6 +204,22 @@ describe('renderer bridge protocol', () => {
     expect(request('onboard', 'event', ['tray:resetAllSettings'])).toBeNull()
   })
 
+  test('allows profile recovery only from the dashboard renderer', () => {
+    const request = (role, channel) =>
+      decodeBridgeMessage(
+        encode({ source: LINK_SOURCE, method: 'invoke', id, args: [channel, 'bounded argument'] }),
+        LINK_SOURCE,
+        role
+      )
+
+    for (const channel of ['profile:export', 'profile:inspectBackup', 'profile:stageRestore']) {
+      expect(request('dash', channel)).not.toBeNull()
+      expect(request('tray', channel)).toBeNull()
+      expect(request('dapp', channel)).toBeNull()
+      expect(request('onboard', channel)).toBeNull()
+    }
+  })
+
   test('rejects requests without a valid role while preserving responses', () => {
     const request = encode({ source: LINK_SOURCE, method: 'rpc', id, args: ['getState'] })
     const response = encode({ source: BRIDGE_SOURCE, method: 'rpc', id, args: [null, {}] })

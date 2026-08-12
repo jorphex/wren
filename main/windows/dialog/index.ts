@@ -57,3 +57,24 @@ export const saveAddressBookDialog = async () => {
   })
   return result.canceled ? undefined : result.filePath
 }
+
+export const openProfileBackupDialog = async () => {
+  const browserWindow = BrowserWindow.getFocusedWindow() as BrowserWindow
+  const result = await dialog.showOpenDialog(browserWindow, {
+    title: 'Inspect Wren Profile Backup',
+    properties: ['openFile'],
+    filters: [{ name: 'Wren profile backup', extensions: ['wrenbackup'] }]
+  })
+  return result.canceled ? undefined : result.filePaths[0]
+}
+
+export const saveProfileBackupDialog = async (now = new Date()) => {
+  const browserWindow = BrowserWindow.getFocusedWindow() as BrowserWindow
+  const date = now.toISOString().slice(0, 10)
+  const result = await dialog.showSaveDialog(browserWindow, {
+    title: 'Export Encrypted Wren Profile',
+    defaultPath: `wren-profile-${date}.wrenbackup`,
+    filters: [{ name: 'Wren profile backup', extensions: ['wrenbackup'] }]
+  })
+  return result.canceled ? undefined : result.filePath
+}

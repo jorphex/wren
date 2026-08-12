@@ -41,13 +41,16 @@ export const hasRendererCapability = (
   args: unknown[]
 ) => {
   if (!rendererRole) return false
+  const channel = args[0]
+  if (method === 'invoke' && typeof channel === 'string' && channel.startsWith('profile:')) {
+    return rendererRole === 'dash'
+  }
   if (rendererRole === 'dash' || rendererRole === 'tray') return true
 
   const capabilities = limitedCapabilities[rendererRole]
   if (method === 'rpc') return typeof args[0] === 'string' && capabilities.rpc.has(args[0])
   if (method === 'invoke') return false
 
-  const channel = args[0]
   if (typeof channel !== 'string' || !capabilities.events.has(channel)) return false
   return channel !== 'tray:action' || (typeof args[1] === 'string' && capabilities.actions.has(args[1]))
 }

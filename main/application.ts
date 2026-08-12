@@ -1,4 +1,5 @@
 import { app, protocol, clipboard, powerMonitor } from 'electron'
+import crypto from 'crypto'
 import path from 'path'
 import url from 'url'
 
@@ -22,7 +23,11 @@ import * as launch from './launch'
 import updater from './updater'
 import signers from './signers'
 import persist from './store/persist'
-import { showUnhandledExceptionDialog } from './windows/dialog'
+import {
+  openProfileBackupDialog,
+  saveProfileBackupDialog,
+  showUnhandledExceptionDialog
+} from './windows/dialog'
 import { openBlockExplorer, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
@@ -40,6 +45,12 @@ import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
 import { persistAddressBookEntry, persistCustomToken } from './applicationMutations'
 import { installSignerPowerLockHandlers } from './security/signerLockLifecycle'
+import {
+  inspectEncryptedProfileBackupFile,
+  stageInspectedProfileRestore,
+  type ProfileBackupFileBinding,
+  writeEncryptedProfileBackup
+} from './profileBackup'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -75,6 +86,12 @@ log.info(`Node: v${process.versions.node}`)
 let closing = false
 let walletCallEvidenceLifecycleReady = false
 let removeSignerPowerLockHandlers = () => {}
+let profileRestoreRelaunchTimer: ReturnType<typeof setTimeout> | undefined
+const PROFILE_INSPECTION_TOKEN_TTL_MS = 5 * 60 * 1000
+const profileInspectionTokens = new Map<
+  string,
+  { source: string; binding: ProfileBackupFileBinding; expiresAt: number }
+>()
 
 function startWalletCallEvidenceRuntime() {
   if (!walletCallEvidenceLifecycleReady) {
@@ -294,6 +311,89 @@ handleRenderer('addressBook:remove', async (e, address) =>
 handleRenderer('addressBook:import', async () => addressBookMutation(() => addressBookFiles.importFile()))
 handleRenderer('addressBook:export', async () => addressBookMutation(() => addressBookFiles.exportFile()))
 
+const profileBackupMutation = async (
+  publicError: string,
+  operation: () => Promise<unknown> | unknown
+) => {
+  try {
+    return await operation()
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : typeof error
+    const errorCode =
+      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? error.code.slice(0, 64)
+        : undefined
+    log.warn('Profile backup operation failed', { errorName, ...(errorCode ? { errorCode } : {}) })
+    return {
+      success: false as const,
+      error: publicError
+    }
+  }
+}
+
+handleRenderer('profile:export', async (e, password) =>
+  profileBackupMutation('Encrypted backup could not be exported', async () => {
+    const destination = await saveProfileBackupDialog()
+    if (!destination) return { success: false as const, canceled: true as const }
+    persist.writeUpdates()
+    const { bytes } = writeEncryptedProfileBackup(app.getPath('userData'), destination, password)
+    return { success: true as const, bytes }
+  })
+)
+
+handleRenderer('profile:inspectBackup', async (e, password) =>
+  profileBackupMutation('Encrypted backup could not be inspected', async () => {
+    const source = await openProfileBackupDialog()
+    if (!source) return { success: false as const, canceled: true as const }
+    const now = Date.now()
+    for (const [token, inspection] of profileInspectionTokens) {
+      if (inspection.expiresAt <= now) profileInspectionTokens.delete(token)
+    }
+    while (profileInspectionTokens.size >= 8) {
+      const oldest = profileInspectionTokens.keys().next().value
+      if (!oldest) break
+      profileInspectionTokens.delete(oldest)
+    }
+    const binding = inspectEncryptedProfileBackupFile(source, password)
+    const token = crypto.randomUUID()
+    const expiresAt = now + PROFILE_INSPECTION_TOKEN_TTL_MS
+    profileInspectionTokens.set(token, { source, binding, expiresAt })
+    return {
+      success: true as const,
+      backup: binding.backup,
+      restoreToken: token,
+      tokenExpiresAt: new Date(expiresAt).toISOString()
+    }
+  })
+)
+
+handleRenderer('profile:stageRestore', async (e, restoreToken, password, confirmation) =>
+  profileBackupMutation('Encrypted backup could not be staged for restore', async () => {
+    if (confirmation !== 'REPLACE_PROFILE_ON_RESTART') {
+      throw new Error('Profile replacement was not explicitly confirmed')
+    }
+    const inspection = profileInspectionTokens.get(restoreToken)
+    profileInspectionTokens.delete(restoreToken)
+    if (!inspection || inspection.expiresAt <= Date.now()) {
+      throw new Error('Profile backup inspection expired; inspect the backup again')
+    }
+    const restore = stageInspectedProfileRestore(
+      inspection.source,
+      password,
+      inspection.binding,
+      app.getPath('userData')
+    )
+    if (profileRestoreRelaunchTimer) clearTimeout(profileRestoreRelaunchTimer)
+    profileRestoreRelaunchTimer = setTimeout(() => {
+      profileRestoreRelaunchTimer = undefined
+      app.relaunch()
+      app.quit()
+    }, 250)
+    profileRestoreRelaunchTimer.unref?.()
+    return { success: true as const, restore }
+  })
+)
+
 handleRenderer('yearn:getCatalog', async (e, options) => yearn.getCatalog(options))
 handleRenderer('yearn:getPositions', async () => yearn.getPositions())
 handleRenderer('yearn:getWorkflows', async () => yearn.list())
@@ -454,6 +554,9 @@ installShutdownHandlers(
     log.info('Application closing')
 
     // await clients.stop()
+    if (profileRestoreRelaunchTimer) clearTimeout(profileRestoreRelaunchTimer)
+    profileRestoreRelaunchTimer = undefined
+    profileInspectionTokens.clear()
     removeSignerPowerLockHandlers()
     accounts.close()
     await signers.close()

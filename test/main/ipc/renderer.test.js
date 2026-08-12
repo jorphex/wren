@@ -75,6 +75,19 @@ test('rejects unauthorized invokes and permits privileged invokes', async () => 
   expect(handler).toHaveBeenCalledTimes(1)
 })
 
+test('reserves profile recovery invokes for the dashboard role', async () => {
+  const result = { success: false, canceled: true }
+  const handler = jest.fn().mockResolvedValue(result)
+  handleRenderer('profile:inspectBackup', handler)
+  const invoke = mockHandlers.get('profile:inspectBackup')
+
+  await expect(invoke(sender('tray'), 'correct horse battery staple')).rejects.toThrow(
+    'Unauthorized renderer IPC'
+  )
+  await expect(invoke(sender('dash'), 'correct horse battery staple')).resolves.toEqual(result)
+  expect(handler).toHaveBeenCalledTimes(1)
+})
+
 test('drops invalid events without calling application handlers', () => {
   const listener = jest.fn()
   onRenderer('tray:copyTxHash', listener)
