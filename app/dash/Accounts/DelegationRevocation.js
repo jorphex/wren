@@ -5,11 +5,16 @@ import { getAddress } from '../../../resources/utils'
 import { isNetworkConnected } from '../../../resources/utils/chains'
 
 const COPY = {
-  available: 'Available with a Wren software signer',
-  hardware: 'Revocation requires a Wren software signer.',
-  none: 'No EIP-7702 delegation found. Nothing to revoke.',
-  unavailable: 'Delegation status unavailable.',
-  admissionFailed: 'Delegation status unavailable. Request not sent.'
+  available:
+    'View the execution code the configured RPC reports for any account. You can revoke a delegation only from Wren’s currently selected eligible Ring or Seed account.',
+  hardware:
+    'Observed only. Wren can prepare revocation only for its currently selected eligible Ring or Seed account.',
+  none: 'The configured RPC reports no code at this address.',
+  contract:
+    'The configured RPC reports contract code at this address. Wren can’t sign for this smart account.',
+  empty: 'No accounts are available to observe.',
+  unavailable: 'Execution state is unavailable.',
+  admissionFailed: 'Couldn’t prepare the revocation request. No request was sent.'
 }
 
 const softwareSignerTypes = new Set(['ring', 'seed'])
@@ -35,7 +40,7 @@ export const connectedNetworks = (networks = {}) =>
 export class DelegationRevocation extends React.Component {
   constructor(props) {
     super(props)
-    const accounts = this.getSoftwareAccounts(props)
+    const accounts = this.getAccounts(props)
     const networks = connectedNetworks(props.networks)
     const current = props.currentAccount
     const selectedAccount = accounts.some((account) => account.id === current) ? current : ''
@@ -43,6 +48,7 @@ export class DelegationRevocation extends React.Component {
     this.state = {
       account: selectedAccount,
       chainId: networks[0]?.id || '',
+      execution: undefined,
       eligibility: undefined,
       checking: false,
       queueing: false,
@@ -54,7 +60,7 @@ export class DelegationRevocation extends React.Component {
 
   componentDidMount() {
     this.mounted = true
-    if (this.state.account) this.checkEligibility(this.state.account, this.state.chainId)
+    if (this.state.account) this.checkExecution(this.state.account, this.state.chainId)
   }
 
   componentWillUnmount() {
@@ -73,14 +79,13 @@ export class DelegationRevocation extends React.Component {
     if (wasConnected === connected) return
 
     this.checkSequence += 1
-    if (connected) this.checkEligibility(account, chainId)
+    if (connected) this.checkExecution(account, chainId)
     else this.setUnavailable()
   }
 
-  getSoftwareAccounts(props = this.props) {
+  getAccounts(props = this.props) {
     return Object.entries(props.accounts || {})
       .map(([id, account]) => ({ id, ...account }))
-      .filter((account) => isSoftwareAccount(account, props.signers))
       .map((account) => ({
         ...account,
         address: getAddress(account.address || account.id),
@@ -90,10 +95,15 @@ export class DelegationRevocation extends React.Component {
 
   setUnavailable() {
     if (!this.mounted) return
-    this.setState({ checking: false, eligibility: undefined, message: COPY.unavailable })
+    this.setState({
+      checking: false,
+      execution: undefined,
+      eligibility: undefined,
+      message: COPY.unavailable
+    })
   }
 
-  checkEligibility(account, chainId) {
+  checkExecution(account, chainId) {
     const parsedChainId = Number(chainId)
     if (!account || !Number.isSafeInteger(parsedChainId) || parsedChainId <= 0) {
       this.setUnavailable()
@@ -101,23 +111,40 @@ export class DelegationRevocation extends React.Component {
     }
 
     const sequence = ++this.checkSequence
-    this.setState({ checking: true, eligibility: undefined, message: '' })
-    link.rpc('getEip7702RevocationEligibility', account, parsedChainId, (error, result) => {
+    this.setState({ checking: true, execution: undefined, eligibility: undefined, message: '' })
+    link.rpc('getAccountExecutionState', account, parsedChainId, (error, result) => {
       if (!this.mounted || sequence !== this.checkSequence) return
       if (error || !result || result.account !== account || Number(result.chainId) !== parsedChainId) {
         this.setUnavailable()
         return
       }
 
-      const message =
-        result.status === 'not-delegated'
-          ? COPY.none
-          : result.status === 'unsupported-signer'
-            ? COPY.hardware
-            : result.status === 'eligible'
-              ? ''
-              : COPY.unavailable
-      this.setState({ checking: false, eligibility: result, message })
+      const selected = this.props.accounts?.[account]
+      const checksRevocation =
+        result.status === 'delegated' &&
+        account === this.props.currentAccount &&
+        isSoftwareAccount(selected, this.props.signers)
+
+      this.setState({
+        checking: checksRevocation,
+        execution: result,
+        eligibility: undefined,
+        message: ''
+      })
+      if (checksRevocation) {
+        this.checkEligibility(account, parsedChainId, sequence)
+      }
+    })
+  }
+
+  checkEligibility(account, chainId, sequence = this.checkSequence) {
+    link.rpc('getEip7702RevocationEligibility', account, chainId, (error, result) => {
+      if (!this.mounted || sequence !== this.checkSequence) return
+      if (error || !result || result.account !== account || Number(result.chainId) !== chainId) {
+        this.setState({ checking: false, eligibility: undefined })
+        return
+      }
+      this.setState({ checking: false, eligibility: result })
     })
   }
 
@@ -127,21 +154,7 @@ export class DelegationRevocation extends React.Component {
       return
     }
 
-    if (account === this.props.currentAccount) {
-      this.checkEligibility(account, chainId)
-      return
-    }
-
-    const sequence = ++this.checkSequence
-    this.setState({ checking: true, eligibility: undefined, message: '' })
-    link.rpc('setSigner', account, (error) => {
-      if (!this.mounted || sequence !== this.checkSequence) return
-      if (error) {
-        this.setUnavailable()
-        return
-      }
-      this.checkEligibility(account, chainId)
-    })
+    this.checkExecution(account, chainId)
   }
 
   requestRevocation() {
@@ -176,31 +189,31 @@ export class DelegationRevocation extends React.Component {
   }
 
   render() {
-    const accounts = this.getSoftwareAccounts()
+    const accounts = this.getAccounts()
     const networks = connectedNetworks(this.props.networks)
-    const { account, chainId, eligibility, checking, queueing, message } = this.state
+    const { account, chainId, execution, eligibility, checking, queueing, message } = this.state
     const selectedAccount = accounts.find((item) => item.id === account)
-    const delegate = eligibility?.status === 'eligible' ? getAddress(eligibility.delegate) : ''
+    const delegate = execution?.status === 'delegated' ? getAddress(execution.delegate) : ''
 
     return (
       <section className='delegationRevocation' aria-labelledby='delegation-revocation-title'>
         <header className='delegationRevocationHeader'>
           <div>
-            <h2 id='delegation-revocation-title'>Delegation</h2>
+            <h2 id='delegation-revocation-title'>Account execution</h2>
             <p>{COPY.available}</p>
           </div>
         </header>
         {!accounts.length ? (
           <p className='delegationRevocationMessage' role='status'>
-            {COPY.hardware}
+            {COPY.empty}
           </p>
         ) : (
           <>
             <div className='delegationRevocationSelectors'>
               <label>
-                <span>Selected software account</span>
+                <span>Account</span>
                 <select
-                  aria-label='Selected software account'
+                  aria-label='Account to observe'
                   className='wrenInput'
                   value={account}
                   disabled={checking || queueing}
@@ -210,7 +223,7 @@ export class DelegationRevocation extends React.Component {
                     this.selectAccountAndCheck(nextAccount, chainId)
                   }}
                 >
-                  {!account ? <option value=''>Choose an active account</option> : null}
+                  {!account ? <option value=''>Choose an account to observe</option> : null}
                   {accounts.map((item) => (
                     <option
                       key={item.id}
@@ -218,19 +231,19 @@ export class DelegationRevocation extends React.Component {
                     >{`${item.name} · ${item.address.slice(0, 8)}…${item.address.slice(-6)}`}</option>
                   ))}
                 </select>
-                <small>Choosing an account also makes it Wren’s selected account.</small>
+                <small>Viewing another account here does not change Wren’s currently selected account.</small>
               </label>
               <label>
                 <span>Network</span>
                 <select
-                  aria-label='Network'
+                  aria-label='Network to query'
                   className='wrenInput'
                   value={chainId}
                   disabled={checking || queueing || !networks.length}
                   onChange={(event) => {
                     const nextChainId = Number(event.target.value)
                     this.setState({ chainId: nextChainId })
-                    this.checkEligibility(account, nextChainId)
+                    this.checkExecution(account, nextChainId)
                   }}
                 >
                   {!networks.length ? <option value=''>No connected networks</option> : null}
@@ -242,29 +255,40 @@ export class DelegationRevocation extends React.Component {
                 </select>
               </label>
             </div>
-            {checking ? (
+            {checking && !execution ? (
               <p className='delegationRevocationMessage' role='status'>
-                Checking delegation…
+                Checking execution code…
               </p>
-            ) : eligibility?.status === 'eligible' ? (
+            ) : message ? (
+              <p className='delegationRevocationMessage' role='status'>
+                {message}
+              </p>
+            ) : execution?.status === 'delegated' ? (
               <div className='delegationRevocationEligible'>
                 <div className='delegationRevocationIdentity'>
-                  <span>Delegated to</span>
+                  <span>RPC-reported delegation target</span>
                   <strong title={delegate}>{delegate}</strong>
-                  <small>Configured RPC · eth_getCode</small>
+                  <small>Reported by configured RPC · eth_getCode</small>
+                  {eligibility?.status !== 'eligible' ? <small>{COPY.hardware}</small> : null}
                 </div>
-                <button
-                  type='button'
-                  className='wrenControl wrenControlPrimary'
-                  disabled={queueing || !selectedAccount}
-                  onClick={() => this.requestRevocation()}
-                >
-                  {queueing ? 'Preparing…' : 'Revoke delegation'}
-                </button>
+                {eligibility?.status === 'eligible' ? (
+                  <button
+                    type='button'
+                    className='wrenControl wrenControlPrimary'
+                    disabled={queueing || !selectedAccount}
+                    onClick={() => this.requestRevocation()}
+                  >
+                    {queueing ? 'Preparing revocation…' : 'Revoke delegation'}
+                  </button>
+                ) : null}
               </div>
             ) : (
               <p className='delegationRevocationMessage' role='status'>
-                {message || COPY.unavailable}
+                {execution?.status === 'no-code'
+                  ? COPY.none
+                  : execution?.status === 'contract'
+                    ? COPY.contract
+                    : COPY.unavailable}
               </p>
             )}
           </>

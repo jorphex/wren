@@ -437,6 +437,16 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (scenario.state === 'delegation' && method === 'getAccountExecutionState') {
+    return {
+      status: 'delegated',
+      account: QUALIFICATION_ACCOUNT,
+      chainId: 10,
+      source: 'eth_getCode',
+      delegate: QUALIFICATION_DELEGATE,
+      codeHash: QUALIFICATION_CODE_HASH
+    }
+  }
   if (scenario.state === 'delegation' && method === 'getEip7702RevocationEligibility') {
     return {
       status: 'eligible',

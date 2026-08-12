@@ -2491,6 +2491,38 @@ describe('wallet-owned EIP-7702 revocation', () => {
     expect(JSON.stringify(admitted)).not.toMatch(/rawTransaction|authorizationList|signature/i)
   })
 
+  it('reports configured-RPC account execution independently of signer eligibility', async () => {
+    signer.type = 'ledger'
+    await expect(Accounts.getAccountExecutionState(authority, 1)).resolves.toMatchObject({
+      status: 'delegated',
+      account: authority,
+      chainId: 1,
+      source: 'eth_getCode',
+      delegate: '0x1111111111111111111111111111111111111111',
+      codeHash: expect.stringMatching(/^0x[0-9a-f]{64}$/)
+    })
+
+    code = '0x6000'
+    await expect(Accounts.getAccountExecutionState(authority, 1)).resolves.toMatchObject({
+      status: 'contract',
+      source: 'eth_getCode'
+    })
+    code = '0x'
+    await expect(Accounts.getAccountExecutionState(authority, 1)).resolves.toMatchObject({
+      status: 'no-code',
+      source: 'eth_getCode'
+    })
+    code = 'malformed'
+    await expect(Accounts.getAccountExecutionState(authority, 1)).resolves.toMatchObject({
+      status: 'unavailable'
+    })
+    delete provider.connection.connections.ethereum[1]
+    await expect(Accounts.getAccountExecutionState(authority, 1)).resolves.toMatchObject({
+      status: 'disconnected'
+    })
+    signer.type = 'seed'
+  })
+
   it('serializes same-tick admission and rejects a duplicate reservation', async () => {
     let releaseCode
     provider.connection.send.mockImplementation((payload, callback) => {

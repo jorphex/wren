@@ -37,6 +37,12 @@ const rpc = {
   getState: (cb) => {
     cb(null, store())
   },
+  getAccountExecutionState(account, chainId, cb) {
+    accounts.getAccountExecutionState(account, chainId).then(
+      (execution) => cb(null, execution),
+      (error) => cb(error)
+    )
+  },
   getEip7702RevocationEligibility(account, chainId, cb) {
     accounts.getEip7702RevocationEligibility(account, chainId).then(
       (eligibility) => cb(null, eligibility),

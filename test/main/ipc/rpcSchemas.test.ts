@@ -98,6 +98,31 @@ test('validates fee quantities and request identifiers', () => {
 })
 
 test('bounds wallet-owned EIP-7702 renderer requests', () => {
+  expect(parseRendererRpcRequest(wire(1, 'getAccountExecutionState', address, 1))).toMatchObject({
+    success: true,
+    data: { args: [address, 1] }
+  })
+  expect(parseRendererRpcRequest(wire(1, 'getAccountExecutionState', address, 0)).success).toBe(false)
+  expect(
+    parseRendererRpcResponse('getAccountExecutionState', [
+      null,
+      {
+        status: 'delegated',
+        account: address,
+        chainId: 1,
+        source: 'eth_getCode',
+        delegate: '0x0000000000000000000000000000000000000002',
+        codeHash: `0x${'a'.repeat(64)}`
+      }
+    ]).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcResponse('getAccountExecutionState', [
+      null,
+      { status: 'contract', account: address, chainId: 1, codeHash: `0x${'a'.repeat(64)}` }
+    ]).success
+  ).toBe(false)
+
   expect(parseRendererRpcRequest(wire(1, 'getEip7702RevocationEligibility', address, 1))).toMatchObject({
     success: true,
     data: { args: [address, 1] }

@@ -63,6 +63,7 @@ import {
 } from '../eip7702'
 import { EIP7702_REVOKE_INTRINSIC_GAS } from '../transaction/eip7702'
 import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
+import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain/account/code'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -164,6 +165,9 @@ export type Eip7702RevocationEligibility = Eip7702RevocationEligibilityBase &
     | { status: 'eligible'; source: 'eth_getCode'; delegate: string; codeHash: string }
     | { status: 'not-delegated' | 'unavailable' | 'unsupported-signer' | 'disconnected' }
   >
+
+export type AccountExecutionState = Readonly<{ account: string; chainId: number }> &
+  Readonly<({ source: 'eth_getCode' } & ParsedAccountCode) | { status: 'disconnected' | 'unavailable' }>
 
 export type Eip7702RevocationRequestReference = Readonly<{
   handlerId: string
@@ -523,6 +527,26 @@ export class Accounts extends EventEmitter {
     } catch (error) {
       const status = error instanceof Eip7702EligibilityError ? error.status : 'unavailable'
       return Object.freeze({ ...base, status })
+    }
+  }
+
+  async getAccountExecutionState(accountId: string, chainId: number): Promise<AccountExecutionState> {
+    const account = accountId.toLowerCase()
+    const base = { account, chainId }
+    if (!Number.isSafeInteger(chainId) || chainId <= 0 || !this.accounts[account]) {
+      return Object.freeze({ ...base, status: 'unavailable' })
+    }
+    if (!this.eip7702ChainConnected(chainId)) {
+      return Object.freeze({ ...base, status: 'disconnected' })
+    }
+    try {
+      const code = await this.sendEip7702Rpc<unknown>(chainId, 'eth_getCode', [account, 'latest'])
+      const execution = parseAccountCode(code)
+      return execution
+        ? Object.freeze({ ...base, source: 'eth_getCode' as const, ...execution })
+        : Object.freeze({ ...base, status: 'unavailable' as const })
+    } catch {
+      return Object.freeze({ ...base, status: 'unavailable' })
     }
   }
 

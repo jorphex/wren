@@ -218,7 +218,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.delegationRevocationEligible',
         requiredControls: ['Revoke delegation'],
-        requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+        requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode']
       },
       {
         id: `dash-delegation-short-${scale}`,
@@ -229,7 +229,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.delegationRevocationEligible',
         requiredControls: ['Revoke delegation'],
-        requiredText: ['Delegated to', 'Configured RPC · eth_getCode']
+        requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode']
       },
       {
         id: `dash-tokens-full-${scale}`,
@@ -340,7 +340,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.delegationRevocationEligible',
       requiredControls: ['Revoke delegation'],
-      requiredText: ['Delegated to', 'Configured RPC · eth_getCode'],
+      requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode'],
       layoutExpectations: [
         { kind: 'stacked', selector: '.delegationRevocationSelectors > label' },
         {

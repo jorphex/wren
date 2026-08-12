@@ -178,6 +178,11 @@ it('injects a selected software account and controlled revocation eligibility', 
     status: 'ok'
   })
   expect(state.main.networks.ethereum[10].connection.endpoints[0].connected).toBe(true)
+  expect(rpcReplyFor(scenario, 'getAccountExecutionState')).toMatchObject({
+    status: 'delegated',
+    account: state.selected.current,
+    chainId: 10
+  })
   expect(rpcReplyFor(scenario, 'getEip7702RevocationEligibility')).toMatchObject({
     status: 'eligible',
     account: state.selected.current,

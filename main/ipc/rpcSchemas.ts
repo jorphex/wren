@@ -45,6 +45,40 @@ const Eip7702EligibilitySchema = z.discriminatedUnion('status', [
     z.object({ status: z.literal(status), ...Eip7702EligibilityBase }).strict()
   )
 ])
+const AccountExecutionBase = {
+  account: AddressSchema,
+  chainId: ChainIdSchema
+}
+const AccountExecutionStateSchema = z.discriminatedUnion('status', [
+  z
+    .object({
+      status: z.literal('no-code'),
+      ...AccountExecutionBase,
+      source: z.literal('eth_getCode'),
+      codeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/)
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('delegated'),
+      ...AccountExecutionBase,
+      source: z.literal('eth_getCode'),
+      delegate: AddressSchema,
+      codeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/)
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('contract'),
+      ...AccountExecutionBase,
+      source: z.literal('eth_getCode'),
+      codeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/)
+    })
+    .strict(),
+  ...(['unavailable', 'disconnected'] as const).map((status) =>
+    z.object({ status: z.literal(status), ...AccountExecutionBase }).strict()
+  )
+])
 const Eip7702RequestReferenceSchema = z
   .object({
     handlerId: HandlerIdSchema,
@@ -160,6 +194,10 @@ const rpcSchemas = {
   },
   declineRequest: { request: z.tuple([ActionRequestReferenceSchema]), response: actionResult },
   getFrameId: { request: noArgs, response: result(IdSchema) },
+  getAccountExecutionState: {
+    request: z.tuple([AddressSchema, ChainIdSchema]),
+    response: result(AccountExecutionStateSchema)
+  },
   getEip7702RevocationEligibility: {
     request: z.tuple([AddressSchema, ChainIdSchema]),
     response: result(Eip7702EligibilitySchema)

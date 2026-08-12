@@ -46,7 +46,16 @@ it('recognizes only local software accounts and connected enabled networks', () 
 it('checks the selected software account and queues only an eligible revocation', async () => {
   link.rpc.mockImplementation((method, ...args) => {
     const callback = args.at(-1)
-    if (method === 'getEip7702RevocationEligibility') {
+    if (method === 'getAccountExecutionState') {
+      callback(null, {
+        status: 'delegated',
+        account,
+        chainId: 1,
+        source: 'eth_getCode',
+        delegate,
+        codeHash: `0x${'11'.repeat(32)}`
+      })
+    } else if (method === 'getEip7702RevocationEligibility') {
       callback(null, {
         status: 'eligible',
         account,
@@ -69,9 +78,9 @@ it('checks the selected software account and queues only an eligible revocation'
     />
   )
 
-  expect(await screen.findByText('Configured RPC · eth_getCode')).toBeTruthy()
+  expect(await screen.findByText('Reported by configured RPC · eth_getCode')).toBeTruthy()
   expect(screen.getByText(delegate)).toBeTruthy()
-  expect(link.rpc).toHaveBeenCalledWith('getEip7702RevocationEligibility', account, 1, expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('getAccountExecutionState', account, 1, expect.any(Function))
 
   await user.click(screen.getByRole('button', { name: 'Revoke delegation' }))
   expect(link.rpc).toHaveBeenCalledWith('requestEip7702Revocation', account, 1, expect.any(Function))
@@ -82,32 +91,54 @@ it('checks the selected software account and queues only an eligible revocation'
   })
 })
 
-it('makes account selection explicit before checking a different software account', async () => {
+it('observes a different account without changing Wren selection', async () => {
+  const current = '0x0000000000000000000000000000000000000003'
+  const multipleAccounts = {
+    ...accounts,
+    [current]: { id: current, address: current, name: 'Current', lastSignerType: 'ring' }
+  }
   link.rpc.mockImplementation((method, ...args) => {
     const callback = args.at(-1)
-    if (method === 'setSigner') callback(null)
-    if (method === 'getEip7702RevocationEligibility') {
-      callback(null, { status: 'not-delegated', account, chainId: 1 })
+    if (method === 'getAccountExecutionState') {
+      callback(null, {
+        status: 'no-code',
+        account: args[0],
+        chainId: 1,
+        source: 'eth_getCode',
+        codeHash: `0x${'c5'.repeat(32)}`
+      })
     }
   })
 
   const { user } = render(
     <DelegationRevocation
-      accounts={accounts}
-      currentAccount='0x0000000000000000000000000000000000000003'
+      accounts={multipleAccounts}
+      currentAccount={current}
       networks={networks}
       signers={{ [signer.id]: signer }}
     />
   )
 
-  expect(link.rpc).not.toHaveBeenCalled()
-  await user.selectOptions(screen.getByLabelText('Selected software account'), account)
+  await user.selectOptions(screen.getByLabelText('Account to observe'), account)
 
-  expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
+  expect(link.rpc).not.toHaveBeenCalledWith('setSigner', account, expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('getAccountExecutionState', account, 1, expect.any(Function))
   expect(await screen.findByText(delegationRevocationCopy.none)).toBeTruthy()
 })
 
-it('does not offer unsupported accounts as eligible', () => {
+it('shows delegated hardware evidence without offering revocation', async () => {
+  link.rpc.mockImplementation((method, selectedAccount, chainId, callback) => {
+    if (method === 'getAccountExecutionState') {
+      callback(null, {
+        status: 'delegated',
+        account: selectedAccount,
+        chainId,
+        source: 'eth_getCode',
+        delegate,
+        codeHash: `0x${'11'.repeat(32)}`
+      })
+    }
+  })
   render(
     <DelegationRevocation
       accounts={{ [account]: { ...accounts[account], signer: undefined, lastSignerType: 'ledger' } }}
@@ -117,17 +148,19 @@ it('does not offer unsupported accounts as eligible', () => {
     />
   )
 
+  expect(await screen.findByText(delegate)).toBeTruthy()
   expect(screen.getByText(delegationRevocationCopy.hardware)).toBeTruthy()
   expect(document.body.textContent).not.toContain('Request not sent')
   expect(screen.queryByRole('button', { name: 'Revoke delegation' })).toBeNull()
-  expect(link.rpc).not.toHaveBeenCalled()
+  expect(link.rpc).toHaveBeenCalledWith('getAccountExecutionState', account, 1, expect.any(Function))
+  expect(link.rpc.mock.calls.some(([method]) => method === 'getEip7702RevocationEligibility')).toBe(false)
 })
 
 it('rechecks eligibility when the selected network reconnects', async () => {
   link.rpc.mockImplementation((method, selectedAccount, chainId, callback) => {
-    if (method === 'getEip7702RevocationEligibility') {
+    if (method === 'getAccountExecutionState') {
       callback(null, {
-        status: 'eligible',
+        status: 'delegated',
         account: selectedAccount,
         chainId,
         source: 'eth_getCode',
@@ -158,15 +191,13 @@ it('rechecks eligibility when the selected network reconnects', async () => {
   }
   rerender(<DelegationRevocation {...props} networks={reconnected} />)
   expect(await screen.findByText(delegate)).toBeTruthy()
-  expect(link.rpc.mock.calls.filter(([method]) => method === 'getEip7702RevocationEligibility')).toHaveLength(
-    2
-  )
+  expect(link.rpc.mock.calls.filter(([method]) => method === 'getAccountExecutionState')).toHaveLength(2)
 })
 
 it('ignores stale eligibility results when the network changes', async () => {
   const callbacks = new Map()
   link.rpc.mockImplementation((method, _account, chainId, callback) => {
-    if (method === 'getEip7702RevocationEligibility') callbacks.set(chainId, callback)
+    if (method === 'getAccountExecutionState') callbacks.set(chainId, callback)
   })
   const withPolygon = {
     ...networks,
@@ -188,19 +219,28 @@ it('ignores stale eligibility results when the network changes', async () => {
     />
   )
 
-  act(() => ref.current.checkEligibility(account, 137))
+  act(() => ref.current.checkExecution(account, 137))
   act(() => {
     callbacks.get(137)(null, {
-      status: 'eligible',
+      status: 'delegated',
       account,
       chainId: 137,
+      source: 'eth_getCode',
       delegate,
       codeHash: `0x${'22'.repeat(32)}`
     })
   })
   expect(await screen.findByText(delegate)).toBeTruthy()
 
-  act(() => callbacks.get(1)(null, { status: 'not-delegated', account, chainId: 1 }))
+  act(() =>
+    callbacks.get(1)(null, {
+      status: 'no-code',
+      account,
+      chainId: 1,
+      source: 'eth_getCode',
+      codeHash: `0x${'c5'.repeat(32)}`
+    })
+  )
   expect(screen.getByText(delegate)).toBeTruthy()
   expect(screen.queryByText(delegationRevocationCopy.none)).toBeNull()
 })
@@ -208,7 +248,16 @@ it('ignores stale eligibility results when the network changes', async () => {
 it('recovers with bounded copy when request admission fails', async () => {
   link.rpc.mockImplementation((method, ...args) => {
     const callback = args.at(-1)
-    if (method === 'getEip7702RevocationEligibility') {
+    if (method === 'getAccountExecutionState') {
+      callback(null, {
+        status: 'delegated',
+        account,
+        chainId: 1,
+        source: 'eth_getCode',
+        delegate,
+        codeHash: `0x${'11'.repeat(32)}`
+      })
+    } else if (method === 'getEip7702RevocationEligibility') {
       callback(null, {
         status: 'eligible',
         account,
