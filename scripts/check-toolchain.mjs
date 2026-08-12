@@ -1,10 +1,13 @@
 import { execFileSync } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
+import { executableForPlatform } from './toolchain.mjs'
 
 const expectedNode = (await readFile(new URL('../.nvmrc', import.meta.url), 'utf8')).trim()
 const packageFile = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 const expectedNpm = packageFile.packageManager.split('@').at(-1)
-const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim()
+const npmVersion = execFileSync(executableForPlatform('npm'), ['--version'], {
+  encoding: 'utf8'
+}).trim()
 
 if (process.version !== `v${expectedNode}`) {
   console.error(`Expected Node ${expectedNode}; run "nvm install && nvm use".`)

@@ -34,7 +34,7 @@ export const packageTargets = Object.freeze({
       {
         name: 'arm64 tarball',
         kind: 'tar',
-        fileName: ({ version }) => `Wren-${version}-arm64.tar.gz`
+        fileName: ({ version }) => `wren-${version}-arm64.tar.gz`
       }
     ]
   },

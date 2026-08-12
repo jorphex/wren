@@ -35,11 +35,11 @@ test('selects the exact versioned Linux x64 package pair', () => {
 test('selects native macOS, Windows, and Linux arm64 artifacts', () => {
   assert.deepEqual(
     selectPackageArtifacts(
-      ['Wren-0.1.0-arm64.AppImage', 'Wren-0.1.0-arm64.tar.gz'],
+      ['Wren-0.1.0-arm64.AppImage', 'wren-0.1.0-arm64.tar.gz'],
       getPackageTarget('linux-arm64'),
       '0.1.0'
     ),
-    ['Wren-0.1.0-arm64.AppImage', 'Wren-0.1.0-arm64.tar.gz']
+    ['Wren-0.1.0-arm64.AppImage', 'wren-0.1.0-arm64.tar.gz']
   )
   assert.deepEqual(
     selectPackageArtifacts(['Wren-0.1.0.dmg', 'Wren-0.1.0-mac.zip'], getPackageTarget('mac-x64'), '0.1.0'),
