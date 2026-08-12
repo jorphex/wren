@@ -10,6 +10,8 @@ import { DappSchema } from './dapp'
 import { ExtensionCredentialsSchema } from './extensionCredential'
 import { OriginSchema } from './origin'
 import { OperationLifecyclesSchema } from './operationLifecycle'
+import { DesktopAuthIdentitySchema } from '../../../api/desktopAuthIdentity'
+import { NativePeerCredentialsSchema } from './peerCredential'
 import { PermissionSchema } from './permission'
 import { ShortcutSchema } from './shortcuts'
 import { WalletCallBatchesSchema } from './walletCallBatch'
@@ -71,6 +73,8 @@ export const MainSchema = z.object({
   }),
   origins: z.record(z.string().describe('Origin Id'), OriginSchema),
   extensionCredentials: ExtensionCredentialsSchema,
+  desktopAuthIdentity: DesktopAuthIdentitySchema,
+  nativePeerCredentials: NativePeerCredentialsSchema,
   permissions: z.record(
     z.string().describe('Address'),
     z.record(z.string().describe('Origin Id'), PermissionSchema)

@@ -10,6 +10,7 @@ import migrations from '../migrate'
 import { MainSchema } from './types/main'
 import { clearSessionOnlyOrigins } from './session'
 import { normalizeInterfaceScale } from '../../windows/uiScale'
+import { createDesktopAuthIdentity, DesktopAuthIdentitySchema } from '../../api/desktopAuthIdentity'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -115,6 +116,11 @@ const main = (path: string, def: unknown) => {
   return found
 }
 
+const persistedDesktopAuthIdentity = DesktopAuthIdentitySchema.safeParse(get('desktopAuthIdentity'))
+const desktopAuthIdentity = persistedDesktopAuthIdentity.success
+  ? persistedDesktopAuthIdentity.data
+  : createDesktopAuthIdentity(generateUuid())
+
 const mainState = {
   _version: main('_version', 49),
   instanceId: main('instanceId', generateUuid()),
@@ -178,6 +184,8 @@ const mainState = {
   },
   origins: main('origins', {}),
   extensionCredentials: main('extensionCredentials', {}),
+  desktopAuthIdentity,
+  nativePeerCredentials: main('nativePeerCredentials', {}),
   accounts: main('accounts', {}),
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),

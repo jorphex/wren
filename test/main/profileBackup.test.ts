@@ -199,6 +199,8 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('yearn')
   expect(recoveryMain).not.toHaveProperty('updater')
   expect(recoveryMain).not.toHaveProperty('extensionCredentials')
+  expect(recoveryMain).not.toHaveProperty('desktopAuthIdentity')
+  expect(recoveryMain).not.toHaveProperty('nativePeerCredentials')
   expect(recoveryMain).not.toHaveProperty('dapps')
   expect(recoveryMain).not.toHaveProperty('balances')
   expect(configurationText).not.toMatch(

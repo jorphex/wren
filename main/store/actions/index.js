@@ -651,6 +651,19 @@ module.exports = {
       return next
     })
   },
+  setNativePeerCredential: (u, credential) => {
+    u('main.nativePeerCredentials', (credentials = {}) => ({
+      ...credentials,
+      [credential.fingerprint]: credential
+    }))
+  },
+  removeNativePeerCredential: (u, fingerprint) => {
+    u('main.nativePeerCredentials', (credentials = {}) => {
+      const next = { ...credentials }
+      delete next[fingerprint]
+      return next
+    })
+  },
   setBlockHeight: (u, chainId, blockHeight) => {
     u('main.networksMeta.ethereum', (chainsMeta) => {
       if (chainsMeta[chainId]) {

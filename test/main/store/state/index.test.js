@@ -75,6 +75,8 @@ it('loads values from the current version of the state', async () => {
   expect(state().main.instanceId).toBe(currentInstanceId)
   expect(state().main.interfaceScale).toBe(1)
   expect(state().view.interfaceScaleEffective).toBe(1)
+  expect(state().main.desktopAuthIdentity.installationId).not.toBe(currentInstanceId)
+  expect(state().main.desktopAuthIdentity.privateKey.d).toEqual(expect.any(String))
 })
 
 it('restores a supported requested interface scale', async () => {
