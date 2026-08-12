@@ -33,7 +33,7 @@ and checks full, short, and capped-width shells at 100%, 125%, and 150%, includi
 delegation entry, revocation review, ambiguous monitoring, safe focus,
 reachability, text, and targets.
 Companion's `npm run qualify:browser` uses disposable temporary builds and profiles
-to exercise protocol 2, EIP-6963, provider requests, and top/frame origin isolation
+to exercise exact protocol 3 mutual authentication, EIP-6963, provider requests, and top/frame origin isolation
 in real Chrome and Firefox. These automated checks do not replace the candidate-
 archive and active-desktop checks below.
 

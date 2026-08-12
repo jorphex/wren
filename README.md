@@ -39,7 +39,7 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 
 ## What Wren does
 
-- Hosts HTTP and WebSocket JSON-RPC on localhost for browser, native, and CLI clients.
+- Hosts browser-compatible HTTP and WebSocket JSON-RPC on localhost and authenticated protocol-3 routes for native and CLI clients.
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
@@ -129,7 +129,7 @@ http://127.0.0.1:1248
 ws://127.0.0.1:1248
 ```
 
-Clients can send JSON-RPC requests and specify an enabled EVM chain using Wren's request metadata. Localhost is not a local-process identity boundary: method permissions, subscriptions, origins, limits, and the trust model are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
+Browser-compatible clients send root-route JSON-RPC with a canonical web or extension `Origin`. Originless native and CLI clients must pair and sign requests through protocol 3. Clients can specify an enabled EVM chain using Wren's request metadata. Localhost is not a local-process identity boundary: method permissions, subscriptions, origins, limits, and the trust model are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## Network data and privacy
 

@@ -38,15 +38,14 @@ accept asserted origins; labels and prompts reduce accidents, not establish
 process identity. HTTP requests and WebSocket upgrades require an IPv4/IPv6
 loopback `Host` matching the listening port, which blocks DNS-rebinding
 authorities but does not authenticate a local process. Canonical,
-scheme-preserving web/extension origins keep
-HTTP/HTTPS and WS/WSS grants separate. Originless, opaque, malformed, oversized,
-and schemeless clients get a per-connection server identity. It is session-only
-and removed at startup recovery, so connections cannot inherit legacy host-only
-or shared `Unknown` grants. Protected methods need account permission; passive
+scheme-preserving web/extension origins keep HTTP/HTTPS and WS/WSS grants
+separate. Root routes reject originless, opaque, malformed, schemeless, and
+reserved internal-origin claims before provider dispatch or consent UI; local
+native and CLI clients must pair through protocol 3. Protected methods need account permission; passive
 account, asset, and capability probes never open consent UI and fail closed
 (account methods reveal no identity; asset/capability methods return `4100`).
 Permissions are scoped by account, chain, method, expiry, and invoker identity.
-Legacy direct-local identities remain assertions; authenticated native clients
+Direct browser-compatible identities remain assertions; authenticated native clients
 and Companion credentials cannot reuse those grants.
 
 RPC bodies, connections, rates, header/body receive time, polls (15 seconds),
@@ -55,7 +54,7 @@ subscription IDs are opaque and bound to their WebSocket or canonical HTTP origi
 and original chain. This prevents cross-client cancellation and unbounded
 inactive poll queues, but a poll token or asserted origin is not authentication.
 
-Originless native clients can opt into protocol-v3 HTTP or WebSocket authentication.
+Originless native clients use protocol-v3 HTTP or WebSocket authentication.
 Wren and the client exchange signed P-256 challenges, bind the installation,
 role, channel, nonces, expiry, session, request path, and request-body hash, and
 require matching six-digit consent for a new key. Every native request carries a
@@ -148,6 +147,11 @@ validation exists, but handler semantics and authorization remain privileged
 main-process work. Compromised tray/dash and broad renderer network/image policy
 remain high-impact; embedded dapps depend on partitioning, session checks, and
 request filtering.
+
+The hidden balance worker has no localhost provider authority. Its parent IPC
+broker accepts only bounded latest-block `eth_call` and `eth_getBalance` reads
+for an explicit enabled chain, with strict schemas, request limits, and timeouts.
+The main process selects and owns the configured RPC connection.
 
 ### Networks, content, and Earn
 
