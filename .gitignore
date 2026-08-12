@@ -9,7 +9,7 @@ config.json
 dist
 compiled
 release
-test/.userData
+test/**/.userData
 .vscode
 .parcel-cache
 *.tsbuildinfo
