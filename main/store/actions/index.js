@@ -183,6 +183,9 @@ module.exports = {
   setWalletCallBatches: (u, batches) => {
     u('main.walletCallBatches', () => batches)
   },
+  setOperationLifecycles: (u, operations) => {
+    u('main.operationLifecycles', () => operations)
+  },
   recordActivity: (u, entry) => {
     u('main.activity', (activity = []) =>
       pruneActivity([entry, ...activity.filter(({ id }) => id !== entry.id)])

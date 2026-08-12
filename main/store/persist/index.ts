@@ -3,7 +3,7 @@ import electron from 'electron'
 import Conf, { Options } from 'conf'
 
 import migrations from '../migrate'
-import { pruneTransientPersistedState } from './state'
+import { pruneTransientPersistedState, sanitizePersistedStateUpdate } from './state'
 
 type PersistedConfig = Record<string, unknown>
 type PersistOpts<T extends PersistedConfig> = Options<T>
@@ -41,17 +41,21 @@ class PersistStore extends Conf<PersistedConfig> {
   }
 
   queue(path: string, value: unknown) {
-    path = `main.__.${migrations.latest}.${path}`
+    const sanitized = sanitizePersistedStateUpdate(path, value)
+    if (!sanitized) return
+    path = `main.__.${migrations.latest}.${sanitized.path}`
     this.updates = this.updates || {}
     delete this.updates[path] // maintain entry order
-    this.updates[path] = JSON.parse(JSON.stringify(value))
+    this.updates[path] = JSON.parse(JSON.stringify(sanitized.value))
   }
 
   override set(path: string | Partial<PersistedConfig>, value?: unknown) {
     if (this.blockUpdates) return
     if (typeof path !== 'string') throw new TypeError('Persisted state path must be a string')
-    path = `main.__.${migrations.latest}.${path}`
-    super.set(path, value)
+    const sanitized = sanitizePersistedStateUpdate(path, value)
+    if (!sanitized) return
+    path = `main.__.${migrations.latest}.${sanitized.path}`
+    super.set(path, sanitized.value)
   }
 
   override clear() {

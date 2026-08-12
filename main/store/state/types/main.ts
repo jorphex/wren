@@ -9,6 +9,7 @@ import { ColorwayPrimarySchema } from './colors'
 import { DappSchema } from './dapp'
 import { ExtensionCredentialsSchema } from './extensionCredential'
 import { OriginSchema } from './origin'
+import { OperationLifecyclesSchema } from './operationLifecycle'
 import { PermissionSchema } from './permission'
 import { ShortcutSchema } from './shortcuts'
 import { WalletCallBatchesSchema } from './walletCallBatch'
@@ -77,6 +78,7 @@ export const MainSchema = z.object({
   accounts: z.record(z.string(), AccountSchema),
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
+  operationLifecycles: OperationLifecyclesSchema,
   addressBook: AddressBookSchema,
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),

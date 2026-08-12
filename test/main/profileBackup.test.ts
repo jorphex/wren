@@ -55,6 +55,7 @@ const fixture = () => {
     }
   ]
   fixtureMain.walletCallBatches = { execution: 'private-call-history' }
+  fixtureMain.operationLifecycles = { pending: { evidence: 'private-operation-lifecycle' } }
   fixtureMain.yearn = { catalogCache: { private: true }, workflows: { pending: 'private-workflow' } }
   fixtureMain.updater = { dontRemind: ['runtime-update-id'] }
   fixtureMain.dapps = {
@@ -194,13 +195,14 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   })
   expect(recoveryMain).not.toHaveProperty('activity')
   expect(recoveryMain).not.toHaveProperty('walletCallBatches')
+  expect(recoveryMain).not.toHaveProperty('operationLifecycles')
   expect(recoveryMain).not.toHaveProperty('yearn')
   expect(recoveryMain).not.toHaveProperty('updater')
   expect(recoveryMain).not.toHaveProperty('extensionCredentials')
   expect(recoveryMain).not.toHaveProperty('dapps')
   expect(recoveryMain).not.toHaveProperty('balances')
   expect(configurationText).not.toMatch(
-    /transient-request-secret|privateRuntimeObservation|activeRequestId|private-call-history|private-workflow|private-provider-evidence|private-notification-data|private-token-cache|private-installed-content|runtime-update-id/
+    /transient-request-secret|privateRuntimeObservation|activeRequestId|private-call-history|private-operation-lifecycle|private-workflow|private-provider-evidence|private-notification-data|private-token-cache|private-installed-content|runtime-update-id/
   )
   expect(Buffer.from(payload.files.signers[0].bytes, 'base64').toString('utf8')).toContain(
     'secret-shaped-but-encrypted'
