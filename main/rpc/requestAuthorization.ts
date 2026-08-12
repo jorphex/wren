@@ -1,7 +1,14 @@
-import { originIdForName } from '../../resources/domain/origin'
+import { permissionCovers } from '../provider/permissions'
+import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../resources/domain/origin'
+
+const managedSendOriginId = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
 
 type RequestOrigin = {
+  account?: string
+  chainId?: string
+  data?: { chainId?: string }
   origin: string
+  payload?: { chainId?: string; method?: string }
   type: string
 }
 
@@ -11,8 +18,7 @@ type ApprovableRequest = RequestOrigin & {
 }
 
 type OriginPermission = {
-  origin: string
-  provider?: boolean
+  [field: string]: unknown
 }
 
 export function isRequestOriginAuthorized(
@@ -20,10 +26,17 @@ export function isRequestOriginAuthorized(
   permissions: Record<string, OriginPermission>
 ) {
   if (request.type === 'access') return true
+  if (request.origin === managedSendOriginId) return true
 
-  return Object.values(permissions).some(
-    (permission) => permission.provider === true && originIdForName(permission.origin) === request.origin
-  )
+  if (!request.account || !request.payload?.method) return false
+  const permission = permissions[request.origin]
+  const chainId = request.data?.chainId || request.chainId || request.payload.chainId
+  return permissionCovers(permission, {
+    account: request.account,
+    ...(chainId ? { chainId } : {}),
+    handlerId: request.origin,
+    method: request.payload.method
+  })
 }
 
 export function enforceRequestOriginAuthorization(

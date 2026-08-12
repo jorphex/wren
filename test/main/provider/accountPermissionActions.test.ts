@@ -1,13 +1,15 @@
-import { FRAME_SEND_ORIGIN, originIdForName } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { applyAccountPermissionRendererAction } from '../../../main/provider/accountPermissionActions'
 
 const account = '0x0000000000000000000000000000000000000001'
 const externalOrigin = 'https://alpha.example'
 const disabledOrigin = 'https://disabled.example'
+const externalId = originIdForInvoker(externalOrigin, { provenance: 'direct' })
+const disabledId = originIdForInvoker(disabledOrigin, { provenance: 'direct' })
 const permissions = {
   managed: { handlerId: 'managed', origin: FRAME_SEND_ORIGIN, provider: true },
-  external: { handlerId: 'external', origin: externalOrigin, provider: true },
-  disabled: { handlerId: 'disabled', origin: disabledOrigin, provider: false }
+  [externalId]: { handlerId: externalId, origin: externalOrigin, provider: true },
+  [disabledId]: { handlerId: disabledId, origin: disabledOrigin, provider: false }
 }
 
 const setup = (storedPermissions = permissions) => {
@@ -31,17 +33,15 @@ it('disables an external permission and rejects its untouched pending requests',
   expect(
     applyAccountPermissionRendererAction(
       'toggleAccess',
-      [account.toUpperCase(), 'external', false],
+      [account.toUpperCase(), externalId, false],
       dependencies
     )
   ).toBe(true)
 
   expect(dependencies.getPermissions).toHaveBeenCalledWith(account)
-  expect(dependencies.mutate).toHaveBeenCalledWith(account, 'external', false)
-  expect(provider.accountsChanged).toHaveBeenCalledWith([account], [originIdForName(externalOrigin)])
-  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [
-    originIdForName(externalOrigin)
-  ])
+  expect(dependencies.mutate).toHaveBeenCalledWith(account, externalId, false)
+  expect(provider.accountsChanged).toHaveBeenCalledWith([account], [externalId])
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
 })
 
 it('clears external permissions while preserving managed access and rejecting only enabled origins', () => {
@@ -51,9 +51,7 @@ it('clears external permissions while preserving managed access and rejecting on
 
   expect(dependencies.mutate).toHaveBeenCalledWith(account)
   expect(provider.accountsChanged).toHaveBeenCalledWith([account], undefined)
-  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [
-    originIdForName(externalOrigin)
-  ])
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId, disabledId])
 })
 
 it('still rejects revoked-origin requests when subscription delivery fails after mutation', () => {
@@ -63,17 +61,15 @@ it('still rejects revoked-origin requests when subscription delivery fails after
   })
 
   expect(() =>
-    applyAccountPermissionRendererAction('toggleAccess', [account, 'external', false], dependencies)
+    applyAccountPermissionRendererAction('toggleAccess', [account, externalId, false], dependencies)
   ).toThrow('subscription delivery failed')
-  expect(dependencies.mutate).toHaveBeenCalledWith(account, 'external', false)
-  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [
-    originIdForName(externalOrigin)
-  ])
+  expect(dependencies.mutate).toHaveBeenCalledWith(account, externalId, false)
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
 })
 
 it.each([
   ['missing permission', ['toggleAccess', [account, 'missing', false]]],
-  ['unchanged desired state', ['toggleAccess', [account, 'external', true]]],
+  ['unchanged desired state', ['toggleAccess', [account, externalId, true]]],
   ['managed permission', ['toggleAccess', [account, 'managed', false]]]
 ])('ignores %s without mutation or provider events', (_label, [action, args]) => {
   const { accounts, provider, dependencies } = setup()

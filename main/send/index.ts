@@ -58,6 +58,7 @@ function ensureOrigin(chainId: number) {
     requireStoreAction('initOrigin')(sendOriginId, {
       chain,
       name: FRAME_SEND_ORIGIN,
+      provenance: 'managed',
       sessionOnly: false
     })
     return

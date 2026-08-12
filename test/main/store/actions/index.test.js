@@ -62,19 +62,19 @@ describe('#toggleAccess', () => {
     return result
   }
 
-  it('immutably toggles an existing permission', () => {
-    const permissions = { first: { origin: 'alpha.example', provider: false } }
+  it('immutably removes an existing permission when access is revoked', () => {
+    const permissions = { first: { origin: 'alpha.example', provider: true } }
 
-    const result = toggleAccess(permissions, 'first', true)
+    const result = toggleAccess(permissions, 'first', false)
 
-    expect(result).toEqual({ first: { origin: 'alpha.example', provider: true } })
-    expect(permissions.first.provider).toBe(false)
+    expect(result).toEqual({})
+    expect(permissions.first.provider).toBe(true)
   })
 
-  it('keeps stale and missing permission state unchanged', () => {
-    const permissions = { first: { origin: 'alpha.example', provider: false } }
+  it('does not restore access or alter missing permission state', () => {
+    const permissions = { first: { origin: 'alpha.example', provider: true } }
 
-    expect(toggleAccess(permissions, 'first', false)).toBe(permissions)
+    expect(toggleAccess(permissions, 'first', true)).toBe(permissions)
     expect(toggleAccess(permissions, 'missing', true)).toBe(permissions)
     expect(toggleAccess(undefined, 'missing', true)).toEqual({})
   })

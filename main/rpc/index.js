@@ -10,7 +10,6 @@ import {
   respondToExtensionPairing,
   revokeExtensionCredential as revokePairedExtension
 } from '../api/extensionPairing'
-import { disconnectExtensionCredential } from '../api/ws'
 
 const accounts = require('../accounts').default
 const signers = require('../signers').default
@@ -31,6 +30,17 @@ const callbackWhenDone = (fn, cb) => {
   } catch (e) {
     cb(e)
   }
+}
+
+const revokeCompanionAccess = (fingerprint) => {
+  const revoked = revokePairedExtension(fingerprint)
+  const selected = accounts.getSelectedAddresses()
+  revoked.forEach(({ account, originIds }) => {
+    accounts.rejectUnapprovedRequestsForOrigins(account, originIds)
+    if (selected.some((address) => address.toLowerCase() === account.toLowerCase())) {
+      provider.accountsChanged(selected, originIds)
+    }
+  })
 }
 
 const rpc = {
@@ -139,15 +149,14 @@ const rpc = {
   },
   respondToExtensionRequest(requestId, approved, cb) {
     callbackWhenDone(() => {
-      if (!respondToExtensionPairing(requestId, approved)) {
+      if (!respondToExtensionPairing(requestId, approved, revokeCompanionAccess)) {
         throw new Error('Extension pairing request is no longer active')
       }
     }, cb)
   },
   revokeExtensionCredential(fingerprint, cb) {
     callbackWhenDone(() => {
-      revokePairedExtension(fingerprint)
-      disconnectExtensionCredential(fingerprint)
+      revokeCompanionAccess(fingerprint)
     }, cb)
   },
   updateRequest(accountId, reqId, data, actionId, cb) {

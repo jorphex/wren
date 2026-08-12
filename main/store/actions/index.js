@@ -156,12 +156,11 @@ module.exports = {
     u('main.permissions', address, (permissions = {}) => {
       const permission = permissions[handlerId]
       if (!permission) return permissions
-      if (permission.provider === provider) return permissions
+      if (provider !== false) return permissions
 
-      return {
-        ...permissions,
-        [handlerId]: { ...permission, provider }
-      }
+      const next = { ...permissions }
+      delete next[handlerId]
+      return next
     })
   },
   setAccountCloseLock: (u, value) => {

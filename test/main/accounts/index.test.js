@@ -16,6 +16,7 @@ import { SignerUserRejectedError } from '../../../main/signers/errors'
 import nav from '../../../main/windows/nav'
 import { computeAddress, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
+import { createAccountPermission } from '../../../main/provider/permissions'
 
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
@@ -1668,7 +1669,13 @@ describe('account-bound request transitions', () => {
     const response = jest.fn()
     const explicit = {
       ...targetRequest('account-bound-access', 'access'),
-      origin: '8073729a-5e59-53b7-9e69-5d9bcff94087'
+      origin: '8073729a-5e59-53b7-9e69-5d9bcff94087',
+      permission: createAccountPermission({
+        account: account2.address,
+        chains: [1],
+        handlerId: '8073729a-5e59-53b7-9e69-5d9bcff94087',
+        origin: 'account-bound.example'
+      })
     }
     store.initOrigin(explicit.origin, {
       name: 'account-bound.example',

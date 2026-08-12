@@ -1,4 +1,4 @@
-import { FRAME_SEND_ORIGIN, originIdForName } from '../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN } from '../../resources/domain/origin'
 import type { Permission } from '../store/state'
 
 import { applyPermissionAction } from './permissionEvents'
@@ -36,7 +36,7 @@ export function applyAccountPermissionRendererAction(
 
   if (action === 'toggleAccess') {
     if (!permission || typeof desiredAccess !== 'boolean') return false
-    if (permission.origin === FRAME_SEND_ORIGIN || permission.provider === desiredAccess) return false
+    if (permission.origin === FRAME_SEND_ORIGIN || desiredAccess !== false) return false
   }
 
   const externalPermissions = Object.values(permissions).filter(({ origin }) => origin !== FRAME_SEND_ORIGIN)
@@ -44,11 +44,11 @@ export function applyAccountPermissionRendererAction(
 
   const revokedPermissions =
     action === 'clearPermissions'
-      ? externalPermissions.filter(({ provider }) => provider)
-      : permission?.provider && desiredAccess === false
+      ? externalPermissions
+      : permission && desiredAccess === false
         ? [permission]
         : []
-  const affectedOriginIds = permission ? [originIdForName(permission.origin)] : undefined
+  const affectedOriginIds = permission ? [permission.handlerId] : undefined
 
   let mutated = false
   try {
@@ -66,7 +66,7 @@ export function applyAccountPermissionRendererAction(
     if (mutated) {
       dependencies.accounts.rejectUnapprovedRequestsForOrigins(
         address,
-        revokedPermissions.map(({ origin }) => originIdForName(origin))
+        revokedPermissions.map(({ handlerId }) => handlerId)
       )
     }
   }

@@ -42,7 +42,7 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 - Hosts HTTP and WebSocket JSON-RPC on localhost for browser, native, and CLI clients.
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
-- Provides per-origin account permissions, per-origin chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
+- Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
 - Stores local contacts and shows saved names during review without changing the signed payload.
 - Supports a local, allowlisted Yearn Earn catalog on Ethereum, Base, and Katana. See [Yearn Earn](YEARN_EARN.md) for the exact products, workflows, and evidence.
 - Lets users choose EVM RPC and Kubo IPFS endpoints.

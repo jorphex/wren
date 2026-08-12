@@ -1,4 +1,3 @@
-import { v5 as uuidv5 } from 'uuid'
 import log from 'electron-log'
 
 import {
@@ -12,6 +11,12 @@ import {
 } from '../../../main/api/origins'
 import accounts from '../../../main/accounts'
 import store from '../../../main/store'
+import { createAccountPermission } from '../../../main/provider/permissions'
+import { originIdForInvoker } from '../../../resources/domain/origin'
+
+const directOriginId = (origin) => originIdForInvoker(origin, { provenance: 'direct' })
+const grant = (address, originId, origin = 'test.frame.eth', chains = [1]) =>
+  createAccountPermission({ account: address, chains, handlerId: originId, origin })
 
 jest.mock('../../../main/accounts', () => ({
   current: jest.fn(),
@@ -44,8 +49,9 @@ describe('#updateOrigin', () => {
     it('adds a new origin to the store', () => {
       updateOrigin({}, 'frame.test')
 
-      expect(store.initOrigin).toHaveBeenCalledWith(uuidv5('frame.test', uuidv5.DNS), {
+      expect(store.initOrigin).toHaveBeenCalledWith(directOriginId('frame.test'), {
         name: 'frame.test',
+        provenance: 'direct',
         chain: {
           type: 'ethereum',
           id: 1
@@ -58,15 +64,16 @@ describe('#updateOrigin', () => {
 
       updateOrigin({}, origin)
 
-      expect(store.initOrigin).toHaveBeenCalledWith(uuidv5(origin, uuidv5.DNS), {
+      expect(store.initOrigin).toHaveBeenCalledWith(directOriginId(origin), {
         name: origin,
+        provenance: 'direct',
         sessionOnly: true,
         chain: { type: 'ethereum', id: 1 }
       })
     })
 
     it('does not overwrite an existing origin', () => {
-      store.set('main.origins', uuidv5('frame.test', uuidv5.DNS), { chain: { id: 1 } })
+      store.set('main.origins', directOriginId('frame.test'), { chain: { id: 1 } })
 
       updateOrigin({}, 'frame.test')
 
@@ -77,6 +84,23 @@ describe('#updateOrigin', () => {
       updateOrigin({}, 'frame.test', true)
 
       expect(store.initOrigin).not.toHaveBeenCalled()
+    })
+
+    it('separates direct clients and authenticated Companion installations claiming the same origin', () => {
+      const origin = 'https://example.test'
+      const direct = updateOrigin({}, origin)
+      const firstCompanion = updateOrigin({}, origin, false, {
+        provenance: 'companion',
+        sourceId: 'installation-one'
+      })
+      const secondCompanion = updateOrigin({}, origin, false, {
+        provenance: 'companion',
+        sourceId: 'installation-two'
+      })
+
+      expect(
+        new Set([direct.payload._origin, firstCompanion.payload._origin, secondCompanion.payload._origin])
+      ).toHaveProperty('size', 3)
     })
     it('sets the payload chain id to mainnet for connection messages with no known origin', () => {
       const originalPayload = {}
@@ -107,7 +131,7 @@ describe('#updateOrigin', () => {
     })
 
     it('sets the chain id for an existing origin', () => {
-      store.set('main.origins', uuidv5('frame.test', uuidv5.DNS), { chain: { id: 137 } })
+      store.set('main.origins', directOriginId('frame.test'), { chain: { id: 137 } })
 
       const { chainId } = updateOrigin({}, 'frame.test')
 
@@ -115,7 +139,7 @@ describe('#updateOrigin', () => {
     })
 
     it('does not override the chain id in the payload with one from a configured origin', () => {
-      store.set('main.origins', uuidv5('frame.test', uuidv5.DNS), { chain: { id: 137 } })
+      store.set('main.origins', directOriginId('frame.test'), { chain: { id: 137 } })
 
       const { chainId } = updateOrigin({ chainId: '0x1' }, 'frame.test')
 
@@ -159,7 +183,7 @@ describe('#updateOrigin', () => {
 
       expect(http).toBe('http://frame.test')
       expect(https).toBe('https://frame.test')
-      expect(uuidv5(http, uuidv5.DNS)).not.toBe(uuidv5(https, uuidv5.DNS))
+      expect(directOriginId(http)).not.toBe(directOriginId(https))
     })
 
     it('does not change an origin using an extension protocol', () => {
@@ -317,7 +341,11 @@ describe('#isTrusted', () => {
   const frameTestOriginId = 'bf93061b-3575-40c5-b526-4932b02e1f3f'
 
   beforeEach(() => {
-    store.set('main.origins', frameTestOriginId, { name: 'test.frame.eth' })
+    store.set('main.origins', frameTestOriginId, {
+      name: 'test.frame.eth',
+      chain: { type: 'ethereum', id: 1 },
+      provenance: 'direct'
+    })
     store.set('main.permissions', {})
   })
 
@@ -329,7 +357,7 @@ describe('#isTrusted', () => {
     trustedOrigins.forEach((origin) => {
       it(`does not trust requests from the ${origin} origin by default`, async () => {
         const payload = { method: 'eth_accounts', _origin: 'ac93061b-3575-40c5-b526-4932b02e1f3f' }
-        store.set('main.origins', payload._origin, { name: origin })
+        store.set('main.origins', payload._origin, { name: origin, chain: { type: 'ethereum', id: 1 } })
 
         return expect(isTrusted(payload)).resolves.toBe(false)
       })
@@ -337,7 +365,7 @@ describe('#isTrusted', () => {
       trustedExtensionMethods.forEach((method) => {
         it(`trusts all requests for ${method} from the ${origin} origin`, async () => {
           const payload = { method, _origin: 'ac93061b-3575-40c5-b526-4932b02e1f3f' }
-          store.set('main.origins', payload._origin, { name: origin })
+          store.set('main.origins', payload._origin, { name: origin, chain: { type: 'ethereum', id: 1 } })
 
           return expect(isTrusted(payload)).resolves.toBe(true)
         })
@@ -347,7 +375,10 @@ describe('#isTrusted', () => {
 
   it('does not trust any request with an invalid origin', async () => {
     const payload = { _origin: 'ac93061b-3575-40c5-b526-4932b02e1f3f' }
-    store.set('main.origins', payload._origin, { name: '!nvalid origin' })
+    store.set('main.origins', payload._origin, {
+      name: '!nvalid origin',
+      chain: { type: 'ethereum', id: 1 }
+    })
 
     return expect(isTrusted(payload)).resolves.toBe(false)
   })
@@ -367,13 +398,26 @@ describe('#isTrusted', () => {
     accounts.current.mockReturnValue({ address })
 
     store.set('main.permissions', address, {
-      'c004cc87-bfa3-50f5-812f-3d70dd8f82c6': {
-        origin: 'test.frame.eth',
-        provider: true
-      }
+      [frameTestOriginId]: grant(address, frameTestOriginId)
     })
 
     return expect(isTrusted(payload)).resolves.toBe(true)
+  })
+
+  it('rejects a transaction whose internal chain exceeds the granted scope before review', async () => {
+    const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
+    const payload = {
+      method: 'eth_sendTransaction',
+      _origin: frameTestOriginId,
+      params: [{ from: address, to: address, chainId: '0xa' }]
+    }
+    accounts.current.mockReturnValue({ address })
+    store.set('main.permissions', address, {
+      [frameTestOriginId]: grant(address, frameTestOriginId, 'test.frame.eth', [1])
+    })
+
+    await expect(isTrusted(payload)).resolves.toBe(false)
+    expect(accounts.addRequest).not.toHaveBeenCalled()
   })
 
   it('does not prompt when an origin has no standing permission', async () => {
@@ -381,12 +425,7 @@ describe('#isTrusted', () => {
     const payload = { method: 'eth_accounts', _origin: frameTestOriginId }
 
     accounts.current.mockReturnValue({ address })
-    store.set('main.permissions', address, {
-      [frameTestOriginId]: {
-        origin: 'test.frame.eth',
-        provider: false
-      }
-    })
+    store.set('main.permissions', address, {})
     await expect(isTrusted(payload)).resolves.toBe(false)
     expect(accounts.addRequest).not.toHaveBeenCalled()
   })
@@ -403,6 +442,7 @@ describe('#isTrusted', () => {
         handlerId: frameTestOriginId,
         origin: frameTestOriginId,
         account: address,
+        permission: expect.objectContaining({ handlerId: frameTestOriginId }),
         payload: {
           method: 'eth_accounts'
         }
@@ -418,6 +458,27 @@ describe('#isTrusted', () => {
     return expect(runTest).resolves
   })
 
+  it('prompts for a replacement grant when enabled networks exceed the existing scope', async () => {
+    const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
+    const payload = { method: 'wallet_requestPermissions', _origin: frameTestOriginId }
+    accounts.current.mockReturnValue({ address })
+    store.set('main.permissions', address, {
+      [frameTestOriginId]: grant(address, frameTestOriginId, 'test.frame.eth', [1])
+    })
+    store.set('main.networks.ethereum', {
+      1: { id: 1, on: true },
+      10: { id: 10, on: true }
+    })
+    accounts.addRequest.mockImplementationOnce((request, callback) => {
+      expect(request.permission.caveats[0].value.chains).toEqual(['0x1', '0xa'])
+      store.set('main.permissions', address, { [frameTestOriginId]: request.permission })
+      callback()
+    })
+
+    await expect(requestOriginAccess(payload)).resolves.toBe(true)
+    expect(accounts.addRequest).toHaveBeenCalledTimes(1)
+  })
+
   it('does not let an ordinary capability check join an explicit access prompt', async () => {
     const address = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
     const implicitPayload = { method: 'eth_accounts', _origin: frameTestOriginId }
@@ -429,10 +490,7 @@ describe('#isTrusted', () => {
       setTimeout(() => {
         // simulate user accepting the request after both RPC requests are received
         store.set('main.permissions', address, {
-          [frameTestOriginId]: {
-            origin: 'test.frame.eth',
-            provider: true
-          }
+          [frameTestOriginId]: request.permission
         })
 
         cb()
@@ -458,9 +516,11 @@ describe('#isTrusted', () => {
     const first = new AbortController()
     const second = new AbortController()
     let resolvePrompt
+    let proposedPermission
 
     accounts.current.mockReturnValue({ address })
-    accounts.addRequest.mockImplementationOnce((_request, callback) => {
+    accounts.addRequest.mockImplementationOnce((request, callback) => {
+      proposedPermission = request.permission
       resolvePrompt = callback
     })
 
@@ -473,7 +533,7 @@ describe('#isTrusted', () => {
     expect(accounts.cancelUnapprovedRequestForAccount).not.toHaveBeenCalled()
 
     store.set('main.permissions', address, {
-      [frameTestOriginId]: { origin: 'test.frame.eth', provider: true }
+      [frameTestOriginId]: proposedPermission
     })
     resolvePrompt()
 
@@ -516,12 +576,11 @@ describe('#isTrusted', () => {
       // simulate user acting on request
       accounts.addRequest.mockImplementationOnce((request, cb) => {
         setTimeout(() => {
-          store.set('main.permissions', address, {
-            'c004cc87-bfa3-50f5-812f-3d70dd8f82c6': {
-              origin: 'test.frame.eth',
-              provider: permissionGranted
-            }
-          })
+          store.set(
+            'main.permissions',
+            address,
+            permissionGranted ? { [frameTestOriginId]: request.permission } : {}
+          )
 
           cb()
         }, 1000)

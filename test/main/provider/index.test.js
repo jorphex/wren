@@ -21,8 +21,13 @@ import walletCallEvidenceRuntime from '../../../main/provider/walletCallEvidence
 import { showWalletCallStatus } from '../../../main/provider/walletCallStatusView'
 import { ApprovalType } from '../../../resources/constants'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
+import { createAccountPermission } from '../../../main/provider/permissions'
 
 const address = '0x22dd63c3619818fdbc262c78baee43cb61e9cccf'
+const defaultOriginId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
+
+const grant = (originId = defaultOriginId, origin = 'example.test', chains = [1, 5, 99]) =>
+  createAccountPermission({ account: address, chains, handlerId: originId, origin })
 
 let accountRequests = []
 let currentAccount
@@ -362,7 +367,7 @@ describe('#wallet-call provider boundary', () => {
       name: 'example.test'
     })
     store.set('main.permissions', address, {
-      [originId]: { handlerId: originId, origin: 'example.test', provider: true }
+      [originId]: grant()
     })
     store.set('main.networks.ethereum', 1, { id: 1, on: true })
   }
@@ -409,7 +414,7 @@ describe('#wallet-call provider boundary', () => {
   it.each([
     ['unauthorized origin', () => store.set('main.permissions', {}), payload(), 4100],
     ['wrong sender', () => {}, payload({ from: '0x3333333333333333333333333333333333333333' }), 4100],
-    ['unknown chain', () => {}, payload({ chainId: '0xa' }), 5710],
+    ['chain outside the grant', () => {}, payload({ chainId: '0xa' }), 4100],
     ['disabled chain', () => store.set('main.networks.ethereum', 1, { id: 1, on: false }), payload(), 5710],
     [
       'disconnected chain',
@@ -568,8 +573,8 @@ describe('#wallet-call provider boundary', () => {
       name: 'other.test'
     })
     store.set('main.permissions', address, {
-      [originId]: { handlerId: originId, origin: 'example.test', provider: true },
-      [otherOrigin]: { handlerId: otherOrigin, origin: 'other.test', provider: true }
+      [originId]: grant(),
+      [otherOrigin]: grant(otherOrigin, 'other.test')
     })
     const respond = jest.fn()
 
@@ -672,8 +677,8 @@ describe('#wallet-call provider boundary', () => {
       name: 'other.test'
     })
     store.set('main.permissions', address, {
-      [originId]: { handlerId: originId, origin: 'example.test', provider: true },
-      [otherOrigin]: { handlerId: otherOrigin, origin: 'other.test', provider: true }
+      [originId]: grant(),
+      [otherOrigin]: grant(otherOrigin, 'other.test')
     })
     const respond = jest.fn()
 
@@ -786,7 +791,7 @@ describe('#send', () => {
     ['eth_coinbase', address]
   ])('returns the selected account through %s after permission', (method, expected) => {
     store.set('main.permissions', address, {
-      granted: { origin: 'example.test', provider: true }
+      [defaultOriginId]: grant()
     })
     const response = jest.fn()
 
@@ -1103,7 +1108,7 @@ describe('#send', () => {
         name: 'example.test'
       })
       store.set('main.permissions', address, {
-        granted: { origin: 'example.test', provider: true }
+        [defaultOriginId]: grant()
       })
       store.switchOriginChain = jest.fn()
       const response = jest.fn()
@@ -1127,7 +1132,7 @@ describe('#send', () => {
   describe('#wallet_switchEthereumChain', () => {
     const authorizeOrigin = () =>
       store.set('main.permissions', address, {
-        granted: { origin: 'example.test', provider: true }
+        [defaultOriginId]: grant()
       })
 
     it('switches the authorized origin immediately without queuing a wallet request', () => {
@@ -1294,12 +1299,16 @@ describe('#send', () => {
 
     it('returns the current account permission for the invoker', (done) => {
       store.set('main.permissions', address, {
-        [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        [originId]: grant(originId, 'test.frame')
       })
 
       send(request, (response) => {
         expect(response.result).toEqual([
-          { invoker: 'test.frame', parentCapability: 'eth_accounts', caveats: [] }
+          {
+            invoker: 'test.frame',
+            parentCapability: 'eth_accounts',
+            caveats: [expect.objectContaining({ type: 'wren:permissionScope' })]
+          }
         ])
         done()
       })
@@ -1325,7 +1334,7 @@ describe('#send', () => {
       accounts.addRequest.mockImplementationOnce((req, cb) => {
         accountRequests.push(req)
         store.set('main.permissions', address, {
-          [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+          [originId]: req.permission
         })
         cb()
       })
@@ -1367,7 +1376,7 @@ describe('#send', () => {
     const grantAccess = (req, cb) => {
       accountRequests.push(req)
       store.set('main.permissions', address, {
-        [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        [originId]: req.permission
       })
       cb()
     }
@@ -1441,7 +1450,7 @@ describe('#send', () => {
 
     it('returns immediately when access is already granted', (done) => {
       store.set('main.permissions', address, {
-        [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        [originId]: grant(originId, 'test.frame')
       })
 
       send(request, (response) => {
@@ -1454,7 +1463,7 @@ describe('#send', () => {
     it('does not depend on the origin chain connection', (done) => {
       store.set('main.origins', originId, { name: 'test.frame', chain: { id: 99, type: 'ethereum' } })
       store.set('main.permissions', address, {
-        [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        [originId]: grant(originId, 'test.frame')
       })
 
       send(request, (response) => {
@@ -1527,7 +1536,7 @@ describe('#send', () => {
 
       expect(accounts.addRequest).toHaveBeenCalledTimes(1)
       store.set('main.permissions', address, {
-        [originId]: { handlerId: originId, origin: 'test.frame', provider: true }
+        [originId]: grant(originId, 'test.frame')
       })
       resolvePrompt()
 
@@ -2090,7 +2099,7 @@ describe('#send', () => {
       store.set('main.accounts', address, { balances: { lastUpdated: new Date() } })
       store.set('main.balances', address, balances)
       store.set('main.permissions', address, {
-        assets: { origin: 'example.test', provider: true }
+        [defaultOriginId]: grant(defaultOriginId, 'example.test', [1, 137, 42161])
       })
     })
 
@@ -3892,9 +3901,13 @@ describe('#assetsChanged', () => {
   })
 
   it('fires an assetsChanged event when an account has permission', (done) => {
-    hasSubscriptionPermission.mockReturnValueOnce(true)
+    hasSubscriptionPermission.mockReturnValue(true)
 
-    const assets = { account: address, nativeCurrency: [], erc20: ['tokens'] }
+    const assets = {
+      account: address,
+      nativeCurrency: [],
+      erc20: [{ chainId: 1, symbol: 'TOKEN' }]
+    }
 
     provider.once('data:subscription', (payload) => {
       expect(payload.method).toBe('eth_subscription')
@@ -3903,6 +3916,12 @@ describe('#assetsChanged', () => {
       expect(payload.params.result).toEqual(assets)
 
       expect(hasSubscriptionPermission).toHaveBeenCalledWith('assetsChanged', address, subscription.originId)
+      expect(hasSubscriptionPermission).toHaveBeenCalledWith(
+        'assetsChanged',
+        address,
+        subscription.originId,
+        1
+      )
 
       done()
     })
@@ -3941,6 +3960,7 @@ describe('state change events', () => {
     store.getObserver('provider:origins').fire()
 
     provider.subscriptions.chainChanged = [subscription]
+    hasSubscriptionPermission.mockReturnValue(true)
     provider.once('data:subscription', (event) => {
       expect(event.method).toBe('eth_subscription')
       expect(event.jsonrpc).toBe('2.0')
@@ -3953,6 +3973,19 @@ describe('state change events', () => {
       chain: { id: 137, type: 'ethereum' }
     })
     store.getObserver('provider:origins').fire()
+  })
+
+  it('does not deliver chain changes after subscription permission expires or is revoked', () => {
+    provider.subscriptions.chainChanged = [subscription]
+    hasSubscriptionPermission.mockReturnValue(false)
+    const listener = jest.fn()
+    provider.on('data:subscription', listener)
+
+    provider.chainChanged(10, subscription.originId)
+
+    provider.off('data:subscription', listener)
+    expect(listener).not.toHaveBeenCalled()
+    expect(hasSubscriptionPermission).toHaveBeenCalledWith('chainChanged', address, subscription.originId, 10)
   })
 
   it('fires a chainsChanged event to subscribers', (done) => {
@@ -4069,6 +4102,7 @@ describe('state change events', () => {
     const tokenBalance = {
       symbol: 'OHM',
       balance: '0x606401fc9',
+      chainId: 1,
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
     }
 
@@ -4079,7 +4113,7 @@ describe('state change events', () => {
     store.set('main.balances', address, [ethBalance, tokenBalance])
     store.set('selected.current', address)
 
-    hasSubscriptionPermission.mockReturnValueOnce(true)
+    hasSubscriptionPermission.mockReturnValue(true)
     accounts.current = () => ({ id: address })
     provider.subscriptions.assetsChanged = [subscription]
 

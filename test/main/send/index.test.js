@@ -119,6 +119,7 @@ it('queues a validated native transfer through the existing provider request pip
   expect(actions.initOrigin).toHaveBeenCalledWith(originIdForName(FRAME_SEND_ORIGIN), {
     chain: { type: 'ethereum', id: 1 },
     name: FRAME_SEND_ORIGIN,
+    provenance: 'managed',
     sessionOnly: false
   })
   expect(actions.setDash).toHaveBeenCalledWith({ showing: true })

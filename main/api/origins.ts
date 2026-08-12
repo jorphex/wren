@@ -1,4 +1,4 @@
-import { v4 as uuidv4, v5 as uuidv5 } from 'uuid'
+import { v4 as uuidv4 } from 'uuid'
 import { IncomingMessage } from 'http'
 import queryString from 'query-string'
 
@@ -8,6 +8,8 @@ import { requireStoreAction } from '../store/action'
 
 import type { Permission } from '../store/state'
 import type { ExtensionBrowser } from '../store/state/types/extensionCredential'
+import { originIdForInvoker, type InvokerContext } from '../../resources/domain/origin'
+import { createAccountPermission, permissionCovers } from '../provider/permissions'
 
 const dev = process.env.NODE_ENV === 'development'
 
@@ -37,6 +39,14 @@ export interface OriginAccess {
   permission?: Permission
 }
 
+interface CapabilityCheck {
+  account?: Address
+  chainId?: number | bigint | string
+  method?: string
+  now?: number
+  originId?: string
+}
+
 export interface FrameExtension {
   browser: ExtensionBrowser
   id: string
@@ -50,9 +60,9 @@ const isTrustedOrigin = (origin: string) => origin === 'frame-extension' || orig
 const isInternalMethod = (method: string) => trustedInternalMethods.includes(method)
 
 const storeApi = {
-  getPermission: (address: Address, origin: string) => {
+  getPermission: (address: Address, originId: string) => {
     const permissions: Record<string, Permission> = store('main.permissions', address) || {}
-    return Object.values(permissions).find((p) => p.origin === origin)
+    return permissions[originId]
   }
 }
 
@@ -143,9 +153,15 @@ function waitForPermission(permissionCheckId: string, check: ActivePermissionChe
   })
 }
 
-async function requestPermission(address: Address, fullPayload: RPCRequestPayload, signal?: AbortSignal) {
+async function requestPermission(
+  address: Address,
+  fullPayload: RPCRequestPayload,
+  permission: Permission,
+  signal?: AbortSignal
+) {
   const { _origin: originId, ...payload } = fullPayload
-  const permissionCheckId = `${address.toLowerCase()}:${originId}`
+  const scope = permission.caveats[0].value
+  const permissionCheckId = `${address.toLowerCase()}:${originId}:${scope.chains.join(',')}`
 
   if (permissionCheckId in activePermissionChecks) {
     const check = activePermissionChecks[permissionCheckId]
@@ -162,7 +178,8 @@ async function requestPermission(address: Address, fullPayload: RPCRequestPayloa
     handlerId: originId,
     type: 'access',
     origin: originId,
-    account: address
+    account: address,
+    permission
   }
   const check: ActivePermissionCheck = {
     promise,
@@ -184,7 +201,7 @@ async function requestPermission(address: Address, fullPayload: RPCRequestPayloa
   try {
     accounts.addRequest(request, () => {
       const origin = store('main.origins', originId)
-      const permission = origin ? storeApi.getPermission(address, origin.name) : undefined
+      const permission = origin ? storeApi.getPermission(address, originId) : undefined
 
       check.settle(permission)
     })
@@ -201,8 +218,24 @@ export function getOriginAccess(payload: RPCRequestPayload): OriginAccess | unde
 
   if (!origin || typeof origin.name !== 'string' || invalidOrigin(origin.name) || !address) return
 
-  const permission = storeApi.getPermission(address, origin.name)
+  const permission = storeApi.getPermission(address, payload._origin)
   return { address, origin: origin.name, ...(permission !== undefined && { permission }) }
+}
+
+export function hasOriginCapability(payload: RPCRequestPayload, check: CapabilityCheck = {}) {
+  const originId = check.originId || payload._origin
+  const origin = store('main.origins', originId)
+  const address = check.account || currentAccountAddress()
+  if (!origin || !address || (!check.account && !accountIsCurrent(address))) return false
+
+  const permission = storeApi.getPermission(address, originId)
+  return permissionCovers(permission, {
+    account: address,
+    ...(check.chainId !== undefined ? { chainId: check.chainId } : {}),
+    handlerId: originId,
+    method: check.method || payload.method,
+    ...(check.now !== undefined ? { now: check.now } : {})
+  })
 }
 
 export async function requestOriginAccess(
@@ -213,19 +246,56 @@ export async function requestOriginAccess(
   const access = getOriginAccess(payload)
   if (!access) return false
   if (expectedAddress && access.address.toLowerCase() !== expectedAddress.toLowerCase()) return false
-  if (access.permission?.provider) return true
 
-  const permission = await requestPermission(access.address, payload, signal)
+  const origin = store('main.origins', payload._origin)
+  const networks = (store('main.networks.ethereum') || {}) as Record<number, { id?: number; on?: boolean }>
+  const chains = Object.values(networks)
+    .filter((network) => network?.on !== false && Number.isSafeInteger(network?.id))
+    .map((network) => network.id as number)
+  if (origin?.chain?.id && !chains.includes(origin.chain.id)) chains.push(origin.chain.id)
+
+  const proposedPermission = createAccountPermission({
+    account: access.address,
+    chains,
+    handlerId: payload._origin,
+    origin: access.origin
+  })
+  const proposedChains = proposedPermission.caveats[0].value.chains
+  const existingPermissionCoversProposal =
+    permissionCovers(access.permission, {
+      account: access.address,
+      handlerId: payload._origin,
+      method: 'eth_accounts'
+    }) &&
+    proposedChains.every((chainId) =>
+      permissionCovers(access.permission, {
+        account: access.address,
+        chainId,
+        handlerId: payload._origin,
+        method: 'eth_accounts'
+      })
+    )
+  if (existingPermissionCoversProposal) return true
+
+  const permission = await requestPermission(access.address, payload, proposedPermission, signal)
   if (signal?.aborted) return false
-  return accountIsCurrent(access.address) && !!permission?.provider
+  return (
+    accountIsCurrent(access.address) &&
+    permissionCovers(permission, {
+      account: access.address,
+      handlerId: payload._origin,
+      method: 'eth_accounts'
+    })
+  )
 }
 
 export function updateOrigin(
   requestPayload: JSONRPCRequestPayload,
   origin: string,
-  connectionMessage = false
+  connectionMessage = false,
+  invoker: InvokerContext = { provenance: 'direct' }
 ): OriginUpdateResult {
-  const originId = uuidv5(origin, uuidv5.DNS)
+  const originId = originIdForInvoker(origin, invoker)
   const existingOrigin = store('main.origins', originId)
 
   if (!connectionMessage) {
@@ -238,6 +308,7 @@ export function updateOrigin(
     } else {
       requireStoreAction('initOrigin')(originId, {
         name: origin,
+        ...invoker,
         ...(isSessionOnlyOrigin(origin) && { sessionOnly: true }),
         chain: {
           id: 1,
@@ -247,7 +318,7 @@ export function updateOrigin(
     }
   }
 
-  const chainId = requestPayload.chainId || `0x${(existingOrigin?.chain.id || 1).toString(16)}`
+  const chainId = requestPayload.chainId || `0x${(existingOrigin?.chain?.id || 1).toString(16)}`
 
   const payload = {
     ...requestPayload,
@@ -304,8 +375,14 @@ export async function isTrusted(payload: RPCRequestPayload, signal?: AbortSignal
     return true
   }
 
-  const access = getOriginAccess(payload)
-  if (!access) return false
+  if (signal?.aborted) return false
 
-  return !signal?.aborted && accountIsCurrent(access.address) && !!access.permission?.provider
+  const params = Array.isArray(payload.params) ? payload.params : []
+  const requestedChain = ['wallet_switchEthereumChain', 'wallet_sendCalls', 'eth_sendTransaction'].includes(
+    payload.method
+  )
+    ? (params[0] as { chainId?: unknown } | undefined)?.chainId
+    : undefined
+  const chainId = requestedChain === undefined ? payload.chainId || origin.chain?.id : requestedChain
+  return hasOriginCapability(payload, { chainId: chainId as number | bigint | string })
 }

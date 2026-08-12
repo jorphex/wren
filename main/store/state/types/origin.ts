@@ -11,6 +11,8 @@ const SessionSchema = z.object({
 export const OriginSchema = z.object({
   chain: ChainIdSchema,
   name: z.string(),
+  provenance: z.enum(['direct', 'companion', 'internal', 'managed', 'legacy']).default('legacy'),
+  sourceId: z.string().min(1).max(256).optional(),
   sessionOnly: z.boolean().default(false),
   session: SessionSchema
 })

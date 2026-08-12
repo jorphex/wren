@@ -44,7 +44,8 @@ import {
 } from './permissions'
 import Erc20Contract from '../contracts/erc20'
 import { reconcileErc1046TokenData, resolveErc1046Metadata } from './erc1046'
-import { getOriginAccess, requestOriginAccess } from '../api/origins'
+import { getOriginAccess, hasOriginCapability, requestOriginAccess } from '../api/origins'
+import { requiresStandingCapability } from '../api/protectedMethods'
 import { parseCallsStatus, parseGetCapabilities, parseSendCalls, parseShowCallsStatus } from './walletCalls'
 import { WalletCallLifecycleController } from './walletCallLifecycle'
 import walletCallBatchLedger from './walletCallLedger'
@@ -262,14 +263,29 @@ export class Provider extends EventEmitter {
       .filter((subscription) =>
         hasSubscriptionPermission(SubscriptionType.ASSETS, address, subscription.originId)
       )
-      .forEach((subscription) => this.sendSubscriptionData(subscription.id, { ...assets, account: address }))
+      .forEach((subscription) => {
+        const visibleAssets = {
+          nativeCurrency: assets.nativeCurrency.filter((asset) =>
+            hasSubscriptionPermission(SubscriptionType.ASSETS, address, subscription.originId, asset.chainId)
+          ),
+          erc20: (assets.erc20 || []).filter((asset) =>
+            hasSubscriptionPermission(SubscriptionType.ASSETS, address, subscription.originId, asset.chainId)
+          )
+        }
+        this.sendSubscriptionData(subscription.id, { ...visibleAssets, account: address })
+      })
   }
 
   chainChanged(chainId: number, originId: string) {
     const chain = intToHex(chainId)
+    const address = accounts.getSelectedAddresses()[0]
 
     this.subscriptions.chainChanged
-      .filter((subscription) => subscription.originId === originId)
+      .filter(
+        (subscription) =>
+          subscription.originId === originId &&
+          hasSubscriptionPermission(SubscriptionType.CHAIN, address, subscription.originId, chainId)
+      )
       .forEach((subscription) => this.sendSubscriptionData(subscription.id, chain))
   }
 
@@ -281,8 +297,13 @@ export class Provider extends EventEmitter {
   }
 
   networkChanged(netId: number | string, originId: string) {
+    const address = accounts.getSelectedAddresses()[0]
     this.subscriptions.networkChanged
-      .filter((subscription) => subscription.originId === originId)
+      .filter(
+        (subscription) =>
+          subscription.originId === originId &&
+          hasSubscriptionPermission(SubscriptionType.NETWORK, address, subscription.originId, netId)
+      )
       .forEach((subscription) => this.sendSubscriptionData(subscription.id, netId))
   }
 
@@ -662,12 +683,8 @@ export class Provider extends EventEmitter {
   sendWalletCalls(payload: RPCRequestPayload, res: RPCRequestCallback) {
     try {
       const access = getOriginAccess(payload)
-      if (!access?.permission?.provider) {
-        throw { code: 4100, message: 'Origin is not authorized for wallet calls' }
-      }
-
       const currentAccount = accounts.current()
-      if (!currentAccount || currentAccount.id.toLowerCase() !== access.address.toLowerCase()) {
+      if (!access || !currentAccount || currentAccount.id.toLowerCase() !== access.address.toLowerCase()) {
         throw { code: 4100, message: 'Wallet-call account is no longer selected' }
       }
 
@@ -677,6 +694,9 @@ export class Provider extends EventEmitter {
       }
 
       const chainId = Number(BigInt(request.chainId))
+      if (!hasOriginCapability(payload, { method: payload.method, chainId: request.chainId })) {
+        throw { code: 4100, message: 'Origin is not authorized for wallet calls' }
+      }
       if (!this.walletCallChainAvailable(chainId)) {
         throw { code: 5710, message: `Unsupported chain id: ${request.chainId}` }
       }
@@ -701,16 +721,24 @@ export class Provider extends EventEmitter {
       if (request.type !== 'walletCalls') throw new Error('Wallet-call request is no longer available')
 
       let rejection: EVMError | undefined
-      if (!this.walletCallOriginAuthorized(request.origin, request.account)) {
-        rejection = { code: 4100, message: 'Wallet-call origin is no longer authorized' }
-      } else {
-        try {
+      try {
+        const chainId = Number(BigInt(request.chainId))
+        if (
+          !this.walletCallOriginAuthorized(
+            request.origin,
+            request.account,
+            request.chainId,
+            'wallet_sendCalls'
+          )
+        ) {
+          rejection = { code: 4100, message: 'Wallet-call origin is no longer authorized' }
+        } else {
           if (!this.walletCallChainAvailable(Number(BigInt(request.chainId)))) {
-            rejection = { code: 5710, message: `Unsupported chain id: ${request.chainId}` }
+            rejection = { code: 5710, message: `Unsupported chain id: ${chainId}` }
           }
-        } catch (_) {
-          rejection = { code: -32602, message: 'Invalid wallet-call chain id' }
         }
+      } catch (_) {
+        rejection = { code: -32602, message: 'Invalid wallet-call chain id' }
       }
 
       if (rejection) {
@@ -743,10 +771,13 @@ export class Provider extends EventEmitter {
     try {
       const id = parseCallsStatus(payload.params)
       const access = getOriginAccess(payload)
-      if (!access?.permission?.provider) {
+      if (!access || !hasOriginCapability(payload, { method: payload.method })) {
         throw { code: 4100, message: 'Origin is not authorized for wallet-call status' }
       }
-
+      const batch = walletCallBatchLedger.get(payload._origin, access.address, id)
+      if (!hasOriginCapability(payload, { method: payload.method, chainId: batch.chainId })) {
+        throw { code: 4100, message: 'Origin is not authorized for wallet-call status' }
+      }
       const result = walletCallBatchLedger.getStatus(payload._origin, access.address, id)
       return res({ id: payload.id, jsonrpc: payload.jsonrpc, result })
     } catch (error) {
@@ -758,10 +789,13 @@ export class Provider extends EventEmitter {
     try {
       const id = parseShowCallsStatus(payload.params)
       const access = getOriginAccess(payload)
-      if (!access?.permission?.provider) {
+      if (!access || !hasOriginCapability(payload, { method: payload.method })) {
         throw { code: 4100, message: 'Origin is not authorized for wallet-call status' }
       }
-
+      const batch = walletCallBatchLedger.get(payload._origin, access.address, id)
+      if (!hasOriginCapability(payload, { method: payload.method, chainId: batch.chainId })) {
+        throw { code: 4100, message: 'Origin is not authorized for wallet-call status' }
+      }
       const status = walletCallBatchLedger.getStatus(payload._origin, access.address, id)
       showWalletCallStatus({ account: access.address, originName: access.origin, status })
       return res({ id: payload.id, jsonrpc: payload.jsonrpc, result: null })
@@ -774,7 +808,7 @@ export class Provider extends EventEmitter {
     try {
       const request = parseGetCapabilities(payload.params)
       const access = getOriginAccess(payload)
-      if (!access?.permission?.provider || request.address.toLowerCase() !== access.address.toLowerCase()) {
+      if (!access || request.address.toLowerCase() !== access.address.toLowerCase()) {
         throw { code: 4100, message: 'Account is not authorized for wallet-call capabilities' }
       }
 
@@ -786,6 +820,9 @@ export class Provider extends EventEmitter {
           .map((id) => intToHex(id))
       const result = [...new Set(requestedChains)]
         .map((chainId) => ({ chainId, numericId: Number(BigInt(chainId)) }))
+        .filter(({ chainId }) =>
+          hasOriginCapability(payload, { method: payload.method, chainId, account: request.address })
+        )
         .filter(({ numericId }) => this.walletCallChainAvailable(numericId))
         .sort((left, right) => left.numericId - right.numericId)
         .reduce<Record<string, { atomic: { status: 'unsupported' } }>>((capabilities, { numericId }) => {
@@ -799,16 +836,13 @@ export class Provider extends EventEmitter {
     }
   }
 
-  private walletCallOriginAuthorized(originId: string, accountId: string) {
-    const origin = store('main.origins', originId)
-    if (!origin || typeof origin.name !== 'string') return false
-    const permissions = (store('main.permissions', accountId.toLowerCase()) || {}) as Record<
-      string,
-      { origin?: string; provider?: boolean }
-    >
-    return Object.values(permissions).some(
-      (permission) => permission.origin === origin.name && permission.provider === true
-    )
+  private walletCallOriginAuthorized(originId: string, accountId: string, chainId: string, method: string) {
+    return hasOriginCapability({ _origin: originId, method } as RPCRequestPayload, {
+      originId,
+      account: accountId,
+      chainId,
+      method
+    })
   }
 
   private walletCallChainAvailable(chainId: number) {
@@ -1345,8 +1379,7 @@ export class Provider extends EventEmitter {
         return resError({ message: 'Unknown requesting origin', code: 4100 }, payload, res)
       }
 
-      const access = getOriginAccess(payload)
-      if (!access?.permission?.provider) {
+      if (!hasOriginCapability(payload, { method: payload.method, chainId })) {
         return resError({ message: 'Origin is not authorized to switch chains', code: 4100 }, payload, res)
       }
       if (origin.chain.id === chainId) return res({ id: payload.id, jsonrpc: '2.0', result: null })
@@ -1589,7 +1622,10 @@ export class Provider extends EventEmitter {
     }
 
     const access = getOriginAccess(payload)
-    const result = access?.permission?.provider ? [grantedAccountPermission(access.origin)] : []
+    const result =
+      access && hasOriginCapability(payload, { method: 'eth_accounts' })
+        ? [grantedAccountPermission(access.permission)]
+        : []
     res({ id: payload.id, jsonrpc: '2.0', result })
   }
 
@@ -1674,16 +1710,29 @@ export class Provider extends EventEmitter {
     cb: RPCCallback<RPC.GetAssets.Response>
   ) {
     const access = getOriginAccess(payload)
-    if (!access?.permission?.provider) {
+    if (!access || !hasOriginCapability(payload, { method: payload.method })) {
       return resError({ code: 4100, message: 'Origin is not authorized to read wallet assets' }, payload, cb)
     }
     if (!currentAccount) return resError('no account selected', payload, cb)
 
     try {
       const { nativeCurrency, erc20 } = loadAssets(currentAccount.id)
+      const visibleOnGrantedChain = (asset: RPC.GetAssets.Balance) =>
+        hasOriginCapability(payload, {
+          account: currentAccount.id,
+          chainId: asset.chainId,
+          method: payload.method
+        })
       const { id, jsonrpc } = payload
 
-      return cb({ id, jsonrpc, result: { nativeCurrency, erc20 } })
+      return cb({
+        id,
+        jsonrpc,
+        result: {
+          nativeCurrency: nativeCurrency.filter(visibleOnGrantedChain),
+          erc20: erc20.filter(visibleOnGrantedChain)
+        }
+      })
     } catch (e) {
       return resError({ message: (e as Error).message, code: 5901 }, payload, cb)
     }
@@ -1702,6 +1751,7 @@ export class Provider extends EventEmitter {
 
   send(requestPayload: RPCRequestPayload, res: RPCRequestCallback = () => {}) {
     let payload: RPCRequestPayload
+    const outerMethod = requestPayload.method
 
     try {
       payload = mapRequest(requestPayload)
@@ -1722,6 +1772,20 @@ export class Provider extends EventEmitter {
       return res({ id: payload.id, jsonrpc: '2.0', result: true }) // Subscription was ours
     if (method === 'wallet_getPermissions') return this.getPermissions(payload, res)
     if (method === 'wallet_requestPermissions') return this.requestPermissions(payload, res)
+    if (
+      (outerMethod === 'caip_request' || outerMethod === 'wallet_request') &&
+      requiresStandingCapability(method)
+    ) {
+      const origin = getPayloadOrigin(payload)
+      const params = Array.isArray(payload.params) ? payload.params : []
+      const requestedChain = ['wallet_switchEthereumChain', 'wallet_sendCalls'].includes(method)
+        ? (params[0] as { chainId?: unknown } | undefined)?.chainId
+        : undefined
+      const chainId = requestedChain === undefined ? payload.chainId || origin?.chain.id : requestedChain
+      if (!hasOriginCapability(payload, { method, chainId: chainId as number | bigint | string })) {
+        return resError({ code: 4100, message: 'Origin is not authorized' }, payload, res)
+      }
+    }
     if (method === 'wallet_addEthereumChain') return this.addEthereumChain(payload, res)
     if (method === 'wallet_switchEthereumChain') return this.switchEthereumChain(payload, res)
     if (method === 'wallet_sendCalls') return this.sendWalletCalls(payload, res)
@@ -1737,7 +1801,7 @@ export class Provider extends EventEmitter {
     }
 
     function getAccounts(payload: RPCRequestPayload, res: RPCRequestCallback) {
-      const authorized = !!getOriginAccess(payload)?.permission?.provider
+      const authorized = hasOriginCapability(payload, { method: 'eth_accounts' })
       res({
         id: payload.id,
         jsonrpc: payload.jsonrpc,
@@ -1746,7 +1810,7 @@ export class Provider extends EventEmitter {
     }
 
     function getCoinbase(payload: RPCRequestPayload, res: RPCRequestCallback) {
-      const authorized = !!getOriginAccess(payload)?.permission?.provider
+      const authorized = hasOriginCapability(payload, { method: 'eth_coinbase' })
       const selected = authorized ? accounts.getSelectedAddresses()[0] : undefined
       res({ id: payload.id, jsonrpc: payload.jsonrpc, result: selected?.toLowerCase() || null })
     }

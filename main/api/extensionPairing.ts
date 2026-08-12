@@ -16,6 +16,11 @@ interface PendingPairing {
   waiters: number
 }
 
+export interface RevokedCompanionAccess {
+  account: string
+  originIds: string[]
+}
+
 const activeByIdentity = new Map<string, PendingPairing>()
 const activeByRequest = new Map<string, PendingPairing>()
 const rejectedIdentities = new Set<string>()
@@ -45,7 +50,10 @@ function storedCredential(fingerprint: string) {
   return ExtensionCredentialSchema.safeParse(store('main.extensionCredentials', fingerprint))
 }
 
-function replaceIdentityCredentials(candidate: ExtensionPairingCandidate) {
+function replaceIdentityCredentials(
+  candidate: ExtensionPairingCandidate,
+  revokeCredential: (fingerprint: string) => RevokedCompanionAccess[]
+) {
   const credentials: Record<string, unknown> = store('main.extensionCredentials') || {}
   Object.entries(credentials).forEach(([fingerprint, value]) => {
     const parsed = ExtensionCredentialSchema.safeParse(value)
@@ -56,8 +64,7 @@ function replaceIdentityCredentials(candidate: ExtensionPairingCandidate) {
       parsed.data.installationId === candidate.installationId &&
       fingerprint !== candidate.fingerprint
     ) {
-      requireStoreAction('removeExtensionCredential')(fingerprint)
-      disconnectExtensionCredential(fingerprint)
+      revokeCredential(fingerprint)
     }
   })
 }
@@ -149,14 +156,18 @@ export async function authorizeExtension(
   return waitForPairing(pending, signal)
 }
 
-export function respondToExtensionPairing(requestId: string, approved: boolean) {
+export function respondToExtensionPairing(
+  requestId: string,
+  approved: boolean,
+  revokeCredential = revokeExtensionCredential
+) {
   const pending = activeByRequest.get(requestId)
   if (!pending) return false
 
   const identity = pairingIdentity(pending.candidate)
   if (approved) {
     const { pairingCode: _pairingCode, ...credential } = pending.candidate
-    replaceIdentityCredentials(pending.candidate)
+    replaceIdentityCredentials(pending.candidate, revokeCredential)
     requireStoreAction('setExtensionCredential')(credential)
     rejectedIdentities.delete(identity)
   } else {
@@ -166,6 +177,21 @@ export function respondToExtensionPairing(requestId: string, approved: boolean) 
   return true
 }
 
-export function revokeExtensionCredential(fingerprint: string) {
+export function revokeExtensionCredential(fingerprint: string): RevokedCompanionAccess[] {
   requireStoreAction('removeExtensionCredential')(fingerprint)
+  disconnectExtensionCredential(fingerprint)
+
+  const origins = (store('main.origins') || {}) as Record<string, { provenance?: string; sourceId?: string }>
+  const companionOriginIds = Object.entries(origins)
+    .filter(([, origin]) => origin.provenance === 'companion' && origin.sourceId === fingerprint)
+    .map(([originId]) => originId)
+  if (companionOriginIds.length === 0) return []
+
+  const companionOrigins = new Set(companionOriginIds)
+  const permissions = (store('main.permissions') || {}) as Record<string, Record<string, unknown>>
+  return Object.entries(permissions).flatMap(([account, grants]) => {
+    const originIds = Object.keys(grants).filter((originId) => companionOrigins.has(originId))
+    originIds.forEach((originId) => requireStoreAction('toggleAccess')(account, originId, false))
+    return originIds.length > 0 ? [{ account, originIds }] : []
+  })
 }

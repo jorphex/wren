@@ -1,6 +1,8 @@
 import {
+  createAccountPermission,
   findUnsupportedRequiredMethod,
   grantedAccountPermission,
+  permissionCovers,
   parseGetPermissions,
   parseRequestPermissions,
   requestedAccountPermission
@@ -65,11 +67,42 @@ it('checks required methods against the selected signer profile', () => {
   expect(findUnsupportedRequiredMethod(['wallet_unknownMethod'], software)).toBe('wallet_unknownMethod')
 })
 
-it('formats granted and newly requested account permissions', () => {
-  expect(grantedAccountPermission('https://example.test')).toEqual({
+it('creates, evaluates, and formats a finite scoped account permission', () => {
+  const permission = createAccountPermission({
+    account: '0x1111111111111111111111111111111111111111',
+    chains: [10, 1, '0x1'],
+    handlerId: 'origin-id',
+    origin: 'https://example.test',
+    now: 123
+  })
+
+  expect(grantedAccountPermission(permission)).toEqual({
     invoker: 'https://example.test',
     parentCapability: 'eth_accounts',
-    caveats: []
+    caveats: [
+      {
+        type: 'wren:permissionScope',
+        value: expect.objectContaining({
+          account: '0x1111111111111111111111111111111111111111',
+          chains: ['0x1', '0xa'],
+          expiresAt: 2592000123
+        })
+      }
+    ]
   })
   expect(requestedAccountPermission(123)).toEqual({ parentCapability: 'eth_accounts', date: 123 })
+
+  const check = {
+    account: '0x1111111111111111111111111111111111111111',
+    handlerId: 'origin-id',
+    method: 'eth_accounts',
+    now: 124
+  }
+  expect(permissionCovers(permission, check)).toBe(true)
+  expect(permissionCovers(permission, { ...check, chainId: 10 })).toBe(true)
+  expect(permissionCovers(permission, { ...check, chainId: 137 })).toBe(false)
+  expect(permissionCovers(permission, { ...check, account: `0x${'2'.repeat(40)}` })).toBe(false)
+  expect(permissionCovers(permission, { ...check, handlerId: 'other-origin' })).toBe(false)
+  expect(permissionCovers(permission, { ...check, method: 'wallet_unknownMethod' })).toBe(false)
+  expect(permissionCovers(permission, { ...check, now: permission.caveats[0].value.expiresAt })).toBe(false)
 })

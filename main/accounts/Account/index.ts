@@ -291,18 +291,14 @@ class FrameAccount {
   }
 
   setAccess(req: AccessRequest, access: boolean) {
-    const { handlerId, origin, account } = req
+    const { origin, account } = req
     if (account.toLowerCase() === this.address) {
       // Permissions do no live inside the account summary
-      const { name } = store('main.origins', origin)
       applyPermissionAction(
         this.address,
-        () =>
-          requireStoreAction('setPermission')(this.address, {
-            handlerId,
-            origin: name,
-            provider: access
-          }),
+        () => {
+          if (access) requireStoreAction('setPermission')(this.address, req.permission)
+        },
         this.accounts,
         provider,
         [origin]
@@ -313,7 +309,7 @@ class FrameAccount {
   }
 
   getRequest<T extends AccountRequest>(id: string) {
-    return this.requests[id] as T
+    return this.requests[id] as unknown as T
   }
 
   getActiveReviewRequest<T extends AccountRequest>(handlerId: string) {

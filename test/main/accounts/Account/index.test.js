@@ -18,6 +18,7 @@ import windows from '../../../../main/windows'
 import nav from '../../../../main/windows/nav'
 import { flushPromises } from '../../../util'
 import { transitionNotification } from '../../../../resources/store/notifications'
+import { createAccountPermission } from '../../../../main/provider/permissions'
 
 jest.mock('../../../../main/reveal')
 jest.mock('../../../../main/transaction/simulation', () => ({
@@ -334,18 +335,20 @@ it('publishes account visibility after resolving access for the selected account
     handlerId: 'access-request',
     origin: 'origin-id',
     account: accountState.address,
-    type: 'access'
+    type: 'access',
+    permission: createAccountPermission({
+      account: accountState.address,
+      chains: [1],
+      handlerId: 'access-request',
+      origin: 'https://example.test'
+    })
   }
   store.mockImplementation((path) => (path === 'main.origins' ? { name: 'https://example.test' } : undefined))
   account.requests[request.handlerId] = request
 
   account.setAccess(request, true)
 
-  expect(store.setPermission).toHaveBeenCalledWith(accountState.address.toLowerCase(), {
-    handlerId: request.handlerId,
-    origin: 'https://example.test',
-    provider: true
-  })
+  expect(store.setPermission).toHaveBeenCalledWith(accountState.address.toLowerCase(), request.permission)
   expect(provider.accountsChanged).toHaveBeenCalledWith(
     [accountState.address.toLowerCase()],
     [request.origin]

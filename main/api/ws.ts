@@ -288,7 +288,19 @@ const handler = (
       }
     }
 
-    const { payload, chainId } = updateOrigin(rawPayload, origin, extensionConnecting)
+    const invoker = !socket.frameExtension
+      ? { provenance: 'direct' as const }
+      : origin === 'frame-extension'
+        ? { provenance: 'internal' as const }
+        : { provenance: 'companion' as const, sourceId: socket.extensionFingerprint || '' }
+    if (invoker.provenance === 'companion' && !invoker.sourceId) {
+      return res({
+        id: rawPayload.id,
+        jsonrpc: rawPayload.jsonrpc,
+        error: { code: 4100, message: 'Companion is not authenticated' }
+      })
+    }
+    const { payload, chainId } = updateOrigin(rawPayload, origin, extensionConnecting, invoker)
 
     try {
       parseChainId(chainId)

@@ -1,27 +1,25 @@
 import { isNetworkConnected } from '../../utils/chains'
-import { isManagedPermission } from '../permissions'
+import { isManagedPermission, isPermissionActive } from '../permissions'
 import { FRAME_SEND_ORIGIN } from '../origin'
 
 export const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 
 const hiddenOriginNames = new Set(['frame-internal', 'frame-extension', FRAME_SEND_ORIGIN])
 
-const externalPermissionAccess = (permissionsByAccount = {}) => {
+const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) => {
   const accessByOrigin = new Map()
   Object.values(permissionsByAccount).forEach((permissions = {}) => {
     Object.values(permissions).forEach((permission) => {
       if (
         isManagedPermission(permission) ||
         typeof permission?.origin !== 'string' ||
-        hiddenOriginNames.has(permission.origin)
+        hiddenOriginNames.has(permission.origin) ||
+        !isPermissionActive(permission, now)
       ) {
         return
       }
 
-      accessByOrigin.set(
-        permission.origin,
-        accessByOrigin.get(permission.origin) === true || permission.provider === true
-      )
+      accessByOrigin.set(permission.origin, true)
     })
   })
   return accessByOrigin
@@ -40,7 +38,7 @@ export function selectConnectedAppGroups({
   permissions = {},
   now = Date.now()
 }) {
-  const permissionAccess = externalPermissionAccess(permissions)
+  const permissionAccess = externalPermissionAccess(permissions, now)
 
   return Object.values(networks)
     .map((chain) => {

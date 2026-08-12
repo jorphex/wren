@@ -307,7 +307,9 @@ it.each(['Unknown/caller-selected', 'https://Unknown/caller-selected', 'legacy.e
 
     await send({ body: JSON.stringify(payload), headers: { origin } })
 
-    expect(updateOrigin).toHaveBeenLastCalledWith(payload, 'Unknown/session-1')
+    expect(updateOrigin).toHaveBeenLastCalledWith(payload, 'Unknown/session-1', false, {
+      provenance: 'direct'
+    })
   }
 )
 

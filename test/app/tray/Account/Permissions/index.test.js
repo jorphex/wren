@@ -10,10 +10,29 @@ import { act, render, screen } from '../../../../componentSetup'
 jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
 
 const account = '0x0000000000000000000000000000000000000001'
+const permission = (handlerId, origin) => ({
+  version: 1,
+  handlerId,
+  origin,
+  provider: true,
+  parentCapability: 'eth_accounts',
+  caveats: [
+    {
+      type: 'wren:permissionScope',
+      value: {
+        account,
+        methods: ['eth_accounts'],
+        chains: ['0x1'],
+        expiresAt: Date.now() + 60_000
+      }
+    }
+  ],
+  grantedAt: Date.now()
+})
 const permissions = {
   managed: { origin: FRAME_SEND_ORIGIN, provider: true },
-  second: { origin: 'zeta.example', provider: true },
-  first: { origin: 'alpha.example', provider: false }
+  second: permission('second', 'zeta.example'),
+  first: permission('first', 'alpha.example')
 }
 
 beforeAll(() => {
@@ -48,22 +67,22 @@ it('sorts permission rows by their displayed origin', () => {
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
 
-it('toggles a permission once and settles from the store value', async () => {
+it('revokes a permission once and settles from the store value', async () => {
   const { rerender, user } = render(
-    <PermissionToggle account={account} permissionId='first' origin='alpha.example' checked={false} />
+    <PermissionToggle account={account} permissionId='first' origin='alpha.example' checked />
   )
   const toggle = screen.getByRole('switch', { name: 'Access for alpha.example' })
 
   await user.dblClick(toggle)
 
   expect(link.send).toHaveBeenCalledTimes(1)
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleAccess', account, 'first', true)
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleAccess', account, 'first', false)
   expect(toggle.disabled).toBe(true)
 
-  rerender(<PermissionToggle account={account} permissionId='first' origin='alpha.example' checked={true} />)
+  rerender(<PermissionToggle account={account} permissionId='first' origin='alpha.example' checked={false} />)
   expect(screen.getByRole('switch', { name: 'Access for alpha.example' }).disabled).toBe(false)
   expect(screen.getByRole('switch', { name: 'Access for alpha.example' }).getAttribute('aria-checked')).toBe(
-    'true'
+    'false'
   )
 })
 
@@ -71,13 +90,7 @@ it('retries a dropped permission update with the same desired state and clears i
   const ref = { current: null }
   const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
   const { unmount, user } = render(
-    <PermissionToggle
-      ref={ref}
-      account={account}
-      permissionId='first'
-      origin='alpha.example'
-      checked={false}
-    />
+    <PermissionToggle ref={ref} account={account} permissionId='first' origin='alpha.example' checked />
   )
 
   await user.click(screen.getByRole('switch', { name: 'Access for alpha.example' }))
@@ -87,8 +100,8 @@ it('retries a dropped permission update with the same desired state and clears i
 
   await user.click(screen.getByRole('switch', { name: 'Access for alpha.example' }))
   expect(link.send.mock.calls).toEqual([
-    ['tray:action', 'toggleAccess', account, 'first', true],
-    ['tray:action', 'toggleAccess', account, 'first', true]
+    ['tray:action', 'toggleAccess', account, 'first', false],
+    ['tray:action', 'toggleAccess', account, 'first', false]
   ])
 
   unmount()

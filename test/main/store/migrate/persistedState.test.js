@@ -128,8 +128,7 @@ it('rejects secret-shaped and malformed fixtures', () => {
 it('migrates a representative version 12 profile through application state initialization', async () => {
   const fixture = loadFixture('v12-wallet-state.json')
   const preserved = {
-    account: clone(fixture.state.main.accounts[fixtureAccount]),
-    permission: clone(fixture.state.main.permissions[fixtureAccount])
+    account: clone(fixture.state.main.accounts[fixtureAccount])
   }
   const { migrated, mode, reloaded } = await migrateTemporaryProfile(fixture)
 
@@ -139,7 +138,7 @@ it('migrates a representative version 12 profile through application state initi
     lastSignerType: 'trezor',
     signer: 'fixture-safe7'
   })
-  expect(migrated.main.permissions[fixtureAccount]).toEqual(preserved.permission)
+  expect(migrated.main.permissions).toEqual({})
   expect(Object.values(migrated.main.accountsMeta)).toContainEqual({
     name: 'Fixture Hardware Account',
     lastUpdated: 1700000000000
@@ -180,7 +179,6 @@ it('migrates the version 37 network boundary without losing custom state', async
   const fixture = loadFixture('v37-network-state.json')
   const customChain = clone(fixture.state.main.networks.ethereum[31337])
   const { connection: customConnection, ...customChainIdentity } = customChain
-  const permission = clone(fixture.state.main.permissions[fixtureAccount])
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
 
   expect(migrated.main.networks.ethereum[31337]).toMatchObject(customChainIdentity)
@@ -192,7 +190,7 @@ it('migrates the version 37 network boundary without losing custom state', async
     lastSignerType: 'trezor',
     signer: 'fixture-safe7'
   })
-  expect(migrated.main.permissions[fixtureAccount]).toEqual(permission)
+  expect(migrated.main.permissions).toEqual({})
   expect(migrated.main.networks.ethereum[84531].connection.endpoints[0]).toMatchObject({
     id: 'rpc-1',
     on: false,
@@ -216,6 +214,7 @@ it('migrates the version 41 boundary and reloads it without another migration', 
 
   expect(migrated.main).toMatchObject({
     ...expectedMain,
+    permissions: {},
     _version: migrations.latest,
     walletCallBatches: {}
   })

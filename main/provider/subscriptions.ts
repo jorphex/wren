@@ -2,6 +2,7 @@ import store from '../store'
 
 import type { Permission } from '../store/state'
 import { isTrustedOriginId, originIdForName } from '../../resources/domain/origin'
+import { permissionCovers } from './permissions'
 
 export { isTrustedOriginId, originIdForName }
 
@@ -29,7 +30,12 @@ export type Subscription = {
   originId: string
 }
 
-export function hasSubscriptionPermission(subType: string, address: string | undefined, originId: string) {
+export function hasSubscriptionPermission(
+  subType: string,
+  address: string | undefined,
+  originId: string,
+  chainId?: number | bigint | string
+) {
   if (subType === SubscriptionType.CHAINS && isTrustedOriginId(originId)) {
     // internal trusted origins are allowed to subscribe to chain changes without approval
     return true
@@ -40,9 +46,10 @@ export function hasSubscriptionPermission(subType: string, address: string | und
   }
 
   const permissions = (store('main.permissions', address) || {}) as Record<string, Permission>
-  const permission = Object.values(permissions).find(({ origin }) => {
-    return originIdForName(origin) === originId
+  return permissionCovers(permissions[originId], {
+    account: address,
+    ...(chainId !== undefined ? { chainId } : {}),
+    handlerId: originId,
+    method: 'eth_accounts'
   })
-
-  return !!permission?.provider
 }

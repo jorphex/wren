@@ -1,4 +1,5 @@
 import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
+import { createAccountPermission } from '../../../../main/provider/permissions'
 import {
   RECENT_ORIGIN_TTL,
   nextTransientConnectedAppExpiry,
@@ -24,7 +25,11 @@ const origin = (name, chainId, session = {}) => ({
     ...session
   }
 })
-const permission = (name, provider = true) => ({ handlerId: name, origin: name, provider })
+const account = '0x1111111111111111111111111111111111111111'
+const permission = (name, active = true) =>
+  active
+    ? createAccountPermission({ account, chains: [1, 10], handlerId: name, origin: name, now: 1 })
+    : { handlerId: name, origin: name, provider: false }
 
 it('retains expired origins with durable permissions across accounts and disabled networks', () => {
   const lastUpdatedAt = now - RECENT_ORIGIN_TTL - 1

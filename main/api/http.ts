@@ -235,7 +235,7 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         }
 
         const origin = requestOrigin(req)
-        const { payload, chainId } = updateOrigin(rawPayload, origin)
+        const { payload, chainId } = updateOrigin(rawPayload, origin, false, { provenance: 'direct' })
 
         try {
           parseChainId(chainId)

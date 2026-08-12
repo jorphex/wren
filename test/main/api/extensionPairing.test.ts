@@ -64,6 +64,11 @@ beforeEach(() => {
   })
   store.setExtensionCredential = jest.fn()
   store.removeExtensionCredential = jest.fn()
+  store.toggleAccess = jest.fn((account, originId) => {
+    const grants = { ...(store('main.permissions', account) || {}) }
+    delete grants[originId]
+    store.set('main.permissions', account, grants)
+  })
 })
 
 it('accepts only an exact persisted browser identity and public key', async () => {
@@ -254,4 +259,21 @@ it('exposes explicit credential revocation', () => {
   const fingerprint = candidate('f').fingerprint
   revokeExtensionCredential(fingerprint)
   expect(store.removeExtensionCredential).toHaveBeenCalledWith(fingerprint)
+})
+
+it('revokes every grant bound to the removed Companion credential', () => {
+  const fingerprint = candidate('s').fingerprint
+  const account = '0x1111111111111111111111111111111111111111'
+  store.set('main.origins', {
+    companion: { provenance: 'companion', sourceId: fingerprint },
+    direct: { provenance: 'direct' }
+  })
+  store.set('main.permissions', account, {
+    companion: { handlerId: 'companion' },
+    direct: { handlerId: 'direct' }
+  })
+
+  expect(revokeExtensionCredential(fingerprint)).toEqual([{ account, originIds: ['companion'] }])
+  expect(store.toggleAccess).toHaveBeenCalledWith(account, 'companion', false)
+  expect(store('main.permissions', account)).toEqual({ direct: { handlerId: 'direct' } })
 })

@@ -22,6 +22,26 @@ const chain = {
   connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
 }
 const RECENT_ORIGIN_TTL = 60 * 60 * 1000
+const account = '0x0000000000000000000000000000000000000001'
+const permission = (handlerId, origin) => ({
+  version: 1,
+  handlerId,
+  origin,
+  provider: true,
+  parentCapability: 'eth_accounts',
+  caveats: [
+    {
+      type: 'wren:permissionScope',
+      value: {
+        account,
+        methods: ['eth_accounts'],
+        chains: ['0x1'],
+        expiresAt: Date.now() + 60_000
+      }
+    }
+  ],
+  grantedAt: Date.now()
+})
 
 function renderDapps(origins, permissions = {}, networks = { 1: chain }) {
   const store = Restore.create({
@@ -150,8 +170,8 @@ test('keeps an expired disconnected app visible while any account retains its pe
       }
     },
     {
-      account: {
-        permission: { handlerId: 'permission', origin: 'durable.test', provider: true }
+      [account]: {
+        permission: permission('permission', 'durable.test')
       }
     }
   )

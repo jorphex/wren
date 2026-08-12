@@ -1,22 +1,31 @@
-import { v5 as uuid } from 'uuid'
-
 import {
   enforceRequestOriginAuthorization,
   isRequestOriginAuthorized
 } from '../../../main/rpc/requestAuthorization'
+import { createAccountPermission } from '../../../main/provider/permissions'
+import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 
 const origin = 'https://alpha.example'
-const request = { type: 'transaction', origin: uuid(origin, uuid.DNS) }
+const account = '0x0000000000000000000000000000000000000001'
+const originId = originIdForInvoker(origin, { provenance: 'direct' })
+const request = {
+  type: 'transaction',
+  origin: originId,
+  account,
+  data: { chainId: '0x1' },
+  payload: { method: 'eth_sendTransaction' }
+}
+const permission = createAccountPermission({ account, chains: [1], handlerId: originId, origin })
 
 it('authorizes a request only while its external origin permission is enabled', () => {
   expect(
     isRequestOriginAuthorized(request, {
-      permission: { origin, provider: true }
+      [originId]: permission
     })
   ).toBe(true)
   expect(
     isRequestOriginAuthorized(request, {
-      permission: { origin, provider: false }
+      [originId]: { origin, provider: false }
     })
   ).toBe(false)
   expect(isRequestOriginAuthorized(request, {})).toBe(false)
@@ -25,8 +34,8 @@ it('authorizes a request only while its external origin permission is enabled', 
 it('does not authorize a different origin with the same account permission set', () => {
   expect(
     isRequestOriginAuthorized(
-      { ...request, origin: uuid('https://other.example', uuid.DNS) },
-      { permission: { origin, provider: true } }
+      { ...request, origin: originIdForInvoker('https://other.example', { provenance: 'direct' }) },
+      { [originId]: permission }
     )
   ).toBe(false)
 })
@@ -35,7 +44,13 @@ it.each(['frame-internal', 'frame-extension'])(
   'requires account authorization before %s can request signing',
   (trustedOrigin) => {
     expect(
-      isRequestOriginAuthorized({ type: 'transaction', origin: uuid(trustedOrigin, uuid.DNS) }, {})
+      isRequestOriginAuthorized(
+        {
+          ...request,
+          origin: originIdForInvoker(trustedOrigin, { provenance: 'direct' })
+        },
+        {}
+      )
     ).toBe(false)
   }
 )
@@ -44,11 +59,23 @@ it('allows an access request to establish permission', () => {
   expect(isRequestOriginAuthorized({ type: 'access', origin: request.origin }, {})).toBe(true)
 })
 
+it('allows the application-owned Send surface without a persisted external grant', () => {
+  expect(
+    isRequestOriginAuthorized(
+      {
+        ...request,
+        origin: originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      },
+      {}
+    )
+  ).toBe(true)
+})
+
 it('rejects an unauthorized approval against its stored account and handler', () => {
   const reject = jest.fn()
   const approvalRequest = {
     ...request,
-    account: '0x0000000000000000000000000000000000000001',
+    account,
     handlerId: 'request-id'
   }
 
@@ -66,10 +93,10 @@ it('leaves an authorized approval pending for its normal signer path', () => {
   const error = enforceRequestOriginAuthorization(
     {
       ...request,
-      account: '0x0000000000000000000000000000000000000001',
+      account,
       handlerId: 'request-id'
     },
-    { permission: { origin, provider: true } },
+    { [originId]: permission },
     reject
   )
 

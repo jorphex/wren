@@ -292,7 +292,9 @@ export interface PermitSignatureRequest extends AccountRequest<'signErc20Permit'
   approvals: Approval[]
 }
 
-export type AccessRequest = AccountRequest<'access'>
+export interface AccessRequest extends AccountRequest<'access'> {
+  permission: import('../store/state').Permission
+}
 
 export interface AddChainRequest extends AccountRequest<'addChain'> {
   chain: Chain
