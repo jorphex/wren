@@ -37,7 +37,26 @@ const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
   }
 ])
 
+const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
+  id: `tray-transaction-lookalike-${geometry}-${scale}`,
+  renderer: 'tray',
+  state: 'transaction-lookalike',
+  scale,
+  logicalWidth: 760,
+  logicalHeight,
+  ready: '.requestApproveTransaction .requestSign:not(:disabled)',
+  requiredControls: ['Copy transaction recipient address', 'Decline', 'Sign transaction'],
+  requiredText: [
+    'Possible address poisoning.',
+    'Verify the full address. Its first and last four characters match a destination you used before.'
+  ]
+})
+
 const reviewScenarios = () => [
+  ...INTERFACE_SCALES.flatMap((scale) => [
+    transactionLookalikeScenario('full', scale, FULL_SHELL_HEIGHT),
+    transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT)
+  ]),
   {
     id: 'dash-account-chooser-full-1',
     renderer: 'dash',

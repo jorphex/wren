@@ -5,6 +5,7 @@ const QUALIFICATION_DELEGATE = '0x6f96E6fDaA7492965aB0f9C92E978De807747901'
 const QUALIFICATION_REQUEST = 'qualification-eip7702-revocation'
 const QUALIFICATION_CODE_HASH = `0x${'ab'.repeat(32)}`
 const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
+const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
 
 const baseState = () => ({
   platform: 'linux',
@@ -137,6 +138,46 @@ const qualificationAccount = (request) => ({
   balances: { lastUpdated: '2999-01-01T00:00:00.000Z' },
   activeRequestId: request?.handlerId,
   requests: request ? { [request.handlerId]: request } : {}
+})
+
+const addressLookalikeRequest = () => ({
+  handlerId: 'qualification-address-lookalike',
+  activityId: '77777777-7777-4777-8777-777777777777',
+  type: 'transaction',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 71, jsonrpc: '2.0', method: 'eth_sendTransaction', params: [] },
+  data: {
+    from: QUALIFICATION_ACCOUNT,
+    to: QUALIFICATION_LOOKALIKE,
+    chainId: '0x1',
+    nonce: '0x7',
+    type: '0x2',
+    value: '0xde0b6b3a7640000',
+    gasLimit: '0x5208',
+    maxFeePerGas: '0x77359400',
+    maxPriorityFeePerGas: '0x3b9aca00'
+  },
+  approvals: [],
+  recognizedActions: [],
+  classification: 'NATIVE_TRANSFER',
+  recipientType: 'external',
+  locked: true,
+  simulation: {
+    status: 'succeeded',
+    source: 'eth_simulateV1',
+    calls: [{ status: 'succeeded', source: 'eth_simulateV1' }],
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: { status: 'no-code' },
+      targets: [{ status: 'no-code', account: QUALIFICATION_LOOKALIKE, callIndexes: [0] }]
+    }
+  },
+  addressSafety: {
+    assessedAt: Date.UTC(2026, 7, 12),
+    fingerprint: 'a'.repeat(64),
+    targets: [{ address: QUALIFICATION_LOOKALIKE, state: 'lookalike' }]
+  }
 })
 
 const qualificationActivity = () => [
@@ -546,6 +587,26 @@ const fixtureFor = (scenario) => {
       }
     }
     state.main.origins = { wren: { name: 'Wren' } }
+  }
+
+  if (scenario.state === 'transaction-lookalike') {
+    const request = addressLookalikeRequest()
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 132
   }
 
   return state

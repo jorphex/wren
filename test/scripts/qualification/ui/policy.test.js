@@ -51,6 +51,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
 
 it('fixtures the separator-review surfaces at native scale and geometry', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
+  const lookalikeReviews = scenarios.filter(({ state }) => state === 'transaction-lookalike')
   const chooser = scenarios.find(({ state }) => state === 'account-chooser')
   const settings = scenarios.find(({ state }) => state === 'settings')
   const settingsLocalConnections = scenarios.find(({ id }) => id === 'dash-settings-local-connections-full-1')
@@ -83,6 +84,15 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     [620, 1],
     [620, 1]
   ])
+  expect(lookalikeReviews).toHaveLength(6)
+  for (const scale of INTERFACE_SCALES) {
+    expect(lookalikeReviews.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        `tray-transaction-lookalike-full-${scale}`,
+        `tray-transaction-lookalike-short-${scale}`
+      ])
+    )
+  }
   expect([ledger.logicalWidth, ledger.scale]).toEqual([760, 1])
   for (const scenario of [recovery, recoveryExport, recoveryRestore, recoveryRestoreConfirm]) {
     expect(scenario).toMatchObject({
