@@ -7,6 +7,7 @@ import Dropdown from '../../../resources/Components/Dropdown'
 import KeyboardShortcutConfigurator from '../../../resources/Components/KeyboardShortcutConfigurator'
 import Toggle from '../../../resources/Components/Toggle'
 import DialogSurface from '../../../resources/Components/DialogSurface'
+import Recovery from './Recovery'
 
 import styled from 'styled-components'
 
@@ -155,6 +156,7 @@ export class Settings extends Component {
             <DialogSurface
               className='appInfoLineResetConfirm'
               role='alertdialog'
+              modal={false}
               labelledBy='reset-app-title'
               initialFocusRef={this.resetCancelRef}
               returnFocusRef={this.resetTriggerRef}
@@ -291,7 +293,7 @@ export class Settings extends Component {
                   {summonShortcut.configuring ? (
                     <EditShortcut
                       type='button'
-                      className='wrenControl wrenControlGhost'
+                      className='wrenControl wrenControlGhost wrenControlLarge'
                       onClick={() => {
                         link.send('tray:action', 'setShortcut', 'summon', {
                           ...summonShortcut,
@@ -304,7 +306,7 @@ export class Settings extends Component {
                   ) : (
                     <EditShortcut
                       type='button'
-                      className='wrenControl wrenControlGhost'
+                      className='wrenControl wrenControlGhost wrenControlLarge'
                       onClick={() => {
                         link.send('tray:action', 'setShortcut', 'summon', {
                           ...summonShortcut,
@@ -647,6 +649,7 @@ export class Settings extends Component {
                         as={CompanionRevokeDialog}
                         className='companionRevokeDialog'
                         role='alertdialog'
+                        modal={false}
                         labelledBy={titleId}
                         describedBy={bodyId}
                         busy={this.state.revokeCompanionPending}
@@ -691,6 +694,12 @@ export class Settings extends Component {
               })}
             </section>
           ) : null}
+          <section className='wrenSettingsSection' aria-labelledby='wren-settings-recovery'>
+            <h2 id='wren-settings-recovery' className='wrenSettingsSectionTitle'>
+              Recovery
+            </h2>
+            <Recovery />
+          </section>
           <section className='wrenSettingsSection' aria-labelledby='wren-settings-about'>
             <h2 id='wren-settings-about' className='wrenSettingsSectionTitle'>
               About

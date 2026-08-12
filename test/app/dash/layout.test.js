@@ -61,6 +61,8 @@ test('groups chooser, settings, and networks with spacing instead of decorative 
   expect(settingsStyle).toMatch(
     /\.wrenSettingsSection \+ \.wrenSettingsSection[\s\S]*?margin-top var\(--wren-space-5\)/
   )
+  expect(settingsStyle).toMatch(/\.recoverySettings[\s\S]*?gap var\(--wren-space-2\)/)
+  expect(settingsStyle).toMatch(/\.recoveryPanel[\s\S]*?border-radius 2px/)
   expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-2\)/)
   expect(chainsStyle).toMatch(/\.networkBreak[\s\S]*?margin-top var\(--wren-space-5\)/)
 })

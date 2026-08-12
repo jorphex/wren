@@ -6,7 +6,11 @@ const {
   physicalSize,
   scenarioMatrix
 } = require('../../../../scripts/qualification/ui/policy.cjs')
-const { fixtureFor, rpcReplyFor } = require('../../../../scripts/qualification/ui/state-fixture.cjs')
+const {
+  fixtureFor,
+  invokeReplyFor,
+  rpcReplyFor
+} = require('../../../../scripts/qualification/ui/state-fixture.cjs')
 
 it('covers shell, token management, delegation, revocation, and onboarding at every supported scale', () => {
   const scenarios = scenarioMatrix()
@@ -49,9 +53,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const scenarios = scenarioMatrix({ includeReview: true })
   const chooser = scenarios.find(({ state }) => state === 'account-chooser')
   const settings = scenarios.find(({ state }) => state === 'settings')
+  const recovery = scenarios.find(({ id }) => id === 'dash-settings-recovery-full-1')
+  const recoveryExport = scenarios.find(({ id }) => id === 'dash-settings-recovery-export-full-1')
+  const recoveryRestore = scenarios.find(({ id }) => id === 'dash-settings-recovery-restore-full-1')
+  const recoveryRestoreConfirm = scenarios.find(
+    ({ id }) => id === 'dash-settings-recovery-restore-confirm-full-1'
+  )
   const networks = scenarios.find(({ state }) => state === 'networks')
   const editor = scenarios.find(({ state }) => state === 'network-editor')
   const ledger = scenarios.find(({ state }) => state === 'account-ledger')
+  const activity = scenarios.find(({ state }) => state === 'account-activity')
+  const activityClear = scenarios.find(({ id }) => id === 'tray-account-activity-clear-full-1')
   const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
   const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
@@ -66,6 +78,32 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     [620, 1]
   ])
   expect([ledger.logicalWidth, ledger.scale]).toEqual([760, 1])
+  for (const scenario of [recovery, recoveryExport, recoveryRestore, recoveryRestoreConfirm]) {
+    expect(scenario).toMatchObject({
+      logicalWidth: 620,
+      scale: 1,
+      captureScroll: 'target',
+      captureScrollSelector: '#wren-settings-recovery'
+    })
+  }
+  expect(recoveryExport.action).toEqual({ type: 'clickText', text: 'Export backup' })
+  expect(recoveryRestore.action).toEqual({ type: 'clickText', text: 'Restore backup' })
+  expect(recoveryRestoreConfirm.action.steps).toEqual(
+    expect.arrayContaining([
+      { type: 'inputLabel', label: 'Backup password', value: 'orchard-sparrow-26' },
+      { type: 'clickText', text: 'Choose backup to inspect' }
+    ])
+  )
+  expect(invokeReplyFor(recoveryRestoreConfirm, 'profile:inspectBackup')).toMatchObject({
+    success: true,
+    backup: { formatVersion: 1, signerCount: 3 },
+    restoreToken: expect.stringMatching(/^[0-9a-f-]{36}$/u)
+  })
+  expect([activity.logicalWidth, activity.scale]).toEqual([760, 1])
+  expect(activityClear).toMatchObject({
+    action: { type: 'clickText', text: 'Clear activity' },
+    ready: '[role="alertdialog"]'
+  })
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
@@ -93,12 +131,19 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     'requests',
     'chains',
     'balances',
+    'activity',
     'permissions',
     'signer',
     'settings'
   ])
   expect(ledgerFixture.panel.account.modules.balances.height).toBe(248)
+  expect(ledgerFixture.panel.account.modules.activity.height).toBe(328)
+  expect(ledgerFixture.main.activity).toHaveLength(4)
   expect(ledgerFixture.panel.account.modules.permissions.height).toBe(168)
+  expect(fixtureFor(activity).windows.panel.nav[0]).toMatchObject({
+    view: 'expandedModule',
+    data: { id: 'activity', title: 'Activity' }
+  })
 })
 
 it('qualifies the decorative Control Center Wren and selected-chain explorer geometry', () => {

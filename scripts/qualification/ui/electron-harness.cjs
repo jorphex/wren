@@ -6,7 +6,7 @@ const { app, BrowserWindow, ipcMain, session } = require('electron')
 
 const { auditPage } = require('./audit-page.cjs')
 const { COMPACT_TARGET_EXCEPTIONS, physicalSize, scenarioMatrix } = require('./policy.cjs')
-const { fixtureFor, rpcReplyFor } = require('./state-fixture.cjs')
+const { fixtureFor, invokeReplyFor, rpcReplyFor } = require('./state-fixture.cjs')
 
 const projectRoot = path.resolve(__dirname, '../../..')
 const runRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_ROOT || '')
@@ -223,6 +223,57 @@ const clickText = async (webContents, text) => {
   if (!clicked) throw new Error(`Could not find button text ${text}`)
 }
 
+const inputByLabel = async (webContents, label, value) => {
+  const changed = await webContents.executeJavaScript(
+    `(() => {
+      const input = Array.from(document.querySelectorAll('input')).find(
+        (element) => element.getAttribute('aria-label') === ${JSON.stringify(label)}
+      )
+      if (!input) return false
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+      setter.call(input, ${JSON.stringify(value)})
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      return true
+    })()`,
+    true
+  )
+  if (!changed) throw new Error(`Could not find input label ${label}`)
+}
+
+const performAction = async (webContents, action) => {
+  if (action.type === 'sequence') {
+    for (const step of action.steps) {
+      await performAction(webContents, step)
+      await new Promise((resolve) => setTimeout(resolve, 30))
+    }
+    return
+  }
+  if (action.type === 'clickText') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('button')).some(
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(action.text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
+      )`
+    )
+    await clickText(webContents, action.text)
+    return
+  }
+  if (action.type === 'inputLabel') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('input')).some(
+        (input) => input.getAttribute('aria-label') === ${JSON.stringify(action.label)}
+      )`
+    )
+    await inputByLabel(webContents, action.label, action.value)
+    return
+  }
+  throw new Error(`Unknown qualification action ${action.type}`)
+}
+
 const runScenario = async (scenario) => {
   const window = createRendererWindow(scenario)
   try {
@@ -233,17 +284,7 @@ const runScenario = async (scenario) => {
       throw new Error(`${error.message}${errors.length ? `; ${errors.join(' | ')}` : ''}`)
     }
     window.webContents.setZoomFactor(scenario.scale)
-    if (scenario.action?.type === 'clickText') {
-      await waitFor(
-        window.webContents,
-        `Array.from(document.querySelectorAll('button')).some(
-          (button) =>
-            button.innerText.trim() === ${JSON.stringify(scenario.action.text)} ||
-            button.getAttribute('aria-label') === ${JSON.stringify(scenario.action.text)}
-        )`
-      )
-      await clickText(window.webContents, scenario.action.text)
-    }
+    if (scenario.action) await performAction(window.webContents, scenario.action)
     await waitFor(window.webContents, `document.querySelector(${JSON.stringify(scenario.ready)})`)
     await new Promise((resolve) => setTimeout(resolve, 900))
 
@@ -285,6 +326,15 @@ const runScenario = async (scenario) => {
             })()`,
             true
           )
+        } else if (scenario.captureScroll === 'target') {
+          await window.webContents.executeJavaScript(
+            `(() => {
+              const element = document.querySelector(${JSON.stringify(scenario.captureScrollSelector)})
+              if (!element) throw new Error('Capture scroll target was not found')
+              element.scrollIntoView({ block: 'start', inline: 'nearest' })
+            })()`,
+            true
+          )
         }
         await new Promise((resolve) => setTimeout(resolve, 50))
       }
@@ -322,6 +372,12 @@ const main = async () => {
     }
     const result = method === 'getState' ? stateByWebContents.get(event.sender.id) : reply
     event.sender.send('main:rpc', id, null, JSON.stringify(result))
+  })
+  ipcMain.handle('profile:inspectBackup', (event) => {
+    const scenario = scenarioByWebContents.get(event.sender.id)
+    const reply = scenario ? invokeReplyFor(scenario, 'profile:inspectBackup') : undefined
+    if (reply === undefined) throw new Error('Qualification harness does not provide profile:inspectBackup')
+    return reply
   })
 
   const localFileProbe = await runLocalFileSelfTest()

@@ -70,6 +70,7 @@ it('groups settings into a short, semantic ledger', () => {
     'Desktop behavior',
     'Accounts and signing',
     'Browser companions',
+    'Recovery',
     'About'
   ])
   expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Wallet shortcut'))).toBe(
@@ -112,6 +113,7 @@ it('keeps app identity, license, and reset actions in About', async () => {
 
   const reset = within(about).getByRole('button', { name: 'Reset Wren' })
   await user.click(reset)
+  expect(within(about).getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)
   expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Cancel' }))
   await user.click(within(about).getByRole('button', { name: 'Cancel' }))
   expect(document.activeElement).toBe(within(about).getByRole('button', { name: 'Reset Wren' }))
@@ -188,7 +190,9 @@ it('requires confirmation before revoking a companion pairing', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(link.rpc).not.toHaveBeenCalled()
-  expect(screen.getByRole('alertdialog', { name: 'Revoke Firefox pairing?' }).textContent).toContain(
+  const dialog = screen.getByRole('alertdialog', { name: 'Revoke Firefox pairing?' })
+  expect(dialog.getAttribute('aria-modal')).toBeNull()
+  expect(dialog.textContent).toContain(
     'This disconnects the Firefox Companion pairing from Wren. A new pairing code will be required to connect it again.'
   )
   fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))

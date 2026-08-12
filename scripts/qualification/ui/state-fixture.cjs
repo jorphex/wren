@@ -8,6 +8,7 @@ const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 
 const baseState = () => ({
   platform: 'linux',
+  version: '0.1.0',
   windows: {
     panel: { nav: [], footer: { height: 40 } },
     dash: { showing: false, nav: [], footer: { height: 40 } },
@@ -18,11 +19,12 @@ const baseState = () => ({
     accountFilter: '',
     view: 'default',
     account: {
-      moduleOrder: ['requests', 'chains', 'balances', 'permissions', 'signer', 'settings'],
+      moduleOrder: ['requests', 'chains', 'balances', 'activity', 'permissions', 'signer', 'settings'],
       modules: {
         requests: { height: 0 },
         chains: { height: 0 },
         balances: { height: 0 },
+        activity: { height: 0 },
         permissions: { height: 0 },
         signer: { height: 0 },
         settings: { height: 0 }
@@ -54,6 +56,7 @@ const baseState = () => ({
     frames: {},
     accounts: {},
     balances: {},
+    activity: [],
     signers: {},
     permissions: {},
     rates: {},
@@ -135,6 +138,50 @@ const qualificationAccount = (request) => ({
   activeRequestId: request?.handlerId,
   requests: request ? { [request.handlerId]: request } : {}
 })
+
+const qualificationActivity = () => [
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: 'workshop',
+    type: 'transaction',
+    outcome: 'confirmed',
+    createdAt: Date.UTC(2026, 7, 12, 13, 58),
+    completedAt: Date.UTC(2026, 7, 12, 14, 0),
+    chainId: 1,
+    transactionHash: QUALIFICATION_TX_HASH
+  },
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: 'garden',
+    type: 'signTypedData',
+    outcome: 'completed',
+    createdAt: Date.UTC(2026, 7, 12, 12, 30),
+    completedAt: Date.UTC(2026, 7, 12, 12, 31),
+    chainId: 1
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: 'workshop',
+    type: 'access',
+    outcome: 'completed',
+    createdAt: Date.UTC(2026, 7, 11, 18, 0),
+    completedAt: Date.UTC(2026, 7, 11, 18, 0),
+    chainId: 10
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444444',
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: 'garden',
+    type: 'walletCalls',
+    outcome: 'failed',
+    createdAt: Date.UTC(2026, 7, 10, 9, 14),
+    completedAt: Date.UTC(2026, 7, 10, 9, 15),
+    chainId: 1
+  }
+]
 
 const revocationRequest = (monitoring) => ({
   type: 'eip7702Revoke',
@@ -356,6 +403,11 @@ const fixtureFor = (scenario) => {
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
       workshop: { origin: 'workshop.example', provider: true }
     }
+    state.main.activity = qualificationActivity()
+    state.main.origins = {
+      workshop: { name: 'workshop.example' },
+      garden: { name: 'garden.example' }
+    }
     if (scenario.requestsAbsent) {
       state.panel.account.moduleOrder = state.panel.account.moduleOrder.filter((id) => id !== 'requests')
     }
@@ -363,10 +415,29 @@ const fixtureFor = (scenario) => {
       requests: { height: 48 },
       chains: { height: 104 },
       balances: { height: 248 },
+      activity: { height: 328 },
       permissions: { height: 168 },
       signer: { height: 52 },
       settings: { height: 52 }
     }
+  }
+
+  if (scenario.state === 'account-activity') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.activity = qualificationActivity()
+    state.main.origins = {
+      workshop: { name: 'workshop.example' },
+      garden: { name: 'garden.example' }
+    }
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'activity', account: QUALIFICATION_ACCOUNT, title: 'Activity' }
+      }
+    ]
   }
 
   if (scenario.state === 'account-drawer') {
@@ -459,6 +530,21 @@ const rpcReplyFor = (scenario, method) => {
   }
 }
 
+const invokeReplyFor = (scenario, method) => {
+  if (scenario.id === 'dash-settings-recovery-restore-confirm-full-1' && method === 'profile:inspectBackup') {
+    return {
+      success: true,
+      backup: {
+        formatVersion: 1,
+        createdAt: '2026-08-12T14:00:00.000Z',
+        signerCount: 3
+      },
+      restoreToken: '11111111-1111-4111-8111-111111111111',
+      tokenExpiresAt: '2026-08-12T14:05:00.000Z'
+    }
+  }
+}
+
 module.exports = {
   QUALIFICATION_ACCOUNT,
   QUALIFICATION_CODE_HASH,
@@ -466,5 +552,6 @@ module.exports = {
   QUALIFICATION_REQUEST,
   baseState,
   fixtureFor,
+  invokeReplyFor,
   rpcReplyFor
 }

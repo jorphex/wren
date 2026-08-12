@@ -59,6 +59,69 @@ const reviewScenarios = () => [
     requiredText: ['Desktop behavior', 'Accounts and signing']
   },
   {
+    id: 'dash-settings-recovery-full-1',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.recoverySettings',
+    requiredControls: ['Export backup', 'Restore backup'],
+    requiredText: ['Recovery', 'Live balances, rates, and pending requests are left out'],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-recovery'
+  },
+  {
+    id: 'dash-settings-recovery-export-full-1',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Export backup' },
+    ready: '[role="dialog"][aria-label="Export encrypted backup"]',
+    requiredControls: ['Cancel', 'Choose save location'],
+    requiredText: ['Wren cannot recover it if you forget it', 'Backup password', 'Confirm password'],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-recovery'
+  },
+  {
+    id: 'dash-settings-recovery-restore-full-1',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Restore backup' },
+    ready: '[role="dialog"][aria-label="Inspect encrypted backup"]',
+    requiredControls: ['Cancel', 'Choose backup to inspect'],
+    requiredText: ['Nothing is replaced yet', 'Backup password'],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-recovery'
+  },
+  {
+    id: 'dash-settings-recovery-restore-confirm-full-1',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickText', text: 'Restore backup' },
+        { type: 'inputLabel', label: 'Backup password', value: 'orchard-sparrow-26' },
+        { type: 'clickText', text: 'Choose backup to inspect' }
+      ]
+    },
+    ready: '[role="alertdialog"][aria-labelledby="recovery-replace-title"]',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Replace this Wren profile'],
+    requiredText: ['Version 1', 'Signer records', 'atomically replaces the current profile'],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-recovery'
+  },
+  {
     id: 'dash-networks-full-1',
     renderer: 'dash',
     state: 'networks',
@@ -86,7 +149,30 @@ const reviewScenarios = () => [
     logicalWidth: 760,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum Mainnet', 'Balances', 'Connected apps', 'Signer', 'Remove account']
+    requiredText: ['Ethereum Mainnet', 'Balances', 'Activity', 'Connected apps', 'Signer', 'Remove account']
+  },
+  {
+    id: 'tray-account-activity-full-1',
+    renderer: 'tray',
+    state: 'account-activity',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityModuleExpanded',
+    requiredControls: ['All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
+    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum Mainnet']
+  },
+  {
+    id: 'tray-account-activity-clear-full-1',
+    renderer: 'tray',
+    state: 'account-activity',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Clear activity' },
+    ready: '[role="alertdialog"]',
+    requiredControls: ['Cancel', 'Clear history'],
+    requiredText: ['Clear activity history?', 'every account on this device', 'cannot be undone']
   },
   {
     id: 'tray-account-ledger-bottom-full-1',
