@@ -234,6 +234,42 @@
   font-size var(--wren-type-caption)
   font-weight 400
   letter-spacing -.2px
+  overflow-wrap anywhere
+  word-break break-all
+
+.clusterAddressLookalikeEnd
+  color var(--wren-warning)
+  font-weight 650
+
+.addressSafetyStatus
+  display flex
+  align-items flex-start
+  gap var(--wren-space-1)
+  margin var(--wren-space-1) 0 0
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  font-weight 450
+  line-height 17px
+  text-align left
+
+.addressSafetyStatusStale
+  color var(--wren-warning)
+
+.addressSafetyStatusLookalike
+  color var(--wren-warning)
+
+  svg
+    flex none
+    margin-top 1px
+
+  span
+    margin 0
+    color var(--wren-text-secondary)
+
+  strong
+    color var(--wren-warning)
+    font-weight 650
 
 .clusterAddressRecipientFull
   position absolute

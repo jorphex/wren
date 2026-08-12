@@ -324,6 +324,36 @@ it('requires an explicit acknowledgement before a failed simulation can be submi
   expect(canApproveWalletCalls(failed, undefined, 'ledger', true)).toBe(true)
 })
 
+it('keeps a lookalike wallet-call target on the standard review path', () => {
+  const lookalike = request({
+    addressSafety: {
+      assessedAt: 1,
+      fingerprint: 'a'.repeat(64),
+      targets: [{ address: request().calls[0].to, state: 'lookalike' }]
+    }
+  })
+
+  expect(canApproveWalletCalls(lookalike, undefined, 'ledger')).toBe(true)
+})
+
+it('submits a lookalike wallet-call batch through the standard review actions', async () => {
+  const req = request({
+    account: '0x0000000000000000000000000000000000000001',
+    addressSafety: {
+      assessedAt: 1,
+      fingerprint: 'a'.repeat(64),
+      targets: [{ address: request().calls[0].to, state: 'lookalike' }]
+    }
+  })
+  const { user } = renderRequestFooter(req)
+  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+
+  expect(submit.disabled).toBe(false)
+  await user.click(submit)
+
+  expect(link.rpc).toHaveBeenCalledWith('approveRequest', req, expect.any(Function))
+})
+
 it('blocks wallet-call submission for watch-only or unknown account types', () => {
   expect(canApproveWalletCalls(request(), undefined, 'address')).toBe(false)
   expect(canApproveWalletCalls(request(), undefined, 'Address')).toBe(false)

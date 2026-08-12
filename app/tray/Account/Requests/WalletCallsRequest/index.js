@@ -2,6 +2,10 @@ import React from 'react'
 import BigNumber from 'bignumber.js'
 
 import Icon from '../../../../../resources/Components/Icon'
+import AddressIdentity from '../../../../../resources/Components/AddressIdentity'
+import AddressSafetyStatus, {
+  addressSafetyTarget
+} from '../../../../../resources/Components/AddressSafetyStatus'
 import link from '../../../../../resources/link'
 import { resolveLocalAddressIdentity } from '../../../../../resources/domain/addressBook/identity'
 import { SimulationAllowance, SimulationEffects } from '../TransactionRequest/ViewData/effects'
@@ -436,14 +440,23 @@ export class WalletCallsRequest extends React.Component {
                       onClick={() => this.copyCallAddress(index, call.to)}
                     >
                       <strong>{identity.label}</strong>
-                      <span>
-                        {this.state.copiedCall === index
-                          ? 'Address copied'
-                          : call.to
-                            ? `${identity.source} · ${call.to}`
-                            : identity.source}
-                      </span>
+                      <span>{this.state.copiedCall === index ? 'Address copied' : identity.source}</span>
+                      {call.to ? (
+                        <div className='walletCallsDestinationAddress'>
+                          <AddressIdentity
+                            address={call.to}
+                            complete={true}
+                            emphasizeEnds={
+                              addressSafetyTarget(req.addressSafety, call.to)?.state === 'lookalike'
+                            }
+                            revealOnHover={false}
+                          />
+                        </div>
+                      ) : null}
                     </button>
+                    {call.to ? (
+                      <AddressSafetyStatus address={call.to} assessment={req.addressSafety} />
+                    ) : null}
                     <div className='walletCallsCallEvidence'>
                       <span>{identity.method ? `${identity.method} call` : 'Contract call'}</span>
                       <span>Value · {formatNative(call.value, decimals, symbol)}</span>

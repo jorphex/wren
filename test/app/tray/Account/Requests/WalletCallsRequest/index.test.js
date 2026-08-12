@@ -91,6 +91,36 @@ it('shows the approved hierarchy, ordered call identities, values, and disclosed
   expect(screen.getByText('Address copied')).toBeTruthy()
 })
 
+it('shows full lookalike destinations with highlighted ends and an inline warning', () => {
+  const req = preparedRequest()
+  req.calls = [req.calls[0]]
+  req.preparation.calls = [req.preparation.calls[0]]
+  req.preparation.maxFee = req.preparation.calls[0].maxFee
+  req.simulation.calls = [req.simulation.calls[0]]
+  req.addressSafety = {
+    assessedAt: 1,
+    fingerprint: 'lookalike',
+    targets: [{ address: target, state: 'lookalike' }]
+  }
+  render(
+    <WalletCallsRequest
+      originName='example.test'
+      chainData={{ chainName: 'Ethereum', nativeCurrencySymbol: 'ETH', nativeCurrencyDecimals: 18 }}
+      req={req}
+    />
+  )
+
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Possible address poisoning. Verify the full address. Its first and last four characters match a destination you used before.'
+  )
+  expect(
+    screen
+      .getAllByText(/^(0x)?2222$/)
+      .every((segment) => segment.classList.contains('clusterAddressLookalikeEnd'))
+  ).toBe(true)
+  expect(screen.getByLabelText(target).classList.contains('clusterAddressRecipientComplete')).toBe(true)
+})
+
 it('renders per-transaction and aggregate maximum fees and opens a separate editor', async () => {
   const req = preparedRequest()
   const { user } = render(

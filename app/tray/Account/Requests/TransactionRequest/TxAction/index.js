@@ -11,6 +11,9 @@ import {
   ClusterValue
 } from '../../../../../../resources/Components/Cluster'
 import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
+import AddressSafetyStatus, {
+  addressSafetyTarget
+} from '../../../../../../resources/Components/AddressSafetyStatus'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { formatDisplayDecimal, isUnlimited } from '../../../../../../resources/utils/numbers'
 import { DisplayValue, DisplayCoinBalance } from '../../../../../../resources/Components/DisplayValue'
@@ -229,6 +232,8 @@ export class TxSending extends React.Component {
           symbol
         } = action.data || {}
         const address = getAddress(recipientAddress)
+        const distinctSafetyTarget =
+          typeof address === 'string' && address.toLowerCase() !== req.data.to?.toLowerCase()
         const localIdentity = resolveLocalAddressIdentity(
           this.store('main.addressBook'),
           this.store('main.accounts'),
@@ -283,11 +288,16 @@ export class TxSending extends React.Component {
                     <div className='clusterAddress'>
                       <AddressIdentity
                         address={address}
+                        complete={true}
                         copied={this.state.copied}
+                        emphasizeEnds={addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'}
                         label={localIdentity?.label || recipientEns}
                         revealOnHover={false}
                         source={localIdentity?.source || (recipientEns ? 'ENS' : '')}
                       />
+                      {distinctSafetyTarget ? (
+                        <AddressSafetyStatus address={address} assessment={req.addressSafety} />
+                      ) : null}
                     </div>
                   </ClusterValue>
                   <ClusterStatus>
@@ -306,6 +316,8 @@ export class TxSending extends React.Component {
           symbol
         } = action.data || {}
         const address = recipientAddress
+        const distinctSafetyTarget =
+          typeof address === 'string' && address.toLowerCase() !== req.data.to?.toLowerCase()
         const localIdentity = resolveLocalAddressIdentity(
           this.store('main.addressBook'),
           this.store('main.accounts'),
@@ -384,11 +396,16 @@ export class TxSending extends React.Component {
                     <div className='clusterAddress'>
                       <AddressIdentity
                         address={address}
+                        complete={true}
                         copied={this.state.copied}
+                        emphasizeEnds={addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'}
                         label={localIdentity?.label || spenderEns}
                         revealOnHover={false}
                         source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
                       />
+                      {distinctSafetyTarget ? (
+                        <AddressSafetyStatus address={address} assessment={req.addressSafety} />
+                      ) : null}
                     </div>
                   </ClusterValue>
                   <ClusterStatus>{this.state.copied ? 'Approval spender address copied' : ''}</ClusterStatus>

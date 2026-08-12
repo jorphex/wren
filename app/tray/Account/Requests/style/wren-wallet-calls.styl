@@ -460,12 +460,28 @@
 
 .walletCallsDestinationAddress
   margin-top 4px
-  overflow hidden
   color var(--wren-text-muted)
   font-family var(--wren-font-utility)
   font-size 12px
-  text-overflow ellipsis
-  white-space nowrap
+  overflow-wrap anywhere
+  white-space normal
+
+  .clusterAddressRecipient,
+  .clusterAddressRecipient span
+    display inline
+    margin 0
+    overflow visible
+    color inherit
+    font-family inherit
+    font-size inherit
+    text-overflow clip
+    white-space normal
+
+  .clusterAddressRecipientFull
+    display none
+
+  .clusterAddressLookalikeEnd
+    color var(--wren-warning)
 
 .walletCallsAdjustFields
   display grid

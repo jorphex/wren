@@ -1,7 +1,7 @@
 import Restore from 'react-restore'
 
 import store from '../../../../../../main/store'
-import { screen, render } from '../../../../../componentSetup'
+import { act, screen, render } from '../../../../../componentSetup'
 import TxRequestComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TransactionRequest } from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TxMain } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
@@ -43,7 +43,8 @@ import NonceControl, {
 import {
   canApproveTransaction,
   getRequiredRequestApproval,
-  isNoSignerError
+  isNoSignerError,
+  RequestCommand
 } from '../../../../../../app/tray/Footer/RequestCommand'
 import TxApproval from '../../../../../../app/tray/Footer/RequestCommand/TxApproval'
 import link from '../../../../../../resources/link'
@@ -115,6 +116,49 @@ describe('confirm', () => {
     expect(screen.getByText('To')).toBeTruthy()
     expect(screen.getByLabelText(recipient).classList.contains('clusterAddressRecipientComplete')).toBe(true)
     expect(screen.getByRole('button', { name: 'Copy transaction recipient address' })).toBeTruthy()
+  })
+
+  it('shows quiet prior-use age and escalates a different full-address lookalike', () => {
+    const previous = '0x1111111111111111111111111111111111111111'
+    const { unmount } = render(
+      <TxRecipient
+        i={0}
+        req={{
+          data: { to: previous, value: '0x1' },
+          recipientType: 'external',
+          addressSafety: {
+            assessedAt: 40 * 24 * 60 * 60 * 1000,
+            fingerprint: 'previous',
+            targets: [{ address: previous, state: 'previous', lastSubmittedAt: 0 }]
+          }
+        }}
+      />
+    )
+
+    expect(screen.getByText('Previously submitted to this address · 40 days ago')).toBeTruthy()
+    unmount()
+
+    const lookalike = `0x1234${'b'.repeat(32)}abcd`
+    render(
+      <TxRecipient
+        i={0}
+        req={{
+          data: { to: lookalike, value: '0x1' },
+          recipientType: 'external',
+          addressSafety: {
+            assessedAt: 1,
+            fingerprint: 'lookalike',
+            targets: [{ address: lookalike, state: 'lookalike' }]
+          }
+        }}
+      />
+    )
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Possible address poisoning. Verify the full address. Its first and last four characters match a destination you used before.'
+    )
+    expect(screen.getByText(/^0x1234$/i).classList.contains('clusterAddressLookalikeEnd')).toBe(true)
+    expect(screen.getByText(/^abcd$/i).classList.contains('clusterAddressLookalikeEnd')).toBe(true)
   })
 
   it('does not expose a recipient copy target for contract creation', () => {
@@ -484,6 +528,52 @@ describe('approval editing', () => {
       'erc20:approve',
       callback
     )
+  })
+})
+
+describe('address lookalike decision', () => {
+  class AddressSafetyCommand extends RequestCommand {
+    store(...path) {
+      const key = path.join('.')
+      if (key === 'windows.panel.nav') return [{ data: { step: 'confirm' } }]
+      if (key === 'main.networks.ethereum.1.isTestnet') return false
+      if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
+      if (key === 'main.networksMeta.ethereum.1') {
+        return { nativeCurrency: { symbol: 'ETH', usd: { price: 1 } } }
+      }
+      if (key.startsWith('main.mute.')) return true
+    }
+  }
+
+  it('keeps the transaction visible and uses the standard signing actions for a lookalike warning', () => {
+    const req = {
+      handlerId: 'lookalike-request',
+      account,
+      type: 'transaction',
+      data: {
+        chainId: '0x1',
+        gasLimit: '0x5208',
+        gasPrice: '0x1',
+        to: '0x1234bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbabcd'
+      },
+      addressSafety: {
+        assessedAt: 1,
+        fingerprint: 'a'.repeat(64),
+        targets: [{ address: '0x1234bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbabcd', state: 'lookalike' }]
+      },
+      simulation: {
+        status: 'succeeded',
+        accountCodeEvidence: { sender: { status: 'no-code' }, targets: [] }
+      },
+      approvals: []
+    }
+    render(<AddressSafetyCommand req={req} signingDelay={0} />)
+    act(() => jest.advanceTimersByTime(0))
+
+    expect(screen.queryByText('Verify this destination address')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /checked the address/i })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
   })
 })
 

@@ -11,6 +11,9 @@ import {
   ClusterValue
 } from '../../../../../../resources/Components/Cluster'
 import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
+import AddressSafetyStatus, {
+  addressSafetyTarget
+} from '../../../../../../resources/Components/AddressSafetyStatus'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
 
@@ -53,6 +56,7 @@ class TxRecipient extends React.Component {
       : undefined
     const yearnAction = (req.recognizedActions || []).find(({ id }) => id?.startsWith('yearn:'))
     const yearnData = yearnAction?.data || {}
+    const addressSafety = addressSafetyTarget(req.addressSafety, address)
     const title = yearnAction
       ? 'Calling Yearn Contract'
       : req.recipientType === 'contract'
@@ -74,10 +78,12 @@ class TxRecipient extends React.Component {
                 <AddressIdentity
                   address={address}
                   complete={true}
+                  emphasizeEnds={addressSafety?.state === 'lookalike'}
                   label={localIdentity?.label || ensName}
                   revealOnHover={false}
                   source={localIdentity?.source || (ensName ? 'ENS' : '')}
                 />
+                <AddressSafetyStatus address={address} assessment={req.addressSafety} />
               </div>
               <span
                 aria-hidden='true'

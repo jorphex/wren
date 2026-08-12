@@ -11,6 +11,7 @@ import {
   ClusterValue
 } from '../../../../../../resources/Components/Cluster'
 import AddressIdentity from '../../../../../../resources/Components/AddressIdentity'
+import { addressSafetyTarget } from '../../../../../../resources/Components/AddressSafetyStatus'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
 
@@ -102,7 +103,9 @@ export class TxSending extends React.Component {
                   <div className='clusterAddress'>
                     <AddressIdentity
                       address={address}
+                      complete={true}
                       copied={this.state.copied}
+                      emphasizeEnds={addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'}
                       label={localIdentity?.label || ensName}
                       revealOnHover={false}
                       source={localIdentity?.source || (ensName ? 'ENS' : '')}
