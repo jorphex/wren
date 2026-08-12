@@ -35,6 +35,7 @@ const OUTCOME_LABELS = Object.freeze({
   completed: 'Completed',
   declined: 'Declined',
   failed: 'Failed',
+  dropped: 'Dropped',
   submitted: 'Submitted',
   confirmed: 'Confirmed'
 })
@@ -73,13 +74,17 @@ const formatTime = (timestamp) =>
     minute: '2-digit'
   }).format(new Date(timestamp))
 
-const ActivityRow = ({ entry, networkName, originName }) => {
+const ActivityRow = ({ entry, networkName, originName, selected }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
   const explorerAvailable = Boolean(entry.transactionHash && entry.chainId)
 
   return (
-    <li className='activityRow'>
+    <li
+      className={`activityRow${selected ? ' activityRowSelected' : ''}`}
+      data-activity-id={entry.id}
+      tabIndex={selected ? -1 : undefined}
+    >
       <span className='activityMark' aria-hidden='true'>
         <Icon name={meta.icon} size={15} />
       </span>
@@ -140,6 +145,7 @@ export class Activity extends React.Component {
 
   componentDidMount() {
     this.resizeObserver?.observe(this.moduleRef.current)
+    this.focusSelectedEntry()
   }
 
   componentDidUpdate() {
@@ -149,10 +155,23 @@ export class Activity extends React.Component {
         this.clearStatusRef.current?.focus()
       )
     }
+    this.focusSelectedEntry()
   }
 
   componentWillUnmount() {
     this.resizeObserver?.disconnect()
+  }
+
+  focusSelectedEntry() {
+    const activityId = this.props.expandedData?.activityId
+    if (!this.props.expanded || !activityId || this.focusedActivityId === activityId) return
+    const row = [...(this.moduleRef.current?.querySelectorAll('[data-activity-id]') || [])].find(
+      (candidate) => candidate.dataset.activityId === activityId
+    )
+    if (!row) return
+    this.focusedActivityId = activityId
+    row.scrollIntoView?.({ block: 'center' })
+    row.focus()
   }
 
   openExpanded() {
@@ -224,7 +243,13 @@ export class Activity extends React.Component {
                 ? this.store('main.networks.ethereum', entry.chainId, 'name') || `Network ${entry.chainId}`
                 : ''
               return (
-                <ActivityRow entry={entry} key={entry.id} networkName={networkName} originName={originName} />
+                <ActivityRow
+                  entry={entry}
+                  key={entry.id}
+                  networkName={networkName}
+                  originName={originName}
+                  selected={this.props.expandedData?.activityId === entry.id}
+                />
               )
             })}
           </ol>

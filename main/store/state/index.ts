@@ -157,6 +157,7 @@ const mainState = {
   interfaceScale: normalizeInterfaceScale(main('interfaceScale', 1)),
   showLocalNameWithENS: main('showLocalNameWithENS', false),
   autohide: main('autohide', false),
+  transactionNotifications: main('transactionNotifications', true),
   accountCloseLock: main('accountCloseLock', false),
   hardwareDerivation: main('hardwareDerivation', 'mainnet'),
   menubarGasPrice: main('menubarGasPrice', false),

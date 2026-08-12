@@ -17,6 +17,7 @@ const state = {
   main: {
     accountCloseLock: false,
     autohide: false,
+    transactionNotifications: true,
     instanceId: '11111111-1111-4111-8111-111111111111',
     interfaceScale: 1.5,
     extensionCredentials: {
@@ -136,6 +137,11 @@ it('cancels a staged reset from About with Escape', async () => {
 
 it.each([
   ['Auto-hide', 'Auto-hide', ['tray:action', 'setAutohide', true]],
+  [
+    'Transaction notifications',
+    'Transaction notifications',
+    ['tray:action', 'setTransactionNotifications', false]
+  ],
   ['Run on startup', 'Run on startup', ['tray:action', 'toggleLaunch']],
   ['Reveal from screen edge', 'Reveal from screen edge', ['tray:action', 'toggleReveal']],
   ['Show account name with ENS', 'Show account name with ENS', ['tray:action', 'toggleShowLocalNameWithENS']]

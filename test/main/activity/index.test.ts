@@ -53,7 +53,9 @@ it('records an explicit completion through the bounded store action', () => {
   const action = jest.fn()
   ;(requireStoreAction as jest.Mock).mockReturnValue(action)
 
-  expect(recordRequestActivity(transaction({ status: undefined, tx: undefined }), 'completed')).toBe(true)
+  expect(recordRequestActivity(transaction({ status: undefined, tx: undefined }), 'completed')).toEqual(
+    expect.objectContaining({ outcome: 'completed' })
+  )
   expect(action).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'completed' }))
 })
 
@@ -62,7 +64,9 @@ it('never lets history persistence interfere with request completion', () => {
     throw new Error('disk unavailable')
   })
 
-  expect(recordRequestActivity(transaction({ status: undefined, tx: undefined }), 'completed')).toBe(false)
+  expect(
+    recordRequestActivity(transaction({ status: undefined, tx: undefined }), 'completed')
+  ).toBeUndefined()
 })
 
 it('ignores legacy request summaries that lack newer nested context', () => {

@@ -94,6 +94,21 @@ it('offers an explorer action only for a persisted transaction hash', () => {
   expect(link.send).toHaveBeenCalledWith('tray:openExplorer', { type: 'ethereum', id: 1 }, transactionHash)
 })
 
+it('focuses the exact activity row requested by native notification navigation', () => {
+  const selected = entries[2]
+  render(
+    <ActivityHarness
+      account={account}
+      moduleId='activity'
+      expanded
+      expandedData={{ activityId: selected.id }}
+    />
+  )
+
+  expect(document.activeElement).toBe(screen.getAllByRole('listitem')[2])
+  expect(document.activeElement.classList.contains('activityRowSelected')).toBe(true)
+})
+
 it('uses an explicit privacy-preserving empty state', () => {
   render(<ActivityHarness account={account} entries={[]} moduleId='activity' />)
 

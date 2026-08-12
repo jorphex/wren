@@ -1,4 +1,5 @@
 import log from 'electron-log'
+import { randomUUID } from 'crypto'
 import { isValidAddress } from '@ethereumjs/util'
 
 import {
@@ -1418,6 +1419,7 @@ class FrameAccount {
 
     req.mode = RequestMode.Normal
     req.created = Date.now()
+    req.activityId = req.activityId || randomUUID()
     req.queueIndex = this.nextRequestQueueIndex++
     req.res = res
     this.requests[req.handlerId] = req

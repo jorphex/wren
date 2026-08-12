@@ -32,6 +32,10 @@ const PreferencesSchema = {
     .default(1)
     .describe('Requested interface scale'),
   autohide: z.boolean().default(false).describe('Automatically hide Wren when it loses focus'),
+  transactionNotifications: z
+    .boolean()
+    .default(true)
+    .describe('Show privacy-safe terminal transaction notifications while Wren is hidden'),
   accountCloseLock: z
     .boolean()
     .default(false)

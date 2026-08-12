@@ -828,6 +828,13 @@ store.api.feed((_state, actions) => {
 })
 
 export default {
+  isAnyWrenVisible() {
+    return Boolean(
+      tray?.isVisible() ||
+      dash?.isVisible() ||
+      (windows.onboard && !windows.onboard.isDestroyed() && windows.onboard.isVisible())
+    )
+  },
   toggleTray() {
     tray.toggle()
   },

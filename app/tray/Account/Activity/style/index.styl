@@ -48,6 +48,10 @@
   min-width 0
   flex-direction column
 
+.activityRowSelected
+  outline 2px solid var(--wren-focus)
+  outline-offset 2px
+
 .activityTitle
   overflow hidden
   font-size var(--wren-type-small)
@@ -79,7 +83,8 @@
 .activityOutcome-completed
   color var(--wren-success)
 
-.activityOutcome-failed
+.activityOutcome-failed,
+.activityOutcome-dropped
   color var(--wren-danger)
 
 .activityExplorer

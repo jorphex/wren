@@ -65,7 +65,7 @@ export const requestActivityEntry = (
       (request.type === 'transaction' || request.type === 'eip7702Revoke') && request.tx?.hash?.toLowerCase()
     const chainId = chainIdFor(request)
     const candidate = {
-      id: randomUUID(),
+      id: request.activityId || randomUUID(),
       account: request.account.toLowerCase(),
       origin: request.origin.slice(0, 256),
       type: request.type,
@@ -84,12 +84,12 @@ export const requestActivityEntry = (
 
 export const recordRequestActivity = (request: AnyAccountRequest, outcome?: ActivityOutcome) => {
   const entry = requestActivityEntry(request, outcome)
-  if (!entry) return false
+  if (!entry) return
   try {
     requireStoreAction('recordActivity')(entry)
-    return true
+    return entry
   } catch {
     // History is secondary: persistence failure must never alter the request response lifecycle.
-    return false
+    return
   }
 }

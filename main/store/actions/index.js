@@ -189,6 +189,21 @@ module.exports = {
     )
   },
   clearActivity: (u) => u('main.activity', () => []),
+  showAccountActivity: (u, account, activityId) => {
+    const crumb = {
+      view: 'expandedModule',
+      data: { id: 'activity', account, title: 'Activity', activityId }
+    }
+    u('selected.current', () => account)
+    u('selected.minimized', () => false)
+    u('selected.open', () => true)
+    u('panel.view', () => 'default')
+    u('windows.panel.nav', (nav = []) => [
+      crumb,
+      ...nav.filter((item) => !(item?.view === 'expandedModule' && item?.data?.id === 'activity'))
+    ])
+    u('windows.panel.showing', () => true)
+  },
   setYearnCatalogCache: (u, catalogCache) => {
     u('main.yearn.catalogCache', () => catalogCache)
   },
@@ -331,6 +346,9 @@ module.exports = {
   },
   setAutohide: (u, v) => {
     u('main.autohide', () => v)
+  },
+  setTransactionNotifications: (u, value) => {
+    u('main.transactionNotifications', () => Boolean(value))
   },
   setGasFees: (u, netType, netId, fees) => {
     u('main.networksMeta', netType, netId, 'gas.price.fees', () => fees)

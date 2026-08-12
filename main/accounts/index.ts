@@ -1,6 +1,5 @@
 import EventEmitter from 'events'
 import log from 'electron-log'
-import { Notification } from 'electron'
 import { addHexPrefix } from '@ethereumjs/util'
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid'
 import { toBeHex } from 'ethers'
@@ -44,7 +43,6 @@ import {
 
 import type { Chain } from '../chains'
 import { ActionType } from '../transaction/actions'
-import { openBlockExplorer } from '../windows/window'
 import { ApprovalType } from '../../resources/constants'
 import { accountNS } from '../../resources/domain/account'
 import { chainUsesOptimismFees } from '../../resources/utils/chains'
@@ -64,6 +62,8 @@ import {
 import { EIP7702_REVOKE_INTRINSIC_GAS } from '../transaction/eip7702'
 import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
 import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain/account/code'
+import { recordRequestActivity } from '../activity'
+import { notifyTransactionOutcome } from '../notifications/transaction'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -95,13 +95,6 @@ function isTransactionReceipt(value: unknown): value is TransactionReceipt {
     parseRpcQuantity(value['blockNumber']) !== undefined &&
     parseRpcQuantity(value['status']) !== undefined
   )
-}
-
-function notify(title: string, body: string, action: (event: Electron.Event) => void) {
-  const notification = new Notification({ title, body })
-  notification.on('click', action)
-
-  setTimeout(() => notification.show(), 1000)
 }
 
 function toTransactionsByLayer(requests: Record<string, AccountRequest>, chainId?: number) {
@@ -1140,7 +1133,21 @@ export class Accounts extends EventEmitter {
               if (receiptRes.result && !receipt)
                 return reject(new Error('Invalid transaction receipt response'))
 
-              if (receipt && account.requests[id]) {
+              if (!receipt) {
+                const request = account.requests[id]
+                if (request?.type === 'transaction' && request.tx?.receipt) {
+                  const { receipt: _staleReceipt, ...transactionState } = request.tx
+                  request.tx = { ...transactionState, confirmations: 0 }
+                  if (request.status === RequestStatus.Confirming) {
+                    request.status = RequestStatus.Verifying
+                    request.notice = 'Verifying'
+                  }
+                  account.update()
+                }
+                return resolve(0)
+              }
+
+              if (account.requests[id]) {
                 const txRequest = this.getTransactionRequest(account, id)
 
                 txRequest.tx = {
@@ -1180,31 +1187,9 @@ export class Accounts extends EventEmitter {
                   }
                 }
 
-                if (receipt.status === '0x1' && txRequest.status === RequestStatus.Verifying) {
+                if (txRequest.status === RequestStatus.Verifying || txRequest.status === RequestStatus.Sent) {
                   txRequest.status = RequestStatus.Confirming
                   txRequest.notice = 'Confirming'
-                  txRequest.completed = Date.now()
-                  const hash = txRequest.tx?.hash || ''
-                  const h = hash.substring(0, 6) + '...' + hash.substring(hash.length - 4)
-                  const body = `Transaction ${h} successful! \n Click for details`
-
-                  // Drop any other pending txs with same nonce
-                  Object.keys(account.requests).forEach((k) => {
-                    const txReq = this.getTransactionRequest(account, k)
-                    if (
-                      txReq.status === RequestStatus.Verifying &&
-                      txReq.data.nonce === (account.requests[id] as TransactionRequest).data.nonce
-                    ) {
-                      txReq.status = RequestStatus.Error
-                      txReq.notice = 'Dropped'
-                      setTimeout(() => this.accounts[account.address] && this.removeRequest(account, k), 8000)
-                    }
-                  })
-
-                  // If Wren is hidden, trigger a native notification.
-                  notify('Transaction Successful', body, () => {
-                    openBlockExplorer(targetChain, hash)
-                  })
                 }
                 const receiptBlock = parseRpcQuantity(receipt.blockNumber)
                 if (receiptBlock === undefined) return reject(new Error('Invalid receipt block number'))
@@ -1217,12 +1202,75 @@ export class Accounts extends EventEmitter {
     })
   }
 
+  private terminalizeTransaction(account: FrameAccount, id: string) {
+    const request = account.requests[id]
+    if (
+      request?.type !== 'transaction' ||
+      ![RequestStatus.Sent, RequestStatus.Verifying, RequestStatus.Confirming].includes(
+        request.status as RequestStatus
+      ) ||
+      !request.tx?.receipt ||
+      request.tx.confirmations <= 12
+    ) {
+      return false
+    }
+
+    const receiptStatus = parseRpcQuantity(request.tx.receipt.status)
+    if (receiptStatus !== 0n && receiptStatus !== 1n) return false
+
+    const outcome = receiptStatus === 1n ? 'confirmed' : 'failed'
+    request.status = receiptStatus === 1n ? RequestStatus.Confirmed : RequestStatus.Error
+    request.notice = receiptStatus === 1n ? 'Confirmed' : 'Failed'
+    request.completed = Date.now()
+    const entry = recordRequestActivity(request, outcome)
+    if (entry) notifyTransactionOutcome(entry.id, request.account, outcome)
+
+    if (receiptStatus === 1n) this.dropReplacedTransactions(account, id)
+    account.update()
+    return true
+  }
+
+  private dropReplacedTransactions(account: FrameAccount, replacementId: string) {
+    const replacement = account.requests[replacementId]
+    if (replacement?.type !== 'transaction') return
+    const replacementNonce = parseRpcQuantity(replacement.data.nonce)
+    const replacementChainId = parseRpcQuantity(replacement.data.chainId)
+    if (replacementNonce === undefined || replacementChainId === undefined) return
+
+    Object.entries(account.requests).forEach(([candidateId, candidate]) => {
+      if (
+        candidateId === replacementId ||
+        candidate.type !== 'transaction' ||
+        ![RequestStatus.Sent, RequestStatus.Verifying, RequestStatus.Confirming].includes(
+          candidate.status as RequestStatus
+        ) ||
+        parseRpcQuantity(candidate.data.chainId) !== replacementChainId ||
+        parseRpcQuantity(candidate.data.nonce) !== replacementNonce
+      ) {
+        return
+      }
+
+      candidate.status = RequestStatus.Error
+      candidate.notice = 'Dropped'
+      candidate.completed = Date.now()
+      const entry = recordRequestActivity(candidate, 'dropped')
+      if (entry) notifyTransactionOutcome(entry.id, candidate.account, 'dropped')
+      const removalTimer = setTimeout(() => {
+        if (this.accounts[account.address]?.requests[candidateId]) {
+          account.clearRequest(candidateId, 'dropped')
+        }
+      }, 8000)
+      removalTimer.unref?.()
+    })
+  }
+
   private async txMonitor(account: FrameAccount, requestId: string, hash: string) {
     if (!account) return log.error('txMonitor had no target account')
 
     const txRequest = this.getTransactionRequest(account, requestId)
     const rawTx = txRequest.data
     txRequest.tx = { hash, confirmations: 0 }
+    recordRequestActivity(txRequest, 'submitted')
 
     account.update()
 
@@ -1264,10 +1312,7 @@ export class Accounts extends EventEmitter {
 
                 account.update()
 
-                if (confirmations > 12) {
-                  txRequest.status = RequestStatus.Confirmed
-                  txRequest.notice = 'Confirmed'
-                  account.update()
+                if (this.terminalizeTransaction(account, requestId)) {
                   setTimeout(
                     () => this.accounts[account.address] && this.removeRequest(account, requestId),
                     8000
@@ -1347,11 +1392,7 @@ export class Accounts extends EventEmitter {
                 txRequest.tx = { ...txRequest.tx, confirmations }
                 account.update()
 
-                if (confirmations > 12) {
-                  txRequest.status = RequestStatus.Confirmed
-                  txRequest.notice = 'Confirmed'
-                  account.update()
-
+                if (this.terminalizeTransaction(account, requestId)) {
                   removeSubscription(8000)
                 }
               }

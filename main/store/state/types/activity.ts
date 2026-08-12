@@ -19,7 +19,7 @@ export const ActivityEntrySchema = z
       'walletCalls',
       'eip7702Revoke'
     ]),
-    outcome: z.enum(['completed', 'declined', 'failed', 'submitted', 'confirmed']),
+    outcome: z.enum(['completed', 'declined', 'failed', 'submitted', 'confirmed', 'dropped']),
     createdAt: z.number().int().nonnegative(),
     completedAt: z.number().int().nonnegative(),
     chainId: z.number().int().positive().optional(),

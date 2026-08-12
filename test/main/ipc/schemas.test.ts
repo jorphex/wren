@@ -33,6 +33,11 @@ test('enforces exact event tuple arity and Ethereum values', () => {
   expect(parseRendererIpcArgs('event', 'tray:renameAccount', ['0x1', 'Account']).success).toBe(false)
 })
 
+test('allows only an argument-free activity clear action', () => {
+  expect(parse('event', 'tray:action', ['clearActivity'])).toEqual(['clearActivity'])
+  expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity', true]).success).toBe(false)
+})
+
 test('does not coerce chain or token identifiers', () => {
   expect(parseRendererIpcArgs('invoke', 'tray:getTokenDetails', [address, 1]).success).toBe(true)
   expect(parseRendererIpcArgs('invoke', 'tray:getTokenDetails', [address, '1']).success).toBe(false)

@@ -389,6 +389,20 @@ export class Settings extends Component {
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
               <div className='signerPermissionControls'>
+                <div className='signerPermissionSetting'>Transaction notifications</div>
+                <Toggle
+                  checked={this.store('main.transactionNotifications') !== false}
+                  label='Transaction notifications'
+                  onChange={(enabled) => link.send('tray:action', 'setTransactionNotifications', enabled)}
+                />
+              </div>
+              <div className='signerPermissionDetails'>
+                Show confirmation, failure, and dropped updates when Wren is hidden. Notifications never
+                include transaction details.
+              </div>
+            </div>
+            <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
+              <div className='signerPermissionControls'>
                 <div className='signerPermissionSetting'>Run on startup</div>
                 <Toggle
                   checked={this.store('main.launch')}

@@ -18,6 +18,14 @@ import { computeAddress, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
 
+jest.mock('electron', () => ({
+  Notification: class {
+    static isSupported() {
+      return true
+    }
+  }
+}))
+
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
   emit: jest.fn(),
@@ -26,7 +34,11 @@ jest.mock('../../../main/provider', () => ({
   connection: { connections: { ethereum: {} }, send: jest.fn() }
 }))
 jest.mock('../../../main/signers', () => ({ get: jest.fn() }))
-jest.mock('../../../main/windows', () => ({ broadcast: jest.fn(), showTray: jest.fn() }))
+jest.mock('../../../main/windows', () => ({
+  broadcast: jest.fn(),
+  isAnyWrenVisible: jest.fn(() => true),
+  showTray: jest.fn()
+}))
 jest.mock('../../../main/windows/nav', () => ({ on: jest.fn(), forward: jest.fn() }))
 jest.mock('../../../main/externalData')
 jest.mock('../../../main/transaction')
@@ -1925,6 +1937,10 @@ describe('#confirmations', () => {
       blockNumber: '0x5',
       status: '0x0'
     })
+    expect(targetAccount.requests[targetRequest.handlerId]).toMatchObject({
+      status: 'confirming',
+      notice: 'Confirming'
+    })
     expect(Accounts.current().id).toBe(account.id)
     expect(provider.send).not.toHaveBeenCalled()
     expect(
@@ -1933,6 +1949,75 @@ describe('#confirmations', () => {
       ['eth_blockNumber', { type: 'ethereum', id: 10 }],
       ['eth_getTransactionReceipt', { type: 'ethereum', id: 10 }]
     ])
+  })
+})
+
+describe('ordinary transaction terminal monitoring', () => {
+  const monitored = (handlerId, nonce = '0xa') => ({
+    ...request,
+    handlerId,
+    account: account.address,
+    data: { ...request.data, nonce },
+    status: 'confirming',
+    tx: {
+      hash: `0x${'a'.repeat(64)}`,
+      confirmations: 13,
+      receipt: { blockNumber: '0x1', gasUsed: '0x5208', status: '0x1' }
+    }
+  })
+
+  beforeEach(() => store.clearActivity())
+
+  it('terminalizes a failed receipt only beyond twelve confirmations and upserts its activity', () => {
+    const targetAccount = Accounts.current()
+    const target = monitored('failed-terminal')
+    target.tx.receipt.status = '0x0'
+    target.tx.confirmations = 12
+    targetAccount.addRequest(target)
+
+    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(false)
+    expect(target.status).toBe('confirming')
+
+    target.tx.confirmations = 13
+    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(true)
+    expect(target).toMatchObject({ status: 'error', notice: 'Failed' })
+    expect(store('main.activity').find(({ id }) => id === target.activityId)).toMatchObject({
+      outcome: 'failed',
+      transactionHash: target.tx.hash
+    })
+    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(false)
+  })
+
+  it('drops only comparable ordinary replacements after terminal success', () => {
+    const targetAccount = Accounts.current()
+    const replacement = monitored('replacement')
+    const replaced = monitored('replaced')
+    const otherNonce = monitored('other-nonce', '0xb')
+    const otherChain = monitored('other-chain')
+    otherChain.data.chainId = '0xa'
+    replaced.status = 'verifying'
+    replaced.tx.confirmations = 0
+    otherNonce.status = 'verifying'
+    otherNonce.tx.confirmations = 0
+    otherChain.status = 'verifying'
+    otherChain.tx.confirmations = 0
+    targetAccount.addRequest(replaced)
+    targetAccount.addRequest(otherNonce)
+    targetAccount.addRequest(otherChain)
+    targetAccount.addRequest(replacement)
+
+    replacement.tx.confirmations = 12
+    expect(Accounts.terminalizeTransaction(targetAccount, replacement.handlerId)).toBe(false)
+    expect(replaced.status).toBe('verifying')
+
+    replacement.tx.confirmations = 13
+    expect(Accounts.terminalizeTransaction(targetAccount, replacement.handlerId)).toBe(true)
+    expect(replaced).toMatchObject({ status: 'error', notice: 'Dropped' })
+    expect(otherNonce.status).toBe('verifying')
+    expect(otherChain.status).toBe('verifying')
+    expect(store('main.activity').find(({ id }) => id === replaced.activityId)).toMatchObject({
+      outcome: 'dropped'
+    })
   })
 })
 

@@ -29,7 +29,8 @@ import {
   updateTypedDataRequest as updateTypedDataAction,
   setGlideSide as setGlideSideAction,
   setInterfaceScale as setInterfaceScaleAction,
-  setInterfaceScaleEffective as setInterfaceScaleEffectiveAction
+  setInterfaceScaleEffective as setInterfaceScaleEffectiveAction,
+  showAccountActivity as showAccountActivityAction
 } from '../../../../main/store/actions'
 import { toTokenId } from '../../../../resources/domain/balance'
 import * as storeActions from '../../../../main/store/actions'
@@ -44,6 +45,46 @@ afterAll(() => {
 })
 
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
+
+describe('#showAccountActivity', () => {
+  it('selects and opens the target account before routing to the exact activity entry', () => {
+    const state = {
+      'selected.current': 'other',
+      'selected.minimized': true,
+      'selected.open': false,
+      'panel.view': 'accountChooser',
+      'windows.panel.nav': [
+        { view: 'expandedModule', data: { id: 'activity', account: 'other' } },
+        { view: 'default', data: {} }
+      ],
+      'windows.panel.showing': false
+    }
+    const update = (...args) => {
+      const path = args.slice(0, -1).join('.')
+      state[path] = args.at(-1)(state[path])
+    }
+
+    showAccountActivityAction(update, owner, '00000000-0000-4000-8000-000000000001')
+
+    expect(state).toMatchObject({
+      'selected.current': owner,
+      'selected.minimized': false,
+      'selected.open': true,
+      'panel.view': 'default',
+      'windows.panel.showing': true
+    })
+    expect(state['windows.panel.nav'][0]).toEqual({
+      view: 'expandedModule',
+      data: {
+        id: 'activity',
+        account: owner,
+        title: 'Activity',
+        activityId: '00000000-0000-4000-8000-000000000001'
+      }
+    })
+    expect(state['windows.panel.nav'].filter(({ data }) => data.id === 'activity')).toHaveLength(1)
+  })
+})
 
 describe('#toggleAccess', () => {
   const address = '0x1111111111111111111111111111111111111111'
