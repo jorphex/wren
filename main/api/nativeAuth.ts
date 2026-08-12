@@ -5,7 +5,8 @@ import store from '../store'
 import { requireStoreAction } from '../store/action'
 import { NativePeerCredentialSchema, type NativePeerCredential } from '../store/state/types/peerCredential'
 import { DesktopAuthIdentitySchema } from './desktopAuthIdentity'
-import { disconnectPeer } from './peerConnections'
+import { registerPeerCleanup } from './peerConnections'
+import { revokeNativePeerAccess } from './peerRevocation'
 import {
   PEER_AUTH_PROTOCOL,
   PEER_AUTH_VERSION,
@@ -78,7 +79,7 @@ export type NativeRequestProof = z.infer<typeof NativeRequestProofSchema>
 type PendingChallenge = {
   transcript: PeerAuthTranscript
   publicKey: PeerAuthPublicKey
-  label: string
+  transportContext: string
 }
 
 export type NativeAuthSession = Readonly<{
@@ -88,7 +89,10 @@ export type NativeAuthSession = Readonly<{
   expiresAt: number
 }>
 
-type RuntimeSession = NativeAuthSession & { replayNonces: Map<string, number> }
+type RuntimeSession = NativeAuthSession & {
+  replayNonces: Map<string, number>
+  unregisterPeerCleanup: () => void
+}
 
 const pending = new Map<string, PendingChallenge>()
 const sessions = new Map<string, RuntimeSession>()
@@ -135,8 +139,10 @@ const prune = (now: number) => {
     if (challenge.transcript.expiresAt <= now) pending.delete(id)
   }
   for (const [id, session] of sessions) {
-    if (session.expiresAt <= now) sessions.delete(id)
-    else {
+    if (session.expiresAt <= now) {
+      sessions.delete(id)
+      session.unregisterPeerCleanup()
+    } else {
       for (const [requestNonce, expiry] of session.replayNonces) {
         if (expiry <= now) session.replayNonces.delete(requestNonce)
       }
@@ -155,7 +161,8 @@ const pairingCode = (transcript: PeerAuthTranscript) =>
     .padStart(6, '0')
 
 export function issueNativeChallenge(
-  input: { installationId: unknown; publicKey: unknown; clientNonce: unknown; label: unknown },
+  input: { installationId: unknown; publicKey: unknown; clientNonce: unknown },
+  transportContext: string,
   now = Date.now()
 ) {
   prune(now)
@@ -165,7 +172,7 @@ export function issueNativeChallenge(
   const installationId = PeerAuthInstallationIdSchema.parse(input.installationId)
   const publicKey = PeerAuthPublicKeySchema.parse(input.publicKey)
   const clientNonce = PeerAuthNonceSchema.parse(input.clientNonce)
-  const label = z.string().trim().min(1).max(64).parse(input.label)
+  const context = z.string().min(1).max(128).parse(transportContext)
   const fingerprint = peerAuthFingerprint(publicKey)
   const desktop = desktopIdentity()
   const transcript = nativeTranscript({
@@ -179,7 +186,7 @@ export function issueNativeChallenge(
     clientNonce,
     expiresAt: now + NATIVE_AUTH_CHALLENGE_TTL_MS
   })
-  pending.set(transcript.challengeId, { transcript, publicKey, label })
+  pending.set(transcript.challengeId, { transcript, publicKey, transportContext: context })
   return {
     step: 'challenge' as const,
     desktop: {
@@ -211,11 +218,7 @@ function retireReplacedCredentials(credential: NativePeerCredential) {
       existing.data.installationId === credential.installationId &&
       fingerprint !== credential.fingerprint
     ) {
-      requireStoreAction('removeNativePeerCredential')(fingerprint)
-      for (const [id, session] of sessions) {
-        if (session.fingerprint === fingerprint) sessions.delete(id)
-      }
-      disconnectPeer(fingerprint, 'Native credential replaced')
+      revokeNativePeerAccess(fingerprint, 'Native credential replaced')
     }
   })
 }
@@ -223,6 +226,7 @@ function retireReplacedCredentials(credential: NativePeerCredential) {
 export async function proveNativeChallenge(
   input: unknown,
   authorize: (credential: NativePeerCredential, code: string) => boolean | Promise<boolean>,
+  transportContext: string,
   now = Date.now()
 ) {
   prune(now)
@@ -232,6 +236,7 @@ export async function proveNativeChallenge(
   if (!challenge || challenge.transcript.expiresAt <= now) {
     throw new NativeAuthError('challenge-expired')
   }
+  if (challenge.transportContext !== transportContext) throw new NativeAuthError('invalid-proof')
   const expected = { ...challenge.transcript, role: 'client-response' as const }
   if (
     !verifyExpectedPeerAuthTranscript(
@@ -257,7 +262,6 @@ export async function proveNativeChallenge(
     protocolVersion: PEER_AUTH_VERSION,
     kind: 'native',
     installationId: expected.client.installationId,
-    label: challenge.label,
     publicKey: challenge.publicKey,
     fingerprint,
     pairedAt: now
@@ -270,12 +274,14 @@ export async function proveNativeChallenge(
     requireStoreAction('setNativePeerCredential')(credential)
   }
 
+  const sessionId = randomUUID()
   const session: RuntimeSession = {
-    id: randomUUID(),
+    id: sessionId,
     fingerprint,
     publicKey: challenge.publicKey,
     expiresAt: now + NATIVE_AUTH_SESSION_TTL_MS,
-    replayNonces: new Map()
+    replayNonces: new Map(),
+    unregisterPeerCleanup: registerPeerCleanup(fingerprint, () => sessions.delete(sessionId))
   }
   sessions.set(session.id, session)
   const desktop = desktopIdentity()
@@ -329,6 +335,7 @@ export function authenticateNativeRequest(
   if (session.replayNonces.has(proof.requestNonce)) throw new NativeAuthError('replay')
   if (session.replayNonces.size >= NATIVE_AUTH_MAX_REPLAYS_PER_SESSION) {
     sessions.delete(session.id)
+    session.unregisterPeerCleanup()
     throw new NativeAuthError('capacity')
   }
   const { signature, ...unsigned } = proof
@@ -353,14 +360,11 @@ export function authenticateNativeRequest(
 
 export function revokeNativeCredential(fingerprint: string) {
   PeerAuthFingerprintSchema.parse(fingerprint)
-  requireStoreAction('removeNativePeerCredential')(fingerprint)
-  for (const [id, session] of sessions) {
-    if (session.fingerprint === fingerprint) sessions.delete(id)
-  }
-  disconnectPeer(fingerprint, 'Native credential revoked')
+  revokeNativePeerAccess(fingerprint)
 }
 
 export function resetNativeAuthRuntimeForTests() {
   pending.clear()
+  sessions.forEach((session) => session.unregisterPeerCleanup())
   sessions.clear()
 }

@@ -12,10 +12,25 @@ import {
   revokeExtensionCredential
 } from '../../../main/api/extensionPairing'
 import type { ExtensionPairingCandidate } from '../../../main/api/extensionAuth'
+import { revokeCompanionAccess } from '../../../main/api/companionAccess'
 import { registerAuthenticatedExtension } from '../../../main/api/extensionConnections'
 import { transitionNotification } from '../../../resources/store/notifications'
 
 jest.mock('../../../main/store')
+jest.mock('../../../main/accounts', () => ({
+  __esModule: true,
+  default: {
+    getSelectedAddresses: jest.fn(() => ['0x1111111111111111111111111111111111111111']),
+    rejectUnapprovedRequestsForOrigins: jest.fn()
+  }
+}))
+jest.mock('../../../main/provider', () => ({
+  __esModule: true,
+  default: { accountsChanged: jest.fn() }
+}))
+
+const accounts = require('../../../main/accounts').default
+const provider = require('../../../main/provider').default
 
 const installationId = '7a86842f-7c01-4d0d-b0f7-fc04e0acfd8f'
 
@@ -62,6 +77,9 @@ beforeEach(() => {
     delete grants[originId]
     store.set('main.permissions', account, grants)
   })
+  accounts.getSelectedAddresses.mockClear()
+  accounts.rejectUnapprovedRequestsForOrigins.mockClear()
+  provider.accountsChanged.mockClear()
 })
 
 it('stores one atomic control and page key bundle only after consent and final acknowledgement', async () => {
@@ -131,6 +149,23 @@ it('retains the old principal until an exact reconnect confirms the replacement 
   expect(commitExtensionPairing(replacement)).toBe(true)
   expect(store.removeExtensionCredential).toHaveBeenCalledWith(previous.fingerprint)
   expect(store('main.extensionCredentials', previous.fingerprint)).toBeUndefined()
+})
+
+it('uses full Companion cleanup when an acknowledged replacement retires the old principal', () => {
+  const previous = candidate('e')
+  const replacement = candidate('f', { extensionId: previous.extensionId })
+  const account = '0x1111111111111111111111111111111111111111'
+  commitExtensionPairing(previous)
+  commitExtensionPairing(replacement)
+  store.set('main.origins', { old: { provenance: 'companion', sourceId: previous.fingerprint } })
+  store.set('main.permissions', account, { old: { handlerId: 'old' } })
+
+  // The exact-new reconnect is the safe-rotation confirmation point.
+  expect(commitExtensionPairing(replacement, revokeCompanionAccess)).toBe(true)
+  expect(accounts.getSelectedAddresses).toHaveBeenCalledTimes(1)
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, ['old'])
+  expect(provider.accountsChanged).toHaveBeenCalledWith([account], ['old'])
+  expect(store('main.permissions', account)).toEqual({})
 })
 
 it('rejects a modified bundle during an active challenge instead of reusing consent', async () => {

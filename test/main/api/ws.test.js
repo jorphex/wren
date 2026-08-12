@@ -1,4 +1,4 @@
-import { generateKeyPairSync, sign } from 'crypto'
+import { createPrivateKey, sign } from 'crypto'
 import WebSocket from 'ws'
 import { EventEmitter } from 'stream'
 
@@ -12,8 +12,14 @@ import ws, {
 } from '../../../main/api/ws'
 import { MAX_REQUEST_BYTES } from '../../../main/api/validPayload'
 import { getRequestSignal } from '../../../main/provider/requestSignal'
-import { extensionAuthPayload, extensionKeyFingerprint } from '../../../main/api/extensionAuth'
+import { extensionAuthPayload } from '../../../main/api/extensionAuth'
 import { respondToExtensionPairing } from '../../../main/api/extensionPairing'
+import {
+  generatePeerAuthKeyPair,
+  peerAuthClientBundleFingerprint,
+  peerAuthFingerprint
+} from '../../../main/api/peerAuth'
+import { createDesktopAuthIdentity } from '../../../main/api/desktopAuthIdentity'
 
 let socketConnection, mockSocket, authenticatedResponse
 
@@ -25,46 +31,51 @@ const extensionRequest = {
 }
 
 const regularRequest = { headers: { origin: 'https://example.test' } }
-const extensionKeyPair = generateKeyPairSync('ec', { namedCurve: 'P-256' })
-const exportedExtensionKey = extensionKeyPair.publicKey.export({ format: 'jwk' })
-const extensionPublicKey = {
-  kty: 'EC',
-  crv: 'P-256',
-  x: exportedExtensionKey.x,
-  y: exportedExtensionKey.y,
-  ext: true,
-  key_ops: ['verify']
+const extensionKeyPair = generatePeerAuthKeyPair()
+const extensionPageKeyPair = generatePeerAuthKeyPair()
+const extensionPublicKeys = {
+  control: extensionKeyPair.publicKey,
+  page: extensionPageKeyPair.publicKey
 }
-const extensionFingerprint = extensionKeyFingerprint(extensionPublicKey)
+const extensionFingerprint = peerAuthClientBundleFingerprint(extensionPublicKeys)
 const extensionInstallationId = '7a86842f-7c01-4d0d-b0f7-fc04e0acfd8f'
 const flushPromises = async () => {
   for (let index = 0; index < 6; index += 1) await Promise.resolve()
 }
 
+const extensionHello = (keys = extensionPublicKeys) => ({
+  type: 'frame-auth',
+  version: 3,
+  step: 'hello',
+  peerKind: 'companion',
+  channelRole: 'control',
+  clientNonce: Buffer.alloc(32, 1).toString('base64url'),
+  browser: 'chrome',
+  extensionId: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf',
+  client: {
+    installationId: extensionInstallationId,
+    fingerprint: peerAuthClientBundleFingerprint(keys),
+    roleFingerprint: peerAuthFingerprint(keys.control),
+    publicKeys: keys
+  }
+})
+
 const authenticateExtension = async (socket) => {
-  socket.emit(
-    'message',
-    JSON.stringify({
-      type: 'frame-auth',
-      version: 2,
-      step: 'hello',
-      clientNonce: Buffer.alloc(32, 1).toString('base64url'),
-      installationId: extensionInstallationId,
-      publicKey: extensionPublicKey
-    })
-  )
+  socket.emit('message', JSON.stringify(extensionHello()))
   await flushPromises()
   const challenge = JSON.parse(socket.send.mock.calls.at(-1)[0])
-  const signature = sign('sha256', extensionAuthPayload(challenge), {
-    key: extensionKeyPair.privateKey,
+  const signature = sign('sha256', extensionAuthPayload(challenge, 'client-response'), {
+    key: createPrivateKey({ key: extensionKeyPair.privateKey, format: 'jwk' }),
     dsaEncoding: 'ieee-p1363'
   }).toString('base64url')
   socket.emit(
     'message',
     JSON.stringify({
       type: 'frame-auth',
-      version: 2,
-      step: 'proof',
+      version: 3,
+      step: 'response',
+      peerKind: 'companion',
+      channelRole: 'control',
       challengeId: challenge.challengeId,
       signature
     })
@@ -88,13 +99,14 @@ beforeEach(async () => {
     store.set('view.notifyData', data)
   })
   store.setExtensionCredential = jest.fn()
+  store.set('main.desktopAuthIdentity', createDesktopAuthIdentity('11111111-1111-4111-8111-111111111111'))
   store.set('main.extensionCredentials', {
     [extensionFingerprint]: {
-      protocolVersion: 2,
+      protocolVersion: 3,
       installationId: extensionInstallationId,
       browser: 'chrome',
       extensionId: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf',
-      publicKey: extensionPublicKey,
+      publicKeys: extensionPublicKeys,
       fingerprint: extensionFingerprint,
       pairedAt: 1_000
     }
@@ -127,11 +139,11 @@ beforeEach(async () => {
 afterEach(() => mockSocket.emit('close'))
 
 it('requires and accepts a signed companion authentication handshake', () => {
-  expect(authenticatedResponse).toEqual({
+  expect(authenticatedResponse).toMatchObject({
     type: 'frame-auth',
-    version: 2,
+    version: 3,
     step: 'authenticated',
-    fingerprint: extensionFingerprint
+    client: { fingerprint: extensionFingerprint }
   })
   expect(mockSocket.close).not.toHaveBeenCalled()
 })
@@ -182,44 +194,29 @@ it('rejects extension RPC before authentication', async () => {
 })
 
 it('aborts pending consent when another authentication frame arrives', async () => {
-  const pair = generateKeyPairSync('ec', { namedCurve: 'P-256' })
-  const exported = pair.publicKey.export({ format: 'jwk' })
-  const publicKey = {
-    kty: 'EC',
-    crv: 'P-256',
-    x: exported.x,
-    y: exported.y,
-    ext: true,
-    key_ops: ['verify']
-  }
+  const pair = generatePeerAuthKeyPair()
+  const page = generatePeerAuthKeyPair()
+  const publicKeys = { control: pair.publicKey, page: page.publicKey }
   const socket = new EventEmitter()
   socket.readyState = WebSocket.OPEN
   socket.close = jest.fn()
   socket.send = jest.fn()
   socketConnection.emit('connection', socket, extensionRequest)
-  socket.emit(
-    'message',
-    JSON.stringify({
-      type: 'frame-auth',
-      version: 2,
-      step: 'hello',
-      clientNonce: Buffer.alloc(32, 3).toString('base64url'),
-      installationId: extensionInstallationId,
-      publicKey
-    })
-  )
+  socket.emit('message', JSON.stringify(extensionHello(publicKeys)))
   await flushPromises()
   const challenge = JSON.parse(socket.send.mock.calls[0][0])
-  const signature = sign('sha256', extensionAuthPayload(challenge), {
-    key: pair.privateKey,
+  const signature = sign('sha256', extensionAuthPayload(challenge, 'client-response'), {
+    key: createPrivateKey({ key: pair.privateKey, format: 'jwk' }),
     dsaEncoding: 'ieee-p1363'
   }).toString('base64url')
   socket.emit(
     'message',
     JSON.stringify({
       type: 'frame-auth',
-      version: 2,
-      step: 'proof',
+      version: 3,
+      step: 'response',
+      peerKind: 'companion',
+      channelRole: 'control',
       challengeId: challenge.challengeId,
       signature
     })
@@ -251,14 +248,7 @@ it('rate-limits challenge issuance across extension connections', async () => {
   second.send = jest.fn()
   limitedServer.emit('connection', first, extensionRequest)
   limitedServer.emit('connection', second, extensionRequest)
-  const hello = JSON.stringify({
-    type: 'frame-auth',
-    version: 2,
-    step: 'hello',
-    clientNonce: Buffer.alloc(32, 2).toString('base64url'),
-    installationId: extensionInstallationId,
-    publicKey: extensionPublicKey
-  })
+  const hello = JSON.stringify(extensionHello())
 
   first.emit('message', hello)
   second.emit('message', hello)

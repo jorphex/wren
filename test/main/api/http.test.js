@@ -8,6 +8,7 @@ import {
   HTTP_HEADERS_TIMEOUT_MS,
   HTTP_KEEP_ALIVE_TIMEOUT_MS,
   HTTP_MAX_CONNECTIONS,
+  HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES,
   HTTP_MAX_REQUESTS_PER_SOCKET,
   HTTP_REQUEST_TIMEOUT_MS
 } from '../../../main/api/http'
@@ -16,10 +17,18 @@ import provider from '../../../main/provider'
 import accounts from '../../../main/accounts'
 import { createSessionOrigin, isTrusted, updateOrigin } from '../../../main/api/origins'
 import { getRequestSignal } from '../../../main/provider/requestSignal'
+import { issueNativeChallenge, proveNativeChallenge } from '../../../main/api/nativeAuth'
 
 jest.mock('../../../main/provider', () => ({ send: jest.fn(), on: jest.fn() }))
 jest.mock('../../../main/accounts', () => ({ getSelectedAddresses: jest.fn(() => []) }))
 jest.mock('../../../main/store')
+jest.mock('../../../main/api/nativeAuth', () => ({
+  NativeRequestProofSchema: { parse: jest.fn() },
+  authenticateNativeRequest: jest.fn(),
+  issueNativeChallenge: jest.fn(),
+  proveNativeChallenge: jest.fn()
+}))
+jest.mock('../../../main/api/nativePairing', () => ({ authorizeNativePeer: jest.fn() }))
 jest.mock('../../../main/api/origins', () => ({
   createSessionOrigin: jest.fn(),
   requiresSessionOrigin: jest.fn(
@@ -77,13 +86,14 @@ afterEach((done) => {
   server.close(done)
 })
 
-const send = ({ body = '', method = 'POST', headers = {}, agent } = {}) =>
+const send = ({ body = '', method = 'POST', headers = {}, agent, path } = {}) =>
   new Promise((resolve, reject) => {
     const req = request(
       {
         host: '127.0.0.1',
         port,
         method,
+        path,
         headers,
         agent
       },
@@ -155,6 +165,69 @@ it('rejects a non-loopback Host header before parsing or forwarding', async () =
   })
   expect(updateOrigin).not.toHaveBeenCalled()
   expect(provider.send).not.toHaveBeenCalled()
+})
+
+it('keeps native challenge routes outside browser CORS', async () => {
+  const challenge = { step: 'challenge', expiresAt: 2_000 }
+  issueNativeChallenge.mockReturnValue(challenge)
+  const body = JSON.stringify({
+    installationId: '11111111-1111-4111-8111-111111111111',
+    publicKey: {},
+    clientNonce: 'nonce'
+  })
+  const accepted = await send({ path: '/native/v3/challenge', body })
+  expect(accepted).toMatchObject({
+    status: 200,
+    body: challenge
+  })
+  expect(accepted.headers).not.toHaveProperty('access-control-allow-origin')
+  const rejected = await send({
+    path: '/native/v3/challenge',
+    body,
+    headers: { origin: 'https://example.test' }
+  })
+  expect(rejected).toMatchObject({
+    status: 403,
+    body: { error: { code: 4100 } }
+  })
+  expect(rejected.headers).not.toHaveProperty('access-control-allow-origin')
+  const preflight = await send({ path: '/native/v3/challenge', method: 'OPTIONS' })
+  expect(preflight).toMatchObject({ status: 405 })
+  expect(preflight.headers).not.toHaveProperty('access-control-allow-origin')
+  expect(issueNativeChallenge).toHaveBeenCalledWith(expect.any(Object), 'http')
+
+  issueNativeChallenge.mockClear()
+  const labelled = await send({
+    path: '/native/v3/challenge',
+    body: JSON.stringify({ ...JSON.parse(body), label: 'untrusted' })
+  })
+  expect(labelled).toMatchObject({ status: 400, body: { error: { code: -32600 } } })
+  expect(issueNativeChallenge).not.toHaveBeenCalled()
+})
+
+it('bounds native handshake bodies below the general RPC limit', async () => {
+  await expect(
+    send({
+      path: '/native/v3/challenge',
+      body: Buffer.alloc(HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES + 1),
+      headers: { 'content-length': HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES + 1 }
+    })
+  ).resolves.toMatchObject({
+    status: 413,
+    headers: expect.not.objectContaining({ 'access-control-allow-origin': expect.anything() }),
+    body: {
+      error: {
+        message: `Request exceeds ${HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES} byte limit`
+      }
+    }
+  })
+})
+
+it('binds native proofs to the HTTP transport context', async () => {
+  proveNativeChallenge.mockResolvedValue({ step: 'authenticated' })
+  const response = await send({ path: '/native/v3/prove', body: '{}' })
+  expect(response).toMatchObject({ status: 200, body: { step: 'authenticated' } })
+  expect(proveNativeChallenge).toHaveBeenCalledWith({}, expect.any(Function), 'http')
 })
 
 it('rejects excess requests before provider forwarding', async () => {

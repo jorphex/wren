@@ -10,12 +10,14 @@ export const originIdForName = (origin: string) => uuid(origin, uuid.DNS)
 export type InvokerContext =
   | { provenance: 'direct' }
   | { provenance: 'companion'; sourceId: string }
+  | { provenance: 'native'; sourceId: string }
   | { provenance: 'internal' }
   | { provenance: 'managed' }
 
 export const originIdForInvoker = (origin: string, context: InvokerContext) => {
   if (context.provenance === 'internal' || context.provenance === 'managed') return originIdForName(origin)
 
+  if (context.provenance === 'native') return uuid(`native\u0000${context.sourceId}`, uuid.URL)
   const sourceId = context.provenance === 'companion' ? context.sourceId : ''
   return uuid(`${context.provenance}\u0000${sourceId}\u0000${origin}`, uuid.URL)
 }

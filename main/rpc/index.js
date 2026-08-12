@@ -6,10 +6,12 @@ import { openFileDialog } from '../windows/dialog'
 import { routeWalletCallRequest } from './walletCalls'
 import { applyRequestUpdate } from './updateRequest'
 import { enforceRequestOriginAuthorization } from './requestAuthorization'
+import { respondToExtensionPairing } from '../api/extensionPairing'
+import { revokeCompanionAccess } from '../api/companionAccess'
 import {
-  respondToExtensionPairing,
-  revokeExtensionCredential as revokePairedExtension
-} from '../api/extensionPairing'
+  respondToNativePairing,
+  revokeNativePeerCredential as revokePairedNative
+} from '../api/nativePairing'
 
 const accounts = require('../accounts').default
 const signers = require('../signers').default
@@ -32,15 +34,8 @@ const callbackWhenDone = (fn, cb) => {
   }
 }
 
-const revokeCompanionAccess = (fingerprint) => {
-  const revoked = revokePairedExtension(fingerprint)
-  const selected = accounts.getSelectedAddresses()
-  revoked.forEach(({ account, originIds }) => {
-    accounts.rejectUnapprovedRequestsForOrigins(account, originIds)
-    if (selected.some((address) => address.toLowerCase() === account.toLowerCase())) {
-      provider.accountsChanged(selected, originIds)
-    }
-  })
+const revokeNativeAccess = (fingerprint) => {
+  revokePairedNative(fingerprint)
 }
 
 const rpc = {
@@ -145,10 +140,20 @@ const rpc = {
       }
     }, cb)
   },
+  respondToNativePeerRequest(requestId, approved, cb) {
+    callbackWhenDone(() => {
+      if (!respondToNativePairing(requestId, approved)) {
+        throw new Error('Native pairing request is no longer active')
+      }
+    }, cb)
+  },
   revokeExtensionCredential(fingerprint, cb) {
     callbackWhenDone(() => {
       revokeCompanionAccess(fingerprint)
     }, cb)
+  },
+  revokeNativePeerCredential(fingerprint, cb) {
+    callbackWhenDone(() => revokeNativeAccess(fingerprint), cb)
   },
   updateRequest(accountId, reqId, data, actionId, cb) {
     callbackWhenDone(() => applyRequestUpdate(accounts, reqId, data, actionId, accountId), cb)

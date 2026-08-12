@@ -246,6 +246,12 @@ test('accepts the ERC-1967 implementation-slot approval type', () => {
 
 test('validates companion credential revocation fingerprints', () => {
   expect(parseRendererRpcRequest(wire(1, 'revokeExtensionCredential', 'a'.repeat(43))).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'revokeNativePeerCredential', 'a'.repeat(43))).success).toBe(true)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'respondToNativePeerRequest', '11111111-1111-4111-8111-111111111111', true)
+    ).success
+  ).toBe(true)
   expect(parseRendererRpcRequest(wire(1, 'revokeExtensionCredential', 'not-a-fingerprint')).success).toBe(
     false
   )

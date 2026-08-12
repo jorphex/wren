@@ -94,6 +94,8 @@ export class Settings extends Component {
     const latticeEndpointMode = context.store('main.latticeSettings.endpointMode')
     this.revokeCancelRef = createRef()
     this.revokeTriggerRefs = {}
+    this.revokeNativeCancelRef = createRef()
+    this.revokeNativeTriggerRefs = {}
     this.resetTriggerRef = createRef()
     this.resetCancelRef = createRef()
     this.state = {
@@ -103,7 +105,10 @@ export class Settings extends Component {
       instanceIdCopied: false,
       revokeCompanionConfirm: undefined,
       revokeCompanionPending: false,
-      revokeCompanionError: ''
+      revokeCompanionError: '',
+      revokeNativeConfirm: undefined,
+      revokeNativePending: false,
+      revokeNativeError: ''
     }
   }
 
@@ -252,6 +257,40 @@ export class Settings extends Component {
     })
   }
 
+  armNativeRevocation(credential) {
+    if (this.state.revokeNativePending) return
+    this.setState({ revokeNativeConfirm: credential.fingerprint, revokeNativeError: '' }, () =>
+      this.revokeNativeCancelRef.current?.focus()
+    )
+  }
+
+  cancelNativeRevocation(fingerprint) {
+    if (this.state.revokeNativePending) return
+    this.setState({ revokeNativeConfirm: undefined, revokeNativeError: '' }, () =>
+      this.revokeNativeTriggerRefs[fingerprint]?.current?.focus()
+    )
+  }
+
+  revokeNative(credential) {
+    if (this.state.revokeNativePending) return
+    this.setState({ revokeNativePending: true, revokeNativeError: '' })
+    link.rpc('revokeNativePeerCredential', credential.fingerprint, (error) => {
+      if (!this.mounted) return
+      this.setState(
+        error
+          ? {
+              revokeNativePending: false,
+              revokeNativeError: 'Couldn\u2019t revoke connection. Try again.'
+            }
+          : {
+              revokeNativeConfirm: undefined,
+              revokeNativePending: false,
+              revokeNativeError: ''
+            }
+      )
+    })
+  }
+
   inputLatticeEndpoint(e) {
     e.preventDefault()
     clearTimeout(this.inputLatticeTimeout)
@@ -276,6 +315,9 @@ export class Settings extends Component {
         ? `Interface scale set to ${effectiveInterfaceScalePercent}%.`
         : `Interface scale set to ${effectiveInterfaceScalePercent}%. You requested ${requestedInterfaceScalePercent}%, but Wren reduced it to fit the available screen space.`
     const companionCredentials = Object.values(this.store('main.extensionCredentials') || {}).sort(
+      (left, right) => right.pairedAt - left.pairedAt
+    )
+    const nativeCredentials = Object.values(this.store('main.nativePeerCredentials') || {}).sort(
       (left, right) => right.pairedAt - left.pairedAt
     )
 
@@ -389,16 +431,16 @@ export class Settings extends Component {
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
               <div className='signerPermissionControls'>
-                <div className='signerPermissionSetting'>Transaction notifications</div>
+                <div className='signerPermissionSetting'>Wallet activity notifications</div>
                 <Toggle
                   checked={this.store('main.transactionNotifications') !== false}
-                  label='Transaction notifications'
+                  label='Wallet activity notifications'
                   onChange={(enabled) => link.send('tray:action', 'setTransactionNotifications', enabled)}
                 />
               </div>
               <div className='signerPermissionDetails'>
-                Show confirmation, failure, and dropped updates when Wren is hidden. Notifications never
-                include transaction details.
+                Show private updates while Wren is hidden. They never include app, account, network, amounts,
+                addresses, call data, transaction hashes, or delegation details.
               </div>
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
@@ -699,6 +741,97 @@ export class Settings extends Component {
                             onClick={() => this.revokeCompanion(credential)}
                           >
                             {this.state.revokeCompanionPending ? 'Revoking pairing\u2026' : 'Confirm revoke'}
+                          </button>
+                        </CompanionRevokeActions>
+                      </DialogSurface>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </section>
+          ) : null}
+          {nativeCredentials.length > 0 ? (
+            <section className='wrenSettingsSection' aria-labelledby='wren-settings-local-connections'>
+              <h2 id='wren-settings-local-connections' className='wrenSettingsSectionTitle'>
+                Local connections
+              </h2>
+              {nativeCredentials.map((credential, index) => {
+                const confirm = this.state.revokeNativeConfirm === credential.fingerprint
+                if (!this.revokeNativeTriggerRefs[credential.fingerprint]) {
+                  this.revokeNativeTriggerRefs[credential.fingerprint] = createRef()
+                }
+                const shortId = `${credential.fingerprint.slice(0, 8)}…${credential.fingerprint.slice(-6)}`
+                const titleId = `revoke-native-title-${index}`
+                const bodyId = `revoke-native-body-${index}`
+                return (
+                  <div className='signerPermission localSetting' key={credential.fingerprint}>
+                    <div className='signerPermissionControls'>
+                      <CompanionDetails>
+                        <div className='signerPermissionSetting'>Local app</div>
+                        <CompanionIdentity
+                          title={credential.fingerprint}
+                        >{`Connection ID ${shortId}`}</CompanionIdentity>
+                        <button
+                          type='button'
+                          className='wrenControl wrenControlGhost'
+                          onClick={() => link.send('tray:clipboardData', credential.fingerprint)}
+                        >
+                          Copy full connection ID
+                        </button>
+                      </CompanionDetails>
+                      {!confirm ? (
+                        <RevokeCompanion
+                          ref={this.revokeNativeTriggerRefs[credential.fingerprint]}
+                          type='button'
+                          className='wrenControl wrenControlGhost'
+                          aria-label='Revoke local app'
+                          onClick={() => this.armNativeRevocation(credential)}
+                        >
+                          Revoke
+                        </RevokeCompanion>
+                      ) : null}
+                    </div>
+                    <div className='signerPermissionDetails'>Authenticated software on this computer.</div>
+                    {confirm ? (
+                      <DialogSurface
+                        as={CompanionRevokeDialog}
+                        className='companionRevokeDialog'
+                        role='alertdialog'
+                        modal={false}
+                        labelledBy={titleId}
+                        describedBy={bodyId}
+                        busy={this.state.revokeNativePending}
+                        initialFocusRef={this.revokeNativeCancelRef}
+                        returnFocusRef={this.revokeNativeTriggerRefs[credential.fingerprint]}
+                        onCancel={() => this.cancelNativeRevocation(credential.fingerprint)}
+                      >
+                        <CompanionRevokeTitle id={titleId}>Revoke local connection?</CompanionRevokeTitle>
+                        <CompanionRevokeBody id={bodyId}>
+                          This disconnects the local app and removes its access, pending requests, and
+                          subscriptions. It must pair again with a matching code to reconnect.
+                        </CompanionRevokeBody>
+                        {this.state.revokeNativeError ? (
+                          <CompanionRevokeError role='alert'>
+                            {this.state.revokeNativeError}
+                          </CompanionRevokeError>
+                        ) : null}
+                        <CompanionRevokeActions>
+                          <button
+                            type='button'
+                            ref={this.revokeNativeCancelRef}
+                            className='wrenControl wrenControlGhost'
+                            disabled={this.state.revokeNativePending}
+                            onClick={() => this.cancelNativeRevocation(credential.fingerprint)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type='button'
+                            className='wrenControl wrenControlDanger'
+                            disabled={this.state.revokeNativePending}
+                            onClick={() => this.revokeNative(credential)}
+                          >
+                            {this.state.revokeNativePending ? 'Revoking connection\u2026' : 'Confirm revoke'}
                           </button>
                         </CompanionRevokeActions>
                       </DialogSurface>

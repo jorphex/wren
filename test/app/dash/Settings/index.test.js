@@ -28,6 +28,12 @@ const state = {
         pairedAt: 1
       }
     },
+    nativePeerCredentials: {
+      native: {
+        fingerprint: 'n'.repeat(43),
+        pairedAt: 2
+      }
+    },
     glideSide: 'right',
     latticeSettings: {
       accountLimit: 5,
@@ -71,6 +77,7 @@ it('groups settings into a short, semantic ledger', () => {
     'Desktop behavior',
     'Accounts and signing',
     'Browser companions',
+    'Local connections',
     'Recovery',
     'About'
   ])
@@ -80,6 +87,20 @@ it('groups settings into a short, semantic ledger', () => {
   expect(
     screen.getByRole('region', { name: 'Accounts and signing' }).contains(setting('Ledger derivation'))
   ).toBe(true)
+  expect(
+    within(setting('Wallet activity notifications')).getByText(
+      'Show private updates while Wren is hidden. They never include app, account, network, amounts, addresses, call data, transaction hashes, or delegation details.'
+    )
+  ).toBeTruthy()
+})
+
+it('shows native credentials as local apps using only their connection IDs', () => {
+  renderSettings()
+  const section = screen.getByRole('region', { name: 'Local connections' })
+  expect(within(section).getByText('Local app')).toBeTruthy()
+  expect(within(section).getByText('Connection ID nnnnnnnn…nnnnnn')).toBeTruthy()
+  fireEvent.click(within(section).getByRole('button', { name: 'Copy full connection ID' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', 'n'.repeat(43))
 })
 
 it('shows requested and effective interface scale and routes scale changes', () => {
@@ -138,8 +159,8 @@ it('cancels a staged reset from About with Escape', async () => {
 it.each([
   ['Auto-hide', 'Auto-hide', ['tray:action', 'setAutohide', true]],
   [
-    'Transaction notifications',
-    'Transaction notifications',
+    'Wallet activity notifications',
+    'Wallet activity notifications',
     ['tray:action', 'setTransactionNotifications', false]
   ],
   ['Run on startup', 'Run on startup', ['tray:action', 'toggleLaunch']],

@@ -2,6 +2,7 @@ const { v4 } = require('uuid')
 
 const REQUEST_OWNER_PREFIX = 'request:'
 const EXTENSION_OWNER_PREFIX = 'extension:'
+const NATIVE_OWNER_PREFIX = 'native:'
 
 const requestNotificationOwner = (account, handlerId) => {
   if (!handlerId) return ''
@@ -23,6 +24,7 @@ const notificationOwner = (type, data = {}, explicitOwner) => {
   if (type === 'extensionConnect' && data.requestId) {
     return `${EXTENSION_OWNER_PREFIX}${data.requestId}`
   }
+  if (type === 'nativeConnect' && data.requestId) return `${NATIVE_OWNER_PREFIX}${data.requestId}`
   return ''
 }
 
@@ -97,6 +99,7 @@ const transitionNotification = (view, type = '', data = {}, options = {}) => {
 
 module.exports = {
   EXTENSION_OWNER_PREFIX,
+  NATIVE_OWNER_PREFIX,
   REQUEST_OWNER_PREFIX,
   notificationById,
   notificationByOwner,

@@ -2,6 +2,7 @@ import { IncomingMessage, Server } from 'http'
 import WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
 import log from 'electron-log'
+import { z } from 'zod'
 
 import provider from '../provider'
 import accounts from '../accounts'
@@ -21,7 +22,8 @@ import {
   parseExtensionAuthMessage,
   type ExtensionAuthServerMessage
 } from './extensionAuth'
-import { authorizeExtension } from './extensionPairing'
+import { authorizeExtension, commitExtensionPairing } from './extensionPairing'
+import { revokeCompanionAccess } from './companionAccess'
 import {
   disconnectExtensionCredential,
   registerAuthenticatedExtension,
@@ -37,6 +39,16 @@ import { isFrameSubscriptionType } from '../provider/subscriptions'
 import { toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { isValidUpstreamSubscriptionId, TransportSubscriptionRegistry } from './subscriptionRegistry'
 import { isAllowedLocalRpcHost } from './localHost'
+import {
+  NativeRequestProofSchema,
+  authenticateNativeRequest,
+  issueNativeChallenge,
+  proveNativeChallenge
+} from './nativeAuth'
+import { authorizeNativePeer } from './nativePairing'
+import { registerPeerConnection, unregisterPeerConnection } from './peerConnections'
+import { DesktopAuthIdentitySchema } from './desktopAuthIdentity'
+import store from '../store'
 
 const logTraffic = (origin: string) =>
   process.env['LOG_TRAFFIC'] === 'true' || process.env['LOG_TRAFFIC'] === origin
@@ -67,6 +79,63 @@ interface FrameWebSocket extends WebSocket {
   id: string
   origin: string | undefined
   frameExtension: FrameExtension | undefined
+  nativeAuth: boolean
+  nativeFingerprint?: string
+  nativeSessionId?: string
+  nativeChallengeId?: string
+}
+
+const NativeHelloSchema = z
+  .object({
+    type: z.literal('wren-native-auth'),
+    version: z.literal(3),
+    step: z.literal('hello'),
+    installationId: z.unknown(),
+    publicKey: z.unknown(),
+    clientNonce: z.unknown()
+  })
+  .strict()
+
+const NativeProofSchema = z
+  .object({
+    type: z.literal('wren-native-auth'),
+    version: z.literal(3),
+    step: z.literal('prove'),
+    protocol: z.unknown(),
+    transcript: z.unknown(),
+    signature: z.unknown()
+  })
+  .strict()
+
+const NativeRpcEnvelopeSchema = z
+  .object({
+    type: z.literal('wren-native-rpc'),
+    version: z.literal(3),
+    proof: NativeRequestProofSchema,
+    payloadBase64: z
+      .string()
+      .min(1)
+      .max(Math.ceil((MAX_REQUEST_BYTES * 4) / 3) + 4)
+  })
+  .strict()
+
+const nativeSocketRequest = (req: IncomingMessage) => {
+  try {
+    const query = new URL(req.url || '/', 'ws://localhost').searchParams
+    return (
+      query.get('identity') === 'wren-native' && query.get('role') === 'rpc' && query.get('version') === '3'
+    )
+  } catch {
+    return false
+  }
+}
+
+const nativeIdentityRequested = (req: IncomingMessage) => {
+  try {
+    return new URL(req.url || '/', 'ws://localhost').searchParams.get('identity') === 'wren-native'
+  } catch {
+    return false
+  }
 }
 
 const terminateSocket = (socket: FrameWebSocket, code: number, reason: string) => {
@@ -119,18 +188,22 @@ const handler = (
   socket.id = uuid()
   socket.origin = req.headers.origin
   socket.frameExtension = parseFrameExtension(req)
+  socket.nativeAuth = nativeSocketRequest(req)
   socket.extensionFingerprint = undefined
   socket.authProcessing = false
   socket.authSession = socket.frameExtension
     ? new ExtensionAuthSession(socket.frameExtension, {
         authorize: (candidate, signal) =>
-          authorizeExtension(candidate, signal, socket.frameExtension?.role === 'control')
+          authorizeExtension(candidate, signal, socket.frameExtension?.role === 'control'),
+        commit: (candidate) => commitExtensionPairing(candidate, revokeCompanionAccess),
+        desktopIdentity: () => DesktopAuthIdentitySchema.parse(store('main.desktopAuthIdentity'))
       })
     : undefined
   const authController = new AbortController()
-  let authDeadline = socket.authSession
-    ? setTimeout(() => terminateSocket(socket, 1008, 'Extension authentication timed out'), 5000)
-    : undefined
+  let authDeadline =
+    socket.authSession || socket.nativeAuth
+      ? setTimeout(() => terminateSocket(socket, 1008, 'Peer authentication timed out'), 5000)
+      : undefined
   const sessionOrigin = createSessionOrigin()
   const requests = new FixedWindowRateLimiter(rateLimit)
   const pendingRequests = new Set<AbortController>()
@@ -143,6 +216,7 @@ const handler = (
     authDeadline = undefined
     authController.abort()
     unregisterAuthenticatedExtension(socket)
+    unregisterPeerConnection(socket)
     pendingRequests.forEach((controller) => controller.abort())
     pendingRequests.clear()
     subscriptions.forOwner(socket).forEach((subscription) => {
@@ -158,7 +232,7 @@ const handler = (
     })
   }
 
-  const sendResponse = (payload: TransportResponse) => {
+  const sendResponse = (payload: unknown) => {
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(payload), (err) => {
         if (err) log.info(err)
@@ -181,7 +255,9 @@ const handler = (
       if (authDeadline) clearTimeout(authDeadline)
       authDeadline = undefined
       if (payload.step === 'error') terminateSocket(socket, 1008, payload.code)
-      if (payload.step === 'authenticated') registerAuthenticatedExtension(socket, payload.fingerprint)
+      if (payload.step === 'authenticated') {
+        registerAuthenticatedExtension(socket, payload.client.fingerprint)
+      }
     }
   }
 
@@ -189,6 +265,76 @@ const handler = (
     if (disposed) return
     if (!requests.allow()) {
       terminateSocket(socket, 1013, 'Request rate limit exceeded')
+      return
+    }
+
+    if (socket.nativeAuth && !socket.nativeSessionId) {
+      if (socket.authProcessing) {
+        terminateSocket(socket, 1008, 'Native authentication already in progress')
+        return
+      }
+      let value: unknown
+      try {
+        value = JSON.parse(data.toString())
+      } catch {
+        terminateSocket(socket, 1008, 'Invalid native authentication message')
+        return
+      }
+      const hello = NativeHelloSchema.safeParse(value)
+      if (hello.success) {
+        if (socket.nativeChallengeId) {
+          terminateSocket(socket, 1008, 'Native authentication challenge already issued')
+          return
+        }
+        try {
+          const challenge = issueNativeChallenge(hello.data, `ws:${socket.id}`)
+          socket.nativeChallengeId = challenge.transcript.challengeId
+          sendResponse({ type: 'wren-native-auth', version: 3, ...challenge })
+          if (authDeadline) clearTimeout(authDeadline)
+          authDeadline = setTimeout(
+            () => terminateSocket(socket, 1008, 'Native authentication proof timed out'),
+            Math.max(1, challenge.transcript.expiresAt - Date.now())
+          )
+        } catch {
+          terminateSocket(socket, 1008, 'Native authentication challenge rejected')
+        }
+        return
+      }
+      const proof = NativeProofSchema.safeParse(value)
+      if (!proof.success) {
+        terminateSocket(socket, 1008, 'Invalid native authentication message')
+        return
+      }
+      if (
+        !socket.nativeChallengeId ||
+        (proof.data.transcript as { challengeId?: unknown }).challengeId !== socket.nativeChallengeId
+      ) {
+        terminateSocket(socket, 1008, 'Native authentication challenge does not match')
+        return
+      }
+      socket.authProcessing = true
+      try {
+        const { type: _type, ...nativeProof } = proof.data
+        const authenticated = await proveNativeChallenge(
+          nativeProof,
+          (credential, code) => authorizeNativePeer(credential, code, authController.signal),
+          `ws:${socket.id}`
+        )
+        if (authController.signal.aborted) return
+        socket.nativeSessionId = authenticated.sessionId
+        socket.nativeFingerprint = authenticated.fingerprint
+        registerPeerConnection(socket, authenticated.fingerprint)
+        if (authDeadline) clearTimeout(authDeadline)
+        authDeadline = setTimeout(
+          () => terminateSocket(socket, 1008, 'Native authentication session expired'),
+          Math.max(1, authenticated.expiresAt - Date.now())
+        )
+        sendResponse({ type: 'wren-native-auth', version: 3, ...authenticated })
+      } catch {
+        terminateSocket(socket, 1008, 'Native authentication failed')
+      } finally {
+        socket.authProcessing = false
+      }
       return
     }
 
@@ -214,7 +360,38 @@ const handler = (
       return
     }
 
-    const parsedPayload = parsePayload<ExtensionPayload>(data.toString())
+    let rpcData = data.toString()
+    if (socket.nativeAuth) {
+      let envelopeInput: unknown
+      try {
+        envelopeInput = JSON.parse(rpcData)
+      } catch {
+        envelopeInput = undefined
+      }
+      const envelope = NativeRpcEnvelopeSchema.safeParse(envelopeInput)
+      if (!envelope.success) {
+        terminateSocket(socket, 1008, 'Invalid signed native request')
+        return
+      }
+      const body = Buffer.from(envelope.data.payloadBase64, 'base64url')
+      if (body.length > MAX_REQUEST_BYTES || body.toString('base64url') !== envelope.data.payloadBase64) {
+        terminateSocket(socket, 1008, 'Invalid signed native request')
+        return
+      }
+      try {
+        const session = authenticateNativeRequest(envelope.data.proof, '/native/v3/ws', body)
+        if (session.id !== socket.nativeSessionId || session.fingerprint !== socket.nativeFingerprint) {
+          terminateSocket(socket, 1008, 'Native session mismatch')
+          return
+        }
+      } catch {
+        terminateSocket(socket, 1008, 'Invalid signed native request')
+        return
+      }
+      rpcData = body.toString('utf8')
+    }
+
+    const parsedPayload = parsePayload<ExtensionPayload>(rpcData)
     if (!parsedPayload.success) {
       return sendResponse({ id: parsedPayload.id, jsonrpc: '2.0', error: parsedPayload.error })
     }
@@ -268,7 +445,7 @@ const handler = (
     const extensionConnecting = rawPayload.__extensionConnecting === true
     delete rawPayload.__extensionConnecting
 
-    const origin = parseOrigin(requestOrigin, sessionOrigin)
+    const origin = socket.nativeAuth ? 'Local app' : parseOrigin(requestOrigin, sessionOrigin)
 
     if (logTraffic(origin))
       log.info(
@@ -289,12 +466,14 @@ const handler = (
       }
     }
 
-    const invoker = !socket.frameExtension
-      ? { provenance: 'direct' as const }
-      : origin === 'frame-extension'
-        ? { provenance: 'internal' as const }
-        : { provenance: 'companion' as const, sourceId: socket.extensionFingerprint || '' }
-    if (invoker.provenance === 'companion' && !invoker.sourceId) {
+    const invoker = socket.nativeAuth
+      ? { provenance: 'native' as const, sourceId: socket.nativeFingerprint || '' }
+      : !socket.frameExtension
+        ? { provenance: 'direct' as const }
+        : origin === 'frame-extension'
+          ? { provenance: 'internal' as const }
+          : { provenance: 'companion' as const, sourceId: socket.extensionFingerprint || '' }
+    if ((invoker.provenance === 'companion' || invoker.provenance === 'native') && !invoker.sourceId) {
       return res({
         id: rawPayload.id,
         jsonrpc: rawPayload.jsonrpc,
@@ -446,7 +625,8 @@ export default function (server: Server, options: WebSocketServerOptions = {}) {
     maxPayload: MAX_REQUEST_BYTES,
     perMessageDeflate: false,
     verifyClient: ({ req }: { req: IncomingMessage }) =>
-      isAllowedLocalRpcHost(req.headers.host, req.socket.localPort)
+      isAllowedLocalRpcHost(req.headers.host, req.socket.localPort) &&
+      (!nativeIdentityRequested(req) || (nativeSocketRequest(req) && req.headers.origin === undefined))
   })
   ws.on('connection', (socket: FrameWebSocket, req: IncomingMessage) => {
     if (clients.size >= maxClients) {

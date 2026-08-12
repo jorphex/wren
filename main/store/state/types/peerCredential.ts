@@ -13,7 +13,6 @@ export const NativePeerCredentialSchema = z
     protocolVersion: z.literal(PEER_AUTH_VERSION),
     kind: z.literal('native'),
     installationId: PeerAuthInstallationIdSchema,
-    label: z.string().trim().min(1).max(64),
     publicKey: PeerAuthPublicKeySchema,
     fingerprint: PeerAuthFingerprintSchema,
     pairedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)

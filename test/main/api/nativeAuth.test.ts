@@ -25,8 +25,15 @@ import {
   type PeerAuthPublicKey
 } from '../../../main/api/peerAuth'
 import type { NativePeerCredential } from '../../../main/store/state/types/peerCredential'
+import accounts from '../../../main/accounts'
+import provider from '../../../main/provider'
 
 jest.mock('../../../main/store')
+jest.mock('../../../main/accounts', () => ({
+  getSelectedAddresses: jest.fn(() => []),
+  rejectUnapprovedRequestsForOrigins: jest.fn()
+}))
+jest.mock('../../../main/provider', () => ({ accountsChanged: jest.fn() }))
 
 const clientInstallationId = '11111111-1111-4111-8111-111111111111'
 const desktopInstallationId = '22222222-2222-4222-8222-222222222222'
@@ -46,6 +53,11 @@ function installStoreActions() {
     delete credentials[fingerprint]
     store.set('main.nativePeerCredentials', credentials)
   })
+  store.toggleAccess = jest.fn((account: string, originId: string) => {
+    const grants = { ...(store('main.permissions', account) || {}) }
+    delete grants[originId]
+    store.set('main.permissions', account, grants)
+  })
 }
 
 function proofFor(challenge: ReturnType<typeof issueNativeChallenge>, privateKey: PeerAuthPrivateKey) {
@@ -61,9 +73,10 @@ function proofFor(challenge: ReturnType<typeof issueNativeChallenge>, privateKey
   }
 }
 
-function challengeFor(publicKey: PeerAuthPublicKey, marker: number, now = 1_000, label = 'CLI') {
+function challengeFor(publicKey: PeerAuthPublicKey, marker: number, now = 1_000) {
   return issueNativeChallenge(
-    { installationId: clientInstallationId, publicKey, clientNonce: nonce(marker), label },
+    { installationId: clientInstallationId, publicKey, clientNonce: nonce(marker) },
+    'test',
     now
   )
 }
@@ -74,7 +87,12 @@ async function authenticatedSession(
   authorize: (credential: NativePeerCredential, code: string) => boolean | Promise<boolean> = () => true
 ) {
   const challenge = challengeFor(keys.publicKey, 1, now)
-  const authenticated = await proveNativeChallenge(proofFor(challenge, keys.privateKey), authorize, now)
+  const authenticated = await proveNativeChallenge(
+    proofFor(challenge, keys.privateKey),
+    authorize,
+    'test',
+    now
+  )
   return { authenticated, keys }
 }
 
@@ -83,7 +101,39 @@ beforeEach(() => {
   resetNativeAuthRuntimeForTests()
   store.set('main.desktopAuthIdentity', createDesktopAuthIdentity(desktopInstallationId, 1_000))
   store.set('main.nativePeerCredentials', {})
+  store.set('main.origins', {})
+  store.set('main.permissions', {})
   installStoreActions()
+})
+
+it('revokes the replaced key principal before committing a rotated credential', async () => {
+  const previous = generatePeerAuthKeyPair()
+  const next = generatePeerAuthKeyPair()
+  const previousFingerprint = peerAuthFingerprint(previous.publicKey)
+  store.set('main.nativePeerCredentials', previousFingerprint, {
+    protocolVersion: 3,
+    kind: 'native',
+    installationId: clientInstallationId,
+    publicKey: previous.publicKey,
+    fingerprint: previousFingerprint,
+    pairedAt: 10
+  })
+  store.set('main.origins', {
+    oldOrigin: { provenance: 'native', sourceId: previousFingerprint }
+  })
+  store.set('main.permissions', { account: { oldOrigin: { caveats: [] } } })
+  ;(accounts.getSelectedAddresses as jest.Mock).mockReturnValue(['account'])
+
+  const challenge = challengeFor(next.publicKey, 1)
+  await expect(
+    proveNativeChallenge(proofFor(challenge, next.privateKey), () => true, 'test', 1_000)
+  ).resolves.toMatchObject({ fingerprint: peerAuthFingerprint(next.publicKey) })
+
+  expect(store.removeNativePeerCredential).toHaveBeenCalledWith(previousFingerprint)
+  expect(store.toggleAccess).toHaveBeenCalledWith('account', 'oldOrigin', false)
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith('account', ['oldOrigin'])
+  expect(provider.accountsChanged).toHaveBeenCalledWith(['account'], ['oldOrigin'])
+  expect(store('main.permissions', 'account')).toEqual({})
 })
 
 afterEach(resetNativeAuthRuntimeForTests)
@@ -94,19 +144,21 @@ it('requires an exact signed transcript and asynchronous explicit consent for fi
   let release = (_approved: boolean) => {}
   const authorization = jest.fn(() => new Promise<boolean>((resolve) => (release = resolve)))
   let settled = false
-  const result = proveNativeChallenge(proofFor(challenge, keys.privateKey), authorization, 1_000).then(
-    (value) => {
-      settled = true
-      return value
-    }
-  )
+  const result = proveNativeChallenge(
+    proofFor(challenge, keys.privateKey),
+    authorization,
+    'test',
+    1_000
+  ).then((value) => {
+    settled = true
+    return value
+  })
   await Promise.resolve()
   expect(settled).toBe(false)
   expect(authorization).toHaveBeenCalledWith(
     expect.objectContaining({
       installationId: clientInstallationId,
-      fingerprint: peerAuthFingerprint(keys.publicKey),
-      label: 'CLI'
+      fingerprint: peerAuthFingerprint(keys.publicKey)
     }),
     expect.stringMatching(/^\d{6}$/u)
   )
@@ -121,25 +173,24 @@ it('requires an exact signed transcript and asynchronous explicit consent for fi
   expect(store.setNativePeerCredential).toHaveBeenCalledTimes(1)
 })
 
-it('silently reconnects only the exact stored identity and ignores label changes', async () => {
+it('silently reconnects only the exact stored identity without retaining a client label', async () => {
   const keys = generatePeerAuthKeyPair()
   const fingerprint = peerAuthFingerprint(keys.publicKey)
   store.set('main.nativePeerCredentials', fingerprint, {
     protocolVersion: 3,
     kind: 'native',
     installationId: clientInstallationId,
-    label: 'Original label',
     publicKey: keys.publicKey,
     fingerprint,
     pairedAt: 10
   })
   const authorize = jest.fn(() => false)
-  const challenge = challengeFor(keys.publicKey, 1, 1_000, 'Changed label')
+  const challenge = challengeFor(keys.publicKey, 1, 1_000)
   await expect(
-    proveNativeChallenge(proofFor(challenge, keys.privateKey), authorize, 1_000)
+    proveNativeChallenge(proofFor(challenge, keys.privateKey), authorize, 'test', 1_000)
   ).resolves.toMatchObject({ step: 'authenticated', fingerprint })
   expect(authorize).not.toHaveBeenCalled()
-  expect(store('main.nativePeerCredentials', fingerprint).label).toBe('Original label')
+  expect(store('main.nativePeerCredentials', fingerprint)).not.toHaveProperty('label')
 })
 
 it('fails closed when a stored fingerprint is attached to a different installation', async () => {
@@ -149,7 +200,6 @@ it('fails closed when a stored fingerprint is attached to a different installati
     protocolVersion: 3,
     kind: 'native',
     installationId: '33333333-3333-4333-8333-333333333333',
-    label: 'Pinned elsewhere',
     publicKey: keys.publicKey,
     fingerprint,
     pairedAt: 10
@@ -157,7 +207,7 @@ it('fails closed when a stored fingerprint is attached to a different installati
   const authorize = jest.fn(() => true)
   const challenge = challengeFor(keys.publicKey, 1)
   await expect(
-    proveNativeChallenge(proofFor(challenge, keys.privateKey), authorize, 1_000)
+    proveNativeChallenge(proofFor(challenge, keys.privateKey), authorize, 'test', 1_000)
   ).rejects.toMatchObject({ code: 'credential-mismatch' })
   expect(authorize).not.toHaveBeenCalled()
 })
@@ -177,11 +227,11 @@ it('bounds active sessions independently of pending challenges', async () => {
   const keys = generatePeerAuthKeyPair()
   for (let index = 0; index < NATIVE_AUTH_MAX_SESSIONS; index += 1) {
     const challenge = challengeFor(keys.publicKey, index + 1)
-    await proveNativeChallenge(proofFor(challenge, keys.privateKey), () => true, 1_000)
+    await proveNativeChallenge(proofFor(challenge, keys.privateKey), () => true, 'test', 1_000)
   }
   const overflow = challengeFor(keys.publicKey, NATIVE_AUTH_MAX_SESSIONS + 1)
   await expect(
-    proveNativeChallenge(proofFor(overflow, keys.privateKey), () => true, 1_000)
+    proveNativeChallenge(proofFor(overflow, keys.privateKey), () => true, 'test', 1_000)
   ).rejects.toMatchObject({ code: 'capacity' })
 })
 
@@ -296,6 +346,23 @@ it('rejects tampered proof before persisting or creating a usable session', asyn
   const challenge = challengeFor(keys.publicKey, 1)
   const proof = proofFor(challenge, keys.privateKey)
   proof.transcript.clientNonce = nonce(99)
-  await expect(proveNativeChallenge(proof, () => true, 1_000)).rejects.toBeInstanceOf(NativeAuthError)
+  await expect(proveNativeChallenge(proof, () => true, 'test', 1_000)).rejects.toBeInstanceOf(NativeAuthError)
+  expect(store.setNativePeerCredential).not.toHaveBeenCalled()
+})
+
+it('does not allow a challenge to cross transport contexts', async () => {
+  const keys = generatePeerAuthKeyPair()
+  const challenge = issueNativeChallenge(
+    {
+      installationId: clientInstallationId,
+      publicKey: keys.publicKey,
+      clientNonce: nonce(1)
+    },
+    'http',
+    1_000
+  )
+  await expect(
+    proveNativeChallenge(proofFor(challenge, keys.privateKey), () => true, 'ws:socket', 1_000)
+  ).rejects.toMatchObject({ code: 'invalid-proof' })
   expect(store.setNativePeerCredential).not.toHaveBeenCalled()
 })

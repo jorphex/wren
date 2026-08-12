@@ -8,8 +8,13 @@ import { usesBaseFee } from '../../../resources/domain/transaction'
 import { capitalize } from '../../../resources/utils'
 import wrenIcon from '../../../asset/WrenIcon.png'
 import ExtensionConnectNotification from './ExtensionConnect'
+import NativeConnectNotification from './NativeConnect'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
-import { EXTENSION_OWNER_PREFIX, requestReference } from '../../../resources/store/notifications'
+import {
+  EXTENSION_OWNER_PREFIX,
+  NATIVE_OWNER_PREFIX,
+  requestReference
+} from '../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 
@@ -50,11 +55,16 @@ export class Notify extends React.Component {
   deferredPairingContext() {
     const queue = this.store('view.notifyQueue') || []
     const extensionWaiting = queue.some(({ owner }) => owner?.startsWith(EXTENSION_OWNER_PREFIX))
-    if (!extensionWaiting) return null
+    const nativeWaiting = queue.some(({ owner }) => owner?.startsWith(NATIVE_OWNER_PREFIX))
+    if (!extensionWaiting && !nativeWaiting) return null
 
     return (
       <div className='notifyQueueContext' role='status'>
-        <span>Extension pairing will continue after this request.</span>
+        <span>
+          {extensionWaiting
+            ? 'Extension pairing will continue after this request.'
+            : 'Local app pairing will continue after this request.'}
+        </span>
       </div>
     )
   }
@@ -732,6 +742,18 @@ export class Notify extends React.Component {
         <ExtensionConnectNotification
           browser={browser}
           extensionId={extensionId}
+          pairingCode={pairingCode}
+          requestId={requestId}
+          onClose={() => this.dismissNotification(notificationId)}
+        />,
+        false
+      )
+    } else if (notify === 'nativeConnect') {
+      const { fingerprint, pairingCode, requestId } = this.store('view.notifyData')
+      const notificationId = this.activeNotificationId()
+      return this.renderDialog(
+        <NativeConnectNotification
+          fingerprint={fingerprint}
           pairingCode={pairingCode}
           requestId={requestId}
           onClose={() => this.dismissNotification(notificationId)}

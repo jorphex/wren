@@ -15,6 +15,14 @@ import { createAccountPermission } from '../../../main/provider/permissions'
 import { originIdForInvoker } from '../../../resources/domain/origin'
 
 const directOriginId = (origin) => originIdForInvoker(origin, { provenance: 'direct' })
+
+it('uses the authenticated native fingerprint as identity, not its display label', () => {
+  const invoker = { provenance: 'native', sourceId: 'a'.repeat(43) }
+  expect(originIdForInvoker('Local app', invoker)).toBe(originIdForInvoker('Renamed app', invoker))
+  expect(originIdForInvoker('Local app', invoker)).not.toBe(
+    originIdForInvoker('Local app', { provenance: 'native', sourceId: 'b'.repeat(43) })
+  )
+})
 const grant = (address, originId, origin = 'test.frame.eth', chains = [1]) =>
   createAccountPermission({ account: address, chains, handlerId: originId, origin })
 

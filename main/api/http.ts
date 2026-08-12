@@ -1,5 +1,6 @@
 import http, { IncomingMessage, ServerResponse } from 'http'
 import log from 'electron-log'
+import { z } from 'zod'
 
 import provider from '../provider'
 import accounts from '../accounts'
@@ -16,6 +17,15 @@ import { isFrameSubscriptionType } from '../provider/subscriptions'
 import { toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { isValidUpstreamSubscriptionId, TransportSubscriptionRegistry } from './subscriptionRegistry'
 import { isAllowedLocalRpcHost } from './localHost'
+import {
+  NativeRequestProofSchema,
+  authenticateNativeRequest,
+  issueNativeChallenge,
+  proveNativeChallenge,
+  type NativeAuthSession
+} from './nativeAuth'
+import { authorizeNativePeer } from './nativePairing'
+import { registerPeerCleanup } from './peerConnections'
 
 const logTraffic = process.env['LOG_TRAFFIC']
 
@@ -32,6 +42,8 @@ interface PollClient {
   overflowed: boolean
   pending?: PendingRequest
   cleanupTimer?: NodeJS.Timeout
+  peerFingerprint?: string
+  unregisterPeerCleanup?: () => void
 }
 
 interface HTTPPollingPayload extends JSONRPCRequestPayload {
@@ -41,6 +53,7 @@ interface HTTPPollingPayload extends JSONRPCRequestPayload {
 const pollClients = new Map<string, PollClient>()
 const subscriptions = new TransportSubscriptionRegistry<PollClient>()
 const socketOrigins = new WeakMap<IncomingMessage['socket'], string>()
+const nativePaths = new Set(['/native/v3/challenge', '/native/v3/prove', '/native/v3/rpc'])
 
 export const HTTP_MAX_CONNECTIONS = 128
 export const HTTP_HEADERS_TIMEOUT_MS = 10 * 1000
@@ -56,6 +69,7 @@ export const HTTP_MAX_QUEUED_SUBSCRIPTION_BYTES = 4 * 1024 * 1024
 export const HTTP_POLL_IDLE_TIMEOUT_MS = 20 * 1000
 export const HTTP_LONG_POLL_TIMEOUT_MS = 15 * 1000
 export const HTTP_MAX_POLL_ID_BYTES = 128
+export const HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES = 16 * 1024
 
 interface HTTPServerOptions {
   requestRateLimit?: RateLimitOptions
@@ -74,14 +88,40 @@ const requestOrigin = (req: IncomingMessage) => {
   return parseOrigin(req.headers.origin, origin)
 }
 
-const sendJson = (
-  res: ServerResponse,
-  status: number,
-  payload: { id: string | number | null; jsonrpc: '2.0'; error: JsonRpcError } | RPCResponsePayload
-) => {
+const sendJson = (res: ServerResponse, status: number, payload: unknown) => {
   res.writeHead(status, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify(payload))
 }
+
+const NativeChallengeRequestSchema = z
+  .object({
+    installationId: z.unknown(),
+    publicKey: z.unknown(),
+    clientNonce: z.unknown()
+  })
+  .strict()
+
+const parseJson = (body: Buffer) => {
+  try {
+    return JSON.parse(body.toString('utf8')) as unknown
+  } catch {
+    return
+  }
+}
+
+const nativeProofHeader = (req: IncomingMessage) => {
+  const header = req.headers['x-wren-native-proof']
+  if (typeof header !== 'string' || header.length > 16 * 1024) return
+  try {
+    const bytes = Buffer.from(header, 'base64url')
+    if (bytes.toString('base64url') !== header) return
+    return NativeRequestProofSchema.parse(JSON.parse(bytes.toString('utf8')))
+  } catch {
+    return
+  }
+}
+
+const nativeOriginName = (_session: NativeAuthSession) => 'Local app'
 
 const sendTransportError = (
   res: ServerResponse,
@@ -90,17 +130,22 @@ const sendTransportError = (
   error: JsonRpcError
 ) => sendJson(res, status, { id, jsonrpc: '2.0', error })
 
-const rejectOversizedRequest = (req: IncomingMessage, res: ServerResponse) => {
+const rejectOversizedRequest = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  maximumBytes = MAX_REQUEST_BYTES
+) => {
   res.setHeader('Connection', 'close')
   res.once('finish', () => req.destroy())
   sendTransportError(res, 413, null, {
     code: -32600,
-    message: `Request exceeds ${MAX_REQUEST_BYTES} byte limit`
+    message: `Request exceeds ${maximumBytes} byte limit`
   })
 }
 
 const rejectRateLimitedRequest = (req: IncomingMessage, res: ServerResponse) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  const requestPath = (req.url || '/').split('?')[0] || '/'
+  if (!nativePaths.has(requestPath)) res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Connection', 'close')
   res.once('finish', () => req.destroy())
   sendTransportError(res, 429, null, { code: -32005, message: 'Request rate limit exceeded' })
@@ -135,6 +180,7 @@ const removePollClient = (client: PollClient) => {
     subscriptions.remove(subscription.id)
   })
   pollClients.delete(key)
+  client.unregisterPeerCleanup?.()
 }
 
 const schedulePollCleanup = (client: PollClient) => {
@@ -143,7 +189,7 @@ const schedulePollCleanup = (client: PollClient) => {
   client.cleanupTimer.unref()
 }
 
-const getPollClient = (originId: string, pollId: string, create = false) => {
+const getPollClient = (originId: string, pollId: string, create = false, peerFingerprint?: string) => {
   const key = pollClientKey(originId, pollId)
   const existing = pollClients.get(key)
   if (existing || !create || pollClients.size >= HTTP_MAX_POLL_CLIENTS) return existing
@@ -153,7 +199,11 @@ const getPollClient = (originId: string, pollId: string, create = false) => {
     pollId,
     events: [],
     eventBytes: 0,
-    overflowed: false
+    overflowed: false,
+    ...(peerFingerprint && { peerFingerprint })
+  }
+  if (peerFingerprint) {
+    client.unregisterPeerCleanup = registerPeerCleanup(peerFingerprint, () => removePollClient(client))
   }
   pollClients.set(key, client)
   schedulePollCleanup(client)
@@ -180,19 +230,36 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
     })
   }
 
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept'
-  )
+  const requestPath = (req.url || '/').split('?')[0] || '/'
+  const nativePath = nativePaths.has(requestPath)
+  if (nativePath && req.headers.origin !== undefined) {
+    return sendTransportError(res, 403, null, {
+      code: 4100,
+      message: 'Native authentication is not available to browser origins'
+    })
+  }
+  if (!nativePath) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept'
+    )
+  }
   if (req.method === 'OPTIONS') {
+    if (nativePath) {
+      return sendTransportError(res, 405, null, { code: -32600, message: 'Method Not Allowed' })
+    }
     res.writeHead(200)
     res.end()
   } else if (req.method === 'POST') {
+    const maximumBytes =
+      requestPath === '/native/v3/challenge' || requestPath === '/native/v3/prove'
+        ? HTTP_NATIVE_AUTH_MAX_REQUEST_BYTES
+        : MAX_REQUEST_BYTES
     const contentLength = Number(req.headers['content-length'])
-    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
-      return rejectOversizedRequest(req, res)
+    if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
+      return rejectOversizedRequest(req, res, maximumBytes)
     }
 
     const body: Buffer[] = []
@@ -204,10 +271,10 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         if (rejected) return
 
         bodySize += chunk.length
-        if (bodySize > MAX_REQUEST_BYTES) {
+        if (bodySize > maximumBytes) {
           rejected = true
           body.length = 0
-          rejectOversizedRequest(req, res)
+          rejectOversizedRequest(req, res, maximumBytes)
           return
         }
 
@@ -217,7 +284,64 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         if (rejected) return
 
         res.on('error', (err) => console.error('res err', err))
-        const data = Buffer.concat(body).toString()
+        const bodyBytes = Buffer.concat(body)
+        if (requestPath === '/native/v3/challenge') {
+          const challengeInput = NativeChallengeRequestSchema.safeParse(parseJson(bodyBytes))
+          if (!challengeInput.success) {
+            return sendTransportError(res, 400, null, {
+              code: -32600,
+              message: 'Invalid native challenge request'
+            })
+          }
+          try {
+            return sendJson(res, 200, issueNativeChallenge(challengeInput.data, 'http'))
+          } catch {
+            return sendTransportError(res, 400, null, {
+              code: 4100,
+              message: 'Native challenge request was rejected'
+            })
+          }
+        }
+        if (requestPath === '/native/v3/prove') {
+          const controller = new AbortController()
+          req.socket.once('close', () => controller.abort())
+          try {
+            const result = await proveNativeChallenge(
+              parseJson(bodyBytes),
+              (credential, code) => authorizeNativePeer(credential, code, controller.signal),
+              'http'
+            )
+            if (controller.signal.aborted) return
+            return sendJson(res, 200, result)
+          } catch {
+            if (controller.signal.aborted) return
+            return sendTransportError(res, 401, null, {
+              code: 4100,
+              message: 'Native authentication failed'
+            })
+          }
+        }
+
+        let nativeSession: NativeAuthSession | undefined
+        if (requestPath === '/native/v3/rpc') {
+          const proof = nativeProofHeader(req)
+          if (!proof) {
+            return sendTransportError(res, 401, null, {
+              code: 4100,
+              message: 'Native request proof is required'
+            })
+          }
+          try {
+            nativeSession = authenticateNativeRequest(proof, requestPath, bodyBytes)
+          } catch {
+            return sendTransportError(res, 401, null, {
+              code: 4100,
+              message: 'Native request proof is invalid'
+            })
+          }
+        }
+
+        const data = bodyBytes.toString()
         const parsedPayload = parsePayload<HTTPPollingPayload>(data)
         if (!parsedPayload.success) {
           return sendTransportError(res, 400, parsedPayload.id, parsedPayload.error)
@@ -242,8 +366,11 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
           }
         }
 
-        const origin = requestOrigin(req)
-        const { payload, chainId } = updateOrigin(rawPayload, origin, false, { provenance: 'direct' })
+        const origin = nativeSession ? nativeOriginName(nativeSession) : requestOrigin(req)
+        const invoker = nativeSession
+          ? { provenance: 'native' as const, sourceId: nativeSession.fingerprint }
+          : { provenance: 'direct' as const }
+        const { payload, chainId } = updateOrigin(rawPayload, origin, false, invoker)
 
         try {
           parseChainId(chainId)
@@ -257,12 +384,18 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
         originSessions.extend(payload._origin)
 
         const controller = new AbortController()
+        const unregisterNativeCleanup = nativeSession
+          ? registerPeerCleanup(nativeSession.fingerprint, () => controller.abort())
+          : undefined
         const abortIfUnfinished = () => {
           if (!res.writableFinished) controller.abort()
         }
         req.socket.once('close', abortIfUnfinished)
         res.once('close', abortIfUnfinished)
-        res.once('finish', () => req.socket.removeListener('close', abortIfUnfinished))
+        res.once('finish', () => {
+          req.socket.removeListener('close', abortIfUnfinished)
+          unregisterNativeCleanup?.()
+        })
         const respond = bindRequestSignal((response: RPCResponsePayload) => {
           if (controller.signal.aborted || res.writableEnded) return
           if (logTraffic)
@@ -292,7 +425,7 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
                 error: { code: -32602, message: 'Invalid Client ID' }
               })
             }
-            const client = getPollClient(payload._origin, pollId, true)
+            const client = getPollClient(payload._origin, pollId, true, nativeSession?.fingerprint)
             if (!client) {
               return respond({
                 id: payload.id,
@@ -411,7 +544,12 @@ const handler = (req: IncomingMessage, res: ServerResponse) => {
                   })
                   return
                 } else {
-                  const client = getPollClient(payload._origin, pollId as string, true)
+                  const client = getPollClient(
+                    payload._origin,
+                    pollId as string,
+                    true,
+                    nativeSession?.fingerprint
+                  )
                   const subscriptionCount = client ? subscriptions.forOwner(client).length : 0
                   const subscription =
                     client && subscriptionCount < HTTP_MAX_SUBSCRIPTIONS_PER_POLL_CLIENT
