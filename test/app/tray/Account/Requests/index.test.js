@@ -50,8 +50,9 @@ it('keeps a confirmed transaction out of the home-row count while it remains ins
 
   render(requests.renderPreview())
 
-  expect(screen.getByRole('button', { name: 'Requests. 2 requests · 1 pending · 1 confirming' })).toBeTruthy()
-  expect(screen.getByText('2 requests · 1 pending · 1 confirming')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Requests. 2 active. 1 pending. 1 confirming.' })).toBeTruthy()
+  expect(screen.getByText('Requests (2)')).toBeTruthy()
+  expect(screen.getByText('1 pending · 1 confirming')).toBeTruthy()
 })
 
 const createRequest = (handlerId, created, origin = 'https://example.test', queueIndex) => ({
@@ -106,7 +107,7 @@ it('falls back to newest creation time and stable identity for legacy requests',
   ])
 })
 
-it('shows queue status and allows only the current FIFO request to open', async () => {
+it('shows the compact queue count and allows only the current FIFO request to open', async () => {
   const requests = {
     later: createRequest('later', 1, 'https://example.test', 2),
     current: createRequest('current', 2, 'https://example.test', 1),
@@ -122,9 +123,8 @@ it('shows queue status and allows only the current FIFO request to open', async 
     />
   )
 
-  expect(screen.getByText('Requests (3)').closest('.requestQueueStatus').textContent).toBe(
-    'Requests (3)2 requests waiting'
-  )
+  expect(screen.getByText('3 items').closest('.requestQueueStatus').textContent).toBe('3 items')
+  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
   expect(screen.getByText('Current')).toBeTruthy()
 
   const current = screen.getByRole('button', { name: 'Review Account access. Current' })
@@ -142,7 +142,7 @@ it('shows queue status and allows only the current FIFO request to open', async 
   })
 })
 
-it('uses singular waiting copy when one request follows the current request', () => {
+it('does not duplicate per-row waiting state in the queue heading', () => {
   render(
     <ExpandedRequestsHarness
       expanded
@@ -155,8 +155,8 @@ it('uses singular waiting copy when one request follows the current request', ()
     />
   )
 
-  expect(screen.getByText('Requests (2)')).toBeTruthy()
-  expect(screen.getByText('1 request waiting')).toBeTruthy()
+  expect(screen.getByText('2 items')).toBeTruthy()
+  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
 })
 
 it('keeps newest-first row order when request origins are interleaved', () => {
@@ -204,7 +204,7 @@ it('keeps monitor evidence inspectable while gating only the review queue', () =
   expect(screen.getByRole('button', { name: 'Review Account access' }).disabled).toBe(false)
   expect(screen.getByRole('button', { name: 'Review Account access. Current' }).disabled).toBe(false)
   expect(screen.getByRole('button', { name: 'Account access. Waiting' }).disabled).toBe(true)
-  expect(screen.getByText('1 request waiting')).toBeTruthy()
+  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
   expect(screen.getAllByText('Current')).toHaveLength(1)
 })
 
@@ -224,7 +224,7 @@ it('does not infer a current request when the account has not exposed one', () =
 
   expect(screen.queryByText('Current')).toBeNull()
   expect(screen.getAllByRole('button', { name: 'Account access. Waiting' })).toHaveLength(2)
-  expect(screen.getByText('2 requests waiting')).toBeTruthy()
+  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
 })
 
 it('renders wallet-owned delegation revocations in the same active FIFO ledger', () => {
@@ -262,7 +262,7 @@ it('opens pending requests from a native keyboard-operable button and restores f
   }
 
   const { user, unmount } = render(requests.renderPreview())
-  const button = screen.getByRole('button', { name: /1 Request/i })
+  const button = screen.getByRole('button', { name: /Requests.*1 active/i })
 
   button.focus()
   await user.keyboard('{Enter}')
@@ -277,7 +277,7 @@ it('opens pending requests from a native keyboard-operable button and restores f
   returned.store = requests.store
   render(returned.renderPreview())
   returned.componentDidMount()
-  const restored = screen.getByRole('button', { name: /1 Request/i })
+  const restored = screen.getByRole('button', { name: /Requests.*1 active/i })
   await waitFor(() => expect(document.activeElement).toBe(restored))
 })
 

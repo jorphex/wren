@@ -234,8 +234,8 @@ const reviewScenarios = () => [
     logicalWidth: 760,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestPreviewContentMeta',
-    requiredControls: ['Requests. 3 requests · 1 pending · 2 confirming'],
-    requiredText: ['Requests', '3 requests · 1 pending · 2 confirming']
+    requiredControls: ['Requests. 3 active. 1 pending. 2 confirming.'],
+    requiredText: ['Requests (3)', '1 pending · 2 confirming']
   },
   {
     id: 'tray-account-requests-list-full-1',
@@ -246,7 +246,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestClearAll',
     requiredControls: ['Clear all requests'],
-    requiredText: ['Requests (3)', 'No requests waiting', 'workshop.example', 'garden.example']
+    requiredText: ['Requests', '3 items', 'workshop.example', 'garden.example']
   },
   {
     id: 'tray-transaction-safety-unavailable-short-1',

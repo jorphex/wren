@@ -37,10 +37,7 @@ export const requestPreviewSummary = (requests = []) => {
   return { total: unfinished.length, pending: unfinished.length - confirming, confirming }
 }
 
-const requestSummaryCopy = ({ total, pending, confirming }) => {
-  const requestLabel = total === 1 ? '1 request' : `${total} requests`
-  return `${requestLabel} · ${pending} pending · ${confirming} confirming`
-}
+const requestSummaryCopy = ({ pending, confirming }) => `${pending} pending · ${confirming} confirming`
 
 export const byRequestRecency = (a, b) => {
   const aQueueIndex = queueNumber(a.queueIndex)
@@ -160,13 +157,18 @@ export class Requests extends React.Component {
     const requests = Object.values(this.store('main.accounts', this.props.account, 'requests') || {})
     const summary = requestPreviewSummary(requests)
     const summaryCopy = requestSummaryCopy(summary)
+    const title = summary.total ? `Requests (${summary.total})` : 'Requests'
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <button
           ref={this.previewRef}
           type='button'
           className='requestsPreview'
-          aria-label={summary.total ? `Requests. ${summaryCopy}` : 'Requests'}
+          aria-label={
+            summary.total
+              ? `Requests. ${summary.total} active. ${summary.pending} pending. ${summary.confirming} confirming.`
+              : 'Requests'
+          }
           onClick={() => {
             restorePreviewFocus = true
             const crumb = {
@@ -184,7 +186,7 @@ export class Requests extends React.Component {
               <span style={summary.total ? { color: 'var(--good)' } : {}}>
                 <Icon name='requests' size={13} />
               </span>
-              <span>Requests</span>
+              <span>{title}</span>
             </div>
             <div className='requestPreviewContentEnd'>
               {summary.total ? <span className='requestPreviewContentMeta'>{summaryCopy}</span> : null}
@@ -477,7 +479,6 @@ export class Requests extends React.Component {
     const activeAccount = this.store('main.accounts', this.props.account)
     const requests = Object.values(activeAccount.requests || {}).sort(byRequestRecency)
     this.renderedRequests = requests
-    const reviewQueue = requests.filter((request) => request.mode !== 'monitor')
     this.activeRequestId = activeAccount.activeRequestId
     this.requestIndexes = new Map(requests.map((request, index) => [request.handlerId, index]))
 
@@ -487,14 +488,6 @@ export class Requests extends React.Component {
       else result.push({ key: `${req.origin}:${req.handlerId}`, origin: req.origin, requests: [req] })
       return result
     }, [])
-
-    const waitingCount = reviewQueue.filter((request) => request.handlerId !== this.activeRequestId).length
-    const waitingCopy =
-      waitingCount === 0
-        ? 'No requests waiting'
-        : waitingCount === 1
-          ? '1 request waiting'
-          : `${waitingCount} requests waiting`
 
     return (
       <div
@@ -506,8 +499,9 @@ export class Requests extends React.Component {
         {requests.length ? (
           <div className='requestQueueStatus'>
             <div className='requestQueueStatusSummary' role='status' aria-live='polite'>
-              <span className='requestQueueStatusTitle'>{`Requests (${requests.length})`}</span>
-              <span className='requestQueueStatusWaiting'>{waitingCopy}</span>
+              <span className='requestQueueStatusTitle'>{`${requests.length} ${
+                requests.length === 1 ? 'item' : 'items'
+              }`}</span>
             </div>
             <button
               ref={this.clearReturnFocusRef}
