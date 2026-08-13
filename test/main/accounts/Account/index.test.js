@@ -300,6 +300,20 @@ describe('ENS identity', () => {
     expect(account.ensName).toBe('known.eth')
     expect(provider.off).toHaveBeenCalledWith('status:ethereum:1', statusHandler)
   })
+
+  it('keeps a successful reverse lookup without polling or clearing it on reconnect', async () => {
+    const statusHandler = provider.on.mock.calls.find(([event]) => event === 'status:ethereum:1')[1]
+
+    statusHandler('connected')
+    await flushPromises()
+    mockReverseLookup.mockResolvedValueOnce([''])
+    statusHandler('connected')
+    await flushPromises()
+
+    expect(account.ensName).toBe('wren.eth')
+    expect(mockReverseLookup).toHaveBeenCalledTimes(1)
+    expect(provider.off).toHaveBeenCalledWith('status:ethereum:1', statusHandler)
+  })
 })
 
 it('opens a dapp network proposal directly in the editable network decision', () => {

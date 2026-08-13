@@ -71,6 +71,24 @@ it('renders the Trezor PIN matrix as named native controls', () => {
   expect(screen.getByRole('status', { name: '0 PIN positions entered' })).toBeTruthy()
 })
 
+it('uses a transient hardware-authentication dialog without exposing address management', () => {
+  render(
+    <SignerHarness
+      id='device-1'
+      promptOnly
+      name='Trezor Safe 5'
+      type='trezor'
+      status='need pin'
+      addresses={['0x00000000000000000000000000000000000000aa']}
+    />
+  )
+
+  expect(screen.getByRole('dialog', { name: 'Trezor Safe 5 authentication' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Enter PIN' })).toBeTruthy()
+  expect(screen.queryByText('Available accounts')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Remove signer' })).toBeNull()
+})
+
 it('submits one Trezor PIN with the original RPC payload', async () => {
   link.rpc.mockImplementationOnce((_action, _id, _pin, callback) => callback())
   const { user } = renderSigner({ type: 'trezor', status: 'need pin' })

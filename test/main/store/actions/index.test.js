@@ -24,6 +24,8 @@ import {
   updateAccount as updateAccountAction,
   navClearReq as clearNavRequestAction,
   navClearSigner as clearNavSignerAction,
+  showHardwarePrompt as showHardwarePromptAction,
+  clearHardwarePrompt as clearHardwarePromptAction,
   notify as notifyAction,
   showWalletCallsStatus as showWalletCallsStatusAction,
   updateTypedDataRequest as updateTypedDataAction,
@@ -1654,6 +1656,56 @@ describe('#navClearSigner', () => {
     clearSigner('2b')
 
     expect(nav).toStrictEqual([req1])
+  })
+})
+
+describe('hardware signer prompt', () => {
+  const updateDash = (state) => (_node, update) => {
+    state.dash = update(state.dash)
+  }
+
+  it('opens over the existing dashboard without replacing its navigation', () => {
+    const state = {
+      dash: { showing: false, nav: [{ view: 'accounts', data: {} }] }
+    }
+
+    showHardwarePromptAction(updateDash(state), 'trezor-1')
+
+    expect(state.dash).toEqual({
+      showing: true,
+      nav: [{ view: 'accounts', data: {} }],
+      hardwarePrompt: { signerId: 'trezor-1', restoreHidden: true }
+    })
+  })
+
+  it('restores a previously hidden dashboard after authentication', () => {
+    const state = {
+      dash: {
+        showing: true,
+        nav: [{ view: 'accounts', data: {} }],
+        hardwarePrompt: { signerId: 'trezor-1', restoreHidden: true }
+      }
+    }
+
+    clearHardwarePromptAction(updateDash(state), 'trezor-1')
+
+    expect(state.dash).toEqual({ showing: false, nav: [{ view: 'accounts', data: {} }] })
+  })
+
+  it('keeps an already-open dashboard visible and ignores another signer id', () => {
+    const state = {
+      dash: {
+        showing: true,
+        nav: [{ view: 'settings', data: {} }],
+        hardwarePrompt: { signerId: 'trezor-1', restoreHidden: false }
+      }
+    }
+
+    clearHardwarePromptAction(updateDash(state), 'trezor-2')
+    expect(state.dash.hardwarePrompt.signerId).toBe('trezor-1')
+
+    clearHardwarePromptAction(updateDash(state), 'trezor-1')
+    expect(state.dash).toEqual({ showing: true, nav: [{ view: 'settings', data: {} }] })
   })
 })
 

@@ -7,7 +7,6 @@ import { Derivation } from '../Signer/derive'
 import { SignerAdapter } from '../adapters'
 import Ledger from './Ledger'
 import store from '../../store'
-import { requireStoreAction } from '../../store/action'
 
 function updateDerivation(ledger: Ledger, derivation = store('main.ledger.derivation'), accountLimit = 0) {
   const liveAccountLimit =
@@ -196,18 +195,6 @@ export default class LedgerSignerAdapter extends SignerAdapter {
     this.knownSigners[ledger.devicePath] = ledger
 
     this.emit('add', ledger)
-
-    // Show signer in dash window
-    requireStoreAction('navReplace')('dash', [
-      {
-        view: 'expandedSigner',
-        data: { signer: ledger.id }
-      },
-      {
-        view: 'accounts',
-        data: {}
-      }
-    ])
 
     try {
       await this.handleConnectedDevice(ledger)

@@ -66,6 +66,7 @@ export class Dash extends React.Component {
   onKeyDown(event) {
     if (event.key !== 'Escape' || event.defaultPrevented) return
     event.preventDefault()
+    if (this.store('windows.dash.hardwarePrompt')?.signerId) return
     const nav = this.store('windows.dash.nav') || []
     if (nav.length) link.send('tray:action', 'backDash')
     else link.send('tray:action', 'closeDash')
@@ -92,6 +93,10 @@ export class Dash extends React.Component {
 
   render() {
     const { view, data } = this.store('windows.dash.nav')[0] || { view: 'default', data: {} }
+    const hardwarePrompt = this.store('windows.dash.hardwarePrompt')
+    const promptSigner = hardwarePrompt?.signerId
+      ? this.store('main.signers', hardwarePrompt.signerId)
+      : undefined
     const showAddButton =
       ['chains', 'accounts', 'tokens'].includes(view) && (!data || Object.keys(data).length === 0)
 
@@ -102,6 +107,9 @@ export class Dash extends React.Component {
           <div className='dashMainOverlay' />
           <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>
         </div>
+        {promptSigner ? (
+          <Signer key={`hardware-prompt-${promptSigner.id}`} promptOnly {...promptSigner} />
+        ) : null}
         {showAddButton && <AddNewItemButton view={view} req={this.props.req} />}
       </div>
     )

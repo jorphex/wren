@@ -272,13 +272,16 @@ class FrameAccount {
   }
 
   async lookupAddress() {
-    if (this.ensLookupClosed || this.ensLookupInFlight) return
+    // A successful reverse lookup is durable account identity. Do not let later
+    // provider reconnects or an empty resolver response erase it.
+    if (this.ensLookupClosed || this.ensLookupInFlight || this.ensName) return
     this.ensLookupInFlight = true
 
     try {
       const ensName = (await nebula.ens.reverseLookup(this.address))[0] || ''
-      if (!this.ensLookupClosed && ensName !== this.ensName) {
+      if (!this.ensLookupClosed && ensName) {
         this.ensName = ensName
+        provider.off('status:ethereum:1', this.ensStatusHandler)
         this.update()
       }
     } catch (e) {

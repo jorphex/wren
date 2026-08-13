@@ -665,8 +665,45 @@ export class Signer extends React.Component {
     )
   }
 
+  renderPrompt() {
+    const signerStatus = this.getStatusMeta()
+
+    return (
+      <div className='hardwareSignerPromptOverlay'>
+        <DialogSurface
+          className='hardwareSignerPromptSurface expandedSigner'
+          ariaLabel={`${this.props.name || 'Hardware wallet'} authentication`}
+          busy={signerStatus.busy}
+          modal
+        >
+          <div className='hardwareSignerPromptHeader'>
+            <div className='hardwareSignerPromptMark'>
+              <AccountTypeMark type={this.props.type} size={20} />
+            </div>
+            <div className='hardwareSignerPromptIdentity'>
+              <h2>{this.props.name || 'Hardware wallet'}</h2>
+              {this.statusText()}
+            </div>
+          </div>
+          {signerStatus.input ? (
+            <div className='signerInterface'>
+              {this.renderTrezorPin(signerStatus.input === 'pin')}
+              {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}
+              {this.renderTrezorPairing(signerStatus.input === 'pairingCode')}
+            </div>
+          ) : (
+            <div className='hardwareSignerPromptBusy'>
+              <div className='signerLoadingLoader' />
+            </div>
+          )}
+        </DialogSurface>
+      </div>
+    )
+  }
+
   render() {
-    const { expanded } = this.props
+    const { expanded, promptOnly } = this.props
+    if (promptOnly) return this.renderPrompt()
     if (expanded) {
       return this.renderExpanded()
     } else {

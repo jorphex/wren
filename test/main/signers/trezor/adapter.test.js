@@ -4,8 +4,12 @@ jest.mock('../../../../main/store', () => {
   return { __esModule: true, default: store }
 })
 
+const mockStoreActions = {}
 jest.mock('../../../../main/store/action', () => ({
-  requireStoreAction: jest.fn(() => jest.fn())
+  requireStoreAction: jest.fn((name) => {
+    mockStoreActions[name] ||= jest.fn()
+    return mockStoreActions[name]
+  })
 }))
 
 jest.mock('../../../../main/signers/trezor/bridge', () => {
@@ -74,6 +78,23 @@ describe('Trezor adapter lifecycle', () => {
 
     TrezorBridge.emit('trezor:entered:passphrase', signer.id)
     expect(signer.status).toBe(Status.OK)
+  })
+
+  it('opens only the transient authentication prompt and clears it when ready', () => {
+    let signer
+    adapter.once('add', (addedSigner) => {
+      signer = addedSigner
+    })
+    TrezorBridge.emit('trezor:detected', device.path)
+
+    expect(mockStoreActions.navReplace).toBeUndefined()
+
+    signer.status = Status.OK
+    TrezorBridge.emit('trezor:needPin', device)
+    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id)
+
+    TrezorBridge.emit('trezor:entered:pin', signer.id)
+    expect(mockStoreActions.clearHardwarePrompt).toHaveBeenCalledWith(signer.id)
   })
 
   it('does not restore a stale status after PIN attempts are depleted', () => {

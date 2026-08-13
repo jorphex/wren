@@ -869,6 +869,27 @@ module.exports = {
       return win
     })
   },
+  showHardwarePrompt: (u, signerId) => {
+    if (!signerId) return
+    u('windows.dash', (dash) => {
+      const existing = dash.hardwarePrompt
+      dash.hardwarePrompt = {
+        signerId,
+        restoreHidden: existing ? existing.restoreHidden : !dash.showing
+      }
+      dash.showing = true
+      return dash
+    })
+  },
+  clearHardwarePrompt: (u, signerId) => {
+    u('windows.dash', (dash) => {
+      const prompt = dash.hardwarePrompt
+      if (!prompt || (signerId && prompt.signerId !== signerId)) return dash
+      delete dash.hardwarePrompt
+      if (prompt.restoreHidden) dash.showing = false
+      return dash
+    })
+  },
   navClearSigner: (u, signerId) => {
     u('windows.dash.nav', (nav) => nav.filter((navItem) => navItem?.data?.signer !== signerId))
   },

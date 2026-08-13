@@ -26,6 +26,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   private pendingSessionProbes = new Map<string, symbol>()
   private timers = new Map<string, Set<ReturnType<typeof setTimeout>>>()
   private promptStatuses = new Map<string, string>()
+  private activePrompts = new Set<string>()
   private connectionGenerations = new Map<string, number>()
   private observer: Observer | undefined
   private lifecycleGeneration = 0
@@ -141,6 +142,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       const signer = this.knownSigners[deviceId]?.signer
       if (!signer) return
 
+      this.showPrompt(signer)
       this.rememberPromptStatus(signer)
       this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
         this.restorePromptStatus(signer)
@@ -154,6 +156,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.withSigner(device, (signer) => {
         log.verbose(`Trezor ${signer.id} needs pin`)
 
+        this.showPrompt(signer)
         this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:pin', () => {
@@ -184,6 +187,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
         delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pin']
         signer.pinError = undefined
         signer.status = Status.NEEDS_RECONNECTION
+        this.clearPrompt(signer.id)
         this.emit('update', signer)
       })
     })
@@ -192,6 +196,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.withSigner(device, (signer) => {
         log.verbose(`Trezor ${signer.id} needs passphrase`, { status: signer.status })
 
+        this.showPrompt(signer)
         this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
@@ -210,6 +215,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
           selectedMethod: payload.selectedMethod
         })
 
+        this.showPrompt(signer)
         this.rememberPromptStatus(signer)
 
         this.addEventHandler(signer, 'trezor:entered:pairing', () => {
@@ -248,24 +254,14 @@ export default class TrezorSignerAdapter extends SignerAdapter {
         delete this.knownSigners[trezor.id]?.eventHandlers['trezor:entered:passphrase']
       }
 
+      if (this.shouldClearPrompt(trezor.status)) this.clearPrompt(trezor.id)
+
       this.emit('update', trezor)
     })
 
     this.knownSigners[trezor.id] = { signer: trezor, eventHandlers: {} }
 
     this.emit('add', trezor)
-
-    // Show signer in dash window
-    requireStoreAction('navReplace')('dash', [
-      {
-        view: 'expandedSigner',
-        data: { signer: trezor.id }
-      },
-      {
-        view: 'accounts',
-        data: {}
-      }
-    ])
 
     const generation = this.lifecycleGeneration
     this.setSignerTimer(trezor.id, () => this.markDisconnectedAfterProbe(trezor, generation), 10_000)
@@ -309,6 +305,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     this.clearAllTimers()
     this.pendingSessionProbes.clear()
     this.promptStatuses.clear()
+    Array.from(this.activePrompts).forEach((id) => this.clearPrompt(id))
+    this.activePrompts.clear()
     this.connectionGenerations.clear()
 
     if (this.observer) {
@@ -335,6 +333,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.clearSignerTimers(trezor.id)
       this.pendingSessionProbes.delete(trezor.id)
       this.promptStatuses.delete(trezor.id)
+      this.clearPrompt(trezor.id)
       this.connectionGenerations.delete(trezor.id)
 
       trezor.close()
@@ -414,6 +413,30 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     ].includes(status)
   }
 
+  private shouldClearPrompt(status: string) {
+    return [
+      Status.OK,
+      Status.DISCONNECTED,
+      Status.NEEDS_RECONNECTION,
+      Status.DERIVATION_FAILED,
+      Status.SAFETY_CHECKS
+    ].includes(status)
+  }
+
+  private showPrompt(signer: Trezor) {
+    if (this.activePrompts.has(signer.id)) return
+    this.activePrompts.add(signer.id)
+    if (this.activePrompts.size === 1) requireStoreAction('showHardwarePrompt')(signer.id)
+  }
+
+  private clearPrompt(signerId: string) {
+    const visiblePrompt = this.activePrompts.values().next().value === signerId
+    if (!this.activePrompts.delete(signerId) || !visiblePrompt) return
+    requireStoreAction('clearHardwarePrompt')(signerId)
+    const nextSignerId = this.activePrompts.values().next().value
+    if (nextSignerId) requireStoreAction('showHardwarePrompt')(nextSignerId)
+  }
+
   private rememberPromptStatus(signer: Trezor) {
     if (!this.promptStatuses.has(signer.id) && !this.isPromptStatus(signer.status)) {
       this.promptStatuses.set(signer.id, signer.status)
@@ -427,6 +450,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     this.promptStatuses.delete(signer.id)
 
     if (status) signer.status = status
+    if (this.shouldClearPrompt(signer.status)) this.clearPrompt(signer.id)
     this.emit('update', signer)
   }
 
