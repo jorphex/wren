@@ -9,6 +9,10 @@ const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
+const transactionEvidenceStyle = fs.readFileSync(
+  'app/tray/Account/Requests/TransactionRequest/ViewData/style/index.styl',
+  'utf8'
+)
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
@@ -150,6 +154,7 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewSummaryStatus[\s\S]*?min-height 54px[\s\S]*?align-items center/
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
+  expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)
 })
 
 test('keeps signing evidence readable and operable when the shell is scaled', () => {
