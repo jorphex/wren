@@ -65,9 +65,11 @@ const migrateTemporaryProfile = async (fixture) => {
     const migrated = await loadApplicationState(sourcePath)
     const migratedPath = writePersistedVersion(directory, { main: migrated.main })
     const reloaded = await loadApplicationState(migratedPath)
+    const reloadedPath = writePersistedVersion(directory, { main: reloaded.main })
+    const secondReload = await loadApplicationState(reloadedPath)
     const mode = fs.statSync(migratedPath).mode & 0o777
 
-    return { migrated, mode, reloaded }
+    return { migrated, mode, reloaded, secondReload }
   } finally {
     fs.rmSync(directory, { recursive: true, force: true })
   }
@@ -175,6 +177,71 @@ it('migrates a representative version 12 profile through application state initi
   expect(migrations.apply(clone(migrated))).toEqual(migrated)
 })
 
+it('migrates a representative version 3 profile across raw and application boundaries', async () => {
+  const fixture = loadFixture('v3-pre-cross-chain-state.json')
+  const address = fixtureAccount
+
+  const afterFour = migrations.apply(clone(fixture.state), 4)
+  expect(afterFour.main.networks.ethereum[1]).toMatchObject({
+    symbol: 'ETH',
+    gas: { price: { selected: 'standard', levels: { custom: '0x2a' } } },
+    connection: {
+      primary: { on: true, current: 'local', custom: 'http://127.0.0.1:8545' },
+      secondary: { on: false, current: 'custom' }
+    }
+  })
+  expect(afterFour.main).not.toHaveProperty('gasPrice')
+  expect(afterFour.main).not.toHaveProperty('connection')
+
+  const afterSeven = migrations.apply(clone(fixture.state), 7)
+  expect(afterSeven.main.accounts[address]).toMatchObject({
+    id: address,
+    address,
+    name: 'Fixture Early Hardware Account',
+    lastSignerType: 'trezor',
+    tokens: { 'fixture-token': true }
+  })
+  expect(afterSeven.main).not.toHaveProperty('addresses')
+
+  const afterTwelve = migrations.apply(clone(fixture.state), 12)
+  expect(afterTwelve.main.accounts[address].created).toBe('256:1700000000000')
+  const afterThirtySeven = migrations.apply(clone(fixture.state), 37)
+  expect(afterThirtySeven.main.shortcuts.summon).toEqual({
+    modifierKeys: ['Alt'],
+    shortcutKey: 'Slash',
+    enabled: true,
+    configuring: false
+  })
+
+  const { migrated, mode, reloaded, secondReload } = await migrateTemporaryProfile(fixture)
+  expect(migrated.main._version).toBe(migrations.latest)
+  expect(migrated.main.accounts[address]).toMatchObject({
+    id: address,
+    address,
+    lastSignerType: 'trezor',
+    created: '256:1700000000000'
+  })
+  expect(Object.values(migrated.main.accountsMeta)).toContainEqual({
+    name: 'Fixture Early Hardware Account',
+    lastUpdated: 1700000000000
+  })
+  expect(migrated.main.ledger.derivation).toBe('testnet')
+  expect(migrated.main.trezor.derivation).toBe('testnet')
+  expect(migrated.main.networks.ethereum[1].connection.endpoints[0]).toMatchObject({
+    current: 'local',
+    custom: 'http://127.0.0.1:8545'
+  })
+  expect(migrated.main.permissions).toEqual({})
+  expect(mode).toBe(0o600)
+  expect(migrated.main.backup).toMatchObject({
+    accounts: expect.any(Object),
+    addresses: expect.any(Object)
+  })
+  expect(reloaded.main).not.toHaveProperty('backup')
+  expect(secondReload.main).toEqual(reloaded.main)
+  expect(migrations.apply(clone(migrated))).toEqual(migrated)
+})
+
 it('migrates the version 37 network boundary without losing custom state', async () => {
   const fixture = loadFixture('v37-network-state.json')
   const customChain = clone(fixture.state.main.networks.ethereum[31337])
@@ -264,6 +331,22 @@ it('migrates version 52 Pylon presets through application state initialization',
   })
   expect(migrated.main.mute.migrateToPylon).toBe(false)
   expect(JSON.stringify(migrated)).not.toContain('pylon.link')
+  expect(reloaded.main).toEqual(migrated.main)
+})
+
+it('keeps a current safe profile migration-invariant and reload-stable', async () => {
+  const fixture = loadFixture('v64-safe-current-state.json')
+  const source = clone(fixture.state)
+
+  expect(migrations.apply(clone(source))).toEqual(source)
+
+  const { migrated, mode, reloaded } = await migrateTemporaryProfile(fixture)
+  expect(migrated.main).toMatchObject(source.main)
+  expect(migrated.main._version).toBe(migrations.latest)
+  expect(migrated.main.instanceId).toBe(source.main.instanceId)
+  expect(migrated.main.networks.ethereum[31337]).toMatchObject(source.main.networks.ethereum[31337])
+  expect(migrated.main.accounts[fixtureAccount]).toMatchObject(source.main.accounts[fixtureAccount])
+  expect(mode).toBe(0o600)
   expect(reloaded.main).toEqual(migrated.main)
 })
 

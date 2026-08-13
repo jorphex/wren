@@ -1,111 +1,314 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Legacy JS migrations are not typed yet.
-// @ts-nocheck
-// legacy migrations that were written in JS and have not been ported
-// to Typescript
+// Legacy migrations preserve historical persisted shapes. Values stay unknown until
+// the migration that owns a field has narrowed them.
 
 import { v5 as uuidv5 } from 'uuid'
 import { z } from 'zod'
 import log from 'electron-log'
 
-import { accountNS, isDefaultAccountName } from '../../../../../resources/domain/account'
+import { accountNS, getDefaultAccountName } from '../../../../../resources/domain/account'
 import { isWindows } from '../../../../../resources/platform'
 
+const LegacyEndpointSchema = z
+  .object({
+    on: z.boolean().optional(),
+    current: z.string().optional(),
+    status: z.string().optional(),
+    connected: z.boolean().optional(),
+    type: z.string().optional(),
+    network: z.string().optional(),
+    custom: z.string().optional()
+  })
+  .passthrough()
+
+const LegacyConnectionSchema = z
+  .object({
+    primary: LegacyEndpointSchema.optional(),
+    secondary: LegacyEndpointSchema.optional(),
+    on: z.boolean().optional()
+  })
+  .passthrough()
+
+const LegacyGasSchema = z
+  .object({
+    price: z
+      .object({
+        selected: z.string().optional(),
+        lastLevel: z.string().optional(),
+        levels: z.record(z.string(), z.unknown()).optional()
+      })
+      .passthrough()
+      .optional(),
+    fees: z.record(z.string(), z.unknown()).optional()
+  })
+  .passthrough()
+
+const LegacyNetworkSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).optional(),
+    type: z.string().optional(),
+    layer: z.string().optional(),
+    symbol: z.string().optional(),
+    name: z.string().optional(),
+    explorer: z.string().optional(),
+    gas: LegacyGasSchema.optional(),
+    connection: LegacyConnectionSchema.optional(),
+    on: z.boolean().optional(),
+    isTestnet: z.boolean().optional()
+  })
+  .passthrough()
+
+const LegacyNativeCurrencySchema = z
+  .object({
+    usd: z.record(z.string(), z.unknown()).optional(),
+    icon: z.string().optional(),
+    name: z.string().optional(),
+    symbol: z.string().optional(),
+    decimals: z.number().optional()
+  })
+  .passthrough()
+
+const LegacyNetworkMetaSchema = z
+  .object({
+    gas: LegacyGasSchema.optional(),
+    nativeCurrency: LegacyNativeCurrencySchema.optional(),
+    icon: z.string().optional(),
+    primaryColor: z.string().optional()
+  })
+  .passthrough()
+
+const LegacySmartSchema = z
+  .object({
+    type: z.string().optional(),
+    actor: z.union([z.string(), z.object({ address: z.string() }).passthrough()]).optional(),
+    chain: z.record(z.string(), z.unknown()).optional()
+  })
+  .passthrough()
+
+const LegacyAccountSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().optional(),
+    lastSignerType: z.string().optional(),
+    type: z.string().optional(),
+    address: z.string().optional(),
+    addresses: z.array(z.string()).optional(),
+    created: z.union([z.string(), z.number()]).nullish(),
+    smart: LegacySmartSchema.optional(),
+    permissions: z.record(z.string(), z.unknown()).optional(),
+    tokens: z.unknown().optional()
+  })
+  .passthrough()
+
+const LegacyTokenSchema = z.object({ address: z.string().optional() }).passthrough()
+const LegacyTokensSchema = z.union([
+  z.array(z.unknown()),
+  z
+    .object({
+      custom: z.array(z.unknown()).optional(),
+      known: z.record(z.string(), z.array(LegacyTokenSchema)).optional()
+    })
+    .passthrough()
+])
+
+const LegacyShortcutSchema = z
+  .object({
+    modifierKeys: z.array(z.string()).optional(),
+    shortcutKey: z.string().optional(),
+    enabled: z.boolean().optional(),
+    configuring: z.boolean().optional()
+  })
+  .passthrough()
+
+const LegacyTopLevelConnectionSchema = z
+  .object({
+    network: z.union([z.string(), z.number()]).optional(),
+    local: z
+      .object({
+        on: z.boolean().optional(),
+        settings: z
+          .record(
+            z.string(),
+            z
+              .object({
+                options: z.record(z.string(), z.unknown()).optional(),
+                current: z.string().optional()
+              })
+              .passthrough()
+          )
+          .optional()
+      })
+      .passthrough()
+      .optional(),
+    secondary: z
+      .object({
+        on: z.boolean().optional(),
+        settings: z
+          .record(
+            z.string(),
+            z
+              .object({
+                options: z.record(z.string(), z.unknown()).optional(),
+                current: z.string().optional()
+              })
+              .passthrough()
+          )
+          .optional()
+      })
+      .passthrough()
+      .optional()
+  })
+  .passthrough()
+
+const LegacyStateSchema = z
+  .object({
+    main: z
+      .object({
+        _version: z.coerce.number(),
+        networks: z
+          .object({ ethereum: z.record(z.string(), LegacyNetworkSchema) })
+          .passthrough()
+          .optional(),
+        networksMeta: z
+          .object({ ethereum: z.record(z.string(), LegacyNetworkMetaSchema) })
+          .passthrough()
+          .optional(),
+        accounts: z.record(z.string(), LegacyAccountSchema).optional(),
+        addresses: z.record(z.string(), LegacyAccountSchema).optional(),
+        permissions: z.record(z.string(), z.unknown()).optional(),
+        balances: z.record(z.string(), z.array(LegacyTokenSchema)).optional(),
+        gasPrice: z
+          .record(
+            z.string(),
+            z.object({ default: z.string(), levels: z.record(z.string(), z.unknown()) }).passthrough()
+          )
+          .optional(),
+        connection: LegacyTopLevelConnectionSchema.optional(),
+        currentNetwork: z
+          .object({ id: z.union([z.string(), z.number()]).optional() })
+          .passthrough()
+          .optional(),
+        clients: z.unknown().optional(),
+        backup: z.record(z.string(), z.unknown()).optional(),
+        hardwareDerivation: z.string().optional(),
+        ledger: z.record(z.string(), z.unknown()).optional(),
+        trezor: z.record(z.string(), z.unknown()).optional(),
+        lattice: z.record(z.string(), z.unknown()).optional(),
+        latticeSettings: z.record(z.string(), z.unknown()).optional(),
+        mute: z.record(z.string(), z.unknown()).optional(),
+        tokens: z.unknown().optional(),
+        shortcuts: z.unknown().optional(),
+        accountsMeta: z.record(z.string(), z.unknown()).optional()
+      })
+      .passthrough()
+  })
+  .passthrough()
+
+type LegacyState = z.infer<typeof LegacyStateSchema>
+type LegacyMigration = (initial: LegacyState) => LegacyState
+
+const isUnknownRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const invalidField = (migration: number, field: string): never => {
+  throw new Error(`Migration ${migration}: invalid ${field}`)
+}
+
+const required = <Value>(value: Value | undefined, migration: number, field: string): Value =>
+  value === undefined ? invalidField(migration, field) : value
+
+const ethereumNetworks = (initial: LegacyState, migration: number) =>
+  initial.main.networks?.ethereum || invalidField(migration, 'networks')
+
+const ethereumNetworkMeta = (initial: LegacyState, migration: number) =>
+  initial.main.networksMeta?.ethereum || invalidField(migration, 'network metadata')
+
+const legacyAccounts = (initial: LegacyState, migration: number) =>
+  initial.main.accounts || invalidField(migration, 'accounts')
+
+const legacyValueIsGreater = (
+  left: string | number | null | undefined,
+  right: string | number | null | undefined
+) => {
+  const leftValue = left ?? ''
+  const rightValue = right ?? ''
+  if (typeof leftValue === typeof rightValue) {
+    return typeof leftValue === 'number' ? leftValue > Number(rightValue) : leftValue > String(rightValue)
+  }
+  return Number(leftValue) > Number(rightValue)
+}
+
 const migrations = {
-  4: (initial) => {
-    // If persisted state still has main.gasPrice, move gas settings into networks
-    const gasPrice = initial.main.gasPrice // ('gasPrice', false)
+  4: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 4)
+    const gasPrice = initial.main.gasPrice
 
     if (gasPrice) {
-      Object.keys(gasPrice).forEach((network) => {
-        // Prerelease versions of 0.3.2 used 'normal' instead of 'standard'
-        if (gasPrice[network].default === 'normal') gasPrice[network].default = 'standard'
-        // For each network with gasPrices, copy over default and custom level
-        if (initial.main.networks.ethereum[network] && initial.main.networks.ethereum[network].gas) {
-          initial.main.networks.ethereum[network].gas.price.selected = gasPrice[network].default
-          initial.main.networks.ethereum[network].gas.price.levels.custom = gasPrice[network].levels.custom
+      Object.entries(gasPrice).forEach(([networkId, settings]) => {
+        if (settings.default === 'normal') settings.default = 'standard'
+        const price = networks[networkId]?.gas?.price
+        if (price) {
+          price.selected = settings.default
+          price.levels = { ...(price.levels || {}), custom: settings.levels['custom'] }
         }
       })
     }
 
-    // If persisted state state still has main.connection, move connection settings into networks
-    const connection = initial.main.connection // main('connection', false)
+    const connection = initial.main.connection
     if (connection) {
-      // Copy all local connection settings to new connection object
-      if (connection.local && connection.local.settings) {
-        Object.keys(connection.local.settings).forEach((id) => {
-          if (
-            connection.secondary.settings[id] &&
-            initial.main.networks.ethereum[id] &&
-            initial.main.networks.ethereum[id].connection
-          ) {
-            // Copy local custom endpoint to new connection object
-            if (connection.local.settings[id].options)
-              initial.main.networks.ethereum[id].connection.primary.custom =
-                connection.local.settings[id].options.custom
-            // Copy local current selection to new connection object
-            let current = connection.local.settings[id].current
-            if (current === 'direct') current = 'local'
-            if (current) initial.main.networks.ethereum[id].connection.primary.current = current
-          }
-        })
-      }
-      // Copy all secondary connection settings to new connection object
-      if (connection.secondary && connection.secondary.settings) {
-        Object.keys(connection.secondary.settings).forEach((id) => {
-          if (
-            connection.secondary.settings[id] &&
-            initial.main.networks.ethereum[id] &&
-            initial.main.networks.ethereum[id].connection
-          ) {
-            // Copy all secondary connection settings to new connection object
-            if (connection.secondary.settings[id].options)
-              initial.main.networks.ethereum[id].connection.secondary.custom =
-                connection.secondary.settings[id].options.custom
-            // Copy local current selection to new connection object
-            let current = connection.secondary.settings[id].current
-            if (current === 'direct') current = 'local'
-            if (current) initial.main.networks.ethereum[id].connection.secondary.current = current
-          }
-        })
-      }
-      // Copy primary/secondary on/off
-      Object.keys(initial.main.networks.ethereum).forEach((id) => {
-        initial.main.networks.ethereum[id].connection.primary.on = connection.local.on
-        initial.main.networks.ethereum[id].connection.secondary.on = connection.secondary.on
+      Object.entries(connection.local?.settings || {}).forEach(([networkId, settings]) => {
+        const endpoint = networks[networkId]?.connection?.primary
+        if (!endpoint) return
+        const custom = settings.options?.['custom']
+        if (typeof custom === 'string') endpoint.custom = custom
+        const current = settings.current === 'direct' ? 'local' : settings.current
+        if (current) endpoint.current = current
       })
-      initial.main.currentNetwork.id = connection.network || initial.main.currentNetwork.id || 1
+
+      Object.entries(connection.secondary?.settings || {}).forEach(([networkId, settings]) => {
+        const endpoint = networks[networkId]?.connection?.secondary
+        if (!endpoint) return
+        const custom = settings.options?.['custom']
+        if (typeof custom === 'string') endpoint.custom = custom
+        const current = settings.current === 'direct' ? 'local' : settings.current
+        if (current) endpoint.current = current
+      })
+
+      Object.values(networks).forEach((network) => {
+        if (network.connection?.primary && connection.local?.on !== undefined) {
+          network.connection.primary.on = connection.local.on
+        }
+        if (network.connection?.secondary && connection.secondary?.on !== undefined) {
+          network.connection.secondary.on = connection.secondary.on
+        }
+      })
+
+      const currentNetwork = initial.main.currentNetwork || {}
+      currentNetwork.id = connection.network || currentNetwork.id || 1
+      initial.main.currentNetwork = currentNetwork
     }
 
-    Object.keys(initial.main.networks.ethereum).forEach((id) => {
-      // Earlier versions of v0.3.3 did not include symbols
-      if (!initial.main.networks.ethereum[id].symbol) {
-        if (id === 74) {
-          initial.main.networks.ethereum[id].symbol = 'EIDI'
-        } else if (id === 100) {
-          initial.main.networks.ethereum[id].symbol = 'xDAI'
-        } else {
-          initial.main.networks.ethereum[id].symbol = 'ETH'
-        }
-      }
-      if (initial.main.networks.ethereum[id].symbol === 'Ξ') initial.main.networks.ethereum[id].symbol = 'ETH'
-      // Update safelow -> slow and trader -> asap
-      if (initial.main.networks.ethereum[id].gas.price.selected === 'safelow')
-        initial.main.networks.ethereum[id].gas.price.selected = 'slow'
-      if (initial.main.networks.ethereum[id].gas.price.selected === 'trader')
-        initial.main.networks.ethereum[id].gas.price.selected = 'asap'
-      if (initial.main.networks.ethereum[id].gas.price.selected === 'custom')
-        initial.main.networks.ethereum[id].gas.price.selected =
-          initial.main.networks.ethereum[id].gas.price.lastLevel || 'standard'
+    Object.values(networks).forEach((network) => {
+      // The original JavaScript compared Object.keys strings with numeric 74/100,
+      // so every missing symbol took this ETH fallback.
+      if (!network.symbol) network.symbol = 'ETH'
+      if (network.symbol === 'Ξ') network.symbol = 'ETH'
+      const price = network.gas?.price
+      if (price?.selected === 'safelow') price.selected = 'slow'
+      if (price?.selected === 'trader') price.selected = 'asap'
+      if (price?.selected === 'custom') price.selected = price.lastLevel || 'standard'
     })
 
-    // If migrating from before this was a setting make it 'true' to grandfather behavior
-    if (initial.main.mute && initial.main.accountCloseLock === undefined) initial.main.accountCloseLock = true
+    if (initial.main.mute && initial.main['accountCloseLock'] === undefined) {
+      initial.main['accountCloseLock'] = true
+    }
+    delete initial.main.gasPrice
+    delete initial.main.connection
 
     return initial
   },
-  5: (initial) => {
+  5: (initial: LegacyState) => {
     // Add Polygon to persisted networks
-    initial.main.networks.ethereum[137] = {
+    ethereumNetworks(initial, 5)[137] = {
       id: 137,
       type: 'ethereum',
       symbol: 'MATIC',
@@ -140,133 +343,118 @@ const migrations = {
     }
     return initial
   },
-  6: (initial) => {
+  6: (initial: LegacyState) => {
     // If previous hardwareDerivation is testnet, set that for split ledger/trezor derevation
     if (initial.main.hardwareDerivation === 'testnet') {
-      initial.main.ledger.derivation = 'testnet'
-      initial.main.trezor.derivation = 'testnet'
+      initial.main.ledger = initial.main.ledger || {}
+      initial.main.trezor = initial.main.trezor || {}
+      initial.main.ledger['derivation'] = 'testnet'
+      initial.main.trezor['derivation'] = 'testnet'
     }
     return initial
   },
-  7: (initial) => {
-    // Move account to become cross chain accounts
-    const moveOldAccountsToNewAddresses = () => {
-      const addressesToMove = {}
-      const accounts = JSON.parse(JSON.stringify(initial.main.accounts))
-      Object.keys(accounts).forEach((id) => {
-        if (id.startsWith('0x')) {
-          addressesToMove[id] = accounts[id]
-          delete accounts[id]
-        }
-      })
-      initial.main.accounts = accounts
-      Object.keys(addressesToMove).forEach((id) => {
-        initial.main.addresses[id] = addressesToMove[id]
-      })
-    }
+  7: (initial: LegacyState) => {
+    const originalAccounts = structuredClone(legacyAccounts(initial, 7))
+    const addresses = structuredClone(initial.main.addresses || {})
 
-    // Before the v6 state migration
-    // If users have very old state they will first need to do an older account migration
-    moveOldAccountsToNewAddresses()
-
-    // Once this is complete they can now do the current account migration
-    const newAccounts = {}
-    // const nameCount = {}
-    let { accounts, addresses } = initial.main
-    accounts = JSON.parse(JSON.stringify(accounts))
-    addresses = JSON.parse(JSON.stringify(addresses))
-    Object.keys(addresses).forEach((address) => {
-      // Normalize address case
-      addresses[address.toLowerCase()] = addresses[address]
-      address = address.toLowerCase()
-
-      const hasPermissions =
-        addresses[address] &&
-        addresses[address].permissions &&
-        Object.keys(addresses[address].permissions).length > 0
-      // const hasTokens = addresses[address] && addresses[address].tokens && Object.keys(addresses[address].tokens).length > 0
-      if (!hasPermissions) return log.info(`Address ${address} did not have any permissions or tokens`)
-
-      // Copy Account permissions
-      initial.main.permissions[address] =
-        addresses[address] && addresses[address].permissions
-          ? Object.assign({}, addresses[address].permissions)
-          : {}
-
-      const matchingAccounts = []
-      Object.keys(accounts)
-        .sort((a, b) => (accounts[a].created > accounts[b].created ? 1 : -1))
-        .forEach((id) => {
-          if (
-            accounts[id].addresses &&
-            accounts[id].addresses.map &&
-            accounts[id].addresses.map((a) => a.toLowerCase()).indexOf(address) > -1
-          ) {
-            matchingAccounts.push(id)
-          }
-        })
-      if (matchingAccounts.length > 0) {
-        const primaryAccount = matchingAccounts.sort((a, b) => {
-          return accounts[a].addresses.length === accounts[b].addresses.length
-            ? 0
-            : accounts[a].addresses.length > accounts[b].addresses.length
-              ? -1
-              : 1
-        })
-        newAccounts[address] = Object.assign({}, accounts[primaryAccount[0]])
-        // nameCount[newAccounts[address].name] = nameCount[newAccounts[address].name] || 0
-        // nameCount[newAccounts[address].name]++
-        // if (nameCount[newAccounts[address].name] > 1) newAccounts[address].name = newAccounts[address].name + ' ' + nameCount[newAccounts[address].name]
-        newAccounts[address].address = address
-        newAccounts[address].id = address
-        newAccounts[address].lastSignerType = newAccounts[address].type
-        delete newAccounts[address].type
-        delete newAccounts[address].network
-        delete newAccounts[address].signer
-        delete newAccounts[address].index
-        delete newAccounts[address].addresses
-        newAccounts[address].tokens =
-          addresses[address] && addresses[address].tokens ? addresses[address].tokens : {}
-        newAccounts[address] = Object.assign({}, newAccounts[address])
+    // Pre-v7 builds could store address records in the account map.
+    Object.keys(originalAccounts).forEach((id) => {
+      const account = originalAccounts[id]
+      if (id.startsWith('0x') && account) {
+        addresses[id] = account
+        delete originalAccounts[id]
       }
     })
+
+    const newAccounts: Record<string, z.infer<typeof LegacyAccountSchema>> = {}
+    const permissions = initial.main.permissions || {}
+    let skippedAddresses = 0
+    Object.keys(addresses).forEach((originalAddress) => {
+      const addressRecord = addresses[originalAddress]
+      if (!addressRecord) return
+      const address = originalAddress.toLowerCase()
+      addresses[address] = addressRecord
+
+      if (!addressRecord.permissions || Object.keys(addressRecord.permissions).length === 0) {
+        skippedAddresses += 1
+        return
+      }
+      permissions[address] = { ...addressRecord.permissions }
+
+      const matchingAccounts = Object.keys(originalAccounts)
+        .sort((left, right) =>
+          legacyValueIsGreater(originalAccounts[left]?.created, originalAccounts[right]?.created) ? 1 : -1
+        )
+        .filter((id) =>
+          originalAccounts[id]?.addresses?.map((value) => value.toLowerCase()).includes(address)
+        )
+        .sort((left, right) => {
+          const leftLength = originalAccounts[left]?.addresses?.length || 0
+          const rightLength = originalAccounts[right]?.addresses?.length || 0
+          return leftLength === rightLength ? 0 : leftLength > rightLength ? -1 : 1
+        })
+
+      const sourceId = matchingAccounts[0]
+      const source = sourceId ? originalAccounts[sourceId] : undefined
+      if (!source) return
+      const migrated: z.infer<typeof LegacyAccountSchema> = {
+        ...source,
+        address,
+        id: address,
+        lastSignerType: source.type
+      }
+      delete migrated.type
+      delete migrated['network']
+      delete migrated['signer']
+      delete migrated['index']
+      delete migrated.addresses
+      migrated.tokens = addressRecord.tokens || {}
+      newAccounts[address] = migrated
+    })
+
+    if (skippedAddresses > 0) log.info(`Migration 7: skipped ${skippedAddresses} inactive addresses`)
     initial.main.backup = initial.main.backup || {}
-    initial.main.backup.accounts = Object.assign({}, initial.main.accounts)
-    initial.main.backup.addresses = Object.assign({}, initial.main.addresses)
+    initial.main.backup['accounts'] = { ...originalAccounts }
+    initial.main.backup['addresses'] = { ...addresses }
+    initial.main.permissions = permissions
     initial.main.accounts = newAccounts
     delete initial.main.addresses
 
     return initial
   },
-  8: (initial) => {
+  8: (initial: LegacyState) => {
     // Add on/off value to chains
-    Object.keys(initial.main.networks.ethereum).forEach((chainId) => {
-      initial.main.networks.ethereum[chainId].on =
-        chainId === '1' || chainId === initial.main.currentNetwork?.id
+    const networks = ethereumNetworks(initial, 8)
+    Object.keys(networks).forEach((chainId) => {
+      const network = networks[chainId]
+      if (network) network.on = chainId === '1' || chainId === String(initial.main.currentNetwork?.id)
     })
 
     return initial
   },
-  9: (initial) => {
-    Object.keys(initial.main.networks.ethereum).forEach((chainId) => {
+  9: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 9)
+    Object.keys(networks).forEach((chainId) => {
+      const network = networks[chainId]
+      if (!network) return
       if (chainId === '1') {
-        initial.main.networks.ethereum[chainId].layer = 'mainnet'
+        network.layer = 'mainnet'
       } else if (chainId === '10') {
-        initial.main.networks.ethereum[chainId].layer = 'rollup'
+        network.layer = 'rollup'
       } else if (chainId === '100' || chainId === '137') {
-        initial.main.networks.ethereum[chainId].layer = 'sidechain'
+        network.layer = 'sidechain'
       } else if (chainId === '3' || chainId === '4' || chainId === '5' || chainId === '42') {
-        initial.main.networks.ethereum[chainId].layer = 'testnet'
+        network.layer = 'testnet'
       } else {
-        initial.main.networks.ethereum[chainId].layer = 'other'
+        network.layer = 'other'
       }
     })
 
     return initial
   },
-  10: (initial) => {
+  10: (initial: LegacyState) => {
     // Add Optimism to persisted networks
-    initial.main.networks.ethereum[10] = {
+    ethereumNetworks(initial, 10)[10] = {
       id: 10,
       type: 'ethereum',
       layer: 'rollup',
@@ -303,51 +491,56 @@ const migrations = {
     }
     return initial
   },
-  11: (initial) => {
+  11: (initial: LegacyState) => {
     // Convert all Ξ symbols to ETH
-    Object.keys(initial.main.networks.ethereum).forEach((chain) => {
-      if (initial.main.networks.ethereum[chain].symbol === 'Ξ') {
-        initial.main.networks.ethereum[chain].symbol = 'ETH'
-      }
+    Object.values(ethereumNetworks(initial, 11)).forEach((chain) => {
+      if (chain.symbol === 'Ξ') chain.symbol = 'ETH'
     })
     // Convert all accounts to new creation type system
-    Object.keys(initial.main.accounts).forEach((account) => {
+    const accounts = legacyAccounts(initial, 11)
+    Object.keys(accounts).forEach((accountId) => {
+      const account = accounts[accountId]
+      if (!account) return
       try {
-        if (!initial.main.accounts[account].created || initial.main.accounts[account].created === -1) {
-          initial.main.accounts[account].created = 'new:' + Date.now()
+        if (!account.created || account.created === -1) {
+          account.created = 'new:' + Date.now()
         } else {
-          initial.main.accounts[account].created = initial.main.accounts[account].created + ''
-          const [block, localTime] = initial.main.accounts[account].created.split(':')
+          account.created = String(account.created)
+          const [block, localTime] = account.created.split(':')
           if (!block) {
-            initial.main.accounts[account].created = 'new:' + Date.now()
+            account.created = 'new:' + Date.now()
           } else if (!localTime) {
-            initial.main.accounts[account].created = block + ':' + Date.now()
+            account.created = block + ':' + Date.now()
           }
         }
 
-        let [block, localTime] = initial.main.accounts[account].created.split(':')
-        if (block.startsWith('0x')) block = parseInt(block, 'hex')
-        if (block > 12726312) block = 12726312
-        initial.main.accounts[account].created = block + ':' + localTime
+        const [block = '', localTime] = String(account.created).split(':')
+        let blockValue: string | number = block
+        // The original "hex" radix coerced to zero, equivalent to parseInt here.
+        if (block.startsWith('0x')) blockValue = parseInt(block)
+        if (Number(blockValue) > 12726312) blockValue = 12726312
+        account.created = blockValue + ':' + localTime
       } catch (e) {
         log.error('Migration error', e)
-        delete initial.main.accounts[account]
+        delete accounts[accountId]
       }
     })
 
     return initial
   },
-  12: (initial) => {
+  12: (initial: LegacyState) => {
     // Update old smart accounts
-    Object.keys(initial.main.accounts).forEach((id) => {
-      if (initial.main.accounts[id].smart) {
-        initial.main.accounts[id].smart.actor = initial.main.accounts[id].smart.actor.address
-      }
+    Object.values(legacyAccounts(initial, 12)).forEach((account) => {
+      const smart = account.smart
+      const actor = smart?.actor
+      if (smart && actor && typeof actor !== 'string') smart.actor = actor.address
     })
 
     return initial
   },
-  13: (initial) => {
+  13: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 13)
+    const networkMetadata = ethereumNetworkMeta(initial, 13)
     const defaultMeta = {
       gas: {
         price: {
@@ -358,33 +551,35 @@ const migrations = {
     }
 
     // ensure all network configurations have corresponding network meta
-    Object.keys(initial.main.networks.ethereum).forEach((networkId) => {
-      if (initial.main.networksMeta.ethereum[networkId]) {
-        const gasSettings = initial.main.networksMeta.ethereum[networkId].gas || { price: {} }
+    Object.keys(networks).forEach((networkId) => {
+      const metadata = networkMetadata[networkId]
+      if (metadata) {
+        const gasSettings = metadata.gas
+        const price = gasSettings?.price
 
-        initial.main.networksMeta.ethereum[networkId].gas = {
+        metadata.gas = {
           price: {
-            selected: gasSettings.price.selected || defaultMeta.gas.price.selected,
-            levels: gasSettings.price.levels || defaultMeta.gas.price.levels
+            selected: price?.selected || defaultMeta.gas.price.selected,
+            levels: price?.levels || defaultMeta.gas.price.levels
           }
         }
       } else {
-        initial.main.networksMeta.ethereum[networkId] = { ...defaultMeta }
+        networkMetadata[networkId] = { ...defaultMeta }
       }
     })
 
     return initial
   },
-  14: (initial) => {
-    if (initial.main.networks.ethereum[137] && initial.main.networks.ethereum[137].connection) {
-      const { primary, secondary } = initial.main.networks.ethereum[137].connection || {}
-      if (primary.current === 'matic') primary.current = 'infura'
-      if (secondary.current === 'matic') secondary.current = 'infura'
-    }
+  14: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 14)
+    const networkMetadata = ethereumNetworkMeta(initial, 14)
+    const polygonConnection = networks[137]?.connection
+    if (polygonConnection?.primary?.current === 'matic') polygonConnection.primary.current = 'infura'
+    if (polygonConnection?.secondary?.current === 'matic') polygonConnection.secondary.current = 'infura'
 
     // add arbitrum network information
-    if (!initial.main.networks.ethereum[42161]) {
-      initial.main.networks.ethereum[42161] = {
+    if (!networks[42161]) {
+      networks[42161] = {
         id: 42161,
         type: 'ethereum',
         layer: 'rollup',
@@ -421,8 +616,8 @@ const migrations = {
       }
     }
 
-    if (!initial.main.networksMeta.ethereum[42161]) {
-      initial.main.networksMeta.ethereum[42161] = {
+    if (!networkMetadata[42161]) {
+      networkMetadata[42161] = {
         gas: {
           fees: {},
           price: {
@@ -435,48 +630,54 @@ const migrations = {
 
     return initial
   },
-  15: (initial) => {
+  15: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 15)
     // Polygon
-    if (initial.main.networks.ethereum['137']) {
-      const oldExplorer = initial.main.networks.ethereum['137'].explorer
+    if (networks['137']) {
+      const oldExplorer = networks['137'].explorer
 
       if (!oldExplorer || oldExplorer.endsWith('explorer.matic.network')) {
         // only replace if it hasn't been changed from the initial setting
-        initial.main.networks.ethereum['137'].explorer = 'https://polygonscan.com'
+        networks['137'].explorer = 'https://polygonscan.com'
       }
     }
 
     return initial
   },
-  16: (initial) => {
+  16: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 16)
     if (initial.main.currentNetwork?.id) {
-      initial.main.currentNetwork.id = parseInt(initial.main.currentNetwork.id)
+      const id = parseInt(String(initial.main.currentNetwork.id))
+      if (Number.isNaN(id)) invalidField(16, 'current network id')
+      initial.main.currentNetwork.id = id
     }
-    Object.keys(initial.main.networks.ethereum).forEach((chain) => {
-      try {
-        initial.main.networks.ethereum[chain].id = parseInt(initial.main.networks.ethereum[chain].id)
-      } catch (e) {
-        log.error(e)
-      }
+    Object.keys(networks).forEach((chain) => {
+      const network = networks[chain]
+      if (!network?.id) return
+      const id = parseInt(String(network.id))
+      if (Number.isNaN(id)) invalidField(16, 'network id')
+      network.id = id
     })
     return initial
   },
-  17: (initial) => {
+  17: (initial: LegacyState) => {
     // update Lattice settings
     const lattices = initial.main.lattice || {}
-    const oldSuffix = initial.main.latticeSettings?.suffix || ''
+    const suffix = initial.main.latticeSettings?.['suffix']
+    const oldSuffix = typeof suffix === 'string' ? suffix : ''
 
     Object.values(lattices).forEach((lattice) => {
-      lattice.paired = true
-      lattice.tag = oldSuffix
-      lattice.deviceName = 'GridPlus'
+      if (!isUnknownRecord(lattice)) return
+      lattice['paired'] = true
+      lattice['tag'] = oldSuffix
+      lattice['deviceName'] = 'GridPlus'
     })
 
     return initial
   },
-  18: (initial) => {
+  18: (initial: LegacyState) => {
     // move custom tokens to new location
-    let existingCustomTokens = []
+    let existingCustomTokens: unknown[] = []
 
     if (Array.isArray(initial.main.tokens)) {
       existingCustomTokens = [...initial.main.tokens]
@@ -486,28 +687,32 @@ const migrations = {
 
     return initial
   },
-  19: (initial) => {
+  19: (initial: LegacyState) => {
     // delete main.currentNetwork and main.clients
     delete initial.main.currentNetwork
     delete initial.main.clients
 
     return initial
   },
-  20: (initial) => {
+  20: (initial: LegacyState) => {
     // move all Aragon accounts to mainnet and add a warning if we did
-    Object.values(initial.main.accounts).forEach((account) => {
+    Object.values(legacyAccounts(initial, 20)).forEach((account) => {
       if (account.smart?.type === 'aragon' && !account.smart.chain) {
         account.smart.chain = { type: 'ethereum', id: 1 }
-        initial.main.mute.aragonAccountMigrationWarning = false
+        const mute = initial.main.mute || {}
+        mute['aragonAccountMigrationWarning'] = false
+        initial.main.mute = mute
       }
     })
 
     return initial
   },
-  21: (initial) => {
+  21: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 21)
+    const networkMetadata = ethereumNetworkMeta(initial, 21)
     // add sepolia network information
-    if (!initial.main.networks.ethereum[11155111]) {
-      initial.main.networks.ethereum[11155111] = {
+    if (!networks[11155111]) {
+      networks[11155111] = {
         id: 11155111,
         type: 'ethereum',
         layer: 'testnet',
@@ -544,8 +749,8 @@ const migrations = {
       }
     }
 
-    if (!initial.main.networksMeta.ethereum[11155111]) {
-      initial.main.networksMeta.ethereum[11155111] = {
+    if (!networkMetadata[11155111]) {
+      networkMetadata[11155111] = {
         gas: {
           fees: {},
           price: {
@@ -556,20 +761,15 @@ const migrations = {
       }
     }
 
-    if ('5' in initial.main.networks.ethereum) {
+    if ('5' in networks) {
       // we removed support for the following goerli RPCs so reset the connections
       // to defaults when the user was previously connecting to them
       const removedGoerliRPCs = ['mudit', 'slockit', 'prylabs']
-      const goerli = initial.main.networks.ethereum[5]
-      const goerliPrimaryConnection = goerli.connection.primary.current
-      const goerliSecondaryConnection = goerli.connection.secondary.current
-
-      if (removedGoerliRPCs.includes(goerliPrimaryConnection)) {
-        initial.main.networks.ethereum[5] = {
-          ...goerli,
-          connection: {
-            ...goerli.connection,
-            primary: {
+      const goerli = required(networks[5], 21, 'Goerli network')
+      const connection = required(goerli.connection, 21, 'Goerli connection')
+      const resetEndpoint = (endpoint: z.infer<typeof LegacyEndpointSchema> | undefined) =>
+        endpoint?.current && removedGoerliRPCs.includes(endpoint.current)
+          ? {
               on: false,
               current: 'custom',
               status: 'loading',
@@ -578,46 +778,30 @@ const migrations = {
               network: '',
               custom: ''
             }
-          }
-        }
+          : endpoint
+      const primary = resetEndpoint(connection.primary)
+      const secondary = resetEndpoint(connection.secondary)
+      goerli.connection = {
+        ...connection,
+        ...(primary ? { primary } : {}),
+        ...(secondary ? { secondary } : {}),
+        on: Boolean(primary?.on || secondary?.on)
       }
-
-      if (removedGoerliRPCs.includes(goerliSecondaryConnection)) {
-        initial.main.networks.ethereum[5] = {
-          ...goerli,
-          connection: {
-            ...goerli.connection,
-            secondary: {
-              on: false,
-              current: 'custom',
-              status: 'loading',
-              connected: false,
-              type: '',
-              network: '',
-              custom: ''
-            }
-          }
-        }
-      }
-
-      // if neither primary nor secondary is enabled then we switch the overall connection off
-      initial.main.networks.ethereum[5].connection.on =
-        goerli.connection.primary.on || goerli.connection.secondary.on
     }
 
     return initial
   },
-  22: (initial) => {
+  22: (initial: LegacyState) => {
     // set "isTestnet" flag on all chains based on layer value
-    Object.values(initial.main.networks.ethereum).forEach((chain) => {
+    Object.values(ethereumNetworks(initial, 22)).forEach((chain) => {
       chain.isTestnet = chain.layer === 'testnet'
     })
 
     return initial
   },
-  23: (initial) => {
+  23: (initial: LegacyState) => {
     // set icon and primaryColor values on all chains
-    Object.entries(initial.main.networksMeta.ethereum).forEach(([id, chain]) => {
+    Object.entries(ethereumNetworkMeta(initial, 23)).forEach(([id, chain]) => {
       if (id === '1') {
         chain.icon = ''
         chain.primaryColor = 'accent1' // Main
@@ -644,9 +828,9 @@ const migrations = {
 
     return initial
   },
-  24: (initial) => {
+  24: (initial: LegacyState) => {
     // set default nativeCurrency where it doesn't exist
-    Object.values(initial.main.networksMeta.ethereum).forEach((chain) => {
+    Object.values(ethereumNetworkMeta(initial, 24)).forEach((chain) => {
       if (!chain.nativeCurrency) {
         chain.nativeCurrency = {
           usd: { price: 0, change24hr: 0 },
@@ -660,41 +844,47 @@ const migrations = {
 
     return initial
   },
-  25: (initial) => {
+  25: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 25)
     // remove Optimism RPC connection presets and use Infura instead
-    if ('10' in initial.main.networks.ethereum) {
-      const removeOptimismConnection = (connection) => ({
+    if ('10' in networks) {
+      const removeOptimismConnection = (connection: z.infer<typeof LegacyEndpointSchema>) => ({
         ...connection,
         current: connection.current === 'optimism' ? 'infura' : connection.current
       })
 
-      const optimism = initial.main.networks.ethereum[10]
+      const optimism = required(networks[10], 25, 'Optimism network')
+      const primary = required(optimism.connection?.primary, 25, 'Optimism primary connection')
+      const secondary = required(optimism.connection?.secondary, 25, 'Optimism secondary connection')
 
-      initial.main.networks.ethereum[10] = {
+      networks[10] = {
         ...optimism,
         connection: {
-          primary: removeOptimismConnection(optimism.connection.primary),
-          secondary: removeOptimismConnection(optimism.connection.secondary)
+          primary: removeOptimismConnection(primary),
+          secondary: removeOptimismConnection(secondary)
         }
       }
     }
 
     return initial
   },
-  26: (initial) => {
-    Object.values(initial.main.networks.ethereum).forEach((network) => {
+  26: (initial: LegacyState) => {
+    const networkMetadata = ethereumNetworkMeta(initial, 26)
+    Object.values(ethereumNetworks(initial, 26)).forEach((network) => {
       const { symbol, id } = network
-      initial.main.networksMeta.ethereum[id].nativeCurrency.symbol =
-        initial.main.networksMeta.ethereum[id].nativeCurrency.symbol || symbol
+      if (id === undefined) invalidField(26, 'network id')
+      const metadata = required(networkMetadata[String(id)], 26, 'network metadata')
+      const nativeCurrency = required(metadata.nativeCurrency, 26, 'native currency metadata')
+      nativeCurrency.symbol = nativeCurrency.symbol || symbol
       delete network.symbol
     })
 
     return initial
   },
-  27: (initial) => {
+  27: (initial: LegacyState) => {
     // change any accounts with the old names of "seed signer" or "ring signer" to "hot signer"
 
-    const accounts = Object.entries(initial.main.accounts).map(([id, account]) => {
+    const accounts = Object.entries(legacyAccounts(initial, 27)).map(([id, account]) => {
       const name = ['ring account', 'seed account'].includes((account.name || '').toLowerCase())
         ? 'Hot Account'
         : account.name
@@ -706,19 +896,20 @@ const migrations = {
 
     return initial
   },
-  28: (initial) => {
-    const getUpdatedSymbol = (symbol, chainId) => {
+  28: (initial: LegacyState) => {
+    const getUpdatedSymbol = (symbol: string | undefined, chainId: string) => {
       return parseInt(chainId) === 5 ? 'görETH' : parseInt(chainId) === 11155111 ? 'sepETH' : symbol
     }
 
-    const updatedMeta = Object.entries(initial.main.networksMeta.ethereum).map(([id, chainMeta]) => {
-      const { symbol, decimals } = chainMeta.nativeCurrency
+    const updatedMeta = Object.entries(ethereumNetworkMeta(initial, 28)).map(([id, chainMeta]) => {
+      const nativeCurrency = required(chainMeta.nativeCurrency, 28, 'native currency metadata')
+      const { symbol, decimals } = nativeCurrency
       const updatedSymbol = (symbol || '').toLowerCase() !== 'eth' ? symbol : getUpdatedSymbol(symbol, id)
 
       const updatedChainMeta = {
         ...chainMeta,
         nativeCurrency: {
-          ...chainMeta.nativeCurrency,
+          ...nativeCurrency,
           symbol: updatedSymbol,
           decimals: decimals || 18
         }
@@ -727,21 +918,28 @@ const migrations = {
       return [id, updatedChainMeta]
     })
 
-    initial.main.networksMeta.ethereum = Object.fromEntries(updatedMeta)
+    initial.main.networksMeta = {
+      ...(initial.main.networksMeta || {}),
+      ethereum: Object.fromEntries(updatedMeta)
+    }
 
     return initial
   },
-  29: (initial) => {
+  29: (initial: LegacyState) => {
     // add accountsMeta
-    initial.main.accountsMeta = {}
-    Object.entries(initial.main.accounts).forEach(([id, account]) => {
+    const accountsMeta: Record<string, unknown> = {}
+    initial.main.accountsMeta = accountsMeta
+    Object.entries(legacyAccounts(initial, 29)).forEach(([id, account]) => {
+      const { lastSignerType, name } = account
+      if (!lastSignerType || !name) return
       // Watch accounts, having a signer type of "address", used to have a default label of "Address Account"
       const isPreviousDefaultWatchAccountName =
-        account.lastSignerType.toLowerCase() === 'address' && account.name.toLowerCase() === 'address account'
-      if (!isPreviousDefaultWatchAccountName && !isDefaultAccountName(account)) {
+        lastSignerType.toLowerCase() === 'address' && name.toLowerCase() === 'address account'
+      const isCurrentDefaultName = name.toLowerCase() === getDefaultAccountName(lastSignerType)
+      if (!isPreviousDefaultWatchAccountName && !isCurrentDefaultName) {
         const accountMetaId = uuidv5(id, accountNS)
-        initial.main.accountsMeta[accountMetaId] = {
-          name: account.name,
+        accountsMeta[accountMetaId] = {
+          name,
           lastUpdated: Date.now()
         }
       }
@@ -749,11 +947,12 @@ const migrations = {
 
     return initial
   },
-  30: (initial) => {
+  30: (initial: LegacyState) => {
     // convert Aragon accounts to watch only
-    Object.entries(initial.main.accounts).forEach(([id, { smart, name, created }]) => {
+    const accounts = legacyAccounts(initial, 30)
+    Object.entries(accounts).forEach(([id, { smart, name, created }]) => {
       if (smart) {
-        initial.main.accounts[id] = {
+        accounts[id] = {
           id,
           name,
           lastSignerType: 'address',
@@ -771,30 +970,37 @@ const migrations = {
 
     return initial
   },
-  31: (initial) => {
+  31: (initial: LegacyState) => {
     const dodgyAddress = '0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000'
+    const balances = initial.main.balances || invalidField(31, 'balances')
 
-    Object.entries(initial.main.balances).forEach(([address, balances]) => {
-      initial.main.balances[address] = balances.filter(({ address }) => address !== dodgyAddress)
+    Object.entries(balances).forEach(([account, entries]) => {
+      balances[account] = entries.filter(({ address }) => address !== dodgyAddress)
     })
 
     return initial
   },
-  32: (initial) => {
+  32: (initial: LegacyState) => {
     const dodgyAddress = '0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000'
-    const knownTokens = initial.main.tokens.known || {}
+    const parsedTokens = LegacyTokensSchema.safeParse(initial.main.tokens)
+    const tokens = parsedTokens.success ? parsedTokens.data : invalidField(32, 'tokens')
+    const tokenState = Array.isArray(tokens) ? invalidField(32, 'known tokens') : tokens
+    const knownTokens = tokenState.known || {}
     Object.entries(knownTokens).forEach(([address, tokens]) => {
       knownTokens[address] = tokens.filter(({ address }) => address !== dodgyAddress)
     })
 
-    initial.main.tokens.known = knownTokens
+    tokenState.known = knownTokens
+    initial.main.tokens = tokenState
 
     return initial
   },
-  33: (initial) => {
+  33: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 33)
+    const networkMetadata = ethereumNetworkMeta(initial, 33)
     // add Base testnet network information
-    if (!initial.main.networks.ethereum[84531]) {
-      initial.main.networks.ethereum[84531] = {
+    if (!networks[84531]) {
+      networks[84531] = {
         id: 84531,
         type: 'ethereum',
         layer: 'testnet',
@@ -831,8 +1037,8 @@ const migrations = {
       }
     }
 
-    if (!initial.main.networksMeta.ethereum[84531]) {
-      initial.main.networksMeta.ethereum[84531] = {
+    if (!networkMetadata[84531]) {
+      networkMetadata[84531] = {
         blockHeight: 0,
         gas: {
           fees: {},
@@ -858,10 +1064,12 @@ const migrations = {
 
     return initial
   },
-  34: (initial) => {
+  34: (initial: LegacyState) => {
+    const networks = ethereumNetworks(initial, 34)
+    const networkMetadata = ethereumNetworkMeta(initial, 34)
     // Add any missing nativeCurrency name values
     // Base Görli (84531) value added in #33
-    const nativeCurrencyMap = {
+    const nativeCurrencyMap: Partial<Record<number, { name: string; symbol: string }>> = {
       1: {
         name: 'Ether',
         symbol: 'ETH'
@@ -892,13 +1100,15 @@ const migrations = {
       }
     }
 
-    Object.values(initial.main.networks.ethereum).forEach((network) => {
+    Object.values(networks).forEach((network) => {
       const { id } = network
-      const { name = '', symbol = '' } = nativeCurrencyMap[id] || {}
-      const existingMeta = initial.main.networksMeta.ethereum[id] || {}
+      if (id === undefined) invalidField(34, 'network id')
+      const defaults = nativeCurrencyMap[Number(id)]
+      const { name = '', symbol = '' } = defaults || {}
+      const existingMeta = networkMetadata[String(id)] || {}
       const { nativeCurrency = {} } = existingMeta
 
-      initial.main.networksMeta.ethereum[id] = {
+      networkMetadata[String(id)] = {
         ...existingMeta,
         nativeCurrency: {
           ...nativeCurrency,
@@ -910,8 +1120,12 @@ const migrations = {
 
     return initial
   },
-  35: (initial) => {
-    const { shortcuts } = initial.main || {}
+  35: (initial: LegacyState) => {
+    const shortcutsResult = z
+      .object({ altSlash: z.boolean().optional(), summon: LegacyShortcutSchema.optional() })
+      .passthrough()
+      .safeParse(initial.main.shortcuts)
+    const shortcuts = shortcutsResult.success ? shortcutsResult.data : {}
     const { altSlash: summonShortcutEnabled, ...otherShortcuts } = shortcuts
 
     initial.main.shortcuts = {
@@ -926,20 +1140,18 @@ const migrations = {
 
     return initial
   },
-  36: (initial) => {
-    if (
-      initial?.main?.shortcuts?.summon &&
-      typeof initial.main.shortcuts.summon === 'object' &&
-      initial.main.shortcuts.summon.enabled === undefined
-    ) {
-      initial.main.shortcuts.summon.enabled = true
+  36: (initial: LegacyState) => {
+    const shortcuts = initial.main.shortcuts
+    if (isUnknownRecord(shortcuts)) {
+      const summon = shortcuts['summon']
+      if (isUnknownRecord(summon) && summon['enabled'] === undefined) summon['enabled'] = true
     }
 
     return initial
   },
-  37: (initial) => {
+  37: (initial: LegacyState) => {
     const replaceAltGr = () => (isWindows() ? ['Alt', 'Control'] : ['Alt'])
-    const updateModifierKey = (key) => (key === 'AltGr' ? replaceAltGr(key) : key)
+    const updateModifierKey = (key: string) => (key === 'AltGr' ? replaceAltGr() : key)
 
     const defaultShortcuts = {
       summon: {
@@ -981,12 +1193,24 @@ const migrations = {
 
     return initial
   }
-}
+} satisfies Record<number, LegacyMigration>
 
 // retrofit legacy migrations
 const legacyMigrations = Object.entries(migrations).map(([version, legacyMigration]) => ({
   version: parseInt(version),
-  migrate: (initial: unknown) => legacyMigration(initial)
+  migrate: (initial: unknown) => {
+    const parsed = LegacyStateSchema.safeParse(initial)
+    if (!parsed.success) {
+      // Record keys can contain addresses, origins, or endpoint labels. Limit
+      // diagnostics to the owned top-level state field.
+      const fields = [...new Set(parsed.error.issues.map(({ path }) => path.slice(0, 2).join('.')))].slice(
+        0,
+        5
+      )
+      throw new Error(`Migration ${version}: invalid state${fields.length ? ` (${fields.join(', ')})` : ''}`)
+    }
+    return legacyMigration(parsed.data)
+  }
 }))
 
 export default legacyMigrations

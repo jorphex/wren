@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "formatVersion": 1,
+    "synthetic": true,
+    "title": "Synthetic current safe profile state",
+    "sourceVersion": 64
+  },
+  "state": {
+    "main": {
+      "_version": 64,
+      "instanceId": "11111111-1111-4111-8111-111111111111",
+      "colorway": "dark",
+      "launch": false,
+      "reveal": false,
+      "glideSide": "right",
+      "interfaceScale": 1.25,
+      "showLocalNameWithENS": true,
+      "autohide": true,
+      "transactionNotifications": false,
+      "accountCloseLock": true,
+      "hardwareDerivation": "mainnet",
+      "menubarGasPrice": false,
+      "mute": { "externalLinkWarning": true },
+      "shortcuts": {
+        "summon": {
+          "modifierKeys": ["Alt"],
+          "shortcutKey": "Slash",
+          "enabled": true,
+          "configuring": false
+        }
+      },
+      "networks": {
+        "ethereum": {
+          "31337": {
+            "id": 31337,
+            "name": "Fixture Local Chain",
+            "on": true,
+            "layer": "testnet",
+            "isTestnet": true,
+            "explorer": "",
+            "connection": {
+              "endpoints": [
+                {
+                  "id": "rpc-1",
+                  "on": true,
+                  "connected": false,
+                  "current": "custom",
+                  "status": "loading",
+                  "custom": "http://127.0.0.1:8545"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "networksMeta": {
+        "ethereum": {
+          "31337": {
+            "gas": {
+              "samples": [],
+              "price": {
+                "selected": "standard",
+                "levels": { "custom": "" },
+                "fees": null
+              }
+            },
+            "icon": "",
+            "primaryColor": "accent2",
+            "nativeCurrency": {
+              "symbol": "TETH",
+              "icon": "",
+              "name": "Test Ether",
+              "decimals": 18,
+              "usd": { "price": 0, "change24hr": 0 }
+            }
+          }
+        }
+      },
+      "accounts": {
+        "0x000000000000000000000000000000000000dead": {
+          "id": "0x000000000000000000000000000000000000dead",
+          "address": "0x000000000000000000000000000000000000dead",
+          "name": "Fixture Current Account",
+          "lastSignerType": "address",
+          "created": "new:1700000000000",
+          "status": "ok",
+          "active": false,
+          "signer": "",
+          "requests": {},
+          "ensName": "",
+          "balances": {}
+        }
+      },
+      "accountsMeta": {
+        "22222222-2222-4222-8222-222222222222": {
+          "name": "Fixture Current Account",
+          "lastUpdated": 1700000000000
+        }
+      },
+      "origins": {},
+      "permissions": {},
+      "addressBook": {},
+      "activity": [],
+      "operationLifecycles": {},
+      "outboundAddressMemory": {},
+      "walletCallBatches": {},
+      "tokens": { "custom": [], "known": {} },
+      "yearn": { "catalogCache": null, "workflows": {} }
+    }
+  }
+}

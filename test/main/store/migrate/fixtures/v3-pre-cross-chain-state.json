@@ -1,0 +1,138 @@
+{
+  "metadata": {
+    "formatVersion": 1,
+    "synthetic": true,
+    "title": "Synthetic pre-cross-chain wallet state",
+    "sourceVersion": 3
+  },
+  "state": {
+    "main": {
+      "_version": 3,
+      "hardwareDerivation": "testnet",
+      "ledger": {},
+      "trezor": {},
+      "gasPrice": {
+        "1": {
+          "default": "normal",
+          "levels": { "custom": "0x2a" }
+        }
+      },
+      "connection": {
+        "network": 1,
+        "local": {
+          "on": true,
+          "settings": {
+            "1": {
+              "options": { "custom": "http://127.0.0.1:8545" },
+              "current": "direct"
+            }
+          }
+        },
+        "secondary": {
+          "on": false,
+          "settings": {
+            "1": {
+              "options": { "custom": "" },
+              "current": "custom"
+            }
+          }
+        }
+      },
+      "currentNetwork": { "type": "ethereum", "id": 1 },
+      "clients": { "geth": {}, "parity": {} },
+      "networks": {
+        "ethereum": {
+          "1": {
+            "id": "1",
+            "type": "ethereum",
+            "name": "Mainnet",
+            "explorer": "https://etherscan.io",
+            "gas": {
+              "price": {
+                "selected": "custom",
+                "lastLevel": "fast",
+                "levels": { "slow": "", "standard": "", "fast": "", "asap": "", "custom": "" }
+              }
+            },
+            "connection": {
+              "primary": {
+                "on": false,
+                "current": "custom",
+                "status": "loading",
+                "connected": false,
+                "type": "",
+                "network": "",
+                "custom": ""
+              },
+              "secondary": {
+                "on": false,
+                "current": "custom",
+                "status": "loading",
+                "connected": false,
+                "type": "",
+                "network": "",
+                "custom": ""
+              }
+            }
+          },
+          "100": {
+            "id": "100",
+            "type": "ethereum",
+            "name": "Gnosis",
+            "explorer": "https://gnosisscan.io",
+            "gas": {
+              "price": {
+                "selected": "standard",
+                "levels": { "slow": "", "standard": "", "fast": "", "asap": "", "custom": "" }
+              }
+            },
+            "connection": {
+              "primary": {
+                "on": true,
+                "current": "poa",
+                "status": "loading",
+                "connected": false,
+                "type": "",
+                "network": "",
+                "custom": ""
+              },
+              "secondary": {
+                "on": false,
+                "current": "custom",
+                "status": "loading",
+                "connected": false,
+                "type": "",
+                "network": "",
+                "custom": ""
+              }
+            }
+          }
+        }
+      },
+      "networksMeta": { "ethereum": {} },
+      "accounts": {
+        "fixture-account-id": {
+          "name": "Fixture Early Hardware Account",
+          "type": "trezor",
+          "created": "0x100",
+          "addresses": ["0x000000000000000000000000000000000000dEaD"]
+        }
+      },
+      "addresses": {
+        "0x000000000000000000000000000000000000dEaD": {
+          "permissions": {
+            "fixture.example": { "origin": "fixture.example", "provider": true }
+          },
+          "tokens": { "fixture-token": true }
+        }
+      },
+      "permissions": {},
+      "balances": {
+        "0x000000000000000000000000000000000000dead": []
+      },
+      "tokens": ["fixture-token"],
+      "mute": {},
+      "shortcuts": { "altSlash": true }
+    }
+  }
+}

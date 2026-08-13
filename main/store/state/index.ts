@@ -121,9 +121,10 @@ const persistedDesktopAuthIdentity = DesktopAuthIdentitySchema.safeParse(get('de
 const desktopAuthIdentity = persistedDesktopAuthIdentity.success
   ? persistedDesktopAuthIdentity.data
   : createDesktopAuthIdentity(generateUuid())
+const persistedMigrationVersion = Number(main('_version', 49))
 
 const mainState = {
-  _version: main('_version', 49),
+  _version: persistedMigrationVersion,
   instanceId: main('instanceId', generateUuid()),
   colorway: main('colorway', 'dark'),
   colorwayPrimary: {
@@ -187,13 +188,23 @@ const mainState = {
   extensionCredentials: main('extensionCredentials', {}),
   desktopAuthIdentity,
   nativePeerCredentials: main('nativePeerCredentials', {}),
+  // Retain raw fields only long enough for pre-v19 migrations to consume them.
+  // Each owning migration removes the retired representation before validation.
+  ...(persistedMigrationVersion < 4 && get('gasPrice') !== undefined ? { gasPrice: get('gasPrice') } : {}),
+  ...(persistedMigrationVersion < 4 && get('connection') !== undefined
+    ? { connection: get('connection') }
+    : {}),
+  ...(persistedMigrationVersion < 19 && get('currentNetwork') !== undefined
+    ? { currentNetwork: get('currentNetwork') }
+    : {}),
+  ...(persistedMigrationVersion < 19 && get('clients') !== undefined ? { clients: get('clients') } : {}),
   accounts: main('accounts', {}),
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
   operationLifecycles: main('operationLifecycles', {}),
   outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),
   addressBook: main('addressBook', {}),
-  addresses: main('addresses', {}), // Should be removed after 0.5 release
+  ...(persistedMigrationVersion < 7 && get('addresses') !== undefined ? { addresses: get('addresses') } : {}),
   permissions: main('permissions', {}),
   balances: {},
   tokens: main('tokens', { custom: [], known: {} }),

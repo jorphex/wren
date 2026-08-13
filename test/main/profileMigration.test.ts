@@ -42,6 +42,11 @@ function fixture() {
   return { appDataPath, source, target }
 }
 
+const legacyMigrationFixture = () =>
+  JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'store/migrate/fixtures/v3-pre-cross-chain-state.json'), 'utf8')
+  ).state
+
 test('does nothing unless the explicit import flag is present', () => {
   const { appDataPath, source, target } = fixture()
 
@@ -103,6 +108,15 @@ test('atomically copies only wallet state and encrypted signer files', () => {
     expect(fs.statSync(path.join(target, 'config.json')).mode & 0o777).toBe(0o600)
     expect(fs.statSync(path.join(target, 'signers', 'signer.json')).mode & 0o777).toBe(0o600)
   }
+})
+
+test('validates and preserves a version 3 profile for first-start migration', () => {
+  const { source, target } = fixture()
+  const configuration = { main: { __: { 3: legacyMigrationFixture() } } }
+  fs.writeFileSync(path.join(source, 'config.json'), `${JSON.stringify(configuration)}\n`)
+
+  expect(importFrameProfile(source, target)).toMatchObject({ status: 'imported' })
+  expect(JSON.parse(fs.readFileSync(path.join(target, 'config.json'), 'utf8'))).toEqual(configuration)
 })
 
 test('rolls back only a profile created by the import flow', () => {

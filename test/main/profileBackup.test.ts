@@ -96,6 +96,11 @@ const fixture = () => {
   return { root, profile }
 }
 
+const legacyMigrationFixture = () =>
+  JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'store/migrate/fixtures/v3-pre-cross-chain-state.json'), 'utf8')
+  ).state
+
 const decryptTestPayload = (backup: Buffer, backupPassword: string) => {
   const envelope = JSON.parse(backup.toString('utf8'))
   const key = crypto.scryptSync(backupPassword, Buffer.from(envelope.kdf.salt, 'base64'), 32, {
@@ -219,6 +224,56 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(Buffer.from(payload.files.signers[0].bytes, 'base64').toString('utf8')).toContain(
     'secret-shaped-but-encrypted'
   )
+})
+
+it('normalizes a version 3 profile before backup inspection and restore staging', () => {
+  const { root, profile } = fixture()
+  fs.writeFileSync(
+    path.join(profile, 'config.json'),
+    JSON.stringify({ main: { __: { 3: legacyMigrationFixture() } } })
+  )
+
+  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'))
+  expect(inspectEncryptedProfileBackup(backup, password)).toEqual({
+    formatVersion: 1,
+    createdAt: '2026-08-12T00:00:00.000Z',
+    signerCount: 1
+  })
+
+  const payload = decryptTestPayload(backup, password)
+  const configuration = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const [version] = Object.keys(configuration.main.__)
+  const recoveryMain = configuration.main.__[version].main
+  expect(Number(version)).toBe(recoveryMain._version)
+  expect(recoveryMain._version).toBeGreaterThan(37)
+  expect(recoveryMain).not.toHaveProperty('gasPrice')
+  expect(recoveryMain).not.toHaveProperty('connection')
+  expect(recoveryMain).not.toHaveProperty('addresses')
+  expect(recoveryMain.accounts).toHaveProperty('0x000000000000000000000000000000000000dead')
+
+  const backupFile = path.join(root, 'legacy-profile.wrenbackup')
+  const target = path.join(root, 'legacy-restored')
+  fs.writeFileSync(backupFile, backup)
+  fs.cpSync(profile, target, { recursive: true })
+  const staged = stageEncryptedProfileRestore(
+    backupFile,
+    password,
+    target,
+    new Date('2026-08-12T00:01:00.000Z')
+  )
+  expect(staged).toMatchObject({
+    signerCount: 1,
+    relaunchRequired: true
+  })
+  expect(runPendingProfileRestore(target, new Date('2026-08-12T00:02:00.000Z'))).toMatchObject({
+    status: 'applied',
+    restoreId: staged.restoreId,
+    signerCount: 1
+  })
+  expect(
+    migratePersistedConfiguration(JSON.parse(fs.readFileSync(path.join(target, 'config.json'), 'utf8'))).main
+      ._version
+  ).toBe(recoveryMain._version)
 })
 
 it('drops source-bound origins and grants when peer credentials are excluded', () => {
