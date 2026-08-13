@@ -44,7 +44,7 @@
     "compile:clean": "rimraf compiled",
     "compile": "npm run compile:clean && npm run copy-assets && node scripts/verify-tray-icons.mjs && tsc --project tsconfig.build.json && node scripts/write-build-identity.mjs",
     "compile:watch": "npm run compile:clean && npm run copy-assets && tsc --project tsconfig.build.json -w",
-    "build": "npm run compile && sleep 4 && npm run bundle && sleep 4 && cross-env WREN_MAC_SIGNING=skip WREN_MAC_NOTARIZATION=skip WREN_WINDOWS_SIGNING=skip electron-builder --config=build/electron-builder-standard.js --publish never",
+    "build": "npm run compile && sleep 4 && npm run bundle && sleep 4 && node scripts/prepare-package.mjs && cross-env WREN_MAC_SIGNING=skip WREN_MAC_NOTARIZATION=skip WREN_WINDOWS_SIGNING=skip electron-builder --config=build/electron-builder-standard.js --publish never",
     "package:linux:x64": "node scripts/assert-package-host.mjs linux x64 && node scripts/prepare-linux-package.mjs && electron-builder --config=build/electron-builder-linux.js --linux AppImage deb --x64 --publish never",
     "package:linux:arm64": "node scripts/assert-package-host.mjs linux arm64 && node scripts/prepare-linux-package.mjs && electron-builder --config=build/electron-builder-linux-arm64.js --linux AppImage tar.gz --arm64 --publish never",
     "package:mac:unsigned:x64": "node scripts/assert-package-host.mjs darwin x64 && node scripts/prepare-package.mjs && cross-env WREN_MAC_SIGNING=skip WREN_MAC_NOTARIZATION=skip electron-builder --config=build/electron-builder-macos.js --mac --x64 --publish never",

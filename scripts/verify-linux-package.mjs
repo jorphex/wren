@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
-import { access, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { access, lstat, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
@@ -65,6 +65,19 @@ const nativeModules = [
 ]
 
 await Promise.all(nativeModules.map((modulePath) => access(modulePath)))
+
+const assertSandboxHelper = async (root, description) => {
+  const helper = path.join(root, 'chrome-sandbox')
+  const stats = await lstat(helper)
+  assert.ok(stats.isFile() && !stats.isSymbolicLink(), `${description} sandbox helper is not a regular file`)
+  assert.equal(
+    stats.mode & 0o111,
+    0o111,
+    `${description} sandbox helper is not executable by every installed user`
+  )
+}
+
+await assertSandboxHelper(path.join(dist, 'linux-unpacked'), 'linux-unpacked')
 
 const packagedExecutable = path.join(dist, 'linux-unpacked', 'wren')
 const packagedModuleProbe = `
@@ -273,6 +286,9 @@ try {
     stdio: 'ignore',
     timeout: 30_000
   })
+
+  await assertSandboxHelper(path.join(appImageExtraction, 'squashfs-root'), 'AppImage')
+  await assertSandboxHelper(path.join(debExtraction, 'opt', 'Wren'), 'deb')
 
   appImageProbeResult = runPackagedProbe('AppImage', path.join(appImageExtraction, 'squashfs-root', 'wren'))
   appImageDesktopEntry = await readFile(

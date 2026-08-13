@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
+import { URL } from 'node:url'
 import {
   assertNativeHost,
   assertSafeArchiveEntries,
@@ -7,6 +9,16 @@ import {
   packageTargets,
   selectPackageArtifacts
 } from '../../scripts/package-verification.mjs'
+
+const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+
+test('cleans and source-binds local package output before invoking electron-builder', () => {
+  assert.match(packageJson.scripts.build, /node scripts\/prepare-package\.mjs/)
+  assert.ok(
+    packageJson.scripts.build.indexOf('node scripts/prepare-package.mjs') <
+      packageJson.scripts.build.indexOf('electron-builder')
+  )
+})
 
 test('defines explicit native package layouts for every applicable target', () => {
   assert.deepEqual(Object.keys(packageTargets).sort(), [

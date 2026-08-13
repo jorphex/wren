@@ -19,6 +19,7 @@ describe('electron-builder platform boundaries', () => {
     const config = load('../../../build/electron-builder-linux.js')
     expect(config.linux.category).toBe('Office;Finance')
     expect(config.appImage.executableArgs).toEqual([])
+    expect(config.linux.target.map(({ target }) => target)).toEqual(['AppImage', 'deb'])
     expect(config.linux.target.every((target) => target.arch.every((arch) => arch === 'x64'))).toBe(true)
     expect(config.mac).toBeUndefined()
     expect(config.win).toBeUndefined()
