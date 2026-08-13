@@ -2,7 +2,8 @@
   --asset-mark-size 32px
   --asset-mark-glyph-size 30px
   --asset-mark-chain-size 8px
-  --asset-mark-image-size calc(var(--asset-mark-glyph-size) * .76)
+  --asset-mark-image-size 22px
+  --asset-mark-vector-size 18px
   --asset-mark-art-size var(--asset-mark-image-size)
   position relative
   display inline-flex
@@ -15,6 +16,8 @@
   color var(--wren-text-primary)
 
 .assetMarkGlyph
+  --asset-mark-render-size var(--asset-mark-art-size)
+  position relative
   display flex
   width var(--asset-mark-glyph-size)
   height var(--asset-mark-glyph-size)
@@ -28,31 +31,60 @@
   font-family var(--wren-font-mono)
   font-size var(--wren-type-caption)
   font-weight 650
+  line-height 1
 
   img
+    position absolute
+    top 50%
+    left 50%
     display block
     width var(--asset-mark-image-size)
     height var(--asset-mark-image-size)
     object-fit contain
     object-position center
+    transform translate(-50%, -50%)
 
   > div
-    display contents
-
-  svg
-    width var(--asset-mark-art-size)
-    height var(--asset-mark-art-size)
-
-  &.assetMarkGlyphVector svg
-    width calc(var(--asset-mark-art-size) * .78)
-    height calc(var(--asset-mark-art-size) * .78)
-
-  .ringIconFallback
+    position absolute
+    top 50%
+    left 50%
     display flex
-    width var(--asset-mark-art-size)
-    height var(--asset-mark-art-size)
+    width var(--asset-mark-render-size)
+    min-width var(--asset-mark-render-size)
+    max-width var(--asset-mark-render-size)
+    height var(--asset-mark-render-size)
+    min-height var(--asset-mark-render-size)
+    max-height var(--asset-mark-render-size)
     align-items center
     justify-content center
+    transform translate(-50%, -50%)
+
+  > svg
+    position absolute
+    top 50%
+    left 50%
+    display block
+    width var(--asset-mark-render-size)
+    height var(--asset-mark-render-size)
+    transform translate(-50%, -50%)
+
+  > div > svg
+    display block
+    width 100%
+    height 100%
+
+  &.assetMarkGlyphVector
+    --asset-mark-render-size var(--asset-mark-vector-size)
+
+  .ringIconFallback
+    position absolute
+    top 50%
+    left 50%
+    display grid
+    width var(--asset-mark-art-size)
+    height var(--asset-mark-art-size)
+    place-items center
+    transform translate(-50%, -50%)
 
 .assetMarkChain
   position absolute
@@ -68,15 +100,21 @@
 .assetMark-card
   --asset-mark-size 34px
   --asset-mark-glyph-size 32px
+  --asset-mark-image-size 24px
+  --asset-mark-vector-size 19px
 
 .assetMark-position
   --asset-mark-size 31px
   --asset-mark-glyph-size 29px
+  --asset-mark-image-size 22px
+  --asset-mark-vector-size 17px
 
 .assetMark-hero
   --asset-mark-size 48px
   --asset-mark-glyph-size 46px
   --asset-mark-chain-size 16px
+  --asset-mark-image-size 35px
+  --asset-mark-vector-size 27px
 
   .assetMarkGlyph
     box-shadow 0 4px 12px rgba(0, 0, 0, .28)

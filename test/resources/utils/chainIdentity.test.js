@@ -43,5 +43,5 @@ test('uses authored colors for known chains and the selected color only for cust
 })
 
 test('keeps known chain artwork optically comparable to the generic network mark', () => {
-  expect(chainIdentitySource).toMatch(/svgSize=\{identity\.custom \? undefined : small \? 18 : 32\}/)
+  expect(chainIdentitySource).toMatch(/svgSize=\{identity\.custom \? undefined : small \? 18 : 30\}/)
 })

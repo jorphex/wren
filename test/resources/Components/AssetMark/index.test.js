@@ -14,11 +14,13 @@ const assetMarkStyle = fs.readFileSync('resources/Components/AssetMark/index.sty
 
 it('centers every artwork path in one shared inset without moving the chain marker', () => {
   expect(assetMarkStyle).toMatch(
-    /\.assetMarkGlyph[\s\S]*?img[\s\S]*?width var\(--asset-mark-image-size\)[\s\S]*?height var\(--asset-mark-image-size\)[\s\S]*?object-fit contain[\s\S]*?object-position center/
+    /\.assetMarkGlyph[\s\S]*?img[\s\S]*?top 50%[\s\S]*?left 50%[\s\S]*?width var\(--asset-mark-image-size\)[\s\S]*?height var\(--asset-mark-image-size\)[\s\S]*?object-fit contain[\s\S]*?object-position center[\s\S]*?transform translate\(-50%, -50%\)/
   )
-  expect(assetMarkStyle).toMatch(/--asset-mark-art-size var\(--asset-mark-image-size\)/)
   expect(assetMarkStyle).toMatch(
-    /svg[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?\.ringIconFallback[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?align-items center[\s\S]*?justify-content center/
+    /--asset-mark-image-size 22px[\s\S]*?--asset-mark-vector-size 18px[\s\S]*?--asset-mark-art-size var\(--asset-mark-image-size\)/
+  )
+  expect(assetMarkStyle).toMatch(
+    /> div[\s\S]*?top 50%[\s\S]*?left 50%[\s\S]*?width var\(--asset-mark-render-size\)[\s\S]*?min-width var\(--asset-mark-render-size\)[\s\S]*?height var\(--asset-mark-render-size\)[\s\S]*?transform translate\(-50%, -50%\)[\s\S]*?\.ringIconFallback[\s\S]*?place-items center/
   )
   expect(assetMarkStyle).toMatch(/\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right 0[\s\S]*?bottom 0/)
 })
@@ -67,7 +69,7 @@ it('centers the native Ethereum artwork without a vertical transform', () => {
   expect(mark.style.transform).toBe('')
   expect(mark.parentElement.parentElement.classList.contains('assetMarkGlyphVector')).toBe(true)
   expect(assetMarkStyle).toMatch(
-    /\.assetMarkGlyphVector svg[\s\S]*?width calc\(var\(--asset-mark-art-size\) \* \.78\)[\s\S]*?height calc\(var\(--asset-mark-art-size\) \* \.78\)/
+    /\.assetMarkGlyphVector[\s\S]*?--asset-mark-render-size var\(--asset-mark-vector-size\)/
   )
 })
 

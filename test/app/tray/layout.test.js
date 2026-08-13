@@ -93,7 +93,7 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
   expect(balancesStyle).toMatch(/\.signerBalanceChain[\s\S]*?left calc\(var\(--wren-space-4\) \+ 40px\)/)
   expect(balancesStyle).toMatch(/\.signerBalancePrice[\s\S]*?left calc\(var\(--wren-space-4\) \+ 40px\)/)
   expect(balancesStyle).toMatch(
-    /\.signerBalanceIcon[\s\S]*?top 17px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
+    /\.signerBalanceIcon[\s\S]*?top 19px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
   )
 })
 

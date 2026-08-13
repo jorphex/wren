@@ -20,7 +20,7 @@ const ChainIdentityMark = ({ chainId, icon, isTestnet = false, primaryColor, sma
       noRing={!identity.custom}
       small={small}
       svgName={identity.mark}
-      svgSize={identity.custom ? undefined : small ? 18 : 32}
+      svgSize={identity.custom ? undefined : small ? 18 : 30}
     />
   )
 }

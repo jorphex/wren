@@ -176,7 +176,7 @@ test('keeps canonical identity colors for known chains', () => {
   expect(icon.getAttribute('data-img')).toBeNull()
   expect(icon.getAttribute('data-block')).toBe('true')
   expect(icon.getAttribute('data-no-ring')).toBe('true')
-  expect(icon.getAttribute('data-size')).toBe('32')
+  expect(icon.getAttribute('data-size')).toBe('30')
 })
 
 test('uses the shared testnet identity color with the canonical family mark', () => {
