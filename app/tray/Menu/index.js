@@ -19,16 +19,6 @@ export class Menu extends React.Component {
         >
           <Icon name='sidebar' size={19} />
         </button>
-        <button
-          type='button'
-          className='panelMenuItem panelMenuItemSend wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
-          aria-label='Open Wren Send'
-          onClick={() => {
-            link.send('tray:action', 'navDash', { view: 'send', data: {} })
-          }}
-        >
-          <Icon name='send' size={19} />
-        </button>
       </div>
     )
   }

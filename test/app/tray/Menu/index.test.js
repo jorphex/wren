@@ -16,6 +16,7 @@ it('opens the dashboard with the current visibility inverted', () => {
   renderMenu()
 
   const button = screen.getByRole('button', { name: 'Open dashboard' })
+  expect(screen.getAllByRole('button')).toHaveLength(1)
   expect(button.classList.contains('wrenShellNav')).toBe(true)
   fireEvent.click(button)
 
@@ -30,12 +31,4 @@ it('opens the dashboard from the keyboard', async () => {
   await user.keyboard('{Enter}')
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setDash', { showing: true })
-})
-
-it('opens Wren Send in the dashboard workspace', () => {
-  renderMenu()
-
-  fireEvent.click(screen.getByRole('button', { name: 'Open Wren Send' }))
-
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })

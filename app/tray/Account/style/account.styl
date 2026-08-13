@@ -1282,10 +1282,9 @@
       left 0
 
 // Account home follows the approved controls study: the selected-account switcher
-// owns the left edge of the header while the persistent Send control remains at right.
+// owns the header, so the startup dashboard control stays out of the selected state.
 #panel
-  &:has(.accountSelectorOpen) .panelMenuItemOpen,
-  &:has(.accountSelectorOpen) .panelMenuItemSend
+  &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
 
   .accountSelector.accountSelectorOpen
