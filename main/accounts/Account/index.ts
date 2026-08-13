@@ -14,6 +14,7 @@ import {
 } from '..'
 import nebulaApi from '../../nebula'
 import signers from '../../signers'
+import { SignerUserRejectedError } from '../../signers/errors'
 import windows from '../../windows'
 import nav from '../../windows/nav'
 import store from '../../store'
@@ -44,6 +45,7 @@ import { requiredSignatureRisks } from '../../../resources/domain/signature/risk
 import reveal from '../../reveal'
 import { isTransactionRequest, isTypedMessageSignatureRequest } from '../../../resources/domain/request'
 import Erc20Contract from '../../contracts/erc20'
+import { suggestCallData } from '../../contracts'
 import {
   assertAccountCodeEvidenceStable,
   inspectTransactionAccountCode,
@@ -118,6 +120,11 @@ type WalletCallsPreparationSnapshot = Readonly<{
 }>
 
 type AccountCodeSnapshot = Readonly<{ codeAddress?: string; fingerprint: string }>
+type CalldataDecodeBinding = Readonly<{
+  to: string
+  calldata: string
+  codeFingerprint: string
+}>
 
 function accountCodeSnapshot(
   simulation: { status: string; accountCodeEvidence?: TransactionAccountCodeEvidence } | undefined,
@@ -169,6 +176,7 @@ class FrameAccount {
   requests: Record<string, AnyAccountRequest> = {}
   private simulationVersions: Record<string, number> = {}
   private simulationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+  private calldataDecodeBindings: Record<string, CalldataDecodeBinding> = {}
   private preparationVersions: Record<string, number> = {}
   private preparationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   private requestAbortCleanup: Record<string, () => void> = {}
@@ -374,6 +382,7 @@ class FrameAccount {
     delete this.requestAbortCleanup[handlerId]
     delete this.requests[handlerId]
     delete this.simulationVersions[handlerId]
+    delete this.calldataDecodeBindings[handlerId]
     clearTimeout(this.simulationTimers[handlerId])
     delete this.simulationTimers[handlerId]
     delete this.preparationVersions[handlerId]
@@ -535,9 +544,27 @@ class FrameAccount {
     const codeAddress = codeSnapshot?.codeAddress
 
     if (to && codeAddress && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
+      const binding = Object.freeze({
+        to: to.toLowerCase(),
+        calldata: calldata.toLowerCase(),
+        codeFingerprint: codeSnapshot.fingerprint
+      })
+      const suggestion = suggestCallData(calldata)
+      if (suggestion) {
+        req.suggestedData = suggestion
+        this.update()
+      } else {
+        delete req.suggestedData
+      }
       try {
         // Decode calldata
-        const decodedData = await reveal.decode(to, parseInt(chainId, 16), calldata, codeAddress)
+        const decodedData = await reveal.decode(
+          to,
+          parseInt(chainId, 16),
+          calldata,
+          codeAddress,
+          codeSnapshot.fingerprint
+        )
 
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
         const knownCodeSnapshot = knownTxRequest
@@ -549,13 +576,41 @@ class FrameAccount {
           knownCodeSnapshot?.fingerprint === codeSnapshot.fingerprint &&
           decodedData
         ) {
-          knownTxRequest.decodedData = decodedData
+          knownTxRequest.decodedData = { ...decodedData, retained: false }
+          delete knownTxRequest.suggestedData
+          this.calldataDecodeBindings[req.handlerId] = binding
+          this.update()
+        } else if (knownTxRequest === req && knownCodeSnapshot?.fingerprint === codeSnapshot.fingerprint) {
           this.update()
         }
       } catch (e) {
         log.warn(e)
       }
+    } else {
+      delete req.suggestedData
+      delete req.decodedData
+      delete this.calldataDecodeBindings[req.handlerId]
     }
+  }
+
+  private prepareCalldataForSimulation(req: TransactionRequest, simulation: TransactionSimulation) {
+    const { to, data: calldata } = req.data
+    const previousBinding = this.calldataDecodeBindings[req.handlerId]
+    const codeSnapshot = to ? accountCodeSnapshot(simulation, to, 0) : undefined
+    const canRetain =
+      previousBinding !== undefined &&
+      to?.toLowerCase() === previousBinding.to &&
+      calldata?.toLowerCase() === previousBinding.calldata &&
+      codeSnapshot?.fingerprint === previousBinding.codeFingerprint
+
+    if (canRetain && req.decodedData) {
+      req.decodedData = { ...req.decodedData, retained: true }
+      return
+    }
+
+    delete req.decodedData
+    delete req.suggestedData
+    delete this.calldataDecodeBindings[req.handlerId]
   }
 
   private async recognizeActions(req: TransactionRequest) {
@@ -857,16 +912,16 @@ class FrameAccount {
     })
   }
 
-  private applySimulationResult(req: TransactionRequest, simulation: TransactionSimulation) {
+  private applySimulationResult(req: TransactionRequest, simulation: TransactionSimulation, final = true) {
     req.simulation = simulation
-    delete req.decodedData
+    this.prepareCalldataForSimulation(req, simulation)
     req.recognizedActions = []
     this.syncAddressSafety(req)
     this.syncSimulationApproval(req, simulation)
     this.syncTokenApprovalRisk(req, simulation)
     this.syncTokenAllowanceChangeRisk(req, simulation)
     this.syncDelegatedAccountRisk(req, simulation)
-    this.syncProxyImplementationChangeRisk(req, simulation)
+    if (final) this.syncProxyImplementationChangeRisk(req, simulation)
     this.update()
     this.decodeCalldata(req)
     this.recognizeActions(req)
@@ -877,7 +932,22 @@ class FrameAccount {
 
     const version = (this.simulationVersions[req.handlerId] || 0) + 1
     this.simulationVersions[req.handlerId] = version
-    if (publishPending) req.simulation = { status: 'pending' }
+    if (publishPending) {
+      const binding = this.calldataDecodeBindings[req.handlerId]
+      if (
+        binding &&
+        req.decodedData &&
+        req.data.to?.toLowerCase() === binding.to &&
+        req.data.data?.toLowerCase() === binding.calldata
+      ) {
+        req.decodedData = { ...req.decodedData, retained: true }
+      } else {
+        delete req.decodedData
+        delete req.suggestedData
+        delete this.calldataDecodeBindings[req.handlerId]
+      }
+      req.simulation = { status: 'pending' }
+    }
     if (!preserveApproval) this.removeSimulationApprovals(req)
 
     if (publishPending) this.update()
@@ -888,7 +958,12 @@ class FrameAccount {
       if (this.requests[req.handlerId] !== req || this.simulationVersions[req.handlerId] !== version) return
 
       simulateTransaction(req.data, {
-        send: (payload, callback, targetChain) => provider.connection.send(payload, callback, targetChain)
+        send: (payload, callback, targetChain) => provider.connection.send(payload, callback, targetChain),
+        onCoreResult: (simulation) => {
+          const knownRequest = this.requests[req.handlerId]
+          if (knownRequest !== req || this.simulationVersions[req.handlerId] !== version) return
+          this.applySimulationResult(req, simulation, false)
+        }
       })
         .then((simulation) => {
           const knownRequest = this.requests[req.handlerId]
@@ -968,7 +1043,13 @@ class FrameAccount {
         const codeAddress = codeSnapshots[index]?.codeAddress
         if (!codeAddress) return null
         try {
-          const decoded = await reveal.decode(call.to, chainId, call.data, codeAddress)
+          const decoded = await reveal.decode(
+            call.to,
+            chainId,
+            call.data,
+            codeAddress,
+            codeSnapshots[index]?.fingerprint || ''
+          )
           if (!decoded) return null
           if (decoded.contractName !== 'ERC-20') {
             return {
@@ -1618,18 +1699,52 @@ class FrameAccount {
     this.validateTransaction(rawTx, (err) => {
       if (err) return cb(err)
       const reviewed = this.reviewedAccountCodeEvidence(rawTx)
+      if (reviewed?.request) {
+        this.accounts.setTransactionSigningProgress?.(
+          this.id,
+          reviewed.request.handlerId,
+          'rechecking-safety'
+        )
+      }
       inspectTransactionAccountCode(rawTx, {
         send: (payload, callback, targetChain) => provider.connection.send(payload, callback, targetChain)
       })
         .then((actual) => {
           assertAccountCodeEvidenceStable(reviewed?.evidence, actual, reviewed?.callIndex ?? 0)
+          if (reviewed?.request?.status !== undefined && reviewed.request.status !== RequestStatus.Pending) {
+            throw new SignerUserRejectedError('Transaction request was cancelled')
+          }
           if (!this.signer) return cb(new Error('No signer found for this account'))
 
           const s = signers.get(this.signer)
           if (!s) return cb(new Error(`Cannot find signer for this account`))
           const index = s.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
           if (index === -1) return cb(new Error(`Signer cannot sign for this address`))
-          s.signTransaction(index, rawTx, cb)
+          const signerSummary =
+            typeof s.summary === 'function'
+              ? s.summary()
+              : { type: s.type || this.lastSignerType, model: '', name: '' }
+          const signerIdentity = { type: signerSummary.type, name: signerSummary.model || signerSummary.name }
+          const setPhase = (phase: 'sending-to-signer' | 'waiting-for-signer' | 'signed') => {
+            if (!reviewed?.request) return
+            this.accounts.setTransactionSigningProgress?.(
+              this.id,
+              reviewed.request.handlerId,
+              phase,
+              signerIdentity
+            )
+          }
+          setPhase('sending-to-signer')
+          if (s.type !== 'trezor') setPhase('waiting-for-signer')
+          s.signTransaction(
+            index,
+            rawTx,
+            (signError, signedTransaction) => {
+              if (!signError) setPhase('signed')
+              cb(signError, signedTransaction)
+            },
+            (phase) => setPhase(phase === 'waiting' ? 'waiting-for-signer' : 'sending-to-signer')
+          )
         })
         .catch((error) => {
           const failure = error instanceof Error ? error : new Error('account-code-check-failed')
@@ -1638,9 +1753,21 @@ class FrameAccount {
     })
   }
 
-  private reviewedAccountCodeEvidence(
-    rawTx: TransactionData
-  ): Readonly<{ evidence?: TransactionAccountCodeEvidence; callIndex: number }> | undefined {
+  cancelTransactionSigning(handlerId: string) {
+    const request = this.requests[handlerId]
+    if (request?.type !== 'transaction' || request.status !== RequestStatus.Pending || !this.signer) {
+      return false
+    }
+    return signers.get(this.signer)?.cancelTransactionSigning?.() === true
+  }
+
+  private reviewedAccountCodeEvidence(rawTx: TransactionData):
+    | Readonly<{
+        evidence?: TransactionAccountCodeEvidence
+        callIndex: number
+        request?: TransactionRequest
+      }>
+    | undefined {
     const transactionRequest = Object.values(this.requests).find(
       (request) => request.type === 'transaction' && request.data === rawTx
     ) as TransactionRequest | undefined
@@ -1648,7 +1775,8 @@ class FrameAccount {
       const evidence = transactionRequest.simulation?.accountCodeEvidence
       return Object.freeze({
         ...(evidence ? { evidence } : {}),
-        callIndex: 0
+        callIndex: 0,
+        request: transactionRequest
       })
     }
 

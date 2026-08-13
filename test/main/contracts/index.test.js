@@ -1,5 +1,5 @@
 import log from 'electron-log'
-import { fetchContract } from '../../../main/contracts'
+import { fetchContract, suggestCallData } from '../../../main/contracts'
 import { fetchSourcifyContract } from '../../../main/contracts/sources/sourcify'
 import { fetchEtherscanContract } from '../../../main/contracts/sources/etherscan'
 
@@ -98,6 +98,33 @@ describe('#fetchContract', () => {
     fetchEtherscanContract.mockResolvedValue(undefined)
 
     return expect(fetchContract('0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0', 1)).resolves.toBeUndefined()
+  })
+
+  it('reuses a verified ABI only for the same reviewed code identity', async () => {
+    const address = '0x1111111111111111111111111111111111111111'
+    fetchSourcifyContract.mockResolvedValue(mockContractSource('sourcify'))
+
+    await fetchContract(address, 1, 'code-fingerprint-a')
+    await fetchContract(address, 1, 'code-fingerprint-a')
+    await fetchContract(address, 1, 'code-fingerprint-b')
+
+    expect(fetchSourcifyContract).toHaveBeenCalledTimes(2)
+    expect(fetchEtherscanContract).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('#suggestCallData', () => {
+  it('suggests a unique bundled method from only the exact selector', () => {
+    expect(suggestCallData(`0xa9059cbb${'00'.repeat(64)}`)).toEqual({
+      method: 'transfer',
+      signature: 'transfer(address,uint256)',
+      source: 'bundled-selector-directory'
+    })
+  })
+
+  it('does not invent a method for unknown or malformed calldata', () => {
+    expect(suggestCallData('0x12345678')).toBeUndefined()
+    expect(suggestCallData('0xa9059cbb0')).toBeUndefined()
   })
 })
 

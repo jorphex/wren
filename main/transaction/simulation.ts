@@ -9,6 +9,7 @@ import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { parseAccountCode } from '../../resources/domain/account/code'
 import { parseSimulationEffects } from './effects'
 import type { SimulationEffect } from './effects'
+import log from 'electron-log'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const MAX_ERROR_MESSAGE_LENGTH = 240
@@ -308,6 +309,9 @@ export interface TransactionSimulation {
   nativeBalanceChanges?: NativeBalanceChanges
   callTrace?: CallTraceEvidence
   proxyImplementationCheck?: ProxyImplementationCheck
+  advancedChecks?: {
+    status: 'pending' | 'complete' | 'partly-unavailable'
+  }
 }
 
 export interface SimulationCallData {
@@ -342,6 +346,27 @@ type ChainSend = (payload: JSONRPCRequestPayload, callback: RPCRequestCallback, 
 interface SimulationDependencies {
   send: ChainSend
   timeoutMs?: number
+  onCoreResult?: (simulation: TransactionSimulation) => void
+}
+
+const timingBucket = (durationMs: number) => {
+  if (durationMs < 250) return 'under-250ms'
+  if (durationMs < 1000) return 'under-1s'
+  if (durationMs < 3000) return 'under-3s'
+  if (durationMs < 8000) return 'under-8s'
+  return '8s-or-more'
+}
+
+function logReviewTiming(phase: string, startedAt: number, outcome: string) {
+  // Jest exercises deliberately unanswered RPC paths whose bounded timers can
+  // settle after a suite ends. Keep operational timing production-only.
+  if (process.env.NODE_ENV === 'test') return
+
+  log.info('transaction review timing', {
+    phase,
+    outcome,
+    duration: timingBucket(Date.now() - startedAt)
+  })
 }
 
 type RpcOutcome = { response: RPCResponsePayload } | { timedOut: true }
@@ -1398,25 +1423,46 @@ export async function simulateTransaction(
 
     return readCallTrace(transaction, send, targetChain, Math.max(0, timeoutMs - (Date.now() - startedAt)))
   })
-  const [simulation, allowance, accountCodeEvidence, prestateTrace, callTrace] = await Promise.all([
+  const coreStartedAt = Date.now()
+  const [simulation, allowance, accountCodeEvidence] = await Promise.all([
     simulationPromise,
     readTokenAllowance(transaction, send, targetChain, timeoutMs),
-    inspectAccountCodeEvidence([transaction], send, targetChain, timeoutMs),
-    prestateTracePromise,
-    callTracePromise
+    inspectAccountCodeEvidence([transaction], send, targetChain, timeoutMs)
   ])
   const delegation = legacyDelegationCheck(accountCodeEvidence.sender)
-
-  return {
+  const coreResult: TransactionSimulation = {
     ...simulation,
     ...(allowance ? { allowance } : {}),
     ...(delegation.status === 'undelegated' ? {} : { delegation }),
     accountCodeEvidence,
+    ...(simulation.status === 'succeeded' ? { advancedChecks: { status: 'pending' as const } } : {})
+  }
+  logReviewTiming('core', coreStartedAt, simulation.status)
+  try {
+    dependencies.onCoreResult?.(coreResult)
+  } catch {
+    log.warn('transaction review core-result callback failed')
+  }
+
+  if (simulation.status !== 'succeeded') return coreResult
+
+  const advancedStartedAt = Date.now()
+  const [prestateTrace, callTrace] = await Promise.all([prestateTracePromise, callTracePromise])
+  const advancedChecksComplete =
+    prestateTrace?.nativeBalanceChanges.status === 'succeeded' &&
+    prestateTrace.proxyImplementationCheck.status === 'succeeded' &&
+    callTrace !== undefined
+  const advancedStatus = advancedChecksComplete ? 'complete' : 'partly-unavailable'
+  logReviewTiming('advanced', advancedStartedAt, advancedStatus)
+
+  return {
+    ...coreResult,
     ...(prestateTrace ? { nativeBalanceChanges: prestateTrace.nativeBalanceChanges } : {}),
     ...(prestateTrace?.proxyImplementationCheck
       ? { proxyImplementationCheck: prestateTrace.proxyImplementationCheck }
       : {}),
-    ...(callTrace ? { callTrace } : {})
+    ...(callTrace ? { callTrace } : {}),
+    advancedChecks: { status: advancedStatus }
   }
 }
 

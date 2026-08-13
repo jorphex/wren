@@ -4,7 +4,7 @@ import type {
   TypedDataV1,
   TypedMessage as BaseTypedMessage
 } from '@metamask/eth-sig-util'
-import type { DecodedCallData } from '../contracts'
+import type { DecodedCallData, SuggestedCallData } from '../contracts'
 import type { Chain } from '../chains'
 import type { TransactionData } from '../../resources/domain/transaction'
 import type { WalletCallBatchAdjustment } from '../provider/walletCallAdjustment'
@@ -105,6 +105,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   payload: RPC.SendTransaction.Request
   data: TransactionData
   decodedData?: DecodedCallData
+  suggestedData?: SuggestedCallData
   chainData?: {
     optimism?: {
       l1Fees: string
@@ -134,6 +135,18 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   }
   retainedPreBroadcastError?: {
     responderPending: boolean
+  }
+  signingProgress?: {
+    phase:
+      | 'preparing-nonce'
+      | 'rechecking-safety'
+      | 'sending-to-signer'
+      | 'waiting-for-signer'
+      | 'signed'
+      | 'sending'
+    startedAt: number
+    signerType?: string
+    signerName?: string
   }
 }
 

@@ -67,7 +67,11 @@ async function fetchSourceCode(
     const res = await fetchWithTimeout(endpointUrl, {}, 4000)
     const parsedResponse = await parseResponse<SourcifySourceCodeResponse>(res)
 
-    const metadataFile = parsedResponse?.files[0]
+    const metadataFile = Array.isArray(parsedResponse?.files)
+      ? parsedResponse.files.find(
+          (file) => file?.name === 'metadata.json' || file?.path?.endsWith('/metadata.json')
+        ) || parsedResponse.files[0]
+      : undefined
     return parsedResponse && ['partial', 'full'].includes(parsedResponse.status) && metadataFile
       ? JSON.parse(metadataFile.content)
       : Promise.reject(`Contract ${contractAddress} not found in Sourcify`)

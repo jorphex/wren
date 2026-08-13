@@ -123,6 +123,27 @@ describe('#fetchSourcifyContract', () => {
     return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
   })
 
+  it('does not throw when Sourcify returns a malformed files field', async () => {
+    mockSourcifyApi(200, { status: 'partial', files: { unexpected: true } })
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
+  })
+
+  it('selects metadata.json when source files appear first', async () => {
+    mockSourcifyApi(200, {
+      ...sourcifyResponse,
+      files: [
+        { name: 'Contract.sol', path: 'contracts/Contract.sol', content: 'contract Contract {}' },
+        ...sourcifyResponse.files
+      ]
+    })
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toMatchObject({
+      name: 'mock sourcify abi',
+      source: 'sourcify'
+    })
+  })
+
   it('does not retrieve a contract when the request times out', async () => {
     mockSourcifyApi(200, sourcifyResponse, 10000)
 

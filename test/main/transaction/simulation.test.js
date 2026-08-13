@@ -594,6 +594,7 @@ it('uses eth_simulateV1 without falling back when it succeeds', async () => {
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
     accountCodeEvidence: transactionAccountCodeEvidence,
+    advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -617,6 +618,68 @@ it('uses eth_simulateV1 without falling back when it succeeds', async () => {
     expect.any(Function),
     { type: 'ethereum', id: 1 }
   )
+})
+
+it('publishes a successful core result before bounded advanced checks settle', async () => {
+  const traceRequests = []
+  let publishCore
+  const corePublished = new Promise((resolve) => {
+    publishCore = resolve
+  })
+  const onCoreResult = jest.fn((result) => publishCore(result))
+  const send = jest.fn((payload, callback) => {
+    if (payload.method === 'eth_simulateV1') {
+      callback({ id: payload.id, jsonrpc: '2.0', result: simulateSuccess })
+    } else if (payload.method === 'eth_getCode') {
+      callback({ id: payload.id, jsonrpc: '2.0', result: '0x' })
+    } else if (payload.method === 'debug_traceCall') {
+      traceRequests.push({ payload, callback })
+    }
+  })
+  let finalSettled = false
+  const pending = simulateTransaction(transaction, { send, onCoreResult }).then((result) => {
+    finalSettled = true
+    return result
+  })
+
+  await expect(corePublished).resolves.toMatchObject({
+    status: 'succeeded',
+    source: 'eth_simulateV1',
+    advancedChecks: { status: 'pending' }
+  })
+  expect(onCoreResult).toHaveBeenCalledTimes(1)
+  expect(onCoreResult.mock.calls[0][0]).not.toHaveProperty('nativeBalanceChanges')
+  expect(onCoreResult.mock.calls[0][0]).not.toHaveProperty('proxyImplementationCheck')
+  expect(onCoreResult.mock.calls[0][0]).not.toHaveProperty('callTrace')
+  expect(finalSettled).toBe(false)
+  expect(traceRequests).toHaveLength(2)
+
+  for (const { payload, callback } of traceRequests) {
+    const tracer = payload.params[2].tracer
+    callback({
+      id: payload.id,
+      jsonrpc: '2.0',
+      result:
+        tracer === 'prestateTracer'
+          ? { pre: {}, post: {} }
+          : callFrame({
+              calls: [
+                callFrame({
+                  from: transaction.to,
+                  to: '0x3333333333333333333333333333333333333333'
+                })
+              ]
+            })
+    })
+  }
+
+  await expect(pending).resolves.toMatchObject({
+    status: 'succeeded',
+    advancedChecks: { status: 'complete' },
+    nativeBalanceChanges: { status: 'succeeded' },
+    proxyImplementationCheck: { status: 'succeeded' },
+    callTrace: { source: 'debug_traceCall' }
+  })
 })
 
 it('attaches exact configured-RPC native balance changes after execution succeeds', async () => {
@@ -1018,6 +1081,7 @@ it.each([-32601, -32004])('falls back to eth_call for unsupported-method code %s
 
   await expect(simulateTransaction(transaction, { send: withAccountCode(send) })).resolves.toEqual({
     accountCodeEvidence: transactionAccountCodeEvidence,
+    advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
     source: 'eth_call',
     nativeBalanceChanges: unsupportedNativeBalanceChanges,
@@ -1430,6 +1494,7 @@ it('attaches an exact configured-RPC allowance read to an approval simulation', 
 
   await expect(simulateTransaction(approvalTransaction, { send: withAccountCode(send) })).resolves.toEqual({
     accountCodeEvidence: transactionAccountCodeEvidence,
+    advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -1476,6 +1541,7 @@ it.each([
 
   await expect(simulateTransaction(approvalTransaction, { send: withAccountCode(send) })).resolves.toEqual({
     accountCodeEvidence: transactionAccountCodeEvidence,
+    advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',
@@ -1499,6 +1565,7 @@ it('bounds a missing allowance response without changing a successful execution 
 
   await expect(pending).resolves.toEqual({
     accountCodeEvidence: transactionAccountCodeEvidence,
+    advancedChecks: { status: 'partly-unavailable' },
     status: 'succeeded',
     source: 'eth_simulateV1',
     gasUsed: '0x5208',

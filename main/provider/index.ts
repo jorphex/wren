@@ -19,6 +19,7 @@ import accounts, {
   AddTokenRequest,
   WalletCallsRequest
 } from '../accounts'
+import { SignerUserRejectedError } from '../signers/errors'
 
 import FrameAccount from '../accounts/Account'
 import Chains, { Chain } from '../chains'
@@ -78,6 +79,7 @@ import {
   LegacyTypedData,
   MessageSigningMethod,
   PermitSignatureRequest,
+  RequestStatus,
   SignRequest,
   TypedData,
   TypedMessage
@@ -576,8 +578,11 @@ export class Provider extends EventEmitter {
       cb(error)
     }
 
-    if (req.simulation?.status === 'pending') {
-      return failBeforeBroadcast(req, new Error('Transaction execution check is still pending'))
+    const reviewPending = (request: TransactionRequest) =>
+      request.simulation?.status === 'pending' || request.simulation?.advancedChecks?.status === 'pending'
+
+    if (reviewPending(req)) {
+      return failBeforeBroadcast(req, new Error('Transaction safety checks are still pending'))
     }
 
     if ((req.approvals || []).some((approval) => !approval.approved)) {
@@ -594,11 +599,8 @@ export class Provider extends EventEmitter {
       return failBeforeBroadcast(req, new Error('Transaction request is no longer available'))
     }
     const transactionRequest = storedRequest as TransactionRequest
-    if (transactionRequest.simulation?.status === 'pending') {
-      return failBeforeBroadcast(
-        transactionRequest,
-        new Error('Transaction execution check is still pending')
-      )
+    if (reviewPending(transactionRequest)) {
+      return failBeforeBroadcast(transactionRequest, new Error('Transaction safety checks are still pending'))
     }
     if ((transactionRequest.approvals || []).some((approval) => !approval.approved)) {
       return failBeforeBroadcast(
@@ -629,6 +631,18 @@ export class Provider extends EventEmitter {
 
       if (typeof response.result !== 'string' || parseRpcQuantity(response.result) === undefined) {
         return failBeforeBroadcast(transactionRequest, new Error('Invalid transaction nonce response'))
+      }
+      let currentRequest: AccountRequest | undefined
+      try {
+        currentRequest = accounts.getActiveRequestForAccount(
+          transactionRequest.account,
+          transactionRequest.handlerId
+        )
+      } catch {
+        currentRequest = undefined
+      }
+      if (!currentRequest || currentRequest.status !== RequestStatus.Pending) {
+        return cb(new SignerUserRejectedError('Transaction request was cancelled'))
       }
       const updatedReq = accounts.updateNonce(
         transactionRequest.handlerId,

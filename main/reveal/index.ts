@@ -164,17 +164,25 @@ const surface = {
     return { type, ens }
   },
   resolveEntityType,
-  decode: async (contractAddress = '', chainId: number, calldata: string, codeAddress = contractAddress) => {
+  decode: async (
+    contractAddress = '',
+    chainId: number,
+    calldata: string,
+    codeAddress = contractAddress,
+    codeIdentity = ''
+  ) => {
     // Decode calldata
-    const contractSources: ContractSource[] = [{ name: 'ERC-20', source: 'Generic ERC-20', abi: erc20Abi }]
-    const contractSource = await fetchContract(codeAddress, chainId)
+    const standardSource: ContractSource = {
+      name: 'ERC-20',
+      source: 'Standard ERC-20 ABI',
+      abi: erc20Abi
+    }
+    const contractSource = codeIdentity
+      ? await fetchContract(codeAddress, chainId, codeIdentity)
+      : await fetchContract(codeAddress, chainId)
 
     if (contractSource) {
-      contractSources.push(contractSource)
-    }
-
-    for (const { name, source, abi } of contractSources.reverse()) {
-      const decodedCall = decodeCallData(calldata, abi)
+      const decodedCall = decodeCallData(calldata, contractSource.abi)
 
       if (decodedCall) {
         return {
@@ -182,15 +190,30 @@ const surface = {
           ...(codeAddress.toLowerCase() !== contractAddress.toLowerCase()
             ? { codeAddress: codeAddress.toLowerCase() }
             : {}),
-          contractName: name,
-          source,
+          contractName: contractSource.name,
+          source: contractSource.source,
+          confidence: 'verified-abi' as const,
           ...decodedCall
         }
       }
     }
 
-    log.warn(`Unable to decode data for contract ${contractAddress}`, {
-      ...(codeAddress !== contractAddress ? { codeAddress } : {})
+    const standardDecoded = decodeCallData(calldata, standardSource.abi)
+    if (standardDecoded) {
+      return {
+        contractAddress: contractAddress.toLowerCase(),
+        ...(codeAddress.toLowerCase() !== contractAddress.toLowerCase()
+          ? { codeAddress: codeAddress.toLowerCase() }
+          : {}),
+        contractName: standardSource.name,
+        source: standardSource.source,
+        confidence: 'standard-abi' as const,
+        ...standardDecoded
+      }
+    }
+
+    log.warn('Unable to decode contract call data', {
+      delegatedCode: codeAddress.toLowerCase() !== contractAddress.toLowerCase()
     })
     return undefined
   },

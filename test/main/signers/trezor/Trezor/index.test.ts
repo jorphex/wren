@@ -23,6 +23,17 @@ function deferred<T>(): Deferred<T> {
 }
 
 const device = { path: 'trezor-test-path', features: {} } as TrezorDevice
+const rawTransaction = {
+  nonce: '0x1',
+  gasPrice: '0x1',
+  gasLimit: '0x5208',
+  to: '0x2222222222222222222222222222222222222222',
+  value: '0x0',
+  data: '0x',
+  chainId: '0x1',
+  type: '0x0'
+}
+const transactionSignature = { v: '1b', r: '1'.repeat(64), s: '2'.repeat(64) }
 
 function createSigner() {
   const signer = new Trezor(device.path)
@@ -218,6 +229,79 @@ describe('Trezor lifecycle', () => {
       name: 'SignerUserRejectedError',
       code: USER_REJECTED_REQUEST
     })
+    signer.close()
+  })
+
+  it('reports queued and device-waiting transaction phases from real dispatch boundaries', async () => {
+    jest
+      .spyOn(TrezorBridge, 'signTransaction')
+      .mockImplementation(async (_device, _path, _tx, onDispatch) => {
+        onDispatch?.()
+        return transactionSignature
+      })
+    const signer = createSigner()
+    const callback = jest.fn()
+    const onPhase = jest.fn()
+
+    await signer.signTransaction(0, rawTransaction, callback, onPhase)
+
+    expect(onPhase.mock.calls.map(([phase]) => phase)).toEqual(['queued', 'waiting'])
+    expect(callback).toHaveBeenCalledWith(null, expect.stringMatching(/^0x/))
+    signer.close()
+  })
+
+  it('cancels a queued transaction without cancelling an unrelated active bridge request', async () => {
+    const dispatchGate = deferred<void>()
+    jest
+      .spyOn(TrezorBridge, 'signTransaction')
+      .mockImplementation(async (_device, _path, _tx, onDispatch) => {
+        await dispatchGate.promise
+        onDispatch?.()
+        return transactionSignature
+      })
+    const cancel = jest.spyOn(TrezorBridge, 'cancelCurrentRequest').mockImplementation(() => undefined)
+    const signer = createSigner()
+    const callback = jest.fn()
+    const onPhase = jest.fn()
+    const signing = signer.signTransaction(0, rawTransaction, callback, onPhase)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(signer.cancelTransactionSigning()).toBe(true)
+    expect(cancel).not.toHaveBeenCalled()
+    dispatchGate.resolve(undefined)
+    await signing
+
+    expect(onPhase).toHaveBeenCalledWith('queued')
+    expect(onPhase).not.toHaveBeenCalledWith('waiting')
+    expect(callback.mock.calls[0][0]).toMatchObject({ code: USER_REJECTED_REQUEST })
+    signer.close()
+  })
+
+  it('cancels the active Trezor prompt and rejects a late signature result', async () => {
+    const signature = deferred<typeof transactionSignature>()
+    jest
+      .spyOn(TrezorBridge, 'signTransaction')
+      .mockImplementation(async (_device, _path, _tx, onDispatch) => {
+        onDispatch?.()
+        return signature.promise
+      })
+    const cancel = jest.spyOn(TrezorBridge, 'cancelCurrentRequest').mockImplementation(() => undefined)
+    const signer = createSigner()
+    const callback = jest.fn()
+    const onPhase = jest.fn()
+    const signing = signer.signTransaction(0, rawTransaction, callback, onPhase)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(onPhase).toHaveBeenCalledWith('waiting')
+    expect(signer.cancelTransactionSigning()).toBe(true)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    signature.resolve(transactionSignature)
+    await signing
+
+    expect(callback.mock.calls[0][0]).toMatchObject({ code: USER_REJECTED_REQUEST })
+    expect(callback.mock.calls[0][1]).toBeUndefined()
     signer.close()
   })
 })

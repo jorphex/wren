@@ -6,6 +6,7 @@ import type { Device as TrezorDevice } from '@trezor/connect'
 import { v5 as uuid } from 'uuid'
 
 import Signer from '../../Signer'
+import type { SignerTransactionPhase } from '../../Signer'
 import { TransactionData } from '../../../../resources/domain/transaction'
 import { sign, londonToLegacy, signerCompatibility } from '../../../transaction'
 import { Derivation, getDerivationPath } from '../../Signer/derive'
@@ -86,6 +87,7 @@ export default class Trezor extends Signer {
 
   private closed = false
   private lifecycleGeneration = 0
+  private transactionSigning?: { cancelled: boolean; dispatched: boolean }
   private derivationGeneration = 0
   private verificationGeneration = 0
   private requestQueue: Promise<void> = Promise.resolve()
@@ -166,6 +168,11 @@ export default class Trezor extends Signer {
     ++this.lifecycleGeneration
     ++this.derivationGeneration
     ++this.verificationGeneration
+    if (this.transactionSigning) {
+      this.transactionSigning.cancelled = true
+      if (this.transactionSigning.dispatched) TrezorBridge.cancelCurrentRequest()
+      delete this.transactionSigning
+    }
     this.clearTimers()
     const cancellation = new Error('Trezor signer closed')
     const pendingCallbacks = [...this.pendingCallbacks]
@@ -431,8 +438,16 @@ export default class Trezor extends Signer {
     }
   }
 
-  override async signTransaction(index: number, rawTx: TransactionData, cb: Callback<string>) {
+  override async signTransaction(
+    index: number,
+    rawTx: TransactionData,
+    cb: Callback<string>,
+    onPhase?: (phase: SignerTransactionPhase) => void
+  ) {
     const done = this.trackCallback(cb)
+    const signing = { cancelled: false, dispatched: false }
+    this.transactionSigning = signing
+    onPhase?.('queued')
 
     try {
       const compatibility = signerCompatibility(rawTx, this.summary())
@@ -447,13 +462,22 @@ export default class Trezor extends Signer {
         const path = this.getPath(index)
 
         try {
-          return await this.runDeviceRequest(
-            () => TrezorBridge.signTransaction(this.device!, path, trezorTx),
+          return await this.runForegroundDeviceRequest(
+            async () => {
+              const signature = await TrezorBridge.signTransaction(this.device!, path, trezorTx, () => {
+                if (signing.cancelled) throw new SignerUserRejectedError()
+                signing.dispatched = true
+                onPhase?.('waiting')
+              })
+              if (signing.cancelled) throw new SignerUserRejectedError()
+              return signature
+            },
             this.lifecycleGeneration,
             this.status
           )
         } catch (e: unknown) {
           const err = e as DeviceError
+          if (err instanceof SignerUserRejectedError) throw err
           if (isUserRejection(err)) throw new SignerUserRejectedError()
           throw new Error(getTransactionErrorMessage(err, this.derivation))
         }
@@ -463,7 +487,17 @@ export default class Trezor extends Signer {
     } catch (e: unknown) {
       const err = e as DeviceError
       done(err)
+    } finally {
+      if (this.transactionSigning === signing) delete this.transactionSigning
     }
+  }
+
+  override cancelTransactionSigning() {
+    const signing = this.transactionSigning
+    if (!signing) return false
+    signing.cancelled = true
+    if (signing.dispatched) TrezorBridge.cancelCurrentRequest()
+    return true
   }
 
   private async deriveAccounts(publicKey: string, chainCode: string) {
@@ -530,6 +564,25 @@ export default class Trezor extends Signer {
     )
 
     return request
+  }
+
+  private async runForegroundDeviceRequest<T>(
+    operation: () => Promise<T>,
+    lifecycleGeneration: number,
+    statusToRestore: string
+  ) {
+    if (!this.isCurrent(lifecycleGeneration)) throw new Error('Trezor operation cancelled')
+
+    try {
+      const result = await operation()
+      if (!this.isCurrent(lifecycleGeneration)) throw new Error('Trezor operation cancelled')
+      return result
+    } finally {
+      if (this.isCurrent(lifecycleGeneration) && this.status === Status.ENTERING_PASSPHRASE) {
+        this.status = statusToRestore
+        this.emitUpdate()
+      }
+    }
   }
 
   private isCurrent(generation: number, device: TrezorDevice | undefined = this.device) {

@@ -1745,6 +1745,21 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('cancels an in-flight signer request before marking the transaction declined', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('cancel-active-transaction-signing')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    const cancel = jest.spyOn(targetAccount, 'cancelTransactionSigning').mockReturnValue(true)
+
+    expect(Accounts.declineRequest(explicit.handlerId, account2.address)).toBe(true)
+
+    expect(cancel).toHaveBeenCalledWith(explicit.handlerId)
+    expect(explicit.status).toBe('declined')
+    cancel.mockRestore()
+  })
+
   it('keeps a declined request terminal when signer callbacks arrive late', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('declined-is-terminal', 'sign')
@@ -2682,9 +2697,45 @@ describe('#setRequestPending', () => {
     currentAccount.requests[pendingSimulation.handlerId] = pendingSimulation
     currentAccount.activeReviewHandlerId = pendingSimulation.handlerId
 
-    expect(() => Accounts.setRequestPending(pendingSimulation)).toThrow(/execution check is still pending/i)
+    expect(() => Accounts.setRequestPending(pendingSimulation)).toThrow(/safety checks are still pending/i)
     expect(pendingSimulation.status).toBeUndefined()
     expect(pendingSimulation.notice).toBeUndefined()
+  })
+
+  it('keeps a transaction reviewable while required additional checks are pending', () => {
+    const currentAccount = Accounts.current()
+    currentAccount.lastSignerType = 'seed'
+    const pendingAdvancedChecks = {
+      ...request,
+      handlerId: 'pending-advanced-checks',
+      simulation: { status: 'succeeded', advancedChecks: { status: 'pending' } }
+    }
+    currentAccount.requests[pendingAdvancedChecks.handlerId] = pendingAdvancedChecks
+    currentAccount.activeReviewHandlerId = pendingAdvancedChecks.handlerId
+
+    expect(() => Accounts.setRequestPending(pendingAdvancedChecks)).toThrow(
+      /safety checks are still pending/i
+    )
+    expect(pendingAdvancedChecks.status).toBeUndefined()
+  })
+
+  it('records the truthful initial transaction-signing phase', () => {
+    const currentAccount = Accounts.current()
+    currentAccount.lastSignerType = 'seed'
+    const withNonce = {
+      ...request,
+      handlerId: 'signing-phase-with-nonce',
+      simulation: { status: 'succeeded' },
+      data: { ...request.data, nonce: '0x5' }
+    }
+    currentAccount.requests[withNonce.handlerId] = withNonce
+    currentAccount.activeReviewHandlerId = withNonce.handlerId
+
+    expect(Accounts.setRequestPending(withNonce)).toBe(true)
+    expect(withNonce.signingProgress).toMatchObject({
+      phase: 'rechecking-safety',
+      startedAt: expect.any(Number)
+    })
   })
 
   it.each(['transaction', 'sign', 'signTypedData', 'signErc20Permit'])(

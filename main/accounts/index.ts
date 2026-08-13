@@ -2201,6 +2201,7 @@ export class Accounts extends EventEmitter {
       if (!isCancelableRequest(request.status || '')) return false
 
       if (request.type === 'eip7702Revoke') this.cancelEip7702Operation(currentAccount.id, handlerId)
+      if (request.type === 'transaction') currentAccount.cancelTransactionSigning(handlerId)
       request.status = RequestStatus.Declined
       request.notice =
         request.type === 'transaction'
@@ -2246,8 +2247,12 @@ export class Accounts extends EventEmitter {
     ) {
       throw new Error(WATCH_ONLY_SIGNING_ERROR)
     }
-    if (isTransactionRequest(storedRequest) && storedRequest.simulation?.status === 'pending') {
-      throw new Error('Transaction execution check is still pending')
+    if (
+      isTransactionRequest(storedRequest) &&
+      (storedRequest.simulation?.status === 'pending' ||
+        storedRequest.simulation?.advancedChecks?.status === 'pending')
+    ) {
+      throw new Error('Transaction safety checks are still pending')
     }
 
     storedRequest.status = RequestStatus.Pending
@@ -2256,6 +2261,66 @@ export class Accounts extends EventEmitter {
     const hwSigner = signerType !== 'seed' && signerType !== 'ring'
 
     storedRequest.notice = hwSigner ? 'See Signer' : ''
+    if (storedRequest.type === 'transaction') {
+      const transactionRequest = storedRequest as TransactionRequest
+      this.setTransactionSigningProgress(
+        transactionRequest.account,
+        transactionRequest.handlerId,
+        transactionRequest.data.nonce ? 'rechecking-safety' : 'preparing-nonce'
+      )
+    }
+    currentAccount.update()
+    return true
+  }
+
+  setTransactionSigningProgress(
+    accountId: string,
+    handlerId: string,
+    phase: NonNullable<TransactionRequest['signingProgress']>['phase'],
+    signer?: { type?: string; name?: string }
+  ) {
+    const currentAccount = this.requestAccount(handlerId, accountId)
+    const request = currentAccount?.getRequest<TransactionRequest>(handlerId)
+    if (!currentAccount || !request || request.type !== 'transaction') return false
+    if (
+      [RequestStatus.Declined, RequestStatus.Error, RequestStatus.Confirmed].includes(
+        request.status as RequestStatus
+      )
+    ) {
+      return false
+    }
+
+    const previous = request.signingProgress
+    if (previous && previous.phase !== phase) {
+      const duration = Date.now() - previous.startedAt
+      log.info('transaction signing timing', {
+        phase: previous.phase,
+        duration:
+          duration < 250
+            ? 'under-250ms'
+            : duration < 1000
+              ? 'under-1s'
+              : duration < 3000
+                ? 'under-3s'
+                : duration < 8000
+                  ? 'under-8s'
+                  : '8s-or-more'
+      })
+    }
+    if (
+      previous?.phase === phase &&
+      previous.signerType === signer?.type &&
+      previous.signerName === signer?.name
+    ) {
+      return true
+    }
+
+    request.signingProgress = {
+      phase,
+      startedAt: Date.now(),
+      ...(signer?.type ? { signerType: signer.type } : {}),
+      ...(signer?.name ? { signerName: signer.name } : {})
+    }
     currentAccount.update()
     return true
   }
@@ -2403,6 +2468,7 @@ export class Accounts extends EventEmitter {
     delete request.notice
     delete request.recoverableError
     delete request.retainedPreBroadcastError
+    delete request.signingProgress
     request.mode = RequestMode.Normal
     currentAccount.refreshTransactionSimulation(request, true, false)
     return true
@@ -2466,6 +2532,7 @@ export class Accounts extends EventEmitter {
         }
         currentAccount.requests[handlerId].status = RequestStatus.Sending
         currentAccount.requests[handlerId].notice = 'Sending'
+        this.setTransactionSigningProgress(currentAccount.id, handlerId, 'sending')
         currentAccount.update()
         cb(null)
       }

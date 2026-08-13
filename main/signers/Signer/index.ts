@@ -26,6 +26,8 @@ export interface AppVersion {
   patch: number
 }
 
+export type SignerTransactionPhase = 'queued' | 'waiting'
+
 export default class Signer extends EventEmitter {
   id = ''
   type = ''
@@ -101,10 +103,19 @@ export default class Signer extends EventEmitter {
     cb(error, undefined)
   }
 
-  signTransaction(index: number, rawTx: TransactionData, cb: Callback<string>) {
+  signTransaction(
+    index: number,
+    rawTx: TransactionData,
+    cb: Callback<string>,
+    _onPhase?: (phase: SignerTransactionPhase) => void
+  ) {
     const error = new Error(`Signer: ${this.type} did not implement a signTransaction method`)
     log.warn(error.message)
     cb(error, undefined)
+  }
+
+  cancelTransactionSigning() {
+    return false
   }
 
   signTypedData(index: number, typedMessage: TypedMessage, cb: Callback<string>) {

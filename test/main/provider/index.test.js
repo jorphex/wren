@@ -192,7 +192,23 @@ describe('#approveTransactionRequest', () => {
         simulation: { status: 'pending' }
       },
       (error) => {
-        expect(error.message).toMatch(/execution check is still pending/i)
+        expect(error.message).toMatch(/safety checks are still pending/i)
+        expect(accounts.lockRequest).not.toHaveBeenCalled()
+        expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
+        done()
+      }
+    )
+  })
+
+  it('refuses to lock or sign while required additional checks are pending', (done) => {
+    provider.approveTransactionRequest(
+      {
+        handlerId: 'pending-advanced-checks',
+        data: { nonce: '0x1' },
+        simulation: { status: 'succeeded', advancedChecks: { status: 'pending' } }
+      },
+      (error) => {
+        expect(error.message).toMatch(/safety checks are still pending/i)
         expect(accounts.lockRequest).not.toHaveBeenCalled()
         expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
         done()
@@ -215,6 +231,38 @@ describe('#approveTransactionRequest', () => {
         done()
       }
     )
+  })
+
+  it('does not continue after a nonce response if the request was cancelled while waiting', () => {
+    const request = {
+      account: address,
+      handlerId: 'cancelled-during-nonce',
+      type: 'transaction',
+      data: { chainId: '0x1' },
+      simulation: { status: 'succeeded' },
+      approvals: []
+    }
+    accountRequests.push(request)
+    accounts.lockRequest.mockImplementationOnce(() => {
+      request.status = 'pending'
+    })
+    accounts.updateNonce = jest.fn()
+    let respondWithNonce
+    const nonce = jest.spyOn(provider, 'getNonce').mockImplementation((_transaction, callback) => {
+      respondWithNonce = callback
+    })
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    request.status = 'declined'
+    respondWithNonce({ result: '0x5' })
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 4001, message: expect.stringMatching(/cancelled/i) })
+    )
+    expect(accounts.updateNonce).not.toHaveBeenCalled()
+    expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
+    nonce.mockRestore()
   })
 })
 

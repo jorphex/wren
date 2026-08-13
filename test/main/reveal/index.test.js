@@ -57,9 +57,53 @@ it('decodes an authority call with ABI source from its reviewed delegate', async
     codeAddress: delegate,
     contractName: 'Delegated Executor',
     source: 'Sourcify',
+    confidence: 'verified-abi',
     method: 'execute'
   })
   expect(fetchContract).toHaveBeenCalledWith(delegate, 1)
+})
+
+it('binds verified ABI lookup to the reviewed code identity', async () => {
+  const contractInterface = new Interface(['function execute(uint256 value)'])
+  const calldata = contractInterface.encodeFunctionData('execute', [42n])
+  fetchContract.mockResolvedValueOnce({
+    name: 'Verified Executor',
+    source: 'Sourcify',
+    abi: contractInterface.formatJson()
+  })
+
+  await reveal.decode(token, 1, calldata, token, 'reviewed-code-fingerprint')
+
+  expect(fetchContract).toHaveBeenCalledWith(token, 1, 'reviewed-code-fingerprint')
+})
+
+it('uses the bundled ERC-20 ABI only after a verified ABI is unavailable', async () => {
+  const calldata = erc20Interface.encodeFunctionData('transfer', [counterparty, 7n])
+
+  await expect(reveal.decode(token, 1, calldata)).resolves.toMatchObject({
+    contractAddress: token,
+    contractName: 'ERC-20',
+    source: 'Standard ERC-20 ABI',
+    confidence: 'standard-abi',
+    method: 'transfer'
+  })
+  expect(fetchContract).toHaveBeenCalledWith(token, 1)
+})
+
+it('prefers a verified contract identity over a generic standard signature match', async () => {
+  const contractInterface = new Interface(['function transfer(address recipient, uint256 amount)'])
+  const calldata = contractInterface.encodeFunctionData('transfer', [counterparty, 7n])
+  fetchContract.mockResolvedValueOnce({
+    name: 'Verified Bridge',
+    source: 'Sourcify',
+    abi: contractInterface.formatJson()
+  })
+
+  await expect(reveal.decode(token, 1, calldata)).resolves.toMatchObject({
+    contractName: 'Verified Bridge',
+    confidence: 'verified-abi',
+    method: 'transfer'
+  })
 })
 
 it.each([

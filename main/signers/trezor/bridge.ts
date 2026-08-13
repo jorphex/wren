@@ -184,14 +184,15 @@ class TrezorBridge extends EventEmitter {
     return result.signature
   }
 
-  async signTransaction(device: DeviceReference, path: string, tx: unknown) {
-    const result = await this.makeRequest(() =>
-      TrezorConnect.ethereumSignTransaction({
+  async signTransaction(device: DeviceReference, path: string, tx: unknown, onDispatch?: () => void) {
+    const result = await this.makeRequest(() => {
+      onDispatch?.()
+      return TrezorConnect.ethereumSignTransaction({
         device: deviceSelector(device),
         path,
         transaction: tx as TrezorTransaction
       })
-    )
+    })
 
     const { v, r, s } = result
     return { v, r, s }
@@ -230,6 +231,10 @@ class TrezorBridge extends EventEmitter {
     TrezorConnect.uiResponse({ type: UI.RECEIVE_THP_PAIRING_TAG, payload })
 
     this.emit('trezor:entered:pairing', deviceId)
+  }
+
+  cancelCurrentRequest() {
+    TrezorConnect.cancel('Transaction signing cancelled in Wren')
   }
 
   private makeRequest<T>(fn: () => Response<T>, retries = 20) {

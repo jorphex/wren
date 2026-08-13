@@ -11,6 +11,7 @@ import {
 } from '../../../../main/transaction/simulation'
 import { ApprovalType } from '../../../../resources/constants'
 import { GasFeesSource } from '../../../../resources/domain/transaction'
+import { RequestStatus } from '../../../../main/accounts/types'
 import signers from '../../../../main/signers'
 import store from '../../../../main/store'
 import nebulaApi from '../../../../main/nebula'
@@ -82,7 +83,11 @@ const mockReverseLookup = nebulaApi.reverseLookup
 
 let account
 
-const accounts = { update: jest.fn(), getSelectedAddresses: jest.fn() }
+const accounts = {
+  update: jest.fn(),
+  getSelectedAddresses: jest.fn(),
+  setTransactionSigningProgress: jest.fn()
+}
 
 const accountState = {
   address: '0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990',
@@ -246,9 +251,13 @@ beforeEach(() => {
   windows.showTray.mockClear()
   nav.forward.mockClear()
   provider.accountsChanged.mockClear()
+  accounts.update.mockClear()
+  accounts.setTransactionSigningProgress.mockClear()
   accounts.getSelectedAddresses.mockReturnValue([accountState.address.toLowerCase()])
-  simulateTransaction.mockImplementation(() => new Promise(() => {}))
-  simulateWalletCalls.mockImplementation(() => new Promise(() => {}))
+  simulateTransaction.mockReset().mockImplementation(() => new Promise(() => {}))
+  simulateWalletCalls.mockReset().mockImplementation(() => new Promise(() => {}))
+  reveal.decode.mockReset()
+  fetchContract.mockReset().mockResolvedValue(undefined)
   inspectTransactionAccountCode.mockReset().mockResolvedValue(accountCodeEvidence())
   provider.getNonce.mockImplementation((_transaction, callback) => callback({ result: '0x5' }))
   provider.fillTransaction.mockImplementation((transaction, callback) =>
@@ -265,7 +274,6 @@ beforeEach(() => {
     })
   )
   account = new Account(accountState, accounts)
-  fetchContract.mockResolvedValueOnce(undefined)
 })
 
 describe('ENS identity', () => {
@@ -907,7 +915,13 @@ describe('#addRequest', () => {
 
     await account.revealWalletCallDetails(request)
 
-    expect(reveal.decode).toHaveBeenCalledWith(tokenContract, 1, '0x12345678', implementation)
+    expect(reveal.decode).toHaveBeenCalledWith(
+      tokenContract,
+      1,
+      '0x12345678',
+      implementation,
+      expect.any(String)
+    )
     expect(request.callDetails).toEqual([
       { label: 'Delegated Router', source: 'Sourcify', method: 'execute' }
     ])
@@ -1185,7 +1199,7 @@ describe('#addRequest', () => {
       account.clearRequest(request.handlerId)
     })
 
-    it('recognizes an ERC-20 approval', (done) => {
+    it('recognizes an ERC-20 approval', async () => {
       const request = {
         handlerId: '123456',
         type: 'transaction',
@@ -1202,13 +1216,10 @@ describe('#addRequest', () => {
         }
       ])
 
-      accounts.update.mockImplementationOnce(() => {})
-      accounts.update.mockImplementationOnce(() => {
-        expect(request.recognizedActions).toHaveLength(1)
-        done()
-      })
-
       account.addRequest(request)
+      await flushPromises()
+
+      expect(request.recognizedActions).toHaveLength(1)
     })
   })
 
@@ -1281,6 +1292,71 @@ describe('#addRequest', () => {
     resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1' })
     await jest.advanceTimersByTimeAsync(0)
     expect(request.simulation).toEqual({ status: 'succeeded', source: 'eth_simulateV1' })
+  })
+
+  it('retains decoded method details only while calldata, target, and reviewed code stay unchanged', async () => {
+    const calldata = '0x12345678'
+    const reviewedEvidence = accountCodeEvidence()
+    reviewedEvidence.targets[0] = {
+      ...reviewedEvidence.targets[0],
+      status: 'contract',
+      codeHash: `0x${'a'.repeat(64)}`
+    }
+    const changedEvidence = {
+      ...reviewedEvidence,
+      targets: [{ ...reviewedEvidence.targets[0], codeHash: `0x${'b'.repeat(64)}` }]
+    }
+    const simulation = {
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      advancedChecks: { status: 'complete' },
+      accountCodeEvidence: reviewedEvidence
+    }
+    const decoded = {
+      contractAddress: tokenContract,
+      contractName: 'Verified Router',
+      source: 'Sourcify',
+      confidence: 'verified-abi',
+      method: 'execute',
+      args: []
+    }
+    reveal.decode
+      .mockResolvedValueOnce(decoded)
+      .mockResolvedValueOnce(decoded)
+      .mockImplementation(() => new Promise(() => {}))
+    simulateTransaction
+      .mockResolvedValueOnce(simulation)
+      .mockResolvedValueOnce(simulation)
+      .mockResolvedValueOnce({ ...simulation, accountCodeEvidence: changedEvidence })
+    const request = {
+      handlerId: 'stable-calldata-decode',
+      type: 'transaction',
+      account: accountState.address,
+      data: { chainId: '0x1', from: accountState.address, to: tokenContract, data: calldata },
+      approvals: [],
+      simulation: { status: 'pending' }
+    }
+
+    account.addRequest(request)
+    jest.advanceTimersByTime(1)
+    await flushPromises()
+    expect(request.decodedData).toMatchObject({ method: 'execute', retained: false })
+
+    account.refreshTransactionSimulation(request)
+    expect(request.decodedData).toMatchObject({ method: 'execute', retained: true })
+    jest.advanceTimersByTime(1)
+    await flushPromises()
+    expect(request.decodedData).toMatchObject({ method: 'execute', retained: true })
+
+    account.refreshTransactionSimulation(request)
+    expect(request.decodedData).toMatchObject({ method: 'execute', retained: true })
+    jest.advanceTimersByTime(1)
+    await flushPromises()
+    expect(request.decodedData).toBeUndefined()
+
+    request.data.data = '0x87654321'
+    account.refreshTransactionSimulation(request)
+    expect(request.decodedData).toBeUndefined()
   })
 
   it('requires explicit approval for a reported revert and invalidates it on edits', async () => {
@@ -1476,6 +1552,63 @@ describe('#addRequest', () => {
     jest.advanceTimersByTime(1)
     await jest.advanceTimersByTimeAsync(0)
     expect(request.approvals).toEqual([])
+  })
+
+  it('publishes core execution early but waits for final proxy evidence before creating consent', async () => {
+    let resolveFinal
+    const proxy = '0x3333333333333333333333333333333333333333'
+    simulateTransaction.mockImplementationOnce((_transaction, dependencies) => {
+      dependencies.onCoreResult({
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        advancedChecks: { status: 'pending' }
+      })
+      return new Promise((resolve) => (resolveFinal = resolve))
+    })
+    const request = {
+      handlerId: 'progressive-proxy-review',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208' },
+      approvals: [],
+      simulation: { status: 'pending' }
+    }
+
+    account.addRequest(request)
+    jest.advanceTimersByTime(1)
+    await Promise.resolve()
+
+    expect(request.simulation).toMatchObject({
+      status: 'succeeded',
+      advancedChecks: { status: 'pending' }
+    })
+    expect(request.approvals).toEqual([])
+
+    resolveFinal({
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      advancedChecks: { status: 'complete' },
+      proxyImplementationCheck: {
+        status: 'succeeded',
+        source: 'debug_traceCall',
+        standard: 'ERC-1967',
+        slot: '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc',
+        changes: [
+          {
+            proxy,
+            kind: 'created',
+            beforeValue: `0x${'0'.repeat(64)}`,
+            afterValue: `0x${'0'.repeat(24)}${tokenContract.slice(2)}`,
+            afterImplementation: tokenContract
+          }
+        ]
+      }
+    })
+    await flushPromises()
+
+    expect(request.approvals[0]).toMatchObject({
+      type: ApprovalType.ProxyImplementationChangeRisk,
+      approved: false
+    })
   })
 
   it('preserves an acknowledged override across automatic fee rechecks and removes it on success', async () => {
@@ -2269,9 +2402,51 @@ describe('#signTransaction', () => {
     await flushPromises()
 
     expect(inspectTransactionAccountCode).toHaveBeenCalledWith(rawTx, expect.any(Object))
-    expect(signer.signTransaction).toHaveBeenCalledWith(1, rawTx, callback)
+    expect(signer.signTransaction).toHaveBeenCalledWith(1, rawTx, expect.any(Function), expect.any(Function))
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback).toHaveBeenCalledWith(null, '0xsigned')
+    expect(accounts.setTransactionSigningProgress.mock.calls.map((call) => call[2])).toEqual([
+      'rechecking-safety',
+      'sending-to-signer',
+      'waiting-for-signer',
+      'signed'
+    ])
+  })
+
+  it('does not dispatch to a signer after the request is cancelled during safety revalidation', async () => {
+    let resolveCheck
+    inspectTransactionAccountCode.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveCheck = resolve))
+    )
+    const callback = jest.fn()
+    const rawTx = validTransaction()
+    const signer = { addresses: [accountState.address], signTransaction: jest.fn() }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValue(signer)
+    const request = addReviewedTransaction(rawTx)
+    request.status = RequestStatus.Pending
+
+    account.signTransaction(rawTx, callback)
+    request.status = RequestStatus.Declined
+    resolveCheck(accountCodeEvidence())
+    await flushPromises()
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/cancelled/i) })
+    )
+    expect(signer.signTransaction).not.toHaveBeenCalled()
+  })
+
+  it('forwards an active transaction cancellation to the selected signer', () => {
+    const rawTx = validTransaction()
+    const signer = { cancelTransactionSigning: jest.fn(() => true) }
+    account.signer = 'signer-id'
+    signers.get.mockReturnValueOnce(signer)
+    const request = addReviewedTransaction(rawTx)
+    request.status = RequestStatus.Pending
+
+    expect(account.cancelTransactionSigning(request.handlerId)).toBe(true)
+    expect(signer.cancelTransactionSigning).toHaveBeenCalledTimes(1)
   })
 
   it.each([
@@ -2394,7 +2569,7 @@ describe('#signTransaction', () => {
     account.signTransaction(rawTx, callback)
     await flushPromises()
 
-    expect(signer.signTransaction).toHaveBeenCalledWith(0, rawTx, callback)
+    expect(signer.signTransaction).toHaveBeenCalledWith(0, rawTx, expect.any(Function), expect.any(Function))
     expect(callback).toHaveBeenCalledWith(null, '0xsigned')
   })
 

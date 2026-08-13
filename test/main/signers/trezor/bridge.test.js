@@ -16,6 +16,7 @@ beforeAll(() => {
   TrezorConnect.once = events.once.bind(events)
   TrezorConnect.emit = events.emit.bind(events)
   TrezorConnect.removeAllListeners = events.removeAllListeners.bind(events)
+  TrezorConnect.cancel = jest.fn()
 })
 
 afterAll(() => {
@@ -312,6 +313,46 @@ describe('requests', () => {
     const signature = await TrezorBridge.signTransaction({ path: '11' }, "m/44'/60'/0'/4/0", tx)
 
     expect(signature).toEqual({ v: 1, r: 2, s: 3 })
+  })
+
+  it('reports transaction dispatch only when the serialized device request actually starts', async () => {
+    let resolveFeatures
+    TrezorConnect.getFeatures.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFeatures = resolve
+      })
+    )
+    TrezorConnect.ethereumSignTransaction.mockResolvedValueOnce({
+      id: 2,
+      success: true,
+      payload: { v: 1, r: 2, s: 3 }
+    })
+    const onDispatch = jest.fn()
+    const features = TrezorBridge.getFeatures({ path: '11' })
+    const signing = TrezorBridge.signTransaction(
+      { path: '11' },
+      "m/44'/60'/0'/4/0",
+      { chainId: '0x1' },
+      onDispatch
+    )
+    await Promise.resolve()
+
+    expect(onDispatch).not.toHaveBeenCalled()
+    expect(TrezorConnect.ethereumSignTransaction).not.toHaveBeenCalled()
+
+    resolveFeatures({ id: 1, success: true, payload: { model: 'T' } })
+    await features
+    await expect(signing).resolves.toEqual({ v: 1, r: 2, s: 3 })
+    expect(onDispatch).toHaveBeenCalledTimes(1)
+    expect(onDispatch.mock.invocationCallOrder[0]).toBeLessThan(
+      TrezorConnect.ethereumSignTransaction.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('forwards an active transaction cancellation to Trezor Connect', () => {
+    TrezorBridge.cancelCurrentRequest()
+
+    expect(TrezorConnect.cancel).toHaveBeenCalledWith('Transaction signing cancelled in Wren')
   })
 
   it('sends a pairing response back to trezor connect', () => {
