@@ -111,20 +111,37 @@
         line-height 18px
 
     .transactionReviewSummaryStatus
-      width 224px
-      max-width 224px
+      width 100%
+      max-width none
       min-height 54px
       box-sizing border-box
-      padding var(--wren-space-2) 0
-      display flex
-      align-items center
-      justify-self end
+      padding var(--wren-space-2)
+      display grid
+      align-content center
+      grid-template-rows repeat(2, minmax(18px, auto))
+      justify-self stretch
       font-family var(--wren-font-ui)
       font-size var(--wren-type-small)
       font-variation-settings var(--wren-font-body-settings)
       font-weight 540
       line-height 18px
       text-align left
+
+      > span
+        display block
+        min-width 0
+
+        &:empty
+          visibility hidden
+
+      ._txMainTagQuiet
+        color var(--wren-text-muted)
+
+    .transactionReviewStatusRow
+      border-top 1px solid var(--wren-ledger-rule)
+
+      .clusterValue
+        padding 0
 
     ._txDescriptionSummaryTag
       display none
@@ -1238,7 +1255,7 @@
   .simulationEffectsTruncated
     margin 0 0 var(--wren-space-4)
     color var(--wren-text-secondary)
-    font-family var(--wren-font-utility)
+    font-family var(--wren-font-ui)
     font-size var(--wren-type-caption)
     line-height 18px
     text-align left

@@ -175,15 +175,17 @@ class _RequestItem extends React.Component {
               </div>
             </div>
             <div style={headerMode ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}>{children}</div>
-            {notice && notice !== status && (
-              <div
-                role='alert'
-                className={requestItemNoticeClass}
-                style={notice === 'see signer' ? { color: 'var(--good)' } : {}}
-              >
-                {notice}
-              </div>
-            )}
+            {notice &&
+              notice !== status &&
+              !(headerMode && req.type === 'transaction' && req.status === 'pending') && (
+                <div
+                  role='alert'
+                  className={requestItemNoticeClass}
+                  style={notice === 'see signer' ? { color: 'var(--good)' } : {}}
+                >
+                  {notice}
+                </div>
+              )}
           </div>
         </ClusterValue>
       </ClusterRow>

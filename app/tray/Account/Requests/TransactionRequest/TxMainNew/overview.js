@@ -159,17 +159,21 @@ function renderRecognizedActions(req, assetContext) {
 }
 
 const simulationLabels = {
-  pending: 'Checking transaction simulation',
-  succeeded: 'Simulation completed',
-  reverted: 'Simulation predicts this transaction will revert',
-  unavailable: 'RPC execution check unavailable',
-  failed: 'Could not complete simulation'
+  pending: 'Checking transaction',
+  reverted: 'Simulation reverted',
+  unavailable: 'Simulation unavailable',
+  failed: 'Simulation failed'
 }
 
 export function getSimulationPresentation(simulation) {
-  if (!simulation || !simulationLabels[simulation.status]) return null
+  if (!simulation || (simulation.status !== 'succeeded' && !simulationLabels[simulation.status])) return null
 
-  const method = simulation.source ? ` via ${simulation.source}` : ''
+  const label =
+    simulation.status === 'succeeded'
+      ? simulation.source === 'eth_call'
+        ? 'Basic simulation complete'
+        : 'Simulation completed'
+      : simulationLabels[simulation.status]
   const className =
     simulation.status === 'succeeded'
       ? '_txMainTagGood'
@@ -179,8 +183,13 @@ export function getSimulationPresentation(simulation) {
 
   return {
     className,
-    label: `${simulationLabels[simulation.status]}${method}`
+    label
   }
+}
+
+export function getAdvancedChecksPresentation(simulation) {
+  if (simulation?.advancedChecks?.status !== 'pending') return null
+  return { className: '_txMainTagQuiet', label: 'Additional checks pending' }
 }
 
 export function getSimulationEffectsPresentation(simulation, account) {
@@ -199,11 +208,11 @@ export function getSimulationEffectsPresentation(simulation, account) {
   }
 }
 
-export function getNativeBalanceChangesPresentation(simulation, { suppressUnavailable = false } = {}) {
+export function getNativeBalanceChangesPresentation(simulation, options = {}) {
   const evidence = simulation?.nativeBalanceChanges
   if (!evidence) return null
   if (evidence.status !== 'succeeded') {
-    if (evidence.status === 'unavailable' && suppressUnavailable) return null
+    if (evidence.status === 'unavailable' && options.suppressUnavailable) return null
     return {
       className: '_txMainTagWarning',
       label:
@@ -242,11 +251,11 @@ export function getCallTracePresentation(simulation) {
   }
 }
 
-export function getProxyImplementationChangesPresentation(simulation, { suppressUnavailable = false } = {}) {
+export function getProxyImplementationChangesPresentation(simulation, options = {}) {
   const evidence = simulation?.proxyImplementationCheck
   if (!evidence) return null
   if (evidence.status !== 'succeeded') {
-    if (evidence.status === 'unavailable' && suppressUnavailable) return null
+    if (evidence.status === 'unavailable' && options.suppressUnavailable) return null
     return {
       className: '_txMainTagWarning',
       label:
@@ -389,21 +398,20 @@ const TxOverview = ({
 }) => {
   const { data: tx = {}, classification } = req
   const { data: calldata } = tx
-  const recognizedYearn = (req.recognizedActions || []).some(({ id }) => id?.startsWith('yearn:'))
   const simulation = getSimulationPresentation(req.simulation)
+  const advancedChecks = getAdvancedChecksPresentation(req.simulation)
   const simulationEffects = getSimulationEffectsPresentation(req.simulation, req.account)
   const nativeBalanceChanges = getNativeBalanceChangesPresentation(req.simulation, {
-    suppressUnavailable: recognizedYearn && !isNonZeroHex(tx.value)
+    suppressUnavailable: true
   })
   const callTrace = getCallTracePresentation(req.simulation)
   const proxyImplementationChanges = getProxyImplementationChangesPresentation(req.simulation, {
-    suppressUnavailable: recognizedYearn
+    suppressUnavailable: true
   })
   const allowance = getAllowancePresentation(req.simulation)
   const delegation = getDelegationPresentation(req.simulation)
   const accessList = getAccessListPresentation(req.data)
   const reviewStatus = getReviewStatusPresentation([
-    simulation,
     simulationEffects?.broadApproval
       ? { className: '_txMainTagBad', label: 'RPC reports broad token approval' }
       : null,
@@ -415,6 +423,7 @@ const TxOverview = ({
     simulationEffects ? { className: '_txMainTagWarning', label: simulationEffects.label } : null,
     accessList
   ])
+  const supportingStatus = reviewStatus || advancedChecks
 
   const Description = BaseOverviews[classification]
   const chainId = typeof tx.chainId === 'string' ? Number.parseInt(tx.chainId, 16) : Number(tx.chainId)
@@ -457,16 +466,19 @@ const TxOverview = ({
                   />
                 </div>
               </RequestHeader>
-              <div
-                aria-hidden={reviewStatus ? undefined : 'true'}
-                className={`transactionReviewSummaryStatus ${reviewStatus?.className || ''}`.trim()}
-                role={reviewStatus ? 'status' : undefined}
-              >
-                {reviewStatus?.label || ''}
-              </div>
             </div>
           </ClusterValue>
         </ClusterRow>
+        {(simulation || supportingStatus) && (
+          <ClusterRow className='transactionReviewStatusRow'>
+            <ClusterValue>
+              <div className='transactionReviewSummaryStatus' role='status' aria-live='polite'>
+                <span className={simulation?.className || ''}>{simulation?.label || ''}</span>
+                <span className={supportingStatus?.className || ''}>{supportingStatus?.label || ''}</span>
+              </div>
+            </ClusterValue>
+          </ClusterRow>
+        )}
         {replacementStatus.replacement &&
           (replacementStatus.possible ? (
             <ClusterRow>

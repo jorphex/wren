@@ -21,13 +21,13 @@
 
   .transactionEvidenceGroupSummary
     display flex
-    min-height 38px
+    min-height 44px
     margin 0
     padding 0
     color var(--wren-text-primary)
     cursor pointer
     list-style none
-    align-items flex-start
+    align-items center
     justify-content space-between
 
     &::-webkit-details-marker
@@ -45,7 +45,7 @@
 
   .transactionEvidenceGroupChevron
     flex 0 0 auto
-    margin-top 3px
+    margin-top 0
     color var(--wren-text-tertiary)
     transition transform var(--wren-motion-fast) var(--wren-ease)
 
@@ -81,84 +81,34 @@
     text-transform none
 
   .decodedDataContract
-    position relative
     padding 0 0 var(--wren-space-4)
 
-  .dataUnverified,
-  .dataSource
+  .decodedDataConfidence,
+  .dataRetained
     color var(--wren-text-muted)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
-    line-height 18px
-
-  .dataUnverified
-    color var(--wren-danger)
-
-  .decodedDataContractTarget
-    display grid
-    min-height 58px
-    padding var(--wren-space-3) 0
-    border-top 1px solid var(--wren-ledger-rule)
-    border-bottom 1px solid var(--wren-ledger-rule)
-    box-sizing border-box
-    place-items center
-
-  .decodedDataSync
-    display none
-
-  .decodedDataContractName
-    color var(--wren-text-primary)
     font-family var(--wren-font-ui)
-    font-size var(--wren-type-small)
-    font-weight 650
-    line-height 18px
-    text-align center
-
-  .decodedDataContractMethod
-    color var(--wren-text-secondary)
-    font-family var(--wren-font-mono)
     font-size var(--wren-type-caption)
     line-height 18px
-    text-align center
 
-  .decodedDataContractArgHeader
-    padding var(--wren-space-3) 0 0
-    color var(--wren-text-secondary)
+  .decodedDataConfidence
+    margin-bottom var(--wren-space-3)
+
+  .decodedDataConfidencePossible
+    color var(--wren-warning)
+
+  .decodedDataSignature
     font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
-    font-weight 500
-    line-height 18px
 
-  .decodedDataContractArg
-    padding var(--wren-space-3) 0
-    border-bottom 1px solid var(--wren-ledger-rule)
-    color var(--wren-text-primary)
-    font-family var(--wren-font-mono)
-    font-size var(--wren-type-caption)
-    line-height 18px
-
-  .decodedDataSubtitle
-    margin-top var(--wren-space-2)
-    color var(--wren-text-secondary)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
-    line-height 18px
-
-  .overflowBox
-    overflow-x auto
-    overflow-y hidden
-    overflow-wrap anywhere
-    white-space pre-wrap
-
-    div
-      user-select all
+  .dataRetained
+    margin-top var(--wren-space-1)
+    color var(--wren-warning)
 
   .simulationEffectsNotice,
   .simulationEffectsEmpty,
   .simulationEffectsTruncated
     margin 0 0 var(--wren-space-4)
     color var(--wren-text-secondary)
-    font-family var(--wren-font-utility)
+    font-family var(--wren-font-ui)
     font-size var(--wren-type-caption)
     line-height 18px
     text-align left

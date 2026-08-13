@@ -58,6 +58,121 @@ const reviewScenarios = () => [
     transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT)
   ]),
   {
+    id: 'tray-transaction-advanced-pending-full-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'advanced-pending',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestSign:disabled',
+    requiredControls: ['Copy transaction recipient address'],
+    requiredText: [
+      'Simulation completed',
+      'Additional checks pending',
+      'Reviewing transaction details',
+      'Finishing checks'
+    ]
+  },
+  {
+    id: 'tray-transaction-advanced-partial-full-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'advanced-partial',
+    viewData: true,
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.transactionEvidenceGroupDisclosure',
+    requiredText: ['Execution', 'Raw data']
+  },
+  ...[
+    ['trezor-waiting', 'Waiting for Trezor', 'Review and approve the transaction on your Trezor.'],
+    ['trezor-slow', 'Still waiting for Trezor', 'Check your Trezor and approve the transaction.'],
+    [
+      'trezor-delayed',
+      'Still waiting for Trezor',
+      'Check that your Trezor is connected and showing this transaction.'
+    ]
+  ].map(([variant, title, detail]) => ({
+    id: `tray-transaction-${variant}-full-1`,
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant,
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestApproveSigning',
+    requiredControls: ['Cancel'],
+    requiredText: [title, detail]
+  })),
+  ...[
+    ['method-verified', 'Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer'],
+    ['method-standard', 'Method identified · ABI source: Standard ERC-20 ABI', 'Workshop Token', 'transfer'],
+    [
+      'method-retained',
+      'Showing method details retained from an earlier decode.',
+      'Workshop Token',
+      'transfer'
+    ],
+    [
+      'method-selector',
+      'Possible method: transfer(address,uint256)',
+      'Selector match only. Arguments are not decoded.'
+    ],
+    ['method-unknown', 'Contract method not identified', 'Selector', '0x12345678']
+  ].map(([variant, ...requiredText]) => ({
+    id: `tray-transaction-${variant}-full-1`,
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant,
+    viewData: true,
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.decodedDataContract',
+    requiredText
+  })),
+  {
+    id: 'tray-transaction-method-verified-short-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'method-verified',
+    viewData: true,
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.decodedDataContract',
+    requiredText: ['Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer']
+  },
+  {
+    id: 'tray-transaction-method-verified-full-1.5',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'method-verified',
+    viewData: true,
+    scale: 1.5,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.decodedDataContract',
+    requiredText: ['Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer']
+  },
+  {
+    id: 'tray-transaction-trezor-delayed-full-1.5',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'trezor-delayed',
+    scale: 1.5,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestApproveSigning',
+    requiredControls: ['Cancel'],
+    requiredText: [
+      'Still waiting for Trezor',
+      'Check that your Trezor is connected and showing this transaction.'
+    ]
+  },
+  {
     id: 'dash-account-chooser-full-1',
     renderer: 'dash',
     state: 'account-chooser',

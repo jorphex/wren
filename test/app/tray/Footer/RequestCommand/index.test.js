@@ -299,16 +299,67 @@ it('keeps signing disabled while simulation is pending after decline becomes ava
   command.componentWillUnmount()
 })
 
+it('shows successful core execution while keeping signing disabled for required additional checks', () => {
+  const req = transaction({
+    simulation: {
+      ...transaction().simulation,
+      status: 'succeeded',
+      advancedChecks: { status: 'pending' }
+    }
+  })
+  const command = new RequestCommand({ req, signingDelay: 0 })
+  command.store = commandStore()
+  command.state.allowInput = true
+  renderCommandResult(command, 'signOrDecline')
+
+  expect(screen.getByText('Reviewing transaction details')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Finishing checks' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(false)
+  command.componentWillUnmount()
+})
+
 it('enters a stable pending lifecycle even when software signing has no notice text', () => {
-  const req = transaction({ notice: '', status: 'pending' })
+  const req = transaction({
+    notice: '',
+    status: 'pending',
+    signingProgress: { phase: 'waiting-for-signer', startedAt: Date.now(), signerType: 'seed' }
+  })
   const command = new RequestCommand({ req, signingDelay: 0 })
   command.store = commandStore()
   renderCommandResult(command, 'renderTxCommand')
 
-  expect(screen.getByText('See signer')).toBeTruthy()
-  expect(screen.getByText('Wren is waiting for your signer to sign this transaction.')).toBeTruthy()
+  expect(screen.getByText('Waiting for signer')).toBeTruthy()
+  expect(screen.getByText('Review and approve the transaction on your signer.')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Sign transaction' })).toBeNull()
   command.componentWillUnmount()
+})
+
+it('escalates truthful Trezor waiting guidance and keeps cancellation available', async () => {
+  const req = transaction({
+    status: 'pending',
+    signingProgress: {
+      phase: 'waiting-for-signer',
+      startedAt: Date.now(),
+      signerType: 'trezor',
+      signerName: 'Trezor Safe 5'
+    }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  expect(screen.getByText('Waiting for Trezor')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(5000))
+  expect(screen.getByText('Still waiting for Trezor')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(5000))
+  expect(screen.getByText('Still waiting for Trezor')).toBeTruthy()
+  expect(screen.getByText('Check that your Trezor is connected and showing this transaction.')).toBeTruthy()
+
+  await view.user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'declineRequest',
+    { account: req.account, handlerId: req.handlerId, type: 'transaction' },
+    expect.any(Function)
+  )
+  view.unmount()
 })
 
 it('keeps signing disabled while a fee field has an uncommitted or invalid draft', () => {

@@ -405,9 +405,7 @@ describe('confirm', () => {
     addRequest(req)
     render(<TxRequest req={req} step='confirm' />)
 
-    expect(
-      screen.getByText('Simulation predicts this transaction will revert via eth_simulateV1')
-    ).toBeTruthy()
+    expect(screen.getByText('Simulation reverted')).toBeTruthy()
   })
 })
 
@@ -664,14 +662,14 @@ describe('simulation review', () => {
     expect(isNoSignerError('Signer unavailable')).toBe(false)
   })
 
-  it('qualifies success and failure as configured-RPC results', () => {
+  it('summarizes execution outcomes without exposing implementation-specific RPC names', () => {
     expect(getSimulationPresentation({ status: 'succeeded', source: 'eth_call' })).toEqual({
       className: '_txMainTagGood',
-      label: 'Simulation completed via eth_call'
+      label: 'Basic simulation complete'
     })
     expect(getSimulationPresentation({ status: 'failed', source: 'eth_simulateV1' })).toEqual({
       className: '_txMainTagBad',
-      label: 'Could not complete simulation via eth_simulateV1'
+      label: 'Simulation failed'
     })
   })
 
@@ -686,6 +684,13 @@ describe('simulation review', () => {
     expect(canApproveTransaction(true, { status: 'failed', accountCodeEvidence: readyEvidence })).toBe(true)
     expect(canApproveTransaction(true)).toBe(false)
     expect(canApproveTransaction(false, { status: 'succeeded' })).toBe(false)
+    expect(
+      canApproveTransaction(true, {
+        status: 'succeeded',
+        advancedChecks: { status: 'pending' },
+        accountCodeEvidence: readyEvidence
+      })
+    ).toBe(false)
     expect(
       canApproveTransaction(true, {
         status: 'succeeded',
@@ -1276,6 +1281,52 @@ describe('simulation review', () => {
     expect(rendered).toBe(JSON.stringify(accessList, null, 2))
   })
 
+  it('labels selector-only method suggestions without presenting decoded arguments', () => {
+    render(
+      <ViewData
+        req={{
+          account,
+          data: { chainId: '0x1', to: account, data: `0xa9059cbb${'00'.repeat(64)}` },
+          suggestedData: {
+            method: 'transfer',
+            signature: 'transfer(address,uint256)',
+            source: 'bundled-selector-directory'
+          },
+          simulation: { status: 'succeeded' }
+        }}
+      />
+    )
+
+    expect(document.querySelector('.decodedDataConfidencePossible').textContent).toBe(
+      'Possible method: transfer(address,uint256)'
+    )
+    expect(screen.getByText('Selector match only. Arguments are not decoded.')).toBeTruthy()
+    expect(screen.queryByText('Inputs')).toBeNull()
+  })
+
+  it('distinguishes verified and retained method details', () => {
+    render(
+      <ViewData
+        req={{
+          account,
+          data: { chainId: '0x1', to: account, data: '0x12345678' },
+          decodedData: {
+            source: 'Sourcify',
+            contractName: 'Verified Router',
+            confidence: 'verified-abi',
+            retained: true,
+            method: 'execute',
+            args: []
+          },
+          simulation: { status: 'succeeded' }
+        }}
+      />
+    )
+
+    expect(screen.getByText(/Method verified/)).toBeTruthy()
+    expect(screen.getByText(/retained from an earlier decode/)).toBeTruthy()
+  })
+
   it('groups decoded, permission, execution, and raw contract evidence without hiding warnings', () => {
     const token = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     const delegate = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
@@ -1372,6 +1423,32 @@ describe('simulation review', () => {
 
     expect(screen.getByRole('region', { name: 'Execution' }).open).toBe(false)
     expect(screen.getByRole('region', { name: 'Raw data' }).open).toBe(false)
+  })
+
+  it('keeps unavailable supporting checks available without opening a warning-heavy panel', () => {
+    render(
+      <ViewData
+        req={{
+          account,
+          data: { chainId: '0x1', to: account, data: '0x12345678' },
+          simulation: {
+            status: 'succeeded',
+            advancedChecks: { status: 'partly-unavailable' },
+            proxyImplementationCheck: {
+              status: 'unavailable',
+              source: 'debug_traceCall',
+              standard: 'ERC-1967',
+              slot: `0x${'00'.repeat(32)}`,
+              reason: 'Configured RPC does not support tracing'
+            }
+          }
+        }}
+      />
+    )
+
+    expect(screen.getByRole('region', { name: 'Execution' }).open).toBe(false)
+    expect(screen.getByText(/Some supporting checks could not be completed/)).toBeTruthy()
+    expect(screen.getByText('ERC-1967 Implementation Slot Check')).toBeTruthy()
   })
 })
 

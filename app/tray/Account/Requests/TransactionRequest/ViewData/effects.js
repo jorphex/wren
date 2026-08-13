@@ -275,6 +275,22 @@ export const SimulationCallTrace = ({ simulation }) => {
   )
 }
 
+export const SimulationAdvancedChecks = ({ simulation }) => {
+  const status = simulation?.advancedChecks?.status
+  if (!status || status === 'complete') return null
+
+  return (
+    <div className='txViewData'>
+      <div className='txViewDataHeader'>Additional Checks</div>
+      <div className='simulationEffectsNotice' role='note'>
+        {status === 'pending'
+          ? 'Wren is checking supporting transaction details.'
+          : 'Some supporting checks could not be completed. Available results are shown below.'}
+      </div>
+    </div>
+  )
+}
+
 export const SimulationAllowance = ({ simulation }) => {
   const allowance = simulation?.allowance
   if (!allowance) return null

@@ -33,7 +33,11 @@ export function accountCodeEvidenceReady(simulation) {
 
 export function canApproveTransaction(allowInput, simulation, feeDraftSafe = true) {
   return (
-    allowInput && simulation?.status !== 'pending' && accountCodeEvidenceReady(simulation) && feeDraftSafe
+    allowInput &&
+    simulation?.status !== 'pending' &&
+    simulation?.advancedChecks?.status !== 'pending' &&
+    accountCodeEvidenceReady(simulation) &&
+    feeDraftSafe
   )
 }
 
@@ -94,15 +98,38 @@ export class RequestCommand extends React.Component {
       if (handlerId !== this.props.req?.handlerId) return
       this.setState({ feeDraftSafe: isTransactionFeeDraftSafe(handlerId) })
     })
+    this.syncSigningClock()
+  }
+
+  componentDidUpdate() {
+    this.syncSigningClock()
   }
 
   componentWillUnmount() {
     this.mounted = false
-    ;['allowInputTimer', 'txHashCopiedTimer', 'signerLockedTimer'].forEach((name) => {
+    ;['allowInputTimer', 'txHashCopiedTimer', 'signerLockedTimer', 'signingClockTimer'].forEach((name) => {
       clearTimeout(this[name])
       this[name] = undefined
     })
     if (this.unsubscribeFeeDraftSafety) this.unsubscribeFeeDraftSafety()
+  }
+
+  syncSigningClock() {
+    const progress = this.props.req?.signingProgress
+    const needsClock = this.props.req?.status === 'pending' && progress?.phase === 'waiting-for-signer'
+    if (!needsClock) {
+      clearTimeout(this.signingClockTimer)
+      this.signingClockTimer = undefined
+      return
+    }
+    if (this.signingClockTimer) return
+    this.scheduleTimer(
+      'signingClockTimer',
+      () => {
+        if (this.mounted) this.setState({ signingClock: Date.now() })
+      },
+      1000
+    )
   }
 
   approve(_reqId, req) {
@@ -340,6 +367,8 @@ export class RequestCommand extends React.Component {
     let displayStatus = req.status
     if (displayStatus === 'verifying') displayStatus = 'waiting for block'
 
+    const advancedPending = req.simulation?.advancedChecks?.status === 'pending'
+    const reviewPending = req.simulation?.status === 'pending'
     return (
       <div className='requestApprove requestApproveTransaction'>
         <div className='requestActionContext'>
@@ -348,9 +377,17 @@ export class RequestCommand extends React.Component {
           </span>
           <span className='requestActionContextCopy'>
             <strong>
-              {req.simulation?.status === 'pending' ? 'Checking transaction' : 'Ready for review'}
+              {reviewPending
+                ? 'Checking transaction'
+                : advancedPending
+                  ? 'Reviewing transaction details'
+                  : 'Ready for review'}
             </strong>
-            <span>Verify these details on your signer before approving.</span>
+            <span>
+              {advancedPending
+                ? 'Wren is checking supporting transaction details.'
+                : 'Verify these details on your signer before approving.'}
+            </span>
             {this.state.requestActionError ? (
               <span className='requestActionError' role='alert'>
                 {this.state.requestActionError}
@@ -410,7 +447,9 @@ export class RequestCommand extends React.Component {
                   </span>
                 </span>
               ) : (
-                <span>{req.simulation?.status === 'pending' ? 'Checking' : 'Sign transaction'}</span>
+                <span>
+                  {reviewPending ? 'Checking' : advancedPending ? 'Finishing checks' : 'Sign transaction'}
+                </span>
               )}
             </span>
           </button>
@@ -439,6 +478,8 @@ export class RequestCommand extends React.Component {
           </div>
         </div>
       )
+    } else if (req.type === 'transaction' && req.status === 'pending') {
+      return this.signingStatus(req)
     } else {
       const monitoring = notice || req.status !== undefined
       const commandClass = monitoring
@@ -465,6 +506,94 @@ export class RequestCommand extends React.Component {
         </div>
       )
     }
+  }
+
+  signingStatus(req) {
+    const progress = req.signingProgress || { phase: 'rechecking-safety', startedAt: Date.now() }
+    const elapsed = Math.max(0, Date.now() - progress.startedAt)
+    const signerName = progress.signerName || (progress.signerType === 'trezor' ? 'Trezor' : 'signer')
+    const trezor = progress.signerType === 'trezor'
+    const phaseCopy = {
+      'preparing-nonce': {
+        title: 'Preparing transaction',
+        detail: 'Wren is preparing the transaction nonce.',
+        button: 'Preparing'
+      },
+      'rechecking-safety': {
+        title: 'Rechecking transaction',
+        detail: 'Wren is repeating the safety checks before signing.',
+        button: 'Rechecking'
+      },
+      'sending-to-signer': {
+        title: 'Sending to signer',
+        detail: `Wren is sending the transaction to your ${signerName}.`,
+        button: 'Sending'
+      },
+      signed: {
+        title: 'Transaction signed',
+        detail: 'Wren is preparing to send the signed transaction.',
+        button: 'Signed'
+      }
+    }
+    let presentation = phaseCopy[progress.phase]
+    if (progress.phase === 'waiting-for-signer') {
+      if (trezor && elapsed >= 10_000) {
+        presentation = {
+          title: 'Still waiting for Trezor',
+          detail: 'Check that your Trezor is connected and showing this transaction.',
+          button: 'Waiting'
+        }
+      } else if (trezor && elapsed >= 5_000) {
+        presentation = {
+          title: 'Still waiting for Trezor',
+          detail: 'Check your Trezor and approve the transaction.',
+          button: 'Waiting'
+        }
+      } else if (trezor) {
+        presentation = {
+          title: 'Waiting for Trezor',
+          detail: 'Review and approve the transaction on your Trezor.',
+          button: 'Waiting'
+        }
+      } else {
+        presentation = {
+          title: 'Waiting for signer',
+          detail: 'Review and approve the transaction on your signer.',
+          button: 'Waiting'
+        }
+      }
+    }
+    presentation ||= {
+      title: 'Preparing transaction',
+      detail: 'Wren is preparing the transaction for signing.',
+      button: 'Preparing'
+    }
+
+    return (
+      <div className='requestApprove requestApproveTransaction requestApproveSigning' aria-busy='true'>
+        <div className='requestActionContext' role='status' aria-live='polite'>
+          <span className='requestActionContextIcon'>
+            <Icon name='sign' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>{presentation.title}</strong>
+            <span>{presentation.detail}</span>
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          <button type='button' className='requestDecline' onClick={() => this.decline(req)}>
+            <span className='requestDeclineButton _txButton _txButtonBad'>
+              <span>Cancel</span>
+            </span>
+          </button>
+          <button type='button' className='requestSign' disabled>
+            <span className='requestSignButton _txButton'>
+              <span>{presentation.button}</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    )
   }
 
   retainedPreBroadcastFailureStatus(req) {

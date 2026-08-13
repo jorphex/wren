@@ -1,9 +1,11 @@
 import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../../../../resources/Components/Icon'
+import { SimpleJSON } from '../../../../../../resources/Components/SimpleTypedData'
 import { parseRpcQuantity } from '../../../../../../resources/domain/transaction/quantity'
 import {
   SimulationAllowance,
+  SimulationAdvancedChecks,
   SimulationCallTrace,
   SimulationDelegation,
   SimulationEffects,
@@ -88,41 +90,47 @@ export class ViewData extends React.Component {
 
   renderDecodedData() {
     const { req } = this.props
-    return req.decodedData ? (
-      <div className='decodedDataContract'>
-        <div className='decodedDataContractArgHeader'>Contract Method</div>
-        <div className='dataUnverified'>unverified abi</div>
-        <div className='dataSource'>{'abi source: ' + req.decodedData.source}</div>
-        <div className='decodedDataContractTarget'>
-          <div className='decodedDataSync decodedDataSyncLeft'>
-            <Icon name='sync' size={16} />
+    if (req.decodedData) {
+      const verified = req.decodedData.confidence === 'verified-abi'
+      const fields = {
+        Contract: req.decodedData.contractName,
+        Method: req.decodedData.method
+      }
+      for (const argument of req.decodedData.args) {
+        fields[`${argument.name} (${argument.type})`] = argument.value
+      }
+      return (
+        <div className='decodedDataContract'>
+          <div className='decodedDataConfidence'>
+            {verified ? 'Method verified' : 'Method identified'} · ABI source: {req.decodedData.source}
           </div>
-          <div className='decodedDataSync decodedDataSyncRight'>
-            <Icon name='sync' size={16} />
-          </div>
-          <div className='decodedDataContractName'>{req.decodedData.contractName}</div>
-          <div className='decodedDataContractMethod'>
-            <div>{req.decodedData.method}</div>
-          </div>
+          {req.decodedData.retained ? (
+            <div className='dataRetained'>Showing method details retained from an earlier decode.</div>
+          ) : null}
+          <SimpleJSON humanizeKeys quoteStrings={false} json={fields} />
         </div>
-        <div className='decodedDataContractArgHeader'>Inputs</div>
-        {req.decodedData.args.map((a) => {
-          return (
-            <div key={a.name} className='decodedDataContractArg'>
-              <div className='overflowBox'>
-                {a.type.includes('[]') ? (
-                  a.value.split(',').map((i) => <div key={i}>{i}</div>)
-                ) : (
-                  <div>{a.value}</div>
-                )}
-              </div>
-              <div className='decodedDataSubtitle'>{a.name + ' (' + a.type + ')'}</div>
-            </div>
-          )
-        })}
+      )
+    }
+
+    if (req.suggestedData) {
+      return (
+        <div className='decodedDataContract'>
+          <div className='decodedDataConfidence decodedDataConfidencePossible'>
+            Possible method: <span className='decodedDataSignature'>{req.suggestedData.signature}</span>
+          </div>
+          <div className='simulationEffectsNotice'>Selector match only. Arguments are not decoded.</div>
+        </div>
+      )
+    }
+
+    const selector = typeof req.data?.data === 'string' ? req.data.data.slice(0, 10) : ''
+    return (
+      <div className='decodedDataContract'>
+        <div className='decodedDataConfidence'>Contract method not identified</div>
+        {selector.length === 10 ? (
+          <SimpleJSON humanizeKeys quoteStrings={false} json={{ Selector: selector }} />
+        ) : null}
       </div>
-    ) : (
-      'Could not decode data..'
     )
   }
 
@@ -162,7 +170,7 @@ export class ViewData extends React.Component {
       ...(accountCodeEvidence?.targets || [])
     ].some((evidence) => evidence?.status === 'delegated' || evidence?.status === 'unavailable')
     const showActions =
-      Boolean(req.decodedData) ||
+      Boolean(data?.data && data.data !== '0x') ||
       (simulation.status === 'succeeded' && simulation.source === 'eth_simulateV1')
     const showPermissions =
       Boolean(simulation.allowance) ||
@@ -170,6 +178,7 @@ export class ViewData extends React.Component {
       simulation.delegation?.status === 'delegated' ||
       simulation.delegation?.status === 'unavailable'
     const showExecution =
+      Boolean(simulation.advancedChecks) ||
       Boolean(simulation.nativeBalanceChanges) ||
       (Boolean(simulation.proxyImplementationCheck) &&
         (simulation.proxyImplementationCheck.status !== 'succeeded' ||
@@ -178,12 +187,12 @@ export class ViewData extends React.Component {
     const executionNeedsAttention =
       Boolean(
         simulation.nativeBalanceChanges &&
-        (simulation.nativeBalanceChanges.status !== 'succeeded' || simulation.nativeBalanceChanges.truncated)
+        (simulation.nativeBalanceChanges.status === 'failed' || simulation.nativeBalanceChanges.truncated)
       ) ||
       Boolean(
         simulation.proxyImplementationCheck &&
-        (simulation.proxyImplementationCheck.status !== 'succeeded' ||
-          simulation.proxyImplementationCheck.changes.length > 0 ||
+        (simulation.proxyImplementationCheck.status === 'failed' ||
+          (simulation.proxyImplementationCheck.changes?.length || 0) > 0 ||
           simulation.proxyImplementationCheck.truncated)
       ) ||
       Boolean(
@@ -197,7 +206,9 @@ export class ViewData extends React.Component {
           this.renderEvidenceGroup(
             'Actions',
             <>
-              {req.decodedData && <div className='txViewData'>{this.renderDecodedData()}</div>}
+              {data?.data && data.data !== '0x' ? (
+                <div className='txViewData'>{this.renderDecodedData()}</div>
+              ) : null}
               <SimulationEffects account={req.account} simulation={simulation} />
             </>
           )}
@@ -213,6 +224,7 @@ export class ViewData extends React.Component {
           this.renderEvidenceGroup(
             'Execution',
             <>
+              <SimulationAdvancedChecks simulation={simulation} />
               <SimulationProxyImplementationChanges simulation={simulation} />
               <SimulationCallTrace simulation={simulation} />
               <SimulationNativeBalanceChanges simulation={simulation} />

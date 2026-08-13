@@ -233,6 +233,100 @@ const safetyUnavailableRequest = () => {
   return request
 }
 
+const responsiveTransactionRequest = (variant) => {
+  const request = addressLookalikeRequest()
+  request.handlerId = `qualification-responsive-${variant}`
+  request.activityId = `88888888-8888-4888-8888-${variant.padEnd(12, '0').slice(0, 12)}`
+  request.classification = 'CONTRACT_CALL'
+  request.data.to = QUALIFICATION_DELEGATE
+  request.data.data =
+    variant === 'method-unknown'
+      ? '0x12345678'
+      : '0xa9059cbb0000000000000000000000006f96e6fdaa7492965ab0f9c92e978de807747901000000000000000000000000000000000000000000000000000000000000002a'
+  request.payload.params = [request.data]
+  request.recognizedActions = []
+  request.simulation = {
+    status: 'succeeded',
+    source: 'eth_simulateV1',
+    advancedChecks: { status: 'complete' },
+    effects: [],
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: {
+        status: 'no-code',
+        account: QUALIFICATION_ACCOUNT.toLowerCase(),
+        codeHash: `0x${'00'.repeat(32)}`,
+        role: 'sender'
+      },
+      targets: [
+        {
+          status: 'contract',
+          account: QUALIFICATION_DELEGATE.toLowerCase(),
+          codeHash: QUALIFICATION_CODE_HASH,
+          role: 'target',
+          callIndexes: [0]
+        }
+      ]
+    }
+  }
+  delete request.addressSafety
+
+  if (variant === 'advanced-pending') {
+    request.simulation.advancedChecks.status = 'pending'
+  } else if (variant === 'advanced-partial') {
+    request.simulation.advancedChecks.status = 'partly-unavailable'
+    request.simulation.nativeBalanceChanges = {
+      status: 'unavailable',
+      source: 'debug_traceCall',
+      reason: 'RPC method unavailable'
+    }
+    request.simulation.proxyImplementationCheck = {
+      status: 'unavailable',
+      source: 'debug_traceCall',
+      standard: 'ERC-1967',
+      slot: '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc',
+      reason: 'RPC method unavailable'
+    }
+  } else if (
+    variant === 'method-verified' ||
+    variant === 'method-standard' ||
+    variant === 'method-retained'
+  ) {
+    request.decodedData = {
+      contractAddress: QUALIFICATION_DELEGATE.toLowerCase(),
+      contractName: 'Workshop Token',
+      source: variant === 'method-standard' ? 'Standard ERC-20 ABI' : 'Sourcify',
+      confidence: variant === 'method-standard' ? 'standard-abi' : 'verified-abi',
+      retained: variant === 'method-retained',
+      method: 'transfer',
+      args: [
+        { name: 'to', type: 'address', value: QUALIFICATION_DELEGATE.toLowerCase() },
+        { name: 'amount', type: 'uint256', value: '42' }
+      ]
+    }
+  } else if (variant === 'method-selector') {
+    request.suggestedData = {
+      method: 'transfer',
+      signature: 'transfer(address,uint256)',
+      source: 'bundled-selector-directory'
+    }
+  }
+
+  if (variant.startsWith('trezor-')) {
+    request.status = 'pending'
+    request.notice = 'See Signer'
+    request.signingProgress = {
+      phase: 'waiting-for-signer',
+      signerType: 'trezor',
+      signerName: 'Trezor',
+      startedAt:
+        Date.now() - (variant === 'trezor-delayed' ? 11_000 : variant === 'trezor-slow' ? 6_000 : 500)
+    }
+  }
+
+  return request
+}
+
 const qualificationActivity = () => [
   {
     id: '11111111-1111-4111-8111-111111111111',
@@ -825,6 +919,26 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 230
+  }
+
+  if (scenario.state === 'transaction-responsive') {
+    const request = responsiveTransactionRequest(scenario.variant)
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: scenario.viewData ? 'viewData' : 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 132
   }
 
   return state
