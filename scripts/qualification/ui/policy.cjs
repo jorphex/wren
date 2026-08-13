@@ -199,7 +199,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.trezorPinInput',
+    ready: '.hardwareSignerPromptSurface .trezorPinInput',
     requiredControls: ['PIN position 1', 'PIN position 9'],
     requiredText: ['Enter PIN', 'scrambled matrix', '0 positions selected']
   },
@@ -328,6 +328,16 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
+  },
+  {
+    id: 'dash-network-editor-short-1',
+    renderer: 'dash',
+    state: 'network-editor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
     requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
   },

@@ -24,7 +24,8 @@ const connection = {
       connected: true,
       current: 'custom',
       custom: 'https://rpc.example',
-      status: 'connected'
+      status: 'connected',
+      latencyMs: 84
     },
     {
       id: 'rpc-2',
@@ -76,7 +77,8 @@ test('renders directly editable network and RPC fields', () => {
   expect(screen.getByLabelText('Chain ID').readOnly).toBe(true)
   expect(screen.getByLabelText('RPC URL 1').value).toBe('https://rpc.example')
   expect(screen.getByLabelText('RPC URL 2').value).toBe('https://fallback.example')
-  expect(screen.getAllByText('Connected')).toHaveLength(2)
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Connected, 84 milliseconds' })).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'RPC endpoint 2: Connected' })).toBeTruthy()
 })
 
 test('commits a valid primary RPC when focus leaves the input', () => {
@@ -146,7 +148,7 @@ test('keeps an invalid RPC local and marks the field', () => {
   fireEvent.change(rpc, { target: { value: 'not-a-url' } })
   fireEvent.blur(rpc)
 
-  expect(screen.getByText('Can’t connect')).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Can’t connect' })).toBeTruthy()
   expect(rpc.getAttribute('aria-invalid')).toBe('true')
   expect(link.send).not.toHaveBeenCalledWith('tray:action', 'setEndpointUrl', expect.anything())
 })

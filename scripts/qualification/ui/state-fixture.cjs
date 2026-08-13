@@ -8,6 +8,26 @@ const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
 const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
 
+const activePermission = (handlerId, origin) => ({
+  version: 1,
+  handlerId,
+  origin,
+  provider: true,
+  parentCapability: 'eth_accounts',
+  caveats: [
+    {
+      type: 'wren:permissionScope',
+      value: {
+        account: QUALIFICATION_ACCOUNT,
+        methods: ['eth_accounts'],
+        chains: ['0x1'],
+        expiresAt: 4_102_444_800_000
+      }
+    }
+  ],
+  grantedAt: 1_700_000_000_000
+})
+
 const baseState = () => ({
   platform: 'linux',
   version: '0.1.0',
@@ -114,7 +134,7 @@ const accountHomeNetworks = () => ({
   metadata: {
     1: {
       primaryColor: 'wren-chain-ethereum',
-      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: 3200 },
+      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: { price: 3200 } },
       gas: {
         price: {
           fees: { nextBaseFee: '0x3b9aca00', maxPriorityFeePerGas: '0x3b9aca00' },
@@ -125,7 +145,7 @@ const accountHomeNetworks = () => ({
     },
     10: {
       primaryColor: 'wren-chain-optimism',
-      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: 3200 },
+      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: { price: 3200 } },
       gas: {
         price: {
           fees: { nextBaseFee: '0x1dcd6500', maxPriorityFeePerGas: '0x1dcd6500' },
@@ -136,7 +156,7 @@ const accountHomeNetworks = () => ({
     },
     123456: {
       primaryColor: 'accent6',
-      nativeCurrency: { symbol: 'WRK', name: 'Workshop token', decimals: 18, usd: 1 },
+      nativeCurrency: { symbol: 'WRK', name: 'Workshop token', decimals: 18, usd: { price: 1 } },
       gas: {
         price: {
           fees: { nextBaseFee: '0x3b9aca00', maxPriorityFeePerGas: '0x3b9aca00' },
@@ -520,7 +540,8 @@ const fixtureFor = (scenario) => {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
-      nav: [{ view: 'expandedSigner', data: { signer: signerId } }]
+      nav: [{ view: 'accounts', data: {} }],
+      hardwarePrompt: { signerId, restoreHidden: false }
     }
     state.main.signers = {
       [signerId]: {
@@ -650,12 +671,13 @@ const fixtureFor = (scenario) => {
               current: 'publicnode',
               on: true,
               connected: true,
-              status: 'connected'
+              status: 'connected',
+              latencyMs: 84
             },
             {
               id: 'backup',
               current: 'custom',
-              custom: 'https://rpc.example',
+              custom: 'https://secondary.ethereum.rpc.workshop.example/v1',
               on: false,
               connected: false,
               status: 'off'
@@ -725,7 +747,7 @@ const fixtureFor = (scenario) => {
       })
     }
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
-      workshop: { origin: 'workshop.example', provider: true }
+      workshop: activePermission('workshop', 'workshop.example')
     }
     state.main.activity = qualificationActivity()
     state.main.origins = {

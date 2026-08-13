@@ -248,7 +248,7 @@
 
 input.networkEditorInput
   width 100%
-  height 39px
+  height 44px
   padding 0 12px
   color var(--wren-text-primary)
   font-family var(--wren-font-ui)
@@ -296,7 +296,7 @@ input.networkEditorInputTechnical
   box-sizing border-box
   border 0
   align-items center
-  grid-template-columns 18px 8px minmax(0, 1fr) 120px 72px 44px 44px
+  grid-template-columns 18px 18px minmax(0, 1fr) 88px 44px 44px
   gap 6px
 
 .rpcEndpointRowOff
@@ -311,31 +311,41 @@ input.networkEditorInputTechnical
   font-size 12px
   text-align center
 
-.rpcEndpointDot
-  width 7px
-  height 7px
-  border-radius 50%
-  background var(--wren-text-disabled)
+.rpcEndpointState
+  display flex
+  width 18px
+  height 18px
+  align-items center
+  justify-content center
+  color var(--wren-text-disabled)
 
-.rpcEndpointDotconnected
-  background var(--wren-success)
+.rpcEndpointState-connected
+  color var(--wren-success)
 
-.rpcEndpointDotloading,
-.rpcEndpointDotpending,
-.rpcEndpointDotsyncing
-  background var(--wren-warning)
+.rpcEndpointState-checking,
+.rpcEndpointState-standby
+  color var(--wren-warning)
 
-.rpcEndpointDotdegraded,
-.rpcEndpointDoterror,
-.rpcEndpointDotchain\ mismatch
-  background var(--wren-danger)
+.rpcEndpointState-checking svg
+  animation rpcEndpointChecking var(--wren-motion-slow) linear infinite
+
+.rpcEndpointState-error
+  color var(--wren-danger)
+
+@keyframes rpcEndpointChecking
+  to
+    transform rotate(360deg)
+
+@media (prefers-reduced-motion: reduce)
+  .rpcEndpointState-checking svg
+    animation none
 
 .rpcEndpointInputWrap
   min-width 0
 
 input.rpcEndpointInput
   width 100%
-  height 39px
+  height 44px
   min-width 0
   box-sizing border-box
   padding 0 9px
@@ -344,28 +354,16 @@ input.rpcEndpointInput
   font-size 12px
   text-align left
 
-.rpcEndpointStatus
-  overflow hidden
-  color var(--wren-text-muted)
-  font-family var(--wren-font-mono)
-  font-size 12px
-  text-align right
-  text-overflow ellipsis
-  white-space nowrap
-
-.rpcEndpointStatusError
-  color var(--wren-danger)
-
 .rpcEndpointMove
   display grid
-  width 72px
+  width 88px
   height 44px
-  grid-template-columns repeat(2, 36px)
+  grid-template-columns repeat(2, 44px)
 
   button
     appearance none
     display flex
-    width 36px
+    width 44px
     height 44px
     min-height 44px
     padding 0
@@ -415,11 +413,15 @@ input.rpcEndpointInput
 .rpcEndpointAddRow
   display flex
   min-height 46px
+  padding-top 10px
+  padding-left 48px
+  box-sizing border-box
   align-items center
-  justify-content space-between
+  justify-content flex-start
   gap var(--wren-space-3)
 
   > span
+    margin-left auto
     color var(--wren-text-muted)
     font-family var(--wren-font-utility)
     font-size 12px
@@ -427,35 +429,33 @@ input.rpcEndpointInput
   button
     appearance none
     display inline-flex
-    min-width 124px
+    min-width 0
     height 44px
-    padding 0 12px
-    border 1px solid var(--wren-border-default)
+    padding 0 10px 0 12px
+    border 1px solid transparent
     border-radius var(--wren-radius-sm)
     align-items center
     justify-content center
     gap 7px
-    color var(--wren-text-primary)
-    background-color var(--wren-bg-elevated)
-    background-image var(--wren-control-texture-dark)
-    box-shadow var(--wren-control-shadow)
+    color var(--wren-text-secondary)
+    background transparent
+    box-shadow none
     font-family var(--wren-font-ui)
     font-size 12px
     font-weight 590
     cursor pointer
 
     &:hover:not(:disabled)
-      border-color var(--wren-border-strong)
+      color var(--wren-text-primary)
       background var(--wren-surface-hover)
 
     &:active:not(:disabled)
       transform translateY(1px)
-      box-shadow var(--wren-control-shadow-pressed)
+      background var(--wren-surface-active)
 
     &:disabled
       color var(--wren-text-disabled)
-      background var(--wren-surface-inset)
-      box-shadow none
+      background transparent
       cursor default
 
     &:focus-visible

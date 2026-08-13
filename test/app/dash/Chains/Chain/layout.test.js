@@ -18,6 +18,9 @@ test('keeps the short network editor body scrollable above its fixed actions', (
 test('keeps network editor copy readable and compact controls practically targetable', () => {
   expect(editorStyle).not.toMatch(/font-size (?:10|11)px/)
   expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?height 44px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?width 88px[\s\S]*?repeat\(2, 44px\)/)
+  expect(editorStyle).toMatch(/input\.networkEditorInput\n[\s\S]*?height 44px/)
+  expect(editorStyle).toMatch(/input\.rpcEndpointInput\n[\s\S]*?height 44px/)
   expect(editorStyle).toMatch(/\.rpcEndpointRemove\n[\s\S]*?width 44px\n\s{2}height 44px/)
   expect(toggleStyle).toMatch(/\.wrenToggle\n[\s\S]*?width 44px\n\s{2}height 44px/)
   expect(toggleStyle).toMatch(/&::before\n[\s\S]*?width 44px\n\s{4}height 24px[\s\S]*?border-radius 2px/)

@@ -1,3 +1,5 @@
+import fs from 'fs'
+
 import { Activity, activityOriginLabel, filterActivity } from '../../../../../app/tray/Account/Activity'
 import link from '../../../../../resources/link'
 import { fireEvent, render, screen } from '../../../../componentSetup'
@@ -49,6 +51,13 @@ afterAll(() => {
 })
 
 beforeEach(() => link.send.mockReset())
+
+it('keeps non-interactive activity rows visually inert', () => {
+  const styles = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
+  const rowRule = styles.match(/\.activityRow\n([\s\S]*?)\n\.activityMark/)[1]
+
+  expect(rowRule).not.toContain('&:hover')
+})
 
 it('shows four privacy-safe recent entries and opens the complete activity view', () => {
   render(<ActivityHarness account={account} moduleId='activity' />)

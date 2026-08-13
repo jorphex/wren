@@ -60,6 +60,7 @@ const renderWithStore = (Component, props = {}, storedPermissions = permissions)
 it('sorts permission rows by their displayed origin', () => {
   renderWithStore(DappsPermissionsPreview)
 
+  expect(document.querySelector('.connectedAppsList')).toBeTruthy()
   expect(screen.getAllByText(/\.example$/).map((node) => node.textContent)).toEqual([
     'alpha.example',
     'zeta.example'

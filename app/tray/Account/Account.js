@@ -1,13 +1,10 @@
 import React from 'react'
 import Restore from 'react-restore'
-import BigNumber from 'bignumber.js'
 
 import Icon from '../../../resources/Components/Icon'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
-import { createBalance, formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
-import { isNetworkConnected } from '../../../resources/utils/chains'
 
 import Default from './Default'
 
@@ -245,38 +242,10 @@ class _AccountMain extends React.Component {
     )
   }
 
-  getTotalBalance(account) {
-    const networks = this.store('main.networks.ethereum') || {}
-    const networksMeta = this.store('main.networksMeta.ethereum') || {}
-    const rates = this.store('main.rates') || {}
-    const balances = this.store('main.balances', account.address) || []
-
-    return balances.reduce((total, balance) => {
-      const network = networks[balance.chainId]
-      if (!network || !isNetworkConnected(network)) return total
-
-      const nativeCurrency = networksMeta[balance.chainId]?.nativeCurrency || {}
-      const native = isNativeCurrency(balance.address)
-      const quote = native ? nativeCurrency : rates[balance.address || balance.symbol]
-      const displayed = createBalance(
-        {
-          ...balance,
-          decimals: native ? nativeCurrency.decimals || 18 : balance.decimals,
-          symbol: native ? nativeCurrency.symbol || balance.symbol : balance.symbol
-        },
-        network.isTestnet ? { price: 0 } : quote
-      )
-
-      return total.plus(displayed.totalValue)
-    }, BigNumber(0))
-  }
-
   renderHomeHeader() {
     const account = this.store('main.accounts', this.props.id) || {}
     const address = getAddress(account.address || this.props.id)
     const name = account.ensName || account.name || 'Account'
-    const hideBalances = this.store('selected.hideBalances')
-    const total = this.getTotalBalance(account)
 
     return (
       <header className='accountHomeHeader'>
@@ -284,16 +253,6 @@ class _AccountMain extends React.Component {
           <div className='accountHomeEyebrow'>Selected account</div>
           <AccountNameEditor account={this.props.id} name={name} />
           <AccountAddressActions address={address} />
-        </div>
-        <div className='accountHomeTotal'>
-          <div className='accountHomeTotalLabel'>Total balance</div>
-          <div className='accountHomeTotalValue'>
-            {hideBalances ? (
-              <span aria-label='Total balance hidden'>$••••</span>
-            ) : (
-              `$${formatUsdRate(total, 0)}`
-            )}
-          </div>
         </div>
         <div className='accountHomeActions' aria-label='Account actions'>
           <button

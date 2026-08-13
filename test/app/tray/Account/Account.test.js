@@ -22,13 +22,14 @@ function accountMain({ hideBalances = false } = {}) {
   return main
 }
 
-it('renders the approved account-home identity and protects the total when balances are hidden', () => {
+it('renders the approved account-home identity without duplicating the balances total', () => {
   const main = accountMain({ hideBalances: true })
   render(main.renderHomeHeader())
 
   expect(screen.getByText('Selected account')).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Workshop' })).toBeTruthy()
-  expect(screen.getByLabelText('Total balance hidden')).toBeTruthy()
+  expect(screen.queryByText('Total balance')).toBeNull()
+  expect(screen.queryByLabelText('Total balance hidden')).toBeNull()
 })
 
 it('keeps Send and copy address actions connected to their existing tray behavior', async () => {

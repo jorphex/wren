@@ -75,7 +75,7 @@ export class DappsPermissionsPreview extends React.Component {
             />
           )
         ) : (
-          <Cluster>
+          <Cluster className='connectedAppsList'>
             {permissionList.map((o) => {
               return (
                 <ClusterRow key={o}>

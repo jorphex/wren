@@ -104,15 +104,33 @@ export const NetworkEditorActions = ({ primaryLabel, primaryEnabled, onCancel, o
 const endpointStatus = (endpoint, localStatus) => {
   if (localStatus) return localStatus
   if (!endpoint.on) return ''
-  if (endpoint.status === 'connected') {
-    return endpoint.latencyMs === undefined ? 'Connected' : `Connected · ${Math.round(endpoint.latencyMs)} ms`
-  }
-  if (endpoint.status === 'standby') {
-    return endpoint.latencyMs === undefined ? 'Not checked' : `Standby · ${Math.round(endpoint.latencyMs)} ms`
-  }
+  if (endpoint.status === 'connected') return 'Connected'
+  if (endpoint.status === 'standby') return 'Not checked'
   if (['loading', 'pending', 'syncing'].includes(endpoint.status)) return 'Checking connection…'
   if (['disconnected', 'error', 'chain mismatch'].includes(endpoint.status)) return 'Can’t connect'
   return 'Not checked'
+}
+
+const endpointStatusPresentation = (endpoint, status, index) => {
+  const latency = Number(endpoint.latencyMs)
+  const label = status || 'Off'
+  const latencyDetail =
+    Number.isFinite(latency) && ['Connected', 'Not checked'].includes(label)
+      ? `, ${Math.round(latency)} milliseconds`
+      : ''
+  const accessibleLabel = `RPC endpoint ${index + 1}: ${label}${latencyDetail}`
+
+  if (label === 'Connected') {
+    return { accessibleLabel, icon: 'check', tone: 'connected' }
+  }
+  if (label === 'Checking connection…') {
+    return { accessibleLabel, icon: 'sync', tone: 'checking' }
+  }
+  if (label === 'Can’t connect' || label === 'Use an HTTPS RPC URL') {
+    return { accessibleLabel, icon: 'alert', tone: 'error' }
+  }
+
+  return { accessibleLabel, icon: 'pending', tone: endpoint.on ? 'standby' : 'off' }
 }
 
 export const RpcEndpointLedger = ({
@@ -137,13 +155,21 @@ export const RpcEndpointLedger = ({
       {endpoints.map((endpoint, index) => {
         const status = endpointStatus(endpoint, statuses[endpoint.id])
         const error = status === 'Can’t connect' || status === 'Use an HTTPS RPC URL'
+        const statusPresentation = endpointStatusPresentation(endpoint, status, index)
         return (
           <div
             className={endpoint.on ? 'rpcEndpointRow' : 'rpcEndpointRow rpcEndpointRowOff'}
             key={endpoint.id}
           >
             <span className='rpcEndpointOrder'>{index + 1}</span>
-            <span className={`rpcEndpointDot rpcEndpointDot${endpoint.status || 'off'}`} aria-hidden='true' />
+            <span
+              aria-label={statusPresentation.accessibleLabel}
+              className={`rpcEndpointState rpcEndpointState-${statusPresentation.tone}`}
+              role='img'
+              title={statusPresentation.accessibleLabel}
+            >
+              <Icon aria-hidden='true' name={statusPresentation.icon} size={13} />
+            </span>
             <label className='rpcEndpointInputWrap'>
               <input
                 aria-label={`RPC URL ${index + 1}`}
@@ -155,9 +181,6 @@ export const RpcEndpointLedger = ({
                 onChange={(event) => onValueChange(endpoint.id, event.target.value.replace(/\s+/g, ''))}
               />
             </label>
-            <span className={error ? 'rpcEndpointStatus rpcEndpointStatusError' : 'rpcEndpointStatus'}>
-              {status}
-            </span>
             <div className='rpcEndpointMove'>
               <button
                 type='button'

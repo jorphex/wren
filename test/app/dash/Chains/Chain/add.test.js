@@ -148,7 +148,7 @@ test('shows RPC feedback in the field label after focus leaves', async () => {
   await user.type(rpc, 'not-a-url')
   await user.tab()
 
-  expect(screen.getByText('Can’t connect')).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Can’t connect' })).toBeTruthy()
   expect(rpc.getAttribute('aria-invalid')).toBe('true')
 })
 
@@ -169,7 +169,7 @@ test('requires HTTPS for a dapp proposal', async () => {
   await user.click(screen.getByLabelText('RPC URL 1'))
   await user.tab()
 
-  expect(screen.getByText('Use an HTTPS RPC URL')).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Use an HTTPS RPC URL' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Add network' }).disabled).toBe(true)
 })
 

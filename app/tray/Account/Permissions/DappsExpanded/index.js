@@ -83,7 +83,7 @@ export class DappsPermissionsExpanded extends React.Component {
           )
         ) : (
           <ClusterBox>
-            <Cluster>
+            <Cluster className='connectedAppsList'>
               <div className='moduleMainPermissions'>
                 {permissionList.map((o) => {
                   return (

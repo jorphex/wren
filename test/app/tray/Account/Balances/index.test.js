@@ -51,6 +51,52 @@ it('does not offer an empty expanded balance view', () => {
   expect(screen.queryByText('Total')).toBeNull()
 })
 
+it('uses the native-currency USD quote for the single balances total', () => {
+  const preview = new BalancesPreview({ account, moduleId: 'balances' })
+  preview.store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.networks.ethereum') {
+      return {
+        1: {
+          id: 1,
+          name: 'Ethereum',
+          isTestnet: false,
+          connection: { endpoints: [{ connected: true }] }
+        }
+      }
+    }
+    if (key === 'main.networksMeta.ethereum') {
+      return {
+        1: {
+          nativeCurrency: {
+            name: 'Ether',
+            symbol: 'ETH',
+            decimals: 18,
+            usd: { price: 507.2, change24hr: 0 }
+          }
+        }
+      }
+    }
+  }
+
+  const [native] = preview.getBalances(
+    [
+      {
+        address: '0x0000000000000000000000000000000000000000',
+        chainId: 1,
+        balance: '1250000000000000000',
+        decimals: 18,
+        name: 'Ether',
+        symbol: 'ETH'
+      }
+    ],
+    {}
+  )
+
+  expect(native.totalValue.toNumber()).toBe(634)
+  expect(native.displayValue).toBe('634')
+})
+
 it('opens token settings from the expanded native control', async () => {
   const { user } = render(<BalancesExpandedHarness account={account} moduleId='balances' />)
 
