@@ -1,5 +1,9 @@
 import { fireEvent, render, screen } from '../../../../componentSetup'
-import { Account, accountTypeIcon } from '../../../../../app/tray/AccountSelector/AccountController'
+import {
+  Account,
+  AccountTypeMark,
+  accountTypeIcon
+} from '../../../../../app/tray/AccountSelector/AccountController'
 import link from '../../../../../resources/link'
 
 jest.mock('../../../../../resources/link', () => ({
@@ -12,6 +16,13 @@ test('maps account identity types to distinct Wren glyphs', () => {
   expect(accountTypeIcon('seed')).toBe('seedling')
   expect(accountTypeIcon('ring')).toBe('key')
   expect(accountTypeIcon('trezor')).toBe('hardware')
+})
+
+test('gives the full-bleed Trezor mark a smaller optical box', () => {
+  const { container } = render(<AccountTypeMark type='trezor' size={17} />)
+
+  expect(container.firstChild.style.width).toBe('13px')
+  expect(container.firstChild.style.height).toBe('15px')
 })
 
 test('selects an account from the startup chooser', () => {

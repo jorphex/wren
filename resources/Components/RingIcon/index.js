@@ -29,7 +29,8 @@ const wrenIconNames = Object.freeze({
   tokens: 'tokens'
 })
 
-export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, img, bundledImg, small }) => {
+export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize, img, bundledImg, small }) => {
+  const resolvedSvgSize = svgSize || 16
   const imageUrl = bundledImg || safeRemoteImageUrl(img)
   const [failedImageUrl, setFailedImageUrl] = useState('')
 
@@ -40,15 +41,15 @@ export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, 
     const iconName = svgName.toLowerCase()
     const ethChains = ['ethereum', 'mainnet', 'görli', 'sepolia', 'ropsten', 'rinkeby', 'kovan']
     if (ethChains.includes(iconName)) {
-      return svg.eth(small ? 13 : svgSize)
+      return svg.eth(svgSize || (small ? 13 : 16))
     }
 
     if (wrenIconNames[iconName]) {
-      return <WrenIcon label={alt || undefined} name={wrenIconNames[iconName]} size={svgSize} />
+      return <WrenIcon label={alt || undefined} name={wrenIconNames[iconName]} size={resolvedSvgSize} />
     }
 
     const svgIcon = svg[iconName]
-    return svgIcon ? svgIcon(svgSize) : null
+    return svgIcon ? svgIcon(resolvedSvgSize) : null
   }
 
   if (fallback) {
@@ -59,7 +60,7 @@ export const RingIconGlyph = ({ svgName, alt = '', fallback = '', svgSize = 16, 
     )
   }
 
-  return svg.eth(small ? 13 : 18)
+  return svg.eth(svgSize || (small ? 13 : 18))
 }
 
 class RingIcon extends React.Component {

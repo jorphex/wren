@@ -1,10 +1,10 @@
 import React from 'react'
 import Restore from 'react-restore'
 
+import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
 import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
 import link from '../../../resources/link'
-import svg from '../../../resources/svg'
 import { getAddress } from '../../../resources/utils'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
@@ -101,7 +101,9 @@ export class AddAccounts extends React.Component {
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('lattice')}
             >
-              <div className='accountTypeSelectIcon'>{svg.lattice(20)}</div>
+              <div className='accountTypeSelectIcon'>
+                <AccountTypeMark type='lattice' size={20} />
+              </div>
               <div>{'GridPlus Lattice1'}</div>
             </button>
             <button
@@ -109,7 +111,9 @@ export class AddAccounts extends React.Component {
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('ledger')}
             >
-              <div className='accountTypeSelectIcon'>{svg.ledger(20)}</div>
+              <div className='accountTypeSelectIcon'>
+                <AccountTypeMark type='ledger' size={20} />
+              </div>
               <div>{'Ledger device'}</div>
             </button>
             <button
@@ -117,7 +121,9 @@ export class AddAccounts extends React.Component {
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('trezor')}
             >
-              <div className='accountTypeSelectIcon'>{svg.trezor(18)}</div>
+              <div className='accountTypeSelectIcon'>
+                <AccountTypeMark type='trezor' size={20} />
+              </div>
               <div>{'Trezor device'}</div>
             </button>
           </div>
@@ -263,7 +269,7 @@ export class Dash extends React.Component {
                       onClick={() => link.rpc('setSigner', account.id, () => {})}
                     >
                       <span className='watchAccountIcon'>
-                        <Icon name='watch' size={19} />
+                        <AccountTypeMark type='address' size={20} />
                       </span>
                       <span className='watchAccountIdentity'>
                         <span className='watchAccountName'>{name}</span>

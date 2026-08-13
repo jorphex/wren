@@ -3,9 +3,8 @@ import { useState } from 'react'
 import Icon from '../../../../../resources/Components/Icon'
 import Toggle from '../../../../../resources/Components/Toggle'
 import link from '../../../../../resources/link'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import ChainIdentityMark from '../../../../../resources/Components/ChainIdentityMark'
 import chainDefault from '../chainDefault'
-import { getChainIdentity } from '../../../../../resources/utils/chainIdentity'
 
 export const SubmitChainButton = ({ text, enabled, textColor, onClick }) => {
   return (
@@ -220,21 +219,10 @@ export const ChainHeader = ({
   showToggle
 }) => {
   const isMainnet = id === 1
-  const chainIdentity = getChainIdentity(id, isTestnet)
-  const isCustomIdentity = chainIdentity.mark === 'chain'
-  const identityColor =
-    isCustomIdentity && primaryColor ? `var(--${primaryColor})` : `var(${chainIdentity.colorToken})`
   const identity = (
     <>
       <div className='signerIcon'>
-        <RingIcon
-          block={!isCustomIdentity}
-          color={identityColor}
-          img={isCustomIdentity ? icon : undefined}
-          noRing={!isCustomIdentity}
-          svgName={chainIdentity.mark}
-          svgSize={isCustomIdentity ? undefined : 20}
-        />
+        <ChainIdentityMark chainId={id} icon={icon} isTestnet={isTestnet} primaryColor={primaryColor} />
       </div>
       <div className='networkIdentityText'>
         <span className='signerName'>{name}</span>

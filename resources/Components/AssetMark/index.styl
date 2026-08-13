@@ -43,6 +43,10 @@
     width var(--asset-mark-art-size)
     height var(--asset-mark-art-size)
 
+  &.assetMarkGlyphVector svg
+    width calc(var(--asset-mark-art-size) * .78)
+    height calc(var(--asset-mark-art-size) * .78)
+
   .ringIconFallback
     display flex
     width var(--asset-mark-art-size)
@@ -52,8 +56,8 @@
 
 .assetMarkChain
   position absolute
-  right -2px
-  bottom -2px
+  right 0
+  bottom 0
   width var(--asset-mark-chain-size)
   height var(--asset-mark-chain-size)
   box-sizing content-box

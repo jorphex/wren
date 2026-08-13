@@ -1,4 +1,9 @@
+import fs from 'fs'
+
+import { resolveChainIdentityColor } from '../../../resources/Components/ChainIdentityMark'
 import { getChainIdentity } from '../../../resources/utils/chainIdentity'
+
+const chainIdentitySource = fs.readFileSync('resources/Components/ChainIdentityMark/index.js', 'utf8')
 
 test.each([
   [1, 'ethereum', '--wren-chain-ethereum'],
@@ -24,4 +29,19 @@ test('uses a generic network mark and neutral token for unknown chains', () => {
     mark: 'chain',
     colorToken: '--wren-chain-custom'
   })
+})
+
+test('uses authored colors for known chains and the selected color only for custom chains', () => {
+  expect(resolveChainIdentityColor(1, false, 'accent8')).toMatchObject({
+    color: 'var(--wren-chain-ethereum)',
+    custom: false
+  })
+  expect(resolveChainIdentityColor(123456, false, 'accent8')).toMatchObject({
+    color: 'var(--accent8)',
+    custom: true
+  })
+})
+
+test('keeps known chain artwork optically comparable to the generic network mark', () => {
+  expect(chainIdentitySource).toMatch(/svgSize=\{identity\.custom \? undefined : small \? 18 : 32\}/)
 })

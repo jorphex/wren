@@ -102,6 +102,9 @@ it('hides holdings while keeping public unit prices visible', () => {
   expect(screen.getAllByTestId('display-value')).toHaveLength(1)
   expect(document.body.textContent).not.toContain('2,500')
   expect(document.body.textContent).toContain('2.4')
+  expect(
+    screen.getByRole('img', { name: 'TST asset' }).style.getPropertyValue('--asset-mark-chain-color')
+  ).toBe('var(--wren-chain-ethereum)')
 })
 
 it.each([

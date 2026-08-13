@@ -2,6 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import AssetMark from '../../../../../resources/Components/AssetMark'
+import { resolveChainIdentityColor } from '../../../../../resources/Components/ChainIdentityMark'
 import { DisplayFiatPrice, DisplayValue } from '../../../../../resources/Components/DisplayValue'
 
 export class Balance extends React.Component {
@@ -28,7 +29,8 @@ export class Balance extends React.Component {
     }
     const chain = this.store('main.networks.ethereum', chainId)
     const { name: chainName = '', isTestnet = false } = chain
-    const chainColor = this.store('main.networksMeta.ethereum', chainId, 'primaryColor')
+    const primaryColor = this.store('main.networksMeta.ethereum', chainId, 'primaryColor')
+    const chainColor = resolveChainIdentityColor(chainId, isTestnet, primaryColor).color
 
     const hideBalances = this.store('selected.hideBalances')
 
@@ -48,12 +50,12 @@ export class Balance extends React.Component {
                 chainId,
                 isTestnet,
                 logoURI,
-                primaryColor: chainColor,
+                chainColor,
                 symbol
               }}
             />
           </div>
-          <div className='signerBalanceChain' style={{ color: chainColor ? `var(--${chainColor})` : '' }}>
+          <div className='signerBalanceChain' style={{ color: chainColor }}>
             {chainName}
           </div>
           <div className='signerBalanceCurrency' title={name}>

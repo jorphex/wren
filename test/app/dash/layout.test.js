@@ -9,6 +9,7 @@ const settingsStyle = fs.readFileSync('app/dash/Settings/style/index.styl', 'utf
 const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl', 'utf8')
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 const chainsStyle = fs.readFileSync('app/dash/Chains/style/index.styl', 'utf8')
+const signerStyle = fs.readFileSync('app/dash/Signer/style/index.styl', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
   expect(baseStyle).toMatch(/--wren-type-label var\(--wren-type-caption\)/)
@@ -96,8 +97,26 @@ test('keeps dashboard add actions compact and inactive network toggles neutral',
     /\.dashFooter[\s\S]*?justify-content flex-end[\s\S]*?height 46px[\s\S]*?background transparent[\s\S]*?\.dashFooterButton[\s\S]*?width auto[\s\S]*?min-width 190px[\s\S]*?height 46px/
   )
   expect(dashStyle).toMatch(
-    /\.network \.signerPermissionToggle[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?&::before[\s\S]*?height 24px[\s\S]*?border-radius 2px[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?border-bottom 2px solid var\(--wren-border-strong\)[\s\S]*?border-radius 1px[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-success-soft\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)/
+    /\.network \.signerPermissionToggle[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?&::before[\s\S]*?height 24px[\s\S]*?border-radius 2px[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?border-bottom 2px solid var\(--wren-border-strong\)[\s\S]*?border-radius 1px[\s\S]*?\.network \.signerPermissionToggleOn[\s\S]*?background var\(--wren-success-soft\)[\s\S]*?\.signerPermissionToggleSwitch[\s\S]*?background var\(--wren-success\)[\s\S]*?transform translateX\(20px\)/
   )
+  expect(chainsStyle).toMatch(/\.discordInvite[\s\S]*?min-height 44px/)
+})
+
+test('keeps watch and signer identities on the same account-list axis', () => {
+  expect(dashStyle).toMatch(
+    /\.watchAccount[\s\S]*?padding 0 var\(--wren-space-2\)[\s\S]*?\.watchAccountIcon[\s\S]*?width 38px[\s\S]*?height 38px[\s\S]*?border 1px solid var\(--wren-border-subtle\)[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background var\(--wren-surface-inset\)/
+  )
+  expect(signerStyle).toMatch(
+    /\.signerTop[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-2\) var\(--wren-space-2\)[\s\S]*?\.signerDetails[\s\S]*?grid-template-columns 38px minmax\(0, 1fr\)[\s\S]*?gap var\(--wren-space-3\)[\s\S]*?\.signerIcon[\s\S]*?border 1px solid var\(--wren-border-subtle\)[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background var\(--wren-surface-inset\)/
+  )
+  expect(signerStyle).not.toMatch(/\.signerIconHardware[\s\S]{0,100}?transform/)
+})
+
+test('keeps the Trezor PIN submit action in the Wren control language', () => {
+  expect(signerStyle).toMatch(
+    /\.signerPinSubmit[\s\S]*?min-height 44px[\s\S]*?border-radius var\(--wren-radius-sm\)[\s\S]*?font-weight 550[\s\S]*?text-transform none[\s\S]*?&:disabled[\s\S]*?color var\(--wren-text-muted\)[\s\S]*?opacity 1/
+  )
+  expect(signerStyle).not.toMatch(/\.signerPinSubmit[\s\S]{0,180}?text-transform uppercase/)
 })
 
 test('renders page actions with their destination instead of delaying the footer', () => {

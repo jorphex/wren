@@ -1,23 +1,23 @@
 import React from 'react'
 import Restore from 'react-restore'
+import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
-import svg from '../../../resources/svg'
 
 export class Command extends React.Component {
   renderSignerIcon(type) {
-    if (type === 'ledger') {
-      return <div className='expandedSignerIcon'>{svg.ledger(20)}</div>
-    } else if (type === 'trezor') {
-      return <div className='expandedSignerIcon'>{svg.trezor(20)}</div>
+    if (['ledger', 'trezor', 'lattice'].includes(type)) {
+      return (
+        <div className='expandedSignerIcon'>
+          <AccountTypeMark type={type} size={20} />
+        </div>
+      )
     } else if (type === 'seed' || type === 'ring') {
       return (
         <div className='expandedSignerIcon'>
           <Icon name='hot' size={23} />
         </div>
       )
-    } else if (type === 'lattice') {
-      return <div className='expandedSignerIcon'>{svg.lattice(22)}</div>
     } else {
       return (
         <div className='expandedSignerIcon'>

@@ -1,9 +1,9 @@
 import React from 'react'
 import Restore from 'react-restore'
+import AccountTypeMark from '../../../../../resources/Components/AccountTypeMark'
 import Icon from '../../../../../resources/Components/Icon'
 
 import link from '../../../../../resources/link'
-import svg from '../../../../../resources/svg'
 import {
   findUnavailableSigners,
   getSignerStatusMeta,
@@ -99,21 +99,27 @@ export class Signer extends React.Component {
     if (type === 'lattice') {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>{svg.lattice(18)}</div>
+          <div className='moduleItemIcon'>
+            <AccountTypeMark type={type} size={17} />
+          </div>
           <div>{'GridPlus'}</div>
         </div>
       )
     } else if (type === 'ledger') {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>{svg.ledger(16)}</div>
+          <div className='moduleItemIcon'>
+            <AccountTypeMark type={type} size={17} />
+          </div>
           <div>{'Ledger'}</div>
         </div>
       )
     } else if (type === 'trezor') {
       return (
         <div className='moduleItemSignerType'>
-          <div className='moduleItemIcon'>{svg.trezor(15)}</div>
+          <div className='moduleItemIcon'>
+            <AccountTypeMark type={type} size={17} />
+          </div>
           <div>{'Trezor'}</div>
         </div>
       )

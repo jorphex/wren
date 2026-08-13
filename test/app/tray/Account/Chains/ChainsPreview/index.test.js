@@ -108,6 +108,13 @@ it('groups network navigation and explorer controls on the right of the identity
   renderMonitor()
   const controls = screen.getByRole('group', { name: 'Displayed network controls' })
 
+  expect(screen.getByTestId('ethereum-mark').closest('.ringIcon').classList.contains('ringIconNoRing')).toBe(
+    true
+  )
+  expect(screen.getByTestId('ethereum-mark').closest('.ringIconInner').style.color).toBe(
+    'var(--wren-chain-ethereum)'
+  )
+
   expect(controls.previousElementSibling.textContent).toContain('Mainnet')
   expect(
     Array.from(controls.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))

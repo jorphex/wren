@@ -32,3 +32,9 @@ test('uses the centered square Ethereum mark for chain and asset identities', ()
   expect(mark.getAttribute('width')).toBe('16px')
   expect(mark.style.transform).toBe('')
 })
+
+test('honors an explicit Ethereum glyph size in compact chain identities', () => {
+  render(<RingIconGlyph small svgName='ethereum' svgSize={18} />)
+
+  expect(screen.getByTestId('ethereum-mark').getAttribute('width')).toBe('18px')
+})

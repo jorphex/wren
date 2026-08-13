@@ -95,7 +95,8 @@ export const resolveAssetArtwork = (asset = {}) => {
 
 const AssetMark = ({ asset, className = '', showChain = true, size = 'default' }) => {
   const symbol = asset?.symbol || '?'
-  const chainColor = asset?.primaryColor ? `var(--${asset.primaryColor})` : 'var(--wren-text-muted)'
+  const chainColor =
+    asset?.chainColor || (asset?.primaryColor ? `var(--${asset.primaryColor})` : 'var(--wren-chain-custom)')
   const artwork = resolveAssetArtwork(asset)
 
   return (
@@ -105,7 +106,10 @@ const AssetMark = ({ asset, className = '', showChain = true, size = 'default' }
       role='img'
       style={{ '--asset-mark-chain-color': chainColor }}
     >
-      <span className='assetMarkGlyph' aria-hidden='true'>
+      <span
+        className={artwork.svgName ? 'assetMarkGlyph assetMarkGlyphVector' : 'assetMarkGlyph'}
+        aria-hidden='true'
+      >
         <RingIconGlyph
           fallback={artwork.fallback}
           img={artwork.img}

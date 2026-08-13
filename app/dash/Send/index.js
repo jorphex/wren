@@ -4,6 +4,7 @@ import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
 
 import Icon from '../../../resources/Components/Icon'
 import AssetMark from '../../../resources/Components/AssetMark'
+import { resolveChainIdentityColor } from '../../../resources/Components/ChainIdentityMark'
 import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
 import link from '../../../resources/link'
 import { createBalance, isNativeCurrency, sortByTotalValue } from '../../../resources/domain/balance'
@@ -93,6 +94,8 @@ const displayedAsset = (rawBalance, networks, metadata, rates) => {
 
   return {
     ...balance,
+    chainColor: resolveChainIdentityColor(rawBalance.chainId, network.isTestnet, chainMeta.primaryColor)
+      .color,
     chainName: network.name,
     connected: isNetworkConnected(network),
     native,

@@ -20,9 +20,7 @@ it('centers every artwork path in one shared inset without moving the chain mark
   expect(assetMarkStyle).toMatch(
     /svg[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?\.ringIconFallback[\s\S]*?width var\(--asset-mark-art-size\)[\s\S]*?height var\(--asset-mark-art-size\)[\s\S]*?align-items center[\s\S]*?justify-content center/
   )
-  expect(assetMarkStyle).toMatch(
-    /\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right -2px[\s\S]*?bottom -2px/
-  )
+  expect(assetMarkStyle).toMatch(/\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right 0[\s\S]*?bottom 0/)
 })
 
 it('resolves bundled vault artwork by normalized chain and token address', () => {
@@ -67,7 +65,18 @@ it('centers the native Ethereum artwork without a vertical transform', () => {
 
   const mark = screen.getByTestId('ethereum-mark')
   expect(mark.style.transform).toBe('')
-  expect(mark.parentElement.parentElement.classList.contains('assetMarkGlyph')).toBe(true)
+  expect(mark.parentElement.parentElement.classList.contains('assetMarkGlyphVector')).toBe(true)
+  expect(assetMarkStyle).toMatch(
+    /\.assetMarkGlyphVector svg[\s\S]*?width calc\(var\(--asset-mark-art-size\) \* \.78\)[\s\S]*?height calc\(var\(--asset-mark-art-size\) \* \.78\)/
+  )
+})
+
+it('accepts the resolved semantic chain color without reinterpreting it', () => {
+  render(<AssetMark asset={{ chainColor: 'var(--wren-chain-ethereum)', symbol: 'ETH' }} />)
+
+  expect(
+    screen.getByRole('img', { name: 'ETH asset' }).style.getPropertyValue('--asset-mark-chain-color')
+  ).toBe('var(--wren-chain-ethereum)')
 })
 
 it('falls back to the asset initial if bundled artwork cannot load', () => {

@@ -1054,6 +1054,8 @@
         display flex
         min-width 0
         min-height 44px
+        padding-left var(--wren-space-3)
+        box-sizing border-box
         flex 1
         align-items center
         gap var(--wren-space-2)
@@ -1170,6 +1172,28 @@
       font-variation-settings var(--wren-font-heading-settings)
       font-weight 590
       letter-spacing .1px
+
+    .requestPreviewContentEnd
+      display flex
+      min-width 0
+      align-items center
+      gap var(--wren-space-3)
+
+    .requestPreviewContentMeta
+      min-width 0
+      overflow hidden
+      margin 0
+      color var(--wren-text-muted)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+      font-weight 450
+      letter-spacing 0
+      text-overflow ellipsis
+      white-space nowrap
+
+    .requestPreviewContentArrow
+      flex 0 0 auto
+      padding-right 0
 
 .accountView
   right 0

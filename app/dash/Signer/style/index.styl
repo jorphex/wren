@@ -664,21 +664,8 @@
       transition transform var(--wren-motion-fast) var(--wren-ease)
 
     .signerPinMessage
-      appearance none
-      color inherit
-      border 0
-      font-family inherit
-      height 32px
-      width 140px
-      display flex
-      justify-content center
-      align-items center
       overflow hidden
       position relative
-      font-size 13px
-      padding-bottom 2px
-      background var(--ghostB)
-      box-shadow 0px 2px 6px var(--ghostZ)
 
     .signerPinActions
       position relative
@@ -708,24 +695,9 @@
 
     .signerPinSubmit
       width 250px
-      border-radius 8px
-      cursor pointer
-      font-size var(--wren-type-small)
-      text-transform uppercase
-      text-align center
-      font-weight 300
-      display flex
-      justify-content center
 
       .signerPinDelete
         left 0px
-
-    .signerPinSubmit:not(:disabled):hover
-      background var(--ghostC)
-
-    .signerPinSubmit:disabled
-      cursor default
-      opacity 0.45
 
     .trezorPinInputWrap
       width 100%
@@ -878,7 +850,6 @@
 
 .signerControls .signerControlOption,
 .signerLatticePair .signerLatticePairSubmit,
-.signerInterface .signerPinSubmit,
 .signerInterface .signerPinDelete
   border 1px solid var(--wren-border-default)
   border-radius var(--wren-radius-sm)
@@ -924,7 +895,7 @@
     display grid
     min-height 62px
     box-sizing border-box
-    padding var(--wren-space-3) var(--wren-space-1) var(--wren-space-2)
+    padding var(--wren-space-3) var(--wren-space-2) var(--wren-space-2)
     grid-template-columns minmax(0, 1fr) 44px
     align-items center
     column-gap var(--wren-space-3)
@@ -934,7 +905,7 @@
     min-width 0
     grid-template-columns 38px minmax(0, 1fr)
     align-items center
-    gap var(--wren-space-2)
+    gap var(--wren-space-3)
 
     .signerIcon,
     .signerIconWrap
@@ -948,11 +919,8 @@
     .signerIcon
       border 1px solid var(--wren-border-subtle)
       border-radius 50%
-      color var(--wren-text-secondary)
+      color var(--wren-accent-primary-hover)
       background var(--wren-surface-inset)
-
-    .signerIconHardware
-      transform translateY(-1px)
 
     .signerName
       width auto
@@ -985,6 +953,10 @@
   .signerPreviewSummary
     margin 0 0 0 46px
     padding 0 var(--wren-space-1) var(--wren-space-2) 0
+
+  .signerPreviewManage
+    height 44px
+    min-height 44px
 
   .signerAddedAccountTitle
     justify-content flex-start
@@ -1164,7 +1136,8 @@
     .signerControlOption
       width auto
       min-width 156px
-      height 42px
+      height 44px
+      min-height 44px
       margin 0
 
   .signerRemovalConfirm
@@ -1222,6 +1195,77 @@
     .trezorPinWrap
       gap var(--wren-space-3)
 
+    .trezorPinHeading
+      width 100%
+      max-width 480px
+      text-align left
+
+      h3,
+      p
+        margin 0
+
+      h3
+        color var(--wren-text-primary)
+        font-size var(--wren-type-body)
+        font-weight 650
+
+      p
+        margin-top var(--wren-space-2)
+        color var(--wren-text-secondary)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-small)
+        line-height 18px
+
+    .trezorPinEntryStatus
+      display flex
+      width 100%
+      max-width 480px
+      min-height 44px
+      padding 0 var(--wren-space-3)
+      box-sizing border-box
+      align-items center
+      justify-content space-between
+      border 1px solid var(--wren-border-default)
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-secondary)
+      background var(--wren-surface-inset)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-small)
+
+    .trezorPinEntryDots
+      display flex
+      min-width 0
+      align-items center
+      justify-content flex-end
+      gap var(--wren-space-1)
+
+    .trezorPinInputWrap
+      width 100%
+      height auto
+      padding var(--wren-space-2) 0
+
+      .trezorPinInput
+        width 148px
+        height 148px
+        gap var(--wren-space-2)
+
+        .trezorPinInputButton
+          flex 0 0 44px
+          min-width 44px
+          min-height 44px
+          border 1px solid var(--wren-border-default)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-surface-card)
+          cursor pointer
+
+        .trezorPinInputButton:not(:disabled):hover
+          border-color var(--wren-border-strong)
+          background var(--wren-surface-hover)
+
+        .trezorPinInputButton:focus-visible
+          outline 2px solid var(--wren-focus)
+          outline-offset 2px
+
     .trezorPhraseInput
       width 100%
       height 39px
@@ -1235,13 +1279,37 @@
     .signerPinSubmit
       width auto
       min-width 190px
-      min-height 42px
+      min-height 44px
+      height 44px
+      padding 0 var(--wren-space-4)
+      border-radius var(--wren-radius-sm)
+      font-family var(--wren-font-ui)
+      font-size 13px
+      font-weight 550
+      letter-spacing .01em
+      line-height 1
+      text-transform none
+
+      &:disabled
+        color var(--wren-text-muted)
+        opacity 1
 
     .signerPinActions
+      display flex
       width 250px
+      align-items center
+      justify-content center
+      gap var(--wren-space-2)
 
       .signerPinSubmit
-        width 100%
+        flex 1
+        width auto
+
+      .signerPinDelete
+        position static
+        flex 0 0 44px
+        width 44px
+        min-height 44px
 
 @media (max-height: 760px)
   .dash .dashMain .signers .signersMid

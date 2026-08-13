@@ -4,7 +4,7 @@ import Restore from 'react-restore'
 import link from '../../../resources/link'
 import DialogSurface from '../../../resources/Components/DialogSurface'
 import Icon from '../../../resources/Components/Icon'
-import svg from '../../../resources/svg'
+import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import { capitalize, getAddress } from '../../../resources/utils'
 import { getSignerDisplayType, getSignerStatusMeta, isHardwareSigner } from '../../../resources/domain/signer'
 
@@ -148,43 +148,29 @@ export class Signer extends React.Component {
       <div className='trezorPinWrap' style={active ? {} : { height: '0px', padding: '0px 0px 0px 0px' }}>
         {active ? (
           <>
+            <div className='trezorPinHeading'>
+              <h3>Enter PIN</h3>
+              <p>
+                On your Trezor, find each PIN digit in the scrambled matrix, then select its matching position
+                here.
+              </p>
+            </div>
             {this.props.pinError ? (
               <div role='alert' className='trezorPinError'>
                 {this.props.pinError}
               </div>
             ) : null}
             <div
-              className='trezorPhraseInput'
+              className='trezorPinEntryStatus'
               role='status'
               aria-label={`${this.state.tPin.length} PIN positions entered`}
             >
-              {this.state.tPin.split('').map((n, i) => {
-                return (
-                  <span key={i} className='trezorPinInputButton' aria-hidden='true'>
-                    <span className='signerPinDot' />
-                  </span>
-                )
-              })}
-            </div>
-            <div className='signerPinActions'>
-              <button
-                type='button'
-                className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
-                disabled={!this.state.tPin || this.state.tPinPending}
-                onClick={() => this.submitPin()}
-              >
-                Submit PIN
-              </button>
-              {this.state.tPin ? (
-                <button
-                  type='button'
-                  aria-label='Delete last PIN position'
-                  className='signerPinDelete wrenControl wrenControlSecondary wrenControlIcon'
-                  onClick={this.backspacePin.bind(this)}
-                >
-                  <Icon name='back' size={18} />
-                </button>
-              ) : null}
+              <span>{`${this.state.tPin.length} ${this.state.tPin.length === 1 ? 'position' : 'positions'} selected`}</span>
+              <span className='trezorPinEntryDots' aria-hidden='true'>
+                {this.state.tPin.split('').map((n, i) => (
+                  <span key={i} className='signerPinDot' />
+                ))}
+              </span>
             </div>
             <div className='trezorPinInputWrap'>
               <div className='trezorPinInput'>
@@ -201,6 +187,26 @@ export class Signer extends React.Component {
                   </button>
                 ))}
               </div>
+            </div>
+            <div className='signerPinActions'>
+              {this.state.tPin ? (
+                <button
+                  type='button'
+                  aria-label='Delete last PIN position'
+                  className='signerPinDelete wrenControl wrenControlSecondary wrenControlIcon'
+                  onClick={this.backspacePin.bind(this)}
+                >
+                  <Icon name='back' size={18} />
+                </button>
+              ) : null}
+              <button
+                type='button'
+                className='signerPinMessage signerPinSubmit wrenControl wrenControlPrimary'
+                disabled={!this.state.tPin || this.state.tPinPending}
+                onClick={() => this.submitPin()}
+              >
+                Submit PIN
+              </button>
             </div>
           </>
         ) : null}
@@ -388,18 +394,18 @@ export class Signer extends React.Component {
             <div className='signerIcon'>
               {((_) => {
                 const type = this.props.type
-                if (type === 'ledger')
-                  return <div className='signerIconWrap signerIconHardware'>{svg.ledger(20)}</div>
-                if (type === 'trezor')
-                  return <div className='signerIconWrap signerIconHardware'>{svg.trezor(20)}</div>
+                if (type === 'ledger' || type === 'trezor' || type === 'lattice')
+                  return (
+                    <div className='signerIconWrap signerIconHardware'>
+                      <AccountTypeMark type={type} size={20} />
+                    </div>
+                  )
                 if (type === 'seed' || type === 'ring')
                   return (
                     <div className='signerIconWrap signerIconHot'>
-                      <Icon name='hot' size={23} />
+                      <AccountTypeMark type={type} size={20} />
                     </div>
                   )
-                if (type === 'lattice')
-                  return <div className='signerIconWrap signerIconSmart'>{svg.lattice(22)}</div>
                 return (
                   <div className='signerIconWrap'>
                     <Icon name='hardware' size={20} />

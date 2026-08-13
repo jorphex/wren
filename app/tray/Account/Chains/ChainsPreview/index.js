@@ -3,7 +3,9 @@ import Restore from 'react-restore'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import ChainIdentityMark, {
+  resolveChainIdentityColor
+} from '../../../../../resources/Components/ChainIdentityMark'
 
 export class ChainsPreview extends React.Component {
   constructor(...args) {
@@ -57,6 +59,7 @@ export class ChainsPreview extends React.Component {
     if (!currentChain || !currentChainMeta) return null
     const { name } = currentChain
     const { icon, primaryColor } = currentChainMeta
+    const chainIdentity = resolveChainIdentityColor(currentChainId, currentChain.isTestnet, primaryColor)
     const chain = { type: 'ethereum', id: currentChain.id ?? Number(currentChainId) }
     const explorerAvailable =
       typeof currentChain.explorer === 'string' && currentChain.explorer.trim().length > 0
@@ -65,7 +68,13 @@ export class ChainsPreview extends React.Component {
         <div className='chainMonitorNetworkRow'>
           <span className='chainMonitorIdentity'>
             <span className='chainMonitorMark'>
-              <RingIcon color={primaryColor ? `var(--${primaryColor})` : 'var(--moon)'} img={icon} small />
+              <ChainIdentityMark
+                chainId={currentChainId}
+                icon={icon}
+                isTestnet={currentChain.isTestnet}
+                primaryColor={primaryColor}
+                small
+              />
             </span>
             <strong>{name}</strong>
           </span>
@@ -108,7 +117,7 @@ export class ChainsPreview extends React.Component {
         <div className='chainMonitorGasRow'>
           <span className='chainMonitorGasEvidence'>
             <span>Gas</span>
-            <Monitor inline chainId={chain.id} color={`var(--${primaryColor})`} />
+            <Monitor inline chainId={chain.id} color={chainIdentity.color} />
           </span>
           <button
             aria-expanded={this.state.expanded}
@@ -121,7 +130,7 @@ export class ChainsPreview extends React.Component {
             <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={17} />
           </button>
         </div>
-        {this.state.expanded ? <Monitor details chainId={chain.id} color={`var(--${primaryColor})`} /> : null}
+        {this.state.expanded ? <Monitor details chainId={chain.id} color={chainIdentity.color} /> : null}
       </div>
     )
   }

@@ -64,6 +64,8 @@ it('maps warning and danger signer status tones to distinct classes', () => {
 it('renders the Trezor PIN matrix as named native controls', () => {
   renderSigner({ type: 'trezor', status: 'need pin' })
 
+  expect(screen.getByRole('heading', { name: 'Enter PIN' })).toBeTruthy()
+  expect(screen.getByText(/scrambled matrix/i)).toBeTruthy()
   expect(screen.getAllByRole('button', { name: /PIN position/ })).toHaveLength(9)
   expect(screen.getByRole('button', { name: 'Submit PIN' }).disabled).toBe(true)
   expect(screen.getByRole('status', { name: '0 PIN positions entered' })).toBeTruthy()
