@@ -22,7 +22,9 @@ it('centers every artwork path in one shared inset without moving the chain mark
   expect(assetMarkStyle).toMatch(
     /> div[\s\S]*?top 50%[\s\S]*?left 50%[\s\S]*?width var\(--asset-mark-render-size\)[\s\S]*?min-width var\(--asset-mark-render-size\)[\s\S]*?height var\(--asset-mark-render-size\)[\s\S]*?transform translate\(-50%, -50%\)[\s\S]*?\.ringIconFallback[\s\S]*?place-items center/
   )
-  expect(assetMarkStyle).toMatch(/\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right 0[\s\S]*?bottom 0/)
+  expect(assetMarkStyle).toMatch(
+    /\.assetMarkChain[\s\S]*?position absolute[\s\S]*?right -2px[\s\S]*?bottom -2px/
+  )
 })
 
 it('resolves bundled vault artwork by normalized chain and token address', () => {

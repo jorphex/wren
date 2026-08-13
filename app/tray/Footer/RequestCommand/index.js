@@ -486,7 +486,7 @@ export class RequestCommand extends React.Component {
     return (
       <div className='requestApprove requestApproveTransaction requestApproveRecoverable'>
         <div className='requestActionContext' role='alert'>
-          <span className='requestActionContextIcon'>
+          <span className='requestActionContextIcon requestActionContextIconAlert'>
             <Icon name='alert' size={19} />
           </span>
           <span className='requestActionContextCopy'>

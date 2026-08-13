@@ -38,6 +38,20 @@ it('opens a request with a validated navigation breadcrumb', async () => {
   })
 })
 
+it('removes the generic backing plate around chain artwork', () => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--accent1)'
+      img='https://example.test/chain.png'
+      req={{ created: Date.now(), handlerId, status: 'confirming', type: 'transaction' }}
+      title='Ethereum Mainnet transaction'
+    />
+  )
+
+  expect(document.querySelector('.requestItemIconRing')).toBeTruthy()
+})
+
 it('opens a request only once for duplicate activation', async () => {
   const { user } = render(
     <RequestItem

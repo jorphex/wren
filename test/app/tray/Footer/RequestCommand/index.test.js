@@ -226,7 +226,9 @@ it('retains a recoverable pre-sign failure with explicit recheck and close actio
   })
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
-  expect(screen.getByRole('alert').textContent).toMatch(/safety check unavailable/i)
+  const alert = screen.getByRole('alert')
+  expect(alert.textContent).toMatch(/safety check unavailable/i)
+  expect(alert.firstElementChild.classList.contains('requestActionContextIconAlert')).toBe(true)
   expect(screen.getByText('The safety check could not be repeated. Nothing was signed or sent.')).toBeTruthy()
   expect(screen.queryByText(/Delegation recheck unavailable/)).toBeNull()
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))

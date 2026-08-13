@@ -133,7 +133,9 @@ class _RequestItem extends React.Component {
             />
             <div className='requestItemTitle'>
               <div className='requestItemTitleLeft'>
-                <div className='requestItemIcon'>
+                <div
+                  className={requestIcon && !img ? 'requestItemIcon' : 'requestItemIcon requestItemIconRing'}
+                >
                   {requestIcon && !img ? (
                     <Icon name={requestIcon} size={18} />
                   ) : (
