@@ -577,6 +577,34 @@ describe('#addRequest', () => {
     expect(account.getActiveReviewRequest(first.handlerId)).toBeUndefined()
   })
 
+  it('dismisses a completed review to the wallet without deleting it or opening the next request', () => {
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+    })
+    const completed = request('completed-review')
+    const waiting = request('waiting-review')
+    account.addRequest(completed)
+    account.addRequest(waiting)
+    nav.forward.mockClear()
+
+    expect(account.dismissRequestReview(completed.handlerId)).toBe(true)
+
+    expect(store.navClearReq).toHaveBeenCalledWith(account.id, completed.handlerId, false)
+    expect(account.getRequest(completed.handlerId)).toBe(completed)
+    expect(account.getRequest(waiting.handlerId)).toBe(waiting)
+    expect(account.summary().activeRequestId).toBeNull()
+    expect(nav.forward).not.toHaveBeenCalled()
+  })
+
   it('simulates exact wallet calls under the selected account and chain', async () => {
     const result = {
       status: 'succeeded',

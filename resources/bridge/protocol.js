@@ -20,7 +20,7 @@ export const requestEventChannels = new Set([
   'tray:action',
   'tray:addToken',
   'tray:adjustNonce',
-  'tray:clearRequestsByOrigin',
+  'tray:clearRequests',
   'tray:clipboardData',
   'tray:copyTxHash',
   'tray:dismissUpdate',

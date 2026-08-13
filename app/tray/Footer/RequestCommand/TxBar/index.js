@@ -77,7 +77,7 @@ const TxBar = ({ networkName, req }) => {
     >
       <div className='txLifecycleSummary'>
         <span className='txLifecycleMark' aria-hidden='true'>
-          <Icon name={presentation.icon} size={18} />
+          <Icon name={presentation.icon} size={20} />
         </span>
         <span className='txLifecycleCopy'>
           <strong>{presentation.title}</strong>

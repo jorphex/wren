@@ -218,8 +218,8 @@ onRenderer('tray:rejectRequest', (e, req) => {
   accounts.rejectRequestForAccount(req.account, req.handlerId, err)
 })
 
-onRenderer('tray:clearRequestsByOrigin', (e, account, origin) => {
-  accounts.clearRequestsByOrigin(account, origin)
+onRenderer('tray:clearRequests', (e, account) => {
+  accounts.clearRequests(account)
 })
 
 onRenderer('tray:openExternal', (e, url) => {

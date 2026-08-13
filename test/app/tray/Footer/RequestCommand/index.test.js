@@ -227,7 +227,8 @@ it('retains a recoverable pre-sign failure with explicit recheck and close actio
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
   expect(screen.getByRole('alert').textContent).toMatch(/safety check unavailable/i)
-  expect(screen.getByText(/nothing was signed or sent/i)).toBeTruthy()
+  expect(screen.getByText('The safety check could not be repeated. Nothing was signed or sent.')).toBeTruthy()
+  expect(screen.queryByText(/Delegation recheck unavailable/)).toBeNull()
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
 
   expect(link.rpc).toHaveBeenCalledWith(
@@ -263,14 +264,13 @@ it('closes a retained pre-sign failure only through the explicit close action', 
 it('retains a terminal pre-sign failure with its real notice and Close only', async () => {
   const req = transaction({
     status: 'error',
-    notice: 'Trezor is disconnected',
+    notice: 'Trezor is disconnected.',
     retainedPreBroadcastError: { responderPending: false }
   })
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
   expect(screen.getByRole('alert').textContent).toMatch(/signing did not complete/i)
-  expect(screen.getByText('Trezor is disconnected')).toBeTruthy()
-  expect(screen.getByText(/no transaction was sent/i)).toBeTruthy()
+  expect(screen.getByText('Trezor is disconnected. No transaction was sent.')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Recheck' })).toBeNull()
 
   await view.user.click(screen.getByRole('button', { name: 'Close request' }))
@@ -425,6 +425,7 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
 
   expect(screen.getAllByText('Submitted')).toHaveLength(2)
+  expect(document.querySelector('.txLifecycleMark svg').getAttribute('width')).toBe('20')
   expect(screen.getByText('Wren sent the transaction to the network.')).toBeTruthy()
   expect(screen.getByRole('list', { name: 'Transaction progress' })).toBeTruthy()
   expect(screen.getByText('Confirmations')).toBeTruthy()

@@ -471,6 +471,17 @@ export class RequestCommand extends React.Component {
     const recoverable = Boolean(req.recoverableError)
     const changed = req.recoverableError?.code === 'account-code-evidence-changed'
     const pending = this.state.requestActionPending
+    const title = recoverable
+      ? changed
+        ? 'Transaction state changed'
+        : 'Safety check unavailable'
+      : 'Signing did not complete'
+    const failureNotice = (req.notice || 'Signing did not complete').replace(/[.]+$/u, '')
+    const detail = recoverable
+      ? changed
+        ? 'Account code changed during the final safety check. Nothing was signed or sent.'
+        : 'The safety check could not be repeated. Nothing was signed or sent.'
+      : `${failureNotice}. No transaction was sent.`
 
     return (
       <div className='requestApprove requestApproveTransaction requestApproveRecoverable'>
@@ -479,19 +490,8 @@ export class RequestCommand extends React.Component {
             <Icon name='alert' size={19} />
           </span>
           <span className='requestActionContextCopy'>
-            <strong>
-              {recoverable
-                ? changed
-                  ? 'Transaction state changed'
-                  : 'Safety check unavailable'
-                : 'Signing did not complete'}
-            </strong>
-            <span>{req.notice || 'The transaction could not be signed.'}</span>
-            <span>
-              {recoverable
-                ? 'Nothing was signed or sent. Recheck to load fresh details before signing again.'
-                : 'No transaction was sent. Close this request when you are ready.'}
-            </span>
+            <strong>{title}</strong>
+            <span>{detail}</span>
             {this.state.requestActionError ? (
               <span className='requestActionError' role='alert'>
                 {this.state.requestActionError}

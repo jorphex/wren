@@ -83,6 +83,18 @@ test('keeps network switching, chain explorer, and gas evidence as distinct cont
   )
   expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
   expect(accountSource).toMatch(/wrenControlPrimary wrenControlLarge/)
+  expect(accountStyle).toMatch(
+    /\.chainMonitorIdentity[\s\S]*?padding-left var\(--wren-space-3\)[\s\S]*?\.chainMonitorMark[\s\S]*?width 24px[\s\S]*?height 24px/
+  )
+})
+
+test('aligns balance artwork and copy with the account ledger rhythm', () => {
+  expect(balancesStyle).toMatch(/\.signerBalanceCurrency[\s\S]*?left calc\(var\(--wren-space-4\) \+ 40px\)/)
+  expect(balancesStyle).toMatch(/\.signerBalanceChain[\s\S]*?left calc\(var\(--wren-space-4\) \+ 40px\)/)
+  expect(balancesStyle).toMatch(/\.signerBalancePrice[\s\S]*?left calc\(var\(--wren-space-4\) \+ 40px\)/)
+  expect(balancesStyle).toMatch(
+    /\.signerBalanceIcon[\s\S]*?top 17px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
+  )
 })
 
 test('keeps the account selector and privacy control on one optical axis', () => {
@@ -147,6 +159,9 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
   )
   expect(signingStyle).toMatch(
     /@media \(max-width: 560px\)[\s\S]*?\.approveTransaction \.transactionReviewMain[\s\S]*?\._txDescription[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.transactionReviewSummaryStatus[\s\S]*?width 100%[\s\S]*?max-width none/
+  )
+  expect(signingStyle).toMatch(
+    /\.requestSign:disabled \.requestSignButton,[\s\S]*?\.requestSign:disabled \.requestSignButton:hover[\s\S]*?color var\(--wren-text-inverse\)[\s\S]*?background var\(--wren-control-texture-light\), var\(--wren-accent-primary\)/
   )
 })
 

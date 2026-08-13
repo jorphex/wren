@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '../../../../componentSetup'
-import { byRequestQueue, Requests } from '../../../../../app/tray/Account/Requests'
+import { byRequestRecency, requestPreviewSummary, Requests } from '../../../../../app/tray/Account/Requests'
 import RequestItem from '../../../../../resources/Components/RequestItem'
 import link from '../../../../../resources/link'
 
@@ -20,6 +20,38 @@ afterAll(() => {
 
 beforeEach(() => {
   link.send.mockReset()
+})
+
+it('summarizes only unfinished requests and separates pending from confirming', () => {
+  expect(
+    requestPreviewSummary([
+      { status: undefined },
+      { status: 'pending' },
+      { status: 'verifying' },
+      { status: 'sent', mode: 'monitor' },
+      { status: 'confirming' },
+      { status: 'confirmed' },
+      { status: 'error' }
+    ])
+  ).toEqual({ total: 5, pending: 2, confirming: 3 })
+})
+
+it('keeps a confirmed transaction out of the home-row count while it remains inspectable', () => {
+  const requests = new Requests({ expanded: false, account: '0xabc', moduleId: 'requests' })
+  requests.store = (...path) => {
+    if (path.join('.') === 'main.accounts.0xabc.requests') {
+      return {
+        waiting: { status: 'pending' },
+        included: { status: 'confirming' },
+        receipt: { status: 'confirmed' }
+      }
+    }
+  }
+
+  render(requests.renderPreview())
+
+  expect(screen.getByRole('button', { name: 'Requests. 2 requests · 1 pending · 1 confirming' })).toBeTruthy()
+  expect(screen.getByText('2 requests · 1 pending · 1 confirming')).toBeTruthy()
 })
 
 const createRequest = (handlerId, created, origin = 'https://example.test', queueIndex) => ({
@@ -48,7 +80,7 @@ class ExpandedRequestsHarness extends Requests {
   }
 }
 
-it('sorts indexed requests in FIFO order and places legacy requests after them', () => {
+it('sorts indexed requests newest-first and places legacy requests after them', () => {
   const requests = [
     createRequest('legacy-newer', 30),
     createRequest('third', 10, 'https://example.test', 3),
@@ -56,21 +88,21 @@ it('sorts indexed requests in FIFO order and places legacy requests after them',
     createRequest('legacy-older', 5)
   ]
 
-  expect(requests.sort(byRequestQueue).map(({ handlerId }) => handlerId)).toEqual([
-    'first',
+  expect(requests.sort(byRequestRecency).map(({ handlerId }) => handlerId)).toEqual([
     'third',
-    'legacy-older',
-    'legacy-newer'
+    'first',
+    'legacy-newer',
+    'legacy-older'
   ])
 })
 
-it('falls back to oldest creation time and stable identity for legacy requests', () => {
+it('falls back to newest creation time and stable identity for legacy requests', () => {
   const requests = [createRequest('z-last', 2), createRequest('b-tie', 1), createRequest('a-tie', 1)]
 
-  expect(requests.sort(byRequestQueue).map(({ handlerId }) => handlerId)).toEqual([
-    'a-tie',
+  expect(requests.sort(byRequestRecency).map(({ handlerId }) => handlerId)).toEqual([
+    'z-last',
     'b-tie',
-    'z-last'
+    'a-tie'
   ])
 })
 
@@ -127,7 +159,7 @@ it('uses singular waiting copy when one request follows the current request', ()
   expect(screen.getByText('1 request waiting')).toBeTruthy()
 })
 
-it('keeps FIFO row order when request origins are interleaved', () => {
+it('keeps newest-first row order when request origins are interleaved', () => {
   const current = createRequest('current', 1, 'https://first.test', 1)
   const middle = { ...createRequest('middle', 2, 'https://second.test', 2), type: 'sign' }
   const last = { ...createRequest('last', 3, 'https://first.test', 3), type: 'addToken' }
@@ -147,7 +179,7 @@ it('keeps FIFO row order when request origins are interleaved', () => {
       .getAllByRole('button')
       .filter((button) => button.classList.contains('clusterValueAction'))
       .map((button) => button.getAttribute('aria-label'))
-  ).toEqual(['Review Account access. Current', 'Sign message. Waiting', 'Add token. Waiting'])
+  ).toEqual(['Add token. Waiting', 'Sign message. Waiting', 'Review Account access. Current'])
 })
 
 it('keeps monitor evidence inspectable while gating only the review queue', () => {
@@ -249,7 +281,7 @@ it('opens pending requests from a native keyboard-operable button and restores f
   await waitFor(() => expect(document.activeElement).toBe(restored))
 })
 
-it('stages grouped clearing, cancels with Escape, and submits confirmation only once', async () => {
+it('offers one top-level clear-all action, cancels with Escape, and submits only once', async () => {
   const requests = {
     first: createRequest('first', 2),
     second: createRequest('second', 1)
@@ -258,14 +290,15 @@ it('stages grouped clearing, cancels with Escape, and submits confirmation only 
     <ExpandedRequestsHarness expanded account='0xabc' moduleId='requests' requests={requests} />
   )
 
-  const clearTrigger = screen.getByRole('button', { name: 'Clear requests from Example' })
+  const clearTrigger = screen.getByRole('button', { name: 'Clear all requests' })
+  expect(screen.getAllByRole('button', { name: 'Clear all requests' })).toHaveLength(1)
   await user.click(clearTrigger)
 
   expect(screen.getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)
-  expect(screen.getByText('Clear 2 staged requests?')).toBeTruthy()
+  expect(screen.getByText('Clear 2 requests?')).toBeTruthy()
   expect(
     screen.getByText(
-      'This removes the staged requests from this list. It does not cancel transactions already submitted.'
+      'This removes all requests from the list. It does not cancel transactions already submitted.'
     )
   ).toBeTruthy()
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' })))
@@ -278,9 +311,9 @@ it('stages grouped clearing, cancels with Escape, and submits confirmation only 
   await user.click(clearTrigger)
   await user.dblClick(screen.getByRole('button', { name: 'Clear all' }))
   expect(link.send).toHaveBeenCalledTimes(1)
-  expect(link.send).toHaveBeenCalledWith('tray:clearRequestsByOrigin', '0xabc', 'https://example.test')
+  expect(link.send).toHaveBeenCalledWith('tray:clearRequests', '0xabc')
 
-  await user.click(screen.getByRole('button', { name: 'Clear requests from Example' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all requests' }))
   expect(screen.queryByRole('alertdialog')).toBeNull()
   expect(link.send).toHaveBeenCalledTimes(1)
 })
@@ -295,14 +328,15 @@ it('uses singular confirmation copy for one staged request', async () => {
     />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Clear requests from Example' }))
+  await user.click(screen.getByRole('button', { name: 'Clear all requests' }))
 
-  expect(screen.getByText('Clear 1 staged request?')).toBeTruthy()
+  expect(screen.getByText('Clear 1 request?')).toBeTruthy()
   expect(
     screen.getByText(
-      'This removes the staged request from this list. It does not cancel transactions already submitted.'
+      'This removes this request from the list. It does not cancel a transaction already submitted.'
     )
   ).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy()
 })
 
 it('restores request focus to its originating row after returning', async () => {

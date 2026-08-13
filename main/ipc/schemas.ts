@@ -304,7 +304,7 @@ const eventSchemas: Record<string, z.ZodType> = {
     AssetSuggestionReferenceSchema.optional()
   ]),
   'tray:adjustNonce': z.tuple([AccountRequestReferenceSchema, z.union([z.literal(-1), z.literal(1)])]),
-  'tray:clearRequestsByOrigin': z.tuple([AddressSchema, OriginSchema]),
+  'tray:clearRequests': z.tuple([AddressSchema]),
   'tray:clipboardData': z.tuple([BoundedStringSchema]),
   'tray:copyTxHash': z.tuple([HashSchema]),
   'tray:dismissUpdate': z.tuple([z.string().min(1).max(128), z.boolean()]),

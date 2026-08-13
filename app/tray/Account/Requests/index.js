@@ -26,22 +26,37 @@ import { getOriginDisplayName } from '../../../../resources/domain/origin'
 let restorePreviewFocus = false
 
 const queueNumber = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : null)
+const terminalRequestStatuses = new Set(['confirmed', 'declined', 'error', 'success'])
+const inFlightRequestStatuses = new Set(['sending', 'verifying', 'sent', 'confirming'])
 
-export const byRequestQueue = (a, b) => {
+export const requestPreviewSummary = (requests = []) => {
+  const unfinished = requests.filter((request) => !terminalRequestStatuses.has(request?.status))
+  const confirming = unfinished.filter(
+    (request) => request?.mode === 'monitor' || inFlightRequestStatuses.has(request?.status)
+  ).length
+  return { total: unfinished.length, pending: unfinished.length - confirming, confirming }
+}
+
+const requestSummaryCopy = ({ total, pending, confirming }) => {
+  const requestLabel = total === 1 ? '1 request' : `${total} requests`
+  return `${requestLabel} · ${pending} pending · ${confirming} confirming`
+}
+
+export const byRequestRecency = (a, b) => {
   const aQueueIndex = queueNumber(a.queueIndex)
   const bQueueIndex = queueNumber(b.queueIndex)
 
   if (aQueueIndex !== null || bQueueIndex !== null) {
     if (aQueueIndex === null) return 1
     if (bQueueIndex === null) return -1
-    if (aQueueIndex !== bQueueIndex) return aQueueIndex - bQueueIndex
+    if (aQueueIndex !== bQueueIndex) return bQueueIndex - aQueueIndex
   }
 
-  const aCreated = Number.isFinite(a.created) ? a.created : Number.MAX_SAFE_INTEGER
-  const bCreated = Number.isFinite(b.created) ? b.created : Number.MAX_SAFE_INTEGER
-  if (aCreated !== bCreated) return aCreated - bCreated
+  const aCreated = Number.isFinite(a.created) ? a.created : Number.MIN_SAFE_INTEGER
+  const bCreated = Number.isFinite(b.created) ? b.created : Number.MIN_SAFE_INTEGER
+  if (aCreated !== bCreated) return bCreated - aCreated
 
-  return String(a.handlerId || '').localeCompare(String(b.handlerId || ''))
+  return String(b.handlerId || '').localeCompare(String(a.handlerId || ''))
 }
 
 export class Requests extends React.Component {
@@ -49,9 +64,8 @@ export class Requests extends React.Component {
     super(props, context)
     this.state = {
       minimized: false,
-      clearOrigin: null,
-      clearGroupKey: null,
-      clearingOrigin: null
+      clearConfirm: false,
+      clearing: false
     }
     this.moduleRef = React.createRef()
     this.previewRef = React.createRef()
@@ -59,8 +73,6 @@ export class Requests extends React.Component {
     this.clearCancelRef = React.createRef()
     this.clearReturnFocusRef = React.createRef()
     this.requestRefs = new Map()
-    this.clearButtonRefs = new Map()
-    this.clearPendingOrigins = new Set()
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
@@ -90,12 +102,8 @@ export class Requests extends React.Component {
   }
 
   componentDidUpdate() {
-    const clearingOriginStillPresent = this.renderedRequests?.some(
-      (request) => request.origin === this.state.clearingOrigin
-    )
-    if (this.state.clearingOrigin && !clearingOriginStillPresent) {
-      this.clearPendingOrigins.delete(this.state.clearingOrigin)
-      this.setState({ clearingOrigin: null }, () => {
+    if (this.state.clearing && this.renderedRequests?.length === 0) {
+      this.setState({ clearing: false }, () => {
         window.setTimeout(() => this.focusFirstRequestOrHeading(), 0)
       })
     }
@@ -108,11 +116,6 @@ export class Requests extends React.Component {
   setRequestRef(handlerId, element) {
     if (element) this.requestRefs.set(handlerId, element)
     else this.requestRefs.delete(handlerId)
-  }
-
-  setClearButtonRef(groupKey, element) {
-    if (element) this.clearButtonRefs.set(groupKey, element)
-    else this.clearButtonRefs.delete(groupKey)
   }
 
   focusFirstRequestOrHeading() {
@@ -138,31 +141,32 @@ export class Requests extends React.Component {
     ;(target || this.inboxHeadingRef.current)?.focus()
   }
 
-  openClearConfirmation(origin, groupKey) {
-    if (this.clearPendingOrigins.has(origin)) return
-    this.clearReturnFocusRef.current = this.clearButtonRefs.get(groupKey)
-    this.setState({ clearOrigin: origin, clearGroupKey: groupKey })
+  openClearConfirmation() {
+    if (this.state.clearing) return
+    this.setState({ clearConfirm: true })
   }
 
   cancelClearConfirmation() {
-    this.setState({ clearOrigin: null, clearGroupKey: null })
+    this.setState({ clearConfirm: false })
   }
 
-  confirmClearRequests(origin) {
-    if (this.clearPendingOrigins.has(origin)) return
-    this.clearPendingOrigins.add(origin)
-    this.setState({ clearOrigin: null, clearGroupKey: null, clearingOrigin: origin })
-    link.send('tray:clearRequestsByOrigin', this.props.account, origin)
+  confirmClearRequests() {
+    if (this.state.clearing) return
+    this.setState({ clearConfirm: false, clearing: true })
+    link.send('tray:clearRequests', this.props.account)
   }
 
   renderPreview() {
-    const reqCount = Object.keys(this.store('main.accounts', this.props.account, 'requests') || {}).length
+    const requests = Object.values(this.store('main.accounts', this.props.account, 'requests') || {})
+    const summary = requestPreviewSummary(requests)
+    const summaryCopy = requestSummaryCopy(summary)
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <button
           ref={this.previewRef}
           type='button'
           className='requestsPreview'
+          aria-label={summary.total ? `Requests. ${summaryCopy}` : 'Requests'}
           onClick={() => {
             restorePreviewFocus = true
             const crumb = {
@@ -177,13 +181,19 @@ export class Requests extends React.Component {
         >
           <div className={'requestPreviewContent'}>
             <div className={'requestPreviewContentTitle'}>
-              <span style={reqCount ? { color: 'var(--good)' } : {}}>
+              <span style={summary.total ? { color: 'var(--good)' } : {}}>
                 <Icon name='requests' size={13} />
               </span>
-              <span>{reqCount ? (reqCount === 1 ? '1 request' : reqCount + ' requests') : 'Requests'}</span>
+              <span>Requests</span>
             </div>
-            <div className={'requestPreviewContentArrow'} style={reqCount ? { color: 'var(--good)' } : {}}>
-              <Icon name='next' size={14} />
+            <div className='requestPreviewContentEnd'>
+              {summary.total ? <span className='requestPreviewContentMeta'>{summaryCopy}</span> : null}
+              <div
+                className={'requestPreviewContentArrow'}
+                style={summary.total ? { color: 'var(--good)' } : {}}
+              >
+                <Icon name='next' size={14} />
+              </div>
             </div>
           </div>
         </button>
@@ -191,10 +201,14 @@ export class Requests extends React.Component {
     )
   }
 
-  renderClearConfirmation(origin, count, groupKey) {
-    if (this.state.clearOrigin !== origin || this.state.clearGroupKey !== groupKey) return null
+  renderClearConfirmation(count) {
+    if (!this.state.clearConfirm) return null
 
     const requestLabel = count === 1 ? 'request' : 'requests'
+    const clearBody =
+      count === 1
+        ? 'This removes this request from the list. It does not cancel a transaction already submitted.'
+        : 'This removes all requests from the list. It does not cancel transactions already submitted.'
 
     return (
       <DialogSurface
@@ -207,10 +221,10 @@ export class Requests extends React.Component {
         onCancel={() => this.cancelClearConfirmation()}
       >
         <div id='request-clear-title' className='requestGroupClearTitle'>
-          {`Clear ${count} staged ${requestLabel}?`}
+          {`Clear ${count} ${requestLabel}?`}
         </div>
         <div id='request-clear-body' className='requestGroupClearBody'>
-          {`This removes the staged ${requestLabel} from this list. It does not cancel transactions already submitted.`}
+          {clearBody}
         </div>
         <div className='requestGroupClearActions'>
           <button
@@ -224,9 +238,9 @@ export class Requests extends React.Component {
           <button
             type='button'
             className='wrenControl wrenControlDanger wrenControlCompact'
-            onClick={() => this.confirmClearRequests(origin)}
+            onClick={() => this.confirmClearRequests()}
           >
-            Clear all
+            {count === 1 ? 'Clear' : 'Clear all'}
           </button>
         </div>
       </DialogSurface>
@@ -239,9 +253,8 @@ export class Requests extends React.Component {
     return { active, queued: !active }
   }
 
-  renderRequestGroup(origin, requests, groupKey, originCount) {
+  renderRequestGroup(origin, requests, groupKey) {
     const groupName = getOriginDisplayName(this.store('main.origins', origin, 'name'))
-    const clearing = this.clearPendingOrigins.has(origin)
 
     return (
       <section className='requestGroupBlock' key={groupKey}>
@@ -252,19 +265,7 @@ export class Requests extends React.Component {
             </div>
             <div className='requestGroupName'>{groupName}</div>
           </div>
-          <button
-            ref={(element) => this.setClearButtonRef(groupKey, element)}
-            type='button'
-            aria-label={`Clear requests from ${groupName}`}
-            className='requestGroupButton wrenControl wrenControlGhost wrenControlCompact'
-            disabled={clearing}
-            onClick={() => this.openClearConfirmation(origin, groupKey)}
-          >
-            <Icon name='close' size={14} />
-            <span className='requestGroupButtonLabel'>{'Clear all'}</span>
-          </button>
         </div>
-        {this.renderClearConfirmation(origin, originCount, groupKey)}
         <Cluster className='requestLedger'>
           {!requests.length ? (
             <div key='noReq' className='noRequests'>
@@ -474,16 +475,11 @@ export class Requests extends React.Component {
 
   renderExpanded() {
     const activeAccount = this.store('main.accounts', this.props.account)
-    const requests = Object.values(activeAccount.requests || {}).sort(byRequestQueue)
+    const requests = Object.values(activeAccount.requests || {}).sort(byRequestRecency)
     this.renderedRequests = requests
     const reviewQueue = requests.filter((request) => request.mode !== 'monitor')
     this.activeRequestId = activeAccount.activeRequestId
     this.requestIndexes = new Map(requests.map((request, index) => [request.handlerId, index]))
-
-    const originCounts = {}
-    requests.forEach((req) => {
-      originCounts[req.origin] = (originCounts[req.origin] || 0) + 1
-    })
 
     const groups = requests.reduce((result, req) => {
       const previous = result[result.length - 1]
@@ -508,11 +504,24 @@ export class Requests extends React.Component {
           Requests
         </h2>
         {requests.length ? (
-          <div className='requestQueueStatus' role='status' aria-live='polite'>
-            <span className='requestQueueStatusTitle'>{`Requests (${requests.length})`}</span>
-            <span className='requestQueueStatusWaiting'>{waitingCopy}</span>
+          <div className='requestQueueStatus'>
+            <div className='requestQueueStatusSummary' role='status' aria-live='polite'>
+              <span className='requestQueueStatusTitle'>{`Requests (${requests.length})`}</span>
+              <span className='requestQueueStatusWaiting'>{waitingCopy}</span>
+            </div>
+            <button
+              ref={this.clearReturnFocusRef}
+              type='button'
+              aria-label='Clear all requests'
+              className='requestClearAll wrenControl wrenControlGhost wrenControlIcon'
+              disabled={this.state.clearing}
+              onClick={() => this.openClearConfirmation()}
+            >
+              <Icon name='close' size={14} />
+            </button>
           </div>
         ) : null}
+        {this.renderClearConfirmation(requests.length)}
         {groups.length === 0 ? (
           <WrenEmptyState
             image={emptyRequests}
@@ -522,14 +531,7 @@ export class Requests extends React.Component {
             transparentImage
           />
         ) : (
-          groups.map((group) => {
-            return this.renderRequestGroup(
-              group.origin,
-              group.requests,
-              group.key,
-              originCounts[group.origin]
-            )
-          })
+          groups.map((group) => this.renderRequestGroup(group.origin, group.requests, group.key))
         )}
       </div>
     )

@@ -818,6 +818,13 @@
   .requestSign:disabled
     opacity .55
 
+  .requestSign:disabled .requestSignButton,
+  .requestSign:disabled .requestSignButton:hover
+    border-color var(--wren-control-primary-border)
+    color var(--wren-text-inverse)
+    background var(--wren-control-texture-light), var(--wren-accent-primary)
+    box-shadow var(--wren-control-primary-shadow)
+
 .requestNoticeApproval
   background var(--wren-bg-subtle)
 
@@ -937,6 +944,13 @@
   background var(--wren-bg-elevated)
   align-items center
   justify-content center
+  box-sizing border-box
+  line-height 0
+
+  > svg
+    display block
+    flex 0 0 auto
+    overflow visible
 
 .txLifecycle-success .txLifecycleMark
   color var(--wren-success)
@@ -1028,6 +1042,14 @@
 .txLifecycle-failure .txLifecycleStep-current .txLifecycleStepMarker
   border-color var(--wren-danger)
   background var(--wren-danger)
+
+.requestApproveRecoverable
+  min-height 114px
+  padding-top 14px
+  padding-bottom 14px
+
+  .requestActionContextCopy span
+    max-width 390px
 
 .txLifecycleEvidence
   position relative

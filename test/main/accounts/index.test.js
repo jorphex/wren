@@ -2125,25 +2125,53 @@ describe('ordinary transaction terminal monitoring', () => {
       outcome: 'replaced'
     })
   })
+
+  it('dwells on confirmation, returns to the wallet, and removes the terminal row after one minute', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.current()
+    const target = monitored('confirmed-handoff')
+    const dismiss = jest.spyOn(targetAccount, 'dismissRequestReview')
+    targetAccount.addRequest(target)
+
+    try {
+      expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(true)
+      expect(target).toMatchObject({ status: 'confirmed', notice: 'Confirmed' })
+      expect(targetAccount.requests[target.handlerId]).toBe(target)
+
+      jest.advanceTimersByTime(3999)
+      expect(dismiss).not.toHaveBeenCalled()
+
+      jest.advanceTimersByTime(1)
+      expect(dismiss).toHaveBeenCalledWith(target.handlerId)
+      expect(targetAccount.requests[target.handlerId]).toBe(target)
+
+      jest.advanceTimersByTime(56_000)
+      expect(targetAccount.requests[target.handlerId]).toBeUndefined()
+    } finally {
+      dismiss.mockRestore()
+      jest.useRealTimers()
+    }
+  })
 })
 
-describe('#clearRequestsByOrigin', () => {
-  beforeEach(() => {
-    nav.forward.mockClear()
-    Accounts.addRequest(request)
-    Accounts.addRequest({ ...request, handlerId: '2' })
-    Accounts.addRequest({ ...request, handlerId: '3', origin: '07h3r' })
-  })
+describe('#clearRequests', () => {
+  it('declines untouched requests and silently removes already-answered monitor rows', () => {
+    const pendingResponse = jest.fn()
+    const monitorResponse = jest.fn()
+    Accounts.addRequest(request, pendingResponse)
+    Accounts.addRequest({ ...request, handlerId: '2', origin: 'other-origin' }, monitorResponse)
+    Object.assign(Accounts.accounts[account.id].requests['2'], {
+      mode: 'monitor',
+      status: 'confirming'
+    })
 
-  it('should remove any request from a given origin', () => {
-    Accounts.clearRequestsByOrigin(account.id, request.origin)
-    expect(Object.keys(Accounts.accounts[account.id].requests)).toHaveLength(1)
-    expect(
-      nav.forward.mock.calls
-        .map(([, crumb]) => crumb)
-        .filter(({ view }) => view === 'requestView')
-        .map(({ data }) => data.requestId)
-    ).toEqual([request.handlerId, '3'])
+    Accounts.clearRequests(account.id)
+
+    expect(Object.keys(Accounts.accounts[account.id].requests)).toHaveLength(0)
+    expect(pendingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+    )
+    expect(monitorResponse).not.toHaveBeenCalled()
   })
 })
 

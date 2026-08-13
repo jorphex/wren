@@ -196,6 +196,9 @@ type PendingNonceAdjustment = {
   adjustments: Array<-1 | 1>
 }
 
+const CONFIRMED_TRANSACTION_REVIEW_DWELL_MS = 4000
+const CONFIRMED_TRANSACTION_RETENTION_MS = 60_000
+
 export class Accounts extends EventEmitter {
   _current: string
   accounts: Record<string, FrameAccount>
@@ -203,6 +206,8 @@ export class Accounts extends EventEmitter {
   private readonly dataScanner: DataScanner
   private readonly pendingNonceAdjustments = new Map<string, PendingNonceAdjustment>()
   private readonly eip7702MonitorTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly transactionReviewDismissTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private readonly transactionCleanupTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly eip7702Admissions = new Set<string>()
   private readonly removeOperationLifecycleObserver: () => void
 
@@ -426,6 +431,7 @@ export class Accounts extends EventEmitter {
       request.notice = 'Confirmed'
       request.completed = operation.updatedAt
       recordRequestActivity(request, 'confirmed')
+      if (request.type === 'transaction') this.scheduleConfirmedTransactionHandoff(account, request)
     } else if (operation.state === 'verified-clearance' && request.type === 'eip7702Revoke') {
       request.status = RequestStatus.Confirmed
       request.notice = 'Delegation removed'
@@ -462,6 +468,54 @@ export class Accounts extends EventEmitter {
       recordRequestActivity(request, 'clearance-unverified')
     }
     account.update()
+  }
+
+  private transactionTerminalTimerKey(accountId: string, handlerId: string) {
+    return `${accountId.toLowerCase()}:${handlerId}`
+  }
+
+  cancelTransactionTerminalTimers(accountId: string, handlerId: string) {
+    const key = this.transactionTerminalTimerKey(accountId, handlerId)
+    const dismissTimer = this.transactionReviewDismissTimers.get(key)
+    const cleanupTimer = this.transactionCleanupTimers.get(key)
+    if (dismissTimer) clearTimeout(dismissTimer)
+    if (cleanupTimer) clearTimeout(cleanupTimer)
+    this.transactionReviewDismissTimers.delete(key)
+    this.transactionCleanupTimers.delete(key)
+  }
+
+  private scheduleConfirmedTransactionHandoff(account: FrameAccount, request: TransactionRequest) {
+    const key = this.transactionTerminalTimerKey(account.id, request.handlerId)
+    const completedAt = request.completed || Date.now()
+
+    if (!this.transactionReviewDismissTimers.has(key)) {
+      const dismissTimer = setTimeout(() => {
+        this.transactionReviewDismissTimers.delete(key)
+        const current = this.accounts[account.address]?.getRequest<TransactionRequest>(request.handlerId)
+        if (current?.type === 'transaction' && current.status === RequestStatus.Confirmed) {
+          account.dismissRequestReview(request.handlerId)
+        }
+      }, CONFIRMED_TRANSACTION_REVIEW_DWELL_MS)
+      dismissTimer.unref?.()
+      this.transactionReviewDismissTimers.set(key, dismissTimer)
+    }
+
+    if (!this.transactionCleanupTimers.has(key)) {
+      const cleanupDelay = Math.max(0, completedAt + CONFIRMED_TRANSACTION_RETENTION_MS - Date.now())
+      const cleanupTimer = setTimeout(() => {
+        this.transactionCleanupTimers.delete(key)
+        const current = this.accounts[account.address]?.getRequest<TransactionRequest>(request.handlerId)
+        if (
+          current?.type === 'transaction' &&
+          current.status === RequestStatus.Confirmed &&
+          current.completed === completedAt
+        ) {
+          account.clearRequest(request.handlerId, 'confirmed')
+        }
+      }, cleanupDelay)
+      cleanupTimer.unref?.()
+      this.transactionCleanupTimers.set(key, cleanupTimer)
+    }
   }
 
   private nonceAdjustmentKey(account: FrameAccount, handlerId: string) {
@@ -1499,6 +1553,7 @@ export class Accounts extends EventEmitter {
     recordRequestActivity(request, outcome)
 
     if (receiptStatus === 1n) this.dropReplacedTransactions(account, id)
+    if (receiptStatus === 1n) this.scheduleConfirmedTransactionHandoff(account, request)
     account.update()
     return true
   }
@@ -1945,6 +2000,10 @@ export class Accounts extends EventEmitter {
     this.removeOperationLifecycleObserver()
     this.eip7702MonitorTimers.forEach((timer) => clearTimeout(timer))
     this.eip7702MonitorTimers.clear()
+    this.transactionReviewDismissTimers.forEach((timer) => clearTimeout(timer))
+    this.transactionReviewDismissTimers.clear()
+    this.transactionCleanupTimers.forEach((timer) => clearTimeout(timer))
+    this.transactionCleanupTimers.clear()
     this.dataScanner.close()
     // usbDetect.stopMonitoring()
   }
@@ -2437,7 +2496,6 @@ export class Accounts extends EventEmitter {
       currentAccount.requests[handlerId].notice = 'Verifying'
       currentAccount.requests[handlerId].mode = RequestMode.Monitor
       currentAccount.update()
-      currentAccount.releaseRequestReview(handlerId)
 
       void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
         const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)
@@ -2493,11 +2551,9 @@ export class Accounts extends EventEmitter {
     return false
   }
 
-  clearRequestsByOrigin(address: string, origin: string) {
-    if (address && origin) {
-      const account = this.accounts[address]
-      if (account) account.clearRequestsByOrigin(origin)
-    }
+  clearRequests(address: string) {
+    if (!address) return
+    this.accounts[address.toLowerCase()]?.clearRequests()
   }
 
   rejectUnapprovedRequestsForOriginChain(origin: string, chainId: number) {

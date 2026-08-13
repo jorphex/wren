@@ -361,6 +361,7 @@ class FrameAccount {
   clearRequest(handlerId: string, outcome?: ActivityOutcome) {
     log.info(`clearRequest(${handlerId}) for account ${this.id}`)
 
+    this.accounts.cancelTransactionTerminalTimers?.(this.id, handlerId)
     const clearedActiveReview = this.activeReviewHandlerId === handlerId
     const request = this.requests[handlerId]
     if (request && !this.accounts.isLifecycleActivityManaged?.(request)) {
@@ -409,12 +410,14 @@ class FrameAccount {
     }
   }
 
-  clearRequestsByOrigin(origin: string) {
+  clearRequests() {
     this.deferRequestPresentation(() => {
       Object.values(this.requests).forEach((req) => {
-        if (req.origin === origin) {
+        if (req.status === undefined) {
           const err = { code: 4001, message: 'User rejected the request' }
           this.rejectRequest(req, err)
+        } else {
+          this.clearRequest(req.handlerId)
         }
       })
     })
@@ -1431,6 +1434,15 @@ class FrameAccount {
     } finally {
       this.update()
     }
+    return true
+  }
+
+  dismissRequestReview(handlerId: string) {
+    if (this.activeReviewHandlerId !== handlerId) return false
+
+    this.activeReviewHandlerId = undefined
+    requireStoreAction('navClearReq')(this.id, handlerId, false)
+    this.update()
     return true
   }
 
