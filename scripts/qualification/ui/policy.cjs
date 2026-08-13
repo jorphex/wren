@@ -335,11 +335,20 @@ const reviewScenarios = () => [
     id: 'tray-account-ledger-full-1',
     renderer: 'tray',
     state: 'account-ledger',
+    balanceArtwork: true,
     scale: 1,
     logicalWidth: 760,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum Mainnet', 'Balances', 'Activity', 'Connected apps', 'Signer', 'Remove account']
+    requiredText: [
+      'Ethereum Mainnet',
+      'Balances',
+      'Yearn WETH',
+      'Activity',
+      'Connected apps',
+      'Signer',
+      'Remove account'
+    ]
   },
   {
     id: 'tray-account-requests-summary-full-1',

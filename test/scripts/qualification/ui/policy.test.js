@@ -184,7 +184,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     'signer',
     'settings'
   ])
-  expect(ledgerFixture.panel.account.modules.balances.height).toBe(318)
+  expect(ledgerFixture.panel.account.modules.balances.height).toBe(396)
+  expect(ledgerFixture.main.balances[QUALIFICATION_ACCOUNT]).toHaveLength(4)
   expect(ledgerFixture.panel.account.modules.activity.height).toBe(328)
   expect(ledgerFixture.main.activity).toHaveLength(4)
   expect(ledgerFixture.panel.account.modules.permissions.height).toBe(168)

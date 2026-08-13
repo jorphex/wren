@@ -714,6 +714,16 @@ const fixtureFor = (scenario) => {
         symbol: 'WRK'
       }
     ]
+    if (scenario.balanceArtwork) {
+      state.main.balances[QUALIFICATION_ACCOUNT].push({
+        chainId: 1,
+        address: '0xc56413869c6cdf96496f2b1ef801fedbdfa7ddb0',
+        balance: '250000000000000000',
+        decimals: 18,
+        name: 'Yearn WETH',
+        symbol: 'yvWETH-1'
+      })
+    }
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
       workshop: { origin: 'workshop.example', provider: true }
     }
@@ -728,7 +738,7 @@ const fixtureFor = (scenario) => {
     state.panel.account.modules = {
       requests: { height: 48 },
       chains: { height: 104 },
-      balances: { height: 318 },
+      balances: { height: scenario.balanceArtwork ? 396 : 318 },
       activity: { height: 328 },
       permissions: { height: 168 },
       signer: { height: 52 },

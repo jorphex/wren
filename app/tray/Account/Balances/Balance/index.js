@@ -44,6 +44,7 @@ export class Balance extends React.Component {
         <div className='signerBalanceInner' style={{ opacity: !scanning ? 1 : 0 }}>
           <div className='signerBalanceIcon'>
             <AssetMark
+              className='balancesAssetMark'
               asset={{
                 ...balance,
                 address: balance.address,

@@ -99,6 +99,9 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
   expect(balancesStyle).toMatch(
     /\.signerBalanceIcon[\s\S]*?top 19px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
   )
+  expect(balancesStyle).toMatch(
+    /\.balancesAssetMark \.assetMarkGlyph[\s\S]*?border-color transparent[\s\S]*?box-shadow none/
+  )
 })
 
 test('keeps the account selector and privacy control on one optical axis', () => {
