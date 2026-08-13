@@ -347,6 +347,7 @@ it('escalates truthful Trezor waiting guidance and keeps cancellation available'
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
   expect(screen.getByText('Waiting for Trezor')).toBeTruthy()
+  expect(document.querySelector('.requestActionContextIconSign')).toBeTruthy()
   act(() => jest.advanceTimersByTime(5000))
   expect(screen.getByText('Still waiting for Trezor')).toBeTruthy()
   act(() => jest.advanceTimersByTime(5000))

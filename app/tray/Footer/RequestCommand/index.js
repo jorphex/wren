@@ -572,7 +572,7 @@ export class RequestCommand extends React.Component {
     return (
       <div className='requestApprove requestApproveTransaction requestApproveSigning' aria-busy='true'>
         <div className='requestActionContext' role='status' aria-live='polite'>
-          <span className='requestActionContextIcon'>
+          <span className='requestActionContextIcon requestActionContextIconSign'>
             <Icon name='sign' size={19} />
           </span>
           <span className='requestActionContextCopy'>
@@ -721,7 +721,7 @@ export class RequestCommand extends React.Component {
         ) : (
           <div className='requestApprove requestApproveSignature'>
             <div className='requestActionContext'>
-              <span className='requestActionContextIcon'>
+              <span className='requestActionContextIcon requestActionContextIconSign'>
                 <Icon name='sign' size={19} />
               </span>
               <span className='requestActionContextCopy'>
