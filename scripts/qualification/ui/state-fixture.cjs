@@ -6,6 +6,7 @@ const QUALIFICATION_REQUEST = 'qualification-eip7702-revocation'
 const QUALIFICATION_CODE_HASH = `0x${'ab'.repeat(32)}`
 const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
+const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
 
 const baseState = () => ({
   platform: 'linux',
@@ -100,12 +101,20 @@ const accountHomeNetworks = () => ({
       isTestnet: false,
       connection: { endpoints: [{ connected: true, status: 'connected' }] }
     },
-    10: qualificationNetwork()
+    10: qualificationNetwork(),
+    123456: {
+      id: 123456,
+      name: 'Workshop Chain',
+      explorer: 'https://explorer.example',
+      on: true,
+      isTestnet: false,
+      connection: { endpoints: [{ connected: true, status: 'connected' }] }
+    }
   },
   metadata: {
     1: {
       primaryColor: 'wren-chain-ethereum',
-      nativeCurrency: { symbol: 'ETH', decimals: 18, usd: 3200 },
+      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: 3200 },
       gas: {
         price: {
           fees: { nextBaseFee: '0x3b9aca00', maxPriorityFeePerGas: '0x3b9aca00' },
@@ -116,11 +125,22 @@ const accountHomeNetworks = () => ({
     },
     10: {
       primaryColor: 'wren-chain-optimism',
-      nativeCurrency: { symbol: 'ETH', decimals: 18, usd: 3200 },
+      nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: 3200 },
       gas: {
         price: {
           fees: { nextBaseFee: '0x1dcd6500', maxPriorityFeePerGas: '0x1dcd6500' },
           levels: { fast: '0x3b9aca00' }
+        },
+        samples: []
+      }
+    },
+    123456: {
+      primaryColor: 'accent6',
+      nativeCurrency: { symbol: 'WRK', name: 'Workshop token', decimals: 18, usd: 1 },
+      gas: {
+        price: {
+          fees: { nextBaseFee: '0x3b9aca00', maxPriorityFeePerGas: '0x3b9aca00' },
+          levels: { fast: '0x77359400' }
         },
         samples: []
       }
@@ -179,6 +199,39 @@ const addressLookalikeRequest = () => ({
     targets: [{ address: QUALIFICATION_LOOKALIKE, state: 'lookalike' }]
   }
 })
+
+const monitoredTransactionRequest = (status) => {
+  const request = addressLookalikeRequest()
+  request.handlerId = `qualification-transaction-${status}`
+  request.status = status
+  request.mode = 'monitor'
+  request.notice = status === 'confirmed' ? 'Confirmed' : 'Confirming'
+  request.tx = {
+    hash: QUALIFICATION_TX_HASH,
+    confirmations: status === 'confirmed' ? 13 : 4,
+    receipt: {
+      status: '0x1',
+      blockNumber: '0x123456',
+      blockHash: `0x${'ef'.repeat(32)}`,
+      gasUsed: '0x5208',
+      effectiveGasPrice: '0x3b9aca00'
+    }
+  }
+  request.completed = status === 'confirmed' ? Date.UTC(2026, 7, 12, 14, 0) : undefined
+  delete request.addressSafety
+  return request
+}
+
+const safetyUnavailableRequest = () => {
+  const request = addressLookalikeRequest()
+  request.handlerId = 'qualification-safety-unavailable'
+  request.status = 'error'
+  request.notice = 'Delegation recheck unavailable'
+  request.retainedPreBroadcastError = { reason: 'final-safety-check' }
+  request.recoverableError = { code: 'account-code-evidence-unavailable' }
+  delete request.addressSafety
+  return request
+}
 
 const qualificationActivity = () => [
   {
@@ -329,6 +382,64 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'accounts-icons') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'accounts', data: {} }]
+    }
+    const signerTypes = ['ledger', 'trezor', 'lattice', 'seed', 'ring']
+    const signerNames = {
+      ledger: 'Ledger',
+      trezor: 'Trezor',
+      lattice: 'GridPlus',
+      seed: 'Seed phrase',
+      ring: 'Imported keys'
+    }
+    state.main.signers = Object.fromEntries(
+      signerTypes.map((type, index) => [
+        `qualification-${type}`,
+        {
+          id: `qualification-${type}`,
+          name: signerNames[type],
+          type,
+          status: 'ready',
+          addresses: [],
+          createdAt: signerTypes.length - index
+        }
+      ])
+    )
+    const watchAddress = `0x${'7'.repeat(40)}`
+    state.main.accounts = {
+      [watchAddress]: {
+        ...qualificationAccount(),
+        id: watchAddress,
+        address: watchAddress,
+        name: 'Watch account',
+        lastSignerType: 'address'
+      }
+    }
+  }
+
+  if (scenario.state === 'trezor-pin') {
+    const signerId = 'qualification-trezor-pin'
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'expandedSigner', data: { signer: signerId } }]
+    }
+    state.main.signers = {
+      [signerId]: {
+        id: signerId,
+        name: 'Trezor',
+        type: 'trezor',
+        model: 'Trezor',
+        status: 'need pin',
+        addresses: []
+      }
+    }
+  }
+
   if (scenario.state === 'settings' || scenario.state === 'settings-local-connections') {
     state.windows.dash = {
       ...state.windows.dash,
@@ -401,12 +512,27 @@ const fixtureFor = (scenario) => {
         on: false,
         isTestnet: true,
         connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      },
+      123456: {
+        id: 123456,
+        name: 'Workshop Chain',
+        explorer: 'https://explorer.example',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
       }
     }
     state.main.networksMeta.ethereum = {
-      1: { nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
-      10: { nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
-      11155111: { nativeCurrency: { symbol: 'ETH', name: 'Sepolia Ether', decimals: 18 } }
+      1: { primaryColor: 'accent1', nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
+      10: { primaryColor: 'accent4', nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
+      11155111: {
+        primaryColor: 'accent2',
+        nativeCurrency: { symbol: 'ETH', name: 'Sepolia Ether', decimals: 18 }
+      },
+      123456: {
+        primaryColor: 'accent6',
+        nativeCurrency: { symbol: 'WRK', name: 'Workshop token', decimals: 18 }
+      }
     }
   }
 
@@ -469,19 +595,29 @@ const fixtureFor = (scenario) => {
     state.main.balances[QUALIFICATION_ACCOUNT] = [
       {
         chainId: 1,
-        address: null,
+        address: NATIVE_CURRENCY,
         balance: '1250000000000000000',
         decimals: 18,
         name: 'Ether',
+        native: true,
         symbol: 'ETH'
       },
       {
         chainId: 10,
-        address: null,
+        address: NATIVE_CURRENCY,
         balance: '500000000000000000',
         decimals: 18,
         name: 'Ether',
+        native: true,
         symbol: 'ETH'
+      },
+      {
+        chainId: 123456,
+        address: '0x0000000000000000000000000000000000001234',
+        balance: '42000000000000000000',
+        decimals: 18,
+        name: 'Workshop token',
+        symbol: 'WRK'
       }
     ]
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
@@ -498,12 +634,67 @@ const fixtureFor = (scenario) => {
     state.panel.account.modules = {
       requests: { height: 48 },
       chains: { height: 104 },
-      balances: { height: 248 },
+      balances: { height: 318 },
       activity: { height: 328 },
       permissions: { height: 168 },
       signer: { height: 52 },
       settings: { height: 52 }
     }
+  }
+
+  if (scenario.state === 'account-requests-summary') {
+    prepareSelectedAccount(state)
+    state.main.accounts[QUALIFICATION_ACCOUNT].requests = {
+      review: { handlerId: 'review', status: 'pending' },
+      submitted: { handlerId: 'submitted', status: 'verifying' },
+      included: { handlerId: 'included', status: 'confirming' },
+      receipt: { handlerId: 'receipt', status: 'confirmed' }
+    }
+    state.panel.account.moduleOrder = ['requests']
+    state.panel.account.modules.requests.height = 48
+  }
+
+  if (scenario.state === 'account-requests-list') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = {
+      workshop: { name: 'workshop.example' },
+      garden: { name: 'garden.example' }
+    }
+    const now = Date.now()
+    const oldest = monitoredTransactionRequest('confirmed')
+    Object.assign(oldest, {
+      handlerId: 'qualification-request-oldest',
+      origin: 'garden',
+      created: now - 180_000,
+      queueIndex: 1
+    })
+    const middle = monitoredTransactionRequest('confirming')
+    Object.assign(middle, {
+      handlerId: 'qualification-request-middle',
+      created: now - 120_000,
+      queueIndex: 2
+    })
+    const latest = monitoredTransactionRequest('confirming')
+    Object.assign(latest, {
+      handlerId: 'qualification-request-latest',
+      created: now - 60_000,
+      queueIndex: 3
+    })
+    state.main.accounts[QUALIFICATION_ACCOUNT].requests = {
+      oldest,
+      middle,
+      latest
+    }
+    state.main.accounts[QUALIFICATION_ACCOUNT].activeRequestId = undefined
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'requests', account: QUALIFICATION_ACCOUNT, title: 'Requests' }
+      }
+    ]
   }
 
   if (scenario.state === 'account-activity' || scenario.state === 'account-activity-lifecycle') {
@@ -607,6 +798,33 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = 132
+  }
+
+  if (
+    scenario.state === 'transaction-safety-unavailable' ||
+    scenario.state === 'transaction-confirming' ||
+    scenario.state === 'transaction-confirmed'
+  ) {
+    const request =
+      scenario.state === 'transaction-safety-unavailable'
+        ? safetyUnavailableRequest()
+        : monitoredTransactionRequest(scenario.state === 'transaction-confirmed' ? 'confirmed' : 'confirming')
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 230
   }
 
   return state

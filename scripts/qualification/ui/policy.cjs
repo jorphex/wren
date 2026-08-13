@@ -68,6 +68,27 @@ const reviewScenarios = () => [
     requiredText: ['Watch-only']
   },
   {
+    id: 'dash-accounts-icons-full-1',
+    renderer: 'dash',
+    state: 'accounts-icons',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.watchAccountIcon',
+    requiredText: ['Watch account', 'Ledger', 'Trezor', 'GridPlus', 'Seed Phrase', 'Imported Keys']
+  },
+  {
+    id: 'dash-trezor-pin-full-1',
+    renderer: 'dash',
+    state: 'trezor-pin',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.trezorPinInput',
+    requiredControls: ['PIN position 1', 'PIN position 9'],
+    requiredText: ['Enter PIN', 'scrambled matrix', '0 positions selected']
+  },
+  {
     id: 'dash-settings-full-1',
     renderer: 'dash',
     state: 'settings',
@@ -183,7 +204,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkBreak',
-    requiredText: ['Ethereum Mainnet', 'Optimism Mainnet', 'Sepolia', 'Testnets']
+    requiredText: ['Ethereum Mainnet', 'Optimism Mainnet', 'Workshop Chain', 'Sepolia', 'Testnets']
   },
   {
     id: 'dash-network-editor-full-1',
@@ -204,6 +225,64 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredText: ['Ethereum Mainnet', 'Balances', 'Activity', 'Connected apps', 'Signer', 'Remove account']
+  },
+  {
+    id: 'tray-account-requests-summary-full-1',
+    renderer: 'tray',
+    state: 'account-requests-summary',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestPreviewContentMeta',
+    requiredControls: ['Requests. 3 requests · 1 pending · 2 confirming'],
+    requiredText: ['Requests', '3 requests · 1 pending · 2 confirming']
+  },
+  {
+    id: 'tray-account-requests-list-full-1',
+    renderer: 'tray',
+    state: 'account-requests-list',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestClearAll',
+    requiredControls: ['Clear all requests'],
+    requiredText: ['Requests (3)', 'No requests waiting', 'workshop.example', 'garden.example']
+  },
+  {
+    id: 'tray-transaction-safety-unavailable-short-1',
+    renderer: 'tray',
+    state: 'transaction-safety-unavailable',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.requestApproveRecoverable',
+    requiredControls: ['Close request', 'Recheck'],
+    requiredText: [
+      'Safety check unavailable',
+      'The safety check could not be repeated. Nothing was signed or sent.'
+    ]
+  },
+  {
+    id: 'tray-transaction-confirming-full-1',
+    renderer: 'tray',
+    state: 'transaction-confirming',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.txLifecycle',
+    requiredControls: ['View details'],
+    requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4']
+  },
+  {
+    id: 'tray-transaction-confirmed-full-1',
+    renderer: 'tray',
+    state: 'transaction-confirmed',
+    scale: 1,
+    logicalWidth: 760,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.txLifecycle-success',
+    requiredControls: ['View details', 'Close'],
+    requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
   },
   {
     id: 'tray-account-activity-full-1',

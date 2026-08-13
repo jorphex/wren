@@ -7,6 +7,7 @@ const {
   scenarioMatrix
 } = require('../../../../scripts/qualification/ui/policy.cjs')
 const {
+  QUALIFICATION_ACCOUNT,
   fixtureFor,
   invokeReplyFor,
   rpcReplyFor
@@ -183,13 +184,60 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     'signer',
     'settings'
   ])
-  expect(ledgerFixture.panel.account.modules.balances.height).toBe(248)
+  expect(ledgerFixture.panel.account.modules.balances.height).toBe(318)
   expect(ledgerFixture.panel.account.modules.activity.height).toBe(328)
   expect(ledgerFixture.main.activity).toHaveLength(4)
   expect(ledgerFixture.panel.account.modules.permissions.height).toBe(168)
   expect(fixtureFor(activity).windows.panel.nav[0]).toMatchObject({
     view: 'expandedModule',
     data: { id: 'activity', title: 'Activity' }
+  })
+})
+
+it('fixtures the transaction handoff, request summary, and Trezor PIN review surfaces', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const byId = (id) => scenarios.find((scenario) => scenario.id === id)
+
+  const summary = byId('tray-account-requests-summary-full-1')
+  const summaryRequests = fixtureFor(summary).main.accounts[QUALIFICATION_ACCOUNT].requests
+  expect(Object.values(summaryRequests).map(({ status }) => status)).toEqual([
+    'pending',
+    'verifying',
+    'confirming',
+    'confirmed'
+  ])
+
+  const list = fixtureFor(byId('tray-account-requests-list-full-1'))
+  expect(list.windows.panel.nav[0]).toMatchObject({
+    view: 'expandedModule',
+    data: { id: 'requests', title: 'Requests' }
+  })
+  expect(
+    Object.values(list.main.accounts[QUALIFICATION_ACCOUNT].requests).map(({ queueIndex }) => queueIndex)
+  ).toEqual([1, 2, 3])
+
+  const safety = fixtureFor(byId('tray-transaction-safety-unavailable-short-1'))
+  const safetyRequest = Object.values(safety.main.accounts[QUALIFICATION_ACCOUNT].requests)[0]
+  expect(safetyRequest).toMatchObject({
+    status: 'error',
+    notice: 'Delegation recheck unavailable',
+    recoverableError: { code: 'account-code-evidence-unavailable' }
+  })
+
+  const confirming = fixtureFor(byId('tray-transaction-confirming-full-1'))
+  expect(Object.values(confirming.main.accounts[QUALIFICATION_ACCOUNT].requests)[0]).toMatchObject({
+    status: 'confirming',
+    tx: { confirmations: 4 }
+  })
+
+  const trezor = fixtureFor(byId('dash-trezor-pin-full-1'))
+  expect(trezor.windows.dash.nav[0]).toEqual({
+    view: 'expandedSigner',
+    data: { signer: 'qualification-trezor-pin' }
+  })
+  expect(trezor.main.signers['qualification-trezor-pin']).toMatchObject({
+    type: 'trezor',
+    status: 'need pin'
   })
 })
 
