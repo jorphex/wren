@@ -5,3 +5,20 @@ export function shouldSuppressRepeatedShow(recentDisplayEvent: boolean, currentl
 export function shouldAnimateShell(currentlyVisible: boolean, prefersReducedMotion: boolean) {
   return currentlyVisible && !prefersReducedMotion
 }
+
+export function shouldAnimateWorkspaceOpen(
+  workspaceLoaded: boolean,
+  trayVisible: boolean,
+  workspaceSettled: boolean,
+  prefersReducedMotion: boolean
+) {
+  return workspaceLoaded && shouldAnimateShell(trayVisible && !workspaceSettled, prefersReducedMotion)
+}
+
+export function shouldAnimateWorkspaceClose(
+  trayVisible: boolean,
+  workspaceSettled: boolean,
+  prefersReducedMotion: boolean
+) {
+  return shouldAnimateShell(trayVisible && !workspaceSettled, prefersReducedMotion)
+}

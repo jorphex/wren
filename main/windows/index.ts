@@ -20,7 +20,11 @@ import { createRendererView, createWindow, restoreWindow } from './window'
 import { EmbeddedWorkspace } from './embeddedWorkspace'
 import { EmbeddedDapp } from './embeddedDapp'
 import type { DappViewDescriptor } from './dappView'
-import { shouldAnimateShell, shouldSuppressRepeatedShow } from './displayTransition'
+import {
+  shouldAnimateWorkspaceClose,
+  shouldAnimateWorkspaceOpen,
+  shouldSuppressRepeatedShow
+} from './displayTransition'
 import { GlideDetector, shouldAutoHideGlide } from './glide'
 import { GlideSentinel } from './glideSentinel'
 import {
@@ -391,6 +395,7 @@ class Dash {
   private readonly workspace: EmbeddedWorkspace
   private embeddedDapp: EmbeddedDapp | undefined
   private lastLayout: ShellLayout | undefined
+  private workspaceLoaded = false
 
   constructor() {
     const trayWindow = windows.tray
@@ -406,6 +411,7 @@ class Dash {
     )
     this.workspace.loadURL(rendererUrl('dash').toString())
     this.workspace.onLoaded(() => {
+      this.workspaceLoaded = true
       const processId = this.workspace.processId()
       if (processId !== null) log.info('Created dash renderer view process, pid:', processId)
       tray.reposition()
@@ -454,7 +460,12 @@ class Dash {
   public hide() {
     if (this.workspace.isTransitioningTo(false)) return
     this.embeddedDapp?.hide()
-    tray.reposition(false)
+    const animate = shouldAnimateWorkspaceClose(
+      tray.isVisible(),
+      this.workspace.isSettled(false),
+      systemPreferences.getAnimationSettings().prefersReducedMotion
+    )
+    tray.reposition(animate)
     windows.tray?.webContents.focus()
   }
 
@@ -463,8 +474,10 @@ class Dash {
     if (this.workspace.isTransitioningTo(true)) return
 
     const currentlyVisible = tray.isVisible()
-    const animate = shouldAnimateShell(
-      currentlyVisible && !this.workspace.isSettled(true),
+    const animate = shouldAnimateWorkspaceOpen(
+      this.workspaceLoaded,
+      currentlyVisible,
+      this.workspace.isSettled(true),
       systemPreferences.getAnimationSettings().prefersReducedMotion
     )
     if (!currentlyVisible) {
@@ -530,6 +543,7 @@ class Dash {
   }
 
   reload() {
+    this.workspaceLoaded = false
     this.workspace.reload()
   }
 }
