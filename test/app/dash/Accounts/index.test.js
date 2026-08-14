@@ -1,9 +1,11 @@
 import { AddAccounts, Dash } from '../../../../app/dash/Accounts'
+import AccountTypeMark from '../../../../resources/Components/AccountTypeMark'
 import link from '../../../../resources/link'
 import { getAddress } from '../../../../resources/utils'
 import { fireEvent, render, screen } from '../../../componentSetup'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn(), rpc: jest.fn() }))
+jest.mock('../../../../resources/Components/AccountTypeMark', () => jest.fn(() => <svg aria-hidden='true' />))
 
 const account = '0x0000000000000000000000000000000000000001'
 
@@ -26,6 +28,12 @@ it('groups account methods into a semantic ruled chooser', () => {
     'Watch-only'
   ])
   expect(screen.getAllByRole('button')).toHaveLength(7)
+})
+
+it('uses the seed identity mark for the seed phrase route', () => {
+  render(<AddAccounts data={{}} />)
+
+  expect(AccountTypeMark.mock.calls.some(([props]) => props.type === 'seed' && props.size === 20)).toBe(true)
 })
 
 it('keeps each account method a one-click route', () => {

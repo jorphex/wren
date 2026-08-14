@@ -135,7 +135,7 @@ export class AddAccounts extends React.Component {
           <div className='accountTypeList'>
             <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('seed')}>
               <div className='accountTypeSelectIcon'>
-                <Icon name='key' size={20} />
+                <AccountTypeMark type='seed' size={20} />
               </div>
               <div>{'Seed phrase'}</div>
             </button>
