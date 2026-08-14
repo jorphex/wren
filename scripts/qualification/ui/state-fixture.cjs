@@ -540,7 +540,7 @@ const fixtureFor = (scenario) => {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
-      nav: [{ view: 'accounts', data: {} }],
+      nav: [{ view: 'expandedSigner', data: { signer: signerId } }],
       hardwarePrompt: { signerId, dismissible: true, restoreHidden: false }
     }
     state.main.signers = {

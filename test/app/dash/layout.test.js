@@ -108,11 +108,12 @@ test('keeps dashboard add actions compact and inactive network toggles neutral',
 
 test('keeps watch and signer identities on the same account-list axis', () => {
   expect(dashStyle).toMatch(
-    /\.watchAccount[\s\S]*?padding 0 var\(--wren-space-2\)[\s\S]*?\.watchAccountIcon[\s\S]*?width 38px[\s\S]*?height 38px[\s\S]*?border 1px solid var\(--wren-border-subtle\)[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background var\(--wren-surface-inset\)/
+    /\.watchAccount[\s\S]*?padding 0 var\(--wren-space-2\)[\s\S]*?\.watchAccountIcon[\s\S]*?width 38px[\s\S]*?height 38px[\s\S]*?border 0[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background transparent/
   )
   expect(signerStyle).toMatch(
-    /\.signerTop[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-2\) var\(--wren-space-2\)[\s\S]*?\.signerDetails[\s\S]*?grid-template-columns 38px minmax\(0, 1fr\)[\s\S]*?gap var\(--wren-space-3\)[\s\S]*?\.signerIcon[\s\S]*?border 1px solid var\(--wren-border-subtle\)[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background var\(--wren-surface-inset\)/
+    /\.signersList \.signer[\s\S]*?min-height 72px[\s\S]*?padding 0 var\(--wren-space-2\)[\s\S]*?grid-template-columns minmax\(0, 1fr\) 14px[\s\S]*?\.signerDetails[\s\S]*?grid-template-columns 38px minmax\(0, 1fr\)[\s\S]*?gap var\(--wren-space-3\)[\s\S]*?\.signerIcon[\s\S]*?border 0[\s\S]*?color var\(--wren-accent-primary-hover\)[\s\S]*?background transparent/
   )
+  expect(signerStyle).toMatch(/\.hardwareSignerPromptMark[\s\S]*?border 0[\s\S]*?background transparent/)
   expect(signerStyle).not.toMatch(/\.signerIconHardware[\s\S]{0,100}?transform/)
 })
 

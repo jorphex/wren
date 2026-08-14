@@ -253,8 +253,8 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
 
   const trezor = fixtureFor(byId('dash-trezor-pin-full-1'))
   expect(trezor.windows.dash.nav[0]).toEqual({
-    view: 'accounts',
-    data: {}
+    view: 'expandedSigner',
+    data: { signer: 'qualification-trezor-pin' }
   })
   expect(trezor.windows.dash.hardwarePrompt).toEqual({
     signerId: 'qualification-trezor-pin',

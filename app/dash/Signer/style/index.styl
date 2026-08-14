@@ -72,26 +72,6 @@
       *
         pointer-events none
 
-.signerExpand
-  appearance none
-  color inherit
-  height 26px
-  width 54px
-  border-radius 20px
-  box-sizing border-box
-  background var(--ghostA)
-  border 3px solid var(--ghostZ)
-  cursor pointer
-  display flex
-  justify-content center
-  align-items center
-
-  *
-    pointer-events none
-
-.signerExpand:hover
-  background var(--ghostB)
-
 .signerNameFocused
   background var(--ghostZ)
   .signerNameUpdate
@@ -786,36 +766,33 @@
 .signerIdentity
   min-width 0
 
-.signerIdentity > .signerStatusText
-  margin var(--wren-space-1) 0 0
-  padding 0
-  text-align left
-  white-space nowrap
-
-.signerPreviewSummary
+.signerPreviewMeta
   display flex
-  min-height 44px
-  margin 0 var(--wren-space-4)
-  box-sizing border-box
+  min-width 0
   align-items center
-  justify-content space-between
-  gap var(--wren-space-3)
+  gap var(--wren-space-1)
+
+  .signerStatusText
+    margin 0
+    padding 0
+    flex none
+    text-align left
+    white-space nowrap
+
+.signerPreviewMetaSeparator
+  flex none
+  color var(--wren-text-muted)
 
 .signerPreviewAccountCount
   min-width 0
+  overflow hidden
   color var(--wren-text-tertiary)
   font-family var(--wren-font-ui)
   font-size var(--wren-type-small)
   line-height 18px
+  text-overflow ellipsis
+  white-space nowrap
 
-.signerPreviewManage
-  min-width 132px
-  min-height 44px
-  flex none
-  padding 0 var(--wren-space-3)
-  font-size var(--wren-type-small)
-
-.signerExpand,
 .signerBottom .signerBottomPageBack,
 .signerBottom .signerBottomPageNext,
 .signerDrawer .showControls
@@ -878,27 +855,44 @@
     display block
 
   .signersList .signer
+    appearance none
+    display grid
     width 100%
+    min-height 72px
     margin 0
-    padding 0 0 var(--wren-space-3)
+    padding 0 var(--wren-space-2)
     overflow visible
+    box-sizing border-box
+    grid-template-columns minmax(0, 1fr) 14px
+    align-items center
+    gap var(--wren-space-3)
     border 0
     border-bottom 1px solid var(--wren-ledger-rule)
     border-radius 0
+    color var(--wren-text-primary)
     background transparent
     box-shadow none
+    font-family var(--wren-font-ui)
+    text-align left
+    cursor pointer
+    transition background var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      background var(--wren-ledger-hover)
+
+    &:active
+      background var(--wren-surface-active)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -2px
+
+    > svg
+      flex none
+      color var(--wren-text-tertiary)
 
   .signersList .signer:last-child
     border-bottom 1px solid var(--wren-ledger-rule)
-
-  .signerTop
-    display grid
-    min-height 62px
-    box-sizing border-box
-    padding var(--wren-space-3) var(--wren-space-2) var(--wren-space-2)
-    grid-template-columns minmax(0, 1fr) 44px
-    align-items center
-    column-gap var(--wren-space-3)
 
   .signerDetails
     display grid
@@ -917,10 +911,9 @@
       justify-content center
 
     .signerIcon
-      border 1px solid var(--wren-border-subtle)
-      border-radius 50%
+      border 0
       color var(--wren-accent-primary-hover)
-      background var(--wren-surface-inset)
+      background transparent
 
     .signerName
       width auto
@@ -935,8 +928,10 @@
       line-height 1.35
       text-overflow ellipsis
 
-  .signerExpand
-    flex none
+  .signerIdentity
+    display flex
+    flex-direction column
+    gap 3px
 
   .signerStatusReady
     color var(--wren-success)
@@ -949,14 +944,6 @@
 
   .signerStatusDanger
     color var(--wren-danger)
-
-  .signerPreviewSummary
-    margin 0 0 0 46px
-    padding 0 var(--wren-space-1) var(--wren-space-2) 0
-
-  .signerPreviewManage
-    height 44px
-    min-height 44px
 
   .signerAddedAccountTitle
     justify-content flex-start
@@ -1348,10 +1335,9 @@
   height 40px
   align-items center
   justify-content center
-  border 1px solid var(--wren-border-subtle)
-  border-radius 50%
+  border 0
   color var(--wren-accent-primary-hover)
-  background var(--wren-surface-inset)
+  background transparent
 
 .hardwareSignerPromptIdentity
   min-width 0

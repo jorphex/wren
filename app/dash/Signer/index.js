@@ -324,7 +324,7 @@ export class Signer extends React.Component {
     return getSignerStatusMeta({ type: this.props.type, status: this.props.status })
   }
 
-  statusText() {
+  statusText(Element = 'div') {
     const signerStatus = this.getStatusMeta()
     const classes = [
       'signerStatusText',
@@ -336,9 +336,9 @@ export class Signer extends React.Component {
       .join(' ')
 
     return (
-      <div className={classes} role='status'>
+      <Element className={classes} role='status'>
         {signerStatus.label}
-      </div>
+      </Element>
     )
   }
 
@@ -391,71 +391,54 @@ export class Signer extends React.Component {
     const addedAccounts = signer.addresses.filter((address) => {
       return Boolean(this.store('main.accounts', address.toLowerCase()))
     })
+    const accountSummary = `${addedAccounts.length} active ${addedAccounts.length === 1 ? 'account' : 'accounts'}`
 
     const zIndex = 1000 - (this.props.index || 0)
 
     return (
-      <section className={signerClass + ' cardShow'} style={{ zIndex }} aria-label={this.props.name}>
-        <div className='signerTop'>
-          <div className='signerDetails'>
-            <div className='signerIcon'>
-              {((_) => {
-                const type = this.props.type
-                if (type === 'ledger' || type === 'trezor' || type === 'lattice')
-                  return (
-                    <div className='signerIconWrap signerIconHardware'>
-                      <AccountTypeMark type={type} size={20} />
-                    </div>
-                  )
-                if (type === 'seed' || type === 'ring')
-                  return (
-                    <div className='signerIconWrap signerIconHot'>
-                      <AccountTypeMark type={type} size={20} />
-                    </div>
-                  )
+      <button
+        type='button'
+        className={signerClass + ' cardShow'}
+        style={{ zIndex }}
+        aria-label={`Manage accounts for ${this.props.name || 'signer'}. ${signerStatus.label}. ${accountSummary}.`}
+        onClick={() => this.expand(signer.id)}
+      >
+        <span className='signerDetails'>
+          <span className='signerIcon'>
+            {((_) => {
+              const type = this.props.type
+              if (type === 'ledger' || type === 'trezor' || type === 'lattice')
                 return (
-                  <div className='signerIconWrap'>
-                    <Icon name='hardware' size={20} />
-                  </div>
+                  <span className='signerIconWrap signerIconHardware'>
+                    <AccountTypeMark type={type} size={20} />
+                  </span>
                 )
-              })()}
-            </div>
-            {/* <div className='signerType' style={this.props.inSetup ? {top: '21px'} : {top: '24px'}}>{this.props.model}</div> */}
-            <div className='signerIdentity'>
-              <h2 className='signerName'>{this.props.name}</h2>
-              {this.statusText()}
-            </div>
-          </div>
-          <button
-            type='button'
-            aria-label={`Open ${this.props.name || 'signer'} details`}
-            className='signerExpand wrenControl wrenControlGhost wrenControlIcon'
-            onClick={() => this.expand(signer.id)}
-          >
-            <Icon name='details' size={14} />
-          </button>
-        </div>
-        {signerStatus.ready || isLocked ? (
-          <div className='signerPreviewSummary'>
-            <div className='signerPreviewAccountCount'>
-              {`${addedAccounts.length} active ${addedAccounts.length === 1 ? 'account' : 'accounts'}`}
-            </div>
-            <button
-              type='button'
-              className='signerPreviewManage wrenControl wrenControlGhost'
-              onClick={() => this.expand(signer.id)}
-            >
-              Manage accounts
-            </button>
-          </div>
-        ) : signerStatus.busy ? (
-          <div className='signerLoading'>
-            <div className='signerLoadingLoader' />
-          </div>
-        ) : (
-          <></>
-        )}
-      </section>
+              if (type === 'seed' || type === 'ring')
+                return (
+                  <span className='signerIconWrap signerIconHot'>
+                    <AccountTypeMark type={type} size={20} />
+                  </span>
+                )
+              return (
+                <span className='signerIconWrap'>
+                  <Icon name='hardware' size={20} />
+                </span>
+              )
+            })()}
+          </span>
+          <span className='signerIdentity'>
+            <span className='signerName'>{this.props.name}</span>
+            <span className='signerPreviewMeta'>
+              {this.statusText('span')}
+              <span className='signerPreviewMetaSeparator' aria-hidden='true'>
+                ·
+              </span>
+              <span className='signerPreviewAccountCount'>{accountSummary}</span>
+            </span>
+          </span>
+        </span>
+        <Icon name='next' size={14} />
+      </button>
     )
   }
 
@@ -472,6 +455,7 @@ export class Signer extends React.Component {
     const startIndex = page * addressLimit
 
     const signerStatus = this.getStatusMeta()
+    const authenticationOwnedByPrompt = this.props.authenticationOwnedByPrompt
 
     const hwSigner = isHardwareSigner(type)
     const canReload = signerStatus.reloadable
@@ -485,7 +469,7 @@ export class Signer extends React.Component {
     return (
       <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
         {!signerStatus.ready ? this.statusText() : null}
-        {type === 'lattice' && signerStatus.input === 'pairingCode' ? (
+        {!authenticationOwnedByPrompt && type === 'lattice' && signerStatus.input === 'pairingCode' ? (
           <div className='signerLatticePair'>
             <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
             <div className='signerLatticePairInput wrenInputGroup'>
@@ -592,7 +576,7 @@ export class Signer extends React.Component {
               </div>
             ) : null}
           </>
-        ) : type === 'trezor' && signerStatus.input ? (
+        ) : !authenticationOwnedByPrompt && type === 'trezor' && signerStatus.input ? (
           <div className='signerInterface'>
             {this.renderTrezorPin(signerStatus.input === 'pin')}
             {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}

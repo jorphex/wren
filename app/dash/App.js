@@ -76,7 +76,7 @@ export class Dash extends React.Component {
     else link.send('tray:action', 'closeDash')
   }
 
-  renderPanel(view, data) {
+  renderPanel(view, data, hardwarePrompt) {
     if (view === 'accounts') return <Accounts data={data} />
     if (view === 'earn') return <Earn data={data} />
     if (view === 'addressBook') return <AddressBook data={data} />
@@ -85,7 +85,14 @@ export class Dash extends React.Component {
       const signerId = data.signer
       const signer = this.store('main.signers', signerId)
 
-      return <Signer key={signerId} expanded={true} {...signer} />
+      return (
+        <Signer
+          key={signerId}
+          authenticationOwnedByPrompt={hardwarePrompt?.signerId === signerId}
+          expanded={true}
+          {...signer}
+        />
+      )
     }
     if (view === 'chains') return <Chains data={data} />
     if (view === 'tokens') return <Tokens data={data} />
@@ -109,7 +116,7 @@ export class Dash extends React.Component {
         <Command />
         <div className='dashMain' style={showAddButton ? { bottom: '78px' } : undefined}>
           <div className='dashMainOverlay' />
-          <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>
+          <div className='dashMainScroll'>{this.renderPanel(view, data, hardwarePrompt)}</div>
         </div>
         {promptSigner ? (
           <Signer

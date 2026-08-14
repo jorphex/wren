@@ -18,6 +18,37 @@ it('renders the connected-app destination instead of falling through to the cont
   expect(view.props.data).toBe(data)
 })
 
+it('gives an active hardware prompt exclusive ownership of signer authentication', () => {
+  const dash = new Dash({})
+  dash.store = jest.fn(() => ({
+    id: 'trezor-1',
+    name: 'Trezor Signer',
+    type: 'trezor',
+    status: 'need pin'
+  }))
+
+  const view = dash.renderPanel(
+    'expandedSigner',
+    { signer: 'trezor-1' },
+    { signerId: 'trezor-1', dismissible: true }
+  )
+
+  expect(view.props.authenticationOwnedByPrompt).toBe(true)
+})
+
+it('does not suppress authentication for a different expanded signer', () => {
+  const dash = new Dash({})
+  dash.store = jest.fn(() => ({ id: 'trezor-2', type: 'trezor', status: 'need pin' }))
+
+  const view = dash.renderPanel(
+    'expandedSigner',
+    { signer: 'trezor-2' },
+    { signerId: 'trezor-1', dismissible: true }
+  )
+
+  expect(view.props.authenticationOwnedByPrompt).toBe(false)
+})
+
 it('returns one dashboard level on Escape when navigation is active', () => {
   const dash = new Dash({})
   dash.store = jest.fn(() => [{ view: 'send', data: { step: 'assetPicker' } }])

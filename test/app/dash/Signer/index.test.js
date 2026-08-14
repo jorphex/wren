@@ -89,6 +89,29 @@ it('uses a transient hardware-authentication dialog without exposing address man
   expect(screen.queryByRole('button', { name: 'Remove signer' })).toBeNull()
 })
 
+it('lets the hardware prompt exclusively own active signer authentication', () => {
+  renderSigner({
+    type: 'trezor',
+    status: 'need pin',
+    authenticationOwnedByPrompt: true
+  })
+
+  expect(screen.getByRole('status').textContent).toBe('PIN required')
+  expect(screen.queryByRole('heading', { name: 'Enter PIN' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /PIN position/ })).toBeNull()
+})
+
+it('lets the hardware prompt exclusively own active pairing input', () => {
+  renderSigner({
+    type: 'lattice',
+    status: 'pairing-code-required',
+    authenticationOwnedByPrompt: true
+  })
+
+  expect(screen.queryByRole('textbox', { name: 'GridPlus pairing code' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Pair' })).toBeNull()
+})
+
 it('offers a quiet dismissal for passive hardware authentication', async () => {
   const { user } = render(
     <SignerHarness
@@ -304,7 +327,12 @@ it('keeps the signer overview compact while showing its account count', () => {
   )
 
   expect(screen.getByText('8 active accounts')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Manage accounts' })).toBeTruthy()
+  expect(
+    screen.getByRole('button', {
+      name: 'Manage accounts for Test signer. Signer ready. 8 active accounts.'
+    })
+  ).toBeTruthy()
+  expect(screen.getAllByRole('button')).toHaveLength(1)
   expect(screen.queryByRole('button', { name: /^0x/ })).toBeNull()
 })
 
@@ -348,7 +376,11 @@ it('opens active hardware account management from the signer preview', async () 
     />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Manage accounts' }))
+  await user.click(
+    screen.getByRole('button', {
+      name: 'Manage accounts for Test signer. Signer ready. 1 active account.'
+    })
+  )
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'expandedSigner',
     data: { signer: 'device-1' }
