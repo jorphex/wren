@@ -81,9 +81,18 @@ test('keeps the Control Center Wren decorative, fixed beside the title, and abse
   )
 })
 
-test('uses ruled Earn detail regions and the shared focus treatment', () => {
+test('uses separator-free Earn lists, spacing-led detail regions, and the shared focus treatment', () => {
+  expect(earnStyle).toMatch(/\.earnPositionList, \.earnVaultList[\s\S]*?gap 0/)
+  expect(earnStyle).not.toMatch(/\.earnVault \+ \.earnVault, \.earnPosition \+ \.earnPosition/)
   expect(earnStyle).toMatch(
-    /\.earnVariants, \.earnOwned, \.earnActionForm[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+    /\.earnVariants, \.earnOwned, \.earnActionForm[\s\S]*?margin-top var\(--wren-space-6\)[\s\S]*?border 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+  )
+  expect(earnStyle).toMatch(/\.earnApy[\s\S]*?strong[\s\S]*?color var\(--wren-accent-primary-hover\)/)
+  expect(earnStyle).toMatch(
+    /\.earnPositionsOverview[\s\S]*?padding 0 0 var\(--wren-space-5\)[\s\S]*?border-bottom 0/
+  )
+  expect(earnStyle).toMatch(
+    /\.earnMetric[\s\S]*?padding var\(--wren-space-3\)[\s\S]*?border 0[\s\S]*?background transparent/
   )
   expect(earnStyle).toMatch(
     /\.earnTabs button\.wrenControl:focus-visible,[\s\S]*?outline 2px solid var\(--wren-focus\)[\s\S]*?box-shadow none/
@@ -92,7 +101,7 @@ test('uses ruled Earn detail regions and the shared focus treatment', () => {
     /button\.earnVariant\.wrenControl\.wrenControlSecondary[\s\S]*?flex-direction column/
   )
   expect(earnStyle).toMatch(
-    /\.earnActions[\s\S]*?gap 0[\s\S]*?button\.wrenControl \+ button\.wrenControl[\s\S]*?border-left 1px solid var\(--wren-border-subtle\)[\s\S]*?button\.wrenControl\.active[\s\S]*?background var\(--wren-surface-active\)/
+    /\.earnActions[\s\S]*?gap var\(--wren-space-1\)[\s\S]*?padding var\(--wren-space-1\)[\s\S]*?button\.wrenControl[\s\S]*?border-radius var\(--wren-radius-sm\)[\s\S]*?button\.wrenControl\.active[\s\S]*?background var\(--wren-surface-active\)/
   )
 })
 
