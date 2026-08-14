@@ -4,11 +4,15 @@ import path from 'node:path'
 import { PNG } from 'pngjs'
 
 const iconSpecs = [
+  { name: 'Icon.png', size: 24 },
+  { name: 'Icon@2x.png', size: 48 },
+  { name: 'IconTemplate.png', size: 24, template: true },
+  { name: 'IconTemplate@2x.png', size: 48, template: true },
   { name: 'LinuxTray.png', size: 24 },
   { name: 'LinuxTray@2x.png', size: 48 }
 ]
 
-for (const { name, size } of iconSpecs) {
+for (const { name, size, template = false } of iconSpecs) {
   const source = await readFile(path.resolve('main/windows', name))
   const compiled = await readFile(path.resolve('compiled/main/windows', name))
   assert.deepEqual(compiled, source, `${name} was not copied intact`)
@@ -28,6 +32,14 @@ for (const { name, size } of iconSpecs) {
   assert.ok(visiblePixels >= pixelCount * 0.1, `${name} has too little visible artwork`)
   assert.ok(opaquePixels >= pixelCount * 0.08, `${name} is effectively transparent`)
   assert.ok(transparentPixels >= pixelCount * 0.5, `${name} must retain a transparent background`)
+
+  if (template) {
+    for (let offset = 0; offset < icon.data.length; offset += 4) {
+      assert.equal(icon.data[offset], 0, `${name} must be monochrome`)
+      assert.equal(icon.data[offset + 1], 0, `${name} must be monochrome`)
+      assert.equal(icon.data[offset + 2], 0, `${name} must be monochrome`)
+    }
+  }
 }
 
-console.log('Linux tray icons verified')
+console.log('Cross-platform tray icons verified')
