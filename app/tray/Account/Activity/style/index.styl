@@ -88,31 +88,33 @@
   white-space normal
   text-align right
 
-.activityFooter
-  display flex
-  min-height 44px
-  padding 0 var(--wren-space-3) var(--wren-space-2)
-  align-items center
-  justify-content flex-end
-
-.activityViewAll
-  min-width 80px
-
 .activityFilters
   display grid
-  padding 0 0 var(--wren-space-3)
+  padding var(--wren-space-1)
   grid-template-columns repeat(4, minmax(0, 1fr))
   gap var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
 .activityFilter
   min-width 0
   padding 0 var(--wren-space-2)
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
   font-size var(--wren-type-caption)
+  transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease),
+    border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease)
 
-  &[aria-pressed='true']
+  &.wrenControl[aria-pressed='true']
     color var(--wren-text-primary)
-    background var(--wren-surface-active)
-    box-shadow var(--wren-shadow-inset)
+    background var(--wren-bg-panel)
+    border-color var(--wren-border-strong)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  &:not([aria-pressed='true']):hover:not(:disabled)
+    color var(--wren-text-secondary)
+    background var(--wren-surface-hover)
 
 .activityEmpty
   display flex

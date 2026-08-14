@@ -14,7 +14,7 @@ export type ShellLayout = {
   workspaceOverlaysMain: boolean
 }
 
-export const shellMainTargetWidth = 760
+export const shellMainTargetWidth = 620
 export const shellWorkspaceTargetWidth = 620
 export const shellTargetHeight = 900
 const workspaceMinimumWidth = 400
@@ -60,7 +60,7 @@ export function getShellLayout(
   return { window, main, workspace, workspaceOverlaysMain }
 }
 
-export function shouldJoinWorkspace(layout: ShellLayout, showing: boolean, transitioning: boolean) {
-  return !layout.workspaceOverlaysMain && (showing || transitioning)
+export function shouldJoinWorkspace(layout: ShellLayout, showing: boolean) {
+  return !layout.workspaceOverlaysMain && showing
 }
 import type { InterfaceScale } from './uiScale'

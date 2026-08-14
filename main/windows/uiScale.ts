@@ -7,7 +7,7 @@ export type WorkAreaSize = {
   height: number
 }
 
-const minimumLogicalWidth = 760
+const minimumLogicalWidth = 620
 const minimumLogicalHeight = 744
 
 export function normalizeInterfaceScale(value: unknown): InterfaceScale {

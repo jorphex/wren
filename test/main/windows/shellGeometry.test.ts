@@ -3,8 +3,8 @@ import { getShellLayout, shouldJoinWorkspace } from '../../../main/windows/shell
 describe('getShellLayout', () => {
   it('anchors a compact wallet to the right edge', () => {
     expect(getShellLayout({ x: 0, y: 48, width: 1920, height: 1032 }, 'right')).toEqual({
-      window: { x: 1160, y: 114, width: 760, height: 900 },
-      main: { x: 0, y: 0, width: 760, height: 900 },
+      window: { x: 1300, y: 114, width: 620, height: 900 },
+      main: { x: 0, y: 0, width: 620, height: 900 },
       workspace: { x: 0, y: 0, width: 0, height: 900 },
       workspaceOverlaysMain: false
     })
@@ -15,14 +15,14 @@ describe('getShellLayout', () => {
     const expanded = getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'right', true, 1.25)
 
     expect(compact).toEqual({
-      window: { x: 970, y: 12, width: 950, height: 1056 },
-      main: { x: 0, y: 0, width: 950, height: 1056 },
+      window: { x: 1145, y: 12, width: 775, height: 1056 },
+      main: { x: 0, y: 0, width: 775, height: 1056 },
       workspace: { x: 0, y: 0, width: 0, height: 1056 },
       workspaceOverlaysMain: false
     })
     expect(expanded).toEqual({
-      window: { x: 195, y: 12, width: 1725, height: 1056 },
-      main: { x: 775, y: 0, width: 950, height: 1056 },
+      window: { x: 370, y: 12, width: 1550, height: 1056 },
+      main: { x: 775, y: 0, width: 775, height: 1056 },
       workspace: { x: 0, y: 0, width: 775, height: 1056 },
       workspaceOverlaysMain: false
     })
@@ -31,18 +31,18 @@ describe('getShellLayout', () => {
 
   it('scales overlay thresholds and caps target height to the work area margin', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1440, height: 1200 }, 'right', true, 1.5)).toEqual({
-      window: { x: 300, y: 12, width: 1140, height: 1176 },
-      main: { x: 0, y: 0, width: 1140, height: 1176 },
-      workspace: { x: 0, y: 0, width: 1140, height: 1176 },
+      window: { x: 510, y: 12, width: 930, height: 1176 },
+      main: { x: 0, y: 0, width: 930, height: 1176 },
+      workspace: { x: 0, y: 0, width: 930, height: 1176 },
       workspaceOverlaysMain: true
     })
   })
 
   it('collapses a left-edge workspace at the wallet seam', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'left')).toEqual({
-      window: { x: 0, y: 90, width: 760, height: 900 },
-      main: { x: 0, y: 0, width: 760, height: 900 },
-      workspace: { x: 760, y: 0, width: 0, height: 900 },
+      window: { x: 0, y: 90, width: 620, height: 900 },
+      main: { x: 0, y: 0, width: 620, height: 900 },
+      workspace: { x: 620, y: 0, width: 0, height: 900 },
       workspaceOverlaysMain: false
     })
   })
@@ -52,8 +52,8 @@ describe('getShellLayout', () => {
     const expanded = getShellLayout({ x: 0, y: 48, width: 1920, height: 1032 }, 'right', true)
 
     expect(expanded).toEqual({
-      window: { x: 540, y: 114, width: 1380, height: 900 },
-      main: { x: 620, y: 0, width: 760, height: 900 },
+      window: { x: 680, y: 114, width: 1240, height: 900 },
+      main: { x: 620, y: 0, width: 620, height: 900 },
       workspace: { x: 0, y: 0, width: 620, height: 900 },
       workspaceOverlaysMain: false
     })
@@ -65,9 +65,9 @@ describe('getShellLayout', () => {
     const expanded = getShellLayout({ x: -1920, y: 0, width: 1920, height: 1080 }, 'left', true)
 
     expect(expanded).toEqual({
-      window: { x: -1920, y: 90, width: 1380, height: 900 },
-      main: { x: 0, y: 0, width: 760, height: 900 },
-      workspace: { x: 760, y: 0, width: 620, height: 900 },
+      window: { x: -1920, y: 90, width: 1240, height: 900 },
+      main: { x: 0, y: 0, width: 620, height: 900 },
+      workspace: { x: 620, y: 0, width: 620, height: 900 },
       workspaceOverlaysMain: false
     })
     expect(expanded.window.x + expanded.main.x).toBe(compact.window.x)
@@ -76,35 +76,35 @@ describe('getShellLayout', () => {
   it('uses all available adjacent width before falling back to an overlay', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1200, height: 900 }, 'right', true)).toEqual({
       window: { x: 0, y: 12, width: 1200, height: 876 },
-      main: { x: 440, y: 0, width: 760, height: 876 },
-      workspace: { x: 0, y: 0, width: 440, height: 876 },
+      main: { x: 580, y: 0, width: 620, height: 876 },
+      workspace: { x: 0, y: 0, width: 580, height: 876 },
       workspaceOverlaysMain: false
     })
   })
 
   it('fits an adjacent workspace inside a common 1366x768 work area', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1366, height: 768 }, 'right', true)).toEqual({
-      window: { x: 0, y: 12, width: 1366, height: 744 },
-      main: { x: 606, y: 0, width: 760, height: 744 },
-      workspace: { x: 0, y: 0, width: 606, height: 744 },
+      window: { x: 126, y: 12, width: 1240, height: 744 },
+      main: { x: 620, y: 0, width: 620, height: 744 },
+      workspace: { x: 0, y: 0, width: 620, height: 744 },
       workspaceOverlaysMain: false
     })
   })
 
-  it('uses a workspace overlay on a common 1024x768 work area', () => {
+  it('uses the available adjacent workspace on a common 1024x768 work area', () => {
     expect(getShellLayout({ x: 0, y: 0, width: 1024, height: 768 }, 'right', true)).toEqual({
-      window: { x: 264, y: 12, width: 760, height: 744 },
-      main: { x: 0, y: 0, width: 760, height: 744 },
-      workspace: { x: 0, y: 0, width: 760, height: 744 },
-      workspaceOverlaysMain: true
+      window: { x: 0, y: 12, width: 1024, height: 744 },
+      main: { x: 404, y: 0, width: 620, height: 744 },
+      workspace: { x: 0, y: 0, width: 404, height: 744 },
+      workspaceOverlaysMain: false
     })
   })
 
   it('overlays the wallet on narrow displays instead of going off-screen', () => {
     expect(getShellLayout({ x: 10, y: 20, width: 1000, height: 600 }, 'right', true)).toEqual({
-      window: { x: 250, y: 32, width: 760, height: 576 },
-      main: { x: 0, y: 0, width: 760, height: 576 },
-      workspace: { x: 0, y: 0, width: 760, height: 576 },
+      window: { x: 390, y: 32, width: 620, height: 576 },
+      main: { x: 0, y: 0, width: 620, height: 576 },
+      workspace: { x: 0, y: 0, width: 620, height: 576 },
       workspaceOverlaysMain: true
     })
   })
@@ -120,16 +120,15 @@ describe('getShellLayout', () => {
 
   it('joins only an adjacent workspace to the wallet shell', () => {
     const adjacent = getShellLayout({ x: 0, y: 0, width: 1920, height: 1080 }, 'left', true)
-    const overlay = getShellLayout({ x: 0, y: 0, width: 1024, height: 768 }, 'left', true)
-    const collapsedOverlay = getShellLayout({ x: 0, y: 0, width: 1024, height: 768 }, 'left')
+    const overlay = getShellLayout({ x: 0, y: 0, width: 1000, height: 768 }, 'left', true)
+    const collapsedOverlay = getShellLayout({ x: 0, y: 0, width: 1000, height: 768 }, 'left')
 
-    expect(shouldJoinWorkspace(adjacent, true, false)).toBe(true)
-    expect(shouldJoinWorkspace(adjacent, false, true)).toBe(true)
-    expect(shouldJoinWorkspace(adjacent, false, false)).toBe(false)
-    expect(shouldJoinWorkspace(overlay, true, true)).toBe(false)
+    expect(shouldJoinWorkspace(adjacent, true)).toBe(true)
+    expect(shouldJoinWorkspace(adjacent, false)).toBe(false)
+    expect(shouldJoinWorkspace(overlay, true)).toBe(false)
     expect(collapsedOverlay.workspaceOverlaysMain).toBe(true)
-    expect(collapsedOverlay.workspace).toEqual({ x: 760, y: 0, width: 0, height: 744 })
-    expect(overlay.workspace).toEqual({ x: 0, y: 0, width: 760, height: 744 })
-    expect(shouldJoinWorkspace(collapsedOverlay, false, true)).toBe(false)
+    expect(collapsedOverlay.workspace).toEqual({ x: 620, y: 0, width: 0, height: 744 })
+    expect(overlay.workspace).toEqual({ x: 0, y: 0, width: 620, height: 744 })
+    expect(shouldJoinWorkspace(collapsedOverlay, false)).toBe(false)
   })
 })

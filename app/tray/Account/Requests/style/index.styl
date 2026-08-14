@@ -261,11 +261,9 @@
   background transparent
 
 .requestQueueStatus
-  position sticky
-  top 0
-  z-index 2
+  position relative
   display grid
-  min-height 60px
+  min-height 52px
   grid-template-columns minmax(0, 1fr) 44px
   align-items center
   gap var(--wren-space-3)
@@ -273,7 +271,7 @@
   box-sizing border-box
   border-bottom 0
   color var(--wren-text-secondary)
-  background var(--wren-bg-canvas)
+  background transparent
   font-size 12px
 
 .requestQueueStatusSummary

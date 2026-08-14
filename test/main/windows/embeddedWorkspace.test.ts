@@ -137,7 +137,7 @@ it('keeps a left-edge overlay anchored while it expands over the wallet', () => 
   jest.useRealTimers()
 })
 
-it('hides workspace content as a collapse animation begins', () => {
+it('keeps workspace content visible during concealment and hides it on collapse completion', () => {
   jest.useFakeTimers()
   const { parent, view, workspace } = createSetup()
   const onComplete = jest.fn()
@@ -153,8 +153,8 @@ it('hides workspace content as a collapse animation begins', () => {
   view.setVisible.mockClear()
   workspace.applyShellLayout(windowBounds, mainBounds, viewBounds, false, true, onComplete)
 
-  expect(view.setVisible).toHaveBeenCalledWith(false)
-  expect(workspace.isVisible()).toBe(false)
+  expect(view.setVisible).not.toHaveBeenCalled()
+  expect(workspace.isVisible()).toBe(true)
   expect(workspace.isSettled(false)).toBe(false)
   expect(workspace.isTransitioningTo(false)).toBe(true)
   expect(onComplete).not.toHaveBeenCalled()
@@ -164,6 +164,7 @@ it('hides workspace content as a collapse animation begins', () => {
   jest.runAllTimers()
 
   expect(view.setVisible).toHaveBeenCalledTimes(1)
+  expect(view.setVisible).toHaveBeenCalledWith(false)
   expect(parent.setBounds).not.toHaveBeenCalled()
   if (process.platform === 'linux') expect(parent.setShape).toHaveBeenCalledWith([mainBounds])
   expect(view.setBounds).toHaveBeenCalledWith(viewBounds)

@@ -22,12 +22,36 @@ const setupSelector = ({ drawerOpen = true } = {}) => {
   return { selector, store, setOpen: (next) => (open = next) }
 }
 
-it('exposes account switching as an embedded full-panel region', () => {
-  const { selector } = setupSelector()
+it('exposes open account switching as a modal with an embedded account region', () => {
+  const account = {
+    id: '0x000000000000000000000000000000000000dead',
+    address: '0x000000000000000000000000000000000000dead',
+    name: 'Watch Account'
+  }
+  let drawerOpen = true
+  const store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.accounts') return { [account.id]: account }
+    if (key === 'selected.current') return account.id
+    if (key === 'selected.open') return true
+    if (key === 'selected.showAccounts') return drawerOpen
+    if (key === 'selected.hideBalances') return false
+    if (key === 'windows.dash.showing') return false
+    if (key === 'panel.accountFilter') return ''
+  }
+  store.toggleHideBalances = jest.fn()
+  store.toggleShowAccounts = jest.fn()
+  const selector = new AccountSelector({}, { store })
+  selector.store = store
+  selector.renderAccountList = () => <div />
 
-  render(selector.renderAccountPanel({}))
+  const view = render(selector.render())
 
+  expect(screen.getByRole('dialog', { name: 'Accounts' })).toBeTruthy()
   expect(screen.getByRole('region', { name: 'Accounts' })).toBeTruthy()
+
+  drawerOpen = false
+  view.rerender(selector.render())
   expect(screen.queryByRole('dialog')).toBeNull()
 })
 
@@ -98,13 +122,33 @@ it('uses the emphasized primary treatment for the empty-state action', () => {
   expect(screen.getByRole('button', { name: 'Add account' }).classList.contains('wrenHeroPrimary')).toBe(true)
 })
 
-it('welcomes returning users before the startup account list', () => {
-  const { selector } = setupSelector()
+it('uses a direct account choice prompt before the startup account list', () => {
+  const account = {
+    id: '0x000000000000000000000000000000000000dead',
+    address: '0x000000000000000000000000000000000000dead',
+    name: 'Watch Account'
+  }
+  const store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.accounts') return { [account.id]: account }
+    if (key === 'panel.accountFilter') return ''
+    if (key === 'selected.open') return false
+  }
+  const selector = new AccountSelector({}, { store })
+  selector.store = store
+  selector.renderAccountList = () => <div data-testid='startup-account-list' />
 
-  render(selector.renderWelcome())
+  render(selector.render())
 
-  expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeTruthy()
+  const heading = screen.getByRole('heading', { name: 'Choose an account' })
+  const filter = screen.getByRole('textbox', { name: 'Filter accounts' })
+  const list = screen.getByTestId('startup-account-list')
+  const children = [...heading.closest('.accountSelector').children]
+
   expect(screen.getByText('Choose an account to open your wallet.')).toBeTruthy()
+  expect(children[0].contains(heading)).toBe(true)
+  expect(children[1].contains(filter)).toBe(true)
+  expect(children[2]).toBe(list)
 })
 
 it('moves focus into the chooser, wraps Tab, and restores the trigger on Escape', async () => {

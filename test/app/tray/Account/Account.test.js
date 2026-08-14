@@ -1,5 +1,6 @@
+import Restore from 'react-restore'
 import { render, screen, waitFor } from '../../../componentSetup'
-import { AccountMain } from '../../../../app/tray/Account/Account'
+import { AccountBody, AccountMain } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({
@@ -73,4 +74,34 @@ it('cancels header name editing without changing the account', async () => {
   expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', expect.anything(), expect.anything())
   const rename = screen.getByRole('button', { name: 'Update account name' })
   await waitFor(() => expect(document.activeElement).toBe(rename))
+})
+
+it('uses the compact frame and explicit title for expanded balances', () => {
+  const store = Restore.create(
+    {
+      selected: { open: false },
+      windows: {
+        panel: {
+          footer: { height: 0 },
+          nav: [{ view: 'expandedModule', data: { id: 'balances', account: address } }]
+        }
+      },
+      main: {
+        accounts: { [address]: { address } },
+        balances: { [address]: [] },
+        rates: {},
+        networks: { ethereum: {} },
+        networksMeta: { ethereum: {} }
+      }
+    },
+    {}
+  )
+  const ConnectedAccountBody = Restore.connect(AccountBody, store)
+
+  render(<ConnectedAccountBody id={address} />)
+
+  const view = document.querySelector('.accountView')
+  expect(view.classList.contains('accountViewCompact')).toBe(true)
+  expect(view.style.top).toBe('68px')
+  expect(screen.getByText('Balances')).toBeTruthy()
 })

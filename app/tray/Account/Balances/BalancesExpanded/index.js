@@ -72,8 +72,10 @@ export class BalancesExpanded extends React.Component {
   }
 
   renderAccountFilter() {
+    const hasFilter = Boolean(this.state.balanceFilter)
+
     return (
-      <div className='panelFilterAccount'>
+      <div className={`panelFilterAccount balanceFilter${hasFilter ? ' balanceFilterHasValue' : ''}`}>
         <div className='panelFilterIcon'>
           <Icon name='search' size={12} />
         </div>
@@ -90,11 +92,11 @@ export class BalancesExpanded extends React.Component {
             value={this.state.balanceFilter}
           />
         </div>
-        {this.state.balanceFilter ? (
+        {hasFilter ? (
           <button
             type='button'
             aria-label='Clear balance filter'
-            className='panelFilterClear'
+            className='panelFilterClear wrenControl wrenControlGhost wrenControlIcon'
             onClick={() => {
               this.setState({ balanceFilter: '' })
             }}

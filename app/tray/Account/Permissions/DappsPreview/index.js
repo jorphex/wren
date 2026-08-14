@@ -97,20 +97,17 @@ export class DappsPermissionsPreview extends React.Component {
             })}
           </Cluster>
         )}
-        {permissionIds.length > 0 && (
-          <div className='signerBalanceTotal'>
-            <div className='signerBalanceButtons'>
-              <button
-                type='button'
-                className='signerBalanceButton signerBalanceShowAll wrenControl wrenControlGhost wrenControlCompact'
-                disabled={this.state.navigating}
-                onClick={() => this.openExpanded()}
-              >
-                More
-              </button>
-            </div>
-          </div>
-        )}
+        {!this.props.expanded && permissionIds.length > permissionList.length ? (
+          <button
+            type='button'
+            className='accountContinuationRow connectedAppsContinuation'
+            disabled={this.state.navigating}
+            onClick={() => this.openExpanded()}
+          >
+            <span>View all connected apps</span>
+            <Icon name='chevron-right' size={16} />
+          </button>
+        ) : null}
       </div>
     )
   }

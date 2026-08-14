@@ -111,6 +111,21 @@ it('opens token settings from the expanded native control', async () => {
   })
 })
 
+it('uses the full search width until an in-field clear action is needed', async () => {
+  const { user } = render(<BalancesExpandedHarness account={account} moduleId='balances' />)
+  const filter = screen.getByRole('textbox', { name: 'Filter balances' })
+  const filterSurface = filter.closest('.balanceFilter')
+
+  expect(filterSurface.classList.contains('balanceFilterHasValue')).toBe(false)
+  expect(screen.queryByRole('button', { name: 'Clear balance filter' })).toBeNull()
+
+  await user.type(filter, 'eth')
+
+  const clear = screen.getByRole('button', { name: 'Clear balance filter' })
+  expect(filterSurface.classList.contains('balanceFilterHasValue')).toBe(true)
+  expect(clear.classList.contains('wrenControlIcon')).toBe(true)
+})
+
 it('keeps filtered misses plain instead of showing empty-account artwork', () => {
   render(<BalancesPreviewHarness account={account} moduleId='balances' filter='not-present' />)
 

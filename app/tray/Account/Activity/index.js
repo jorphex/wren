@@ -287,16 +287,15 @@ export class Activity extends React.Component {
         )}
 
         {!this.props.expanded && allEntries.length ? (
-          <div className='activityFooter'>
-            <button
-              type='button'
-              className='activityViewAll wrenControl wrenControlGhost wrenControlCompact'
-              disabled={this.state.navigating}
-              onClick={() => this.openExpanded()}
-            >
-              View all
-            </button>
-          </div>
+          <button
+            type='button'
+            className='accountContinuationRow activityContinuation'
+            disabled={this.state.navigating}
+            onClick={() => this.openExpanded()}
+          >
+            <span>View all activity</span>
+            <Icon name='chevron-right' size={16} />
+          </button>
         ) : null}
 
         {this.props.expanded && this.state.clearStatus ? (

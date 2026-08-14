@@ -3,6 +3,22 @@
   overflow auto
   color var(--wren-text-primary)
 
+.balanceFilter
+  .panelFilterInput
+    right 10px
+
+  &.balanceFilterHasValue
+    .panelFilterInput input
+      padding-right 46px
+
+    .panelFilterClear
+      top 5px
+      right 13px
+      width 38px
+      min-width 38px
+      height 38px
+      min-height 38px
+
 .signerBalanceWarning
   appearance none
   position relative
@@ -238,6 +254,7 @@
 
     .balancesAssetMark .assetMarkGlyph
       border-color transparent
+      background transparent
       box-shadow none
 
   .signerBalanceValue

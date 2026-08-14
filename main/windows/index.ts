@@ -415,18 +415,17 @@ class Dash {
   public applyLayout(layout: ShellLayout, animate = false, focusWhenShown = false) {
     this.lastLayout = layout
     const showing = !!store('windows.dash.showing')
-    const joined = shouldJoinWorkspace(layout, showing, false)
+    const joined = shouldJoinWorkspace(layout, showing)
     if (animate && showing) this.prepareWorkspaceContent()
     if (animate && !showing) this.concealWorkspaceContent()
     if (animate) this.embeddedDapp?.hide()
-    if (!animate) this.setShellJoined(joined)
+    this.setShellJoined(joined)
     this.workspace.applyShellLayout(layout.window, layout.main, layout.workspace, showing, animate, () => {
       this.setShellJoined(joined)
       if (showing) this.revealWorkspaceContent()
       this.syncEmbeddedDapp(focusWhenShown)
       if (showing && focusWhenShown && (!this.isSendRoute() || !this.embeddedDapp)) this.workspace.focus()
     })
-    if (animate) this.setShellJoined(shouldJoinWorkspace(layout, showing, true))
     this.workspace.send('main:flex', 'shellLayout', layout.workspaceOverlaysMain ? 'overlay' : 'adjacent')
   }
 

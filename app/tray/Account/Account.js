@@ -523,8 +523,16 @@ class _AccountBody extends React.Component {
             link.send('nav:back', 'panel')
           }}
           {...this.props}
-          compactTop={crumb.data.id === 'requests'}
-          accountViewTitle={crumb.data.title || (crumb.data.id === 'requests' ? 'Requests' : crumb.data.id)}
+          compactTop={
+            crumb.data.id === 'requests' || crumb.data.id === 'activity' || crumb.data.id === 'balances'
+          }
+          accountViewTitle={
+            crumb.data.id === 'balances'
+              ? 'Balances'
+              : crumb.data.title ||
+                { requests: 'Requests', activity: 'Activity' }[crumb.data.id] ||
+                crumb.data.id
+          }
         >
           <div className='moduleExpanded'>
             <AccountModule
@@ -564,4 +572,4 @@ class Account extends React.Component {
 }
 
 export default Restore.connect(Account)
-export { _AccountMain as AccountMain }
+export { _AccountMain as AccountMain, _AccountBody as AccountBody }

@@ -33,11 +33,11 @@ export class ChainsPreview extends React.Component {
       return chain && this.store('main.networks.ethereum', chain, 'on')
     })
     if (newIndex > existingChains.length - 1) {
-      this.setState({ expanded: false, index: 0 })
+      this.setState({ index: 0 })
     } else if (newIndex < 0) {
-      this.setState({ expanded: false, index: existingChains.length - 1 })
+      this.setState({ index: existingChains.length - 1 })
     } else {
-      this.setState({ expanded: false, index: newIndex })
+      this.setState({ index: newIndex })
     }
   }
 
@@ -65,7 +65,7 @@ export class ChainsPreview extends React.Component {
       typeof currentChain.explorer === 'string' && currentChain.explorer.trim().length > 0
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
-        <div className='chainMonitorNetworkRow'>
+        <div className='chainMonitorRow'>
           <span className='chainMonitorIdentity'>
             <span className='chainMonitorMark'>
               <ChainIdentityMark
@@ -113,10 +113,8 @@ export class ChainsPreview extends React.Component {
               <Icon name='external' size={15} />
             </button>
           </div>
-        </div>
-        <div className='chainMonitorGasRow'>
+          <span className='chainMonitorDivider' aria-hidden='true' />
           <span className='chainMonitorGasEvidence'>
-            <span>Gas</span>
             <Monitor inline chainId={chain.id} color={chainIdentity.color} />
           </span>
           <button

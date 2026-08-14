@@ -117,9 +117,25 @@ it('applies the account filter in the expanded permission view', () => {
   expect(screen.getByText('zeta.example')).toBeTruthy()
 })
 
-it('opens permission management once with the exact breadcrumb and remains single-flight', async () => {
-  const { user } = renderWithStore(DappsPermissionsPreview)
-  const more = screen.getByRole('button', { name: 'More' })
+it('ends cleanly when every connected app is visible', () => {
+  renderWithStore(DappsPermissionsPreview)
+
+  expect(screen.queryByRole('button', { name: 'View all connected apps' })).toBeNull()
+})
+
+it('opens truncated permission management once from a continuation row', async () => {
+  const crowdedPermissions = {
+    managed: permissions.managed,
+    first: permission('first', 'alpha.example'),
+    second: permission('second', 'beta.example'),
+    third: permission('third', 'delta.example'),
+    fourth: permission('fourth', 'gamma.example'),
+    fifth: permission('fifth', 'zeta.example')
+  }
+  const { user } = renderWithStore(DappsPermissionsPreview, {}, crowdedPermissions)
+  const more = screen.getByRole('button', { name: 'View all connected apps' })
+
+  expect(more.classList.contains('accountContinuationRow')).toBe(true)
 
   await user.dblClick(more)
 
@@ -188,7 +204,7 @@ it('does not offer permission management or clearing for an empty list', () => {
   const { unmount } = renderWithStore(DappsPermissionsPreview, {}, {})
   expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(document.querySelector('.wrenEmptyStateImage')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'More' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View all connected apps' })).toBeNull()
   unmount()
 
   renderWithStore(DappsPermissionsExpanded, { expanded: true }, {})

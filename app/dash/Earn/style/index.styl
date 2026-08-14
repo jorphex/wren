@@ -920,14 +920,17 @@
 
   button
     border-radius var(--wren-radius-sm)
+    border 1px solid transparent
     color var(--wren-text-tertiary)
     font-family var(--wren-font-ui)
-    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease),
+      border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease)
 
   .earnTabActive
     color var(--wren-text-primary)
     background var(--wren-surface-active)
-    box-shadow var(--wren-shadow-sm)
+    border-color var(--wren-border-default)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
   button:not(.earnTabActive):hover
     color var(--wren-text-secondary)

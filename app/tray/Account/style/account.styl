@@ -1038,12 +1038,12 @@
         padding 0 var(--wren-space-3)
 
     .chainMonitorPreview
-      .chainMonitorNetworkRow,
-      .chainMonitorGasRow
+      .chainMonitorRow
         display grid
-        min-height 52px
-        grid-template-columns minmax(0, 1fr) auto
+        min-height 56px
+        grid-template-columns minmax(0, 1fr) auto 1px auto auto
         align-items center
+        gap var(--wren-space-2)
 
       .chainMonitorControls
         display flex
@@ -1084,24 +1084,18 @@
         min-height 44px !important
         flex none
 
-      .chainMonitorGasRow
-        border-top 0
+      .chainMonitorDivider
+        width 1px
+        height 24px
+        background var(--wren-border-subtle)
 
       .chainMonitorGasEvidence
         display flex
         min-width 0
-        min-height 52px
-        padding 0 var(--wren-space-3)
+        min-height 44px
         align-items center
-        justify-content space-between
-        gap var(--wren-space-3)
+        justify-content flex-end
         box-sizing border-box
-
-        > span:first-child
-          margin-left calc(var(--wren-space-5) + var(--wren-space-2))
-          color var(--wren-text-secondary)
-          font-size var(--wren-type-small)
-          font-weight 560
 
       .chainMonitorDisclosure
         display flex
@@ -1118,6 +1112,22 @@
       .sliceTileGasPrice
         justify-content flex-end
         padding 0
+
+      @media (max-width: 540px)
+        .chainMonitorRow
+          grid-template-columns minmax(0, 1fr) auto
+          gap 0
+
+        .chainMonitorDivider
+          display none
+
+        .chainMonitorGasEvidence
+          min-height 52px
+          padding-left calc(var(--wren-space-3) + 24px + var(--wren-space-2))
+          justify-content flex-start
+
+        .chainMonitorDisclosure
+          justify-self end
 
 .accountMainSlide .moduleHeader
   height 40px
@@ -1287,6 +1297,17 @@
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
 
+  // Keep the account shell continuous from startup through ordinary account
+  // browsing. Request review and signer-request states deliberately do not
+  // match: their decision canvas remains opaque and quiet.
+  &:has(.accountSelector:not(.accountSelectorOpen)),
+  &:has(.accountMain),
+  &:has(.accountView:not(.accountViewRequest)):not(:has(.signerRequest))
+    background-color var(--wren-bg-canvas)
+    background-image url('./Account/style/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 2% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at 102% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 12% 104%, rgba(111, 91, 126, .045), transparent 74%)
+    background-repeat repeat, no-repeat, no-repeat, no-repeat
+    background-size 144px 144px, 100% 100%, 100% 100%, 100% 100%
+
   .accountSelector.accountSelectorOpen
     top 6px
 
@@ -1296,7 +1317,6 @@
     bottom 40px
     left 0
     border-radius 0
-    background radial-gradient(circle at 86% 8%, rgba(166, 138, 97, .055), transparent 29%)
 
     .accountMainScroll
       border-radius 0
@@ -1308,11 +1328,14 @@
 
 .accountHomeHeader
   display grid
-  padding 0 var(--wren-space-5) var(--wren-space-5)
+  padding 0 var(--wren-space-5) var(--wren-space-3)
   margin-bottom var(--wren-space-2)
   grid-template-columns minmax(0, 1fr) auto
   column-gap var(--wren-space-5)
-  row-gap var(--wren-space-4)
+  align-items start
+
+.accountHomeIdentity
+  min-width 0
 
 .accountHomeEyebrow
   color var(--wren-text-tertiary)
@@ -1410,12 +1433,64 @@
     outline-offset 3px
 
 .accountHomeActions
-  grid-column 1 / -1
   display flex
-  flex-wrap wrap
+  padding-top var(--wren-space-3)
   align-items center
+  justify-content flex-end
   gap var(--wren-space-2)
 
   .wrenControl
     svg
       flex none
+
+.accountContinuationRow
+  appearance none
+  display flex
+  width calc(100% - var(--wren-space-4))
+  min-height 44px
+  margin var(--wren-space-1) var(--wren-space-2) 0
+  padding 0 var(--wren-space-3)
+  box-sizing border-box
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+  border 0
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background transparent
+  cursor pointer
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-small)
+  font-weight 540
+  text-align left
+  transition color var(--wren-motion-fast) var(--wren-ease), background var(--wren-motion-fast) var(--wren-ease)
+
+  svg
+    flex none
+    color var(--wren-text-tertiary)
+    transition color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+    background var(--wren-surface-hover)
+
+    svg
+      color var(--wren-accent-primary)
+      transform translateX(1px)
+
+  &:active:not(:disabled)
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    cursor default
+    opacity .58
+
+.accountContinuationRow.activityContinuation
+  padding-left var(--wren-space-12)
+
+.accountContinuationRow.connectedAppsContinuation
+  padding-left var(--wren-space-5)

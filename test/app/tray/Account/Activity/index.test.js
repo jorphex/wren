@@ -57,6 +57,7 @@ it('keeps non-interactive activity rows visually inert', () => {
   const rowRule = styles.match(/\.activityRow\n([\s\S]*?)\n\.activityMark/)[1]
 
   expect(rowRule).not.toContain('&:hover')
+  expect(styles).toContain("&:not([aria-pressed='true']):hover:not(:disabled)")
 })
 
 it('shows four privacy-safe recent entries and opens the complete activity view', () => {
@@ -67,7 +68,9 @@ it('shows four privacy-safe recent entries and opens the complete activity view'
   expect(document.body.textContent).not.toContain(transactionHash)
   expect(document.body.textContent).not.toMatch(/payload|calldata|recipient/i)
 
-  fireEvent.click(screen.getByRole('button', { name: 'View all' }))
+  const continuation = screen.getByRole('button', { name: 'View all activity' })
+  expect(continuation.classList.contains('accountContinuationRow')).toBe(true)
+  fireEvent.click(continuation)
   expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
     view: 'expandedModule',
     data: { id: 'activity', account, title: 'Activity' }
@@ -154,7 +157,7 @@ it('uses an explicit privacy-preserving empty state', () => {
   expect(
     screen.getByText('Completed wallet requests will appear here without their private contents.')
   ).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'View all' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View all activity' })).toBeNull()
 })
 
 it('does not expose opaque origin identifiers as app names', () => {

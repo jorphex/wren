@@ -80,14 +80,15 @@ it('reveals gas suggestions and action estimates with one disclosure target', as
   expect(screen.getByLabelText('Estimated fees')).toBeTruthy()
 })
 
-it('collapses the disclosure when switching networks', async () => {
+it('keeps gas details expanded when switching networks', async () => {
   const { user } = renderMonitor()
   await user.click(screen.getByRole('button', { name: 'Show gas details for Mainnet' }))
   await user.click(screen.getByRole('button', { name: 'Next network from Mainnet' }))
 
-  expect(screen.getByRole('button', { name: 'Show gas details for Optimism' })).toBeTruthy()
+  const disclosure = screen.getByRole('button', { name: 'Hide gas details for Optimism' })
+  expect(disclosure.getAttribute('aria-expanded')).toBe('true')
   expect(screen.getByLabelText('Current gas price 1 gwei')).toBeTruthy()
-  expect(screen.queryByText('Next base fee')).toBeNull()
+  expect(screen.getByText('Next base fee')).toBeTruthy()
 })
 
 it('opens the selected account on the displayed network explorer', async () => {
@@ -123,6 +124,20 @@ it('groups network navigation and explorer controls on the right of the identity
     'Next network from Mainnet',
     'View Mainnet account on block explorer'
   ])
+})
+
+it('composes gas evidence with the selected network without a redundant label', () => {
+  renderMonitor()
+  const gasEvidence = screen.getByLabelText('Current gas price 2 gwei')
+  const disclosure = screen.getByRole('button', { name: 'Show gas details for Mainnet' })
+  const gasGroup = gasEvidence.closest('.chainMonitorGasEvidence')
+  const divider = gasGroup.previousElementSibling
+  const row = disclosure.parentElement
+
+  expect(row.children).toHaveLength(5)
+  expect(divider.nextElementSibling.contains(gasEvidence)).toBe(true)
+  expect(gasGroup.nextElementSibling).toBe(disclosure)
+  expect(screen.queryByText('Gas')).toBeNull()
 })
 
 it('keeps explorer placement stable and disabled when the displayed network has none', async () => {

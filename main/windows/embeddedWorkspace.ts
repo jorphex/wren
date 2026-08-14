@@ -85,23 +85,24 @@ export class EmbeddedWorkspace {
       this.applyWindowShape(this.fullShape(windowBounds))
       this.view.setBounds(viewBounds)
       this.viewBounds = viewBounds
-    } else {
-      this.view.setVisible(false)
-      this.visible = false
     }
 
     this.animationTimer = setTimeout(() => {
       if (this.destroyed || this.parent.isDestroyed()) return
 
       if (!showing) {
+        this.view.setVisible(false)
+        this.visible = false
         this.applyWindowBounds(windowBounds)
         this.applyWindowShape(mainBounds)
         this.view.setBounds(viewBounds)
         this.viewBounds = viewBounds
       }
       this.animationTimer = undefined
-      this.visible = showing
-      if (showing) this.view.setVisible(true)
+      if (showing) {
+        this.visible = true
+        this.view.setVisible(true)
+      }
       onComplete?.()
     }, shellTransitionDuration)
   }

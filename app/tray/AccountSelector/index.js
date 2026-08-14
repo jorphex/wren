@@ -19,6 +19,7 @@ export class AccountSelector extends React.Component {
       accountFilter: context.store('panel.accountFilter') || ''
     }
     this.accountTriggerRef = React.createRef()
+    this.accountDrawerRef = React.createRef()
     this.accountChooserRef = React.createRef()
     this.accountChooserWasOpen = Boolean(context.store('selected.showAccounts'))
     this.handleDrawerKeyDown = this.handleDrawerKeyDown.bind(this)
@@ -53,7 +54,7 @@ export class AccountSelector extends React.Component {
 
     if (event.key !== 'Tab') return
 
-    const focusable = this.getAccountChooserFocusable()
+    const focusable = this.getAccountDrawerFocusable()
     if (!focusable.length) {
       event.preventDefault()
       this.accountChooserRef.current?.focus()
@@ -64,7 +65,7 @@ export class AccountSelector extends React.Component {
     const last = focusable[focusable.length - 1]
     const active = document.activeElement
 
-    if (!this.accountChooserRef.current?.contains(active)) {
+    if (!(this.accountDrawerRef.current || this.accountChooserRef.current)?.contains(active)) {
       event.preventDefault()
       ;(event.shiftKey ? last : first).focus()
     } else if (event.shiftKey && active === first) {
@@ -81,6 +82,17 @@ export class AccountSelector extends React.Component {
 
     return Array.from(
       this.accountChooserRef.current.querySelectorAll(
+        'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
+  }
+
+  getAccountDrawerFocusable() {
+    const root = this.accountDrawerRef.current || this.accountChooserRef.current
+    if (!root) return []
+
+    return Array.from(
+      root.querySelectorAll(
         'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
       )
     ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
@@ -148,7 +160,7 @@ export class AccountSelector extends React.Component {
   renderWelcome() {
     return (
       <header className='accountSelectorWelcome'>
-        <h1>Welcome back</h1>
+        <h1>Choose an account</h1>
         <p>Choose an account to open your wallet.</p>
       </header>
     )
@@ -174,7 +186,6 @@ export class AccountSelector extends React.Component {
         <div className='accountSelectorScrollWrap'>
           {displayAccounts.length ? (
             <>
-              {!closeOnSelect ? this.renderWelcome() : null}
               {displayAccounts.map((account, i) => (
                 <AccountController
                   key={account.id}
@@ -318,10 +329,17 @@ export class AccountSelector extends React.Component {
     const current = this.store('selected.current')
     const open = this.store('selected.open')
     const currentAccount = accounts[current]
+    const accountDrawerOpen = Boolean(this.store('selected.showAccounts'))
 
     if (open && currentAccount) {
       return (
-        <div className='accountSelector accountSelectorOpen'>
+        <div
+          ref={this.accountDrawerRef}
+          className='accountSelector accountSelectorOpen'
+          role={accountDrawerOpen ? 'dialog' : undefined}
+          aria-modal={accountDrawerOpen ? 'true' : undefined}
+          aria-label={accountDrawerOpen ? 'Accounts' : undefined}
+        >
           {this.renderCurrentAccount(currentAccount)}
           {this.renderAccountPanel(accounts)}
         </div>
@@ -330,6 +348,7 @@ export class AccountSelector extends React.Component {
 
     return (
       <div className='accountSelector'>
+        {Object.keys(accounts).length ? this.renderWelcome() : null}
         {this.renderAccountFilter()}
         {this.renderAccountList()}
       </div>

@@ -1,6 +1,7 @@
 import fs from 'fs'
 
 const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf8')
+const accountGrain = fs.readFileSync('app/tray/Account/style/wren-grain.svg', 'utf8')
 const accountSource = fs.readFileSync('app/tray/Account/Account.js', 'utf8')
 const accountSelectorStyle = fs.readFileSync('app/tray/AccountSelector/style/index.styl', 'utf8')
 const balancesStyle = fs.readFileSync('app/tray/Account/Balances/style/index.styl', 'utf8')
@@ -16,6 +17,13 @@ const transactionEvidenceStyle = fs.readFileSync(
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
+const trayShellStyle = fs.readFileSync('app/tray/style/index.styl', 'utf8')
+
+test('keeps the compact wallet shell and its canvas on the same width contract', () => {
+  expect(trayStyle).toMatch(/body::before[\s\S]*?width 620px/)
+  expect(trayStyle).toMatch(/#panel[\s\S]*?width 620px/)
+  expect(trayStyle).not.toMatch(/width 760px/)
+})
 
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   expect(trayStyle).toMatch(
@@ -30,6 +38,34 @@ test('keeps account collection and balance interiors spacing-led', () => {
   expect(accountStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
   expect(balancesStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
   expect(accountStyle).toMatch(/\.clusterRow \+ \.clusterRow[\s\S]*?margin-top var\(--wren-space-2\)/)
+})
+
+test('keeps the account atmosphere static across startup and ordinary browsing only', () => {
+  expect(accountStyle).toMatch(
+    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-image url\('\.\/Account\/style\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
+  )
+  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(1)
+  expect(accountGrain).toMatch(
+    /<feTurbulence type="fractalNoise"[\s\S]*?stitchTiles="stitch"[\s\S]*?<feColorMatrix type="saturate" values="0"[\s\S]*?<feComponentTransfer>[\s\S]*?<rect width="144" height="144" opacity="0\.11"/
+  )
+})
+
+test('keeps the home-to-requests gap compact without shifting the selector rail', () => {
+  expect(accountStyle).toMatch(
+    /\.accountHomeHeader[\s\S]*?padding 0 var\(--wren-space-5\) var\(--wren-space-3\)/
+  )
+  expect(accountSelectorStyle).toMatch(
+    /\.accountSelectorScrollWrap[\s\S]*?padding 24px var\(--wren-space-5\) 48px/
+  )
+  expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
+})
+
+test('centers shared filter icons in the 44px field and anchors the startup control right', () => {
+  expect(accountSelectorStyle).toMatch(
+    /\.panelFilterIcon[\s\S]*?top 2px[\s\S]*?bottom 2px[\s\S]*?align-items center/
+  )
+  expect(accountSelectorStyle).toMatch(/\.panelFilterInput[\s\S]*?top 2px[\s\S]*?bottom 2px/)
+  expect(trayShellStyle).toMatch(/\.panelMenuItemOpen[\s\S]*?right var\(--wren-space-2\)[\s\S]*?left auto/)
 })
 
 test('keeps account modules free of decorative seams', () => {
@@ -57,8 +93,12 @@ test('keeps activity grouped by spacing and exposes its expanded module', () => 
   expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
   expect(accountSource).toMatch(/activity: Activity/)
   expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
+  expect(accountSource).toMatch(
+    /compactTop=\{\s*crumb\.data\.id === 'requests' \|\| crumb\.data\.id === 'activity' \|\| crumb\.data\.id === 'balances'\s*\}/
+  )
   expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap var\(--wren-space-1\)/)
   expect(activityStyle).not.toMatch(/border-(?:top|bottom)|wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
 
 test('keeps reserved tray bands and revocation evidence free of decorative horizontal rules', () => {
@@ -76,19 +116,22 @@ test('keeps warnings and balance siblings attached through spacing', () => {
 test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {
   expect(accountSource).not.toMatch(/accountHomeExplorer/)
   expect(accountStyle).toMatch(
-    /\.chainMonitorNetworkRow,[\s\S]*?\.chainMonitorGasRow[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto/
+    /\.chainMonitorRow[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto 1px auto auto/
   )
   expect(accountStyle).toMatch(
     /\.chainMonitorSwitchButton,[\s\S]*?\.chainMonitorExplorer[\s\S]*?min-height 44px/
   )
   expect(accountStyle).toMatch(/\.chainMonitorControls[\s\S]*?display flex[\s\S]*?gap var\(--wren-space-1\)/)
   expect(accountStyle).toMatch(
-    /\.chainMonitorGasEvidence[\s\S]*?justify-content space-between[\s\S]*?\.chainMonitorDisclosure[\s\S]*?min-height 44px/
+    /\.chainMonitorGasEvidence[\s\S]*?justify-content flex-end[\s\S]*?\.chainMonitorDisclosure[\s\S]*?min-height 44px/
   )
   expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
   expect(accountSource).toMatch(/wrenControlPrimary wrenControlLarge/)
   expect(accountStyle).toMatch(
     /\.chainMonitorIdentity[\s\S]*?padding-left var\(--wren-space-3\)[\s\S]*?\.chainMonitorMark[\s\S]*?width 24px[\s\S]*?height 24px/
+  )
+  expect(accountStyle).toMatch(
+    /\.chainMonitorDivider[\s\S]*?height 24px[\s\S]*?@media \(max-width: 540px\)[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto[\s\S]*?\.chainMonitorDivider[\s\S]*?display none/
   )
 })
 
@@ -100,7 +143,7 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
     /\.signerBalanceIcon[\s\S]*?top 19px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
   )
   expect(balancesStyle).toMatch(
-    /\.balancesAssetMark \.assetMarkGlyph[\s\S]*?border-color transparent[\s\S]*?box-shadow none/
+    /\.balancesAssetMark \.assetMarkGlyph[\s\S]*?border-color transparent[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
 })
 
