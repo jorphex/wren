@@ -289,6 +289,7 @@ const TrayActionArgsSchema = z
 
 const eventSchemas: Record<string, z.ZodType> = {
   '*:contextmenu': z.tuple([z.number().finite(), z.number().finite()]),
+  'dash:dismissHardwarePrompt': z.tuple([IdSchema]),
   'dash:reloadSigner': z.tuple([IdSchema]),
   'dash:removeSigner': z.tuple([IdSchema]),
   'frame:close': noArgs,

@@ -27,6 +27,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   private timers = new Map<string, Set<ReturnType<typeof setTimeout>>>()
   private promptStatuses = new Map<string, string>()
   private activePrompts = new Set<string>()
+  private promptDismissibility = new Map<string, boolean>()
+  private suspendedPrompts = new Set<string>()
   private connectionGenerations = new Map<string, number>()
   private observer: Observer | undefined
   private lifecycleGeneration = 0
@@ -75,6 +77,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
 
       const id = Trezor.generateId(device.path)
       const trezor = this.knownSigners[id]?.signer || this.initTrezor(device.path)
+      this.suspendedPrompts.delete(id)
       const connectionGeneration = (this.connectionGenerations.get(id) || 0) + 1
       this.connectionGenerations.set(id, connectionGeneration)
 
@@ -305,6 +308,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     this.clearAllTimers()
     this.pendingSessionProbes.clear()
     this.promptStatuses.clear()
+    this.promptDismissibility.clear()
+    this.suspendedPrompts.clear()
     Array.from(this.activePrompts).forEach((id) => this.clearPrompt(id))
     this.activePrompts.clear()
     this.connectionGenerations.clear()
@@ -333,6 +338,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.clearSignerTimers(trezor.id)
       this.pendingSessionProbes.delete(trezor.id)
       this.promptStatuses.delete(trezor.id)
+      this.promptDismissibility.delete(trezor.id)
+      this.suspendedPrompts.delete(trezor.id)
       this.clearPrompt(trezor.id)
       this.connectionGenerations.delete(trezor.id)
 
@@ -343,6 +350,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   override async reload(trezor: Trezor) {
     const generation = this.lifecycleGeneration
     if (!this.isRegistered(trezor, generation)) return
+    this.suspendedPrompts.delete(trezor.id)
     const connectionGeneration = (this.connectionGenerations.get(trezor.id) || 0) + 1
     this.connectionGenerations.set(trezor.id, connectionGeneration)
 
@@ -424,17 +432,68 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   }
 
   private showPrompt(signer: Trezor) {
+    if (this.suspendedPrompts.has(signer.id)) return
     if (this.activePrompts.has(signer.id)) return
     this.activePrompts.add(signer.id)
-    if (this.activePrompts.size === 1) requireStoreAction('showHardwarePrompt')(signer.id)
+    // Only the initial connect/session-establishment request is passive. Later
+    // PIN or passphrase prompts can belong to signing, verification, or derivation.
+    const dismissible = signer.status === Status.INITIAL
+    this.promptDismissibility.set(signer.id, dismissible)
+    if (this.activePrompts.size === 1) {
+      requireStoreAction('showHardwarePrompt')(signer.id, dismissible)
+    }
+  }
+
+  override dismissAuthentication(signer: Trezor) {
+    if (
+      !this.isRegistered(signer, this.lifecycleGeneration) ||
+      !this.activePrompts.has(signer.id) ||
+      !this.promptDismissibility.get(signer.id) ||
+      signer.hasActiveSigningOperation()
+    ) {
+      return false
+    }
+
+    log.info(`dismissing passive Trezor authentication for ${signer.id}`)
+    this.suspendedPrompts.add(signer.id)
+    this.promptStatuses.delete(signer.id)
+    this.promptDismissibility.delete(signer.id)
+    delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pin']
+    delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:passphrase']
+    delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pairing']
+    signer.pinError = undefined
+    signer.pairing = undefined
+    signer.status = Status.NEEDS_RECONNECTION
+    TrezorBridge.cancelAuthentication()
+    const visiblePrompt = this.activePrompts.values().next().value === signer.id
+    this.activePrompts.delete(signer.id)
+    if (visiblePrompt) {
+      requireStoreAction('dismissHardwarePrompt')(signer.id)
+      const nextSignerId = this.activePrompts.values().next().value
+      if (nextSignerId) {
+        requireStoreAction('showHardwarePrompt')(
+          nextSignerId,
+          this.promptDismissibility.get(nextSignerId) || false
+        )
+      }
+    }
+    this.emit('update', signer)
+    return true
   }
 
   private clearPrompt(signerId: string) {
     const visiblePrompt = this.activePrompts.values().next().value === signerId
-    if (!this.activePrompts.delete(signerId) || !visiblePrompt) return
+    if (!this.activePrompts.delete(signerId)) return
+    this.promptDismissibility.delete(signerId)
+    if (!visiblePrompt) return
     requireStoreAction('clearHardwarePrompt')(signerId)
     const nextSignerId = this.activePrompts.values().next().value
-    if (nextSignerId) requireStoreAction('showHardwarePrompt')(nextSignerId)
+    if (nextSignerId) {
+      requireStoreAction('showHardwarePrompt')(
+        nextSignerId,
+        this.promptDismissibility.get(nextSignerId) || false
+      )
+    }
   }
 
   private rememberPromptStatus(signer: Trezor) {

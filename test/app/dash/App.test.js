@@ -49,10 +49,10 @@ it('leaves an Escape event handled by a child untouched', () => {
   expect(link.send).not.toHaveBeenCalled()
 })
 
-it('keeps a required hardware prompt open on Escape', () => {
+it('keeps a non-dismissible hardware prompt open on Escape', () => {
   const dash = new Dash({})
   dash.store = jest.fn((path) => {
-    if (path === 'windows.dash.hardwarePrompt') return { signerId: 'trezor-1' }
+    if (path === 'windows.dash.hardwarePrompt') return { signerId: 'trezor-1', dismissible: false }
     if (path === 'windows.dash.nav') return [{ view: 'accounts', data: {} }]
   })
   const event = { defaultPrevented: false, key: 'Escape', preventDefault: jest.fn() }
@@ -61,4 +61,18 @@ it('keeps a required hardware prompt open on Escape', () => {
 
   expect(event.preventDefault).toHaveBeenCalled()
   expect(link.send).not.toHaveBeenCalled()
+})
+
+it('dismisses a passive hardware prompt on Escape without closing Dash', () => {
+  const dash = new Dash({})
+  dash.store = jest.fn((path) => {
+    if (path === 'windows.dash.hardwarePrompt') return { signerId: 'trezor-1', dismissible: true }
+    if (path === 'windows.dash.nav') return [{ view: 'accounts', data: {} }]
+  })
+  const event = { defaultPrevented: false, key: 'Escape', preventDefault: jest.fn() }
+
+  dash.onKeyDown(event)
+
+  expect(event.preventDefault).toHaveBeenCalled()
+  expect(link.send).toHaveBeenCalledWith('dash:dismissHardwarePrompt', 'trezor-1')
 })

@@ -69,9 +69,14 @@ export default class Signer extends EventEmitter {
   }
 
   summary(): SignerSummary {
+    const displayType = getSignerDisplayType(this)
+    const defaultName = displayType
+      ? `${displayType.charAt(0).toUpperCase()}${displayType.slice(1)} Signer`
+      : 'Signer'
+
     return {
       id: this.id,
-      name: this.name || `${getSignerDisplayType(this)} signer`,
+      name: this.name || defaultName,
       type: this.type,
       model: this.model,
       addresses: this.addresses.map((addr) => addHexPrefix(addr.toString())),

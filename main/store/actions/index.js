@@ -869,12 +869,13 @@ module.exports = {
       return win
     })
   },
-  showHardwarePrompt: (u, signerId) => {
+  showHardwarePrompt: (u, signerId, dismissible = false) => {
     if (!signerId) return
     u('windows.dash', (dash) => {
       const existing = dash.hardwarePrompt
       dash.hardwarePrompt = {
         signerId,
+        dismissible,
         restoreHidden: existing ? existing.restoreHidden : !dash.showing
       }
       dash.showing = true
@@ -887,6 +888,18 @@ module.exports = {
       if (!prompt || (signerId && prompt.signerId !== signerId)) return dash
       delete dash.hardwarePrompt
       if (prompt.restoreHidden) dash.showing = false
+      return dash
+    })
+  },
+  dismissHardwarePrompt: (u, signerId) => {
+    if (!signerId) return
+    u('windows.dash', (dash) => {
+      const prompt = dash.hardwarePrompt
+      if (!prompt || prompt.signerId !== signerId) return dash
+      delete dash.hardwarePrompt
+      // A user dismissal is an explicit visit to the Control Panel. Do not restore
+      // its previous hidden state as the normal authentication completion path does.
+      dash.showing = true
       return dash
     })
   },

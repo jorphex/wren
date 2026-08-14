@@ -1,6 +1,15 @@
 import Signer from '../../../../main/signers/Signer'
 
 describe('Signer unsupported operations', () => {
+  it('uses title-cased canonical default names for known signers', () => {
+    const signer = new Signer()
+    signer.type = 'trezor'
+    expect(signer.summary().name).toBe('Trezor Signer')
+
+    signer.type = 'ledger'
+    expect(signer.summary().name).toBe('Ledger Signer')
+  })
+
   it('settles an unsupported message request with an error', () => {
     const signer = new Signer()
     const callback = jest.fn()

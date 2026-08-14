@@ -89,6 +89,60 @@ it('uses a transient hardware-authentication dialog without exposing address man
   expect(screen.queryByRole('button', { name: 'Remove signer' })).toBeNull()
 })
 
+it('offers a quiet dismissal for passive hardware authentication', async () => {
+  const { user } = render(
+    <SignerHarness
+      id='device-1'
+      promptOnly
+      promptDismissible
+      name='Trezor Safe 5'
+      type='trezor'
+      status='need pin'
+    />
+  )
+
+  const dismiss = screen.getByRole('button', { name: 'Not now' })
+  expect(dismiss.classList.contains('hardwareSignerPromptDismiss')).toBe(true)
+  await user.click(dismiss)
+
+  expect(link.send).toHaveBeenCalledTimes(1)
+  expect(link.send).toHaveBeenCalledWith('dash:dismissHardwarePrompt', 'device-1')
+})
+
+it('dismisses passive hardware authentication on Escape', async () => {
+  const { user } = render(
+    <SignerHarness
+      id='device-1'
+      promptOnly
+      promptDismissible
+      name='Trezor Safe 5'
+      type='trezor'
+      status='need pin'
+    />
+  )
+
+  await user.keyboard('{Escape}')
+
+  expect(link.send).toHaveBeenCalledWith('dash:dismissHardwarePrompt', 'device-1')
+})
+
+it('dismisses a busy but passive authentication prompt on Escape', async () => {
+  const { user } = render(
+    <SignerHarness
+      id='device-1'
+      promptOnly
+      promptDismissible
+      name='Trezor Safe 5'
+      type='trezor'
+      status='passphrase-on-device'
+    />
+  )
+
+  await user.keyboard('{Escape}')
+
+  expect(link.send).toHaveBeenCalledWith('dash:dismissHardwarePrompt', 'device-1')
+})
+
 it('submits one Trezor PIN with the original RPC payload', async () => {
   link.rpc.mockImplementationOnce((_action, _id, _pin, callback) => callback())
   const { user } = renderSigner({ type: 'trezor', status: 'need pin' })

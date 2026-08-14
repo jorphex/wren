@@ -41,6 +41,7 @@ export class Signer extends React.Component {
       tPhrasePending: false,
       tPairing: '',
       tPairingPending: false,
+      promptDismissalPending: false,
       removalArmed: false,
       removalPending: false
     }
@@ -141,6 +142,12 @@ export class Signer extends React.Component {
     this.pending.pairing = true
     this.setState({ tPairing: '', tPairingPending: true })
     link.rpc('trezorPairing', this.props.id, { tag: pairing }, () => {})
+  }
+
+  dismissHardwarePrompt() {
+    if (!this.props.promptDismissible || this.state.promptDismissalPending) return
+    this.setState({ promptDismissalPending: true })
+    link.send('dash:dismissHardwarePrompt', this.props.id)
   }
 
   renderTrezorPin(active) {
@@ -667,6 +674,7 @@ export class Signer extends React.Component {
 
   renderPrompt() {
     const signerStatus = this.getStatusMeta()
+    const canDismiss = this.props.promptDismissible && !this.state.promptDismissalPending
 
     return (
       <div className='hardwareSignerPromptOverlay'>
@@ -675,6 +683,8 @@ export class Signer extends React.Component {
           ariaLabel={`${this.props.name || 'Hardware wallet'} authentication`}
           busy={signerStatus.busy}
           modal
+          onCancel={canDismiss ? () => this.dismissHardwarePrompt() : undefined}
+          cancelWhenBusy={this.props.promptDismissible}
         >
           <div className='hardwareSignerPromptHeader'>
             <div className='hardwareSignerPromptMark'>
@@ -696,6 +706,16 @@ export class Signer extends React.Component {
               <div className='signerLoadingLoader' />
             </div>
           )}
+          {this.props.promptDismissible ? (
+            <button
+              type='button'
+              className='hardwareSignerPromptDismiss wrenControl wrenControlGhost'
+              disabled={this.state.promptDismissalPending}
+              onClick={() => this.dismissHardwarePrompt()}
+            >
+              Not now
+            </button>
+          ) : null}
         </DialogSurface>
       </div>
     )

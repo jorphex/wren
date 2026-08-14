@@ -66,7 +66,11 @@ export class Dash extends React.Component {
   onKeyDown(event) {
     if (event.key !== 'Escape' || event.defaultPrevented) return
     event.preventDefault()
-    if (this.store('windows.dash.hardwarePrompt')?.signerId) return
+    const hardwarePrompt = this.store('windows.dash.hardwarePrompt')
+    if (hardwarePrompt?.signerId) {
+      if (hardwarePrompt.dismissible) link.send('dash:dismissHardwarePrompt', hardwarePrompt.signerId)
+      return
+    }
     const nav = this.store('windows.dash.nav') || []
     if (nav.length) link.send('tray:action', 'backDash')
     else link.send('tray:action', 'closeDash')
@@ -108,7 +112,12 @@ export class Dash extends React.Component {
           <div className='dashMainScroll'>{this.renderPanel(view, data)}</div>
         </div>
         {promptSigner ? (
-          <Signer key={`hardware-prompt-${promptSigner.id}`} promptOnly {...promptSigner} />
+          <Signer
+            key={`hardware-prompt-${promptSigner.id}`}
+            promptOnly
+            promptDismissible={hardwarePrompt.dismissible}
+            {...promptSigner}
+          />
         ) : null}
         {showAddButton && <AddNewItemButton view={view} req={this.props.req} />}
       </div>

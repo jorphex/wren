@@ -31,6 +31,8 @@ test('enforces exact event tuple arity and Ethereum values', () => {
   )
   expect(parseRendererIpcArgs('event', 'tray:renameAccount', [address, 'Account']).success).toBe(true)
   expect(parseRendererIpcArgs('event', 'tray:renameAccount', ['0x1', 'Account']).success).toBe(false)
+  expect(parse('event', 'dash:dismissHardwarePrompt', ['trezor-1'])).toEqual(['trezor-1'])
+  expect(parseRendererIpcArgs('event', 'dash:dismissHardwarePrompt', []).success).toBe(false)
 })
 
 test('allows only an argument-free activity clear action', () => {

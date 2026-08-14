@@ -87,6 +87,7 @@ export default class Trezor extends Signer {
 
   private closed = false
   private lifecycleGeneration = 0
+  private activeSigningOperations = new Set<object>()
   private transactionSigning?: { cancelled: boolean; dispatched: boolean }
   private derivationGeneration = 0
   private verificationGeneration = 0
@@ -173,6 +174,7 @@ export default class Trezor extends Signer {
       if (this.transactionSigning.dispatched) TrezorBridge.cancelCurrentRequest()
       delete this.transactionSigning
     }
+    this.activeSigningOperations.clear()
     this.clearTimers()
     const cancellation = new Error('Trezor signer closed')
     const pendingCallbacks = [...this.pendingCallbacks]
@@ -360,6 +362,8 @@ export default class Trezor extends Signer {
 
   override async signMessage(index: number, rawMessage: string, cb: Callback<string>) {
     const done = this.trackCallback(cb)
+    const signingOperation = {}
+    this.activeSigningOperations.add(signingOperation)
 
     try {
       if (!this.device) {
@@ -377,6 +381,8 @@ export default class Trezor extends Signer {
     } catch (e: unknown) {
       const err = e as DeviceError
       done(toSignerError(err))
+    } finally {
+      this.activeSigningOperations.delete(signingOperation)
     }
   }
 
@@ -386,6 +392,8 @@ export default class Trezor extends Signer {
     cb: Callback<string>
   ) {
     const done = this.trackCallback(cb)
+    const signingOperation = {}
+    this.activeSigningOperations.add(signingOperation)
 
     try {
       if (!this.device) {
@@ -435,6 +443,8 @@ export default class Trezor extends Signer {
     } catch (e: unknown) {
       const err = e as DeviceError
       done(toSignerError(err))
+    } finally {
+      this.activeSigningOperations.delete(signingOperation)
     }
   }
 
@@ -446,6 +456,7 @@ export default class Trezor extends Signer {
   ) {
     const done = this.trackCallback(cb)
     const signing = { cancelled: false, dispatched: false }
+    this.activeSigningOperations.add(signing)
     this.transactionSigning = signing
     onPhase?.('queued')
 
@@ -489,6 +500,7 @@ export default class Trezor extends Signer {
       done(err)
     } finally {
       if (this.transactionSigning === signing) delete this.transactionSigning
+      this.activeSigningOperations.delete(signing)
     }
   }
 
@@ -498,6 +510,10 @@ export default class Trezor extends Signer {
     signing.cancelled = true
     if (signing.dispatched) TrezorBridge.cancelCurrentRequest()
     return true
+  }
+
+  hasActiveSigningOperation() {
+    return this.activeSigningOperations.size > 0
   }
 
   private async deriveAccounts(publicKey: string, chainCode: string) {

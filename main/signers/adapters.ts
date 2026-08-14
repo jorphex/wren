@@ -22,4 +22,7 @@ export class SignerAdapter extends EventEmitter {
   reload(_signer: Signer) {
     // Optional adapter lifecycle hook.
   }
+  dismissAuthentication(_signer: Signer) {
+    return false
+  }
 }

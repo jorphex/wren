@@ -26,6 +26,7 @@ import {
   navClearSigner as clearNavSignerAction,
   showHardwarePrompt as showHardwarePromptAction,
   clearHardwarePrompt as clearHardwarePromptAction,
+  dismissHardwarePrompt as dismissHardwarePromptAction,
   notify as notifyAction,
   showWalletCallsStatus as showWalletCallsStatusAction,
   updateTypedDataRequest as updateTypedDataAction,
@@ -1674,7 +1675,7 @@ describe('hardware signer prompt', () => {
     expect(state.dash).toEqual({
       showing: true,
       nav: [{ view: 'accounts', data: {} }],
-      hardwarePrompt: { signerId: 'trezor-1', restoreHidden: true }
+      hardwarePrompt: { signerId: 'trezor-1', dismissible: false, restoreHidden: true }
     })
   })
 
@@ -1706,6 +1707,24 @@ describe('hardware signer prompt', () => {
 
     clearHardwarePromptAction(updateDash(state), 'trezor-1')
     expect(state.dash).toEqual({ showing: true, nav: [{ view: 'settings', data: {} }] })
+  })
+})
+
+describe('#dismissHardwarePrompt', () => {
+  it('clears the matching prompt without hiding the Control Panel', () => {
+    const state = {
+      dash: {
+        showing: false,
+        nav: [{ view: 'accounts', data: {} }],
+        hardwarePrompt: { signerId: 'trezor-1', dismissible: true, restoreHidden: true }
+      }
+    }
+
+    dismissHardwarePromptAction((_node, update) => {
+      state.dash = update(state.dash)
+    }, 'trezor-1')
+
+    expect(state.dash).toEqual({ showing: true, nav: [{ view: 'accounts', data: {} }] })
   })
 })
 

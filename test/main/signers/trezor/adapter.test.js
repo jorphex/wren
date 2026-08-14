@@ -25,6 +25,7 @@ jest.mock('../../../../main/signers/trezor/bridge', () => {
   }))
   bridge.getAddress = jest.fn(async () => '0xabc')
   bridge.getPublicKey = jest.fn(async () => ({ publicKey: 'public-key', chainCode: 'chain-code' }))
+  bridge.cancelAuthentication = jest.fn()
 
   return { __esModule: true, default: bridge }
 })
@@ -89,13 +90,73 @@ describe('Trezor adapter lifecycle', () => {
 
     expect(mockStoreActions.navReplace).toBeUndefined()
 
-    signer.status = Status.OK
+    signer.status = Status.INITIAL
     TrezorBridge.emit('trezor:needPin', device)
-    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id)
+    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id, true)
 
     TrezorBridge.emit('trezor:entered:pin', signer.id)
+    signer.status = Status.OK
+    signer.emit('update')
     expect(mockStoreActions.clearHardwarePrompt).toHaveBeenCalledWith(signer.id)
   })
+
+  it('cancels and suppresses a passive authentication prompt until an intentional retry', async () => {
+    let signer
+    adapter.once('add', (addedSigner) => {
+      signer = addedSigner
+    })
+    TrezorBridge.emit('trezor:detected', device.path)
+    signer.status = Status.INITIAL
+    signer.device = device
+
+    TrezorBridge.emit('trezor:needPin', device)
+    expect(adapter.dismissAuthentication(signer)).toBe(true)
+    expect(TrezorBridge.cancelAuthentication).toHaveBeenCalledTimes(1)
+    expect(mockStoreActions.dismissHardwarePrompt).toHaveBeenCalledWith(signer.id)
+    expect(signer.device).toBe(device)
+    expect(signer.status).toBe(Status.NEEDS_RECONNECTION)
+
+    TrezorBridge.emit('trezor:needPin', device)
+    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledTimes(1)
+
+    await adapter.reload(signer)
+    TrezorBridge.emit('trezor:needPin', device)
+    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not dismiss authentication prompted during an active message or typed-data request', () => {
+    let signer
+    adapter.once('add', (addedSigner) => {
+      signer = addedSigner
+    })
+    TrezorBridge.emit('trezor:detected', device.path)
+    signer.status = Status.OK
+    // Signing requests retain ready status while their request is live; only
+    // startup/session establishment is eligible for a passive dismissal.
+    TrezorBridge.emit('trezor:needPhrase', device)
+
+    expect(adapter.dismissAuthentication(signer)).toBe(false)
+    expect(TrezorBridge.cancelAuthentication).not.toHaveBeenCalled()
+    expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id, false)
+  })
+
+  it.each(['message', 'typed data', 'transaction'])(
+    'does not let a formerly passive prompt cancel %s signing',
+    () => {
+      let signer
+      adapter.once('add', (addedSigner) => {
+        signer = addedSigner
+      })
+      TrezorBridge.emit('trezor:detected', device.path)
+      signer.status = Status.INITIAL
+      TrezorBridge.emit('trezor:needPin', device)
+      signer.hasActiveSigningOperation = jest.fn(() => true)
+
+      expect(adapter.dismissAuthentication(signer)).toBe(false)
+      expect(TrezorBridge.cancelAuthentication).not.toHaveBeenCalled()
+      expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id, true)
+    }
+  )
 
   it('does not restore a stale status after PIN attempts are depleted', () => {
     let signer

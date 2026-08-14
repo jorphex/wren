@@ -207,6 +207,13 @@ export class Signers extends EventEmitter {
     }
   }
 
+  dismissHardwarePrompt(id: string) {
+    const signer = this.signers[id]
+    if (!signer || signer.type !== 'trezor') return false
+
+    return this.adapters['trezor']?.adapter.dismissAuthentication(signer) || false
+  }
+
   get(id: string) {
     return this.signers[id]
   }

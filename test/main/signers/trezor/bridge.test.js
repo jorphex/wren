@@ -146,6 +146,12 @@ describe('connect events', () => {
 })
 
 describe('ui events', () => {
+  it('cancels a passive authentication request without using the transaction cancellation reason', () => {
+    TrezorBridge.cancelAuthentication()
+
+    expect(TrezorConnect.cancel).toHaveBeenCalledWith('Authentication dismissed in Wren')
+  })
+
   it('emits a needPin event when a pin is requested', (done) => {
     const device = { type: 'acquired', id: 'someid1234' }
 

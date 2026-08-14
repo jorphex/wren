@@ -213,6 +213,10 @@ onRenderer('dash:reloadSigner', (e, id) => {
   signers.reload(id)
 })
 
+onRenderer('dash:dismissHardwarePrompt', (e, id) => {
+  signers.dismissHardwarePrompt(id)
+})
+
 onRenderer('tray:rejectRequest', (e, req) => {
   const err = { code: 4001, message: 'User rejected the request' }
   accounts.rejectRequestForAccount(req.account, req.handlerId, err)

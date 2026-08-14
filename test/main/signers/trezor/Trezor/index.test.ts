@@ -205,6 +205,7 @@ describe('Trezor lifecycle', () => {
 
     const signing = signer.signMessage(0, '0x12', callback)
     await Promise.resolve()
+    expect(signer.hasActiveSigningOperation()).toBe(true)
     signer.status = Status.ENTERING_PASSPHRASE
 
     signature.resolve('abcd')
@@ -212,6 +213,34 @@ describe('Trezor lifecycle', () => {
 
     expect(signer.status).toBe(Status.OK)
     expect(callback).toHaveBeenCalledTimes(1)
+    expect(signer.hasActiveSigningOperation()).toBe(false)
+    signer.close()
+  })
+
+  it('tracks typed-data signing for prompt-dismissal safety', async () => {
+    const signature = deferred<string>()
+    jest.spyOn(TrezorBridge, 'signTypedData').mockReturnValue(signature.promise)
+    const signer = createSigner()
+    const callback = jest.fn()
+    const typedMessage = {
+      version: 'V4',
+      data: {
+        types: { EIP712Domain: [], Message: [] },
+        primaryType: 'Message',
+        domain: {},
+        message: {}
+      }
+    } as Parameters<Trezor['signTypedData']>[1]
+
+    const signing = signer.signTypedData(0, typedMessage, callback)
+    await Promise.resolve()
+    expect(signer.hasActiveSigningOperation()).toBe(true)
+
+    signature.resolve('abcd')
+    await signing
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(signer.hasActiveSigningOperation()).toBe(false)
     signer.close()
   })
 
@@ -294,6 +323,7 @@ describe('Trezor lifecycle', () => {
     await Promise.resolve()
     await Promise.resolve()
 
+    expect(signer.hasActiveSigningOperation()).toBe(true)
     expect(onPhase).toHaveBeenCalledWith('waiting')
     expect(signer.cancelTransactionSigning()).toBe(true)
     expect(cancel).toHaveBeenCalledTimes(1)
@@ -302,6 +332,7 @@ describe('Trezor lifecycle', () => {
 
     expect(callback.mock.calls[0][0]).toMatchObject({ code: USER_REJECTED_REQUEST })
     expect(callback.mock.calls[0][1]).toBeUndefined()
+    expect(signer.hasActiveSigningOperation()).toBe(false)
     signer.close()
   })
 })

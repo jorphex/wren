@@ -155,6 +155,7 @@ const DialogSurface = forwardRef(function DialogSurface(
     initialFocusRef,
     returnFocusRef,
     onCancel,
+    cancelWhenBusy = false,
     onKeyDown: callerOnKeyDown,
     tabIndex = -1,
     ...surfaceProps
@@ -182,7 +183,7 @@ const DialogSurface = forwardRef(function DialogSurface(
     callerOnKeyDown?.(event)
     if (event.defaultPrevented) return
 
-    if (event.key === 'Escape' && onCancel && !busy) {
+    if (event.key === 'Escape' && onCancel && (!busy || cancelWhenBusy)) {
       event.preventDefault()
       event.stopPropagation()
       onCancel()

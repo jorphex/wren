@@ -237,6 +237,10 @@ class TrezorBridge extends EventEmitter {
     TrezorConnect.cancel('Transaction signing cancelled in Wren')
   }
 
+  cancelAuthentication() {
+    TrezorConnect.cancel('Authentication dismissed in Wren')
+  }
+
   private makeRequest<T>(fn: () => Response<T>, retries = 20) {
     const generation = this.lifecycleGeneration
     const request = this.requestQueue
