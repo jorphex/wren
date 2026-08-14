@@ -394,7 +394,7 @@ it('retains a terminal request state after the core request is removed', async (
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
 })
 
-it('shows the dashboard transaction as sent once broadcast verification begins', async () => {
+it('keeps a submitted transaction visible without treating it as final success', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
   const { store } = renderSend()
@@ -409,8 +409,116 @@ it('shows the dashboard transaction as sent once broadcast verification begins',
     state.main.accounts[account].requests['send-request'] = { status: 'verifying' }
   })
 
-  expect(screen.getByText('Transaction sent')).toBeTruthy()
+  expect(screen.getByText('Transaction submitted')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.'
+    )
+  ).toBeTruthy()
   expect(screen.queryByText('Transaction queued')).toBeNull()
+})
+
+it('announces a confirmed transaction and closes the dashboard after a three-second dwell', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  jest.useFakeTimers()
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
+  })
+
+  expect(screen.getByRole('status').textContent).toContain('Transaction confirmed')
+  expect(screen.getByRole('button', { name: 'Close' }).className).toContain('wrenControlLarge')
+  act(() => jest.advanceTimersByTime(2_999))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+
+  act(() => jest.advanceTimersByTime(1))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+})
+
+it('restarts the confirmed auto-close dwell after success-surface interaction ends', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  jest.useFakeTimers()
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
+  })
+  const success = screen.getByRole('status')
+  const close = screen.getByRole('button', { name: 'Close' })
+
+  fireEvent.mouseEnter(success)
+  act(() => jest.advanceTimersByTime(3_000))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+
+  fireEvent.mouseLeave(success)
+  act(() => jest.advanceTimersByTime(2_999))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+
+  fireEvent.focus(close)
+  act(() => jest.advanceTimersByTime(1))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+
+  fireEvent.blur(close)
+  act(() => jest.advanceTimersByTime(2_999))
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+  act(() => jest.advanceTimersByTime(1))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+})
+
+it('keeps submitted, declined, and failed requests open until the user acts', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  jest.useFakeTimers()
+  for (const status of ['verifying', 'declined', 'error']) {
+    replaceStore(store, (state) => {
+      state.main.accounts[account].requests['send-request'] = { status }
+    })
+    act(() => jest.advanceTimersByTime(3_000))
+    expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+  }
+})
+
+it('closes the dashboard directly from confirmed success instead of returning to the send form', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+  expect(screen.queryByPlaceholderText('Enter an address')).toBeNull()
 })
 
 it('ignores a delayed queue result after the selected account changes', async () => {

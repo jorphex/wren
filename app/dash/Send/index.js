@@ -18,6 +18,8 @@ import { isNetworkConnected } from '../../../resources/utils/chains'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import { maxSendAmount, queueSend, resolveSendRecipient } from './api'
 
+const CONFIRMED_CLOSE_DWELL_MS = 3000
+
 const COPY = Object.freeze({
   accountChanged: 'The selected account changed. Re-check the recipient and amount before trying again.',
   amount: 'Amount',
@@ -25,7 +27,7 @@ const COPY = Object.freeze({
   amountInvalid: 'Enter a valid amount',
   asset: 'Asset',
   assetUnavailable: 'This asset is no longer available to send on this network. Choose another asset.',
-  backToAccount: 'Back to account',
+  close: 'Close',
   chooseAsset: 'Choose an asset',
   chooseContact: 'Choose contact',
   chooseAContact: 'Choose a contact',
@@ -58,8 +60,11 @@ const COPY = Object.freeze({
   savedContacts: 'Saved contacts',
   searchContacts: 'Search accounts and contacts',
   searchAssets: 'Search assets',
-  successBody: 'Your transaction was submitted successfully.',
-  successHeading: 'Transaction sent',
+  confirmedBody: 'Your transaction has been confirmed on the network.',
+  confirmedHeading: 'Transaction confirmed',
+  submittedBody:
+    'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.',
+  submittedHeading: 'Transaction submitted',
   tryAgain: 'Try again',
   watchOnly: 'Watch-only accounts cannot sign transactions.'
 })
@@ -111,6 +116,10 @@ export class Send extends React.Component {
     this.queueSequence = 0
     this.recipientSequence = 0
     this.mounted = false
+    this.confirmedRequestKey = ''
+    this.confirmedCloseSent = false
+    this.successPointerInside = false
+    this.successFocusWithin = false
     this.assetTriggerRef = React.createRef()
     this.contactTriggerRef = React.createRef()
     this.pickerStep = ''
@@ -138,6 +147,7 @@ export class Send extends React.Component {
     this.accountId = this.store('selected.current') || ''
     this.pickerStep = this.store('windows.dash.nav')[0]?.data?.step || ''
     this.lockInitialAsset()
+    this.syncConfirmedAutoClose()
   }
 
   componentDidUpdate() {
@@ -151,6 +161,7 @@ export class Send extends React.Component {
     const accountId = this.store('selected.current') || ''
     if (accountId === this.accountId) {
       this.lockInitialAsset()
+      this.syncConfirmedAutoClose()
       return
     }
     this.accountId = accountId
@@ -158,6 +169,7 @@ export class Send extends React.Component {
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
+    this.resetConfirmedAutoClose()
     if (step === 'assetPicker' || step === 'contactPicker') link.send('nav:back', 'dash')
     this.setState({
       amount: '',
@@ -179,9 +191,93 @@ export class Send extends React.Component {
   componentWillUnmount() {
     this.mounted = false
     clearTimeout(this.recipientTimer)
+    this.clearConfirmedAutoClose()
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
+  }
+
+  requestForState() {
+    if (!this.state.requestId) return null
+    const request = this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId)
+    if (request) this.lastRequest = { notice: request.notice, status: request.status }
+    return request || this.lastRequest
+  }
+
+  confirmedRequestKeyForState() {
+    const request = this.requestForState()
+    return request?.status === 'confirmed' ? `${this.state.requestAccount}:${this.state.requestId}` : ''
+  }
+
+  clearConfirmedAutoClose() {
+    clearTimeout(this.confirmedAutoCloseTimer)
+    this.confirmedAutoCloseTimer = null
+  }
+
+  resetConfirmedAutoClose() {
+    this.clearConfirmedAutoClose()
+    this.confirmedRequestKey = ''
+    this.confirmedCloseSent = false
+    this.successPointerInside = false
+    this.successFocusWithin = false
+  }
+
+  successSurfaceInteracting() {
+    return this.successPointerInside || this.successFocusWithin
+  }
+
+  scheduleConfirmedAutoClose() {
+    const requestKey = this.confirmedRequestKeyForState()
+    if (
+      !requestKey ||
+      this.confirmedCloseSent ||
+      this.successSurfaceInteracting() ||
+      this.confirmedAutoCloseTimer
+    ) {
+      return
+    }
+    this.confirmedAutoCloseTimer = setTimeout(() => {
+      this.confirmedAutoCloseTimer = null
+      if (
+        !this.mounted ||
+        this.confirmedCloseSent ||
+        this.successSurfaceInteracting() ||
+        this.confirmedRequestKeyForState() !== requestKey
+      ) {
+        return
+      }
+      this.confirmedCloseSent = true
+      link.send('tray:action', 'closeDash')
+    }, CONFIRMED_CLOSE_DWELL_MS)
+  }
+
+  syncConfirmedAutoClose() {
+    const requestKey = this.confirmedRequestKeyForState()
+    if (requestKey !== this.confirmedRequestKey) {
+      this.clearConfirmedAutoClose()
+      this.confirmedRequestKey = requestKey
+      this.confirmedCloseSent = false
+      this.successPointerInside = false
+      this.successFocusWithin = false
+    }
+    this.scheduleConfirmedAutoClose()
+  }
+
+  closeConfirmedRequest() {
+    this.clearConfirmedAutoClose()
+    this.confirmedCloseSent = true
+    link.send('tray:action', 'closeDash')
+  }
+
+  setSuccessSurfaceInteraction(type, event) {
+    if (type === 'focus' && event.currentTarget.contains(event.relatedTarget)) return
+    if (type === 'blur' && event.currentTarget.contains(event.relatedTarget)) return
+    if (type === 'pointer-enter') this.successPointerInside = true
+    if (type === 'pointer-leave') this.successPointerInside = false
+    if (type === 'focus') this.successFocusWithin = true
+    if (type === 'blur') this.successFocusWithin = false
+    this.clearConfirmedAutoClose()
+    if (!this.successSurfaceInteracting()) this.scheduleConfirmedAutoClose()
   }
 
   lockInitialAsset() {
@@ -343,6 +439,7 @@ export class Send extends React.Component {
   }
 
   resetRequest(clearDraft = false) {
+    this.resetConfirmedAutoClose()
     this.lastRequest = null
     this.setState({
       ...(clearDraft
@@ -532,29 +629,50 @@ export class Send extends React.Component {
     const status = request?.status
     const declined = status === 'declined'
     const failed = status === 'error'
-    const success = ['success', 'verifying', 'sent', 'confirming', 'confirmed'].includes(status)
+    const confirmed = status === 'confirmed'
+    const submitted = ['success', 'verifying', 'sent', 'confirming'].includes(status)
     const heading = declined
       ? COPY.declinedHeading
       : failed
         ? COPY.errorHeading
-        : success
-          ? COPY.successHeading
-          : COPY.queuedHeading
+        : confirmed
+          ? COPY.confirmedHeading
+          : submitted
+            ? COPY.submittedHeading
+            : COPY.queuedHeading
     const body = declined
       ? COPY.declinedBody
       : failed
         ? request?.notice || COPY.errorBody
-        : success
-          ? COPY.successBody
-          : COPY.queuedBody
+        : confirmed
+          ? COPY.confirmedBody
+          : submitted
+            ? COPY.submittedBody
+            : COPY.queuedBody
 
     return (
-      <section className={`sendRequestState cardShow ${success ? 'sendRequestStateSuccess' : ''}`}>
+      <section
+        className={`sendRequestState cardShow ${confirmed ? 'sendRequestStateSuccess' : ''}`}
+        onBlur={confirmed ? (event) => this.setSuccessSurfaceInteraction('blur', event) : undefined}
+        onFocus={confirmed ? (event) => this.setSuccessSurfaceInteraction('focus', event) : undefined}
+        onMouseEnter={
+          confirmed ? (event) => this.setSuccessSurfaceInteraction('pointer-enter', event) : undefined
+        }
+        onMouseLeave={
+          confirmed ? (event) => this.setSuccessSurfaceInteraction('pointer-leave', event) : undefined
+        }
+      >
         <div className='sendRequestGlyph'>
-          <Icon name={success ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
+          <Icon name={confirmed ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
         </div>
-        <h2>{heading}</h2>
-        <p>{body}</p>
+        <div
+          aria-atomic={confirmed ? 'true' : undefined}
+          aria-live={confirmed ? 'polite' : undefined}
+          role={confirmed ? 'status' : undefined}
+        >
+          <h2>{heading}</h2>
+          <p>{body}</p>
+        </div>
         {declined || failed ? (
           <button
             className='wrenControl wrenControlPrimary wrenControlLarge'
@@ -563,13 +681,13 @@ export class Send extends React.Component {
           >
             {COPY.tryAgain}
           </button>
-        ) : success ? (
+        ) : confirmed ? (
           <button
-            className='wrenControl wrenControlSecondary wrenControlLarge'
-            onClick={() => this.resetRequest(true)}
+            className='wrenControl wrenControlGhost wrenControlLarge'
+            onClick={() => this.closeConfirmedRequest()}
             type='button'
           >
-            {COPY.backToAccount}
+            {COPY.close}
           </button>
         ) : null}
       </section>
@@ -584,9 +702,7 @@ export class Send extends React.Component {
     if (data.step === 'contactPicker') return this.renderContactPicker()
 
     if (this.state.requestId) {
-      const request = this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId)
-      if (request) this.lastRequest = { notice: request.notice, status: request.status }
-      return this.renderRequestState(request || this.lastRequest)
+      return this.renderRequestState(this.requestForState())
     }
 
     if (!account || !assets.length) {
