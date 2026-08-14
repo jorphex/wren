@@ -1,3 +1,4 @@
+import fs from 'fs'
 import Restore from 'react-restore'
 
 import { act, fireEvent, screen, render, waitFor } from '../../../../componentSetup'
@@ -12,6 +13,7 @@ jest.mock('../../../../../resources/link', () => ({
 }))
 
 const AddToken = Restore.connect(AddTokenComponent, store)
+const addTokenStyle = fs.readFileSync('app/dash/Tokens/AddToken/style/index.styl', 'utf8')
 
 beforeAll(() => {
   store.addNetwork({
@@ -52,6 +54,23 @@ describe('selecting token chain', () => {
     expect(tokenChainNames).toEqual(['Mainnet', 'Polygon'])
     expect(screen.getByRole('heading', { name: 'Select a network' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Open Networks' })).toBeTruthy()
+  })
+
+  it('uses canonical chain identity marks instead of stored raster logos for known networks', () => {
+    render(<AddToken />)
+
+    for (const name of ['Mainnet', 'Polygon']) {
+      const chainButton = screen.getByRole('button', { name })
+      expect(chainButton.querySelector('.ringIconNoRing')).toBeTruthy()
+      expect(chainButton.querySelector('img')).toBeNull()
+    }
+  })
+
+  it('inherits the shared inset list without local dividers or forced full-height overflow', () => {
+    const viewRule = addTokenStyle.split('\n\n')[0]
+
+    expect(addTokenStyle).not.toContain('.newTokenView .originSwapChainList')
+    expect(viewRule).not.toContain('min-height')
   })
 
   it('shows the approved empty state when no networks are enabled', () => {
@@ -167,7 +186,13 @@ describe('selecting token chain', () => {
   })
 })
 
-describe('setting token address', () => {
+describe('detecting token details', () => {
+  const address = '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0'
+
+  const runLookup = async () => {
+    await act(async () => jest.advanceTimersByTime(350))
+  }
+
   it('should prompt for a contract address if a chain has been selected', () => {
     render(<AddToken data={{ notifyData: { chain: { id: 137, name: 'Polygon' } } }} />)
 
@@ -176,109 +201,51 @@ describe('setting token address', () => {
     expect(contractAddressInput.placeholder).toBe('0x…')
     expect(screen.getByRole('heading', { name: 'Add token' })).toBeTruthy()
     expect(screen.getByText('On Polygon')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Token details' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
   })
 
-  it('should update add token navigation with an error when a user submits an invalid contract address', async () => {
+  it('keeps an invalid contract address inline without adding a navigation crumb', async () => {
     const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
 
     const contractAddressInput = screen.getByLabelText('Token contract address')
     await user.type(contractAddressInput, 'INVALID_ADDRESS')
-    const setAddressButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(setAddressButton)
+    fireEvent.blur(contractAddressInput)
 
-    expect(link.send).toHaveBeenCalledTimes(1)
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'tokens',
-      data: {
-        notify: 'addToken',
-        notifyData: {
-          chain: { id: 1 },
-          address: 'INVALID_ADDRESS',
-          error: 'Enter a valid token contract address.'
-        }
-      }
-    })
+    expect(contractAddressInput.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByRole('alert').textContent).toBe('Enter a valid token contract address.')
+    expect(link.invoke).not.toHaveBeenCalled()
+    expect(link.send).not.toHaveBeenCalled()
   })
 
-  it('should update add token navigation when a contracts details cannot be validated on-chain', async () => {
-    store.setEndpoint('ethereum', 1, 'rpc-1', { connected: true })
-    link.invoke.mockImplementationOnce((action, address, chainId) => {
-      expect(action).toBe('tray:getTokenDetails')
-      expect(address).toBe('0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
-      expect(chainId).toBe(1)
-      return {
-        decimals: 0,
-        name: '',
-        symbol: '',
-        totalSupply: ''
-      }
-    })
-
-    const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
-
-    const contractAddressLabel = screen.getByLabelText('Token contract address')
-    await user.type(contractAddressLabel, '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
-    const setAddressButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(setAddressButton)
-
-    expect(link.send).toHaveBeenCalledTimes(1)
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'tokens',
-      data: {
-        notify: 'addToken',
-        notifyData: {
-          chain: { id: 1 },
-          address: '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0',
-          error: 'Token details could not be verified.',
-          tokenData: {
-            decimals: 0,
-            name: '',
-            symbol: '',
-            totalSupply: ''
-          }
-        }
-      }
-    })
-  })
-
-  it('should update add token navigation with the contract details when a valid address is entered for a connected chain', async () => {
+  it('auto-detects a valid contract and reveals editable details in place', async () => {
     const mockTokenData = {
-      decimals: 420,
+      decimals: 18,
       name: 'FAKE COIN',
       symbol: 'FAKE',
       totalSupply: '100000'
     }
-
-    link.invoke.mockImplementationOnce((action, address, chainId) => {
+    link.invoke.mockImplementationOnce((action, requestedAddress, chainId) => {
       expect(action).toBe('tray:getTokenDetails')
-      expect(address).toBe('0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
+      expect(requestedAddress).toBe(address)
       expect(chainId).toBe(1)
       return mockTokenData
     })
-
     const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
 
-    const contractAddressLabel = screen.getByLabelText('Token contract address')
-    await user.type(contractAddressLabel, '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
-    const setAddressButton = screen.getByRole('button', { name: 'Continue' })
-    await user.click(setAddressButton)
+    await user.type(screen.getByLabelText('Token contract address'), address)
+    await runLookup()
 
-    expect(link.send).toHaveBeenCalledTimes(1)
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'tokens',
-      data: {
-        notify: 'addToken',
-        notifyData: {
-          error: null,
-          chain: { id: 1 },
-          address: '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0',
-          tokenData: mockTokenData
-        }
-      }
-    })
+    expect(link.invoke).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('status').textContent).toBe('Token details detected.')
+    expect(screen.getByRole('heading', { name: 'Token details' })).toBeTruthy()
+    expect(screen.getByLabelText('Token name').value).toBe('FAKE COIN')
+    expect(screen.getByLabelText('Symbol').value).toBe('FAKE')
+    expect(screen.getByLabelText('Decimals').value).toBe('18')
+    expect(link.send).not.toHaveBeenCalled()
   })
 
-  it('submits only one token lookup for duplicate activation', async () => {
+  it('keeps the address visible and announces checking without duplicating lookups', async () => {
     let resolveLookup
     link.invoke.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -287,40 +254,18 @@ describe('setting token address', () => {
     )
     const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
     const input = screen.getByLabelText('Token contract address')
-    await user.type(input, '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0')
+    await user.type(input, address)
 
-    await user.dblClick(screen.getByRole('button', { name: 'Continue' }))
+    act(() => jest.advanceTimersByTime(350))
 
     expect(link.invoke).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('status').textContent).toContain('Checking token…')
-    await act(async () => resolveLookup({ totalSupply: '1' }))
+    expect(input.value).toBe(address)
+    expect(screen.getByRole('status').textContent).toBe('Checking token…')
+    await act(async () => resolveLookup({ name: 'Token', symbol: 'TOK', decimals: 6, totalSupply: '1' }))
+    expect(link.invoke).toHaveBeenCalledTimes(1)
   })
 
-  it('preserves a request reference through address validation', async () => {
-    const requestReference = {
-      account: '0x0000000000000000000000000000000000000001',
-      handlerId: '11111111-1111-4111-8111-111111111111'
-    }
-    const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 }, requestReference } }} />)
-
-    await user.type(screen.getByLabelText('Token contract address'), 'invalid')
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
-
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'tokens',
-      data: {
-        notify: 'addToken',
-        notifyData: {
-          chain: { id: 1 },
-          address: 'invalid',
-          error: 'Enter a valid token contract address.',
-          requestReference
-        }
-      }
-    })
-  })
-
-  it('does not navigate with a token lookup result after unmount', async () => {
+  it('ignores a token lookup result after unmount', async () => {
     let resolveLookup
     link.invoke.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -328,14 +273,11 @@ describe('setting token address', () => {
       })
     )
     const { unmount, user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
-    await user.type(
-      screen.getByLabelText('Token contract address'),
-      '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0'
-    )
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.type(screen.getByLabelText('Token contract address'), address)
+    act(() => jest.advanceTimersByTime(350))
 
     unmount()
-    await act(async () => resolveLookup({ totalSupply: '1' }))
+    await act(async () => resolveLookup({ name: 'Token', symbol: 'TOK', decimals: 6, totalSupply: '1' }))
 
     expect(link.send).not.toHaveBeenCalled()
   })
@@ -348,126 +290,54 @@ describe('setting token address', () => {
       })
     )
     const { rerender, user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
-    await user.type(
-      screen.getByLabelText('Token contract address'),
-      '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0'
-    )
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.type(screen.getByLabelText('Token contract address'), address)
+    act(() => jest.advanceTimersByTime(350))
 
     rerender(<AddToken data={{ notifyData: { chain: { id: 137 } } }} />)
-    await act(async () => resolveLookup({ totalSupply: '1' }))
+    await act(async () => resolveLookup({ name: 'Token', symbol: 'TOK', decimals: 6, totalSupply: '1' }))
 
     expect(link.send).not.toHaveBeenCalled()
     expect(screen.getByLabelText('Token contract address').value).toBe('')
   })
 
-  it('routes failed token lookups to the manual metadata flow', async () => {
+  it('keeps only the latest contract lookup result on the same network', async () => {
+    const nextAddress = '0x64aa3364f17a4d01c6f1751fd97c2bd3d7e7f1d4'
+    let resolveFirstLookup
+    link.invoke
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirstLookup = resolve
+        })
+      )
+      .mockResolvedValueOnce({ name: 'Latest Token', symbol: 'NEW', decimals: 8, totalSupply: '2' })
+    const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
+    const input = screen.getByLabelText('Token contract address')
+
+    await user.type(input, address)
+    act(() => jest.advanceTimersByTime(350))
+    fireEvent.change(input, { target: { value: nextAddress } })
+    await runLookup()
+
+    expect(link.invoke).toHaveBeenCalledTimes(2)
+    expect(screen.getByLabelText('Token name').value).toBe('Latest Token')
+    await act(async () =>
+      resolveFirstLookup({ name: 'Stale Token', symbol: 'OLD', decimals: 6, totalSupply: '1' })
+    )
+    expect(screen.getByLabelText('Token name').value).toBe('Latest Token')
+  })
+
+  it('reveals manual metadata fields inline when lookup is unavailable', async () => {
     link.invoke.mockRejectedValueOnce(new Error('RPC unavailable'))
-    const address = '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0'
     const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
     await user.type(screen.getByLabelText('Token contract address'), address)
+    await runLookup()
 
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
-
-    expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', {
-      view: 'tokens',
-      data: {
-        notify: 'addToken',
-        notifyData: {
-          chain: { id: 1 },
-          address,
-          error: 'Token details could not be verified.',
-          tokenData: {}
-        }
-      }
-    })
-  })
-})
-
-describe('displaying errors', () => {
-  it('should allow the user to navigate back when displaying an error', () => {
-    render(
-      <AddToken
-        data={{
-          notifyData: {
-            chain: { id: 137 },
-            error: 'Enter a valid token contract address.',
-            address: '0xabc'
-          }
-        }}
-      />
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Token details could not be verified. Enter the details manually.'
     )
-
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBe(1)
-    expect(buttons[0].textContent).toBe('Cancel')
-  })
-
-  it(`should allow the user to proceed if we are unable to verify the token data`, () => {
-    render(
-      <AddToken
-        data={{
-          notifyData: {
-            chain: { id: 137 },
-            error: 'Token details could not be verified.',
-            address: '0xabc'
-          }
-        }}
-      />
-    )
-
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].textContent).toBe('Cancel')
-    expect(buttons[1].textContent).toBe('Add anyway')
-  })
-
-  it('sends the exact back navigation from an invalid-address error', async () => {
-    const { user } = render(
-      <AddToken
-        data={{
-          notifyData: {
-            chain: { id: 137 },
-            error: 'Enter a valid token contract address.',
-            address: '0xabc'
-          }
-        }}
-      />
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-
-    expect(link.send.mock.calls).toEqual([['nav:back', 'dash', 1]])
-  })
-
-  it('sends the exact manual-entry navigation when adding an unverified token', async () => {
-    const chain = { id: 137 }
-    const address = '0xabc'
-    const { user } = render(
-      <AddToken
-        data={{
-          notifyData: {
-            chain,
-            error: 'Token details could not be verified.',
-            address
-          }
-        }}
-      />
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Add anyway' }))
-
-    expect(link.send.mock.calls).toEqual([
-      ['nav:back', 'dash', 1],
-      [
-        'nav:forward',
-        'dash',
-        {
-          view: 'tokens',
-          data: { notify: 'addToken', notifyData: { address, chain } }
-        }
-      ]
-    ])
+    expect(screen.getByLabelText('Token name').value).toBe('')
+    expect(screen.getByRole('button', { name: 'Complete token details' }).disabled).toBe(true)
+    expect(link.send).not.toHaveBeenCalled()
   })
 })
 
@@ -512,7 +382,8 @@ describe('setting token details', () => {
     )
 
     const heading = screen.getByTestId('addTokenFormTitle')
-    expect(heading.textContent).toBe('Token details')
+    expect(heading.textContent).toBe('Add token')
+    expect(screen.getByRole('heading', { name: 'Token details' })).toBeTruthy()
   })
 
   it('should prompt to fill in missing token data', () => {
@@ -535,12 +406,12 @@ describe('setting token details', () => {
       />
     )
 
-    const contractAddress = document.querySelector('.newTokenChainAddress')
+    const contractAddress = screen.getByLabelText('Token contract address')
     const tokenNameInput = screen.getByLabelText('Token name')
     const tokenSymbolInput = screen.getByLabelText('Symbol')
     const tokenDecimalsInput = screen.getByLabelText('Decimals')
 
-    expect(contractAddress.textContent).toEqual('0x64aa3364D7e7f1D4')
+    expect(contractAddress.value).toEqual('0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4')
     expect(tokenNameInput.value).toEqual('')
     expect(tokenNameInput.placeholder).toEqual('Token name')
     expect(tokenSymbolInput.value).toEqual('')
@@ -569,12 +440,12 @@ describe('setting token details', () => {
       />
     )
 
-    const contractAddress = document.querySelector('.newTokenChainAddress')
+    const contractAddress = screen.getByLabelText('Token contract address')
     const tokenNameInput = screen.getByLabelText('Token name')
     const tokenSymbolInput = screen.getByLabelText('Symbol')
     const tokenDecimalsInput = screen.getByLabelText('Decimals')
 
-    expect(contractAddress.textContent).toEqual('0x64aa3364D7e7f1D4')
+    expect(contractAddress.value).toEqual('0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4')
     await waitFor(() => expect(tokenNameInput.value).toEqual('Frame Test on Polygon'), { timeout: 200 })
     expect(tokenSymbolInput.value).toEqual('mFRT')
     expect(tokenDecimalsInput.value).toEqual('18')
@@ -735,7 +606,7 @@ describe('setting token details', () => {
   })
 
   it.each([
-    ['add', false, 4, 'Add token'],
+    ['add', false, 3, 'Add token'],
     ['edit', true, 2, 'Save']
   ])(
     'uses the exact successful post-save navigation for %s',

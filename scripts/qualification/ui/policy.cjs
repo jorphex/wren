@@ -58,6 +58,33 @@ const reviewScenarios = () => [
     transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT)
   ]),
   {
+    id: 'dash-add-token-selector-short-1',
+    renderer: 'dash',
+    state: 'add-token-selector',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.originSwapChainList',
+    requiredControls: [
+      'Ethereum Mainnet',
+      'Optimism Mainnet — Community RPC',
+      'Workshop Chain',
+      'Open Networks'
+    ],
+    requiredText: ['Select a network']
+  },
+  {
+    id: 'dash-add-token-details-full-1',
+    renderer: 'dash',
+    state: 'add-token-details',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.newTokenDetails',
+    requiredControls: ['Add token'],
+    requiredText: ['Token details detected.', 'On Ethereum Mainnet']
+  },
+  {
     id: 'tray-transaction-advanced-pending-full-1',
     renderer: 'tray',
     state: 'transaction-responsive',

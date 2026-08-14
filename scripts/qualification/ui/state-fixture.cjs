@@ -488,6 +488,48 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'add-token-selector') {
+    const { networks, metadata } = accountHomeNetworks()
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'tokens', data: { notify: 'addToken' } }]
+    }
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+  }
+
+  if (scenario.state === 'add-token-details') {
+    const { networks, metadata } = accountHomeNetworks()
+    const address = '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'tokens',
+          data: {
+            notify: 'addToken',
+            notifyData: {
+              address,
+              chain: { id: 1, name: 'Ethereum Mainnet', color: 'wren-chain-ethereum' },
+              tokenData: {
+                address,
+                name: 'USD Coin',
+                symbol: 'USDC',
+                decimals: 6,
+                logoURI: '',
+                totalSupply: '1000000000000'
+              }
+            }
+          }
+        }
+      ]
+    }
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+  }
+
   if (scenario.state === 'account-chooser') {
     state.windows.dash = {
       ...state.windows.dash,
