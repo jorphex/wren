@@ -44,4 +44,17 @@ describe('renderer link bridge', () => {
     messageListener({ data: response, source: rendererWindow, origin: 'null' })
     expect(callback).toHaveBeenCalledWith(null, { ready: true })
   })
+
+  test('omits trailing undefined invoke arguments before JSON encoding', () => {
+    const token = { address: '0x0000000000000000000000000000000000000001', chainId: 1 }
+
+    link.invoke('tokens:save', token, undefined)
+
+    const [requestValue] = rendererWindow.postMessage.mock.calls[0]
+    expect(JSON.parse(requestValue)).toMatchObject({
+      source: 'tray:link',
+      method: 'invoke',
+      args: ['tokens:save', token]
+    })
+  })
 })

@@ -57,7 +57,9 @@ test('strictly validates acknowledged custom-token saves and results', () => {
   }
   const requestReference = { account: address, handlerId }
 
+  expect(parse('invoke', 'tokens:save', [token])).toEqual([token])
   expect(parse('invoke', 'tokens:save', [token, requestReference])).toEqual([token, requestReference])
+  expect(parseRendererIpcArgs('invoke', 'tokens:save', [token, null]).success).toBe(false)
   expect(parseRendererIpcArgs('invoke', 'tokens:save', [{ ...token, chainId: '1' }]).success).toBe(false)
   expect(parseRendererIpcArgs('invoke', 'tokens:save', [{ ...token, unexpected: true }]).success).toBe(false)
   expect(parseRendererInvokeResult('tokens:save', { success: true }).success).toBe(true)

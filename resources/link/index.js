@@ -10,7 +10,16 @@ import {
 } from '../bridge/protocol'
 
 const targetOrigin = getRendererTargetOrigin(window.location)
-const postToBridge = (message) => window.postMessage(encodeBridgeMessage(message), targetOrigin)
+const omitTrailingUndefined = (args) => {
+  let end = args.length
+  while (end > 0 && args[end - 1] === undefined) end -= 1
+  return end === args.length ? args : args.slice(0, end)
+}
+const postToBridge = (message) => {
+  const args = omitTrailingUndefined(message.args)
+  const normalizedMessage = args === message.args ? message : { ...message, args }
+  window.postMessage(encodeBridgeMessage(normalizedMessage), targetOrigin)
+}
 
 const handlers = {}
 
