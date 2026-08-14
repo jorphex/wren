@@ -1,10 +1,10 @@
 import React from 'react'
 import Restore from 'react-restore'
 import emptyCustomTokens from 'url:../../../../asset/ui/empty-custom-tokens-v1.png'
+import AssetMark from '../../../../resources/Components/AssetMark'
 import DialogSurface from '../../../../resources/Components/DialogSurface'
 import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
-import { safeRemoteImageUrl } from '../../../../resources/utils/image'
 
 const tokenIdentity = (token) => `${token.chainId}:${token.address.toLowerCase()}`
 const sortTokens = (tokens) =>
@@ -154,11 +154,7 @@ class CustomTokens extends React.Component {
                   >
                     <div className='customTokensListItemTitle'>
                       <div className='customTokensListItemName'>
-                        <img
-                          src={safeRemoteImageUrl(token.logoURI)}
-                          value={token.symbol.toUpperCase()}
-                          alt={token.symbol.toUpperCase()}
-                        />
+                        <AssetMark asset={token} className='customTokensAssetMark' showChain={false} />
                         <div className='customTokensListItemText'>
                           <div className='customTokensListItemSymbol'>{token.symbol}</div>
                           <div className='customTokensListItemSub'>{token.name}</div>

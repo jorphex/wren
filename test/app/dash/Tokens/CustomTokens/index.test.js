@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { act, render, screen, waitFor } from '../../../../componentSetup'
+import { act, render, screen, waitFor, within } from '../../../../componentSetup'
 import CustomTokensComponent from '../../../../../app/dash/Tokens/CustomTokens'
 import link from '../../../../../resources/link'
 
@@ -32,6 +32,16 @@ const renderTokens = (tokens = [alpha, beta]) => {
 
   return { ...render(<CustomTokens />), store }
 }
+
+test('uses the canonical asset placeholder when a token has no logo', () => {
+  renderTokens([{ ...alpha, logoURI: '' }])
+
+  const mark = screen.getByRole('img', { name: 'ALPHA asset' })
+  expect(mark.classList.contains('customTokensAssetMark')).toBe(true)
+  expect(within(mark).getByText('A')).toBeTruthy()
+  expect(within(mark).queryByRole('img')).toBeNull()
+  expect(mark.querySelector('.assetMarkChain')).toBeNull()
+})
 
 test('exposes every token interaction as a keyboard-operable named button', async () => {
   const { user } = renderTokens([alpha])
