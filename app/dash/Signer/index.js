@@ -450,12 +450,23 @@ export class Signer extends React.Component {
 
   renderExpanded() {
     const { id, type, tag, index = 0 } = this.props
+    const zIndex = 1000 - index
+
+    if (this.props.authenticationOwnedByPrompt) {
+      return (
+        <section
+          className='expandedSigner expandedSignerPromptOwned cardShow'
+          style={{ zIndex }}
+          aria-label={this.props.name}
+        />
+      )
+    }
+
     const signer = this.store('main.signers', id)
     const { page, addressLimit } = this.state
     const startIndex = page * addressLimit
 
     const signerStatus = this.getStatusMeta()
-    const authenticationOwnedByPrompt = this.props.authenticationOwnedByPrompt
 
     const hwSigner = isHardwareSigner(type)
     const canReload = signerStatus.reloadable
@@ -464,12 +475,10 @@ export class Signer extends React.Component {
     const isLocked = !hwSigner && signerStatus.phase === 'locked'
     const permissionId = tag || tag === '' ? 'Frame' + (tag ? `-${tag}` : '') : undefined
 
-    const zIndex = 1000 - index
-
     return (
       <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
         {!signerStatus.ready ? this.statusText() : null}
-        {!authenticationOwnedByPrompt && type === 'lattice' && signerStatus.input === 'pairingCode' ? (
+        {type === 'lattice' && signerStatus.input === 'pairingCode' ? (
           <div className='signerLatticePair'>
             <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
             <div className='signerLatticePairInput wrenInputGroup'>
@@ -576,7 +585,7 @@ export class Signer extends React.Component {
               </div>
             ) : null}
           </>
-        ) : !authenticationOwnedByPrompt && type === 'trezor' && signerStatus.input ? (
+        ) : type === 'trezor' && signerStatus.input ? (
           <div className='signerInterface'>
             {this.renderTrezorPin(signerStatus.input === 'pin')}
             {this.renderTrezorPhrase(signerStatus.input === 'passphrase')}

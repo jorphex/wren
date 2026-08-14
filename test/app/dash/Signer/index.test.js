@@ -96,9 +96,11 @@ it('lets the hardware prompt exclusively own active signer authentication', () =
     authenticationOwnedByPrompt: true
   })
 
-  expect(screen.getByRole('status').textContent).toBe('PIN required')
+  expect(screen.queryByRole('status')).toBeNull()
   expect(screen.queryByRole('heading', { name: 'Enter PIN' })).toBeNull()
   expect(screen.queryByRole('button', { name: /PIN position/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Remove signer' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reload signer' })).toBeNull()
 })
 
 it('lets the hardware prompt exclusively own active pairing input', () => {
@@ -108,6 +110,7 @@ it('lets the hardware prompt exclusively own active pairing input', () => {
     authenticationOwnedByPrompt: true
   })
 
+  expect(screen.queryByRole('status')).toBeNull()
   expect(screen.queryByRole('textbox', { name: 'GridPlus pairing code' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Pair' })).toBeNull()
 })
