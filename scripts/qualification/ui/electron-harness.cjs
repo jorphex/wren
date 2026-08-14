@@ -413,7 +413,7 @@ const main = async () => {
     },
     uncovered: [
       'General transaction review and account-home modules beyond the controlled Gas surface remain outside this focused matrix.',
-      'Hardware prompts, provider requests, and live network content are intentionally excluded.',
+      'Live hardware transports, provider requests, and live network content are intentionally excluded.',
       'This harness qualifies renderer scaling; production window placement remains covered by shell-geometry tests.',
       "This host cannot provide Chromium's test sandbox; only trusted local bundles run, with application-level isolation self-tested."
     ],

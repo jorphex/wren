@@ -68,6 +68,10 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const networks = scenarios.find(({ state }) => state === 'networks')
   const editor = scenarios.find(({ state }) => state === 'network-editor')
   const ledger = scenarios.find(({ state }) => state === 'account-ledger')
+  const startup = scenarios.find(({ state }) => state === 'account-startup')
+  const balances = scenarios.find(({ state }) => state === 'account-balances')
+  const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
+  const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
   const activity = scenarios.find(({ state }) => state === 'account-activity')
   const activityClear = scenarios.find(({ id }) => id === 'tray-account-activity-clear-full-1')
   const activityLifecycle = scenarios.find(({ id }) => id === 'tray-account-activity-lifecycle-full-1')
@@ -94,7 +98,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
       ])
     )
   }
-  expect([ledger.logicalWidth, ledger.scale]).toEqual([760, 1])
+  expect([ledger.logicalWidth, ledger.scale]).toEqual([620, 1])
+  expect([startup.logicalWidth, startup.scale]).toEqual([620, 1])
+  expect([balances.logicalWidth, balances.scale]).toEqual([620, 1])
+  expect(switchedGas.action).toEqual({
+    type: 'sequence',
+    steps: [
+      { type: 'clickText', text: 'Show gas details for Ethereum Mainnet' },
+      { type: 'clickText', text: 'Next network from Ethereum Mainnet' }
+    ]
+  })
+  expect([chainFallback.logicalWidth, chainFallback.scale]).toEqual([520, 1])
   for (const scenario of [recovery, recoveryExport, recoveryRestore, recoveryRestoreConfirm]) {
     expect(scenario).toMatchObject({
       logicalWidth: 620,
@@ -116,7 +130,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     backup: { formatVersion: 1, signerCount: 3 },
     restoreToken: expect.stringMatching(/^[0-9a-f-]{36}$/u)
   })
-  expect([activity.logicalWidth, activity.scale]).toEqual([760, 1])
+  expect([activity.logicalWidth, activity.scale]).toEqual([620, 1])
   expect(activityClear).toMatchObject({
     action: { type: 'clickText', text: 'Clear activity' },
     ready: '[role="alertdialog"]'
@@ -162,7 +176,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     ready: '[role="alertdialog"]',
     captureScroll: 'bottom'
   })
-  expect([drawer.logicalWidth, drawer.scale]).toEqual([760, 1])
+  expect([drawer.logicalWidth, drawer.scale]).toEqual([620, 1])
   expect(fixtureFor(chooser).windows.dash.nav[0]).toEqual({
     view: 'accounts',
     data: { showAddAccounts: true }
@@ -173,6 +187,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   )
   expect(fixtureFor(editor).main.networks.ethereum[1].connection.endpoints).toHaveLength(2)
   expect(Object.keys(fixtureFor(drawer).main.accounts)).toHaveLength(6)
+  expect(Object.keys(fixtureFor(startup).main.accounts)).toHaveLength(3)
+  expect(fixtureFor(startup).selected.open).toBe(false)
   expect(fixtureFor(drawer).selected.showAccounts).toBe(true)
   const ledgerFixture = fixtureFor(ledger)
   expect(ledgerFixture.panel.account.moduleOrder).toEqual([
@@ -186,12 +202,16 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   ])
   expect(ledgerFixture.panel.account.modules.balances.height).toBe(396)
   expect(ledgerFixture.main.balances[QUALIFICATION_ACCOUNT]).toHaveLength(4)
-  expect(ledgerFixture.panel.account.modules.activity.height).toBe(328)
+  expect(ledgerFixture.panel.account.modules.activity.height).toBe(332)
   expect(ledgerFixture.main.activity).toHaveLength(4)
-  expect(ledgerFixture.panel.account.modules.permissions.height).toBe(168)
+  expect(ledgerFixture.panel.account.modules.permissions.height).toBe(92)
   expect(fixtureFor(activity).windows.panel.nav[0]).toMatchObject({
     view: 'expandedModule',
     data: { id: 'activity', title: 'Activity' }
+  })
+  expect(fixtureFor(balances).windows.panel.nav[0]).toMatchObject({
+    view: 'expandedModule',
+    data: { id: 'balances', title: 'Balances' }
   })
 })
 
@@ -238,9 +258,11 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
   })
   expect(trezor.windows.dash.hardwarePrompt).toEqual({
     signerId: 'qualification-trezor-pin',
+    dismissible: true,
     restoreHidden: false
   })
   expect(trezor.main.signers['qualification-trezor-pin']).toMatchObject({
+    name: 'Trezor Signer',
     type: 'trezor',
     status: 'need pin'
   })

@@ -541,18 +541,42 @@ const fixtureFor = (scenario) => {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'accounts', data: {} }],
-      hardwarePrompt: { signerId, restoreHidden: false }
+      hardwarePrompt: { signerId, dismissible: true, restoreHidden: false }
     }
     state.main.signers = {
       [signerId]: {
         id: signerId,
-        name: 'Trezor',
+        name: 'Trezor Signer',
         type: 'trezor',
         model: 'Trezor',
         status: 'need pin',
         addresses: []
       }
     }
+  }
+
+  if (scenario.state === 'account-startup') {
+    const startupAccounts = [
+      [QUALIFICATION_ACCOUNT, 'Primary Account', 'ring'],
+      [`0x${'6'.repeat(40)}`, 'Trezor Account', 'trezor'],
+      [`0x${'7'.repeat(40)}`, 'Watch Account', 'address']
+    ]
+    state.main.accounts = Object.fromEntries(
+      startupAccounts.map(([address, name, lastSignerType], index) => [
+        address,
+        {
+          id: address,
+          address,
+          name,
+          lastSignerType,
+          status: 'ok',
+          created: `new:${index + 1}`,
+          createdAt: index + 1,
+          balances: { lastUpdated: '2999-01-01T00:00:00.000Z' },
+          requests: {}
+        }
+      ])
+    )
   }
 
   if (scenario.state === 'settings' || scenario.state === 'settings-local-connections') {
@@ -700,10 +724,10 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.panel.account.moduleOrder = ['chains']
-    state.panel.account.modules.chains.height = 105
+    state.panel.account.modules.chains.height = scenario.logicalWidth <= 540 ? 108 : 56
   }
 
-  if (scenario.state === 'account-ledger') {
+  if (scenario.state === 'account-ledger' || scenario.state === 'account-balances') {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -759,12 +783,20 @@ const fixtureFor = (scenario) => {
     }
     state.panel.account.modules = {
       requests: { height: 48 },
-      chains: { height: 104 },
+      chains: { height: scenario.logicalWidth <= 540 ? 108 : 56 },
       balances: { height: scenario.balanceArtwork ? 396 : 318 },
-      activity: { height: 328 },
-      permissions: { height: 168 },
+      activity: { height: 332 },
+      permissions: { height: 92 },
       signer: { height: 52 },
       settings: { height: 52 }
+    }
+    if (scenario.state === 'account-balances') {
+      state.windows.panel.nav = [
+        {
+          view: 'expandedModule',
+          data: { id: 'balances', account: QUALIFICATION_ACCOUNT, title: 'Balances' }
+        }
+      ]
     }
   }
 

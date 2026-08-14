@@ -42,7 +42,7 @@ const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
   renderer: 'tray',
   state: 'transaction-lookalike',
   scale,
-  logicalWidth: 760,
+  logicalWidth: 620,
   logicalHeight,
   ready: '.requestApproveTransaction .requestSign:not(:disabled)',
   requiredControls: ['Copy transaction recipient address', 'Decline', 'Sign transaction'],
@@ -63,7 +63,7 @@ const reviewScenarios = () => [
     state: 'transaction-responsive',
     variant: 'advanced-pending',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestSign:disabled',
     requiredControls: ['Copy transaction recipient address'],
@@ -81,7 +81,7 @@ const reviewScenarios = () => [
     variant: 'advanced-partial',
     viewData: true,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionEvidenceGroupDisclosure',
     requiredText: ['Execution', 'Raw data']
@@ -100,7 +100,7 @@ const reviewScenarios = () => [
     state: 'transaction-responsive',
     variant,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestApproveSigning',
     requiredControls: ['Cancel'],
@@ -128,7 +128,7 @@ const reviewScenarios = () => [
     variant,
     viewData: true,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.decodedDataContract',
     requiredText
@@ -140,7 +140,7 @@ const reviewScenarios = () => [
     variant: 'method-verified',
     viewData: true,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.decodedDataContract',
     requiredText: ['Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer']
@@ -152,7 +152,7 @@ const reviewScenarios = () => [
     variant: 'method-verified',
     viewData: true,
     scale: 1.5,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.decodedDataContract',
     requiredText: ['Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer']
@@ -163,7 +163,7 @@ const reviewScenarios = () => [
     state: 'transaction-responsive',
     variant: 'trezor-delayed',
     scale: 1.5,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestApproveSigning',
     requiredControls: ['Cancel'],
@@ -200,8 +200,8 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.hardwareSignerPromptSurface .trezorPinInput',
-    requiredControls: ['PIN position 1', 'PIN position 9'],
-    requiredText: ['Enter PIN', 'scrambled matrix', '0 positions selected']
+    requiredControls: ['PIN position 1', 'PIN position 9', 'Not now'],
+    requiredText: ['Trezor Signer', 'Enter PIN', 'scrambled matrix', '0 positions selected']
   },
   {
     id: 'dash-settings-full-1',
@@ -342,12 +342,23 @@ const reviewScenarios = () => [
     requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
+    id: 'tray-account-startup-full-1',
+    renderer: 'tray',
+    state: 'account-startup',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.accountSelectorWelcome',
+    requiredControls: ['Open dashboard'],
+    requiredText: ['Choose an account', 'Choose an account to open your wallet.', 'Trezor Account']
+  },
+  {
     id: 'tray-account-ledger-full-1',
     renderer: 'tray',
     state: 'account-ledger',
     balanceArtwork: true,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredText: [
@@ -361,11 +372,57 @@ const reviewScenarios = () => [
     ]
   },
   {
+    id: 'tray-account-gas-expanded-switched-full-1',
+    renderer: 'tray',
+    state: 'account-home',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickText', text: 'Show gas details for Ethereum Mainnet' },
+        { type: 'clickText', text: 'Next network from Ethereum Mainnet' }
+      ]
+    },
+    ready: '.gasDetails',
+    requiredControls: ['Hide gas details for Optimism Mainnet'],
+    requiredText: ['Optimism Mainnet', 'Next base fee', 'Priority fee']
+  },
+  {
+    id: 'tray-account-balances-full-1',
+    renderer: 'tray',
+    state: 'account-balances',
+    balanceArtwork: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.accountLedgerView',
+    requiredControls: ['Filter balances', 'Add token'],
+    requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total']
+  },
+  {
+    id: 'tray-account-chain-fallback-narrow-1',
+    renderer: 'tray',
+    state: 'account-home',
+    scale: 1,
+    logicalWidth: 520,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.chainMonitorPreview',
+    requiredControls: [
+      'Previous network from Ethereum Mainnet',
+      'Next network from Ethereum Mainnet',
+      'View Ethereum Mainnet account on block explorer',
+      'Show gas details for Ethereum Mainnet'
+    ],
+    requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+  },
+  {
     id: 'tray-account-requests-summary-full-1',
     renderer: 'tray',
     state: 'account-requests-summary',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestPreviewContentMeta',
     requiredControls: ['Requests. 3 active. 1 pending. 2 confirming.'],
@@ -376,7 +433,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-requests-list',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestClearAll',
     requiredControls: ['Clear all requests'],
@@ -387,7 +444,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'transaction-safety-unavailable',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.requestApproveRecoverable',
     requiredControls: ['Close request', 'Recheck'],
@@ -401,7 +458,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'transaction-confirming',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.txLifecycle',
     requiredControls: ['View details'],
@@ -412,7 +469,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'transaction-confirmed',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.txLifecycle-success',
     requiredControls: ['View details', 'Close'],
@@ -423,7 +480,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-activity',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
     requiredControls: ['All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
@@ -434,7 +491,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-activity',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     action: { type: 'clickText', text: 'Clear activity' },
     ready: '[role="alertdialog"]',
@@ -446,7 +503,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-activity-lifecycle',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
     requiredText: [
@@ -464,7 +521,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'native-pairing',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '[role="dialog"][aria-labelledby="wren-notify-title"]',
     expectedInitialFocus: 'Not now',
@@ -480,9 +537,10 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-ledger',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
+    requiredControls: ['View all activity'],
     requiredText: ['Connected apps', 'Signer', 'Remove account'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
@@ -493,7 +551,7 @@ const reviewScenarios = () => [
     state: 'account-ledger',
     requestsAbsent: true,
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredText: ['Ethereum Mainnet', 'Balances', 'Connected apps']
@@ -503,7 +561,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-ledger',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     action: { type: 'clickText', text: 'Remove account' },
     ready: '[role="alertdialog"]',
@@ -516,7 +574,7 @@ const reviewScenarios = () => [
     renderer: 'tray',
     state: 'account-drawer',
     scale: 1,
-    logicalWidth: 760,
+    logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.accountChooserPanel',
     requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
@@ -531,7 +589,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'empty',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.accountSelectorEmpty'
       },
@@ -540,7 +598,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'empty',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.accountSelectorEmpty'
       },
@@ -569,7 +627,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'account-home',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.chainMonitorPreview',
         requiredControls: [
@@ -578,14 +636,14 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           'View Ethereum Mainnet account on block explorer',
           'Show gas details for Ethereum Mainnet'
         ],
-        requiredText: ['Ethereum Mainnet', 'Gas']
+        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
       },
       {
         id: `tray-account-home-short-${scale}`,
         renderer: 'tray',
         state: 'account-home',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.chainMonitorPreview',
         requiredControls: [
@@ -594,7 +652,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           'View Ethereum Mainnet account on block explorer',
           'Show gas details for Ethereum Mainnet'
         ],
-        requiredText: ['Ethereum Mainnet', 'Gas']
+        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
       },
       {
         id: `dash-delegation-full-${scale}`,
@@ -645,7 +703,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'revocation-review',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
@@ -656,7 +714,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'revocation-review',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
@@ -667,7 +725,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'revocation-monitor',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
@@ -680,7 +738,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         renderer: 'tray',
         state: 'revocation-monitor',
         scale,
-        logicalWidth: 760,
+        logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
