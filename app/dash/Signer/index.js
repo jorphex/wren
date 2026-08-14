@@ -16,7 +16,7 @@ import { compactAccountAddress } from '../Accounts/address'
 const signerListReservedHeight = 392
 const signerAddressRowHeight = 44
 const minimumAddressLimit = 8
-const maximumAddressLimit = 11
+const maximumAddressLimit = 10
 export function getAddressLimit(viewportHeight = typeof window === 'undefined' ? 900 : window.innerHeight) {
   const height = Number.isFinite(viewportHeight) ? viewportHeight : 900
   const usableListHeight = Math.max(0, height - signerListReservedHeight)

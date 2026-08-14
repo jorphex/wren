@@ -40,8 +40,8 @@ beforeEach(() => {
 
 it('derives address capacity from the supported shell heights', () => {
   expect(getAddressLimit(744)).toBe(8)
-  expect(getAddressLimit(900)).toBe(11)
-  expect(getAddressLimit(2000)).toBe(11)
+  expect(getAddressLimit(900)).toBe(10)
+  expect(getAddressLimit(2000)).toBe(10)
 })
 
 it('maps warning and danger signer status tones to distinct classes', () => {
@@ -348,11 +348,11 @@ it('keeps all hardware accounts reachable as address capacity responds to shell 
   const { user, unmount } = renderSigner({ type: 'trezor', status: 'ready', addresses })
 
   expect(screen.queryByText('Ready to sign')).toBeNull()
-  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(11)
+  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(10)
   expect(screen.getByText('1 / 2')).toBeTruthy()
 
   await user.click(screen.getByRole('button', { name: 'Next address page' }))
-  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(1)
+  expect(screen.getAllByRole('button', { name: /^Add 0x/ })).toHaveLength(2)
 
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 744, writable: true })
   act(() => window.dispatchEvent(new Event('resize')))
