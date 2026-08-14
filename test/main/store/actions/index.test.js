@@ -688,6 +688,22 @@ describe('#addCustomTokens', () => {
     expect(tokens).toStrictEqual([testTokens.zrx, testTokens.badger])
   })
 
+  it('repairs a missing custom token collection while adding a token', () => {
+    tokens = undefined
+
+    addTokens([testTokens.badger])
+
+    expect(tokens).toStrictEqual([testTokens.badger])
+  })
+
+  it('repairs a malformed custom token collection while adding a token', () => {
+    tokens = {}
+
+    addTokens([testTokens.badger])
+
+    expect(tokens).toStrictEqual([testTokens.badger])
+  })
+
   it('overwrites a token', () => {
     tokens = [testTokens.zrx, testTokens.badger]
 
