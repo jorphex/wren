@@ -23,6 +23,10 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   expect(dashStyle).toMatch(
     /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/
   )
+  expect(dashStyle).toMatch(/\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?overflow-y auto/)
+  expect(dashStyle).toMatch(
+    /\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?scrollbar-gutter stable both-edges/
+  )
 })
 
 test('keeps disabled semantic controls visually neutral', () => {

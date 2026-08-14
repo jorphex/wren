@@ -20,9 +20,14 @@ test('maps account identity types to distinct Wren glyphs', () => {
 
 test('gives the full-bleed Trezor mark a smaller optical box', () => {
   const { container } = render(<AccountTypeMark type='trezor' size={17} />)
+  const mark = container.firstChild
+  const icon = mark.firstChild
 
-  expect(container.firstChild.style.width).toBe('13px')
-  expect(container.firstChild.style.height).toBe('15px')
+  expect(mark.style.width).toBe('13px')
+  expect(mark.style.height).toBe('13px')
+  expect(mark.style.lineHeight).toBe('0')
+  expect(icon.getAttribute('width')).toBe('100%')
+  expect(icon.getAttribute('height')).toBe('100%')
 })
 
 test('selects an account from the startup chooser', () => {
