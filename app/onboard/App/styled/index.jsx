@@ -114,7 +114,7 @@ export const SlideProgress = styled.div`
   z-index: 800;
   color: var(--wren-text-tertiary);
   font-family: var(--wren-font-utility);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
 

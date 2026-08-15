@@ -38,7 +38,7 @@ it('keeps compact progress above the slide title without adding a decorative rul
   const progress = screen.getByText('Step 3 of 7')
   const style = window.getComputedStyle(progress)
   expect(style.position).toBe('absolute')
-  expect(style.fontSize).toBe('11px')
+  expect(style.fontSize).toBe('12px')
   expect(styledSource).not.toMatch(/SlideProgress[\s\S]{0,500}?border-(?:top|bottom)/)
 })
 
