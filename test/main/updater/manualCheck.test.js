@@ -37,6 +37,12 @@ it('identifies that a newer version is not available', async () => {
   return expect(checkForUpdates()).resolves.toBeFalsy()
 })
 
+it('treats an empty release list as no available update', () => {
+  mockApiResponse(200, [])
+
+  return expect(checkForUpdates()).resolves.toBeUndefined()
+})
+
 it('identifies that a newer version is available', async () => {
   const response = [
     {

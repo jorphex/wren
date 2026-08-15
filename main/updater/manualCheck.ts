@@ -28,7 +28,10 @@ interface CheckOptions {
 function parseResponse(rawData: string) {
   try {
     const releases: unknown = JSON.parse(rawData)
-    if (!Array.isArray(releases)) return []
+    if (!Array.isArray(releases)) {
+      log.warn('Manual check for update returned an unexpected JSON shape')
+      return undefined
+    }
     return releases.filter(
       (release): release is GithubRelease =>
         typeof release === 'object' &&
@@ -39,7 +42,7 @@ function parseResponse(rawData: string) {
     )
   } catch (e) {
     log.warn('Manual check for update returned invalid JSON response', e)
-    return []
+    return undefined
   }
 }
 
@@ -91,7 +94,10 @@ export default function (opts?: CheckOptions) {
             )
           }
 
-          const releases = parseResponse(rawData).filter((r) => !r.prerelease || opts?.prereleaseTrack) || []
+          const parsedReleases = parseResponse(rawData)
+          if (!parsedReleases) return reject(new Error('invalid release response'))
+
+          const releases = parsedReleases.filter((r) => !r.prerelease || opts?.prereleaseTrack)
           const latestRelease = releases[0]
 
           if (latestRelease?.tag_name) {
@@ -117,7 +123,7 @@ export default function (opts?: CheckOptions) {
             )
           } else {
             log.verbose('Manual check did not find any releases')
-            reject(new Error('no releases found'))
+            resolve(undefined)
           }
         })
       })
