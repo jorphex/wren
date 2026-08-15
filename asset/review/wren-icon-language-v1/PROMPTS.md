@@ -11,7 +11,7 @@ selected-source evidence; the decorative-symbol sheet is evidence-only and remai
 
 Style references:
 
-- `asset/brand/wren-character-reference-v1.png` — mascot anatomy and pixel density
+- `asset/brand/wren-control-center-v1.png` — mascot anatomy and pixel density
 - `asset/ui/empty-accounts-v2.png` — compact empty-state finish
 - `asset/ui/empty-connections-v6.png` — compact empty-state finish
 - `asset/ui/onboarding-welcome.png` — dusk palette, maturity, atmosphere, and lighting
