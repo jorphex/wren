@@ -1,6 +1,15 @@
+const mockStoreState = {
+  'main.mute.onboardingWindow': true,
+  'main.trezor.derivation': 'standard'
+}
+const mockStoreObservers = []
+
 jest.mock('../../../../main/store', () => {
-  const store = jest.fn(() => 'standard')
-  store.observer = jest.fn(() => ({ remove: jest.fn() }))
+  const store = jest.fn((key) => mockStoreState[key])
+  store.observer = jest.fn((observer) => {
+    mockStoreObservers.push(observer)
+    return { remove: jest.fn() }
+  })
   return { __esModule: true, default: store }
 })
 
@@ -48,6 +57,8 @@ describe('Trezor adapter lifecycle', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     jest.clearAllMocks()
+    mockStoreState['main.mute.onboardingWindow'] = true
+    mockStoreObservers.length = 0
     TrezorBridge.getFeatures.mockResolvedValue({
       model: 'T',
       major_version: 2,
@@ -98,6 +109,46 @@ describe('Trezor adapter lifecycle', () => {
     signer.status = Status.OK
     signer.emit('update')
     expect(mockStoreActions.clearHardwarePrompt).toHaveBeenCalledWith(signer.id)
+  })
+
+  it('defers passive session authentication until onboarding completes', async () => {
+    await adapter.close()
+    mockStoreState['main.mute.onboardingWindow'] = false
+    mockStoreObservers.length = 0
+    adapter = new TrezorSignerAdapter()
+    adapter.open()
+
+    TrezorBridge.emit('trezor:detected', device.path)
+    expect(TrezorBridge.getFeatures).not.toHaveBeenCalled()
+
+    mockStoreState['main.mute.onboardingWindow'] = true
+    mockStoreObservers[0]()
+    expect(TrezorBridge.getFeatures).toHaveBeenCalledWith({ path: device.path })
+  })
+
+  it('defers an already-acquired device session until onboarding completes', async () => {
+    await adapter.close()
+    mockStoreState['main.mute.onboardingWindow'] = false
+    mockStoreObservers.length = 0
+    adapter = new TrezorSignerAdapter()
+    adapter.open()
+
+    let signer
+    adapter.once('add', (addedSigner) => {
+      signer = addedSigner
+    })
+    TrezorBridge.emit('trezor:connect', device)
+    signer.open = jest.fn(async () => undefined)
+    signer.deriveAddresses = jest.fn(async () => undefined)
+
+    expect(signer.device).toBe(device)
+    expect(signer.open).not.toHaveBeenCalled()
+
+    mockStoreState['main.mute.onboardingWindow'] = true
+    mockStoreObservers[0]()
+    await flushPromises()
+
+    expect(signer.open).toHaveBeenCalledWith(device)
   })
 
   it('cancels and suppresses a passive authentication prompt until an intentional retry', async () => {

@@ -33,6 +33,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   private observer: Observer | undefined
   private lifecycleGeneration = 0
   private closed = true
+  private onboardingComplete = false
 
   constructor() {
     super('trezor')
@@ -41,9 +42,24 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   override open() {
     const generation = ++this.lifecycleGeneration
     this.closed = false
+    this.onboardingComplete = !!store('main.mute.onboardingWindow')
 
     this.observer = store.observer(() => {
       if (!this.isCurrent(generation)) return
+
+      const onboardingComplete = !!store('main.mute.onboardingWindow')
+      if (onboardingComplete && !this.onboardingComplete) {
+        this.onboardingComplete = true
+        Object.values(this.knownSigners).forEach(({ signer }) => {
+          if (signer.device) {
+            void this.openConnectedSigner(signer, signer.device, generation)
+          } else {
+            this.probeSession(signer.path)
+          }
+        })
+      } else {
+        this.onboardingComplete = onboardingComplete
+      }
 
       const trezorDerivation = store('main.trezor.derivation')
 
@@ -67,43 +83,24 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       const id = Trezor.generateId(path)
       const signer = this.knownSigners[id]?.signer || this.initTrezor(path)
 
-      if (!signer.device) {
+      if (!signer.device && this.onboardingComplete) {
         this.probeSession(path)
       }
     })
 
-    TrezorBridge.on('trezor:connect', async (device: TrezorDevice) => {
+    TrezorBridge.on('trezor:connect', (device: TrezorDevice) => {
       if (!this.isCurrent(generation)) return
 
       const id = Trezor.generateId(device.path)
       const trezor = this.knownSigners[id]?.signer || this.initTrezor(device.path)
-      this.suspendedPrompts.delete(id)
-      const connectionGeneration = (this.connectionGenerations.get(id) || 0) + 1
-      this.connectionGenerations.set(id, connectionGeneration)
-
-      trezor.derivation = store('main.trezor.derivation')
-
-      try {
-        await trezor.open(device)
-
-        if (!this.isConnectionCurrent(trezor, generation, connectionGeneration)) return
-
-        const version = [trezor.appVersion.major, trezor.appVersion.minor, trezor.appVersion.patch].join('.')
-        log.info(`Trezor ${trezor.id} connected: ${trezor.model}, firmware v${version}`)
-
-        // arbitrary delay to attempt to minimize message conflicts on first connection
-        this.setSignerTimer(
-          trezor.id,
-          () => {
-            if (this.isConnectionCurrent(trezor, generation, connectionGeneration)) {
-              void trezor.deriveAddresses()
-            }
-          },
-          200
-        )
-      } catch (e) {
-        if (this.isRegistered(trezor, generation)) log.error('could not open Trezor', e)
+      if (!this.onboardingComplete) {
+        // Trezor Connect can report an already-acquired device during startup.
+        // Remember it without opening a session so onboarding stays unobstructed.
+        trezor.device = device
+        return
       }
+
+      void this.openConnectedSigner(trezor, device, generation)
     })
 
     TrezorBridge.on('trezor:disconnect', (device: TrezorDevice) => {
@@ -300,6 +297,37 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       })
   }
 
+  private async openConnectedSigner(trezor: Trezor, device: TrezorDevice, generation: number) {
+    if (!this.isRegistered(trezor, generation)) return
+
+    this.suspendedPrompts.delete(trezor.id)
+    const connectionGeneration = (this.connectionGenerations.get(trezor.id) || 0) + 1
+    this.connectionGenerations.set(trezor.id, connectionGeneration)
+    trezor.derivation = store('main.trezor.derivation')
+
+    try {
+      await trezor.open(device)
+
+      if (!this.isConnectionCurrent(trezor, generation, connectionGeneration)) return
+
+      const version = [trezor.appVersion.major, trezor.appVersion.minor, trezor.appVersion.patch].join('.')
+      log.info(`Trezor ${trezor.id} connected: ${trezor.model}, firmware v${version}`)
+
+      // arbitrary delay to attempt to minimize message conflicts on first connection
+      this.setSignerTimer(
+        trezor.id,
+        () => {
+          if (this.isConnectionCurrent(trezor, generation, connectionGeneration)) {
+            void trezor.deriveAddresses()
+          }
+        },
+        200
+      )
+    } catch (e) {
+      if (this.isRegistered(trezor, generation)) log.error('could not open Trezor', e)
+    }
+  }
+
   override async close() {
     if (this.closed) return
 
@@ -313,6 +341,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     Array.from(this.activePrompts).forEach((id) => this.clearPrompt(id))
     this.activePrompts.clear()
     this.connectionGenerations.clear()
+    this.onboardingComplete = false
 
     if (this.observer) {
       this.observer.remove()
