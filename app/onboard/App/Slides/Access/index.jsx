@@ -33,11 +33,11 @@ const Access = ({ setTitle, setProceed, platform }) => {
 
   useEffect(() => {
     if (trayOpen && !shortcutActivated) {
-      setTitle('Wren when you need it')
-      setProceed({ action: 'skip', text: 'Skip' })
+      setTitle('Open Wren quickly')
+      setProceed({ action: 'skip', text: 'Skip shortcut' })
     } else if (!trayOpen) {
       setTitle('Bring Wren back')
-      setProceed({ action: 'skip', text: 'Skip' })
+      setProceed({ action: 'skip', text: 'Skip shortcut' })
     } else {
       setTitle('Auto-hide')
       setProceed({ action: 'next', text: 'Next' })
@@ -49,24 +49,28 @@ const Access = ({ setTitle, setProceed, platform }) => {
       {trayOpen && !shortcutActivated ? (
         <SlideBody key={1}>
           <SlideItem>
-            Keep Wren close without keeping it in the way. One shortcut opens or dismisses the wallet.
+            Use one shortcut to show or hide Wren whenever you need it.
           </SlideItem>
           <SlideItem>
-            <span>{'Try dismissing Wren with '}</span>
+            <span>{'Press '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
+            <span>{' to hide Wren.'}</span>
           </SlideItem>
         </SlideBody>
       ) : !trayOpen ? (
         <SlideBody key={2}>
           <SlideItem>
-            <span>{'Bring Wren back with '}</span>
+            <span>{'Press '}</span>
             <Shortcut>{keyboardShortcut}</Shortcut>
+            <span>{' to bring Wren back.'}</span>
           </SlideItem>
         </SlideBody>
       ) : (
         <SlideBody key={3}>
           <SlideItem>
-            When you are done, auto-hide moves Wren aside. Your shortcut keeps it within reach.
+            <span>{'When you stop using Wren, it hides automatically. Press '}</span>
+            <Shortcut>{keyboardShortcut}</Shortcut>
+            <span>{' to show it again.'}</span>
           </SlideItem>
         </SlideBody>
       )}

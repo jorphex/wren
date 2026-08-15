@@ -4,6 +4,16 @@ const INTERFACE_SCALES = Object.freeze([1, 1.25, 1.5])
 const FULL_SHELL_HEIGHT = 900
 const SHORT_SHELL_HEIGHT = 744
 
+const onboardingAction = (nextCount = 0) => ({
+  type: 'sequence',
+  delayMs: 650,
+  steps: [
+    { type: 'clickText', text: 'Get started' },
+    ...(nextCount >= 0 ? [{ type: 'clickText', text: 'Skip shortcut' }] : []),
+    ...Array.from({ length: nextCount }, () => ({ type: 'clickText', text: 'Next' }))
+  ]
+})
+
 const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
   {
     selector: '.wrenControlChrome',
@@ -780,7 +790,9 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale,
         logicalWidth: 720,
         logicalHeight: 405,
-        ready: 'button'
+        ready: 'button',
+        requiredControls: ['Get started'],
+        requiredText: ['Meet Wren']
       },
       {
         id: `onboard-access-${scale}`,
@@ -790,7 +802,81 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 720,
         logicalHeight: 405,
         ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: { type: 'clickText', text: 'Get started' }
+        action: { type: 'clickText', text: 'Get started' },
+        requiredControls: ['Back', 'Skip shortcut'],
+        requiredText: ['Open Wren quickly']
+      },
+      {
+        id: `onboard-networks-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-networks',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(0),
+        requiredControls: ['Back', 'Next'],
+        requiredText: ['Choose your networks']
+      },
+      {
+        id: `onboard-context-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-context',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(1),
+        requiredControls: ['Back', 'Next'],
+        requiredText: ['Use the right network']
+      },
+      {
+        id: `onboard-accounts-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-accounts',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(2),
+        requiredControls: ['Back', 'Next'],
+        requiredText: ['Add your accounts']
+      },
+      {
+        id: `onboard-companion-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-companion',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(3),
+        requiredControls: ['Chrome', 'Firefox', 'Back', 'Next'],
+        requiredText: ['Connect browser dapps']
+      },
+      {
+        id: `onboard-dapp-network-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-dapp-network',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(4),
+        requiredControls: ['Back', 'Next'],
+        requiredText: ['Check the dapp network']
+      },
+      {
+        id: `onboard-ready-${scale}`,
+        renderer: 'onboard',
+        state: 'onboarding-ready',
+        scale,
+        logicalWidth: 720,
+        logicalHeight: 405,
+        ready: '[aria-labelledby="onboarding-slide-title"]',
+        action: onboardingAction(5),
+        requiredControls: ['Back', 'Open Wren'],
+        requiredText: ['Ready to begin']
       }
     ]),
     {

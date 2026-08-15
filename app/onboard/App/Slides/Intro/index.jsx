@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import styled from 'styled-components'
 
 import onboardingWelcome from 'url:../../../../../asset/ui/onboarding-welcome.png'
-import { Slide } from '../../styled'
+import { ONBOARDING_SCENE_SCRIM, Slide } from '../../styled'
 
 const Welcome = styled.div`
   position: relative;
@@ -13,7 +13,7 @@ const Welcome = styled.div`
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   background:
-    linear-gradient(90deg, rgba(7, 11, 10, 0.5) 0%, rgba(7, 11, 10, 0.12) 48%, transparent 66%),
+    ${ONBOARDING_SCENE_SCRIM},
     url(${onboardingWelcome}) center / cover no-repeat;
   animation: cardShow 400ms linear both;
   animation-delay: 120ms;
@@ -87,7 +87,7 @@ const Intro = ({ onProceed, setTitle, setProceed }) => {
         <WelcomeContent>
           <WelcomeTitle>Meet Wren</WelcomeTitle>
           <WelcomeCopy>
-            Your accounts, networks, and signing tools together in one calm desktop wallet.
+            A calm desktop wallet for your accounts, networks, and signing tools.
           </WelcomeCopy>
           <WelcomeButton
             type='button'

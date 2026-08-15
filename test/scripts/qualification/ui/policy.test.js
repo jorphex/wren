@@ -17,7 +17,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(51)
+  expect(scenarios).toHaveLength(69)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -36,7 +36,13 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `tray-revocation-monitor-full-${scale}`,
         `tray-revocation-monitor-short-${scale}`,
         `onboard-intro-${scale}`,
-        `onboard-access-${scale}`
+        `onboard-access-${scale}`,
+        `onboard-networks-${scale}`,
+        `onboard-context-${scale}`,
+        `onboard-accounts-${scale}`,
+        `onboard-companion-${scale}`,
+        `onboard-dapp-network-${scale}`,
+        `onboard-ready-${scale}`
       ])
     )
   }

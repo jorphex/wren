@@ -5,7 +5,7 @@ import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const OmnichainSlide = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Keep each request in context')
+    setTitle('Use the right network')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
 
@@ -13,8 +13,8 @@ const OmnichainSlide = ({ setTitle, setProceed }) => {
     <Slide $background={onboardingContext}>
       <SlideBody>
         <SlideItem>
-          Each request goes to the network where it belongs. Dapps can use several networks at once, without
-          making you manage a global network switch.
+          Every request stays tied to its network. A dapp can use several networks without making you manage
+          a wallet-wide network switch.
         </SlideItem>
       </SlideBody>
     </Slide>

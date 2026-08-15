@@ -1,5 +1,8 @@
 import styled from 'styled-components'
 
+export const ONBOARDING_SCENE_SCRIM =
+  'linear-gradient(90deg, rgba(7, 11, 10, 0.88) 0%, rgba(7, 11, 10, 0.66) 40%, rgba(7, 11, 10, 0.18) 68%, rgba(7, 11, 10, 0.08) 100%)'
+
 export const Onboard = styled.div`
   position: absolute;
   top: 0px;
@@ -38,14 +41,15 @@ export const Slide = styled.div`
   z-index: 700;
   box-sizing: border-box;
   overflow: hidden;
-  background:
-    linear-gradient(90deg, rgba(7, 11, 10, 0.45) 0%, rgba(7, 11, 10, 0.08) 48%, transparent 66%),
-    ${({ $background }) => ($background ? `url(${$background}) center / cover no-repeat` : 'transparent')};
+  background: ${({ $background }) =>
+    $background
+      ? `${ONBOARDING_SCENE_SCRIM}, url(${$background}) center / cover no-repeat`
+      : 'transparent'};
 `
 
 export const SlideBody = styled.div`
   position: absolute;
-  top: 112px;
+  top: 120px;
   bottom: 104px;
   left: clamp(36px, 7vw, 54px);
   width: min(320px, 43%);
@@ -61,13 +65,13 @@ export const SlideBody = styled.div`
   color: var(--wren-text-secondary);
 
   @media (max-height: 540px) {
-    top: 96px;
+    top: 104px;
     bottom: 88px;
     font-size: 15px;
   }
 
   @media (max-height: 700px) and (min-height: 541px) {
-    top: 100px;
+    top: 110px;
     bottom: 92px;
   }
 
@@ -171,7 +175,7 @@ export const Tag = styled.span`
 `
 
 export const SlideItem = styled.div`
-  margin: 0 0 14px;
+  margin: 0 0 ${({ $flush }) => ($flush ? '0' : '14px')};
   line-height: 1.5;
 
   &:last-child {
@@ -181,35 +185,22 @@ export const SlideItem = styled.div`
 
 export const BrowserChoices = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 6px;
+  gap: var(--wren-space-2);
+  margin-top: 0;
 `
 
 export const BrowserChoice = styled.button`
-  display: flex;
-  width: 48px;
-  height: 48px;
-  padding: 6px;
+  min-width: 112px;
+  height: 44px;
+  padding: 0 var(--wren-space-3);
   align-items: center;
   justify-content: center;
-  color: var(--outerspace);
-  background: transparent;
-  border: 0;
-  border-radius: var(--wren-radius-md);
-  cursor: pointer;
 
   svg {
-    width: 36px;
-    height: 36px;
-  }
-
-  &:hover {
-    background: var(--wren-surface-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--wren-focus);
-    outline-offset: 2px;
+    width: 20px;
+    height: 20px;
   }
 `
 

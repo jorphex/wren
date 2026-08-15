@@ -15,9 +15,9 @@ const Chains = ({ setTitle, setProceed }) => {
   return (
     <Slide $background={onboardingNetworks}>
       <SlideBody>
-        <SlideItem>Enable the networks you use and leave the rest quiet.</SlideItem>
-        <SlideItem>Wren includes popular EVM networks. Prefer your own RPC? Add it here.</SlideItem>
-        <SlideItem>You can add another network at any time. Dapps can ask Wren to add one, too.</SlideItem>
+        <SlideItem>Use the main panel to enable networks. You can change this later.</SlideItem>
+        <SlideItem>Wren includes common EVM networks. Add a custom RPC when you need one.</SlideItem>
+        <SlideItem>Dapps may request a network. Review its details before adding it.</SlideItem>
       </SlideBody>
     </Slide>
   )

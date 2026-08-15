@@ -245,7 +245,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'sequence') {
     for (const step of action.steps) {
       await performAction(webContents, step)
-      await new Promise((resolve) => setTimeout(resolve, 30))
+      await new Promise((resolve) => setTimeout(resolve, action.delayMs || 30))
     }
     return
   }

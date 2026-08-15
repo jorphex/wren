@@ -5,7 +5,7 @@ import { Slide, SlideBody, SlideItem } from '../../styled'
 
 const SwitchChainsSlide = ({ setTitle, setProceed }) => {
   useEffect(() => {
-    setTitle('Choose a network')
+    setTitle('Check the dapp network')
     setProceed({ action: 'next', text: 'Next' })
   }, [])
 
@@ -13,7 +13,8 @@ const SwitchChainsSlide = ({ setTitle, setProceed }) => {
     <Slide $background={onboardingNetworkChoice}>
       <SlideBody>
         <SlideItem>
-          Some dapps do not ask to change networks. Wren Companion lets you choose one when they do not.
+          When a dapp does not provide a network, Wren Companion lets you choose one. Check the network in
+          Wren before approving.
         </SlideItem>
       </SlideBody>
     </Slide>

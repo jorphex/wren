@@ -2,6 +2,7 @@ import fs from 'fs'
 
 import { act, fireEvent, render, screen } from '../../../../componentSetup'
 import Accounts from '../../../../../app/onboard/App/Slides/Accounts'
+import Extension from '../../../../../app/onboard/App/Slides/Extension'
 import Slides, { GUIDED_SLIDE_COUNT, guidedStepForSlide } from '../../../../../app/onboard/App/Slides'
 
 jest.mock('../../../../../resources/link', () => ({
@@ -24,13 +25,29 @@ afterEach(() => {
   delete global.store
 })
 
-it('keeps the existing Accounts slide as the single hardware-signing introduction', () => {
+it('introduces every supported account type without internal signer terminology', () => {
   render(<Accounts setProceed={jest.fn()} setTitle={jest.fn()} />)
 
   expect(
-    screen.getByText('Hardware signers, local accounts, and watch-only addresses all belong here.')
+    screen.getByText('Connect a hardware wallet, create a local account, or add a watch-only address.')
   ).toBeTruthy()
-  expect(screen.getByText('Choose Add account, then choose how you want to connect.')).toBeTruthy()
+  expect(screen.getByText('Select Add account, then choose how to connect it.')).toBeTruthy()
+})
+
+it('labels both Companion download controls without the compact icon-only override', () => {
+  render(<Extension setProceed={jest.fn()} setTitle={jest.fn()} />)
+
+  const chrome = screen.getByRole('button', {
+    name: 'Open Wren Companion release downloads for Chrome'
+  })
+  const firefox = screen.getByRole('button', {
+    name: 'Open Wren Companion release downloads for Firefox'
+  })
+
+  expect(chrome.textContent).toContain('Chrome')
+  expect(firefox.textContent).toContain('Firefox')
+  expect(chrome.className).not.toContain('wrenControlIcon')
+  expect(firefox.className).not.toContain('wrenControlIcon')
 })
 
 it('numbers every guided slide while leaving the immersive welcome unnumbered', () => {
@@ -47,11 +64,11 @@ it('shows first and final progress with the visible slide title as context', () 
   fireEvent.click(screen.getByRole('button', { name: 'Get started' }))
 
   expect(screen.getByText('Step 1 of 7')).toBeTruthy()
-  expect(
-    screen.getByRole('heading', { name: 'Wren when you need it' }).getAttribute('aria-describedby')
-  ).toBe('onboarding-slide-progress')
+  expect(screen.getByRole('heading', { name: 'Open Wren quickly' }).getAttribute('aria-describedby')).toBe(
+    'onboarding-slide-progress'
+  )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Skip' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Skip shortcut' }))
   for (let slide = 0; slide < 5; slide += 1) {
     act(() => jest.advanceTimersByTime(601))
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))

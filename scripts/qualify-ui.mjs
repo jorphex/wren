@@ -175,7 +175,7 @@ try {
   const timeout = setTimeout(() => {
     timedOut = true
     void terminate(renderer)
-  }, 90_000)
+  }, 180_000)
   timeout.unref()
   const result = await waitForExit(renderer)
   clearTimeout(timeout)
@@ -188,7 +188,7 @@ try {
   if (!report) throw new Error('Electron harness did not write a qualification report')
   if (report.fatal) throw new Error(report.fatal)
   exportArtifacts(report)
-  if (timedOut) throw new Error('Electron UI qualification exceeded 90 seconds')
+  if (timedOut) throw new Error('Electron UI qualification exceeded 180 seconds')
 
   const passed = report.results.filter((entry) => entry.audit.violations.length === 0).length
   console.log(`UI qualification: ${passed}/${report.results.length} scenarios passed`)
