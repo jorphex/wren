@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { once } from 'node:events'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { access, lstat, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { pipeline } from 'node:stream/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import { assertReleaseBuildIdentity } from './build-identity.mjs'
@@ -34,30 +32,6 @@ const findArtifact = async (suffix) => {
 }
 
 const artifacts = await Promise.all([findArtifact('.AppImage'), findArtifact('_amd64.deb')])
-const readDebFile = async (deb, member) => {
-  const archive = spawn('dpkg-deb', ['--fsys-tarfile', deb], { stdio: ['ignore', 'pipe', 'pipe'] })
-  const extract = spawn('tar', ['-xOf', '-', member], { stdio: ['pipe', 'pipe', 'pipe'] })
-  const output = []
-  const archiveErrors = []
-  const extractErrors = []
-
-  archive.stderr.on('data', (chunk) => archiveErrors.push(chunk))
-  extract.stdout.on('data', (chunk) => output.push(chunk))
-  extract.stderr.on('data', (chunk) => extractErrors.push(chunk))
-
-  await Promise.all([
-    pipeline(archive.stdout, extract.stdin),
-    once(archive, 'close').then(([code]) =>
-      assert.equal(code, 0, `dpkg-deb failed: ${Buffer.concat(archiveErrors).toString()}`)
-    ),
-    once(extract, 'close').then(([code]) =>
-      assert.equal(code, 0, `tar failed: ${Buffer.concat(extractErrors).toString()}`)
-    )
-  ])
-
-  return Buffer.concat(output).toString('utf8')
-}
-
 const unpackedModules = path.join(dist, 'linux-unpacked', 'resources', 'app.asar.unpacked', 'node_modules')
 const nativeModules = [
   path.join(unpackedModules, 'node-hid', 'build', 'Release', 'HID_hidraw.node'),
@@ -276,6 +250,7 @@ const debExtraction = await mkdtemp(path.join(tmpdir(), 'wren-deb-'))
 let appImageProbeResult
 let appImageDesktopEntry
 let debProbeResult
+let debDesktopEntry
 try {
   execFileSync(path.join(dist, artifacts[0]), ['--appimage-extract'], {
     cwd: appImageExtraction,
@@ -296,6 +271,10 @@ try {
     'utf8'
   )
   debProbeResult = runPackagedProbe('deb', path.join(debExtraction, 'opt', 'Wren', 'wren'))
+  debDesktopEntry = await readFile(
+    path.join(debExtraction, 'usr', 'share', 'applications', packageJson.desktopName),
+    'utf8'
+  )
 } finally {
   await Promise.all([
     rm(appImageExtraction, { recursive: true, force: true }),
@@ -305,10 +284,6 @@ try {
 
 assert.deepEqual(appImageProbeResult, probeResult, 'AppImage payload differs from package output')
 assert.deepEqual(debProbeResult, probeResult, 'deb payload differs from package output')
-const desktopEntry = await readDebFile(
-  path.join(dist, artifacts[1]),
-  `./usr/share/applications/${packageJson.desktopName}`
-)
 const builderPackage = JSON.parse(
   await readFile(path.resolve('node_modules/electron-builder/package.json'), 'utf8')
 )
@@ -334,10 +309,10 @@ assert.deepEqual(probeResult.workerEnvironment, {
 })
 assert.match(appImageDesktopEntry, /^Exec=AppRun %U$/m)
 assert.doesNotMatch(appImageDesktopEntry, /--no-sandbox/)
-assert.match(desktopEntry, /^Exec=\/opt\/Wren\/wren %U$/m)
-assert.match(desktopEntry, /^StartupWMClass=wren$/m)
-assert.match(desktopEntry, /^Categories=Office;Finance;$/m)
-assert.doesNotMatch(desktopEntry, /^Categories=Utility;$/m)
+assert.match(debDesktopEntry, /^Exec=\/opt\/Wren\/wren %U$/m)
+assert.match(debDesktopEntry, /^StartupWMClass=wren$/m)
+assert.match(debDesktopEntry, /^Categories=Office;Finance;$/m)
+assert.doesNotMatch(debDesktopEntry, /^Categories=Utility;$/m)
 assert.deepEqual(probeResult.modules, ['node-hid', 'usb', 'usb via @trezor/transport'])
 assert.ok(probeResult.ledgerApis.every((api) => api === 'function'))
 assert.deepEqual(probeResult.ledgerVersions, {
