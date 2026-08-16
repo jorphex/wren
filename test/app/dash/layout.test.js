@@ -161,6 +161,15 @@ test('keeps the Trezor PIN submit action in the Wren control language', () => {
   expect(signerStyle).not.toMatch(/\.signerPinSubmit[\s\S]{0,180}?text-transform uppercase/)
 })
 
+test('keeps hardware prompts opaque while giving their scrim and surface restrained depth', () => {
+  expect(signerStyle).toMatch(
+    /\.hardwareSignerPromptOverlay[\s\S]*?background rgba\(7, 10, 14, 0\.76\)[\s\S]*?backdrop-filter blur\(5px\)/
+  )
+  expect(signerStyle).toMatch(
+    /\.hardwareSignerPromptSurface\.expandedSigner[\s\S]*?background-color var\(--wren-bg-elevated\)[\s\S]*?background-image var\(--wren-control-texture-dark\)[\s\S]*?box-shadow var\(--wren-shadow-lg\), var\(--wren-shadow-inset\)[\s\S]*?animation cardShow/
+  )
+})
+
 test('renders page actions with their destination instead of delaying the footer', () => {
   expect(dashStyle).not.toContain('@keyframes showFooter')
   expect(dashStyle).not.toMatch(/\.dashFooter[\s\S]*?animation showFooter/)

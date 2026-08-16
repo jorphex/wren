@@ -101,6 +101,12 @@ test('keeps the home-to-requests gap compact without shifting the selector rail'
   expect(accountStyle).toMatch(/\.accountHomeQrTrigger[\s\S]*?min-height 44px/)
 })
 
+test('keeps the QR disclosure opaque and gives it restrained material depth', () => {
+  expect(accountStyle).toMatch(
+    /\.accountAddressQrPopover[\s\S]*?background-color var\(--wren-bg-elevated\)[\s\S]*?background-image var\(--wren-control-texture-dark\)[\s\S]*?box-shadow var\(--wren-shadow-lg\), var\(--wren-shadow-inset\)/
+  )
+})
+
 test('centers shared filter icons in the 44px field and anchors the startup control right', () => {
   expect(accountSelectorStyle).toMatch(
     /\.panelFilterIcon[\s\S]*?top 2px[\s\S]*?bottom 2px[\s\S]*?align-items center/
