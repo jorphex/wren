@@ -1,7 +1,7 @@
 import fs from 'fs'
 
 const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf8')
-const accountGrain = fs.readFileSync('app/tray/Account/style/wren-grain.svg', 'utf8')
+const accountGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 const accountSource = fs.readFileSync('app/tray/Account/Account.js', 'utf8')
 const accountSelectorStyle = fs.readFileSync('app/tray/AccountSelector/style/index.styl', 'utf8')
 const balancesStyle = fs.readFileSync('app/tray/Account/Balances/style/index.styl', 'utf8')
@@ -25,6 +25,27 @@ test('keeps the compact wallet shell and its canvas on the same width contract',
   expect(trayStyle).not.toMatch(/width 760px/)
 })
 
+test('squares the canvas and panel corners only along an open workspace seam', () => {
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-right\n[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/
+  )
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-left\n[\s\S]*?border-top-right-radius 0[\s\S]*?border-bottom-right-radius 0/
+  )
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-right::before[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/
+  )
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-left::before[\s\S]*?border-top-right-radius 0[\s\S]*?border-bottom-right-radius 0/
+  )
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-right #panel[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/
+  )
+  expect(trayStyle).toMatch(
+    /\.workspace-open\.workspace-edge-left #panel[\s\S]*?border-top-right-radius 0[\s\S]*?border-bottom-right-radius 0/
+  )
+})
+
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   expect(trayStyle).toMatch(
     /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color var\(--wren-text-muted\)/
@@ -42,11 +63,30 @@ test('keeps account collection and balance interiors spacing-led', () => {
 
 test('keeps the account atmosphere static across startup and ordinary browsing only', () => {
   expect(accountStyle).toMatch(
-    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-image url\('\.\/Account\/style\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
+    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-image url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
   )
-  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(1)
+  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(2)
+  expect(accountStyle).toMatch(
+    /\.workspace-edge-left #panel[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at -2% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 88% 104%/
+  )
   expect(accountGrain).toMatch(
     /<feTurbulence type="fractalNoise"[\s\S]*?stitchTiles="stitch"[\s\S]*?<feColorMatrix type="saturate" values="0"[\s\S]*?<feComponentTransfer>[\s\S]*?<rect width="144" height="144" opacity="0\.11"/
+  )
+})
+
+test('lets the selected-account chooser share the wallet canvas', () => {
+  expect(accountSelectorStyle).toMatch(
+    /\.accountChooserPanel[\s\S]*?background transparent[\s\S]*?pointer-events auto/
+  )
+  expect(accountSelectorStyle).toMatch(/\.accountDrawerItem[\s\S]*?background transparent/)
+  expect(accountSelectorStyle).toMatch(
+    /&\.accountDrawerItemSelected[\s\S]*?background var\(--wren-ledger-selected\)/
+  )
+  expect(accountStyle).toMatch(
+    /#panel[\s\S]*?&:has\(\.accountSelectorOpen\[aria-modal='true'\]\) \.accountMain[\s\S]*?visibility hidden/
+  )
+  expect(accountStyle).toMatch(
+    /#panel[\s\S]*?&:has\(\.accountViewRequest\) \.accountSelector\.accountSelectorOpen[\s\S]*?visibility hidden/
   )
 })
 
@@ -58,6 +98,7 @@ test('keeps the home-to-requests gap compact without shifting the selector rail'
     /\.accountSelectorScrollWrap[\s\S]*?padding 24px var\(--wren-space-5\) 48px/
   )
   expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
+  expect(accountStyle).toMatch(/\.accountHomeQrTrigger[\s\S]*?min-height 44px/)
 })
 
 test('centers shared filter icons in the 44px field and anchors the startup control right', () => {

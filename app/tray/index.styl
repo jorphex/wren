@@ -43,6 +43,26 @@ body::before
 .workspace-open::before
   width 100%
 
+.workspace-joined.workspace-edge-right::before,
+.workspace-open.workspace-edge-right::before
+  border-top-left-radius 0
+  border-bottom-left-radius 0
+
+.workspace-joined.workspace-edge-left::before,
+.workspace-open.workspace-edge-left::before
+  border-top-right-radius 0
+  border-bottom-right-radius 0
+
+.workspace-joined.workspace-edge-right,
+.workspace-open.workspace-edge-right
+  border-top-left-radius 0
+  border-bottom-left-radius 0
+
+.workspace-joined.workspace-edge-left,
+.workspace-open.workspace-edge-left
+  border-top-right-radius 0
+  border-bottom-right-radius 0
+
 div
   user-select none
   cursor default

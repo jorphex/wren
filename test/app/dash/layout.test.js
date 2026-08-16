@@ -10,10 +10,28 @@ const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl'
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 const chainsStyle = fs.readFileSync('app/dash/Chains/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/dash/Signer/style/index.styl', 'utf8')
+const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
   expect(baseStyle).toMatch(/--wren-type-label var\(--wren-type-caption\)/)
   expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
+})
+
+test('continues the joined wallet canvas according to its dock edge', () => {
+  expect(dashStyle).toMatch(
+    /\.dash[\s\S]*?background-color var\(--wren-bg-canvas\)[\s\S]*?url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?background-size 144px 144px/
+  )
+  expect(dashStyle).toMatch(
+    /\.dash[\s\S]*?\.dashMain[\s\S]*?background transparent[\s\S]*?\.workspace-edge-left \.dash,[\s\S]*?\.workspace-overlay \.dash[\s\S]*?radial-gradient\(ellipse 94% 58% at 2% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at 102% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 12% 104%/
+  )
+  expect(dashStyle).toMatch(/\.dashMain[\s\S]*?\.localSettings[\s\S]*?background transparent/)
+  expect(dashStyle).toMatch(
+    /\.workspace-edge-right \.dash[\s\S]*?border-top-right-radius 0[\s\S]*?border-bottom-right-radius 0/
+  )
+  expect(dashStyle).toMatch(
+    /\.workspace-edge-left \.dash[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/
+  )
+  expect(canvasGrain).toMatch(/width="144" height="144"[\s\S]*?stitchTiles="stitch"/)
 })
 
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {

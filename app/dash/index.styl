@@ -339,7 +339,10 @@ button,
   display none
 
 .dash
-  background var(--wren-bg-canvas)
+  background-color var(--wren-bg-canvas)
+  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 98% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at -2% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 88% 104%, rgba(111, 91, 126, .045), transparent 74%)
+  background-repeat repeat, no-repeat, no-repeat, no-repeat
+  background-size 144px 144px, 100% 100%, 100% 100%, 100% 100%
   overflow hidden
 
   > .command,
@@ -369,6 +372,11 @@ button,
       display none
       border-radius 0
       box-shadow none
+
+    // Ordinary dashboard destinations sit directly on the shared workspace
+    // canvas; focused notification and signing surfaces keep their own fills.
+    .localSettings
+      background transparent
 
   .dashFooter
     display flex
@@ -489,11 +497,21 @@ button,
         color var(--wren-text-muted)
         transition color var(--wren-motion-fast) var(--wren-ease)
 
+.workspace-edge-left .dash,
+.workspace-overlay .dash
+  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 2% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at 102% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 12% 104%, rgba(111, 91, 126, .045), transparent 74%)
+
 .workspace-edge-right .dash
-  border-radius var(--wren-radius-xl) 0 0 var(--wren-radius-xl)
+  border-top-left-radius var(--wren-radius-xl)
+  border-top-right-radius 0
+  border-bottom-right-radius 0
+  border-bottom-left-radius var(--wren-radius-xl)
 
 .workspace-edge-left .dash
-  border-radius 0 var(--wren-radius-xl) var(--wren-radius-xl) 0
+  border-top-left-radius 0
+  border-top-right-radius var(--wren-radius-xl)
+  border-bottom-right-radius var(--wren-radius-xl)
+  border-bottom-left-radius 0
 
 .workspace-overlay .dash
   border 0
