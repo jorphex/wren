@@ -1387,12 +1387,103 @@
   font-weight 620
 
 .accountHomeAddressActions
+  position relative
   display flex
   max-width 100%
   min-height 44px
   margin-top 3px
   align-items center
   gap var(--wren-space-1)
+
+.accountHomeQrTrigger
+  width 44px !important
+  min-width 44px !important
+  height 44px !important
+  min-height 44px !important
+
+  &[aria-expanded='true']
+    color var(--wren-text-primary)
+    border-color var(--wren-border-subtle)
+    background-color var(--wren-surface-active)
+
+.accountHomeQrDisclosure
+  position relative
+  flex none
+  width 44px
+  height 44px
+
+.accountAddressQrPopover
+  position absolute
+  top calc(100% + var(--wren-space-1))
+  left 50%
+  z-index 20001
+  width 217px
+  margin-left -108.5px
+  padding var(--wren-space-3)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background var(--wren-bg-elevated)
+  box-shadow var(--wren-shadow-md)
+  animation cardShow var(--wren-motion-standard) var(--wren-ease) both
+
+  &::before
+    content ''
+    position absolute
+    top -5px
+    left calc(50% - 5px)
+    width 9px
+    height 9px
+    border-top 1px solid var(--wren-border-default)
+    border-left 1px solid var(--wren-border-default)
+    background var(--wren-bg-elevated)
+    transform rotate(45deg)
+
+.accountAddressQrHeader
+  display flex
+  min-height 38px
+  margin-bottom var(--wren-space-2)
+  align-items flex-start
+  justify-content space-between
+  gap var(--wren-space-2)
+
+.accountAddressQrTitle
+  margin 0
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-body)
+  font-weight 650
+  line-height 1.2
+
+.accountAddressQrAccount
+  max-width 135px
+  margin-top 3px
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  line-height 1.25
+  text-overflow ellipsis
+  white-space nowrap
+
+.accountAddressQrClose
+  flex none
+
+.accountAddressQrCode
+  display block
+  width 185px
+  max-width 100%
+  height auto
+  margin 0 auto
+
+.accountAddressQrValue
+  margin-top var(--wren-space-2)
+  overflow-wrap anywhere
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  line-height 1.45
 
 .accountHomeAddress
   appearance none

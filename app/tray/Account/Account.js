@@ -2,6 +2,8 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import Icon from '../../../resources/Components/Icon'
+import DialogSurface from '../../../resources/Components/DialogSurface'
+import QrCode from '../../../resources/Components/QrCode'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
@@ -57,17 +59,81 @@ const modules = {
   settings: Settings
 }
 
-export const AccountAddressActions = ({ address }) => {
+export const AccountAddressActions = ({ address, name }) => {
   const [copied, copyAddress] = useCopiedMessage(address, 1800)
+  const [showQr, setShowQr] = React.useState(false)
+  const actionsRef = React.useRef()
+  const qrTriggerRef = React.useRef()
+  const dialogId = React.useId()
+  const titleId = `${dialogId}-title`
+
+  React.useEffect(() => {
+    if (!showQr) return undefined
+
+    const dismissOutside = (event) => {
+      if (!actionsRef.current?.contains(event.target)) setShowQr(false)
+    }
+
+    document.addEventListener('pointerdown', dismissOutside, true)
+    return () => document.removeEventListener('pointerdown', dismissOutside, true)
+  }, [showQr])
 
   return (
-    <div className='accountHomeAddressActions'>
+    <div ref={actionsRef} className='accountHomeAddressActions'>
       <button type='button' className='accountHomeAddress' aria-label='Copy address' onClick={copyAddress}>
         <span>{address}</span>
         <Icon name={copied ? 'check' : 'copy'} size={14} />
       </button>
+      <div className='accountHomeQrDisclosure'>
+        <button
+          ref={qrTriggerRef}
+          type='button'
+          aria-controls={showQr ? dialogId : undefined}
+          aria-expanded={showQr}
+          aria-haspopup='dialog'
+          aria-label='Show account address QR code'
+          className='accountHomeQrTrigger wrenControl wrenControlGhost wrenControlIcon'
+          title='Show account address QR code'
+          onClick={() => setShowQr((visible) => !visible)}
+        >
+          <Icon name='qr' size={16} />
+        </button>
+        {showQr ? (
+          <DialogSurface
+            id={dialogId}
+            labelledBy={titleId}
+            className='accountAddressQrPopover'
+            modal
+            returnFocusRef={qrTriggerRef}
+            onCancel={() => setShowQr(false)}
+          >
+            <div className='accountAddressQrHeader'>
+              <div>
+                <h2 id={titleId} className='accountAddressQrTitle'>
+                  Account address
+                </h2>
+                <div className='accountAddressQrAccount'>{name}</div>
+              </div>
+              <button
+                type='button'
+                aria-label='Close'
+                className='accountAddressQrClose wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
+                onClick={() => setShowQr(false)}
+              >
+                <Icon name='close' size={12} />
+              </button>
+            </div>
+            <QrCode
+              className='accountAddressQrCode'
+              label='QR code for account address'
+              value={address}
+            />
+            <div className='accountAddressQrValue'>{address}</div>
+          </DialogSurface>
+        ) : null}
+      </div>
       <span className='clusterStatus' role='status' aria-live='polite'>
-        {copied ? 'Address copied' : ''}
+        {copied ? 'Address copied.' : showQr ? 'Address QR code opened.' : ''}
       </span>
     </div>
   )
@@ -252,7 +318,7 @@ class _AccountMain extends React.Component {
         <div className='accountHomeIdentity'>
           <div className='accountHomeEyebrow'>Selected account</div>
           <AccountNameEditor account={this.props.id} name={name} />
-          <AccountAddressActions address={address} />
+          <AccountAddressActions key={address} address={address} name={name} />
         </div>
         <div className='accountHomeActions' aria-label='Account actions'>
           <button

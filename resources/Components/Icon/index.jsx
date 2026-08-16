@@ -281,6 +281,14 @@ const wrenGlyphs = Object.freeze({
     </>
   ),
   pulse: createWrenGlyph(<path d='M3 12h4l2-6 4 12 2-6h6' />),
+  qr: createWrenGlyph(
+    <>
+      <rect x='4' y='4' width='6' height='6' rx='.5' />
+      <rect x='14' y='4' width='6' height='6' rx='.5' />
+      <rect x='4' y='14' width='6' height='6' rx='.5' />
+      <path d='M14 14h2v2h-2zM18 14h2v4h-2M14 18h4v2h2' />
+    </>
+  ),
   receive: createWrenGlyph(<path d='M18 6 6 18M6 9v9h9' />),
   remove: createWrenGlyph(
     <>
@@ -368,6 +376,7 @@ const icons = Object.freeze({
   pencil: wrenGlyphs.pencil,
   permissions: wrenGlyphs.shield,
   pulse: wrenGlyphs.pulse,
+  qr: wrenGlyphs.qr,
   receive: wrenGlyphs.receive,
   restore: wrenGlyphs.restore,
   remove: wrenGlyphs.remove,
