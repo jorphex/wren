@@ -62,10 +62,108 @@ const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
   ]
 })
 
+const joinedCanvasScenarios = () => [
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].flatMap(([geometry, logicalHeight]) => [
+      {
+        id: `tray-account-drawer-${geometry}-right-${scale}`,
+        renderer: 'tray',
+        state: 'account-drawer',
+        glideSide: 'right',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.accountChooserPanel',
+        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
+      },
+      {
+        id: `tray-account-drawer-${geometry}-left-${scale}`,
+        renderer: 'tray',
+        state: 'account-drawer',
+        glideSide: 'left',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.accountChooserPanel',
+        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
+      },
+      {
+        id: `dash-control-center-${geometry}-left-${scale}`,
+        renderer: 'dash',
+        state: 'control-center',
+        glideSide: 'left',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.dashModules',
+        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+      },
+      {
+        id: `tray-account-home-${geometry}-left-${scale}`,
+        renderer: 'tray',
+        state: 'account-home',
+        glideSide: 'left',
+        workspaceOpen: true,
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: 'body.workspace-open .chainMonitorPreview',
+        requiredControls: [
+          'Previous network from Ethereum Mainnet',
+          'Next network from Ethereum Mainnet',
+          'View Ethereum Mainnet account on block explorer',
+          'Show gas details for Ethereum Mainnet'
+        ],
+        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+      },
+      {
+        id: `tray-account-home-${geometry}-right-${scale}`,
+        renderer: 'tray',
+        state: 'account-home',
+        glideSide: 'right',
+        workspaceOpen: true,
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: 'body.workspace-open .chainMonitorPreview',
+        requiredControls: [
+          'Previous network from Ethereum Mainnet',
+          'Next network from Ethereum Mainnet',
+          'View Ethereum Mainnet account on block explorer',
+          'Show gas details for Ethereum Mainnet'
+        ],
+        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+      }
+    ])
+  )
+]
+
 const reviewScenarios = () => [
+  ...joinedCanvasScenarios(),
   ...INTERFACE_SCALES.flatMap((scale) => [
     transactionLookalikeScenario('full', scale, FULL_SHELL_HEIGHT),
-    transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT)
+    transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT),
+    ...[
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `tray-account-address-qr-${geometry}-${scale}`,
+      renderer: 'tray',
+      state: 'account-home',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: { type: 'clickText', text: 'Show account address QR code' },
+      ready: '.accountAddressQrPopover',
+      requiredControls: ['Close'],
+      requiredText: ['Account address', 'Workshop Software Account With A Long Name'],
+      layoutExpectations: [
+        { kind: 'size', selector: '.accountAddressQrCode', width: 185, height: 185 }
+      ]
+    }))
   ]),
   {
     id: 'dash-add-token-selector-short-1',
@@ -606,16 +704,6 @@ const reviewScenarios = () => [
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
   },
-  {
-    id: 'tray-account-drawer-full-1',
-    renderer: 'tray',
-    state: 'account-drawer',
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.accountChooserPanel',
-    requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
-  }
 ]
 
 const scenarioMatrix = ({ includeReview = false } = {}) => {

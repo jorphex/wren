@@ -468,6 +468,12 @@ const prepareSelectedAccount = (state, request) => {
 
 const fixtureFor = (scenario) => {
   const state = baseState()
+  if (scenario.glideSide === 'left' || scenario.glideSide === 'right') {
+    state.main.glideSide = scenario.glideSide
+  }
+  if (scenario.workspaceOpen) {
+    state.windows.dash.showing = true
+  }
   state.main.interfaceScale = scenario.scale
   state.view.interfaceScaleEffective = scenario.scale
 

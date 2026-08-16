@@ -59,6 +59,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
 it('fixtures the separator-review surfaces at native scale and geometry', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
   const lookalikeReviews = scenarios.filter(({ state }) => state === 'transaction-lookalike')
+  const addressQrReviews = scenarios.filter(({ id }) => id.startsWith('tray-account-address-qr-'))
   const chooser = scenarios.find(({ state }) => state === 'account-chooser')
   const settings = scenarios.find(({ state }) => state === 'settings')
   const settingsLocalConnections = scenarios.find(({ id }) => id === 'dash-settings-local-connections-full-1')
@@ -78,6 +79,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const balances = scenarios.find(({ state }) => state === 'account-balances')
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
   const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
+  expect(addressQrReviews).toHaveLength(6)
+  expect(addressQrReviews.every(({ ready }) => ready === '.accountAddressQrPopover')).toBe(true)
+  expect(addressQrReviews.every(({ requiredControls }) => requiredControls.join(',') === 'Close')).toBe(true)
+  expect(
+    addressQrReviews.every(({ layoutExpectations }) =>
+      layoutExpectations.some(
+        ({ kind, selector, width, height }) =>
+          kind === 'size' && selector === '.accountAddressQrCode' && width === 185 && height === 185
+      )
+    )
+  ).toBe(true)
   const activity = scenarios.find(({ state }) => state === 'account-activity')
   const activityClear = scenarios.find(({ id }) => id === 'tray-account-activity-clear-full-1')
   const activityLifecycle = scenarios.find(({ id }) => id === 'tray-account-activity-lifecycle-full-1')
@@ -85,7 +97,13 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
   const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
-  const drawer = scenarios.find(({ state }) => state === 'account-drawer')
+  const drawers = scenarios.filter(({ state }) => state === 'account-drawer')
+  const drawer = drawers.find(({ id }) => id === 'tray-account-drawer-full-right-1')
+  const leftDashCanvases = scenarios.filter(({ id }) => id.startsWith('dash-control-center-') && id.includes('-left-'))
+  const leftWalletCanvases = scenarios.filter(({ id }) => id.startsWith('tray-account-home-') && id.includes('-left-'))
+  const rightWalletCanvases = scenarios.filter(
+    ({ id }) => id.startsWith('tray-account-home-') && id.includes('-right-')
+  )
 
   expect(
     [chooser, settings, networks, editor].map(({ logicalWidth, scale }) => [logicalWidth, scale])
@@ -183,6 +201,16 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     captureScroll: 'bottom'
   })
   expect([drawer.logicalWidth, drawer.scale]).toEqual([620, 1])
+  expect(drawers).toHaveLength(12)
+  expect(leftDashCanvases).toHaveLength(6)
+  expect(leftWalletCanvases).toHaveLength(6)
+  expect(rightWalletCanvases).toHaveLength(6)
+  expect(leftWalletCanvases.every(({ ready }) => ready.startsWith('body.workspace-open '))).toBe(true)
+  expect(rightWalletCanvases.every(({ ready }) => ready.startsWith('body.workspace-open '))).toBe(true)
+  expect(fixtureFor(drawer).main.glideSide).toBe('right')
+  expect(fixtureFor(leftDashCanvases[0]).main.glideSide).toBe('left')
+  expect(fixtureFor(leftWalletCanvases[0]).windows.dash.showing).toBe(true)
+  expect(fixtureFor(rightWalletCanvases[0]).windows.dash.showing).toBe(true)
   expect(fixtureFor(chooser).windows.dash.nav[0]).toEqual({
     view: 'accounts',
     data: { showAddAccounts: true }
