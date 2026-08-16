@@ -1,5 +1,6 @@
 import fs from 'fs'
 
+const baseStyle = fs.readFileSync('resources/base.styl', 'utf8')
 const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf8')
 const accountGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 const accountSource = fs.readFileSync('app/tray/Account/Account.js', 'utf8')
@@ -62,8 +63,9 @@ test('keeps account collection and balance interiors spacing-led', () => {
 })
 
 test('keeps the account atmosphere static across startup and ordinary browsing only', () => {
+  expect(baseStyle).toMatch(/--wren-bg-wallet-canvas #070907/)
   expect(accountStyle).toMatch(
-    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-image url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
+    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-color var\(--wren-bg-wallet-canvas\)[\s\S]*?background-image url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
   )
   expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(2)
   expect(accountStyle).toMatch(
