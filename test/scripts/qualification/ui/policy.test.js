@@ -103,8 +103,12 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
   const drawers = scenarios.filter(({ state }) => state === 'account-drawer')
   const drawer = drawers.find(({ id }) => id === 'tray-account-drawer-full-right-1')
-  const leftDashCanvases = scenarios.filter(({ id }) => id.startsWith('dash-control-center-') && id.includes('-left-'))
-  const leftWalletCanvases = scenarios.filter(({ id }) => id.startsWith('tray-account-home-') && id.includes('-left-'))
+  const leftDashCanvases = scenarios.filter(
+    ({ id }) => id.startsWith('dash-control-center-') && id.includes('-left-')
+  )
+  const leftWalletCanvases = scenarios.filter(
+    ({ id }) => id.startsWith('tray-account-home-') && id.includes('-left-')
+  )
   const rightWalletCanvases = scenarios.filter(
     ({ id }) => id.startsWith('tray-account-home-') && id.includes('-right-')
   )

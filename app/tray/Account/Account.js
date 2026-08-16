@@ -123,11 +123,7 @@ export const AccountAddressActions = ({ address, name }) => {
                 <Icon name='close' size={12} />
               </button>
             </div>
-            <QrCode
-              className='accountAddressQrCode'
-              label='QR code for account address'
-              value={address}
-            />
+            <QrCode className='accountAddressQrCode' label='QR code for account address' value={address} />
             <div className='accountAddressQrValue'>{address}</div>
           </DialogSurface>
         ) : null}

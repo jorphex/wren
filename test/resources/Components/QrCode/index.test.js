@@ -1,9 +1,6 @@
 import { render, screen } from '@testing-library/react'
 
-import QrCode, {
-  createQrMatrix,
-  QR_QUIET_ZONE_MODULES
-} from '../../../../resources/Components/QrCode'
+import QrCode, { createQrMatrix, QR_QUIET_ZONE_MODULES } from '../../../../resources/Components/QrCode'
 
 const address = '0x0000000000000000000000000000000000000001'
 
