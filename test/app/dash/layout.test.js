@@ -10,6 +10,7 @@ const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl'
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 const chainsStyle = fs.readFileSync('app/dash/Chains/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/dash/Signer/style/index.styl', 'utf8')
+const accountAddStyle = fs.readFileSync('app/dash/Accounts/Add/style/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
@@ -88,6 +89,15 @@ test('groups chooser, settings, and networks with spacing instead of decorative 
   expect(settingsStyle).toMatch(/\.recoveryPanel[\s\S]*?border-radius 2px/)
   expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-2\)/)
   expect(chainsStyle).toMatch(/\.networkBreak[\s\S]*?margin-top var\(--wren-space-5\)/)
+})
+
+test('keeps account chooser and setup routes on the shared dashboard canvas', () => {
+  expect(dashStyle).toMatch(
+    /\.dash \.dashMain \.addAccounts\n {2}background transparent[\s\S]*?\.addAccounts\.addAccountsChooser/
+  )
+  expect(accountAddStyle).toMatch(
+    /\/\/ Wren account setup surfaces[\s\S]*?\.addAccountItemWrap[\s\S]*?background transparent/
+  )
 })
 
 test('keeps the Control Center Wren decorative, fixed beside the title, and absent at the narrow fallback', () => {

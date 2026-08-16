@@ -61,6 +61,10 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const lookalikeReviews = scenarios.filter(({ state }) => state === 'transaction-lookalike')
   const addressQrReviews = scenarios.filter(({ id }) => id.startsWith('tray-account-address-qr-'))
   const chooser = scenarios.find(({ state }) => state === 'account-chooser')
+  const accountSetupStates = ['account-add-watch', 'account-add-seed', 'account-add-trezor']
+  const accountSetups = accountSetupStates.map((state) =>
+    scenarios.find((scenario) => scenario.state === state)
+  )
   const settings = scenarios.find(({ state }) => state === 'settings')
   const settingsLocalConnections = scenarios.find(({ id }) => id === 'dash-settings-local-connections-full-1')
   const settingsWalletNotifications = scenarios.find(
@@ -109,6 +113,11 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     [chooser, settings, networks, editor].map(({ logicalWidth, scale }) => [logicalWidth, scale])
   ).toEqual([
     [620, 1],
+    [620, 1],
+    [620, 1],
+    [620, 1]
+  ])
+  expect(accountSetups.map(({ logicalWidth, scale }) => [logicalWidth, scale])).toEqual([
     [620, 1],
     [620, 1],
     [620, 1]

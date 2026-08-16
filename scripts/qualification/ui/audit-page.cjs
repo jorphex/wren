@@ -48,6 +48,7 @@ const auditPage = async ({
       element.getAttribute('aria-label')?.trim() ||
       element.getAttribute('aria-labelledby')?.trim() ||
       element.getAttribute('title')?.trim() ||
+      Array.from(element.labels || []).some((label) => label.textContent?.trim()) ||
       element.innerText?.trim() ||
       (element.tagName === 'INPUT' && element.getAttribute('placeholder')?.trim())
     )
@@ -150,7 +151,7 @@ const auditPage = async ({
     'button, a[href], input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])'
   const modalRoot = Array.from(document.querySelectorAll('[aria-modal="true"]')).find(visible)
   const controls = Array.from((modalRoot || document).querySelectorAll(controlSelector)).filter(
-    (element) => visible(element) && !element.disabled && element.getAttribute('aria-hidden') !== 'true'
+    (element) => visible(element) && !element.disabled && !element.closest('[aria-hidden="true"], [inert]')
   )
 
   for (const name of requiredControls) {

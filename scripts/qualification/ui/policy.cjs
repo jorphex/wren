@@ -318,6 +318,36 @@ const reviewScenarios = () => [
     requiredText: ['Watch-only']
   },
   {
+    id: 'dash-account-add-watch-full-1',
+    renderer: 'dash',
+    state: 'account-add-watch',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.addAccountItemSmart .addAccountItemOptionInput.address',
+    requiredText: ['Watch Account', 'Follow balances and activity without adding signing access.']
+  },
+  {
+    id: 'dash-account-add-seed-full-1',
+    renderer: 'dash',
+    state: 'account-add-seed',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.addAccountItemOptionInput.phrase',
+    requiredText: ['Recovery phrase', 'Import an account from a recovery phrase.']
+  },
+  {
+    id: 'dash-account-add-trezor-full-1',
+    renderer: 'dash',
+    state: 'account-add-trezor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.addAccountItemDeviceArtwork',
+    requiredText: ['Trezor', 'Looking for your Trezor', 'Connect and unlock your device.']
+  },
+  {
     id: 'dash-accounts-icons-full-1',
     renderer: 'dash',
     state: 'accounts-icons',

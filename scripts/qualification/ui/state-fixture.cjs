@@ -544,6 +544,27 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  const accountSetupTypes = {
+    'account-add-watch': 'nonsigning',
+    'account-add-seed': 'seed',
+    'account-add-trezor': 'trezor'
+  }
+  if (accountSetupTypes[scenario.state]) {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'accounts',
+          data: {
+            showAddAccounts: true,
+            newAccountType: accountSetupTypes[scenario.state]
+          }
+        }
+      ]
+    }
+  }
+
   if (scenario.state === 'accounts-icons') {
     state.windows.dash = {
       ...state.windows.dash,
