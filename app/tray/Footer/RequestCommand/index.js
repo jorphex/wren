@@ -377,11 +377,7 @@ export class RequestCommand extends React.Component {
           </span>
           <span className='requestActionContextCopy'>
             <strong>
-              {reviewPending
-                ? 'Checking transaction'
-                : advancedPending
-                  ? 'Final checks'
-                  : 'Ready for review'}
+              {reviewPending ? 'Checking transaction' : advancedPending ? 'Final checks' : 'Ready for review'}
             </strong>
             <span>
               {advancedPending

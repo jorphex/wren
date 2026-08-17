@@ -269,9 +269,7 @@ test('keeps transaction review on one flat details ledger', () => {
   expect(signingStyle).toMatch(
     /\.transactionReviewAddress[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/
   )
-  expect(signingStyle).toMatch(
-    /\.transactionReviewCopyFeedback[\s\S]*?position absolute[\s\S]*?right 0/
-  )
+  expect(signingStyle).toMatch(/\.transactionReviewCopyFeedback[\s\S]*?position absolute[\s\S]*?right 0/)
   expect(signingStyle).toMatch(
     /\.transactionNonce[\s\S]*?grid-column 2 \/ 4[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto/
   )
@@ -292,9 +290,7 @@ test('keeps compact transfer summaries inline and revocation review on one focus
   expect(transactionStyle).toMatch(
     /\.txDescriptionSummaryStandalone[\s\S]*?\._txDescriptionTransfer[\s\S]*?display flex[\s\S]*?align-items baseline[\s\S]*?gap var\(--wren-space-2\)/
   )
-  expect(revokeStyle).toMatch(
-    /\.eip7702RevokeRequest[\s\S]*?background var\(--wren-bg-canvas\)/
-  )
+  expect(revokeStyle).toMatch(/\.eip7702RevokeRequest[\s\S]*?background var\(--wren-bg-canvas\)/)
   expect(revokeStyle).not.toMatch(
     /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeDocument[\s\S]*?padding-(?:right|left) var\(--wren-space-3\)/
   )
