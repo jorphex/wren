@@ -374,7 +374,6 @@ const AccountMain = Restore.connect(_AccountMain)
 // AccountView is a reusable template that provides the option to nav back to main
 class _AccountView extends React.Component {
   render() {
-    const accountOpen = this.store('selected.open')
     const footerHeight = this.store('windows.panel.footer.height')
     const { compactTop = false, requestMode = false } = this.props
     const className = [
@@ -388,7 +387,7 @@ class _AccountView extends React.Component {
       <div
         className={className}
         style={{
-          top: requestMode || compactTop ? '68px' : accountOpen ? '140px' : '80px',
+          top: '10px',
           bottom: footerHeight + 'px'
         }}
       >

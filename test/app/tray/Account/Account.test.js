@@ -145,6 +145,6 @@ it('uses the compact frame and explicit title for expanded balances', () => {
 
   const view = document.querySelector('.accountView')
   expect(view.classList.contains('accountViewCompact')).toBe(true)
-  expect(view.style.top).toBe('68px')
+  expect(view.style.top).toBe('10px')
   expect(screen.getByText('Balances')).toBeTruthy()
 })
