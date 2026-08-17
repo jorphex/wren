@@ -6,7 +6,8 @@ const root = process.cwd()
 const masterPath = path.join(root, 'asset/brand/wren-mark.svg')
 const grainPath = path.join(root, 'resources/svg/wren-grain.svg')
 const socialHeaderSourcePath = path.join(root, 'asset/social/source/wren-night-rounds-v1.png')
-const reviewDirectory = path.join(root, 'asset/review/wren-brand-release-v1')
+const brandDirectory = path.join(root, 'asset/brand')
+const exportDirectory = path.join(brandDirectory, 'exports')
 const socialDirectory = path.join(root, 'asset/social')
 const master = await readFile(masterPath, 'utf8')
 const grain = await readFile(grainPath, 'utf8')
@@ -50,9 +51,14 @@ const colorMark = () => svg({ content: '<use href="#wren-color" />' })
 const appIcon = () => {
   const markOffset = (1000 - 1000 * appMarkScale) / 2
   return svg({
-    content: `<rect x="16" y="16" width="968" height="968" rx="214" fill="${palette.tile}" /><g transform="translate(${markOffset} ${markOffset}) scale(${appMarkScale})"><use href="#wren-color" /></g>`
+    content: `<rect width="1000" height="1000" rx="220" fill="${palette.tile}" /><g transform="translate(${markOffset} ${markOffset}) scale(${appMarkScale})"><use href="#wren-color" /></g>`
   })
 }
+
+const monoLightMark = () =>
+  mark({ fill: palette.light, symbol: 'wren-silhouette', scale: 0.985, x: -8, y: -51 })
+
+const monoDarkMark = () => mark({ fill: palette.dark, symbol: 'wren-silhouette', x: -8, y: -51 })
 
 const socialTextureDefs = ({ gradientId, centerX, centerY }) => `
   <radialGradient id="${gradientId}" cx="${centerX}" cy="${centerY}" r="72%">
@@ -106,30 +112,95 @@ const render = async (source, outputPath, width, height = width) => {
 }
 
 const writeProductionAssets = async () => {
-  const appOutput = path.join(reviewDirectory, 'wren-app-icon-512.png')
-  await render(appIcon(), appOutput, 512)
+  const appSizes = [1024, 512, 256, 128, 64, 32, 16]
+  const markSizes = [1024, 512, 256, 128, 64, 32]
+  const appExportDirectory = path.join(exportDirectory, 'app')
+  const markExportDirectory = path.join(exportDirectory, 'mark')
+  const trayExportDirectory = path.join(exportDirectory, 'tray')
+  const webExportDirectory = path.join(exportDirectory, 'web')
 
-  for (const outputPath of [
-    'asset/WrenIcon.png',
-    'asset/png/WrenLogo512.png',
-    'main/windows/AppIcon.png',
-    'build/icons/512x512.png',
-    'build/icons/icon.png'
-  ]) {
+  for (const size of appSizes) {
+    await render(appIcon(), path.join(appExportDirectory, `wren-app-icon-${size}.png`), size)
+  }
+
+  const markExports = [
+    ['color', colorMark()],
+    ['mono-light', monoLightMark()],
+    ['mono-dark', monoDarkMark()]
+  ]
+
+  for (const [name, source] of markExports) {
+    await writeFile(path.join(markExportDirectory, `wren-mark-${name}.svg`), source.trimStart())
+    for (const size of markSizes) {
+      await render(source, path.join(markExportDirectory, `wren-mark-${name}-${size}.png`), size)
+    }
+  }
+
+  const webExports = [
+    ['wren-favicon-16.png', 16],
+    ['wren-favicon-32.png', 32],
+    ['wren-apple-touch-icon-180.png', 180],
+    ['wren-web-app-192.png', 192],
+    ['wren-web-app-512.png', 512]
+  ]
+
+  for (const [name, size] of webExports) {
+    await render(appIcon(), path.join(webExportDirectory, name), size)
+  }
+
+  const appOutput = path.join(appExportDirectory, 'wren-app-icon-512.png')
+
+  for (const outputPath of ['main/windows/AppIcon.png', 'build/icons/512x512.png', 'build/icons/icon.png']) {
     await writeFile(path.join(root, outputPath), await readFile(appOutput))
   }
 
   const trayAssets = [
-    ['Icon.png', 24, palette.tray, 'wren-silhouette-24', 1.17, -42],
-    ['Icon@2x.png', 48, palette.tray, 'wren-silhouette-32', 1.17, -42],
-    ['IconTemplate.png', 24, '#000000', 'wren-silhouette-24', 1.15245, -42],
-    ['IconTemplate@2x.png', 48, '#000000', 'wren-silhouette-32', 1.15245, -42],
-    ['LinuxTray.png', 24, palette.light, 'wren-silhouette-16', 1.28, -42, -10],
-    ['LinuxTray@2x.png', 48, palette.light, 'wren-silhouette-16', 1.28, -42, -10]
+    ['wren-tray-windows-24.png', 'Icon.png', 24, palette.tray, 'wren-silhouette-24', 1.17, -42],
+    ['wren-tray-windows-48.png', 'Icon@2x.png', 48, palette.tray, 'wren-silhouette-32', 1.17, -42],
+    [
+      'wren-tray-macos-template-24.png',
+      'IconTemplate.png',
+      24,
+      '#000000',
+      'wren-silhouette-24',
+      1.15245,
+      -42
+    ],
+    [
+      'wren-tray-macos-template-48.png',
+      'IconTemplate@2x.png',
+      48,
+      '#000000',
+      'wren-silhouette-32',
+      1.15245,
+      -42
+    ],
+    [
+      'wren-tray-linux-light-24.png',
+      'LinuxTray.png',
+      24,
+      palette.light,
+      'wren-silhouette-16',
+      1.28,
+      -42,
+      -10
+    ],
+    [
+      'wren-tray-linux-light-48.png',
+      'LinuxTray@2x.png',
+      48,
+      palette.light,
+      'wren-silhouette-16',
+      1.28,
+      -42,
+      -10
+    ]
   ]
 
-  for (const [name, size, fill, symbol, scale, y, x = 0] of trayAssets) {
-    await render(mark({ fill, symbol, scale, x, y }), path.join(root, 'main/windows', name), size)
+  for (const [exportName, runtimeName, size, fill, symbol, scale, y, x = 0] of trayAssets) {
+    const exportPath = path.join(trayExportDirectory, exportName)
+    await render(mark({ fill, symbol, scale, x, y }), exportPath, size)
+    await writeFile(path.join(root, 'main/windows', runtimeName), await readFile(exportPath))
   }
 
   await render(socialAvatar(), path.join(socialDirectory, 'wren-profile-400.png'), 400)
@@ -195,15 +266,15 @@ const writeProofSheet = async () => {
   try {
     await page.setViewport({ width: 1240, height: 1380, deviceScaleFactor: 1 })
     await page.setContent(html)
-    await mkdir(reviewDirectory, { recursive: true })
-    await page.screenshot({ path: path.join(reviewDirectory, 'proof-sheet.png'), fullPage: true })
+    await mkdir(brandDirectory, { recursive: true })
+    await page.screenshot({ path: path.join(brandDirectory, 'wren-brand-sheet.png'), fullPage: true })
   } finally {
     await page.close()
   }
 }
 
 try {
-  await mkdir(reviewDirectory, { recursive: true })
+  await mkdir(exportDirectory, { recursive: true })
   await writeProductionAssets()
   await writeProofSheet()
 } finally {

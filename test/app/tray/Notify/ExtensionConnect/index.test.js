@@ -4,7 +4,7 @@ import { Notify } from '../../../../../app/tray/Notify'
 import { act, render, screen, waitFor } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
-jest.mock('../../../../../asset/WrenIcon.png', () => 'wren-icon.png')
+jest.mock('../../../../../asset/brand/exports/app/wren-app-icon-512.png', () => 'wren-icon.png')
 
 it('routes the complete authentication candidate into the consent component', () => {
   const notifyData = {

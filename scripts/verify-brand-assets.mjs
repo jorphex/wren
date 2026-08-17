@@ -1,20 +1,19 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { PNG } from 'pngjs'
 
-const appIconPaths = [
-  'asset/WrenIcon.png',
-  'asset/png/WrenLogo512.png',
-  'main/windows/AppIcon.png',
-  'build/icons/512x512.png',
-  'build/icons/icon.png',
-  'asset/review/wren-brand-release-v1/wren-app-icon-512.png'
-]
-
-const [canonicalPath, ...copyPaths] = appIconPaths
+const appSizes = [1024, 512, 256, 128, 64, 32, 16]
+const markSizes = [1024, 512, 256, 128, 64, 32]
+const appExport = (size) => `asset/brand/exports/app/wren-app-icon-${size}.png`
+const markExport = (name, size) => `asset/brand/exports/mark/wren-mark-${name}-${size}.png`
+const canonicalPath = appExport(512)
 const canonical = await readFile(path.resolve(canonicalPath))
 const canonicalPng = PNG.sync.read(canonical)
+
+const readPng = async (filePath) => PNG.sync.read(await readFile(path.resolve(filePath)))
+
+const alphaAt = (png, x, y) => png.data[(y * png.width + x) * 4 + 3]
 
 const getWarmMarkMetrics = (png) => {
   const bounds = { minX: png.width, minY: png.height, maxX: -1, maxY: -1 }
@@ -57,6 +56,17 @@ const getWarmMarkMetrics = (png) => {
   }
 }
 
+for (const size of appSizes) {
+  const filePath = appExport(size)
+  const png = await readPng(filePath)
+  assert.equal(png.width, size, `${filePath} must be ${size}px wide`)
+  assert.equal(png.height, size, `${filePath} must be ${size}px high`)
+  assert.equal(alphaAt(png, Math.floor(size / 2), 0), 255, `${filePath} plate must reach top edge`)
+  assert.equal(alphaAt(png, 0, Math.floor(size / 2)), 255, `${filePath} plate must reach left edge`)
+  assert.equal(alphaAt(png, size - 1, Math.floor(size / 2)), 255, `${filePath} plate must reach right edge`)
+  assert.ok(alphaAt(png, 0, 0) <= 1, `${filePath} must retain a transparent rounded corner`)
+}
+
 assert.equal(canonicalPng.width, 512, `${canonicalPath} must be 512px wide`)
 assert.equal(canonicalPng.height, 512, `${canonicalPath} must be 512px high`)
 
@@ -83,17 +93,59 @@ assert.ok(
   `${canonicalPath} app mark must retain safe taskbar side insets`
 )
 
-for (const copyPath of copyPaths) {
+for (const copyPath of ['main/windows/AppIcon.png', 'build/icons/512x512.png', 'build/icons/icon.png']) {
   const copy = await readFile(path.resolve(copyPath))
-  const copyPng = PNG.sync.read(copy)
-  assert.equal(copyPng.width, 512, `${copyPath} must be 512px wide`)
-  assert.equal(copyPng.height, 512, `${copyPath} must be 512px high`)
   assert.deepEqual(copy, canonical, `${copyPath} must match the canonical generated app icon`)
 }
 
 const master = await readFile(path.resolve('asset/brand/wren-mark.svg'), 'utf8')
 assert.match(master, /id="wren-silhouette"/, 'The brand master must define the shared silhouette')
 assert.match(master, /id="wren-color"/, 'The brand master must define the full-color mark')
+
+const markSpecs = [
+  { name: 'color', svgPattern: /href="#wren-color"/ },
+  { name: 'mono-light', svgPattern: /fill="#e7eee8"/ },
+  { name: 'mono-dark', svgPattern: /fill="#10130f"/ }
+]
+
+for (const { name, svgPattern } of markSpecs) {
+  const svgPath = `asset/brand/exports/mark/wren-mark-${name}.svg`
+  const source = await readFile(path.resolve(svgPath), 'utf8')
+  assert.match(source, svgPattern, `${svgPath} must retain its intended polarity`)
+
+  for (const size of markSizes) {
+    const filePath = markExport(name, size)
+    const png = await readPng(filePath)
+    assert.equal(png.width, size, `${filePath} must be ${size}px wide`)
+    assert.equal(png.height, size, `${filePath} must be ${size}px high`)
+    const transparentPixels = png.data.filter((_, offset) => offset % 4 === 3 && png.data[offset] === 0)
+    assert.ok(transparentPixels.length >= size * size * 0.5, `${filePath} must retain transparency`)
+  }
+}
+
+const webSpecs = [
+  ['wren-favicon-16.png', 16],
+  ['wren-favicon-32.png', 32],
+  ['wren-apple-touch-icon-180.png', 180],
+  ['wren-web-app-192.png', 192],
+  ['wren-web-app-512.png', 512]
+]
+
+for (const [name, size] of webSpecs) {
+  const filePath = `asset/brand/exports/web/${name}`
+  const png = await readPng(filePath)
+  assert.equal(png.width, size, `${filePath} must be ${size}px wide`)
+  assert.equal(png.height, size, `${filePath} must be ${size}px high`)
+}
+
+for (const size of [16, 32, 512]) {
+  const webName = size === 512 ? 'wren-web-app-512.png' : `wren-favicon-${size}.png`
+  assert.deepEqual(
+    await readFile(path.resolve(`asset/brand/exports/web/${webName}`)),
+    await readFile(path.resolve(appExport(size))),
+    `${webName} must match the same-size app export`
+  )
+}
 
 const profilePath = 'asset/social/wren-profile-400.png'
 const profile = await readFile(path.resolve(profilePath))
@@ -111,13 +163,10 @@ assert.ok(
   profileMark.minY >= 118 && profileMark.maxY <= 279,
   `${profilePath} mark must retain its lowered optical center`
 )
-assert.ok(
-  profileMark.farthestFromCenter <= 160,
-  `${profilePath} full-color mark must fit inside the centered 320px crop-safe circle`
-)
+assert.ok(profileMark.farthestFromCenter <= 160, `${profilePath} mark must fit inside the crop-safe circle`)
 
 const headerMasterPath = 'asset/social/source/wren-night-rounds-v1.png'
-const headerMasterPng = PNG.sync.read(await readFile(path.resolve(headerMasterPath)))
+const headerMasterPng = await readPng(headerMasterPath)
 assert.equal(headerMasterPng.width, 2172, `${headerMasterPath} must retain its native 3:1 width`)
 assert.equal(headerMasterPng.height, 724, `${headerMasterPath} must retain its native 3:1 height`)
 
@@ -128,26 +177,33 @@ const headerMark = getWarmMarkMetrics(headerPng)
 assert.equal(headerPng.width, 1500, `${headerPath} must be 1500px wide`)
 assert.equal(headerPng.height, 500, `${headerPath} must be 500px high`)
 assert.ok(header.byteLength < 5 * 1024 * 1024, `${headerPath} must remain below X's 5 MB header limit`)
-assert.ok(
-  headerMark.pixelCountByThird[0] >= 4000,
-  `${headerPath} left third must retain the gate and secondary lantern detail`
-)
-assert.ok(
-  headerMark.pixelCountByThird[1] >= 1500,
-  `${headerPath} middle third must retain the path and distant lantern detail`
-)
-assert.ok(
-  headerMark.pixelCountByThird[2] >= 22000,
-  `${headerPath} right third must retain the detailed wren and main lantern focal point`
-)
+assert.ok(headerMark.pixelCountByThird[0] >= 4000, `${headerPath} left third must retain its detail`)
+assert.ok(headerMark.pixelCountByThird[1] >= 1500, `${headerPath} middle third must retain its detail`)
+assert.ok(headerMark.pixelCountByThird[2] >= 22000, `${headerPath} right third must retain its focal point`)
 assert.ok(headerMark.pixelCount >= 30000, `${headerPath} must retain the panorama's warm focal content`)
-assert.ok(
-  headerMark.meanX >= 1050,
-  `${headerPath} hero focal content must remain right-weighted and clear of X's profile overlay`
-)
-assert.ok(
-  headerMark.cropSafePixelRatio >= 0.95,
-  `${headerPath} must retain at least 95% of its warm focal content after X's possible vertical crop`
-)
+assert.ok(headerMark.meanX >= 1050, `${headerPath} focal content must remain clear of X's profile overlay`)
+assert.ok(headerMark.cropSafePixelRatio >= 0.95, `${headerPath} must retain crop-safe focal content`)
 
-console.log('Coherent Wren app icon and social assets verified')
+for (const requiredPath of [
+  'asset/README.md',
+  'asset/brand/README.md',
+  'asset/brand/source/wren-character-flat-reference.png',
+  'asset/brand/wren-brand-sheet.png',
+  'asset/ui/wren-control-center-v1.png'
+]) {
+  await access(path.resolve(requiredPath))
+}
+
+for (const removedPath of [
+  'asset/review',
+  'asset/WrenIcon.png',
+  'asset/png',
+  'asset/ui/empty-connections-v6.png',
+  'asset/ui/wren-empty-balances-v1.png',
+  'asset/ui/wren-empty-connections-v1.png',
+  'asset/ui/wren-empty-requests-v1.png'
+]) {
+  await assert.rejects(access(path.resolve(removedPath)), `${removedPath} must remain removed`)
+}
+
+console.log('Complete Wren brand and social asset collection verified')

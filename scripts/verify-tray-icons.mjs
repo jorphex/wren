@@ -4,18 +4,30 @@ import path from 'node:path'
 import { PNG } from 'pngjs'
 
 const iconSpecs = [
-  { name: 'Icon.png', size: 24 },
-  { name: 'Icon@2x.png', size: 48 },
-  { name: 'IconTemplate.png', size: 24, template: true },
-  { name: 'IconTemplate@2x.png', size: 48, template: true },
-  { name: 'LinuxTray.png', size: 24, linux: true },
-  { name: 'LinuxTray@2x.png', size: 48, linux: true }
+  { name: 'Icon.png', exportName: 'wren-tray-windows-24.png', size: 24 },
+  { name: 'Icon@2x.png', exportName: 'wren-tray-windows-48.png', size: 48 },
+  {
+    name: 'IconTemplate.png',
+    exportName: 'wren-tray-macos-template-24.png',
+    size: 24,
+    template: true
+  },
+  {
+    name: 'IconTemplate@2x.png',
+    exportName: 'wren-tray-macos-template-48.png',
+    size: 48,
+    template: true
+  },
+  { name: 'LinuxTray.png', exportName: 'wren-tray-linux-light-24.png', size: 24, linux: true },
+  { name: 'LinuxTray@2x.png', exportName: 'wren-tray-linux-light-48.png', size: 48, linux: true }
 ]
 
-for (const { name, size, template = false, linux = false } of iconSpecs) {
+for (const { name, exportName, size, template = false, linux = false } of iconSpecs) {
   const source = await readFile(path.resolve('main/windows', name))
   const compiled = await readFile(path.resolve('compiled/main/windows', name))
+  const durableExport = await readFile(path.resolve('asset/brand/exports/tray', exportName))
   assert.deepEqual(compiled, source, `${name} was not copied intact`)
+  assert.deepEqual(source, durableExport, `${name} must match ${exportName}`)
 
   const icon = PNG.sync.read(source)
   assert.equal(icon.width, size, `${name} must be ${size}px wide`)

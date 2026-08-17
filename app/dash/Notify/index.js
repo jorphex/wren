@@ -7,7 +7,7 @@ import BigNumber from 'bignumber.js'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 
 import Confirm from '../../../resources/Components/Confirm'
-import wrenIcon from '../../../asset/WrenIcon.png'
+import wrenIcon from '../../../asset/brand/exports/app/wren-app-icon-512.png'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 import { notificationIdentity, requestReference } from '../../../resources/store/notifications'
 

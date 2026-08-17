@@ -3,7 +3,7 @@ import { Notify } from '../../../../app/dash/Notify'
 import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
-jest.mock('../../../../asset/WrenIcon.png', () => 'wren-icon.png')
+jest.mock('../../../../asset/brand/exports/app/wren-app-icon-512.png', () => 'wren-icon.png')
 
 const createStore = () =>
   jest.fn((...path) => (path.join('.') === 'main.mute.gasFeeWarning' ? false : undefined))

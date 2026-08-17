@@ -4,7 +4,7 @@ import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import { WREN_COMPANION_RELEASES_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
-import controlCenterWren from 'url:../../../asset/brand/wren-control-center-v1.png'
+import controlCenterWren from 'url:../../../asset/ui/wren-control-center-v1.png'
 
 const dashboardSections = [
   {

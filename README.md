@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="asset/png/WrenLogo512.png" alt="Wren" width="150" />
+  <img src="asset/brand/exports/app/wren-app-icon-512.png" alt="Wren" width="150" />
 </p>
 
 <h1 align="center">Wren</h1>
