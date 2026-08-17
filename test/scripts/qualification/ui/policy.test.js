@@ -1,4 +1,4 @@
-/* global require */
+/* global process, require */
 
 const {
   COMPACT_TARGET_EXCEPTIONS,
@@ -205,6 +205,20 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     notify: 'nativeConnect',
     notifyData: { pairingCode: '482 731', requestId: 'qualification-native-pairing' }
   })
+  process.env.WREN_UI_QUALIFICATION_PAIRING_CODE = '193704'
+  try {
+    expect(fixtureFor(nativePairing).view.notifyData.pairingCode).toBe('193 704')
+  } finally {
+    delete process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
+  }
+  process.env.WREN_UI_QUALIFICATION_PAIRING_CODE = 'invalid'
+  try {
+    expect(() => fixtureFor(nativePairing)).toThrow(
+      'WREN_UI_QUALIFICATION_PAIRING_CODE must contain exactly six digits'
+    )
+  } finally {
+    delete process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
+  }
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'

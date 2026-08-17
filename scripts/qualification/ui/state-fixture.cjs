@@ -8,6 +8,15 @@ const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
 const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
 
+const qualificationPairingCode = () => {
+  const code = process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
+  if (!code) return '482 731'
+  if (!/^\d{6}$/u.test(code)) {
+    throw new Error('WREN_UI_QUALIFICATION_PAIRING_CODE must contain exactly six digits')
+  }
+  return `${code.slice(0, 3)} ${code.slice(3)}`
+}
+
 const activePermission = (handlerId, origin) => ({
   version: 1,
   handlerId,
@@ -689,7 +698,7 @@ const fixtureFor = (scenario) => {
       notify: 'nativeConnect',
       notifyData: {
         fingerprint: 'B7mKnX3q8A2dL5pR9vT4wY6cF1hJ0sUeZgQxN2oC7iM',
-        pairingCode: '482 731',
+        pairingCode: qualificationPairingCode(),
         requestId: 'qualification-native-pairing'
       },
       notifyId: 'native:qualification-native-pairing',
