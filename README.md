@@ -62,7 +62,7 @@ The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPAT
 
 ## Install a published release
 
-`v0.1.0` is not yet available to download. When it is published, get `Wren-0.1.0.AppImage` or `wren_0.1.0_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
+Download `Wren-0.1.0.AppImage` or `wren_0.1.0_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
 
 ```bash
 sha256sum --check SHA256SUMS
