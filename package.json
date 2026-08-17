@@ -197,7 +197,7 @@
     "tar-stream": "3.2.0",
     "tree-kill": "1.2.2",
     "typescript": "5.9.3",
-    "wait-on": "8.0.2"
+    "wait-on": "9.1.0"
   },
   "alias": {
     "buffer": "buffer",
