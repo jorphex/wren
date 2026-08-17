@@ -15,7 +15,7 @@
 </p>
 
 > [!WARNING]
-> Wren is preview wallet software and has no independent security audit. Its current release target is Linux x64. Back up your profile, verify release checksums, and use test accounts before trusting a release with valuable assets. Use at your own risk.
+> Wren has no independent security audit. Its current release target is Linux x64. Back up your profile, verify release checksums, and use test accounts before trusting a release with valuable assets. Use at your own risk.
 
 Wren provides one approval and signing interface to browser dapps and native applications. Dapps connect through the paired browser companion or Wren's local EIP-1193/JSON-RPC provider. Each origin has its own account permission and chain route; there is no shared global network selection.
 
@@ -28,21 +28,21 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Current status
 
-This table is a release-candidate snapshot. The
+This table describes the published `0.1.0` release boundary. The
 [Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
 evidence and limitations.
 
-Wren `0.1.0` and Wren Companion `0.1.0` are release candidates. They are not published releases until the relevant release page has the matching artifacts, checksums, and source-bound metadata. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
+Wren `0.1.0` and Wren Companion `0.1.0` are published on GitHub with matching artifacts, checksums, and source-bound metadata. Browser store publication is a separate process. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Linux x64 AppImage and deb   | Release candidate; Wren-branded qualification pending                                     |
+| Linux x64 AppImage and deb   | Published; Wren-branded qualification complete                                            |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
 | Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.0`              |
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                       |
-| Chrome and Firefox companion | Separate `0.1.0` candidate; release-gated qualification remains                           |
+| Chrome and Firefox companion | GitHub packages published; Chrome and Firefox store review pending                        |
 | macOS, Windows, Linux arm64  | Unsigned native CI smoke packages; not released or qualified                              |
 | Trezor Safe 7 Bluetooth      | Unsupported                                                                               |
 
@@ -95,7 +95,7 @@ For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validate
 
 ### Browser companion
 
-The companion injects Wren's EIP-1193 provider and announces it through EIP-6963. When the Companion candidate is published, download the Chrome or Firefox archive from its [releases page](https://github.com/jorphex/wren-companion/releases), verify its checksum, extract it, then follow the [companion installation instructions](https://github.com/jorphex/wren-companion#install).
+The companion injects Wren's EIP-1193 provider and announces it through EIP-6963. Download the Chrome or Firefox archive from its [releases page](https://github.com/jorphex/wren-companion/releases), verify its checksum, extract it, then follow the [companion installation instructions](https://github.com/jorphex/wren-companion#install).
 
 Compare the six-digit pairing code shown in Wren and the extension before approving. Older store extensions do not implement this desktop release's authenticated protocol.
 
@@ -170,6 +170,6 @@ Report vulnerabilities privately through [Security Policy](SECURITY.md), not a p
 
 ## Roadmap and license
 
-The current candidate includes local contacts and the first curated Earn milestone. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
+Wren `0.1.0` includes local contacts and the first curated Earn milestone. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
 
 Wren is a community-maintained continuation of the GPL-licensed [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is distributed under the [GNU GPL v3.0](LICENSE).

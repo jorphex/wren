@@ -5,6 +5,16 @@ import link from '../../../../resources/link'
 jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 jest.mock('../../../../asset/brand/exports/app/wren-app-icon-512.png', () => 'wren-icon.png')
 
+test('uses safety labels without release-maturity wording', () => {
+  const notify = new Notify({})
+  notify.store = jest.fn(() => '')
+  const { rerender } = render(notify.betaDisclosure())
+
+  expect(screen.getByRole('heading', { name: 'Important Safety Notice' })).toBeTruthy()
+  rerender(notify.hotAccountWarning())
+  expect(screen.getByRole('heading', { name: 'Hot signer warning' })).toBeTruthy()
+})
+
 test('exposes warning suppression as a pressed-state button', () => {
   const notify = new Notify({})
   notify.store = (...path) => (path.join('.') === 'main.mute.gasFeeWarning' ? false : undefined)

@@ -219,7 +219,7 @@ export class Notify extends React.Component {
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
             <h2 id='wren-notify-title' className='notifyTitle'>
-              Wren Preview
+              Important Safety Notice
             </h2>
             <div className='notifyBody'>
               <div className='notifyBodyBlock'>
@@ -552,7 +552,7 @@ export class Notify extends React.Component {
       >
         <div className='notifyBox'>
           <h2 id='wren-notify-title' className='notifyTitle'>
-            <div>Hot signer preview</div>
+            <div>Hot signer warning</div>
           </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>

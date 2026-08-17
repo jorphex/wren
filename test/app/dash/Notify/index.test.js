@@ -145,6 +145,7 @@ test('exposes disclosure links and acceptance as native actions', () => {
   notify.store = jest.fn()
   render(notify.betaDisclosure())
 
+  expect(screen.getByText('Important safety notice')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'our license' }))
   expect(link.send).toHaveBeenCalledWith('tray:openExternal', expect.any(String))
 

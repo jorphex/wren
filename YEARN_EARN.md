@@ -18,7 +18,7 @@ economics.
 Earn is a focused, allowlisted integration, not a general DeFi marketplace.
 Wren owns the catalog and the transaction boundary. Yearn Kong provides current
 metadata. Kong cannot add an address, choose a target, or change calldata. Earn
-is in the Wren `0.1.0` candidate. The published Frame-derived `0.7.0` release
+is in the Wren `0.1.0` release. The published Frame-derived `0.7.0` release
 did not include Earn.
 
 Wren sends the same fixed vault-list request to Kong for every user. The
@@ -117,6 +117,6 @@ milestone.
 
 ## Qualification boundary
 
-For the exact candidate and remaining signer limits, see [Linux Release
+For the exact release boundary and remaining signer limits, see [Linux Release
 Qualification](QUALIFICATION.md). Do not generalize a tested row to an untested
 product, chain, or signer.

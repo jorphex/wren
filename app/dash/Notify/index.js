@@ -154,7 +154,7 @@ export class Notify extends React.Component {
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
             <div id='wren-dash-notify-title' className='notifyTitle'>
-              Wren preview
+              Important safety notice
             </div>
             <div className='notifyBody'>
               <div className='notifyBodyBlock notifyBodyBlockBig'>
