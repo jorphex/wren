@@ -245,9 +245,7 @@ test('separates request groups without ruling the inbox toolbar', () => {
   expect(requestsStyle).toMatch(
     /\.requestGroupBlock\n {2}border-top 0[\s\S]*?& \+ \.requestGroupBlock\n {4}border-top 1px solid var\(--wren-ledger-rule\)/
   )
-  expect(requestsStyle).toMatch(
-    /\.requestQueueStatus[\s\S]*?border-bottom 0/
-  )
+  expect(requestsStyle).toMatch(/\.requestQueueStatus[\s\S]*?border-bottom 0/)
 })
 
 test('keeps transaction review on one flat details ledger', () => {
