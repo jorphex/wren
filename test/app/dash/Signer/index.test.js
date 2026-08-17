@@ -129,6 +129,7 @@ it('offers a quiet dismissal for passive hardware authentication', async () => {
 
   const dismiss = screen.getByRole('button', { name: 'Not now' })
   expect(dismiss.classList.contains('hardwareSignerPromptDismiss')).toBe(true)
+  expect(document.activeElement).toBe(dismiss)
   await user.click(dismiss)
 
   expect(link.send).toHaveBeenCalledTimes(1)

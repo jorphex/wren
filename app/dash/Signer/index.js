@@ -702,6 +702,7 @@ export class Signer extends React.Component {
           {this.props.promptDismissible ? (
             <button
               type='button'
+              data-dialog-initial-focus
               className='hardwareSignerPromptDismiss wrenControl wrenControlGhost'
               disabled={this.state.promptDismissalPending}
               onClick={() => this.dismissHardwarePrompt()}
