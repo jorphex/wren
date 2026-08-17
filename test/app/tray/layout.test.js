@@ -9,6 +9,7 @@ const balancesStyle = fs.readFileSync('app/tray/Account/Balances/style/index.sty
 const inventoryStyle = fs.readFileSync('app/tray/Account/Inventory/style/index.styl', 'utf8')
 const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
+const requestsStyle = fs.readFileSync('app/tray/Account/Requests/style/index.styl', 'utf8')
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const transactionEvidenceStyle = fs.readFileSync(
@@ -228,6 +229,24 @@ test('lets transparent account artwork merge with the ruled ledger canvas', () =
 test('keeps ordered wallet calls on a flat ruled ledger', () => {
   expect(walletCallsStyle).toMatch(
     /\.walletCall[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+  )
+})
+
+test('keeps ordinary account subviews below the shell header', () => {
+  expect(accountStyle).toMatch(
+    /\.accountView[\s\S]*?\.accountViewMain[\s\S]*?top calc\(52px \+ var\(--wren-space-3\) \+ var\(--wren-space-5\)\)/
+  )
+  expect(accountStyle).toMatch(
+    /&:has\(\.requestViewScroll\)[\s\S]*?\.accountViewMain[\s\S]*?top calc\(52px \+ var\(--wren-space-3\)\)/
+  )
+})
+
+test('separates request groups without ruling the inbox toolbar', () => {
+  expect(requestsStyle).toMatch(
+    /\.requestGroupBlock\n {2}border-top 0[\s\S]*?& \+ \.requestGroupBlock\n {4}border-top 1px solid var\(--wren-ledger-rule\)/
+  )
+  expect(requestsStyle).toMatch(
+    /\.requestQueueStatus[\s\S]*?border-bottom 0/
   )
 })
 

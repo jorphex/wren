@@ -138,6 +138,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   expect([ledger.logicalWidth, ledger.scale]).toEqual([620, 1])
   expect([startup.logicalWidth, startup.scale]).toEqual([620, 1])
   expect([balances.logicalWidth, balances.scale]).toEqual([620, 1])
+  expect(balances).toMatchObject({ glideSide: 'left', workspaceOpen: true })
   expect(switchedGas.action).toEqual({
     type: 'sequence',
     steps: [
@@ -168,6 +169,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     restoreToken: expect.stringMatching(/^[0-9a-f-]{36}$/u)
   })
   expect([activity.logicalWidth, activity.scale]).toEqual([620, 1])
+  expect(activity).toMatchObject({ glideSide: 'left', workspaceOpen: true })
   expect(activityClear).toMatchObject({
     action: { type: 'clickText', text: 'Clear activity' },
     ready: '[role="alertdialog"]'
@@ -275,7 +277,9 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
     'confirmed'
   ])
 
-  const list = fixtureFor(byId('tray-account-requests-list-full-1'))
+  const listScenario = byId('tray-account-requests-list-full-1')
+  expect(listScenario).toMatchObject({ glideSide: 'left', workspaceOpen: true })
+  const list = fixtureFor(listScenario)
   expect(list.windows.panel.nav[0]).toMatchObject({
     view: 'expandedModule',
     data: { id: 'requests', title: 'Requests' }
