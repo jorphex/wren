@@ -123,7 +123,9 @@ it('shows the compact queue count and allows only the current FIFO request to op
     />
   )
 
-  expect(screen.getByText('3 items').closest('.requestQueueStatus').textContent).toBe('3 items')
+  expect(screen.getByText('3 requests').closest('.requestQueueStatus').textContent).toBe(
+    '3 requestsClear all'
+  )
   expect(screen.queryByText(/requests? waiting/i)).toBeNull()
   expect(screen.getByText('Current')).toBeTruthy()
 
@@ -155,7 +157,7 @@ it('does not duplicate per-row waiting state in the queue heading', () => {
     />
   )
 
-  expect(screen.getByText('2 items')).toBeTruthy()
+  expect(screen.getByText('2 requests')).toBeTruthy()
   expect(screen.queryByText(/requests? waiting/i)).toBeNull()
 })
 
@@ -292,6 +294,7 @@ it('offers one top-level clear-all action, cancels with Escape, and submits only
 
   const clearTrigger = screen.getByRole('button', { name: 'Clear all requests' })
   expect(screen.getAllByRole('button', { name: 'Clear all requests' })).toHaveLength(1)
+  expect(clearTrigger.textContent).toBe('Clear all')
   await user.click(clearTrigger)
 
   expect(screen.getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)

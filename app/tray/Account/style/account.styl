@@ -1231,13 +1231,17 @@
       text-transform none
 
   .accountViewMain
-    top 52px
+    top calc(52px + var(--wren-space-3) + var(--wren-space-5))
     right var(--wren-space-5)
     left var(--wren-space-5)
     padding-top 0
 
     .accountViewScroll
       padding-top 0
+
+  &:has(.requestViewScroll)
+    .accountViewMain
+      top calc(52px + var(--wren-space-3))
 
   &:has(.signerRequest)
     .accountViewMain

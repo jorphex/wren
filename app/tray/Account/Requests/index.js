@@ -500,18 +500,18 @@ export class Requests extends React.Component {
           <div className='requestQueueStatus'>
             <div className='requestQueueStatusSummary' role='status' aria-live='polite'>
               <span className='requestQueueStatusTitle'>{`${requests.length} ${
-                requests.length === 1 ? 'item' : 'items'
+                requests.length === 1 ? 'request' : 'requests'
               }`}</span>
             </div>
             <button
               ref={this.clearReturnFocusRef}
               type='button'
               aria-label='Clear all requests'
-              className='requestClearAll wrenControl wrenControlGhost wrenControlIcon'
+              className='requestClearAll wrenControl wrenControlGhost wrenControlCompact'
               disabled={this.state.clearing}
               onClick={() => this.openClearConfirmation()}
             >
-              <Icon name='close' size={14} />
+              Clear all
             </button>
           </div>
         ) : null}

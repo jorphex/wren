@@ -208,10 +208,10 @@
       line-height 1
 
 .requestGroupBlock
-  border-top 1px solid var(--wren-ledger-rule)
+  border-top 0
 
-  &:first-child
-    border-top 0
+  & + .requestGroupBlock
+    border-top 1px solid var(--wren-ledger-rule)
 
   > .cluster
     margin 0
@@ -264,7 +264,7 @@
   position relative
   display grid
   min-height 52px
-  grid-template-columns minmax(0, 1fr) 44px
+  grid-template-columns minmax(0, 1fr) auto
   align-items center
   gap var(--wren-space-3)
   padding var(--wren-space-2) var(--wren-space-4)
@@ -286,10 +286,12 @@
   font-weight 560
 
 .requestClearAll
-  width 44px
-  min-width 44px
+  width auto
+  min-width 0
   height 44px
   min-height 44px
+  padding-right var(--wren-space-3)
+  padding-left var(--wren-space-3)
 
 .requestViewScrollEmpty
   display flex
