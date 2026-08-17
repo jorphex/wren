@@ -7,6 +7,7 @@ import {
   assertSafeArchiveEntries,
   getPackageTarget,
   packageTargets,
+  removeTemporaryPackageRoot,
   selectPackageArtifacts
 } from '../../scripts/package-verification.mjs'
 
@@ -105,4 +106,13 @@ test('rejects archive entries that could escape their disposable extraction root
   assert.throws(() => assertSafeArchiveEntries(['C:\\Windows\\system.ini']), /Drive-qualified/)
   assert.throws(() => assertSafeArchiveEntries(['Wren/../../outside']), /escapes extraction root/)
   assert.throws(() => assertSafeArchiveEntries(['Wren/evil\0name']), /null byte/)
+})
+
+test('retries cleanup when a native package executable is briefly locked', async () => {
+  const calls = []
+  await removeTemporaryPackageRoot('temporary-package-root', async (...args) => calls.push(args))
+
+  assert.deepEqual(calls, [
+    ['temporary-package-root', { recursive: true, force: true, maxRetries: 5, retryDelay: 250 }]
+  ])
 })

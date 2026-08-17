@@ -115,6 +115,15 @@ export function assertSafeArchiveEntries(entries) {
   }
 }
 
+export async function removeTemporaryPackageRoot(root, remove = rm) {
+  await remove(root, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 250
+  })
+}
+
 function readArchiveEntries(command, args, artifact) {
   const output = execFileSync(command, args, { encoding: 'utf8' })
   const entries = output
@@ -295,7 +304,7 @@ export async function verifyNativePackage(targetName, options = {}) {
       assert.deepEqual(artifactResult, result, `${artifact} payload differs from unpacked package output`)
     }
   } finally {
-    await rm(temporaryRoot, { recursive: true, force: true })
+    await removeTemporaryPackageRoot(temporaryRoot)
   }
 
   return { artifacts, result, target }
