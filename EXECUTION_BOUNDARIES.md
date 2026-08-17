@@ -1,18 +1,20 @@
-# Advanced Execution Boundaries
+# Advanced execution boundaries
 
-Wren implements only execution paths it can review, sign, submit, and reconcile
-without dropping protocol data or trusting arbitrary execution code. The
-programs below remain deliberately limited until their listed product and trust
-boundaries are selected.
+## Purpose and status
 
-**Planning status:** these are fail-closed reference boundaries, not active tasks.
+Wren implements only execution paths that it can review, sign, submit, and
+reconcile without dropping protocol data or trusting arbitrary execution code.
+The features below remain deliberately limited until Wren selects their product
+and trust boundaries.
+
+**Planning status:** These are fail-closed reference boundaries, not active tasks.
 Generic delegation creation, atomic batches without an account-owned executor,
 and wallet-authored blob transactions are not planned under the current product
-model; revisit only after their named trust/deployment choices exist.
+model. Revisit them only after their named trust and deployment choices exist.
 
 ## EIP-7702 delegation
 
-### Current support
+### Current behavior
 
 Wren detects configured-RPC delegation indicators and offers one wallet-owned
 operation: a selected, unlocked Ring or Seed account can authorize the zero
@@ -26,7 +28,7 @@ This is intentional: EIP-7702 gives delegate code unrestricted authority in the
 account's context and explicitly warns wallets not to expose a generic interface
 for app-suggested authorizations.
 
-### Creation and replacement prerequisites
+### Why creation and replacement remain unsupported
 
 Software creation needs a Wren-selected delegate registry containing, per chain:
 
@@ -45,24 +47,26 @@ back when outer execution fails. Replacement must model the outer transaction
 nonce and each authority nonce separately; Wren's ordinary speed-up/cancel path
 cannot safely copy a type-4 payload.
 
-General type-4 support remains blocked until that registry and policy are chosen.
-Hardware expansion remains separately blocked on vendor support and physical
-qualification.
+General type-4 support remains blocked until Wren selects that registry and
+policy. Hardware expansion remains separately blocked on vendor support and
+physical qualification.
 
 ## Atomic EIP-5792
 
-### Current support
+### Current behavior
 
 Wren executes accepted wallet-call batches as explicitly non-atomic sequential
 transactions. It advertises `atomic.status: "unsupported"`, rejects
 `atomicRequired: true` before creating a review or ledger entry, and rejects
 sequential batches from delegated senders.
 
+### Why a generic multicall is not enough
+
 A generic multicall contract is not equivalent to account execution: it changes
 `msg.sender`, balances, allowances, and failure semantics. Sequential nonces do
 not provide atomicity or contiguity.
 
-### Atomic executor prerequisites
+### Requirements before atomic support
 
 Atomic support needs one selected account-owned executor:
 
@@ -78,21 +82,21 @@ Atomic support needs one selected account-owned executor:
 - tests for code/nonce drift, all-call revert, no interleaving, ambiguous
   submission, restart recovery, permission revocation, and receipt/log scoping.
 
-Wren must not advertise `supported` or `ready` until this executor is selected
+Wren must not advertise `supported` or `ready` until it selects this executor
 and the complete path passes. Installing a delegation during the requested batch
-does not make the batch safely atomic because a failed outer call does not undo
-the authorization.
+does not make the batch safely atomic: a failed outer call does not undo the
+authorization.
 
 ## EIP-4844 type-3 transactions
 
-### Current support
+### Current behavior
 
 Wren rejects type-3 transactions and blob fields before review, including signed
 type-3 payloads submitted through `eth_sendRawTransaction`. Its transaction
 domain, fee model, replacement logic, generic software serializer, and hardware
 capabilities currently cover only legacy, type-1, and type-2 transactions.
 
-### Complete type-3 prerequisites
+### Requirements before type-3 support
 
 Support requires all of the following as one coherent path:
 
@@ -119,8 +123,8 @@ Support requires all of the following as one coherent path:
   review coverage, and end-to-end submission/reconciliation evidence.
 
 Ethers can represent type-3 bodies, but Wren has no KZG dependency or sidecar
-trust boundary. Enabling body parsing alone would drop required evidence and is
-not support.
+trust boundary. Body parsing alone would drop required evidence. Body parsing
+alone is not support.
 
 ## Finish condition
 

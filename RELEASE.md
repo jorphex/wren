@@ -1,8 +1,13 @@
 # Linux release procedure
 
-## Release boundary
+Use this how-to to prepare, verify, review, and publish a Linux x64 candidate. It
+does not replace the [qualification checklist](QUALIFICATION.md) or the
+[signer and platform support reference](HARDWARE_SUPPORT.md). For product
+orientation and installation, see the [README](README.md).
 
-Wren currently releases Linux x64 AppImage and deb packages. The GitHub workflow
+## 1. Confirm the release boundary
+
+Linux x64 AppImage and deb packages are Wren's current release target. The GitHub workflow
 creates a **new draft** only; it does not update or publish a release. Packages
 are unsigned, macOS notarization and Windows signing are not configured, and
 Linux x64 remains the only release target. Secret-free CI builds and verifies real
@@ -15,7 +20,7 @@ runtime architecture, native hardware modules, sandbox policy, and matching
 unpacked/archive payload behavior. It does not exercise installers, the graphical
 desktop, hardware, signing, notarization, or operating-system integration.
 
-## Prepare a candidate
+## 2. Prepare a candidate
 
 1. Use a clean, reviewed default-branch commit. Set a new SemVer-compatible
    `package.json` version and regenerate `package-lock.json` with the pinned
@@ -54,7 +59,7 @@ desktop, hardware, signing, notarization, or operating-system integration.
    report the embedded identity of the clean compiled source. Do not waive an
    unexplained signing, migration, native-module, or packaging failure.
 
-## Reproducibility evidence
+## 3. Review reproducibility evidence
 
 The bounded two-build comparison at commit
 `cb6078a2e2a4ce6c841cf5afa1907947d9a9be21` used the commit epoch with `TZ=UTC`,
@@ -67,7 +72,7 @@ repository-local remediation was evidenced, so Wren does not claim byte-for-byte
 AppImage reproducibility. Run the command above on each candidate and retain its
 report with private release evidence.
 
-## Create and review the draft
+## 4. Create and review the draft
 
 Push `v<package version>` on that commit, or manually dispatch **Build a draft
 Linux release** for it. The requested tag must exactly match the package version.
@@ -89,7 +94,7 @@ initial-code comparison, reconnect, reset, revocation, origin isolation, and
 EIP-6963 discovery. Keep unsigned artifacts and unqualified platforms/signers
 prominent in the notes.
 
-## Publish or reject
+## 5. Publish or reject
 
 Publish only after the review passes. Leave a failed draft unpublished or delete
 it in GitHub; fix the source and make a new version/tag rather than replacing a

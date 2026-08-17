@@ -4,7 +4,7 @@
 
 <h1 align="center">Wren</h1>
 
-<p align="center">A desktop EVM wallet and signing firewall for browsers, native apps, and command-line tools.</p>
+<p align="center">A desktop EVM wallet and signing firewall for browsers and native apps.</p>
 
 <p align="center">
   <a href="https://github.com/jorphex/wren/releases">Desktop releases</a> ·
@@ -17,11 +17,22 @@
 > [!WARNING]
 > Wren is preview wallet software and has no independent security audit. Its current release target is Linux x64. Back up your profile, verify release checksums, and use test accounts before trusting a release with valuable assets. Use at your own risk.
 
-Wren provides one approval and signing interface to browser dapps, native applications, and CLI tools. Dapps connect through the paired browser companion or Wren's local EIP-1193/JSON-RPC provider. Each origin has its own account permission and chain route; there is no shared global network selection.
+Wren provides one approval and signing interface to browser dapps and native applications. Dapps connect through the paired browser companion or Wren's local EIP-1193/JSON-RPC provider. Each origin has its own account permission and chain route; there is no shared global network selection.
 
-## Release status
+## Choose a path
 
-Wren `0.1.0` and Wren Companion `0.1.0` are release candidates. They are not published releases until the relevant release page has the matching artifacts, checksums, and source-bound metadata.
+- New users: start with [Install a published release](#install-a-published-release) or [Run from source](#run-from-source).
+- Developers: read [RPC Compatibility](RPC_COMPATIBILITY.md) for the local provider and authenticated protocol.
+- Release operators: follow the [Release Procedure](RELEASE.md), then the [qualification checklist](QUALIFICATION.md).
+- Hardware users: check the [Signer and Platform Support reference](HARDWARE_SUPPORT.md) before testing a device.
+
+## Current status
+
+This table is a release-candidate snapshot. The
+[Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
+evidence and limitations.
+
+Wren `0.1.0` and Wren Companion `0.1.0` are release candidates. They are not published releases until the relevant release page has the matching artifacts, checksums, and source-bound metadata. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
@@ -39,7 +50,7 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 
 ## What Wren does
 
-- Hosts browser-compatible HTTP and WebSocket JSON-RPC on localhost and authenticated protocol-3 routes for native and CLI clients.
+- Hosts browser-compatible HTTP and WebSocket JSON-RPC on localhost and authenticated protocol-3 routes for originless native clients. See [RPC Compatibility](RPC_COMPATIBILITY.md) for the exact protocol boundary.
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
@@ -49,7 +60,7 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 
 The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPATIBILITY.md), [Supported Ethereum Standards](SUPPORTED_EIPS.md), and [Advanced Execution](EXECUTION_BOUNDARIES.md).
 
-## Install when `v0.1.0` is published
+## Install a published release
 
 `v0.1.0` is not yet available to download. When it is published, get `Wren-0.1.0.AppImage` or `wren_0.1.0_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
 
@@ -120,7 +131,7 @@ npm run package:verify:linux
 
 A successful local package build is not release qualification; follow [Release Procedure](RELEASE.md).
 
-## Local provider
+## Developer protocol (local provider)
 
 Wren listens only on loopback:
 
@@ -129,7 +140,7 @@ http://127.0.0.1:1248
 ws://127.0.0.1:1248
 ```
 
-Browser-compatible clients send root-route JSON-RPC with a canonical web or extension `Origin`. Originless native and CLI clients must pair and sign requests through protocol 3. Clients can specify an enabled EVM chain using Wren's request metadata. Localhost is not a local-process identity boundary: method permissions, subscriptions, origins, limits, and the trust model are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
+Browser-compatible clients send root-route JSON-RPC with a canonical web or extension `Origin`. Originless native clients must pair and sign requests through protocol 3. Clients can specify an enabled EVM chain using Wren's request metadata. Localhost is not a local-process identity boundary: method permissions, subscriptions, origins, limits, and the trust model are documented in [RPC Compatibility](RPC_COMPATIBILITY.md).
 
 ## Network data and privacy
 
@@ -153,9 +164,11 @@ To use Kubo RPC, set `WREN_IPFS_API_URL`; set `WREN_IPFS_AUTH_TOKEN` for HTTP Ba
 
 Wren does not follow mutable ENS for the built-in Send app. It activates downloaded content only when the complete UnixFS directory CID matches the pinned manifest.
 
-## Security, roadmap, and license
+## Security
 
 Report vulnerabilities privately through [Security Policy](SECURITY.md), not a public issue. The [Threat Model](THREAT_MODEL.md) covers local RPC, renderers, persistence, signers, network, and release boundaries. Only the newest Wren release is considered for security fixes; Wren packages have no support guarantee from the original Frame maintainers.
+
+## Roadmap and license
 
 The current candidate includes local contacts and the first curated Earn milestone. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
 

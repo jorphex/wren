@@ -1,16 +1,34 @@
 # Threat model
 
+## Purpose and scope
+
 Wren is a desktop EVM wallet and account router. It accepts local HTTP/WebSocket
 and Wren Companion requests, obtains approval, and routes approved work to
-software or hardware signers. This is an implementation description, not an
-audit or a claim that every risk is mitigated. The method surface is in
-[`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
-[`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md). Unhandled wallet/signing methods,
-`admin_*`, `engine_*`, `miner_*`, and unreviewed `debug_*` calls are rejected
-rather than forwarded; ordinary reads, reviewed debug queries, and explicitly
-signed raw-transaction broadcast remain available.
+software or hardware signers.
 
-## Assets and limits
+This document describes the implementation. It is not an audit and does not
+claim that every risk is mitigated. The method surface is in
+[`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
+[`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
+
+Unhandled wallet and signing methods, `admin_*`, `engine_*`, `miner_*`, and
+unreviewed `debug_*` calls are rejected rather than forwarded. Ordinary reads,
+reviewed debug queries, and explicitly signed raw-transaction broadcasts remain
+available.
+
+## Navigation
+
+- [Assets](#assets)
+- [Adversaries](#adversaries)
+- [Residual risks](#residual-risks)
+- [Local clients and Companion](#local-clients-and-companion)
+- [Local state and signers](#local-state-and-signers)
+- [Renderer and IPC](#renderer-and-ipc)
+- [Networks, content, and Earn](#networks-content-and-earn)
+- [Builds and updates](#builds-and-updates)
+- [Invariants for new work](#invariants-for-new-work)
+
+## Assets
 
 Assets include software seeds/keys; hardware requests, passphrases, pairing
 responses, and signatures; approval intent, accounts, permissions, and origins;
@@ -20,33 +38,43 @@ request, transaction, typed-data, message, pairing-response, and signer-result
 payloads. Optional diagnostics can expose non-secret account/network metadata and
 are sensitive support data.
 
+## Adversaries
+
 Wren does not protect against malware, debuggers, an administrator, a compromised
-host or maintainer account, hardware firmware/vendor software, physical coercion,
-or a user approving unexpected data. A device display still needs to be compared
-with the intended action. It does not guarantee contract correctness or economic
-safety, third-party/RPC correctness or availability, or losses after a secret is
-exposed. Boundary bypasses that act without documented access or approval are in
-scope.
+host or maintainer account, hardware firmware or vendor software, physical
+coercion, or a user approving unexpected data.
+
+## Residual risks
+
+Compare a device display with the intended action. Wren does not guarantee
+contract correctness or economic safety, third-party or RPC correctness or
+availability, or losses after a secret is exposed. Boundary bypasses that act
+without documented access or approval are in scope.
 
 ## Boundaries and controls
 
 ### Local clients and Companion
 
 HTTP and WebSocket JSON-RPC listen on `127.0.0.1:1248`. Loopback blocks remote
-connections, not another same-user process. Legacy/browser-compatible routes
-accept asserted origins; labels and prompts reduce accidents, not establish
-process identity. HTTP requests and WebSocket upgrades require an IPv4/IPv6
-loopback `Host` matching the listening port, which blocks DNS-rebinding
-authorities but does not authenticate a local process. Canonical,
-scheme-preserving web/extension origins keep HTTP/HTTPS and WS/WSS grants
-separate. Root routes reject originless, opaque, malformed, schemeless, and
-reserved internal-origin claims before provider dispatch or consent UI; local
-native and CLI clients must pair through protocol 3. Protected methods need account permission; passive
-account, asset, and capability probes never open consent UI and fail closed
-(account methods reveal no identity; asset/capability methods return `4100`).
+connections, but not another process owned by the same user. Legacy and
+browser-compatible routes accept asserted origins. Labels and prompts reduce
+accidents, but do not establish process identity.
+
+HTTP requests and WebSocket upgrades require an IPv4/IPv6 loopback `Host` that
+matches the listening port. This blocks DNS-rebinding authorities, but does not
+authenticate a local process. Canonical, scheme-preserving web and extension
+origins keep HTTP/HTTPS and WS/WSS grants separate.
+
+Root routes reject originless, opaque, malformed, schemeless, and reserved
+internal-origin claims before provider dispatch or the consent UI. Local native
+and CLI clients must pair through protocol 3. Protected methods require account
+permission. Passive account, asset, and capability probes never open the consent
+UI and fail closed: account methods reveal no identity, and asset/capability
+methods return `4100`.
+
 Permissions are scoped by account, chain, method, expiry, and invoker identity.
-Direct browser-compatible identities remain assertions; authenticated native clients
-and Companion credentials cannot reuse those grants.
+Direct browser-compatible identities remain assertions. Authenticated native
+clients and Companion credentials cannot reuse those grants.
 
 RPC bodies, connections, rates, header/body receive time, polls (15 seconds),
 subscription counts, queues/bytes, and idle lifetime are bounded. Client-visible
@@ -75,6 +103,8 @@ does not defend a compromised browser profile, native client, or host.
 
 ### Local state and signers
 
+#### Software signer files
+
 The per-user config and signer files are mode `0600`; the `signers/` directory is
 mode `0700` on POSIX. New seed/key material uses a versioned, authenticated
 scrypt-derived AES-256-GCM envelope and is decrypted only in an unlocked child
@@ -91,7 +121,10 @@ Limits: while retained, legacy backup ciphertext is unauthenticated and protecte
 by its old password; encryption is neither keychain nor hardware bound; live-profile
 metadata, addresses, permissions, and networks are unencrypted; unlocked secrets
 exist in memory; and overwrite-before-delete is not secure erasure on modern
-filesystems/SSDs.
+filesystems or SSDs.
+
+#### Local metadata
+
 Contacts, notes, addresses, and timestamps are unencrypted relationship metadata.
 The address-safety index is also local unencrypted metadata: it keeps at most 500
 one-year records containing a profile-bound SHA-256 full-address digest, the first
@@ -101,6 +134,9 @@ index never learns from incoming activity, explorers, RPC history, simulation,
 arbitrary calldata, declines, or failed pre-broadcast work; clearing Activity clears
 the index, and profile backup excludes it. These warnings are evidence for review,
 not an assertion that a destination is safe or malicious.
+
+#### Profile backups
+
 User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
 envelopes over an explicit recovery allowlist. They include configuration and
 validated encrypted software-signer records, but exclude activity, address-safety
@@ -120,6 +156,8 @@ and independent backups. Encryption migrations must stay versioned,
 address-verified, atomic, tested with non-real data, and recoverable without
 weakening encryption.
 
+#### Hardware signers
+
 Hardware keys are expected to stay on-device, but Wren controls the presented
 request and depends on firmware, vendor libraries, and USB drivers. Blind or
 incomplete displays are risky. Claims require physical-device evidence in
@@ -127,12 +165,16 @@ incomplete displays are risky. Claims require physical-device evidence in
 
 ### Renderer and IPC
 
+#### Renderer isolation
+
 Windows use context isolation and sandboxing; Node integration and webviews are
 off, navigation/popups and browser permissions are denied, and production
 renderers have CSP. Production startup rejects `--no-sandbox`; AppImage requires
 unprivileged user namespaces rather than an unsandboxed fallback. Display capture,
 Bluetooth pairing, device permission, and HID/USB/serial/Bluetooth selectors are
 denied for Wren renderers and embedded dapps.
+
+#### IPC authority
 
 The preload accepts only bounded serialized envelopes from its own window, an
 expected packaged/development origin, and protocol label. Only registered IPC
@@ -148,12 +190,16 @@ main-process work. Compromised tray/dash and broad renderer network/image policy
 remain high-impact; embedded dapps depend on partitioning, session checks, and
 request filtering.
 
+#### Balance worker
+
 The hidden balance worker has no localhost provider authority. Its parent IPC
 broker accepts only bounded latest-block `eth_call` and `eth_getBalance` reads
 for an explicit enabled chain, with strict schemas, request limits, and timeouts.
 The main process selects and owns the configured RPC connection.
 
 ### Networks, content, and Earn
+
+#### RPC and execution evidence
 
 RPCs, explorers, IPFS, ABI/pricing/update/signer-vendor services can fail or lie.
 RPC-supplied execution checks, effects, balances, traces, allowances, code,
@@ -165,6 +211,8 @@ input size, and error text are bounded and raw input/return data stays out of th
 renderer. No code does not prove EOA; code does not prove an interface. Decoding
 and traces explain, not prove, behavior. Verify chain, recipient, value,
 calldata, and device display whenever possible.
+
+#### Remote services and content
 
 Wren has no first-party backend. Built-in networks use visibly named PublicNode;
 it can observe IP and routed account/contract reads, simulation/traces, calldata,
@@ -181,12 +229,16 @@ UnixFS directory, not mutable ENS; bundled token inventory can become stale.
 External links are allowlisted except configured explorers, whose final OS launch
 still permits only credential-free HTTP(S).
 
+#### Transactions and EIP-7702
+
 The exact `eth_getCode` EIP-7702 indicator triggers extra approval for ordinary
 transactions and blocks sequential wallet-call batches. Type-4 envelopes and
 authorization lists are rejected; Wren creates/signs no authorizations. State can
 change after review and RPC can lie. Input transactions have only supported fields
 and types; access lists are bounded, exact-width, order/duplicate preserving, and
 fully shown. Signers must preserve bytes; unsupported hardware types fail.
+
+#### Earn
 
 Earn promotes only its versioned local `(chainId, vaultAddress)` catalog. Kong
 cannot add targets; Wren pins assets and decimals, while Kong supplies display
@@ -204,6 +256,8 @@ or lose funds; Wren makes no safety or yield guarantee. Wren ships no hosted cra
 client: uncaught main errors stay local and are not sent to upstream Sentry.
 
 ### Builds and updates
+
+#### Supply-chain boundaries
 
 Dependencies are locked and install scripts allowlisted; CI actions are pinned.
 Linux release evidence is checksums, SBOM, a reviewed draft workflow, and GitHub

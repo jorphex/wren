@@ -1,15 +1,18 @@
-# Smart Account Integration Boundary
+# Smart account integration boundary
+
+## Purpose and status
 
 Wren does not currently support selectable smart accounts, ERC-4337 execution,
-or ERC-6492 counterfactual signatures. The standards do not define one generic
-account implementation or signature format, so those paths remain fail-closed
-until the product choices below are made and pinned.
+or ERC-6492 counterfactual signatures. These standards do not define one generic
+account implementation or signature format. Those paths therefore remain
+fail-closed until Wren selects and pins the product choices below.
 
-**Planning status:** not planned under Wren's current backend-free product model.
-The requirements below preserve an honest re-entry boundary if user demand and a
-privacy-compatible coordination/bundler strategy materially change.
+**Planning status:** Wren does not plan these paths under its current backend-free
+product model. The requirements below preserve an honest re-entry boundary if
+user demand and a privacy-compatible coordination/bundler strategy materially
+change.
 
-## Implemented foundation
+## Implemented verification foundation
 
 Wren has an internal ERC-1271 verifier for a future account adapter. It calls
 `isValidSignature(bytes32,bytes)` through the configured chain RPC, accepts only
@@ -17,7 +20,7 @@ Wren has an internal ERC-1271 verifier for a future account adapter. It calls
 canonical EIP-1898 block hash. It does not infer account families from bytecode,
 produce account-defined signatures, or expose a user-facing validation flow.
 
-## Required ERC-4337 decisions
+## ERC-4337: decisions required before support
 
 Implementation requires one reviewed configuration, not arbitrary dapp input:
 
@@ -50,14 +53,14 @@ Implementation requires one reviewed configuration, not arbitrary dapp input:
   automatically resubmits one; replacement and cancellation remain unsupported
   until the selected family's nonce-key policy is defined.
 
-The smallest safe first implementation is one deployed account family, no
+The smallest safe first implementation is one deployed account family, with no
 factory deployment, paymaster, aggregator, EIP-7702 marker, or automatic retry.
 Both the `factory: 0x7702` marker and a distinct `eip7702Auth` tuple are rejected.
 Review must show decoded inner calls, controller, EntryPoint, maximum cost,
 funding, and simulation evidence before adapter-bound signing and bundler
 submission.
 
-## Required ERC-6492 decisions
+## ERC-6492: decisions required before support
 
 Counterfactual validation depends on the selected account adapter. It requires
 an exact factory/prepare payload, deterministic sender derivation, allowlisted
@@ -72,7 +75,8 @@ the signer has no contract code.
 
 ## Finish condition
 
-ERC-4337 or ERC-6492 may move from `Unsupported` only after these choices are
-recorded, the complete adapter/execution path is implemented, configured-chain
-evidence is rechecked before signing/submission, and automated lifecycle and
-failure tests pass. Parser-only code or mocked contract evidence is insufficient.
+ERC-4337 or ERC-6492 may move from `Unsupported` only after Wren records these
+choices, implements the complete adapter and execution path, rechecks
+configured-chain evidence before signing or submission, and passes automated
+lifecycle and failure tests. Parser-only code or mocked contract evidence is
+insufficient.

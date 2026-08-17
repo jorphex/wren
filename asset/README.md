@@ -1,19 +1,25 @@
 # Wren assets
 
-This directory contains the current durable artwork used by Wren. It is a
-production library, not a design-review transcript.
+This directory contains durable artwork used by Wren. It is a production
+library, not a design-review archive.
 
-- `brand/` — canonical identity source, reproducible exports, brand sheet, and
-  provenance reference.
-- `social/` — approved social profile and X header artwork, including the
-  purpose-built Night Rounds source panorama.
-- `ui/` — current illustrations imported by the application.
+- `brand/` contains the deterministic identity master, generated exports, the
+  brand sheet, and approved concept provenance.
+- `social/` contains the approved profile and X header, plus the Night Rounds
+  source panorama.
+- `ui/` contains current illustrations imported by the application.
 
-Run `npm run brand:generate` after changing the canonical Wren mark or social
-source. Run `npm run brand:verify` to check dimensions, app-tile geometry,
-monochrome polarity, platform copies, social crop safety, and removal of stale
-asset paths.
+After changing the canonical mark or social source, run:
 
-Historical review screenshots are available through Git history. They are not
-kept in the working tree because their decisions are recorded in `DESIGN.md`
-and their rendered UI frequently becomes obsolete.
+```sh
+npm run brand:generate
+npm run brand:verify
+```
+
+The generator writes the delivery PNGs and runtime copies. The verifier checks
+dimensions, app-tile geometry, monochrome polarity, platform copies, social
+crop safety, and stale asset paths. Do not edit generated delivery files
+directly.
+
+Historical review screenshots stay in Git history. Their decisions are
+recorded in `DESIGN.md`; rendered UI becomes obsolete as the product changes.

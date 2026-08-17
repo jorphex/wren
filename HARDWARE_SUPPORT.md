@@ -1,10 +1,20 @@
-# Signer and Platform Support
+# Signer and platform support reference
 
-For people deciding whether their signer and platform are within Wren's tested boundary.
+Use this reference to decide whether a signer or platform is within Wren's tested
+boundary. Run the complete candidate checks in the [qualification checklist](QUALIFICATION.md);
+see the [README](README.md) for orientation and the [release procedure](RELEASE.md)
+for package and publication gates.
 
-**Physical** means exercised on a real device in this project. **Automated** means unit or adapter coverage, usually with mocks. **Implemented** means a code path exists but has not been regression-qualified here. These labels are evidence, not security certification. The runtime `signingCapabilities` profile controls supported envelopes, typed-data versions, messages, address display, and transport; it does not upgrade the evidence label.
+## Evidence labels
 
-## Current support
+**Physical** means exercised on a real device in this project. **Automated** means
+unit or adapter coverage, usually with mocks. **Implemented** means a code path
+exists but has not been regression-qualified here. These labels are evidence, not
+security certification. The runtime `signingCapabilities` profile controls
+supported envelopes, typed-data versions, messages, address display, and
+transport; it does not upgrade the evidence label.
+
+## Current support matrix
 
 | Signer or platform              | Transport/package             | Evidence and release boundary                                                                                                                                   |
 | ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |

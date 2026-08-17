@@ -1,13 +1,24 @@
-# Linux release qualification
+# Linux desktop and Companion release qualification checklist
 
-This is the manual gate for a paired Wren desktop and Wren Companion candidate;
-it supplements tests and is not an audit. Use disposable accounts and Ethereum
+This is the manual gate for a paired Wren desktop and Wren Companion candidate.
+It supplements automated tests and is not an audit. Use disposable accounts and Ethereum
 Sepolia (`0xaa36a7`) or Base Sepolia (`0x14a34`) unless testing Earn, which uses
 minimal live-fund flows. Never publish seeds, keys, PINs, passphrases, pairing
 responses, full addresses, signatures, transaction hashes, device IDs, or profile
-contents.
+contents. Use the [release procedure](RELEASE.md) for packaging and publication;
+use the [signer and platform support reference](HARDWARE_SUPPORT.md) for current
+device and platform boundaries.
 
-## Candidate record and automated evidence
+## Checklist navigation
+
+- [1. Record the candidate and automated evidence](#1-record-the-candidate-and-automated-evidence)
+- [2. Run the required operator checks](#2-run-the-required-operator-checks)
+- [3. Qualify EIP-5792 and EIP-7702 boundaries](#3-qualify-eip-5792-and-eip-7702-boundaries)
+- [4. Run Earn-only qualification](#4-run-earn-only-qualification)
+- [5. Decide pass or fail and retain evidence](#5-decide-pass-or-fail-and-retain-evidence)
+- [Historical 0.8.0 Linux x64 evidence](#historical-080-linux-x64-evidence)
+
+## 1. Record the candidate and automated evidence
 
 Record desktop and Companion version/commit, Companion minimum desktop commit,
 AppImage/deb/Chrome ZIP/Firefox ZIP SHA-256, and OS/kernel/browser versions.
@@ -37,7 +48,7 @@ to exercise exact protocol 3 mutual authentication, EIP-6963, provider requests,
 in real Chrome and Firefox. These automated checks do not replace the candidate-
 archive and active-desktop checks below.
 
-## Required operator checks
+## 2. Run the required operator checks
 
 1. Back up the closed Wren profile and confirm the backup is readable. Close all
    Wren and other hardware-wallet apps. Use new disposable software/hardware
@@ -103,7 +114,7 @@ archive and active-desktop checks below.
    expected testnet and disposable-account confirmation are active; check its
    hash privately on the matching explorer.
 
-## EIP-5792 and EIP-7702 qualification
+## 3. Qualify EIP-5792 and EIP-7702 boundaries
 
 Use a new isolated `0700` desktop profile, disposable testnet accounts, a controlled
 local page, the candidate desktop, its configured testnet RPC, and the exact Chrome
@@ -140,7 +151,7 @@ This qualifies only the exercised desktop, RPC, testnet state, and exact browser
 archives. It does not audit delegate code, qualify every chain/RPC, qualify atomic
 EIP-5792, create or replace delegation, or qualify EIP-7702 hardware signing.
 
-## Earn-only qualification
+## 4. Run Earn-only qualification
 
 Run this only when [`YEARN_EARN.md`](YEARN_EARN.md) is present. Use an isolated
 `0700` profile, four disposable accounts (private key, seed, Safe 7, Model One),
@@ -188,7 +199,7 @@ notification may contain only Wren's shortened hash. Restart after completed
 flows: positions refresh, terminal workflows stay bounded, broadcasts do not
 duplicate, and approvals never exceed the request.
 
-## Pass, cleanup, and historical evidence
+## 5. Decide pass or fail and retain evidence
 
 After each signer run, relock/disconnect/quit, ensure no pending request after
 restart, scan the isolated profile/logs for exact disposable fixtures without
@@ -204,7 +215,7 @@ wrong updater target, wrong target/amount, cross-chain request, stale deposit,
 duplicate broadcast, unrecoverable workflow, or unrevokable approval block a
 release. Report only versions, checksums, pass/fail, sanitized errors, and steps.
 
-### 0.8.0 Linux x64 evidence (historical)
+### Historical 0.8.0 Linux x64 evidence
 
 The pre-separation manual run used desktop `0.8.0` commit `3963a014` and Companion
 `0.13.1` commit `88ca5b2f` (protocol 2), on Pop!_OS 22.04 / Linux
