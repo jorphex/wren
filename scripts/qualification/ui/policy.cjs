@@ -205,7 +205,7 @@ const reviewScenarios = () => [
     requiredText: [
       'Simulation completed',
       'Additional checks pending',
-      'Reviewing transaction details',
+      'Final checks',
       'Finishing checks'
     ]
   },

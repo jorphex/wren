@@ -23,8 +23,8 @@ export const revokeLifecyclePresentation = (req, active = true) => {
   if (!req?.status) {
     return {
       kind: 'review',
-      title: 'Review delegation revocation',
-      detail: 'Verify the account, network, current delegate, evidence, and fee.'
+      title: 'Review details',
+      detail: 'Check everything above before revoking.'
     }
   }
 

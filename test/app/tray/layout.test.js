@@ -15,6 +15,10 @@ const transactionEvidenceStyle = fs.readFileSync(
   'app/tray/Account/Requests/TransactionRequest/ViewData/style/index.styl',
   'utf8'
 )
+const transactionStyle = fs.readFileSync(
+  'app/tray/Account/Requests/TransactionRequest/style/new.styl',
+  'utf8'
+)
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
@@ -167,6 +171,7 @@ test('keeps reserved tray bands and revocation evidence free of decorative horiz
 test('keeps warnings and balance siblings attached through spacing', () => {
   expect(balancesStyle).not.toMatch(/\.signerBalanceWarning[\s\S]{0,220}?border-top/)
   expect(balancesStyle).not.toMatch(/& \+ \.signerBalance[\s\S]{0,100}?border-top/)
+  expect(balancesStyle).toMatch(/\.balanceFilter\n {2}margin-bottom var\(--wren-space-2\)/)
 })
 
 test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {
@@ -227,13 +232,28 @@ test('keeps ordered wallet calls on a flat ruled ledger', () => {
 })
 
 test('keeps transaction review on one flat details ledger', () => {
-  expect(accountSource).toMatch(
-    /style=\{\{[\s\S]*?top: requestMode \|\| compactTop \? '68px' : accountOpen \? '140px' : '80px'/
-  )
+  expect(accountSource).toMatch(/style=\{\{[\s\S]*?top: '10px'/)
+  expect(accountSource).not.toMatch(/top: requestMode \|\| compactTop/)
   expect(accountSource).toMatch(/requestMode=\{true\}/)
   expect(accountStyle).toMatch(
     /\.accountView[\s\S]*?&:has\(\.signerRequest\)[\s\S]*?\.accountViewMain[\s\S]*?top 52px/
   )
+  expect(accountStyle).toMatch(
+    /\.accountViewMeta[\s\S]*?display block[\s\S]*?color var\(--wren-text-tertiary\)[\s\S]*?text-align right[\s\S]*?text-overflow ellipsis/
+  )
+  const requestMetaStyle = accountStyle.split('.accountViewMeta')[1].split('.accountViewMain')[0]
+  expect(requestMetaStyle).not.toMatch(/(?:^|\n)\s+(?:border|border-radius|background|padding) /)
+  expect(signingStyle).toMatch(
+    /\.approveTransaction\n {2}padding 0 var\(--wren-space-5\) var\(--wren-space-4\)/
+  )
+  expect(signingStyle).toMatch(
+    /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewSectionTitle[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-1\)/
+  )
+  expect(signingStyle).toMatch(/\._txLabel[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-2\)/)
+  expect(signingStyle).toMatch(/\._txMainTag[\s\S]*?padding var\(--wren-space-3\) 0/)
   expect(signingStyle).toMatch(
     /\.requestItem,[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?\.transactionReviewSectionTitle/
   )
@@ -241,7 +261,16 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewRecipient,[\s\S]*?\.transactionReviewFee,[\s\S]*?\.transactionReviewNonce[\s\S]*?margin 0/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?grid-template-columns 112px minmax\(0, 1fr\) auto/
+    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\) auto/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewRecipient[\s\S]*?\.clusterRow:first-child \.clusterValue[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewAddress[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewCopyFeedback[\s\S]*?position absolute[\s\S]*?right 0/
   )
   expect(signingStyle).toMatch(
     /\.transactionNonce[\s\S]*?grid-column 2 \/ 4[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto/
@@ -257,6 +286,18 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
   expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)
+})
+
+test('keeps compact transfer summaries inline and revocation review on one focused canvas', () => {
+  expect(transactionStyle).toMatch(
+    /\.txDescriptionSummaryStandalone[\s\S]*?\._txDescriptionTransfer[\s\S]*?display flex[\s\S]*?align-items baseline[\s\S]*?gap var\(--wren-space-2\)/
+  )
+  expect(revokeStyle).toMatch(
+    /\.eip7702RevokeRequest[\s\S]*?background var\(--wren-bg-canvas\)/
+  )
+  expect(revokeStyle).not.toMatch(
+    /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeDocument[\s\S]*?padding-(?:right|left) var\(--wren-space-3\)/
+  )
 })
 
 test('keeps signing evidence readable and operable when the shell is scaled', () => {

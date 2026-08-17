@@ -380,13 +380,13 @@ export class RequestCommand extends React.Component {
               {reviewPending
                 ? 'Checking transaction'
                 : advancedPending
-                  ? 'Reviewing transaction details'
+                  ? 'Final checks'
                   : 'Ready for review'}
             </strong>
             <span>
               {advancedPending
-                ? 'Wren is checking supporting transaction details.'
-                : 'Verify these details on your signer before approving.'}
+                ? 'Wren is checking transaction details.'
+                : 'Verify on your signer before approving.'}
             </span>
             {this.state.requestActionError ? (
               <span className='requestActionError' role='alert'>

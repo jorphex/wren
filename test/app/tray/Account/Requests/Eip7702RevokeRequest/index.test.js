@@ -52,7 +52,11 @@ const connectedReview = (req, props = {}) => {
 }
 
 it('presents review, queue, and signer states without overstating execution', () => {
-  expect(revokeLifecyclePresentation(request(), true)).toMatchObject({ kind: 'review' })
+  expect(revokeLifecyclePresentation(request(), true)).toEqual({
+    kind: 'review',
+    title: 'Review details',
+    detail: 'Check everything above before revoking.'
+  })
   expect(revokeLifecyclePresentation(request(), false)).toMatchObject({ kind: 'waiting' })
   expect(revokeLifecyclePresentation(request({ status: 'pending' }), true)).toEqual({
     kind: 'signing',

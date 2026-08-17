@@ -165,6 +165,8 @@ it('uses native disabled decisions until the transaction signing delay completes
   const req = transaction()
   const view = renderMountedCommand(req, 'signOrDecline', commandStore())
 
+  expect(screen.getByText('Ready for review')).toBeTruthy()
+  expect(screen.getByText('Verify on your signer before approving.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)
 
@@ -312,7 +314,8 @@ it('shows successful core execution while keeping signing disabled for required 
   command.state.allowInput = true
   renderCommandResult(command, 'signOrDecline')
 
-  expect(screen.getByText('Reviewing transaction details')).toBeTruthy()
+  expect(screen.getByText('Final checks')).toBeTruthy()
+  expect(screen.getByText('Wren is checking transaction details.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Finishing checks' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(false)
   command.componentWillUnmount()
