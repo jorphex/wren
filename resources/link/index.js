@@ -60,14 +60,14 @@ window.addEventListener(
     const args = data.args
     if (data.method === 'rpc') {
       const handler = handlers.get(data.id)
-      if (!handler) return console.log('link.rpc response had no handler')
-      handler(...args)
+      if (typeof handler !== 'function') return console.log('link.rpc response had no handler')
       handlers.delete(data.id)
+      handler(...args)
     } else if (data.method === 'invoke') {
       const handler = handlers.get(data.id)
-      if (!handler) return console.log('link.invoke response had no handler')
-      handler(args)
+      if (typeof handler !== 'function') return console.log('link.invoke response had no handler')
       handlers.delete(data.id)
+      handler(args)
     } else if (data.method === 'event') {
       link.emit(data.channel, ...args)
     }
