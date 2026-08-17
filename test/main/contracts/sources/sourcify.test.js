@@ -56,23 +56,13 @@ const mockAbi = [
 ]
 
 const sourcifyResponse = {
-  status: 'partial',
-  files: [
-    {
-      name: 'metadata.json',
-      path: '',
-      content: JSON.stringify({
-        output: {
-          abi: mockAbi,
-          devdoc: { title: 'mock sourcify abi' }
-        }
-      })
-    }
-  ]
-}
-
-const sourcifyNotFoundResponse = {
-  error: 'Files have not been found!'
+  match: 'exact_match',
+  abi: mockAbi,
+  devdoc: { title: 'mock sourcify abi' },
+  compilation: {
+    name: 'MockContract',
+    fullyQualifiedName: 'contracts/MockContract.sol:MockContract'
+  }
 }
 
 beforeAll(() => {
@@ -95,13 +85,13 @@ afterEach(() => {
 describe('#fetchSourcifyContract', () => {
   const contractAddress = '0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0'
   const domain = 'sourcify.dev'
-  const endpoint = `/server/files/any/137/${contractAddress}`
+  const endpoint = `/server/v2/contract/137/${contractAddress}?fields=abi,devdoc,compilation`
 
-  const mockSourcifyApi = (status, response, delay) => {
-    mockApiResponse(domain, endpoint, status, response, delay)
+  const mockSourcifyApi = (status, response, delay, headers) => {
+    mockApiResponse(domain, endpoint, status, response, delay, headers)
   }
 
-  it('retrieves a contract from sourcify', async () => {
+  it('retrieves an exact-match contract through Sourcify API v2', async () => {
     mockSourcifyApi(200, sourcifyResponse)
 
     return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toStrictEqual({
@@ -111,37 +101,61 @@ describe('#fetchSourcifyContract', () => {
     })
   })
 
-  it('does not retrieve a contract when the request fails', async () => {
-    mockSourcifyApi(400)
-
-    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
-  })
-
-  it('does not retrieve a contract when the contract is not found', async () => {
-    mockSourcifyApi(200, sourcifyNotFoundResponse)
-
-    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
-  })
-
-  it('does not throw when Sourcify returns a malformed files field', async () => {
-    mockSourcifyApi(200, { status: 'partial', files: { unexpected: true } })
-
-    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
-  })
-
-  it('selects metadata.json when source files appear first', async () => {
+  it('accepts a non-exact match and falls back to the compiler contract name', async () => {
     mockSourcifyApi(200, {
       ...sourcifyResponse,
-      files: [
-        { name: 'Contract.sol', path: 'contracts/Contract.sol', content: 'contract Contract {}' },
-        ...sourcifyResponse.files
-      ]
+      match: 'match',
+      devdoc: {}
     })
 
     return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toMatchObject({
-      name: 'mock sourcify abi',
+      name: 'MockContract',
       source: 'sourcify'
     })
+  })
+
+  it('falls back to the fully qualified name when other names are absent', async () => {
+    mockSourcifyApi(200, {
+      ...sourcifyResponse,
+      devdoc: {},
+      compilation: { fullyQualifiedName: 'contracts/MockContract.sol:MockContract' }
+    })
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toMatchObject({
+      name: 'MockContract'
+    })
+  })
+
+  it('does not retrieve a contract when the request fails', async () => {
+    mockSourcifyApi(404)
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
+  })
+
+  it('does not request malformed addresses or chain IDs', async () => {
+    await expect(fetchSourcifyContract('not-an-address', 137)).resolves.toBeUndefined()
+    await expect(fetchSourcifyContract(contractAddress, 0)).resolves.toBeUndefined()
+    return expect(fetchSourcifyContract(contractAddress, Number.NaN)).resolves.toBeUndefined()
+  })
+
+  it('does not retrieve a contract without a verified match', async () => {
+    mockSourcifyApi(200, { ...sourcifyResponse, match: null })
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
+  })
+
+  it('does not retrieve a contract with a malformed ABI or missing name', async () => {
+    mockSourcifyApi(200, { ...sourcifyResponse, abi: { unexpected: true } })
+    await expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
+
+    mockSourcifyApi(200, { match: 'match', abi: mockAbi, devdoc: {}, compilation: {} })
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
+  })
+
+  it('does not parse a non-JSON response', async () => {
+    mockSourcifyApi(200, sourcifyResponse, 0, { 'content-type': 'text/html' })
+
+    return expect(fetchSourcifyContract(contractAddress, 137)).resolves.toBeUndefined()
   })
 
   it('does not retrieve a contract when the request times out', async () => {

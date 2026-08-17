@@ -1,50 +1,27 @@
 import log from 'electron-log'
 
-import { fetchWithTimeout } from '../../../resources/utils/fetch'
+import { fetchWithTimeout, readJsonWithLimit } from '../../../resources/utils/fetch'
 
 import type { JsonFragment } from 'ethers'
 import type { ContractSource } from '..'
 
-interface SourcifySourceCodeResponse {
-  status: string
-  files: SourcifySourceCodeFile[]
+interface SourcifyContractResponse {
+  match?: 'match' | 'exact_match' | null
+  abi?: JsonFragment[]
+  devdoc?: {
+    title?: unknown
+  }
+  compilation?: {
+    name?: unknown
+    fullyQualifiedName?: unknown
+  }
 }
 
-interface SourcifySourceCodeFile {
-  name: string
-  path: string
-  content: string
-}
-
-interface SourcifyMetadataFileContent {
-  compiler: { version: string }
-  language: string
-  output: {
-    abi: JsonFragment[]
-    devdoc: Partial<{
-      details: string
-      title: string
-    }>
-  }
-  settings: Partial<{
-    compilationTarget: {
-      [K: string]: string
-    }
-    evmVersion: string
-    metadata: {
-      [K: string]: string
-    }
-  }>
-  sources: {
-    [K: string]: {
-      [J: string]: string | string[]
-    }
-  }
-  version: number
-}
+const MAX_SOURCIFY_RESPONSE_BYTES = 8 * 1024 * 1024
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/
 
 function getEndpointUrl(contractAddress: Address, chainId: number) {
-  return `https://sourcify.dev/server/files/any/${chainId}/${contractAddress}`
+  return `https://sourcify.dev/server/v2/contract/${chainId}/${contractAddress}?fields=abi,devdoc,compilation`
 }
 
 async function parseResponse<T>(response: Response): Promise<T | undefined> {
@@ -52,29 +29,20 @@ async function parseResponse<T>(response: Response): Promise<T | undefined> {
     response?.status === 200 &&
     (response?.headers.get('content-type') || '').toLowerCase().includes('json')
   ) {
-    return await response.json()
+    return await readJsonWithLimit<T>(response, MAX_SOURCIFY_RESPONSE_BYTES)
   }
-  return Promise.resolve(undefined)
+  return undefined
 }
 
-async function fetchSourceCode(
+async function fetchContractMetadata(
   contractAddress: Address,
   chainId: number
-): Promise<SourcifyMetadataFileContent | undefined> {
+): Promise<SourcifyContractResponse | undefined> {
   const endpointUrl = getEndpointUrl(contractAddress, chainId)
 
   try {
     const res = await fetchWithTimeout(endpointUrl, {}, 4000)
-    const parsedResponse = await parseResponse<SourcifySourceCodeResponse>(res)
-
-    const metadataFile = Array.isArray(parsedResponse?.files)
-      ? parsedResponse.files.find(
-          (file) => file?.name === 'metadata.json' || file?.path?.endsWith('/metadata.json')
-        ) || parsedResponse.files[0]
-      : undefined
-    return parsedResponse && ['partial', 'full'].includes(parsedResponse.status) && metadataFile
-      ? JSON.parse(metadataFile.content)
-      : Promise.reject(`Contract ${contractAddress} not found in Sourcify`)
+    return await parseResponse<SourcifyContractResponse>(res)
   } catch (e) {
     log.warn(
       (e as Error).name === 'AbortError' ? 'Sourcify request timed out' : 'Unable to parse Sourcify response',
@@ -84,23 +52,35 @@ async function fetchSourceCode(
   }
 }
 
+function nonEmptyString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function contractName(result: SourcifyContractResponse) {
+  const qualifiedName = nonEmptyString(result.compilation?.fullyQualifiedName)
+  return (
+    nonEmptyString(result.devdoc?.title) ||
+    nonEmptyString(result.compilation?.name) ||
+    qualifiedName?.split(':').pop()
+  )
+}
+
 export async function fetchSourcifyContract(
   contractAddress: Address,
   chainId: number
 ): Promise<ContractSource | undefined> {
-  try {
-    const result = await fetchSourceCode(contractAddress, chainId)
+  if (!ADDRESS.test(contractAddress) || !Number.isSafeInteger(chainId) || chainId <= 0) return
 
-    if (result?.output) {
-      const {
-        abi,
-        devdoc: { title }
-      } = result.output
-      return { abi: JSON.stringify(abi), name: title as string, source: 'sourcify' }
-    }
-  } catch (e) {
-    log.warn(`Contract ${contractAddress} not found in Sourcify`, e)
-  }
+  const result = await fetchContractMetadata(contractAddress, chainId)
+  const name = result && contractName(result)
 
-  return undefined
+  if (
+    !result ||
+    !['match', 'exact_match'].includes(result.match || '') ||
+    !Array.isArray(result.abi) ||
+    !name
+  )
+    return
+
+  return { abi: JSON.stringify(result.abi), name, source: 'sourcify' }
 }
