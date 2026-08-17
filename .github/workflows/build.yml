@@ -48,6 +48,7 @@ jobs:
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          test -f "release-notes/v${version}.md"
       - name: Install Linux build prerequisites
         run: |
           sudo apt-get update
@@ -100,4 +101,4 @@ jobs:
             echo "Refusing to modify existing release $RELEASE_TAG; delete a failed draft or use a new version" >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/*.AppImage dist/*_amd64.deb dist/SHA256SUMS dist/wren.cdx.json --target "$GITHUB_SHA" --draft --title "$RELEASE_VERSION" --notes "Automated Linux draft build from $GITHUB_SHA."
+          gh release create "$RELEASE_TAG" dist/*.AppImage dist/*_amd64.deb dist/SHA256SUMS dist/wren.cdx.json --target "$GITHUB_SHA" --draft --title "$RELEASE_VERSION" --notes-file "release-notes/v${RELEASE_VERSION}.md"

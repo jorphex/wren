@@ -25,11 +25,12 @@ desktop, hardware, signing, notarization, or operating-system integration.
 1. Use a clean, reviewed default-branch commit. Set a new SemVer-compatible
    `package.json` version and regenerate `package-lock.json` with the pinned
    Node/npm toolchain. Do not reuse a published tag.
-2. Update release notes and support claims. Record current physical-device
-   evidence in [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md). When desktop/Companion
-   integration changes, update the Companion `compatibility.json` minimum desktop
-   commit and build both from their exact paired commits; protocol 2 must not be
-   directed at an older store extension.
+2. Update the matching `release-notes/v<version>.md` and support claims. Record
+   current physical-device evidence in
+   [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md). When desktop/Companion integration
+   changes, update the Companion `compatibility.json` minimum desktop commit and
+   build both from their exact paired commits; protocol 2 must not be directed at
+   an older store extension.
 3. Run the release gate:
 
    ```bash
