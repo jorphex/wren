@@ -563,8 +563,9 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.accountLedgerView',
-    requiredControls: ['Filter balances', 'Add token'],
-    requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total']
+    requiredControls: ['Back', 'Filter balances', 'Add token'],
+    requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
     id: 'tray-account-chain-fallback-narrow-1',
@@ -601,8 +602,9 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestClearAll',
-    requiredControls: ['Clear all requests'],
-    requiredText: ['Requests', '3 items', 'workshop.example', 'garden.example']
+    requiredControls: ['Back', 'Clear all requests'],
+    requiredText: ['Requests', '3 items', 'workshop.example', 'garden.example'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
     id: 'tray-transaction-safety-unavailable-short-1',
@@ -648,8 +650,9 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
-    requiredControls: ['All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
-    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum Mainnet']
+    requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
+    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum Mainnet'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
     id: 'tray-account-activity-clear-full-1',

@@ -312,7 +312,6 @@ class _AccountMain extends React.Component {
     return (
       <header className='accountHomeHeader'>
         <div className='accountHomeIdentity'>
-          <div className='accountHomeEyebrow'>Selected account</div>
           <AccountNameEditor account={this.props.id} name={name} />
           <AccountAddressActions key={address} address={address} name={name} />
         </div>

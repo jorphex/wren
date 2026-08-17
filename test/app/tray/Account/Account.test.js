@@ -27,7 +27,7 @@ it('renders the approved account-home identity without duplicating the balances 
   const main = accountMain({ hideBalances: true })
   render(main.renderHomeHeader())
 
-  expect(screen.getByText('Selected account')).toBeTruthy()
+  expect(screen.queryByText('Selected account')).toBeNull()
   expect(screen.getByRole('heading', { name: 'Workshop' })).toBeTruthy()
   expect(screen.queryByText('Total balance')).toBeNull()
   expect(screen.queryByLabelText('Total balance hidden')).toBeNull()
@@ -87,7 +87,7 @@ it('dismisses the account address QR when clicking outside its anchored surface'
   await user.click(screen.getByRole('button', { name: 'Show account address QR code' }))
   expect(screen.getByRole('dialog', { name: 'Account address' })).toBeTruthy()
 
-  await user.click(screen.getByText('Selected account'))
+  await user.click(screen.getByRole('banner'))
   expect(screen.queryByRole('dialog', { name: 'Account address' })).toBeNull()
 })
 

@@ -85,11 +85,18 @@ test('lets the selected-account chooser share the wallet canvas', () => {
     /&\.accountDrawerItemSelected[\s\S]*?background var\(--wren-ledger-selected\)/
   )
   expect(accountStyle).toMatch(
-    /#panel[\s\S]*?&:has\(\.accountSelectorOpen\[aria-modal='true'\]\) \.accountMain[\s\S]*?visibility hidden/
+    /#panel[\s\S]*?&:has\(\.accountSelectorOpen\[aria-modal='true'\]\) \.accountMain[\s\S]*?display none/
   )
   expect(accountStyle).toMatch(
-    /#panel[\s\S]*?&:has\(\.accountViewRequest\) \.accountSelector\.accountSelectorOpen[\s\S]*?visibility hidden/
+    /#panel[\s\S]*?&:has\(\.accountView\) \.accountSelector\.accountSelectorOpen[\s\S]*?display none/
   )
+})
+
+test('keeps the account body geometry independent from the dashboard dock edge', () => {
+  expect(accountStyle).toMatch(/\/\/ Wren account surface\n\.accountMain\n {2}top 88px/)
+  expect(accountSelectorStyle).toMatch(/\.accountSelector\.accountSelectorOpen\n {2}top 6px/)
+  const edgeOverride = accountStyle.split('.workspace-edge-left #panel')[1].split('.accountHomeHeader')[0]
+  expect(edgeOverride).not.toMatch(/\n {2}\.account(?:Main|Selector)/)
 })
 
 test('keeps the home-to-requests gap compact without shifting the selector rail', () => {

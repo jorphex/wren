@@ -899,6 +899,7 @@
 
 // Wren account surface
 .accountMain
+  top 88px
   right 0
   left 0
   border-radius 0
@@ -907,6 +908,7 @@
     border-radius 0
 
   .accountMainSlide
+    padding-top var(--wren-space-4)
     padding-right var(--wren-space-5)
     padding-left var(--wren-space-5)
     box-sizing border-box
@@ -1297,11 +1299,11 @@
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
 
-  &:has(.accountViewRequest) .accountSelector.accountSelectorOpen
-    visibility hidden
+  &:has(.accountView) .accountSelector.accountSelectorOpen
+    display none
 
   &:has(.accountSelectorOpen[aria-modal='true']) .accountMain
-    visibility hidden
+    display none
 
   // Keep the account shell continuous from startup through ordinary account
   // browsing. Request review and signer-request states deliberately do not
@@ -1320,24 +1322,6 @@
   &:has(.accountView:not(.accountViewRequest)):not(:has(.signerRequest))
     background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 98% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at -2% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 88% 104%, rgba(111, 91, 126, .045), transparent 74%)
 
-  .accountSelector.accountSelectorOpen
-    top 6px
-
-  .accountMain
-    top 88px
-    right 0
-    bottom 40px
-    left 0
-    border-radius 0
-
-    .accountMainScroll
-      border-radius 0
-
-    .accountMainSlide
-      padding-top var(--wren-space-4)
-      padding-right var(--wren-space-5)
-      padding-left var(--wren-space-5)
-
 .accountHomeHeader
   display grid
   padding 0 var(--wren-space-5) var(--wren-space-3)
@@ -1348,17 +1332,6 @@
 
 .accountHomeIdentity
   min-width 0
-
-.accountHomeEyebrow
-  color var(--wren-text-tertiary)
-  font-family var(--wren-font-ui)
-  font-size var(--wren-type-caption)
-  font-weight 620
-  letter-spacing 1.15px
-  text-transform uppercase
-
-.accountHomeEyebrow
-  color var(--wren-accent-primary)
 
 .accountHomeTitle
   min-width 0
@@ -1376,7 +1349,7 @@
   display flex
   min-width 0
   min-height 32px
-  margin-top 4px
+  margin-top 0
   align-items center
   gap var(--wren-space-2)
 
