@@ -64,6 +64,7 @@ it('keeps one non-interactive Wren beside the Control Center title', () => {
   expect(bird.getAttribute('alt')).toBe('')
   expect(bird.getAttribute('aria-hidden')).toBe('true')
   expect(screen.getAllByTestId('control-center-wren')).toHaveLength(1)
+  expect(screen.queryByText('Desktop EVM wallet')).toBeNull()
 })
 
 it('includes each destination description in its accessible name', () => {

@@ -20,7 +20,7 @@ test('defines every shared dashboard typography role', () => {
 
 test('continues the joined wallet canvas according to its dock edge', () => {
   expect(dashStyle).toMatch(
-    /\.dash[\s\S]*?background-color var\(--wren-bg-canvas\)[\s\S]*?url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?background-size 144px 144px/
+    /\.dash[\s\S]*?background-color var\(--wren-bg-wallet-canvas\)[\s\S]*?url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?background-size 144px 144px/
   )
   expect(dashStyle).toMatch(
     /\.dash[\s\S]*?\.dashMain[\s\S]*?background transparent[\s\S]*?\.workspace-edge-left \.dash,[\s\S]*?\.workspace-overlay \.dash[\s\S]*?radial-gradient\(ellipse 94% 58% at 2% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at 102% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 12% 104%/
@@ -33,6 +33,12 @@ test('continues the joined wallet canvas according to its dock edge', () => {
     /\.workspace-edge-left \.dash[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/
   )
   expect(canvasGrain).toMatch(/width="144" height="144"[\s\S]*?stitchTiles="stitch"/)
+})
+
+test('uses a default cursor for dashboard copy while preserving editable text behavior', () => {
+  expect(dashStyle).toMatch(
+    /\.dash[\s\S]*?cursor default[\s\S]*?user-select none[\s\S]*?input,[\s\S]*?textarea,[\s\S]*?\[contenteditable='true'\][\s\S]*?cursor text[\s\S]*?user-select text/
+  )
 })
 
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {

@@ -73,7 +73,6 @@ export class Main extends React.Component {
         <div className='localSettingsWrap'>
           <header className='dashHomeHeader'>
             <div className='dashHomeIntro'>
-              <div className='dashHomeEyebrow'>Desktop EVM wallet</div>
               <h1>Control center</h1>
               <p>Manage accounts, networks, permissions, and desktop behavior.</p>
             </div>
