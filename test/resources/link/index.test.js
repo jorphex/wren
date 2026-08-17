@@ -57,4 +57,25 @@ describe('renderer link bridge', () => {
       args: ['tokens:save', token]
     })
   })
+
+  test('ignores duplicate responses after removing the completed handler', () => {
+    const callback = jest.fn()
+    const log = jest.spyOn(globalThis.console, 'log').mockImplementation(() => {})
+    link.rpc('getState', callback)
+
+    const request = JSON.parse(rendererWindow.postMessage.mock.calls[0][0])
+    const response = JSON.stringify({
+      source: 'bridge:link',
+      method: 'rpc',
+      id: request.id,
+      args: [null, { ready: true }]
+    })
+
+    messageListener({ data: response, source: rendererWindow, origin: 'null' })
+    messageListener({ data: response, source: rendererWindow, origin: 'null' })
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith('link.rpc response had no handler')
+    log.mockRestore()
+  })
 })

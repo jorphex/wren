@@ -21,14 +21,14 @@ const postToBridge = (message) => {
   window.postMessage(encodeBridgeMessage(normalizedMessage), targetOrigin)
 }
 
-const handlers = {}
+const handlers = new Map()
 
 const link = new EventEmitter()
 link.rpc = (...args) => {
   const cb = args.pop()
   if (typeof cb !== 'function') throw new Error('link.rpc requires a callback')
   const id = v4()
-  handlers[id] = cb
+  handlers.set(id, cb)
   postToBridge({ id, args, source: LINK_SOURCE, method: 'rpc' })
 }
 link.send = (...args) => {
@@ -37,7 +37,7 @@ link.send = (...args) => {
 link.invoke = (...args) => {
   return new Promise((resolve) => {
     const id = v4()
-    handlers[id] = resolve
+    handlers.set(id, resolve)
     postToBridge({ id, args, source: LINK_SOURCE, method: 'invoke' })
   })
 }
@@ -59,13 +59,15 @@ window.addEventListener(
 
     const args = data.args
     if (data.method === 'rpc') {
-      if (!handlers[data.id]) return console.log('link.rpc response had no handler')
-      handlers[data.id](...args)
-      delete handlers[data.id]
+      const handler = handlers.get(data.id)
+      if (!handler) return console.log('link.rpc response had no handler')
+      handler(...args)
+      handlers.delete(data.id)
     } else if (data.method === 'invoke') {
-      if (!handlers[data.id]) return console.log('link.invoke response had no handler')
-      handlers[data.id](args)
-      delete handlers[data.id]
+      const handler = handlers.get(data.id)
+      if (!handler) return console.log('link.invoke response had no handler')
+      handler(args)
+      handlers.delete(data.id)
     } else if (data.method === 'event') {
       link.emit(data.channel, ...args)
     }

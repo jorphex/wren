@@ -77,4 +77,17 @@ describe('#getAddress', () => {
       '0x81aA3e376ea6e4b238a213324220c1A515031D12'
     )
   })
+
+  it('logs an invalid address through a fixed format string', () => {
+    const warn = jest.spyOn(globalThis.console, 'warn').mockImplementation(() => {})
+
+    expect(getAddress('%s-not-an-address')).toBe('%s-not-an-address')
+    expect(warn).toHaveBeenCalledWith(
+      'could not checksum address %s, using lowercase address',
+      '%s-not-an-address',
+      expect.any(Error)
+    )
+
+    warn.mockRestore()
+  })
 })

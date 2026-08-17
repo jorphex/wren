@@ -88,7 +88,7 @@ function getAddress(address: Address) {
     // this will throw if the address can't be checksummed
     return getChecksumAddress(lowerCaseAddress)
   } catch (e) {
-    console.warn(`could not checksum address ${address}, using lowercase address`, e)
+    console.warn('could not checksum address %s, using lowercase address', address, e)
     return lowerCaseAddress
   }
 }
