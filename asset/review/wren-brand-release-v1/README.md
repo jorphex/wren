@@ -18,3 +18,8 @@ The original user-approved generated image is retained beside this file as
 `approved-character-flat-source.png`. It records provenance and visual intent;
 it is not a shipping asset. Rejected exploration rounds and superseded review
 renders are intentionally excluded from the release pack.
+
+The installed app tile enlarges the canonical full-color mark to 110 percent
+around the canvas center for clearer taskbar and dock recognition. This optical
+scale applies only to the app tile; tray and menu-bar reductions retain their
+independent native-size corrections.

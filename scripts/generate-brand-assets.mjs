@@ -16,6 +16,7 @@ const palette = {
   light: '#e7eee8',
   dark: '#10130f'
 }
+const appMarkScale = 1.1
 
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
 
@@ -35,10 +36,12 @@ const mark = ({ fill, symbol = 'wren-silhouette', scale = 1, x = 0, y = 0 }) => 
 
 const colorMark = () => svg({ content: '<use href="#wren-color" />' })
 
-const appIcon = () =>
-  svg({
-    content: `<rect x="16" y="16" width="968" height="968" rx="214" fill="${palette.tile}" /><use href="#wren-color" />`
+const appIcon = () => {
+  const markOffset = (1000 - 1000 * appMarkScale) / 2
+  return svg({
+    content: `<rect x="16" y="16" width="968" height="968" rx="214" fill="${palette.tile}" /><g transform="translate(${markOffset} ${markOffset}) scale(${appMarkScale})"><use href="#wren-color" /></g>`
   })
+}
 
 const render = async (source, outputPath, size) => {
   const page = await browser.newPage()
