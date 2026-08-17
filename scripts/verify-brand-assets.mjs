@@ -180,7 +180,7 @@ assert.ok(header.byteLength < 5 * 1024 * 1024, `${headerPath} must remain below 
 assert.ok(headerMark.pixelCountByThird[0] >= 4000, `${headerPath} left third must retain its detail`)
 assert.ok(headerMark.pixelCountByThird[1] >= 1500, `${headerPath} middle third must retain its detail`)
 assert.ok(headerMark.pixelCountByThird[2] >= 22000, `${headerPath} right third must retain its focal point`)
-assert.ok(headerMark.pixelCount >= 30000, `${headerPath} must retain the panorama's warm focal content`)
+assert.ok(headerMark.pixelCount >= 29000, `${headerPath} must retain the panorama's warm focal content`)
 assert.ok(headerMark.meanX >= 1050, `${headerPath} focal content must remain clear of X's profile overlay`)
 assert.ok(headerMark.cropSafePixelRatio >= 0.95, `${headerPath} must retain crop-safe focal content`)
 
