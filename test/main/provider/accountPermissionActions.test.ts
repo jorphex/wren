@@ -22,7 +22,8 @@ const setup = (storedPermissions = permissions) => {
     accounts,
     provider,
     getPermissions: jest.fn(() => storedPermissions),
-    mutate: jest.fn()
+    mutate: jest.fn(),
+    removeGuardrails: jest.fn()
   }
   return { accounts, provider, dependencies }
 }
@@ -40,6 +41,7 @@ it('disables an external permission and rejects its untouched pending requests',
 
   expect(dependencies.getPermissions).toHaveBeenCalledWith(account)
   expect(dependencies.mutate).toHaveBeenCalledWith(account, externalId, false)
+  expect(dependencies.removeGuardrails).toHaveBeenCalledWith(account, [externalId])
   expect(provider.accountsChanged).toHaveBeenCalledWith([account], [externalId])
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
 })
@@ -50,6 +52,7 @@ it('clears external permissions while preserving managed access and rejecting on
   expect(applyAccountPermissionRendererAction('clearPermissions', [account], dependencies)).toBe(true)
 
   expect(dependencies.mutate).toHaveBeenCalledWith(account)
+  expect(dependencies.removeGuardrails).toHaveBeenCalledWith(account, [externalId, disabledId])
   expect(provider.accountsChanged).toHaveBeenCalledWith([account], undefined)
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId, disabledId])
 })
@@ -64,6 +67,7 @@ it('still rejects revoked-origin requests when subscription delivery fails after
     applyAccountPermissionRendererAction('toggleAccess', [account, externalId, false], dependencies)
   ).toThrow('subscription delivery failed')
   expect(dependencies.mutate).toHaveBeenCalledWith(account, externalId, false)
+  expect(dependencies.removeGuardrails).toHaveBeenCalledWith(account, [externalId])
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
 })
 
@@ -78,6 +82,7 @@ it.each([
     applyAccountPermissionRendererAction(action as 'toggleAccess', args as unknown[], dependencies)
   ).toBe(false)
   expect(dependencies.mutate).not.toHaveBeenCalled()
+  expect(dependencies.removeGuardrails).not.toHaveBeenCalled()
   expect(provider.accountsChanged).not.toHaveBeenCalled()
   expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalled()
 })
@@ -87,6 +92,7 @@ it('ignores clearing when only managed Wren Send access remains', () => {
 
   expect(applyAccountPermissionRendererAction('clearPermissions', [account], dependencies)).toBe(false)
   expect(dependencies.mutate).not.toHaveBeenCalled()
+  expect(dependencies.removeGuardrails).not.toHaveBeenCalled()
   expect(provider.accountsChanged).not.toHaveBeenCalled()
   expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalled()
 })

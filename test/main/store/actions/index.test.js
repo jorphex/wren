@@ -157,6 +157,77 @@ describe('#clearPermissions', () => {
   })
 })
 
+describe('dapp guardrail actions', () => {
+  const account = '0x1111111111111111111111111111111111111111'
+  const first = { account, originId: 'first', chainId: '0x1', revision: 1 }
+  const second = { account, originId: 'second', chainId: '0xa', revision: 1 }
+
+  it('stores a canonical record at its identity-derived path', () => {
+    const update = jest.fn()
+    storeActions.saveDappGuardrail(update, first)
+    expect(update).toHaveBeenCalledWith('main.dappGuardrails', account, 'first', '0x1', expect.any(Function))
+    expect(update.mock.calls[0].at(-1)()).toBe(first)
+  })
+
+  it('removes exact policies and prunes empty parents immutably', () => {
+    const guardrails = { [account]: { first: { '0x1': first, '0xa': second } } }
+    let result
+    storeActions.removeDappGuardrail(
+      (path, reducer) => {
+        expect(path).toBe('main.dappGuardrails')
+        result = reducer(guardrails)
+      },
+      { account, originId: 'first', chainId: '0x1' }
+    )
+    expect(result).toEqual({ [account]: { first: { '0xa': second } } })
+    expect(guardrails[account].first).toHaveProperty('0x1')
+  })
+
+  it('removes revoked origins across one account or every account', () => {
+    const otherAccount = '0x2222222222222222222222222222222222222222'
+    const guardrails = {
+      [account]: { first: { '0x1': first }, second: { '0xa': second } },
+      [otherAccount]: { first: { '0x1': { ...first, account: otherAccount } } }
+    }
+    const reduce = (action, ...args) => {
+      let result
+      action(
+        (path, reducer) => {
+          expect(path).toBe('main.dappGuardrails')
+          result = reducer(guardrails)
+        },
+        ...args
+      )
+      return result
+    }
+    expect(reduce(storeActions.removeDappGuardrailsForOrigins, account, ['first'])).toEqual({
+      [account]: { second: { '0xa': second } },
+      [otherAccount]: guardrails[otherAccount]
+    })
+    expect(reduce(storeActions.removeDappGuardrailsForPrincipalOrigins, ['first'])).toEqual({
+      [account]: { second: { '0xa': second } }
+    })
+  })
+
+  it('removes every policy when its account is deleted', () => {
+    const guardrails = {
+      [account]: { first: { '0x1': first } },
+      '0x2222222222222222222222222222222222222222': {
+        second: { '0xa': { ...second, account: '0x2222222222222222222222222222222222222222' } }
+      }
+    }
+    let nextGuardrails
+    storeActions.removeAccount((path, reducer) => {
+      if (path === 'main.dappGuardrails') nextGuardrails = reducer(guardrails)
+      else reducer({ [account]: {} })
+    }, account.toUpperCase())
+
+    expect(nextGuardrails).toEqual({
+      '0x2222222222222222222222222222222222222222': guardrails['0x2222222222222222222222222222222222222222']
+    })
+  })
+})
+
 it('does not expose the retired Pylon migration actions', () => {
   expect(storeActions).not.toHaveProperty('mutePylonMigrationNotice')
   expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
@@ -1186,6 +1257,14 @@ describe('#removeNetwork', () => {
         cosmos: {
           50: {}
         }
+      },
+      dappGuardrails: {
+        '0x1111111111111111111111111111111111111111': {
+          first: {
+            '0x4': { chainId: '0x4' },
+            '0x89': { chainId: '0x89' }
+          }
+        }
       }
     }
   })
@@ -1198,6 +1277,11 @@ describe('#removeNetwork', () => {
 
     expect(main.networks.ethereum).toStrictEqual({ 1: {}, 137: {} })
     expect(main.networksMeta.ethereum).toStrictEqual({ 1: {}, 137: {} })
+    expect(main.dappGuardrails).toEqual({
+      '0x1111111111111111111111111111111111111111': {
+        first: { '0x89': { chainId: '0x89' } }
+      }
+    })
   })
 
   it('should switch the chain for origins using the deleted network to mainnet', () => {
@@ -1291,6 +1375,14 @@ describe('#updateNetwork', () => {
         cosmos: {
           50: {}
         }
+      },
+      dappGuardrails: {
+        '0x1111111111111111111111111111111111111111': {
+          first: {
+            '0x4': { chainId: '0x4' },
+            '0x89': { chainId: '0x89' }
+          }
+        }
       }
     }
   })
@@ -1344,6 +1436,30 @@ describe('#updateNetwork', () => {
         chain: expect.objectContaining({ id: 66, type: 'ethereum' })
       }
     })
+  })
+
+  it('prunes only guardrails for the old chain identity when chainId changes', () => {
+    updateNetwork(
+      { id: '0x4', type: 'ethereum', name: '', explorer: '', symbol: '' },
+      { id: '0x42', type: 'ethereum', name: 'test', explorer: 'explorer.test', symbol: 'TEST' }
+    )
+
+    expect(main.dappGuardrails).toEqual({
+      '0x1111111111111111111111111111111111111111': {
+        first: { '0x89': { chainId: '0x89' } }
+      }
+    })
+  })
+
+  it('preserves guardrails when network identity is unchanged', () => {
+    const guardrails = main.dappGuardrails
+
+    updateNetwork(
+      { id: '0x4', type: 'ethereum', name: '', explorer: '', symbol: '' },
+      { id: '0x4', type: 'ethereum', name: 'renamed', explorer: 'explorer.test', symbol: 'TEST' }
+    )
+
+    expect(main.dappGuardrails).toBe(guardrails)
   })
 
   it('should correctly update the networksMeta', () => {

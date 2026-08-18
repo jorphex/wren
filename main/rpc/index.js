@@ -216,6 +216,12 @@ const rpc = {
       (account, handlerId, error) => accounts.rejectRequestForAccount(account, handlerId, error)
     )
     if (authorizationError) return cb(authorizationError)
+    try {
+      provider.prepareDappGuardrailReview(req)
+    } catch (error) {
+      accounts.rejectRequestForAccount(req.account, req.handlerId, error)
+      return cb(error)
+    }
     if ((req.approvals || []).some((approval) => !approval.approved)) {
       return cb(new Error('Request approvals are incomplete'))
     }

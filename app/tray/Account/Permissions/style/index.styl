@@ -8,6 +8,9 @@
 .clearPermissionsAction
   width 100%
 
+button.wrenControl.clearPermissionsAction
+  min-height 44px
+
 .clearPermissionsConfirm .clearPermissionsAction
   flex 1
 
@@ -95,5 +98,210 @@
     margin 0
     flex 1
 
+  .signerPermissionIdentity
+    min-width 0
+    flex 1
+
   .wrenToggle
     flex none
+
+.signerPermissionPrincipal
+  padding-top var(--wren-space-1)
+  overflow-wrap anywhere
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+
+.dappGuardrailChainActions
+  display grid
+  gap var(--wren-space-1)
+  padding var(--wren-space-1) 0 var(--wren-space-2)
+
+.dappGuardrailManage
+  width 100%
+  height auto
+  padding var(--wren-space-2)
+  overflow-wrap anywhere
+  white-space normal
+
+button.wrenControl.dappGuardrailManage
+  min-height 44px
+
+.dappGuardrailNoChains
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+
+.dappGuardrailEditor
+  margin var(--wren-space-1) 0 var(--wren-space-2)
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+
+  textarea
+    min-height 88px
+
+.dappGuardrailEditorHeader
+  display flex
+  align-items flex-start
+  justify-content space-between
+  gap var(--wren-space-2)
+
+  > div
+    min-width 0
+    display grid
+    gap var(--wren-space-1)
+
+  strong
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+
+  span
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+
+.dappGuardrailEvidence
+  display grid
+  gap var(--wren-space-1)
+  margin var(--wren-space-3) 0
+
+  > div
+    display grid
+    grid-template-columns minmax(88px, auto) minmax(0, 1fr)
+    gap var(--wren-space-2)
+
+  dt
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    text-transform uppercase
+
+  dd
+    min-width 0
+    margin 0
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+
+.dappGuardrailDisclosure
+  margin 0 0 var(--wren-space-3)
+  padding var(--wren-space-2)
+  border-left 2px solid var(--wren-accent-primary)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-overlay)
+  font-size var(--wren-type-caption)
+  line-height 1.45
+
+.dappGuardrailField
+  display grid
+  gap var(--wren-space-1)
+  margin-bottom var(--wren-space-3)
+
+  > span
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+
+  input,
+  select,
+  textarea
+    width 100%
+    min-height 44px
+    padding var(--wren-space-2)
+
+.dappGuardrailToggleField
+  min-width 0
+  margin 0 0 var(--wren-space-3)
+  padding var(--wren-space-2)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+
+  legend
+    width 100%
+    display flex
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-2)
+    padding 0
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+
+  > input,
+  > textarea
+    width 100%
+    min-height 44px
+    margin-top var(--wren-space-2)
+    padding var(--wren-space-2)
+
+.dappGuardrailFieldDetail
+  display block
+  padding-top var(--wren-space-1)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  line-height 1.4
+
+.dappGuardrailMessage
+  margin-bottom var(--wren-space-2)
+  padding var(--wren-space-2)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  overflow-wrap anywhere
+  font-size var(--wren-type-small)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.dappGuardrailMessage-status
+  color var(--wren-text-secondary)
+
+.dappGuardrailMessage-alert
+  border-color var(--wren-danger)
+  color var(--wren-danger)
+  background var(--wren-danger-soft)
+
+.dappGuardrailActions,
+.dappGuardrailConfirmActions
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-2)
+
+.dappGuardrailActions
+  grid-template-columns repeat(auto-fit, minmax(150px, 1fr))
+
+  button.wrenControl
+    width 100%
+    min-height 44px
+
+.dappGuardrailConfirm
+  display grid
+  gap var(--wren-space-2)
+  margin-bottom var(--wren-space-2)
+  padding var(--wren-space-2)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-overlay)
+
+  strong
+    color var(--wren-text-primary)
+
+  > span
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-caption)
+
+  button.wrenControl
+    width 100%
+    min-height 44px
+
+@media (max-width: 540px)
+  .dappGuardrailEditorHeader,
+  .dappGuardrailEvidence > div
+    grid-template-columns 1fr
+
+  .dappGuardrailEditorHeader
+    display grid
+
+  .dappGuardrailActions,
+  .dappGuardrailConfirmActions
+    grid-template-columns 1fr

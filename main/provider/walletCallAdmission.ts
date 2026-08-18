@@ -142,6 +142,7 @@ export function admitWalletCallBatch(
       chainId: batch.data.chainId,
       atomic: false,
       calls: calls.map((call) => ({ ...call })),
+      approvals: [],
       preparation: { status: 'pending' },
       simulation: { status: 'pending', calls: [] }
     }

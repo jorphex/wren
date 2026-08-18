@@ -39,6 +39,7 @@ beforeEach(() => {
     store.set('view', transitionNotification(store('view'), type, data, options))
   })
   store.removeNativePeerCredential = jest.fn()
+  store.removeDappGuardrailsForPrincipalOrigins = jest.fn()
   store.toggleAccess = jest.fn()
 })
 

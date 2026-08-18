@@ -24,6 +24,7 @@ export type { AddressBook, AddressBookEntry } from './types/addressBook'
 export type { Balance } from './types/balance'
 export type { WithTokenId, Token } from './types/token'
 export type { Dapp } from './types/dapp'
+export type { DappGuardrail, DappGuardrails } from './types/dappGuardrail'
 export type { ExtensionCredential } from './types/extensionCredential'
 export type { NativeCurrency } from './types/nativeCurrency'
 export type { Gas, GasFees } from './types/gas'
@@ -206,6 +207,7 @@ const mainState = {
   addressBook: main('addressBook', {}),
   ...(persistedMigrationVersion < 7 && get('addresses') !== undefined ? { addresses: get('addresses') } : {}),
   permissions: main('permissions', {}),
+  dappGuardrails: main('dappGuardrails', {}),
   balances: {},
   tokens: main('tokens', { custom: [], known: {} }),
   rates: {}, // main('rates', {}),

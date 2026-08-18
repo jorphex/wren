@@ -32,7 +32,7 @@ interface WalletCallLifecycleAccounts {
 export interface WalletCallLifecycleDependencies {
   ledger: WalletCallLifecycleLedger
   accounts: WalletCallLifecycleAccounts
-  execute(input: Readonly<PreparedWalletCallExecutionSnapshot>): Promise<readonly string[]>
+  execute(input: Readonly<PreparedWalletCallExecutionSnapshot>, handlerId: string): Promise<readonly string[]>
   reportError?(error: Error): void
 }
 
@@ -207,7 +207,7 @@ export class WalletCallLifecycleController {
     }
 
     try {
-      const hashes = await this.execute(snapshot)
+      const hashes = await this.execute(snapshot, handlerId)
       this.safeSettle(snapshot.account, handlerId)
       return hashes
     } catch (error) {

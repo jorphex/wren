@@ -77,6 +77,7 @@ beforeEach(() => {
     delete grants[originId]
     store.set('main.permissions', account, grants)
   })
+  store.removeDappGuardrailsForPrincipalOrigins = jest.fn()
   accounts.getSelectedAddresses.mockClear()
   accounts.rejectUnapprovedRequestsForOrigins.mockClear()
   provider.accountsChanged.mockClear()
@@ -259,6 +260,7 @@ it('rejects ungranted first-access requests when Companion access is revoked', (
 
   revokeCompanionAccess(pairing.fingerprint)
 
+  expect(store.removeDappGuardrailsForPrincipalOrigins).toHaveBeenCalledWith(['companion'])
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(granted, ['companion'])
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(pendingOnly, ['companion'])
   expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalledWith(

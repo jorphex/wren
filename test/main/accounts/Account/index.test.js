@@ -2566,6 +2566,24 @@ describe('#signTransaction', () => {
     expect(signer.signTransaction).not.toHaveBeenCalled()
   })
 
+  it('fails closed at the final transaction guardrail boundary before invoking the signer', async () => {
+    const callback = jest.fn()
+    const rawTx = validTransaction()
+    const signer = { addresses: [accountState.address], signTransaction: jest.fn() }
+    const guardrailError = Object.assign(new Error('Dapp guardrail changed before signing'), { code: 4100 })
+    account.signer = 'signer-id'
+    signers.get.mockReturnValue(signer)
+    addReviewedTransaction(rawTx)
+
+    account.signTransaction(rawTx, callback, () => {
+      throw guardrailError
+    })
+    await flushPromises()
+
+    expect(callback).toHaveBeenCalledWith(guardrailError)
+    expect(signer.signTransaction).not.toHaveBeenCalled()
+  })
+
   it('uses the reviewed batch evidence when signing each prepared wallet call', async () => {
     const callback = jest.fn()
     const request = readyWalletCallsRequest('sign-reviewed-wallet-call')
@@ -2630,4 +2648,29 @@ describe('signer address ownership', () => {
     )
     expect(signer[method]).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ['message', (callback, beforeSign) => account.signMessage('hello', callback, beforeSign), 'signMessage'],
+    [
+      'typed data',
+      (callback, beforeSign) => account.signTypedData({ data: {}, version: 'V4' }, callback, beforeSign),
+      'signTypedData'
+    ]
+  ])(
+    'fails closed at the final %s guardrail boundary before invoking the signer',
+    (_label, invoke, method) => {
+      const callback = jest.fn()
+      const guardrailError = Object.assign(new Error('Dapp guardrail changed before signing'), { code: 4100 })
+      const signer = { addresses: [accountState.address], [method]: jest.fn() }
+      account.signer = 'signer-id'
+      signers.get.mockReturnValueOnce(signer)
+
+      invoke(callback, () => {
+        throw guardrailError
+      })
+
+      expect(callback).toHaveBeenCalledWith(guardrailError)
+      expect(signer[method]).not.toHaveBeenCalled()
+    }
+  )
 })

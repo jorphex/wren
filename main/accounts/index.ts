@@ -1332,7 +1332,7 @@ export class Accounts extends EventEmitter {
       throw new Error('Request is waiting for review')
     }
     const request = currentAccount?.getActiveReviewRequest(reqId) as
-      (TransactionRequest | PermitSignatureRequest) | undefined
+      (TransactionRequest | PermitSignatureRequest | WalletCallsRequest) | undefined
     if (currentAccount && request && request.status === undefined) {
       const approval = (request.approvals || []).find((a) => a.type === approvalType)
 
@@ -1570,7 +1570,8 @@ export class Accounts extends EventEmitter {
             this.applyReplacementFees(currentAccount, request)
             currentAccount.update()
             resolve()
-          }
+          },
+          { replacement }
         )
       })
     } finally {
@@ -1749,24 +1750,26 @@ export class Accounts extends EventEmitter {
     currentAccount.getCoinbase(cb)
   }
 
-  signMessage(address: Address, message: string, cb: Callback<string>) {
+  signMessage(address: Address, message: string, cb: Callback<string>, beforeSign?: () => void) {
     const currentAccount = this.current()
 
     if (!currentAccount) return cb(new Error('No Account Selected'))
     if (address.toLowerCase() !== currentAccount.getSelectedAddress().toLowerCase())
       return cb(new Error('signMessage: Wrong Account Selected'))
 
-    currentAccount.signMessage(message, cb)
+    if (beforeSign) currentAccount.signMessage(message, cb, beforeSign)
+    else currentAccount.signMessage(message, cb)
   }
 
-  signTypedData(address: Address, typedMessage: TypedMessage, cb: Callback<string>) {
+  signTypedData(address: Address, typedMessage: TypedMessage, cb: Callback<string>, beforeSign?: () => void) {
     const currentAccount = this.current()
 
     if (!currentAccount) return cb(new Error('No Account Selected'))
     if (address.toLowerCase() !== currentAccount.getSelectedAddress().toLowerCase())
       return cb(new Error('signMessage: Wrong Account Selected'))
 
-    currentAccount.signTypedData(typedMessage, cb)
+    if (beforeSign) currentAccount.signTypedData(typedMessage, cb, beforeSign)
+    else currentAccount.signTypedData(typedMessage, cb)
   }
 
   signTransaction(rawTx: TransactionData, cb: Callback<string>) {
@@ -1777,7 +1780,12 @@ export class Accounts extends EventEmitter {
     return this.signTransactionForAccount(currentAccount.id, rawTx, cb)
   }
 
-  signTransactionForAccount(accountId: string, rawTx: TransactionData, cb: Callback<string>) {
+  signTransactionForAccount(
+    accountId: string,
+    rawTx: TransactionData,
+    cb: Callback<string>,
+    beforeSign?: () => void
+  ) {
     if (typeof accountId !== 'string') return cb(new Error('Invalid signing account'))
 
     const account = this.accounts[accountId.toLowerCase()]
@@ -1789,7 +1797,8 @@ export class Accounts extends EventEmitter {
 
     if (!matchesAccount) return cb(new Error('Transaction does not match signing account'))
 
-    account.signTransaction(rawTx, cb)
+    if (beforeSign) account.signTransaction(rawTx, cb, beforeSign)
+    else account.signTransaction(rawTx, cb)
   }
 
   claimWalletCallsRequest(
@@ -2201,6 +2210,37 @@ export class Accounts extends EventEmitter {
     const account = this.accounts[accountId.toLowerCase()]
     if (!account) throw new Error('Could not locate request account')
     return account.refreshRequestAddressSafety(handlerId)
+  }
+
+  syncDappGuardrailApproval(req: AnyAccountRequest, data?: Record<string, unknown>) {
+    const account = this.accounts[req.account.toLowerCase()]
+    if (!account) throw new Error('Could not locate guardrail request account')
+    if (
+      req.type !== 'transaction' &&
+      req.type !== 'walletCalls' &&
+      req.type !== 'sign' &&
+      req.type !== 'signTypedData' &&
+      req.type !== 'signErc20Permit'
+    ) {
+      throw new Error('Request type does not support dapp guardrails')
+    }
+    account.syncDappGuardrailApproval(req, data)
+  }
+
+  dappGuardrailRequests(accountId: string, originId: string) {
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account) return []
+    return Object.values(account.requests).filter(
+      (request) =>
+        request.origin === originId &&
+        (request.type === 'transaction' ||
+          request.type === 'walletCalls' ||
+          request.type === 'sign' ||
+          request.type === 'signTypedData' ||
+          request.type === 'signErc20Permit') &&
+        (request.status === undefined ||
+          (request.type === 'walletCalls' && Boolean(request.recoverableError) && !request.locked))
+    )
   }
 
   addRequest(req: AnyAccountRequest, res?: RPCRequestCallback) {

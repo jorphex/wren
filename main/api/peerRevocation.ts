@@ -22,6 +22,7 @@ export function revokeNativePeerAccess(
   const nativeOriginIds = Object.entries(origins)
     .filter(([, origin]) => origin.provenance === 'native' && origin.sourceId === fingerprint)
     .map(([originId]) => originId)
+  requireStoreAction('removeDappGuardrailsForPrincipalOrigins')(nativeOriginIds)
   if (nativeOriginIds.length === 0) return []
 
   const nativeOrigins = new Set(nativeOriginIds)
@@ -31,15 +32,18 @@ export function revokeNativePeerAccess(
     ...Object.keys(permissions)
   ])
   const selected = accounts.getSelectedAddresses()
-  return [...accountIds].flatMap((account) => {
+  const revoked = [...accountIds].flatMap((account) => {
     const grants = permissions[account] || {}
     const originIds = Object.keys(grants).filter((originId) => nativeOrigins.has(originId))
     originIds.forEach((originId) => requireStoreAction('toggleAccess')(account, originId, false))
     accounts.rejectUnapprovedRequestsForOrigins(account, nativeOriginIds)
     if (originIds.length === 0) return []
+    return [{ account, originIds }]
+  })
+  revoked.forEach(({ account, originIds }) => {
     if (selected.some((address) => address.toLowerCase() === account.toLowerCase())) {
       provider.accountsChanged(selected, originIds)
     }
-    return [{ account, originIds }]
   })
+  return revoked
 }

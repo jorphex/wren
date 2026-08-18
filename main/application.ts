@@ -37,6 +37,7 @@ import operationLifecycleProjectionRuntime from './operationLifecycle/projection
 import walletCallBatchLedger from './provider/walletCallLedger'
 import { showWalletCallStatus } from './provider/walletCallStatusView'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
+import { applyDappGuardrailRendererAction } from './provider/dappGuardrailActions'
 import { applyOriginChainRendererAction } from './provider/originChainActions'
 import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
@@ -578,12 +579,28 @@ app.on('ready', () => {
 onRenderer('tray:action', (e, action, ...args) => {
   const storeAction = typeof action === 'string' ? store[action] : undefined
   if (typeof storeAction === 'function') {
+    if (action === 'saveDappGuardrail' || action === 'removeDappGuardrail') {
+      return applyDappGuardrailRendererAction(action, args[0], {
+        getAccount: (account) => store('main.accounts', account),
+        getPermission: (account, originId) => store('main.permissions', account, originId),
+        getOrigin: (originId) => store('main.origins', originId),
+        getChain: (chainId) => store('main.networks.ethereum', Number(BigInt(chainId))),
+        getCompanionCredential: (fingerprint) => store('main.extensionCredentials', fingerprint),
+        getNativeCredential: (fingerprint) => store('main.nativePeerCredentials', fingerprint),
+        getGuardrails: () => store('main.dappGuardrails') || {},
+        save: (guardrail) => requireStoreAction('saveDappGuardrail')(guardrail),
+        remove: (request) => requireStoreAction('removeDappGuardrail')(request),
+        onPolicyChanged: (account, originId) => provider.refreshDappGuardrails(account, originId)
+      })
+    }
     if ((action === 'toggleAccess' || action === 'clearPermissions') && typeof args[0] === 'string') {
       return applyAccountPermissionRendererAction(action, args, {
         accounts,
         provider,
         getPermissions: (address) => store('main.permissions', address) || {},
-        mutate: (address, ...mutationArgs) => storeAction(address, ...mutationArgs)
+        mutate: (address, ...mutationArgs) => storeAction(address, ...mutationArgs),
+        removeGuardrails: (address, originIds) =>
+          requireStoreAction('removeDappGuardrailsForOrigins')(address, originIds)
       })
     }
     if (action === 'switchOriginChain') {

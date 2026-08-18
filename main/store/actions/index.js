@@ -22,6 +22,22 @@ function switchChainForOrigins(origins, oldChainId, newChainId) {
   })
 }
 
+function withoutGuardrailChain(guardrails = {}, chainId) {
+  return Object.fromEntries(
+    Object.entries(guardrails).flatMap(([account, origins]) => {
+      const nextOrigins = Object.fromEntries(
+        Object.entries(origins).flatMap(([originId, chains]) => {
+          const nextChains = Object.fromEntries(
+            Object.entries(chains).filter(([storedChainId]) => storedChainId !== chainId)
+          )
+          return Object.keys(nextChains).length ? [[originId, nextChains]] : []
+        })
+      )
+      return Object.keys(nextOrigins).length ? [[account, nextOrigins]] : []
+    })
+  )
+}
+
 function validateNetworkSettings(network) {
   const networkId = parseInt(network.id)
 
@@ -165,6 +181,66 @@ module.exports = {
       return next
     })
   },
+  saveDappGuardrail: (u, guardrail) => {
+    u(
+      'main.dappGuardrails',
+      guardrail.account,
+      guardrail.originId,
+      String(guardrail.chainId),
+      () => guardrail
+    )
+  },
+  removeDappGuardrail: (u, { account, originId, chainId }) => {
+    u('main.dappGuardrails', (guardrails = {}) => {
+      const accountGuardrails = guardrails[account]
+      const originGuardrails = accountGuardrails?.[originId]
+      if (!originGuardrails || !Object.prototype.hasOwnProperty.call(originGuardrails, chainId)) {
+        return guardrails
+      }
+
+      const nextOriginGuardrails = { ...originGuardrails }
+      delete nextOriginGuardrails[chainId]
+      const nextAccountGuardrails = { ...accountGuardrails }
+      if (Object.keys(nextOriginGuardrails).length > 0) nextAccountGuardrails[originId] = nextOriginGuardrails
+      else delete nextAccountGuardrails[originId]
+      const nextGuardrails = { ...guardrails }
+      if (Object.keys(nextAccountGuardrails).length > 0) nextGuardrails[account] = nextAccountGuardrails
+      else delete nextGuardrails[account]
+      return nextGuardrails
+    })
+  },
+  removeDappGuardrailsForOrigins: (u, account, originIds) => {
+    const removedOriginIds = new Set(originIds)
+    if (removedOriginIds.size === 0) return
+    u('main.dappGuardrails', (guardrails = {}) => {
+      const accountGuardrails = guardrails[account]
+      if (!accountGuardrails) return guardrails
+      const nextAccountGuardrails = Object.fromEntries(
+        Object.entries(accountGuardrails).filter(([originId]) => !removedOriginIds.has(originId))
+      )
+      if (Object.keys(nextAccountGuardrails).length === Object.keys(accountGuardrails).length) {
+        return guardrails
+      }
+      const nextGuardrails = { ...guardrails }
+      if (Object.keys(nextAccountGuardrails).length > 0) nextGuardrails[account] = nextAccountGuardrails
+      else delete nextGuardrails[account]
+      return nextGuardrails
+    })
+  },
+  removeDappGuardrailsForPrincipalOrigins: (u, originIds) => {
+    const removedOriginIds = new Set(originIds)
+    if (removedOriginIds.size === 0) return
+    u('main.dappGuardrails', (guardrails = {}) =>
+      Object.fromEntries(
+        Object.entries(guardrails).flatMap(([account, accountGuardrails]) => {
+          const nextAccountGuardrails = Object.fromEntries(
+            Object.entries(accountGuardrails).filter(([originId]) => !removedOriginIds.has(originId))
+          )
+          return Object.keys(nextAccountGuardrails).length > 0 ? [[account, nextAccountGuardrails]] : []
+        })
+      )
+    )
+  },
   setAccountCloseLock: (u, value) => {
     u('main.accountCloseLock', () => Boolean(value))
   },
@@ -274,6 +350,13 @@ module.exports = {
     u('main.accounts', (accounts) => {
       delete accounts[id]
       return accounts
+    })
+    u('main.dappGuardrails', (guardrails = {}) => {
+      const account = typeof id === 'string' ? id.toLowerCase() : ''
+      if (!account || !Object.prototype.hasOwnProperty.call(guardrails, account)) return guardrails
+      const next = { ...guardrails }
+      delete next[account]
+      return next
     })
   },
   removeSigner: (u, id) => {
@@ -486,6 +569,10 @@ module.exports = {
           }
         })
 
+        if (net.type === 'ethereum' && net.id !== updatedNetwork.id) {
+          main.dappGuardrails = withoutGuardrailChain(main.dappGuardrails, `0x${net.id.toString(16)}`)
+        }
+
         const existingNetworkMeta = main.networksMeta[updatedNetwork.type][updatedNetwork.id] || {}
         const networkCurrency = existingNetworkMeta.nativeCurrency || {}
 
@@ -526,6 +613,9 @@ module.exports = {
         if (main.networks[net.type]) {
           delete main.networks[net.type][net.id]
           delete main.networksMeta[net.type][net.id]
+        }
+        if (net.type === 'ethereum') {
+          main.dappGuardrails = withoutGuardrailChain(main.dappGuardrails, `0x${net.id.toString(16)}`)
         }
 
         return main

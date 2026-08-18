@@ -1,5 +1,6 @@
 import {
   enforceRequestOriginAuthorization,
+  isCurrentRequestOriginAuthorized,
   isRequestOriginAuthorized
 } from '../../../main/rpc/requestAuthorization'
 import { createAccountPermission } from '../../../main/provider/permissions'
@@ -16,6 +17,19 @@ const request = {
   payload: { method: 'eth_sendTransaction' }
 }
 const permission = createAccountPermission({ account, chains: [1], handlerId: originId, origin })
+const directPrincipalState = {
+  origins: {
+    [originId]: {
+      chain: { id: 1, type: 'ethereum' as const },
+      name: origin,
+      provenance: 'direct' as const,
+      sessionOnly: false,
+      session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+    }
+  },
+  extensionCredentials: {},
+  nativePeerCredentials: {}
+}
 
 it('authorizes a request only while its external origin permission is enabled', () => {
   expect(
@@ -69,6 +83,83 @@ it('allows the application-owned Send surface without a persisted external grant
       {}
     )
   ).toBe(true)
+})
+
+it('keeps a locally-created cancel recoverable after its original dapp is disconnected', () => {
+  const cancel = {
+    ...request,
+    replacement: { kind: 'cancel' }
+  }
+
+  expect(isRequestOriginAuthorized(cancel, {})).toBe(true)
+  expect(
+    isCurrentRequestOriginAuthorized(
+      cancel,
+      {},
+      {
+        origins: {},
+        extensionCredentials: {},
+        nativePeerCredentials: {}
+      }
+    )
+  ).toBe(true)
+})
+
+it('does not exempt speed-ups or non-transaction requests from origin authorization', () => {
+  expect(isRequestOriginAuthorized({ ...request, replacement: { kind: 'speed' } }, {})).toBe(false)
+  expect(
+    isRequestOriginAuthorized({ ...request, type: 'message', replacement: { kind: 'cancel' } }, {})
+  ).toBe(false)
+})
+
+it('revalidates the exact direct principal and permission at the final signer boundary', () => {
+  expect(isCurrentRequestOriginAuthorized(request, { [originId]: permission }, directPrincipalState)).toBe(
+    true
+  )
+  expect(isCurrentRequestOriginAuthorized(request, {}, directPrincipalState)).toBe(false)
+  expect(
+    isCurrentRequestOriginAuthorized(
+      request,
+      { [originId]: permission },
+      {
+        ...directPrincipalState,
+        origins: {
+          [originId]: { ...directPrincipalState.origins[originId], name: 'https://forged.example' }
+        }
+      }
+    )
+  ).toBe(false)
+})
+
+it('rejects a stale source-bound permission when its credential is absent', () => {
+  const sourceId = 'A'.repeat(43)
+  const companionOriginId = originIdForInvoker(origin, { provenance: 'companion', sourceId })
+  const companionPermission = createAccountPermission({
+    account,
+    chains: [1],
+    handlerId: companionOriginId,
+    origin
+  })
+  expect(
+    isCurrentRequestOriginAuthorized(
+      { ...request, origin: companionOriginId },
+      { [companionOriginId]: companionPermission },
+      {
+        origins: {
+          [companionOriginId]: {
+            chain: { id: 1, type: 'ethereum' },
+            name: origin,
+            provenance: 'companion',
+            sourceId,
+            sessionOnly: false,
+            session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+          }
+        },
+        extensionCredentials: {},
+        nativePeerCredentials: {}
+      }
+    )
+  ).toBe(false)
 })
 
 it('rejects an unauthorized approval against its stored account and handler', () => {

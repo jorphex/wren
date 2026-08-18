@@ -14,7 +14,12 @@ interface WalletCallRuntimeLedger {
 }
 
 interface WalletCallRuntimeAccounts {
-  signTransactionForAccount(accountId: string, transaction: TransactionData, callback: Callback<string>): void
+  signTransactionForAccount(
+    accountId: string,
+    transaction: TransactionData,
+    callback: Callback<string>,
+    beforeSign?: () => void
+  ): void
 }
 
 interface WalletCallRuntimeConnection {
@@ -27,6 +32,7 @@ export interface WalletCallRuntimeDependencies {
   ledger: WalletCallRuntimeLedger
   evidenceAvailable?(): void
   recordSubmittedTarget?(address: string, submittedAt: number): void
+  assertBeforeSign?(): void
 }
 
 function runtimeError(error: unknown, fallback: string) {
@@ -63,7 +69,8 @@ export async function executeWalletCallRuntime(
     typeof dependencies.ledger.fail !== 'function' ||
     (dependencies.evidenceAvailable !== undefined && typeof dependencies.evidenceAvailable !== 'function') ||
     (dependencies.recordSubmittedTarget !== undefined &&
-      typeof dependencies.recordSubmittedTarget !== 'function')
+      typeof dependencies.recordSubmittedTarget !== 'function') ||
+    (dependencies.assertBeforeSign !== undefined && typeof dependencies.assertBeforeSign !== 'function')
   ) {
     throw new Error('Invalid wallet-call runtime dependencies')
   }
@@ -78,6 +85,7 @@ export async function executeWalletCallRuntime(
   const failBatch = dependencies.ledger.fail.bind(dependencies.ledger)
   const evidenceAvailable = dependencies.evidenceAvailable?.bind(dependencies)
   const recordSubmittedTarget = dependencies.recordSubmittedTarget?.bind(dependencies)
+  const assertBeforeSign = dependencies.assertBeforeSign?.bind(dependencies)
   const notifyEvidenceAvailable = () => {
     try {
       evidenceAvailable?.()
@@ -115,7 +123,7 @@ export async function executeWalletCallRuntime(
         }
 
         try {
-          signTransactionForAccount(account, { ...transaction }, complete)
+          signTransactionForAccount(account, { ...transaction }, complete, assertBeforeSign)
         } catch (error) {
           complete(runtimeError(error, 'Wallet-call signing failed'))
         }

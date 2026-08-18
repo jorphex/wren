@@ -167,7 +167,7 @@ it('publishes the id after claim and then executes and settles the exact request
 
   expect(respond).toHaveBeenCalledWith({ id: 7, jsonrpc: '2.0', result: { id: admitted.id } })
   expect(events).toEqual(['request', 'claim', 'response', 'execute', 'success'])
-  expect(execute).toHaveBeenCalledWith(expect.objectContaining({ id: admitted.id, account }))
+  expect(execute).toHaveBeenCalledWith(expect.objectContaining({ id: admitted.id, account }), 'handler-id')
   expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(account, 'handler-id', undefined)
 })
 

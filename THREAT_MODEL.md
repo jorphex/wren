@@ -173,6 +173,13 @@ arbitrary calldata, declines, or failed pre-broadcast work; clearing Activity cl
 the index, and profile backup excludes it. These warnings are evidence for review,
 not an assertion that a destination is safe or malicious.
 
+Per-dapp guardrails are also unencrypted relationship and policy metadata: exact
+account, invoker principal, chain, allowlists, ceilings, mode, expiry, timestamps, and
+revision. Direct-origin policies can be included in encrypted profile backups;
+session-only, Companion-bound, native-bound, managed, and internal policies are
+excluded. Revoking the associated permission or source credential removes its
+policies. Guardrails do not contain request calldata or typed data.
+
 #### Profile backups
 
 User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
@@ -274,6 +281,30 @@ than leaving a phantom pending batch.
 These checks prevent a known-unfunded signing attempt but do not reserve funds or
 eliminate races with other pending transactions, RPC disagreement, reorgs, or
 fees changing after the check.
+
+#### Per-dapp guardrails
+
+Guardrails are a local restriction layered below the finite dapp permission. They
+never grant access, suppress normal review, rewrite a request, auto-sign, or represent
+a session key. Main validates exact account, origin principal, enabled permission
+chain, and source credential before authoring a policy. Policies are evaluated when a
+transaction, signature, permit, or non-atomic Wallet Call batch enters review, when a
+queued policy changes, and synchronously immediately before each signer invocation.
+That final boundary also requires the exact current permission, method, chain, origin
+provenance, and Companion/native source credential. Block or revoked-authorization
+failures return `4100`; warning violations require a new explicit approval bound to a
+fingerprint of principal, policy, normalized intent, and violations.
+
+Intent extraction is local and bounded. Top-level destinations and typed-data
+verifying contracts are targets; recognized ERC-20 transfers, EIP-2612, Permit2, and
+ERC-3009 contribute token amounts; recognized approvals contribute spenders; Wallet
+Calls aggregate all calls. Wren does not fetch remote ABI evidence to widen a policy.
+Opaque or ambiguous fields violate only configured restrictions that depend on those
+fields. Enforcement is fail-closed but cannot prove contract semantics, prevent a
+malicious allowed contract from moving additional assets, or reserve onchain state.
+The policy can change between user review and signing, so Wren rechecks at the signer
+boundary and stops remaining sequential calls on drift. A user-initiated Cancel is
+exempt so a dapp policy cannot trap transaction recovery; Speed Up remains constrained.
 
 #### Remote services and content
 

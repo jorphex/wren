@@ -55,6 +55,9 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
+- Lets users add optional local per-dapp, per-account, per-chain guardrails for
+  destinations, approval spenders, native/token amounts, and expiry. Guardrails block
+  or require an extra warning acknowledgement; normal request review still applies.
 - Stores local contacts with user-attested Saved or Verified out-of-band provenance,
   keeps the full address visible during review, and offers an explicit Save contact
   action after confirmation without building a recipient history.

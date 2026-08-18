@@ -101,7 +101,7 @@ interface SignerOptions {
   type?: string
 }
 
-type ManagedApprovalRequest = TransactionRequest | SignatureRequest
+type ManagedApprovalRequest = TransactionRequest | SignatureRequest | WalletCallsRequest
 
 interface AccountOptions {
   address?: Address
@@ -720,6 +720,11 @@ class FrameAccount {
     }
 
     req.approvals = [...(req.approvals || []), approval]
+  }
+
+  syncDappGuardrailApproval(req: ManagedApprovalRequest, data?: Record<string, unknown>) {
+    this.syncManagedApproval(req, ApprovalType.DappGuardrailWarning, data)
+    if (this.requests[req.handlerId] === req) this.update()
   }
 
   private syncAddressSafety(req: TransactionRequest | WalletCallsRequest) {
@@ -1723,20 +1728,25 @@ class FrameAccount {
     this.accountObserver.remove()
   }
 
-  signMessage(message: string, cb: Callback<string>) {
+  signMessage(message: string, cb: Callback<string>, beforeSign?: () => void) {
     if (!message) return cb(new Error('No message to sign'))
     if (this.signer) {
       const s = signers.get(this.signer)
       if (!s) return cb(new Error(`Cannot find signer for this account`))
       const index = s.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
       if (index === -1) return cb(new Error(`Signer cannot sign for this address`))
+      try {
+        beforeSign?.()
+      } catch (error) {
+        return cb(error instanceof Error ? error : new Error('Dapp guardrail changed before signing'))
+      }
       s.signMessage(index, message, cb)
     } else {
       cb(new Error('No signer found for this account'))
     }
   }
 
-  signTypedData(typedMessage: TypedMessage, cb: Callback<string>) {
+  signTypedData(typedMessage: TypedMessage, cb: Callback<string>, beforeSign?: () => void) {
     if (!typedMessage.data) return cb(new Error('No data to sign'))
     if (typeof typedMessage.data !== 'object') return cb(new Error('Data to sign has the wrong format'))
     if (this.signer) {
@@ -1744,13 +1754,18 @@ class FrameAccount {
       if (!s) return cb(new Error(`Cannot find signer for this account`))
       const index = s.addresses.map((a) => a.toLowerCase()).indexOf(this.address)
       if (index === -1) return cb(new Error(`Signer cannot sign for this address`))
+      try {
+        beforeSign?.()
+      } catch (error) {
+        return cb(error instanceof Error ? error : new Error('Dapp guardrail changed before signing'))
+      }
       s.signTypedData(index, typedMessage, cb)
     } else {
       cb(new Error('No signer found for this account'))
     }
   }
 
-  signTransaction(rawTx: TransactionData, cb: Callback<string>) {
+  signTransaction(rawTx: TransactionData, cb: Callback<string>, beforeSign?: () => void) {
     // if(index === typeof 'object' && cb === typeof 'undefined' && typeof rawTx === 'function') cb = rawTx; rawTx = index; index = 0;
     this.validateTransaction(rawTx, (err) => {
       if (err) return cb(err)
@@ -1790,6 +1805,7 @@ class FrameAccount {
               signerIdentity
             )
           }
+          beforeSign?.()
           setPhase('sending-to-signer')
           if (s.type !== 'trezor') setPhase('waiting-for-signer')
           s.signTransaction(

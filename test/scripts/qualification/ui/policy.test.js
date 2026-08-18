@@ -526,6 +526,54 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
   })
 })
 
+it('qualifies account-scoped guardrails across shell geometry, scale, provenance, busy, and error states', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const editors = scenarios.filter(({ id }) => id.startsWith('tray-account-guardrail-editor-'))
+  const native = scenarios.find(({ id }) => id === 'tray-account-guardrail-native-source-full-1')
+  const busy = scenarios.find(({ id }) => id === 'tray-account-guardrail-save-busy-full-1')
+  const error = scenarios.find(({ id }) => id === 'tray-account-guardrail-save-error-full-1')
+
+  expect(editors).toHaveLength(6)
+  for (const scale of INTERFACE_SCALES) {
+    expect(editors.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        `tray-account-guardrail-editor-full-${scale}`,
+        `tray-account-guardrail-editor-short-${scale}`
+      ])
+    )
+  }
+  expect(
+    editors.every(
+      ({ expectedInitialFocus }) => expectedInitialFocus === 'When a request exceeds a restriction'
+    )
+  ).toBe(true)
+  expect(native.requiredText).toEqual(
+    expect.arrayContaining(['22222222-2222-4222-8222-222222222222', 'Native app · bound to the source below'])
+  )
+  expect(busy.ready).toBe('.dappGuardrailConfirm[aria-busy="true"]')
+  expect(error.ready).toBe('.dappGuardrailMessage-alert')
+
+  const state = fixtureFor(editors[0])
+  const account = QUALIFICATION_ACCOUNT.toLowerCase()
+  const originId = '11111111-1111-4111-8111-111111111111'
+  expect(state.windows.panel.nav[0]).toEqual({
+    view: 'expandedModule',
+    data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Connected apps' }
+  })
+  expect(state.main.permissions[QUALIFICATION_ACCOUNT][originId]).toMatchObject({
+    handlerId: originId,
+    caveats: [{ value: { account: QUALIFICATION_ACCOUNT, chains: ['0x1'] } }]
+  })
+  expect(state.main.dappGuardrails[account][originId]['0x1']).toMatchObject({
+    account,
+    originId,
+    chainId: '0x1',
+    mode: 'block',
+    targets: ['0x4444444444444444444444444444444444444444'],
+    spenders: []
+  })
+})
+
 it('forces the dashboard and tray capped-width fallback layouts at 150%', () => {
   const scenarios = scenarioMatrix()
   const dashboard = scenarios.find(({ id }) => id === 'dash-delegation-capped-1.5')

@@ -335,7 +335,7 @@ it('migrates version 52 Pylon presets through application state initialization',
 })
 
 it('keeps a current safe profile migration-invariant and reload-stable', async () => {
-  const fixture = loadFixture('v65-safe-current-state.json')
+  const fixture = loadFixture('v66-safe-current-state.json')
   const source = clone(fixture.state)
 
   expect(migrations.apply(clone(source))).toEqual(source)
@@ -347,6 +347,7 @@ it('keeps a current safe profile migration-invariant and reload-stable', async (
   expect(migrated.main.networks.ethereum[31337]).toMatchObject(source.main.networks.ethereum[31337])
   expect(migrated.main.accounts[fixtureAccount]).toMatchObject(source.main.accounts[fixtureAccount])
   expect(migrated.main.addressBook).toEqual(source.main.addressBook)
+  expect(migrated.main.dappGuardrails).toEqual(source.main.dappGuardrails)
   expect(mode).toBe(0o600)
   expect(reloaded.main).toEqual(migrated.main)
 })

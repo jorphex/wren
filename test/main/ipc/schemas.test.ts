@@ -40,6 +40,38 @@ test('allows only an argument-free activity clear action', () => {
   expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity', true]).success).toBe(false)
 })
 
+test('strictly validates dapp guardrail action payloads without renderer-owned metadata', () => {
+  const target = '0x2222222222222222222222222222222222222222'
+  const save = {
+    account: address,
+    originId: handlerId,
+    chainId: '0x1',
+    body: { mode: 'block', targets: [target] }
+  }
+  expect(parse('event', 'tray:action', ['saveDappGuardrail', save])).toEqual(['saveDappGuardrail', save])
+  expect(
+    parse('event', 'tray:action', [
+      'removeDappGuardrail',
+      { account: address, originId: handlerId, chainId: '0x1' }
+    ])
+  ).toEqual(['removeDappGuardrail', { account: address, originId: handlerId, chainId: '0x1' }])
+  expect(
+    parseRendererIpcArgs('event', 'tray:action', [
+      'saveDappGuardrail',
+      { ...save, body: { ...save.body, revision: 4 } }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('event', 'tray:action', ['saveDappGuardrail', { ...save, chainId: 1 }]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('event', 'tray:action', [
+      'saveDappGuardrail',
+      { ...save, body: { mode: 'warn', targets: [target, address] } }
+    ]).success
+  ).toBe(false)
+})
+
 test('does not coerce chain or token identifiers', () => {
   expect(parseRendererIpcArgs('invoke', 'tray:getTokenDetails', [address, 1]).success).toBe(true)
   expect(parseRendererIpcArgs('invoke', 'tray:getTokenDetails', [address, '1']).success).toBe(false)

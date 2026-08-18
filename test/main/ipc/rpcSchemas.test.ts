@@ -275,6 +275,20 @@ test('accepts the ERC-1967 implementation-slot approval type', () => {
   ).toBe(true)
 })
 
+test('accepts the dapp guardrail warning approval type', () => {
+  expect(
+    parseRendererRpcRequest(
+      wire(
+        1,
+        'confirmRequestApproval',
+        { handlerId, account: address, type: 'transaction' },
+        'approveDappGuardrailWarning',
+        {}
+      )
+    ).success
+  ).toBe(true)
+})
+
 test('validates companion credential revocation fingerprints', () => {
   expect(parseRendererRpcRequest(wire(1, 'revokeExtensionCredential', 'a'.repeat(43))).success).toBe(true)
   expect(parseRendererRpcRequest(wire(1, 'revokeNativePeerCredential', 'a'.repeat(43))).success).toBe(true)

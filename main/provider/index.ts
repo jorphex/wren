@@ -20,6 +20,7 @@ import accounts, {
   WalletCallsClaimEvidence,
   WalletCallsRequest
 } from '../accounts'
+import type { AnyAccountRequest } from '../accounts/types'
 import { SignerUserRejectedError } from '../signers/errors'
 
 import FrameAccount from '../accounts/Account'
@@ -70,6 +71,8 @@ import { isUnsafeRpcForwardingMethod, unsupportedRawTransactionFamily } from './
 import { getRequestSignal, inheritRequestSignal } from './requestSignal'
 import { summarizeRpcError } from '../security/rpcLogging'
 import { isRecoverableAccountCodeEvidenceError, simulateWalletCalls } from '../transaction/simulation'
+import { assertDappGuardrailReviewStable, guardrailWarningData, reviewDappGuardrail } from './dappGuardrails'
+import { isCurrentRequestOriginAuthorized } from '../rpc/requestAuthorization'
 
 import { Subscription, SubscriptionType, hasSubscriptionPermission } from './subscriptions'
 import {
@@ -255,6 +258,53 @@ export class Provider extends EventEmitter {
     this.getNonce = this.getNonce.bind(this)
   }
 
+  prepareDappGuardrailReview(request: AnyAccountRequest) {
+    const review = reviewDappGuardrail(request)
+    if (!review) return
+    request.guardrail = {
+      fingerprint: review.fingerprint,
+      mode: review.mode,
+      violations: review.violations.map(({ code, field, message }) => ({ code, field, message }))
+    }
+    const warning = guardrailWarningData(review)
+    if (typeof accounts.syncDappGuardrailApproval === 'function') {
+      accounts.syncDappGuardrailApproval(request, warning)
+    } else if (warning) {
+      throw new Error('Dapp guardrail approval state is unavailable')
+    }
+    return review
+  }
+
+  assertDappGuardrailReview(request: AnyAccountRequest) {
+    const authorized = isCurrentRequestOriginAuthorized(
+      request,
+      store('main.permissions', request.account) || {},
+      {
+        origins: store('main.origins') || {},
+        extensionCredentials: store('main.extensionCredentials') || {},
+        nativePeerCredentials: store('main.nativePeerCredentials') || {}
+      }
+    )
+    if (!authorized) {
+      throw Object.assign(new Error('Request origin is no longer authorized'), { code: 4100 })
+    }
+    return assertDappGuardrailReviewStable(request)
+  }
+
+  refreshDappGuardrails(accountId: string, originId: string) {
+    accounts.dappGuardrailRequests(accountId, originId).forEach((request) => {
+      try {
+        this.prepareDappGuardrailReview(request)
+      } catch (error) {
+        const guardrailError = error as Error
+        accounts.cancelUnapprovedRequestForAccount(accountId, request.handlerId, {
+          code: 4100,
+          message: guardrailError.message || 'Dapp guardrail blocked this request'
+        })
+      }
+    })
+  }
+
   accountsChanged(accounts: string[], originIds?: readonly string[]) {
     const address = accounts[0]
     const targetedOrigins = originIds ? new Set(originIds) : undefined
@@ -414,23 +464,28 @@ export class Provider extends EventEmitter {
     const address = signRequest.account
     const message = data.rawMessage
 
-    accounts.signMessage(address, message, (err, signed) => {
-      if (err) {
-        resError(err.message, payload, res)
-        cb(err, undefined)
-      } else {
-        const signature = signed || ''
-        this.verifySignature(signature, message, address, (err) => {
-          if (err) {
-            resError(err.message, payload, res)
-            cb(err)
-          } else {
-            res({ id: payload.id, jsonrpc: payload.jsonrpc, result: signature })
-            cb(null, signature)
-          }
-        })
-      }
-    })
+    accounts.signMessage(
+      address,
+      message,
+      (err, signed) => {
+        if (err) {
+          resError(err, payload, res)
+          cb(err, undefined)
+        } else {
+          const signature = signed || ''
+          this.verifySignature(signature, message, address, (err) => {
+            if (err) {
+              resError(err.message, payload, res)
+              cb(err)
+            } else {
+              res({ id: payload.id, jsonrpc: payload.jsonrpc, result: signature })
+              cb(null, signature)
+            }
+          })
+        }
+      },
+      () => this.assertDappGuardrailReview(signRequest)
+    )
   }
 
   approveSignTypedData(req: SignTypedDataRequest, cb: Callback<string>) {
@@ -466,27 +521,32 @@ export class Provider extends EventEmitter {
     const [address] = payload.params
     if (typeof address !== 'string') return cb(new Error('Typed signature address is missing'))
 
-    accounts.signTypedData(address, typedMessage, (err, signature = '') => {
-      if (err) {
-        resError(err.message, payload, res)
-        cb(err)
-      } else {
-        try {
-          const recoveredAddress = recoverTypedSignature({ ...typedMessage, signature })
-          if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-            throw new Error('TypedData signature verification failed')
-          }
-
-          res({ id: payload.id, jsonrpc: payload.jsonrpc, result: signature })
-          cb(null, signature)
-        } catch (e) {
-          const err = e as Error
-          resError(err.message, payload, res)
-
+    accounts.signTypedData(
+      address,
+      typedMessage,
+      (err, signature = '') => {
+        if (err) {
+          resError(err, payload, res)
           cb(err)
+        } else {
+          try {
+            const recoveredAddress = recoverTypedSignature({ ...typedMessage, signature })
+            if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+              throw new Error('TypedData signature verification failed')
+            }
+
+            res({ id: payload.id, jsonrpc: payload.jsonrpc, result: signature })
+            cb(null, signature)
+          } catch (e) {
+            const err = e as Error
+            resError(err.message, payload, res)
+
+            cb(err)
+          }
         }
-      }
-    })
+      },
+      () => this.assertDappGuardrailReview(signRequest)
+    )
   }
 
   async getL1GasCost(txData: TransactionData) {
@@ -528,58 +588,63 @@ export class Provider extends EventEmitter {
       resError(err, payload, res)
       cb(new Error(err))
     } else {
-      accounts.signTransactionForAccount(req.account, rawTx, (err, signedTx) => {
-        // Sign Transaction
-        if (err) {
-          // A fresh account-code check happens before the signer is invoked. Keep the
-          // original request responder alive when that check needs to be repeated so
-          // the user can review fresh evidence and retry the same request.
-          if (!isRecoverableAccountCodeEvidenceError(err)) resError(err, payload, res)
-          cb(err)
-        } else {
-          accounts.setTxSigned(
-            req.handlerId,
-            (err) => {
-              if (err) return cb(err)
-              let done = false
-              const cast = () => {
-                this.connection.send(
-                  {
-                    id: req.payload.id,
-                    jsonrpc: req.payload.jsonrpc,
-                    method: 'eth_sendRawTransaction',
-                    params: [signedTx]
-                  },
-                  (response) => {
-                    clearInterval(broadcastTimer)
-                    if (done) return
-                    done = true
-                    if (response.error) {
-                      resError(response.error, payload, res)
-                      cb(new Error(response.error.message))
-                    } else {
-                      if (typeof response.result !== 'string' || !TRANSACTION_HASH.test(response.result)) {
-                        const error = new Error('Invalid transaction hash response')
-                        resError(error.message, payload, res)
-                        return cb(error)
+      accounts.signTransactionForAccount(
+        req.account,
+        rawTx,
+        (err, signedTx) => {
+          // Sign Transaction
+          if (err) {
+            // A fresh account-code check happens before the signer is invoked. Keep the
+            // original request responder alive when that check needs to be repeated so
+            // the user can review fresh evidence and retry the same request.
+            if (!isRecoverableAccountCodeEvidenceError(err)) resError(err, payload, res)
+            cb(err)
+          } else {
+            accounts.setTxSigned(
+              req.handlerId,
+              (err) => {
+                if (err) return cb(err)
+                let done = false
+                const cast = () => {
+                  this.connection.send(
+                    {
+                      id: req.payload.id,
+                      jsonrpc: req.payload.jsonrpc,
+                      method: 'eth_sendRawTransaction',
+                      params: [signedTx]
+                    },
+                    (response) => {
+                      clearInterval(broadcastTimer)
+                      if (done) return
+                      done = true
+                      if (response.error) {
+                        resError(response.error, payload, res)
+                        cb(new Error(response.error.message))
+                      } else {
+                        if (typeof response.result !== 'string' || !TRANSACTION_HASH.test(response.result)) {
+                          const error = new Error('Invalid transaction hash response')
+                          resError(error.message, payload, res)
+                          return cb(error)
+                        }
+                        res(response)
+                        cb(null, response.result)
                       }
-                      res(response)
-                      cb(null, response.result)
+                    },
+                    {
+                      type: 'ethereum',
+                      id: parseInt(req.data.chainId, 16)
                     }
-                  },
-                  {
-                    type: 'ethereum',
-                    id: parseInt(req.data.chainId, 16)
-                  }
-                )
-              }
-              const broadcastTimer = setInterval(() => cast(), 1000)
-              cast()
-            },
-            req.account
-          )
-        }
-      })
+                  )
+                }
+                const broadcastTimer = setInterval(() => cast(), 1000)
+                cast()
+              },
+              req.account
+            )
+          }
+        },
+        () => this.assertDappGuardrailReview(req)
+      )
     }
   }
 
@@ -753,13 +818,25 @@ export class Provider extends EventEmitter {
   private createWalletCallLifecycle() {
     return new WalletCallLifecycleController({
       ledger: walletCallBatchLedger,
-      accounts,
-      execute: (input) =>
+      accounts: {
+        addRequestForAccount: (accountId, request, responder) => {
+          this.prepareDappGuardrailReview(request)
+          return accounts.addRequestForAccount(accountId, request, responder)
+        },
+        claimWalletCallsRequestWithResponse: (...args) =>
+          accounts.claimWalletCallsRequestWithResponse(...args),
+        settleWalletCallsRequest: (...args) => accounts.settleWalletCallsRequest(...args)
+      },
+      execute: (input, handlerId) =>
         executeWalletCallRuntime(input, {
           accounts,
           connection: this.connection,
           ledger: walletCallBatchLedger,
           evidenceAvailable: () => walletCallEvidenceRuntime.wake(),
+          assertBeforeSign: () => {
+            const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
+            this.assertDappGuardrailReview(request)
+          },
           recordSubmittedTarget: (address, submittedAt) => {
             try {
               requireStoreAction('recordOutboundAddresses')(store('main.instanceId'), [address], submittedAt)
@@ -1015,6 +1092,11 @@ export class Provider extends EventEmitter {
 
       this.requireWalletCallsReviewAuthorization(accountId, handlerId, request)
 
+      this.prepareDappGuardrailReview(request)
+      if (request.approvals.some((approval) => !approval.approved)) {
+        throw new Error('Wallet-call request approvals are incomplete')
+      }
+
       accounts.refreshRequestAddressSafety(accountId, handlerId)
 
       const preflight = await this.inspectWalletCallsPreflight(request)
@@ -1022,6 +1104,7 @@ export class Provider extends EventEmitter {
       const currentRequest = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
       if (currentRequest !== request) throw new Error('Wallet-call request changed during preflight')
       this.requireWalletCallsReviewAuthorization(accountId, handlerId, currentRequest)
+      this.assertDappGuardrailReview(currentRequest)
 
       if (preflight.reviewChanged) {
         accounts.applyWalletCallsPreflightEvidence(
@@ -1331,7 +1414,8 @@ export class Provider extends EventEmitter {
     payload: RPC.SendTransaction.Request,
     res: RPCRequestCallback,
     targetChain: Chain,
-    onQueued?: (handlerId: string) => void
+    onQueued?: (handlerId: string) => void,
+    trustedMetadata?: Pick<TransactionRequest, 'replacement'>
   ) {
     try {
       const txParams = payload.params[0]
@@ -1420,7 +1504,8 @@ export class Provider extends EventEmitter {
             feesUpdatedByUser: false,
             recipientType,
             recognizedActions: [],
-            simulation: { status: 'pending' }
+            simulation: { status: 'pending' },
+            ...(trustedMetadata?.replacement ? { replacement: trustedMetadata.replacement } : {})
           } as Omit<TransactionRequest, 'classification'>
 
           const classification = classifyTransaction(unclassifiedReq)
@@ -1434,11 +1519,10 @@ export class Provider extends EventEmitter {
           })
 
           try {
+            this.prepareDappGuardrailReview(req)
             accounts.addRequestForAccount((currentAccount as FrameAccount).id, req, requestResponder)
           } catch (error) {
-            return resError((error as Error).message, payload, (response) =>
-              this.respondToRequest(handlerId, response)
-            )
+            return resError(error as Error, payload, (response) => this.respondToRequest(handlerId, response))
           }
 
           txMetadata.approvals.forEach((approval) => {
@@ -1517,6 +1601,7 @@ export class Provider extends EventEmitter {
     })
 
     try {
+      this.prepareDappGuardrailReview(req)
       accounts.addRequest(req, _res)
     } catch (error) {
       resError(error as Error, normalizedPayload, _res)
@@ -1674,12 +1759,14 @@ export class Provider extends EventEmitter {
       }
 
       try {
+        this.prepareDappGuardrailReview(permitRequest)
         accounts.addRequest(permitRequest, requestResponder)
       } catch (error) {
         resError(error as Error, payload, requestResponder)
       }
     } else {
       try {
+        this.prepareDappGuardrailReview(req)
         accounts.addRequest(req, requestResponder)
       } catch (error) {
         resError(error as Error, payload, requestResponder)

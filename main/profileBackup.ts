@@ -9,6 +9,8 @@ import {
   validatePersistedConfiguration
 } from './profileMigration'
 import migrations from './store/migrate'
+import { DappGuardrailSchema } from '../resources/domain/dappGuardrails'
+import { FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForInvoker } from '../resources/domain/origin'
 
 const FORMAT = 'wren-profile-backup'
 const VERSION = 1
@@ -295,6 +297,66 @@ const recoveryPermissions = (value: unknown, droppedOriginIds: Set<string>) =>
     ])
   )
 
+const recoveryDappGuardrails = (
+  value: unknown,
+  accounts: Record<string, unknown>,
+  origins: Record<string, unknown>,
+  permissions: Record<string, unknown>,
+  networks: Record<string, unknown>
+) =>
+  Object.fromEntries(
+    Object.entries(recordValue(value)).flatMap(([accountKey, accountGuardrailsValue]) => {
+      if (!accounts[accountKey]) return []
+      const accountPermissions = recordValue(permissions[accountKey])
+      const retainedOrigins = Object.fromEntries(
+        Object.entries(recordValue(accountGuardrailsValue)).flatMap(([originId, chainGuardrailsValue]) => {
+          const origin = recordValue(origins[originId])
+          const permission = recordValue(accountPermissions[originId])
+          if (
+            origin['provenance'] !== 'direct' ||
+            origin['sourceId'] !== undefined ||
+            origin['sessionOnly'] === true ||
+            [FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, 'frame-extension'].includes(
+              String(permission['origin'])
+            ) ||
+            permission['handlerId'] !== originId ||
+            permission['origin'] !== origin['name'] ||
+            originIdForInvoker(String(permission['origin']), { provenance: 'direct' }) !== originId
+          ) {
+            return []
+          }
+
+          const retainedChains = Object.fromEntries(
+            Object.entries(recordValue(chainGuardrailsValue)).flatMap(([chainKey, guardrailValue]) => {
+              const parsed = DappGuardrailSchema.safeParse(guardrailValue)
+              const scope = recordValue(
+                recordValue(Array.isArray(permission['caveats']) ? permission['caveats'][0] : undefined)[
+                  'value'
+                ]
+              )
+              const permissionChains = Array.isArray(scope['chains']) ? scope['chains'] : []
+              const numericChainKey = parsed.success ? String(BigInt(parsed.data.chainId)) : ''
+              if (
+                !parsed.success ||
+                parsed.data.account !== accountKey ||
+                parsed.data.originId !== originId ||
+                String(parsed.data.chainId) !== chainKey ||
+                scope['account'] !== accountKey ||
+                !permissionChains.includes(chainKey) ||
+                !Object.prototype.hasOwnProperty.call(recordValue(networks['ethereum']), numericChainKey)
+              ) {
+                return []
+              }
+              return [[chainKey, parsed.data]]
+            })
+          )
+          return Object.keys(retainedChains).length > 0 ? [[originId, retainedChains]] : []
+        })
+      )
+      return Object.keys(retainedOrigins).length > 0 ? [[accountKey, retainedOrigins]] : []
+    })
+  )
+
 const recoveryNetworks = (value: unknown) => {
   const ethereum = recordValue(recordValue(value)['ethereum'])
   return {
@@ -373,6 +435,9 @@ const recoveryMainState = (value: unknown) => {
       .map(([id]) => id)
   )
   const tokens = recordValue(main['tokens'])
+  const accounts = recoveryAccounts(main['accounts'])
+  const permissions = recoveryPermissions(main['permissions'], droppedOriginIds)
+  const networks = recoveryNetworks(main['networks'])
   const shortcuts = structuredClone(recordValue(main['shortcuts']))
   const summon = recordValue(shortcuts['summon'])
   if (Object.keys(summon).length > 0) summon['configuring'] = false
@@ -401,14 +466,15 @@ const recoveryMainState = (value: unknown) => {
       'addressBook'
     ]),
     ...(Object.keys(shortcuts).length > 0 ? { shortcuts } : {}),
-    accounts: recoveryAccounts(main['accounts']),
+    accounts,
     origins,
-    permissions: recoveryPermissions(main['permissions'], droppedOriginIds),
+    permissions,
+    dappGuardrails: recoveryDappGuardrails(main['dappGuardrails'], accounts, origins, permissions, networks),
     tokens: {
       custom: Array.isArray(tokens['custom']) ? structuredClone(tokens['custom']) : [],
       known: {}
     },
-    networks: recoveryNetworks(main['networks']),
+    networks,
     networksMeta: recoveryNetworksMeta(main['networksMeta'])
   }
 }

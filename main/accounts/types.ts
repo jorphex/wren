@@ -67,6 +67,11 @@ export interface AccountRequest<T extends RequestType = RequestType> extends Req
   activityId?: string
   queueIndex?: number
   res?: RPCRequestCallback
+  guardrail?: Readonly<{
+    fingerprint: string
+    mode: 'clear' | 'warn'
+    violations: readonly Readonly<{ code: string; field: string; message: string }>[]
+  }>
 }
 
 export interface TransactionReceipt {
@@ -340,6 +345,7 @@ export interface WalletCallsRequest extends AccountRequest<'walletCalls'> {
     data: string
     value: string
   }>
+  approvals: Approval[]
   callDetails?: readonly Readonly<{
     label: string
     source: string

@@ -125,7 +125,8 @@ const ApprovalTypeSchema = z.enum([
   'approveDelegatedAccountExecution',
   'approveProxyImplementationChange',
   'approveUnlimitedTokenPermit',
-  'approveDangerousSignature'
+  'approveDangerousSignature',
+  'approveDappGuardrailWarning'
 ])
 const ActionIdSchema = z
   .enum([

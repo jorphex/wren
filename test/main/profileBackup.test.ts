@@ -15,6 +15,8 @@ import {
 } from '../../main/profileBackup'
 import { migratePersistedConfiguration } from '../../main/profileMigration'
 import { OsSignerStorage } from '../../main/signers/hot/storage'
+import { originIdForInvoker } from '../../resources/domain/origin'
+import { createAccountPermission } from '../../main/provider/permissions'
 
 const roots: string[] = []
 const password = 'correct horse battery staple'
@@ -271,6 +273,102 @@ it('preserves address-book provenance in encrypted profile recovery data', () =>
   const [version] = Object.keys(configuration.main.__)
 
   expect(configuration.main.__[version].main.addressBook[address]).toEqual(current.main.addressBook[address])
+})
+
+it('backs up only valid guardrails belonging to retained direct principals', () => {
+  const { profile } = fixture()
+  const configPath = path.join(profile, 'config.json')
+  const current = migratePersistedConfiguration(JSON.parse(fs.readFileSync(configPath, 'utf8')))
+  const account = Object.keys(current.main.accounts)[0] as string
+  const chainId = Object.keys(current.main.networks.ethereum)[0] as string
+  const chainQuantity = `0x${BigInt(chainId).toString(16)}`
+  const directName = 'https://direct.example'
+  const directId = originIdForInvoker(directName, { provenance: 'direct' })
+  const sessionName = 'Unknown/session'
+  const sessionId = originIdForInvoker(sessionName, { provenance: 'direct' })
+  const companionName = 'https://companion.example'
+  const companionId = originIdForInvoker(companionName, {
+    provenance: 'companion',
+    sourceId: 'companion-principal'
+  })
+  const session = { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+  current.main.origins = {
+    ...current.main.origins,
+    [directId]: {
+      name: directName,
+      provenance: 'direct',
+      sessionOnly: false,
+      chain: { id: Number(chainId), type: 'ethereum' },
+      session
+    },
+    [sessionId]: {
+      name: sessionName,
+      provenance: 'direct',
+      sessionOnly: true,
+      chain: { id: Number(chainId), type: 'ethereum' },
+      session
+    },
+    [companionId]: {
+      name: companionName,
+      provenance: 'companion',
+      sourceId: 'companion-principal',
+      sessionOnly: false,
+      chain: { id: Number(chainId), type: 'ethereum' },
+      session
+    }
+  }
+  current.main.permissions[account] = {
+    ...current.main.permissions[account],
+    [directId]: createAccountPermission({
+      account,
+      chains: [Number(chainId)],
+      handlerId: directId,
+      origin: directName,
+      now: 1
+    }),
+    [sessionId]: createAccountPermission({
+      account,
+      chains: [Number(chainId)],
+      handlerId: sessionId,
+      origin: sessionName,
+      now: 1
+    }),
+    [companionId]: createAccountPermission({
+      account,
+      chains: [Number(chainId)],
+      handlerId: companionId,
+      origin: companionName,
+      now: 1
+    })
+  }
+  const guardrail = (originId: string) => ({
+    version: 1 as const,
+    account,
+    originId,
+    chainId: chainQuantity,
+    mode: 'block' as const,
+    nativeValueCeiling: '0x1',
+    createdAt: 1,
+    updatedAt: 1,
+    revision: 1
+  })
+  current.main.dappGuardrails = {
+    [account]: {
+      [directId]: { [chainQuantity]: guardrail(directId) },
+      [sessionId]: { [chainQuantity]: guardrail(sessionId) },
+      [companionId]: { [chainQuantity]: guardrail(companionId) }
+    }
+  }
+  fs.writeFileSync(configPath, JSON.stringify({ main: { __: { [current.main._version]: current } } }))
+
+  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'))
+  const payload = decryptTestPayload(backup, password)
+  const configuration = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const [version] = Object.keys(configuration.main.__)
+
+  expect(configuration.main.__[version].main.dappGuardrails).toEqual({
+    [account]: { [directId]: { [chainQuantity]: guardrail(directId) } }
+  })
 })
 
 it('normalizes a version 3 profile before backup inspection and restore staging', () => {

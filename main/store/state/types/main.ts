@@ -7,6 +7,7 @@ import { BalanceSchema } from './balance'
 import { ChainMetadataSchema, ChainSchema } from './chain'
 import { ColorwayPrimarySchema } from './colors'
 import { DappSchema } from './dapp'
+import { DappGuardrailsSchema } from './dappGuardrail'
 import { ExtensionCredentialsSchema } from './extensionCredential'
 import { OriginSchema } from './origin'
 import { OperationLifecyclesSchema } from './operationLifecycle'
@@ -88,6 +89,7 @@ export const MainSchema = z.object({
   addressBook: AddressBookSchema,
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),
+  dappGuardrails: DappGuardrailsSchema,
   mute: z.partialRecord(notificationTypes, z.boolean()),
   colorway: z.literal('dark').default('dark'),
   colorwayPrimary: ColorwayPrimarySchema,

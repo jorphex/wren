@@ -143,6 +143,94 @@ const joinedCanvasScenarios = () => [
 
 const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `tray-account-guardrail-editor-${geometry}-${scale}`,
+      renderer: 'tray',
+      state: 'account-permissions',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+      ready: '.dappGuardrailEditor',
+      expectedInitialFocus: 'When a request exceeds a restriction',
+      requiredControls: [
+        'Close editor',
+        'When a request exceeds a restriction',
+        'Restrict request targets',
+        'Restrict approval spenders',
+        'Set native-value ceiling',
+        'Set token ceilings',
+        'Set allowed-until time',
+        'Remove guardrail',
+        'Save changes'
+      ],
+      requiredText: [
+        'Local request guardrail',
+        '11111111-1111-4111-8111-111111111111',
+        'Direct web origin · asserted by the connecting app',
+        'never sign automatically and never replace normal transaction review',
+        'Enabled with no addresses denies every target',
+        'Amounts are raw whole base units'
+      ]
+    }))
+  ),
+  {
+    id: 'tray-account-guardrail-native-source-full-1',
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Add guardrail · Ethereum Mainnet (0x1)' },
+    ready: '.dappGuardrailEditor',
+    expectedInitialFocus: 'When a request exceeds a restriction',
+    requiredText: [
+      '22222222-2222-4222-8222-222222222222',
+      'Native app · bound to the source below',
+      'B7mKnX3q8A2dL5pR9vT4wY6cF1hJ0sUeZgQxN2oC7iM'
+    ]
+  },
+  {
+    id: 'tray-account-guardrail-save-busy-full-1',
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+        { type: 'clickText', text: 'Save changes' },
+        { type: 'clickText', text: 'Confirm save' }
+      ]
+    },
+    ready: '.dappGuardrailConfirm[aria-busy="true"]',
+    requiredText: ['Save guardrail changes?', 'Saving…']
+  },
+  {
+    id: 'tray-account-guardrail-save-error-full-1',
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+        { type: 'clickText', text: 'Save changes' },
+        { type: 'clickText', text: 'Confirm save' }
+      ]
+    },
+    ready: '.dappGuardrailMessage-alert',
+    requiredControls: ['Remove guardrail', 'Save changes'],
+    requiredText: ['Wren could not save this guardrail. Nothing changed. Try again.']
+  },
   ...INTERFACE_SCALES.flatMap((scale) => [
     transactionLookalikeScenario('full', scale, FULL_SHELL_HEIGHT),
     transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT),

@@ -39,7 +39,11 @@ interface WalletCallExecutionDependencies {
 
 function boundedError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : fallback
-  return new Error((message.trim() || fallback).slice(0, MAX_ERROR_MESSAGE_LENGTH))
+  const bounded = new Error((message.trim() || fallback).slice(0, MAX_ERROR_MESSAGE_LENGTH))
+  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'number') {
+    Object.assign(bounded, { code: error.code })
+  }
+  return bounded
 }
 
 export function snapshotWalletCalls(calls: readonly WalletCall[]) {

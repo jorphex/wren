@@ -7,7 +7,8 @@ export enum ApprovalType {
   DelegatedAccountRisk = 'approveDelegatedAccountExecution',
   ProxyImplementationChangeRisk = 'approveProxyImplementationChange',
   TokenPermitRisk = 'approveUnlimitedTokenPermit',
-  SignatureRisk = 'approveDangerousSignature'
+  SignatureRisk = 'approveDangerousSignature',
+  DappGuardrailWarning = 'approveDappGuardrailWarning'
 }
 
 export const WREN_REPOSITORY_URL = 'https://github.com/jorphex/wren'

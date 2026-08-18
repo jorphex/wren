@@ -19,6 +19,7 @@ interface PermissionActionDependencies {
   provider: PermissionProvider
   getPermissions(address: string): Record<string, Permission>
   mutate(address: string, ...args: unknown[]): void
+  removeGuardrails(address: string, originIds: readonly string[]): void
 }
 
 export function applyAccountPermissionRendererAction(
@@ -57,6 +58,10 @@ export function applyAccountPermissionRendererAction(
       () => {
         dependencies.mutate(address, ...args.slice(1))
         mutated = true
+        dependencies.removeGuardrails(
+          address,
+          revokedPermissions.map(({ handlerId }) => handlerId)
+        )
       },
       dependencies.accounts,
       dependencies.provider,

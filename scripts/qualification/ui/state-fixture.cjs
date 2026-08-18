@@ -9,6 +9,10 @@ const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
 const QUALIFICATION_RECIPIENT = '0x2222222222222222222222222222222222222222'
 const QUALIFICATION_CONTACT = '0x3333333333333333333333333333333333333333'
 const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
+const QUALIFICATION_GUARDRAIL_ORIGIN = '11111111-1111-4111-8111-111111111111'
+const QUALIFICATION_NATIVE_ORIGIN = '22222222-2222-4222-8222-222222222222'
+const QUALIFICATION_GUARDRAIL_TARGET = '0x4444444444444444444444444444444444444444'
+const QUALIFICATION_GUARDRAIL_TOKEN = '0x5555555555555555555555555555555555555555'
 
 const qualificationPairingCode = () => {
   const code = process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
@@ -93,6 +97,7 @@ const baseState = () => ({
     activity: [],
     signers: {},
     permissions: {},
+    dappGuardrails: {},
     rates: {},
     networks: { ethereum: {} },
     networksMeta: { ethereum: {} },
@@ -1004,6 +1009,62 @@ const fixtureFor = (scenario) => {
         }
       ]
     }
+  }
+
+  if (scenario.state === 'account-permissions') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.permissions[QUALIFICATION_ACCOUNT] = {
+      [QUALIFICATION_GUARDRAIL_ORIGIN]: activePermission(
+        QUALIFICATION_GUARDRAIL_ORIGIN,
+        'https://treasury.workshop.example'
+      ),
+      [QUALIFICATION_NATIVE_ORIGIN]: activePermission(QUALIFICATION_NATIVE_ORIGIN, 'Local treasury app')
+    }
+    state.main.origins = {
+      [QUALIFICATION_GUARDRAIL_ORIGIN]: {
+        name: 'https://treasury.workshop.example',
+        provenance: 'direct',
+        sessionOnly: false,
+        chain: { id: 1, type: 'ethereum' },
+        session: { requests: 12, startedAt: 1, lastUpdatedAt: 2 }
+      },
+      [QUALIFICATION_NATIVE_ORIGIN]: {
+        name: 'Local treasury app',
+        provenance: 'native',
+        sourceId: 'B7mKnX3q8A2dL5pR9vT4wY6cF1hJ0sUeZgQxN2oC7iM',
+        sessionOnly: false,
+        chain: { id: 1, type: 'ethereum' },
+        session: { requests: 4, startedAt: 1, lastUpdatedAt: 2 }
+      }
+    }
+    state.main.dappGuardrails[QUALIFICATION_ACCOUNT.toLowerCase()] = {
+      [QUALIFICATION_GUARDRAIL_ORIGIN]: {
+        '0x1': {
+          version: 1,
+          account: QUALIFICATION_ACCOUNT.toLowerCase(),
+          originId: QUALIFICATION_GUARDRAIL_ORIGIN,
+          chainId: '0x1',
+          mode: 'block',
+          targets: [QUALIFICATION_GUARDRAIL_TARGET],
+          spenders: [],
+          nativeValueCeiling: '0x1158e460913d0000',
+          tokenCeilings: [{ token: QUALIFICATION_GUARDRAIL_TOKEN, amount: '0x3e8' }],
+          expiresAt: Date.UTC(2030, 0, 1),
+          createdAt: 1,
+          updatedAt: 2,
+          revision: 1
+        }
+      }
+    }
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Connected apps' }
+      }
+    ]
   }
 
   if (scenario.state === 'account-requests-summary') {

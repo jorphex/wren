@@ -22,6 +22,7 @@ import { showWalletCallStatus } from '../../../main/provider/walletCallStatusVie
 import { ApprovalType } from '../../../resources/constants'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
+import { originIdForInvoker } from '../../../resources/domain/origin'
 import {
   TransactionFundingError,
   WalletCallFundingError,
@@ -80,6 +81,7 @@ beforeEach(() => {
   store.set('main.accounts', {})
   store.set('main.origins', {})
   store.set('main.permissions', {})
+  store.set('main.dappGuardrails', {})
   store.set('main.walletCallBatches', {})
   store.setWalletCallBatches = jest.fn((batches) => store.set('main.walletCallBatches', batches))
   showWalletCallStatus.mockClear()
@@ -143,6 +145,29 @@ beforeEach(() => {
     const request = accountRequests.find((candidate) => candidate.handlerId === handlerId)
     if (!request || request.account !== accountId) throw new Error('request is waiting for review')
     return request
+  })
+  accounts.syncDappGuardrailApproval = jest.fn((req, data) => {
+    const existing = (req.approvals || []).find(
+      (approval) => approval.type === ApprovalType.DappGuardrailWarning
+    )
+    if (!data) {
+      req.approvals = (req.approvals || []).filter(
+        (approval) => approval.type !== ApprovalType.DappGuardrailWarning
+      )
+    } else if (!existing) {
+      const approval = {
+        type: ApprovalType.DappGuardrailWarning,
+        data,
+        approved: false,
+        approve: () => {
+          approval.approved = true
+        }
+      }
+      req.approvals.push(approval)
+    } else if (existing.data.fingerprint !== data.fingerprint) {
+      existing.data = data
+      existing.approved = false
+    }
   })
   accounts.rejectRequestForAccount = jest.fn((accountId, handlerId, error) => {
     const index = accountRequests.findIndex((candidate) => candidate.handlerId === handlerId)
@@ -630,7 +655,7 @@ describe('#declineRequest', () => {
 })
 
 describe('#wallet-call provider boundary', () => {
-  const originId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
+  const originId = originIdForInvoker('example.test', { provenance: 'direct' })
   const payload = (overrides = {}) => ({
     id: 71,
     jsonrpc: '2.0',
@@ -651,13 +676,35 @@ describe('#wallet-call provider boundary', () => {
   const authorize = () => {
     store.set('main.origins', originId, {
       chain: { id: 1, type: 'ethereum' },
-      name: 'example.test'
+      name: 'example.test',
+      provenance: 'direct',
+      sessionOnly: false,
+      session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
     })
     store.set('main.permissions', address, {
-      [originId]: grant()
+      [originId]: grant(originId)
     })
     store.set('main.networks.ethereum', 1, { id: 1, on: true })
   }
+
+  const guardrail = (mode = 'block', overrides = {}) => ({
+    [address]: {
+      [originId]: {
+        '0x1': {
+          version: 1,
+          account: address,
+          originId,
+          chainId: '0x1',
+          mode,
+          targets: ['0x3333333333333333333333333333333333333333'],
+          createdAt: 1,
+          updatedAt: 1,
+          revision: 1,
+          ...overrides
+        }
+      }
+    }
+  })
 
   beforeEach(authorize)
 
@@ -696,6 +743,76 @@ describe('#wallet-call provider boundary', () => {
     expect(provider.handlers).toEqual({})
     expect(respond).not.toHaveBeenCalled()
     expect(walletCallBatchLedger.getStatus(originId, address, admitted.id).status).toBe(100)
+  })
+
+  it('rolls back admission when block mode rejects the wallet-call intent', () => {
+    store.set('main.dappGuardrails', guardrail())
+    const respond = jest.fn()
+
+    expect(provider.sendWalletCalls(payload(), respond)).toBeUndefined()
+    expect(respond).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4100 }) })
+    )
+    expect(accountRequests).toHaveLength(0)
+    expect(store('main.walletCallBatches')).toEqual({})
+  })
+
+  it('requires a fingerprint-bound warning acknowledgement before wallet-call preflight', async () => {
+    store.set('main.dappGuardrails', guardrail('warn'))
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    const warning = request.approvals.find((approval) => approval.type === ApprovalType.DappGuardrailWarning)
+
+    expect(warning).toMatchObject({ approved: false, data: { fingerprint: request.guardrail.fingerprint } })
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toThrow(
+      'approvals are incomplete'
+    )
+    expect(provider.inspectWalletCallsPreflight).not.toHaveBeenCalled()
+
+    warning.approve()
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).resolves.toEqual(['0xhash'])
+  })
+
+  it('stops remaining wallet calls when policy changes before a later signature', async () => {
+    store.set('main.dappGuardrails', guardrail('warn'))
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.approvals.find((approval) => approval.type === ApprovalType.DappGuardrailWarning).approve()
+    executeWalletCallRuntime.mockImplementationOnce(async (_input, dependencies) => {
+      dependencies.assertBeforeSign()
+      store.set('main.dappGuardrails', guardrail('warn', { revision: 2, updatedAt: 2 }))
+      dependencies.assertBeforeSign()
+      return ['unreachable']
+    })
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toThrow(
+      'changed before signing'
+    )
+    expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.objectContaining({ message: expect.stringContaining('changed before signing') })
+    )
+  })
+
+  it('stops later wallet-call signatures when the origin permission is revoked mid-batch', async () => {
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    executeWalletCallRuntime.mockImplementationOnce(async (_input, dependencies) => {
+      dependencies.assertBeforeSign()
+      store.set('main.permissions', address, {})
+      dependencies.assertBeforeSign()
+      return ['unreachable']
+    })
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toMatchObject({
+      code: 4100,
+      message: 'Request origin is no longer authorized'
+    })
+    expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.objectContaining({ code: 4100 })
+    )
   })
 
   it.each([
@@ -2912,6 +3029,31 @@ describe('#send', () => {
       }, '0x5')
     })
 
+    it('returns 4100 and creates no review when block mode rejects transaction intent', (done) => {
+      const originId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
+      store.set('main.dappGuardrails', address, originId, '0x1', {
+        version: 1,
+        account: address,
+        originId,
+        chainId: '0x1',
+        mode: 'block',
+        targets: ['0x3333333333333333333333333333333333333333'],
+        createdAt: 1,
+        updatedAt: 1,
+        revision: 1
+      })
+
+      sendTransaction((response) => {
+        try {
+          expect(response).toMatchObject({ error: { code: 4100 } })
+          expect(accountRequests).toHaveLength(0)
+          done()
+        } catch (error) {
+          done(error)
+        }
+      })
+    })
+
     it.each([
       ['type-4 transaction', (transaction) => (transaction.type = '0x4')],
       ['numeric type-4 transaction', (transaction) => (transaction.type = 4)],
@@ -3438,7 +3580,12 @@ describe('#send', () => {
         try {
           expect(error).toBeNull()
           expect(signature).toBe('0xsignature')
-          expect(accounts.signMessage).toHaveBeenCalledWith(address, hexMessage, expect.any(Function))
+          expect(accounts.signMessage).toHaveBeenCalledWith(
+            address,
+            hexMessage,
+            expect.any(Function),
+            expect.any(Function)
+          )
           expect(verify).toHaveBeenCalledWith('0xsignature', hexMessage, address, expect.any(Function))
           done()
         } catch (testError) {

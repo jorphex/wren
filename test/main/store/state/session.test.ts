@@ -40,6 +40,14 @@ it('removes session-only and legacy unknown origins with their permissions', () 
           provider: true
         }
       }
+    },
+    dappGuardrails: {
+      '0xaccount': {
+        [persistentId]: { '0x1': { originId: persistentId } },
+        [sessionOnlyId]: { '0x1': { originId: sessionOnlyId } },
+        [legacyUnknownId]: { '0x1': { originId: legacyUnknownId } },
+        [orphanedSessionOnlyId]: { '0x1': { originId: orphanedSessionOnlyId } }
+      }
     }
   }
 
@@ -48,5 +56,8 @@ it('removes session-only and legacy unknown origins with their permissions', () 
   expect(main.origins).toEqual({ [persistentId]: origin('example.com', false) })
   expect(main.permissions['0xaccount']).toEqual({
     [persistentId]: { handlerId: persistentId, origin: 'example.com', provider: true }
+  })
+  expect(main.dappGuardrails['0xaccount']).toEqual({
+    [persistentId]: { '0x1': { originId: persistentId } }
   })
 })

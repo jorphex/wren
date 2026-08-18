@@ -61,6 +61,7 @@ beforeEach(() => {
   store.set('main.accounts', {})
   store.set('main.permissions', {})
   store.removeNativePeerCredential = jest.fn()
+  store.removeDappGuardrailsForPrincipalOrigins = jest.fn()
   server = new EventEmitter()
   socket = new EventEmitter()
   socket.readyState = WebSocket.OPEN
@@ -214,6 +215,7 @@ it('unsubscribes provider work when the native credential is revoked', async () 
 
   revokeNativePeerAccess(nativeFingerprint)
 
+  expect(store.removeDappGuardrailsForPrincipalOrigins).toHaveBeenCalledWith(['native-origin'])
   expect(provider.send).toHaveBeenCalledWith(
     expect.objectContaining({
       method: 'eth_unsubscribe',

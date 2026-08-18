@@ -440,6 +440,8 @@ const main = async () => {
         'selected account network and gas module',
         'selected software account delegation',
         'custom-token management',
+        'account-scoped connected-app guardrail editor',
+        'guardrail source identity, confirmation, busy, and refused-save states',
         'delegation revocation review',
         'ambiguous delegation revocation monitoring',
         'onboarding intro',

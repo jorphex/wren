@@ -6,6 +6,7 @@ import emptyConnections from 'url:../../../../../asset/ui/wren-empty-connections
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
 import PermissionToggle from '../PermissionToggle'
+import DappGuardrailEditor, { canonicalChainId } from '../DappGuardrailEditor'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
@@ -18,7 +19,14 @@ export class DappsPermissionsExpanded extends React.Component {
     this.clearButtonRef = React.createRef()
     this.cancelClearRef = React.createRef()
     this.clearStatusRef = React.createRef()
-    this.state = { clearConfirm: false, clearRequested: false, clearing: false, clearStatus: false }
+    this.guardrailButtonRefs = new Map()
+    this.state = {
+      clearConfirm: false,
+      clearRequested: false,
+      clearing: false,
+      clearStatus: false,
+      guardrailEditor: null
+    }
   }
 
   componentDidUpdate() {
@@ -61,6 +69,39 @@ export class DappsPermissionsExpanded extends React.Component {
     link.send('tray:action', 'clearPermissions', this.props.account)
   }
 
+  guardrailKey(originId, chainId) {
+    return `${originId}\u0000${chainId}`
+  }
+
+  guardrailButtonRef(originId, chainId) {
+    const key = this.guardrailKey(originId, chainId)
+    if (!this.guardrailButtonRefs.has(key)) this.guardrailButtonRefs.set(key, React.createRef())
+    return this.guardrailButtonRefs.get(key)
+  }
+
+  openGuardrail(originId, chainId) {
+    if (this.state.clearing) return
+    this.setState({ guardrailEditor: { originId, chainId }, clearConfirm: false })
+  }
+
+  closeGuardrail() {
+    const active = this.state.guardrailEditor
+    this.setState({ guardrailEditor: null }, () => {
+      if (active) this.guardrailButtonRef(active.originId, active.chainId).current?.focus()
+    })
+  }
+
+  chainName(chainId) {
+    const numericId = Number(BigInt(chainId))
+    const storedName = this.store('main.networks.ethereum', numericId, 'name')
+    return typeof storedName === 'string' && storedName ? storedName : `Chain ${chainId}`
+  }
+
+  nativeDecimals(chainId) {
+    const numericId = Number(BigInt(chainId))
+    return this.store('main.networksMeta.ethereum', numericId, 'nativeCurrency', 'decimals')
+  }
+
   render() {
     const permissions = this.store('main.permissions', this.props.account) || {}
     const allPermissionIds = getPermissionIds(permissions)
@@ -86,19 +127,84 @@ export class DappsPermissionsExpanded extends React.Component {
             <Cluster className='connectedAppsList'>
               <div className='moduleMainPermissions'>
                 {permissionList.map((o) => {
+                  const permission = permissions[o]
+                  const originId = permission.handlerId
+                  const chains = (permission.caveats?.[0]?.value?.chains || [])
+                    .map(canonicalChainId)
+                    .filter(Boolean)
                   return (
                     <ClusterRow key={o}>
                       <ClusterValue pointerEvents={true}>
                         <div className='signerPermission'>
                           <div className='signerPermissionControls'>
-                            <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
+                            <div className='signerPermissionIdentity'>
+                              <div className='signerPermissionOrigin'>{permission.origin}</div>
+                              <div className='signerPermissionPrincipal'>Principal {originId}</div>
+                            </div>
                             <PermissionToggle
                               account={this.props.account}
-                              permissionId={o}
-                              origin={permissions[o].origin}
-                              checked={permissions[o].provider}
+                              permissionId={originId}
+                              origin={permission.origin}
+                              checked={permission.provider}
                             />
                           </div>
+                          <div className='dappGuardrailChainActions'>
+                            {chains.length ? (
+                              chains.map((chainId) => {
+                                const guardrail = this.store(
+                                  'main.dappGuardrails',
+                                  this.props.account.toLowerCase(),
+                                  originId,
+                                  chainId
+                                )
+                                const chainName = this.chainName(chainId)
+                                return (
+                                  <button
+                                    type='button'
+                                    className='dappGuardrailManage wrenControl wrenControlSecondary'
+                                    key={chainId}
+                                    ref={this.guardrailButtonRef(originId, chainId)}
+                                    aria-expanded={
+                                      this.state.guardrailEditor?.originId === originId &&
+                                      this.state.guardrailEditor?.chainId === chainId
+                                    }
+                                    onClick={() => this.openGuardrail(originId, chainId)}
+                                  >
+                                    {guardrail ? 'Edit' : 'Add'} guardrail · {chainName} ({chainId})
+                                  </button>
+                                )
+                              })
+                            ) : (
+                              <span className='dappGuardrailNoChains'>No granted chains</span>
+                            )}
+                          </div>
+                          {this.state.guardrailEditor?.originId === originId
+                            ? chains
+                                .filter((chainId) => this.state.guardrailEditor.chainId === chainId)
+                                .map((chainId) => (
+                                  <DappGuardrailEditor
+                                    key={`${originId}-${chainId}`}
+                                    account={this.props.account.toLowerCase()}
+                                    originId={originId}
+                                    origin={
+                                      this.store('main.origins', originId) || {
+                                        name: permission.origin,
+                                        provenance: 'legacy'
+                                      }
+                                    }
+                                    chainId={chainId}
+                                    chainName={this.chainName(chainId)}
+                                    nativeDecimals={this.nativeDecimals(chainId)}
+                                    guardrail={this.store(
+                                      'main.dappGuardrails',
+                                      this.props.account.toLowerCase(),
+                                      originId,
+                                      chainId
+                                    )}
+                                    onClose={() => this.closeGuardrail()}
+                                  />
+                                ))
+                            : null}
                         </div>
                       </ClusterValue>
                     </ClusterRow>
@@ -119,7 +225,7 @@ export class DappsPermissionsExpanded extends React.Component {
               <DialogSurface
                 className='clearPermissionsConfirm'
                 role='alertdialog'
-                modal={false}
+                modal
                 ariaLabel='Clear all permissions?'
                 busy={this.state.clearing}
                 initialFocusRef={this.cancelClearRef}

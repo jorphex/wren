@@ -15,6 +15,10 @@ import {
   AddressBookEntrySchema,
   AddressBookSaveRequestSchema
 } from '../../resources/domain/addressBook'
+import {
+  RemoveDappGuardrailRequestSchema,
+  SaveDappGuardrailRequestSchema
+} from '../provider/dappGuardrailActions'
 
 const MAX_TEXT = 4096
 const MAX_URL = 8192
@@ -249,6 +253,8 @@ const actionSchemas = {
   removeNetwork: z.tuple([NetworkReferenceSchema]),
   removeEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema]),
   retryDapp: z.tuple([IdSchema]),
+  removeDappGuardrail: z.tuple([RemoveDappGuardrailRequestSchema]),
+  saveDappGuardrail: z.tuple([SaveDappGuardrailRequestSchema]),
   setAccountCloseLock: z.tuple([z.boolean()]),
   setAccountFilter: z.tuple([z.string().max(256)]),
   setAutohide: z.tuple([z.boolean()]),

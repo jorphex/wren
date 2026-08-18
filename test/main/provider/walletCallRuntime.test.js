@@ -114,6 +114,32 @@ it('signs with the pinned account and broadcasts sequentially to the exact chain
   ])
 })
 
+it('rechecks before every signer invocation and stops after first-call policy drift', async () => {
+  const deps = dependencies()
+  let checks = 0
+  let signerInvocations = 0
+  deps.assertBeforeSign = jest.fn(() => {
+    checks += 1
+    if (checks === 2) throw Object.assign(new Error('Request origin is no longer authorized'), { code: 4100 })
+  })
+  deps.accounts.signTransactionForAccount.mockImplementation((_accountId, prepared, callback, beforeSign) => {
+    beforeSign()
+    signerInvocations += 1
+    callback(null, sign(prepared))
+  })
+
+  await expect(executeWalletCallRuntime(input(), deps)).rejects.toMatchObject({
+    code: 4100,
+    message: 'Request origin is no longer authorized'
+  })
+  expect(deps.assertBeforeSign).toHaveBeenCalledTimes(2)
+  expect(signerInvocations).toBe(1)
+  expect(deps.connection.send).toHaveBeenCalledTimes(1)
+  expect(deps.ledger.markTransactionSubmitted).toHaveBeenCalledTimes(1)
+  expect(deps.ledger.complete).not.toHaveBeenCalled()
+  expect(deps.ledger.fail).toHaveBeenCalledTimes(1)
+})
+
 it('records each concrete destination only after its broadcast is accepted', async () => {
   const deps = dependencies()
   deps.recordSubmittedTarget = jest.fn()

@@ -1,6 +1,7 @@
 import accounts from '../accounts'
 import provider from '../provider'
 import store from '../store'
+import { requireStoreAction } from '../store/action'
 import { revokeExtensionCredential } from './extensionPairing'
 
 /**
@@ -14,6 +15,7 @@ export function revokeCompanionAccess(fingerprint: string) {
   const sourceOriginIds = Object.entries(origins)
     .filter(([, origin]) => origin.provenance === 'companion' && origin.sourceId === fingerprint)
     .map(([originId]) => originId)
+  requireStoreAction('removeDappGuardrailsForPrincipalOrigins')(sourceOriginIds)
   const accountIds = new Set([
     ...Object.keys((store('main.accounts') || {}) as Record<string, unknown>),
     ...Object.keys((store('main.permissions') || {}) as Record<string, unknown>)

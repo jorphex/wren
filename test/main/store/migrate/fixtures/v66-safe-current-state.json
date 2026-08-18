@@ -3,11 +3,11 @@
     "formatVersion": 1,
     "synthetic": true,
     "title": "Synthetic current safe profile state",
-    "sourceVersion": 65
+    "sourceVersion": 66
   },
   "state": {
     "main": {
-      "_version": 65,
+      "_version": 66,
       "instanceId": "11111111-1111-4111-8111-111111111111",
       "colorway": "dark",
       "launch": false,
@@ -97,8 +97,59 @@
           "lastUpdated": 1700000000000
         }
       },
-      "origins": {},
-      "permissions": {},
+      "origins": {
+        "fixture-origin-id": {
+          "chain": { "id": 31337, "type": "ethereum" },
+          "name": "https://fixture.example",
+          "provenance": "direct",
+          "sessionOnly": false,
+          "session": {
+            "requests": 1,
+            "startedAt": 1700000000000,
+            "lastUpdatedAt": 1700000000000
+          }
+        }
+      },
+      "permissions": {
+        "0x000000000000000000000000000000000000dead": {
+          "fixture-origin-id": {
+            "version": 1,
+            "origin": "https://fixture.example",
+            "provider": true,
+            "handlerId": "fixture-origin-id",
+            "parentCapability": "eth_accounts",
+            "caveats": [
+              {
+                "type": "wren:permissionScope",
+                "value": {
+                  "account": "0x000000000000000000000000000000000000dead",
+                  "methods": ["eth_sendTransaction"],
+                  "chains": ["0x7a69"],
+                  "expiresAt": 1800000000000
+                }
+              }
+            ],
+            "grantedAt": 1700000000000
+          }
+        }
+      },
+      "dappGuardrails": {
+        "0x000000000000000000000000000000000000dead": {
+          "fixture-origin-id": {
+            "0x7a69": {
+              "version": 1,
+              "account": "0x000000000000000000000000000000000000dead",
+              "originId": "fixture-origin-id",
+              "chainId": "0x7a69",
+              "mode": "block",
+              "targets": [],
+              "createdAt": 1700000000000,
+              "updatedAt": 1700000000000,
+              "revision": 1
+            }
+          }
+        }
+      },
       "addressBook": {
         "0x1111111111111111111111111111111111111111": {
           "address": "0x1111111111111111111111111111111111111111",
