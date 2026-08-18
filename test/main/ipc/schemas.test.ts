@@ -213,6 +213,12 @@ test('strictly bounds software signer protection commands and status', () => {
   expect(
     parseRendererInvokeResult('signers:protectionStatus', {
       success: true,
+      status: { ...protectionStatus, backend: 'windows_dpapi' }
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('signers:protectionStatus', {
+      success: true,
       status: { ...protectionStatus, keychainPath: '/private/keyring' }
     }).success
   ).toBe(false)

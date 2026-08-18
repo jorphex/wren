@@ -4,9 +4,10 @@ import DialogSurface from '../../../../resources/Components/DialogSurface'
 import { disableSignerProtection, enableSignerProtection, getSignerProtectionStatus } from './api'
 
 const backendName = (backend) => {
+  if (backend === 'windows_dpapi') return 'Windows DPAPI'
   if (backend === 'gnome_libsecret') return 'Secret Service'
   if (backend === 'kwallet' || backend === 'kwallet5' || backend === 'kwallet6') return 'KWallet'
-  return 'secure Linux keychain'
+  return 'secure OS credential storage'
 }
 
 export class SignerProtection extends Component {
@@ -77,17 +78,23 @@ export class SignerProtection extends Component {
     if (!status) return 'Checking this device’s keychain…'
     if (status.state === 'unsupported') {
       if (status.enabled) {
-        return 'This profile contains Linux device-protected signers that cannot be opened here. Restore a portable encrypted backup instead.'
+        return 'This profile contains device-protected signers that cannot be opened here. Restore a portable encrypted backup instead.'
       }
-      return 'Device protection is available on Linux in this release. Signer passwords still protect these records.'
+      return 'Device protection is not supported on this operating system. Signer passwords still protect these records.'
     }
     if (status.state === 'recovery-required') {
       return 'A protection change was interrupted. Software signers stay unavailable until you finish enabling protection or restore password-only storage.'
     }
     if (status.state === 'unavailable' && status.enabled) {
+      if (status.backend === 'windows_dpapi') {
+        return 'Protection is enabled, but this Windows environment cannot open the records. Software signers remain closed; return to the original account and device, then retry or restore a portable backup.'
+      }
       return 'Protection is enabled, but this keychain cannot open the records. Software signers remain closed; start the original Secret Service or KWallet, then retry or restore a portable backup.'
     }
     if (status.state === 'unavailable') {
+      if (status.backend === 'windows_dpapi') {
+        return 'Windows DPAPI encryption is unavailable, so device protection cannot be enabled. Existing signer password encryption remains active.'
+      }
       return 'Wren could not find Secret Service or KWallet. It refuses Electron’s insecure basic-text fallback.'
     }
     if (status.state === 'enabled') {
@@ -100,6 +107,7 @@ export class SignerProtection extends Component {
     const operation = this.state.operation
     if (!operation) return null
     const enabling = operation === 'enable'
+    const windows = this.state.status?.backend === 'windows_dpapi'
     return (
       <DialogSurface
         className='recoveryPanel'
@@ -117,7 +125,9 @@ export class SignerProtection extends Component {
         </strong>
         <p id='signer-protection-confirm-copy' className='recoveryPanelCopy'>
           {enabling
-            ? 'Wren will bind the existing password-encrypted signer files to this Linux keychain. Export an encrypted backup for recovery on another device.'
+            ? `Wren will bind the existing password-encrypted signer files to ${
+                windows ? 'this Windows account through DPAPI' : 'this Linux keychain'
+              }. Export an encrypted backup for recovery on another device.`
             : 'Wren will remove only the device-bound layer. Existing signer password encryption stays in place.'}
         </p>
         <div className='recoveryActions'>

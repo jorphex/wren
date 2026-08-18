@@ -8,6 +8,7 @@ import { OsSignerStorage, type StorageBackend } from '../../../../main/signers/h
 class FakeSafeStorage {
   available = true
   backend: StorageBackend = 'gnome_libsecret'
+  backendCalls = 0
   decryptCalls = 0
   encryptCalls = 0
   failDecryptAt = 0
@@ -19,6 +20,7 @@ class FakeSafeStorage {
   }
 
   getSelectedStorageBackend() {
+    this.backendCalls += 1
     return this.backend
   }
 
@@ -108,6 +110,166 @@ test('disabling removes only the device layer and restores exact password-encryp
   Object.entries(records).forEach(([name, bytes]) => {
     expect(fs.readFileSync(path.join(signerRoot, name))).toEqual(bytes)
   })
+})
+
+test('uses Windows DPAPI without querying the Linux-only backend API', () => {
+  const safeStorage = new FakeSafeStorage()
+  const { records, signerRoot, storage } = fixture(safeStorage, 'win32')
+
+  expect(storage.status()).toMatchObject({
+    available: true,
+    backend: 'windows_dpapi',
+    enabled: false,
+    state: 'disabled'
+  })
+  expect(storage.enable()).toMatchObject({
+    backend: 'windows_dpapi',
+    enabled: true,
+    protectedFiles: 3,
+    state: 'enabled'
+  })
+  expect(JSON.parse(fs.readFileSync(path.join(signerRoot, '.os-signer-protection.json'), 'utf8'))).toEqual({
+    format: 'wren-os-signer-protection',
+    version: 1,
+    backend: 'windows_dpapi'
+  })
+  expect(Object.fromEntries(storage.readAllSignerFiles().map(({ name, bytes }) => [name, bytes]))).toEqual(
+    records
+  )
+  expect(storage.disable()).toMatchObject({ enabled: false, protectedFiles: 0, state: 'disabled' })
+  expect(safeStorage.backendCalls).toBe(0)
+})
+
+test('reopens Windows DPAPI-protected signers after an application restart', () => {
+  const key = crypto.randomBytes(32)
+  const firstSafeStorage = new FakeSafeStorage(key)
+  const first = fixture(firstSafeStorage, 'win32')
+  first.storage.enable()
+
+  const restartedSafeStorage = new FakeSafeStorage(key)
+  const restarted = new OsSignerStorage(first.profile, {
+    platform: 'win32',
+    safeStorage: restartedSafeStorage
+  })
+
+  expect(restarted.status()).toMatchObject({
+    available: true,
+    backend: 'windows_dpapi',
+    enabled: true,
+    protectedFiles: 3,
+    state: 'enabled'
+  })
+  expect(Object.fromEntries(restarted.readAllSignerFiles().map(({ name, bytes }) => [name, bytes]))).toEqual(
+    first.records
+  )
+  expect(firstSafeStorage.backendCalls).toBe(0)
+  expect(restartedSafeStorage.backendCalls).toBe(0)
+})
+
+test('fails Windows DPAPI-protected signers closed under another Windows identity', () => {
+  const first = fixture(new FakeSafeStorage(), 'win32')
+  first.storage.enable()
+  const otherIdentity = new FakeSafeStorage()
+  const copiedProfile = new OsSignerStorage(first.profile, {
+    platform: 'win32',
+    safeStorage: otherIdentity
+  })
+
+  expect(copiedProfile.status()).toMatchObject({
+    available: true,
+    backend: 'windows_dpapi',
+    enabled: true,
+    state: 'unavailable'
+  })
+  expect(() => copiedProfile.readAllSignerFiles()).toThrow('could not be decrypted')
+  expect(() => copiedProfile.writeSignerFile('new.json', signerRecord('new'))).toThrow(
+    'could not be decrypted'
+  )
+  expect(fs.existsSync(path.join(first.signerRoot, 'new.json'))).toBe(false)
+  expect(otherIdentity.backendCalls).toBe(0)
+})
+
+test('does not reinterpret a Linux keychain marker as Windows DPAPI data', () => {
+  const key = crypto.randomBytes(32)
+  const linux = fixture(new FakeSafeStorage(key), 'linux')
+  linux.storage.enable()
+  const windowsSafeStorage = new FakeSafeStorage(key)
+  const windows = new OsSignerStorage(linux.profile, {
+    platform: 'win32',
+    safeStorage: windowsSafeStorage
+  })
+
+  expect(windows.status()).toMatchObject({
+    available: true,
+    backend: 'windows_dpapi',
+    enabled: true,
+    state: 'unavailable'
+  })
+  expect(() => windows.readAllSignerFiles()).toThrow(
+    'OS-protected signer files belong to another operating-system backend'
+  )
+  expect(() => windows.writeSignerFile('new.json', signerRecord('new'))).toThrow(
+    'OS-protected signer files belong to another operating-system backend'
+  )
+  expect(windowsSafeStorage.backendCalls).toBe(0)
+})
+
+test('fails Windows DPAPI protection closed when encryption is unavailable', () => {
+  const safeStorage = new FakeSafeStorage()
+  safeStorage.available = false
+  const { signerRoot, storage } = fixture(safeStorage, 'win32')
+
+  expect(storage.status()).toMatchObject({
+    available: false,
+    backend: 'windows_dpapi',
+    enabled: false,
+    state: 'unavailable'
+  })
+  expect(() => storage.enable()).toThrow('Windows DPAPI encryption is unavailable')
+  expect(fs.existsSync(path.join(signerRoot, '.os-signer-protection.json'))).toBe(false)
+  expect(safeStorage.encryptCalls).toBe(0)
+  expect(safeStorage.backendCalls).toBe(0)
+})
+
+test('rejects tampered Windows DPAPI ciphertext without changing the profile', () => {
+  const { signerRoot, storage } = fixture(new FakeSafeStorage(), 'win32')
+  storage.enable()
+  const signerPath = path.join(signerRoot, 'alpha.json')
+  const wrapper = JSON.parse(fs.readFileSync(signerPath, 'utf8'))
+  const ciphertext = Buffer.from(wrapper.ciphertext, 'base64')
+  ciphertext[ciphertext.length - 1] ^= 1
+  wrapper.ciphertext = ciphertext.toString('base64')
+  fs.writeFileSync(signerPath, JSON.stringify(wrapper))
+
+  expect(storage.status()).toMatchObject({ enabled: true, state: 'unavailable' })
+  expect(() => storage.readAllSignerFiles()).toThrow('could not be decrypted')
+  expect(JSON.parse(fs.readFileSync(signerPath, 'utf8')).format).toBe('wren-os-protected-signer')
+})
+
+test('recovers Windows DPAPI migrations interrupted in either direction', () => {
+  const safeStorage = new FakeSafeStorage()
+  safeStorage.failEncryptAt = 2
+  const { records, storage } = fixture(safeStorage, 'win32')
+
+  expect(() => storage.enable()).toThrow('injected encrypt failure')
+  expect(storage.status()).toMatchObject({ enabled: false, protectedFiles: 1, state: 'recovery-required' })
+  expect(() => storage.readAllSignerFiles()).toThrow('Signer protection migration is incomplete')
+
+  safeStorage.failEncryptAt = 0
+  expect(storage.enable()).toMatchObject({ enabled: true, protectedFiles: 3, state: 'enabled' })
+  safeStorage.decryptCalls = 0
+  safeStorage.failDecryptAt = 2
+
+  expect(() => storage.disable()).toThrow('could not be decrypted')
+  expect(storage.status()).toMatchObject({ enabled: true, state: 'recovery-required' })
+  expect(() => storage.readAllSignerFiles()).toThrow('Signer protection migration is incomplete')
+
+  safeStorage.failDecryptAt = 0
+  expect(storage.disable()).toMatchObject({ enabled: false, protectedFiles: 0, state: 'disabled' })
+  expect(Object.fromEntries(storage.readAllSignerFiles().map(({ name, bytes }) => [name, bytes]))).toEqual(
+    records
+  )
+  expect(safeStorage.backendCalls).toBe(0)
 })
 
 test.each(['basic_text', 'unknown'] as const)(
@@ -257,11 +419,12 @@ test('does not remove a competing file when an exclusive create loses a race', (
   }
 })
 
-test('reports unsupported without invoking a non-Linux keychain', () => {
+test('reports macOS as unsupported without invoking safeStorage', () => {
   const safeStorage = new FakeSafeStorage()
   const { storage } = fixture(safeStorage, 'darwin')
   expect(storage.status()).toMatchObject({ available: false, backend: 'unsupported', state: 'unsupported' })
-  expect(() => storage.enable()).toThrow('secure Linux Secret Service or KWallet backend is unavailable')
+  expect(() => storage.enable()).toThrow('OS-backed signer protection is unsupported on this platform')
+  expect(safeStorage.backendCalls).toBe(0)
   expect(safeStorage.encryptCalls).toBe(0)
 })
 

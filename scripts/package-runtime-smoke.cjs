@@ -66,6 +66,7 @@ try {
 } catch {
   signerTamperingRejected = true
 }
+let linuxBackendQueries = 0
 const osSignerStorage = new OsSignerStorage(path.join(process.resourcesPath, '.wren-package-probe'), {
   platform: process.platform,
   safeStorage: {
@@ -75,8 +76,11 @@ const osSignerStorage = new OsSignerStorage(path.join(process.resourcesPath, '.w
     encryptString: () => {
       throw new Error('unexpected encrypt')
     },
-    getSelectedStorageBackend: () => 'basic_text',
-    isEncryptionAvailable: () => true
+    getSelectedStorageBackend: () => {
+      linuxBackendQueries += 1
+      return 'basic_text'
+    },
+    isEncryptionAvailable: () => false
   }
 })
 const osSignerStatus = osSignerStorage.status()
@@ -144,8 +148,10 @@ Promise.all([
         signerTamperingRejected,
         osSignerProtection: {
           available: osSignerStatus.available,
+          backend: osSignerStatus.backend,
           state: osSignerStatus.state,
-          failClosed: osSignerProtectionFailClosed
+          failClosed: osSignerProtectionFailClosed,
+          linuxBackendQueries
         }
       })
     )

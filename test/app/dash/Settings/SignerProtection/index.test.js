@@ -47,6 +47,48 @@ it('requires explicit confirmation before enabling device protection', async () 
   expect(screen.getByText(/Your signer password is still required/)).toBeTruthy()
 })
 
+it('describes the Windows DPAPI account boundary before enabling protection', async () => {
+  link.invoke.mockResolvedValue({
+    success: true,
+    status: status({ backend: 'windows_dpapi' })
+  })
+  render(<SignerProtection />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Enable protection' }))
+  expect(
+    screen.getByRole('alertdialog', { name: 'Protect software signers with this device?' }).textContent
+  ).toContain('this Windows account through DPAPI')
+})
+
+it('names Windows DPAPI and keeps the signer password requirement visible', async () => {
+  link.invoke.mockResolvedValue({
+    success: true,
+    status: status({
+      backend: 'windows_dpapi',
+      enabled: true,
+      protectedFiles: 2,
+      state: 'enabled'
+    })
+  })
+  render(<SignerProtection />)
+
+  expect(await screen.findByText(/protected by Windows DPAPI/)).toBeTruthy()
+  expect(screen.getByText(/Your signer password is still required/)).toBeTruthy()
+})
+
+it('explains the fail-closed Windows path when DPAPI is unavailable', async () => {
+  link.invoke.mockResolvedValue({
+    success: true,
+    status: status({ available: false, backend: 'windows_dpapi', state: 'unavailable' })
+  })
+  render(<SignerProtection />)
+
+  await screen.findByRole('button', { name: 'Retry' })
+  expect(screen.getByText(/Windows DPAPI encryption is unavailable/)).toBeTruthy()
+  expect(screen.getByText(/Existing signer password encryption remains active/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Enable protection' })).toBeNull()
+})
+
 it('makes clear that insecure basic-text storage is refused', async () => {
   link.invoke.mockResolvedValue({
     success: true,

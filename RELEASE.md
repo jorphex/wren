@@ -17,8 +17,13 @@ Glide is qualified on X11 only; on native Wayland use the tray or summon shortcu
 
 The native verifier checks clean source/application identity, packaged resources,
 runtime architecture, native hardware modules, sandbox policy, and matching
-unpacked/archive payload behavior. It does not exercise installers, the graphical
-desktop, hardware, signing, notarization, or operating-system integration.
+unpacked/archive payload behavior. Its fail-closed signer-protection probe checks
+that Windows selects the DPAPI policy without invoking Linux-only backend
+discovery, but it does not decrypt real DPAPI data. The verifier does not exercise
+installers, the graphical desktop, hardware, signing, notarization, or native
+operating-system credential persistence. Use the
+[Windows signer-protection checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md)
+for that separate evidence.
 
 ## 2. Prepare a candidate
 

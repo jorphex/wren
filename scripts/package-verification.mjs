@@ -278,11 +278,15 @@ export async function verifyNativePackage(targetName, options = {}) {
   })
   assert.equal(result.signerSecretRoundTrip, true)
   assert.equal(result.signerTamperingRejected, true)
-  assert.deepEqual(result.osSignerProtection, {
-    available: false,
-    state: target.platform === 'linux' ? 'unavailable' : 'unsupported',
-    failClosed: true
-  })
+  assert.equal(result.osSignerProtection.available, false)
+  assert.equal(
+    result.osSignerProtection.backend,
+    target.platform === 'linux' ? 'basic_text' : target.platform === 'win32' ? 'windows_dpapi' : 'unsupported'
+  )
+  assert.equal(result.osSignerProtection.state, target.platform === 'darwin' ? 'unsupported' : 'unavailable')
+  assert.equal(result.osSignerProtection.failClosed, true)
+  if (target.platform === 'linux') assert.ok(result.osSignerProtection.linuxBackendQueries > 0)
+  else assert.equal(result.osSignerProtection.linuxBackendQueries, 0)
   assert.deepEqual(result.runtime, {
     ethers: packageJson.dependencies.ethers,
     ethersBrowserProvider: 'function',

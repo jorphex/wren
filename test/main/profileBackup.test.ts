@@ -382,51 +382,61 @@ it('writes private backup files and restores them through bounded regular-file r
   if (process.platform !== 'win32') expect(fs.statSync(destination).mode & 0o777).toBe(0o600)
 })
 
-it('exports portable password-encrypted signer records from an OS-protected profile', () => {
-  const { profile, root } = fixture()
-  const original = fs.readFileSync(path.join(profile, 'signers', 'seed.json'))
-  const keychain = fakeSafeStorage()
-  const signerStorage = new OsSignerStorage(profile, { platform: 'linux', safeStorage: keychain })
-  signerStorage.enable()
+it.each(['linux', 'win32'] as const)(
+  'exports portable password-encrypted signer records from an OS-protected %s profile',
+  (platform) => {
+    const { profile, root } = fixture()
+    const original = fs.readFileSync(path.join(profile, 'signers', 'seed.json'))
+    const keychain = fakeSafeStorage()
+    const signerStorage = new OsSignerStorage(profile, { platform, safeStorage: keychain })
+    signerStorage.enable()
 
-  const local = fs.readFileSync(path.join(profile, 'signers', 'seed.json'))
-  expect(JSON.parse(local.toString('utf8')).format).toBe('wren-os-protected-signer')
-  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'), {
-    readSignerFiles: () => signerStorage.readAllSignerFiles()
-  })
-  const payload = decryptTestPayload(backup, password)
-
-  expect(payload.files.signers).toHaveLength(1)
-  expect(Buffer.from(payload.files.signers[0].bytes, 'base64')).toEqual(original)
-  expect(JSON.stringify(payload)).not.toContain('wren-os-protected-signer')
-  expect(JSON.stringify(payload)).not.toContain('.os-signer-protection.json')
-
-  const source = path.join(root, 'portable.wrenbackup')
-  const target = path.join(root, 'restored')
-  fs.writeFileSync(source, backup)
-  fs.cpSync(profile, target, { recursive: true })
-  stageEncryptedProfileRestore(source, password, target, new Date('2026-08-12T00:01:00.000Z'))
-  expect(runPendingProfileRestore(target, new Date('2026-08-12T00:02:00.000Z'))).toMatchObject({
-    status: 'applied',
-    signerCount: 1
-  })
-  expect(fs.existsSync(path.join(target, 'signers', '.os-signer-protection.json'))).toBe(false)
-  expect(fs.readFileSync(path.join(target, 'signers', 'seed.json'))).toEqual(original)
-})
-
-it('refuses portable export when an enabled profile keychain is unavailable', () => {
-  const { profile } = fixture()
-  const keychain = fakeSafeStorage()
-  const signerStorage = new OsSignerStorage(profile, { platform: 'linux', safeStorage: keychain })
-  signerStorage.enable()
-  keychain.setAvailable(false)
-
-  expect(() =>
-    createEncryptedProfileBackup(profile, password, new Date(), {
+    const local = fs.readFileSync(path.join(profile, 'signers', 'seed.json'))
+    expect(JSON.parse(local.toString('utf8')).format).toBe('wren-os-protected-signer')
+    const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'), {
       readSignerFiles: () => signerStorage.readAllSignerFiles()
     })
-  ).toThrow('secure Linux Secret Service or KWallet backend is unavailable')
-})
+    const payload = decryptTestPayload(backup, password)
+
+    expect(payload.files.signers).toHaveLength(1)
+    expect(Buffer.from(payload.files.signers[0].bytes, 'base64')).toEqual(original)
+    expect(JSON.stringify(payload)).not.toContain('wren-os-protected-signer')
+    expect(JSON.stringify(payload)).not.toContain('.os-signer-protection.json')
+
+    const source = path.join(root, 'portable.wrenbackup')
+    const target = path.join(root, 'restored')
+    fs.writeFileSync(source, backup)
+    fs.cpSync(profile, target, { recursive: true })
+    stageEncryptedProfileRestore(source, password, target, new Date('2026-08-12T00:01:00.000Z'))
+    expect(runPendingProfileRestore(target, new Date('2026-08-12T00:02:00.000Z'))).toMatchObject({
+      status: 'applied',
+      signerCount: 1
+    })
+    expect(fs.existsSync(path.join(target, 'signers', '.os-signer-protection.json'))).toBe(false)
+    expect(fs.readFileSync(path.join(target, 'signers', 'seed.json'))).toEqual(original)
+  }
+)
+
+it.each(['linux', 'win32'] as const)(
+  'refuses portable export when an enabled %s profile credential store is unavailable',
+  (platform) => {
+    const { profile } = fixture()
+    const keychain = fakeSafeStorage()
+    const signerStorage = new OsSignerStorage(profile, { platform, safeStorage: keychain })
+    signerStorage.enable()
+    keychain.setAvailable(false)
+
+    expect(() =>
+      createEncryptedProfileBackup(profile, password, new Date(), {
+        readSignerFiles: () => signerStorage.readAllSignerFiles()
+      })
+    ).toThrow(
+      platform === 'linux'
+        ? 'secure Linux Secret Service or KWallet backend is unavailable'
+        : 'Windows DPAPI encryption is unavailable'
+    )
+  }
+)
 
 it('binds restore staging to the exact regular backup file that was inspected', () => {
   const { target, backup } = restoreFixture()

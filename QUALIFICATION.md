@@ -7,7 +7,9 @@ minimal live-fund flows. Never publish seeds, keys, PINs, passphrases, pairing
 responses, full addresses, signatures, transaction hashes, device IDs, or profile
 contents. Use the [release procedure](RELEASE.md) for packaging and publication;
 use the [signer and platform support reference](HARDWARE_SUPPORT.md) for current
-device and platform boundaries.
+device and platform boundaries. Windows DPAPI signer protection has a separate
+[native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md); completing it
+does not by itself qualify the unsigned Windows package for release.
 
 ## Checklist navigation
 

@@ -41,6 +41,7 @@ const SignerProtectionStatusSchema = z
       'kwallet5',
       'kwallet6',
       'unknown',
+      'windows_dpapi',
       'unsupported'
     ]),
     enabled: z.boolean(),
@@ -50,7 +51,9 @@ const SignerProtectionStatusSchema = z
   })
   .strict()
   .superRefine((status, context) => {
-    const secureBackend = ['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'].includes(status.backend)
+    const secureBackend = ['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6', 'windows_dpapi'].includes(
+      status.backend
+    )
     if (status.available && !secureBackend) {
       context.addIssue({ code: 'custom', message: 'available protection requires a secure backend' })
     }

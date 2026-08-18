@@ -117,28 +117,33 @@ authenticated-envelope unlock proves the replacement can be read; a failed
 unlock or migration keeps the recovery copy. OS suspend and screen-lock events
 relock every unlocked software signer.
 
-On Linux, users may additionally bind all software-signer files, including a
-retained legacy recovery copy, to the current OS keychain. This is a versioned
-outer layer around the existing password-encrypted record; it neither stores the
-signer password nor enables passwordless unlock. Wren accepts only Electron's
-Secret Service (`gnome_libsecret`) and KWallet backends. It rejects `basic_text`,
-`unknown`, unavailable backends, other operating systems, a corrupt policy
-marker, and any mixed protected/unprotected transition. In those states no
-software signer is loaded at startup or after the failure is detected, and new
-signer writes are refused. Each encrypted
-payload is bound to its filename, migrations replace one private file at a time,
-and a profile marker is committed last when enabling and removed last when
-disabling. An interrupted change must be explicitly finished or reversed from
-Settings after the secure backend is available.
+On Linux and Windows x64, users may additionally bind all software-signer files,
+including a retained legacy recovery copy, to the current operating-system
+credential context. This is a versioned outer layer around the existing
+password-encrypted record; it neither stores the signer password nor enables
+passwordless unlock. Linux accepts only Electron's Secret Service
+(`gnome_libsecret`) and KWallet backends and rejects `basic_text` and `unknown`.
+Windows uses Electron `safeStorage` through DPAPI and never queries the Linux-only
+selected-backend API. macOS remains unsupported. Wren rejects an unavailable
+credential store, another identity's undecryptable data, a corrupt policy marker,
+and any mixed protected/unprotected transition. In those states no software
+signer is loaded at startup or after the failure is detected, and new signer
+writes are refused. Each encrypted payload is bound to its filename, migrations
+replace one private file at a time, and a profile marker is committed last when
+enabling and removed last when disabling. An interrupted change must be
+explicitly finished or reversed from Settings after the original credential
+context is available.
 
 Limits: while retained, legacy backup ciphertext is unauthenticated and protected
 by its old password inside either local storage layer. Device protection does not
-defend a compromised logged-in session, keychain, Wren process, signer worker, or
-host, and loss of the device keychain makes the bound local signer files
-unavailable. Without the optional Linux layer, signer encryption remains
-password-only. The keychain layer is at-rest protection, not continuous
-authorization: a signer already loaded into a running Wren process is governed
-by the normal password and process-lock lifecycle. It is never hardware-bound.
+defend a compromised logged-in session, credential store, Wren process, signer
+worker, or host, and loss of the original credential context makes the bound
+local signer files unavailable. DPAPI does not isolate Wren from other processes
+running as the same Windows user. Without the optional OS-backed layer, signer
+encryption remains password-only. The outer layer is at-rest protection, not
+continuous authorization: a signer already loaded into a running Wren process is
+governed by the normal password and process-lock lifecycle. It is never
+hardware-bound.
 Live-profile metadata, addresses,
 permissions, and networks are unencrypted; unlocked secrets exist in memory; and
 overwrite-before-delete is not secure erasure on modern filesystems or SSDs.
@@ -163,13 +168,13 @@ validated encrypted software-signer records, but exclude activity, address-safet
 memory, pending work,
 runtime observations, caches, installed dapp content, and Companion credentials;
 hardware devices keep their keys. Export writes a new mode-`0600` regular file.
-When Linux device protection is enabled, export first verifies the all-or-nothing
-local policy and removes only that outer layer in main memory; the backup contains
-the original password-encrypted signer record and never contains the device
-marker or device-bound ciphertext. Export fails if the keychain cannot open every
-record. Restored signer files intentionally start password-only on the destination
-so recovery never depends on the source device; users may explicitly enable the
-destination keychain layer afterward.
+When OS-backed device protection is enabled, export first verifies the
+all-or-nothing local policy and removes only that outer layer in main memory; the
+backup contains the original password-encrypted signer record and never contains
+the device marker or device-bound ciphertext. Export fails if the source
+credential context cannot open every record. Restored signer files intentionally
+start password-only on the destination so recovery never depends on the source
+device; users may explicitly enable the destination layer afterward.
 Restore keeps the chosen path in main, binds a short-lived single-use token to its
 identity, bytes, and inspected metadata, then requires an explicit replace action.
 The replacement runs before application bootstrap using an atomic swap, receipt,

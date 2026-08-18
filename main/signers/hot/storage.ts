@@ -15,7 +15,7 @@ const SIGNER_FILE = /^[A-Za-z0-9._-]+(?:\.json|\.legacy-v1\.bak)$/u
 const SECURE_LINUX_BACKENDS = new Set(['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'])
 
 export type StorageBackend =
-  'basic_text' | 'gnome_libsecret' | 'kwallet' | 'kwallet5' | 'kwallet6' | 'unknown'
+  'basic_text' | 'gnome_libsecret' | 'kwallet' | 'kwallet5' | 'kwallet6' | 'unknown' | 'windows_dpapi'
 
 interface SafeStorageLike {
   decryptString(encrypted: Buffer): string
@@ -32,7 +32,7 @@ const MarkerSchema = z
   .object({
     format: z.literal(MARKER_FORMAT),
     version: z.literal(VERSION),
-    backend: z.enum(['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'])
+    backend: z.enum(['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6', 'windows_dpapi'])
   })
   .strict()
 const WrapperSchema = z
@@ -114,6 +114,7 @@ const readRegularFile = (source: string, maximumBytes: number, label: string) =>
 }
 
 const fsyncDirectory = (directory: string) => {
+  if (process.platform === 'win32') return
   let descriptor: number | undefined
   try {
     descriptor = fs.openSync(directory, fs.constants.O_RDONLY)
@@ -216,7 +217,23 @@ export class OsSignerStorage {
     return parsed.data
   }
 
+  private markerMatchesPlatform(marker: z.infer<typeof MarkerSchema>) {
+    if (this.platform === 'win32') return marker.backend === 'windows_dpapi'
+    if (this.platform === 'linux') return SECURE_LINUX_BACKENDS.has(marker.backend)
+    return false
+  }
+
   private backend() {
+    if (this.platform === 'win32') {
+      try {
+        return {
+          available: this.storage.isEncryptionAvailable(),
+          backend: 'windows_dpapi' as const
+        }
+      } catch {
+        return { available: false, backend: 'windows_dpapi' as const }
+      }
+    }
     if (this.platform !== 'linux') return { available: false, backend: 'unsupported' as const }
     let backend: StorageBackend = 'unknown'
     let encryptionAvailable = false
@@ -232,7 +249,11 @@ export class OsSignerStorage {
   private requireSecureBackend() {
     const selected = this.backend()
     if (!selected.available || selected.backend === 'unsupported') {
-      throw new Error('A secure Linux Secret Service or KWallet backend is unavailable')
+      if (this.platform === 'win32') throw new Error('Windows DPAPI encryption is unavailable')
+      if (this.platform === 'linux') {
+        throw new Error('A secure Linux Secret Service or KWallet backend is unavailable')
+      }
+      throw new Error('OS-backed signer protection is unsupported on this platform')
     }
     return selected.backend
   }
@@ -333,8 +354,10 @@ export class OsSignerStorage {
   status(): OsSignerProtectionStatus {
     const markerPresent = fs.existsSync(this.markerPath())
     let markerValid = true
+    let markerMatchesPlatform = true
     try {
-      this.marker()
+      const marker = this.marker()
+      markerMatchesPlatform = marker ? this.markerMatchesPlatform(marker) : true
     } catch {
       markerValid = false
     }
@@ -343,7 +366,7 @@ export class OsSignerStorage {
     const mixed = markerPresent ? protectedFiles !== snapshots.length : protectedFiles !== 0
     const selected = this.backend()
     let decryptable = true
-    if (markerPresent && markerValid && !mixed && selected.available) {
+    if (markerPresent && markerValid && markerMatchesPlatform && !mixed && selected.available) {
       for (const snapshot of snapshots) {
         try {
           this.unprotect(snapshot.name, snapshot.bytes).fill(0)
@@ -354,10 +377,11 @@ export class OsSignerStorage {
       }
     }
     let state: OsSignerProtectionState
-    if (this.platform !== 'linux') state = 'unsupported'
+    if (this.platform !== 'linux' && this.platform !== 'win32') state = 'unsupported'
     else if (!markerValid || mixed) state = 'recovery-required'
-    else if (markerPresent && (!selected.available || !decryptable)) state = 'unavailable'
-    else if (markerPresent) state = 'enabled'
+    else if (markerPresent && (!selected.available || !markerMatchesPlatform || !decryptable)) {
+      state = 'unavailable'
+    } else if (markerPresent) state = 'enabled'
     else if (!selected.available) state = 'unavailable'
     else state = 'disabled'
     return Object.freeze({
@@ -372,6 +396,9 @@ export class OsSignerStorage {
 
   readAllSignerFiles() {
     const marker = this.marker()
+    if (marker && !this.markerMatchesPlatform(marker)) {
+      throw new Error('OS-protected signer files belong to another operating-system backend')
+    }
     const snapshots = this.snapshots()
     const protectedFiles = snapshots.filter((file) => file.protected).length
     if ((marker && protectedFiles !== snapshots.length) || (!marker && protectedFiles !== 0)) {
@@ -390,6 +417,9 @@ export class OsSignerStorage {
     }
     parseJsonObject(bytes, `Signer file ${name}`)
     const marker = this.marker()
+    if (marker && !this.markerMatchesPlatform(marker)) {
+      throw new Error('OS-protected signer files belong to another operating-system backend')
+    }
     const snapshots = this.snapshots()
     const protectedFiles = snapshots.filter((file) => file.protected).length
     if ((marker && protectedFiles !== snapshots.length) || (!marker && protectedFiles !== 0)) {
