@@ -32,6 +32,7 @@ jest.mock('electron', () => ({
 
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
+  sendTransaction: jest.fn(),
   emit: jest.fn(),
   on: jest.fn(),
   off: jest.fn(),
@@ -2601,6 +2602,179 @@ describe('#signerCompatibility', () => {
 
     expect(store.navDash).not.toHaveBeenCalled()
     expect(cb).toHaveBeenCalledWith(new Error('Watch-only accounts cannot sign'))
+  })
+})
+
+describe('#replaceTx', () => {
+  const activityId = '00000000-0000-4000-8000-000000000091'
+  const originalHash = `0x${'9'.repeat(64)}`
+
+  const installOriginal = (envelope = 'eip1559') => {
+    const current = Accounts.current()
+    const data =
+      envelope === 'legacy'
+        ? {
+            from: current.id,
+            to: `0x${'1'.repeat(40)}`,
+            value: '0x5',
+            data: '0x',
+            chainId: '0x1',
+            gasLimit: '0x5208',
+            gasPrice: '0x64',
+            type: '0x0',
+            nonce: '0xa',
+            gasFeesSource: GasFeesSource.Frame
+          }
+        : {
+            from: current.id,
+            to: `0x${'1'.repeat(40)}`,
+            value: '0x5',
+            data: '0x1234',
+            chainId: '0x1',
+            gasLimit: '0x9000',
+            maxPriorityFeePerGas: '0xa',
+            maxFeePerGas: '0x64',
+            type: '0x2',
+            nonce: '0xa',
+            gasFeesSource: GasFeesSource.Frame
+          }
+    const original = {
+      ...request,
+      handlerId: 'replace-original',
+      account: current.id,
+      origin: 'replacement-origin',
+      activityId,
+      mode: 'monitor',
+      status: 'verifying',
+      data,
+      tx: { hash: originalHash, confirmations: 0 },
+      approvals: [],
+      recognizedActions: [],
+      simulation: { status: 'succeeded' },
+      feesUpdatedByUser: false
+    }
+    current.requests[original.handlerId] = original
+    const now = Date.now()
+    operationLifecycleLedger.put(
+      {
+        id: activityId,
+        kind: 'transaction',
+        account: current.id,
+        origin: original.origin,
+        chainId: 1,
+        state: 'submitted',
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+        visibleInActivity: true,
+        notification: {},
+        transaction: { hash: originalHash, nonce: '0xa' }
+      },
+      now
+    )
+    return { current, original }
+  }
+
+  beforeEach(() => {
+    provider.sendTransaction.mockReset()
+    provider.connection.send.mockReset()
+    provider.connection.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_getTransactionReceipt') return callback({ result: null })
+      if (payload.method === 'eth_getTransactionCount') return callback({ result: '0xa' })
+      throw new Error(`Unexpected replacement RPC ${payload.method}`)
+    })
+    provider.sendTransaction.mockImplementation((payload, _response, _chain, onQueued) => {
+      const current = Accounts.current()
+      const handlerId = `replacement-${payload.params[0].type}`
+      current.requests[handlerId] = {
+        ...request,
+        handlerId,
+        account: current.id,
+        origin: payload._origin,
+        payload,
+        data: { ...payload.params[0], gasFeesSource: GasFeesSource.Dapp },
+        approvals: [],
+        recognizedActions: [],
+        simulation: { status: 'succeeded' },
+        feesUpdatedByUser: false
+      }
+      onQueued(handlerId)
+    })
+  })
+
+  afterEach(() => {
+    operationLifecycleLedger.remove(activityId, -1)
+    provider.sendTransaction.mockReset()
+    provider.connection.send.mockReset()
+  })
+
+  it('queues an EIP-1559 speed-up with current-or-minimum fees and no global preference mutation', async () => {
+    const { current, original } = installOriginal()
+    store.setGasDefault('ethereum', 1, 'standard', '0x1')
+    store.setGasFees('ethereum', 1, {
+      maxBaseFeePerGas: '0x70',
+      maxPriorityFeePerGas: '0x5'
+    })
+
+    await expect(Accounts.replaceTx(current.id, original.handlerId, 'speed')).resolves.toBeUndefined()
+
+    const [payload, , chain] = provider.sendTransaction.mock.calls[0]
+    expect(chain).toEqual({ type: 'ethereum', id: 1 })
+    expect(payload._origin).toBe(original.origin)
+    expect(payload.params[0]).toMatchObject({
+      to: original.data.to,
+      value: original.data.value,
+      data: original.data.data,
+      nonce: '0xa',
+      gasLimit: original.data.gasLimit,
+      maxPriorityFeePerGas: '0xb',
+      maxFeePerGas: '0x75'
+    })
+    expect(payload.params[0]).not.toHaveProperty('gasFeesSource')
+    expect(store('main.networksMeta.ethereum', 1, 'gas.price.selected')).toBe('standard')
+    expect(current.requests['replacement-0x2'].replacement).toEqual({
+      kind: 'speed',
+      originalActivityId: activityId,
+      originalHash
+    })
+  })
+
+  it('queues a legacy cancel as a reviewed self-transfer using the original origin', async () => {
+    const { current, original } = installOriginal('legacy')
+    store.setGasPrices('ethereum', 1, { fast: '0x96' })
+
+    await expect(Accounts.replaceTx(current.id, original.handlerId, 'cancel')).resolves.toBeUndefined()
+
+    const payload = provider.sendTransaction.mock.calls[0][0]
+    expect(payload._origin).toBe(original.origin)
+    expect(payload.params[0]).toEqual({
+      from: current.id,
+      nonce: '0xa',
+      chainId: '0x1',
+      type: '0x0',
+      gasPrice: '0x96',
+      to: current.id,
+      value: '0x0',
+      data: '0x'
+    })
+    expect(current.requests['replacement-0x0'].replacement.kind).toBe('cancel')
+  })
+
+  it('fails closed when the original is included before replacement admission', async () => {
+    const { current, original } = installOriginal()
+    store.setGasFees('ethereum', 1, {
+      maxBaseFeePerGas: '0x20',
+      maxPriorityFeePerGas: '0x5'
+    })
+    provider.connection.send.mockImplementation((payload, callback) => {
+      if (payload.method === 'eth_getTransactionReceipt') return callback({ result: { status: '0x1' } })
+      if (payload.method === 'eth_getTransactionCount') return callback({ result: '0xb' })
+    })
+
+    await expect(Accounts.replaceTx(current.id, original.handlerId, 'speed')).rejects.toThrow(
+      /already included/i
+    )
+    expect(provider.sendTransaction).not.toHaveBeenCalled()
   })
 })
 

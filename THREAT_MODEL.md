@@ -270,6 +270,14 @@ change after review and RPC can lie. Input transactions have only supported fiel
 and types; access lists are bounded, exact-width, order/duplicate preserving, and
 fully shown. Signers must preserve bytes; unsupported hardware types fail.
 
+Speed Up and Cancel are ordinary reviewed same-nonce transactions. The main process
+uses the greater of current configured-RPC fees and the exact replacement minimum,
+rechecks the original receipt and latest nonce immediately before signer invocation,
+and persists only public hash/nonce plus UUID relationship evidence. Cancel is a
+zero-value self-transfer that succeeds only if it confirms first. Linked lifecycle
+rows can recover an older transaction from `replaced` after a replacement reorg;
+Wren never treats the button or a mempool observation as proof of cancellation.
+
 #### Earn
 
 Earn promotes only its versioned local `(chainId, vaultAddress)` catalog. Kong

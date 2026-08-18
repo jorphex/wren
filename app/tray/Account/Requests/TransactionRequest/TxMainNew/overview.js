@@ -114,6 +114,23 @@ export const YearnOverview = ({ action, vaultName, amountRaw, symbol, decimals, 
 const DeployContractOverview = () => <div>Deploy contract</div>
 const DataOverview = () => <div>Send contract data</div>
 
+export const ReplacementNotice = ({ replacement }) => {
+  if (!replacement) return null
+  const hash = replacement.originalHash
+  const shortHash = `${hash.slice(0, 10)}…${hash.slice(-8)}`
+  return (
+    <ClusterRow>
+      <ClusterValue>
+        <div className='_txMainTag'>
+          {replacement.kind === 'cancel'
+            ? `Cancellation attempt for ${shortHash}. This self-transfer only cancels it if this transaction confirms first.`
+            : `Speed-up attempt for ${shortHash}. This transaction uses the same nonce and must confirm first.`}
+        </div>
+      </ClusterValue>
+    </ClusterRow>
+  )
+}
+
 const ContractCallOverview = ({ req, assetContext = {} }) => {
   const { decodedData: { method } = {} } = req
   return renderRecognizedActions(req, assetContext) || <SimpleContractCallOverview method={method} />
@@ -479,6 +496,7 @@ const TxOverview = ({
             </ClusterValue>
           </ClusterRow>
         )}
+        <ReplacementNotice replacement={req.replacement} />
         {replacementStatus.replacement &&
           (replacementStatus.possible ? (
             <ClusterRow>

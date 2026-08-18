@@ -165,6 +165,24 @@ export class RequestCommand extends React.Component {
     }
   }
 
+  runReplacementAction(kind, req) {
+    if (this.state.requestActionPending) return
+    this.setState({ requestActionPending: true, requestActionError: '' })
+    link.rpc('replaceTransactionRequest', requestReference(req), kind, (error) => {
+      if (!this.mounted) return
+      if (error) {
+        this.setState({
+          requestActionPending: false,
+          requestActionError:
+            'The original transaction could not be replaced. Its current status was preserved.'
+        })
+      } else {
+        this.setState({ requestActionPending: false, requestActionError: '' })
+        link.send('nav:back', 'panel')
+      }
+    })
+  }
+
   handleSignerCompatibilityFailure(error, compatibility, req) {
     if (!error && compatibility) return false
 
@@ -262,8 +280,9 @@ export class RequestCommand extends React.Component {
             <button
               type='button'
               className='txLifecycleAction txLifecycleActionBad'
+              disabled={this.state.requestActionPending}
               onClick={() => {
-                link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'cancel')
+                this.runReplacementAction('cancel', req)
               }}
             >
               Cancel
@@ -283,8 +302,9 @@ export class RequestCommand extends React.Component {
             <button
               type='button'
               className='txLifecycleAction txLifecycleActionGood'
+              disabled={this.state.requestActionPending}
               onClick={() => {
-                link.send('tray:replaceTx', { account: req.account, handlerId: req.handlerId }, 'speed')
+                this.runReplacementAction('speed', req)
               }}
             >
               Speed Up
@@ -300,6 +320,11 @@ export class RequestCommand extends React.Component {
             </button>
           )}
         </div>
+        {this.state.requestActionError ? (
+          <div className='requestActionError' role='alert'>
+            {this.state.requestActionError}
+          </div>
+        ) : null}
         {this.state.showHashDetails && hash && (
           <div className='txLifecycleDetails'>
             <span>{hash}</span>

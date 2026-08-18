@@ -35,7 +35,6 @@ export const requestEventChannels = new Set([
   'tray:rejectRequest',
   'tray:removeToken',
   'tray:renameAccount',
-  'tray:replaceTx',
   'tray:resetAllSettings',
   'tray:resetNonce',
   'tray:updateRestart'

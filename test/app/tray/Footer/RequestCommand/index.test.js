@@ -499,6 +499,31 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   view.unmount()
 })
 
+it.each(['cancel', 'speed'])(
+  'queues %s through the bounded RPC and reports admission failures',
+  async (kind) => {
+    const req = transaction({
+      notice: 'Verifying',
+      status: 'verifying',
+      tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
+    })
+    link.rpc.mockImplementation((_method, _reference, _kind, callback) => callback(new Error('stale')))
+    const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
+
+    await view.user.click(screen.getByRole('button', { name: kind === 'cancel' ? 'Cancel' : 'Speed Up' }))
+
+    expect(link.rpc).toHaveBeenCalledWith(
+      'replaceTransactionRequest',
+      { account: req.account, handlerId: req.handlerId, type: 'transaction' },
+      kind,
+      expect.any(Function)
+    )
+    expect(screen.getByRole('alert').textContent).toMatch(/could not be replaced/i)
+    expect(link.send).not.toHaveBeenCalledWith('nav:back', 'panel')
+    view.unmount()
+  }
+)
+
 it('calculates receipt fees without losing integer precision', () => {
   const receipt = {
     blockNumber: '0x1',

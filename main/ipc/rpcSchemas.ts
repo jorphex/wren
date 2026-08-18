@@ -149,6 +149,10 @@ const rpcSchemas = {
     request: z.tuple([TransactionRequestReferenceSchema]),
     response: actionResult
   },
+  replaceTransactionRequest: {
+    request: z.tuple([TransactionRequestReferenceSchema, z.enum(['cancel', 'speed'])]),
+    response: actionResult
+  },
   closeFailedTransactionRequest: {
     request: z.tuple([TransactionRequestReferenceSchema]),
     response: actionResult

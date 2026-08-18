@@ -462,7 +462,6 @@ test('keeps only trusted request reference fields', () => {
 
   for (const [channel, trailingArgs] of [
     ['tray:adjustNonce', [-1]],
-    ['tray:replaceTx', ['speed']],
     ['tray:resetNonce', []]
   ] as const) {
     expect(

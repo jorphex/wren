@@ -249,6 +249,20 @@ const rpc = {
     }
     callbackWhenDone(() => accounts.retryFailedTransaction(req.handlerId, req.account), cb)
   },
+  replaceTransactionRequest(req, type, cb) {
+    const currentAccount = accounts.current()
+    if (
+      req.type !== 'transaction' ||
+      !currentAccount ||
+      currentAccount.id.toLowerCase() !== req.account.toLowerCase()
+    ) {
+      return cb(new Error('Request account is no longer selected'))
+    }
+    accounts.replaceTx(req.account, req.handlerId, type).then(
+      () => cb(null),
+      (error) => cb(error)
+    )
+  },
   closeFailedTransactionRequest(req, cb) {
     const currentAccount = accounts.current()
     if (

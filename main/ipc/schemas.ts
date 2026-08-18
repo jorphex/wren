@@ -359,7 +359,6 @@ const eventSchemas: Record<string, z.ZodType> = {
   'tray:rejectRequest': z.tuple([AccountRequestReferenceSchema]),
   'tray:removeToken': z.tuple([TokenIdSchema]),
   'tray:renameAccount': z.tuple([AddressSchema, z.string().trim().min(1).max(128)]),
-  'tray:replaceTx': z.tuple([AccountRequestReferenceSchema, z.enum(['cancel', 'speed'])]),
   'tray:resetAllSettings': noArgs,
   'tray:resetNonce': z.tuple([AccountRequestReferenceSchema]),
   'tray:updateRestart': noArgs

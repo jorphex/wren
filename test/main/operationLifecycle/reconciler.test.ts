@@ -344,6 +344,59 @@ test('an unfinalized same-nonce sibling does not irreversibly replace a pending 
   expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash])
 })
 
+test('an explicitly linked canonical replacement supersedes on its first receipt', async () => {
+  const replacementId = '00000000-0000-4000-8000-000000000002'
+  const replacementHash = `0x${'e'.repeat(64)}`
+  let stored: OperationLifecycles = {
+    [operation().id]: operation(),
+    [replacementId]: operation({
+      id: replacementId,
+      state: 'confirmed',
+      transaction: { hash: replacementHash, nonce: '0x1', replacementOf: operation().id },
+      receipt: {
+        transactionHash: replacementHash,
+        blockHash,
+        blockNumber: '0x5',
+        status: '0x1'
+      },
+      settlement: { status: 'monitoring' }
+    })
+  }
+  const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+  const rpc = jest.fn()
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
+    state: 'replaced',
+    replacement: { operationId: replacementId }
+  })
+  expect(rpc).not.toHaveBeenCalled()
+})
+
+test('a replaced transaction resumes canonical monitoring when its linked winner reorgs', async () => {
+  const replacementId = '00000000-0000-4000-8000-000000000002'
+  const replacementHash = `0x${'e'.repeat(64)}`
+  let stored: OperationLifecycles = {
+    [operation().id]: operation({ state: 'replaced', replacement: { operationId: replacementId } }),
+    [replacementId]: operation({
+      id: replacementId,
+      state: 'reorged',
+      updatedAt: 19,
+      transaction: { hash: replacementHash, nonce: '0x1', replacementOf: operation().id }
+    })
+  }
+  const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+  const rpc = jest.fn(async (_chainId: number, method: string) => {
+    if (method === 'eth_getTransactionReceipt') return null
+    throw new Error(`Unexpected method ${method}`)
+  })
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({ state: 'submitted' })
+  expect(ledger.get(operation().id, 20)).not.toHaveProperty('replacement')
+  expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash])
+})
+
 test('a duplicate lifecycle row for the same transaction hash is not a replacement', async () => {
   let stored: OperationLifecycles = {
     [operation().id]: operation(),

@@ -128,6 +128,11 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   classification: TxClassification
   simulation: TransactionSimulation
   addressSafety?: AddressSafetyAssessment
+  replacement?: {
+    kind: ReplacementType
+    originalActivityId: string
+    originalHash: string
+  }
   recoverableError?: {
     code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
     message: string

@@ -1,6 +1,5 @@
 import EventEmitter from 'events'
 import log from 'electron-log'
-import { addHexPrefix } from '@ethereumjs/util'
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid'
 import { toBeHex } from 'ethers'
 
@@ -45,6 +44,11 @@ import { ApprovalType } from '../../resources/constants'
 import { accountNS } from '../../resources/domain/account'
 import { chainUsesOptimismFees } from '../../resources/utils/chains'
 import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
+import {
+  getReplacementStatus,
+  replacementFees,
+  type ReplacementFeeMarket
+} from '../../resources/domain/transaction/replacement'
 import { parseTokenBaseUnitAmount } from '../../resources/domain/token/amount'
 import type { PreparedWalletCallExecutionSnapshot } from '../provider/walletCallPreparedExecution'
 import {
@@ -63,6 +67,7 @@ import { parseAccountCode, type ParsedAccountCode } from '../../resources/domain
 import { recordRequestActivity } from '../activity'
 import operationLifecycleLedger from '../operationLifecycle'
 import operationLifecycleRuntime from '../operationLifecycle/runtime'
+import { operationLifecycleRpc } from '../operationLifecycle/rpc'
 import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
@@ -124,6 +129,9 @@ function toTransactionsByLayer(requests: Record<string, AccountRequest>, chainId
       { l1Transactions: [] as RequestWithId[], l2Transactions: [] as RequestWithId[] }
     )
 }
+
+const transactionRequests = (account: FrameAccount) =>
+  Object.values(account.requests).filter(isTransactionRequest)
 
 const frameOriginId = uuidv5('frame-internal', uuidv5.DNS)
 
@@ -207,6 +215,7 @@ export class Accounts extends EventEmitter {
   private readonly transactionReviewDismissTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly transactionCleanupTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private readonly eip7702Admissions = new Set<string>()
+  private readonly replacementAdmissions = new Set<string>()
   private readonly removeOperationLifecycleObserver: () => void
 
   constructor() {
@@ -268,7 +277,11 @@ export class Accounts extends EventEmitter {
       expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
       visibleInActivity: true,
       notification: {},
-      transaction: { hash: hash.toLowerCase(), nonce: toRpcQuantity(nonce) }
+      transaction: {
+        hash: hash.toLowerCase(),
+        nonce: toRpcQuantity(nonce),
+        ...(request.replacement ? { replacementOf: request.replacement.originalActivityId } : {})
+      }
     }
   }
 
@@ -1370,52 +1383,187 @@ export class Accounts extends EventEmitter {
     return false
   }
 
+  private replacementFeeMarket(chainId: number, baseFee: boolean): ReplacementFeeMarket {
+    const price = store('main.networksMeta', 'ethereum', chainId, 'gas.price') || {}
+    if (baseFee) {
+      return {
+        maxBaseFeePerGas: price.fees?.maxBaseFeePerGas,
+        maxPriorityFeePerGas: price.fees?.maxPriorityFeePerGas
+      }
+    }
+    return { gasPrice: price.levels?.fast }
+  }
+
+  private applyReplacementFees(account: FrameAccount, request: TransactionRequest) {
+    const chainId = Number(parseRpcQuantity(request.data.chainId))
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) throw new Error('Invalid replacement chain')
+    const fees = replacementFees(
+      request,
+      transactionRequests(account),
+      this.replacementFeeMarket(chainId, usesBaseFee(request.data))
+    )
+    request.data = { ...request.data, ...fees, gasFeesSource: GasFeesSource.Frame }
+    request.feesUpdatedByUser = false
+    return fees
+  }
+
+  private replacementOperation(
+    account: FrameAccount,
+    replacement: NonNullable<TransactionRequest['replacement']>
+  ) {
+    const operation = operationLifecycleLedger
+      .listStored()
+      .find(({ id }) => id === replacement.originalActivityId)
+    if (
+      !operation ||
+      operation.kind !== 'transaction' ||
+      operation.account !== account.id ||
+      operation.transaction?.hash !== replacement.originalHash.toLowerCase()
+    ) {
+      throw new Error('Original transaction monitoring evidence is unavailable')
+    }
+    if (!['submitted', 'reorged'].includes(operation.state) || operation.receipt) {
+      throw new Error('Original transaction is no longer replaceable')
+    }
+    return operation
+  }
+
+  private async assertReplacementStillCurrent(
+    account: FrameAccount,
+    replacement: NonNullable<TransactionRequest['replacement']>
+  ) {
+    if (this.current() !== account || this.accounts[account.id] !== account) {
+      throw new Error('Replacement requires the selected account')
+    }
+    const operation = this.replacementOperation(account, replacement)
+    const [receipt, latestNonceValue] = await Promise.all([
+      operationLifecycleRpc(operation.chainId, 'eth_getTransactionReceipt', [replacement.originalHash]),
+      operationLifecycleRpc(operation.chainId, 'eth_getTransactionCount', [account.id, 'latest'])
+    ])
+    if (receipt !== null) throw new Error('Original transaction is already included')
+    const latestNonce = parseRpcQuantity(latestNonceValue)
+    const originalNonce = parseRpcQuantity(operation.transaction?.nonce)
+    if (latestNonce === undefined || originalNonce === undefined) {
+      throw new Error('Could not verify the original transaction nonce')
+    }
+    if (latestNonce > originalNonce) throw new Error('Original transaction nonce is already used')
+
+    // Reject a chain/account/state change that raced the configured-RPC checks.
+    this.replacementOperation(account, replacement)
+    return operation
+  }
+
+  async recheckReplacementRequest(request: TransactionRequest) {
+    if (!request.replacement) return true
+    const account = this.requestAccount(request.handlerId, request.account)
+    if (!account || account.getRequest(request.handlerId) !== request) {
+      throw new Error('Replacement request is no longer available')
+    }
+    await this.assertReplacementStillCurrent(account, request.replacement)
+    const status = getReplacementStatus(request, transactionRequests(account))
+    if (!status.replacement || !status.possible) {
+      throw new Error('Replacement fees or nonce are no longer valid')
+    }
+    return true
+  }
+
   async replaceTx(accountId: string, id: string, type: ReplacementType) {
     const currentAccount = this.requestAccount(id, accountId)
+    if (!currentAccount || this.current() !== currentAccount)
+      throw new Error('Replacement requires the selected account')
+    const original = currentAccount.getRequest<TransactionRequest>(id)
+    if (!original || original.type !== 'transaction') throw new Error('Original transaction is unavailable')
+    if (
+      original.mode !== RequestMode.Monitor ||
+      ![RequestStatus.Verifying, RequestStatus.Sent].includes(original.status as RequestStatus) ||
+      !original.tx?.hash ||
+      original.tx.receipt ||
+      !original.activityId
+    ) {
+      throw new Error('Original transaction is no longer replaceable')
+    }
 
-    return new Promise<void>((resolve, reject) => {
-      if (!currentAccount || !currentAccount.requests[id]) return reject(new Error('Could not find request'))
-      if (currentAccount.requests[id].type !== 'transaction')
-        return reject(new Error('Request is not transaction'))
+    const replacement = Object.freeze({
+      kind: type,
+      originalActivityId: original.activityId,
+      originalHash: original.tx.hash.toLowerCase()
+    })
+    if (
+      this.replacementAdmissions.has(original.activityId) ||
+      Object.values(currentAccount.requests).some(
+        (candidate) =>
+          candidate.type === 'transaction' &&
+          candidate.replacement?.originalActivityId === original.activityId &&
+          ![RequestStatus.Declined, RequestStatus.Error].includes(candidate.status as RequestStatus)
+      )
+    ) {
+      throw new Error('A replacement for this transaction is already pending')
+    }
 
-      const txRequest = this.getTransactionRequest(currentAccount, id)
-
-      const data = JSON.parse(JSON.stringify(txRequest.data))
-      const targetChain = { type: 'ethereum', id: parseInt(data.chainId, 16) }
-      const { levels } = store('main.networksMeta', targetChain.type, targetChain.id, 'gas.price')
-
-      // Set the gas default to asap
-      requireStoreAction('setGasDefault')(targetChain.type, targetChain.id, 'asap', levels.asap)
-
-      const params =
+    this.replacementAdmissions.add(original.activityId)
+    try {
+      const operation = await this.assertReplacementStillCurrent(currentAccount, replacement)
+      const chainId = operation.chainId
+      const base = original.data
+      const fees = replacementFees(
+        original,
+        transactionRequests(currentAccount),
+        this.replacementFeeMarket(chainId, usesBaseFee(base))
+      )
+      const nonce = operation.transaction?.nonce
+      if (!nonce) throw new Error('Original transaction has no durable nonce')
+      const shared = {
+        from: currentAccount.getSelectedAddress(),
+        nonce,
+        chainId: toRpcQuantity(BigInt(chainId)),
+        type: base.type,
+        ...(base.accessList === undefined ? {} : { accessList: base.accessList }),
+        ...fees
+      }
+      const params: RPC.SendTransaction.TxParams =
         type === ReplacementType.Speed
-          ? [data]
-          : [
-              {
-                from: currentAccount.getSelectedAddress(),
-                to: currentAccount.getSelectedAddress(),
-                value: '0x0',
-                nonce: data.nonce,
-                chainId: addHexPrefix(targetChain.id.toString(16))
-              }
-            ]
-
-      const _origin = type === ReplacementType.Speed ? currentAccount.requests[id].origin : frameOriginId
-
-      const tx = {
+          ? {
+              ...shared,
+              ...(base.to === undefined ? {} : { to: base.to }),
+              ...(base.value === undefined ? {} : { value: base.value }),
+              ...(base.data === undefined ? {} : { data: base.data }),
+              ...(base.gasLimit === undefined ? {} : { gasLimit: base.gasLimit })
+            }
+          : { ...shared, to: currentAccount.getSelectedAddress(), value: '0x0', data: '0x' }
+      const payload: RPC.SendTransaction.Request = {
         id: 1,
         jsonrpc: '2.0',
         method: 'eth_sendTransaction',
-        chainId: addHexPrefix(targetChain.id.toString(16)),
-        params,
-        _origin
+        chainId: toRpcQuantity(BigInt(chainId)),
+        params: [params],
+        _origin: original.origin
       }
 
-      this.sendRequest(tx, (res: RPCResponsePayload) => {
-        if (res.error) return reject(new Error(res.error.message))
-        resolve()
+      return await new Promise<void>((resolve, reject) => {
+        let queued = false
+        provider.sendTransaction(
+          payload,
+          (response) => {
+            if (!queued && response.error) reject(new Error(response.error.message))
+          },
+          { type: 'ethereum', id: chainId },
+          (handlerId) => {
+            const request = currentAccount.getRequest<TransactionRequest>(handlerId)
+            if (!request || request.type !== 'transaction') {
+              reject(new Error('Replacement request could not be created'))
+              return
+            }
+            queued = true
+            request.replacement = replacement
+            this.applyReplacementFees(currentAccount, request)
+            currentAccount.update()
+            resolve()
+          }
+        )
       })
-    })
+    } finally {
+      this.replacementAdmissions.delete(original.activityId)
+    }
   }
 
   private sendRequest(
@@ -1515,6 +1663,10 @@ export class Accounts extends EventEmitter {
             const gasPrice = gas.price.levels.fast
             if (!gasPrice) throw new Error(`Network ${chain.id} has no fast gas-price estimate`)
             this.setGasPrice(gasPrice, id, false)
+          }
+          if (req.replacement) {
+            this.applyReplacementFees(currentAccount, req)
+            currentAccount.refreshTransactionSimulation(req)
           }
         } catch (e) {
           log.error('Could not update gas fees for transaction', e)
@@ -2092,6 +2244,12 @@ export class Accounts extends EventEmitter {
         storedRequest.simulation?.advancedChecks?.status === 'pending')
     ) {
       throw new Error('Transaction safety checks are still pending')
+    }
+    if (isTransactionRequest(storedRequest) && storedRequest.replacement) {
+      const replacementStatus = getReplacementStatus(storedRequest, transactionRequests(currentAccount))
+      if (!replacementStatus.replacement || !replacementStatus.possible) {
+        throw new Error('Replacement fees or nonce are no longer valid')
+      }
     }
 
     storedRequest.status = RequestStatus.Pending

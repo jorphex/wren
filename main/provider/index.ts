@@ -620,7 +620,14 @@ export class Provider extends EventEmitter {
 
     accounts.lockRequest(transactionRequest.handlerId, transactionRequest.account)
 
-    if (transactionRequest.data.nonce) return signAndSend(transactionRequest)
+    if (transactionRequest.data.nonce) {
+      if (!transactionRequest.replacement) return signAndSend(transactionRequest)
+      void accounts.recheckReplacementRequest(transactionRequest).then(
+        () => signAndSend(transactionRequest),
+        (error) => failBeforeBroadcast(transactionRequest, error as Error)
+      )
+      return
+    }
 
     this.getNonce(transactionRequest.data, (response) => {
       if (response.error) {

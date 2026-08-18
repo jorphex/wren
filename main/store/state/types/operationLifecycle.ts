@@ -75,7 +75,11 @@ export const OperationLifecycleSchema = z
     expiresAt: z.number().int().positive(),
     visibleInActivity: z.boolean(),
     notification: NotificationStateSchema,
-    transaction: z.object({ hash: HashSchema, nonce: QuantitySchema }).strict().optional(),
+    transaction: z
+      .object({ hash: HashSchema, nonce: QuantitySchema, replacementOf: z.uuid().optional() })
+      .strict()
+      .optional(),
+    replacement: z.object({ operationId: z.uuid() }).strict().optional(),
     walletCalls: z.object({ batchOperationId: z.uuid() }).strict().optional(),
     eip7702Revoke: z.object({ hash: HashSchema, expectedFinalNonce: QuantitySchema }).strict().optional(),
     receipt: ReceiptEvidenceSchema.optional(),
@@ -114,6 +118,18 @@ export const OperationLifecycleSchema = z
     }
     if (operation.kind === 'transaction' && operation.settlement && !operation.receipt) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'transaction settlement requires a receipt' })
+    }
+    if (
+      operation.replacement &&
+      (operation.kind !== 'transaction' ||
+        operation.state !== 'replaced' ||
+        operation.settlement ||
+        operation.replacement.operationId === operation.id)
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid transaction replacement evidence' })
+    }
+    if (operation.transaction?.replacementOf === operation.id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'transaction cannot replace itself' })
     }
 
     for (const timestamp of [

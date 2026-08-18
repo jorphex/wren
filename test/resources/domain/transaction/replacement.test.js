@@ -3,6 +3,7 @@ import {
   getReplacementStatus,
   increaseByTenPercent,
   minimumReplacementFee,
+  replacementFees,
   requiresReplacementFeeBump
 } from '../../../../resources/domain/transaction/replacement'
 
@@ -128,4 +129,35 @@ it('ignores malformed or incomplete fee history without falling between envelope
 
   expect(() => getReplacementStatus(request, requests)).not.toThrow()
   expect(getReplacementStatus(request, requests)).toEqual({ replacement: true, possible: true })
+})
+
+it('selects the greater of the exact legacy replacement minimum and current gas price', () => {
+  const original = monitored({ gasPrice: '0x64' })
+  expect(replacementFees(original, [original], { gasPrice: '0x69' })).toEqual({ gasPrice: '0x6e' })
+  expect(replacementFees(original, [original], { gasPrice: '0x96' })).toEqual({ gasPrice: '0x96' })
+})
+
+it('uses independent same-nonce maxima and current EIP-1559 fees', () => {
+  const original = monitored({ maxPriorityFeePerGas: '0xa', maxFeePerGas: '0x64' })
+  const sibling = monitored({ maxPriorityFeePerGas: '0x14', maxFeePerGas: '0x50' })
+
+  expect(
+    replacementFees(original, [original, sibling], {
+      maxBaseFeePerGas: '0x70',
+      maxPriorityFeePerGas: '0x5'
+    })
+  ).toEqual({ maxPriorityFeePerGas: '0x16', maxFeePerGas: '0x75' })
+})
+
+it('fails closed when replacement history or current market evidence is unavailable', () => {
+  const original = monitored({ gasPrice: '0x64' })
+  expect(() => replacementFees(original, [], { gasPrice: '0x64' })).toThrow(/no longer replaceable/i)
+  expect(() => replacementFees(original, [original], {})).toThrow(/unavailable/i)
+  expect(() =>
+    replacementFees(
+      monitored({ maxPriorityFeePerGas: '0xa', maxFeePerGas: '0x64' }),
+      [monitored({ maxPriorityFeePerGas: '0xa', maxFeePerGas: '0x64' })],
+      {}
+    )
+  ).toThrow(/unavailable/i)
 })

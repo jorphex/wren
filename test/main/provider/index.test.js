@@ -177,6 +177,7 @@ beforeEach(() => {
   accounts.signTransactionForAccount = jest.fn()
   accounts.setTxSigned = jest.fn()
   accounts.lockRequest = jest.fn()
+  accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   accounts.rejectUnapprovedRequestsForOriginChain = jest.fn()
   executeWalletCallRuntime.mockReset()
   executeWalletCallRuntime.mockResolvedValue(['0xhash'])
@@ -184,6 +185,21 @@ beforeEach(() => {
 })
 
 describe('#approveTransactionRequest', () => {
+  const replacementRequest = () => ({
+    account: address,
+    handlerId: 'replacement-approval',
+    type: 'transaction',
+    payload: { id: 1, jsonrpc: '2.0', method: 'eth_sendTransaction' },
+    data: { chainId: '0x1', nonce: '0x1' },
+    simulation: { status: 'succeeded' },
+    approvals: [],
+    replacement: {
+      kind: 'speed',
+      originalActivityId: '00000000-0000-4000-8000-000000000001',
+      originalHash: `0x${'a'.repeat(64)}`
+    }
+  })
+
   it('refuses to lock or sign while the execution check is pending', (done) => {
     provider.approveTransactionRequest(
       {
@@ -263,6 +279,41 @@ describe('#approveTransactionRequest', () => {
     expect(accounts.updateNonce).not.toHaveBeenCalled()
     expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
     nonce.mockRestore()
+  })
+
+  it('rechecks a replacement immediately before signing', async () => {
+    const request = replacementRequest()
+    accountRequests.push(request)
+    const signAndSend = jest
+      .spyOn(provider, 'signAndSend')
+      .mockImplementation((_request, callback) => callback(null, `0x${'b'.repeat(64)}`))
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    await new Promise(setImmediate)
+
+    expect(accounts.recheckReplacementRequest).toHaveBeenCalledWith(request)
+    expect(signAndSend).toHaveBeenCalledWith(request, callback)
+    signAndSend.mockRestore()
+  })
+
+  it('fails closed when final replacement evidence is stale', async () => {
+    const request = replacementRequest()
+    accountRequests.push(request)
+    accounts.recheckReplacementRequest.mockRejectedValueOnce(
+      new Error('Original transaction is already included')
+    )
+    const signAndSend = jest.spyOn(provider, 'signAndSend')
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    await new Promise(setImmediate)
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/included/i) })
+    )
+    expect(signAndSend).not.toHaveBeenCalled()
+    signAndSend.mockRestore()
   })
 })
 

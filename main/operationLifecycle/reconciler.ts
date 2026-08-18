@@ -84,7 +84,7 @@ const operationHash = (operation: OperationLifecycle) =>
   operation.transaction?.hash ?? operation.eip7702Revoke?.hash
 
 const withoutReceipt = (operation: OperationLifecycle, state: OperationLifecycle['state'], now: number) => {
-  const { receipt: _receipt, settlement: _settlement, ...without } = operation
+  const { receipt: _receipt, settlement: _settlement, replacement: _replacement, ...without } = operation
   return { ...without, state, updatedAt: Math.max(now, operation.updatedAt) }
 }
 
@@ -125,19 +125,38 @@ export class OperationLifecycleReconciler {
   private replacementFor(operation: OperationLifecycle) {
     const transaction = operation.transaction
     if (!transaction) return
-    return this.ledger
-      .listStored()
-      .find(
+    const operations = this.ledger.listStored()
+    const byId = new Map(operations.map((candidate) => [candidate.id, candidate]))
+    const explicitlyReplaces = (candidate: OperationLifecycle) => {
+      const visited = new Set<string>()
+      let replacementOf = candidate.transaction?.replacementOf
+      while (replacementOf && !visited.has(replacementOf)) {
+        if (replacementOf === operation.id) return true
+        visited.add(replacementOf)
+        replacementOf = byId.get(replacementOf)?.transaction?.replacementOf
+      }
+      return false
+    }
+    const eligible = (candidate: OperationLifecycle) =>
+      candidate.id !== operation.id &&
+      candidate.kind === 'transaction' &&
+      candidate.account === operation.account &&
+      candidate.chainId === operation.chainId &&
+      candidate.transaction?.nonce === transaction.nonce &&
+      candidate.transaction?.hash !== transaction.hash &&
+      (candidate.state === 'confirmed' || candidate.state === 'failed')
+
+    return (
+      operations.find(
+        (candidate) => eligible(candidate) && explicitlyReplaces(candidate) && candidate.receipt
+      ) ||
+      operations.find(
         (candidate) =>
-          candidate.id !== operation.id &&
-          candidate.kind === 'transaction' &&
-          candidate.account === operation.account &&
-          candidate.chainId === operation.chainId &&
-          candidate.transaction?.nonce === transaction.nonce &&
-          candidate.transaction?.hash !== transaction.hash &&
-          (candidate.state === 'confirmed' || candidate.state === 'failed') &&
+          eligible(candidate) &&
+          candidate.transaction?.replacementOf === undefined &&
           candidate.settlement?.status !== 'monitoring'
       )
+    )
   }
 
   private async settlementBasis(
@@ -207,8 +226,17 @@ export class OperationLifecycleReconciler {
   }
 
   async reconcile(operationId: string, now = Date.now()) {
-    const operation = this.ledger.listStored().find(({ id }) => id === operationId)
+    let operation = this.ledger.listStored().find(({ id }) => id === operationId)
     if (!operation) return
+    if (operation.state === 'replaced' && operation.replacement) {
+      const winner = this.ledger.listStored().find(({ id }) => id === operation?.replacement?.operationId)
+      if (winner?.receipt && (winner.state === 'confirmed' || winner.state === 'failed')) {
+        this.emit(operation, operation, { pendingEvidence: false })
+        return operation
+      }
+      const revived = withoutReceipt(operation, 'submitted', now)
+      operation = this.transition(operation, revived, now, { pendingEvidence: false })
+    }
     if (
       !['submitted', 'confirming', 'reorged'].includes(operation.state) &&
       !isBackgroundSettlementCandidate(operation)
@@ -239,10 +267,22 @@ export class OperationLifecycleReconciler {
       )
     }
 
-    if (this.replacementFor(operation)) {
-      return this.transition(operation, { ...operation, state: 'replaced', updatedAt: now }, now, {
-        pendingEvidence: false
-      })
+    const replacement = this.replacementFor(operation)
+    if (replacement) {
+      const { settlement: _settlement, receipt: _receipt, ...replaceable } = operation
+      return this.transition(
+        operation,
+        {
+          ...replaceable,
+          state: 'replaced',
+          replacement: { operationId: replacement.id },
+          updatedAt: now
+        },
+        now,
+        {
+          pendingEvidence: false
+        }
+      )
     }
 
     try {

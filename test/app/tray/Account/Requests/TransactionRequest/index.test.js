@@ -22,6 +22,7 @@ import {
   getReviewStatusPresentation,
   getSimulationEffectsPresentation,
   getSimulationPresentation,
+  ReplacementNotice,
   TransactionDataRow,
   YearnOverview
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew/overview'
@@ -1528,6 +1529,14 @@ describe('transaction nonce presentation', () => {
 })
 
 describe('replacement status', () => {
+  it.each([
+    ['cancel', /only cancels it if this transaction confirms first/i],
+    ['speed', /uses the same nonce and must confirm first/i]
+  ])('explains %s replacement semantics in review', (kind, message) => {
+    render(<ReplacementNotice replacement={{ kind, originalHash: `0x${'a'.repeat(64)}` }} />)
+    expect(screen.getByText(message)).toBeTruthy()
+  })
+
   it('maps a below-minimum fee assessment to the existing transaction-card notice', () => {
     const req = { data: { nonce: '0x7', gasPrice: '0x6d' } }
     const requests = {

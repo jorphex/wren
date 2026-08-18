@@ -57,6 +57,35 @@ test('requires receipt evidence to match its operation transaction', () => {
   ).toThrow()
 })
 
+test('accepts only payload-free non-self replacement links in their truthful states', () => {
+  const replacementOf = id(2)
+  expect(
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      transaction: { ...transaction().transaction, replacementOf }
+    }).transaction
+  ).toEqual({ ...transaction().transaction, replacementOf })
+  expect(
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      state: 'replaced',
+      replacement: { operationId: replacementOf }
+    }).replacement
+  ).toEqual({ operationId: replacementOf })
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      transaction: { ...transaction().transaction, replacementOf: transaction().id }
+    })
+  ).toThrow()
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      replacement: { operationId: replacementOf }
+    })
+  ).toThrow()
+})
+
 test('accepts only bounded background settlement metadata on ordinary terminal outcomes', () => {
   const receipt = {
     transactionHash: transaction().transaction.hash,

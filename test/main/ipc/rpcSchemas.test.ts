@@ -55,6 +55,19 @@ test.each(['retryTransactionRequest', 'closeFailedTransactionRequest'])(
   }
 )
 
+test('bounds transaction replacement to an account-owned request and known action', () => {
+  const request = { handlerId, account: address, type: 'transaction', notice: 'private details' }
+  expect(parseRendererRpcRequest(wire(1, 'replaceTransactionRequest', request, 'speed'))).toEqual({
+    success: true,
+    data: {
+      id: 1,
+      method: 'replaceTransactionRequest',
+      args: [{ handlerId, account: address, type: 'transaction' }, 'speed']
+    }
+  })
+  expect(parseRendererRpcRequest(wire(1, 'replaceTransactionRequest', request, 'other')).success).toBe(false)
+})
+
 test('accepts only an explicit wallet-call simulation acknowledgement', () => {
   const request = { handlerId, account: address, type: 'walletCalls' }
   expect(

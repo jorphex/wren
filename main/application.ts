@@ -171,17 +171,6 @@ onRenderer('tray:resetAllSettings', () => {
   app.exit(0)
 })
 
-onRenderer('tray:replaceTx', async (e, request, type) => {
-  requireStoreAction('navBack')('panel')
-  setTimeout(async () => {
-    try {
-      await accounts.replaceTx(request.account, request.handlerId, type)
-    } catch (e) {
-      log.error('tray:replaceTx Error', e)
-    }
-  }, 1000)
-})
-
 onRenderer('tray:clipboardData', (e, data) => {
   if (data) clipboard.writeText(data)
 })
