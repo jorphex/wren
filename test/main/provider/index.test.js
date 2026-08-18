@@ -938,8 +938,8 @@ describe('#wallet-call provider boundary', () => {
       id: 75,
       jsonrpc: '2.0',
       result: {
-        '0x1': { atomic: { status: 'unsupported' } },
-        '0x5': { atomic: { status: 'unsupported' } }
+        '0x1': { atomic: { status: 'unsupported' }, assetDiscovery: { supported: true } },
+        '0x5': { atomic: { status: 'unsupported' }, assetDiscovery: { supported: true } }
       }
     })
   })
@@ -960,7 +960,7 @@ describe('#wallet-call provider boundary', () => {
     )
 
     expect(respond.mock.calls[0][0].result).toEqual({
-      '0x1': { atomic: { status: 'unsupported' } }
+      '0x1': { atomic: { status: 'unsupported' }, assetDiscovery: { supported: true } }
     })
   })
 
@@ -2414,6 +2414,134 @@ describe('#send', () => {
 
         done()
       })
+    })
+
+    it('returns ERC-7811 chain-keyed assets for the selected authorized account', (done) => {
+      send(
+        {
+          method: 'wallet_getAssets',
+          params: [{ account: address, chainFilter: ['0x1', '0x89'], assetTypeFilter: ['erc20'] }]
+        },
+        (response) => {
+          expect(response.error).toBeUndefined()
+          expect(response.result).toEqual({
+            '0x1': [
+              {
+                address: balances[1].address,
+                balance: balances[1].balance,
+                type: 'erc20',
+                metadata: { name: 'Olympus DAO', symbol: 'OHM', decimals: 9 }
+              }
+            ],
+            '0x89': [
+              {
+                address: balances[0].address,
+                balance: balances[0].balance,
+                type: 'erc20',
+                metadata: { name: 'Polygon Badger', symbol: 'BADGER', decimals: 18 }
+              }
+            ]
+          })
+          done()
+        }
+      )
+    })
+
+    it('honors explicit-asset precedence for native and ERC-20 assets', (done) => {
+      send(
+        {
+          method: 'wallet_getAssets',
+          params: [
+            {
+              account: address,
+              assetFilter: {
+                '0x1': [{ address: balances[1].address, type: 'erc20' }],
+                '0xa4b1': [{ address: 'native', type: 'native' }]
+              },
+              assetTypeFilter: ['erc721'],
+              chainFilter: []
+            }
+          ]
+        },
+        (response) => {
+          expect(response.result).toEqual({
+            '0x1': [
+              {
+                address: balances[1].address,
+                balance: balances[1].balance,
+                type: 'erc20',
+                metadata: { name: 'Olympus DAO', symbol: 'OHM', decimals: 9 }
+              }
+            ],
+            '0xa4b1': [{ address: 'native', balance: balances[2].balance, type: 'native' }]
+          })
+          done()
+        }
+      )
+    })
+
+    it('omits assets and chain keys outside the origin grant', (done) => {
+      store.set('main.permissions', address, {
+        [defaultOriginId]: grant(defaultOriginId, 'example.test', [1])
+      })
+
+      send(
+        {
+          method: 'wallet_getAssets',
+          params: [{ account: address, chainFilter: ['0x1', '0x89', '0xa4b1'] }]
+        },
+        (response) => {
+          expect(response.result).toEqual({
+            '0x1': [
+              {
+                address: balances[1].address,
+                balance: balances[1].balance,
+                type: 'erc20',
+                metadata: { name: 'Olympus DAO', symbol: 'OHM', decimals: 9 }
+              }
+            ]
+          })
+          done()
+        }
+      )
+    })
+
+    it('rejects another account and malformed filters without disclosure', (done) => {
+      const responses = []
+      const collect = (response) => {
+        responses.push(response)
+        if (responses.length !== 2) return
+        expect(responses.map(({ error }) => error.code)).toEqual([4100, -32602])
+        expect(responses.every(({ result }) => result === undefined)).toBe(true)
+        done()
+      }
+
+      send(
+        {
+          method: 'wallet_getAssets',
+          params: [{ account: '0x3333333333333333333333333333333333333333' }]
+        },
+        collect
+      )
+      send({ method: 'wallet_getAssets', params: [{ account: address, chainFilter: ['0x01'] }] }, collect)
+    })
+
+    it('rejects another account before exposing selected-account scan state', (done) => {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      store.set('main.accounts', address, 'balances.lastUpdated', yesterday)
+
+      send(
+        {
+          method: 'wallet_getAssets',
+          params: [{ account: '0x3333333333333333333333333333333333333333' }]
+        },
+        (response) => {
+          expect(response.result).toBeUndefined()
+          expect(response.error).toMatchObject({ code: 4100 })
+          done()
+        }
+      )
     })
 
     it('returns an error while scanning', (done) => {

@@ -38,6 +38,7 @@ import { populate as populateTransaction, maxFee, classifyTransaction } from '..
 import { capitalize } from '../../resources/utils'
 import { ApprovalType } from '../../resources/constants'
 import { createObserver as AssetsObserver, loadAssets } from './assets'
+import { formatErc7811Assets, parseAssetsRequest } from './assets/erc7811'
 import { getTypedDataContext, parseTypedMessage } from './typedData'
 import { parseAddChainRequest, parseChainRequestId } from './chainRequests'
 import { parseWatchAssetRequest } from './watchAsset'
@@ -912,10 +913,16 @@ export class Provider extends EventEmitter {
         )
         .filter(({ numericId }) => this.walletCallChainAvailable(numericId))
         .sort((left, right) => left.numericId - right.numericId)
-        .reduce<Record<string, { atomic: { status: 'unsupported' } }>>((capabilities, { numericId }) => {
-          capabilities[intToHex(numericId)] = { atomic: { status: 'unsupported' } }
-          return capabilities
-        }, {})
+        .reduce<Record<string, { atomic: { status: 'unsupported' }; assetDiscovery: { supported: true } }>>(
+          (capabilities, { numericId }) => {
+            capabilities[intToHex(numericId)] = {
+              atomic: { status: 'unsupported' },
+              assetDiscovery: { supported: true }
+            }
+            return capabilities
+          },
+          {}
+        )
 
       return res({ id: payload.id, jsonrpc: payload.jsonrpc, result })
     } catch (error) {
@@ -1803,6 +1810,15 @@ export class Provider extends EventEmitter {
     if (!currentAccount) return resError('no account selected', payload, cb)
 
     try {
+      const parsed = parseAssetsRequest(payload.params)
+      if (
+        parsed.mode === 'erc7811' &&
+        (parsed.request.account !== currentAccount.id.toLowerCase() ||
+          parsed.request.account !== access.address.toLowerCase())
+      ) {
+        return resError({ code: 4100, message: 'Asset account is not authorized' }, payload, cb)
+      }
+
       const { nativeCurrency, erc20 } = loadAssets(currentAccount.id)
       const visibleOnGrantedChain = (asset: RPC.GetAssets.Balance) =>
         hasOriginCapability(payload, {
@@ -1812,16 +1828,26 @@ export class Provider extends EventEmitter {
         })
       const { id, jsonrpc } = payload
 
+      const visible = {
+        nativeCurrency: nativeCurrency.filter(visibleOnGrantedChain),
+        erc20: erc20.filter(visibleOnGrantedChain)
+      }
+      if (parsed.mode === 'legacy') return cb({ id, jsonrpc, result: visible })
+
       return cb({
         id,
         jsonrpc,
-        result: {
-          nativeCurrency: nativeCurrency.filter(visibleOnGrantedChain),
-          erc20: erc20.filter(visibleOnGrantedChain)
-        }
+        result: formatErc7811Assets(visible, parsed.request, (chainId) =>
+          hasOriginCapability(payload, {
+            account: currentAccount.id,
+            chainId,
+            method: payload.method
+          })
+        )
       })
     } catch (e) {
-      return resError({ message: (e as Error).message, code: 5901 }, payload, cb)
+      const error = e as EVMError
+      return resError({ message: error.message, code: error.code ?? 5901 }, payload, cb)
     }
   }
 
@@ -1869,6 +1895,12 @@ export class Provider extends EventEmitter {
     if (method === 'wallet_getCallsStatus') return this.getWalletCallsStatus(payload, res)
     if (method === 'wallet_showCallsStatus') return this.showWalletCallsStatus(payload, res)
     if (method === 'wallet_getCapabilities') return this.getWalletCallCapabilities(payload, res)
+    if (method === 'wallet_getAssets')
+      return this.getAssets(
+        payload as RPC.GetAssets.Request,
+        accounts.current(),
+        res as RPCCallback<RPC.GetAssets.Response>
+      )
 
     const targetChain = this.parseTargetChain(payload)
 
@@ -1926,13 +1958,6 @@ export class Provider extends EventEmitter {
 
     if (method === 'wallet_watchAsset') return this.addCustomToken(payload, res, targetChain)
     if (method === 'wallet_getEthereumChains') return this.getChains(payload, res)
-    if (method === 'wallet_getAssets')
-      return this.getAssets(
-        payload as RPC.GetAssets.Request,
-        accounts.current(),
-        res as RPCCallback<RPC.GetAssets.Response>
-      )
-
     // Connection dependent methods need to pass targetChain
     if (method === 'net_version') return this.getNetVersion(payload, res, targetChain)
     if (method === 'eth_chainId') return this.getChainId(payload, res, targetChain)

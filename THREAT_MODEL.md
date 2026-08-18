@@ -76,6 +76,13 @@ Permissions are scoped by account, chain, method, expiry, and invoker identity.
 Direct browser-compatible identities remain assertions. Authenticated native
 clients and Companion credentials cannot reuse those grants.
 
+Asset discovery is passive but permission-gated. Parameterized ERC-7811 requests
+must name the selected authorized account; explicit asset, asset-type, and chain
+filters are bounded and parsed in the main process. Results contain only locally
+known native/ERC-20 balances on granted chains, and ungranted chain keys are
+omitted. The legacy no-parameter response has the same account/chain boundary.
+Wren does not infer NFT or unknown asset support from request strings.
+
 RPC bodies, connections, rates, header/body receive time, polls (15 seconds),
 subscription counts, queues/bytes, and idle lifetime are bounded. Client-visible
 subscription IDs are opaque and bound to their WebSocket or canonical HTTP origin

@@ -76,12 +76,38 @@ declare namespace RPC {
       nativeCurrency: Balance[]
     }
 
-    interface Request extends Omit<RPCRequestPayload, 'method'> {
+    interface AssetSelector {
+      address: Address | 'native'
+      type: string
+    }
+
+    interface DiscoveryRequest {
+      account: Address
+      assetFilter?: Record<string, AssetSelector[]>
+      assetTypeFilter?: string[]
+      chainFilter?: string[]
+    }
+
+    interface DiscoveredAsset {
+      address: Address | 'native'
+      balance: string
+      type: 'native' | 'erc20'
+      metadata?: {
+        name: string
+        symbol: string
+        decimals: number
+      }
+    }
+
+    type DiscoveryAssets = Record<string, DiscoveredAsset[]>
+
+    interface Request extends Omit<RPCRequestPayload, 'method' | 'params'> {
       method: 'wallet_getAssets'
+      params: [] | [DiscoveryRequest]
     }
 
     interface Response extends Omit<RPCResponsePayload, 'result'> {
-      result?: Assets
+      result?: Assets | DiscoveryAssets
     }
   }
 
