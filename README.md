@@ -25,6 +25,7 @@ Wren provides one approval and signing interface to browser dapps and native app
 - Developers: read [RPC Compatibility](RPC_COMPATIBILITY.md) for the local provider and authenticated protocol.
 - Release operators: follow the [Release Procedure](RELEASE.md), then the [qualification checklist](QUALIFICATION.md).
 - Hardware users: check the [Signer and Platform Support reference](HARDWARE_SUPPORT.md) before testing a device.
+- Software-signer users: read [Linux device protection](OS_SIGNER_PROTECTION.md) before binding signer files to a keychain.
 
 ## Current status
 
@@ -166,7 +167,7 @@ Wren does not follow mutable ENS for the built-in Send app. It activates downloa
 
 ## Security
 
-Report vulnerabilities privately through [Security Policy](SECURITY.md), not a public issue. The [Threat Model](THREAT_MODEL.md) covers local RPC, renderers, persistence, signers, network, and release boundaries. Only the newest Wren release is considered for security fixes; Wren packages have no support guarantee from the original Frame maintainers.
+Report vulnerabilities privately through [Security Policy](SECURITY.md), not a public issue. The [Threat Model](THREAT_MODEL.md) covers local RPC, renderers, persistence, signers, network, and release boundaries. The [Linux software-signer device-protection guide](OS_SIGNER_PROTECTION.md) explains its keychain and portable-recovery behavior. Only the newest Wren release is considered for security fixes; Wren packages have no support guarantee from the original Frame maintainers.
 
 ## Roadmap and license
 
