@@ -576,6 +576,14 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'inspector') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'inspector', data: {} }]
+    }
+  }
+
   if (
     scenario.state === 'address-book-list' ||
     scenario.state === 'address-book-editor' ||
@@ -1325,6 +1333,40 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method) => {
+  if (scenario.state === 'inspector' && method === 'inspector:inspect') {
+    return {
+      success: true,
+      inspection: {
+        kind: 'transaction',
+        source: 'direct',
+        normalized: {
+          from: '0x1111111111111111111111111111111111111111',
+          to: '0x2222222222222222222222222222222222222222',
+          chainId: '0x1',
+          value: '0x0',
+          data: '0xa9059cbb'
+        },
+        decode: {
+          status: 'unknown',
+          source: 'bundled-standard-abi',
+          selector: '0xa9059cbb',
+          reason: 'No bundled ABI matched this selector.'
+        },
+        evidence: [
+          { kind: 'calldata', status: 'available', source: 'local' },
+          { kind: 'simulation', status: 'available', source: 'configured-rpc' }
+        ],
+        missingContext: [],
+        simulation: {
+          status: 'succeeded',
+          source: 'eth_call',
+          effects: [],
+          nativeBalanceChanges: { status: 'succeeded', changes: [] },
+          callTrace: { calls: [], truncated: false }
+        }
+      }
+    }
+  }
   if (scenario.state === 'send-confirmed' && method === 'send:resolveRecipient') {
     return { success: true, address: QUALIFICATION_RECIPIENT, name: '' }
   }

@@ -1,0 +1,416 @@
+.inspector
+  min-height 100%
+  box-sizing border-box
+  padding 0 var(--wren-space-4) var(--wren-space-8)
+  color var(--wren-text-primary)
+
+.inspectorHeader
+  position sticky
+  top 0
+  z-index 5
+  display grid
+  grid-template-columns minmax(0, 1fr) auto
+  gap var(--wren-space-4)
+  align-items center
+  margin 0 calc(-1 * var(--wren-space-4))
+  padding var(--wren-space-4)
+  border-bottom 1px solid var(--wren-border-subtle)
+  background var(--wren-bg-wallet-canvas)
+
+  h1
+    margin 2px 0 var(--wren-space-1)
+    font-size 25px
+    font-weight 500
+    letter-spacing -.4px
+
+  p
+    max-width 480px
+    margin 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 19px
+
+.inspectorEyebrow,
+.inspectorResultEyebrow
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  letter-spacing .08em
+  text-transform uppercase
+
+.inspectorSafetyContract
+  display flex
+  align-items center
+  gap var(--wren-space-2)
+  min-width 168px
+  padding var(--wren-space-2) var(--wren-space-3)
+  border 1px solid rgba(120, 166, 184, .52)
+  border-radius var(--wren-radius-sm)
+  color #a9cad5
+  background rgba(120, 166, 184, .09)
+
+  span
+    display flex
+    flex-direction column
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 16px
+
+  strong
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+    font-weight 600
+
+.inspectorModeTabs
+  display grid
+  grid-template-columns repeat(4, minmax(0, 1fr))
+  gap var(--wren-space-2)
+  margin var(--wren-space-4) 0 var(--wren-space-3)
+
+  button.wrenControl
+    min-width 0
+    min-height 44px
+    height auto
+    padding var(--wren-space-2)
+    font-size var(--wren-type-small)
+    scroll-margin-top 144px
+
+  button.inspectorModeSelected,
+  button.inspectorModeSelected:hover:not(:disabled)
+    border-color rgba(120, 166, 184, .8)
+    color var(--wren-text-primary)
+    background rgba(120, 166, 184, .12)
+
+.inspectorInputPanel,
+.inspectorResult
+  padding var(--wren-space-4)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+.inspectorModeCopy
+  h2
+    margin 0 0 var(--wren-space-1)
+    font-size 18px
+    font-weight 500
+
+  p
+    margin 0 0 var(--wren-space-3)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 19px
+
+.inspectorRawInput,
+.inspectorContextFields label
+  display flex
+  min-width 0
+  flex-direction column
+  gap 6px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+
+  > span
+    display flex
+    gap 5px
+    align-items baseline
+
+  em
+    color var(--wren-text-tertiary)
+    font-style normal
+
+  textarea,
+  input,
+  select
+    width 100%
+    box-sizing border-box
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    line-height 18px
+
+  textarea
+    min-height 148px
+    padding var(--wren-space-3)
+    resize vertical
+
+  input,
+  select
+    min-height 40px
+    padding 0 var(--wren-space-2)
+
+  textarea:focus-visible,
+  input:focus-visible,
+  select:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.inspectorContextFields
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-3)
+  margin-top var(--wren-space-3)
+
+.inspectorActions
+  display flex
+  gap var(--wren-space-3)
+  align-items center
+  justify-content space-between
+  margin-top var(--wren-space-4)
+
+.inspectorLocalNote
+  max-width 360px
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  line-height 17px
+
+button.inspectorInspectButton
+  flex 0 0 auto
+  min-width 158px
+
+.inspectorError,
+.inspectorBusy,
+.inspectorMissing
+  margin-top var(--wren-space-3)
+  padding var(--wren-space-3)
+  border-radius var(--wren-radius-sm)
+  font-size var(--wren-type-small)
+  line-height 19px
+
+.inspectorError
+  border 1px solid rgba(208, 92, 92, .55)
+  color var(--wren-danger)
+  background rgba(208, 92, 92, .08)
+
+.inspectorBusy
+  border 1px solid rgba(120, 166, 184, .45)
+  color var(--wren-text-secondary)
+  background rgba(120, 166, 184, .08)
+
+.inspectorResult
+  margin-top var(--wren-space-4)
+
+.inspectorResultHeader
+  display flex
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+  scroll-margin-top 144px
+
+  h2
+    margin var(--wren-space-1) 0 0
+    font-size 20px
+    font-weight 500
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 4px
+
+.inspectorReadonlyBadge
+  padding 5px var(--wren-space-2)
+  border 1px solid rgba(120, 166, 184, .55)
+  border-radius 999px
+  color #a9cad5
+  background rgba(120, 166, 184, .09)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+
+.inspectorMissing
+  display flex
+  flex-direction column
+  gap 3px
+  border 1px solid rgba(210, 162, 75, .52)
+  color var(--wren-text-secondary)
+  background rgba(210, 162, 75, .08)
+
+  strong
+    color #e0b85f
+    font-weight 600
+
+.inspectorEvidenceSection
+  margin-top var(--wren-space-4)
+
+  h3
+    margin 0 0 var(--wren-space-2)
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    font-weight 600
+
+  dl
+    margin 0
+    border-top 1px solid var(--wren-ledger-rule)
+
+.inspectorEvidenceRow
+  display grid
+  grid-template-columns minmax(100px, .32fr) minmax(0, 1fr)
+  min-height 44px
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+  dt,
+  dd
+    display flex
+    align-items center
+    min-width 0
+    margin 0
+    padding var(--wren-space-2)
+
+  dt
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  dd
+    gap var(--wren-space-2)
+    justify-content space-between
+    border-left 1px solid var(--wren-ledger-rule)
+
+  code
+    min-width 0
+    overflow hidden
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    line-height 18px
+    overflow-wrap anywhere
+    white-space pre-wrap
+
+.inspectorEvidenceRowMissing code
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-style italic
+
+.inspectorEvidenceRow-success dd > code
+  color var(--wren-success)
+
+.inspectorEvidenceRow-warning dd > code
+  color var(--wren-warning)
+
+.inspectorEvidenceRow-danger dd > code
+  color var(--wren-danger)
+
+.inspectorLongEvidence
+  min-width 0
+  flex 1
+
+  summary
+    color var(--wren-text-secondary)
+    cursor pointer
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  code
+    display block
+    max-height 360px
+    margin-top var(--wren-space-2)
+    padding var(--wren-space-2)
+    overflow auto
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-bg-wallet-canvas)
+
+.inspectorCopyBound
+  max-width 155px
+  flex 0 0 auto
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  line-height 16px
+
+button.inspectorCopy
+  display inline-flex
+  flex 0 0 auto
+  gap 5px
+  align-items center
+  min-height 32px
+  padding 0 var(--wren-space-2)
+
+.inspectorEvidenceReason
+  margin var(--wren-space-2) 0 0
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  line-height 17px
+
+.inspectorSources
+  display grid
+  gap var(--wren-space-2)
+  margin 0
+  padding 0
+  list-style none
+
+  li
+    display flex
+    flex-wrap wrap
+    gap 4px var(--wren-space-2)
+    padding var(--wren-space-2) var(--wren-space-3)
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-tertiary)
+    background var(--wren-surface-inset)
+    font-size var(--wren-type-caption)
+
+  strong
+    width 100%
+    color var(--wren-text-primary)
+    font-weight 500
+
+.inspectorWarnings
+  margin 0
+  padding 0
+  list-style none
+
+  li
+    margin-top var(--wren-space-2)
+    padding var(--wren-space-2) var(--wren-space-3)
+    border-left 2px solid #d2a24b
+    color var(--wren-text-secondary)
+    background rgba(210, 162, 75, .08)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    line-height 18px
+    overflow-wrap anywhere
+
+.inspectorTerminalNote
+  margin var(--wren-space-4) 0 0
+  padding-top var(--wren-space-3)
+  border-top 1px solid rgba(120, 166, 184, .35)
+  color #a9cad5
+  font-size var(--wren-type-small)
+
+.inspectorCopyStatus
+  display block
+  min-height 17px
+  margin-top var(--wren-space-1)
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+
+@media (max-width: 540px)
+  .inspectorHeader
+    grid-template-columns 1fr
+
+  .inspectorSafetyContract
+    width fit-content
+
+  .inspectorModeTabs
+    grid-template-columns repeat(2, minmax(0, 1fr))
+
+  .inspectorContextFields
+    grid-template-columns 1fr
+
+  .inspectorActions
+    align-items stretch
+    flex-direction column
+
+  button.inspectorInspectButton
+    width 100%
+
+@media (prefers-reduced-motion: reduce)
+  .inspector *,
+  .inspector *::before,
+  .inspector *::after
+    scroll-behavior auto !important
+    transition none !important
+    animation none !important

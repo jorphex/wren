@@ -1,7 +1,7 @@
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import type { MessageTypeProperty } from '@metamask/eth-sig-util'
-import type { Eip3009Authorization, TypedMessage } from '../accounts/types'
+import type { Eip3009Authorization, TypedMessage } from '../../resources/domain/typedData'
 
 const TRANSFER_FIELDS = [
   { name: 'from', type: 'address' },

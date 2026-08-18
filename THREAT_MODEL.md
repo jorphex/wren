@@ -237,7 +237,10 @@ inventory tests require agreement among renderer callsites, handlers, and
 schemas. A main-owned role map independently authorizes the sender: each surface
 receives only its enumerated RPC, IPC, and store actions, and profile recovery is
 dashboard-only; missing, unknown, or duplicate roles fail closed. Remote dapp
-WebContentsViews lack the bridge. Handler payload
+WebContentsViews lack the bridge. The inspector invoke is dashboard-only, bounds both
+input and projected output, and maps a small JSON-RPC allowlist to inert subjects; it
+never forwards the pasted method. Inspector component state is not copied into the
+store, activity, backup, support data, request queue, or signer path. Handler payload
 validation exists, but handler semantics and authorization remain privileged
 main-process work. Compromised tray/dash and broad renderer network/image policy
 remain high-impact; embedded dapps depend on partitioning, session checks, and
@@ -264,6 +267,15 @@ input size, and error text are bounded and raw input/return data stays out of th
 renderer. No code does not prove EOA; code does not prove an interface. Decoding
 and traces explain, not prove, behavior. Verify chain, recipient, value,
 calldata, and device display whenever possible.
+
+The read-only inspector reuses this configured-RPC simulation machinery without
+entering provider admission or any signer/broadcast path. Its bundled standard ABI can
+identify only known selector and argument shapes; it downloads no verified ABI and
+treats no selector match as proof of contract semantics. A pasted `eth_call` or
+`eth_estimateGas` block reference is displayed but not forwarded: simulation is fresh
+evidence from Wren's current configured-RPC review path. Omitted sender, target,
+signer, or chain context stays visibly unestablished rather than being inferred from a
+selected wallet account or an EIP-712 domain.
 
 Before transaction signing, the main process asks the configured chain RPC for
 the account's pending native balance and compares it with the reviewed value plus

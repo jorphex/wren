@@ -45,6 +45,7 @@ export const requestInvokeChannels = new Set([
   'addressBook:import',
   'addressBook:remove',
   'addressBook:save',
+  'inspector:inspect',
   'profile:export',
   'profile:inspectBackup',
   'profile:stageRestore',

@@ -1,5 +1,6 @@
 import { Dash } from '../../../app/dash/App'
 import Dapps from '../../../app/dash/Dapps'
+import Inspector from '../../../app/dash/Inspector'
 import link from '../../../resources/link'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
@@ -16,6 +17,12 @@ it('renders the connected-app destination instead of falling through to the cont
 
   expect(view.type).toBe(Dapps)
   expect(view.props.data).toBe(data)
+})
+
+it('renders the read-only inspector as an explicit dashboard destination', () => {
+  const dash = new Dash({})
+
+  expect(dash.renderPanel('inspector', {}).type).toBe(Inspector)
 })
 
 it('gives an active hardware prompt exclusive ownership of signer authentication', () => {

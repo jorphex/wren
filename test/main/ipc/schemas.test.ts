@@ -666,6 +666,31 @@ test('validates exact invoke result shapes', () => {
   )
 })
 
+test('bounds the dashboard inspector invoke and its result', () => {
+  expect(parse('invoke', 'inspector:inspect', [{ kind: 'calldata', data: '0xa9059cbb' }])).toEqual([
+    { kind: 'calldata', data: '0xa9059cbb' }
+  ])
+  expect(
+    parseRendererIpcArgs('invoke', 'inspector:inspect', [
+      { kind: 'calldata', data: '0xa9059cbb', method: 'eth_sendTransaction' }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('invoke', 'inspector:inspect', [
+      { kind: 'json-rpc', input: 'x'.repeat(256 * 1024 + 1) }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('inspector:inspect', { success: false, error: 'Unsupported input' }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('inspector:inspect', {
+      success: false,
+      error: 'x'.repeat(241)
+    }).success
+  ).toBe(false)
+})
+
 test('reduces explorer snapshots to the selected chain identity', () => {
   expect(
     parse('event', 'tray:openExplorer', [

@@ -45,7 +45,7 @@ export const hasRendererCapability = (
   if (
     method === 'invoke' &&
     typeof channel === 'string' &&
-    (channel.startsWith('profile:') || channel.startsWith('signers:'))
+    (channel.startsWith('profile:') || channel.startsWith('signers:') || channel.startsWith('inspector:'))
   ) {
     return rendererRole === 'dash'
   }

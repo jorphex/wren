@@ -88,6 +88,23 @@ test('reserves profile recovery invokes for the dashboard role', async () => {
   expect(handler).toHaveBeenCalledTimes(1)
 })
 
+test('reserves the read-only inspector invoke for the dashboard role', async () => {
+  const result = {
+    success: false,
+    error: 'Inspection unavailable'
+  }
+  const handler = jest.fn().mockResolvedValue(result)
+  handleRenderer('inspector:inspect', handler)
+  const invoke = mockHandlers.get('inspector:inspect')
+  const input = { kind: 'calldata', data: '0x' }
+
+  await expect(invoke(sender('tray'), input)).rejects.toThrow('Unauthorized renderer IPC')
+  await expect(invoke(sender('dapp'), input)).rejects.toThrow('Unauthorized renderer IPC')
+  await expect(invoke(sender('onboard'), input)).rejects.toThrow('Unauthorized renderer IPC')
+  await expect(invoke(sender('dash'), input)).resolves.toEqual(result)
+  expect(handler).toHaveBeenCalledTimes(1)
+})
+
 test('drops invalid events without calling application handlers', () => {
   const listener = jest.fn()
   onRenderer('tray:copyTxHash', listener)

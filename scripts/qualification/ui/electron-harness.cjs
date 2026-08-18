@@ -226,7 +226,7 @@ const clickText = async (webContents, text) => {
 const inputByLabel = async (webContents, label, value) => {
   const changed = await webContents.executeJavaScript(
     `(() => {
-      const input = Array.from(document.querySelectorAll('input')).find(
+      const input = Array.from(document.querySelectorAll('input, textarea')).find(
         (element) =>
           element.getAttribute('aria-label') === ${JSON.stringify(label)} ||
           Array.from(element.labels || []).some(
@@ -234,7 +234,8 @@ const inputByLabel = async (webContents, label, value) => {
           )
       )
       if (!input) return false
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+      const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+      const setter = Object.getOwnPropertyDescriptor(prototype, 'value').set
       setter.call(input, ${JSON.stringify(value)})
       input.dispatchEvent(new Event('input', { bubbles: true }))
       input.dispatchEvent(new Event('change', { bubbles: true }))
@@ -268,7 +269,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'inputLabel') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('input')).some(
+      `Array.from(document.querySelectorAll('input, textarea')).some(
         (input) =>
           input.getAttribute('aria-label') === ${JSON.stringify(action.label)} ||
           Array.from(input.labels || []).some(
@@ -406,6 +407,12 @@ const main = async () => {
     const scenario = scenarioByWebContents.get(event.sender.id)
     const reply = scenario ? invokeReplyFor(scenario, 'profile:inspectBackup') : undefined
     if (reply === undefined) throw new Error('Qualification harness does not provide profile:inspectBackup')
+    return reply
+  })
+  ipcMain.handle('inspector:inspect', (event, ...args) => {
+    const scenario = scenarioByWebContents.get(event.sender.id)
+    const reply = scenario ? invokeReplyFor(scenario, 'inspector:inspect', args) : undefined
+    if (reply === undefined) throw new Error('Qualification harness does not provide inspector:inspect')
     return reply
   })
   for (const channel of ['send:resolveRecipient', 'send:queue']) {

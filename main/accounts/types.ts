@@ -1,9 +1,4 @@
-import type {
-  MessageTypes,
-  SignTypedDataVersion,
-  TypedDataV1,
-  TypedMessage as BaseTypedMessage
-} from '@metamask/eth-sig-util'
+import type { MessageTypes, SignTypedDataVersion } from '@metamask/eth-sig-util'
 import type { DecodedCallData, SuggestedCallData } from '../contracts'
 import type { Chain } from '../chains'
 import type { TransactionData } from '../../resources/domain/transaction'
@@ -14,6 +9,18 @@ import type { TokenData } from '../contracts/erc20'
 import type { Token } from '../store/state'
 import type { TransactionSimulation, WalletCallsSimulation } from '../transaction/simulation'
 import type { AddressSafetyAssessment } from '../addressSafety/types'
+import type { TypedDataContext, TypedMessage } from '../../resources/domain/typedData'
+
+export type {
+  Eip3009Authorization,
+  LegacyTypedData,
+  Permit2Authority,
+  Permit2Permission,
+  TypedData,
+  TypedDataContext,
+  TypedDataRisk,
+  TypedMessage
+} from '../../resources/domain/typedData'
 
 export enum ReplacementType {
   Speed = 'speed',
@@ -212,75 +219,6 @@ export interface MessageSigningContext {
   byteLength: number
   risks: MessageSigningRisk[]
   siwe?: SiweMessageData
-}
-
-export type TypedData<T extends MessageTypes = MessageTypes> = BaseTypedMessage<T>
-export type LegacyTypedData = TypedDataV1
-
-export interface TypedMessage<V extends SignTypedDataVersion = SignTypedDataVersion> {
-  data: V extends SignTypedDataVersion.V1 ? LegacyTypedData : TypedData
-  version: V
-}
-
-export type TypedDataRisk =
-  | 'legacy-v1'
-  | 'domain-chain-missing'
-  | 'domain-chain-invalid'
-  | 'domain-chain-mismatch'
-  | 'permit2-allowance'
-  | 'permit2-transfer'
-  | 'permit2-maximum-amount'
-  | 'permit2-noncanonical-contract'
-  | 'eip3009-transfer'
-  | 'eip3009-maximum-amount'
-
-export interface Permit2Permission {
-  token: string
-  amount: string
-  expiration?: string
-}
-
-export interface Permit2Authority {
-  kind: 'allowance' | 'transfer'
-  primaryType:
-    | 'PermitSingle'
-    | 'PermitBatch'
-    | 'PermitTransferFrom'
-    | 'PermitBatchTransferFrom'
-    | 'PermitWitnessTransferFrom'
-    | 'PermitBatchWitnessTransferFrom'
-  verifyingContract: string
-  canonicalContract: boolean
-  spender: string
-  deadline: string
-  permissions: Permit2Permission[]
-  batch: boolean
-  witness: boolean
-  grantsAuthority: boolean
-  maximumAmount: boolean
-}
-
-export interface Eip3009Authorization {
-  kind: 'transfer' | 'receive' | 'cancel'
-  primaryType: 'TransferWithAuthorization' | 'ReceiveWithAuthorization' | 'CancelAuthorization'
-  verifyingContract: string
-  authorizer: string
-  from?: string
-  to?: string
-  value?: string
-  validAfter?: string
-  validBefore?: string
-  nonce: string
-  grantsAuthority: boolean
-  maximumAmount: boolean
-}
-
-export interface TypedDataContext {
-  requestChainId: number
-  domainChainId?: string
-  risks: TypedDataRisk[]
-  permit2?: Permit2Authority
-  eip3009?: Eip3009Authorization
 }
 
 export type SignTypedDataRequest = DefaultSignTypedDataRequest | PermitSignatureRequest

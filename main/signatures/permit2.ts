@@ -1,7 +1,7 @@
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import type { MessageTypeProperty } from '@metamask/eth-sig-util'
-import type { Permit2Authority, Permit2Permission, TypedMessage } from '../accounts/types'
+import type { Permit2Authority, Permit2Permission, TypedMessage } from '../../resources/domain/typedData'
 
 export const PERMIT2_ADDRESS = '0x000000000022d473030f116ddee9f6b43ac78ba3'
 

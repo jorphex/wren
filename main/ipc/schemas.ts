@@ -19,6 +19,8 @@ import {
   RemoveDappGuardrailRequestSchema,
   SaveDappGuardrailRequestSchema
 } from '../provider/dappGuardrailActions'
+import { InspectorInputSchema } from '../../resources/domain/inspector'
+import { InspectorInvokeResultSchema } from '../inspector/schema'
 
 const MAX_TEXT = 4096
 const MAX_URL = 8192
@@ -375,6 +377,7 @@ const invokeSchemas = {
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'inspector:inspect': z.tuple([InspectorInputSchema]),
   'profile:export': z.tuple([BackupPasswordSchema]),
   'profile:inspectBackup': z.tuple([BackupPasswordSchema]),
   'profile:stageRestore': z.tuple([z.uuid(), BackupPasswordSchema, z.literal('REPLACE_PROFILE_ON_RESTART')]),
@@ -433,6 +436,7 @@ const invokeResultSchemas = {
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
+  'inspector:inspect': InspectorInvokeResultSchema,
   'profile:export': z.union([
     z.object({ success: z.literal(true), bytes: z.number().int().positive() }).strict(),
     z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),

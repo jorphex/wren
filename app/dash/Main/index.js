@@ -29,6 +29,12 @@ const dashboardSections = [
         icon: 'apps'
       },
       {
+        view: 'inspector',
+        title: 'Read-only inspector',
+        description: 'Decode transactions and signing intent without signing or broadcasting.',
+        icon: 'search'
+      },
+      {
         view: 'earn',
         title: 'Earn',
         description: 'Review selected Yearn vaults by network.',

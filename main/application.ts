@@ -55,6 +55,8 @@ import {
   writeEncryptedProfileBackup
 } from './profileBackup'
 import { osSignerStorage } from './signers/hot/runtimeStorage'
+import chains from './chains'
+import { inspect } from './inspector'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -318,6 +320,7 @@ handleRenderer('addressBook:remove', async (e, address) =>
 )
 handleRenderer('addressBook:import', async () => addressBookMutation(() => addressBookFiles.importFile()))
 handleRenderer('addressBook:export', async () => addressBookMutation(() => addressBookFiles.exportFile()))
+handleRenderer('inspector:inspect', async (e, input) => inspect(input, { send: chains.send.bind(chains) }))
 
 const profileBackupMutation = async (publicError: string, operation: () => Promise<unknown> | unknown) => {
   try {

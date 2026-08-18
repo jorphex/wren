@@ -148,6 +148,48 @@ const reviewScenarios = () => [
       ['full', FULL_SHELL_HEIGHT],
       ['short', SHORT_SHELL_HEIGHT]
     ].map(([geometry, logicalHeight]) => ({
+      id: `dash-inspector-${geometry}-${scale}`,
+      renderer: 'dash',
+      state: 'inspector',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: {
+        type: 'sequence',
+        steps: [
+          {
+            type: 'inputLabel',
+            label: 'Unsigned transaction JSON',
+            value:
+              '{"from":"0x1111111111111111111111111111111111111111","to":"0x2222222222222222222222222222222222222222","chainId":"0x1","value":"0x0","data":"0xa9059cbb"}'
+          },
+          { type: 'clickText', text: 'Inspect read-only' }
+        ]
+      },
+      ready: '.inspectorResult',
+      requiredControls: [
+        'Transaction',
+        'Calldata',
+        'EIP-712',
+        'JSON-RPC',
+        'Inspect read-only',
+        'Copy sender',
+        'Copy target'
+      ],
+      requiredText: [
+        'Read-only inspector',
+        'Never signs or broadcasts',
+        'Raw input is not saved.',
+        'Configured-RPC simulation',
+        'Configured-RPC evidence may use the disclosed transaction fields above.'
+      ]
+    }))
+  ),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
       id: `tray-account-guardrail-editor-${geometry}-${scale}`,
       renderer: 'tray',
       state: 'account-permissions',

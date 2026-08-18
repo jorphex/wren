@@ -61,6 +61,16 @@ User-initiated Cancel remains available as a recovery action; Speed Up retains t
 original dapp intent. Raw signed-transaction submission remains unsupported and cannot
 bypass this boundary.
 
+The Control Center's read-only inspector is not a provider route or dapp capability.
+Its dashboard-only IPC accepts bounded unsigned transaction JSON, calldata with
+explicit optional context, EIP-712 V3/V4 data, and only `eth_sendTransaction`,
+`eth_call`, `eth_estimateGas`, or typed-data V3/V4 JSON-RPC wrappers. A pasted method
+is mapped to an inspection subject and is never forwarded. Local standard-ABI decode
+and typed-data risks are labeled as local evidence; simulation and trace evidence run
+through Wren's current configured-RPC review path only when sender and chain context
+are sufficient. Missing context remains explicit, and inspected payloads are neither
+queued nor persisted.
+
 Only `wallet_requestPermissions` and legacy `eth_requestAccounts` can open
 account-access consent. A grant is replaced through fresh consent after expiry
 or when newly enabled chains exceed its snapshot. Revocation deletes the grant.

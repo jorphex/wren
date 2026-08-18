@@ -54,6 +54,10 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 - Hosts browser-compatible HTTP and WebSocket JSON-RPC on localhost and authenticated protocol-3 routes for originless native clients. See [RPC Compatibility](RPC_COMPATIBILITY.md) for the exact protocol boundary.
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
+- Includes a dashboard-only read-only inspector for bounded unsigned transactions,
+  calldata context, EIP-712, and supported JSON-RPC intent wrappers. It decodes
+  locally, uses only the configured RPC for optional simulation, and cannot sign,
+  queue, forward, or broadcast the pasted request.
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
 - Lets users add optional local per-dapp, per-account, per-chain guardrails for
   destinations, approval spenders, native/token amounts, and expiry. Guardrails block

@@ -33,6 +33,7 @@ it.each([
   ['Accounts', 'accounts'],
   ['Contacts', 'addressBook'],
   ['Connected apps', 'dapps'],
+  ['Read-only inspector', 'inspector'],
   ['Earn', 'earn'],
   ['Networks', 'chains'],
   ['Tokens', 'tokens'],

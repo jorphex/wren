@@ -83,6 +83,22 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const balances = scenarios.find(({ state }) => state === 'account-balances')
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
   const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
+  const inspectors = scenarios.filter(({ state }) => state === 'inspector')
+  expect(inspectors).toHaveLength(6)
+  expect(inspectors.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
+  expect(inspectors.every(({ requiredText }) => requiredText.includes('Never signs or broadcasts'))).toBe(
+    true
+  )
+  expect(invokeReplyFor(inspectors[0], 'inspector:inspect')).toMatchObject({
+    success: true,
+    inspection: {
+      kind: 'transaction',
+      evidence: expect.arrayContaining([
+        { kind: 'calldata', status: 'available', source: 'local' },
+        { kind: 'simulation', status: 'available', source: 'configured-rpc' }
+      ])
+    }
+  })
   expect(addressQrReviews).toHaveLength(6)
   expect(addressQrReviews.every(({ ready }) => ready === '.accountAddressQrPopover')).toBe(true)
   expect(addressQrReviews.every(({ requiredControls }) => requiredControls.join(',') === 'Close')).toBe(true)

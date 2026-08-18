@@ -204,7 +204,7 @@ describe('renderer bridge protocol', () => {
     expect(request('onboard', 'event', ['tray:resetAllSettings'])).toBeNull()
   })
 
-  test('allows profile recovery and signer protection only from the dashboard renderer', () => {
+  test('allows recovery, signer protection, and inspection only from the dashboard renderer', () => {
     const request = (role, channel) =>
       decodeBridgeMessage(
         encode({ source: LINK_SOURCE, method: 'invoke', id, args: [channel, 'bounded argument'] }),
@@ -218,7 +218,8 @@ describe('renderer bridge protocol', () => {
       'profile:stageRestore',
       'signers:protectionStatus',
       'signers:enableProtection',
-      'signers:disableProtection'
+      'signers:disableProtection',
+      'inspector:inspect'
     ]) {
       expect(request('dash', channel)).not.toBeNull()
       expect(request('tray', channel)).toBeNull()
