@@ -763,10 +763,10 @@ export class Send extends React.Component {
     })
   }
 
-  closeRetainedRequest(method, request, failureMessage) {
+  closeRetainedRequest(kind, request, failureMessage) {
     if (this.state.queueing) return
     this.setState({ queueError: '', queueing: true })
-    link.rpc(method, request, (error) => {
+    const callback = (error) => {
       if (!this.mounted) return
       if (error) {
         this.setState({
@@ -776,7 +776,9 @@ export class Send extends React.Component {
         return
       }
       this.resetRequest(false)
-    })
+    }
+    if (kind === 'walletCalls') link.rpc('closeFailedWalletCallsRequest', request, callback)
+    else link.rpc('closeFailedTransactionRequest', request, callback)
   }
 
   openPicker(step, title) {
@@ -1350,13 +1352,13 @@ export class Send extends React.Component {
             onClick={() => {
               if (changedSweep) {
                 this.closeRetainedRequest(
-                  'closeFailedWalletCallsRequest',
+                  'walletCalls',
                   request,
                   'Could not close the stale Sweep request. Open Wren and try again.'
                 )
               } else if (changedMax) {
                 this.closeRetainedRequest(
-                  'closeFailedTransactionRequest',
+                  'transaction',
                   request,
                   'Could not close the stale Max request. Open Wren and try again.'
                 )

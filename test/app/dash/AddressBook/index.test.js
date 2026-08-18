@@ -77,7 +77,7 @@ test('searches contacts, copies rows, and opens add and edit navigation explicit
 })
 
 test('orders contact actions as Copy, Edit, then Remove and exposes an explicit safe confirmation', async () => {
-  const { container, user } = render(<ConnectedAddressBook data={{}} />)
+  const { user } = render(<ConnectedAddressBook data={{}} />)
   const copy = screen.getByRole('button', {
     name: new RegExp(`Copy address for Yearn Treasury ${address}`)
   })
@@ -89,7 +89,12 @@ test('orders contact actions as Copy, Edit, then Remove and exposes an explicit 
   await user.click(remove)
   const dialog = screen.getByRole('alertdialog', { name: 'Remove Yearn Treasury?' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
-  expect(container.querySelector('.addressBookToolbar[inert]')).toBeTruthy()
+  expect(
+    screen
+      .getByPlaceholderText('Search name, note, or address')
+      .closest('.addressBookToolbar')
+      .hasAttribute('inert')
+  ).toBe(true)
   expect(screen.getByText('This removes the saved contact from Wren. Funds are not affected.')).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
   await user.tab({ shift: true })
