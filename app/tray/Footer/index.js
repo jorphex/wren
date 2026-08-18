@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 
 import Icon from '../../../resources/Components/Icon'
 import DialogSurface from '../../../resources/Components/DialogSurface'
+import QrCode from '../../../resources/Components/QrCode'
 import link from '../../../resources/link'
 import { isHardwareSigner, isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import {
@@ -19,6 +20,19 @@ const measure = (ref) => {
   if (!ref || !ref.current) return { height: 0, width: 0 }
   const { clientHeight, clientWidth } = ref.current
   return { height: clientHeight, width: clientWidth }
+}
+
+const formatFundingQuantity = (value, decimals = 18, symbol = '') => {
+  try {
+    const quantity = BigInt(value)
+    const places = Number.isInteger(decimals) && decimals >= 0 && decimals <= 36 ? decimals : 18
+    const scale = 10n ** BigInt(places)
+    const whole = (quantity / scale).toLocaleString('en-US')
+    const fraction = (quantity % scale).toString().padStart(places, '0').replace(/0+$/u, '')
+    return `${whole}${fraction ? `.${fraction}` : ''} ${symbol}`.trim()
+  } catch {
+    return `? ${symbol}`.trim()
+  }
 }
 
 const walletCallsSimulationWarning = (simulation) => {
@@ -72,6 +86,7 @@ export class Footer extends React.Component {
       walletCallsActionId: undefined,
       walletCallsAdjustmentId: undefined,
       walletCallsAcknowledgement: undefined,
+      walletCallsFundingQrId: undefined,
       eip7702ActionId: undefined,
       eip7702ActionError: undefined,
       eip7702MonitoringDialog: undefined,
@@ -82,6 +97,7 @@ export class Footer extends React.Component {
     this.footerRef = React.createRef()
     this.walletCallsAcknowledgementRef = React.createRef()
     this.walletCallsSubmitRef = React.createRef()
+    this.walletCallsFundingRecoveryRef = React.createRef()
     this.eip7702StopMonitoringTriggerRef = React.createRef()
     this.eip7702KeepMonitoringRef = React.createRef()
     this.lastHeight = undefined
@@ -123,10 +139,28 @@ export class Footer extends React.Component {
         this.setState({ walletCallsAcknowledgement: undefined })
       }
     }
+
+    const crumb = this.store('windows.panel.nav')[0] || {}
+    const currentRequest = crumb.data?.accountId
+      ? this.store('main.accounts', crumb.data.accountId, 'requests', crumb.data.requestId)
+      : undefined
+    const fundingRecoveryId = currentRequest?.recoverableError?.code?.startsWith('wallet-call-funding-')
+      ? currentRequest.handlerId
+      : undefined
+    if (fundingRecoveryId && fundingRecoveryId !== this.focusedWalletCallsFundingRecoveryId) {
+      this.focusedWalletCallsFundingRecoveryId = fundingRecoveryId
+      this.walletCallsFundingRecoveryRef.current?.focus()
+    } else if (!fundingRecoveryId && this.focusedWalletCallsFundingRecoveryId) {
+      this.focusedWalletCallsFundingRecoveryId = undefined
+      this.walletCallsSubmitRef.current?.focus()
+    }
   }
   approve(reqId, req, options) {
-    if (options) link.rpc('approveRequest', req, options, () => {})
-    else link.rpc('approveRequest', req, () => {}) // Move to link.send
+    const onResult = (error) => {
+      if (error && this.mounted) this.setState({ walletCallsActionId: undefined })
+    }
+    if (options) link.rpc('approveRequest', req, options, onResult)
+    else link.rpc('approveRequest', req, onResult) // Move to link.send
   }
   decline(reqId, req) {
     link.rpc('declineRequest', req, () => {}) // Move to link.send
@@ -494,6 +528,118 @@ export class Footer extends React.Component {
                   >
                     <span className='requestSignButton _txButton'>
                       <span>Close</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          if (req.status === 'error' && req.recoverableError) {
+            const funding = req.recoverableError.code === 'wallet-call-funding-insufficient'
+            const evidence = funding ? req.recoverableError.data : undefined
+            const nativeCurrency =
+              this.store(
+                'main.networksMeta',
+                'ethereum',
+                Number.parseInt(req.chainId, 16),
+                'nativeCurrency'
+              ) || {}
+            const decimals = Number.isInteger(nativeCurrency.decimals) ? nativeCurrency.decimals : 18
+            const symbol = nativeCurrency.symbol || 'native currency'
+            const chainId = Number.parseInt(req.chainId, 16)
+            const chainName = this.store('main.networks', 'ethereum', chainId, 'name') || `Chain ${chainId}`
+            const qrOpen = this.state.walletCallsFundingQrId === req.handlerId
+            return (
+              <div className='requestApprove requestApproveLightweight walletCallsFundingRecovery'>
+                <div className='requestActionContext'>
+                  <span className='requestActionContextIcon'>
+                    <Icon name='alert' size={19} />
+                  </span>
+                  <div className='requestActionContextCopy'>
+                    <div ref={this.walletCallsFundingRecoveryRef} role='alert' tabIndex='-1'>
+                      <strong>{funding ? 'More funds needed' : 'Funding check unavailable'}</strong>
+                      <span>
+                        {funding
+                          ? `Fund this account on ${chainName}. It cannot cover the batch value and maximum fees. Nothing was signed or sent.`
+                          : `Wren could not verify this batch's funding on ${chainName}. ${req.recoverableError.message} Recheck when network data is available.`}
+                      </span>
+                    </div>
+                    {evidence ? <span>Amounts at last check</span> : null}
+                    {evidence ? (
+                      <dl className='transactionFundingFacts'>
+                        <div>
+                          <dt>Available</dt>
+                          <dd>{formatFundingQuantity(evidence.available, decimals, symbol)}</dd>
+                        </div>
+                        <div>
+                          <dt>Required</dt>
+                          <dd>{formatFundingQuantity(evidence.required, decimals, symbol)}</dd>
+                        </div>
+                        <div>
+                          <dt>Missing</dt>
+                          <dd>{formatFundingQuantity(evidence.missing, decimals, symbol)}</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+                    {funding ? (
+                      <span className='transactionFundingActions'>
+                        <button type='button' onClick={() => link.send('tray:clipboardData', req.account)}>
+                          Copy address
+                        </button>
+                        <button
+                          type='button'
+                          aria-expanded={qrOpen}
+                          aria-controls={`wallet-calls-funding-qr-${req.handlerId}`}
+                          onClick={() =>
+                            this.setState({ walletCallsFundingQrId: qrOpen ? undefined : req.handlerId })
+                          }
+                        >
+                          {qrOpen ? 'Hide receive QR' : 'Show receive QR'}
+                        </button>
+                      </span>
+                    ) : null}
+                    {funding && qrOpen ? (
+                      <QrCode
+                        id={`wallet-calls-funding-qr-${req.handlerId}`}
+                        className='transactionFundingQr'
+                        label={`QR code for funding account on ${chainName}`}
+                        value={`ethereum:${req.account}@${chainId}`}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <div className='requestActionButtons'>
+                  <button
+                    type='button'
+                    className='requestDecline'
+                    disabled={actionPending}
+                    onClick={() => {
+                      if (actionPending) return
+                      this.setState({ walletCallsActionId: req.handlerId })
+                      link.rpc('closeFailedWalletCallsRequest', req, () => {
+                        if (this.mounted) this.setState({ walletCallsActionId: undefined })
+                      })
+                    }}
+                  >
+                    <span className='requestDeclineButton _txButton _txButtonBad'>
+                      <span>Reject request</span>
+                    </span>
+                  </button>
+                  <button
+                    type='button'
+                    className='requestSign'
+                    disabled={actionPending}
+                    onClick={() => {
+                      if (actionPending) return
+                      this.setState({ walletCallsActionId: req.handlerId })
+                      link.rpc('retryWalletCallsRequest', req, () => {
+                        if (this.mounted) this.setState({ walletCallsActionId: undefined })
+                      })
+                    }}
+                  >
+                    <span className='requestSignButton _txButton'>
+                      <span>{actionPending ? 'Rechecking…' : 'Recheck'}</span>
                     </span>
                   </button>
                 </div>

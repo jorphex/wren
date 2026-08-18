@@ -8,6 +8,7 @@ import type { DecodedCallData, SuggestedCallData } from '../contracts'
 import type { Chain } from '../chains'
 import type { TransactionData } from '../../resources/domain/transaction'
 import type { WalletCallBatchAdjustment } from '../provider/walletCallAdjustment'
+import type { PreparedWalletCallExecutionSnapshot } from '../provider/walletCallPreparedExecution'
 import type { Action } from '../transaction/actions'
 import type { TokenData } from '../contracts/erc20'
 import type { Token } from '../store/state'
@@ -349,6 +350,17 @@ export interface WalletCallsRequest extends AccountRequest<'walletCalls'> {
   preparation: WalletCallsPreparation
   simulation: WalletCallsSimulation
   addressSafety?: AddressSafetyAssessment
+  recoverableError?: {
+    code: 'wallet-call-funding-insufficient' | 'wallet-call-funding-unavailable'
+    message: string
+    data?: Readonly<{
+      available: string
+      required: string
+      missing: string
+      value: string
+      maximumFee: string
+    }>
+  }
   res?: WalletCallsResponder | RPCRequestCallback
 }
 
@@ -389,6 +401,11 @@ export interface Eip7702RevokeRequest extends AccountRequest<'eip7702Revoke'> {
     checkedAtBlock?: string
   }>
   completed?: number
+}
+
+export interface WalletCallsClaimEvidence {
+  execution: Readonly<PreparedWalletCallExecutionSnapshot>
+  simulation: string
 }
 
 export interface WalletCallsResponder {

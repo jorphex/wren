@@ -24,8 +24,10 @@ import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import {
   TransactionFundingError,
+  WalletCallFundingError,
   TRANSACTION_FUNDING_ERROR,
-  TRANSACTION_FUNDING_UNAVAILABLE
+  TRANSACTION_FUNDING_UNAVAILABLE,
+  WALLET_CALL_FUNDING_ERROR
 } from '../../../resources/domain/transaction/funding'
 
 const address = '0x22dd63c3619818fdbc262c78baee43cb61e9cccf'
@@ -135,6 +137,8 @@ beforeEach(() => {
     request.addressSafety ||= { assessedAt: Date.now(), fingerprint: 'none', targets: [] }
     return request.addressSafety
   })
+  accounts.retainWalletCallsFundingFailure = jest.fn()
+  accounts.applyWalletCallsPreflightEvidence = jest.fn()
   accounts.getActiveRequestForAccount = jest.fn((accountId, handlerId) => {
     const request = accountRequests.find((candidate) => candidate.handlerId === handlerId)
     if (!request || request.account !== accountId) throw new Error('request is waiting for review')
@@ -184,6 +188,19 @@ beforeEach(() => {
   accounts.lockRequest = jest.fn()
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
+  provider.inspectWalletCallsPreflight = jest.fn().mockResolvedValue({
+    preparation: { calls: [], maxFee: '0x0' },
+    simulation: { status: 'succeeded', source: 'eth_simulateV1', calls: [] },
+    funding: {
+      available: '0x1',
+      required: '0x1',
+      missing: '0x0',
+      value: '0x0',
+      maximumFee: '0x1'
+    },
+    claimEvidence: { execution: {}, simulation: '{}' },
+    reviewChanged: false
+  })
   accounts.rejectUnapprovedRequestsForOriginChain = jest.fn()
   executeWalletCallRuntime.mockReset()
   executeWalletCallRuntime.mockResolvedValue(['0xhash'])
@@ -400,6 +417,86 @@ describe('#assertTransactionFunding', () => {
         data: { chainId: '0x1', type: '0x0', value: '0x0', gasLimit: '0x1', gasPrice: '0x1' }
       })
     ).rejects.toMatchObject({ code: TRANSACTION_FUNDING_UNAVAILABLE })
+  })
+})
+
+describe('#inspectWalletCallsPreflight', () => {
+  const inspect = (request) =>
+    Object.getPrototypeOf(provider).inspectWalletCallsPreflight.call(provider, request)
+
+  it('rebuilds exact transactions and checks pending nonce, balance, code, simulation, and aggregate fees', async () => {
+    const target = '0x3333333333333333333333333333333333333333'
+    const fill = jest.spyOn(provider, 'fillTransaction').mockImplementation((intent, callback) =>
+      callback(null, {
+        tx: {
+          ...intent,
+          type: '0x2',
+          gasLimit: '0x5208',
+          maxFeePerGas: '0x2',
+          maxPriorityFeePerGas: '0x1',
+          gasFeesSource: 'Frame'
+        },
+        approvals: []
+      })
+    )
+    connection.send.mockImplementation((payload, callback, chain) => {
+      expect(chain).toEqual({ type: 'ethereum', id: 1 })
+      if (payload.method === 'eth_getTransactionCount') {
+        callback({ id: payload.id, jsonrpc: '2.0', result: '0x5' })
+      } else if (payload.method === 'eth_getBalance') {
+        callback({ id: payload.id, jsonrpc: '2.0', result: '0xa415' })
+      } else if (payload.method === 'eth_getCode') {
+        callback({ id: payload.id, jsonrpc: '2.0', result: '0x' })
+      } else if (payload.method === 'eth_simulateV1') {
+        callback({
+          id: payload.id,
+          jsonrpc: '2.0',
+          result: [
+            {
+              calls: [{ status: '0x1', gasUsed: '0x5208', returnData: '0x', logs: [] }]
+            }
+          ]
+        })
+      } else {
+        throw new Error(`Unexpected preflight RPC method: ${payload.method}`)
+      }
+    })
+
+    try {
+      const result = await inspect({
+        handlerId: 'actual-wallet-call-preflight',
+        type: 'walletCalls',
+        account: address,
+        origin: defaultOriginId,
+        payload: { id: 1, jsonrpc: '2.0', method: 'wallet_sendCalls', params: [] },
+        version: '2.0.0',
+        batchId: 'actual-preflight-batch',
+        chainId: '0x1',
+        atomic: false,
+        calls: [{ to: target, data: '0x', value: '0x5' }],
+        preparation: { status: 'succeeded', calls: [], maxFee: '0x0' },
+        simulation: { status: 'pending', calls: [] }
+      })
+
+      expect(result.funding).toEqual({
+        available: '0xa415',
+        required: '0xa415',
+        missing: '0x0',
+        value: '0x5',
+        maximumFee: '0xa410'
+      })
+      expect(result.claimEvidence.execution).toMatchObject({
+        account: address,
+        chainId: '0x1',
+        preparation: { calls: [{ transaction: { nonce: '0x5', value: '0x5' } }] }
+      })
+      expect(result.simulation).toMatchObject({ status: 'succeeded', source: 'eth_simulateV1' })
+      expect(connection.send.mock.calls.map(([payload]) => payload.method)).toEqual(
+        expect.arrayContaining(['eth_getTransactionCount', 'eth_getBalance', 'eth_getCode', 'eth_simulateV1'])
+      )
+    } finally {
+      fill.mockRestore()
+    }
   })
 })
 
@@ -660,6 +757,7 @@ describe('#wallet-call provider boundary', () => {
     expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(
       address,
       admitted.handlerId,
+      expect.objectContaining({ execution: expect.any(Object), simulation: expect.any(String) }),
       false
     )
     expect(executeWalletCallRuntime).toHaveBeenCalledWith(
@@ -688,6 +786,114 @@ describe('#wallet-call provider boundary', () => {
 
     expect(walletCallEvidenceRuntime.wake).toHaveBeenCalledTimes(1)
     expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(address, admitted.handlerId, failure)
+  })
+
+  it('retains an aggregate funding shortfall before accepting or executing the batch', async () => {
+    const respond = jest.fn()
+    const admitted = provider.sendWalletCalls(payload(), respond)
+    const error = new WalletCallFundingError(WALLET_CALL_FUNDING_ERROR, 'More funds needed', {
+      available: '0x1',
+      required: '0x3',
+      missing: '0x2',
+      value: '0x1',
+      maximumFee: '0x2'
+    })
+    provider.inspectWalletCallsPreflight.mockRejectedValueOnce(error)
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toBe(error)
+
+    expect(accounts.retainWalletCallsFundingFailure).toHaveBeenCalledWith(address, admitted.handlerId, error)
+    expect(accounts.claimWalletCallsRequestWithResponse).not.toHaveBeenCalled()
+    expect(executeWalletCallRuntime).not.toHaveBeenCalled()
+    expect(respond).not.toHaveBeenCalled()
+    expect(walletCallBatchLedger.getStatus(originId, address, admitted.id).status).toBe(100)
+  })
+
+  it('rechecks exact origin permission after asynchronous preflight and before claim', async () => {
+    const respond = jest.fn()
+    const admitted = provider.sendWalletCalls(payload(), respond)
+    provider.inspectWalletCallsPreflight.mockImplementationOnce(async () => {
+      store.set('main.permissions', {})
+      return {
+        preparation: { calls: [], maxFee: '0x0' },
+        simulation: { status: 'succeeded', source: 'eth_simulateV1', calls: [] },
+        funding: {
+          available: '0x1',
+          required: '0x1',
+          missing: '0x0',
+          value: '0x0',
+          maximumFee: '0x1'
+        },
+        claimEvidence: { execution: {}, simulation: '{}' },
+        reviewChanged: false
+      }
+    })
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toMatchObject({
+      code: 4100
+    })
+
+    expect(accounts.claimWalletCallsRequestWithResponse).not.toHaveBeenCalled()
+    expect(executeWalletCallRuntime).not.toHaveBeenCalled()
+    expect(respond).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4100 }) })
+    )
+  })
+
+  it('rechecks aggregate funding without signing and retains refreshed shortfall evidence', async () => {
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.status = 'error'
+    request.recoverableError = { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed' }
+    const refreshed = {
+      preparation: { calls: [], maxFee: '0x2' },
+      simulation: { status: 'succeeded', source: 'eth_simulateV1', calls: [] },
+      funding: {
+        available: '0x1',
+        required: '0x3',
+        missing: '0x2',
+        value: '0x1',
+        maximumFee: '0x2'
+      },
+      claimEvidence: { execution: {}, simulation: '{}' },
+      reviewChanged: true
+    }
+    provider.inspectWalletCallsPreflight.mockResolvedValueOnce(refreshed)
+
+    await expect(provider.retryWalletCallsRequest(address, admitted.handlerId)).resolves.toBe(true)
+
+    expect(accounts.applyWalletCallsPreflightEvidence).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      refreshed.preparation,
+      refreshed.simulation
+    )
+    expect(accounts.retainWalletCallsFundingFailure).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.objectContaining({ code: WALLET_CALL_FUNDING_ERROR, data: refreshed.funding })
+    )
+    expect(accounts.claimWalletCallsRequestWithResponse).not.toHaveBeenCalled()
+    expect(executeWalletCallRuntime).not.toHaveBeenCalled()
+  })
+
+  it('returns a funded recheck to normal review without claiming or signing', async () => {
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.status = 'error'
+    request.recoverableError = { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed' }
+
+    await expect(provider.retryWalletCallsRequest(address, admitted.handlerId)).resolves.toBe(true)
+
+    expect(accounts.applyWalletCallsPreflightEvidence).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.any(Object),
+      expect.any(Object)
+    )
+    expect(accounts.retainWalletCallsFundingFailure).not.toHaveBeenCalled()
+    expect(accounts.claimWalletCallsRequestWithResponse).not.toHaveBeenCalled()
+    expect(executeWalletCallRuntime).not.toHaveBeenCalled()
   })
 
   it('rechecks lookalike evidence at approval without blocking submission', async () => {

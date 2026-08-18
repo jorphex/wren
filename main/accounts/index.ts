@@ -35,6 +35,7 @@ import {
   PermitSignatureRequest,
   ApprovalData,
   WalletCallsRequest,
+  WalletCallsClaimEvidence,
   WalletCallsResponder,
   Eip7702RevokeRequest
 } from './types'
@@ -51,6 +52,8 @@ import {
 } from '../../resources/domain/transaction/replacement'
 import { parseTokenBaseUnitAmount } from '../../resources/domain/token/amount'
 import type { PreparedWalletCallExecutionSnapshot } from '../provider/walletCallPreparedExecution'
+import type { PreparedWalletCallBatch } from '../provider/walletCallPreparation'
+import type { WalletCallsSimulationResult } from '../transaction/simulation'
 import {
   assertEip7702RevokeEvidenceStable,
   inspectEip7702RevokePreflight,
@@ -74,7 +77,8 @@ import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLi
 import { transactionOutboundTargets } from '../addressSafety'
 import {
   isTransactionFundingError,
-  type TransactionFundingError
+  type TransactionFundingError,
+  type WalletCallFundingError
 } from '../../resources/domain/transaction/funding'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
@@ -162,6 +166,7 @@ export {
   SignTypedDataRequest,
   AddChainRequest,
   AddTokenRequest,
+  WalletCallsClaimEvidence,
   WalletCallsRequest,
   Eip7702RevokeRequest
 } from './types'
@@ -1821,7 +1826,28 @@ export class Accounts extends EventEmitter {
     return account.adjustWalletCalls(handlerId, adjustment)
   }
 
-  claimWalletCallsRequestWithResponse(accountId: string, handlerId: string, simulationAcknowledged = false) {
+  applyWalletCallsPreflightEvidence(
+    accountId: string,
+    handlerId: string,
+    preparation: Readonly<PreparedWalletCallBatch>,
+    simulation: WalletCallsSimulationResult
+  ) {
+    if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
+      throw new Error('Invalid wallet-call request identity')
+    }
+    const account = this.accounts[accountId.toLowerCase()]
+    if (!account?.getActiveReviewRequest<WalletCallsRequest>(handlerId)) {
+      throw new Error('Wallet-call request is no longer available')
+    }
+    return account.applyWalletCallsPreflightEvidence(handlerId, preparation, simulation)
+  }
+
+  claimWalletCallsRequestWithResponse(
+    accountId: string,
+    handlerId: string,
+    expectedEvidence: Readonly<WalletCallsClaimEvidence>,
+    simulationAcknowledged = false
+  ) {
     if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
       throw new Error('Invalid wallet-call request identity')
     }
@@ -1845,8 +1871,16 @@ export class Accounts extends EventEmitter {
     ) {
       throw new Error('Wallet-call response is no longer available')
     }
+    if (
+      !expectedEvidence ||
+      typeof expectedEvidence !== 'object' ||
+      !expectedEvidence.execution ||
+      typeof expectedEvidence.simulation !== 'string'
+    ) {
+      throw new Error('Wallet-call final preflight evidence is unavailable')
+    }
 
-    const snapshot = account.claimWalletCallsRequest(handlerId, simulationAcknowledged)
+    const snapshot = account.claimWalletCallsRequest(handlerId, simulationAcknowledged, expectedEvidence)
     if (account.getRequest(handlerId) !== request) {
       throw new Error('Wallet-call request changed during approval')
     }
@@ -1865,16 +1899,27 @@ export class Accounts extends EventEmitter {
       request?.type === 'transaction' &&
       request.status === RequestStatus.Error &&
       Boolean(request.retainedPreBroadcastError)
+    const retainedWalletCallsFailure =
+      request?.type === 'walletCalls' &&
+      request.status === RequestStatus.Error &&
+      Boolean(request.recoverableError) &&
+      !request.locked
     if (
       !account ||
       !request ||
       (!retainedPreBroadcastFailure &&
+        !retainedWalletCallsFailure &&
         (request.status !== undefined || ('locked' in request && request.locked)))
     ) {
       return false
     }
 
-    if (
+    if (retainedWalletCallsFailure) {
+      delete request.status
+      delete request.notice
+      delete request.recoverableError
+      account.rejectRequest(request, error)
+    } else if (
       request.type === 'transaction' &&
       request.retainedPreBroadcastError &&
       !request.retainedPreBroadcastError.responderPending
@@ -1936,6 +1981,60 @@ export class Accounts extends EventEmitter {
       error ? 8000 : 3300
     )
 
+    return true
+  }
+
+  retainWalletCallsFundingFailure(accountId: string, handlerId: string, error: WalletCallFundingError) {
+    if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
+      throw new Error('Invalid wallet-call request identity')
+    }
+    const account = this.accounts[accountId.toLowerCase()]
+    const request = account?.getActiveReviewRequest<WalletCallsRequest>(handlerId)
+    const updatingRecovery =
+      request?.type === 'walletCalls' &&
+      request.status === RequestStatus.Error &&
+      Boolean(request.recoverableError)
+    if (
+      !account ||
+      !request ||
+      request.type !== 'walletCalls' ||
+      (request.status !== undefined && !updatingRecovery) ||
+      request.locked ||
+      !request.res
+    ) {
+      throw new Error('Wallet-call request is not available for funding recovery')
+    }
+
+    request.status = RequestStatus.Error
+    request.notice = error.message.slice(0, 240)
+    request.recoverableError = {
+      code: error.code,
+      message: request.notice,
+      ...(error.data === undefined ? {} : { data: error.data })
+    }
+    account.update()
+    return true
+  }
+
+  closeFailedWalletCalls(handlerId: string, accountId: string) {
+    const account = this.accounts[accountId.toLowerCase()]
+    const request = account?.getActiveReviewRequest<WalletCallsRequest>(handlerId)
+    if (
+      !account ||
+      !request ||
+      request.type !== 'walletCalls' ||
+      request.status !== RequestStatus.Error ||
+      !request.recoverableError ||
+      !request.res ||
+      request.locked
+    ) {
+      throw new Error('Wallet-call request is not available to close')
+    }
+
+    delete request.status
+    delete request.notice
+    delete request.recoverableError
+    account.rejectRequest(request, { code: 4001, message: 'User closed the unfunded wallet-call request' })
     return true
   }
 

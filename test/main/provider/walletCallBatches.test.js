@@ -92,6 +92,20 @@ it('revokes admission rollback on commit or any persisted batch transition', () 
   expect(changed.storage.value()[changedBatch.key].transactions).toHaveLength(1)
 })
 
+it('fails abandoned zero-transaction admissions on restart without touching submitted work', () => {
+  const { ledger, storage } = createLedger()
+  const abandoned = ledger.create(batch({ id: 'abandoned' }), 1000)
+  abandoned.commit()
+  const started = ledger.create(batch({ id: 'started', account: otherAccount }), 1001)
+  started.commit()
+  ledger.reserveTransaction(origin, otherAccount, 'started', hash('1'), 1002)
+
+  expect(ledger.failAbandonedAdmissions(1003)).toBe(1)
+  expect(ledger.getStatus(origin, account, 'abandoned', 1004).status).toBe(400)
+  expect(ledger.getStatus(origin, otherAccount, 'started', 1004).status).toBe(100)
+  expect(storage.value()[started.key].transactions).toHaveLength(1)
+})
+
 it('normalizes account metadata and returns defensive copies', () => {
   const { ledger, storage } = createLedger()
   const created = ledger.create(batch({ account: account.toUpperCase().replace('0X', '0x') }), 1000)

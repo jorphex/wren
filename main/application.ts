@@ -546,6 +546,7 @@ onRenderer('frame:unmax', (e) => {
 })
 
 app.on('ready', () => {
+  walletCallBatchLedger.failAbandonedAdmissions()
   startWalletCallEvidenceRuntime()
   startOperationLifecycleRuntime()
   void signers.rescanHotSigners()
@@ -623,6 +624,7 @@ installShutdownHandlers(
     profileInspectionTokens.clear()
     removeSignerPowerLockHandlers()
     accounts.close()
+    walletCallBatchLedger.failAbandonedAdmissions()
     await signers.close()
     log.info('Application resources closed')
   },

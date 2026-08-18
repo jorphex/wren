@@ -12,6 +12,7 @@ import { GasFeesSource } from '../../../resources/domain/transaction'
 import { ApprovalType } from '../../../resources/constants'
 import { gweiToHex } from '../../util'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
+import { snapshotPreparedWalletCallExecutionInput } from '../../../main/provider/walletCallPreparedExecution'
 import { SignerUserRejectedError } from '../../../main/signers/errors'
 import nav from '../../../main/windows/nav'
 import { computeAddress, SigningKey, Transaction } from 'ethers'
@@ -23,7 +24,9 @@ import { OperationLifecycleProjection } from '../../../main/operationLifecycle/p
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../../../main/store/state/types/operationLifecycle'
 import {
   TransactionFundingError,
-  TRANSACTION_FUNDING_ERROR
+  WalletCallFundingError,
+  TRANSACTION_FUNDING_ERROR,
+  WALLET_CALL_FUNDING_ERROR
 } from '../../../resources/domain/transaction/funding'
 
 jest.mock('electron', () => ({
@@ -2128,6 +2131,34 @@ describe('#cancelUnapprovedRequestForAccount', () => {
       error: { code: 4900, message: 'Requesting client disconnected' }
     })
   })
+
+  it('closes a retained wallet-call funding recovery when its transport aborts', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const controller = new AbortController()
+    const response = bindRequestSignal(jest.fn(), controller.signal)
+    const recoverable = {
+      ...accessRequest('aborted-wallet-call-recovery'),
+      type: 'walletCalls',
+      chainId: '0x1',
+      calls: [{ data: '0x', value: '0x0' }],
+      preparation: { status: 'pending' },
+      simulation: { status: 'pending', calls: [] }
+    }
+    Accounts.addRequestForAccount(account2.address, recoverable, response)
+    Object.assign(recoverable, {
+      status: 'error',
+      recoverableError: { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed.' }
+    })
+
+    controller.abort()
+
+    expect(targetAccount.requests[recoverable.handlerId]).toBeUndefined()
+    expect(response).toHaveBeenCalledWith({
+      id: recoverable.payload.id,
+      jsonrpc: recoverable.payload.jsonrpc,
+      error: { code: 4900, message: 'Requesting client disconnected' }
+    })
+  })
 })
 
 describe('#removeRequest', () => {
@@ -2222,17 +2253,37 @@ describe('#clearRequests', () => {
   it('declines untouched requests and silently removes already-answered monitor rows', () => {
     const pendingResponse = jest.fn()
     const monitorResponse = jest.fn()
+    const walletCallsResponse = jest.fn()
     Accounts.addRequest(request, pendingResponse)
     Accounts.addRequest({ ...request, handlerId: '2', origin: 'other-origin' }, monitorResponse)
+    Accounts.addRequest(
+      {
+        ...request,
+        handlerId: 'retained-wallet-calls',
+        type: 'walletCalls',
+        chainId: '0x1',
+        calls: [{ data: '0x', value: '0x0' }],
+        preparation: { status: 'pending' },
+        simulation: { status: 'pending', calls: [] }
+      },
+      walletCallsResponse
+    )
     Object.assign(Accounts.accounts[account.id].requests['2'], {
       mode: 'monitor',
       status: 'confirming'
+    })
+    Object.assign(Accounts.accounts[account.id].requests['retained-wallet-calls'], {
+      status: 'error',
+      recoverableError: { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed.' }
     })
 
     Accounts.clearRequests(account.id)
 
     expect(Object.keys(Accounts.accounts[account.id].requests)).toHaveLength(0)
     expect(pendingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+    )
+    expect(walletCallsResponse).toHaveBeenCalledWith(
       expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
     )
     expect(monitorResponse).not.toHaveBeenCalled()
@@ -2245,7 +2296,8 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
     const responses = {
       transaction: jest.fn(),
       sign: jest.fn(),
-      walletCalls: jest.fn()
+      walletCalls: jest.fn(),
+      retainedWalletCalls: jest.fn()
     }
     const requestFor = (handlerId, overrides) => ({
       ...request,
@@ -2280,6 +2332,21 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
       })
     )
     Accounts.addRequest(
+      requestFor('retained-wallet-calls', {
+        type: 'walletCalls',
+        account: activeAccount.id,
+        chainId: '0x1',
+        calls: [{ data: '0x', value: '0x0' }],
+        preparation: { status: 'pending' },
+        simulation: { status: 'pending', calls: [] }
+      }),
+      responses.retainedWalletCalls
+    )
+    Object.assign(activeAccount.requests['retained-wallet-calls'], {
+      status: 'error',
+      recoverableError: { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed.' }
+    })
+    Accounts.addRequest(
       requestFor('already-approved', {
         status: 'pending',
         locked: true
@@ -2304,6 +2371,9 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
     expect(responses.walletCalls).toHaveBeenCalledWith(
       expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
     )
+    expect(responses.retainedWalletCalls).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
+    )
   })
 })
 
@@ -2311,6 +2381,7 @@ describe('#rejectUnapprovedRequestsForOrigins', () => {
   it('rejects only untouched requests for revoked origins on the selected account', () => {
     const activeAccount = Accounts.current()
     const revokedResponse = jest.fn()
+    const walletCallsResponse = jest.fn()
     const retainedResponse = jest.fn()
     const requestFor = (handlerId, overrides = {}) => ({
       ...request,
@@ -2320,6 +2391,20 @@ describe('#rejectUnapprovedRequestsForOrigins', () => {
     })
 
     Accounts.addRequest(requestFor('revoked-request'), revokedResponse)
+    Accounts.addRequest(
+      requestFor('retained-wallet-calls', {
+        type: 'walletCalls',
+        chainId: '0x1',
+        calls: [{ data: '0x', value: '0x0' }],
+        preparation: { status: 'pending' },
+        simulation: { status: 'pending', calls: [] }
+      }),
+      walletCallsResponse
+    )
+    Object.assign(activeAccount.requests['retained-wallet-calls'], {
+      status: 'error',
+      recoverableError: { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed.' }
+    })
     Accounts.addRequest(requestFor('other-origin', { origin: 'other-origin' }), retainedResponse)
     Accounts.addRequest(requestFor('locked-request', { status: 'pending', locked: true }), retainedResponse)
 
@@ -2329,6 +2414,9 @@ describe('#rejectUnapprovedRequestsForOrigins', () => {
     expect(activeAccount.requests).toHaveProperty('other-origin')
     expect(activeAccount.requests).toHaveProperty('locked-request')
     expect(revokedResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4100, message: 'Request origin access was revoked' } })
+    )
+    expect(walletCallsResponse).toHaveBeenCalledWith(
       expect.objectContaining({ error: { code: 4100, message: 'Request origin access was revoked' } })
     )
     expect(retainedResponse).not.toHaveBeenCalled()
@@ -2439,6 +2527,18 @@ describe('#claimWalletCallsRequest', () => {
     request.preparation = preparation
   }
 
+  const claimEvidence = (request) => ({
+    execution: snapshotPreparedWalletCallExecutionInput({
+      id: request.batchId,
+      origin: request.origin,
+      account: request.account,
+      chainId: request.chainId,
+      calls: request.calls,
+      preparation: request.preparation
+    }),
+    simulation: JSON.stringify(request.simulation)
+  })
+
   it('claims from the explicit account while another account remains current', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const request = readyRequest()
@@ -2469,7 +2569,8 @@ describe('#claimWalletCallsRequest', () => {
 
     const claimed = Accounts.claimWalletCallsRequestWithResponse(
       account2.address.toUpperCase(),
-      request.handlerId
+      request.handlerId,
+      claimEvidence(request)
     )
 
     expect(Accounts.current().id).toBe(account.address)
@@ -2489,6 +2590,72 @@ describe('#claimWalletCallsRequest', () => {
     )
     expect(request.locked).toBeUndefined()
     expect(request.status).toBeUndefined()
+  })
+
+  it('rejects a final claim if preparation changes after preflight evidence was captured', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const request = readyRequest('wallet-calls-preflight-drift')
+    const responder = jest.fn()
+    responder.walletCallsLifecycle = true
+    responder.accept = jest.fn()
+    admitReadyRequest(targetAccount, request, responder)
+    const evidence = claimEvidence(request)
+    request.preparation.calls[0].transaction.maxFeePerGas = '0x11'
+    const changedMaxFee = toRpcQuantity(BigInt(request.preparation.calls[0].transaction.gasLimit) * 0x11n)
+    request.preparation.calls[0].maxFee = changedMaxFee
+    request.preparation.maxFee = changedMaxFee
+
+    expect(() =>
+      Accounts.claimWalletCallsRequestWithResponse(account2.address, request.handlerId, evidence)
+    ).toThrow(/changed during final preflight/i)
+    expect(request.locked).toBeUndefined()
+    expect(request.status).toBeUndefined()
+    expect(request.res).toBe(responder)
+    expect(responder.accept).not.toHaveBeenCalled()
+  })
+
+  it('retains, updates, and closes an unfunded wallet-call request without detaching its responder', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const request = readyRequest('wallet-calls-funding-recovery')
+    const responder = jest.fn()
+    responder.walletCallsLifecycle = true
+    responder.accept = jest.fn()
+    admitReadyRequest(targetAccount, request, responder)
+    const error = new WalletCallFundingError(WALLET_CALL_FUNDING_ERROR, 'More funds needed.', {
+      available: '0x1',
+      required: '0x3',
+      missing: '0x2',
+      value: '0x1',
+      maximumFee: '0x2'
+    })
+
+    expect(Accounts.retainWalletCallsFundingFailure(account2.address, request.handlerId, error)).toBe(true)
+    expect(request.res).toBe(responder)
+    expect(request).toMatchObject({
+      status: 'error',
+      recoverableError: { code: WALLET_CALL_FUNDING_ERROR, data: { missing: '0x2' } }
+    })
+    expect(responder).not.toHaveBeenCalled()
+
+    const updated = new WalletCallFundingError(WALLET_CALL_FUNDING_ERROR, 'Still needs funds.', {
+      available: '0x2',
+      required: '0x4',
+      missing: '0x2',
+      value: '0x2',
+      maximumFee: '0x2'
+    })
+    expect(Accounts.retainWalletCallsFundingFailure(account2.address, request.handlerId, updated)).toBe(true)
+    expect(request.recoverableError).toMatchObject({
+      message: 'Still needs funds.',
+      data: { available: '0x2' }
+    })
+    expect(request.res).toBe(responder)
+
+    expect(Accounts.closeFailedWalletCalls(request.handlerId, account2.address)).toBe(true)
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4001 }) })
+    )
+    expect(responder.accept).not.toHaveBeenCalled()
   })
 
   it('settles and expires only the claimed request on its explicit account', () => {

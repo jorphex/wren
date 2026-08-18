@@ -419,6 +419,63 @@ it('exposes native wallet-call decisions and locks actions once submitted', asyn
   expect(submit.disabled).toBe(true)
 })
 
+it('retains an unfunded wallet-call batch with bounded funding and recovery actions', async () => {
+  const req = request({
+    account: '0x0000000000000000000000000000000000000001',
+    chainId: '0x1',
+    status: 'error',
+    recoverableError: {
+      code: 'wallet-call-funding-insufficient',
+      message: 'More funds needed',
+      data: {
+        available: '0x1',
+        required: '0x3',
+        missing: '0x2',
+        value: '0x1',
+        maximumFee: '0x2'
+      }
+    }
+  })
+  const { user } = renderRequestFooter(req)
+
+  expect(screen.getByText('More funds needed')).toBeTruthy()
+  expect(screen.getByText('Available')).toBeTruthy()
+  expect(screen.getByText('Required')).toBeTruthy()
+  expect(screen.getByText('Missing')).toBeTruthy()
+
+  await user.click(screen.getByRole('button', { name: 'Show receive QR' }))
+  expect(screen.getByLabelText('QR code for funding account on Chain 1')).toBeTruthy()
+  expect(screen.getByLabelText('QR code for funding account on Chain 1').dataset.qrPayload).toBe(
+    `ethereum:${req.account}@1`
+  )
+  await user.click(screen.getByRole('button', { name: 'Copy address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', req.account)
+
+  link.rpc.mockImplementationOnce((_method, _request, callback) => callback(null))
+  await user.click(screen.getByRole('button', { name: 'Recheck' }))
+  expect(link.rpc).toHaveBeenCalledWith('retryWalletCallsRequest', req, expect.any(Function))
+})
+
+it('offers retry rather than funding instructions when wallet-call evidence is unavailable', () => {
+  const req = request({
+    account: '0x0000000000000000000000000000000000000001',
+    chainId: '0x1',
+    status: 'error',
+    recoverableError: {
+      code: 'wallet-call-funding-unavailable',
+      message: 'The account balance could not be verified. Nothing was signed or sent.'
+    }
+  })
+  renderRequestFooter(req)
+
+  expect(screen.getByText('Funding check unavailable')).toBeTruthy()
+  expect(screen.getByText(/could not verify this batch's funding on Chain 1/i)).toBeTruthy()
+  expect(screen.getByText(/Recheck when network data is available/i)).toBeTruthy()
+  expect(screen.queryByText(/Fund this account/i)).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Copy address' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Recheck' })).toBeTruthy()
+})
+
 it.each([
   [
     'failed',

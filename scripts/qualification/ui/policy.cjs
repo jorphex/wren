@@ -160,11 +160,39 @@ const reviewScenarios = () => [
       ready: '.accountAddressQrPopover',
       requiredControls: ['Close'],
       requiredText: ['Account address', 'Workshop Software Account With A Long Name'],
-      layoutExpectations: [
-        { kind: 'size', selector: '.accountAddressQrCode', width: 185, height: 185 }
-      ]
+      layoutExpectations: [{ kind: 'size', selector: '.accountAddressQrCode', width: 185, height: 185 }]
     }))
   ]),
+  {
+    id: 'tray-wallet-calls-funding-full-1',
+    renderer: 'tray',
+    state: 'wallet-calls-funding',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.walletCallsFundingRecovery',
+    requiredControls: ['Copy address', 'Show receive QR', 'Reject request', 'Recheck'],
+    requiredText: [
+      'More funds needed',
+      'Fund this account on Optimism Mainnet — Community RPC.',
+      'Amounts at last check',
+      'AVAILABLE',
+      'REQUIRED',
+      'MISSING'
+    ]
+  },
+  {
+    id: 'tray-wallet-calls-funding-qr-full-1',
+    renderer: 'tray',
+    state: 'wallet-calls-funding',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Show receive QR' },
+    ready: '.transactionFundingQr',
+    requiredControls: ['Copy address', 'Hide receive QR', 'Reject request', 'Recheck'],
+    requiredText: ['More funds needed', 'Amounts at last check']
+  },
   {
     id: 'dash-add-token-selector-short-1',
     renderer: 'dash',
@@ -202,12 +230,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestSign:disabled',
     requiredControls: ['Copy transaction recipient address'],
-    requiredText: [
-      'Simulation completed',
-      'Additional checks pending',
-      'Final checks',
-      'Finishing checks'
-    ]
+    requiredText: ['Simulation completed', 'Additional checks pending', 'Final checks', 'Finishing checks']
   },
   {
     id: 'tray-transaction-advanced-partial-full-1',
@@ -742,7 +765,7 @@ const reviewScenarios = () => [
     requiredText: ['Remove Workshop Software Account With A Long Name?', 'Cancel', 'Confirm removal'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
-  },
+  }
 ]
 
 const scenarioMatrix = ({ includeReview = false } = {}) => {

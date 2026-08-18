@@ -254,13 +254,19 @@ calldata, and device display whenever possible.
 Before transaction signing, the main process asks the configured chain RPC for
 the account's pending native balance and compares it with the reviewed value plus
 the maximum execution fee; Optimism-family requests also require the available
-L1 data-fee estimate. Missing or malformed quantities fail closed before signer
-invocation. A shortfall keeps the original dapp responder and review alive,
-exposes exact available/required/missing quantities, and requires a fresh
-balance, fee, and simulation review before approval can resume. This prevents a
-known-unfunded signing attempt but does not reserve funds or eliminate races with
-other pending transactions, RPC disagreement, reorgs, or fees changing after the
-check.
+L1 data-fee estimate. Sequential Wallet Calls repeat the same check over every
+prepared transaction, aggregate value and fees exactly once, verify the pending
+nonce, and statefully simulate the exact prepared batch before Wren returns its
+public batch ID or invokes any signer. Missing or malformed quantities and
+account-code evidence fail closed. A shortfall keeps the original transient dapp
+responder and review alive, exposes exact available/required/missing quantities,
+and requires explicit Recheck; Reject closes the responder and failed batch.
+Recovery payloads are never persisted, so restart cannot restore or sign them;
+startup marks the corresponding unsigned, zero-transaction admission failed rather
+than leaving a phantom pending batch.
+These checks prevent a known-unfunded signing attempt but do not reserve funds or
+eliminate races with other pending transactions, RPC disagreement, reorgs, or
+fees changing after the check.
 
 #### Remote services and content
 

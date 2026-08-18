@@ -53,7 +53,7 @@ import {
   simulateWalletCalls
 } from '../../transaction/simulation'
 import { snapshotWalletCalls } from '../../provider/walletCallExecution'
-import { prepareWalletCallBatch } from '../../provider/walletCallPreparation'
+import { prepareWalletCallBatch, type PreparedWalletCallBatch } from '../../provider/walletCallPreparation'
 import {
   snapshotWalletCallBatchAdjustment,
   type WalletCallBatchAdjustment
@@ -70,6 +70,7 @@ import type {
   SignatureRequest,
   SignRequest,
   TypedMessage,
+  WalletCallsClaimEvidence,
   WalletCallsResponder
 } from '../types'
 import type { Breadcrumb } from '../../windows/nav/breadcrumb'
@@ -425,7 +426,13 @@ class FrameAccount {
   clearRequests() {
     this.deferRequestPresentation(() => {
       Object.values(this.requests).forEach((req) => {
-        if (req.status === undefined) {
+        const retainedWalletCalls = req.type === 'walletCalls' && Boolean(req.recoverableError) && !req.locked
+        if (req.status === undefined || retainedWalletCalls) {
+          if (retainedWalletCalls) {
+            delete req.status
+            delete req.notice
+            delete req.recoverableError
+          }
           const err = { code: 4001, message: 'User rejected the request' }
           this.rejectRequest(req, err)
         } else {
@@ -457,11 +464,18 @@ class FrameAccount {
 
     this.deferRequestPresentation(() => {
       Object.values(this.requests).forEach((request) => {
+        const retainedWalletCalls =
+          request.type === 'walletCalls' && Boolean(request.recoverableError) && !request.locked
         if (
           request.origin === origin &&
-          request.status === undefined &&
+          (request.status === undefined || retainedWalletCalls) &&
           requestChainId(request) === chainId
         ) {
+          if (retainedWalletCalls) {
+            delete request.status
+            delete request.notice
+            delete request.recoverableError
+          }
           this.rejectRequest(request, {
             code: 4901,
             message: `Request cancelled because the origin switched away from chain ${chainId}`
@@ -475,11 +489,18 @@ class FrameAccount {
     const revokedOrigins = new Set(origins)
     this.deferRequestPresentation(() => {
       Object.values(this.requests).forEach((request) => {
+        const retainedWalletCalls =
+          request.type === 'walletCalls' && Boolean(request.recoverableError) && !request.locked
         if (
           revokedOrigins.has(request.origin) &&
-          request.status === undefined &&
+          (request.status === undefined || retainedWalletCalls) &&
           !('locked' in request && request.locked)
         ) {
+          if (retainedWalletCalls) {
+            delete request.status
+            delete request.notice
+            delete request.recoverableError
+          }
           this.rejectRequest(request, { code: 4100, message: 'Request origin access was revoked' })
         }
       })
@@ -1126,6 +1147,30 @@ class FrameAccount {
     return walletCalls.adjustment
   }
 
+  applyWalletCallsPreflightEvidence(
+    handlerId: string,
+    preparation: Readonly<PreparedWalletCallBatch>,
+    simulation: WalletCallsSimulationResult
+  ) {
+    const request = this.requests[handlerId]
+    if (
+      !request ||
+      request.type !== 'walletCalls' ||
+      request.locked ||
+      (request.status !== undefined && !request.recoverableError)
+    ) {
+      throw new Error('Wallet-call request is no longer available')
+    }
+    request.preparation = { status: 'succeeded', ...preparation }
+    request.simulation = simulation
+    delete request.status
+    delete request.notice
+    delete request.recoverableError
+    this.revealWalletCallDetails(request)
+    this.update()
+    return true
+  }
+
   private walletCallsPendingNonce(account: string, chainId: string) {
     return new Promise<string>((resolve, reject) => {
       provider.getNonce({ from: account, chainId } as TransactionData, (response) => {
@@ -1280,7 +1325,8 @@ class FrameAccount {
 
   claimWalletCallsRequest(
     handlerId: string,
-    simulationAcknowledged = false
+    simulationAcknowledged = false,
+    expectedEvidence?: Readonly<WalletCallsClaimEvidence>
   ): Readonly<PreparedWalletCallExecutionSnapshot> {
     const request = this.requests[handlerId]
     if (!request || request.type !== 'walletCalls') {
@@ -1329,6 +1375,13 @@ class FrameAccount {
       calls: walletCalls.calls,
       preparation: walletCalls.preparation
     })
+    if (
+      expectedEvidence &&
+      (JSON.stringify(snapshot) !== JSON.stringify(expectedEvidence.execution) ||
+        JSON.stringify(walletCalls.simulation) !== expectedEvidence.simulation)
+    ) {
+      throw new Error('Wallet-call preparation or simulation changed during final preflight')
+    }
 
     const previousState = {
       locked: walletCalls.locked,

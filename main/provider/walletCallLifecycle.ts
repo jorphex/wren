@@ -1,4 +1,4 @@
-import type { WalletCallsRequest, WalletCallsResponder } from '../accounts/types'
+import type { WalletCallsClaimEvidence, WalletCallsRequest, WalletCallsResponder } from '../accounts/types'
 import type { PreparedWalletCallExecutionSnapshot } from './walletCallPreparedExecution'
 import {
   admitWalletCallBatch,
@@ -20,6 +20,7 @@ interface WalletCallLifecycleAccounts {
   claimWalletCallsRequestWithResponse(
     accountId: string,
     handlerId: string,
+    expectedEvidence: Readonly<WalletCallsClaimEvidence>,
     simulationAcknowledged?: boolean
   ): Readonly<{
     snapshot: Readonly<PreparedWalletCallExecutionSnapshot>
@@ -178,8 +179,18 @@ export class WalletCallLifecycleController {
     })
   }
 
-  async approve(accountId: string, handlerId: string, simulationAcknowledged = false) {
-    const approved = this.claimWalletCallsRequestWithResponse(accountId, handlerId, simulationAcknowledged)
+  async approve(
+    accountId: string,
+    handlerId: string,
+    expectedEvidence: Readonly<WalletCallsClaimEvidence>,
+    simulationAcknowledged = false
+  ) {
+    const approved = this.claimWalletCallsRequestWithResponse(
+      accountId,
+      handlerId,
+      expectedEvidence,
+      simulationAcknowledged
+    )
     const { snapshot, responder } = approved
 
     try {

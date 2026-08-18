@@ -55,6 +55,19 @@ test.each(['retryTransactionRequest', 'closeFailedTransactionRequest'])(
   }
 )
 
+test.each(['retryWalletCallsRequest', 'closeFailedWalletCallsRequest'])(
+  'bounds %s to an account-owned wallet-call request reference',
+  (method) => {
+    const request = { handlerId, account: address, type: 'walletCalls', calls: [{ data: 'private' }] }
+    expect(parseRendererRpcRequest(wire(1, method, request))).toEqual({
+      success: true,
+      data: { id: 1, method, args: [{ handlerId, account: address, type: 'walletCalls' }] }
+    })
+    expect(parseRendererRpcRequest(wire(1, method, { ...request, handlerId: 'forged' })).success).toBe(false)
+    expect(parseRendererRpcRequest(wire(1, method, { ...request, type: 'transaction' })).success).toBe(false)
+  }
+)
+
 test('bounds transaction replacement to an account-owned request and known action', () => {
   const request = { handlerId, account: address, type: 'transaction', notice: 'private details' }
   expect(parseRendererRpcRequest(wire(1, 'replaceTransactionRequest', request, 'speed'))).toEqual({

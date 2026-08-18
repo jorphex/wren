@@ -17,6 +17,7 @@ import accounts, {
   SignTypedDataRequest,
   AddChainRequest,
   AddTokenRequest,
+  WalletCallsClaimEvidence,
   WalletCallsRequest
 } from '../accounts'
 import { SignerUserRejectedError } from '../signers/errors'
@@ -28,11 +29,16 @@ import reveal from '../reveal'
 import { getSignerType, Type as SignerType } from '../../resources/domain/signer'
 import { getSignerCapabilities } from '../signers/capabilities'
 import { TransactionData } from '../../resources/domain/transaction'
-import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
+import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import {
   assertTransactionFunding,
+  isWalletCallFundingError,
   TransactionFundingError,
-  TRANSACTION_FUNDING_UNAVAILABLE
+  TRANSACTION_FUNDING_UNAVAILABLE,
+  walletCallFundingEvidence,
+  WalletCallFundingError,
+  WALLET_CALL_FUNDING_ERROR,
+  WALLET_CALL_FUNDING_UNAVAILABLE
 } from '../../resources/domain/transaction/funding'
 import { populate as populateTransaction, maxFee, classifyTransaction } from '../transaction'
 import { capitalize } from '../../resources/utils'
@@ -54,6 +60,8 @@ import { reconcileErc1046TokenData, resolveErc1046Metadata } from './erc1046'
 import { getOriginAccess, hasOriginCapability, requestOriginAccess } from '../api/origins'
 import { parseCallsStatus, parseGetCapabilities, parseSendCalls, parseShowCallsStatus } from './walletCalls'
 import { WalletCallLifecycleController } from './walletCallLifecycle'
+import { prepareWalletCallBatch } from './walletCallPreparation'
+import { snapshotPreparedWalletCallExecutionInput } from './walletCallPreparedExecution'
 import walletCallBatchLedger from './walletCallLedger'
 import { executeWalletCallRuntime } from './walletCallRuntime'
 import walletCallEvidenceRuntime from './walletCallEvidenceRuntime'
@@ -61,7 +69,7 @@ import { showWalletCallStatus } from './walletCallStatusView'
 import { isUnsafeRpcForwardingMethod, unsupportedRawTransactionFamily } from './rpcForwarding'
 import { getRequestSignal, inheritRequestSignal } from './requestSignal'
 import { summarizeRpcError } from '../security/rpcLogging'
-import { isRecoverableAccountCodeEvidenceError } from '../transaction/simulation'
+import { isRecoverableAccountCodeEvidenceError, simulateWalletCalls } from '../transaction/simulation'
 
 import { Subscription, SubscriptionType, hasSubscriptionPermission } from './subscriptions'
 import {
@@ -801,42 +809,300 @@ export class Provider extends EventEmitter {
     }
   }
 
-  approveWalletCallsRequest(accountId: string, handlerId: string, simulationAcknowledged = false) {
+  private walletCallsRpcQuantity(
+    chainId: number,
+    method: 'eth_getBalance' | 'eth_getTransactionCount',
+    account: string
+  ) {
+    return new Promise<string>((resolve, reject) => {
+      this.connection.send(
+        { id: Date.now(), jsonrpc: '2.0', method, params: [account, 'pending'] },
+        (response) => {
+          const quantity = response.error ? undefined : parseRpcQuantity(response.result)
+          if (quantity === undefined) {
+            reject(
+              new WalletCallFundingError(
+                WALLET_CALL_FUNDING_UNAVAILABLE,
+                method === 'eth_getBalance'
+                  ? 'The account balance could not be verified. Nothing was signed or sent.'
+                  : 'The wallet-call nonce could not be verified. Nothing was signed or sent.'
+              )
+            )
+          } else {
+            resolve(toRpcQuantity(quantity))
+          }
+        },
+        { type: 'ethereum', id: chainId }
+      )
+    })
+  }
+
+  private async walletCallsL1Fees(chainId: number, transactions: readonly TransactionData[]) {
+    if (!chainUsesOptimismFees(chainId)) return transactions.map(() => '0x0')
+
+    const connection = this.connection.connections['ethereum'][chainId]
+    const activeConnection = connection?.active || connection?.primary || connection?.secondary
+    const connectedProvider = activeConnection?.connected ? activeConnection.provider : undefined
+    if (!connectedProvider) {
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'The network data fees could not be verified. Nothing was signed or sent.'
+      )
+    }
+
+    try {
+      const rpcProvider = createRpcProvider(connectedProvider)
+      return await Promise.all(
+        transactions.map(async ({ chainId: _chainId, type, ...transaction }) =>
+          toRpcQuantity(
+            await estimateL1GasCost(rpcProvider, {
+              ...transaction,
+              type: parseInt(type, 16),
+              chainId
+            })
+          )
+        )
+      )
+    } catch {
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'The network data fees could not be verified. Nothing was signed or sent.'
+      )
+    }
+  }
+
+  private walletCallsReviewAuthorizationError(request: WalletCallsRequest): EVMError | undefined {
+    try {
+      const chainId = Number(BigInt(request.chainId))
+      if (
+        !this.walletCallOriginAuthorized(request.origin, request.account, request.chainId, 'wallet_sendCalls')
+      ) {
+        return { code: 4100, message: 'Wallet-call origin is no longer authorized' }
+      }
+      if (!this.walletCallChainAvailable(chainId)) {
+        return { code: 5710, message: `Unsupported chain id: ${chainId}` }
+      }
+    } catch (_) {
+      return { code: -32602, message: 'Invalid wallet-call chain id' }
+    }
+    return undefined
+  }
+
+  private requireWalletCallsReviewAuthorization(
+    accountId: string,
+    handlerId: string,
+    request: WalletCallsRequest
+  ) {
+    const rejection = this.walletCallsReviewAuthorizationError(request)
+    if (!rejection) return
+    accounts.rejectRequestForAccount(accountId, handlerId, rejection)
+    throw Object.assign(new Error(rejection.message), { code: rejection.code })
+  }
+
+  private async inspectWalletCallsPreflight(request: WalletCallsRequest) {
+    const chainId = Number(parseRpcQuantity(request.chainId))
+    if (!Number.isSafeInteger(chainId) || chainId <= 0 || request.preparation.status !== 'succeeded') {
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'The wallet-call funding requirement could not be verified. Nothing was signed or sent.'
+      )
+    }
+    const pendingNonce = await this.walletCallsRpcQuantity(
+      chainId,
+      'eth_getTransactionCount',
+      request.account
+    )
+    const preparation = await prepareWalletCallBatch(
+      {
+        account: request.account,
+        chainId: request.chainId,
+        pendingNonce,
+        calls: request.calls,
+        ...(request.adjustment ? { adjustment: request.adjustment } : {})
+      },
+      {
+        fillTransaction: (transaction) =>
+          new Promise((resolve, reject) => {
+            this.fillTransaction({ ...transaction }, (error, metadata) => {
+              if (error) reject(error)
+              else if (!metadata) reject(new Error('Transaction preparation returned no metadata'))
+              else resolve(metadata)
+            })
+          })
+      }
+    ).catch((error) => {
+      if (isWalletCallFundingError(error)) throw error
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'Fresh wallet-call nonce and fee evidence could not be prepared. Nothing was signed or sent.'
+      )
+    })
+    const transactions = preparation.calls.map((call) => call.transaction)
+    if (transactions.length !== request.calls.length || transactions.length === 0) {
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'The prepared wallet-call batch could not be verified. Nothing was signed or sent.'
+      )
+    }
+
+    const [available, l1Fees, simulation] = await Promise.all([
+      this.walletCallsRpcQuantity(chainId, 'eth_getBalance', request.account),
+      this.walletCallsL1Fees(chainId, transactions),
+      simulateWalletCalls(
+        transactions.map((transaction) => ({ ...transaction })),
+        {
+          send: (payload, callback, targetChain) => this.connection.send(payload, callback, targetChain)
+        }
+      )
+    ]).catch((error) => {
+      if (isWalletCallFundingError(error)) throw error
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'Fresh wallet-call balance and execution evidence could not be verified. Nothing was signed or sent.'
+      )
+    })
+
+    const senderEvidence = simulation.accountCodeEvidence?.sender
+    const targetEvidence = simulation.accountCodeEvidence?.targets || []
+    const evidenceUnavailable =
+      !senderEvidence ||
+      senderEvidence.status === 'unavailable' ||
+      (senderEvidence.status === 'delegated' && senderEvidence.delegateCodeStatus === 'unavailable') ||
+      targetEvidence.some(
+        (target) =>
+          target.status === 'unavailable' ||
+          (target.status === 'delegated' && target.delegateCodeStatus === 'unavailable')
+      )
+    if (evidenceUnavailable) {
+      throw new WalletCallFundingError(
+        WALLET_CALL_FUNDING_UNAVAILABLE,
+        'Fresh wallet-call account-code evidence was unavailable. Nothing was signed or sent.'
+      )
+    }
+    if (senderEvidence.status === 'delegated' || simulation.delegation?.status === 'delegated') {
+      throw new Error('Wallet-call batches from delegated sending accounts are not supported.')
+    }
+    const execution = snapshotPreparedWalletCallExecutionInput({
+      id: request.batchId,
+      origin: request.origin,
+      account: request.account,
+      chainId: request.chainId,
+      calls: request.calls,
+      preparation
+    })
+    const simulationSnapshot = JSON.stringify(simulation)
+    const claimEvidence: Readonly<WalletCallsClaimEvidence> = Object.freeze({
+      execution,
+      simulation: simulationSnapshot
+    })
+    const reviewChanged =
+      JSON.stringify(request.preparation) !== JSON.stringify({ status: 'succeeded', ...preparation }) ||
+      JSON.stringify(request.simulation) !== simulationSnapshot
+
+    return Object.freeze({
+      preparation,
+      simulation,
+      funding: walletCallFundingEvidence(transactions, available, l1Fees),
+      claimEvidence,
+      reviewChanged
+    })
+  }
+
+  async approveWalletCallsRequest(accountId: string, handlerId: string, simulationAcknowledged = false) {
     try {
       const request = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
       if (request.type !== 'walletCalls') throw new Error('Wallet-call request is no longer available')
 
-      let rejection: EVMError | undefined
-      try {
-        const chainId = Number(BigInt(request.chainId))
-        if (
-          !this.walletCallOriginAuthorized(
-            request.origin,
-            request.account,
-            request.chainId,
-            'wallet_sendCalls'
-          )
-        ) {
-          rejection = { code: 4100, message: 'Wallet-call origin is no longer authorized' }
-        } else {
-          if (!this.walletCallChainAvailable(Number(BigInt(request.chainId)))) {
-            rejection = { code: 5710, message: `Unsupported chain id: ${chainId}` }
-          }
-        }
-      } catch (_) {
-        rejection = { code: -32602, message: 'Invalid wallet-call chain id' }
-      }
-
-      if (rejection) {
-        accounts.rejectRequestForAccount(accountId, handlerId, rejection)
-        throw Object.assign(new Error(rejection.message), { code: rejection.code })
-      }
+      this.requireWalletCallsReviewAuthorization(accountId, handlerId, request)
 
       accounts.refreshRequestAddressSafety(accountId, handlerId)
 
-      return this.createWalletCallLifecycle().approve(accountId, handlerId, simulationAcknowledged)
+      const preflight = await this.inspectWalletCallsPreflight(request)
+
+      const currentRequest = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
+      if (currentRequest !== request) throw new Error('Wallet-call request changed during preflight')
+      this.requireWalletCallsReviewAuthorization(accountId, handlerId, currentRequest)
+
+      if (preflight.reviewChanged) {
+        accounts.applyWalletCallsPreflightEvidence(
+          accountId,
+          handlerId,
+          preflight.preparation,
+          preflight.simulation
+        )
+      }
+      if (preflight.funding.missing !== '0x0') {
+        throw new WalletCallFundingError(
+          WALLET_CALL_FUNDING_ERROR,
+          'The selected account cannot cover this wallet-call batch and its maximum fees. Nothing was signed or sent.',
+          preflight.funding
+        )
+      }
+      if (preflight.reviewChanged) {
+        throw new Error(
+          'Wallet-call nonce, fees, or simulation evidence changed. Review the refreshed batch before submitting.'
+        )
+      }
+      if (preflight.simulation.status !== 'succeeded' && !simulationAcknowledged) {
+        throw new Error('Fresh wallet-call simulation requires explicit acknowledgement')
+      }
+
+      return this.createWalletCallLifecycle().approve(
+        accountId,
+        handlerId,
+        preflight.claimEvidence,
+        simulationAcknowledged
+      )
     } catch (error) {
-      return Promise.reject(error)
+      if (isWalletCallFundingError(error)) {
+        try {
+          accounts.retainWalletCallsFundingFailure(accountId, handlerId, error)
+        } catch (retentionError) {
+          log.warn('Wallet-call funding failure could not be retained', retentionError)
+        }
+      }
+      throw error
+    }
+  }
+
+  async retryWalletCallsRequest(accountId: string, handlerId: string) {
+    const request = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
+    if (
+      request.type !== 'walletCalls' ||
+      request.status !== 'error' ||
+      !request.recoverableError ||
+      request.locked
+    ) {
+      throw new Error('Wallet-call request is not available for another funding check')
+    }
+
+    this.requireWalletCallsReviewAuthorization(accountId, handlerId, request)
+    try {
+      const preflight = await this.inspectWalletCallsPreflight(request)
+      const currentRequest = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
+      if (currentRequest !== request) throw new Error('Wallet-call request changed during funding recheck')
+      this.requireWalletCallsReviewAuthorization(accountId, handlerId, currentRequest)
+      accounts.applyWalletCallsPreflightEvidence(
+        accountId,
+        handlerId,
+        preflight.preparation,
+        preflight.simulation
+      )
+      if (preflight.funding.missing !== '0x0') {
+        throw new WalletCallFundingError(
+          WALLET_CALL_FUNDING_ERROR,
+          'The selected account cannot cover this wallet-call batch and its maximum fees. Nothing was signed or sent.',
+          preflight.funding
+        )
+      }
+      return true
+    } catch (error) {
+      if (!isWalletCallFundingError(error)) throw error
+      const currentRequest = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
+      if (currentRequest !== request) throw new Error('Wallet-call request changed during funding recheck')
+      this.requireWalletCallsReviewAuthorization(accountId, handlerId, currentRequest)
+      accounts.retainWalletCallsFundingFailure(accountId, handlerId, error)
+      return true
     }
   }
 

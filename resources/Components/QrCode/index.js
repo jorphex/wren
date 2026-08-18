@@ -31,7 +31,7 @@ const matrixPath = (data) =>
     })
     .join('')
 
-const QrCode = ({ className, label, value }) => {
+const QrCode = ({ className, id, label, value }) => {
   const qr = React.useMemo(() => createQrMatrix(value), [value])
   const pixelSize = qr.size * QR_MODULE_SIZE
 
@@ -39,6 +39,7 @@ const QrCode = ({ className, label, value }) => {
     <svg
       aria-label={label}
       className={className}
+      id={id}
       data-qr-payload={value}
       data-qr-quiet-zone={QR_QUIET_ZONE_MODULES}
       height={pixelSize}

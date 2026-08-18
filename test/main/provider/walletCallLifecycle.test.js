@@ -5,6 +5,7 @@ import { OperationLifecycleLedger } from '../../../main/operationLifecycle/ledge
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
+const claimEvidence = Object.freeze({ execution: Object.freeze({}), simulation: '{}' })
 
 function storage() {
   let batches = {}
@@ -162,7 +163,7 @@ it('publishes the id after claim and then executes and settles the exact request
   const respond = jest.fn(() => events.push('response'))
   const admitted = controller.admit(input(), respond)
 
-  await expect(controller.approve(account, 'handler-id')).resolves.toEqual(['0xhash'])
+  await expect(controller.approve(account, 'handler-id', claimEvidence)).resolves.toEqual(['0xhash'])
 
   expect(respond).toHaveBeenCalledWith({ id: 7, jsonrpc: '2.0', result: { id: admitted.id } })
   expect(events).toEqual(['request', 'claim', 'response', 'execute', 'success'])
@@ -174,9 +175,14 @@ it('threads explicit simulation acknowledgement to the authoritative claim', asy
   const { controller, accounts } = dependencies()
   controller.admit(input(), jest.fn())
 
-  await expect(controller.approve(account, 'handler-id', true)).resolves.toEqual(['0xhash'])
+  await expect(controller.approve(account, 'handler-id', claimEvidence, true)).resolves.toEqual(['0xhash'])
 
-  expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(account, 'handler-id', true)
+  expect(accounts.claimWalletCallsRequestWithResponse).toHaveBeenCalledWith(
+    account,
+    'handler-id',
+    claimEvidence,
+    true
+  )
 })
 
 it('keeps the published id and reports a terminal execution failure through status', async () => {
@@ -188,7 +194,7 @@ it('keeps the published id and reports a terminal execution failure through stat
     throw new Error('device declined')
   })
 
-  await expect(controller.approve(account, 'handler-id')).rejects.toThrow(/device declined/)
+  await expect(controller.approve(account, 'handler-id', claimEvidence)).rejects.toThrow(/device declined/)
 
   expect(respond).toHaveBeenCalledWith({ id: 7, jsonrpc: '2.0', result: { id: admitted.id } })
   expect(ledger.getStatus('example.test', account, admitted.id).status).toBe(400)
@@ -204,7 +210,7 @@ it('leaves an ambiguous execution pending for reconciliation', async () => {
   const admitted = controller.admit(input(), jest.fn())
   execute.mockRejectedValueOnce(new Error('connection closed after signed submission'))
 
-  await expect(controller.approve(account, 'handler-id')).rejects.toThrow(/connection closed/)
+  await expect(controller.approve(account, 'handler-id', claimEvidence)).rejects.toThrow(/connection closed/)
 
   expect(ledger.getStatus('example.test', account, admitted.id).status).toBe(100)
 })
@@ -219,7 +225,7 @@ it('reports response and outcome callback failures without skipping execution', 
   })
   controller.admit(input(), respond)
 
-  await expect(controller.approve(account, 'handler-id')).resolves.toEqual(['0xhash'])
+  await expect(controller.approve(account, 'handler-id', claimEvidence)).resolves.toEqual(['0xhash'])
 
   expect(execute).toHaveBeenCalledTimes(1)
   expect(reportError.mock.calls.map(([error]) => error.message)).toEqual([
@@ -262,7 +268,7 @@ it('snapshots lifecycle dependencies before caller mutation', async () => {
   })
   const admitted = controller.admit(input(), jest.fn())
 
-  await expect(controller.approve(account, 'handler-id')).resolves.toEqual(['0xhash'])
+  await expect(controller.approve(account, 'handler-id', claimEvidence)).resolves.toEqual(['0xhash'])
 
   expect(originalClaim).toHaveBeenCalledTimes(1)
   expect(originalSettle).toHaveBeenCalledTimes(1)

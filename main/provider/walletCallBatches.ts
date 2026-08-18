@@ -371,6 +371,22 @@ export class WalletCallBatchLedger {
     )
   }
 
+  failAbandonedAdmissions(now = Date.now()) {
+    const batches = this.read(now)
+    let failed = 0
+    Object.entries(batches).forEach(([key, batch]) => {
+      if (batch.execution !== 'pending' || batch.transactions.length !== 0) return
+      batches[key] = {
+        ...batch,
+        execution: 'failed',
+        updatedAt: Math.max(now, batch.updatedAt)
+      }
+      failed += 1
+    })
+    if (failed > 0) this.write(batches)
+    return failed
+  }
+
   listReconciliationCandidates(now = Date.now()): readonly Readonly<WalletCallTransactionCandidate>[] {
     const candidates = Object.entries(this.read(now))
       .sort((left, right) => left[1].createdAt - right[1].createdAt || left[0].localeCompare(right[0]))

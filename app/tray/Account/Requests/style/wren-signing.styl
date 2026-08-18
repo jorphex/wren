@@ -1081,6 +1081,39 @@
   .requestActionContextCopy span
     max-width 390px
 
+.walletCallsFundingRecovery
+  height auto
+  min-height 224px
+  padding-top 16px
+  padding-bottom 16px
+  grid-template-columns minmax(0, 1fr)
+  align-items start
+  gap 12px
+
+  .requestActionContext
+    align-items flex-start
+
+  .requestActionContextIcon
+    margin-top 2px
+
+  .requestActionContextCopy
+    width 100%
+
+  .requestActionContextCopy span
+    max-width 460px
+
+  .requestActionButtons
+    display grid
+    width 100%
+    grid-template-columns repeat(2, minmax(0, 1fr))
+
+  .requestDecline,
+  .requestSign
+    width 100%
+    min-width 0
+    max-width none
+    flex-basis auto
+
 .transactionFundingFacts
   display grid
   margin 8px 0 0
@@ -1089,7 +1122,7 @@
 
   dt
     color var(--wren-text-muted)
-    font-size 10px
+    font-size 12px
     text-transform uppercase
 
   dd
@@ -1097,7 +1130,8 @@
     overflow-wrap anywhere
     color var(--wren-text-primary)
     font-family var(--wren-font-mono)
-    font-size 11px
+    font-size 12px
+    line-height 16px
 
 .requestActionContextCopy .transactionFundingActions
   display flex
@@ -1105,12 +1139,15 @@
   gap 8px
 
   button
+    display inline-flex
+    min-height 44px
+    padding 0 8px
     border 0
-    padding 0
     color var(--wren-accent-primary-hover)
     background transparent
     font-family var(--wren-font-utility)
-    font-size 11px
+    font-size 12px
+    align-items center
     cursor pointer
 
 .transactionFundingQr

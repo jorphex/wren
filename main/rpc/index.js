@@ -177,8 +177,13 @@ const rpc = {
             walletCallsRequest.handlerId,
             options?.walletCallsSimulationAcknowledged === true
           )
-          .catch((error) => log.warn('Wallet-call approval failed', error))
-        cb(null)
+          .then(
+            () => cb(null),
+            (error) => {
+              log.warn('Wallet-call approval failed', error)
+              cb(error)
+            }
+          )
       })
     ) {
       return
@@ -252,6 +257,15 @@ const rpc = {
       (error) => cb(error)
     )
   },
+  retryWalletCallsRequest(req, cb) {
+    callbackWhenDone(() => {
+      const request = accounts.getRequestForAccount(req.account, req.handlerId)
+      if (req.type !== 'walletCalls' || request.type !== 'walletCalls') {
+        throw new Error('Wallet-call request is no longer available')
+      }
+      return provider.retryWalletCallsRequest(req.account, req.handlerId)
+    }, cb)
+  },
   replaceTransactionRequest(req, type, cb) {
     const currentAccount = accounts.current()
     if (
@@ -276,6 +290,15 @@ const rpc = {
       return cb(new Error('Request account is no longer selected'))
     }
     callbackWhenDone(() => accounts.closeFailedTransaction(req.handlerId, req.account), cb)
+  },
+  closeFailedWalletCallsRequest(req, cb) {
+    callbackWhenDone(() => {
+      const request = accounts.getRequestForAccount(req.account, req.handlerId)
+      if (req.type !== 'walletCalls' || request.type !== 'walletCalls') {
+        throw new Error('Wallet-call request is no longer available')
+      }
+      return accounts.closeFailedWalletCalls(req.handlerId, req.account)
+    }, cb)
   },
   declineRequest(req, cb) {
     if (

@@ -222,7 +222,7 @@ export function createReviewHarness({
     approve() {
       const request = this.pending()
       if (!request) throw new Error('No review request is pending')
-      return controller.approve(ACCOUNT, request.handlerId)
+      return controller.approve(ACCOUNT, request.handlerId, { execution: {}, simulation: '{}' })
     }
   }
 }

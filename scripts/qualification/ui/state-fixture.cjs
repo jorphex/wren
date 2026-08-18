@@ -229,6 +229,71 @@ const addressLookalikeRequest = () => ({
   }
 })
 
+const walletCallsFundingRequest = () => ({
+  handlerId: 'qualification-wallet-calls-funding',
+  activityId: '88888888-8888-4888-8888-888888888888',
+  type: 'walletCalls',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 72, jsonrpc: '2.0', method: 'wallet_sendCalls', params: [] },
+  version: '2.0.0',
+  batchId: 'qualification-batch',
+  chainId: '0xa',
+  atomic: false,
+  calls: [
+    {
+      to: '0x3333333333333333333333333333333333333333',
+      data: '0x',
+      value: '0xde0b6b3a7640000'
+    }
+  ],
+  preparation: {
+    status: 'succeeded',
+    calls: [
+      {
+        transaction: {
+          from: QUALIFICATION_ACCOUNT,
+          to: '0x3333333333333333333333333333333333333333',
+          chainId: '0xa',
+          nonce: '0x7',
+          type: '0x2',
+          data: '0x',
+          value: '0xde0b6b3a7640000',
+          gasLimit: '0x5208',
+          maxFeePerGas: '0x77359400',
+          maxPriorityFeePerGas: '0x3b9aca00',
+          gasFeesSource: 'Frame'
+        },
+        maxFee: '0x2632e314a000'
+      }
+    ],
+    maxFee: '0x2632e314a000'
+  },
+  simulation: {
+    status: 'succeeded',
+    source: 'eth_simulateV1',
+    calls: [{ status: 'succeeded', source: 'eth_simulateV1', gasUsed: '0x5208' }],
+    accountCodeEvidence: {
+      source: 'configured-rpc',
+      sender: { status: 'no-code' },
+      targets: [{ account: '0x3333333333333333333333333333333333333333', status: 'no-code' }]
+    }
+  },
+  status: 'error',
+  notice: 'The selected account cannot cover this wallet-call batch and its maximum fees.',
+  recoverableError: {
+    code: 'wallet-call-funding-insufficient',
+    message: 'The selected account cannot cover this wallet-call batch and its maximum fees.',
+    data: {
+      available: '0x2386f26fc10000',
+      required: '0xde0dce69bc24000',
+      missing: '0xdbd55f42c014000',
+      value: '0xde0b6b3a7640000',
+      maximumFee: '0x2632f45e4000'
+    }
+  }
+})
+
 const monitoredTransactionRequest = (status) => {
   const request = addressLookalikeRequest()
   request.handlerId = `qualification-transaction-${status}`
@@ -1034,6 +1099,26 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = 132
+  }
+
+  if (scenario.state === 'wallet-calls-funding') {
+    const request = walletCallsFundingRequest()
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = scenario.id.includes('-qr-') ? 430 : 270
   }
 
   if (
