@@ -278,6 +278,11 @@ export async function verifyNativePackage(targetName, options = {}) {
   })
   assert.equal(result.signerSecretRoundTrip, true)
   assert.equal(result.signerTamperingRejected, true)
+  assert.deepEqual(result.osSignerProtection, {
+    available: false,
+    state: target.platform === 'linux' ? 'unavailable' : 'unsupported',
+    failClosed: true
+  })
   assert.deepEqual(result.runtime, {
     ethers: packageJson.dependencies.ethers,
     ethersBrowserProvider: 'function',

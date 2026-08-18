@@ -192,6 +192,26 @@ describe('signer manager lifecycle', () => {
     await manager.close()
   })
 
+  it('unloads active and in-progress hot signers without deleting their protected files', async () => {
+    const manager = new Signers([])
+    const active = hotSigner('active')
+    const pending = hotSigner('pending')
+
+    manager.add(active)
+    manager.trackHotSigner(pending)
+    manager.unloadHotSigners('keychain unavailable')
+
+    expect(manager.get(active.id)).toBeUndefined()
+    expect(active.close).toHaveBeenCalledTimes(1)
+    expect(pending.close).toHaveBeenCalledTimes(1)
+    expect(active.delete).not.toHaveBeenCalled()
+    expect(pending.delete).not.toHaveBeenCalled()
+
+    await manager.close()
+    expect(active.close).toHaveBeenCalledTimes(1)
+    expect(pending.close).toHaveBeenCalledTimes(1)
+  })
+
   it('contains a synchronous signer lock failure and permits a later retry', async () => {
     const manager = new Signers([])
     const signer = hotSigner()

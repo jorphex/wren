@@ -53,6 +53,7 @@ import {
   type ProfileBackupFileBinding,
   writeEncryptedProfileBackup
 } from './profileBackup'
+import { osSignerStorage } from './signers/hot/runtimeStorage'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -350,10 +351,66 @@ handleRenderer('profile:export', async (e, password) =>
     const destination = await saveProfileBackupDialog()
     if (!destination) return { success: false as const, canceled: true as const }
     persist.writeUpdates()
-    const { bytes } = writeEncryptedProfileBackup(app.getPath('userData'), destination, password)
+    const { bytes } = writeEncryptedProfileBackup(
+      app.getPath('userData'),
+      destination,
+      password,
+      new Date(),
+      { readSignerFiles: () => osSignerStorage.readAllSignerFiles() }
+    )
     return { success: true as const, bytes }
   })
 )
+
+const signerProtectionMutation = async (operation: () => Promise<unknown> | unknown) => {
+  try {
+    const status = await operation()
+    await signers.rescanHotSigners()
+    return { success: true as const, status }
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : typeof error
+    log.warn('OS signer protection operation failed', { errorName })
+    try {
+      const status = osSignerStorage.status()
+      if (status.enabled || status.state === 'recovery-required') {
+        signers.unloadHotSigners('OS signer protection failure')
+      }
+    } catch {
+      signers.unloadHotSigners('OS signer protection status failure')
+    }
+    return { success: false as const, error: 'Software signer protection could not be changed' }
+  }
+}
+
+handleRenderer('signers:protectionStatus', async () => {
+  try {
+    const status = osSignerStorage.status()
+    if (status.state === 'enabled') await signers.rescanHotSigners()
+    else if (status.enabled || status.state === 'recovery-required') {
+      signers.unloadHotSigners('OS signer protection unavailable')
+    }
+    return { success: true as const, status }
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : typeof error
+    log.warn('OS signer protection status failed', { errorName })
+    signers.unloadHotSigners('OS signer protection status failure')
+    return { success: false as const, error: 'Software signer protection status is unavailable' }
+  }
+})
+
+handleRenderer('signers:enableProtection', async (e, confirmation) => {
+  if (confirmation !== 'ENABLE_OS_SIGNER_PROTECTION') {
+    return { success: false as const, error: 'Software signer protection was not confirmed' }
+  }
+  return signerProtectionMutation(() => osSignerStorage.enable())
+})
+
+handleRenderer('signers:disableProtection', async (e, confirmation) => {
+  if (confirmation !== 'DISABLE_OS_SIGNER_PROTECTION') {
+    return { success: false as const, error: 'Software signer protection was not confirmed' }
+  }
+  return signerProtectionMutation(() => osSignerStorage.disable())
+})
 
 handleRenderer('profile:inspectBackup', async (e, password) =>
   profileBackupMutation('Encrypted backup could not be inspected', async () => {
@@ -502,6 +559,7 @@ onRenderer('frame:unmax', (e) => {
 app.on('ready', () => {
   startWalletCallEvidenceRuntime()
   startOperationLifecycleRuntime()
+  void signers.rescanHotSigners()
   menu()
   windows.init()
   dapps.setEmbeddedOpener((view) => windows.openEmbeddedDapp(view))

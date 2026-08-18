@@ -31,6 +31,39 @@ const ChainKeySchema = z.union([ChainNumberSchema, z.string().regex(/^[1-9][0-9]
 const NetworkTypeSchema = z.literal('ethereum')
 const BoundedStringSchema = z.string().max(MAX_TEXT)
 const BackupPasswordSchema = z.string().min(12).max(1024)
+const SignerProtectionStatusSchema = z
+  .object({
+    available: z.boolean(),
+    backend: z.enum([
+      'basic_text',
+      'gnome_libsecret',
+      'kwallet',
+      'kwallet5',
+      'kwallet6',
+      'unknown',
+      'unsupported'
+    ]),
+    enabled: z.boolean(),
+    protectedFiles: z.number().int().nonnegative().max(512),
+    signerFiles: z.number().int().nonnegative().max(512),
+    state: z.enum(['disabled', 'enabled', 'unavailable', 'recovery-required', 'unsupported'])
+  })
+  .strict()
+  .superRefine((status, context) => {
+    const secureBackend = ['gnome_libsecret', 'kwallet', 'kwallet5', 'kwallet6'].includes(status.backend)
+    if (status.available && !secureBackend) {
+      context.addIssue({ code: 'custom', message: 'available protection requires a secure backend' })
+    }
+    if (
+      status.state === 'enabled' &&
+      (!status.enabled || !status.available || status.protectedFiles !== status.signerFiles)
+    ) {
+      context.addIssue({ code: 'custom', message: 'enabled protection status is inconsistent' })
+    }
+    if (status.state === 'disabled' && (status.enabled || status.protectedFiles !== 0)) {
+      context.addIssue({ code: 'custom', message: 'disabled protection status is inconsistent' })
+    }
+  })
 const UrlInputSchema = z.string().max(MAX_URL)
 const RpcQuantitySchema = z
   .string()
@@ -337,6 +370,9 @@ const invokeSchemas = {
   'profile:export': z.tuple([BackupPasswordSchema]),
   'profile:inspectBackup': z.tuple([BackupPasswordSchema]),
   'profile:stageRestore': z.tuple([z.uuid(), BackupPasswordSchema, z.literal('REPLACE_PROFILE_ON_RESTART')]),
+  'signers:protectionStatus': z.tuple([]),
+  'signers:enableProtection': z.tuple([z.literal('ENABLE_OS_SIGNER_PROTECTION')]),
+  'signers:disableProtection': z.tuple([z.literal('DISABLE_OS_SIGNER_PROTECTION')]),
   'send:maxAmount': z.tuple([ChainNumberSchema, AddressSchema, AddressSchema.optional()]),
   'send:queue': z.tuple([
     z
@@ -428,6 +464,18 @@ const invokeResultSchemas = {
       })
       .strict(),
     z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'signers:protectionStatus': z.union([
+    z.object({ success: z.literal(true), status: SignerProtectionStatusSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'signers:enableProtection': z.union([
+    z.object({ success: z.literal(true), status: SignerProtectionStatusSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'signers:disableProtection': z.union([
+    z.object({ success: z.literal(true), status: SignerProtectionStatusSchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:maxAmount': z.union([

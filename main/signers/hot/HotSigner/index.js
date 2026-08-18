@@ -1,25 +1,16 @@
 const path = require('path')
 const fs = require('fs')
-const { ensureDirSync, removeSync } = require('fs-extra')
+const { removeSync } = require('fs-extra')
 const { fork } = require('child_process')
-const { app } = require('electron')
 const log = require('electron-log')
 const { v4: uuid } = require('uuid')
 
 const Signer = require('../../Signer').default
 const store = require('../../../store').default
 const { signerWorkerEnvironment } = require('../../../worker/environment')
-// Mock user data dir during tests
-const USER_DATA = app
-  ? app.getPath('userData')
-  : path.resolve(path.dirname(require.main.filename), '../.userData')
-const SIGNERS_PATH = path.resolve(USER_DATA, 'signers')
+const { osSignerStorage } = require('../runtimeStorage')
+const SIGNERS_PATH = osSignerStorage.signerRoot
 const DEFAULT_RPC_TIMEOUT_MS = 30_000
-
-const ensureSignerDirectory = () => {
-  ensureDirSync(SIGNERS_PATH, { mode: 0o700 })
-  if (process.platform !== 'win32') fs.chmodSync(SIGNERS_PATH, 0o700)
-}
 
 const eraseFile = (filePath) => {
   const size = fs.statSync(filePath).size
@@ -68,43 +59,20 @@ class HotSigner extends Signer {
     const { id, addresses, type, network } = this
     const signer = { id, addresses, type, network, ...data }
 
-    // Ensure signers directory exists
-    ensureSignerDirectory()
-
-    const signerPath = path.resolve(SIGNERS_PATH, `${id}.json`)
-    const backupPath = path.resolve(SIGNERS_PATH, `${id}.legacy-v1.bak`)
-    const temporaryPath = path.resolve(SIGNERS_PATH, `${id}.${uuid()}.tmp`)
+    const signerName = `${id}.json`
+    const backupName = `${id}.legacy-v1.bak`
+    const signerPath = path.resolve(SIGNERS_PATH, signerName)
+    const backupPath = path.resolve(SIGNERS_PATH, backupName)
 
     if (backupLegacy && fs.existsSync(signerPath)) {
       if (!fs.existsSync(backupPath)) {
-        fs.copyFileSync(signerPath, backupPath, fs.constants.COPYFILE_EXCL)
+        const source = osSignerStorage.readAllSignerFiles().find(({ name }) => name === signerName)
+        if (!source) throw new Error('Signer recovery source is unavailable')
+        osSignerStorage.writeSignerFile(backupName, source.bytes, { exclusive: true })
       }
-      fs.chmodSync(backupPath, 0o600)
     }
 
-    let descriptor
-    try {
-      descriptor = fs.openSync(temporaryPath, 'wx', 0o600)
-      fs.writeFileSync(descriptor, JSON.stringify(signer))
-      fs.fsyncSync(descriptor)
-      fs.closeSync(descriptor)
-      descriptor = undefined
-      fs.renameSync(temporaryPath, signerPath)
-    } catch (error) {
-      if (descriptor !== undefined) {
-        try {
-          fs.closeSync(descriptor)
-        } catch {
-          // The original write failure is the useful error.
-        }
-      }
-      try {
-        if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath)
-      } catch {
-        // The original write failure is the useful error.
-      }
-      throw error
-    }
+    osSignerStorage.writeSignerFile(signerName, Buffer.from(JSON.stringify(signer), 'utf8'))
 
     // Log
     log.debug('Signer saved to disk')

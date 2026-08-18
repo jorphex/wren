@@ -49,7 +49,10 @@ export class Signers extends EventEmitter {
     this.adapters = {}
 
     const registeredAdapters = adapters || [
-      new HotSignerAdapter((id) => this.exists(id)),
+      new HotSignerAdapter(
+        (id) => this.exists(id),
+        (reason) => this.unloadHotSigners(reason)
+      ),
       new LedgerAdapter(),
       new TrezorAdapter(),
       new LatticeAdapter()
@@ -205,6 +208,35 @@ export class Signers extends EventEmitter {
       if (type === 'hot') delete this.signers[id]
       this.adapters[type]?.adapter.reload(signer)
     }
+  }
+
+  async rescanHotSigners() {
+    const adapter = this.adapters['hot']?.adapter
+    if (adapter instanceof HotSignerAdapter) await adapter.scan()
+  }
+
+  unloadHotSigners(reason = 'software signer storage unavailable') {
+    const unloaded = new Set<Signer>()
+    Object.entries(this.signers).forEach(([id, signer]) => {
+      if (!this.isHotSigner(signer)) return
+      delete this.signers[id]
+      requireStoreAction('navClearSigner')(id)
+      unloaded.add(signer)
+      try {
+        signer.close()
+      } catch (error) {
+        log.warn(`Unable to unload hot signer after ${reason}`, error)
+      }
+    })
+    for (const signer of this.pendingHotSigners) {
+      if (unloaded.has(signer)) continue
+      try {
+        signer.close()
+      } catch (error) {
+        log.warn(`Unable to unload pending hot signer after ${reason}`, error)
+      }
+    }
+    this.pendingHotSigners.clear()
   }
 
   dismissHardwarePrompt(id: string) {

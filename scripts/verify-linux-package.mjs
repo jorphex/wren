@@ -126,6 +126,7 @@ const recoveredSignatureAddress = sigUtil.recoverTypedSignature({
 const modernModules = require(path.join(appRoot, 'compiled/main/nebula/modules.js'))
 const fetchUtils = require(path.join(appRoot, 'compiled/resources/utils/fetch.js'))
 const signerCrypto = require(path.join(appRoot, 'compiled/main/signers/hot/crypto.js'))
+const { OsSignerStorage } = require(path.join(appRoot, 'compiled/main/signers/hot/storage.js'))
 const sandbox = require(path.join(appRoot, 'compiled/main/security/sandbox.js'))
 const { nodeWorkerEnvironment } = require(path.join(appRoot, 'compiled/main/worker/environment.js'))
 const buildIdentity = require(path.join(appRoot, 'compiled/main/build-identity.json'))
@@ -143,6 +144,22 @@ try {
   signerCrypto.decryptSecret(tamperedSignerSecret, 'package-test-password')
 } catch {
   signerTamperingRejected = true
+}
+const osSignerStorage = new OsSignerStorage(path.join(process.resourcesPath, '.wren-package-probe'), {
+  platform: 'linux',
+  safeStorage: {
+    decryptString: () => { throw new Error('unexpected decrypt') },
+    encryptString: () => { throw new Error('unexpected encrypt') },
+    getSelectedStorageBackend: () => 'basic_text',
+    isEncryptionAvailable: () => true
+  }
+})
+const osSignerStatus = osSignerStorage.status()
+let osSignerProtectionFailClosed = false
+try {
+  osSignerStorage.enable()
+} catch {
+  osSignerProtectionFailClosed = true
 }
 const zodPartialRecord = z.partialRecord(z.enum(['existing', 'future']), z.boolean()).parse({ existing: true })
 const zodPrefault = z.object({ enabled: z.boolean().default(true) }).prefault({}).parse(undefined)
@@ -223,6 +240,11 @@ Promise.all([
     signerEncryptionVersion: encryptedSignerSecret.version,
     signerSecretRoundTrip: decryptedSignerSecret.plaintext === signerSecret,
     signerTamperingRejected,
+    osSignerProtection: {
+      available: osSignerStatus.available,
+      state: osSignerStatus.state,
+      failClosed: osSignerProtectionFailClosed
+    },
     fetchType: typeof fetch,
     fetchProbe,
     esmModules: loaded.map((module) => Object.keys(module).length)
@@ -353,6 +375,11 @@ assert.equal(probeResult.walletAddress, '0x9d8a62f656a8d1615c1294fd71e9cfb3e4855
 assert.equal(probeResult.signerEncryptionVersion, 2)
 assert.equal(probeResult.signerSecretRoundTrip, true)
 assert.equal(probeResult.signerTamperingRejected, true)
+assert.deepEqual(probeResult.osSignerProtection, {
+  available: false,
+  state: 'unavailable',
+  failClosed: true
+})
 assert.equal(probeResult.fetchType, 'function')
 assert.deepEqual(probeResult.fetchProbe, { runtime: 'native' })
 assert.equal(probeResult.esmModules.length, 2)

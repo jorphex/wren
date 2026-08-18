@@ -190,6 +190,40 @@ test('keeps profile backup passwords and inspection metadata strictly bounded', 
   ).toBe(true)
 })
 
+test('strictly bounds software signer protection commands and status', () => {
+  const protectionStatus = {
+    available: true,
+    backend: 'gnome_libsecret',
+    enabled: true,
+    protectedFiles: 2,
+    signerFiles: 2,
+    state: 'enabled'
+  }
+  expect(parse('invoke', 'signers:protectionStatus', [])).toEqual([])
+  expect(parse('invoke', 'signers:enableProtection', ['ENABLE_OS_SIGNER_PROTECTION'])).toEqual([
+    'ENABLE_OS_SIGNER_PROTECTION'
+  ])
+  expect(parseRendererIpcArgs('invoke', 'signers:enableProtection', ['enable']).success).toBe(false)
+  expect(parse('invoke', 'signers:disableProtection', ['DISABLE_OS_SIGNER_PROTECTION'])).toEqual([
+    'DISABLE_OS_SIGNER_PROTECTION'
+  ])
+  expect(
+    parseRendererInvokeResult('signers:protectionStatus', { success: true, status: protectionStatus }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('signers:protectionStatus', {
+      success: true,
+      status: { ...protectionStatus, keychainPath: '/private/keyring' }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('signers:enableProtection', {
+      success: true,
+      status: { ...protectionStatus, backend: 'basic_text', available: true }
+    }).success
+  ).toBe(false)
+})
+
 test('strictly bounds native Send requests and results', () => {
   const recipient = '0x0000000000000000000000000000000000000002'
   const draft = {

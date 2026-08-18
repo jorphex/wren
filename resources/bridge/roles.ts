@@ -42,7 +42,11 @@ export const hasRendererCapability = (
 ) => {
   if (!rendererRole) return false
   const channel = args[0]
-  if (method === 'invoke' && typeof channel === 'string' && channel.startsWith('profile:')) {
+  if (
+    method === 'invoke' &&
+    typeof channel === 'string' &&
+    (channel.startsWith('profile:') || channel.startsWith('signers:'))
+  ) {
     return rendererRole === 'dash'
   }
   if (rendererRole === 'dash' || rendererRole === 'tray') return true

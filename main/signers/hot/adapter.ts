@@ -2,7 +2,11 @@ import { SignerAdapter } from '../adapters'
 import Signer from '../Signer'
 
 const hot = require('./index') as {
-  createScanner: (signers: { add: (signer: Signer) => void; exists: (id: string) => boolean }) => {
+  createScanner: (signers: {
+    add: (signer: Signer) => void
+    exists: (id: string) => boolean
+    unload: (reason: string) => void
+  }) => {
     close: () => void
     scan: () => Promise<void>
   }
@@ -10,11 +14,16 @@ const hot = require('./index') as {
 
 export default class HotSignerAdapter extends SignerAdapter {
   private readonly signerExists: (id: string) => boolean
+  private readonly unloadSigners: (reason: string) => void
   private scanner: { close: () => void; scan: () => Promise<void> } | undefined
 
-  constructor(signerExists: (id: string) => boolean) {
+  constructor(
+    signerExists: (id: string) => boolean,
+    unloadSigners: (reason: string) => void = () => undefined
+  ) {
     super('hot')
     this.signerExists = signerExists
+    this.unloadSigners = unloadSigners
   }
 
   override open() {
@@ -22,13 +31,18 @@ export default class HotSignerAdapter extends SignerAdapter {
 
     this.scanner = hot.createScanner({
       add: (signer) => this.emit('add', signer),
-      exists: this.signerExists
+      exists: this.signerExists,
+      unload: this.unloadSigners
     })
   }
 
   override close() {
     this.scanner?.close()
     this.scanner = undefined
+  }
+
+  scan() {
+    return this.scanner?.scan() || Promise.resolve()
   }
 
   override remove(signer: Signer) {

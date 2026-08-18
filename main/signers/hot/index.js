@@ -1,7 +1,3 @@
-const path = require('path')
-const fs = require('fs')
-const { ensureDirSync } = require('fs-extra')
-const { app } = require('electron')
 const log = require('electron-log')
 const bip39 = require('bip39')
 const zxcvbn = require('zxcvbn')
@@ -10,12 +6,8 @@ const crypt = require('../../crypt')
 
 const SeedSigner = require('./SeedSigner')
 const RingSigner = require('./RingSigner')
+const { osSignerStorage } = require('./runtimeStorage')
 const { stripHexPrefix } = require('@ethereumjs/util')
-
-const USER_DATA = app
-  ? app.getPath('userData')
-  : path.resolve(path.dirname(require.main.filename), '../.userData')
-const SIGNERS_PATH = path.resolve(USER_DATA, 'signers')
 
 const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const trackSigner = (signers, signer) =>
@@ -114,7 +106,7 @@ module.exports = {
       cb(null, signer)
     })
   },
-  createScanner: (signers, delay = 4000) => {
+  createScanner: (signers, delay = 4000, storage = osSignerStorage) => {
     let closed = false
 
     const scan = async () => {
@@ -122,21 +114,24 @@ module.exports = {
 
       const storedSigners = {}
 
-      // Ensure signer directory exists
-      ensureDirSync(SIGNERS_PATH, { mode: 0o700 })
-      if (process.platform !== 'win32') fs.chmodSync(SIGNERS_PATH, 0o700)
+      // Read the complete signer set through the device-protection boundary.
+      let files
+      try {
+        files = storage.readAllSignerFiles().filter(({ name }) => name.endsWith('.json'))
+      } catch (error) {
+        log.error('Software signers unavailable:', error.message)
+        signers.unload?.('software signer storage unavailable')
+        return
+      }
 
-      // Find stored signers, read them from disk and add them to storedSigners
-      fs.readdirSync(SIGNERS_PATH)
-        .filter((file) => file.endsWith('.json'))
-        .forEach((file) => {
-          try {
-            const signer = JSON.parse(fs.readFileSync(path.resolve(SIGNERS_PATH, file), 'utf8'))
-            storedSigners[signer.id] = signer
-          } catch {
-            log.error(`Corrupt signer file: ${file}`)
-          }
-        })
+      files.forEach(({ bytes, name }) => {
+        try {
+          const signer = JSON.parse(bytes.toString('utf8'))
+          storedSigners[signer.id] = signer
+        } catch {
+          log.error(`Corrupt signer file: ${name}`)
+        }
+      })
 
       // Add stored signers
       for (const id of Object.keys(storedSigners)) {

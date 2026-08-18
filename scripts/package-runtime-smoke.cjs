@@ -19,6 +19,7 @@ const ledgerPackages = [
 const ledger = ledgerPackages.map((module) => fromApp(module))
 const sandbox = require(path.join(appRoot, 'compiled/main/security/sandbox.js'))
 const signerCrypto = require(path.join(appRoot, 'compiled/main/signers/hot/crypto.js'))
+const { OsSignerStorage } = require(path.join(appRoot, 'compiled/main/signers/hot/storage.js'))
 const modernModules = require(path.join(appRoot, 'compiled/main/nebula/modules.js'))
 const fetchUtils = require(path.join(appRoot, 'compiled/resources/utils/fetch.js'))
 const buildIdentity = require(path.join(appRoot, 'compiled/main/build-identity.json'))
@@ -64,6 +65,26 @@ try {
   signerCrypto.decryptSecret(tampered, 'package-smoke-password')
 } catch {
   signerTamperingRejected = true
+}
+const osSignerStorage = new OsSignerStorage(path.join(process.resourcesPath, '.wren-package-probe'), {
+  platform: process.platform,
+  safeStorage: {
+    decryptString: () => {
+      throw new Error('unexpected decrypt')
+    },
+    encryptString: () => {
+      throw new Error('unexpected encrypt')
+    },
+    getSelectedStorageBackend: () => 'basic_text',
+    isEncryptionAvailable: () => true
+  }
+})
+const osSignerStatus = osSignerStorage.status()
+let osSignerProtectionFailClosed = false
+try {
+  osSignerStorage.enable()
+} catch {
+  osSignerProtectionFailClosed = true
 }
 
 const siwe = new SiweMessage(`example.com wants you to sign in with your Ethereum account:
@@ -120,7 +141,12 @@ Promise.all([
           esmModuleExports: esmModules.map((module) => Object.keys(module).length)
         },
         signerSecretRoundTrip: decrypted.plaintext === signerSecret,
-        signerTamperingRejected
+        signerTamperingRejected,
+        osSignerProtection: {
+          available: osSignerStatus.available,
+          state: osSignerStatus.state,
+          failClosed: osSignerProtectionFailClosed
+        }
       })
     )
   )

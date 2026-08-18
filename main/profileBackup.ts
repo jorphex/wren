@@ -77,6 +77,10 @@ const BackupPayloadSchema = z
 
 type BackupPayload = z.infer<typeof BackupPayloadSchema>
 
+type ProfileBackupOptions = Readonly<{
+  readSignerFiles?: () => ReadonlyArray<{ name: string; bytes: Buffer }>
+}>
+
 export type ProfileBackupInspection = Readonly<{
   formatVersion: 1
   createdAt: string
@@ -422,7 +426,7 @@ const sanitizedConfiguration = (bytes: Buffer) => {
   return normalized
 }
 
-const profilePayload = (profileRoot: string, now: Date): BackupPayload => {
+const profilePayload = (profileRoot: string, now: Date, options: ProfileBackupOptions): BackupPayload => {
   const root = path.resolve(profileRoot)
   const rootStats = fs.lstatSync(root)
   if (!rootStats.isDirectory() || rootStats.isSymbolicLink()) {
@@ -433,34 +437,49 @@ const profilePayload = (profileRoot: string, now: Date): BackupPayload => {
     readRegularFile(path.join(root, CONFIG_FILE), MAX_CONFIG_BYTES, 'Wren configuration')
   )
 
-  const signerRoot = path.join(root, SIGNERS_DIRECTORY)
-  const signerStats = lstatIfPresent(signerRoot)
   const signers: BackupPayload['files']['signers'] = []
   let totalBytes = config.length
-  if (signerStats) {
-    if (!signerStats.isDirectory() || signerStats.isSymbolicLink()) {
-      throw new Error('Wren signer directory is not a regular directory')
-    }
-    const entries = fs
-      .readdirSync(signerRoot, { withFileTypes: true })
-      .filter((entry) => SIGNER_FILE.test(entry.name))
-      .sort((left, right) => left.name.localeCompare(right.name))
-    if (entries.length > MAX_SIGNER_FILES) throw new Error('Wren profile contains too many signer files')
+  const signerRoot = path.join(root, SIGNERS_DIRECTORY)
+  const suppliedFiles = options.readSignerFiles?.()
+  const files = suppliedFiles
+    ? [...suppliedFiles].sort((left, right) => left.name.localeCompare(right.name))
+    : (() => {
+        const signerStats = lstatIfPresent(signerRoot)
+        if (!signerStats) return []
+        if (!signerStats.isDirectory() || signerStats.isSymbolicLink()) {
+          throw new Error('Wren signer directory is not a regular directory')
+        }
+        return fs
+          .readdirSync(signerRoot, { withFileTypes: true })
+          .filter((entry) => SIGNER_FILE.test(entry.name))
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map((entry) => {
+            if (!entry.isFile() || entry.isSymbolicLink()) {
+              throw new Error(`Signer file ${entry.name} is not regular`)
+            }
+            return {
+              name: entry.name,
+              bytes: readRegularFile(
+                path.join(signerRoot, entry.name),
+                MAX_SIGNER_BYTES,
+                `Signer file ${entry.name}`
+              )
+            }
+          })
+      })()
+  if (files.length > MAX_SIGNER_FILES) throw new Error('Wren profile contains too many signer files')
+  if (new Set(files.map(({ name }) => name)).size !== files.length) {
+    throw new Error('Wren profile contains duplicate signer files')
+  }
 
-    for (const entry of entries) {
-      if (!entry.isFile() || entry.isSymbolicLink()) {
-        throw new Error(`Signer file ${entry.name} is not regular`)
-      }
-      const bytes = readRegularFile(
-        path.join(signerRoot, entry.name),
-        MAX_SIGNER_BYTES,
-        `Signer file ${entry.name}`
-      )
-      validateSigner(entry.name, bytes)
-      totalBytes += bytes.length
-      if (totalBytes > MAX_PLAINTEXT_BYTES) throw new Error('Wren profile exceeds the backup size limit')
-      signers.push({ name: entry.name, bytes: bytes.toString('base64') })
+  for (const { name, bytes } of files) {
+    if (!SIGNER_FILE.test(name) || !Buffer.isBuffer(bytes) || bytes.length > MAX_SIGNER_BYTES) {
+      throw new Error(`Signer file ${name} is invalid or exceeds the size limit`)
     }
+    validateSigner(name, bytes)
+    totalBytes += bytes.length
+    if (totalBytes > MAX_PLAINTEXT_BYTES) throw new Error('Wren profile exceeds the backup size limit')
+    signers.push({ name, bytes: bytes.toString('base64') })
   }
 
   return {
@@ -470,9 +489,14 @@ const profilePayload = (profileRoot: string, now: Date): BackupPayload => {
   }
 }
 
-export const createEncryptedProfileBackup = (profileRoot: string, password: string, now = new Date()) => {
+export const createEncryptedProfileBackup = (
+  profileRoot: string,
+  password: string,
+  now = new Date(),
+  options: ProfileBackupOptions = {}
+) => {
   validatePassword(password)
-  const plaintext = Buffer.from(JSON.stringify(profilePayload(profileRoot, now)), 'utf8')
+  const plaintext = Buffer.from(JSON.stringify(profilePayload(profileRoot, now, options)), 'utf8')
   if (plaintext.length > MAX_PLAINTEXT_BYTES) fail('Wren profile exceeds the backup size limit')
 
   const salt = crypto.randomBytes(16)
@@ -975,9 +999,10 @@ export const writeEncryptedProfileBackup = (
   profileRoot: string,
   destination: string,
   password: string,
-  now = new Date()
+  now = new Date(),
+  options: ProfileBackupOptions = {}
 ) => {
-  const backup = createEncryptedProfileBackup(profileRoot, password, now)
+  const backup = createEncryptedProfileBackup(profileRoot, password, now, options)
   writePrivateFile(destination, backup)
   return { bytes: backup.length }
 }
