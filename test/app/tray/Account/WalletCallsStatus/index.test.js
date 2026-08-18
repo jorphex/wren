@@ -104,6 +104,85 @@ it('renders bounded transaction evidence in receipt order', () => {
   expect(screen.getByText('Reverted')).toBeTruthy()
 })
 
+it('renders persisted partial Sweep counts without implying unsent calls resume', () => {
+  render(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='Wren Send'
+      status={status({
+        status: 600,
+        callCount: 3,
+        submittedCount: 1,
+        confirmedCount: 1,
+        receipts: []
+      })}
+    />
+  )
+
+  expect(
+    screen.getByText(
+      '1 of 3 submitted; 1 confirmed; 2 not submitted. Unsent calls do not resume automatically.'
+    )
+  ).toBeTruthy()
+  expect(screen.queryByText(/Transaction 1/)).toBeNull()
+})
+
+it('keeps generic external Wallet Calls status copy when persisted counts are absent or invalid', () => {
+  const { rerender } = render(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='example.test'
+      status={status({ status: 600 })}
+    />
+  )
+  expect(
+    screen.getByText('Some transactions succeeded while others reverted or were not submitted.')
+  ).toBeTruthy()
+
+  rerender(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='example.test'
+      status={status({ status: 600, callCount: 1, submittedCount: 2, confirmedCount: 2 })}
+    />
+  )
+  expect(
+    screen.getByText('Some transactions succeeded while others reverted or were not submitted.')
+  ).toBeTruthy()
+
+  rerender(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='example.test'
+      status={status({ status: 600, callCount: 0, submittedCount: 0, confirmedCount: 0 })}
+    />
+  )
+  expect(
+    screen.getByText('Some transactions succeeded while others reverted or were not submitted.')
+  ).toBeTruthy()
+
+  rerender(
+    <WalletCallsStatus
+      accountId={account}
+      chainName='Ethereum'
+      nativeCurrency={{ symbol: 'ETH', decimals: 18 }}
+      originName='example.test'
+      status={status({ status: 600, callCount: 17, submittedCount: 1, confirmedCount: 1 })}
+    />
+  )
+  expect(
+    screen.getByText('Some transactions succeeded while others reverted or were not submitted.')
+  ).toBeTruthy()
+})
+
 it('does not present an unknown status as pending and only rereads it on refresh', async () => {
   link.invoke.mockResolvedValueOnce({ success: true })
   const unknown = status({ status: 999 })

@@ -1,5 +1,6 @@
 import { WalletCallBatchLedger } from '../../../main/provider/walletCallBatches'
 import { admitWalletCallBatch } from '../../../main/provider/walletCallAdmission'
+import { createSweepEvidence, snapshotSweepSelection } from '../../../resources/domain/sweep'
 
 const account = '0x1111111111111111111111111111111111111111'
 const target = '0x2222222222222222222222222222222222222222'
@@ -254,4 +255,34 @@ it('uses snapshotted dependencies and parsed values despite caller mutation', ()
   expect(admitted.account).toBe(account)
   expect(requests[0].calls[0].data).toBe('0xabcd')
   expect(originalAddRequest).toHaveBeenCalledTimes(1)
+})
+
+it('attaches exact ephemeral managed Sweep evidence without adding it to the standard payload', () => {
+  const evidence = createSweepEvidence(
+    snapshotSweepSelection({ account, chainId: 10, recipient: target, tokens: [], includeNative: true }),
+    [],
+    '0x100',
+    '0x20',
+    ['0x0']
+  )
+  const { requests, deps } = dependencies()
+  admitWalletCallBatch(
+    input({
+      managedSweep: evidence,
+      payload: payload({ calls: evidence.calls })
+    }),
+    deps
+  )
+
+  expect(requests[0].managedSweep).toEqual(evidence)
+  expect(JSON.stringify(requests[0].payload)).not.toContain('managedSweep')
+  expect(() =>
+    admitWalletCallBatch(
+      input({
+        managedSweep: evidence,
+        payload: payload({ calls: [{ ...evidence.calls[0], value: '0x1' }] })
+      }),
+      dependencies().deps
+    )
+  ).toThrow(expect.objectContaining({ code: -32602 }))
 })

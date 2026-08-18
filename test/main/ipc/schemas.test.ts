@@ -303,11 +303,20 @@ test('strictly bounds native Send requests and results', () => {
   expect(parse('invoke', 'send:queue', [draft])).toEqual([draft])
   expect(parseRendererIpcArgs('invoke', 'send:queue', [{ ...draft, amount: '1e18' }]).success).toBe(false)
   expect(parseRendererIpcArgs('invoke', 'send:queue', [{ ...draft, data: '0x' }]).success).toBe(false)
-  expect(parse('invoke', 'send:maxAmount', [1, draft.assetAddress, draft.recipient])).toEqual([
-    1,
-    draft.assetAddress,
-    draft.recipient
+  const maxRequest = {
+    account: draft.account,
+    assetAddress: draft.assetAddress,
+    chainId: draft.chainId,
+    recipient: draft.recipient
+  }
+  expect(parse('invoke', 'send:maxAmount', [maxRequest])).toEqual([maxRequest])
+  expect(parse('invoke', 'send:maxAmount', [{ ...maxRequest, recipient: undefined }])).toEqual([
+    { ...maxRequest, recipient: undefined }
   ])
+  expect(
+    parseRendererIpcArgs('invoke', 'send:maxAmount', [{ ...maxRequest, endpoint: 'https://evil.test' }])
+      .success
+  ).toBe(false)
   expect(parse('invoke', 'send:resolveRecipient', ['name.eth'])).toEqual(['name.eth'])
   expect(parseRendererIpcArgs('invoke', 'send:resolveRecipient', ['x'.repeat(256)]).success).toBe(false)
 
@@ -321,9 +330,87 @@ test('strictly bounds native Send requests and results', () => {
   expect(
     parseRendererInvokeResult('send:maxAmount', { success: true, amount: '1000000000000000000' }).success
   ).toBe(true)
+  expect(
+    parseRendererInvokeResult('send:maxAmount', {
+      success: true,
+      quoteId: 'a'.repeat(32),
+      amount: '999999999999999',
+      expiresAt: 2_000_000_000_000,
+      reserve: {
+        feeModel: 'eip1559',
+        gasLimit: '0x5208',
+        maxFeePerGas: '0x3b9aca00',
+        maxPriorityFeePerGas: '0x1',
+        executionFee: '21000000000000',
+        l1Fee: '0',
+        total: '21000000000000'
+      }
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('send:maxAmount', {
+      success: true,
+      quoteId: 'a'.repeat(32),
+      amount: '1',
+      expiresAt: 2_000_000_000_000,
+      reserve: {
+        feeModel: 'legacy',
+        gasLimit: '0x5208',
+        maxFeePerGas: '0x1',
+        executionFee: '1',
+        l1Fee: '0',
+        total: '1'
+      }
+    }).success
+  ).toBe(false)
   expect(parseRendererInvokeResult('send:queue', { success: true, handlerId: 'send-request' }).success).toBe(
     true
   )
+})
+
+test('strictly bounds dashboard Sweep requests and results', () => {
+  const recipient = '0x0000000000000000000000000000000000000002'
+  const account = '0x0000000000000000000000000000000000000001'
+  const token = '0x0000000000000000000000000000000000000003'
+  const quoteRequest = { account, chainId: 1, recipient, tokens: [token], includeNative: true }
+  const queueRequest = { quoteId: 'quote-id', account, chainId: 1, recipient }
+
+  expect(parse('invoke', 'send:quoteSweep', [quoteRequest])).toEqual([quoteRequest])
+  expect(parse('invoke', 'send:queueSweep', [queueRequest])).toEqual([queueRequest])
+  expect(
+    parseRendererIpcArgs('invoke', 'send:quoteSweep', [
+      { ...quoteRequest, tokens: Array.from({ length: 16 }, () => token) }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('invoke', 'send:quoteSweep', [{ ...quoteRequest, tokens: [], includeNative: false }])
+      .success
+  ).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'send:queueSweep', [{ ...queueRequest, calls: [] }]).success).toBe(
+    false
+  )
+
+  expect(
+    parseRendererInvokeResult('send:quoteSweep', {
+      success: true,
+      quoteId: 'quote-id',
+      expiresAt: 2_000_000_000_000,
+      account,
+      chainId: 1,
+      recipient,
+      assets: [{ address: token, balance: '0x2' }],
+      native: { selected: true, balance: '0x100', value: '0x80' },
+      maximumFee: '0x80',
+      calls: [
+        { to: token, data: `0x${'00'.repeat(68)}`, value: '0x0' },
+        { to: recipient, data: '0x', value: '0x80' }
+      ],
+      execution: 'sequential-non-atomic'
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('send:queueSweep', { success: true, handlerId: crypto.randomUUID() }).success
+  ).toBe(true)
 })
 
 test('requires explicit Yearn catalog options and validates returned metadata', () => {

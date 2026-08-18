@@ -140,6 +140,30 @@ it('rechecks before every signer invocation and stops after first-call policy dr
   expect(deps.ledger.fail).toHaveBeenCalledTimes(1)
 })
 
+it('awaits the exact per-call recheck before invoking each signer and preserves a submitted prefix', async () => {
+  const events = []
+  const deps = dependencies(events)
+  deps.revalidateBeforeCall = jest.fn(async (prepared, index) => {
+    events.push(`fresh:${index}:${prepared.nonce}`)
+    if (index === 1) throw new Error('selected token balance changed')
+  })
+
+  await expect(executeWalletCallRuntime(input(), deps)).rejects.toThrow(/balance changed/)
+  expect(deps.revalidateBeforeCall).toHaveBeenCalledTimes(2)
+  expect(deps.accounts.signTransactionForAccount).toHaveBeenCalledTimes(1)
+  expect(deps.connection.send).toHaveBeenCalledTimes(1)
+  expect(deps.ledger.markTransactionSubmitted).toHaveBeenCalledTimes(1)
+  expect(deps.ledger.fail).toHaveBeenCalledTimes(1)
+  expect(events.slice(0, 6)).toEqual([
+    'fresh:0:0x5',
+    `sign:${account}:0x5`,
+    expect.stringMatching(/^reserve:/),
+    'send:10:1',
+    expect.stringMatching(/^submit:/),
+    'fresh:1:0x6'
+  ])
+})
+
 it('records each concrete destination only after its broadcast is accepted', async () => {
   const deps = dependencies()
   deps.recordSubmittedTarget = jest.fn()

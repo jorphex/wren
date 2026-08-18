@@ -7,12 +7,16 @@ interface ShowWalletCallStatusInput {
   account: string
   originName: string
   status: WalletCallsStatus
+  callCount?: number
+  submittedCount?: number
 }
 
 export function createWalletCallStatusViewData({
   account,
   originName,
-  status
+  status,
+  callCount,
+  submittedCount
 }: ShowWalletCallStatusInput): WalletCallStatusViewData {
   const receipts = status.receipts?.map(
     ({ status, type, blockNumber, gasUsed, effectiveGasPrice, transactionHash }) => ({
@@ -34,6 +38,21 @@ export function createWalletCallStatusViewData({
       chainId: status.chainId,
       status: status.status,
       atomic: false,
+      ...(Number.isInteger(callCount) &&
+      (callCount as number) >= 1 &&
+      (callCount as number) <= 16 &&
+      Number.isInteger(submittedCount) &&
+      (submittedCount as number) >= 0 &&
+      (submittedCount as number) <= (callCount as number)
+        ? {
+            callCount,
+            submittedCount,
+            confirmedCount: Math.min(
+              submittedCount as number,
+              receipts?.filter((receipt) => receipt.status === '0x1').length || 0
+            )
+          }
+        : {}),
       ...(receipts?.length ? { receipts } : {})
     }
   }

@@ -1378,7 +1378,8 @@ class FrameAccount {
       account: walletCalls.account,
       chainId: walletCalls.chainId,
       calls: walletCalls.calls,
-      preparation: walletCalls.preparation
+      preparation: walletCalls.preparation,
+      ...(walletCalls.managedSweep ? { managedSweep: walletCalls.managedSweep } : {})
     })
     if (
       expectedEvidence &&

@@ -1,7 +1,13 @@
 import Restore from 'react-restore'
 
 import { Send } from '../../../../app/dash/Send'
-import { maxSendAmount, queueSend, resolveSendRecipient } from '../../../../app/dash/Send/api'
+import {
+  maxSendAmount,
+  queueSend,
+  queueSweep,
+  quoteSweep,
+  resolveSendRecipient
+} from '../../../../app/dash/Send/api'
 import { NATIVE_CURRENCY } from '../../../../resources/constants'
 import link from '../../../../resources/link'
 import { act, fireEvent, render, screen, waitFor } from '../../../componentSetup'
@@ -9,14 +15,18 @@ import { act, fireEvent, render, screen, waitFor } from '../../../componentSetup
 jest.mock('../../../../app/dash/Send/api', () => ({
   maxSendAmount: jest.fn(),
   queueSend: jest.fn(),
+  queueSweep: jest.fn(),
+  quoteSweep: jest.fn(),
   resolveSendRecipient: jest.fn()
 }))
-jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const recipient = '0x2222222222222222222222222222222222222222'
 const secondRecipient = '0x5555555555555555555555555555555555555555'
 const token = '0x3333333333333333333333333333333333333333'
+const sweepRequestId = '123e4567-e89b-42d3-a456-426614174000'
+const maxRequestId = '123e4567-e89b-42d3-a456-426614174001'
 
 const baseState = () => ({
   selected: { current: account },
@@ -111,8 +121,11 @@ const closeDashStep = (store) => {
 beforeEach(() => {
   maxSendAmount.mockReset()
   queueSend.mockReset()
+  queueSweep.mockReset()
+  quoteSweep.mockReset()
   resolveSendRecipient.mockReset()
   link.send.mockReset()
+  link.rpc.mockReset()
 })
 
 it('defers the network fee to authoritative request review', () => {
@@ -353,26 +366,414 @@ it('queues a zero-value transaction for review', async () => {
 })
 
 it('uses the main-process maximum and blocks an amount above the stored balance', async () => {
-  maxSendAmount.mockResolvedValue({ success: true, amount: '500000000000000000' })
+  maxSendAmount.mockResolvedValue({
+    success: true,
+    amount: '500000000000000000',
+    quoteId: 'max-quote',
+    expiresAt: Date.now() + 60_000,
+    reserve: {
+      feeModel: 'eip1559',
+      gasLimit: '21000',
+      maxFeePerGas: '2000000000',
+      maxPriorityFeePerGas: '1000000000',
+      executionFee: '42000000000000',
+      l1Fee: '0',
+      total: '42000000000000'
+    }
+  })
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   renderSend()
 
-  expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(true)
   expect(screen.getByText('Available: 1.00 ETH')).toBeTruthy()
   expect(screen.getByText('Enter a recipient to enable Max so we can estimate gas.')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-describedby')).toBe('sendMaxReason')
-  fireEvent.click(screen.getByRole('button', { name: 'Max' }))
+  expect(screen.getByRole('button', { name: 'Use Max' }).getAttribute('aria-describedby')).toBe(
+    'sendMaxReason'
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   expect(maxSendAmount).not.toHaveBeenCalled()
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(false))
-  fireEvent.click(screen.getByRole('button', { name: 'Max' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   await waitFor(() => expect(screen.getByPlaceholderText('0.00').value).toBe('0.5'))
-  expect(maxSendAmount).toHaveBeenCalledWith(1, NATIVE_CURRENCY, recipient)
+  expect(maxSendAmount).toHaveBeenCalledWith({
+    account,
+    assetAddress: NATIVE_CURRENCY,
+    chainId: 1,
+    recipient
+  })
 
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '2' } })
   expect(screen.getByRole('alert').textContent).toContain('Amount exceeds available balance')
   expect(screen.getByRole('button', { name: 'Enter send details' }).disabled).toBe(true)
+})
+
+it('clears stale native amount while quoting, exposes exact reserve evidence, and requires Max review', async () => {
+  let finishMax
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  maxSendAmount.mockReturnValue(new Promise((resolve) => (finishMax = resolve)))
+  queueSend.mockResolvedValue({ success: true, handlerId: maxRequestId })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.8' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
+
+  expect(screen.getByPlaceholderText('0.00').value).toBe('')
+  expect(screen.getByText('Calculating safe maximum…')).toBeTruthy()
+  expect(screen.getByPlaceholderText('Enter an address').disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Sweep assets' }).disabled).toBe(true)
+
+  await act(async () =>
+    finishMax({
+      success: true,
+      amount: '500000000000000000',
+      quoteId: 'max-review-quote',
+      expiresAt: Date.now() + 60_000,
+      reserve: {
+        feeModel: 'eip1559',
+        gasLimit: '21000',
+        maxFeePerGas: '2000000000',
+        maxPriorityFeePerGas: '1000000000',
+        executionFee: '42000000000000',
+        l1Fee: '900000000',
+        total: '42000900000000'
+      }
+    })
+  )
+
+  expect(screen.getByText('Maximum sendable')).toBeTruthy()
+  expect(screen.getByText('42000900000000 wei')).toBeTruthy()
+  expect(screen.getByText('900000000 wei')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Review Max send' }))
+  expect(queueSend).not.toHaveBeenCalled()
+  expect(screen.getByText('Review maximum send')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
+  await waitFor(() =>
+    expect(queueSend).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: '0.5', maxQuoteId: 'max-review-quote', recipient })
+    )
+  )
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests[maxRequestId] = {
+      account,
+      handlerId: maxRequestId,
+      type: 'transaction',
+      status: 'error',
+      notice: 'Maximum-send quote changed or expired. Nothing was signed or sent; request a fresh Max quote.',
+      nativeMax: { quoteId: 'max-review-quote', version: 1 },
+      retainedPreBroadcastError: { responderPending: true }
+    }
+  })
+  expect(screen.getByText('Maximum send changed')).toBeTruthy()
+  link.rpc.mockImplementationOnce((method, request, callback) => callback(null))
+  fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'closeFailedTransactionRequest',
+    expect.objectContaining({ account, handlerId: maxRequestId, type: 'transaction' }),
+    expect.any(Function)
+  )
+  expect(screen.queryByText('Maximum send changed')).toBeNull()
+  expect(screen.queryByText('Maximum sendable')).toBeNull()
+  expect(screen.getByPlaceholderText('0.00').value).toBe('')
+  expect(screen.getByRole('button', { name: 'Use Max' })).toBeTruthy()
+})
+
+it('never leaves a submit-able amount after Max failure and lets the user explicitly edit', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  maxSendAmount.mockResolvedValueOnce({ success: false, error: 'fee-unavailable' }).mockResolvedValueOnce({
+    success: true,
+    amount: '400000000000000000',
+    quoteId: 'editable-max',
+    expiresAt: Date.now() + 60_000,
+    reserve: {
+      feeModel: 'legacy',
+      gasLimit: '21000',
+      gasPrice: '1000000000',
+      executionFee: '21000000000000',
+      l1Fee: '0',
+      total: '21000000000000'
+    }
+  })
+  renderSend()
+  const amount = screen.getByPlaceholderText('0.00')
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(amount, { target: { value: '0.75' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
+  expect(await screen.findByText('Fee estimate unavailable')).toBeTruthy()
+  expect(amount.value).toBe('')
+  expect(screen.getByRole('button', { name: 'Enter send details' }).disabled).toBe(true)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
+  await screen.findByText('Maximum sendable')
+  fireEvent.click(screen.getByRole('button', { name: 'Edit amount' }))
+  await waitFor(() => expect(document.activeElement).toBe(amount))
+  expect(amount.value).toBe('')
+  expect(screen.queryByText('Maximum sendable')).toBeNull()
+})
+
+it('trusts a valid bound native Max quote over a stale lower cached scanner balance', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  maxSendAmount.mockResolvedValue({
+    success: true,
+    amount: '500000000000000000',
+    quoteId: 'fresh-over-stale',
+    expiresAt: Date.now() + 60_000,
+    reserve: {
+      feeModel: 'legacy',
+      gasLimit: '21000',
+      gasPrice: '1000000000',
+      executionFee: '21000000000000',
+      l1Fee: '0',
+      total: '21000000000000'
+    }
+  })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'fresh-max-request' })
+  renderSend((state) => {
+    state.main.balances[account][0].balance = '0x16345785d8a0000'
+    state.main.balances[account][0].displayBalance = '0.10'
+    return state
+  })
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
+  await screen.findByText('Maximum sendable')
+  expect(screen.queryByText('Amount exceeds available balance')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Review Max send' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Review Max send' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
+  await waitFor(() =>
+    expect(queueSend).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: '0.5', maxQuoteId: 'fresh-over-stale' })
+    )
+  )
+})
+
+it('preserves a configured zero-decimal native asset when formatting Max', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  maxSendAmount.mockResolvedValue({
+    success: true,
+    amount: '5',
+    quoteId: 'zero-decimal-max',
+    expiresAt: Date.now() + 60_000,
+    reserve: {
+      feeModel: 'legacy',
+      gasLimit: '0x1',
+      gasPrice: '0x1',
+      executionFee: '1',
+      l1Fee: '0',
+      total: '1'
+    }
+  })
+  renderSend((state) => {
+    state.main.networksMeta.ethereum[1].nativeCurrency.decimals = 0
+    state.main.balances[account][0].balance = '0x6'
+    state.main.balances[account][0].displayBalance = '6'
+    return state
+  })
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
+  await screen.findByText('Maximum sendable')
+  expect(screen.getByPlaceholderText('0.00').value).toBe('5')
+})
+
+it('quotes and queues an explicit same-chain non-atomic Sweep with full review evidence', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  quoteSweep.mockResolvedValue({
+    success: true,
+    quote: {
+      quoteId: 'sweep-quote',
+      expiresAt: Date.now() + 60_000,
+      account,
+      chainId: 8453,
+      recipient,
+      assets: [{ address: token, balance: '100000000' }],
+      native: { selected: false, balance: '0', value: '0' },
+      maximumFee: '987654321',
+      calls: [{ to: token, data: '0xa9059cbb', value: '0x0' }],
+      execution: 'sequential-non-atomic'
+    }
+  })
+  queueSweep.mockResolvedValue({ success: true, handlerId: sweepRequestId })
+  const { store } = renderSend()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+  fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
+  fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
+
+  await waitFor(() =>
+    expect(quoteSweep).toHaveBeenCalledWith({
+      account,
+      chainId: 8453,
+      recipient,
+      tokens: [token],
+      includeNative: false
+    })
+  )
+  expect(await screen.findByText('Sequential, not atomic')).toBeTruthy()
+  expect(screen.getByText(token)).toBeTruthy()
+  expect(screen.getByText('100000000')).toBeTruthy()
+  expect(screen.getByText(/No bridge or batch contract is used/i)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Copy full token 1 address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', token)
+  fireEvent.click(screen.getByRole('button', { name: 'Queue 1 transfer' }))
+  await waitFor(() =>
+    expect(queueSweep).toHaveBeenCalledWith({
+      quoteId: 'sweep-quote',
+      account,
+      chainId: 8453,
+      recipient
+    })
+  )
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests[sweepRequestId] = {
+      account,
+      handlerId: sweepRequestId,
+      type: 'walletCalls',
+      status: 'error',
+      notice: 'Sweep changed; close this review and create a fresh Sweep.',
+      recoverableError: { code: 'managed-sweep-changed', message: 'Sweep changed' }
+    }
+  })
+  expect(screen.getByText('Sweep changed; close this review and create a fresh Sweep.')).toBeTruthy()
+  link.rpc.mockImplementationOnce((method, request, callback) => callback(new Error('close failed')))
+  fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'closeFailedWalletCallsRequest',
+    expect.objectContaining({ account, handlerId: sweepRequestId, type: 'walletCalls' }),
+    expect.any(Function)
+  )
+  expect(screen.getByRole('alert').textContent).toContain('Could not close the stale Sweep request')
+  expect(screen.getByText('Sweep changed; close this review and create a fresh Sweep.')).toBeTruthy()
+
+  link.rpc.mockImplementationOnce((method, request, callback) => callback(null))
+  fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
+  expect(screen.queryByText('Sweep changed; close this review and create a fresh Sweep.')).toBeNull()
+  expect(screen.queryByText('Sequential, not atomic')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
+  expect(quoteSweep).toHaveBeenCalledTimes(1)
+})
+
+it('clears a consumed Sweep review after any queue failure', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  quoteSweep.mockResolvedValue({
+    success: true,
+    quote: {
+      quoteId: 'consumed-sweep-quote',
+      expiresAt: Date.now() + 60_000,
+      account,
+      chainId: 8453,
+      recipient,
+      assets: [{ address: token, balance: '100000000' }],
+      native: { selected: false, balance: '0', value: '0' },
+      maximumFee: '987654321',
+      calls: [{ to: token, data: '0xa9059cbb', value: '0x0' }],
+      execution: 'sequential-non-atomic'
+    }
+  })
+  queueSweep.mockResolvedValue({ success: false, error: 'sweep-unavailable' })
+  renderSend()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+  fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
+  fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
+  await screen.findByText('Sequential, not atomic')
+  fireEvent.click(screen.getByRole('button', { name: 'Queue 1 transfer' }))
+
+  await waitFor(() => expect(queueSweep).toHaveBeenCalledTimes(1))
+  await waitFor(() => expect(screen.queryByText('Sequential, not atomic')).toBeNull())
+  expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
+})
+
+it('masks Sweep amounts and encoded calldata and disables amount copy under balance privacy', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  quoteSweep.mockResolvedValue({
+    success: true,
+    quote: {
+      quoteId: 'private-sweep',
+      expiresAt: Date.now() + 60_000,
+      account,
+      chainId: 8453,
+      recipient,
+      assets: [{ address: token, balance: '100000000' }],
+      native: { selected: false, balance: '0', value: '0' },
+      maximumFee: '987654321',
+      calls: [{ to: token, data: '0xa9059cbb-secret-amount', value: '0x0' }],
+      execution: 'sequential-non-atomic'
+    }
+  })
+  renderSend((state) => {
+    state.selected.hideBalances = true
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+  fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
+  fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
+  await screen.findByText('Sequential, not atomic')
+
+  expect(screen.queryByText('100000000')).toBeNull()
+  expect(screen.queryByText(/a9059cbb-secret-amount/)).toBeNull()
+  expect(screen.getByText('Amount copy and calldata are hidden while balance privacy is on.')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy full token 1 amount' }).disabled).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Copy full token 1 address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', token)
+})
+
+it('ignores a stale Sweep quote after selection changes', async () => {
+  let finishQuote
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  quoteSweep.mockReturnValue(new Promise((resolve) => (finishQuote = resolve)))
+  const { store } = renderSend()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
+  fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
+  const usdc = screen.getByRole('checkbox', { name: /USDC/ })
+  fireEvent.click(usdc)
+  fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
+  replaceStore(store, (state) => {
+    state.selected.current = secondRecipient
+    state.main.accounts[secondRecipient] = {
+      id: secondRecipient,
+      address: secondRecipient,
+      name: 'Changed account',
+      lastSignerType: 'ring',
+      requests: {}
+    }
+    state.main.balances[secondRecipient] = state.main.balances[account]
+  })
+  await act(async () =>
+    finishQuote({
+      success: true,
+      quote: {
+        quoteId: 'stale-sweep',
+        expiresAt: Date.now() + 60_000,
+        assets: [{ address: token, balance: '100000000' }],
+        native: { selected: false },
+        maximumFee: '1',
+        calls: [{ to: token, data: '0x', value: '0x0' }]
+      }
+    })
+  )
+  expect(screen.queryByText('Sequential, not atomic')).toBeNull()
+  expect(queueSweep).not.toHaveBeenCalled()
 })
 
 it('preserves an unavailable explicit asset instead of silently sending the fallback asset', async () => {
@@ -405,7 +806,7 @@ it('ignores a delayed Max result after the selected asset changes', async () => 
   setDashStep(store, 'assetPicker', 'Choose an asset')
   fireEvent.click(screen.getByRole('button', { name: 'Select USDC' }))
   closeDashStep(store)
-  fireEvent.click(screen.getByRole('button', { name: 'Max' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
   setDashStep(store, 'assetPicker', 'Choose an asset')
   fireEvent.click(screen.getByRole('button', { name: 'Select ETH' }))
@@ -422,8 +823,8 @@ it('ignores a delayed native Max result after the recipient changes', async () =
   renderSend()
 
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Max' }).disabled).toBe(false))
-  fireEvent.click(screen.getByRole('button', { name: 'Max' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: secondRecipient } })
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(secondRecipient))
   await act(async () => finishMax({ success: true, amount: '500000000000000000' }))

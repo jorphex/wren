@@ -1,7 +1,9 @@
 import log from 'electron-log'
+import crypto from 'crypto'
 import { getAddress } from 'ethers'
 
 import accounts from '../accounts'
+import { createRpcProvider, estimateL1GasCost } from '../chains/optimism'
 import nebulaApi from '../nebula'
 import provider from '../provider'
 import store from '../store'
@@ -9,15 +11,72 @@ import { requireStoreAction } from '../store/action'
 import { NATIVE_CURRENCY } from '../../resources/constants'
 import { FRAME_SEND_ORIGIN, originIdForName } from '../../resources/domain/origin'
 import { isWatchOnlyAccountType } from '../../resources/domain/signer'
-import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
+import { parseTokenDecimalAmount } from '../../resources/domain/token/amount'
+import {
+  NativeMaxQuoteService,
+  type NativeMaxPublicQuote,
+  type NativeMaxQueueValidation,
+  type NativeMaxTrustedMetadata
+} from './max'
 import { SEND_ERROR, SendValidationError, buildSendTransaction, type SendDraft } from './transaction'
 
 import type { Balance, Chain } from '../store/state'
 
 const sendOriginId = originIdForName(FRAME_SEND_ORIGIN)
 const nebula = nebulaApi()
-const MAX_ESTIMATE_PASSES = 4
 let rpcId = 0
+
+function sendRpc(chainId: number, method: string, params: unknown[]): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    provider.connection.send(
+      { id: ++rpcId, jsonrpc: '2.0', method, params },
+      (response) => {
+        if (response?.error) return reject(new Error('Configured RPC request failed'))
+        return resolve(response?.result)
+      },
+      { type: 'ethereum', id: chainId }
+    )
+  })
+}
+
+const nativeMaxQuotes = new NativeMaxQuoteService({
+  rpc: sendRpc,
+  estimateGas: (transaction) => provider.estimateGas(transaction),
+  estimateL1Fee: async (transaction) => {
+    const chainId = parseInt(transaction.chainId, 16)
+    const connection = provider.connection.connections.ethereum[chainId]
+    const connectedProvider = [connection?.active, connection?.primary, connection?.secondary].find(
+      (candidate) => candidate?.connected && candidate.provider
+    )?.provider
+    if (!connectedProvider) throw new Error('Configured RPC is unavailable')
+    if (
+      typeof transaction.nonce !== 'string' ||
+      typeof transaction.from !== 'string' ||
+      typeof transaction.to !== 'string' ||
+      typeof transaction.value !== 'string'
+    ) {
+      throw new Error('Native Max transaction is incomplete')
+    }
+
+    return estimateL1GasCost(createRpcProvider(connectedProvider), {
+      chainId,
+      type: parseInt(transaction.type, 16),
+      nonce: transaction.nonce,
+      from: transaction.from,
+      to: transaction.to,
+      value: transaction.value,
+      ...(transaction.data !== undefined ? { data: transaction.data } : {}),
+      ...(transaction.gasLimit !== undefined ? { gasLimit: transaction.gasLimit } : {}),
+      ...(transaction.gasPrice !== undefined ? { gasPrice: transaction.gasPrice } : {}),
+      ...(transaction.maxFeePerGas !== undefined ? { maxFeePerGas: transaction.maxFeePerGas } : {}),
+      ...(transaction.maxPriorityFeePerGas !== undefined
+        ? { maxPriorityFeePerGas: transaction.maxPriorityFeePerGas }
+        : {})
+    })
+  },
+  now: () => Date.now(),
+  quoteId: () => crypto.randomBytes(16).toString('hex')
+})
 
 type SendResult<T extends Record<string, unknown> = Record<string, never>> =
   ({ success: true } & T) | { success: false; error: string }
@@ -69,7 +128,8 @@ function ensureOrigin(chainId: number) {
     requireStoreAction('switchOriginChain')(sendOriginId, chainId, 'ethereum')
 }
 
-function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
+async function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
+  let maxQuoteId: string | undefined
   try {
     const account = currentAccount()
     const chain = store('main.networks.ethereum', draft.chainId) as Chain | undefined
@@ -77,16 +137,45 @@ function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
       (store('main.balances', account.id) || []) as Balance[],
       draft.chainId
     )
-    const { transaction } = buildSendTransaction(draft, {
+    const selectedAsset = assets.find(
+      (asset) =>
+        asset.chainId === draft.chainId && asset.address.toLowerCase() === draft.assetAddress.toLowerCase()
+    )
+    let maxValidation: NativeMaxQueueValidation | undefined
+    if (draft.maxQuoteId) {
+      if (!selectedAsset || selectedAsset.address.toLowerCase() !== NATIVE_CURRENCY) {
+        throw new SendValidationError(SEND_ERROR.MaxQuoteStale)
+      }
+      const amount = parseTokenDecimalAmount(draft.amount, selectedAsset.decimals)
+      if (amount === undefined) throw new SendValidationError(SEND_ERROR.AmountInvalid)
+      maxQuoteId = draft.maxQuoteId
+      maxValidation = await nativeMaxQuotes.validateForQueue({
+        quoteId: draft.maxQuoteId,
+        account: draft.account,
+        assetAddress: draft.assetAddress,
+        chainId: draft.chainId,
+        recipient: draft.recipient,
+        amount: amount.toString(10)
+      })
+    }
+    const validationAssets = maxValidation
+      ? assets.map((asset) =>
+          asset === selectedAsset ? { ...asset, balance: maxValidation.metadata.evidence.balance } : asset
+        )
+      : assets
+    const built = buildSendTransaction(draft, {
       account: account.id,
-      assets,
+      assets: validationAssets,
       networkAvailable: chainAvailable(chain),
       watchOnly: isWatchOnlyAccountType(account.lastSignerType)
     })
+    const transaction = maxValidation
+      ? { ...built.transaction, ...maxValidation.transaction }
+      : built.transaction
 
     ensureOrigin(draft.chainId)
 
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       let queued = false
       try {
         provider.sendTransaction(
@@ -100,6 +189,7 @@ function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
           },
           (response) => {
             if (!queued && response?.error) {
+              if (maxQuoteId) nativeMaxQuotes.queueFailed(maxQuoteId)
               log.warn('Could not queue Send transaction')
               resolve({ success: false, error: 'send-unavailable' })
             }
@@ -109,13 +199,16 @@ function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }>> {
             queued = true
             requireStoreAction('setDash')({ showing: true })
             resolve({ success: true, handlerId })
-          }
+          },
+          maxValidation ? ({ nativeMax: maxValidation.metadata } as never) : undefined
         )
       } catch (error) {
+        if (maxQuoteId) nativeMaxQuotes.queueFailed(maxQuoteId)
         resolve(failure<{ handlerId: string }>(error))
       }
     })
   } catch (error) {
+    if (maxQuoteId) nativeMaxQuotes.queueFailed(maxQuoteId)
     return Promise.resolve(failure(error))
   }
 }
@@ -149,15 +242,31 @@ async function resolveRecipient(value: unknown): Promise<SendResult<{ address: s
 }
 
 async function maxAmount(
-  chainId: unknown,
-  assetAddress: unknown,
-  recipient: unknown
-): Promise<SendResult<{ amount: string }>> {
+  input: unknown
+): Promise<SendResult<{ amount: string } & Partial<NativeMaxPublicQuote>>> {
   try {
-    if (!Number.isSafeInteger(chainId) || (chainId as number) <= 0 || typeof assetAddress !== 'string') {
+    if (
+      typeof input !== 'object' ||
+      input === null ||
+      Array.isArray(input) ||
+      Object.keys(input).some((key) => !['account', 'assetAddress', 'chainId', 'recipient'].includes(key))
+    ) {
+      throw new SendValidationError(SEND_ERROR.AssetUnavailable)
+    }
+    const { account: requestedAccount, chainId, assetAddress, recipient } = input as Record<string, unknown>
+    if (
+      !Number.isSafeInteger(chainId) ||
+      (chainId as number) <= 0 ||
+      typeof assetAddress !== 'string' ||
+      typeof requestedAccount !== 'string' ||
+      (recipient !== undefined && typeof recipient !== 'string')
+    ) {
       throw new SendValidationError(SEND_ERROR.AssetUnavailable)
     }
     const account = currentAccount()
+    if (account.id.toLowerCase() !== requestedAccount.toLowerCase()) {
+      throw new SendValidationError(SEND_ERROR.AccountChanged)
+    }
     const assets = (store('main.balances', account.id) || []) as Balance[]
     const asset = assets.find(
       (candidate) =>
@@ -165,52 +274,33 @@ async function maxAmount(
     )
     if (!asset) throw new SendValidationError(SEND_ERROR.AssetUnavailable)
 
-    const rawBalance = BigInt(asset.balance)
     if (asset.address.toLowerCase() !== NATIVE_CURRENCY) {
-      return { success: true, amount: rawBalance.toString(10) }
+      try {
+        return { success: true, amount: BigInt(asset.balance).toString(10) }
+      } catch {
+        throw new SendValidationError(SEND_ERROR.AssetUnavailable)
+      }
     }
-
-    const gas = store('main.networksMeta.ethereum', chainId as number, 'gas')
-    const gasPrice = gas?.price?.fees?.maxFeePerGas || gas?.price?.levels?.fast
-    if (!gasPrice) throw new SendValidationError(SEND_ERROR.FeeUnavailable)
-
-    let target: string
-    try {
-      target = getAddress(recipient as string)
-    } catch {
+    if (typeof recipient !== 'string') {
       throw new SendValidationError(SEND_ERROR.RecipientInvalid)
     }
-
-    const feePerGas = BigInt(gasPrice)
-    let candidate = rawBalance > feePerGas * 21_000n ? rawBalance - feePerGas * 21_000n : 0n
-    if (candidate === 0n) return { success: true, amount: '0' }
-
-    for (let pass = 0; pass < MAX_ESTIMATE_PASSES; pass += 1) {
-      let gasLimit: bigint | undefined
-      try {
-        gasLimit = parseRpcQuantity(
-          await provider.estimateGas({
-            chainId: toRpcQuantity(BigInt(chainId as number)),
-            from: account.id,
-            to: target,
-            value: toRpcQuantity(candidate)
-          })
-        )
-      } catch {
-        throw new SendValidationError(SEND_ERROR.FeeUnavailable)
-      }
-      if (gasLimit === undefined) throw new SendValidationError(SEND_ERROR.FeeUnavailable)
-
-      const reserve = feePerGas * gasLimit
-      const nextCandidate = rawBalance > reserve ? rawBalance - reserve : 0n
-      if (nextCandidate === candidate) return { success: true, amount: candidate.toString(10) }
-      candidate = nextCandidate
-    }
-
-    throw new SendValidationError(SEND_ERROR.FeeUnavailable)
+    const quote = await nativeMaxQuotes.quote({
+      account: account.id,
+      assetAddress,
+      chainId: chainId as number,
+      recipient
+    })
+    return { success: true, ...quote }
   } catch (error) {
-    return failure<{ amount: string }>(error)
+    return failure<{ amount: string } & Partial<NativeMaxPublicQuote>>(error)
   }
 }
 
-export default { maxAmount, queue, resolveRecipient }
+export function revalidateNativeMaxBeforeSign(
+  metadata: NativeMaxTrustedMetadata,
+  transaction: Parameters<NativeMaxQuoteService['revalidateBeforeSign']>[1]
+) {
+  return nativeMaxQuotes.revalidateBeforeSign(metadata, transaction)
+}
+
+export default { maxAmount, queue, resolveRecipient, revalidateNativeMaxBeforeSign }

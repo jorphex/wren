@@ -144,9 +144,11 @@ export class Footer extends React.Component {
     const currentRequest = crumb.data?.accountId
       ? this.store('main.accounts', crumb.data.accountId, 'requests', crumb.data.requestId)
       : undefined
-    const fundingRecoveryId = currentRequest?.recoverableError?.code?.startsWith('wallet-call-funding-')
-      ? currentRequest.handlerId
-      : undefined
+    const recoveryCode = currentRequest?.recoverableError?.code
+    const fundingRecoveryId =
+      recoveryCode?.startsWith('wallet-call-funding-') || recoveryCode === 'managed-sweep-changed'
+        ? currentRequest.handlerId
+        : undefined
     if (fundingRecoveryId && fundingRecoveryId !== this.focusedWalletCallsFundingRecoveryId) {
       this.focusedWalletCallsFundingRecoveryId = fundingRecoveryId
       this.walletCallsFundingRecoveryRef.current?.focus()
@@ -536,6 +538,44 @@ export class Footer extends React.Component {
           }
 
           if (req.status === 'error' && req.recoverableError) {
+            if (req.recoverableError.code === 'managed-sweep-changed') {
+              return (
+                <div className='requestApprove requestApproveLightweight walletCallsSweepChanged'>
+                  <div className='requestActionContext'>
+                    <span className='requestActionContextIcon'>
+                      <Icon name='alert' size={19} />
+                    </span>
+                    <div className='requestActionContextCopy'>
+                      <div ref={this.walletCallsFundingRecoveryRef} role='alert' tabIndex='-1'>
+                        <strong>Sweep changed</strong>
+                        <span>
+                          Balances, fees, or nonce changed. Close this review and create a fresh Sweep.
+                          Nothing was signed or submitted; Wren will not retry automatically.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className='requestActionButtons'>
+                    <button
+                      type='button'
+                      className='requestSign'
+                      disabled={actionPending}
+                      onClick={() => {
+                        if (actionPending) return
+                        this.setState({ walletCallsActionId: req.handlerId })
+                        link.rpc('closeFailedWalletCallsRequest', req, () => {
+                          if (this.mounted) this.setState({ walletCallsActionId: undefined })
+                        })
+                      }}
+                    >
+                      <span className='requestSignButton _txButton'>
+                        <span>{actionPending ? 'Closing…' : 'Close request'}</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )
+            }
             const funding = req.recoverableError.code === 'wallet-call-funding-insufficient'
             const evidence = funding ? req.recoverableError.data : undefined
             const nativeCurrency =

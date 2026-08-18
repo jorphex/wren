@@ -25,6 +25,9 @@ export interface WalletCallStatusViewData {
     chainId: string
     status: 100 | 200 | 400 | 500 | 600
     atomic: false
+    callCount?: number
+    submittedCount?: number
+    confirmedCount?: number
     receipts?: Array<{
       status: '0x0' | '0x1'
       type?: '0x0' | '0x1' | '0x2'

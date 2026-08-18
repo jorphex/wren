@@ -33,6 +33,7 @@ export interface WalletCallRuntimeDependencies {
   evidenceAvailable?(): void
   recordSubmittedTarget?(address: string, submittedAt: number): void
   assertBeforeSign?(): void
+  revalidateBeforeCall?(transaction: Readonly<TransactionData>, index: number): Promise<void>
 }
 
 function runtimeError(error: unknown, fallback: string) {
@@ -70,7 +71,9 @@ export async function executeWalletCallRuntime(
     (dependencies.evidenceAvailable !== undefined && typeof dependencies.evidenceAvailable !== 'function') ||
     (dependencies.recordSubmittedTarget !== undefined &&
       typeof dependencies.recordSubmittedTarget !== 'function') ||
-    (dependencies.assertBeforeSign !== undefined && typeof dependencies.assertBeforeSign !== 'function')
+    (dependencies.assertBeforeSign !== undefined && typeof dependencies.assertBeforeSign !== 'function') ||
+    (dependencies.revalidateBeforeCall !== undefined &&
+      typeof dependencies.revalidateBeforeCall !== 'function')
   ) {
     throw new Error('Invalid wallet-call runtime dependencies')
   }
@@ -86,6 +89,7 @@ export async function executeWalletCallRuntime(
   const evidenceAvailable = dependencies.evidenceAvailable?.bind(dependencies)
   const recordSubmittedTarget = dependencies.recordSubmittedTarget?.bind(dependencies)
   const assertBeforeSign = dependencies.assertBeforeSign?.bind(dependencies)
+  const revalidateBeforeCall = dependencies.revalidateBeforeCall?.bind(dependencies)
   const notifyEvidenceAvailable = () => {
     try {
       evidenceAvailable?.()
@@ -97,6 +101,7 @@ export async function executeWalletCallRuntime(
   const targetChain = Object.freeze({ type: 'ethereum', id: Number(BigInt(snapshot.chainId)) })
 
   return executePreparedWalletCallBatch(snapshot, {
+    ...(revalidateBeforeCall ? { beforeCall: revalidateBeforeCall } : {}),
     ledger: Object.freeze({
       reserveTransaction(origin: string, account: string, id: string, hash: string) {
         reserveTransaction(origin, account, id, hash)

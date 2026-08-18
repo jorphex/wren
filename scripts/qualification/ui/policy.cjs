@@ -387,6 +387,67 @@ const reviewScenarios = () => [
         ready: '.sendRequestStateSuccess',
         requiredControls: ['Copy address', 'View contact', 'Close'],
         requiredText: ['Transaction confirmed', 'Garden Friend', '0x2222222222222222222222222222222222222222']
+      },
+      {
+        id: `dash-send-max-review-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-max-review',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: {
+          type: 'sequence',
+          delayMs: 300,
+          steps: [
+            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'clickText', text: 'Use Max' },
+            { type: 'clickText', text: 'Review Max send' }
+          ]
+        },
+        ready: '.sendQuotePanelReview',
+        requiredControls: ['Edit amount', 'Queue transfer'],
+        requiredText: [
+          'Review maximum send',
+          'Total reserved',
+          'L1 data fee',
+          'may leave dust',
+          'Quote expires'
+        ]
+      },
+      {
+        id: `dash-send-sweep-review-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-sweep-review',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: {
+          type: 'sequence',
+          delayMs: 300,
+          steps: [
+            { type: 'clickText', text: 'Sweep assets' },
+            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'selectLabel', label: 'Network', value: '10' },
+            { type: 'clickCheckboxText', text: 'USDC' },
+            { type: 'clickText', text: 'Review 1 transfer' }
+          ]
+        },
+        ready: '.sendSweepReview',
+        requiredControls: [
+          'Copy full sweep recipient address',
+          'Copy full token 1 address',
+          'Copy full token 1 amount',
+          'Back to selection',
+          'Queue 1 transfer'
+        ],
+        requiredText: [
+          'Sequential, not atomic',
+          'No bridge or batch contract is used.',
+          '0x3333333333333333333333333333333333333333',
+          '100000000',
+          'Exact ordered calls (1)',
+          'Quote expires'
+        ]
       }
     ])
   ),

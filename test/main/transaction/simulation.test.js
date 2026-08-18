@@ -529,6 +529,28 @@ it('strictly parses an exact ordered simulation call count', () => {
   expect(parseSimulateCallsResult([{ calls: Array(17).fill(first) }], 17)).toBeUndefined()
 })
 
+it('retains only bounded semantic evidence for nonempty simulation return data', () => {
+  const call = simulateSuccess[0].calls[0]
+  expect(
+    parseSimulateCallsResult(
+      [
+        {
+          calls: [
+            { ...call, returnData: `0x${'0'.repeat(63)}1` },
+            { ...call, returnData: `0x${'0'.repeat(64)}` },
+            { ...call, returnData: '0x1234' }
+          ]
+        }
+      ],
+      3
+    )
+  ).toEqual([
+    expect.objectContaining({ returnDataKind: 'abi-bool-true' }),
+    expect.objectContaining({ returnDataKind: 'abi-bool-false' }),
+    expect.objectContaining({ returnDataKind: 'other' })
+  ])
+})
+
 it('attaches normalized effects only to a successful eth_simulateV1 result', () => {
   const addressTopic = (address) => `0x${'0'.repeat(24)}${address.slice(2)}`
   const amount = 10n.toString(16).padStart(64, '0')

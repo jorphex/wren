@@ -11,6 +11,8 @@ export const SEND_ERROR = Object.freeze({
   AmountInvalid: 'amount-invalid',
   AssetUnavailable: 'asset-unavailable',
   FeeUnavailable: 'fee-unavailable',
+  MaxQuoteStale: 'max-quote-stale',
+  MaxUnavailable: 'max-unavailable',
   NetworkUnavailable: 'network-unavailable',
   RecipientInvalid: 'recipient-invalid',
   RecipientLookupUnavailable: 'recipient-lookup-unavailable',
@@ -38,6 +40,7 @@ export type SendDraft = Readonly<{
   amount: string
   assetAddress: string
   chainId: number
+  maxQuoteId?: string
   recipient: string
 }>
 

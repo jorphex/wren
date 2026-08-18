@@ -2658,6 +2658,35 @@ describe('#claimWalletCallsRequest', () => {
     expect(responder.accept).not.toHaveBeenCalled()
   })
 
+  it('retains managed Sweep drift for a truthful Close-only failure', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const request = readyRequest('wallet-calls-sweep-changed')
+    const responder = jest.fn()
+    responder.walletCallsLifecycle = true
+    responder.accept = jest.fn()
+    admitReadyRequest(targetAccount, request, responder)
+
+    expect(
+      Accounts.retainWalletCallsFundingFailure(account2.address, request.handlerId, {
+        code: 'managed-sweep-changed',
+        message: 'Sweep evidence changed. Create and review a fresh Sweep.'
+      })
+    ).toBe(true)
+    expect(request).toMatchObject({
+      status: 'error',
+      notice: expect.stringMatching(/create and review a fresh Sweep/i),
+      recoverableError: { code: 'managed-sweep-changed' }
+    })
+    expect(request.res).toBe(responder)
+    expect(responder).not.toHaveBeenCalled()
+
+    expect(Accounts.closeFailedWalletCalls(request.handlerId, account2.address)).toBe(true)
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4001 }) })
+    )
+    expect(responder.accept).not.toHaveBeenCalled()
+  })
+
   it('settles and expires only the claimed request on its explicit account', () => {
     jest.useFakeTimers()
     try {

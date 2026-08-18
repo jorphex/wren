@@ -22,7 +22,8 @@ import { showWalletCallStatus } from '../../../main/provider/walletCallStatusVie
 import { ApprovalType } from '../../../resources/constants'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
-import { originIdForInvoker } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
+import { GasFeesSource } from '../../../resources/domain/transaction'
 import {
   TransactionFundingError,
   WalletCallFundingError,
@@ -84,6 +85,7 @@ beforeEach(() => {
   store.set('main.dappGuardrails', {})
   store.set('main.walletCallBatches', {})
   store.setWalletCallBatches = jest.fn((batches) => store.set('main.walletCallBatches', batches))
+  store.initOrigin = undefined
   showWalletCallStatus.mockClear()
 
   provider.handlers = {}
@@ -195,6 +197,7 @@ beforeEach(() => {
 
   currentAccount = {
     id: address,
+    lastSignerType: 'ring',
     getAccounts: () => [address],
     getSelectedAddress: () => address,
     getRequest: (handlerId) => accountRequests.find((request) => request.handlerId === handlerId),
@@ -213,6 +216,7 @@ beforeEach(() => {
   accounts.lockRequest = jest.fn()
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
+  provider.nativeMaxRevalidator = undefined
   provider.inspectWalletCallsPreflight = jest.fn().mockResolvedValue({
     preparation: { calls: [], maxFee: '0x0' },
     simulation: { status: 'succeeded', source: 'eth_simulateV1', calls: [] },
@@ -232,6 +236,133 @@ beforeEach(() => {
   walletCallEvidenceRuntime.wake.mockReset()
 })
 
+describe('#managed Sweep', () => {
+  const recipient = '0x1111111111111111111111111111111111111111'
+  const token = '0x3333333333333333333333333333333333333333'
+
+  function sweepDependencies() {
+    return {
+      getPendingNativeBalance: jest.fn(async () => '0x100000'),
+      getPendingTokenBalance: jest.fn(async () => '0x5'),
+      getPendingNonce: jest.fn(async () => '0x7'),
+      prepare: jest.fn(async ({ account, chainId, pendingNonce, calls }) => ({
+        calls: calls.map((call, index) => ({
+          transaction: {
+            from: account,
+            chainId,
+            nonce: toRpcQuantity(BigInt(pendingNonce) + BigInt(index)),
+            type: '0x0',
+            gasLimit: '0x5208',
+            gasPrice: '0x1',
+            gasFeesSource: GasFeesSource.Frame,
+            ...call
+          },
+          maxFee: '0x5208'
+        })),
+        maxFee: toRpcQuantity(BigInt(calls.length) * 0x5208n)
+      })),
+      l1Fees: jest.fn(async (_chainId, transactions) => transactions.map(() => '0x0')),
+      simulate: jest.fn(async (transactions) => ({
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        calls: transactions.map(() => ({
+          status: 'succeeded',
+          source: 'eth_simulateV1',
+          gasUsed: '0x5208',
+          returnDataKind: 'abi-bool-true'
+        })),
+        accountCodeEvidence: {
+          source: 'configured-rpc',
+          sender: {
+            source: 'eth_getCode',
+            trust: 'configured-rpc',
+            role: 'sender',
+            account: address,
+            status: 'no-code',
+            codeHash: `0x${'00'.repeat(32)}`
+          },
+          targets: []
+        }
+      }))
+    }
+  }
+
+  it('quotes, freshly rebuilds, and admits one exact managed Wallet Call without widening permissions', async () => {
+    const dependencies = sweepDependencies()
+    const dependencySpy = jest.spyOn(provider, 'managedSweepBuildDependencies').mockReturnValue(dependencies)
+    const chainSpy = jest.spyOn(provider, 'walletCallChainAvailable').mockReturnValue(true)
+    const draft = { account: address, chainId: 1, recipient, tokens: [token], includeNative: false }
+    store.initOrigin = jest.fn((originId, origin) =>
+      store.set('main.origins', originId, {
+        ...origin,
+        session: { requests: 1, startedAt: Date.now(), lastUpdatedAt: Date.now() }
+      })
+    )
+
+    const quote = await provider.quoteSweep(draft)
+    expect(quote).toMatchObject({
+      account: address,
+      chainId: 1,
+      recipient,
+      assets: [{ address: token, balance: '0x5' }],
+      native: { selected: false, value: '0x0' },
+      execution: 'sequential-non-atomic'
+    })
+    expect(quote.calls).toHaveLength(1)
+
+    const queued = await provider.queueSweep({
+      quoteId: quote.quoteId,
+      account: address,
+      chainId: 1,
+      recipient
+    })
+    expect(validateUUID(queued.handlerId)).toBe(true)
+    expect(accountRequests).toHaveLength(1)
+    expect(accountRequests[0]).toMatchObject({
+      handlerId: queued.handlerId,
+      type: 'walletCalls',
+      account: address,
+      chainId: '0x1',
+      origin: originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' }),
+      calls: quote.calls,
+      managedSweep: expect.objectContaining({ calls: quote.calls, execution: 'sequential-non-atomic' })
+    })
+    expect(dependencies.prepare).toHaveBeenCalledTimes(4)
+    expect(store('main.permissions')).toEqual({})
+    expect(
+      store('main.origins', originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' }))
+    ).toMatchObject({ name: FRAME_SEND_ORIGIN, provenance: 'managed', chain: { type: 'ethereum', id: 1 } })
+    await expect(
+      provider.queueSweep({ quoteId: quote.quoteId, account: address, chainId: 1, recipient })
+    ).rejects.toThrow(/invalid or expired/)
+
+    dependencySpy.mockRestore()
+    chainSpy.mockRestore()
+  })
+
+  it('rejects watch-only and changed-account quote use before admission', async () => {
+    const dependencies = sweepDependencies()
+    const dependencySpy = jest.spyOn(provider, 'managedSweepBuildDependencies').mockReturnValue(dependencies)
+    const chainSpy = jest.spyOn(provider, 'walletCallChainAvailable').mockReturnValue(true)
+    const draft = { account: address, chainId: 1, recipient, tokens: [token], includeNative: false }
+
+    currentAccount.lastSignerType = 'address'
+    await expect(provider.quoteSweep(draft)).rejects.toThrow(/watch-only/i)
+    expect(dependencies.getPendingNativeBalance).not.toHaveBeenCalled()
+
+    currentAccount.lastSignerType = 'ring'
+    const quote = await provider.quoteSweep(draft)
+    currentAccount.id = recipient
+    await expect(
+      provider.queueSweep({ quoteId: quote.quoteId, account: address, chainId: 1, recipient })
+    ).rejects.toThrow(/account or signer changed/i)
+    expect(accountRequests).toHaveLength(0)
+
+    dependencySpy.mockRestore()
+    chainSpy.mockRestore()
+  })
+})
+
 describe('#approveTransactionRequest', () => {
   const replacementRequest = () => ({
     account: address,
@@ -246,6 +377,24 @@ describe('#approveTransactionRequest', () => {
       originalActivityId: '00000000-0000-4000-8000-000000000001',
       originalHash: `0x${'a'.repeat(64)}`
     }
+  })
+
+  const nativeMaxRequest = () => ({
+    account: address,
+    handlerId: 'native-max-approval',
+    type: 'transaction',
+    payload: { id: 1, jsonrpc: '2.0', method: 'eth_sendTransaction' },
+    data: {
+      from: address,
+      chainId: '0x1',
+      nonce: '0x1',
+      to: '0x1111111111111111111111111111111111111111',
+      value: '0x1',
+      data: '0x'
+    },
+    simulation: { status: 'succeeded' },
+    approvals: [],
+    nativeMax: { quoteId: 'quote', version: 1 }
   })
 
   it('refuses to lock or sign while the execution check is pending', (done) => {
@@ -386,6 +535,90 @@ describe('#approveTransactionRequest', () => {
     expect(callback).toHaveBeenCalledWith(fundingError)
     expect(signAndSend).not.toHaveBeenCalled()
     expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
+    signAndSend.mockRestore()
+  })
+
+  it('awaits native Max revalidation after funding and immediately before signing', async () => {
+    const events = []
+    const request = nativeMaxRequest()
+    accountRequests.push(request)
+    provider.assertTransactionFunding.mockImplementationOnce(async () => events.push('funding'))
+    provider.registerNativeMaxRevalidator(async (metadata, transaction) => {
+      events.push('native-max')
+      expect(metadata).toBe(request.nativeMax)
+      expect(transaction).toBe(request.data)
+    })
+    const signAndSend = jest.spyOn(provider, 'signAndSend').mockImplementation(() => {
+      events.push('sign')
+    })
+
+    provider.approveTransactionRequest(request, jest.fn())
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(events).toEqual(['funding', 'native-max', 'sign'])
+    signAndSend.mockRestore()
+  })
+
+  it('never invokes signing when native Max evidence is stale', async () => {
+    const request = nativeMaxRequest()
+    accountRequests.push(request)
+    provider.registerNativeMaxRevalidator(async () => {
+      throw new Error('max-quote-stale')
+    })
+    const signAndSend = jest.spyOn(provider, 'signAndSend')
+    const callback = jest.fn()
+    const responder = jest.fn()
+    provider.handlers[request.handlerId] = responder
+
+    provider.approveTransactionRequest(request, callback)
+    for (let i = 0; i < 6; i += 1) await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/quote changed or expired/i) })
+    )
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ message: expect.stringMatching(/fresh Max quote/i) })
+      })
+    )
+    expect(provider.handlers[request.handlerId]).toBeUndefined()
+    expect(signAndSend).not.toHaveBeenCalled()
+    signAndSend.mockRestore()
+  })
+
+  it('does not relabel an ordinary synchronous sign pipeline error as a Max failure', async () => {
+    const request = replacementRequest()
+    delete request.replacement
+    accountRequests.push(request)
+    const signAndSend = jest.spyOn(provider, 'signAndSend').mockImplementation(() => {
+      throw new Error('ordinary sign pipeline failed')
+    })
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    for (let i = 0; i < 4; i += 1) await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'ordinary sign pipeline failed' })
+    )
+    signAndSend.mockRestore()
+  })
+
+  it('fails closed without a registered native Max revalidator', async () => {
+    const request = nativeMaxRequest()
+    accountRequests.push(request)
+    const signAndSend = jest.spyOn(provider, 'signAndSend')
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    for (let i = 0; i < 6; i += 1) await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0].message).toMatch(/quote changed or expired/i)
+    expect(signAndSend).not.toHaveBeenCalled()
     signAndSend.mockRestore()
   })
 })
@@ -815,6 +1048,34 @@ describe('#wallet-call provider boundary', () => {
     )
   })
 
+  it('rechecks managed Sweep account authorization at each signer boundary', async () => {
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.managedSweep = {}
+    const authorized = jest
+      .spyOn(provider, 'managedSweepOriginAuthorized')
+      .mockImplementation(
+        (account) => currentAccount.id === account && currentAccount.lastSignerType === 'ring'
+      )
+    executeWalletCallRuntime.mockImplementationOnce(async (_input, dependencies) => {
+      dependencies.assertBeforeSign()
+      currentAccount.id = '0x1111111111111111111111111111111111111111'
+      dependencies.assertBeforeSign()
+      return ['unreachable']
+    })
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toMatchObject({
+      code: 4100,
+      message: 'Managed Wren Send request is no longer authorized'
+    })
+    expect(accounts.settleWalletCallsRequest).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.objectContaining({ code: 4100 })
+    )
+    authorized.mockRestore()
+  })
+
   it.each([
     ['unauthorized origin', () => store.set('main.permissions', {}), payload(), 4100],
     ['wrong sender', () => {}, payload({ from: '0x3333333333333333333333333333333333333333' }), 4100],
@@ -924,6 +1185,29 @@ describe('#wallet-call provider boundary', () => {
     expect(executeWalletCallRuntime).not.toHaveBeenCalled()
     expect(respond).not.toHaveBeenCalled()
     expect(walletCallBatchLedger.getStatus(originId, address, admitted.id).status).toBe(100)
+  })
+
+  it('retains managed Sweep preflight drift as a Close-only visible error', async () => {
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.managedSweep = {}
+    const authorized = jest.spyOn(provider, 'managedSweepOriginAuthorized').mockReturnValue(true)
+    const error = new WalletCallFundingError(WALLET_CALL_FUNDING_ERROR, 'Sweep evidence changed')
+    provider.inspectWalletCallsPreflight.mockRejectedValueOnce(error)
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toBe(error)
+
+    expect(accounts.retainWalletCallsFundingFailure).toHaveBeenCalledWith(
+      address,
+      admitted.handlerId,
+      expect.objectContaining({
+        code: 'managed-sweep-changed',
+        message: expect.stringMatching(/fresh Sweep/i)
+      })
+    )
+    expect(accounts.rejectRequestForAccount).not.toHaveBeenCalled()
+    expect(accounts.claimWalletCallsRequestWithResponse).not.toHaveBeenCalled()
+    authorized.mockRestore()
   })
 
   it('rechecks exact origin permission after asynchronous preflight and before claim', async () => {
@@ -1179,7 +1463,9 @@ describe('#wallet-call provider boundary', () => {
         chainId: '0x1',
         status: 100,
         atomic: false
-      }
+      },
+      callCount: 1,
+      submittedCount: 0
     })
     expect(respond).toHaveBeenCalledWith({ id: 78, jsonrpc: '2.0', result: null })
   })
@@ -3215,6 +3501,71 @@ describe('#send', () => {
       )
     })
 
+    it('retains an immutable native Max snapshot only for the exact managed Wren Send origin', (done) => {
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      const nativeMax = {
+        version: 1,
+        quoteId: '0123456789abcdef0123456789abcdef',
+        account: address,
+        chainId: 1,
+        recipient: tx.to,
+        amount: '1',
+        amountQuantity: '0x1',
+        evidenceAt: 1,
+        expiresAt: 2,
+        evidence: { balance: '0x2' }
+      }
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 10, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        () => {},
+        { type: 'ethereum', id: 1 },
+        () => {
+          try {
+            expect(accountRequests[0].nativeMax).toEqual(nativeMax)
+            expect(accountRequests[0].nativeMax).not.toBe(nativeMax)
+            nativeMax.evidence.balance = '0xff'
+            expect(accountRequests[0].nativeMax.evidence.balance).toBe('0x2')
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { nativeMax }
+      )
+    })
+
+    it('rejects native Max trusted metadata from a non-managed origin before review', (done) => {
+      const payload = {
+        jsonrpc: '2.0',
+        id: 11,
+        method: 'eth_sendTransaction',
+        params: [tx],
+        _origin: defaultOriginId
+      }
+      provider.sendTransaction(
+        payload,
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/exact managed Wren Send origin/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        { nativeMax: { quoteId: 'untrusted' } }
+      )
+    })
+
     it('fails admission without reporting a queued request or leaking its handler', (done) => {
       const onQueued = jest.fn()
       accounts.addRequestForAccount.mockImplementationOnce(() => {
@@ -4590,6 +4941,57 @@ describe('#signAndSend', () => {
             expect(connection.send).not.toHaveBeenCalled()
             expect(handler).not.toHaveBeenCalled()
             expect(provider.handlers[request.handlerId]).toBe(handler)
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
+      it.each([
+        ['selected account', () => (currentAccount.id = '0x1111111111111111111111111111111111111111')],
+        ['signer mode', () => (currentAccount.lastSignerType = 'address')],
+        [
+          'managed origin chain',
+          () =>
+            store.set(
+              'main.origins',
+              originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' }),
+              'chain',
+              { type: 'ethereum', id: 5 }
+            )
+        ]
+      ])('blocks native Max when the %s changes before signer invocation', (_label, mutate, done) => {
+        request.type = 'transaction'
+        request.origin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+        request.nativeMax = { quoteId: 'quote', version: 1 }
+        store.set('main.networks.ethereum', 1, { id: 1, on: true })
+        store.set('main.origins', request.origin, {
+          chain: { type: 'ethereum', id: 1 },
+          name: FRAME_SEND_ORIGIN,
+          provenance: 'managed',
+          sessionOnly: false,
+          session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce(
+          (_accountId, _transaction, callback, assertBeforeSign) => {
+            mutate()
+            try {
+              assertBeforeSign()
+              callback(null, signedTx)
+            } catch (error) {
+              callback(error)
+            }
+          }
+        )
+
+        signAndSend((error) => {
+          try {
+            expect(error).toMatchObject({
+              code: 4100,
+              message: 'Managed Wren Send request is no longer authorized'
+            })
+            expect(connection.send).not.toHaveBeenCalled()
             done()
           } catch (assertionError) {
             done(assertionError)

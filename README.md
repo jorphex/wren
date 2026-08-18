@@ -65,6 +65,9 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 - Stores local contacts with user-attested Saved or Verified out-of-band provenance,
   keeps the full address visible during review, and offers an explicit Save contact
   action after confirmation without building a recipient history.
+- Provides a fresh, recipient-bound native Max quote and an explicit multi-asset Sweep.
+  Sweep reads selected ERC-20 balances from the configured RPC, places native value
+  last, and uses Wren's ordinary sequential Wallet Call review; it is never atomic.
 - Supports a local, allowlisted Yearn Earn catalog on Ethereum, Base, and Katana. See [Yearn Earn](YEARN_EARN.md) for the exact products, workflows, and evidence.
 - Lets users choose EVM RPC and Kubo IPFS endpoints.
 

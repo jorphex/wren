@@ -301,16 +301,26 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   )
   const contactEditors = scenarios.filter(({ state }) => state === 'address-book-editor')
   const sendConfirmations = scenarios.filter(({ state }) => state === 'send-confirmed')
+  const maxReviews = scenarios.filter(({ state }) => state === 'send-max-review')
+  const sweepReviews = scenarios.filter(({ state }) => state === 'send-sweep-review')
 
   expect(contactLists).toHaveLength(6)
   expect(contactEditors).toHaveLength(6)
   expect(sendConfirmations).toHaveLength(6)
+  expect(maxReviews).toHaveLength(6)
+  expect(sweepReviews).toHaveLength(6)
   expect(scenarios.find(({ id }) => id === 'dash-address-book-remove-short-1.5')).toMatchObject({
     action: { type: 'clickText', text: 'Remove Operations multisig with a deliberately long label' },
     scale: 1.5,
     logicalHeight: 744
   })
-  for (const scenario of [...contactLists, ...contactEditors, ...sendConfirmations]) {
+  for (const scenario of [
+    ...contactLists,
+    ...contactEditors,
+    ...sendConfirmations,
+    ...maxReviews,
+    ...sweepReviews
+  ]) {
     expect(INTERFACE_SCALES).toContain(scenario.scale)
     expect([744, 900]).toContain(scenario.logicalHeight)
   }
@@ -335,6 +345,18 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   expect(sendScenario.action.steps.at(-1)).toMatchObject({
     type: 'setRequestStatus',
     status: 'confirmed'
+  })
+  expect(invokeReplyFor(maxReviews[0], 'send:maxAmount')).toMatchObject({
+    success: true,
+    quoteId: 'qualification-max-quote',
+    reserve: { l1Fee: '900000000', total: '42000900000000' }
+  })
+  expect(invokeReplyFor(sweepReviews[0], 'send:quoteSweep')).toMatchObject({
+    success: true,
+    quote: {
+      execution: 'sequential-non-atomic',
+      calls: [{ to: '0x3333333333333333333333333333333333333333' }]
+    }
   })
 })
 

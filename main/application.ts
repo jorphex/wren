@@ -43,7 +43,7 @@ import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
 import yearn from './yearn'
-import send from './send'
+import send, { revalidateNativeMaxBeforeSign } from './send'
 import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
 import { persistAddressBookEntry, persistCustomToken } from './applicationMutations'
@@ -60,6 +60,7 @@ import { inspect } from './inspector'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
+provider.registerNativeMaxRevalidator(revalidateNativeMaxBeforeSign)
 
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration()
@@ -478,10 +479,30 @@ handleRenderer('yearn:cancelWorkflow', async (e, request) => yearnMutation(() =>
 handleRenderer('yearn:revokeWorkflow', async (e, request) => yearnMutation(() => yearn.revoke(request)))
 
 handleRenderer('send:resolveRecipient', async (e, value) => send.resolveRecipient(value))
-handleRenderer('send:maxAmount', async (e, chainId, assetAddress, recipient) =>
-  send.maxAmount(chainId, assetAddress, recipient)
-)
+handleRenderer('send:maxAmount', async (e, request) => send.maxAmount(request))
 handleRenderer('send:queue', async (e, draft) => send.queue(draft))
+handleRenderer('send:quoteSweep', async (e, request) => {
+  try {
+    return { success: true as const, ...(await provider.quoteSweep(request)) }
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
+    return {
+      success: false as const,
+      error: code === 'managed-sweep-changed' ? 'sweep-quote-changed' : 'sweep-unavailable'
+    }
+  }
+})
+handleRenderer('send:queueSweep', async (e, request) => {
+  try {
+    return { success: true as const, ...(await provider.queueSweep(request)) }
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined
+    return {
+      success: false as const,
+      error: code === 'managed-sweep-changed' ? 'sweep-quote-changed' : 'sweep-unavailable'
+    }
+  }
+})
 
 handleRenderer('tokens:save', async (e, token, req) => {
   try {

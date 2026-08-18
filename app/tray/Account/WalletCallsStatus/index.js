@@ -100,6 +100,16 @@ export function WalletCallsStatus({
   const statusUnavailable = !presentations[status.status]
   const receipts = Array.isArray(status.receipts) ? status.receipts : []
   const confirmed = receipts.filter((receipt) => receipt.status === '0x1').length
+  const hasPersistedCounts =
+    Number.isSafeInteger(status.callCount) &&
+    status.callCount >= 1 &&
+    status.callCount <= 16 &&
+    Number.isSafeInteger(status.submittedCount) &&
+    status.submittedCount >= 0 &&
+    status.submittedCount <= status.callCount &&
+    Number.isSafeInteger(status.confirmedCount) &&
+    status.confirmedCount >= 0 &&
+    status.confirmedCount <= status.submittedCount
   const [copied, setCopied] = useState(-1)
   const [refreshing, setRefreshing] = useState(false)
   const copyTimer = useRef()
@@ -121,8 +131,9 @@ export function WalletCallsStatus({
     copyTimer.current = setTimeout(() => setCopied(-1), 1000)
   }
 
-  const statusDetail =
-    status.status === 600 && receipts.length
+  const statusDetail = hasPersistedCounts
+    ? `${status.submittedCount} of ${status.callCount} submitted; ${status.confirmedCount} confirmed; ${status.callCount - status.submittedCount} not submitted. Unsent calls do not resume automatically.`
+    : status.status === 600 && receipts.length
       ? `${confirmed} of ${receipts.length} submitted transactions confirmed.`
       : presentation.detail
 

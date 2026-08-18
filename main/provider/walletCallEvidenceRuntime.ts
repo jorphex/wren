@@ -6,7 +6,10 @@ import { publishOperationLifecycleObservation } from '../operationLifecycle/even
 import walletCallBatchLedger from './walletCallLedger'
 import { WalletCallEvidenceController } from './walletCallEvidenceController'
 import { createWalletCallEvidenceRPC } from './walletCallEvidenceRPC'
-import { WalletCallLifecycleReconciler } from './walletCallLifecycleReconciliation'
+import {
+  isWalletCallLifecycleCandidate,
+  WalletCallLifecycleReconciler
+} from './walletCallLifecycleReconciliation'
 
 const evidenceRPC = createWalletCallEvidenceRPC(connection)
 const lifecycleReconciler = new WalletCallLifecycleReconciler(
@@ -21,11 +24,11 @@ export const walletCallEvidenceRuntime = new WalletCallEvidenceController({
     const outcomes = await lifecycleReconciler.reconcileAll()
     const continuePolling = operationLifecycleLedger
       .listStored()
-      .some(
-        (operation) =>
-          operation.kind === 'walletCalls' &&
-          (['submitted', 'confirming', 'reorged'].includes(operation.state) ||
-            operation.settlement?.status === 'monitoring')
+      .some((operation) =>
+        isWalletCallLifecycleCandidate(
+          operation,
+          Boolean(walletCallBatchLedger.getByOperationId(operation.id)?.transactions.length)
+        )
       )
     return {
       reconciliation: outcomes.map((outcome) => ({

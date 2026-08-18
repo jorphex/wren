@@ -19,7 +19,7 @@ import {
 } from '../../../resources/domain/token/amount'
 import { isNetworkConnected } from '../../../resources/utils/chains'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
-import { maxSendAmount, queueSend, resolveSendRecipient } from './api'
+import { maxSendAmount, queueSend, queueSweep, quoteSweep, resolveSendRecipient } from './api'
 
 const COPY = Object.freeze({
   accountChanged: 'The selected account changed. Re-check the recipient and amount before trying again.',
@@ -41,6 +41,8 @@ const COPY = Object.freeze({
   fee: 'Network fee',
   feeReview: 'Calculated during review',
   maxNeedsRecipient: 'Enter a recipient to enable Max so we can estimate gas.',
+  maxQuoteExpired: 'Maximum-send quote expired. Request a fresh quote.',
+  maxQuoteFailed: 'Maximum-send quote unavailable. No amount was kept.',
   noAccount: 'Select an account to send',
   noAssets: 'No sendable assets on this network',
   noAssetsCopy: 'Wren found no positive balances available to send.',
@@ -55,6 +57,8 @@ const COPY = Object.freeze({
   primaryDisabled: 'Enter send details',
   primaryReady: 'Review send',
   primarySubmitting: 'Sending…',
+  quoteMax: 'Use Max',
+  quotingMax: 'Calculating safe maximum…',
   queuedBody: 'Your transaction is waiting to be submitted.',
   queuedHeading: 'Transaction queued',
   recipient: 'Recipient',
@@ -89,8 +93,27 @@ const errorCopy = Object.freeze({
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
   'recipient-invalid': COPY.recipientInvalid,
   'recipient-lookup-unavailable': COPY.recipientLookupUnavailable,
+  'sweep-quote-changed':
+    'Balances, fees, or nonce changed. Scan a fresh Sweep; nothing was changed silently.',
+  'sweep-quote-expired': 'Sweep quote expired. Scan again before queueing.',
   'watch-only': COPY.watchOnly
 })
+
+const MAX_SWEEP_ASSETS = 16
+const exactValue = (value, suffix = '') =>
+  value === undefined || value === null || value === '' ? 'Not provided' : `${String(value)}${suffix}`
+const expiryTime = (expiresAt) => {
+  const value = typeof expiresAt === 'number' ? expiresAt : Date.parse(expiresAt)
+  return Number.isFinite(value) ? value : NaN
+}
+const expiryLabel = (expiresAt) => {
+  const time = expiryTime(expiresAt)
+  return Number.isFinite(time) ? new Date(time).toISOString() : exactValue(expiresAt)
+}
+const quoteExpired = (quote) => {
+  const expires = expiryTime(quote?.expiresAt)
+  return !Number.isFinite(expires) || expires <= Date.now()
+}
 
 const assetKey = (asset) => `${asset.chainId}:${asset.address.toLowerCase()}`
 const displayedAsset = (rawBalance, networks, metadata, rates) => {
@@ -98,11 +121,13 @@ const displayedAsset = (rawBalance, networks, metadata, rates) => {
   const chainMeta = metadata[rawBalance.chainId] || {}
   const native = isNativeCurrency(rawBalance.address)
   const nativeCurrency = chainMeta.nativeCurrency || {}
+  const nativeDecimals =
+    Number.isInteger(nativeCurrency.decimals) && nativeCurrency.decimals >= 0 ? nativeCurrency.decimals : 18
   const rate = native ? nativeCurrency.usd : rates[rawBalance.address || rawBalance.symbol]
   const balance = createBalance(
     {
       ...rawBalance,
-      decimals: native ? nativeCurrency.decimals || 18 : rawBalance.decimals,
+      decimals: native ? nativeDecimals : rawBalance.decimals,
       name: native ? nativeCurrency.name || network.name : rawBalance.name,
       symbol: native ? nativeCurrency.symbol || rawBalance.symbol : rawBalance.symbol
     },
@@ -127,8 +152,10 @@ export class Send extends React.Component {
     this.maxSequence = 0
     this.queueSequence = 0
     this.recipientSequence = 0
+    this.sweepQuoteSequence = 0
     this.mounted = false
     this.assetTriggerRef = React.createRef()
+    this.amountRef = React.createRef()
     this.contactTriggerRef = React.createRef()
     this.pickerStep = ''
     this.pickerReturnTarget = null
@@ -139,6 +166,10 @@ export class Send extends React.Component {
       contactFilter: '',
       queueError: '',
       queueing: false,
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
+      mode: 'send',
       recipient: '',
       recipientError: '',
       recipientName: '',
@@ -148,7 +179,13 @@ export class Send extends React.Component {
       requestAccount: '',
       requestRecipient: '',
       requestId: '',
-      selectedAsset: ''
+      selectedAsset: '',
+      sweepChainId: null,
+      sweepIncludeNative: false,
+      sweepQuote: null,
+      sweepReview: false,
+      sweepSelected: [],
+      sweepStatus: 'idle'
     }
   }
 
@@ -173,10 +210,12 @@ export class Send extends React.Component {
       return
     }
     this.accountId = accountId
+    clearTimeout(this.quoteExpiryTimer)
     this.lastRequest = null
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
+    this.sweepQuoteSequence += 1
     if (step === 'assetPicker' || step === 'contactPicker') link.send('nav:back', 'dash')
     this.setState({
       amount: '',
@@ -184,6 +223,10 @@ export class Send extends React.Component {
       contactFilter: '',
       queueError: '',
       queueing: false,
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
+      mode: 'send',
       recipient: '',
       recipientError: '',
       recipientName: '',
@@ -193,7 +236,13 @@ export class Send extends React.Component {
       requestAccount: '',
       requestRecipient: '',
       requestId: '',
-      selectedAsset: ''
+      selectedAsset: '',
+      sweepChainId: null,
+      sweepIncludeNative: false,
+      sweepQuote: null,
+      sweepReview: false,
+      sweepSelected: [],
+      sweepStatus: 'idle'
     })
   }
 
@@ -201,9 +250,11 @@ export class Send extends React.Component {
     this.mounted = false
     clearTimeout(this.copyStatusTimer)
     clearTimeout(this.recipientTimer)
+    clearTimeout(this.quoteExpiryTimer)
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
+    this.sweepQuoteSequence += 1
   }
 
   requestForState() {
@@ -269,19 +320,58 @@ export class Send extends React.Component {
       : assets[0]
 
     const scanning = Boolean(account?.address && this.store('main.scanning', account.address))
+    const balanceError = account?.address
+      ? this.store('main.balanceErrors', account.address) ||
+        this.store('main.scanningErrors', account.address)
+      : undefined
     const unavailableAssets = positiveRawBalances.some(
       (balance) => !networks[balance.chainId] || !isNetworkConnected(networks[balance.chainId])
     )
 
-    return { account, accountId, assets, scanning, selected, unavailableAssets }
+    return { account, accountId, assets, balanceError, scanning, selected, unavailableAssets }
   }
 
   amountError(asset) {
     if (!this.state.amount) return ''
+    if (asset.native && this.state.maxQuote && !quoteExpired(this.state.maxQuote)) return ''
     const amount = parseTokenDecimalAmount(this.state.amount, asset.decimals)
     if (amount === undefined) return COPY.amountInvalid
     const balance = parseTokenBaseUnitAmount(asset.balance)
     return balance === undefined || amount > balance ? COPY.amountExceedsBalance : ''
+  }
+
+  clearDerivedReview({ clearAmount = false, message = '' } = {}) {
+    clearTimeout(this.quoteExpiryTimer)
+    this.maxSequence += 1
+    this.sweepQuoteSequence += 1
+    this.setState({
+      ...(clearAmount ? { amount: '' } : {}),
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
+      queueError: message,
+      sweepQuote: null,
+      sweepReview: false,
+      sweepStatus: 'idle'
+    })
+  }
+
+  scheduleQuoteExpiry(kind, quote) {
+    clearTimeout(this.quoteExpiryTimer)
+    const expires = expiryTime(quote?.expiresAt)
+    if (!Number.isFinite(expires)) return
+    this.quoteExpiryTimer = setTimeout(
+      () => {
+        if (!this.mounted) return
+        if (kind === 'max' && this.state.maxQuote?.quoteId === quote.quoteId) {
+          this.clearDerivedReview({ clearAmount: true, message: COPY.maxQuoteExpired })
+        }
+        if (kind === 'sweep' && this.state.sweepQuote?.quoteId === quote.quoteId) {
+          this.clearDerivedReview({ message: 'Sweep quote expired. Scan again before queueing.' })
+        }
+      },
+      Math.min(2_147_483_647, Math.max(0, expires - Date.now()))
+    )
   }
 
   async resolveRecipient(value) {
@@ -330,16 +420,25 @@ export class Send extends React.Component {
 
   updateRecipient(recipient) {
     clearTimeout(this.recipientTimer)
+    clearTimeout(this.quoteExpiryTimer)
     this.maxSequence += 1
     this.recipientSequence += 1
+    this.sweepQuoteSequence += 1
     this.setState({
+      amount: this.state.maxQuote || this.state.maxQuoteStatus === 'loading' ? '' : this.state.amount,
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
       queueError: '',
       recipient,
       recipientError: '',
       recipientName: '',
       recipientSource: '',
       recipientResolved: '',
-      recipientStatus: ''
+      recipientStatus: '',
+      sweepQuote: null,
+      sweepReview: false,
+      sweepStatus: 'idle'
     })
     const value = recipient.trim()
     if (value) {
@@ -352,11 +451,20 @@ export class Send extends React.Component {
     const sequence = ++this.maxSequence
     const accountId = this.store('selected.current') || ''
     const selectedAsset = assetKey(asset)
-    const result = await maxSendAmount(
-      asset.chainId,
-      asset.address,
-      this.state.recipientResolved || undefined
-    )
+    clearTimeout(this.quoteExpiryTimer)
+    this.setState({
+      amount: '',
+      maxQuote: null,
+      maxQuoteStatus: 'loading',
+      maxReview: false,
+      queueError: ''
+    })
+    const result = await maxSendAmount({
+      account: accountId,
+      chainId: asset.chainId,
+      assetAddress: asset.address,
+      recipient: this.state.recipientResolved || undefined
+    })
     if (
       !this.mounted ||
       sequence !== this.maxSequence ||
@@ -365,9 +473,34 @@ export class Send extends React.Component {
     ) {
       return
     }
-    if (!result.success) return this.setState({ queueError: errorCopy[result.error] || COPY.errorBody })
+    if (!result.success) {
+      return this.setState({
+        amount: '',
+        maxQuote: null,
+        maxQuoteStatus: 'error',
+        maxReview: false,
+        queueError: errorCopy[result.error] || COPY.maxQuoteFailed
+      })
+    }
     const amount = formatTokenBaseUnitAmount(result.amount, asset.decimals)
-    this.setState({ amount: amount || '', queueError: '' })
+    const maxQuote = asset.native ? result : null
+    if (asset.native && (!result.quoteId || !result.reserve || quoteExpired(result))) {
+      return this.setState({
+        amount: '',
+        maxQuote: null,
+        maxQuoteStatus: 'error',
+        maxReview: false,
+        queueError: COPY.maxQuoteFailed
+      })
+    }
+    this.setState({
+      amount: amount || '',
+      maxQuote,
+      maxQuoteStatus: asset.native ? 'ready' : 'idle',
+      maxReview: false,
+      queueError: ''
+    })
+    if (maxQuote) this.scheduleQuoteExpiry('max', maxQuote)
   }
 
   async submit(event, context) {
@@ -385,7 +518,19 @@ export class Send extends React.Component {
       return
     }
 
+    if (this.state.maxQuote) {
+      if (quoteExpired(this.state.maxQuote)) {
+        this.clearDerivedReview({ clearAmount: true, message: COPY.maxQuoteExpired })
+        return
+      }
+      if (!this.state.maxReview) {
+        this.setState({ maxReview: true })
+        return
+      }
+    }
+
     const sequence = ++this.queueSequence
+    if (this.state.maxQuote) clearTimeout(this.quoteExpiryTimer)
     const requestAccount = account.id
     const requestRecipient = this.state.recipientResolved
     this.setState({ queueError: '', queueing: true })
@@ -394,7 +539,8 @@ export class Send extends React.Component {
       amount: this.state.amount,
       assetAddress: selected.address,
       chainId: selected.chainId,
-      recipient: requestRecipient
+      recipient: requestRecipient,
+      ...(this.state.maxQuote ? { maxQuoteId: this.state.maxQuote.quoteId } : {})
     })
 
     if (
@@ -406,7 +552,15 @@ export class Send extends React.Component {
     }
 
     if (!result.success) {
-      this.setState({ queueError: errorCopy[result.error] || COPY.errorBody, queueing: false })
+      if (this.state.maxQuote) {
+        this.clearDerivedReview({
+          clearAmount: true,
+          message: errorCopy[result.error] || 'Maximum-send quote changed. Request a fresh quote.'
+        })
+        this.setState({ queueing: false })
+      } else {
+        this.setState({ queueError: errorCopy[result.error] || COPY.errorBody, queueing: false })
+      }
       return
     }
     this.lastRequest = null
@@ -418,17 +572,210 @@ export class Send extends React.Component {
     })
   }
 
+  setMode(mode, context) {
+    if (mode === this.state.mode) return
+    clearTimeout(this.quoteExpiryTimer)
+    this.maxSequence += 1
+    this.sweepQuoteSequence += 1
+    const firstChain = context.assets[0]?.chainId || null
+    this.setState({
+      amount: '',
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
+      mode,
+      queueError: '',
+      sweepChainId: mode === 'sweep' ? this.state.sweepChainId || firstChain : this.state.sweepChainId,
+      sweepIncludeNative: false,
+      sweepQuote: null,
+      sweepReview: false,
+      sweepSelected: [],
+      sweepStatus: 'idle'
+    })
+  }
+
+  setSweepChain(chainId) {
+    clearTimeout(this.quoteExpiryTimer)
+    this.sweepQuoteSequence += 1
+    this.setState({
+      queueError: '',
+      sweepChainId: Number(chainId),
+      sweepIncludeNative: false,
+      sweepQuote: null,
+      sweepReview: false,
+      sweepSelected: [],
+      sweepStatus: 'idle'
+    })
+  }
+
+  toggleSweepAsset(asset) {
+    this.sweepQuoteSequence += 1
+    const key = assetKey(asset)
+    this.setState((state) => {
+      const selected = state.sweepSelected.includes(key)
+        ? state.sweepSelected.filter((entry) => entry !== key)
+        : [...state.sweepSelected, key]
+      if (selected.length + (state.sweepIncludeNative ? 1 : 0) > MAX_SWEEP_ASSETS) return null
+      return {
+        queueError: '',
+        sweepQuote: null,
+        sweepReview: false,
+        sweepSelected: selected,
+        sweepStatus: 'idle'
+      }
+    })
+  }
+
+  toggleSweepNative() {
+    this.sweepQuoteSequence += 1
+    this.setState((state) => {
+      const includeNative = !state.sweepIncludeNative
+      if (state.sweepSelected.length + (includeNative ? 1 : 0) > MAX_SWEEP_ASSETS) return null
+      return {
+        queueError: '',
+        sweepIncludeNative: includeNative,
+        sweepQuote: null,
+        sweepReview: false,
+        sweepStatus: 'idle'
+      }
+    })
+  }
+
+  async reviewSweep(event, context) {
+    event.preventDefault()
+    const { account, assets } = context
+    if (!account || !this.state.recipientResolved || this.state.sweepStatus === 'loading') return
+    const chainId = this.state.sweepChainId
+    const selected = assets.filter(
+      (asset) =>
+        !asset.native && asset.chainId === chainId && this.state.sweepSelected.includes(assetKey(asset))
+    )
+    const count = selected.length + (this.state.sweepIncludeNative ? 1 : 0)
+    if (!count || count > MAX_SWEEP_ASSETS) return
+
+    const sequence = ++this.sweepQuoteSequence
+    const recipient = this.state.recipientResolved
+    const selectionFingerprint = selected
+      .map((asset) => assetKey(asset))
+      .sort()
+      .join('|')
+    const includeNative = this.state.sweepIncludeNative
+    const accountId = account.id
+    this.setState({ queueError: '', sweepQuote: null, sweepReview: false, sweepStatus: 'loading' })
+    const result = await quoteSweep({
+      account: account.id,
+      chainId,
+      recipient,
+      tokens: selected.map((asset) => asset.address),
+      includeNative
+    })
+    const currentSelection = [...this.state.sweepSelected].sort().join('|')
+    if (
+      !this.mounted ||
+      sequence !== this.sweepQuoteSequence ||
+      accountId !== (this.store('selected.current') || '') ||
+      recipient !== this.state.recipientResolved ||
+      chainId !== this.state.sweepChainId ||
+      selectionFingerprint !== currentSelection ||
+      includeNative !== this.state.sweepIncludeNative
+    )
+      return
+    const quote = result.quote || result
+    if (!result.success || !quote.quoteId || !Array.isArray(quote.calls) || quoteExpired(quote)) {
+      this.setState({
+        queueError:
+          errorCopy[result.error] || 'Could not scan fresh balances. Check the network and try again.',
+        sweepQuote: null,
+        sweepReview: false,
+        sweepStatus: 'error'
+      })
+      return
+    }
+    this.setState({ queueError: '', sweepQuote: quote, sweepReview: true, sweepStatus: 'ready' })
+    this.scheduleQuoteExpiry('sweep', quote)
+  }
+
+  async submitSweep(context) {
+    const { account } = context
+    const quote = this.state.sweepQuote
+    if (!account || !quote || this.state.queueing) return
+    if (quoteExpired(quote)) {
+      this.clearDerivedReview({ message: 'Sweep quote expired. Scan again before queueing.' })
+      return
+    }
+    const sequence = ++this.queueSequence
+    clearTimeout(this.quoteExpiryTimer)
+    const requestRecipient = this.state.recipientResolved
+    this.setState({ queueError: '', queueing: true })
+    const result = await queueSweep({
+      quoteId: quote.quoteId,
+      account: account.id,
+      chainId: this.state.sweepChainId,
+      recipient: requestRecipient
+    })
+    if (!this.mounted || sequence !== this.queueSequence) return
+    if (!result.success) {
+      this.setState({
+        queueError: errorCopy[result.error] || COPY.errorBody,
+        queueing: false,
+        sweepQuote: null,
+        sweepReview: false,
+        sweepStatus: 'error'
+      })
+      return
+    }
+    clearTimeout(this.quoteExpiryTimer)
+    this.lastRequest = null
+    this.setState({
+      queueing: false,
+      requestAccount: account.id,
+      requestRecipient,
+      requestId: result.handlerId || result.requestId || '',
+      sweepStatus: result.handlerId || result.requestId ? 'queued' : 'queued-local'
+    })
+  }
+
   resetRequest(clearDraft = false) {
+    const clearMaxAmount = Boolean(this.state.maxQuote)
+    clearTimeout(this.quoteExpiryTimer)
+    this.maxSequence += 1
+    this.queueSequence += 1
+    this.sweepQuoteSequence += 1
     this.lastRequest = null
     this.setState({
       ...(clearDraft
         ? { amount: '', recipient: '', recipientName: '', recipientResolved: '', recipientSource: '' }
-        : {}),
+        : clearMaxAmount
+          ? { amount: '' }
+          : {}),
       queueError: '',
+      queueing: false,
       copyStatus: '',
+      maxQuote: null,
+      maxQuoteStatus: 'idle',
+      maxReview: false,
       requestAccount: '',
       requestRecipient: '',
-      requestId: ''
+      requestId: '',
+      sweepQuote: null,
+      sweepReview: false,
+      sweepStatus: 'idle'
+    })
+  }
+
+  closeRetainedRequest(method, request, failureMessage) {
+    if (this.state.queueing) return
+    this.setState({ queueError: '', queueing: true })
+    link.rpc(method, request, (error) => {
+      if (!this.mounted) return
+      if (error) {
+        this.setState({
+          queueError: failureMessage,
+          queueing: false
+        })
+        return
+      }
+      this.resetRequest(false)
     })
   }
 
@@ -475,6 +822,9 @@ export class Send extends React.Component {
                       return {
                         amount: '',
                         assetFilter: '',
+                        maxQuote: null,
+                        maxQuoteStatus: 'idle',
+                        maxReview: false,
                         queueError: '',
                         selectedAsset: assetKey(asset)
                       }
@@ -608,21 +958,343 @@ export class Send extends React.Component {
     )
   }
 
+  renderMaxQuote(selected) {
+    const { maxQuote, maxQuoteStatus, maxReview } = this.state
+    if (maxQuoteStatus === 'loading') {
+      return (
+        <section aria-busy='true' aria-live='polite' className='sendQuotePanel' role='status'>
+          <strong>{COPY.quotingMax}</strong>
+          <span>The previous amount was cleared while Wren requests current fee evidence.</span>
+        </section>
+      )
+    }
+    if (!maxQuote) return null
+    const reserve = maxQuote.reserve || {}
+    const rows = [
+      ['Fee model', exactValue(reserve.feeModel)],
+      ['Gas limit', exactValue(reserve.gasLimit)],
+      ['Gas price', exactValue(reserve.gasPrice, ' wei')],
+      ['Max fee per gas', exactValue(reserve.maxFeePerGas, ' wei')],
+      ['Max priority fee per gas', exactValue(reserve.maxPriorityFeePerGas, ' wei')],
+      ['Execution fee', exactValue(reserve.executionFee, ' wei')],
+      ['L1 data fee', exactValue(reserve.l1Fee, ' wei')],
+      ['Total reserved', exactValue(reserve.total, ' wei')],
+      ['Quote expires', expiryLabel(maxQuote.expiresAt)]
+    ].filter(
+      ([label, value]) =>
+        !['Gas price', 'Max fee per gas', 'Max priority fee per gas'].includes(label) ||
+        value !== 'Not provided'
+    )
+    return (
+      <section
+        className={`sendQuotePanel ${maxReview ? 'sendQuotePanelReview' : ''}`}
+        aria-label='Safe Max quote'
+      >
+        <div className='sendQuoteHeading'>
+          <div>
+            <span>{maxReview ? 'Review maximum send' : 'Maximum sendable'}</span>
+            <strong>
+              {this.store('selected.hideBalances') ? '••••' : `${this.state.amount} ${selected.symbol}`}
+            </strong>
+          </div>
+          <span className='sendQuoteBadge'>Fresh RPC quote</span>
+        </div>
+        <button
+          className='wrenControl wrenControlGhost wrenControlCompact sendQuoteEdit'
+          onClick={() => {
+            this.clearDerivedReview({ clearAmount: true })
+            setTimeout(() => this.amountRef.current?.focus(), 0)
+          }}
+          type='button'
+        >
+          Edit amount
+        </button>
+        <dl className='sendQuoteFacts'>
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{this.store('selected.hideBalances') && /fee|reserved/i.test(label) ? '••••' : value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          {maxReview
+            ? 'Verify the recipient, exact reserve, and expiry. Worst-case reserve may leave dust; queueing opens Wren’s normal signing review.'
+            : 'This amount reserves the worst-case fee shown and may leave dust when the actual fee is lower. It is bound to this recipient and expiry; review is required.'}
+        </p>
+      </section>
+    )
+  }
+
+  copySweepValue(label, value) {
+    link.send('tray:clipboardData', String(value))
+    clearTimeout(this.copyStatusTimer)
+    this.setState({ copyStatus: `${label} copied` })
+    this.copyStatusTimer = setTimeout(() => {
+      if (this.mounted) this.setState({ copyStatus: '' })
+    }, 4_000)
+  }
+
+  renderSweep(context, watchOnly) {
+    const { account, assets } = context
+    const hideBalances = this.store('selected.hideBalances')
+    const chainIds = [...new Set(assets.map((asset) => asset.chainId))]
+    const chainId = this.state.sweepChainId || chainIds[0]
+    const chainAssets = assets.filter((asset) => asset.chainId === chainId)
+    const native = chainAssets.find((asset) => asset.native)
+    const tokens = chainAssets.filter((asset) => !asset.native)
+    const selectedTokens = tokens.filter((asset) => this.state.sweepSelected.includes(assetKey(asset)))
+    const selectedCount = selectedTokens.length + (this.state.sweepIncludeNative ? 1 : 0)
+    const busy = this.state.sweepStatus === 'loading' || this.state.queueing
+    const canReview =
+      Boolean(
+        account && this.state.recipientResolved && selectedCount && selectedCount <= MAX_SWEEP_ASSETS
+      ) &&
+      !watchOnly &&
+      !busy
+    const quote = this.state.sweepQuote
+
+    if (quote && this.state.sweepReview) {
+      const quotedAssets = Array.isArray(quote.assets) ? quote.assets : []
+      const calls = Array.isArray(quote.calls) ? quote.calls : []
+      return (
+        <section className='sendSweepReview' aria-label='Review sweep'>
+          <div className='sendSweepWarning' role='alert'>
+            <strong>Sequential, not atomic</strong>
+            <span>
+              These transfers are submitted one-by-one. If one fails, earlier transfers stay on-chain and
+              later transfers may not run. No bridge or batch contract is used. Wren does not retry
+              automatically; start a fresh Sweep for any remainder.
+            </span>
+          </div>
+          <div className='sendSweepTruth'>
+            <div>
+              <span>Recipient</span>
+              <code>{quote.recipient || this.state.recipientResolved}</code>
+              <button
+                aria-label='Copy full sweep recipient address'
+                className='wrenControl wrenControlGhost wrenControlCompact'
+                onClick={() =>
+                  this.copySweepValue('Recipient address', quote.recipient || this.state.recipientResolved)
+                }
+                type='button'
+              >
+                Copy
+              </button>
+            </div>
+            {quotedAssets.map((asset, index) => (
+              <div key={`${asset.address}:${index}`}>
+                <span>Token {index + 1} · submitted before native</span>
+                <code>{asset.address}</code>
+                <code>{hideBalances ? '••••' : exactValue(asset.balance)}</code>
+                <span className='sendSweepCopies'>
+                  <button
+                    aria-label={`Copy full token ${index + 1} address`}
+                    className='wrenControl wrenControlGhost wrenControlCompact'
+                    onClick={() => this.copySweepValue(`Token ${index + 1} address`, asset.address)}
+                    type='button'
+                  >
+                    Copy address
+                  </button>
+                  <button
+                    aria-label={`Copy full token ${index + 1} amount`}
+                    aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
+                    className='wrenControl wrenControlGhost wrenControlCompact'
+                    disabled={hideBalances}
+                    onClick={() => this.copySweepValue(`Token ${index + 1} amount`, asset.balance)}
+                    type='button'
+                  >
+                    Copy amount
+                  </button>
+                </span>
+              </div>
+            ))}
+            {quote.native?.selected ? (
+              <div>
+                <span>Native asset · submitted last</span>
+                <code>Native currency</code>
+                <code>{hideBalances ? '••••' : exactValue(quote.native.value)}</code>
+                <button
+                  aria-label='Copy full native amount'
+                  aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
+                  className='wrenControl wrenControlGhost wrenControlCompact'
+                  disabled={hideBalances}
+                  onClick={() => this.copySweepValue('Native amount', quote.native.value)}
+                  type='button'
+                >
+                  Copy amount
+                </button>
+              </div>
+            ) : null}
+          </div>
+          {hideBalances ? (
+            <p className='sendSweepPrivacyCopy' id='sendSweepPrivacyCopy'>
+              Amount copy and calldata are hidden while balance privacy is on.
+            </p>
+          ) : null}
+          <details className='sendSweepCalls'>
+            <summary>Exact ordered calls ({calls.length})</summary>
+            {calls.map((call, index) => (
+              <div key={`${call.to}:${index}`}>
+                <strong>
+                  {index + 1}.{' '}
+                  {index === calls.length - 1 && quote.native?.selected ? 'Native last' : 'Token call'}
+                </strong>
+                <code>to: {call.to}</code>
+                <code>value: {hideBalances ? '••••' : exactValue(call.value)}</code>
+                <code>data: {hideBalances ? '••••' : exactValue(call.data)}</code>
+              </div>
+            ))}
+          </details>
+          <dl className='sendQuoteFacts'>
+            <div>
+              <dt>Maximum total fee</dt>
+              <dd>{hideBalances ? '••••' : `${exactValue(quote.maximumFee)} wei`}</dd>
+            </div>
+            <div>
+              <dt>Quote expires</dt>
+              <dd>{expiryLabel(quote.expiresAt)}</dd>
+            </div>
+          </dl>
+          {this.state.copyStatus ? (
+            <span className='sendCopyStatus' aria-live='polite' role='status'>
+              {this.state.copyStatus}
+            </span>
+          ) : null}
+          <div className='sendSweepReviewActions'>
+            <button
+              className='wrenControl wrenControlGhost wrenControlLarge'
+              disabled={this.state.queueing}
+              onClick={() => this.clearDerivedReview()}
+              type='button'
+            >
+              Back to selection
+            </button>
+            <button
+              className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+              disabled={this.state.queueing}
+              onClick={() => this.submitSweep(context)}
+              type='button'
+            >
+              {this.state.queueing
+                ? 'Queueing…'
+                : `Queue ${calls.length} transfer${calls.length === 1 ? '' : 's'}`}
+            </button>
+          </div>
+        </section>
+      )
+    }
+
+    return (
+      <section className='sendSweepSelect' aria-busy={busy ? 'true' : undefined}>
+        <div className='sendSweepChain'>
+          <label htmlFor='send-sweep-chain'>Network</label>
+          <select
+            disabled={busy}
+            id='send-sweep-chain'
+            onChange={(event) => this.setSweepChain(event.target.value)}
+            value={chainId}
+          >
+            {chainIds.map((id) => (
+              <option key={id} value={id}>
+                {assets.find((asset) => asset.chainId === id)?.chainName || id}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='sendSweepHeader'>
+          <div>
+            <strong>Select positive balances</strong>
+            <span>
+              {selectedCount}/{MAX_SWEEP_ASSETS} selected · one network per sweep
+            </span>
+          </div>
+          {this.state.sweepStatus === 'loading' ? (
+            <span aria-live='polite'>Scanning fresh balances…</span>
+          ) : null}
+        </div>
+        <div aria-label='Select sweep assets' className='sendSweepAssets' role='group'>
+          {tokens.map((asset) => {
+            const checked = this.state.sweepSelected.includes(assetKey(asset))
+            return (
+              <label key={assetKey(asset)}>
+                <input
+                  checked={checked}
+                  disabled={busy || (!checked && selectedCount >= MAX_SWEEP_ASSETS)}
+                  onChange={() => this.toggleSweepAsset(asset)}
+                  type='checkbox'
+                />
+                <AssetMark asset={asset} />
+                <span>
+                  <strong>{asset.symbol}</strong>
+                  <code>{asset.address}</code>
+                </span>
+                <span>{this.store('selected.hideBalances') ? '••••' : asset.displayBalance}</span>
+              </label>
+            )
+          })}
+          {native ? (
+            <label>
+              <input
+                checked={this.state.sweepIncludeNative}
+                disabled={busy || (!this.state.sweepIncludeNative && selectedCount >= MAX_SWEEP_ASSETS)}
+                onChange={() => this.toggleSweepNative()}
+                type='checkbox'
+              />
+              <AssetMark asset={native} />
+              <span>
+                <strong>Include {native.symbol}</strong>
+                <code>Native currency · sent last</code>
+              </span>
+              <span>{this.store('selected.hideBalances') ? '••••' : native.displayBalance}</span>
+            </label>
+          ) : null}
+          {!tokens.length && !native ? <p>No positive balances on this network.</p> : null}
+        </div>
+        <p className='sendSweepWarning sendSweepWarningCompact'>
+          Sweep is sequential and non-atomic. Earlier completed transfers remain if a later one fails. No
+          bridge, batch contract, or automatic retry is used. Native reserve may leave dust when actual fees
+          are lower.
+        </p>
+        <div className='sendActionShelf sendSweepShelf'>
+          <button
+            className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+            disabled={!canReview}
+            type='submit'
+          >
+            {this.state.sweepStatus === 'loading'
+              ? 'Scanning balances…'
+              : canReview
+                ? `Review ${selectedCount} transfer${selectedCount === 1 ? '' : 's'}`
+                : 'Select assets to sweep'}
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   renderRequestState(request) {
     const status = request?.status
     const declined = status === 'declined'
     const failed = status === 'error'
     const confirmed = status === 'confirmed'
+    const changedSweep = failed && request?.recoverableError?.code === 'managed-sweep-changed'
+    const changedMax = failed && Boolean(request?.nativeMax) && Boolean(request?.retainedPreBroadcastError)
+    const retainedFailure = changedSweep || changedMax
     const submitted = ['success', 'verifying', 'sent', 'confirming'].includes(status)
     const heading = declined
       ? COPY.declinedHeading
-      : failed
-        ? COPY.errorHeading
-        : confirmed
-          ? COPY.confirmedHeading
-          : submitted
-            ? COPY.submittedHeading
-            : COPY.queuedHeading
+      : retainedFailure
+        ? changedSweep
+          ? 'Sweep changed'
+          : 'Maximum send changed'
+        : failed
+          ? COPY.errorHeading
+          : confirmed
+            ? COPY.confirmedHeading
+            : submitted
+              ? COPY.submittedHeading
+              : COPY.queuedHeading
     const body = declined
       ? COPY.declinedBody
       : failed
@@ -647,6 +1319,11 @@ export class Send extends React.Component {
           <h2>{heading}</h2>
           <p>{body}</p>
         </div>
+        {this.state.queueError ? (
+          <div className='sendComposerError' role='alert'>
+            {this.state.queueError}
+          </div>
+        ) : null}
         {confirmed && this.state.requestRecipient ? (
           <div className='sendConfirmedDestination'>
             <span>{COPY.destination}</span>
@@ -669,10 +1346,27 @@ export class Send extends React.Component {
         {declined || failed ? (
           <button
             className='wrenControl wrenControlPrimary wrenControlLarge'
-            onClick={() => this.resetRequest(false)}
+            disabled={retainedFailure && this.state.queueing}
+            onClick={() => {
+              if (changedSweep) {
+                this.closeRetainedRequest(
+                  'closeFailedWalletCallsRequest',
+                  request,
+                  'Could not close the stale Sweep request. Open Wren and try again.'
+                )
+              } else if (changedMax) {
+                this.closeRetainedRequest(
+                  'closeFailedTransactionRequest',
+                  request,
+                  'Could not close the stale Max request. Open Wren and try again.'
+                )
+              } else {
+                this.resetRequest(false)
+              }
+            }}
             type='button'
           >
-            {COPY.tryAgain}
+            {retainedFailure ? (this.state.queueing ? 'Closing…' : 'Close request') : COPY.tryAgain}
           </button>
         ) : confirmed ? (
           <div className='sendConfirmedActions'>
@@ -698,7 +1392,7 @@ export class Send extends React.Component {
 
   render() {
     const context = this.getContext()
-    const { account, assets, scanning, selected, unavailableAssets } = context
+    const { account, assets, balanceError, scanning, selected, unavailableAssets } = context
     const { data = {} } = this.store('windows.dash.nav')[0] || {}
     if (data.step === 'assetPicker') return this.renderAssetPicker(context)
     if (data.step === 'contactPicker') return this.renderContactPicker()
@@ -710,18 +1404,22 @@ export class Send extends React.Component {
     if (!account || !assets.length) {
       const unavailableTitle = !account
         ? COPY.noAccount
-        : scanning
-          ? COPY.assetsChecking
-          : unavailableAssets
-            ? COPY.assetsDisconnected
-            : COPY.noAssets
+        : balanceError
+          ? 'Could not load balances'
+          : scanning
+            ? COPY.assetsChecking
+            : unavailableAssets
+              ? COPY.assetsDisconnected
+              : COPY.noAssets
       const unavailableCopy = !account
         ? undefined
-        : scanning
-          ? COPY.assetsCheckingCopy
-          : unavailableAssets
-            ? COPY.assetsDisconnectedCopy
-            : COPY.noAssetsCopy
+        : balanceError
+          ? 'The configured RPC did not return balances. Check the network and try again.'
+          : scanning
+            ? COPY.assetsCheckingCopy
+            : unavailableAssets
+              ? COPY.assetsDisconnectedCopy
+              : COPY.noAssetsCopy
       return (
         <div className='sendUnavailable'>
           <WrenEmptyState
@@ -734,7 +1432,7 @@ export class Send extends React.Component {
         </div>
       )
     }
-    if (!selected) {
+    if (!selected && this.state.mode === 'send') {
       return (
         <div className='sendUnavailable sendUnavailableAsset'>
           <span>{COPY.assetUnavailable}</span>
@@ -753,10 +1451,12 @@ export class Send extends React.Component {
     const amountError = this.amountError(selected)
     const watchOnly = isWatchOnlyAccountType(account.lastSignerType)
     const maxNeedsRecipient = selected.native && !this.state.recipientResolved
+    const derivationBusy = this.state.maxQuoteStatus === 'loading' || this.state.sweepStatus === 'loading'
     const canSubmit =
       !watchOnly &&
       !amountError &&
       Boolean(this.state.amount && this.state.recipientResolved) &&
+      !derivationBusy &&
       !this.state.queueing
     const recipientHint =
       this.state.recipientStatus === 'resolving'
@@ -768,28 +1468,54 @@ export class Send extends React.Component {
           : ''
 
     return (
-      <form className='sendComposer cardShow' onSubmit={(event) => this.submit(event, context)}>
+      <form
+        aria-busy={derivationBusy || this.state.queueing ? 'true' : undefined}
+        className='sendComposer cardShow'
+        onSubmit={(event) =>
+          this.state.mode === 'sweep' ? this.reviewSweep(event, context) : this.submit(event, context)
+        }
+      >
+        <div aria-label='Send mode' className='sendModeSwitch' role='group'>
+          <button
+            aria-pressed={this.state.mode === 'send'}
+            disabled={derivationBusy || this.state.queueing}
+            onClick={() => this.setMode('send', context)}
+            type='button'
+          >
+            Send one
+          </button>
+          <button
+            aria-pressed={this.state.mode === 'sweep'}
+            disabled={derivationBusy || this.state.queueing}
+            onClick={() => this.setMode('sweep', context)}
+            type='button'
+          >
+            Sweep assets
+          </button>
+        </div>
         <div className='sendLedger'>
-          <div className='sendLedgerRow sendAssetRow'>
-            <span className='sendRowLabel'>{COPY.asset}</span>
-            <button
-              aria-label={COPY.chooseAsset}
-              className='sendRowValue sendAssetValue'
-              disabled={this.state.queueing}
-              ref={this.assetTriggerRef}
-              onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
-              type='button'
-            >
-              <span className='sendAssetIdentityCluster'>
-                <AssetMark asset={selected} />
-                <span>
-                  <strong>{selected.symbol}</strong>
-                  <small>{selected.chainName}</small>
+          {this.state.mode === 'send' ? (
+            <div className='sendLedgerRow sendAssetRow'>
+              <span className='sendRowLabel'>{COPY.asset}</span>
+              <button
+                aria-label={COPY.chooseAsset}
+                className='sendRowValue sendAssetValue'
+                disabled={derivationBusy || this.state.queueing}
+                ref={this.assetTriggerRef}
+                onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
+                type='button'
+              >
+                <span className='sendAssetIdentityCluster'>
+                  <AssetMark asset={selected} />
+                  <span>
+                    <strong>{selected.symbol}</strong>
+                    <small>{selected.chainName}</small>
+                  </span>
                 </span>
-              </span>
-              <Icon name='next' size={17} />
-            </button>
-          </div>
+                <Icon name='next' size={17} />
+              </button>
+            </div>
+          ) : null}
 
           <div className={`sendLedgerRow sendInputRow ${this.state.recipientError ? 'sendRowError' : ''}`}>
             <label className='sendRowLabel' htmlFor='send-recipient'>
@@ -803,7 +1529,7 @@ export class Send extends React.Component {
                 aria-describedby='sendRecipientFeedback'
                 aria-invalid={this.state.recipientError ? 'true' : undefined}
                 className='sendRecipientInput wrenInput'
-                disabled={this.state.queueing}
+                disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                 id='send-recipient'
                 maxLength={255}
                 onChange={(event) => this.updateRecipient(event.target.value)}
@@ -814,7 +1540,7 @@ export class Send extends React.Component {
               <button
                 aria-label={COPY.chooseContact}
                 className='sendInlineAction'
-                disabled={this.state.queueing}
+                disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                 ref={this.contactTriggerRef}
                 onClick={() => {
                   this.setState({ contactFilter: '' })
@@ -828,7 +1554,7 @@ export class Send extends React.Component {
                 <button
                   aria-label={COPY.clearRecipient}
                   className='sendInlineAction'
-                  disabled={this.state.queueing}
+                  disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                   onClick={() => this.updateRecipient('')}
                   type='button'
                 >
@@ -849,7 +1575,7 @@ export class Send extends React.Component {
                     <button
                       aria-label='Copy recipient address'
                       className='sendRecipientCopy'
-                      disabled={this.state.queueing}
+                      disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
                       onClick={() => link.send('tray:clipboardData', this.state.recipientResolved)}
                       type='button'
                     >
@@ -862,66 +1588,84 @@ export class Send extends React.Component {
             </span>
           </div>
 
-          <div className={`sendLedgerRow sendInputRow sendAmountRow ${amountError ? 'sendRowError' : ''}`}>
-            <label className='sendRowLabel' htmlFor='send-amount'>
-              {COPY.amount}
-            </label>
-            <span className={`sendInputWrap wrenInputGroup ${amountError ? 'wrenInputGroupError' : ''}`}>
-              <input
-                autoComplete='off'
-                aria-invalid={amountError ? 'true' : undefined}
-                className='sendAmountInput wrenInput'
-                disabled={this.state.queueing}
-                id='send-amount'
-                inputMode='decimal'
-                onChange={(event) => {
-                  this.maxSequence += 1
-                  this.setState({ amount: event.target.value, queueError: '' })
-                }}
-                placeholder='0.00'
-                spellCheck={false}
-                value={this.state.amount}
-              />
-              <span className='sendAmountSymbol'>{selected.symbol}</span>
-              <button
-                aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
-                className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
-                disabled={maxNeedsRecipient || this.state.queueing}
-                onClick={() => {
-                  this.setMax(selected)
-                }}
-                type='button'
+          {this.state.mode === 'send' ? (
+            <div className={`sendLedgerRow sendInputRow sendAmountRow ${amountError ? 'sendRowError' : ''}`}>
+              <label className='sendRowLabel' htmlFor='send-amount'>
+                {COPY.amount}
+              </label>
+              <span className={`sendInputWrap wrenInputGroup ${amountError ? 'wrenInputGroupError' : ''}`}>
+                <input
+                  autoComplete='off'
+                  aria-invalid={amountError ? 'true' : undefined}
+                  className='sendAmountInput wrenInput'
+                  disabled={derivationBusy || this.state.queueing || Boolean(this.state.maxQuote)}
+                  id='send-amount'
+                  inputMode='decimal'
+                  ref={this.amountRef}
+                  onChange={(event) => {
+                    clearTimeout(this.quoteExpiryTimer)
+                    this.maxSequence += 1
+                    this.setState({
+                      amount: event.target.value,
+                      maxQuote: null,
+                      maxQuoteStatus: 'idle',
+                      maxReview: false,
+                      queueError: ''
+                    })
+                  }}
+                  placeholder='0.00'
+                  spellCheck={false}
+                  value={this.state.amount}
+                />
+                <span className='sendAmountSymbol'>{selected.symbol}</span>
+                <button
+                  aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
+                  className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
+                  disabled={
+                    maxNeedsRecipient || derivationBusy || this.state.queueing || Boolean(this.state.maxQuote)
+                  }
+                  onClick={() => {
+                    this.setMax(selected)
+                  }}
+                  type='button'
+                >
+                  {COPY.quoteMax}
+                </button>
+              </span>
+              <span
+                className={`sendRowHint ${!amountError ? 'sendAmountHints' : ''}`}
+                role={amountError ? 'alert' : undefined}
               >
-                Max
-              </button>
-            </span>
-            <span
-              className={`sendRowHint ${!amountError ? 'sendAmountHints' : ''}`}
-              role={amountError ? 'alert' : undefined}
-            >
-              {amountError || (
-                <>
-                  <span className='sendAvailableHint'>
-                    {this.store('selected.hideBalances')
-                      ? 'Available balance hidden'
-                      : `Available: ${selected.displayBalance} ${selected.symbol}`}
-                  </span>
-                  {maxNeedsRecipient ? (
-                    <span className='sendMaxReason' id='sendMaxReason'>
-                      {COPY.maxNeedsRecipient}
+                {amountError || (
+                  <>
+                    <span className='sendAvailableHint'>
+                      {this.store('selected.hideBalances')
+                        ? 'Available balance hidden'
+                        : `Available: ${selected.displayBalance} ${selected.symbol}`}
                     </span>
-                  ) : null}
-                </>
-              )}
-            </span>
-          </div>
+                    {maxNeedsRecipient ? (
+                      <span className='sendMaxReason' id='sendMaxReason'>
+                        {COPY.maxNeedsRecipient}
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </span>
+            </div>
+          ) : null}
 
-          <div className='sendLedgerRow sendFeeRow'>
-            <span className='sendRowLabel'>{COPY.fee}</span>
-            <span className='sendFeeValue'>{COPY.feeReview}</span>
-            <span className='sendRowHint'>{COPY.reviewFee}</span>
-          </div>
+          {this.state.mode === 'send' ? this.renderMaxQuote(selected) : null}
+
+          {this.state.mode === 'send' && !this.state.maxQuote ? (
+            <div className='sendLedgerRow sendFeeRow'>
+              <span className='sendRowLabel'>{COPY.fee}</span>
+              <span className='sendFeeValue'>{COPY.feeReview}</span>
+              <span className='sendRowHint'>{COPY.reviewFee}</span>
+            </div>
+          ) : null}
         </div>
+
+        {this.state.mode === 'sweep' ? this.renderSweep(context, watchOnly) : null}
 
         {watchOnly || this.state.queueError ? (
           <div
@@ -932,19 +1676,25 @@ export class Send extends React.Component {
           </div>
         ) : null}
 
-        <div className='sendActionShelf'>
-          <button
-            className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
-            disabled={!canSubmit}
-            type='submit'
-          >
-            {this.state.queueing
-              ? COPY.primarySubmitting
-              : canSubmit
-                ? COPY.primaryReady
-                : COPY.primaryDisabled}
-          </button>
-        </div>
+        {this.state.mode === 'send' ? (
+          <div className='sendActionShelf'>
+            <button
+              className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+              disabled={!canSubmit}
+              type='submit'
+            >
+              {this.state.queueing
+                ? COPY.primarySubmitting
+                : this.state.maxReview
+                  ? 'Queue transfer'
+                  : this.state.maxQuote
+                    ? 'Review Max send'
+                    : canSubmit
+                      ? COPY.primaryReady
+                      : COPY.primaryDisabled}
+            </button>
+          </div>
+        ) : null}
       </form>
     )
   }

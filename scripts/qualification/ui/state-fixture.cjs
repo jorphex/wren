@@ -587,7 +587,9 @@ const fixtureFor = (scenario) => {
   if (
     scenario.state === 'address-book-list' ||
     scenario.state === 'address-book-editor' ||
-    scenario.state === 'send-confirmed'
+    scenario.state === 'send-confirmed' ||
+    scenario.state === 'send-max-review' ||
+    scenario.state === 'send-sweep-review'
   ) {
     const verifiedAt = Date.UTC(2026, 7, 18)
     state.main.addressBook = {
@@ -617,7 +619,7 @@ const fixtureFor = (scenario) => {
       showing: true,
       nav: [
         {
-          view: scenario.state === 'send-confirmed' ? 'send' : 'addressBook',
+          view: scenario.state.startsWith('send-') ? 'send' : 'addressBook',
           data:
             scenario.state === 'address-book-editor' ? { screen: 'edit', address: QUALIFICATION_CONTACT } : {}
         }
@@ -625,7 +627,7 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'send-confirmed') {
+  if (['send-confirmed', 'send-max-review', 'send-sweep-review'].includes(scenario.state)) {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -639,6 +641,14 @@ const fixtureFor = (scenario) => {
         name: 'Ether',
         native: true,
         symbol: 'ETH'
+      },
+      {
+        chainId: 10,
+        address: '0x3333333333333333333333333333333333333333',
+        balance: '100000000',
+        decimals: 6,
+        name: 'USD Coin',
+        symbol: 'USDC'
       }
     ]
     state.main.rates = {}
@@ -1367,8 +1377,48 @@ const invokeReplyFor = (scenario, method) => {
       }
     }
   }
-  if (scenario.state === 'send-confirmed' && method === 'send:resolveRecipient') {
+  if (scenario.state.startsWith('send-') && method === 'send:resolveRecipient') {
     return { success: true, address: QUALIFICATION_RECIPIENT, name: '' }
+  }
+  if (scenario.state === 'send-max-review' && method === 'send:maxAmount') {
+    return {
+      success: true,
+      amount: '1240000000000000000',
+      quoteId: 'qualification-max-quote',
+      expiresAt: Date.UTC(2030, 0, 1),
+      reserve: {
+        feeModel: 'eip1559',
+        gasLimit: '21000',
+        maxFeePerGas: '2000000000',
+        maxPriorityFeePerGas: '1000000000',
+        executionFee: '42000000000000',
+        l1Fee: '900000000',
+        total: '42000900000000'
+      }
+    }
+  }
+  if (scenario.state === 'send-sweep-review' && method === 'send:quoteSweep') {
+    return {
+      success: true,
+      quote: {
+        quoteId: 'qualification-sweep-quote',
+        expiresAt: Date.UTC(2030, 0, 1),
+        account: QUALIFICATION_ACCOUNT,
+        chainId: 10,
+        recipient: QUALIFICATION_RECIPIENT,
+        assets: [{ address: '0x3333333333333333333333333333333333333333', balance: '100000000' }],
+        native: { selected: false, balance: '0', value: '0' },
+        maximumFee: '987654321',
+        calls: [
+          {
+            to: '0x3333333333333333333333333333333333333333',
+            data: '0xa9059cbb0000000000000000000000002222222222222222222222222222222222222222',
+            value: '0x0'
+          }
+        ],
+        execution: 'sequential-non-atomic'
+      }
+    }
   }
   if (scenario.state === 'send-confirmed' && method === 'send:queue') {
     return { success: true, handlerId: 'qualification-send-request' }

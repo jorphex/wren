@@ -18,6 +18,20 @@ const isBackgroundSettlementCandidate = (operation: OperationLifecycle) =>
   (operation.state === 'confirmed' || operation.state === 'failed') &&
   operation.settlement?.status === 'monitoring'
 
+export const isWalletCallLifecycleCandidate = (
+  operation: OperationLifecycle,
+  hasSubmittedPrefix: boolean
+) => {
+  if (operation.kind !== 'walletCalls') return false
+  if (operation.state === 'failed') {
+    return hasSubmittedPrefix && operation.settlement?.status !== 'complete'
+  }
+  return (
+    ['submitted', 'confirming', 'reorged'].includes(operation.state) ||
+    isBackgroundSettlementCandidate(operation)
+  )
+}
+
 type BlockEvidence = Readonly<{ number: string; hash: string }>
 
 interface WalletCallLifecycleBatchLedger {
@@ -239,6 +253,7 @@ export class WalletCallLifecycleReconciler {
     }
     if (
       !['submitted', 'confirming', 'reorged'].includes(operation.state) &&
+      !(operation.state === 'failed' && operation.settlement?.status !== 'complete') &&
       !isBackgroundSettlementCandidate(operation)
     ) {
       return { operationId, status: 'unchanged' }
@@ -263,11 +278,10 @@ export class WalletCallLifecycleReconciler {
     }
 
     try {
-      if (batch.execution === 'failed') {
+      if (batch.execution === 'failed' && batch.transactions.length === 0) {
         this.transition(operation, 'failed', now, undefined, false)
-        return { operationId, status: 'updated' }
+        return { operationId, status: 'unchanged' }
       }
-
       batch = await this.reconcileSignedReservation(batch, now)
       const evidence = await this.canonicalEvidence(batch, now)
       let reorged = false
@@ -300,14 +314,20 @@ export class WalletCallLifecycleReconciler {
         batch.execution === 'complete' &&
         submitted.length === batch.callCount &&
         batch.transactions.every((transaction) => transaction.state === 'submitted')
+      const failedPrefixSubmitted =
+        batch.execution === 'failed' && submitted.length > 0 && submitted.length === batch.transactions.length
       const canonical = evidence.filter((item) => item.status === 'canonical')
       const allCanonical = canonical.length === submitted.length && submitted.length > 0
       const confirmations = minimumConfirmations === undefined ? undefined : Number(minimumConfirmations)
 
       if (reorged || (operation.state === 'reorged' && !allCanonical)) {
         this.transition(operation, 'reorged', now, confirmations, false, null)
-      } else if (allCallsSubmitted && allCanonical) {
-        const state = canonical.every((item) => item.receipt.status === '0x1') ? 'confirmed' : 'failed'
+      } else if ((allCallsSubmitted || failedPrefixSubmitted) && allCanonical) {
+        const state = failedPrefixSubmitted
+          ? 'failed'
+          : canonical.every((item) => item.receipt.status === '0x1')
+            ? 'confirmed'
+            : 'failed'
         if (!isBackgroundSettlementCandidate(operation)) {
           this.transition(operation, state, now, confirmations, false, { status: 'monitoring' })
         } else if (minimumConfirmations !== undefined) {
@@ -345,11 +365,11 @@ export class WalletCallLifecycleReconciler {
     this.batches.listLifecycleCandidates(now)
     const candidates = this.operations
       .listStored()
-      .filter(
-        (operation) =>
-          operation.kind === 'walletCalls' &&
-          (['submitted', 'confirming', 'reorged'].includes(operation.state) ||
-            isBackgroundSettlementCandidate(operation))
+      .filter((operation) =>
+        isWalletCallLifecycleCandidate(
+          operation,
+          Boolean(this.batches.getByOperationId(operation.id, now)?.transactions.length)
+        )
       )
     const outcomes: WalletCallLifecycleOutcome[] = []
     for (const operation of candidates) outcomes.push(await this.reconcile(operation.id, now))

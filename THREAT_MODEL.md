@@ -294,6 +294,26 @@ These checks prevent a known-unfunded signing attempt but do not reserve funds o
 eliminate races with other pending transactions, RPC disagreement, reorgs, or
 fees changing after the check.
 
+Dashboard native Max and Sweep add no remote quote or execution service. Native Max
+keeps a bounded opaque quote only in main-process memory. The quote binds the exact
+selected account, chain, native asset, canonical recipient, pending balance and nonce,
+fee model, padded gas limit, and any Optimism L1 data fee. Queueing and immediate
+signer handoff recompute that evidence and reject any drift without changing the
+reviewed amount. Because EIP-1559 reserves the maximum fee while the network may charge
+less, Max can leave dust and is not presented as a guaranteed zero balance.
+
+Sweep reads pending balances only for explicitly selected ERC-20 contracts, rejects
+duplicates, and caps the complete token-first/native-last sequence at 16 calls. It
+converges the fixed native value against exact prepared calls, aggregate worst-case
+execution and L1 data fees, pending nonce, and stateful simulation before admission.
+It then enters the ordinary Wallet Call review and signer pipeline. Every remaining
+call is checked again before signing; changed authorization, balances, nonce, fees,
+code, simulation, or funding stops the unsent suffix. Earlier broadcasts cannot be
+rolled back, so the UI states the non-atomic ordering and partial-completion risk.
+Persisted lifecycle evidence contains bounded hashes, receipts, and counts, never the
+asset selection or calldata; restart reconciles submitted evidence but never resumes
+or rebroadcasts unsent calls.
+
 #### Per-dapp guardrails
 
 Guardrails are a local restriction layered below the finite dapp permission. They

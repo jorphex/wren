@@ -204,7 +204,7 @@ describe('renderer bridge protocol', () => {
     expect(request('onboard', 'event', ['tray:resetAllSettings'])).toBeNull()
   })
 
-  test('allows recovery, signer protection, and inspection only from the dashboard renderer', () => {
+  test('allows dashboard wallet utilities only from the dashboard renderer', () => {
     const request = (role, channel) =>
       decodeBridgeMessage(
         encode({ source: LINK_SOURCE, method: 'invoke', id, args: [channel, 'bounded argument'] }),
@@ -219,7 +219,12 @@ describe('renderer bridge protocol', () => {
       'signers:protectionStatus',
       'signers:enableProtection',
       'signers:disableProtection',
-      'inspector:inspect'
+      'inspector:inspect',
+      'send:maxAmount',
+      'send:queue',
+      'send:quoteSweep',
+      'send:queueSweep',
+      'send:resolveRecipient'
     ]) {
       expect(request('dash', channel)).not.toBeNull()
       expect(request('tray', channel)).toBeNull()

@@ -1,6 +1,7 @@
 import { Capability, TransactionFactory } from '@ethereumjs/tx'
 
 import { GasFeesSource, type TransactionData } from '../../resources/domain/transaction'
+import { snapshotSweepEvidence, type SweepEvidence } from '../../resources/domain/sweep'
 import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import chainConfig from '../chains/config'
 import { maxFee } from '../transaction'
@@ -26,6 +27,7 @@ export interface PreparedWalletCallExecutionInput {
   chainId: string
   calls: readonly WalletCall[]
   preparation: PreparedWalletCallBatch
+  managedSweep?: SweepEvidence
 }
 
 export interface PreparedWalletCallExecutionSnapshot {
@@ -35,10 +37,12 @@ export interface PreparedWalletCallExecutionSnapshot {
   readonly chainId: string
   readonly calls: readonly Readonly<WalletCall>[]
   readonly preparation: PreparedWalletCallBatch
+  readonly managedSweep?: SweepEvidence
 }
 
 interface PreparedWalletCallExecutionDependencies {
   ledger: PreparedExecutionLedger
+  beforeCall?(transaction: Readonly<TransactionData>, index: number): Promise<void>
   signTransaction(transaction: Readonly<TransactionData>, index: number): Promise<{ rawTransaction: string }>
   broadcast(rawTransaction: string, index: number): Promise<string>
 }
@@ -182,6 +186,7 @@ export function snapshotPreparedWalletCallExecutionInput(
   }
 
   const calls = Object.freeze(snapshotWalletCalls(input.calls))
+  const managedSweep = input.managedSweep ? snapshotSweepEvidence(input.managedSweep) : undefined
   const preparedCalls = input.preparation?.calls
   if (
     typeof input.account !== 'string' ||
@@ -190,6 +195,14 @@ export function snapshotPreparedWalletCallExecutionInput(
     preparedCalls.length !== calls.length
   ) {
     throw new Error('Prepared wallet call batch does not match request')
+  }
+  if (
+    managedSweep &&
+    (managedSweep.account !== input.account.toLowerCase() ||
+      managedSweep.chainId !== toRpcQuantity(chainId) ||
+      JSON.stringify(managedSweep.calls) !== JSON.stringify(calls))
+  ) {
+    throw new Error('Managed sweep evidence does not match wallet calls')
   }
 
   let firstNonce: bigint | undefined
@@ -245,7 +258,8 @@ export function snapshotPreparedWalletCallExecutionInput(
     preparation: Object.freeze({
       calls: Object.freeze(preparedSnapshot),
       maxFee: toRpcQuantity(aggregateFee)
-    })
+    }),
+    ...(managedSweep ? { managedSweep } : {})
   })
 }
 
@@ -264,13 +278,15 @@ export async function executePreparedWalletCallBatch(
     typeof dependencies.ledger.reserveTransaction !== 'function' ||
     typeof dependencies.ledger.markTransactionSubmitted !== 'function' ||
     typeof dependencies.ledger.complete !== 'function' ||
-    typeof dependencies.ledger.fail !== 'function'
+    typeof dependencies.ledger.fail !== 'function' ||
+    (dependencies.beforeCall !== undefined && typeof dependencies.beforeCall !== 'function')
   ) {
     throw new Error('Invalid prepared wallet call execution dependencies')
   }
 
   const signTransaction = dependencies.signTransaction.bind(dependencies)
   const broadcast = dependencies.broadcast.bind(dependencies)
+  const beforeCall = dependencies.beforeCall?.bind(dependencies)
   const ledger = Object.freeze({
     reserveTransaction: dependencies.ledger.reserveTransaction.bind(dependencies.ledger),
     markTransactionSubmitted: dependencies.ledger.markTransactionSubmitted.bind(dependencies.ledger),
@@ -291,6 +307,7 @@ export async function executePreparedWalletCallBatch(
         const preparedCall = snapshot.preparation.calls[index]
         if (!preparedCall) throw new Error('Prepared wallet call is missing during execution')
         const transaction = preparedCall.transaction
+        await beforeCall?.(transaction, index)
         const signed = await signTransaction(transaction, index)
         return verifySignedTransaction(signed?.rawTransaction, transaction)
       },

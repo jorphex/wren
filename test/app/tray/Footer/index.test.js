@@ -476,6 +476,32 @@ it('offers retry rather than funding instructions when wallet-call evidence is u
   expect(screen.getByRole('button', { name: 'Recheck' })).toBeTruthy()
 })
 
+it('requires closing a changed managed Sweep and never offers retry or funding actions', async () => {
+  const req = request({
+    account: '0x0000000000000000000000000000000000000001',
+    chainId: '0x1',
+    status: 'error',
+    recoverableError: {
+      code: 'managed-sweep-changed',
+      message: 'Sweep inputs changed'
+    }
+  })
+  const { user } = renderRequestFooter(req)
+
+  expect(screen.getByText('Sweep changed')).toBeTruthy()
+  expect(screen.getByText(/Close this review and create a fresh Sweep/i)).toBeTruthy()
+  expect(screen.getByText(/will not retry automatically/i)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Close request' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Reject request' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Recheck' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /receive QR/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Copy address' })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: 'Close request' }))
+  expect(link.rpc).toHaveBeenCalledWith('closeFailedWalletCallsRequest', req, expect.any(Function))
+  expect(link.send).not.toHaveBeenCalledWith('nav:back', 'panel')
+})
+
 it.each([
   [
     'failed',

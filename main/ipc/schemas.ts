@@ -83,6 +83,125 @@ const DecimalAmountSchema = z
   .min(1)
   .max(512)
   .regex(/^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/)
+const BaseUnitAmountSchema = z.string().regex(/^(?:0|[1-9][0-9]{0,77})$/)
+const QuoteIdSchema = z.string().min(1).max(128)
+const ExpirySchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+const CalldataSchema = z
+  .string()
+  .max(131_074)
+  .regex(/^0x(?:[0-9a-fA-F]{2})*$/)
+const NativeMaxRequestSchema = z
+  .object({
+    account: AddressSchema,
+    assetAddress: AddressSchema,
+    chainId: ChainNumberSchema,
+    recipient: AddressSchema.optional()
+  })
+  .strict()
+const NativeMaxReserveSchema = z
+  .object({
+    feeModel: z.enum(['legacy', 'eip1559']),
+    gasLimit: RpcQuantitySchema,
+    gasPrice: RpcQuantitySchema.optional(),
+    maxFeePerGas: RpcQuantitySchema.optional(),
+    maxPriorityFeePerGas: RpcQuantitySchema.optional(),
+    executionFee: BaseUnitAmountSchema,
+    l1Fee: BaseUnitAmountSchema,
+    total: BaseUnitAmountSchema
+  })
+  .strict()
+  .superRefine((reserve, context) => {
+    const legacy = reserve.feeModel === 'legacy'
+    if (
+      (legacy && (!reserve.gasPrice || reserve.maxFeePerGas || reserve.maxPriorityFeePerGas)) ||
+      (!legacy && (reserve.gasPrice || !reserve.maxFeePerGas || !reserve.maxPriorityFeePerGas))
+    ) {
+      context.addIssue({ code: 'custom', message: 'native Max fee fields do not match the fee model' })
+      return
+    }
+    const gasLimit = BigInt(reserve.gasLimit)
+    const feePerGas = BigInt(legacy ? (reserve.gasPrice as string) : (reserve.maxFeePerGas as string))
+    if (!legacy && BigInt(reserve.maxPriorityFeePerGas as string) > feePerGas) {
+      context.addIssue({ code: 'custom', message: 'native Max priority fee exceeds its maximum fee' })
+    }
+    const executionFee = gasLimit * feePerGas
+    if (
+      executionFee !== BigInt(reserve.executionFee) ||
+      executionFee + BigInt(reserve.l1Fee) !== BigInt(reserve.total)
+    ) {
+      context.addIssue({ code: 'custom', message: 'native Max reserve arithmetic is inconsistent' })
+    }
+  })
+const SweepQuoteRequestSchema = z
+  .object({
+    account: AddressSchema,
+    chainId: ChainNumberSchema,
+    recipient: AddressSchema,
+    tokens: z.array(AddressSchema).max(16),
+    includeNative: z.boolean()
+  })
+  .strict()
+  .superRefine((request, context) => {
+    const total = request.tokens.length + (request.includeNative ? 1 : 0)
+    if (total < 1 || total > 16) {
+      context.addIssue({ code: 'custom', message: 'Sweep must contain between 1 and 16 assets' })
+    }
+    if (new Set(request.tokens.map((token) => token.toLowerCase())).size !== request.tokens.length) {
+      context.addIssue({ code: 'custom', message: 'Sweep token addresses must be distinct' })
+    }
+  })
+const SweepQueueRequestSchema = z
+  .object({
+    quoteId: QuoteIdSchema,
+    account: AddressSchema,
+    chainId: ChainNumberSchema,
+    recipient: AddressSchema
+  })
+  .strict()
+const SweepCallSchema = z
+  .object({ to: AddressSchema, data: CalldataSchema, value: RpcQuantitySchema })
+  .strict()
+const SweepQuoteSchema = z
+  .object({
+    quoteId: QuoteIdSchema,
+    expiresAt: ExpirySchema,
+    account: AddressSchema,
+    chainId: ChainNumberSchema,
+    recipient: AddressSchema,
+    assets: z.array(z.object({ address: AddressSchema, balance: RpcQuantitySchema }).strict()).max(16),
+    native: z
+      .object({ selected: z.boolean(), balance: RpcQuantitySchema, value: RpcQuantitySchema })
+      .strict(),
+    maximumFee: RpcQuantitySchema,
+    calls: z.array(SweepCallSchema).min(1).max(16),
+    execution: z.literal('sequential-non-atomic')
+  })
+  .strict()
+  .superRefine((quote, context) => {
+    const expectedCount = quote.assets.length + (quote.native.selected ? 1 : 0)
+    const distinctAssets = new Set(quote.assets.map(({ address }) => address.toLowerCase()))
+    const tokenCallsMatch = quote.assets.every(
+      ({ address, balance }, index) =>
+        BigInt(balance) > 0n &&
+        quote.calls[index]?.to.toLowerCase() === address.toLowerCase() &&
+        quote.calls[index]?.value === '0x0'
+    )
+    const nativeCall = quote.calls[quote.calls.length - 1]
+    const nativeMatches = quote.native.selected
+      ? BigInt(quote.native.value) > 0n &&
+        nativeCall?.to.toLowerCase() === quote.recipient.toLowerCase() &&
+        nativeCall.data === '0x' &&
+        nativeCall.value === quote.native.value
+      : quote.native.value === '0x0'
+    if (
+      quote.calls.length !== expectedCount ||
+      distinctAssets.size !== quote.assets.length ||
+      !tokenCallsMatch ||
+      !nativeMatches
+    ) {
+      context.addIssue({ code: 'custom', message: 'Sweep quote calls do not match its selected assets' })
+    }
+  })
 const WindowIdSchema = z.enum(['dash', 'panel'])
 const AccentSchema = z.enum([
   'accent1',
@@ -384,7 +503,7 @@ const invokeSchemas = {
   'signers:protectionStatus': z.tuple([]),
   'signers:enableProtection': z.tuple([z.literal('ENABLE_OS_SIGNER_PROTECTION')]),
   'signers:disableProtection': z.tuple([z.literal('DISABLE_OS_SIGNER_PROTECTION')]),
-  'send:maxAmount': z.tuple([ChainNumberSchema, AddressSchema, AddressSchema.optional()]),
+  'send:maxAmount': z.tuple([NativeMaxRequestSchema]),
   'send:queue': z.tuple([
     z
       .object({
@@ -392,10 +511,16 @@ const invokeSchemas = {
         amount: DecimalAmountSchema,
         assetAddress: AddressSchema,
         chainId: ChainNumberSchema,
-        recipient: AddressSchema
+        recipient: AddressSchema,
+        maxQuoteId: z
+          .string()
+          .regex(/^[0-9a-f]{32}$/)
+          .optional()
       })
       .strict()
   ]),
+  'send:quoteSweep': z.tuple([SweepQuoteRequestSchema]),
+  'send:queueSweep': z.tuple([SweepQueueRequestSchema]),
   'send:resolveRecipient': z.tuple([z.string().trim().min(1).max(255)]),
   'tokens:save': z.tuple([TokenSchema, AssetSuggestionReferenceSchema.optional()]),
   'yearn:getCatalog': z.tuple([z.object({ force: z.boolean() }).strict()]),
@@ -491,11 +616,28 @@ const invokeResultSchemas = {
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:maxAmount': z.union([
-    z.object({ success: z.literal(true), amount: z.string().regex(/^(?:0|[1-9][0-9]{0,77})$/) }).strict(),
+    z.object({ success: z.literal(true), amount: BaseUnitAmountSchema }).strict(),
+    z
+      .object({
+        success: z.literal(true),
+        quoteId: z.string().regex(/^[0-9a-f]{32}$/),
+        amount: BaseUnitAmountSchema,
+        expiresAt: ExpirySchema,
+        reserve: NativeMaxReserveSchema
+      })
+      .strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:queue': z.union([
     z.object({ success: z.literal(true), handlerId: IdSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'send:quoteSweep': z.union([
+    SweepQuoteSchema.extend({ success: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'send:queueSweep': z.union([
+    z.object({ success: z.literal(true), handlerId: HandlerIdSchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'send:resolveRecipient': z.union([

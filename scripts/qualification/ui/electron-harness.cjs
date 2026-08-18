@@ -246,6 +246,41 @@ const inputByLabel = async (webContents, label, value) => {
   if (!changed) throw new Error(`Could not find input label ${label}`)
 }
 
+const selectByLabel = async (webContents, label, value) => {
+  const changed = await webContents.executeJavaScript(
+    `(() => {
+      const select = Array.from(document.querySelectorAll('select')).find((element) =>
+        Array.from(element.labels || []).some(
+          (candidate) => candidate.textContent.trim() === ${JSON.stringify(label)}
+        )
+      )
+      if (!select) return false
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
+      setter.call(select, ${JSON.stringify(value)})
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+      return true
+    })()`,
+    true
+  )
+  if (!changed) throw new Error(`Could not find select label ${label}`)
+}
+
+const clickCheckboxText = async (webContents, text) => {
+  const clicked = await webContents.executeJavaScript(
+    `(() => {
+      const label = Array.from(document.querySelectorAll('label')).find(
+        (candidate) => candidate.textContent.includes(${JSON.stringify(text)}) && candidate.querySelector('input[type="checkbox"]')
+      )
+      const checkbox = label?.querySelector('input[type="checkbox"]')
+      if (!checkbox) return false
+      checkbox.click()
+      return true
+    })()`,
+    true
+  )
+  if (!clicked) throw new Error(`Could not find checkbox text ${text}`)
+}
+
 const performAction = async (webContents, action) => {
   if (action.type === 'sequence') {
     for (const step of action.steps) {
@@ -278,6 +313,28 @@ const performAction = async (webContents, action) => {
       )`
     )
     await inputByLabel(webContents, action.label, action.value)
+    return
+  }
+  if (action.type === 'selectLabel') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('select')).some((element) =>
+        Array.from(element.labels || []).some(
+          (candidate) => candidate.textContent.trim() === ${JSON.stringify(action.label)}
+        )
+      )`
+    )
+    await selectByLabel(webContents, action.label, action.value)
+    return
+  }
+  if (action.type === 'clickCheckboxText') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('label')).some(
+        (candidate) => candidate.textContent.includes(${JSON.stringify(action.text)}) && candidate.querySelector('input[type="checkbox"]')
+      )`
+    )
+    await clickCheckboxText(webContents, action.text)
     return
   }
   if (action.type === 'setRequestStatus') {
@@ -415,7 +472,13 @@ const main = async () => {
     if (reply === undefined) throw new Error('Qualification harness does not provide inspector:inspect')
     return reply
   })
-  for (const channel of ['send:resolveRecipient', 'send:queue']) {
+  for (const channel of [
+    'send:resolveRecipient',
+    'send:maxAmount',
+    'send:queue',
+    'send:quoteSweep',
+    'send:queueSweep'
+  ]) {
     ipcMain.handle(channel, (event, ...args) => {
       const scenario = scenarioByWebContents.get(event.sender.id)
       const reply = scenario ? invokeReplyFor(scenario, channel, args) : undefined

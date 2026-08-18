@@ -54,6 +54,8 @@ export const requestInvokeChannels = new Set([
   'signers:disableProtection',
   'send:maxAmount',
   'send:queue',
+  'send:quoteSweep',
+  'send:queueSweep',
   'send:resolveRecipient',
   'tokens:save',
   'tray:addChain',

@@ -10,6 +10,8 @@ import type { Token } from '../store/state'
 import type { TransactionSimulation, WalletCallsSimulation } from '../transaction/simulation'
 import type { AddressSafetyAssessment } from '../addressSafety/types'
 import type { TypedDataContext, TypedMessage } from '../../resources/domain/typedData'
+import type { SweepEvidence } from '../../resources/domain/sweep'
+import type { NativeMaxTrustedMetadata } from '../send/max'
 
 export type {
   Eip3009Authorization,
@@ -146,6 +148,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
     originalActivityId: string
     originalHash: string
   }
+  nativeMax?: NativeMaxTrustedMetadata
   recoverableError?: {
     code:
       | 'account-code-evidence-unavailable'
@@ -293,9 +296,10 @@ export interface WalletCallsRequest extends AccountRequest<'walletCalls'> {
   adjustment?: Readonly<WalletCallBatchAdjustment>
   preparation: WalletCallsPreparation
   simulation: WalletCallsSimulation
+  managedSweep?: SweepEvidence
   addressSafety?: AddressSafetyAssessment
   recoverableError?: {
-    code: 'wallet-call-funding-insufficient' | 'wallet-call-funding-unavailable'
+    code: 'wallet-call-funding-insufficient' | 'wallet-call-funding-unavailable' | 'managed-sweep-changed'
     message: string
     data?: Readonly<{
       available: string

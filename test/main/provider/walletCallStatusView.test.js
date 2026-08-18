@@ -92,3 +92,25 @@ it('updates navigation before summoning the tray', () => {
   )
   expect(order).toEqual(['state', 'tray'])
 })
+
+it('projects only bounded truthful internal submission counts', () => {
+  expect(
+    createWalletCallStatusViewData({ ...input(), callCount: 3, submittedCount: 1 }).status
+  ).toMatchObject({
+    callCount: 3,
+    submittedCount: 1,
+    confirmedCount: 1
+  })
+
+  for (const [callCount, submittedCount] of [
+    [0, 0],
+    [17, 0],
+    [2, -1],
+    [2, 3]
+  ]) {
+    const status = createWalletCallStatusViewData({ ...input(), callCount, submittedCount }).status
+    expect(status.callCount).toBeUndefined()
+    expect(status.submittedCount).toBeUndefined()
+    expect(status.confirmedCount).toBeUndefined()
+  }
+})

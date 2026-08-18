@@ -303,6 +303,7 @@ export interface TransactionSimulation {
   reason?: string
   effects?: SimulationEffect[]
   effectsTruncated?: boolean
+  returnDataKind?: 'abi-bool-true' | 'abi-bool-false' | 'other'
   allowance?: TokenAllowanceSnapshot
   delegation?: AccountDelegationCheck
   accountCodeEvidence?: TransactionAccountCodeEvidence
@@ -1259,15 +1260,26 @@ function legacyDelegationCheck(evidence: SenderAccountCodeEvidence): AccountDele
 function parseSimulatedCall(call: unknown): TransactionSimulation | undefined {
   if (!isRecord(call)) return
   const gasUsed = parseGasUsed(call.gasUsed)
-  if (!gasUsed || !isData(call.returnData)) return
+  const rawReturnData = call.returnData
+  if (!gasUsed || typeof rawReturnData !== 'string' || !isData(rawReturnData)) return
 
   if (call.status === '0x1') {
     if (!Array.isArray(call.logs)) return
     const { effects, truncated } = parseSimulationEffects(call.logs)
+    const returnData = rawReturnData.toLowerCase()
+    const returnDataKind =
+      returnData === '0x'
+        ? undefined
+        : returnData === `0x${'0'.repeat(63)}1`
+          ? ('abi-bool-true' as const)
+          : returnData === `0x${'0'.repeat(64)}`
+            ? ('abi-bool-false' as const)
+            : ('other' as const)
     return {
       status: 'succeeded',
       source: 'eth_simulateV1',
       gasUsed,
+      ...(returnDataKind ? { returnDataKind } : {}),
       ...(effects.length ? { effects } : {}),
       ...(truncated ? { effectsTruncated: true } : {})
     }

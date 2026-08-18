@@ -1993,7 +1993,12 @@ export class Accounts extends EventEmitter {
     return true
   }
 
-  retainWalletCallsFundingFailure(accountId: string, handlerId: string, error: WalletCallFundingError) {
+  retainWalletCallsFundingFailure(
+    accountId: string,
+    handlerId: string,
+    error:
+      WalletCallFundingError | Readonly<{ code: 'managed-sweep-changed'; message: string; data?: undefined }>
+  ) {
     if (typeof accountId !== 'string' || typeof handlerId !== 'string' || !handlerId) {
       throw new Error('Invalid wallet-call request identity')
     }
@@ -2011,7 +2016,7 @@ export class Accounts extends EventEmitter {
       request.locked ||
       !request.res
     ) {
-      throw new Error('Wallet-call request is not available for funding recovery')
+      throw new Error('Wallet-call request is not available for recovery')
     }
 
     request.status = RequestStatus.Error
@@ -2043,7 +2048,7 @@ export class Accounts extends EventEmitter {
     delete request.status
     delete request.notice
     delete request.recoverableError
-    account.rejectRequest(request, { code: 4001, message: 'User closed the unfunded wallet-call request' })
+    account.rejectRequest(request, { code: 4001, message: 'User closed the failed wallet-call request' })
     return true
   }
 

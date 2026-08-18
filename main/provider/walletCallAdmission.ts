@@ -2,6 +2,7 @@ import type { WalletCallsRequest } from '../accounts/types'
 import { WalletCallBatchSchema, type WalletCallBatch } from '../store/state/types/walletCallBatch'
 import { snapshotWalletCalls } from './walletCallExecution'
 import { parseSendCalls, type SendCallsRequest } from './walletCalls'
+import { snapshotSweepEvidence, type SweepEvidence } from '../../resources/domain/sweep'
 
 export interface WalletCallAdmissionCapability {
   batch: WalletCallBatch
@@ -29,6 +30,7 @@ export interface WalletCallAdmissionInput {
   origin: string
   account: string
   payload: JSONRPCRequestPayload
+  managedSweep?: SweepEvidence
 }
 
 function admissionError(code: number, message: string): EVMError {
@@ -94,6 +96,15 @@ export function admitWalletCallBatch(
   if (parsed.from && parsed.from !== account) {
     throw admissionError(4100, 'Wallet-call sender is not the selected account')
   }
+  const managedSweep = input.managedSweep ? snapshotSweepEvidence(input.managedSweep) : undefined
+  if (
+    managedSweep &&
+    (managedSweep.account !== account ||
+      managedSweep.chainId !== parsed.chainId ||
+      JSON.stringify(managedSweep.calls) !== JSON.stringify(snapshotWalletCalls(parsed.calls)))
+  ) {
+    throw admissionError(-32602, 'Managed sweep evidence does not match wallet calls')
+  }
 
   const create = dependencies.ledger.create.bind(dependencies.ledger)
   const addRequest = dependencies.addRequest.bind(dependencies)
@@ -144,7 +155,8 @@ export function admitWalletCallBatch(
       calls: calls.map((call) => ({ ...call })),
       approvals: [],
       preparation: { status: 'pending' },
-      simulation: { status: 'pending', calls: [] }
+      simulation: { status: 'pending', calls: [] },
+      ...(managedSweep ? { managedSweep } : {})
     }
 
     if (addRequest(request) === false) throw new Error('Wallet-call review request was not admitted')

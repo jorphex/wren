@@ -1,6 +1,9 @@
 import { OperationLifecycleLedger } from '../../../main/operationLifecycle/ledger'
 import { WalletCallBatchLedger } from '../../../main/provider/walletCallBatches'
-import { WalletCallLifecycleReconciler } from '../../../main/provider/walletCallLifecycleReconciliation'
+import {
+  isWalletCallLifecycleCandidate,
+  WalletCallLifecycleReconciler
+} from '../../../main/provider/walletCallLifecycleReconciliation'
 
 const account = '0x1111111111111111111111111111111111111111'
 const origin = 'example.test'
@@ -209,6 +212,109 @@ test('does not confirm an incomplete batch even when its submitted transaction i
   await reconciler.reconcileAll(2_000)
   expect(state.operations.get(state.operationId, 2_001)?.state).toBe('confirming')
   expect(state.batches.getStatus(origin, account, state.admission.batch.id, 2_001).status).toBe(100)
+})
+
+test('continues receipt and finality evidence for a failed partial prefix after restart without resuming calls', async () => {
+  const original = fixture(3)
+  original.batches.recordTransaction(origin, account, original.admission.batch.id, hash('1'), 1_001)
+  original.batches.fail(origin, account, original.admission.batch.id, 1_002)
+
+  const operations = new OperationLifecycleLedger(original.operationStorage)
+  const batches = new WalletCallBatchLedger(original.batchStorage, operations)
+  const rpc = canonicalRpc({ [hash('1')]: receipt(hash('1')) }, '0x11', '0x10')
+  const reconciler = new WalletCallLifecycleReconciler(batches, operations, rpc)
+
+  await expect(reconciler.reconcileAll(2_000)).resolves.toEqual([
+    { operationId: original.operationId, status: 'updated' }
+  ])
+  expect(batches.get(origin, account, original.admission.batch.id, 2_001)).toMatchObject({
+    execution: 'failed',
+    callCount: 3,
+    transactions: [{ hash: hash('1'), state: 'submitted', receipt: expect.any(Object) }]
+  })
+  expect(operations.get(original.operationId, 2_001)).toMatchObject({
+    state: 'failed',
+    settlement: { status: 'monitoring' }
+  })
+  await reconciler.reconcileAll(3_000)
+  expect(operations.get(original.operationId, 3_001)).toMatchObject({
+    state: 'failed',
+    settlement: { status: 'complete', basis: 'finalized' }
+  })
+  expect(rpc.mock.calls.filter((call) => call[1] === 'eth_getTransactionReceipt')).toHaveLength(2)
+})
+
+test('retries a failed partial prefix after a transient restart RPC outage', async () => {
+  const original = fixture(2)
+  original.batches.recordTransaction(origin, account, original.admission.batch.id, hash('1'), 1_001)
+  original.batches.fail(origin, account, original.admission.batch.id, 1_002)
+  const operations = new OperationLifecycleLedger(original.operationStorage)
+  const batches = new WalletCallBatchLedger(original.batchStorage, operations)
+
+  await expect(
+    new WalletCallLifecycleReconciler(batches, operations, async () => {
+      throw new Error('temporary offline')
+    }).reconcileAll(2_000)
+  ).resolves.toEqual([{ operationId: original.operationId, status: 'error', reason: 'temporary offline' }])
+  expect(operations.get(original.operationId, 2_001)?.state).toBe('failed')
+
+  await expect(
+    new WalletCallLifecycleReconciler(
+      batches,
+      operations,
+      canonicalRpc({ [hash('1')]: receipt(hash('1')) })
+    ).reconcileAll(3_000)
+  ).resolves.toEqual([{ operationId: original.operationId, status: 'updated' }])
+  expect(operations.get(original.operationId, 3_001)).toMatchObject({
+    state: 'failed',
+    settlement: { status: 'monitoring' }
+  })
+})
+
+test('does not poll a failed batch with no signed or submitted prefix', async () => {
+  const state = fixture(2)
+  state.batches.fail(origin, account, state.admission.batch.id, 1_001)
+  const operation = state.operations.get(state.operationId, 2_000)
+  expect(operation).toBeUndefined()
+  const failedOperation = {
+    kind: 'walletCalls',
+    state: 'failed',
+    settlement: { status: 'monitoring' }
+  } as Parameters<typeof isWalletCallLifecycleCandidate>[0]
+  expect(isWalletCallLifecycleCandidate(failedOperation, false)).toBe(false)
+  expect(isWalletCallLifecycleCandidate(failedOperation, true)).toBe(true)
+
+  const rpc = jest.fn(async () => null)
+  await expect(
+    new WalletCallLifecycleReconciler(state.batches, state.operations, rpc).reconcileAll(2_000)
+  ).resolves.toEqual([])
+  expect(rpc).not.toHaveBeenCalled()
+})
+
+test('clears reorged receipt evidence for a failed partial prefix and keeps the unsent suffix absent', async () => {
+  const state = fixture(3)
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)
+  state.batches.fail(origin, account, state.admission.batch.id, 1_002)
+  await new WalletCallLifecycleReconciler(
+    state.batches,
+    state.operations,
+    canonicalRpc({ [hash('1')]: receipt(hash('1')) }, '0x11')
+  ).reconcileAll(2_000)
+
+  await new WalletCallLifecycleReconciler(
+    state.batches,
+    state.operations,
+    canonicalRpc({ [hash('1')]: null })
+  ).reconcileAll(3_000)
+  expect(state.operations.get(state.operationId, 3_001)?.state).toBe('reorged')
+  expect(state.batches.get(origin, account, state.admission.batch.id, 3_001)).toMatchObject({
+    execution: 'failed',
+    callCount: 3,
+    transactions: [{ hash: hash('1'), state: 'submitted' }]
+  })
+  expect(
+    state.batches.get(origin, account, state.admission.batch.id, 3_001).transactions[0]?.receipt
+  ).toBeUndefined()
 })
 
 test('marks a final mixed-result batch failed without changing truthful external status', async () => {

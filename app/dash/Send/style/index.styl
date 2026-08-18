@@ -12,6 +12,40 @@
   display flex
   flex-direction column
 
+.sendModeSwitch
+  display grid
+  grid-template-columns 1fr 1fr
+  gap 4px
+  margin 14px 24px 0
+  padding 4px
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+
+  button
+    min-height 44px
+    padding 0 12px
+    border 0
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background transparent
+    font-family var(--wren-font-ui)
+    font-weight 610
+    cursor pointer
+
+    &[aria-pressed='true']
+      color var(--wren-text-primary)
+      background var(--wren-surface-raised)
+      box-shadow var(--wren-shadow-sm)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+    &:disabled
+      color var(--wren-text-disabled)
+      cursor default
+
 .sendLedger
   flex 1
   padding 12px 24px 0
@@ -54,6 +88,7 @@
 .sendAssetValue
   appearance none
   width 100%
+  min-height 44px
   justify-content space-between
   padding 0
   border 0
@@ -113,6 +148,7 @@
   padding 0 6px 0 12px
 
   input
+    height 44px
     min-width 0
     flex 1
     border 0
@@ -249,6 +285,266 @@
   text-overflow ellipsis
   user-select none
   white-space nowrap
+
+.sendQuotePanel
+  display flex
+  gap var(--wren-space-3)
+  margin 12px 0 4px
+  padding var(--wren-space-4)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+  flex-direction column
+
+  > span,
+  > p
+    margin 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 1.45
+
+.sendQuotePanelReview
+  border-color var(--wren-accent-primary)
+
+.sendQuoteHeading
+  display flex
+  min-width 0
+  align-items flex-start
+  justify-content space-between
+  gap var(--wren-space-3)
+
+  > div
+    display flex
+    min-width 0
+    flex-direction column
+    gap 3px
+
+    span
+      color var(--wren-text-muted)
+      font-size var(--wren-type-caption)
+
+    strong
+      overflow-wrap anywhere
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-body)
+
+.sendQuoteBadge
+  flex none
+  padding 4px 7px
+  border-radius 999px
+  color var(--wren-text-secondary)
+  background var(--wren-success-soft)
+  font-size var(--wren-type-caption)
+
+.sendQuoteEdit
+  align-self flex-start
+
+.sendQuoteFacts
+  display grid
+  gap 6px
+  margin 0
+
+  div
+    display grid
+    grid-template-columns minmax(110px, .8fr) minmax(0, 1.2fr)
+    gap 10px
+
+  dt
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+  dd
+    min-width 0
+    margin 0
+    overflow-wrap anywhere
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    text-align right
+
+.sendSweepSelect,
+.sendSweepReview
+  display flex
+  padding 0 24px
+  flex-direction column
+
+.sendSweepChain
+  display grid
+  grid-template-columns auto minmax(0, 1fr)
+  align-items center
+  gap var(--wren-space-3)
+  padding var(--wren-space-3) 0
+
+  label
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+    font-weight 600
+    text-transform uppercase
+
+  select
+    min-height 44px
+    padding 0 12px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+    font-family var(--wren-font-ui)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+.sendSweepHeader
+  display flex
+  align-items flex-end
+  justify-content space-between
+  gap var(--wren-space-3)
+  padding var(--wren-space-3) 0 var(--wren-space-2)
+
+  > div
+    display flex
+    flex-direction column
+    gap 3px
+
+  strong
+    font-size var(--wren-type-body)
+
+  span
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+.sendSweepAssets
+  display flex
+  border-top 1px solid var(--wren-border-subtle)
+  flex-direction column
+
+  > label
+    display grid
+    min-height 62px
+    grid-template-columns 22px 34px minmax(0, 1fr) auto
+    align-items center
+    gap 10px
+    border-bottom 1px solid var(--wren-border-subtle)
+    cursor pointer
+
+    > span
+      min-width 0
+
+      &:last-child
+        font-family var(--wren-font-mono)
+        font-size var(--wren-type-small)
+
+      strong,
+      code
+        display block
+        overflow hidden
+        text-overflow ellipsis
+        white-space nowrap
+
+      code
+        margin-top 3px
+        color var(--wren-text-muted)
+        font-family var(--wren-font-mono)
+        font-size var(--wren-type-caption)
+
+    input
+      width 18px
+      height 18px
+
+.sendSweepWarning
+  display flex
+  gap 4px
+  margin var(--wren-space-3) 0
+  padding 10px 12px
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background var(--wren-warning-soft)
+  font-size var(--wren-type-small)
+  line-height 1.45
+  flex-direction column
+
+.sendSweepWarningCompact
+  display block
+
+.sendSweepTruth
+  display flex
+  border-top 1px solid var(--wren-border-subtle)
+  flex-direction column
+
+  > div
+    display grid
+    grid-template-columns minmax(0, 1fr) auto
+    gap 5px 10px
+    padding var(--wren-space-3) 0
+    border-bottom 1px solid var(--wren-border-subtle)
+
+    > span:first-child
+      grid-column 1 / -1
+      color var(--wren-text-muted)
+      font-size var(--wren-type-caption)
+      font-weight 600
+
+    > code
+      min-width 0
+      overflow-wrap anywhere
+      color var(--wren-text-primary)
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-caption)
+      line-height 18px
+
+    > button,
+    > .sendSweepCopies
+      grid-column 2
+      grid-row 2 / span 2
+      align-self center
+
+.sendSweepCopies
+  display flex
+  flex-direction column
+  gap 4px
+
+.sendSweepPrivacyCopy
+  margin var(--wren-space-2) 0 0
+  color var(--wren-text-muted)
+  font-size var(--wren-type-caption)
+  line-height 1.4
+
+.sendSweepCalls
+  margin var(--wren-space-3) 0
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-small)
+
+  summary
+    min-height 44px
+    line-height 44px
+    cursor pointer
+
+  > div
+    display flex
+    gap 3px
+    padding 8px 0
+    border-top 1px solid var(--wren-border-subtle)
+    flex-direction column
+
+    code
+      overflow-wrap anywhere
+      font-family var(--wren-font-mono)
+      font-size var(--wren-type-caption)
+
+.sendSweepReviewActions
+  position sticky
+  bottom 0
+  display flex
+  justify-content flex-end
+  gap var(--wren-space-2)
+  margin 10px -24px 0
+  padding 14px 24px 16px
+  border-top 1px solid var(--wren-border-subtle)
+  background var(--wren-bg-canvas)
+
+.sendSweepShelf
+  margin-right -24px
+  margin-left -24px
 
 .sendComposerError
   margin 12px 24px 0
@@ -504,6 +800,7 @@
     color var(--wren-text-secondary)
     font-size var(--wren-type-body)
     line-height 1.5
+
 
 .sendConfirmedDestination
   width min(100%, 430px)

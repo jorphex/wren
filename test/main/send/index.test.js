@@ -8,7 +8,11 @@ import { originIdForName, FRAME_SEND_ORIGIN } from '../../../resources/domain/or
 import { toRpcQuantity } from '../../../resources/domain/transaction/quantity'
 
 jest.mock('../../../main/accounts', () => ({ current: jest.fn() }))
-jest.mock('../../../main/provider', () => ({ estimateGas: jest.fn(), sendTransaction: jest.fn() }))
+jest.mock('../../../main/provider', () => ({
+  connection: { connections: { ethereum: {} }, send: jest.fn() },
+  estimateGas: jest.fn(),
+  sendTransaction: jest.fn()
+}))
 jest.mock('../../../main/store', () => jest.fn())
 jest.mock('../../../main/store/action', () => ({ requireStoreAction: jest.fn() }))
 jest.mock('../../../main/nebula', () => {
@@ -20,6 +24,7 @@ const mockResolveEns = jest.requireMock('../../../main/nebula')().ens.resolve
 
 const account = '0x1111111111111111111111111111111111111111'
 const recipient = '0x2222222222222222222222222222222222222222'
+const token = '0x3333333333333333333333333333333333333333'
 const actions = {
   addOriginRequest: jest.fn(),
   initOrigin: jest.fn(),
@@ -39,6 +44,13 @@ beforeEach(() => {
   jest.clearAllMocks()
   accounts.current.mockReturnValue({ id: account, lastSignerType: 'ring' })
   requireStoreAction.mockImplementation((name) => actions[name])
+  provider.connection.send.mockImplementation((payload, response) => {
+    if (payload.method === 'eth_getBalance') return response({ result: '0xde0b6b3a7640000' })
+    if (payload.method === 'eth_getTransactionCount') return response({ result: '0x5' })
+    if (payload.method === 'eth_getBlockByNumber') return response({ result: {} })
+    if (payload.method === 'eth_gasPrice') return response({ result: '0x3b9aca00' })
+    return response({ error: { message: 'unsupported test RPC' } })
+  })
   store.mockImplementation((...path) => {
     if (path.join('.') === `main.balances.${account}`) {
       return [
@@ -160,43 +172,108 @@ it('distinguishes invalid address input from unavailable ENS lookup', async () =
 it('uses a recipient-aware gas estimate when calculating the native maximum', async () => {
   provider.estimateGas.mockResolvedValue('0x7530')
 
-  await expect(send.maxAmount(1, NATIVE_CURRENCY, recipient)).resolves.toEqual({
-    success: true,
-    amount: '999970000000000000'
-  })
+  await expect(
+    send.maxAmount({ account, chainId: 1, assetAddress: NATIVE_CURRENCY, recipient })
+  ).resolves.toEqual(
+    expect.objectContaining({
+      success: true,
+      amount: '999970000000000000',
+      reserve: expect.objectContaining({ total: '30000000000000' })
+    })
+  )
   expect(provider.estimateGas.mock.calls.map(([transaction]) => transaction)).toEqual([
     {
       chainId: '0x1',
       from: account,
+      nonce: '0x5',
       to: recipient,
       value: toRpcQuantity(999979000000000000n)
     },
     {
       chainId: '0x1',
       from: account,
+      nonce: '0x5',
       to: recipient,
       value: toRpcQuantity(999970000000000000n)
     }
   ])
 })
 
-it('does not offer a native maximum without live fee data', async () => {
+it('keeps token Max available before a recipient is entered', async () => {
   store.mockImplementation((...path) => {
     if (path.join('.') === `main.balances.${account}`) {
       return [
         {
-          address: NATIVE_CURRENCY,
-          balance: '0xde0b6b3a7640000',
+          address: token,
+          balance: '1234567',
           chainId: 1,
-          decimals: 18
+          decimals: 6,
+          displayBalance: '1.234567',
+          name: 'Token',
+          symbol: 'TOK'
         }
       ]
     }
   })
 
-  await expect(send.maxAmount(1, NATIVE_CURRENCY, recipient)).resolves.toEqual({
+  await expect(send.maxAmount({ account, chainId: 1, assetAddress: token })).resolves.toEqual({
+    success: true,
+    amount: '1234567'
+  })
+  expect(provider.connection.send).not.toHaveBeenCalled()
+  expect(provider.estimateGas).not.toHaveBeenCalled()
+})
+
+it('binds a reviewed Max quote to the queued transaction and trusted metadata', async () => {
+  provider.estimateGas.mockResolvedValue('0x7530')
+  const quote = await send.maxAmount({
+    account,
+    chainId: 1,
+    assetAddress: NATIVE_CURRENCY,
+    recipient
+  })
+  expect(quote).toEqual(expect.objectContaining({ success: true, amount: '999970000000000000' }))
+
+  provider.sendTransaction.mockImplementation((payload, response, chain, onQueued, metadata) => {
+    expect(payload.params[0]).toEqual(
+      expect.objectContaining({
+        type: '0x0',
+        nonce: '0x5',
+        gasLimit: '0x7530',
+        gasPrice: '0x3b9aca00',
+        value: toRpcQuantity(999970000000000000n)
+      })
+    )
+    expect(metadata.nativeMax).toEqual(
+      expect.objectContaining({
+        quoteId: quote.quoteId,
+        account,
+        assetAddress: NATIVE_CURRENCY,
+        chainId: 1,
+        recipient,
+        amount: quote.amount,
+        evidence: expect.objectContaining({ nonce: '0x5' })
+      })
+    )
+    onQueued('max-handler')
+  })
+
+  await expect(send.queue({ ...draft, amount: '0.99997', maxQuoteId: quote.quoteId })).resolves.toEqual({
+    success: true,
+    handlerId: 'max-handler'
+  })
+})
+
+it('does not offer a native maximum without live RPC evidence', async () => {
+  provider.connection.send.mockImplementation((payload, response) =>
+    response({ error: { message: 'private RPC detail' } })
+  )
+
+  await expect(
+    send.maxAmount({ account, chainId: 1, assetAddress: NATIVE_CURRENCY, recipient })
+  ).resolves.toEqual({
     success: false,
-    error: 'fee-unavailable'
+    error: 'max-unavailable'
   })
   expect(provider.estimateGas).not.toHaveBeenCalled()
 })
@@ -204,8 +281,10 @@ it('does not offer a native maximum without live fee data', async () => {
 it('fails native Max closed when recipient-specific estimation fails', async () => {
   provider.estimateGas.mockRejectedValue(new Error('private RPC detail'))
 
-  await expect(send.maxAmount(1, NATIVE_CURRENCY, recipient)).resolves.toEqual({
+  await expect(
+    send.maxAmount({ account, chainId: 1, assetAddress: NATIVE_CURRENCY, recipient })
+  ).resolves.toEqual({
     success: false,
-    error: 'fee-unavailable'
+    error: 'max-unavailable'
   })
 })
