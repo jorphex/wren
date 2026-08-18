@@ -157,7 +157,13 @@ overwrite-before-delete is not secure erasure on modern filesystems or SSDs.
 
 #### Local metadata
 
-Contacts, notes, addresses, and timestamps are unencrypted relationship metadata.
+Contacts, notes, addresses, timestamps, and user-attested verification provenance
+are unencrypted relationship metadata. "Verified out of band" records only the
+user's own statement, time, and optional note; it is not a trust score or proof and
+never suppresses the full address, lookalike evidence, simulation, approval, or
+signing warnings. Address-book JSON exports contain this metadata in plaintext.
+Wren offers Save contact explicitly after confirmation but does not retain a full
+recipient history.
 The address-safety index is also local unencrypted metadata: it keeps at most 500
 one-year records containing a profile-bound SHA-256 full-address digest, the first
 and last four hexadecimal characters needed for exact-end lookalike comparison,
@@ -170,10 +176,10 @@ not an assertion that a destination is safe or malicious.
 #### Profile backups
 
 User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
-envelopes over an explicit recovery allowlist. They include configuration and
-validated encrypted software-signer records, but exclude activity, address-safety
-memory, pending work,
-runtime observations, caches, installed dapp content, and Companion credentials;
+envelopes over an explicit recovery allowlist. They include configuration, validated
+contacts and their provenance, and validated encrypted software-signer records, but
+exclude activity, address-safety memory, pending work, runtime observations, caches,
+installed dapp content, and Companion credentials;
 hardware devices keep their keys. Export writes a new mode-`0600` regular file.
 When OS-backed device protection is enabled, export first verifies the
 all-or-nothing local policy and removes only that outer layer in main memory; the
@@ -187,10 +193,11 @@ identity, bytes, and inspected metadata, then requires an explicit replace actio
 The replacement runs before application bootstrap using an atomic swap, receipt,
 and rollback; a target is not committed unless it revalidates. The backup password
 is user-managed, not keychain-bound, and restoring intentionally requires Companion
-re-pairing. Names are unverified aliases, never an authorization or destination
-source; review keeps the full address and aliases do not alter calldata, recipients,
-signing, simulation, or broadcast. Trusted labels reject Unicode control/format
-characters; migration removes only invalid legacy entries. Prefer hardware signers
+re-pairing. Names and user-attested provenance are informational, never an
+authorization or destination source; review keeps the full address and they do not
+alter calldata, recipients, signing, simulation, or broadcast. Trusted labels and
+verification notes reject Unicode control/format characters; migration removes only
+invalid legacy entries. Prefer hardware signers
 and independent backups. Encryption migrations must stay versioned,
 address-verified, atomic, tested with non-real data, and recoverable without
 weakening encryption.

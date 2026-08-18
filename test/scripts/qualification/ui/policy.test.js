@@ -278,6 +278,50 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   })
 })
 
+it('qualifies recipient and contact surfaces at every scale and shell height', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const contactLists = scenarios.filter(
+    ({ state, variant }) => state === 'address-book-list' && variant !== 'remove'
+  )
+  const contactEditors = scenarios.filter(({ state }) => state === 'address-book-editor')
+  const sendConfirmations = scenarios.filter(({ state }) => state === 'send-confirmed')
+
+  expect(contactLists).toHaveLength(6)
+  expect(contactEditors).toHaveLength(6)
+  expect(sendConfirmations).toHaveLength(6)
+  expect(scenarios.find(({ id }) => id === 'dash-address-book-remove-short-1.5')).toMatchObject({
+    action: { type: 'clickText', text: 'Remove Operations multisig with a deliberately long label' },
+    scale: 1.5,
+    logicalHeight: 744
+  })
+  for (const scenario of [...contactLists, ...contactEditors, ...sendConfirmations]) {
+    expect(INTERFACE_SCALES).toContain(scenario.scale)
+    expect([744, 900]).toContain(scenario.logicalHeight)
+  }
+
+  const listState = fixtureFor(contactLists[0])
+  const verified = Object.values(listState.main.addressBook).find(
+    ({ provenance }) => provenance.status === 'verified-out-of-band'
+  )
+  expect(verified.provenance.verifiedAt).toBeLessThanOrEqual(verified.updatedAt)
+  expect(verified.address).toBe('0x3333333333333333333333333333333333333333')
+
+  const sendScenario = sendConfirmations[0]
+  expect(invokeReplyFor(sendScenario, 'send:resolveRecipient')).toEqual({
+    success: true,
+    address: '0x2222222222222222222222222222222222222222',
+    name: ''
+  })
+  expect(invokeReplyFor(sendScenario, 'send:queue')).toEqual({
+    success: true,
+    handlerId: 'qualification-send-request'
+  })
+  expect(sendScenario.action.steps.at(-1)).toMatchObject({
+    type: 'setRequestStatus',
+    status: 'confirmed'
+  })
+})
+
 it('fixtures the transaction handoff, request summary, and Trezor PIN review surfaces', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
   const byId = (id) => scenarios.find((scenario) => scenario.id === id)

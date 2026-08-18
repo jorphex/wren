@@ -131,6 +131,10 @@ async function resolveRecipient(value: unknown): Promise<SendResult<{ address: s
     // Continue with ENS resolution.
   }
 
+  if (recipient.toLowerCase().startsWith('0x')) {
+    return { success: false, error: SEND_ERROR.RecipientInvalid }
+  }
+
   try {
     const result = await nebula.ens.resolve(recipient, { timeout: 8_000 })
     const address = result.addresses.eth
@@ -140,7 +144,7 @@ async function resolveRecipient(value: unknown): Promise<SendResult<{ address: s
     log.info('Could not resolve Send recipient', {
       reason: error instanceof Error ? error.message.slice(0, 160) : 'unknown'
     })
-    return { success: false, error: SEND_ERROR.RecipientInvalid }
+    return { success: false, error: SEND_ERROR.RecipientLookupUnavailable }
   }
 }
 

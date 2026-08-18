@@ -3,11 +3,11 @@
     "formatVersion": 1,
     "synthetic": true,
     "title": "Synthetic current safe profile state",
-    "sourceVersion": 64
+    "sourceVersion": 65
   },
   "state": {
     "main": {
-      "_version": 64,
+      "_version": 65,
       "instanceId": "11111111-1111-4111-8111-111111111111",
       "colorway": "dark",
       "launch": false,
@@ -99,7 +99,16 @@
       },
       "origins": {},
       "permissions": {},
-      "addressBook": {},
+      "addressBook": {
+        "0x1111111111111111111111111111111111111111": {
+          "address": "0x1111111111111111111111111111111111111111",
+          "name": "Fixture Treasury",
+          "note": "Synthetic migration contact",
+          "provenance": { "status": "saved" },
+          "createdAt": 1700000000000,
+          "updatedAt": 1700000000000
+        }
+      },
       "activity": [],
       "operationLifecycles": {},
       "outboundAddressMemory": {},

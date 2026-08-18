@@ -11,9 +11,12 @@ jest.mock('../../../main/accounts', () => ({ current: jest.fn() }))
 jest.mock('../../../main/provider', () => ({ estimateGas: jest.fn(), sendTransaction: jest.fn() }))
 jest.mock('../../../main/store', () => jest.fn())
 jest.mock('../../../main/store/action', () => ({ requireStoreAction: jest.fn() }))
-jest.mock('../../../main/nebula', () => () => ({
-  ens: { resolve: jest.fn() }
-}))
+jest.mock('../../../main/nebula', () => {
+  const resolve = jest.fn()
+  return () => ({ ens: { resolve } })
+})
+
+const mockResolveEns = jest.requireMock('../../../main/nebula')().ens.resolve
 
 const account = '0x1111111111111111111111111111111111111111'
 const recipient = '0x2222222222222222222222222222222222222222'
@@ -138,6 +141,20 @@ it('returns a bounded generic failure instead of exposing provider error text', 
   })
 
   await expect(send.queue(draft)).resolves.toEqual({ success: false, error: 'send-unavailable' })
+})
+
+it('distinguishes invalid address input from unavailable ENS lookup', async () => {
+  await expect(send.resolveRecipient('0x1234')).resolves.toEqual({
+    success: false,
+    error: 'recipient-invalid'
+  })
+  expect(mockResolveEns).not.toHaveBeenCalled()
+
+  mockResolveEns.mockRejectedValueOnce(new Error('private resolver detail'))
+  await expect(send.resolveRecipient('friend.eth')).resolves.toEqual({
+    success: false,
+    error: 'recipient-lookup-unavailable'
+  })
 })
 
 it('uses a recipient-aware gas estimate when calculating the native maximum', async () => {

@@ -7,6 +7,7 @@ test('returns the canonical contact persisted by a store action whose return val
     address,
     name: 'Workshop',
     note: '',
+    provenance: { status: 'saved' as const },
     createdAt: 1,
     updatedAt: 1
   }

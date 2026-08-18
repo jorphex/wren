@@ -224,6 +224,7 @@ it('renders directly copyable evidence without authorization or signature materi
         address: delegate,
         name: 'Delegate contract',
         note: '',
+        provenance: { status: 'saved' },
         createdAt: 1,
         updatedAt: 1
       }
@@ -235,7 +236,7 @@ it('renders directly copyable evidence without authorization or signature materi
     screen.getAllByText(`After confirmation, this account will no longer delegate execution to ${delegate}.`)
   ).toHaveLength(1)
   expect(screen.getByText('Delegate contract')).toBeTruthy()
-  expect(screen.getByText('Address book')).toBeTruthy()
+  expect(screen.getByText('Address book · Saved contact')).toBeTruthy()
   expect(screen.getByText('Configured RPC · eth_getCode')).toBeTruthy()
   expect(screen.getByText('Transaction nonce').nextElementSibling.textContent).toBe('3')
   const accountCopy = screen.getByRole('button', { name: 'Copy account address' })

@@ -15,6 +15,7 @@ jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const recipient = '0x2222222222222222222222222222222222222222'
+const secondRecipient = '0x5555555555555555555555555555555555555555'
 const token = '0x3333333333333333333333333333333333333333'
 
 const baseState = () => ({
@@ -161,6 +162,43 @@ it('uses the shared illustrated empty-state anatomy when no asset is sendable', 
   })
 
   expect(screen.getByText('No sendable assets on this network').closest('.wrenEmptyState')).toBeTruthy()
+  expect(screen.getByText('Wren found no positive balances available to send.')).toBeTruthy()
+})
+
+it('distinguishes balance refresh and disconnected asset networks from an empty account', () => {
+  const { unmount } = renderSend((state) => {
+    state.main.scanning = { [account]: true }
+    state.main.balances[account] = []
+    return state
+  })
+
+  expect(screen.getByText('Checking balances…')).toBeTruthy()
+  expect(screen.getByText('Wren is refreshing this account before showing sendable assets.')).toBeTruthy()
+  unmount()
+
+  renderSend((state) => {
+    state.main.networks.ethereum[1].connection.endpoints[0].connected = false
+    state.main.networks.ethereum[8453].connection.endpoints[0].connected = false
+    return state
+  })
+
+  expect(screen.getByText('Asset networks unavailable')).toBeTruthy()
+  expect(screen.getByText('Reconnect the networks holding these assets before sending.')).toBeTruthy()
+})
+
+it('honors the global balance privacy setting in the composer and asset picker', () => {
+  const { store } = renderSend((state) => {
+    state.selected.hideBalances = true
+    return state
+  })
+
+  expect(screen.getByText('Available balance hidden')).toBeTruthy()
+  expect(screen.queryByText('Available: 1.00 ETH')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
+  expect(screen.getAllByText('••••')).toHaveLength(2)
+  expect(screen.queryByText('1.00')).toBeNull()
+  expect(screen.queryByText('100.00')).toBeNull()
 })
 
 it('keeps the asset label inert and opens the picker from the asset control only', () => {
@@ -182,6 +220,7 @@ it('chooses a saved contact from the recipient field', async () => {
       createdAt: 1,
       name: 'Garden Friend',
       note: '',
+      provenance: { status: 'saved' },
       updatedAt: 1
     }
     return state
@@ -277,6 +316,28 @@ it('validates a recipient and amount before queueing the existing transaction re
   expect(await screen.findByText('Transaction queued')).toBeTruthy()
 })
 
+it('associates canonical recipient evidence with the field and distinguishes lookup failure', async () => {
+  resolveSendRecipient.mockResolvedValueOnce({ success: true, address: recipient, name: 'friend.eth' })
+  renderSend()
+
+  const field = screen.getByPlaceholderText('Enter an address')
+  fireEvent.change(field, { target: { value: 'friend.eth' } })
+  expect(await screen.findByText(recipient)).toBeTruthy()
+  expect(field.getAttribute('aria-describedby')).toBe('sendRecipientFeedback')
+  fireEvent.click(screen.getByRole('button', { name: 'Copy recipient address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+
+  resolveSendRecipient.mockResolvedValueOnce({
+    success: false,
+    error: 'recipient-lookup-unavailable'
+  })
+  fireEvent.change(field, { target: { value: 'offline.eth' } })
+  expect(
+    await screen.findByText('Recipient lookup is unavailable. Enter or verify the full address to continue.')
+  ).toBeTruthy()
+  expect(field.getAttribute('aria-invalid')).toBe('true')
+})
+
 it('queues a zero-value transaction for review', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'zero-send-request' })
@@ -355,7 +416,6 @@ it('ignores a delayed Max result after the selected asset changes', async () => 
 })
 
 it('ignores a delayed native Max result after the recipient changes', async () => {
-  const secondRecipient = '0x5555555555555555555555555555555555555555'
   let finishMax
   resolveSendRecipient.mockImplementation(async (value) => ({ success: true, address: value }))
   maxSendAmount.mockReturnValue(new Promise((resolve) => (finishMax = resolve)))
@@ -418,7 +478,7 @@ it('keeps a submitted transaction visible without treating it as final success',
   expect(screen.queryByText('Transaction queued')).toBeNull()
 })
 
-it('announces a confirmed transaction and closes the dashboard after a three-second dwell', async () => {
+it('announces a confirmed transaction, keeps it open, and offers the unsaved destination', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
   const { store } = renderSend()
@@ -429,55 +489,96 @@ it('announces a confirmed transaction and closes the dashboard after a three-sec
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
   await screen.findByText('Transaction queued')
 
-  jest.useFakeTimers()
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
   })
 
   expect(screen.getByRole('status').textContent).toContain('Transaction confirmed')
+  expect(screen.getByText(recipient)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Save contact' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Close' }).className).toContain('wrenControlLarge')
-  act(() => jest.advanceTimersByTime(2_999))
+  jest.useFakeTimers()
+  act(() => jest.advanceTimersByTime(30_000))
   expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
 
-  act(() => jest.advanceTimersByTime(1))
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+  fireEvent.click(screen.getByRole('button', { name: 'Copy address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+  expect(screen.getByText('Address copied')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Close' }).className).toContain('wrenControlSecondary')
+  expect(screen.getByRole('button', { name: 'Save contact' }).className).toContain('wrenControlGhost')
+  fireEvent.click(screen.getByRole('button', { name: 'Save contact' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'addressBook',
+    data: { screen: 'edit', seed: recipient }
+  })
 })
 
-it('restarts the confirmed auto-close dwell after success-surface interaction ends', async () => {
+it('binds confirmation and contact actions to the queued recipient while queueing is pending', async () => {
+  let finishQueue
+  resolveSendRecipient.mockImplementation(async (value) => ({ success: true, address: value }))
+  queueSend.mockReturnValue(new Promise((resolve) => (finishQueue = resolve)))
+  const { store } = renderSend()
+
+  const recipientField = screen.getByPlaceholderText('Enter an address')
+  fireEvent.change(recipientField, { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+
+  expect(recipientField.disabled).toBe(true)
+  expect(screen.getByPlaceholderText('0.00').disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Choose an asset' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Choose contact' }).disabled).toBe(true)
+  // Testing Library can dispatch an impossible browser change to a disabled field;
+  // the receipt must still stay bound to the submitted snapshot.
+  fireEvent.change(recipientField, { target: { value: secondRecipient } })
+
+  await act(async () => finishQueue({ success: true, handlerId: 'send-request' }))
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
+  })
+
+  expect(screen.getByText(recipient)).toBeTruthy()
+  expect(screen.queryByText(secondRecipient)).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Copy address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+  fireEvent.click(screen.getByRole('button', { name: 'Save contact' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'addressBook',
+    data: { screen: 'edit', seed: recipient }
+  })
+})
+
+it('opens an existing confirmed recipient contact without creating a duplicate', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
-  const { store } = renderSend()
+  const { store } = renderSend((state) => {
+    state.main.addressBook[recipient.toLowerCase()] = {
+      address: recipient,
+      createdAt: 1,
+      name: 'Garden Friend',
+      note: '',
+      provenance: { status: 'saved' },
+      updatedAt: 1
+    }
+    return state
+  })
 
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
   await screen.findByText('Transaction queued')
-
-  jest.useFakeTimers()
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
   })
-  const success = screen.getByRole('status')
-  const close = screen.getByRole('button', { name: 'Close' })
 
-  fireEvent.mouseEnter(success)
-  act(() => jest.advanceTimersByTime(3_000))
-  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
-
-  fireEvent.mouseLeave(success)
-  act(() => jest.advanceTimersByTime(2_999))
-  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
-
-  fireEvent.focus(close)
-  act(() => jest.advanceTimersByTime(1))
-  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
-
-  fireEvent.blur(close)
-  act(() => jest.advanceTimersByTime(2_999))
-  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
-  act(() => jest.advanceTimersByTime(1))
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+  expect(screen.getByText('Garden Friend')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'View contact' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'addressBook',
+    data: { screen: 'edit', address: recipient }
+  })
 })
 
 it('keeps submitted, declined, and failed requests open until the user acts', async () => {

@@ -227,7 +227,11 @@ const inputByLabel = async (webContents, label, value) => {
   const changed = await webContents.executeJavaScript(
     `(() => {
       const input = Array.from(document.querySelectorAll('input')).find(
-        (element) => element.getAttribute('aria-label') === ${JSON.stringify(label)}
+        (element) =>
+          element.getAttribute('aria-label') === ${JSON.stringify(label)} ||
+          Array.from(element.labels || []).some(
+            (candidate) => candidate.textContent.trim() === ${JSON.stringify(label)}
+          )
       )
       if (!input) return false
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
@@ -265,10 +269,35 @@ const performAction = async (webContents, action) => {
     await waitFor(
       webContents,
       `Array.from(document.querySelectorAll('input')).some(
-        (input) => input.getAttribute('aria-label') === ${JSON.stringify(action.label)}
+        (input) =>
+          input.getAttribute('aria-label') === ${JSON.stringify(action.label)} ||
+          Array.from(input.labels || []).some(
+            (candidate) => candidate.textContent.trim() === ${JSON.stringify(action.label)}
+          )
       )`
     )
     await inputByLabel(webContents, action.label, action.value)
+    return
+  }
+  if (action.type === 'setRequestStatus') {
+    await waitFor(webContents, `document.body.innerText.includes('Transaction queued')`)
+    const updated = await webContents.executeJavaScript(
+      `(() => {
+        if (!window.store?.api?.replaceState) return false
+        const state = JSON.parse(JSON.stringify(window.store()))
+        const account = state.main?.accounts?.[${JSON.stringify(action.account)}]
+        if (!account) return false
+        account.requests ||= {}
+        account.requests[${JSON.stringify(action.requestId)}] = {
+          handlerId: ${JSON.stringify(action.requestId)},
+          status: ${JSON.stringify(action.status)}
+        }
+        window.store.api.replaceState(state)
+        return true
+      })()`,
+      true
+    )
+    if (!updated) throw new Error('Could not update qualification request status')
     return
   }
   throw new Error(`Unknown qualification action ${action.type}`)
@@ -379,6 +408,14 @@ const main = async () => {
     if (reply === undefined) throw new Error('Qualification harness does not provide profile:inspectBackup')
     return reply
   })
+  for (const channel of ['send:resolveRecipient', 'send:queue']) {
+    ipcMain.handle(channel, (event, ...args) => {
+      const scenario = scenarioByWebContents.get(event.sender.id)
+      const reply = scenario ? invokeReplyFor(scenario, channel, args) : undefined
+      if (reply === undefined) throw new Error(`Qualification harness does not provide ${channel}`)
+      return reply
+    })
+  }
 
   const localFileProbe = await runLocalFileSelfTest()
   const isolationProbe = await runIsolationSelfTest()

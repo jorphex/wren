@@ -47,7 +47,7 @@
   margin-bottom var(--wren-space-4)
 
   input, button
-    height 42px
+    height 44px
     box-sizing border-box
     border-radius var(--wren-radius-md)
     font-family var(--wren-font-ui)
@@ -97,7 +97,7 @@
 .addressBookSearch
   display flex
   min-width 0
-  height 42px
+  height 44px
   box-sizing border-box
   align-items center
   gap var(--wren-space-2)
@@ -109,7 +109,7 @@
 
   input.wrenInput
     min-width 0
-    height 40px
+    height 44px
     flex 1
     padding 0
     border 0
@@ -138,7 +138,7 @@
 .addressBookRow
   display grid
   grid-template-columns minmax(0, 1fr) 54px 76px
-  min-height 80px
+  min-height 112px
   overflow hidden
   border 0
   border-bottom 1px solid var(--wren-ledger-rule)
@@ -176,6 +176,15 @@
     outline 2px solid var(--wren-focus)
     outline-offset -2px
 
+.addressBookCopyPrompt
+  position absolute
+  width 1px
+  height 1px
+  overflow hidden
+  clip rect(0 0 0 0)
+  clip-path inset(50%)
+  white-space nowrap
+
 .addressBookIdentity
   min-width 0
   display flex
@@ -192,16 +201,46 @@
     white-space nowrap
 
 .addressBookAddress
+  overflow-wrap anywhere
   color var(--wren-accent-primary-hover)
   font-family var(--wren-font-mono)
-  font-size 13px
+  font-size 12px
   line-height 18px
+
+.addressBookProvenance
+  display flex
+  flex-wrap wrap
+  align-items center
+  gap var(--wren-space-2)
+  color var(--wren-text-muted)
+  font-size 12px
+  line-height 18px
+
+.addressBookProvenanceBadge
+  display inline-flex
+  min-height 24px
+  box-sizing border-box
+  align-items center
+  padding 2px var(--wren-space-2)
+  border 1px solid var(--wren-border-default)
+  border-radius 999px
+  color var(--wren-text-secondary)
+  background var(--wren-bg-elevated)
+  font-weight 550
 
 .addressBookNote
   overflow hidden
   color var(--wren-text-secondary)
   font-size 13px
   line-height 18px
+  text-overflow ellipsis
+  white-space nowrap
+
+.addressBookVerificationSummary
+  overflow hidden
+  color var(--wren-text-muted)
+  font-size 12px
+  line-height 17px
   text-overflow ellipsis
   white-space nowrap
 
@@ -244,7 +283,11 @@ button.addressBookRemove.wrenControl.wrenControlGhost
   color var(--wren-danger)
 
 .addressBookRemovalDialog
+  position relative
+  z-index 4
   grid-template-columns minmax(0, 1fr) 64px 84px
+  box-shadow 0 0 0 100vmax rgba(2, 4, 3, .72)
+  background var(--wren-bg-elevated)
 
 .addressBookRemovalCopy
   min-width 0
@@ -328,7 +371,30 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 .addressBookEditor
   display flex
   flex-direction column
+  min-height 0
+  height 100%
+  overflow hidden
+  padding 0
+
+.addressBookEditorScroll
+  min-height 0
+  display flex
+  flex 1
+  flex-direction column
   gap var(--wren-space-4)
+  overflow-y auto
+  padding var(--wren-space-6) var(--wren-space-5) var(--wren-space-4)
+
+.addressBookActionShelf
+  z-index 2
+  display flex
+  min-height 76px
+  align-items center
+  justify-content flex-end
+  box-sizing border-box
+  padding 14px var(--wren-space-5) 16px
+  border-top 1px solid var(--wren-border-subtle)
+  background var(--wren-bg-canvas)
 
 .addressBookEditorHeader
   justify-content flex-start
@@ -373,7 +439,7 @@ button.addressBookRemove.wrenControl.wrenControlGhost
     &::placeholder
       color var(--wren-text-muted)
 
-    &:hover:not(:disabled)
+    &:hover:not(:disabled):not([readonly])
       border-color var(--wren-border-strong)
       background var(--wren-bg-subtle)
 
@@ -388,11 +454,95 @@ button.addressBookRemove.wrenControl.wrenControlGhost
       color var(--wren-text-disabled)
       cursor not-allowed
 
+    &[readonly]
+      border-color var(--wren-border-subtle)
+      background var(--wren-bg-subtle)
+      color var(--wren-text-secondary)
+
   small
     color var(--wren-text-tertiary)
     font-size 13px
     font-weight 400
     line-height 18px
+
+.addressBookProvenanceField
+  display flex
+  flex-direction column
+  gap var(--wren-space-3)
+  padding var(--wren-space-4)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-bg-subtle)
+  color var(--wren-text-secondary)
+
+  legend
+    padding 0 var(--wren-space-2)
+    color var(--wren-text-primary)
+    font-size 13px
+    font-weight 600
+
+  > small
+    color var(--wren-text-tertiary)
+    font-size 12px
+    line-height 18px
+
+.addressBookProvenanceOptions
+  display grid
+  grid-template-columns minmax(0, .8fr) minmax(0, 1.4fr)
+  gap var(--wren-space-2)
+
+  label
+    position relative
+    min-height 44px
+    display flex
+    align-items center
+    gap var(--wren-space-2)
+    padding 0 var(--wren-space-3)
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    background var(--wren-surface-inset)
+    color var(--wren-text-secondary)
+    cursor pointer
+    font-size 13px
+
+    &:focus-within
+      border-color var(--wren-focus)
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+    &::before
+      width 16px
+      height 16px
+      flex 0 0 16px
+      box-sizing border-box
+      border 1px solid var(--wren-border-strong)
+      border-radius 50%
+      content ''
+
+    &:has(input:checked)
+      border-color var(--wren-accent-primary)
+      color var(--wren-text-primary)
+      background var(--wren-surface-active)
+
+      &::before
+        border-color var(--wren-accent-primary)
+        box-shadow inset 0 0 0 4px var(--wren-surface-inset)
+        background var(--wren-accent-primary)
+
+  input
+    position absolute
+    width 1px
+    height 1px
+    overflow hidden
+    opacity 0
+    pointer-events none
+
+.addressBookVerificationNote
+  margin-top var(--wren-space-1)
+
+@media (max-width: 520px)
+  .addressBookProvenanceOptions
+    grid-template-columns 1fr
 
 .addressBookFieldError
   input
@@ -409,7 +559,7 @@ button.addressBookRemove.wrenControl.wrenControlGhost
   width auto
   min-width 176px
   height 46px
-  margin-top var(--wren-space-1)
+  margin-top 0
   border 1px solid var(--wren-accent-primary)
   border-radius var(--wren-radius-md)
   outline none
@@ -488,3 +638,11 @@ button.addressBookRemove.wrenControl.wrenControlGhost
     &:focus-visible
       outline 2px solid var(--wren-focus)
       outline-offset 2px
+
+.addressBookExportNotice
+  max-width 360px
+  margin 0 auto
+  color var(--wren-text-tertiary)
+  font-size 12px
+  line-height 18px
+  text-align center

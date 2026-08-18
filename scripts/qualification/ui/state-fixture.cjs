@@ -6,6 +6,8 @@ const QUALIFICATION_REQUEST = 'qualification-eip7702-revocation'
 const QUALIFICATION_CODE_HASH = `0x${'ab'.repeat(32)}`
 const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
+const QUALIFICATION_RECIPIENT = '0x2222222222222222222222222222222222222222'
+const QUALIFICATION_CONTACT = '0x3333333333333333333333333333333333333333'
 const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
 
 const qualificationPairingCode = () => {
@@ -83,6 +85,7 @@ const baseState = () => ({
     clickGuard: false
   },
   main: {
+    addressBook: {},
     colorway: 'dark',
     frames: {},
     accounts: {},
@@ -566,6 +569,66 @@ const fixtureFor = (scenario) => {
       showing: true,
       nav: [{ view: 'tokens', data: {} }]
     }
+  }
+
+  if (
+    scenario.state === 'address-book-list' ||
+    scenario.state === 'address-book-editor' ||
+    scenario.state === 'send-confirmed'
+  ) {
+    const verifiedAt = Date.UTC(2026, 7, 18)
+    state.main.addressBook = {
+      [QUALIFICATION_CONTACT.toLowerCase()]: {
+        address: QUALIFICATION_CONTACT,
+        name: 'Operations multisig with a deliberately long label',
+        note: 'Quarterly treasury recipient',
+        provenance: {
+          status: 'verified-out-of-band',
+          verifiedAt,
+          note: 'Compared with the deployment record on a separate device'
+        },
+        createdAt: 1,
+        updatedAt: verifiedAt
+      },
+      [QUALIFICATION_RECIPIENT.toLowerCase()]: {
+        address: QUALIFICATION_RECIPIENT,
+        name: 'Garden Friend',
+        note: '',
+        provenance: { status: 'saved' },
+        createdAt: 1,
+        updatedAt: 1
+      }
+    }
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: scenario.state === 'send-confirmed' ? 'send' : 'addressBook',
+          data:
+            scenario.state === 'address-book-editor' ? { screen: 'edit', address: QUALIFICATION_CONTACT } : {}
+        }
+      ]
+    }
+  }
+
+  if (scenario.state === 'send-confirmed') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.balances[QUALIFICATION_ACCOUNT] = [
+      {
+        chainId: 1,
+        address: NATIVE_CURRENCY,
+        balance: '1250000000000000000',
+        decimals: 18,
+        name: 'Ether',
+        native: true,
+        symbol: 'ETH'
+      }
+    ]
+    state.main.rates = {}
   }
 
   if (scenario.state === 'add-token-selector') {
@@ -1069,13 +1132,19 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = 114
+    const verifiedAt = Date.UTC(2026, 7, 18)
     state.main.addressBook = {
       [QUALIFICATION_DELEGATE.toLowerCase()]: {
         address: QUALIFICATION_DELEGATE,
         name: 'Community Delegation Contract With A Long Verified Label',
         note: '',
+        provenance: {
+          status: 'verified-out-of-band',
+          verifiedAt,
+          note: 'Compared with the deployment record on a separate device'
+        },
         createdAt: 1,
-        updatedAt: 1
+        updatedAt: verifiedAt
       }
     }
     state.main.origins = { wren: { name: 'Wren' } }
@@ -1195,6 +1264,12 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method) => {
+  if (scenario.state === 'send-confirmed' && method === 'send:resolveRecipient') {
+    return { success: true, address: QUALIFICATION_RECIPIENT, name: '' }
+  }
+  if (scenario.state === 'send-confirmed' && method === 'send:queue') {
+    return { success: true, handlerId: 'qualification-send-request' }
+  }
   if (scenario.id === 'dash-settings-recovery-restore-confirm-full-1' && method === 'profile:inspectBackup') {
     return {
       success: true,

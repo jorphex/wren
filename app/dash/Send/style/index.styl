@@ -95,7 +95,7 @@
 .sendInputRow
   display grid
   grid-template-columns 1fr auto
-  grid-template-rows 24px minmax(42px, auto) 24px
+  grid-template-rows 24px minmax(42px, auto) minmax(24px, auto)
   align-items center
   padding 15px 0 8px
 
@@ -393,8 +393,9 @@
   overflow hidden
   color var(--wren-text-tertiary)
   font-size var(--wren-type-caption)
+  line-height 17px
+  text-align right
   text-overflow ellipsis
-  white-space nowrap
 
 .sendAssetOption
   display grid
@@ -503,6 +504,103 @@
     color var(--wren-text-secondary)
     font-size var(--wren-type-body)
     line-height 1.5
+
+.sendConfirmedDestination
+  width min(100%, 430px)
+  box-sizing border-box
+  display grid
+  grid-template-columns minmax(0, 1fr) auto
+  gap 4px var(--wren-space-3)
+  padding var(--wren-space-3) var(--wren-space-4)
+  margin 0 0 var(--wren-space-5)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+  text-align left
+
+  > span
+    grid-column 1 / -1
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+    font-weight 600
+    text-transform uppercase
+
+  strong
+    grid-column 1 / -1
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+    font-weight 610
+
+  code
+    min-width 0
+    overflow-wrap anywhere
+    color var(--wren-accent-primary-hover)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+  button
+    align-self center
+
+.sendConfirmedActions
+  display flex
+  flex-wrap wrap
+  justify-content center
+  gap var(--wren-space-2)
+
+  button
+    min-width 132px
+
+.sendRecipientFeedback
+  min-height 18px
+
+.sendRecipientResolved
+  min-width 0
+  display grid
+  grid-template-columns minmax(0, 1fr) auto
+  align-items center
+  gap 2px var(--wren-space-2)
+  text-overflow clip
+  white-space normal
+
+  > span
+    grid-column 1 / -1
+
+  code
+    min-width 0
+    overflow-wrap anywhere
+    color var(--wren-accent-primary-hover)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+.sendRecipientCopy
+  min-width 44px
+  min-height 44px
+  margin -13px 0
+  padding 0 var(--wren-space-2)
+  border 0
+  border-radius var(--wren-radius-sm)
+  background transparent
+  color var(--wren-text-secondary)
+  cursor pointer
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+
+  &:hover
+    background var(--wren-surface-hover)
+    color var(--wren-text-primary)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.sendCopyStatus
+  min-height 18px
+  grid-column 1 / -1
+  color var(--wren-text-muted)
+  font-size var(--wren-type-caption)
+  text-align center
 
 .sendRequestGlyph
   display flex

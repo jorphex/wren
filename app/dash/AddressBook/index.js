@@ -7,9 +7,14 @@ import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { exportAddressBook, importAddressBook, removeAddressBookEntry, saveAddressBookEntry } from './api'
 
-const shortAddress = (address) => `${address.slice(0, 8)}...${address.slice(-6)}`
 const completeEnsName = (value) => /\.[a-z]{2,}$/i.test(value.trim())
 const completeAddress = (value) => /^0x[0-9a-fA-F]{40}$/.test(value.trim())
+const provenanceStatus = (entry) => entry?.provenance?.status || 'saved'
+const verifiedDate = (entry) => {
+  if (entry?.provenance?.status !== 'verified-out-of-band') return ''
+  const date = new Date(entry.provenance.verifiedAt)
+  return Number.isNaN(date.valueOf()) ? 'Date unavailable' : date.toISOString().slice(0, 10)
+}
 
 const resolveEnsName = (name) =>
   new Promise((resolve, reject) => {
@@ -33,6 +38,8 @@ export class AddressBookEditor extends React.Component {
       name: entry.name || (seed && !seedAddress ? seed : ''),
       nameDirty: Boolean(entry.name || (seed && !seedAddress)),
       note: entry.note || '',
+      provenanceStatus: provenanceStatus(entry),
+      verificationNote: entry.provenance?.status === 'verified-out-of-band' ? entry.provenance.note : '',
       error: '',
       resolving: false,
       saving: false
@@ -100,11 +107,24 @@ export class AddressBookEditor extends React.Component {
         this.setState({ address, resolving: false, saving: true })
       }
 
+      const currentProvenance = this.props.entry?.provenance || { status: 'saved' }
+      const provenanceChanged =
+        this.state.provenanceStatus !== currentProvenance.status ||
+        (this.state.provenanceStatus === 'verified-out-of-band' &&
+          this.state.verificationNote.trim() !== (currentProvenance.note || ''))
       const request = {
         mode: this.props.entry ? 'edit' : 'add',
         address,
         name: this.state.name,
-        note: this.state.note
+        note: this.state.note,
+        ...(provenanceChanged
+          ? {
+              provenance:
+                this.state.provenanceStatus === 'verified-out-of-band'
+                  ? { status: 'verified-out-of-band', note: this.state.verificationNote }
+                  : { status: 'saved' }
+            }
+          : {})
       }
       await saveAddressBookEntry(request)
       link.send('tray:action', 'backDash')
@@ -120,98 +140,163 @@ export class AddressBookEditor extends React.Component {
   render() {
     const editing = Boolean(this.props.entry)
     const pending = this.state.resolving || this.state.saving
+    const clearsVerification =
+      this.props.entry?.provenance?.status === 'verified-out-of-band' &&
+      this.state.provenanceStatus === 'saved'
 
     return (
       <form className='addressBookEditor cardShow' onSubmit={(event) => this.submit(event)}>
-        <header className='addressBookEditorHeader'>
-          <div className='addressBookEditorIcon'>
-            <Icon name='contacts' size={24} />
-          </div>
-          <div>
-            <h2>{editing ? 'Edit contact' : 'New contact'}</h2>
-            <p>
-              {editing
-                ? 'Update this local label or note.'
-                : 'Save an address you can recognize during review.'}
-            </p>
-          </div>
-        </header>
+        <div className='addressBookEditorScroll'>
+          <header className='addressBookEditorHeader'>
+            <div className='addressBookEditorIcon'>
+              <Icon name='contacts' size={24} />
+            </div>
+            <div>
+              <h2>{editing ? 'Edit contact' : 'New contact'}</h2>
+              <p>
+                {editing
+                  ? 'Update this local label or note.'
+                  : 'Save an address you can recognize during review.'}
+              </p>
+            </div>
+          </header>
 
-        <label
-          className={`addressBookField ${this.state.ensStatus === 'failed' ? 'addressBookFieldError' : ''}`}
-        >
-          <span>Address or ENS name</span>
-          <input
-            className='wrenInput'
-            autoComplete='off'
-            autoFocus={!editing}
-            disabled={editing || this.state.saving}
-            maxLength={255}
-            onChange={(event) => this.updateAddress(event.target.value)}
-            placeholder='0x... or name.eth'
-            spellCheck={false}
-            value={this.state.address}
-          />
-          {!editing && this.state.ensStatus ? (
-            <small
-              className={`addressBookEnsStatus addressBookEnsStatus${this.state.ensStatus}`}
-              role={this.state.ensStatus === 'failed' ? 'alert' : 'status'}
-            >
-              {this.state.ensStatus === 'resolving'
-                ? 'Resolving ENS name…'
-                : this.state.ensStatus === 'resolved'
-                  ? 'ENS name resolved'
-                  : 'Couldn’t resolve ENS name. Check the name and try again.'}
+          <label
+            className={`addressBookField ${this.state.ensStatus === 'failed' ? 'addressBookFieldError' : ''}`}
+          >
+            <span>Address or ENS name</span>
+            <input
+              aria-readonly={editing ? 'true' : undefined}
+              className='wrenInput'
+              autoComplete='off'
+              autoFocus={!editing}
+              disabled={this.state.saving}
+              maxLength={255}
+              onChange={(event) => this.updateAddress(event.target.value)}
+              placeholder='0x... or name.eth'
+              spellCheck={false}
+              readOnly={editing}
+              value={this.state.address}
+            />
+            {!editing && this.state.ensStatus ? (
+              <small
+                className={`addressBookEnsStatus addressBookEnsStatus${this.state.ensStatus}`}
+                role={this.state.ensStatus === 'failed' ? 'alert' : 'status'}
+              >
+                {this.state.ensStatus === 'resolving'
+                  ? 'Resolving ENS name…'
+                  : this.state.ensStatus === 'resolved'
+                    ? 'ENS name resolved'
+                    : 'Couldn’t resolve ENS name. Check the name and try again.'}
+              </small>
+            ) : null}
+          </label>
+
+          <label className='addressBookField'>
+            <span>Name</span>
+            <input
+              className='wrenInput'
+              autoComplete='off'
+              disabled={this.state.saving}
+              maxLength={80}
+              onChange={(event) => this.setState({ name: event.target.value, nameDirty: true, error: '' })}
+              placeholder='Treasury, teammate, protocol'
+              value={this.state.name}
+            />
+          </label>
+
+          <fieldset className='addressBookProvenanceField'>
+            <legend>Contact provenance</legend>
+            <div className='addressBookProvenanceOptions'>
+              <label>
+                <input
+                  checked={this.state.provenanceStatus === 'saved'}
+                  disabled={this.state.saving}
+                  name='contact-provenance'
+                  onChange={() => this.setState({ provenanceStatus: 'saved', error: '' })}
+                  type='radio'
+                  value='saved'
+                />
+                <span>Saved</span>
+              </label>
+              <label>
+                <input
+                  checked={this.state.provenanceStatus === 'verified-out-of-band'}
+                  disabled={this.state.saving}
+                  name='contact-provenance'
+                  onChange={() => this.setState({ provenanceStatus: 'verified-out-of-band', error: '' })}
+                  type='radio'
+                  value='verified-out-of-band'
+                />
+                <span>Verified out of band</span>
+              </label>
+            </div>
+            <small>
+              {clearsVerification
+                ? 'Saving as Saved clears the existing verification date and note.'
+                : this.state.provenanceStatus === 'verified-out-of-band'
+                  ? 'You checked this address elsewhere. Always verify the full address before signing.'
+                  : 'A label you assigned locally. It does not verify this address.'}
             </small>
+            {this.state.provenanceStatus === 'verified-out-of-band' ? (
+              <label className='addressBookField addressBookVerificationNote'>
+                <span>
+                  Verification note <small>optional</small>
+                </span>
+                <textarea
+                  aria-describedby='addressBookVerificationCount'
+                  className='wrenInput'
+                  disabled={this.state.saving}
+                  maxLength={280}
+                  onChange={(event) => this.setState({ verificationNote: event.target.value, error: '' })}
+                  placeholder='Where or how you checked this address'
+                  rows={2}
+                  value={this.state.verificationNote}
+                />
+                <small id='addressBookVerificationCount'>{this.state.verificationNote.length}/280</small>
+              </label>
+            ) : null}
+            {this.props.entry?.provenance?.status === 'verified-out-of-band' ? (
+              <small>{`Last marked verified ${verifiedDate(this.props.entry)}`}</small>
+            ) : null}
+          </fieldset>
+
+          <label className='addressBookField'>
+            <span>
+              Note <small>optional</small>
+            </span>
+            <textarea
+              aria-describedby='addressBookNoteCount'
+              className='wrenInput'
+              disabled={this.state.saving}
+              maxLength={280}
+              onChange={(event) => this.setState({ note: event.target.value, error: '' })}
+              placeholder='How you use this address'
+              rows={3}
+              value={this.state.note}
+            />
+            <small id='addressBookNoteCount'>{this.state.note.length}/280</small>
+          </label>
+
+          {this.state.error ? (
+            <div className='addressBookError' role='alert'>
+              {this.state.error}
+            </div>
           ) : null}
-        </label>
-
-        <label className='addressBookField'>
-          <span>Name</span>
-          <input
-            className='wrenInput'
-            autoComplete='off'
-            disabled={this.state.saving}
-            maxLength={80}
-            onChange={(event) => this.setState({ name: event.target.value, nameDirty: true, error: '' })}
-            placeholder='Treasury, teammate, protocol'
-            value={this.state.name}
-          />
-        </label>
-
-        <label className='addressBookField'>
-          <span>
-            Note <small>optional</small>
-          </span>
-          <textarea
-            className='wrenInput'
-            disabled={this.state.saving}
-            maxLength={280}
-            onChange={(event) => this.setState({ note: event.target.value, error: '' })}
-            placeholder='How you use this address'
-            rows={3}
-            value={this.state.note}
-          />
-          <small>{this.state.note.length}/280</small>
-        </label>
-
-        {this.state.error ? (
-          <div className='addressBookError' role='alert'>
-            {this.state.error}
-          </div>
-        ) : null}
-
-        <button
-          className='addressBookPrimaryButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
-          disabled={
-            pending ||
-            (!completeAddress(this.state.address) && !completeEnsName(this.state.address)) ||
-            !this.state.name.trim()
-          }
-          type='submit'
-        >
-          {this.state.resolving ? 'Resolving ENS…' : this.state.saving ? 'Saving…' : 'Save Contact'}
-        </button>
+        </div>
+        <div className='addressBookActionShelf'>
+          <button
+            className='addressBookPrimaryButton wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+            disabled={
+              pending ||
+              (!completeAddress(this.state.address) && !completeEnsName(this.state.address)) ||
+              !this.state.name.trim()
+            }
+            type='submit'
+          >
+            {this.state.resolving ? 'Resolving ENS…' : this.state.saving ? 'Saving…' : 'Save Contact'}
+          </button>
+        </div>
       </form>
     )
   }
@@ -224,6 +309,7 @@ export class AddressBook extends React.Component {
     this.removeButtons = new Map()
     this.removeCancelRef = React.createRef()
     this.removeReturnFocusRef = React.createRef()
+    this.searchRef = React.createRef()
     this.removeReturnFocusAddress = ''
     this.removePending = false
   }
@@ -296,7 +382,7 @@ export class AddressBook extends React.Component {
     try {
       await removeAddressBookEntry(address)
       this.removePending = false
-      this.setState({ confirmDelete: '', working: false })
+      this.setState({ confirmDelete: '', working: false }, () => this.searchRef.current?.focus())
       this.setTransientStatus('Contact removed')
     } catch (error) {
       this.removePending = false
@@ -333,8 +419,12 @@ export class AddressBook extends React.Component {
   renderList(addressBook) {
     const filter = this.state.filter.trim().toLowerCase()
     const entries = Object.values(addressBook)
-      .filter(({ address, name, note }) =>
-        !filter ? true : [address, name, note].some((value) => value.toLowerCase().includes(filter))
+      .filter(({ address, name, note, provenance }) =>
+        !filter
+          ? true
+          : [address, name, note, provenance?.note || ''].some((value) =>
+              value.toLowerCase().includes(filter)
+            )
       )
       .sort((left, right) => left.name.localeCompare(right.name) || left.address.localeCompare(right.address))
 
@@ -344,6 +434,7 @@ export class AddressBook extends React.Component {
           <label className='addressBookSearch'>
             <Icon name='search' size={15} />
             <input
+              ref={this.searchRef}
               aria-label='Search contacts'
               className='wrenInput wrenInputQuiet'
               onChange={(event) => {
@@ -376,6 +467,7 @@ export class AddressBook extends React.Component {
                   role='alertdialog'
                   ariaLabel={`Remove ${entry.name}?`}
                   busy={this.state.working || this.removePending}
+                  modal
                   initialFocusRef={this.removeCancelRef}
                   returnFocusRef={this.removeReturnFocusRef}
                   onCancel={() => this.cancelRemoveConfirmation()}
@@ -406,16 +498,29 @@ export class AddressBook extends React.Component {
               ) : (
                 <article className='addressBookRow' key={entry.address}>
                   <button
-                    aria-label={`Copy ${entry.name} address`}
                     className='addressBookCardMain'
                     disabled={this.state.working}
                     onClick={() => this.copy(entry)}
                     type='button'
                   >
+                    <span className='addressBookCopyPrompt'>Copy address for</span>
                     <span className='addressBookIdentity'>
                       <strong>{entry.name}</strong>
-                      <span className='addressBookAddress'>{shortAddress(entry.address)}</span>
+                      <span className='addressBookAddress'>{entry.address}</span>
+                      <span className='addressBookProvenance'>
+                        <span className='addressBookProvenanceBadge'>
+                          {entry.provenance.status === 'verified-out-of-band'
+                            ? 'Verified out of band'
+                            : 'Saved'}
+                        </span>
+                        {entry.provenance.status === 'verified-out-of-band' ? (
+                          <span>{verifiedDate(entry)}</span>
+                        ) : null}
+                      </span>
                       {entry.note ? <span className='addressBookNote'>{entry.note}</span> : null}
+                      {entry.provenance.status === 'verified-out-of-band' && entry.provenance.note ? (
+                        <span className='addressBookVerificationSummary'>{entry.provenance.note}</span>
+                      ) : null}
                     </span>
                   </button>
                   <button
@@ -473,6 +578,9 @@ export class AddressBook extends React.Component {
             Export JSON
           </button>
         </div>
+        <p className='addressBookExportNotice'>
+          Export includes names, notes, and verification records in plaintext.
+        </p>
         {this.state.status ? (
           <div aria-atomic='true' aria-live='polite' className='addressBookStatus' role='status'>
             {this.state.status}

@@ -210,8 +210,8 @@ export class Eip7702RevokeRequest extends React.Component {
       ? {
           ...resolvedDelegateIdentity,
           source:
-            resolvedDelegateIdentity.source === 'Saved contact'
-              ? 'Address book'
+            resolvedDelegateIdentity.kind === 'contact'
+              ? `Address book · ${resolvedDelegateIdentity.source}`
               : resolvedDelegateIdentity.source
         }
       : undefined

@@ -122,8 +122,36 @@ test('strictly validates read-only wallet-call status refreshes and results', ()
 
 test('validates address-book mutations and bounded results', () => {
   const request = { mode: 'add', address, name: 'Treasury', note: 'Operations' }
-  const entry = { address, name: 'Treasury', note: 'Operations', createdAt: 1, updatedAt: 1 }
+  const entry = {
+    address,
+    name: 'Treasury',
+    note: 'Operations',
+    provenance: { status: 'saved' },
+    createdAt: 1,
+    updatedAt: 1
+  }
   expect(parse('invoke', 'addressBook:save', [request])).toEqual([request])
+  expect(
+    parse('invoke', 'addressBook:save', [
+      {
+        ...request,
+        provenance: { status: 'verified-out-of-band', note: '  Confirmed   by phone ' }
+      }
+    ])
+  ).toEqual([
+    {
+      ...request,
+      provenance: { status: 'verified-out-of-band', note: 'Confirmed by phone' }
+    }
+  ])
+  expect(
+    parseRendererIpcArgs('invoke', 'addressBook:save', [
+      {
+        ...request,
+        provenance: { status: 'verified-out-of-band', verifiedAt: 1, note: 'Untrusted timestamp' }
+      }
+    ]).success
+  ).toBe(false)
   expect(parseRendererIpcArgs('invoke', 'addressBook:save', [{ ...request, address: '0x1' }]).success).toBe(
     false
   )

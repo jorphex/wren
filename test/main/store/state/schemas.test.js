@@ -26,6 +26,7 @@ describe('persisted state schema compatibility', () => {
       address: '0x0000000000000000000000000000000000000001',
       name: 'Treasury',
       note: '',
+      provenance: { status: 'verified-out-of-band', verifiedAt: 2, note: 'Confirmed by phone' },
       createdAt: 1,
       updatedAt: 2
     }
@@ -33,6 +34,19 @@ describe('persisted state schema compatibility', () => {
     expect(() => AddressBookSchema.parse({ [entry.address]: { ...entry, updatedAt: 0 } })).toThrow()
     expect(() =>
       AddressBookSchema.parse({ [entry.address]: { ...entry, name: 'Spoofed\u202e treasury' } })
+    ).toThrow()
+    expect(() =>
+      AddressBookSchema.parse({
+        [entry.address]: { ...entry, provenance: { status: 'verified-out-of-band', note: 'Unstamped' } }
+      })
+    ).toThrow()
+    expect(() =>
+      AddressBookSchema.parse({
+        [entry.address]: {
+          ...entry,
+          provenance: { status: 'verified-out-of-band', verifiedAt: 3, note: 'Future' }
+        }
+      })
     ).toThrow()
   })
 

@@ -13,6 +13,7 @@ export const SEND_ERROR = Object.freeze({
   FeeUnavailable: 'fee-unavailable',
   NetworkUnavailable: 'network-unavailable',
   RecipientInvalid: 'recipient-invalid',
+  RecipientLookupUnavailable: 'recipient-lookup-unavailable',
   WatchOnly: 'watch-only'
 } as const)
 

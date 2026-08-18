@@ -193,6 +193,92 @@ const reviewScenarios = () => [
     requiredControls: ['Copy address', 'Hide receive QR', 'Reject request', 'Recheck'],
     requiredText: ['More funds needed', 'Amounts at last check']
   },
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].flatMap(([geometry, logicalHeight]) => [
+      {
+        id: `dash-address-book-list-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'address-book-list',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.addressBookList',
+        requiredControls: [
+          'Copy address for Operations multisig with a deliberately long label',
+          'Edit Operations multisig with a deliberately long label',
+          'Remove Operations multisig with a deliberately long label'
+        ],
+        requiredText: [
+          'Verified out of band',
+          'Compared with the deployment record on a separate device',
+          '0x3333333333333333333333333333333333333333'
+        ]
+      },
+      {
+        id: `dash-address-book-editor-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'address-book-editor',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.addressBookEditor',
+        requiredControls: ['Save Contact'],
+        requiredText: [
+          'Contact provenance',
+          'Verified out of band',
+          'Always verify the full address before signing.'
+        ]
+      },
+      {
+        id: `dash-send-confirmed-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-confirmed',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: {
+          type: 'sequence',
+          delayMs: 450,
+          steps: [
+            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'inputLabel', label: 'Amount', value: '0.25' },
+            { type: 'clickText', text: 'Review send' },
+            {
+              type: 'setRequestStatus',
+              account: '0x9A91D79cB7d27d71E109F4DFD177475E1D35dD02',
+              requestId: 'qualification-send-request',
+              status: 'confirmed'
+            }
+          ]
+        },
+        ready: '.sendRequestStateSuccess',
+        requiredControls: ['Copy address', 'View contact', 'Close'],
+        requiredText: ['Transaction confirmed', 'Garden Friend', '0x2222222222222222222222222222222222222222']
+      }
+    ])
+  ),
+  {
+    id: 'dash-address-book-remove-short-1.5',
+    renderer: 'dash',
+    state: 'address-book-list',
+    variant: 'remove',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    action: {
+      type: 'clickText',
+      text: 'Remove Operations multisig with a deliberately long label'
+    },
+    ready: '.addressBookRemovalDialog[aria-modal="true"]',
+    requiredControls: ['Cancel', 'Confirm removing Operations multisig with a deliberately long label'],
+    requiredText: [
+      'Remove Operations multisig with a deliberately long label?',
+      'This removes the saved contact from Wren. Funds are not affected.'
+    ]
+  },
   {
     id: 'dash-add-token-selector-short-1',
     renderer: 'dash',

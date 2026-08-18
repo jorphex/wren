@@ -4,22 +4,34 @@ import { z } from 'zod'
 import {
   hasAddressBookControlCharacters as hasControlCharacters,
   MAX_ADDRESS_BOOK_ENTRIES,
+  MAX_ADDRESS_BOOK_TIMESTAMP,
   normalizeAddressBookText as normalizedText
 } from './identity'
 
 export {
   lookupAddressBookEntry,
   MAX_ADDRESS_BOOK_ENTRIES,
+  MAX_ADDRESS_BOOK_TIMESTAMP,
   resolveLocalAddressIdentity,
+  type LocalAddressBookEntry,
   type LocalAddressIdentity
 } from './identity'
 
 export const ADDRESS_BOOK_FORMAT = 'frame-address-book'
-export const ADDRESS_BOOK_VERSION = 1
+export const ADDRESS_BOOK_VERSION = 2
 export const MAX_ADDRESS_BOOK_FILE_BYTES = 1024 * 1024
+export const MAX_ADDRESS_BOOK_PROVENANCE_NOTE_LENGTH = 280
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/
 const KEY = /^0x[0-9a-f]{40}$/
+
+const isNormalizedAddress = (value: string) => {
+  try {
+    return value === getAddress(value)
+  } catch {
+    return false
+  }
+}
 
 export const AddressBookAddressInputSchema = z
   .string()
@@ -46,10 +58,48 @@ export const AddressBookNoteInputSchema = z
   .pipe(z.string().max(280, 'Note must be 280 characters or fewer'))
   .refine((value) => !hasControlCharacters(value), 'Note contains unsupported characters')
 
+export const AddressBookProvenanceNoteInputSchema = z
+  .string()
+  .transform(normalizedText)
+  .pipe(
+    z
+      .string()
+      .max(
+        MAX_ADDRESS_BOOK_PROVENANCE_NOTE_LENGTH,
+        `Verification note must be ${MAX_ADDRESS_BOOK_PROVENANCE_NOTE_LENGTH} characters or fewer`
+      )
+  )
+  .refine((value) => !hasControlCharacters(value), 'Verification note contains unsupported characters')
+
+export const AddressBookProvenanceSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('saved') }).strict(),
+  z
+    .object({
+      status: z.literal('verified-out-of-band'),
+      verifiedAt: z.number().int().nonnegative().max(MAX_ADDRESS_BOOK_TIMESTAMP),
+      note: z
+        .string()
+        .max(MAX_ADDRESS_BOOK_PROVENANCE_NOTE_LENGTH)
+        .refine((value) => value === normalizedText(value))
+        .refine((value) => !hasControlCharacters(value), 'Verification note contains unsupported characters')
+    })
+    .strict()
+])
+
+export const AddressBookProvenanceInputSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('saved') }).strict(),
+  z
+    .object({
+      status: z.literal('verified-out-of-band'),
+      note: AddressBookProvenanceNoteInputSchema
+    })
+    .strict()
+])
+
 export const AddressBookEntrySchema = z
   .object({
     address: AddressBookAddressInputSchema.refine(
-      (value) => value === getAddress(value),
+      isNormalizedAddress,
       'Address must use its normalized checksum'
     ),
     name: z
@@ -63,11 +113,18 @@ export const AddressBookEntrySchema = z
       .max(280)
       .refine((value) => value === normalizedText(value))
       .refine((value) => !hasControlCharacters(value), 'Note contains unsupported characters'),
-    createdAt: z.number().int().nonnegative(),
-    updatedAt: z.number().int().nonnegative()
+    provenance: AddressBookProvenanceSchema,
+    createdAt: z.number().int().nonnegative().max(MAX_ADDRESS_BOOK_TIMESTAMP),
+    updatedAt: z.number().int().nonnegative().max(MAX_ADDRESS_BOOK_TIMESTAMP)
   })
   .strict()
   .refine(({ createdAt, updatedAt }) => updatedAt >= createdAt, 'Updated time precedes creation time')
+  .refine(
+    ({ provenance, createdAt, updatedAt }) =>
+      provenance.status === 'saved' ||
+      (provenance.verifiedAt >= createdAt && provenance.verifiedAt <= updatedAt),
+    'Verification time falls outside the contact lifetime'
+  )
 
 export const AddressBookSchema = z
   .record(z.string().regex(KEY), AddressBookEntrySchema)
@@ -82,47 +139,68 @@ export const AddressBookSaveRequestSchema = z
     mode: z.enum(['add', 'edit']),
     address: AddressBookAddressInputSchema,
     name: AddressBookNameInputSchema,
-    note: AddressBookNoteInputSchema
+    note: AddressBookNoteInputSchema,
+    provenance: AddressBookProvenanceInputSchema.optional()
   })
   .strict()
 
-const AddressBookExportEntrySchema = z
+const AddressBookExportEntryV1Schema = z
   .object({
     address: AddressBookAddressInputSchema,
     name: AddressBookNameInputSchema,
     note: AddressBookNoteInputSchema,
-    createdAt: z.number().int().nonnegative(),
-    updatedAt: z.number().int().nonnegative()
+    createdAt: z.number().int().nonnegative().max(MAX_ADDRESS_BOOK_TIMESTAMP),
+    updatedAt: z.number().int().nonnegative().max(MAX_ADDRESS_BOOK_TIMESTAMP)
   })
   .strict()
   .refine(({ createdAt, updatedAt }) => updatedAt >= createdAt, 'Updated time precedes creation time')
 
-export const AddressBookExportSchema = z
+const AddressBookExportV1Schema = z
+  .object({
+    format: z.literal(ADDRESS_BOOK_FORMAT),
+    version: z.literal(1),
+    exportedAt: z.string().datetime(),
+    entries: z.array(AddressBookExportEntryV1Schema).max(MAX_ADDRESS_BOOK_ENTRIES)
+  })
+  .strict()
+
+const AddressBookExportV2Schema = z
   .object({
     format: z.literal(ADDRESS_BOOK_FORMAT),
     version: z.literal(ADDRESS_BOOK_VERSION),
     exportedAt: z.string().datetime(),
-    entries: z.array(AddressBookExportEntrySchema).max(MAX_ADDRESS_BOOK_ENTRIES)
+    entries: z.array(AddressBookEntrySchema).max(MAX_ADDRESS_BOOK_ENTRIES)
   })
   .strict()
+
+export const AddressBookExportSchema = z.discriminatedUnion('version', [
+  AddressBookExportV1Schema,
+  AddressBookExportV2Schema
+])
 
 export type AddressBookEntry = z.infer<typeof AddressBookEntrySchema>
 export type AddressBook = z.infer<typeof AddressBookSchema>
 export type AddressBookSaveRequest = z.infer<typeof AddressBookSaveRequestSchema>
 export type AddressBookExport = z.infer<typeof AddressBookExportSchema>
+export type AddressBookProvenance = z.infer<typeof AddressBookProvenanceSchema>
+export type AddressBookProvenanceInput = z.infer<typeof AddressBookProvenanceInputSchema>
 
 const normalizeAddress = (address: string) => getAddress(address.trim())
 const entryKey = (address: string) => normalizeAddress(address).toLowerCase()
 const normalizedNameKey = (name: string) => normalizedText(name).toLowerCase()
 
 const normalizedEntry = (
-  input: Pick<AddressBookEntry, 'address' | 'name' | 'note' | 'createdAt' | 'updatedAt'>
+  input: Pick<AddressBookEntry, 'address' | 'name' | 'note' | 'provenance' | 'createdAt' | 'updatedAt'>
 ): AddressBookEntry =>
   AddressBookEntrySchema.parse({
     ...input,
     address: normalizeAddress(input.address),
     name: normalizedText(input.name),
-    note: normalizedText(input.note)
+    note: normalizedText(input.note),
+    provenance:
+      input.provenance.status === 'verified-out-of-band'
+        ? { ...input.provenance, note: normalizedText(input.provenance.note) }
+        : input.provenance
   })
 
 const duplicateName = (book: AddressBook, name: string, excludedKey?: string) => {
@@ -156,6 +234,10 @@ export function saveAddressBookEntry(
     address,
     name: parsed.name,
     note: parsed.note,
+    provenance:
+      parsed.provenance?.status === 'verified-out-of-band'
+        ? { ...parsed.provenance, verifiedAt: now }
+        : (parsed.provenance ?? existing?.provenance ?? { status: 'saved' }),
     createdAt: existing?.createdAt ?? now,
     updatedAt: now
   })
@@ -220,8 +302,7 @@ export function importAddressBookExport(
   let importedCount = 0
   let skipped = 0
 
-  parsed.entries.forEach((candidate) => {
-    const entry = normalizedEntry(candidate)
+  const mergeEntry = (entry: AddressBookEntry) => {
     const key = entry.address.toLowerCase()
     if (
       addressBook[key] ||
@@ -233,7 +314,15 @@ export function importAddressBookExport(
     }
     addressBook = { ...addressBook, [key]: entry }
     importedCount += 1
-  })
+  }
+
+  if (parsed.version === 1) {
+    parsed.entries.forEach((candidate) =>
+      mergeEntry(normalizedEntry({ ...candidate, provenance: { status: 'saved' } }))
+    )
+  } else {
+    parsed.entries.forEach((candidate) => mergeEntry(normalizedEntry(candidate)))
+  }
 
   return { addressBook, imported: importedCount, skipped }
 }

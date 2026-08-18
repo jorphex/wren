@@ -1,6 +1,28 @@
 import { z } from 'zod'
 
-import { sanitizeAddressBook } from '../../../../../resources/domain/addressBook'
+import { FrozenAddressBookEntryV1Schema } from '../50'
+
+const KEY = /^0x[0-9a-f]{40}$/
+const MAX_ENTRIES = 1_000
+
+const sanitizeFrozenAddressBookV1 = (current: unknown) => {
+  if (!current || typeof current !== 'object' || Array.isArray(current)) return {}
+
+  const addressBook: Record<string, z.infer<typeof FrozenAddressBookEntryV1Schema>> = {}
+  Object.entries(current).forEach(([key, candidate]) => {
+    const parsed = FrozenAddressBookEntryV1Schema.safeParse(candidate)
+    if (
+      !KEY.test(key) ||
+      !parsed.success ||
+      key !== parsed.data.address.toLowerCase() ||
+      Object.keys(addressBook).length >= MAX_ENTRIES
+    ) {
+      return
+    }
+    addressBook[key] = parsed.data
+  })
+  return addressBook
+}
 
 const StateSchema = z
   .object({
@@ -21,7 +43,7 @@ const migrate = (initial: unknown) => {
     ...parsed.data,
     main: {
       ...parsed.data.main,
-      addressBook: sanitizeAddressBook(parsed.data.main.addressBook).addressBook
+      addressBook: sanitizeFrozenAddressBookV1(parsed.data.main.addressBook)
     }
   }
 }

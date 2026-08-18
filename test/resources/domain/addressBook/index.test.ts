@@ -24,6 +24,7 @@ test('normalizes addresses and bounded contact text', () => {
     address: '0x0000000000000000000000000000000000000001',
     name: 'Alice Treasury',
     note: 'Yearn operations',
+    provenance: { status: 'saved' },
     createdAt: 10,
     updatedAt: 10
   })
@@ -35,6 +36,7 @@ test('resolves saved contacts before existing Wren account names', () => {
 
   expect(resolveLocalAddressIdentity({}, accounts, alice)).toEqual({
     label: 'Frame Savings',
+    kind: 'account',
     source: 'Wren account'
   })
 
@@ -45,7 +47,34 @@ test('resolves saved contacts before existing Wren account names', () => {
   ).addressBook
   expect(resolveLocalAddressIdentity(addressBook, accounts, alice)).toEqual({
     label: 'Treasury Contact',
-    source: 'Saved contact'
+    kind: 'contact',
+    source: 'Saved contact',
+    provenance: { status: 'saved' }
+  })
+})
+
+test('exposes verification provenance without treating it as a safety bypass', () => {
+  const addressBook = saveAddressBookEntry(
+    {},
+    {
+      mode: 'add',
+      address: alice,
+      name: 'Treasury Contact',
+      note: '',
+      provenance: { status: 'verified-out-of-band', note: 'Confirmed by phone' }
+    },
+    10
+  ).addressBook
+
+  expect(resolveLocalAddressIdentity(addressBook, {}, alice)).toEqual({
+    label: 'Treasury Contact',
+    kind: 'contact',
+    source: 'Verified out of band',
+    provenance: {
+      status: 'verified-out-of-band',
+      verifiedAt: 10,
+      note: 'Confirmed by phone'
+    }
   })
 })
 
@@ -87,6 +116,7 @@ test('sanitizes invalid persisted entries without discarding valid contacts', ()
     address: alice,
     name: 'Alice',
     note: '',
+    provenance: { status: 'saved' },
     createdAt: 1,
     updatedAt: 1
   }
@@ -94,6 +124,7 @@ test('sanitizes invalid persisted entries without discarding valid contacts', ()
     address: bob,
     name: 'Bob\u202e Treasury',
     note: '',
+    provenance: { status: 'saved' },
     createdAt: 1,
     updatedAt: 1
   }
@@ -103,6 +134,34 @@ test('sanitizes invalid persisted entries without discarding valid contacts', ()
     removed: 1
   })
   expect(sanitizeAddressBook([])).toEqual({ addressBook: {}, removed: 0 })
+})
+
+test('rejects persisted and imported timestamps outside the supported date range', () => {
+  const invalid = {
+    address: alice,
+    name: 'Alice',
+    note: '',
+    provenance: {
+      status: 'verified-out-of-band',
+      verifiedAt: Number.MAX_SAFE_INTEGER,
+      note: 'Legacy record'
+    },
+    createdAt: 1,
+    updatedAt: Number.MAX_SAFE_INTEGER
+  }
+
+  expect(sanitizeAddressBook({ [alice]: invalid })).toEqual({ addressBook: {}, removed: 1 })
+  expect(() =>
+    importAddressBookExport(
+      {},
+      {
+        format: ADDRESS_BOOK_FORMAT,
+        version: ADDRESS_BOOK_VERSION,
+        exportedAt: new Date(0).toISOString(),
+        entries: [invalid]
+      }
+    )
+  ).toThrow()
 })
 
 test('rejects wrong mixed-case checksums and duplicate addresses or names', () => {
@@ -148,6 +207,95 @@ test('edits without changing creation time and removes exact entries', () => {
   expect(() => removeAddressBookEntry({}, alice)).toThrow(/no longer exists/i)
 })
 
+test('stamps explicit out-of-band verification and preserves it across ordinary edits', () => {
+  const verified = saveAddressBookEntry(
+    {},
+    {
+      mode: 'add',
+      address: alice,
+      name: 'Alice',
+      note: '',
+      provenance: { status: 'verified-out-of-band', note: '  Confirmed   by phone ' }
+    },
+    10
+  )
+
+  expect(verified.entry.provenance).toEqual({
+    status: 'verified-out-of-band',
+    verifiedAt: 10,
+    note: 'Confirmed by phone'
+  })
+  const edited = saveAddressBookEntry(
+    verified.addressBook,
+    { mode: 'edit', address: alice, name: 'Alice Vault', note: 'Primary' },
+    20
+  )
+  expect(edited.entry.provenance).toEqual(verified.entry.provenance)
+
+  const reverified = saveAddressBookEntry(
+    edited.addressBook,
+    {
+      mode: 'edit',
+      address: alice,
+      name: 'Alice Vault',
+      note: 'Primary',
+      provenance: { status: 'verified-out-of-band', note: 'In person' }
+    },
+    30
+  )
+  expect(reverified.entry.provenance).toEqual({
+    status: 'verified-out-of-band',
+    verifiedAt: 30,
+    note: 'In person'
+  })
+  expect(
+    saveAddressBookEntry(
+      reverified.addressBook,
+      {
+        mode: 'edit',
+        address: alice,
+        name: 'Alice Vault',
+        note: 'Primary',
+        provenance: { status: 'saved' }
+      },
+      40
+    ).entry.provenance
+  ).toEqual({ status: 'saved' })
+})
+
+test('does not accept renderer-supplied verification timestamps or unbounded verification notes', () => {
+  expect(() =>
+    saveAddressBookEntry(
+      {},
+      {
+        mode: 'add',
+        address: alice,
+        name: 'Alice',
+        note: '',
+        provenance: {
+          status: 'verified-out-of-band',
+          verifiedAt: 1,
+          note: 'Renderer timestamp'
+        }
+      },
+      10
+    )
+  ).toThrow()
+  expect(() =>
+    saveAddressBookEntry(
+      {},
+      {
+        mode: 'add',
+        address: alice,
+        name: 'Alice',
+        note: '',
+        provenance: { status: 'verified-out-of-band', note: 'x'.repeat(281) }
+      },
+      10
+    )
+  ).toThrow(/280 characters/i)
+})
+
 test('round-trips a versioned export and skips duplicate address and name entries', () => {
   const first = saveAddressBookEntry(
     {},
@@ -156,7 +304,13 @@ test('round-trips a versioned export and skips duplicate address and name entrie
   ).addressBook
   const second = saveAddressBookEntry(
     first,
-    { mode: 'add', address: bob, name: 'Bob', note: 'Two' },
+    {
+      mode: 'add',
+      address: bob,
+      name: 'Bob',
+      note: 'Two',
+      provenance: { status: 'verified-out-of-band', note: 'Confirmed in person' }
+    },
     20
   ).addressBook
   const exported = createAddressBookExport(second, 30)
@@ -178,6 +332,20 @@ test('round-trips a versioned export and skips duplicate address and name entrie
   expect(merged.skipped).toBe(2)
 })
 
+test('imports legacy v1 contacts as user-saved without inventing verification evidence', () => {
+  const imported = importAddressBookExport(
+    {},
+    {
+      format: ADDRESS_BOOK_FORMAT,
+      version: 1,
+      exportedAt: new Date(0).toISOString(),
+      entries: [{ address: alice, name: 'Alice', note: 'Legacy', createdAt: 1, updatedAt: 2 }]
+    }
+  )
+
+  expect(imported.addressBook[alice]?.provenance).toEqual({ status: 'saved' })
+})
+
 test('rejects partial, unsupported, and oversized import documents', () => {
   expect(() => importAddressBookExport({}, { version: ADDRESS_BOOK_VERSION, entries: [] })).toThrow()
   expect(() =>
@@ -185,7 +353,7 @@ test('rejects partial, unsupported, and oversized import documents', () => {
       {},
       {
         format: ADDRESS_BOOK_FORMAT,
-        version: 2,
+        version: 3,
         exportedAt: new Date(0).toISOString(),
         entries: []
       }

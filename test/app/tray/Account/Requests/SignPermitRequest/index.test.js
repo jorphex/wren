@@ -74,6 +74,7 @@ it('shows a live local label without hiding the permit spender address', () => {
           address: spender,
           name: 'Yearn Router',
           note: '',
+          provenance: { status: 'saved' },
           createdAt: 1,
           updatedAt: 1
         }

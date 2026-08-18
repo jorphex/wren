@@ -12,7 +12,14 @@ import { createAddressBookFileService, readAddressBookFile } from '../../../main
 jest.mock('electron', () => ({ app: { on: jest.fn(), getPath: jest.fn(() => '/tmp') } }))
 
 const address = '0x0000000000000000000000000000000000000001'
-const entry = { address, name: 'Treasury', note: '', createdAt: 1, updatedAt: 1 }
+const entry = {
+  address,
+  name: 'Treasury',
+  note: '',
+  provenance: { status: 'saved' as const },
+  createdAt: 1,
+  updatedAt: 1
+}
 const document = {
   format: ADDRESS_BOOK_FORMAT,
   version: ADDRESS_BOOK_VERSION,
@@ -38,6 +45,26 @@ test('imports a completely validated document and reports duplicate skips', asyn
 
   expect(result).toEqual({ success: true, imported: 1, skipped: 0 })
   expect(deps.importEntries).toHaveBeenCalledWith(document)
+})
+
+test('imports legacy v1 documents as saved contacts without rewriting the source file', async () => {
+  const legacy = {
+    format: ADDRESS_BOOK_FORMAT,
+    version: 1,
+    exportedAt: new Date(1).toISOString(),
+    entries: [{ address, name: 'Treasury', note: '', createdAt: 1, updatedAt: 1 }]
+  }
+  const deps = dependencies({
+    importEntries: jest.fn(() => undefined),
+    readFile: jest.fn(async () => JSON.stringify(legacy))
+  })
+
+  await expect(createAddressBookFileService(deps).importFile()).resolves.toEqual({
+    success: true,
+    imported: 1,
+    skipped: 0
+  })
+  expect(deps.importEntries).toHaveBeenCalledWith(legacy)
 })
 
 test('computes import counts from validated state instead of the store action return value', async () => {

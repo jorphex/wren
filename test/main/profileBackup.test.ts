@@ -244,6 +244,35 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   )
 })
 
+it('preserves address-book provenance in encrypted profile recovery data', () => {
+  const { profile } = fixture()
+  const configPath = path.join(profile, 'config.json')
+  const current = migratePersistedConfiguration(JSON.parse(fs.readFileSync(configPath, 'utf8')))
+  const address = '0x0000000000000000000000000000000000000001'
+  current.main.addressBook = {
+    [address]: {
+      address,
+      name: 'Treasury',
+      note: 'Operations',
+      provenance: {
+        status: 'verified-out-of-band',
+        verifiedAt: 1_765_843_200_000,
+        note: 'Confirmed in person'
+      },
+      createdAt: 1_765_843_100_000,
+      updatedAt: 1_765_843_200_000
+    }
+  }
+  fs.writeFileSync(configPath, JSON.stringify({ main: { __: { [current.main._version]: current } } }))
+
+  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'))
+  const payload = decryptTestPayload(backup, password)
+  const configuration = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const [version] = Object.keys(configuration.main.__)
+
+  expect(configuration.main.__[version].main.addressBook[address]).toEqual(current.main.addressBook[address])
+})
+
 it('normalizes a version 3 profile before backup inspection and restore staging', () => {
   const { root, profile } = fixture()
   fs.writeFileSync(

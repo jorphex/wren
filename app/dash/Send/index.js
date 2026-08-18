@@ -8,7 +8,10 @@ import { resolveChainIdentityColor } from '../../../resources/Components/ChainId
 import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
 import link from '../../../resources/link'
 import { createBalance, isNativeCurrency, sortByTotalValue } from '../../../resources/domain/balance'
-import { resolveLocalAddressIdentity } from '../../../resources/domain/addressBook/identity'
+import {
+  lookupAddressBookEntry,
+  resolveLocalAddressIdentity
+} from '../../../resources/domain/addressBook/identity'
 import {
   formatTokenBaseUnitAmount,
   parseTokenBaseUnitAmount,
@@ -17,8 +20,6 @@ import {
 import { isNetworkConnected } from '../../../resources/utils/chains'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import { maxSendAmount, queueSend, resolveSendRecipient } from './api'
-
-const CONFIRMED_CLOSE_DWELL_MS = 3000
 
 const COPY = Object.freeze({
   accountChanged: 'The selected account changed. Re-check the recipient and amount before trying again.',
@@ -42,6 +43,11 @@ const COPY = Object.freeze({
   maxNeedsRecipient: 'Enter a recipient to enable Max so we can estimate gas.',
   noAccount: 'Select an account to send',
   noAssets: 'No sendable assets on this network',
+  noAssetsCopy: 'Wren found no positive balances available to send.',
+  assetsChecking: 'Checking balances…',
+  assetsCheckingCopy: 'Wren is refreshing this account before showing sendable assets.',
+  assetsDisconnected: 'Asset networks unavailable',
+  assetsDisconnectedCopy: 'Reconnect the networks holding these assets before sending.',
   noAssetsFound: 'No assets found',
   noContacts: 'No saved contacts yet.',
   activeAccounts: 'Active accounts',
@@ -53,8 +59,10 @@ const COPY = Object.freeze({
   queuedHeading: 'Transaction queued',
   recipient: 'Recipient',
   recipientInvalid: 'Enter a valid address',
+  recipientLookupUnavailable:
+    'Recipient lookup is unavailable. Enter or verify the full address to continue.',
   recipientPlaceholder: 'Enter an address',
-  recipientResolved: 'Address verified',
+  recipientResolved: 'No saved label · verify the full address',
   recipientResolving: 'Checking address…',
   reviewFee: 'Wren estimates gas before anything is signed.',
   savedContacts: 'Saved contacts',
@@ -62,6 +70,9 @@ const COPY = Object.freeze({
   searchAssets: 'Search assets',
   confirmedBody: 'Your transaction has been confirmed on the network.',
   confirmedHeading: 'Transaction confirmed',
+  destination: 'Destination',
+  saveContact: 'Save contact',
+  viewContact: 'View contact',
   submittedBody:
     'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.',
   submittedHeading: 'Transaction submitted',
@@ -77,6 +88,7 @@ const errorCopy = Object.freeze({
   'fee-unavailable': 'Fee estimate unavailable',
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
   'recipient-invalid': COPY.recipientInvalid,
+  'recipient-lookup-unavailable': COPY.recipientLookupUnavailable,
   'watch-only': COPY.watchOnly
 })
 
@@ -116,16 +128,13 @@ export class Send extends React.Component {
     this.queueSequence = 0
     this.recipientSequence = 0
     this.mounted = false
-    this.confirmedRequestKey = ''
-    this.confirmedCloseSent = false
-    this.successPointerInside = false
-    this.successFocusWithin = false
     this.assetTriggerRef = React.createRef()
     this.contactTriggerRef = React.createRef()
     this.pickerStep = ''
     this.pickerReturnTarget = null
     this.state = {
       amount: '',
+      copyStatus: '',
       assetFilter: '',
       contactFilter: '',
       queueError: '',
@@ -137,6 +146,7 @@ export class Send extends React.Component {
       recipientResolved: '',
       recipientStatus: '',
       requestAccount: '',
+      requestRecipient: '',
       requestId: '',
       selectedAsset: ''
     }
@@ -147,7 +157,6 @@ export class Send extends React.Component {
     this.accountId = this.store('selected.current') || ''
     this.pickerStep = this.store('windows.dash.nav')[0]?.data?.step || ''
     this.lockInitialAsset()
-    this.syncConfirmedAutoClose()
   }
 
   componentDidUpdate() {
@@ -161,7 +170,6 @@ export class Send extends React.Component {
     const accountId = this.store('selected.current') || ''
     if (accountId === this.accountId) {
       this.lockInitialAsset()
-      this.syncConfirmedAutoClose()
       return
     }
     this.accountId = accountId
@@ -169,10 +177,10 @@ export class Send extends React.Component {
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
-    this.resetConfirmedAutoClose()
     if (step === 'assetPicker' || step === 'contactPicker') link.send('nav:back', 'dash')
     this.setState({
       amount: '',
+      copyStatus: '',
       contactFilter: '',
       queueError: '',
       queueing: false,
@@ -183,6 +191,7 @@ export class Send extends React.Component {
       recipientResolved: '',
       recipientStatus: '',
       requestAccount: '',
+      requestRecipient: '',
       requestId: '',
       selectedAsset: ''
     })
@@ -190,8 +199,8 @@ export class Send extends React.Component {
 
   componentWillUnmount() {
     this.mounted = false
+    clearTimeout(this.copyStatusTimer)
     clearTimeout(this.recipientTimer)
-    this.clearConfirmedAutoClose()
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
@@ -204,80 +213,34 @@ export class Send extends React.Component {
     return request || this.lastRequest
   }
 
-  confirmedRequestKeyForState() {
-    const request = this.requestForState()
-    return request?.status === 'confirmed' ? `${this.state.requestAccount}:${this.state.requestId}` : ''
-  }
-
-  clearConfirmedAutoClose() {
-    clearTimeout(this.confirmedAutoCloseTimer)
-    this.confirmedAutoCloseTimer = null
-  }
-
-  resetConfirmedAutoClose() {
-    this.clearConfirmedAutoClose()
-    this.confirmedRequestKey = ''
-    this.confirmedCloseSent = false
-    this.successPointerInside = false
-    this.successFocusWithin = false
-  }
-
-  successSurfaceInteracting() {
-    return this.successPointerInside || this.successFocusWithin
-  }
-
-  scheduleConfirmedAutoClose() {
-    const requestKey = this.confirmedRequestKeyForState()
-    if (
-      !requestKey ||
-      this.confirmedCloseSent ||
-      this.successSurfaceInteracting() ||
-      this.confirmedAutoCloseTimer
-    ) {
-      return
-    }
-    this.confirmedAutoCloseTimer = setTimeout(() => {
-      this.confirmedAutoCloseTimer = null
-      if (
-        !this.mounted ||
-        this.confirmedCloseSent ||
-        this.successSurfaceInteracting() ||
-        this.confirmedRequestKeyForState() !== requestKey
-      ) {
-        return
-      }
-      this.confirmedCloseSent = true
-      link.send('tray:action', 'closeDash')
-    }, CONFIRMED_CLOSE_DWELL_MS)
-  }
-
-  syncConfirmedAutoClose() {
-    const requestKey = this.confirmedRequestKeyForState()
-    if (requestKey !== this.confirmedRequestKey) {
-      this.clearConfirmedAutoClose()
-      this.confirmedRequestKey = requestKey
-      this.confirmedCloseSent = false
-      this.successPointerInside = false
-      this.successFocusWithin = false
-    }
-    this.scheduleConfirmedAutoClose()
-  }
-
   closeConfirmedRequest() {
-    this.clearConfirmedAutoClose()
-    this.confirmedCloseSent = true
     link.send('tray:action', 'closeDash')
   }
 
-  setSuccessSurfaceInteraction(type, event) {
-    if (type === 'focus' && event.currentTarget.contains(event.relatedTarget)) return
-    if (type === 'blur' && event.currentTarget.contains(event.relatedTarget)) return
-    if (type === 'pointer-enter') this.successPointerInside = true
-    if (type === 'pointer-leave') this.successPointerInside = false
-    if (type === 'focus') this.successFocusWithin = true
-    if (type === 'blur') this.successFocusWithin = false
-    this.clearConfirmedAutoClose()
-    if (!this.successSurfaceInteracting()) this.scheduleConfirmedAutoClose()
+  copyConfirmedAddress() {
+    clearTimeout(this.copyStatusTimer)
+    link.send('tray:clipboardData', this.state.requestRecipient)
+    this.setState({ copyStatus: 'Address copied' })
+    this.copyStatusTimer = setTimeout(() => {
+      if (this.mounted) this.setState({ copyStatus: '' })
+    }, 4_000)
+  }
+
+  confirmedContact() {
+    return this.state.requestRecipient
+      ? lookupAddressBookEntry(this.store('main.addressBook'), this.state.requestRecipient)
+      : undefined
+  }
+
+  openConfirmedContact() {
+    const saved = this.confirmedContact()
+    link.send('tray:action', 'navDash', {
+      view: 'addressBook',
+      data: {
+        screen: 'edit',
+        ...(saved ? { address: saved.address } : { seed: this.state.requestRecipient })
+      }
+    })
   }
 
   lockInitialAsset() {
@@ -293,7 +256,10 @@ export class Send extends React.Component {
     const metadata = this.store('main.networksMeta.ethereum') || {}
     const rates = this.store('main.rates') || {}
     const rawBalances = account?.address ? this.store('main.balances', account.address) || [] : []
-    const assets = rawBalances
+    const positiveRawBalances = rawBalances.filter(
+      (balance) => (parseTokenBaseUnitAmount(balance.balance) || 0n) > 0n
+    )
+    const assets = positiveRawBalances
       .filter((balance) => networks[balance.chainId] && isNetworkConnected(networks[balance.chainId]))
       .map((balance) => displayedAsset(balance, networks, metadata, rates))
       .filter((asset) => parseTokenBaseUnitAmount(asset.balance) > 0n)
@@ -302,7 +268,12 @@ export class Send extends React.Component {
       ? assets.find((asset) => assetKey(asset) === this.state.selectedAsset)
       : assets[0]
 
-    return { account, accountId, assets, selected }
+    const scanning = Boolean(account?.address && this.store('main.scanning', account.address))
+    const unavailableAssets = positiveRawBalances.some(
+      (balance) => !networks[balance.chainId] || !isNetworkConnected(networks[balance.chainId])
+    )
+
+    return { account, accountId, assets, scanning, selected, unavailableAssets }
   }
 
   amountError(asset) {
@@ -326,7 +297,10 @@ export class Send extends React.Component {
     if (sequence !== this.recipientSequence || value !== this.state.recipient.trim()) return
 
     if (!result.success) {
-      this.setState({ recipientError: COPY.recipientInvalid, recipientStatus: 'invalid' })
+      this.setState({
+        recipientError: errorCopy[result.error] || COPY.recipientInvalid,
+        recipientStatus: result.error === 'recipient-lookup-unavailable' ? 'unavailable' : 'invalid'
+      })
       return
     }
 
@@ -413,13 +387,14 @@ export class Send extends React.Component {
 
     const sequence = ++this.queueSequence
     const requestAccount = account.id
+    const requestRecipient = this.state.recipientResolved
     this.setState({ queueError: '', queueing: true })
     const result = await queueSend({
       account: account.id,
       amount: this.state.amount,
       assetAddress: selected.address,
       chainId: selected.chainId,
-      recipient: this.state.recipientResolved
+      recipient: requestRecipient
     })
 
     if (
@@ -435,18 +410,24 @@ export class Send extends React.Component {
       return
     }
     this.lastRequest = null
-    this.setState({ queueing: false, requestAccount: account.id, requestId: result.handlerId })
+    this.setState({
+      queueing: false,
+      requestAccount: account.id,
+      requestRecipient,
+      requestId: result.handlerId
+    })
   }
 
   resetRequest(clearDraft = false) {
-    this.resetConfirmedAutoClose()
     this.lastRequest = null
     this.setState({
       ...(clearDraft
         ? { amount: '', recipient: '', recipientName: '', recipientResolved: '', recipientSource: '' }
         : {}),
       queueError: '',
+      copyStatus: '',
       requestAccount: '',
+      requestRecipient: '',
       requestId: ''
     })
   }
@@ -508,7 +489,7 @@ export class Send extends React.Component {
                     <span>{asset.chainName}</span>
                   </span>
                   <span className='sendAssetBalance'>
-                    <strong>{asset.displayBalance}</strong>
+                    <strong>{this.store('selected.hideBalances') ? '••••' : asset.displayBalance}</strong>
                     <span>{asset.name}</span>
                   </span>
                   <span className='sendAssetSelection'>
@@ -614,7 +595,9 @@ export class Send extends React.Component {
                   <strong>{contact.name}</strong>
                   <span>{contact.address}</span>
                 </span>
-                <Icon name='next' size={14} />
+                <span className='sendContactContext'>
+                  {contact.provenance.status === 'verified-out-of-band' ? 'Verified out of band' : 'Saved'}
+                </span>
               </button>
             ))
           ) : !accounts.length ? (
@@ -649,19 +632,10 @@ export class Send extends React.Component {
           : submitted
             ? COPY.submittedBody
             : COPY.queuedBody
+    const savedContact = confirmed ? this.confirmedContact() : undefined
 
     return (
-      <section
-        className={`sendRequestState cardShow ${confirmed ? 'sendRequestStateSuccess' : ''}`}
-        onBlur={confirmed ? (event) => this.setSuccessSurfaceInteraction('blur', event) : undefined}
-        onFocus={confirmed ? (event) => this.setSuccessSurfaceInteraction('focus', event) : undefined}
-        onMouseEnter={
-          confirmed ? (event) => this.setSuccessSurfaceInteraction('pointer-enter', event) : undefined
-        }
-        onMouseLeave={
-          confirmed ? (event) => this.setSuccessSurfaceInteraction('pointer-leave', event) : undefined
-        }
-      >
+      <section className={`sendRequestState cardShow ${confirmed ? 'sendRequestStateSuccess' : ''}`}>
         <div className='sendRequestGlyph'>
           <Icon name={confirmed ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
         </div>
@@ -673,6 +647,25 @@ export class Send extends React.Component {
           <h2>{heading}</h2>
           <p>{body}</p>
         </div>
+        {confirmed && this.state.requestRecipient ? (
+          <div className='sendConfirmedDestination'>
+            <span>{COPY.destination}</span>
+            {savedContact ? <strong>{savedContact.name}</strong> : null}
+            <code>{this.state.requestRecipient}</code>
+            <button
+              className='wrenControl wrenControlGhost wrenControlCompact'
+              onClick={() => this.copyConfirmedAddress()}
+              type='button'
+            >
+              Copy address
+            </button>
+            {this.state.copyStatus ? (
+              <span aria-atomic='true' aria-live='polite' className='sendCopyStatus' role='status'>
+                {this.state.copyStatus}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         {declined || failed ? (
           <button
             className='wrenControl wrenControlPrimary wrenControlLarge'
@@ -682,13 +675,22 @@ export class Send extends React.Component {
             {COPY.tryAgain}
           </button>
         ) : confirmed ? (
-          <button
-            className='wrenControl wrenControlGhost wrenControlLarge'
-            onClick={() => this.closeConfirmedRequest()}
-            type='button'
-          >
-            {COPY.close}
-          </button>
+          <div className='sendConfirmedActions'>
+            <button
+              className='wrenControl wrenControlGhost wrenControlLarge'
+              onClick={() => this.openConfirmedContact()}
+              type='button'
+            >
+              {savedContact ? COPY.viewContact : COPY.saveContact}
+            </button>
+            <button
+              className='wrenControl wrenControlSecondary wrenControlLarge'
+              onClick={() => this.closeConfirmedRequest()}
+              type='button'
+            >
+              {COPY.close}
+            </button>
+          </div>
         ) : null}
       </section>
     )
@@ -696,7 +698,7 @@ export class Send extends React.Component {
 
   render() {
     const context = this.getContext()
-    const { account, assets, selected } = context
+    const { account, assets, scanning, selected, unavailableAssets } = context
     const { data = {} } = this.store('windows.dash.nav')[0] || {}
     if (data.step === 'assetPicker') return this.renderAssetPicker(context)
     if (data.step === 'contactPicker') return this.renderContactPicker()
@@ -706,12 +708,27 @@ export class Send extends React.Component {
     }
 
     if (!account || !assets.length) {
+      const unavailableTitle = !account
+        ? COPY.noAccount
+        : scanning
+          ? COPY.assetsChecking
+          : unavailableAssets
+            ? COPY.assetsDisconnected
+            : COPY.noAssets
+      const unavailableCopy = !account
+        ? undefined
+        : scanning
+          ? COPY.assetsCheckingCopy
+          : unavailableAssets
+            ? COPY.assetsDisconnectedCopy
+            : COPY.noAssetsCopy
       return (
         <div className='sendUnavailable'>
           <WrenEmptyState
+            copy={unavailableCopy}
             expanded={true}
             image={emptyBalances}
-            title={account ? COPY.noAssets : COPY.noAccount}
+            title={unavailableTitle}
             transparentImage={true}
           />
         </div>
@@ -758,6 +775,7 @@ export class Send extends React.Component {
             <button
               aria-label={COPY.chooseAsset}
               className='sendRowValue sendAssetValue'
+              disabled={this.state.queueing}
               ref={this.assetTriggerRef}
               onClick={() => this.openPicker('assetPicker', COPY.chooseAsset)}
               type='button'
@@ -782,8 +800,10 @@ export class Send extends React.Component {
             >
               <input
                 autoComplete='off'
+                aria-describedby='sendRecipientFeedback'
                 aria-invalid={this.state.recipientError ? 'true' : undefined}
                 className='sendRecipientInput wrenInput'
+                disabled={this.state.queueing}
                 id='send-recipient'
                 maxLength={255}
                 onChange={(event) => this.updateRecipient(event.target.value)}
@@ -794,6 +814,7 @@ export class Send extends React.Component {
               <button
                 aria-label={COPY.chooseContact}
                 className='sendInlineAction'
+                disabled={this.state.queueing}
                 ref={this.contactTriggerRef}
                 onClick={() => {
                   this.setState({ contactFilter: '' })
@@ -807,6 +828,7 @@ export class Send extends React.Component {
                 <button
                   aria-label={COPY.clearRecipient}
                   className='sendInlineAction'
+                  disabled={this.state.queueing}
                   onClick={() => this.updateRecipient('')}
                   type='button'
                 >
@@ -814,8 +836,29 @@ export class Send extends React.Component {
                 </button>
               ) : null}
             </span>
-            <span className='sendRowHint' role={this.state.recipientError ? 'alert' : undefined}>
-              {this.state.recipientError || recipientHint}
+            <span
+              className='sendRowHint sendRecipientFeedback'
+              id='sendRecipientFeedback'
+              role={this.state.recipientError ? 'alert' : this.state.recipientStatus ? 'status' : undefined}
+            >
+              {this.state.recipientError ||
+                (this.state.recipientResolved ? (
+                  <span className='sendRecipientResolved'>
+                    {recipientHint ? <span>{recipientHint}</span> : null}
+                    <code>{this.state.recipientResolved}</code>
+                    <button
+                      aria-label='Copy recipient address'
+                      className='sendRecipientCopy'
+                      disabled={this.state.queueing}
+                      onClick={() => link.send('tray:clipboardData', this.state.recipientResolved)}
+                      type='button'
+                    >
+                      Copy
+                    </button>
+                  </span>
+                ) : (
+                  recipientHint
+                ))}
             </span>
           </div>
 
@@ -828,6 +871,7 @@ export class Send extends React.Component {
                 autoComplete='off'
                 aria-invalid={amountError ? 'true' : undefined}
                 className='sendAmountInput wrenInput'
+                disabled={this.state.queueing}
                 id='send-amount'
                 inputMode='decimal'
                 onChange={(event) => {
@@ -842,7 +886,7 @@ export class Send extends React.Component {
               <button
                 aria-describedby={maxNeedsRecipient && !amountError ? 'sendMaxReason' : undefined}
                 className='sendMaxAction wrenControl wrenControlGhost wrenControlCompact'
-                disabled={maxNeedsRecipient}
+                disabled={maxNeedsRecipient || this.state.queueing}
                 onClick={() => {
                   this.setMax(selected)
                 }}
@@ -858,7 +902,9 @@ export class Send extends React.Component {
               {amountError || (
                 <>
                   <span className='sendAvailableHint'>
-                    {`Available: ${selected.displayBalance} ${selected.symbol}`}
+                    {this.store('selected.hideBalances')
+                      ? 'Available balance hidden'
+                      : `Available: ${selected.displayBalance} ${selected.symbol}`}
                   </span>
                   {maxNeedsRecipient ? (
                     <span className='sendMaxReason' id='sendMaxReason'>
