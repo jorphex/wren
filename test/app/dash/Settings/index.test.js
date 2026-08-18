@@ -5,7 +5,21 @@ import { WREN_LICENSE_URL } from '../../../../resources/constants'
 import link from '../../../../resources/link'
 import { act, fireEvent, render, screen, within } from '../../../componentSetup'
 
-jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../resources/link', () => ({
+  invoke: jest.fn().mockResolvedValue({
+    success: true,
+    status: {
+      available: true,
+      backend: 'gnome_libsecret',
+      enabled: false,
+      protectedFiles: 0,
+      signerFiles: 0,
+      state: 'disabled'
+    }
+  }),
+  rpc: jest.fn(),
+  send: jest.fn()
+}))
 jest.mock('../../../../resources/Components/KeyboardShortcutConfigurator', () => () => null)
 
 const state = {
@@ -79,6 +93,7 @@ it('groups settings into a short, semantic ledger', () => {
     'Browser companions',
     'Local connections',
     'Recovery',
+    'Software signers',
     'About'
   ])
   expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Wallet shortcut'))).toBe(

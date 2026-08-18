@@ -8,6 +8,7 @@ import KeyboardShortcutConfigurator from '../../../resources/Components/Keyboard
 import Toggle from '../../../resources/Components/Toggle'
 import DialogSurface from '../../../resources/Components/DialogSurface'
 import Recovery from './Recovery'
+import SignerProtection from './SignerProtection'
 
 import styled from 'styled-components'
 
@@ -853,6 +854,12 @@ export class Settings extends Component {
               Recovery
             </h2>
             <Recovery />
+          </section>
+          <section className='wrenSettingsSection' aria-labelledby='wren-settings-signer-protection'>
+            <h2 id='wren-settings-signer-protection' className='wrenSettingsSectionTitle'>
+              Software signers
+            </h2>
+            <SignerProtection />
           </section>
           <section className='wrenSettingsSection' aria-labelledby='wren-settings-about'>
             <h2 id='wren-settings-about' className='wrenSettingsSectionTitle'>
