@@ -72,6 +72,10 @@ import { publishOperationLifecycleObservation } from '../operationLifecycle/even
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 import { transactionOutboundTargets } from '../addressSafety'
+import {
+  isTransactionFundingError,
+  type TransactionFundingError
+} from '../../resources/domain/transaction/funding'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -120,7 +124,10 @@ function toTransactionsByLayer(requests: Record<string, AccountRequest>, chainId
           l1Transactions.push([id, txRequest])
         }
 
-        if (chainUsesOptimismFees(parseInt(txRequest.data.chainId, 16))) {
+        if (
+          chainUsesOptimismFees(parseInt(txRequest.data.chainId, 16)) &&
+          (!chainId || chainId === 1 || parseInt(txRequest.data.chainId, 16) === chainId)
+        ) {
           l2Transactions.push([id, txRequest])
         }
 
@@ -1630,7 +1637,7 @@ export class Accounts extends EventEmitter {
     this.updatePendingFees()
   }
 
-  updatePendingFees(chainId?: number) {
+  async updatePendingFees(chainId?: number) {
     const currentAccount = this.current()
 
     if (currentAccount) {
@@ -1673,8 +1680,8 @@ export class Accounts extends EventEmitter {
         }
       })
 
-      if (chainId === 1) {
-        l2Transactions.forEach(async ([_id, req]) => {
+      await Promise.all(
+        l2Transactions.map(async ([_id, req]) => {
           let estimate = ''
           try {
             estimate = toBeHex(await provider.getL1GasCost(req.data))
@@ -1691,7 +1698,7 @@ export class Accounts extends EventEmitter {
 
           currentAccount.update()
         })
-      }
+      )
     }
   }
 
@@ -2353,11 +2360,16 @@ export class Accounts extends EventEmitter {
         return true
       }
 
-      if (failedBeforeBroadcast && isRecoverableAccountCodeEvidenceError(err)) {
-        const recoverableError = err as Error & {
-          code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
-          data?: unknown
-        }
+      if (
+        failedBeforeBroadcast &&
+        (isRecoverableAccountCodeEvidenceError(err) || isTransactionFundingError(err))
+      ) {
+        const recoverableError = err as
+          | (Error & {
+              code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
+              data?: unknown
+            })
+          | TransactionFundingError
         failedRequest.status = RequestStatus.Error
         failedRequest.notice =
           recoverableError.message || 'The transaction safety check could not be repeated.'
@@ -2445,7 +2457,7 @@ export class Accounts extends EventEmitter {
     return false
   }
 
-  retryFailedTransaction(handlerId: string, accountId: string) {
+  async retryFailedTransaction(handlerId: string, accountId: string) {
     const currentAccount = this.requestAccount(handlerId, accountId)
     const request = currentAccount?.getActiveReviewRequest<TransactionRequest>(handlerId)
     if (
@@ -2456,6 +2468,27 @@ export class Accounts extends EventEmitter {
       !request.recoverableError
     ) {
       throw new Error('Transaction request is not available for another review')
+    }
+
+    const fundingRecovery = request.recoverableError.code.startsWith('transaction-funding-')
+    if (fundingRecovery) {
+      delete request.locked
+      await this.updatePendingFees(Number(parseRpcQuantity(request.data.chainId)))
+      request.locked = true
+      try {
+        await provider.assertTransactionFunding(request)
+      } catch (error) {
+        if (isTransactionFundingError(error)) {
+          request.notice = error.message
+          request.recoverableError = {
+            code: error.code,
+            message: error.message,
+            ...(error.data === undefined ? {} : { data: error.data })
+          }
+          currentAccount.update()
+        }
+        throw error
+      }
     }
 
     this.clearPendingNonceAdjustment(currentAccount, handlerId)

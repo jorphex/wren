@@ -60,6 +60,7 @@ const commandStore = ({
       return {
         nativeCurrency: {
           symbol: 'ETH',
+          decimals: 18,
           ...(nativePrice === undefined ? {} : { usd: { price: nativePrice } })
         }
       }
@@ -235,6 +236,48 @@ it('retains a recoverable pre-sign failure with explicit recheck and close actio
   expect(screen.queryByText(/Delegation recheck unavailable/)).toBeNull()
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
 
+  expect(link.rpc).toHaveBeenCalledWith(
+    'retryTransactionRequest',
+    { account: request.account, handlerId: request.handlerId, type: 'transaction' },
+    expect.any(Function)
+  )
+  view.unmount()
+})
+
+it('shows exact funding recovery amounts with copy, receive QR, and recheck actions', async () => {
+  const quantity = (value) => `0x${value.toString(16)}`
+  const req = transaction({
+    status: 'error',
+    notice: 'More funds needed.',
+    recoverableError: {
+      code: 'transaction-funding-insufficient',
+      message: 'More funds needed.',
+      data: {
+        available: quantity(10n ** 18n),
+        required: quantity(15n * 10n ** 17n),
+        missing: quantity(5n * 10n ** 17n),
+        value: '0x0',
+        maximumFee: quantity(15n * 10n ** 17n)
+      }
+    },
+    retainedPreBroadcastError: { responderPending: true }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  expect(screen.getByRole('alert').textContent).toMatch(/more funds needed/i)
+  expect(screen.getByText('1 ETH')).toBeTruthy()
+  expect(screen.getByText('1.5 ETH')).toBeTruthy()
+  expect(screen.getByText('0.5 ETH')).toBeTruthy()
+
+  await view.user.click(screen.getByRole('button', { name: 'Copy address' }))
+  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', request.account)
+
+  await view.user.click(screen.getByRole('button', { name: 'Show receive QR' }))
+  expect(
+    screen.getByRole('img', { name: 'QR code for funding account address' }).getAttribute('data-qr-payload')
+  ).toBe(request.account)
+
+  await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
   expect(link.rpc).toHaveBeenCalledWith(
     'retryTransactionRequest',
     { account: request.account, handlerId: request.handlerId, type: 'transaction' },

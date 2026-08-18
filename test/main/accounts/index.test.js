@@ -21,6 +21,10 @@ import operationLifecycleLedger from '../../../main/operationLifecycle'
 import { observeOperationLifecycles } from '../../../main/operationLifecycle/events'
 import { OperationLifecycleProjection } from '../../../main/operationLifecycle/projection'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../../../main/store/state/types/operationLifecycle'
+import {
+  TransactionFundingError,
+  TRANSACTION_FUNDING_ERROR
+} from '../../../resources/domain/transaction/funding'
 
 jest.mock('electron', () => ({
   Notification: class {
@@ -33,6 +37,8 @@ jest.mock('electron', () => ({
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
   sendTransaction: jest.fn(),
+  assertTransactionFunding: jest.fn(),
+  getL1GasCost: jest.fn(),
   emit: jest.fn(),
   on: jest.fn(),
   off: jest.fn(),
@@ -220,6 +226,21 @@ describe('#updatePendingFees', () => {
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(refresh).toHaveBeenCalledWith(matching)
     refresh.mockRestore()
+  })
+
+  it('awaits a fresh Optimism L1 data-fee estimate for the updated L2 chain', async () => {
+    request.data.chainId = '0xa'
+    store.setGasFees('ethereum', 10, {
+      maxBaseFeePerGas: gweiToHex(9),
+      maxPriorityFeePerGas: gweiToHex(2)
+    })
+    provider.getL1GasCost.mockResolvedValueOnce(123n)
+    Accounts.addRequest(request)
+
+    await Accounts.updatePendingFees(10)
+
+    expect(provider.getL1GasCost).toHaveBeenCalledWith(request.data)
+    expect(request.chainData).toEqual({ optimism: { l1Fees: '0x7b' } })
   })
 })
 
@@ -1525,7 +1546,115 @@ describe('account-bound request transitions', () => {
     }
   })
 
-  it('rechecks fresh simulation evidence before a recoverable request can be signed again', () => {
+  it('retains exact insufficient-funding evidence before any signing attempt', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('recoverable-funding-failure')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(
+        TRANSACTION_FUNDING_ERROR,
+        'The account needs more funds. Nothing was signed or sent.',
+        { available: '0x5', required: '0x9', missing: '0x4', value: '0x1', maximumFee: '0x8' }
+      ),
+      account2.address
+    )
+
+    expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+      status: 'error',
+      locked: true,
+      recoverableError: {
+        code: TRANSACTION_FUNDING_ERROR,
+        data: { available: '0x5', required: '0x9', missing: '0x4' }
+      },
+      retainedPreBroadcastError: { responderPending: true }
+    })
+    expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+  })
+
+  it('refreshes fees and keeps updated funding evidence when recheck is still short', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-still-short')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(TRANSACTION_FUNDING_ERROR, 'More funds needed.', {
+        available: '0x1',
+        required: '0x9',
+        missing: '0x8',
+        value: '0x1',
+        maximumFee: '0x8'
+      }),
+      account2.address
+    )
+    const feeRefresh = jest.spyOn(Accounts, 'updatePendingFees').mockImplementation()
+    provider.assertTransactionFunding.mockRejectedValueOnce(
+      new TransactionFundingError(TRANSACTION_FUNDING_ERROR, 'More funds are still needed.', {
+        available: '0x4',
+        required: '0xa',
+        missing: '0x6',
+        value: '0x1',
+        maximumFee: '0x9'
+      })
+    )
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).rejects.toThrow(
+      /still needed/i
+    )
+
+    expect(feeRefresh).toHaveBeenCalledWith(1)
+    expect(explicit).toMatchObject({
+      status: 'error',
+      locked: true,
+      recoverableError: {
+        code: TRANSACTION_FUNDING_ERROR,
+        data: { available: '0x4', required: '0xa', missing: '0x6' }
+      }
+    })
+    feeRefresh.mockRestore()
+  })
+
+  it('returns a funded request to fresh fee and simulation review', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-recovered')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(TRANSACTION_FUNDING_ERROR, 'More funds needed.', {
+        available: '0x1',
+        required: '0x9',
+        missing: '0x8',
+        value: '0x1',
+        maximumFee: '0x8'
+      }),
+      account2.address
+    )
+    const feeRefresh = jest.spyOn(Accounts, 'updatePendingFees').mockImplementation()
+    const simulationRefresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
+    provider.assertTransactionFunding.mockResolvedValueOnce({ missing: '0x0' })
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
+
+    expect(explicit.locked).toBeUndefined()
+    expect(explicit.status).toBeUndefined()
+    expect(explicit.recoverableError).toBeUndefined()
+    expect(explicit.retainedPreBroadcastError).toBeUndefined()
+    expect(simulationRefresh).toHaveBeenCalledWith(explicit, true, false)
+    feeRefresh.mockRestore()
+    simulationRefresh.mockRestore()
+  })
+
+  it('rechecks fresh simulation evidence before a recoverable request can be signed again', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('retry-account-code-failure')
     targetAccount.addRequest(explicit)
@@ -1541,7 +1670,7 @@ describe('account-bound request transitions', () => {
     )
     const refresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
 
-    expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
 
     expect(explicit.locked).toBeUndefined()
     expect(explicit.status).toBeUndefined()
@@ -1555,7 +1684,7 @@ describe('account-bound request transitions', () => {
     refresh.mockRestore()
   })
 
-  it('drops a wallet-filled nonce before rechecking a recoverable request', () => {
+  it('drops a wallet-filled nonce before rechecking a recoverable request', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('retry-wallet-filled-nonce')
     explicit.payload = {
@@ -1577,7 +1706,7 @@ describe('account-bound request transitions', () => {
     )
     const refresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
 
-    expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).toBe(true)
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
 
     expect(explicit.data.nonce).toBeUndefined()
     expect(refresh).toHaveBeenCalledWith(explicit, true, false)

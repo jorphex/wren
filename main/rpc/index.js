@@ -247,7 +247,10 @@ const rpc = {
     ) {
       return cb(new Error('Request account is no longer selected'))
     }
-    callbackWhenDone(() => accounts.retryFailedTransaction(req.handlerId, req.account), cb)
+    accounts.retryFailedTransaction(req.handlerId, req.account).then(
+      () => cb(null),
+      (error) => cb(error)
+    )
   },
   replaceTransactionRequest(req, type, cb) {
     const currentAccount = accounts.current()

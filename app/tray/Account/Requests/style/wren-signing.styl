@@ -1081,6 +1081,45 @@
   .requestActionContextCopy span
     max-width 390px
 
+.transactionFundingFacts
+  display grid
+  margin 8px 0 0
+  grid-template-columns repeat(3, minmax(0, 1fr))
+  gap 10px
+
+  dt
+    color var(--wren-text-muted)
+    font-size 10px
+    text-transform uppercase
+
+  dd
+    margin 2px 0 0
+    overflow-wrap anywhere
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size 11px
+
+.requestActionContextCopy .transactionFundingActions
+  display flex
+  margin-top 8px
+  gap 8px
+
+  button
+    border 0
+    padding 0
+    color var(--wren-accent-primary-hover)
+    background transparent
+    font-family var(--wren-font-utility)
+    font-size 11px
+    cursor pointer
+
+.transactionFundingQr
+  display block
+  width 132px
+  height 132px
+  margin-top 8px
+  border 6px solid #fff
+
 .txLifecycleEvidence
   position relative
   margin-top 16px

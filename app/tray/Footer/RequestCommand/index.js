@@ -7,6 +7,7 @@ import TxApproval from './TxApproval'
 import Time from '../Time'
 
 import Icon from '../../../../resources/Components/Icon'
+import QrCode from '../../../../resources/Components/QrCode'
 import link from '../../../../resources/link'
 
 import { usesBaseFee } from '../../../../resources/domain/transaction'
@@ -20,6 +21,18 @@ import { WATCH_ONLY_SIGNING_ERROR } from '../../../../resources/domain/signer'
 import { requestReference } from '../../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
+
+const formatFundingQuantity = (value, decimals = 18, symbol = '') => {
+  try {
+    const quantity = BigInt(value)
+    const scale = 10n ** BigInt(decimals)
+    const whole = quantity / scale
+    const fraction = (quantity % scale).toString().padStart(decimals, '0').replace(/0+$/u, '')
+    return `${whole}${fraction ? `.${fraction}` : ''} ${symbol}`.trim()
+  } catch {
+    return `? ${symbol}`.trim()
+  }
+}
 
 export function accountCodeEvidenceReady(simulation) {
   const evidence = simulation?.accountCodeEvidence
@@ -72,7 +85,8 @@ export class RequestCommand extends React.Component {
       feeDraftSafe: isTransactionFeeDraftSafe(props.req?.handlerId),
       signerLocked: false,
       requestActionPending: false,
-      requestActionError: ''
+      requestActionError: '',
+      fundingQrOpen: false
     }
 
     this.scheduleTimer(
@@ -620,17 +634,33 @@ export class RequestCommand extends React.Component {
   retainedPreBroadcastFailureStatus(req) {
     const recoverable = Boolean(req.recoverableError)
     const changed = req.recoverableError?.code === 'account-code-evidence-changed'
+    const funding = req.recoverableError?.code === 'transaction-funding-insufficient'
+    const fundingUnavailable = req.recoverableError?.code === 'transaction-funding-unavailable'
+    const fundingEvidence = funding ? req.recoverableError?.data : undefined
+    const chainId = Number.parseInt(req.data?.chainId, 16)
+    const nativeCurrency =
+      (funding ? this.store('main.networksMeta', 'ethereum', chainId)?.nativeCurrency : undefined) || {}
+    const decimals = Number.isInteger(nativeCurrency.decimals) ? nativeCurrency.decimals : 18
+    const symbol = nativeCurrency.symbol || 'native currency'
     const pending = this.state.requestActionPending
     const title = recoverable
-      ? changed
-        ? 'Transaction state changed'
-        : 'Safety check unavailable'
+      ? funding
+        ? 'More funds needed'
+        : fundingUnavailable
+          ? 'Balance check unavailable'
+          : changed
+            ? 'Transaction state changed'
+            : 'Safety check unavailable'
       : 'Signing did not complete'
     const failureNotice = (req.notice || 'Signing did not complete').replace(/[.]+$/u, '')
     const detail = recoverable
-      ? changed
-        ? 'Account code changed during the final safety check. Nothing was signed or sent.'
-        : 'The safety check could not be repeated. Nothing was signed or sent.'
+      ? funding
+        ? 'The account cannot cover the value and maximum network fee. Nothing was signed or sent.'
+        : fundingUnavailable
+          ? 'The balance or fee requirement could not be verified. Nothing was signed or sent.'
+          : changed
+            ? 'Account code changed during the final safety check. Nothing was signed or sent.'
+            : 'The safety check could not be repeated. Nothing was signed or sent.'
       : `${failureNotice}. No transaction was sent.`
 
     return (
@@ -642,6 +672,43 @@ export class RequestCommand extends React.Component {
           <span className='requestActionContextCopy'>
             <strong>{title}</strong>
             <span>{detail}</span>
+            {fundingEvidence ? (
+              <dl className='transactionFundingFacts'>
+                <div>
+                  <dt>Available</dt>
+                  <dd>{formatFundingQuantity(fundingEvidence.available, decimals, symbol)}</dd>
+                </div>
+                <div>
+                  <dt>Required</dt>
+                  <dd>{formatFundingQuantity(fundingEvidence.required, decimals, symbol)}</dd>
+                </div>
+                <div>
+                  <dt>Missing</dt>
+                  <dd>{formatFundingQuantity(fundingEvidence.missing, decimals, symbol)}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {funding ? (
+              <span className='transactionFundingActions'>
+                <button type='button' onClick={() => link.send('tray:clipboardData', req.account)}>
+                  Copy address
+                </button>
+                <button
+                  type='button'
+                  aria-expanded={this.state.fundingQrOpen}
+                  onClick={() => this.setState(({ fundingQrOpen }) => ({ fundingQrOpen: !fundingQrOpen }))}
+                >
+                  {this.state.fundingQrOpen ? 'Hide receive QR' : 'Show receive QR'}
+                </button>
+              </span>
+            ) : null}
+            {funding && this.state.fundingQrOpen ? (
+              <QrCode
+                className='transactionFundingQr'
+                label='QR code for funding account address'
+                value={req.account}
+              />
+            ) : null}
             {this.state.requestActionError ? (
               <span className='requestActionError' role='alert'>
                 {this.state.requestActionError}

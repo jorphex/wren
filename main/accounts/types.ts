@@ -134,7 +134,11 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
     originalHash: string
   }
   recoverableError?: {
-    code: 'account-code-evidence-unavailable' | 'account-code-evidence-changed'
+    code:
+      | 'account-code-evidence-unavailable'
+      | 'account-code-evidence-changed'
+      | 'transaction-funding-insufficient'
+      | 'transaction-funding-unavailable'
     message: string
     data?: unknown
   }

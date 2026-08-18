@@ -22,6 +22,11 @@ import { showWalletCallStatus } from '../../../main/provider/walletCallStatusVie
 import { ApprovalType } from '../../../resources/constants'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
+import {
+  TransactionFundingError,
+  TRANSACTION_FUNDING_ERROR,
+  TRANSACTION_FUNDING_UNAVAILABLE
+} from '../../../resources/domain/transaction/funding'
 
 const address = '0x22dd63c3619818fdbc262c78baee43cb61e9cccf'
 const defaultOriginId = '8073729a-5e59-53b7-9e69-5d9bcff94087'
@@ -178,6 +183,7 @@ beforeEach(() => {
   accounts.setTxSigned = jest.fn()
   accounts.lockRequest = jest.fn()
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
+  provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
   accounts.rejectUnapprovedRequestsForOriginChain = jest.fn()
   executeWalletCallRuntime.mockReset()
   executeWalletCallRuntime.mockResolvedValue(['0xhash'])
@@ -290,7 +296,8 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    await new Promise(setImmediate)
+    await Promise.resolve()
+    await Promise.resolve()
 
     expect(accounts.recheckReplacementRequest).toHaveBeenCalledWith(request)
     expect(signAndSend).toHaveBeenCalledWith(request, callback)
@@ -307,13 +314,92 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    await new Promise(setImmediate)
+    await Promise.resolve()
+    await Promise.resolve()
 
     expect(callback).toHaveBeenCalledWith(
       expect.objectContaining({ message: expect.stringMatching(/included/i) })
     )
     expect(signAndSend).not.toHaveBeenCalled()
     signAndSend.mockRestore()
+  })
+
+  it('does not invoke the signer when the final funding check reports a shortfall', async () => {
+    const request = replacementRequest()
+    delete request.replacement
+    accountRequests.push(request)
+    const fundingError = new TransactionFundingError(
+      TRANSACTION_FUNDING_ERROR,
+      'More funds are needed. Nothing was signed or sent.',
+      { available: '0x1', required: '0x3', missing: '0x2', value: '0x0', maximumFee: '0x3' }
+    )
+    provider.assertTransactionFunding.mockRejectedValueOnce(fundingError)
+    const signAndSend = jest.spyOn(provider, 'signAndSend')
+    const callback = jest.fn()
+
+    provider.approveTransactionRequest(request, callback)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(callback).toHaveBeenCalledWith(fundingError)
+    expect(signAndSend).not.toHaveBeenCalled()
+    expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
+    signAndSend.mockRestore()
+  })
+})
+
+describe('#assertTransactionFunding', () => {
+  const assertFunding = (request) =>
+    Object.getPrototypeOf(provider).assertTransactionFunding.call(provider, request)
+
+  it('reads the pending balance from the target chain and includes an Optimism data fee', async () => {
+    const request = {
+      account: address,
+      data: {
+        chainId: '0xa',
+        type: '0x2',
+        value: '0x5',
+        gasLimit: '0xa',
+        maxFeePerGas: '0x2',
+        maxPriorityFeePerGas: '0x1'
+      },
+      chainData: { optimism: { l1Fees: '0x3' } }
+    }
+    connection.send.mockImplementationOnce((payload, callback, chain) => {
+      expect(payload).toMatchObject({ method: 'eth_getBalance', params: [address, 'pending'] })
+      expect(chain).toEqual({ type: 'ethereum', id: 10 })
+      callback({ result: '0x1c' })
+    })
+
+    await expect(assertFunding(request)).resolves.toMatchObject({ required: '0x1c', missing: '0x0' })
+  })
+
+  it('uses canonical balance for a replacement so the original pending value is not counted twice', async () => {
+    connection.send.mockImplementationOnce((payload, callback) => {
+      expect(payload.params).toEqual([address, 'latest'])
+      callback({ result: '0x20' })
+    })
+
+    await expect(
+      assertFunding({
+        account: address,
+        replacement: { kind: 'speed' },
+        data: { chainId: '0x1', type: '0x0', value: '0x10', gasLimit: '0x2', gasPrice: '0x3' }
+      })
+    ).resolves.toMatchObject({ required: '0x16', missing: '0x0' })
+  })
+
+  it('fails closed when the configured RPC balance is unavailable', async () => {
+    connection.send.mockImplementationOnce((_payload, callback) => {
+      callback({ error: { code: -32603, message: 'offline' } })
+    })
+
+    await expect(
+      assertFunding({
+        account: address,
+        data: { chainId: '0x1', type: '0x0', value: '0x0', gasLimit: '0x1', gasPrice: '0x1' }
+      })
+    ).rejects.toMatchObject({ code: TRANSACTION_FUNDING_UNAVAILABLE })
   })
 })
 

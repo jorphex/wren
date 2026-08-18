@@ -244,6 +244,17 @@ renderer. No code does not prove EOA; code does not prove an interface. Decoding
 and traces explain, not prove, behavior. Verify chain, recipient, value,
 calldata, and device display whenever possible.
 
+Before transaction signing, the main process asks the configured chain RPC for
+the account's pending native balance and compares it with the reviewed value plus
+the maximum execution fee; Optimism-family requests also require the available
+L1 data-fee estimate. Missing or malformed quantities fail closed before signer
+invocation. A shortfall keeps the original dapp responder and review alive,
+exposes exact available/required/missing quantities, and requires a fresh
+balance, fee, and simulation review before approval can resume. This prevents a
+known-unfunded signing attempt but does not reserve funds or eliminate races with
+other pending transactions, RPC disagreement, reorgs, or fees changing after the
+check.
+
 #### Remote services and content
 
 Wren has no first-party backend. Built-in networks use visibly named PublicNode;

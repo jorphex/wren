@@ -29,6 +29,11 @@ import { getSignerType, Type as SignerType } from '../../resources/domain/signer
 import { getSignerCapabilities } from '../signers/capabilities'
 import { TransactionData } from '../../resources/domain/transaction'
 import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
+import {
+  assertTransactionFunding,
+  TransactionFundingError,
+  TRANSACTION_FUNDING_UNAVAILABLE
+} from '../../resources/domain/transaction/funding'
 import { populate as populateTransaction, maxFee, classifyTransaction } from '../transaction'
 import { capitalize } from '../../resources/utils'
 import { ApprovalType } from '../../resources/constants'
@@ -88,6 +93,7 @@ import * as sigParser from '../signatures'
 import { parseMessageRequest } from '../signatures/message'
 import { hasAddress } from '../../resources/domain/account'
 import { isLegacyRequestEnvelope, normalizeTransactionChainId } from '../requests'
+import { chainUsesOptimismFees } from '../../resources/utils/chains'
 
 import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
@@ -214,7 +220,7 @@ export class Provider extends EventEmitter {
       if (event.type === 'fees') {
         const accountsState = getAccounts()
         if (accountsState && typeof accountsState.updatePendingFees === 'function') {
-          return accountsState.updatePendingFees(chain.id)
+          void accountsState.updatePendingFees(chain.id)
         }
       }
 
@@ -568,6 +574,54 @@ export class Provider extends EventEmitter {
     }
   }
 
+  async assertTransactionFunding(req: TransactionRequest) {
+    const chainId = Number(parseRpcQuantity(req.data.chainId))
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new TransactionFundingError(
+        TRANSACTION_FUNDING_UNAVAILABLE,
+        'The transaction network could not be verified. Nothing was signed or sent.'
+      )
+    }
+    const l1Fee = chainUsesOptimismFees(chainId) ? req.chainData?.optimism?.l1Fees : '0x0'
+    if (l1Fee === undefined || l1Fee === '') {
+      throw new TransactionFundingError(
+        TRANSACTION_FUNDING_UNAVAILABLE,
+        'The network data fee could not be verified. Nothing was signed or sent.'
+      )
+    }
+
+    const available = await new Promise<unknown>((resolve, reject) => {
+      // A node's pending balance may already apply the transaction being replaced,
+      // which would double-count its value. Replacement affordability is therefore
+      // checked against canonical balance; ordinary transactions use pending state
+      // so earlier local/mempool spends are accounted for when the RPC supports it.
+      const balanceTag = req.replacement ? 'latest' : 'pending'
+      this.connection.send(
+        {
+          id: Date.now(),
+          jsonrpc: '2.0',
+          method: 'eth_getBalance',
+          params: [req.account, balanceTag]
+        },
+        (response) => {
+          if (response.error) {
+            reject(
+              new TransactionFundingError(
+                TRANSACTION_FUNDING_UNAVAILABLE,
+                'The account balance could not be verified. Nothing was signed or sent.'
+              )
+            )
+          } else {
+            resolve(response.result)
+          }
+        },
+        { type: 'ethereum', id: chainId }
+      )
+    })
+
+    return assertTransactionFunding(req.data, available, l1Fee)
+  }
+
   approveTransactionRequest(req: TransactionRequest, cb: Callback<string>) {
     const failBeforeBroadcast = (request: TransactionRequest, error: Error) => {
       if (request.payload) {
@@ -614,8 +668,10 @@ export class Provider extends EventEmitter {
         handlerId: requestToSign.handlerId,
         type: requestToSign.type
       })
-
-      this.signAndSend(requestToSign, cb)
+      void this.assertTransactionFunding(requestToSign).then(
+        () => this.signAndSend(requestToSign, cb),
+        (error) => cb(error as Error)
+      )
     }
 
     accounts.lockRequest(transactionRequest.handlerId, transactionRequest.account)
