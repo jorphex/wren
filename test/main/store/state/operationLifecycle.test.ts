@@ -57,6 +57,55 @@ test('requires receipt evidence to match its operation transaction', () => {
   ).toThrow()
 })
 
+test('accepts only bounded background settlement metadata on ordinary terminal outcomes', () => {
+  const receipt = {
+    transactionHash: transaction().transaction.hash,
+    blockHash: `0x${'c'.repeat(64)}`,
+    blockNumber: '0xa',
+    status: '0x1' as const
+  }
+  expect(
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      state: 'confirmed',
+      receipt,
+      settlement: { status: 'monitoring' }
+    }).settlement
+  ).toEqual({ status: 'monitoring' })
+  expect(
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      state: 'failed',
+      receipt: { ...receipt, status: '0x0' },
+      settlement: { status: 'complete', basis: 'finalized' }
+    }).settlement
+  ).toEqual({ status: 'complete', basis: 'finalized' })
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      receipt,
+      settlement: { status: 'monitoring' }
+    })
+  ).toThrow()
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      state: 'confirmed',
+      settlement: { status: 'monitoring' }
+    })
+  ).toThrow()
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      kind: 'eip7702Revoke',
+      transaction: undefined,
+      eip7702Revoke: { hash: transaction().transaction.hash, expectedFinalNonce: '0x1' },
+      state: 'failed',
+      settlement: { status: 'monitoring' }
+    })
+  ).toThrow()
+})
+
 test('prunes malformed, expired, mismatched, and excess lifecycle rows deterministically', () => {
   const operations = Object.fromEntries(
     Array.from({ length: MAX_OPERATION_LIFECYCLES + 2 }, (_, offset) => {

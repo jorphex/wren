@@ -108,26 +108,30 @@ it.each([`0x${'A'.repeat(64)}`, '0x1', 'not-a-hash'])(
   }
 )
 
-it('allows only the canonical block query used by lifecycle reconciliation', async () => {
-  const connection = { send: jest.fn() }
-  const rpc = createWalletCallEvidenceRPC(connection)
-  const result = rpc.rpc(1, 'eth_getBlockByNumber', ['0x10', false])
+it.each(['0x10', 'latest', 'finalized'])(
+  'allows the bounded %s block query used by lifecycle reconciliation',
+  async (block) => {
+    const connection = { send: jest.fn() }
+    const rpc = createWalletCallEvidenceRPC(connection)
+    const result = rpc.rpc(1, 'eth_getBlockByNumber', [block, false])
 
-  expect(connection.send).toHaveBeenCalledWith(
-    { id: 1, jsonrpc: '2.0', method: 'eth_getBlockByNumber', params: ['0x10', false] },
-    expect.any(Function),
-    { type: 'ethereum', id: 1 }
-  )
-  connection.send.mock.calls[0][1]({
-    id: 1,
-    jsonrpc: '2.0',
-    result: { number: '0x10', hash }
-  })
-  await expect(result).resolves.toEqual({ number: '0x10', hash })
-})
+    expect(connection.send).toHaveBeenCalledWith(
+      { id: 1, jsonrpc: '2.0', method: 'eth_getBlockByNumber', params: [block, false] },
+      expect.any(Function),
+      { type: 'ethereum', id: 1 }
+    )
+    connection.send.mock.calls[0][1]({
+      id: 1,
+      jsonrpc: '2.0',
+      result: { number: '0x10', hash }
+    })
+    await expect(result).resolves.toEqual({ number: '0x10', hash })
+  }
+)
 
 it.each([
   ['eth_getBlockByNumber', ['pending', false]],
+  ['eth_getBlockByNumber', ['safe', false]],
   ['eth_getBlockByNumber', ['0x10', true]],
   ['eth_sendRawTransaction', ['0x01']]
 ])('rejects out-of-scope lifecycle RPC before transport: %s', async (method, params) => {

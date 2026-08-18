@@ -122,7 +122,9 @@ export class OperationLifecycleLedger {
             'stopped',
             'clearance-unverified',
             'verified-clearance'
-          ].includes(operation.state) && operation.notification.terminalHandledAt !== undefined
+          ].includes(operation.state) &&
+          operation.notification.terminalHandledAt !== undefined &&
+          operation.settlement?.status !== 'monitoring'
       )
       .sort((left, right) => left.updatedAt - right.updatedAt || left.id.localeCompare(right.id))[0]
     return candidate ? this.remove(candidate.id, now) : false

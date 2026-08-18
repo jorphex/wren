@@ -54,23 +54,35 @@ const canonical = (status: '0x0' | '0x1' = '0x1', latest = '0x10') => ({
     gasUsed: '0x5208'
   },
   'eth_getBlockByNumber:0x5': { number: '0x5', hash: blockHash },
-  'eth_getBlockByNumber:latest': { number: latest, hash: latestHash },
-  [`eth_getBlockByNumber:${latest}`]: { number: latest, hash: latestHash }
+  'eth_getBlockByNumber:latest': { number: latest, hash: latest === '0x5' ? blockHash : latestHash },
+  [`eth_getBlockByNumber:${latest}`]: {
+    number: latest,
+    hash: latest === '0x5' ? blockHash : latestHash
+  }
 })
 
-test('ordinary transactions require 13 inclusive confirmations and canonical block evidence', async () => {
-  const confirming = fixture(operation(), canonical('0x1', '0x10'))
-  await expect(confirming.reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
-    state: 'confirming'
-  })
-  const confirmed = fixture(operation(), canonical('0x1', '0x11'))
+test('ordinary transactions resolve on their first canonical receipt and keep monitoring settlement', async () => {
+  const confirmed = fixture(operation(), canonical('0x1', '0x5'))
   await expect(confirmed.reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
     state: 'confirmed',
-    receipt: { blockHash, status: '0x1' }
+    receipt: { blockHash, status: '0x1' },
+    settlement: { status: 'monitoring' }
+  })
+  expect(
+    confirmed.rpc.mock.calls.some(
+      ([, method, params]) => method === 'eth_getBlockByNumber' && params[0] === 'finalized'
+    )
+  ).toBe(false)
+
+  const failed = fixture(operation(), canonical('0x0', '0x5'))
+  await expect(failed.reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
+    state: 'failed',
+    receipt: { status: '0x0' },
+    settlement: { status: 'monitoring' }
   })
 
   const noncanonical = fixture(operation(), {
-    ...canonical('0x1', '0x11'),
+    ...canonical('0x1', '0x5'),
     'eth_getBlockByNumber:0x5': { number: '0x5', hash: `0x${'e'.repeat(64)}` }
   })
   await expect(noncanonical.reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
@@ -78,26 +90,105 @@ test('ordinary transactions require 13 inclusive confirmations and canonical blo
   })
 })
 
-test('same-state confirmation polls preserve lifecycle timestamps while emitting live detail', async () => {
-  const subject = fixture(operation(), canonical('0x1', '0x10'))
+test('background settlement uses a finalized head without moving user completion time', async () => {
+  const subject = fixture(operation(), {
+    ...canonical('0x1', '0x6'),
+    'eth_getBlockByNumber:finalized': { number: '0x5', hash: blockHash }
+  })
   const first = await subject.reconciler.reconcile(operation().id, 20)
-  expect(first).toMatchObject({ state: 'confirming', updatedAt: 20 })
+  expect(first).toMatchObject({ state: 'confirmed', updatedAt: 20, settlement: { status: 'monitoring' } })
 
   const second = await subject.reconciler.reconcile(operation().id, 30)
-  expect(second).toMatchObject({ state: 'confirming', updatedAt: 20 })
+  expect(second).toMatchObject({
+    state: 'confirmed',
+    updatedAt: 20,
+    settlement: { status: 'complete', basis: 'finalized' }
+  })
   expect(subject.ledger.get(operation().id, 30)?.updatedAt).toBe(20)
   expect(subject.observer).toHaveBeenLastCalledWith(
     expect.objectContaining({
       previous: expect.objectContaining({ updatedAt: 20 }),
       current: expect.objectContaining({ updatedAt: 20 }),
-      confirmations: 12
+      confirmations: 2,
+      pendingEvidence: false
     })
   )
 })
 
+test('finalized settlement rejects a receipt block that changes during the evidence read', async () => {
+  let receiptBlockReads = 0
+  const responses = canonical('0x1', '0x6')
+  let stored: OperationLifecycles = { [operation().id]: operation() }
+  const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+  const rpc = jest.fn(async (_chainId: number, method: string, params: readonly unknown[] = []) => {
+    if (method === 'eth_getBlockByNumber' && params[0] === 'finalized') {
+      return { number: '0x5', hash: `0x${'f'.repeat(64)}` }
+    }
+    if (method === 'eth_getBlockByNumber' && params[0] === '0x5') {
+      receiptBlockReads += 1
+      return {
+        number: '0x5',
+        hash: receiptBlockReads <= 2 ? blockHash : `0x${'e'.repeat(64)}`
+      }
+    }
+    return responses[`${method}:${String(params[0] ?? '')}`] ?? responses[method]
+  })
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await reconciler.reconcile(operation().id, 20)
+  await expect(reconciler.reconcile(operation().id, 30)).resolves.toMatchObject({ state: 'reorged' })
+  expect(ledger.get(operation().id, 30)).not.toHaveProperty('receipt')
+  expect(ledger.get(operation().id, 30)).not.toHaveProperty('settlement')
+})
+
+test('background settlement falls back to 13 canonical inclusions', async () => {
+  const subject = fixture(operation(), canonical('0x1', '0x11'))
+  await subject.reconciler.reconcile(operation().id, 20)
+  await expect(subject.reconciler.reconcile(operation().id, 30)).resolves.toMatchObject({
+    state: 'confirmed',
+    updatedAt: 20,
+    settlement: { status: 'complete', basis: 'confirmations' }
+  })
+  expect(
+    subject.rpc.mock.calls.filter(
+      ([, method, params]) => method === 'eth_getBlockByNumber' && params[0] === 'finalized'
+    )
+  ).toHaveLength(0)
+})
+
+test('an unavailable finalized tag leaves background settlement pending below the fallback', async () => {
+  const subject = fixture(operation(), canonical('0x1', '0x6'))
+  await subject.reconciler.reconcile(operation().id, 20)
+  await expect(subject.reconciler.reconcile(operation().id, 30)).resolves.toMatchObject({
+    state: 'confirmed',
+    updatedAt: 20,
+    settlement: { status: 'monitoring' }
+  })
+  expect(subject.ledger.get(operation().id, 30)?.updatedAt).toBe(20)
+})
+
+test('background settlement expiry preserves the user outcome and stops further monitoring', async () => {
+  const expired = operation({
+    state: 'confirmed',
+    createdAt: 0,
+    updatedAt: 5,
+    expiresAt: 10,
+    receipt: { transactionHash: hash, blockHash, blockNumber: '0x5', status: '0x1' },
+    settlement: { status: 'monitoring' }
+  })
+  const { reconciler, rpc } = fixture(expired, {})
+  await expect(reconciler.reconcile(expired.id, 10)).resolves.toMatchObject({
+    state: 'confirmed',
+    updatedAt: 5,
+    settlement: { status: 'complete', basis: 'expired' }
+  })
+  expect(rpc).not.toHaveBeenCalled()
+})
+
 test('receipt disappearance marks reorg then returns to submitted without fabricating failure', async () => {
   const withReceipt = operation({
-    state: 'confirming',
+    state: 'confirmed',
+    settlement: { status: 'monitoring' },
     receipt: { transactionHash: hash, blockHash, blockNumber: '0x5', status: '0x1' }
   })
   const first = fixture(withReceipt, { [`eth_getTransactionReceipt:${hash}`]: null })
@@ -110,8 +201,42 @@ test('receipt disappearance marks reorg then returns to submitted without fabric
   })
 })
 
+test('changed receipt evidence requires one reorg pass before accepting its new canonical block', async () => {
+  const withReceipt = operation({
+    state: 'confirmed',
+    settlement: { status: 'monitoring' },
+    receipt: { transactionHash: hash, blockHash, blockNumber: '0x5', status: '0x1' }
+  })
+  const movedBlockHash = `0x${'e'.repeat(64)}`
+  const movedResponses = {
+    [`eth_getTransactionReceipt:${hash}`]: {
+      transactionHash: hash,
+      blockHash: movedBlockHash,
+      blockNumber: '0x6',
+      status: '0x1'
+    },
+    'eth_getBlockByNumber:0x6': { number: '0x6', hash: movedBlockHash },
+    'eth_getBlockByNumber:latest': { number: '0x6', hash: movedBlockHash }
+  }
+  const first = fixture(withReceipt, movedResponses)
+  const reorged = await first.reconciler.reconcile(withReceipt.id, 20)
+  expect(reorged).toMatchObject({ state: 'reorged' })
+  expect(reorged).not.toHaveProperty('receipt')
+
+  const second = fixture(reorged as OperationLifecycle, movedResponses)
+  await expect(second.reconciler.reconcile(withReceipt.id, 21)).resolves.toMatchObject({
+    state: 'confirmed',
+    receipt: { blockNumber: '0x6', blockHash: movedBlockHash },
+    settlement: { status: 'monitoring' }
+  })
+})
+
 test('RPC outages preserve the exact lifecycle state and evidence', async () => {
-  const current = operation({ state: 'confirming' })
+  const current = operation({
+    state: 'confirmed',
+    settlement: { status: 'monitoring' },
+    receipt: { transactionHash: hash, blockHash, blockNumber: '0x5', status: '0x1' }
+  })
   const { reconciler, ledger, observer } = fixture(current, {
     [`eth_getTransactionReceipt:${hash}`]: new Error('offline')
   })
@@ -151,30 +276,33 @@ test.each([
   }
 )
 
-test.each([
-  ['ordinary transaction', operation(), canonical('0x1', '0x10')],
-  [
-    'EIP-7702 revocation',
-    operation({
-      kind: 'eip7702Revoke',
-      transaction: undefined,
-      eip7702Revoke: { hash, expectedFinalNonce: '0x2' }
-    }),
-    canonical('0x1', '0xf')
-  ]
-] as const)(
-  '%s marks only a canonical nonterminal receipt as positive pending evidence',
-  async (_kind, current, responses) => {
-    const subject = fixture(current, responses)
-    await subject.reconciler.reconcile(current.id, 20)
-    expect(subject.observer).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        current: expect.objectContaining({ state: 'confirming' }),
-        pendingEvidence: true
-      })
-    )
-  }
-)
+test('an ordinary canonical receipt publishes a terminal outcome instead of pending evidence', async () => {
+  const subject = fixture(operation(), canonical('0x1', '0x5'))
+  await subject.reconciler.reconcile(operation().id, 20)
+  expect(subject.observer).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      current: expect.objectContaining({ state: 'confirmed' }),
+      confirmations: 1,
+      pendingEvidence: false
+    })
+  )
+})
+
+test('EIP-7702 keeps canonical nonterminal receipts as positive pending evidence', async () => {
+  const current = operation({
+    kind: 'eip7702Revoke',
+    transaction: undefined,
+    eip7702Revoke: { hash, expectedFinalNonce: '0x2' }
+  })
+  const subject = fixture(current, canonical('0x1', '0xf'))
+  await subject.reconciler.reconcile(current.id, 20)
+  expect(subject.observer).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      current: expect.objectContaining({ state: 'confirming' }),
+      pendingEvidence: true
+    })
+  )
+})
 
 test('a known confirmed sibling with the same account, chain, and nonce replaces a pending tx', async () => {
   let stored: OperationLifecycles = {
@@ -190,6 +318,30 @@ test('a known confirmed sibling with the same account, chain, and nonce replaces
   const reconciler = new OperationLifecycleReconciler(ledger, rpc)
   await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({ state: 'replaced' })
   expect(rpc).not.toHaveBeenCalled()
+})
+
+test('an unfinalized same-nonce sibling does not irreversibly replace a pending tx', async () => {
+  let stored: OperationLifecycles = {
+    [operation().id]: operation(),
+    '00000000-0000-4000-8000-000000000002': operation({
+      id: '00000000-0000-4000-8000-000000000002',
+      state: 'confirmed',
+      transaction: { hash: `0x${'e'.repeat(64)}`, nonce: '0x1' },
+      receipt: {
+        transactionHash: `0x${'e'.repeat(64)}`,
+        blockHash,
+        blockNumber: '0x5',
+        status: '0x1'
+      },
+      settlement: { status: 'monitoring' }
+    })
+  }
+  const ledger = new OperationLifecycleLedger({ load: () => stored, save: (value) => (stored = value) })
+  const rpc = jest.fn(async () => null)
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({ state: 'submitted' })
+  expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash])
 })
 
 test('a duplicate lifecycle row for the same transaction hash is not a replacement', async () => {

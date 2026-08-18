@@ -23,7 +23,9 @@ export const walletCallEvidenceRuntime = new WalletCallEvidenceController({
       .listStored()
       .some(
         (operation) =>
-          operation.kind === 'walletCalls' && ['submitted', 'confirming', 'reorged'].includes(operation.state)
+          operation.kind === 'walletCalls' &&
+          (['submitted', 'confirming', 'reorged'].includes(operation.state) ||
+            operation.settlement?.status === 'monitoring')
       )
     return {
       reconciliation: outcomes.map((outcome) => ({

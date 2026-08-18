@@ -44,12 +44,19 @@ function fixture(callCount = 2) {
   return { batchStorage, operationStorage, operations, batches, admission, operationId }
 }
 
-function canonicalRpc(receipts: Record<string, ReturnType<typeof receipt> | null>, latest = '0x20') {
+function canonicalRpc(
+  receipts: Record<string, ReturnType<typeof receipt> | null>,
+  latest = '0x20',
+  finalized?: string
+) {
   return jest.fn(async (_chainId: number, method: string, params: readonly unknown[] = []) => {
     if (method === 'eth_getTransactionReceipt') return receipts[String(params[0])] ?? null
     if (method === 'eth_getTransactionByHash') return null
     if (method === 'eth_getBlockByNumber' && params[0] === 'latest') {
       return { number: latest, hash: hash('c') }
+    }
+    if (method === 'eth_getBlockByNumber' && params[0] === 'finalized') {
+      return finalized ? { number: finalized, hash: hash('f') } : null
     }
     if (method === 'eth_getBlockByNumber') return { number: params[0], hash: hash('b') }
     throw new Error(`Unexpected ${method}`)
@@ -89,7 +96,7 @@ test('starts the network-pending clock at first signing, not at request admissio
   expect(operation?.expiresAt).toBe(admission.batch.expiresAt)
 })
 
-test('reconciles every transaction after restart and confirms only a complete final batch', async () => {
+test('reconciles every transaction after restart and confirms a complete batch at one receipt', async () => {
   const original = fixture(2)
   original.batches.recordTransaction(origin, account, original.admission.batch.id, hash('1'), 1_001)
   original.batches.recordTransaction(origin, account, original.admission.batch.id, hash('2'), 1_002)
@@ -97,19 +104,97 @@ test('reconciles every transaction after restart and confirms only a complete fi
 
   const operations = new OperationLifecycleLedger(original.operationStorage)
   const batches = new WalletCallBatchLedger(original.batchStorage, operations)
-  const rpc = canonicalRpc({ [hash('1')]: receipt(hash('1')), [hash('2')]: receipt(hash('2')) })
+  const rpc = canonicalRpc({ [hash('1')]: receipt(hash('1')), [hash('2')]: receipt(hash('2')) }, '0x10')
   const observer = jest.fn()
   const reconciler = new WalletCallLifecycleReconciler(batches, operations, rpc, observer)
 
   await expect(reconciler.reconcileAll(2_000)).resolves.toEqual([
     { operationId: original.operationId, status: 'updated' }
   ])
-  expect(operations.get(original.operationId, 2_001)?.state).toBe('confirmed')
+  expect(operations.get(original.operationId, 2_001)).toMatchObject({
+    state: 'confirmed',
+    settlement: { status: 'monitoring' }
+  })
   expect(batches.getStatus(origin, account, original.admission.batch.id, 2_001).status).toBe(200)
   expect(rpc.mock.calls.filter((call) => call[1] === 'eth_getTransactionReceipt')).toHaveLength(2)
   expect(observer).toHaveBeenCalledWith(
-    expect.objectContaining({ current: expect.objectContaining({ state: 'confirmed' }) })
+    expect.objectContaining({
+      current: expect.objectContaining({ state: 'confirmed' }),
+      confirmations: 1,
+      pendingEvidence: false
+    })
   )
+})
+
+test('continues after user confirmation until a finalized head covers every receipt', async () => {
+  const state = fixture(2)
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('2'), 1_002)
+  state.batches.complete(origin, account, state.admission.batch.id, 1_003)
+  const reconciler = new WalletCallLifecycleReconciler(
+    state.batches,
+    state.operations,
+    canonicalRpc({ [hash('1')]: receipt(hash('1')), [hash('2')]: receipt(hash('2')) }, '0x11', '0x10')
+  )
+
+  await reconciler.reconcileAll(2_000)
+  await reconciler.reconcileAll(3_000)
+  expect(state.operations.get(state.operationId, 3_001)).toMatchObject({
+    state: 'confirmed',
+    updatedAt: 2_000,
+    settlement: { status: 'complete', basis: 'finalized' }
+  })
+})
+
+test('does not settle a batch when its receipt block changes during finalized evidence', async () => {
+  const state = fixture(1)
+  const transactionHash = hash('1')
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, transactionHash, 1_001)
+  state.batches.complete(origin, account, state.admission.batch.id, 1_002)
+  let receiptBlockReads = 0
+  const rpc = jest.fn(async (_chainId: number, method: string, params: readonly unknown[] = []) => {
+    if (method === 'eth_getTransactionReceipt') return receipt(transactionHash)
+    if (method === 'eth_getBlockByNumber' && params[0] === 'latest') {
+      return { number: '0x11', hash: hash('c') }
+    }
+    if (method === 'eth_getBlockByNumber' && params[0] === 'finalized') {
+      return { number: '0x10', hash: hash('f') }
+    }
+    if (method === 'eth_getBlockByNumber' && params[0] === '0x10') {
+      receiptBlockReads += 1
+      return { number: '0x10', hash: receiptBlockReads <= 2 ? hash('b') : hash('d') }
+    }
+    throw new Error(`Unexpected ${method}`)
+  })
+  const reconciler = new WalletCallLifecycleReconciler(state.batches, state.operations, rpc)
+
+  await reconciler.reconcileAll(2_000)
+  await reconciler.reconcileAll(3_000)
+  expect(state.operations.get(state.operationId, 3_001)).toMatchObject({ state: 'reorged' })
+  expect(
+    state.batches.get(origin, account, state.admission.batch.id, 3_001).transactions[0]?.receipt
+  ).toBeUndefined()
+})
+
+test('falls back to 13 canonical inclusions when finality tags are unavailable', async () => {
+  const state = fixture(1)
+  state.batches.recordTransaction(origin, account, state.admission.batch.id, hash('1'), 1_001)
+  state.batches.complete(origin, account, state.admission.batch.id, 1_002)
+  const rpc = canonicalRpc({ [hash('1')]: receipt(hash('1')) }, '0x1c')
+  const reconciler = new WalletCallLifecycleReconciler(state.batches, state.operations, rpc)
+
+  await reconciler.reconcileAll(2_000)
+  await reconciler.reconcileAll(3_000)
+  expect(state.operations.get(state.operationId, 3_001)).toMatchObject({
+    state: 'confirmed',
+    updatedAt: 2_000,
+    settlement: { status: 'complete', basis: 'confirmations' }
+  })
+  expect(
+    rpc.mock.calls.some(
+      ([, method, params]) => method === 'eth_getBlockByNumber' && params[0] === 'finalized'
+    )
+  ).toBe(false)
 })
 
 test('does not confirm an incomplete batch even when its submitted transaction is final', async () => {
@@ -155,7 +240,10 @@ test('clears disappeared receipt evidence, reports a reorg, and continues checki
     canonicalRpc({ [hash('1')]: receipt(hash('1')) }, '0x11')
   )
   await first.reconcileAll(2_000)
-  expect(state.operations.get(state.operationId, 2_001)?.state).toBe('confirming')
+  expect(state.operations.get(state.operationId, 2_001)).toMatchObject({
+    state: 'confirmed',
+    settlement: { status: 'monitoring' }
+  })
   expect(
     state.batches.get(origin, account, state.admission.batch.id, 2_001).transactions[0]?.receipt
   ).toBeDefined()
@@ -249,7 +337,10 @@ test('keeps durable evidence unchanged during an RPC outage', async () => {
   await expect(
     new WalletCallLifecycleReconciler(state.batches, state.operations, outage).reconcileAll(3_000)
   ).resolves.toEqual([{ operationId: state.operationId, status: 'error', reason: 'offline' }])
-  expect(state.operations.get(state.operationId, 3_001)?.state).toBe('confirming')
+  expect(state.operations.get(state.operationId, 3_001)).toMatchObject({
+    state: 'confirmed',
+    settlement: { status: 'monitoring' }
+  })
   expect(state.batches.get(origin, account, state.admission.batch.id, 3_001)).toEqual(before)
 })
 

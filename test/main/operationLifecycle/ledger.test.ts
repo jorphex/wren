@@ -121,3 +121,28 @@ test('capacity eviction removes only the oldest handled terminal row', () => {
   expect(ledger.listStored().map(({ id }) => id)).toEqual([unhandled.id, active.id])
   expect(ledger.evictOldestHandledTerminal(10)).toBe(false)
 })
+
+test('capacity eviction preserves terminal outcomes still under background monitoring', () => {
+  const monitoring = {
+    ...operation(),
+    state: 'confirmed' as const,
+    receipt: {
+      transactionHash: `0x${'b'.repeat(64)}`,
+      blockHash: `0x${'c'.repeat(64)}`,
+      blockNumber: '0xa',
+      status: '0x1' as const
+    },
+    settlement: { status: 'monitoring' as const },
+    notification: { terminalHandledAt: 10 }
+  }
+  let persisted = { [monitoring.id]: monitoring }
+  const ledger = new OperationLifecycleLedger({
+    load: () => persisted,
+    save: (value) => {
+      persisted = value
+    }
+  })
+
+  expect(ledger.evictOldestHandledTerminal(10)).toBe(false)
+  expect(ledger.listStored()).toEqual([monitoring])
+})

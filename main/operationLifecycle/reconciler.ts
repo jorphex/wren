@@ -3,9 +3,9 @@ import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transact
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import type { OperationLifecycleLedger } from './ledger'
 import type { OperationLifecycleRpc } from './rpc'
+import { BACKGROUND_SETTLEMENT_FALLBACK_CONFIRMATIONS } from './settlement'
 
 const HASH = /^0x[0-9a-fA-F]{64}$/u
-const ORDINARY_CONFIRMATIONS_REQUIRED = 13n
 const EIP7702_CONFIRMATIONS_REQUIRED = 12n
 
 type BlockEvidence = Readonly<{ number: string; hash: string }>
@@ -84,9 +84,14 @@ const operationHash = (operation: OperationLifecycle) =>
   operation.transaction?.hash ?? operation.eip7702Revoke?.hash
 
 const withoutReceipt = (operation: OperationLifecycle, state: OperationLifecycle['state'], now: number) => {
-  const { receipt: _receipt, ...without } = operation
+  const { receipt: _receipt, settlement: _settlement, ...without } = operation
   return { ...without, state, updatedAt: Math.max(now, operation.updatedAt) }
 }
+
+const isBackgroundSettlementCandidate = (operation: OperationLifecycle) =>
+  operation.kind === 'transaction' &&
+  (operation.state === 'confirmed' || operation.state === 'failed') &&
+  operation.settlement?.status === 'monitoring'
 
 export class OperationLifecycleReconciler {
   constructor(
@@ -107,7 +112,8 @@ export class OperationLifecycleReconciler {
   ) {
     const sameState = previous.state === current.state
     const sameReceipt = JSON.stringify(previous.receipt) === JSON.stringify(current.receipt)
-    if (sameState && sameReceipt) {
+    const sameSettlement = JSON.stringify(previous.settlement) === JSON.stringify(current.settlement)
+    if (sameState && sameReceipt && sameSettlement) {
       this.emit(previous, previous, detail)
       return previous
     }
@@ -129,8 +135,41 @@ export class OperationLifecycleReconciler {
           candidate.chainId === operation.chainId &&
           candidate.transaction?.nonce === transaction.nonce &&
           candidate.transaction?.hash !== transaction.hash &&
-          (candidate.state === 'confirmed' || candidate.state === 'failed')
+          (candidate.state === 'confirmed' || candidate.state === 'failed') &&
+          candidate.settlement?.status !== 'monitoring'
       )
+  }
+
+  private async settlementBasis(
+    operation: OperationLifecycle,
+    receiptBlock: BlockEvidence,
+    confirmations: bigint
+  ): Promise<'finalized' | 'confirmations' | 'reorged' | undefined> {
+    if (confirmations >= BACKGROUND_SETTLEMENT_FALLBACK_CONFIRMATIONS) return 'confirmations'
+    try {
+      const finalized = parseBlock(
+        await this.rpc(operation.chainId, 'eth_getBlockByNumber', ['finalized', false])
+      )
+      const finalizedNumber = parseRpcQuantity(finalized.number)
+      const receiptNumber = parseRpcQuantity(receiptBlock.number)
+      if (finalizedNumber === undefined || receiptNumber === undefined || finalizedNumber < receiptNumber) {
+        return undefined
+      }
+      const confirmedReceiptBlock = parseBlock(
+        await this.rpc(operation.chainId, 'eth_getBlockByNumber', [receiptBlock.number, false])
+      )
+      if (
+        confirmedReceiptBlock.number !== receiptBlock.number ||
+        confirmedReceiptBlock.hash !== receiptBlock.hash
+      ) {
+        return 'reorged'
+      }
+      return 'finalized'
+    } catch (_error) {
+      // Finalized tags are not uniformly available across custom EVM endpoints.
+      // Canonical confirmation monitoring remains the bounded fallback.
+    }
+    return undefined
   }
 
   private async canonicalEvidence(operation: OperationLifecycle) {
@@ -139,6 +178,9 @@ export class OperationLifecycleReconciler {
     const rawReceipt = await this.rpc(operation.chainId, 'eth_getTransactionReceipt', [hash])
     const receipt = parseReceipt(rawReceipt, hash)
     if (!receipt) return
+    if (operation.receipt && JSON.stringify(operation.receipt) !== JSON.stringify(receipt.persisted)) {
+      return { reorged: true as const }
+    }
     const [receiptBlockValue, latestBlockValue] = await Promise.all([
       this.rpc(operation.chainId, 'eth_getBlockByNumber', [receipt.persisted.blockNumber, false]),
       this.rpc(operation.chainId, 'eth_getBlockByNumber', ['latest', false])
@@ -167,9 +209,22 @@ export class OperationLifecycleReconciler {
   async reconcile(operationId: string, now = Date.now()) {
     const operation = this.ledger.listStored().find(({ id }) => id === operationId)
     if (!operation) return
-    if (!['submitted', 'confirming', 'reorged'].includes(operation.state)) return operation
+    if (
+      !['submitted', 'confirming', 'reorged'].includes(operation.state) &&
+      !isBackgroundSettlementCandidate(operation)
+    ) {
+      return operation
+    }
 
     if (operation.expiresAt <= now) {
+      if (isBackgroundSettlementCandidate(operation)) {
+        const settled = this.ledger.put(
+          { ...operation, settlement: { status: 'complete', basis: 'expired' } },
+          -1
+        )
+        this.emit(operation, settled, { pendingEvidence: false })
+        return settled
+      }
       // Expired rows remain durable until the Activity/notification projection marks the
       // terminal outcome handled. This prevents restart from silently losing "stopped".
       return this.transition(
@@ -211,23 +266,43 @@ export class OperationLifecycleReconciler {
       const confirmations = Number(evidence.confirmations)
       const detail = { confirmations, receipt: evidence.receipt.live, pendingEvidence: true }
       const withReceipt = { ...operation, receipt: evidence.receipt.persisted, updatedAt: now }
-      const confirmationsRequired =
-        operation.kind === 'eip7702Revoke' ? EIP7702_CONFIRMATIONS_REQUIRED : ORDINARY_CONFIRMATIONS_REQUIRED
-      if (evidence.confirmations < confirmationsRequired) {
-        return this.transition(operation, { ...withReceipt, state: 'confirming' }, now, detail)
-      }
       if (operation.kind === 'transaction') {
+        const state = evidence.receipt.persisted.status === '0x1' ? 'confirmed' : 'failed'
+        if (!isBackgroundSettlementCandidate(operation)) {
+          return this.transition(
+            operation,
+            { ...withReceipt, state, settlement: { status: 'monitoring' } },
+            now,
+            { ...detail, pendingEvidence: false }
+          )
+        }
+        const basis = await this.settlementBasis(operation, evidence.receiptBlock, evidence.confirmations)
+        if (basis === 'reorged') {
+          return this.transition(operation, withoutReceipt(operation, 'reorged', now), now, {
+            pendingEvidence: false
+          })
+        }
+        if (!basis) {
+          this.emit(operation, operation, { ...detail, pendingEvidence: false })
+          return operation
+        }
         return this.transition(
           operation,
           {
             ...withReceipt,
-            state: evidence.receipt.persisted.status === '0x1' ? 'confirmed' : 'failed'
+            state,
+            updatedAt: operation.updatedAt,
+            settlement: { status: 'complete', basis }
           },
           now,
           { ...detail, pendingEvidence: false }
         )
       }
       if (operation.kind !== 'eip7702Revoke') return operation
+
+      if (evidence.confirmations < EIP7702_CONFIRMATIONS_REQUIRED) {
+        return this.transition(operation, { ...withReceipt, state: 'confirming' }, now, detail)
+      }
 
       const code = await this.rpc(operation.chainId, 'eth_getCode', [
         operation.account,

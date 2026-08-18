@@ -2013,157 +2013,76 @@ describe('#removeRequest', () => {
   })
 })
 
-describe('#confirmations', () => {
-  beforeEach(() => {
-    provider.send.mockClear()
-    provider.connection.send.mockReset()
-  })
-
-  it('updates the originating account while another account remains selected', async () => {
-    const targetAccount = Accounts.accounts[account2.address]
-    const targetRequest = {
-      ...request,
-      handlerId: 'background-confirmation',
-      account: account2.address,
-      data: { ...request.data, from: account2.address },
-      status: 'verifying',
-      tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
-    }
-    Accounts.addRequestForAccount(account2.address, targetRequest)
-    expect(Accounts.current().id).toBe(account.id)
-
-    provider.connection.send.mockImplementation((payload, callback, targetChain) => {
-      if (targetChain.type !== 'ethereum' || targetChain.id !== 10) {
-        return callback({ error: { code: 4901, message: 'wrong configured chain' } })
-      }
-      if (payload.method === 'eth_blockNumber') return callback({ result: '0x10' })
-      if (payload.method === 'eth_getTransactionReceipt') {
-        return callback({
-          result: { blockNumber: '0x5', gasUsed: '0x5208', status: '0x0' }
-        })
-      }
-      return callback({ error: { code: -32601, message: 'unexpected method' } })
-    })
-
-    await expect(
-      Accounts.confirmations(targetAccount, targetRequest.handlerId, targetRequest.tx.hash, {
-        type: 'ethereum',
-        id: 10
-      })
-    ).resolves.toBe(11)
-
-    expect(targetAccount.requests[targetRequest.handlerId].tx.receipt).toMatchObject({
-      blockNumber: '0x5',
-      status: '0x0'
-    })
-    expect(targetAccount.requests[targetRequest.handlerId]).toMatchObject({
-      status: 'confirming',
-      notice: 'Confirming'
-    })
-    expect(Accounts.current().id).toBe(account.id)
-    expect(provider.send).not.toHaveBeenCalled()
-    expect(
-      provider.connection.send.mock.calls.map(([payload, , targetChain]) => [payload.method, targetChain])
-    ).toEqual([
-      ['eth_blockNumber', { type: 'ethereum', id: 10 }],
-      ['eth_getTransactionReceipt', { type: 'ethereum', id: 10 }]
-    ])
-  })
-})
-
-describe('ordinary transaction terminal monitoring', () => {
-  const monitored = (handlerId, nonce = '0xa') => ({
-    ...request,
-    handlerId,
-    account: account.address,
-    data: { ...request.data, nonce },
-    status: 'confirming',
-    tx: {
-      hash: `0x${'a'.repeat(64)}`,
-      confirmations: 13,
-      receipt: { blockNumber: '0x1', gasUsed: '0x5208', status: '0x1' }
-    }
-  })
-
-  beforeEach(() => store.clearActivity())
-
-  it('terminalizes a failed receipt only beyond twelve confirmations and upserts its activity', () => {
-    const targetAccount = Accounts.current()
-    const target = monitored('failed-terminal')
-    target.tx.receipt.status = '0x0'
-    target.tx.confirmations = 12
-    targetAccount.addRequest(target)
-
-    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(false)
-    expect(target.status).toBe('confirming')
-
-    target.tx.confirmations = 13
-    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(true)
-    expect(target).toMatchObject({ status: 'error', notice: 'Failed' })
-    expect(store('main.activity').find(({ id }) => id === target.activityId)).toMatchObject({
-      outcome: 'failed'
-    })
-    expect(store('main.activity').find(({ id }) => id === target.activityId)).not.toHaveProperty(
-      'transactionHash'
-    )
-    expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(false)
-  })
-
-  it('drops only comparable ordinary replacements after terminal success', () => {
-    const targetAccount = Accounts.current()
-    const replacement = monitored('replacement')
-    const replaced = monitored('replaced')
-    const otherNonce = monitored('other-nonce', '0xb')
-    const otherChain = monitored('other-chain')
-    otherChain.data.chainId = '0xa'
-    replaced.status = 'verifying'
-    replaced.tx.confirmations = 0
-    otherNonce.status = 'verifying'
-    otherNonce.tx.confirmations = 0
-    otherChain.status = 'verifying'
-    otherChain.tx.confirmations = 0
-    targetAccount.addRequest(replaced)
-    targetAccount.addRequest(otherNonce)
-    targetAccount.addRequest(otherChain)
-    targetAccount.addRequest(replacement)
-
-    replacement.tx.confirmations = 12
-    expect(Accounts.terminalizeTransaction(targetAccount, replacement.handlerId)).toBe(false)
-    expect(replaced.status).toBe('verifying')
-
-    replacement.tx.confirmations = 13
-    expect(Accounts.terminalizeTransaction(targetAccount, replacement.handlerId)).toBe(true)
-    expect(replaced).toMatchObject({ status: 'error', notice: 'Dropped' })
-    expect(otherNonce.status).toBe('verifying')
-    expect(otherChain.status).toBe('verifying')
-    expect(store('main.activity').find(({ id }) => id === replaced.activityId)).toMatchObject({
-      outcome: 'replaced'
-    })
-  })
-
-  it('dwells on confirmation, returns to the wallet, and removes the terminal row after one minute', () => {
+describe('ordinary transaction lifecycle outcomes', () => {
+  it('confirms on the first canonical receipt and cancels stale cleanup when that receipt reorgs', () => {
     jest.useFakeTimers()
     const targetAccount = Accounts.current()
-    const target = monitored('confirmed-handoff')
-    const dismiss = jest.spyOn(targetAccount, 'dismissRequestReview')
-    targetAccount.addRequest(target)
+    const hash = `0x${'a'.repeat(64)}`
+    const blockHash = `0x${'b'.repeat(64)}`
+    Accounts.addRequest(request)
+    const target = targetAccount.getRequest(request.handlerId)
+    target.status = 'verifying'
+    target.tx = { hash, confirmations: 0 }
+    const now = Date.now()
+    const submitted = {
+      id: target.activityId,
+      kind: 'transaction',
+      account: target.account,
+      origin: target.origin,
+      chainId: 1,
+      state: 'submitted',
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: { hash, nonce: target.data.nonce }
+    }
+    const receipt = {
+      transactionHash: hash,
+      blockHash,
+      blockNumber: '0x5',
+      gasUsed: '0x5208',
+      status: '0x1'
+    }
+    const confirmed = {
+      ...submitted,
+      state: 'confirmed',
+      updatedAt: now + 1,
+      receipt: {
+        transactionHash: hash,
+        blockHash,
+        blockNumber: '0x5',
+        status: '0x1'
+      },
+      settlement: { status: 'monitoring' }
+    }
 
     try {
-      expect(Accounts.terminalizeTransaction(targetAccount, target.handlerId)).toBe(true)
-      expect(target).toMatchObject({ status: 'confirmed', notice: 'Confirmed' })
-      expect(targetAccount.requests[target.handlerId]).toBe(target)
+      operationLifecycleLedger.put(submitted, now)
+      operationLifecycleLedger.put(confirmed, now + 1)
+      Accounts.observeOperationLifecycle(confirmed, 1, receipt)
+      expect(target).toMatchObject({
+        status: 'confirmed',
+        notice: 'Confirmed',
+        tx: { confirmations: 1, receipt }
+      })
 
-      jest.advanceTimersByTime(3999)
-      expect(dismiss).not.toHaveBeenCalled()
+      const { receipt: _receipt, settlement: _settlement, ...withoutEvidence } = confirmed
+      const reorged = { ...withoutEvidence, state: 'reorged', updatedAt: now + 2 }
+      operationLifecycleLedger.put(reorged, now + 2)
+      Accounts.observeOperationLifecycle(reorged)
+      expect(target).toMatchObject({
+        status: 'verifying',
+        notice: 'Rechecking after chain reorganization',
+        tx: { confirmations: 0 }
+      })
+      expect(target.tx.receipt).toBeUndefined()
 
-      jest.advanceTimersByTime(1)
-      expect(dismiss).toHaveBeenCalledWith(target.handlerId)
-      expect(targetAccount.requests[target.handlerId]).toBe(target)
-
-      jest.advanceTimersByTime(56_000)
-      expect(targetAccount.requests[target.handlerId]).toBeUndefined()
+      jest.advanceTimersByTime(60_000)
+      expect(targetAccount.getRequest(target.handlerId)).toBe(target)
     } finally {
-      dismiss.mockRestore()
+      operationLifecycleLedger.remove(target.activityId, -1)
       jest.useRealTimers()
     }
   })

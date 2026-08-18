@@ -42,6 +42,16 @@ const ReceiptEvidenceSchema = z
   })
   .strict()
 
+const SettlementSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('monitoring') }).strict(),
+  z
+    .object({
+      status: z.literal('complete'),
+      basis: z.enum(['finalized', 'confirmations', 'expired'])
+    })
+    .strict()
+])
+
 export const OperationLifecycleSchema = z
   .object({
     id: z.uuid(),
@@ -68,7 +78,8 @@ export const OperationLifecycleSchema = z
     transaction: z.object({ hash: HashSchema, nonce: QuantitySchema }).strict().optional(),
     walletCalls: z.object({ batchOperationId: z.uuid() }).strict().optional(),
     eip7702Revoke: z.object({ hash: HashSchema, expectedFinalNonce: QuantitySchema }).strict().optional(),
-    receipt: ReceiptEvidenceSchema.optional()
+    receipt: ReceiptEvidenceSchema.optional(),
+    settlement: SettlementSchema.optional()
   })
   .strict()
   .superRefine((operation, ctx) => {
@@ -93,6 +104,16 @@ export const OperationLifecycleSchema = z
     const operationHash = operation.transaction?.hash ?? operation.eip7702Revoke?.hash
     if (operation.receipt && operation.receipt.transactionHash !== operationHash) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'receipt transaction hash does not match' })
+    }
+
+    if (
+      operation.settlement &&
+      (operation.kind === 'eip7702Revoke' || !['confirmed', 'failed'].includes(operation.state))
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid background settlement state' })
+    }
+    if (operation.kind === 'transaction' && operation.settlement && !operation.receipt) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'transaction settlement requires a receipt' })
     }
 
     for (const timestamp of [

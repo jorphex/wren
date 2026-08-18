@@ -127,7 +127,7 @@ export function createWalletCallEvidenceRPC(
         method === 'eth_getBlockByNumber' &&
         params.length === 2 &&
         typeof params[0] === 'string' &&
-        (params[0] === 'latest' || QUANTITY.test(params[0])) &&
+        (params[0] === 'latest' || params[0] === 'finalized' || QUANTITY.test(params[0])) &&
         params[1] === false
       return transactionMethod || blockMethod
         ? request(chainId, method, params)

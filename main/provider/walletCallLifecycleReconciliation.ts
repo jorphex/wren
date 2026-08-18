@@ -8,10 +8,15 @@ import {
 import type { OperationLifecycleLedger } from '../operationLifecycle/ledger'
 import type { OperationLifecycleRpc } from '../operationLifecycle/rpc'
 import type { OperationReconciliationObserver } from '../operationLifecycle/reconciler'
+import { BACKGROUND_SETTLEMENT_FALLBACK_CONFIRMATIONS } from '../operationLifecycle/settlement'
 import type { WalletCallBatchWithOperationId } from './walletCallBatches'
 
 const HASH = /^0x[0-9a-fA-F]{64}$/u
-const CONFIRMATIONS_REQUIRED = 13n
+
+const isBackgroundSettlementCandidate = (operation: OperationLifecycle) =>
+  operation.kind === 'walletCalls' &&
+  (operation.state === 'confirmed' || operation.state === 'failed') &&
+  operation.settlement?.status === 'monitoring'
 
 type BlockEvidence = Readonly<{ number: string; hash: string }>
 
@@ -96,9 +101,18 @@ export class WalletCallLifecycleReconciler {
     state: OperationLifecycle['state'],
     now: number,
     confirmations?: number,
-    pendingEvidence?: boolean
+    pendingEvidence?: boolean,
+    settlement?: OperationLifecycle['settlement'] | null,
+    preserveUpdatedAt = false
   ) {
-    if (previous.state === state) {
+    const { settlement: _settlement, ...withoutSettlement } = previous
+    const next = {
+      ...(settlement === null ? withoutSettlement : previous),
+      state,
+      updatedAt: preserveUpdatedAt ? previous.updatedAt : Math.max(now, previous.updatedAt),
+      ...(settlement && { settlement })
+    }
+    if (previous.state === state && JSON.stringify(previous.settlement) === JSON.stringify(next.settlement)) {
       this.observer(
         Object.freeze({
           previous,
@@ -109,10 +123,7 @@ export class WalletCallLifecycleReconciler {
       )
       return previous
     }
-    const current = this.operations.put(
-      { ...previous, state, updatedAt: Math.max(now, previous.updatedAt) },
-      state === 'stopped' ? -1 : now
-    )
+    const current = this.operations.put(next, state === 'stopped' ? -1 : now)
     this.observer(
       Object.freeze({
         previous,
@@ -122,6 +133,41 @@ export class WalletCallLifecycleReconciler {
       })
     )
     return current
+  }
+
+  private async settlementBasis(
+    operation: OperationLifecycle,
+    receiptBlocks: readonly BlockEvidence[],
+    minimumConfirmations: bigint
+  ): Promise<'finalized' | 'confirmations' | 'reorged' | undefined> {
+    if (minimumConfirmations >= BACKGROUND_SETTLEMENT_FALLBACK_CONFIRMATIONS) return 'confirmations'
+    try {
+      const finalized = parseBlock(
+        await this.rpc(operation.chainId, 'eth_getBlockByNumber', ['finalized', false])
+      )
+      const finalizedNumber = parseRpcQuantity(finalized.number)
+      if (finalizedNumber === undefined) return undefined
+      const receiptNumbers = receiptBlocks.map(({ number }) => parseRpcQuantity(number) as bigint)
+      if (!receiptNumbers.every((receiptNumber) => finalizedNumber >= receiptNumber)) return undefined
+      const confirmedReceiptBlocks = await Promise.all(
+        receiptBlocks.map(({ number }) =>
+          this.rpc(operation.chainId, 'eth_getBlockByNumber', [number, false]).then(parseBlock)
+        )
+      )
+      if (
+        confirmedReceiptBlocks.some(
+          (block, index) =>
+            block.number !== receiptBlocks[index]?.number || block.hash !== receiptBlocks[index]?.hash
+        )
+      ) {
+        return 'reorged'
+      }
+      return 'finalized'
+    } catch (_error) {
+      // Finalized tags are optional on custom EVM endpoints. Canonical depth is
+      // the bounded fallback and never delays the first user-visible outcome.
+    }
+    return undefined
   }
 
   private async reconcileSignedReservation(batch: WalletCallBatchWithOperationId, now: number) {
@@ -191,10 +237,21 @@ export class WalletCallLifecycleReconciler {
     if (!operation || operation.kind !== 'walletCalls') {
       return { operationId, status: 'unchanged' }
     }
-    if (!['submitted', 'confirming', 'reorged'].includes(operation.state)) {
+    if (
+      !['submitted', 'confirming', 'reorged'].includes(operation.state) &&
+      !isBackgroundSettlementCandidate(operation)
+    ) {
       return { operationId, status: 'unchanged' }
     }
     if (operation.expiresAt <= now) {
+      if (isBackgroundSettlementCandidate(operation)) {
+        const current = this.operations.put(
+          { ...operation, settlement: { status: 'complete', basis: 'expired' } },
+          -1
+        )
+        this.observer(Object.freeze({ previous: operation, current, pendingEvidence: false }))
+        return { operationId, status: 'updated' }
+      }
       this.transition(operation, 'stopped', operation.expiresAt, undefined, false)
       return { operationId, status: 'updated' }
     }
@@ -245,14 +302,31 @@ export class WalletCallLifecycleReconciler {
         batch.transactions.every((transaction) => transaction.state === 'submitted')
       const canonical = evidence.filter((item) => item.status === 'canonical')
       const allCanonical = canonical.length === submitted.length && submitted.length > 0
-      const allFinal = allCanonical && canonical.every((item) => item.confirmations >= CONFIRMATIONS_REQUIRED)
       const confirmations = minimumConfirmations === undefined ? undefined : Number(minimumConfirmations)
 
       if (reorged || (operation.state === 'reorged' && !allCanonical)) {
-        this.transition(operation, 'reorged', now, confirmations, false)
-      } else if (allCallsSubmitted && allFinal) {
+        this.transition(operation, 'reorged', now, confirmations, false, null)
+      } else if (allCallsSubmitted && allCanonical) {
         const state = canonical.every((item) => item.receipt.status === '0x1') ? 'confirmed' : 'failed'
-        this.transition(operation, state, now, confirmations, false)
+        if (!isBackgroundSettlementCandidate(operation)) {
+          this.transition(operation, state, now, confirmations, false, { status: 'monitoring' })
+        } else if (minimumConfirmations !== undefined) {
+          const receiptBlocks = canonical.map((item) => ({
+            number: item.receipt.blockNumber,
+            hash: item.receipt.blockHash
+          }))
+          const basis = await this.settlementBasis(operation, receiptBlocks, minimumConfirmations)
+          if (basis === 'reorged') {
+            for (const item of canonical) {
+              this.batches.clearReceipt(batch.origin, batch.account, batch.id, item.transaction.hash, now)
+            }
+            this.transition(operation, 'reorged', now, confirmations, false, null)
+          } else if (basis) {
+            this.transition(operation, state, now, confirmations, false, { status: 'complete', basis }, true)
+          } else {
+            this.transition(operation, state, now, confirmations, false)
+          }
+        }
       } else if (hasCanonicalReceipt) {
         this.transition(operation, 'confirming', now, confirmations, true)
       } else {
@@ -273,7 +347,9 @@ export class WalletCallLifecycleReconciler {
       .listStored()
       .filter(
         (operation) =>
-          operation.kind === 'walletCalls' && ['submitted', 'confirming', 'reorged'].includes(operation.state)
+          operation.kind === 'walletCalls' &&
+          (['submitted', 'confirming', 'reorged'].includes(operation.state) ||
+            isBackgroundSettlementCandidate(operation))
       )
     const outcomes: WalletCallLifecycleOutcome[] = []
     for (const operation of candidates) outcomes.push(await this.reconcile(operation.id, now))

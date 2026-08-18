@@ -13,7 +13,6 @@ import Signer from '../signers/Signer'
 import { SignerUserRejectedError, USER_REJECTED_REQUEST } from '../signers/errors'
 import { signerCompatibility as transactionCompatibility, maxFee, SignerCompatibility } from '../transaction'
 
-import { weiIntToEthInt, hexToInt } from '../../resources/utils'
 import { accountPanelCrumb, signerPanelCrumb } from '../../resources/domain/nav'
 import { usesBaseFee, TransactionData, GasFeesSource } from '../../resources/domain/transaction'
 import {
@@ -41,7 +40,6 @@ import {
   Eip7702RevokeRequest
 } from './types'
 
-import type { Chain } from '../chains'
 import { ActionType } from '../transaction/actions'
 import { ApprovalType } from '../../resources/constants'
 import { accountNS } from '../../resources/domain/account'
@@ -419,6 +417,9 @@ export class Accounts extends EventEmitter {
     }
 
     if (operation.state === 'reorged' || operation.state === 'submitted') {
+      if (request.type === 'transaction') {
+        this.cancelTransactionTerminalTimers(account.id, request.handlerId)
+      }
       delete request.tx.receipt
       request.tx.confirmations = 0
       request.status = RequestStatus.Verifying
@@ -1427,168 +1428,6 @@ export class Accounts extends EventEmitter {
     cb: RPCRequestCallback
   ) {
     provider.send({ id: 1, jsonrpc: '2.0', method, params, chainId, _origin }, cb)
-  }
-
-  private sendConfirmationRequest(
-    { method, params }: { method: 'eth_blockNumber' | 'eth_getTransactionReceipt'; params: unknown[] },
-    targetChain: Chain,
-    cb: RPCRequestCallback
-  ) {
-    provider.connection.send({ id: 1, jsonrpc: '2.0', method, params }, cb, targetChain)
-  }
-
-  private async confirmations(account: FrameAccount, id: string, hash: string, targetChain: Chain) {
-    return new Promise<number>((resolve, reject) => {
-      if (!account) return reject(new Error('Unable to determine target account'))
-      if (!targetChain || !targetChain.type || !targetChain.id)
-        return reject(new Error('Unable to determine target chain'))
-      this.sendConfirmationRequest(
-        { method: 'eth_blockNumber', params: [] },
-        targetChain,
-        (res: RPCResponsePayload) => {
-          if (res.error) return reject(new Error(JSON.stringify(res.error)))
-          const blockHeight = parseRpcQuantity(res.result)
-          if (blockHeight === undefined) return reject(new Error('Invalid block number response'))
-
-          this.sendConfirmationRequest(
-            { method: 'eth_getTransactionReceipt', params: [hash] },
-            targetChain,
-            (receiptRes: RPCResponsePayload) => {
-              if (receiptRes.error) return reject(receiptRes.error)
-              if (!this.accounts[account.address]) return reject(new Error('account closed'))
-
-              const receipt = isTransactionReceipt(receiptRes.result) ? receiptRes.result : undefined
-              if (receiptRes.result && !receipt)
-                return reject(new Error('Invalid transaction receipt response'))
-
-              if (!receipt) {
-                const request = account.requests[id]
-                if (request?.type === 'transaction' && request.tx?.receipt) {
-                  const { receipt: _staleReceipt, ...transactionState } = request.tx
-                  request.tx = { ...transactionState, confirmations: 0 }
-                  if (request.status === RequestStatus.Confirming) {
-                    request.status = RequestStatus.Verifying
-                    request.notice = 'Verifying'
-                  }
-                  account.update()
-                }
-                return resolve(0)
-              }
-
-              if (account.requests[id]) {
-                const txRequest = this.getTransactionRequest(account, id)
-
-                txRequest.tx = {
-                  ...txRequest.tx,
-                  receipt,
-                  confirmations: txRequest.tx?.confirmations || 0
-                }
-
-                account.update()
-
-                if (!txRequest.feeAtTime) {
-                  const network = targetChain
-                  if (network.type === 'ethereum' && network.id === 1) {
-                    const ethPrice = store('main.networksMeta.ethereum.1.nativeCurrency.usd.price')
-
-                    if (
-                      typeof ethPrice === 'number' &&
-                      Number.isFinite(ethPrice) &&
-                      txRequest.tx &&
-                      txRequest.tx.receipt &&
-                      this.accounts[account.address]
-                    ) {
-                      const { gasUsed } = txRequest.tx.receipt
-
-                      txRequest.feeAtTime = (
-                        Math.round(
-                          weiIntToEthInt(
-                            hexToInt(gasUsed) * hexToInt(txRequest.data.gasPrice || '0x0') * ethPrice
-                          ) * 100
-                        ) / 100
-                      ).toFixed(2)
-                      account.update()
-                    }
-                  } else {
-                    txRequest.feeAtTime = '?'
-                    account.update()
-                  }
-                }
-
-                if (txRequest.status === RequestStatus.Verifying || txRequest.status === RequestStatus.Sent) {
-                  txRequest.status = RequestStatus.Confirming
-                  txRequest.notice = 'Confirming'
-                }
-                const receiptBlock = parseRpcQuantity(receipt.blockNumber)
-                if (receiptBlock === undefined) return reject(new Error('Invalid receipt block number'))
-                resolve(Number(blockHeight - receiptBlock))
-              }
-            }
-          )
-        }
-      )
-    })
-  }
-
-  private terminalizeTransaction(account: FrameAccount, id: string) {
-    const request = account.requests[id]
-    if (
-      request?.type !== 'transaction' ||
-      ![RequestStatus.Sent, RequestStatus.Verifying, RequestStatus.Confirming].includes(
-        request.status as RequestStatus
-      ) ||
-      !request.tx?.receipt ||
-      request.tx.confirmations <= 12
-    ) {
-      return false
-    }
-
-    const receiptStatus = parseRpcQuantity(request.tx.receipt.status)
-    if (receiptStatus !== 0n && receiptStatus !== 1n) return false
-
-    const outcome = receiptStatus === 1n ? 'confirmed' : 'failed'
-    request.status = receiptStatus === 1n ? RequestStatus.Confirmed : RequestStatus.Error
-    request.notice = receiptStatus === 1n ? 'Confirmed' : 'Failed'
-    request.completed = Date.now()
-    recordRequestActivity(request, outcome)
-
-    if (receiptStatus === 1n) this.dropReplacedTransactions(account, id)
-    if (receiptStatus === 1n) this.scheduleConfirmedTransactionHandoff(account, request)
-    account.update()
-    return true
-  }
-
-  private dropReplacedTransactions(account: FrameAccount, replacementId: string) {
-    const replacement = account.requests[replacementId]
-    if (replacement?.type !== 'transaction') return
-    const replacementNonce = parseRpcQuantity(replacement.data.nonce)
-    const replacementChainId = parseRpcQuantity(replacement.data.chainId)
-    if (replacementNonce === undefined || replacementChainId === undefined) return
-
-    Object.entries(account.requests).forEach(([candidateId, candidate]) => {
-      if (
-        candidateId === replacementId ||
-        candidate.type !== 'transaction' ||
-        ![RequestStatus.Sent, RequestStatus.Verifying, RequestStatus.Confirming].includes(
-          candidate.status as RequestStatus
-        ) ||
-        parseRpcQuantity(candidate.data.chainId) !== replacementChainId ||
-        parseRpcQuantity(candidate.data.nonce) !== replacementNonce
-      ) {
-        return
-      }
-
-      candidate.status = RequestStatus.Error
-      candidate.notice = 'Dropped'
-      candidate.completed = Date.now()
-      recordRequestActivity(candidate, 'replaced')
-      const removalTimer = setTimeout(() => {
-        if (this.accounts[account.address]?.requests[candidateId]) {
-          account.clearRequest(candidateId, 'replaced')
-        }
-      }, 8000)
-      removalTimer.unref?.()
-    })
   }
 
   private async txMonitor(account: FrameAccount, requestId: string, hash: string) {
