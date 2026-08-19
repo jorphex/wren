@@ -419,6 +419,9 @@ const runScenario = async (scenario) => {
               const element = document.querySelector(${JSON.stringify(scenario.captureScrollSelector)})
               if (!element) throw new Error('Capture scroll target was not found')
               element.scrollIntoView({ block: 'start', inline: 'nearest' })
+              const offset = ${JSON.stringify(scenario.captureScrollOffset || 0)}
+              const scroll = element.closest('.dashMainScroll') || document.scrollingElement
+              if (scroll && offset) scroll.scrollTop += offset
             })()`,
             true
           )

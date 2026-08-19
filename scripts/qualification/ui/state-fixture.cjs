@@ -240,6 +240,71 @@ const addressLookalikeRequest = () => ({
   }
 })
 
+const RPC_WARNING_FIXTURES = Object.freeze({
+  'gas-estimate': {
+    type: 'approveGasLimit',
+    title: 'estimated to fail',
+    message: 'execution reverted: ERC20 transfer amount exceeds balance',
+    confirmLabel: 'Proceed'
+  },
+  revert: {
+    type: 'approveSimulationOverride',
+    title: 'RPC Reports Revert',
+    message: 'Your configured RPC reports that this transaction will revert.',
+    confirmLabel: 'Sign Anyway'
+  },
+  'execution-failed': {
+    type: 'approveSimulationOverride',
+    title: 'Execution Check Failed',
+    message: 'Wren could not determine whether this transaction will execute successfully.',
+    confirmLabel: 'Sign Anyway'
+  },
+  'execution-unavailable': {
+    type: 'approveSimulationOverride',
+    title: 'Execution Check Unavailable',
+    message: 'Your configured RPC does not provide a usable transaction execution check.',
+    confirmLabel: 'Sign Anyway'
+  },
+  'broad-token-approval': {
+    type: 'approveBroadTokenAuthority',
+    title: 'Broad Token Approval',
+    message:
+      'Your configured RPC reports broad ERC-20 spending authority. This may grant maximum token spending. Review RPC-reported effects before proceeding.',
+    confirmLabel: 'Approve Anyway'
+  },
+  'existing-token-allowance': {
+    type: 'approveExistingTokenAllowanceChange',
+    title: 'Existing Token Allowance',
+    message:
+      'Your configured RPC reports a different nonzero allowance for this owner and spender. ERC-20 recommends setting the allowance to zero before assigning another nonzero value to reduce an approval-race risk.',
+    confirmLabel: 'Change Anyway'
+  },
+  'delegated-account': {
+    type: 'approveDelegatedAccountExecution',
+    title: 'Delegated Account',
+    message: `This account delegates execution to ${QUALIFICATION_DELEGATE}. Calls to this account run the delegate’s code in this account’s context. Sending this transaction does not by itself run that code.`,
+    confirmLabel: 'Sign With Delegated Account'
+  },
+  'proxy-implementation': {
+    type: 'approveProxyImplementationChange',
+    title: 'Proxy Implementation Change',
+    message:
+      'Your configured RPC reports that 1 ERC-1967 proxy implementation slot will be different after this transaction. This may change the code a proxy runs and control of its assets. Check each proxy and implementation value before proceeding.',
+    confirmLabel: 'Proceed Anyway'
+  }
+})
+
+const queuedTransactionRequest = (handlerId, queueIndex, origin = 'workshop') => {
+  const request = addressLookalikeRequest()
+  request.handlerId = handlerId
+  request.activityId = `88888888-8888-4888-8888-${String(queueIndex).padStart(12, '0')}`
+  request.queueIndex = queueIndex
+  request.created = Date.now() - (4 - queueIndex) * 60_000
+  request.origin = origin
+  delete request.addressSafety
+  return request
+}
+
 const walletCallsFundingRequest = () => ({
   handlerId: 'qualification-wallet-calls-funding',
   activityId: '88888888-8888-4888-8888-888888888888',
@@ -562,6 +627,13 @@ const fixtureFor = (scenario) => {
   state.main.interfaceScale = scenario.scale
   state.view.interfaceScaleEffective = scenario.scale
 
+  if (scenario.state === 'update-available' || scenario.state === 'update-ready') {
+    state.view.badge = {
+      type: scenario.state === 'update-available' ? 'updateAvailable' : 'updateReady',
+      version: '0.1.3'
+    }
+  }
+
   if (scenario.state === 'delegation') {
     prepareSelectedAccount(state)
     state.windows.dash = {
@@ -590,6 +662,8 @@ const fixtureFor = (scenario) => {
   if (
     scenario.state === 'address-book-list' ||
     scenario.state === 'address-book-editor' ||
+    scenario.state === 'send-composer' ||
+    scenario.state === 'send-sweep-selection' ||
     scenario.state === 'send-recipient-picker' ||
     scenario.state === 'send-confirmed' ||
     scenario.state === 'send-max-review' ||
@@ -636,9 +710,14 @@ const fixtureFor = (scenario) => {
   }
 
   if (
-    ['send-recipient-picker', 'send-confirmed', 'send-max-review', 'send-sweep-review'].includes(
-      scenario.state
-    )
+    [
+      'send-composer',
+      'send-sweep-selection',
+      'send-recipient-picker',
+      'send-confirmed',
+      'send-max-review',
+      'send-sweep-review'
+    ].includes(scenario.state)
   ) {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
@@ -808,6 +887,29 @@ const fixtureFor = (scenario) => {
         model: 'Trezor',
         status: 'need pin',
         addresses: []
+      }
+    }
+  }
+
+  if (scenario.state === 'signer-seed-locked' || scenario.state === 'signer-ring-locked') {
+    const type = scenario.state === 'signer-seed-locked' ? 'seed' : 'ring'
+    const signerId = `qualification-${type}-locked`
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'expandedSigner', data: { signer: signerId } }]
+    }
+    state.main.signers = {
+      [signerId]: {
+        id: signerId,
+        name: type === 'seed' ? 'Seed phrase signer' : 'Private key signer',
+        type,
+        status: 'locked',
+        addresses: [
+          '0x00000000000000000000000000000000000000aa',
+          '0x00000000000000000000000000000000000000bb'
+        ],
+        createdAt: 1
       }
     }
   }
@@ -987,6 +1089,34 @@ const fixtureFor = (scenario) => {
         nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, icon: '' }
       }
     }
+  }
+
+  if (scenario.state === 'network-add') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'chains',
+          data: {
+            newChain: {
+              id: 8453,
+              name: 'Base Mainnet',
+              symbol: 'ETH',
+              explorer: 'https://basescan.org',
+              isTestnet: false,
+              type: 'ethereum',
+              rpcUrls: ['https://mainnet.base.org'],
+              nativeCurrencyName: 'Ether',
+              nativeCurrencyDecimals: 18
+            }
+          }
+        }
+      ]
+    }
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
   }
 
   if (scenario.state === 'account-home') {
@@ -1182,6 +1312,42 @@ const fixtureFor = (scenario) => {
     ]
   }
 
+  if (scenario.state === 'account-signing-queue' || scenario.state === 'transaction-signing-queue-review') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = {
+      workshop: { name: 'workshop.example' },
+      garden: { name: 'garden.example' }
+    }
+    const first = queuedTransactionRequest('qualification-queue-first', 1, 'workshop')
+    const second = queuedTransactionRequest('qualification-queue-second', 2, 'garden')
+    const third = queuedTransactionRequest('qualification-queue-third', 3, 'workshop')
+    state.main.accounts[QUALIFICATION_ACCOUNT].requests = {
+      [first.handlerId]: first,
+      [second.handlerId]: second,
+      [third.handlerId]: third
+    }
+    state.main.accounts[QUALIFICATION_ACCOUNT].activeRequestId = first.handlerId
+    state.windows.panel.nav = [
+      scenario.state === 'account-signing-queue'
+        ? {
+            view: 'expandedModule',
+            data: { id: 'requests', account: QUALIFICATION_ACCOUNT, title: 'Requests' }
+          }
+        : {
+            view: 'requestView',
+            data: {
+              step: 'confirm',
+              accountId: QUALIFICATION_ACCOUNT,
+              requestId: first.handlerId
+            }
+          }
+    ]
+    state.windows.panel.footer.height = scenario.state === 'transaction-signing-queue-review' ? 113 : 132
+  }
+
   if (scenario.state === 'account-activity' || scenario.state === 'account-activity-lifecycle') {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
@@ -1289,6 +1455,42 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = 132
+  }
+
+  if (scenario.state === 'transaction-rpc-warning') {
+    const request = addressLookalikeRequest()
+    const warning = RPC_WARNING_FIXTURES[scenario.variant]
+    if (!warning) throw new Error(`Unknown RPC warning qualification variant: ${scenario.variant}`)
+    request.handlerId = `qualification-rpc-warning-${scenario.variant}`
+    request.approvals = [
+      {
+        type: warning.type,
+        approved: false,
+        data: {
+          title: warning.title,
+          message: warning.message,
+          confirmLabel: warning.confirmLabel,
+          ...(warning.type === 'approveGasLimit' ? { gasLimit: '0x00' } : {})
+        }
+      }
+    ]
+    delete request.addressSafety
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 200
   }
 
   if (scenario.state === 'wallet-calls-funding') {
@@ -1405,16 +1607,13 @@ const invokeReplyFor = (scenario, method) => {
         kind: 'transaction',
         source: 'direct',
         normalized: {
-          from: '0x1111111111111111111111111111111111111111',
-          to: '0x2222222222222222222222222222222222222222',
           chainId: '0x1',
-          value: '0x0',
-          data: '0xa9059cbb'
+          data: '0x12345678'
         },
         decode: {
           status: 'unknown',
           source: 'bundled-standard-abi',
-          selector: '0xa9059cbb',
+          selector: '0x12345678',
           reason: 'No bundled ABI matched this selector.'
         },
         evidence: [

@@ -56,6 +56,21 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   )
 })
 
+it('seats every RPC warning shelf at the viewport bottom with its exact reserved height', () => {
+  const warnings = scenarioMatrix({ includeReview: true }).filter(
+    ({ state }) => state === 'transaction-rpc-warning'
+  )
+
+  expect(warnings).toHaveLength(16)
+  for (const warning of warnings) {
+    expect(warning.layoutExpectations).toContainEqual({
+      kind: 'viewport-bottom',
+      selector: '.requestNoticeApproval'
+    })
+    expect(fixtureFor(warning).windows.panel.footer.height).toBe(200)
+  }
+})
+
 it('fixtures the separator-review surfaces at native scale and geometry', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
   const lookalikeReviews = scenarios.filter(({ state }) => state === 'transaction-lookalike')
@@ -84,7 +99,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
   const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
   const inspectors = scenarios.filter(({ state }) => state === 'inspector')
-  expect(inspectors).toHaveLength(6)
+  expect(inspectors).toHaveLength(7)
   expect(inspectors.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
   expect(inspectors.every(({ requiredText }) => requiredText.includes('Never signs or broadcasts'))).toBe(
     true

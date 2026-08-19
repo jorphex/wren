@@ -123,6 +123,16 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'viewport-bottom') {
+      for (const element of elements) {
+        const rect = element.getBoundingClientRect()
+        if (Math.abs(rect.bottom - viewport.height) > 1) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} ends at ${Math.round(rect.bottom)}px; viewport ends at ${viewport.height}px`
+          })
+        }
+      }
     } else {
       violations.push({ kind: 'required-layout', detail: `unknown ${expectation.kind}` })
     }

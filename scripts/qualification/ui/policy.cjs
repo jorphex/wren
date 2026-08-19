@@ -4,6 +4,57 @@ const INTERFACE_SCALES = Object.freeze([1, 1.25, 1.5])
 const FULL_SHELL_HEIGHT = 900
 const SHORT_SHELL_HEIGHT = 744
 
+const RPC_WARNING_SCENARIOS = Object.freeze([
+  {
+    variant: 'gas-estimate',
+    title: 'estimated to fail',
+    message: 'execution reverted: ERC20 transfer amount exceeds balance',
+    confirmLabel: 'Proceed'
+  },
+  {
+    variant: 'revert',
+    title: 'RPC Reports Revert',
+    message: 'Your configured RPC reports that this transaction will revert.',
+    confirmLabel: 'Sign Anyway'
+  },
+  {
+    variant: 'execution-failed',
+    title: 'Execution Check Failed',
+    message: 'Wren could not determine whether this transaction will execute successfully.',
+    confirmLabel: 'Sign Anyway'
+  },
+  {
+    variant: 'execution-unavailable',
+    title: 'Execution Check Unavailable',
+    message: 'Your configured RPC does not provide a usable transaction execution check.',
+    confirmLabel: 'Sign Anyway'
+  },
+  {
+    variant: 'broad-token-approval',
+    title: 'Broad Token Approval',
+    message: 'Your configured RPC reports broad ERC-20 spending authority.',
+    confirmLabel: 'Approve Anyway'
+  },
+  {
+    variant: 'existing-token-allowance',
+    title: 'Existing Token Allowance',
+    message: 'Your configured RPC reports a different nonzero allowance for this owner and spender.',
+    confirmLabel: 'Change Anyway'
+  },
+  {
+    variant: 'delegated-account',
+    title: 'Delegated Account',
+    message: 'This account delegates execution to',
+    confirmLabel: 'Sign With Delegated Account'
+  },
+  {
+    variant: 'proxy-implementation',
+    title: 'Proxy Implementation Change',
+    message: 'Your configured RPC reports that 1 ERC-1967 proxy implementation slot will be different',
+    confirmLabel: 'Proceed Anyway'
+  }
+])
+
 const onboardingAction = (nextCount = 0) => ({
   type: 'sequence',
   delayMs: 650,
@@ -141,8 +192,82 @@ const joinedCanvasScenarios = () => [
   )
 ]
 
+const updateDialogScenarios = () =>
+  INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].flatMap(([geometry, logicalHeight]) => [
+      {
+        id: `tray-update-available-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'update-available',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.updateDialog',
+        expectedInitialFocus: 'Get update',
+        requiredControls: ['Get update', 'Later', 'Skip this version'],
+        requiredText: ['Update available', 'Wren 0.1.3 is available. Get the update when you are ready.']
+      },
+      {
+        id: `tray-update-ready-${geometry}-${scale}`,
+        renderer: 'tray',
+        state: 'update-ready',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.updateDialog',
+        expectedInitialFocus: 'Continue',
+        requiredControls: ['Continue', 'Later'],
+        requiredText: ['Update ready', 'Wren 0.1.3 is ready. Continue to complete the update.']
+      }
+    ])
+  )
+
+const sendComposerScenarios = () =>
+  INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].flatMap(([geometry, logicalHeight]) => [
+      {
+        id: `dash-send-composer-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-composer',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.sendComposer',
+        requiredControls: ['Send one', 'Sweep assets', 'Choose an asset', 'Choose recipient'],
+        requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH']
+      },
+      {
+        id: `dash-send-sweep-selection-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-sweep-selection',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: {
+          type: 'sequence',
+          steps: [
+            { type: 'clickText', text: 'Sweep assets' },
+            { type: 'selectLabel', label: 'Network', value: '10' },
+            { type: 'clickCheckboxText', text: 'USDC' }
+          ]
+        },
+        ready: '.sendSweepAssetSelected',
+        requiredControls: ['Send one', 'Sweep assets'],
+        requiredText: ['Select positive balances', '1/16 selected', 'Sweep is sequential and non-atomic.']
+      }
+    ])
+  )
+
 const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
+  ...updateDialogScenarios(),
+  ...sendComposerScenarios(),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -157,12 +282,9 @@ const reviewScenarios = () => [
       action: {
         type: 'sequence',
         steps: [
-          {
-            type: 'inputLabel',
-            label: 'Unsigned transaction JSON',
-            value:
-              '{"from":"0x1111111111111111111111111111111111111111","to":"0x2222222222222222222222222222222222222222","chainId":"0x1","value":"0x0","data":"0xa9059cbb"}'
-          },
+          { type: 'clickText', text: 'Calldata' },
+          { type: 'inputLabel', label: 'Calldata', value: '0x12345678' },
+          { type: 'inputLabel', label: 'Chain ID optional', value: '1' },
           { type: 'clickText', text: 'Inspect read-only' }
         ]
       },
@@ -173,18 +295,41 @@ const reviewScenarios = () => [
         'EIP-712',
         'JSON-RPC',
         'Inspect read-only',
-        'Copy sender',
-        'Copy target'
+        'Copy selector'
       ],
       requiredText: [
         'Read-only inspector',
         'Never signs or broadcasts',
         'Raw input is not saved.',
-        'Configured-RPC simulation',
-        'Configured-RPC evidence may use the disclosed transaction fields above.'
+        'Unknown function',
+        '0x12345678',
+        'Configured-RPC simulation'
       ]
     }))
   ),
+  {
+    id: 'dash-inspector-result-full-1',
+    renderer: 'dash',
+    state: 'inspector',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickText', text: 'Calldata' },
+        { type: 'inputLabel', label: 'Calldata', value: '0x12345678' },
+        { type: 'inputLabel', label: 'Chain ID optional', value: '1' },
+        { type: 'clickText', text: 'Inspect read-only' }
+      ]
+    },
+    ready: '.inspectorResult',
+    requiredControls: ['Copy selector'],
+    requiredText: ['Never signs or broadcasts', 'Unknown function', '0x12345678'],
+    captureScroll: 'target',
+    captureScrollSelector: '.inspectorMissing',
+    captureScrollOffset: -220
+  },
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -342,8 +487,8 @@ const reviewScenarios = () => [
           'Remove Operations multisig with a deliberately long label'
         ],
         requiredText: [
-          'Verified out of band',
-          'Compared with the deployment record on a separate device',
+          'Quarterly treasury recipient',
+          'Checked 2026-08-18 · Compared with the deployment record on a separate device',
           '0x3333333333333333333333333333333333333333'
         ]
       },
@@ -356,11 +501,7 @@ const reviewScenarios = () => [
         logicalHeight,
         ready: '.addressBookEditor',
         requiredControls: ['Save Contact'],
-        requiredText: [
-          'Contact provenance',
-          'Verified out of band',
-          'Always verify the full address before signing.'
-        ]
+        requiredText: ['Address check', 'Checked outside Wren', 'Wren does not verify it.']
       },
       {
         id: `dash-send-recipient-picker-${geometry}-${scale}`,
@@ -725,6 +866,28 @@ const reviewScenarios = () => [
     requiredText: ['Trezor Signer', 'Enter PIN', 'scrambled matrix', '0 positions selected']
   },
   {
+    id: 'dash-seed-locked-full-1',
+    renderer: 'dash',
+    state: 'signer-seed-locked',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.expandedSigner .signerUnlockInput',
+    requiredControls: ['Signer password', 'Remove signer'],
+    requiredText: ['Seed Phrase Signer', 'Enter the signer password to unlock', 'Unlock']
+  },
+  {
+    id: 'dash-private-key-locked-full-1',
+    renderer: 'dash',
+    state: 'signer-ring-locked',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.expandedSigner .signerUnlockInput',
+    requiredControls: ['Signer password', 'Remove signer'],
+    requiredText: ['Private Key Signer', 'Enter the signer password to unlock', 'Unlock']
+  },
+  {
     id: 'dash-settings-full-1',
     renderer: 'dash',
     state: 'settings',
@@ -863,6 +1026,26 @@ const reviewScenarios = () => [
     requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
+    id: 'dash-network-add-full-1',
+    renderer: 'dash',
+    state: 'network-add',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
+  },
+  {
+    id: 'dash-network-add-short-1',
+    renderer: 'dash',
+    state: 'network-add',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
+  },
+  {
     id: 'tray-account-startup-full-1',
     renderer: 'tray',
     state: 'account-startup',
@@ -966,6 +1149,60 @@ const reviewScenarios = () => [
     requiredText: ['Requests', '3 requests', 'Clear all', 'workshop.example', 'garden.example'],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].flatMap(([geometry, logicalHeight]) => [
+    {
+      id: `tray-account-signing-queue-${geometry}-1`,
+      renderer: 'tray',
+      state: 'account-signing-queue',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.requestQueueStatus',
+      requiredControls: ['Back', 'Clear all requests'],
+      requiredText: [
+        '3 pending signatures · oldest first',
+        'Current · 1 of 3',
+        'Queued · 2 of 3',
+        'Queued · 3 of 3'
+      ],
+      layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    },
+    {
+      id: `tray-transaction-signing-queue-review-${geometry}-1`,
+      renderer: 'tray',
+      state: 'transaction-signing-queue-review',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.transactionReviewQueueContext',
+      requiredText: ['3 pending signatures', 'Current request 1 of 3 · oldest pending'],
+      layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    }
+  ]),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].flatMap(([geometry, logicalHeight]) =>
+    RPC_WARNING_SCENARIOS.map(({ variant, title, message, confirmLabel }) => ({
+      id: `tray-rpc-warning-${variant}-${geometry}-1`,
+      renderer: 'tray',
+      state: 'transaction-rpc-warning',
+      variant,
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.approveTransactionWarning',
+      requiredControls: ['Reject', confirmLabel],
+      requiredText: [title, message],
+      layoutExpectations: [
+        { kind: 'hidden', selector: '.accountSelectorOpen' },
+        { kind: 'viewport-bottom', selector: '.requestNoticeApproval' }
+      ]
+    }))
+  ),
   {
     id: 'tray-transaction-safety-unavailable-short-1',
     renderer: 'tray',

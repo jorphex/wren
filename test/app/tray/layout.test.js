@@ -260,9 +260,7 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   const requestMetaStyle = accountStyle.split('.accountViewMeta')[1].split('.accountViewMain')[0]
   expect(requestMetaStyle).not.toMatch(/(?:^|\n)\s+(?:border|border-radius|background|padding) /)
-  expect(signingStyle).toMatch(
-    /\.approveTransaction\n {2}padding 0 var\(--wren-space-5\) var\(--wren-space-4\)/
-  )
+  expect(signingStyle).toMatch(/\.approveTransaction\n {2}padding 0 var\(--wren-space-5\)/)
   expect(signingStyle).toMatch(
     /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
   )
