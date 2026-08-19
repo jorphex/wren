@@ -134,7 +134,7 @@ class Updater {
   private readyForInstall() {
     this.installerReady = true
 
-    requireStoreAction('updateBadge')('updateReady')
+    requireStoreAction('updateBadge')('updateReady', this.availableVersion)
   }
 
   private checkForAutoUpdate() {

@@ -1,77 +1,79 @@
 .badgeWrap
   position absolute
-  right 0px
-  bottom 0px
-  left 0px
-  top 0px
   z-index 1000000001
-  background var(--ghostZ)
+  inset 0
   display flex
-  justify-content center
   align-items center
+  justify-content center
+  padding var(--wren-space-5)
+  box-sizing border-box
+  background rgba(7, 10, 8, .82)
+  backdrop-filter blur(7px)
 
+.updateDialog
+  width min(100%, 440px)
+  display flex
+  box-sizing border-box
+  padding var(--wren-space-6)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-lg), var(--wren-shadow-inset)
+  font-family var(--wren-font-ui)
+  flex-direction column
 
-.badge
-  width calc(100% - 20px)
-  transform translateY(700px)
-  border-radius 12px
-  background var(--ghostA)
-  z-index 1
-  transition var(--standard)
-  font-size 18px
-  font-weight 300
-  padding-bottom 120px
-  padding-top 70px
-  box-shadow 0px 20px 40px var(--ghostX)
-  height 196px
-  color var(--outerspace)
+.updateDialogCopy
+  display flex
+  flex-direction column
 
-  .badgeMessage, .badgeInput
-    position relative
-    z-index 10
+  h2
+    margin var(--wren-space-2) 0 var(--wren-space-3)
+    color var(--wren-text-primary)
+    font-size 22px
+    font-weight 640
+    line-height 1.2
 
-  .badgeMessage
-    height 120px
-    display flex
-    justify-content center
-    align-items center
-    text-align center
-    padding 0px 40px 0px 40px
+  p
+    margin 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-body)
+    line-height 1.55
 
-  .badgeInput
-    width 100%
-    display flex
-    justify-content center
-    margin-bottom 5px
+.updateDialogEyebrow
+  color var(--wren-accent-primary-hover)
+  font-size var(--wren-type-caption)
+  font-weight 620
+  letter-spacing .055em
+  text-transform uppercase
 
-    .badgeInputButton
-      width 400px
-      display flex
-      justify-content center
-      align-items center
-      cursor pointer
+.updateDialogActions
+  display flex
+  justify-content flex-end
+  gap var(--wren-space-2)
+  margin-top var(--wren-space-6)
 
-      .badgeInputInner
-        height 33px
-        width calc(80% - 2px)
-        display flex
-        justify-content center
-        align-items center
-        border-radius 12px
-        text-transform uppercase
-        font-size 14px
-        font-weight 400
-        letter-spacing 1px
-        margin-left 1px
-        cursor pointer
-        background var(--ghostA)
-        border 2px solid var(--ghostY)
-        height 40px
+  button
+    min-width 118px
 
-      .badgeInputInner:hover
-        background var(--ghostB)
+.updateDialogSkip
+  align-self flex-start
+  margin-top var(--wren-space-3)
 
-      .badgeInputSmall
-        font-size var(--wren-type-caption)
-        height 28px
-        width calc(60% - 2px)
+@media (max-height: 560px)
+  .badgeWrap
+    align-items flex-start
+    overflow-y auto
+
+  .updateDialog
+    margin auto 0
+    padding var(--wren-space-5)
+
+@media (max-width: 420px)
+  .updateDialogActions
+    align-items stretch
+    flex-direction column
+
+    button
+      width 100%

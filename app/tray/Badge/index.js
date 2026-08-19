@@ -1,96 +1,86 @@
 import React from 'react'
 import Restore from 'react-restore'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import link from '../../../resources/link'
 
-class Bridge extends React.Component {
-  render() {
-    const badge = this.store('view.badge') || {}
+export class Bridge extends React.Component {
+  constructor(props, context) {
+    super(props, context)
+    this.primaryRef = React.createRef()
+  }
 
-    if (badge.type === 'updateReady') {
-      return (
-        <div className='badgeWrap'>
-          <div className='badge cardShow' style={{ transform: 'translateY(0px)', height: '196px' }}>
-            <div className='badgeInner'>
-              <div className='badgeMessage'>Your update is ready, restart Wren to switch?</div>
-              <div className='badgeInput'>
-                <div className='badgeInputButton'>
-                  <div
-                    className='badgeInputInner'
-                    onMouseDown={() => link.send('tray:updateRestart')}
-                    style={{ color: 'var(--good)' }}
-                  >
-                    Restart Now
-                  </div>
-                </div>
-              </div>
-              <div className='badgeInput'>
-                <div className='badgeInputButton'>
-                  <div
-                    className='badgeInputInner'
-                    onMouseDown={() => link.send('tray:action', 'updateBadge', '')}
-                    style={{ color: 'var(--moon)' }}
-                  >
-                    Restart Later
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    } else if (badge.type === 'updateAvailable') {
-      return (
-        <div className='badgeWrap'>
-          <div className='badge cardShow' style={{ transform: 'translateY(0px)', height: '224px' }}>
-            <div className='badgeInner'>
-              <div className='badgeMessage'>
-                Version {badge.version} is available, would you like to install it?
-              </div>
-              <div className='badgeInput'>
-                <div className='badgeInputButton'>
-                  <div
-                    className='badgeInputInner'
-                    onMouseDown={() => {
-                      link.send('tray:installAvailableUpdate', badge.version)
-                    }}
-                    style={{ color: 'var(--good)' }}
-                  >
-                    Install Update
-                  </div>
-                </div>
-              </div>
-              <div className='badgeInput'>
-                <div className='badgeInputButton'>
-                  <div
-                    className='badgeInputInner'
-                    onMouseDown={() => {
-                      link.send('tray:dismissUpdate', badge.version, true)
-                    }}
-                    style={{ color: 'var(--moon)' }}
-                  >
-                    Remind Me Later
-                  </div>
-                </div>
-              </div>
-              <div className='badgeInput'>
-                <div className='badgeInputButton'>
-                  <div
-                    className='badgeInputInner badgeInputSmall'
-                    onMouseDown={() => {
-                      link.send('tray:dismissUpdate', badge.version, false)
-                    }}
-                  >
-                    Skip This Version
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
+  badge() {
+    return this.store('view.badge') || {}
+  }
+
+  dismiss(badge) {
+    if (badge.type === 'updateAvailable') {
+      link.send('tray:dismissUpdate', badge.version, true)
     } else {
-      return null
+      link.send('tray:action', 'updateBadge', '')
     }
+  }
+
+  render() {
+    const badge = this.badge()
+    const available = badge.type === 'updateAvailable'
+    const ready = badge.type === 'updateReady'
+    if (!available && !ready) return null
+
+    const versionSubject = badge.version ? `Wren ${badge.version}` : 'The Wren update'
+    const heading = available ? 'Update available' : 'Update ready'
+    const body = available
+      ? `${versionSubject} is available. Get the update when you are ready.`
+      : `${versionSubject} is ready. Continue to complete the update.`
+
+    return (
+      <div className='badgeWrap'>
+        <DialogSurface
+          as='section'
+          className='updateDialog cardShow'
+          describedBy='wren-update-body'
+          initialFocusRef={this.primaryRef}
+          key={`${badge.type}:${badge.version || ''}`}
+          labelledBy='wren-update-heading'
+          modal
+          onCancel={() => this.dismiss(badge)}
+        >
+          <div className='updateDialogCopy'>
+            <span className='updateDialogEyebrow'>Wren desktop</span>
+            <h2 id='wren-update-heading'>{heading}</h2>
+            <p id='wren-update-body'>{body}</p>
+          </div>
+          <div className='updateDialogActions'>
+            <button
+              className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+              onClick={() =>
+                available ? link.send('tray:installAvailableUpdate') : link.send('tray:updateRestart')
+              }
+              ref={this.primaryRef}
+              type='button'
+            >
+              {available ? 'Get update' : 'Continue'}
+            </button>
+            <button
+              className='wrenControl wrenControlSecondary wrenControlLarge'
+              onClick={() => this.dismiss(badge)}
+              type='button'
+            >
+              Later
+            </button>
+          </div>
+          {available ? (
+            <button
+              className='updateDialogSkip wrenControl wrenControlGhost wrenControlCompact'
+              onClick={() => link.send('tray:dismissUpdate', badge.version, false)}
+              type='button'
+            >
+              Skip this version
+            </button>
+          ) : null}
+        </DialogSurface>
+      </div>
+    )
   }
 }
 
