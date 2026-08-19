@@ -47,6 +47,7 @@ export class Signer extends React.Component {
     this.mounted = false
     clearTimeout(this.notificationTimer)
     clearTimeout(this.unavailableTimer)
+    clearTimeout(this.navigationTimer)
     if (this.resizeObserver) this.resizeObserver.disconnect()
   }
 
@@ -93,6 +94,12 @@ export class Signer extends React.Component {
     }
     const crumb = signer ? signerPanelCrumb(signer) : accountPanelCrumb()
     link.send('tray:action', 'navDash', crumb)
+    clearTimeout(this.navigationTimer)
+    this.navigationTimer = setTimeout(() => {
+      if (!this.mounted) return
+      this.navigationPending = false
+      this.setState({ openingDetails: false })
+    }, 500)
   }
 
   renderSignerType(type) {
@@ -192,9 +199,13 @@ export class Signer extends React.Component {
               <span>{'Signer'}</span>
             </div>
             <ClusterValue
-              ariaLabel='Open signer details'
-              disabled={this.state.openingDetails}
-              onClick={() => this.openSignerDetails(activeAccount, activeSigner)}
+              {...(!watchOnly
+                ? {
+                    ariaLabel: 'Open signer details',
+                    disabled: this.state.openingDetails,
+                    onClick: () => this.openSignerDetails(activeAccount, activeSigner)
+                  }
+                : {})}
             >
               <div className='signerPreviewSummary'>
                 {this.renderSignerType(activeAccount.lastSignerType)}

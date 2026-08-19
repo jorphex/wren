@@ -172,7 +172,7 @@ test('keeps reserved tray bands and revocation evidence free of decorative horiz
 test('keeps warnings and balance siblings attached through spacing', () => {
   expect(balancesStyle).not.toMatch(/\.signerBalanceWarning[\s\S]{0,220}?border-top/)
   expect(balancesStyle).not.toMatch(/& \+ \.signerBalance[\s\S]{0,100}?border-top/)
-  expect(balancesStyle).toMatch(/\.balanceFilter\n {2}margin-bottom var\(--wren-space-2\)/)
+  expect(balancesStyle).toMatch(/\.balanceFilter[\s\S]{0,120}?margin-bottom var\(--wren-space-2\)/)
 })
 
 test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {

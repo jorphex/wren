@@ -95,7 +95,9 @@ it('edits the account name from the header and returns focus after saving', asyn
   const main = accountMain()
   const { user } = render(main.renderHomeHeader())
 
-  await user.click(screen.getByRole('button', { name: 'Update account name' }))
+  const renameTarget = screen.getByRole('button', { name: 'Update account name' })
+  expect(renameTarget.textContent).toContain('Workshop')
+  await user.click(renameTarget)
   const input = screen.getByRole('textbox', { name: 'Account name' })
   await user.clear(input)
   await user.type(input, 'Treasury{Enter}')

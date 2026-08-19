@@ -186,18 +186,18 @@ export class AccountNameEditor extends React.Component {
             }}
           />
         ) : (
-          <>
-            <h1 className='accountHomeTitle'>{this.props.name}</h1>
+          <h1 className='accountHomeTitle'>
             <button
               ref={this.renameButtonRef}
               type='button'
-              className='accountHomeRename wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
+              className='accountHomeRename wrenControl wrenControlGhost'
               aria-label='Update account name'
               onClick={() => this.beginEdit()}
             >
+              <span className='accountHomeNameText'>{this.props.name}</span>
               <Icon name='pencil' size={14} />
             </button>
-          </>
+          </h1>
         )}
       </div>
     )
@@ -278,7 +278,7 @@ class _AccountMain extends React.Component {
         <div className='panelFilterInput'>
           <input
             aria-label='Filter account details'
-            className='wrenInput wrenInputQuiet'
+            className='wrenInput'
             type='text'
             spellCheck='false'
             onChange={(e) => {

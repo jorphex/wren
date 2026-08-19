@@ -28,6 +28,13 @@ class SignerHarness extends Signer {
 
 const renderSigner = () => render(<SignerHarness account={account} expanded moduleId='signer' />)
 
+beforeEach(() => {
+  state.main.accounts[account] = { id: account, lastSignerType: 'trezor', signer: activeSigner.id }
+  state.main.signers = { [activeSigner.id]: activeSigner }
+  link.rpc.mockReset()
+  link.send.mockReset()
+})
+
 test('opens signer details once with the exact dashboard breadcrumb', async () => {
   const { user } = renderSigner()
 
@@ -36,6 +43,28 @@ test('opens signer details once with the exact dashboard breadcrumb', async () =
   expect(link.send.mock.calls).toEqual([
     ['tray:action', 'navDash', { view: 'expandedSigner', data: { signer: activeSigner.id } }]
   ])
+})
+
+test('allows signer details to be opened again after the navigation guard expires', async () => {
+  const { user } = renderSigner()
+  const details = screen.getByRole('button', { name: 'Open signer details' })
+
+  await user.click(details)
+  act(() => jest.advanceTimersByTime(501))
+  await user.click(screen.getByRole('button', { name: 'Open signer details' }))
+
+  expect(link.send).toHaveBeenCalledTimes(2)
+})
+
+test('keeps a watch-only signer summary static', () => {
+  state.main.accounts[account] = { id: account, lastSignerType: 'watch' }
+  state.main.signers = {}
+
+  renderSigner()
+
+  expect(screen.getByText('Watch-only')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Open signer details' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Verify account address on signer' })).toBeNull()
 })
 
 test('keeps hardware address verification single-flight until its callback settles', async () => {

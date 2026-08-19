@@ -117,6 +117,10 @@ it('uses the full search width until an in-field clear action is needed', async 
   const filterSurface = filter.closest('.balanceFilter')
 
   expect(filterSurface.classList.contains('balanceFilterHasValue')).toBe(false)
+  expect(filter.classList.contains('wrenInput')).toBe(true)
+  expect(filter.classList.contains('wrenInputQuiet')).toBe(false)
+  expect(filterSurface.parentElement.classList.contains('balancesExpandedView')).toBe(true)
+  expect(filterSurface.nextElementSibling.classList.contains('balancesExpandedScroll')).toBe(true)
   expect(screen.queryByRole('button', { name: 'Clear balance filter' })).toBeNull()
 
   await user.type(filter, 'eth')
