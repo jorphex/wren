@@ -46,7 +46,7 @@ const activePermission = (handlerId, origin) => ({
 
 const baseState = () => ({
   platform: 'linux',
-  version: '0.1.0',
+  version: '0.1.1',
   windows: {
     panel: { nav: [], footer: { height: 40 } },
     dash: { showing: false, nav: [], footer: { height: 40 } },

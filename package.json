@@ -1,6 +1,6 @@
 {
   "name": "wren",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "desktopName": "wren.desktop",
   "packageManager": "npm@11.12.0",
   "description": "Desktop EVM wallet and system-wide provider",
