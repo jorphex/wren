@@ -37,7 +37,7 @@ const COPY = Object.freeze({
   currentAccount: 'Current account',
   declinedBody: 'You declined this transaction. Nothing was signed or sent.',
   declinedHeading: 'Transaction declined',
-  errorBody: 'The network did not accept this transaction.',
+  errorBody: 'Wren could not prepare this transaction.',
   errorHeading: 'Transaction failed',
   fee: 'Network fee',
   feeReview: 'Calculated during review',
@@ -96,11 +96,14 @@ const errorCopy = Object.freeze({
   'asset-unavailable': COPY.assetUnavailable,
   'fee-unavailable': 'Fee estimate unavailable',
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
+  'origin-unavailable':
+    'Wren could not prepare its local Send connection. Close and reopen Send, then try again.',
   'recipient-invalid': COPY.recipientInvalid,
   'recipient-lookup-unavailable': COPY.recipientLookupUnavailable,
   'sweep-quote-changed':
     'Balances, fees, or nonce changed. Scan a fresh Sweep; nothing was changed silently.',
   'sweep-quote-expired': 'Sweep quote expired. Scan again before queueing.',
+  'validation-failed': 'Wren could not validate this transfer. Check the recipient, amount, and network.',
   'watch-only': COPY.watchOnly
 })
 
@@ -827,7 +830,8 @@ export class Send extends React.Component {
               return (
                 <button
                   aria-label={`Select ${asset.symbol}`}
-                  className='sendAssetOption'
+                  aria-pressed={selected}
+                  className={`sendAssetOption ${selected ? 'sendAssetOptionSelected' : ''}`}
                   key={assetKey(asset)}
                   onClick={() => {
                     this.setState(() => {
@@ -975,7 +979,7 @@ export class Send extends React.Component {
                     <span>{contact.address}</span>
                   </span>
                   <span className='sendContactContext'>
-                    {contact.provenance.status === 'verified-out-of-band' ? 'Verified out of band' : 'Saved'}
+                    {contact.provenance.status === 'verified-out-of-band' ? 'Checked outside Wren' : 'Saved'}
                   </span>
                 </button>
               ))
@@ -1246,19 +1250,24 @@ export class Send extends React.Component {
     return (
       <section className='sendSweepSelect' aria-busy={busy ? 'true' : undefined}>
         <div className='sendSweepChain'>
-          <label htmlFor='send-sweep-chain'>Network</label>
-          <select
-            disabled={busy}
-            id='send-sweep-chain'
-            onChange={(event) => this.setSweepChain(event.target.value)}
-            value={chainId}
-          >
-            {chainIds.map((id) => (
-              <option key={id} value={id}>
-                {assets.find((asset) => asset.chainId === id)?.chainName || id}
-              </option>
-            ))}
-          </select>
+          <label className='sendSweepChainLabel' htmlFor='send-sweep-chain'>
+            Network
+          </label>
+          <div className='dropdownWrap'>
+            <select
+              className='dropdown'
+              disabled={busy}
+              id='send-sweep-chain'
+              onChange={(event) => this.setSweepChain(event.target.value)}
+              value={chainId}
+            >
+              {chainIds.map((id) => (
+                <option key={id} value={id}>
+                  {assets.find((asset) => asset.chainId === id)?.chainName || id}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className='sendSweepHeader'>
           <div>
@@ -1275,13 +1284,16 @@ export class Send extends React.Component {
           {tokens.map((asset) => {
             const checked = this.state.sweepSelected.includes(assetKey(asset))
             return (
-              <label key={assetKey(asset)}>
+              <label className={checked ? 'sendSweepAssetSelected' : ''} key={assetKey(asset)}>
                 <input
                   checked={checked}
                   disabled={busy || (!checked && selectedCount >= MAX_SWEEP_ASSETS)}
                   onChange={() => this.toggleSweepAsset(asset)}
                   type='checkbox'
                 />
+                <span className='sendSweepCheckbox' aria-hidden='true'>
+                  {checked ? <Icon name='check' size={14} /> : null}
+                </span>
                 <AssetMark asset={asset} />
                 <span>
                   <strong>{asset.symbol}</strong>
@@ -1292,13 +1304,16 @@ export class Send extends React.Component {
             )
           })}
           {native ? (
-            <label>
+            <label className={this.state.sweepIncludeNative ? 'sendSweepAssetSelected' : ''}>
               <input
                 checked={this.state.sweepIncludeNative}
                 disabled={busy || (!this.state.sweepIncludeNative && selectedCount >= MAX_SWEEP_ASSETS)}
                 onChange={() => this.toggleSweepNative()}
                 type='checkbox'
               />
+              <span className='sendSweepCheckbox' aria-hidden='true'>
+                {this.state.sweepIncludeNative ? <Icon name='check' size={14} /> : null}
+              </span>
               <AssetMark asset={native} />
               <span>
                 <strong>Include {native.symbol}</strong>
@@ -1528,7 +1543,7 @@ export class Send extends React.Component {
     return (
       <form
         aria-busy={derivationBusy || this.state.queueing ? 'true' : undefined}
-        className='sendComposer cardShow'
+        className={`sendComposer cardShow ${this.state.mode === 'sweep' ? 'sendComposerSweep' : ''}`}
         onSubmit={(event) =>
           this.state.mode === 'sweep' ? this.reviewSweep(event, context) : this.submit(event, context)
         }

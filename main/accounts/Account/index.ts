@@ -892,12 +892,9 @@ class FrameAccount {
       ? `at least ${count} ERC-1967 proxy implementation slots`
       : `${count} ERC-1967 proxy implementation slot${count === 1 ? '' : 's'}`
     this.syncManagedApproval(req, ApprovalType.ProxyImplementationChangeRisk, {
-      title:
-        count === 1 && !evidence.truncated
-          ? 'ERC-1967 Implementation Slot Change'
-          : 'ERC-1967 Implementation Slot Changes',
-      message: `Your configured RPC reports that this transaction causes a net pre/post change to ${subject}. This can replace the code executed by a proxy and change control over its assets. Verify every proxy and implementation value before proceeding.`,
-      confirmLabel: 'Approve Upgrade Anyway',
+      title: 'Proxy Implementation Change',
+      message: `Your configured RPC reports that ${subject} will be different after this transaction. This may change the code a proxy runs and control of its assets. Check each proxy and implementation value before proceeding.`,
+      confirmLabel: 'Proceed Anyway',
       riskCount: count,
       truncated: evidence.truncated === true,
       evidenceKey: evidence.changes
@@ -1553,6 +1550,33 @@ class FrameAccount {
     return next
   }
 
+  private presentRequestInboxForConcurrentReview() {
+    const activeHandlerId = this.activeReviewHandlerId
+    const activeRequest = activeHandlerId ? this.requests[activeHandlerId] : undefined
+    const accountId = activeRequest?.account
+    const selectedAccount = store('selected.current')
+    if (
+      !activeHandlerId ||
+      typeof accountId !== 'string' ||
+      typeof selectedAccount !== 'string' ||
+      selectedAccount.toLowerCase() !== this.id
+    )
+      return
+
+    const panelNav: Breadcrumb[] = store('windows.panel.nav') || []
+    const current = panelNav[0]
+    const currentData = isRecord(current?.data) ? current.data : undefined
+    const reviewingActiveRequest =
+      current?.view === 'requestView' &&
+      typeof currentData?.['accountId'] === 'string' &&
+      currentData['accountId'].toLowerCase() === this.id &&
+      currentData?.['requestId'] === activeHandlerId
+
+    if (reviewingActiveRequest) {
+      requireStoreAction('navClearReq')(accountId, activeHandlerId, true)
+    }
+  }
+
   presentActiveRequest() {
     const active = this.activeReviewHandlerId ? this.requests[this.activeReviewHandlerId] : undefined
     if (active) this.presentRequest(active, false)
@@ -1602,6 +1626,8 @@ class FrameAccount {
       throw new Error('Requesting client disconnected')
     }
 
+    const hadActiveReview = Boolean(this.activeReviewHandlerId && this.requests[this.activeReviewHandlerId])
+
     req.mode = RequestMode.Normal
     req.created = Date.now()
     req.activityId = req.activityId || randomUUID()
@@ -1633,7 +1659,11 @@ class FrameAccount {
     }
 
     this.revealDetails(req)
-    this.presentNextRequest(true)
+    if (hadActiveReview && this.orderedRequests().length > 1) {
+      this.presentRequestInboxForConcurrentReview()
+    } else {
+      this.presentNextRequest(true)
+    }
     this.update()
     return true
   }

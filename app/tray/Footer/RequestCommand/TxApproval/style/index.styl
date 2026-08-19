@@ -1,5 +1,5 @@
 .requestNoticeApproval
-  height auto
+  height 200px
 
 .requestNoticeInnerApproval
   display block
@@ -7,41 +7,53 @@
   box-sizing border-box
 
 .approveTransactionWarning
+  width 100%
+  height 100%
   overflow hidden
 
   .approveTransactionWarningBody
-    word-wrap break-word
-    word-break break-all
+    display grid
+    width 100%
+    height 100%
+    padding 12px 24px
+    grid-template-rows auto minmax(0, 1fr) 44px
+    gap 6px
+    box-sizing border-box
+    overflow-wrap anywhere
+    word-break normal
 
     .approveTransactionWarningTitle
-      text-align center
-      font-size 18px
-      letter-spacing 1px
-      text-transform uppercase
-      font-weight 300
-      font-family 'MainFont'
       display flex
-      justify-content space-between
       align-items center
-      transition var(--standard)
-      height 52px
-      width 100%
-      padding 10px 20px
+      min-height 30px
+      gap var(--wren-space-2)
+      color var(--wren-warning)
+      font-family var(--wren-font-ui)
+      font-size 16px
+      font-weight 650
+      letter-spacing 0
+      line-height 20px
+      text-transform none
 
       .approveTransactionWarningIcon
         color var(--moon)
       
     .approveTransactionWarningMessage
-      display flex
-      align-items center
-      justify-content center
-      padding 30px
-      text-align justify
-      text-align-last center
-      font-family 'FiraCode'
-      font-weight 200
-      height 83px
-      font-size 14px
+      min-height 0
+      padding 0
+      overflow auto
+      color var(--wren-text-secondary)
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-small)
+      font-weight 400
+      line-height 18px
+      text-align left
+      text-align-last left
+
+    .approveTransactionWarningActions
+      display grid
+      grid-template-columns repeat(2, minmax(0, 1fr))
+      gap var(--wren-space-2)
 
 ._txApproval
   font-size var(--wren-type-small)

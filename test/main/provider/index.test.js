@@ -1,5 +1,5 @@
 import log from 'electron-log'
-import { parseUnits, toBeHex } from 'ethers'
+import { keccak256, parseUnits, toBeHex } from 'ethers'
 import { validate as validateUUID } from 'uuid'
 import { addHexPrefix, intToHex } from '@ethereumjs/util'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
@@ -215,6 +215,8 @@ beforeEach(() => {
   accounts.signTransaction = jest.fn()
   accounts.signTransactionForAccount = jest.fn()
   accounts.setTxSigned = jest.fn()
+  accounts.setTxSent = jest.fn(() => true)
+  accounts.setTxSubmissionUnclear = jest.fn(() => true)
   accounts.lockRequest = jest.fn()
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
@@ -3541,6 +3543,86 @@ describe('#send', () => {
       )
     })
 
+    it('admits, approves, signs, and broadcasts a managed Send transaction once', (done) => {
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      const signedTransaction = `0x${'ab'.repeat(32)}`
+      const transactionHash = keccak256(signedTransaction)
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      accounts.signTransactionForAccount.mockImplementation(
+        (_accountId, _transaction, callback, assertBeforeSign) => {
+          try {
+            assertBeforeSign()
+            callback(null, signedTransaction)
+          } catch (error) {
+            callback(error)
+          }
+        }
+      )
+      accounts.setTxSigned.mockImplementation((_handlerId, callback) => callback())
+      connection.send.mockImplementation((payload, callback) => {
+        expect(payload).toMatchObject({
+          method: 'eth_sendRawTransaction',
+          params: [signedTransaction]
+        })
+        callback({ id: payload.id, jsonrpc: payload.jsonrpc, result: transactionHash })
+      })
+      const response = jest.fn()
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 13, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        response,
+        { type: 'ethereum', id: 1 },
+        (handlerId) => {
+          const admitted = accountRequests.find((request) => request.handlerId === handlerId)
+          admitted.simulation = { status: 'succeeded' }
+          provider.approveTransactionRequest(admitted, (error, result) => {
+            try {
+              expect(error).toBe(null)
+              expect(result).toBe(transactionHash)
+              expect(connection.send).toHaveBeenCalledTimes(1)
+              done()
+            } catch (assertionError) {
+              done(assertionError)
+            }
+          })
+        }
+      )
+    })
+
+    it('rejects a colliding managed Send origin even without trusted metadata', (done) => {
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        sourceId: 'colliding-source',
+        chain: { type: 'ethereum', id: 1 }
+      })
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 9, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        (response) => {
+          try {
+            expect(response.error).toEqual({
+              code: 4100,
+              message: 'Managed Wren Send origin is not authorized'
+            })
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 }
+      )
+    })
+
     it('retains an immutable native Max snapshot only for the exact managed Wren Send origin', (done) => {
       accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
       const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
@@ -3621,6 +3703,32 @@ describe('#send', () => {
         (response) => {
           try {
             expect(response.error.message).toMatch(/recent recipient.+exact managed Wren Send origin/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        { recentRecipient: { address: tx.to } }
+      )
+    })
+
+    it('rejects recent-recipient metadata from a managed-origin id with a source identity', (done) => {
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        sourceId: 'colliding-source',
+        chain: { type: 'ethereum', id: 1 }
+      })
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 11, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        (response) => {
+          try {
+            expect(response.error.message).toBe('Managed Wren Send origin is not authorized')
             expect(accountRequests).toHaveLength(0)
             done()
           } catch (error) {
@@ -4968,7 +5076,7 @@ describe('#signAndSend', () => {
 
   describe('broadcasting transactions', () => {
     const signedTx = '0x2eca5b929f8a671f0a3c0a7996f83141b2260fdfac62a1da8a8098b326001b99'
-    const txHash = '0x6e8b1de115105ceab599b4d99604797b961cfd1f46b85e10f23a81974baae3d5'
+    const txHash = keccak256(signedTx)
 
     beforeEach(() => {
       Object.assign(tx, {
@@ -5028,6 +5136,85 @@ describe('#signAndSend', () => {
 
         signAndSend()
       })
+
+      it('broadcasts once and accepts a delayed success callback', (done) => {
+        let broadcastCallback
+        connection.send.mockImplementation((_payload, callback) => {
+          broadcastCallback = callback
+        })
+
+        signAndSend((err, result) => {
+          try {
+            expect(err).toBe(null)
+            expect(result).toBe(txHash)
+            expect(connection.send).toHaveBeenCalledTimes(1)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        })
+
+        jest.advanceTimersByTime(5_000)
+        expect(connection.send).toHaveBeenCalledTimes(1)
+        broadcastCallback({ result: txHash })
+      })
+
+      it('starts reconciliation and settles once when the callback never arrives', () => {
+        connection.send.mockImplementation(() => {})
+        const callback = jest.fn()
+        const handler = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+        jest.advanceTimersByTime(15_000)
+
+        expect(connection.send).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: expect.objectContaining({
+              data: { code: 'submission-unconfirmed', hash: txHash }
+            })
+          })
+        )
+        expect(provider.handlers).toEqual({})
+      })
+
+      it('promotes a matching late response without settling the callback twice', () => {
+        let broadcastCallback
+        connection.send.mockImplementation((_payload, callback) => {
+          broadcastCallback = callback
+        })
+        const callback = jest.fn()
+
+        signAndSend(callback)
+        jest.advanceTimersByTime(15_000)
+        broadcastCallback({ result: txHash })
+
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledWith(request.handlerId, txHash, address)
+      })
+
+      it('ignores a late duplicate broadcast callback', (done) => {
+        connection.send.mockImplementation((_payload, callback) => {
+          callback({ result: txHash })
+          callback({ error: { code: -32000, message: 'late duplicate' } })
+        })
+
+        signAndSend((error, result) => {
+          try {
+            expect(error).toBe(null)
+            expect(result).toBe(txHash)
+            expect(accounts.setTxSubmissionUnclear).not.toHaveBeenCalled()
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
     })
 
     describe('failure', () => {
@@ -5040,6 +5227,8 @@ describe('#signAndSend', () => {
       it('handles a transaction send failure', (done) => {
         signAndSend((err) => {
           expect(err.message).toBe(errorMessage)
+          expect(connection.send).toHaveBeenCalledTimes(1)
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
           done()
         })
       })
@@ -5117,6 +5306,42 @@ describe('#signAndSend', () => {
         })
       })
 
+      it('rechecks managed Send authorization before signing without recipient metadata', (done) => {
+        request.type = 'transaction'
+        request.origin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+        store.set('main.origins', request.origin, {
+          chain: { type: 'ethereum', id: 1 },
+          name: FRAME_SEND_ORIGIN,
+          provenance: 'managed',
+          sessionOnly: false,
+          session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce(
+          (_accountId, _transaction, callback, assertBeforeSign) => {
+            store.set('main.origins', request.origin, 'sourceId', 'colliding-source')
+            try {
+              assertBeforeSign()
+              callback(null, signedTx)
+            } catch (error) {
+              callback(error)
+            }
+          }
+        )
+
+        signAndSend((error) => {
+          try {
+            expect(error).toMatchObject({
+              code: 4100,
+              message: 'Managed Wren Send request is no longer authorized'
+            })
+            expect(connection.send).not.toHaveBeenCalled()
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
       it('settles a generic pre-sign failure before retaining its review', (done) => {
         const disconnected = new Error('Trezor is disconnected')
         accounts.signTransactionForAccount.mockImplementationOnce((_accountId, _tx, cb) => cb(disconnected))
@@ -5166,6 +5391,7 @@ describe('#signAndSend', () => {
               error: expect.objectContaining({ message: 'Invalid transaction hash response' })
             })
           )
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
           done()
         })
       })

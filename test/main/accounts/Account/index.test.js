@@ -247,6 +247,7 @@ beforeEach(() => {
   store.mockImplementation(() => undefined)
   store.setPermission.mockClear()
   store.navDash.mockClear()
+  store.navClearReq.mockReset()
   store.notify.mockReset()
   windows.showTray.mockClear()
   nav.forward.mockClear()
@@ -448,8 +449,9 @@ describe('#addRequest', () => {
     account.clearRequest(request.handlerId)
   })
 
-  it('queues same-tick arrivals without replacing the active review', () => {
+  it('returns concurrent arrivals to the inbox without replacing the active review', () => {
     const now = jest.spyOn(Date, 'now').mockReturnValue(100)
+    const panelNav = []
     const request = (handlerId) => ({
       handlerId,
       type: 'access',
@@ -460,7 +462,20 @@ describe('#addRequest', () => {
     store.mockImplementation((...path) => {
       const key = path.join('.')
       if (key === 'selected.current') return accountState.address
-      if (key === 'windows.panel.nav') return []
+      if (key === 'windows.panel.nav') return panelNav
+    })
+    nav.forward.mockImplementation((_windowId, crumb) => panelNav.unshift(crumb))
+    store.navClearReq.mockImplementation((accountId, handlerId, showRequestInbox) => {
+      const next = panelNav.filter((crumb) => {
+        const clearsRequest = crumb.data?.accountId === accountId && crumb.data?.requestId === handlerId
+        const clearsInbox =
+          !showRequestInbox &&
+          crumb.view === 'expandedModule' &&
+          crumb.data?.account === accountId &&
+          crumb.data?.id === 'requests'
+        return !clearsRequest && !clearsInbox
+      })
+      panelNav.splice(0, panelNav.length, ...next)
     })
     const first = request('first')
     const second = request('second')
@@ -471,6 +486,11 @@ describe('#addRequest', () => {
 
     expect(first.queueIndex).toBe(0)
     expect(second.queueIndex).toBe(1)
+    expect(store.navClearReq).toHaveBeenCalledWith(accountState.address, first.handlerId, true)
+    expect(panelNav[0]).toMatchObject({
+      view: 'expandedModule',
+      data: { id: 'requests', account: accountState.address }
+    })
     expect(
       nav.forward.mock.calls
         .map(([, crumb]) => crumb)
@@ -1534,13 +1554,13 @@ describe('#addRequest', () => {
       type: ApprovalType.ProxyImplementationChangeRisk,
       approved: false,
       data: {
-        title: 'ERC-1967 Implementation Slot Change',
-        confirmLabel: 'Approve Upgrade Anyway',
+        title: 'Proxy Implementation Change',
+        confirmLabel: 'Proceed Anyway',
         riskCount: 1,
         evidenceKey: `${proxy}:0x${'0'.repeat(24)}${before.slice(2)}->0x${'0'.repeat(24)}${after.slice(2)}`
       }
     })
-    expect(approval.data.message).toMatch(/replace the code executed by a proxy/i)
+    expect(approval.data.message).toMatch(/change the code a proxy runs/i)
     approval.approve()
 
     account.refreshTransactionSimulation(request, true, true)

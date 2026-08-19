@@ -442,6 +442,15 @@ export class Accounts extends EventEmitter {
       ...(liveReceipt ? { receipt: liveReceipt } : {})
     }
 
+    if (
+      request.type === 'transaction' &&
+      request.submission?.status === 'unconfirmed' &&
+      ['confirming', 'confirmed', 'failed'].includes(operation.state)
+    ) {
+      this.recordLateTransactionSubmissionMetadata(request)
+      delete request.submission
+    }
+
     if (operation.state === 'reorged' || operation.state === 'submitted') {
       if (request.type === 'transaction') {
         this.cancelTransactionTerminalTimers(account.id, request.handlerId)
@@ -449,7 +458,12 @@ export class Accounts extends EventEmitter {
       delete request.tx.receipt
       request.tx.confirmations = 0
       request.status = RequestStatus.Verifying
-      request.notice = operation.state === 'reorged' ? 'Rechecking after chain reorganization' : 'Verifying'
+      request.notice =
+        operation.state === 'reorged'
+          ? 'Rechecking after chain reorganization'
+          : request.type === 'transaction' && request.submission?.status === 'unconfirmed'
+            ? 'Submission unconfirmed; checking network'
+            : 'Verifying'
     } else if (operation.state === 'confirming') {
       request.status = RequestStatus.Confirming
       request.notice = request.type === 'eip7702Revoke' ? 'Included; confirming' : 'Confirming'
@@ -1597,7 +1611,12 @@ export class Accounts extends EventEmitter {
     provider.send({ id: 1, jsonrpc: '2.0', method, params, chainId, _origin }, cb)
   }
 
-  private async txMonitor(account: FrameAccount, requestId: string, hash: string) {
+  private async txMonitor(
+    account: FrameAccount,
+    requestId: string,
+    hash: string,
+    rememberRecentRecipient = true
+  ) {
     if (!account) return log.error('txMonitor had no target account')
 
     const txRequest = this.getTransactionRequest(account, requestId)
@@ -1606,7 +1625,7 @@ export class Accounts extends EventEmitter {
     account.update()
     const operation = this.operationForTransaction(txRequest, hash)
     this.persistOperationLifecycle(operation)
-    if (txRequest.recentRecipient) {
+    if (rememberRecentRecipient && txRequest.recentRecipient) {
       recentRecipientsRuntime.track({
         operationId: operation.id,
         address: txRequest.recentRecipient.address
@@ -2494,6 +2513,13 @@ export class Accounts extends EventEmitter {
       if (currentAccount.requests[handlerId].status === RequestStatus.Declined) return false
 
       const failedRequest = currentAccount.requests[handlerId]
+      if (
+        failedRequest.type === 'transaction' &&
+        failedRequest.status === RequestStatus.Verifying &&
+        failedRequest.submission?.status === 'unconfirmed'
+      ) {
+        return true
+      }
       const failedBeforeBroadcast =
         failedRequest.type === 'transaction' && failedRequest.status === RequestStatus.Pending
 
@@ -2731,7 +2757,22 @@ export class Accounts extends EventEmitter {
     log.info('setTxSent', handlerId, 'Hash', hash)
 
     const currentAccount = this.requestAccount(handlerId, accountId)
-    if (currentAccount && currentAccount.requests[handlerId]?.status === RequestStatus.Sending) {
+    const request = currentAccount?.requests[handlerId]
+    if (
+      currentAccount &&
+      request?.type === 'transaction' &&
+      request.status === RequestStatus.Verifying &&
+      request.submission?.status === 'unconfirmed' &&
+      request.tx?.hash === hash.toLowerCase()
+    ) {
+      this.recordLateTransactionSubmissionMetadata(request)
+      delete request.submission
+      request.notice = 'Verifying'
+      currentAccount.update()
+      return true
+    }
+
+    if (currentAccount && request?.status === RequestStatus.Sending) {
       const submittedRequest = currentAccount.requests[handlerId] as TransactionRequest
       try {
         requireStoreAction('recordOutboundAddresses')(
@@ -2745,9 +2786,9 @@ export class Accounts extends EventEmitter {
           error: error instanceof Error ? error.message : String(error)
         })
       }
-      currentAccount.requests[handlerId].status = RequestStatus.Verifying
-      currentAccount.requests[handlerId].notice = 'Verifying'
-      currentAccount.requests[handlerId].mode = RequestMode.Monitor
+      submittedRequest.status = RequestStatus.Verifying
+      submittedRequest.notice = 'Verifying'
+      submittedRequest.mode = RequestMode.Monitor
       currentAccount.update()
 
       void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
@@ -2775,6 +2816,65 @@ export class Accounts extends EventEmitter {
     }
 
     return false
+  }
+
+  private recordLateTransactionSubmissionMetadata(request: TransactionRequest) {
+    try {
+      requireStoreAction('recordOutboundAddresses')(
+        store('main.instanceId'),
+        transactionOutboundTargets(request),
+        Date.now()
+      )
+    } catch (error) {
+      log.warn('Outbound address memory could not be updated', {
+        handlerId: request.handlerId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+    if (request.recentRecipient && request.activityId) {
+      recentRecipientsRuntime.track({
+        operationId: request.activityId,
+        address: request.recentRecipient.address
+      })
+    }
+  }
+
+  setTxSubmissionUnclear(handlerId: string, hash: string, accountId?: string) {
+    const currentAccount = this.requestAccount(handlerId, accountId)
+    const request = currentAccount?.requests[handlerId]
+    if (
+      !currentAccount ||
+      request?.type !== 'transaction' ||
+      request.status !== RequestStatus.Sending ||
+      !/^0x[0-9a-fA-F]{64}$/.test(hash)
+    ) {
+      return false
+    }
+
+    request.status = RequestStatus.Verifying
+    request.notice = 'Submission unconfirmed; checking network'
+    request.mode = RequestMode.Monitor
+    request.submission = Object.freeze({
+      status: 'unconfirmed',
+      detail: 'The signed transaction was submitted once, but the RPC response was not confirmed.'
+    })
+    request.tx = { hash: hash.toLowerCase(), confirmations: 0 }
+    currentAccount.update()
+
+    void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash, false)).catch((error) => {
+      const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)
+      if (failedRequest?.activityId) operationLifecycleLedger.releaseReservation(failedRequest.activityId)
+      log.warn('Unconfirmed transaction lifecycle monitor could not start', {
+        handlerId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      if (failedRequest?.type === 'transaction' && failedRequest.status === RequestStatus.Verifying) {
+        failedRequest.status = RequestStatus.Sent
+        failedRequest.notice = 'Submission unconfirmed; monitoring unavailable'
+        currentAccount.update()
+      }
+    })
+    return true
   }
 
   setRequestSuccess(handlerId: string, accountId?: string) {

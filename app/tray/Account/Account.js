@@ -16,7 +16,7 @@ import Activity from './Activity'
 import Gas from '../../../resources/Components/Monitor'
 import Inventory from './Inventory'
 import Permissions from './Permissions'
-import Requests from './Requests'
+import Requests, { byRequestQueueOrder, isReviewQueueRequest } from './Requests'
 import Settings from './Settings'
 import Signer from './Signer'
 
@@ -490,6 +490,27 @@ class _AccountBody extends React.Component {
 
     const signingDelay = isHardwareSigner(activeAccount.lastSignerType) ? 200 : 1500
     const accountName = activeAccount.ensName || activeAccount.name || 'Account'
+    const reviewQueue = Object.values(activeAccount.requests || {})
+      .filter(isReviewQueueRequest)
+      .sort(byRequestQueueOrder)
+    const queueIndex = reviewQueue.findIndex((request) => request.handlerId === handlerId)
+    const queueContext =
+      reviewQueue.length > 1 && queueIndex >= 0
+        ? {
+            position: queueIndex + 1,
+            total: reviewQueue.length,
+            pendingSignatures: reviewQueue.filter((request) =>
+              [
+                'transaction',
+                'sign',
+                'signTypedData',
+                'signErc20Permit',
+                'walletCalls',
+                'eip7702Revoke'
+              ].includes(request.type)
+            ).length
+          }
+        : undefined
 
     return (
       <Request
@@ -504,6 +525,7 @@ class _AccountBody extends React.Component {
         accounts={accounts}
         signer={activeSigner}
         accountName={accountName}
+        queueContext={queueContext}
         requestData={data}
       />
     )

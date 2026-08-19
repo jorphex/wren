@@ -2,7 +2,7 @@ import EventEmitter from 'events'
 import crypto from 'crypto'
 import log from 'electron-log'
 import { v4 as uuid } from 'uuid'
-import { isAddress } from 'ethers'
+import { isAddress, keccak256 } from 'ethers'
 import { recoverTypedSignature, SignTypedDataVersion } from '@metamask/eth-sig-util'
 import { addHexPrefix, intToHex } from '@ethereumjs/util'
 
@@ -165,6 +165,15 @@ const MAX_TOKEN_NAME_LENGTH = 128
 const MAX_TOKEN_SYMBOL_LENGTH = 32
 const TOKEN_METADATA_TIMEOUT_MS = 15_000
 const TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/
+const BROADCAST_CALLBACK_TIMEOUT_MS = 15_000
+const SUBMISSION_UNCONFIRMED = 'submission-unconfirmed'
+
+function submissionUnconfirmedError(message: string, hash: string) {
+  return Object.assign(new Error(message), {
+    code: SUBMISSION_UNCONFIRMED,
+    data: { code: SUBMISSION_UNCONFIRMED, hash }
+  })
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -342,7 +351,9 @@ export class Provider extends EventEmitter {
     const isNativeMax = 'nativeMax' in request && Boolean(request.nativeMax)
     const hasRecentRecipient = 'recentRecipient' in request && Boolean(request.recentRecipient)
     const isManagedSweep = 'managedSweep' in request && Boolean(request.managedSweep)
-    if (!isNativeMax && !hasRecentRecipient && !isManagedSweep) return
+    const isManagedSend =
+      request.type === 'transaction' && request.origin === originIdForName(FRAME_SEND_ORIGIN)
+    if (!isNativeMax && !hasRecentRecipient && !isManagedSweep && !isManagedSend) return
     const rawChainId = request.type === 'walletCalls' ? request.chainId : request.data.chainId
     let chainId: number
     try {
@@ -668,12 +679,41 @@ export class Provider extends EventEmitter {
             if (!isRecoverableAccountCodeEvidenceError(err)) resError(err, payload, res)
             cb(err)
           } else {
+            let signedHash: string
+            try {
+              if (typeof signedTx !== 'string') throw new Error('Missing signed transaction')
+              signedHash = keccak256(signedTx).toLowerCase()
+            } catch {
+              const error = new Error('Signer returned an invalid signed transaction')
+              resError(error, payload, res)
+              return cb(error)
+            }
             accounts.setTxSigned(
               req.handlerId,
               (err) => {
                 if (err) return cb(err)
-                let done = false
-                const cast = () => {
+                let transportSettled = false
+                let callbackSettled = false
+                const settleCallback = (error: Error | null, result?: string) => {
+                  if (callbackSettled) return
+                  callbackSettled = true
+                  cb(error, result)
+                }
+                const markSubmissionUnclear = () =>
+                  accounts.setTxSubmissionUnclear(req.handlerId, signedHash, req.account)
+                const callbackTimer = setTimeout(() => {
+                  if (transportSettled) return
+                  markSubmissionUnclear()
+                  const error = submissionUnconfirmedError(
+                    'Transaction submission response timed out. Wren is checking the signed transaction hash.',
+                    signedHash
+                  )
+                  resError(error, payload, res)
+                  settleCallback(error)
+                }, BROADCAST_CALLBACK_TIMEOUT_MS)
+                callbackTimer.unref?.()
+
+                try {
                   this.connection.send(
                     {
                       id: req.payload.id,
@@ -682,20 +722,34 @@ export class Provider extends EventEmitter {
                       params: [signedTx]
                     },
                     (response) => {
-                      clearInterval(broadcastTimer)
-                      if (done) return
-                      done = true
+                      if (transportSettled) return
+                      transportSettled = true
+                      clearTimeout(callbackTimer)
                       if (response.error) {
+                        markSubmissionUnclear()
                         resError(response.error, payload, res)
-                        cb(new Error(response.error.message))
+                        const error = submissionUnconfirmedError(response.error.message, signedHash)
+                        settleCallback(error)
                       } else {
-                        if (typeof response.result !== 'string' || !TRANSACTION_HASH.test(response.result)) {
-                          const error = new Error('Invalid transaction hash response')
+                        if (
+                          typeof response.result !== 'string' ||
+                          !TRANSACTION_HASH.test(response.result) ||
+                          response.result.toLowerCase() !== signedHash
+                        ) {
+                          markSubmissionUnclear()
+                          const error = submissionUnconfirmedError(
+                            'Invalid transaction hash response',
+                            signedHash
+                          )
                           resError(error.message, payload, res)
-                          return cb(error)
+                          return settleCallback(error)
                         }
                         res(response)
-                        cb(null, response.result)
+                        if (callbackSettled) {
+                          accounts.setTxSent(req.handlerId, response.result, req.account)
+                        } else {
+                          settleCallback(null, response.result)
+                        }
                       }
                     },
                     {
@@ -703,9 +757,16 @@ export class Provider extends EventEmitter {
                       id: parseInt(req.data.chainId, 16)
                     }
                   )
+                } catch (error) {
+                  if (transportSettled) return
+                  transportSettled = true
+                  clearTimeout(callbackTimer)
+                  markSubmissionUnclear()
+                  const broadcastError =
+                    error instanceof Error ? error : new Error('Transaction submission failed')
+                  resError(broadcastError, payload, res)
+                  settleCallback(submissionUnconfirmedError(broadcastError.message, signedHash))
                 }
-                const broadcastTimer = setInterval(() => cast(), 1000)
-                cast()
               },
               req.account
             )
@@ -1595,7 +1656,7 @@ export class Provider extends EventEmitter {
     const currentAccount = accounts.current()
     return Boolean(
       origin &&
-      (!requestOrigin || requestOrigin === originId) &&
+      requestOrigin === originId &&
       origin.name === FRAME_SEND_ORIGIN &&
       origin.provenance === 'managed' &&
       !origin.sourceId &&
@@ -1633,7 +1694,7 @@ export class Provider extends EventEmitter {
         sessionOnly: false
       })
     }
-    if (!this.managedSweepOriginAuthorized(account, chainId)) {
+    if (!this.managedSweepOriginAuthorized(account, chainId, originId)) {
       throw new ManagedSweepError('managed-sweep-unavailable', 'Managed sweep authorization failed')
     }
     return originId
@@ -1942,9 +2003,14 @@ export class Provider extends EventEmitter {
       if (!currentAccount || !from || !hasAddress(currentAccount, from)) {
         return resError('Transaction is not from currently selected account', payload, res)
       }
-      const managedSendOriginAuthorized =
-        (!trustedMetadata?.nativeMax && !trustedMetadata?.recentRecipient) ||
-        this.managedSendOriginAuthorized(currentAccount.id, targetChain.id, payload._origin)
+      const managedSendOriginAuthorized = this.managedSendOriginAuthorized(
+        currentAccount.id,
+        targetChain.id,
+        payload._origin
+      )
+      if (payload._origin === originIdForName(FRAME_SEND_ORIGIN) && !managedSendOriginAuthorized) {
+        return resError({ code: 4100, message: 'Managed Wren Send origin is not authorized' }, payload, res)
+      }
       if (trustedMetadata?.nativeMax && !managedSendOriginAuthorized) {
         return resError('Native Max metadata requires the exact managed Wren Send origin', payload, res)
       }

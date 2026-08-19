@@ -52,7 +52,7 @@ export class TransactionRequest extends React.Component {
   }
 
   renderTx(feeInitiallyExpanded = false) {
-    const { req } = this.props
+    const { queueContext, req } = this.props
     if (!req) return null
 
     let requestClass = 'signerRequest cardShow'
@@ -81,6 +81,20 @@ export class TransactionRequest extends React.Component {
       >
         {req.type === 'transaction' ? (
           <div className='approveTransaction'>
+            {queueContext ? (
+              <div className='transactionReviewQueueContext' role='status'>
+                <span>{`${queueContext.pendingSignatures} pending ${
+                  queueContext.pendingSignatures === 1 ? 'signature' : 'signatures'
+                }`}</span>
+                <strong>{`Current request ${queueContext.position} of ${queueContext.total} · ${
+                  queueContext.position === 1
+                    ? 'oldest pending'
+                    : queueContext.position === queueContext.total
+                      ? 'newest pending'
+                      : 'FIFO order'
+                }`}</strong>
+              </div>
+            ) : null}
             <div className='approveTransactionPayload'>
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />

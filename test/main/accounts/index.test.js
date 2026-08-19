@@ -1932,6 +1932,104 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('starts lifecycle reconciliation for an unconfirmed one-shot submission without remembering metadata', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = {
+      ...targetRequest('unconfirmed-one-shot-submission'),
+      recentRecipient: { address: `0x${'2'.repeat(40)}` }
+    }
+    const hash = `0x${'a'.repeat(64)}`
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const track = jest.spyOn(recentRecipientsRuntime, 'track')
+    const record = jest.spyOn(store, 'recordOutboundAddresses')
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSubmissionUnclear(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'verifying',
+        notice: 'Submission unconfirmed; checking network',
+        mode: 'monitor',
+        submission: { status: 'unconfirmed' },
+        tx: { hash, confirmations: 0 }
+      })
+      expect(monitor).toHaveBeenCalledWith(targetAccount, explicit.handlerId, hash, false)
+      expect(record).not.toHaveBeenCalled()
+      expect(track).not.toHaveBeenCalled()
+    } finally {
+      monitor.mockRestore()
+      track.mockRestore()
+      record.mockRestore()
+    }
+  })
+
+  it('preserves unconfirmed submission reconciliation when the transport reports an error', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('unconfirmed-transport-error')
+    const hash = `0x${'a'.repeat(64)}`
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSubmissionUnclear(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(
+        Accounts.setRequestError(
+          explicit.handlerId,
+          Object.assign(new Error('RPC response was not confirmed'), {
+            code: 'submission-unconfirmed'
+          }),
+          account2.address
+        )
+      ).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'verifying',
+        notice: 'Submission unconfirmed; checking network',
+        submission: { status: 'unconfirmed' },
+        tx: { hash }
+      })
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
+  it('records metadata once when an unconfirmed submission later returns its expected hash', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const recipient = `0x${'2'.repeat(40)}`
+    const explicit = {
+      ...targetRequest('late-confirmed-one-shot-submission'),
+      recentRecipient: { address: recipient }
+    }
+    const hash = `0x${'a'.repeat(64)}`
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSubmissionUnclear(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId].submission).toBeUndefined()
+      expect(targetAccount.requests[explicit.handlerId].notice).toBe('Verifying')
+      expect(track).toHaveBeenCalledWith({
+        operationId: explicit.activityId,
+        address: recipient
+      })
+      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(false)
+      expect(track).toHaveBeenCalledTimes(1)
+    } finally {
+      monitor.mockRestore()
+      track.mockRestore()
+    }
+  })
+
   it('records the full outbound target only after broadcast returns a transaction hash', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const destination = `0x1234${'a'.repeat(32)}abcd`

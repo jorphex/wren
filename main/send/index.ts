@@ -88,6 +88,22 @@ const failure = <T extends Record<string, unknown> = Record<string, never>>(
   error: error instanceof SendValidationError ? error.code : 'send-unavailable'
 })
 
+function providerAdmissionFailure(error: unknown): SendResult<{ handlerId: string }> {
+  if (!error || typeof error !== 'object') return { success: false, error: 'send-unavailable' }
+  const { code, message } = error as { code?: unknown; message?: unknown }
+  if (code === 4100) return { success: false, error: SEND_ERROR.OriginUnavailable }
+  if (code === -32602 || code === 4200) {
+    return { success: false, error: SEND_ERROR.ValidationFailed }
+  }
+  if (typeof message === 'string' && /^Chain 0x[0-9a-f]+ not connected$/i.test(message)) {
+    return { success: false, error: SEND_ERROR.NetworkUnavailable }
+  }
+  if (typeof message === 'string' && /(?:fee|gas)/i.test(message)) {
+    return { success: false, error: SEND_ERROR.FeeUnavailable }
+  }
+  return { success: false, error: 'send-unavailable' }
+}
+
 function currentAccount() {
   const account = accounts.current()
   if (!account) throw new SendValidationError(SEND_ERROR.AccountChanged)
@@ -123,8 +139,12 @@ function ensureOrigin(chainId: number) {
     return
   }
 
+  if (existing.name !== FRAME_SEND_ORIGIN || existing.provenance !== 'managed' || existing.sourceId) {
+    throw new SendValidationError(SEND_ERROR.OriginUnavailable)
+  }
+
   requireStoreAction('addOriginRequest')(sendOriginId)
-  if (existing.chain?.id !== chainId)
+  if (existing.chain?.type !== 'ethereum' || existing.chain?.id !== chainId)
     requireStoreAction('switchOriginChain')(sendOriginId, chainId, 'ethereum')
 }
 
@@ -191,7 +211,7 @@ async function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }
             if (!queued && response?.error) {
               if (maxQuoteId) nativeMaxQuotes.queueFailed(maxQuoteId)
               log.warn('Could not queue Send transaction')
-              resolve({ success: false, error: 'send-unavailable' })
+              resolve(providerAdmissionFailure(response.error))
             }
           },
           { type: 'ethereum', id: draft.chainId },
@@ -201,7 +221,13 @@ async function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }
             resolve({ success: true, handlerId })
           },
           {
-            recentRecipient: Object.freeze({ address: getAddress(draft.recipient).toLowerCase() }),
+            ...(store('main.rememberRecentRecipients') === true
+              ? {
+                  recentRecipient: Object.freeze({
+                    address: getAddress(draft.recipient).toLowerCase()
+                  })
+                }
+              : {}),
             ...(maxValidation ? { nativeMax: maxValidation.metadata } : {})
           }
         )

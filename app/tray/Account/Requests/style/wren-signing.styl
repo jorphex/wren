@@ -1,9 +1,26 @@
 // Signing-critical surfaces use one continuous review canvas. Preserve the existing request and
 // signer flow while removing the inherited card stack, animated split pill, and decorative chrome.
 .approveTransaction
-  padding 0 var(--wren-space-5) var(--wren-space-4)
+  padding 0 var(--wren-space-5)
   border-radius 0
   background var(--wren-bg-canvas)
+
+  .transactionReviewQueueContext
+    display flex
+    min-height 36px
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-3)
+    padding var(--wren-space-2) 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    line-height 1.35
+
+    strong
+      color var(--wren-text-secondary)
+      font-weight 560
+      text-align right
 
   .approveTransactionPayload,
   ._txBody
@@ -857,39 +874,18 @@
     box-shadow var(--wren-control-primary-shadow)
 
 .requestNoticeApproval
+  height 200px
+  border-top 1px solid var(--wren-border-subtle)
   background var(--wren-bg-subtle)
 
-  .approveTransactionWarningBody > .cluster
-    margin 0
-    padding var(--wren-space-3) var(--wren-space-5)
-    border 0
-    border-radius 0
-    background transparent
+  .requestNoticeInnerApproval
+    height 100%
 
-  .approveTransactionWarningTitle
-    min-height 40px
-    height auto
-    padding var(--wren-space-2)
+  .approveTransactionWarningBody .approveTransactionWarningTitle
     color var(--wren-warning)
-    font-family var(--wren-font-ui)
-    font-size 16px
-    font-variation-settings var(--wren-font-heading-settings)
-    font-weight 650
-    letter-spacing 0
-    text-transform none
 
-  .approveTransactionWarningIconRight
-    display none
-
-  .approveTransactionWarningMessage
-    height auto
-    min-height 54px
-    padding var(--wren-space-3)
+  .approveTransactionWarningBody .approveTransactionWarningMessage
     color var(--wren-text-secondary)
-    font-family var(--wren-font-ui)
-    font-size var(--wren-type-small)
-    line-height 19px
-    text-align center
 
   ._txActionButton
     height 44px

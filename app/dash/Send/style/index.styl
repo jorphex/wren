@@ -1,7 +1,13 @@
 .sendComposer,
 .sendPicker,
-.sendRequestState,
 .sendUnavailable
+  box-sizing border-box
+  min-height 100%
+  color var(--wren-text-primary)
+  background transparent
+  font-family var(--wren-font-ui)
+
+.sendRequestState
   box-sizing border-box
   min-height 100%
   color var(--wren-text-primary)
@@ -10,6 +16,7 @@
 
 .sendComposer
   display flex
+  min-height calc(100vh - 64px)
   flex-direction column
 
 .sendModeSwitch
@@ -35,7 +42,7 @@
 
     &[aria-pressed='true']
       color var(--wren-text-primary)
-      background var(--wren-surface-raised)
+      background var(--wren-bg-elevated)
       box-shadow var(--wren-shadow-sm)
 
     &:focus-visible
@@ -50,13 +57,18 @@
   flex 1
   padding 12px 24px 0
 
+.sendComposerSweep .sendLedger
+  flex none
+
+.sendComposerSweep .sendSweepSelect
+  flex 1
+
 .sendLedgerRow
   position relative
   width 100%
   min-height 76px
   box-sizing border-box
   border 0
-  border-bottom 1px solid var(--wren-border-subtle)
   color inherit
   background transparent
   font inherit
@@ -368,6 +380,9 @@
   padding 0 24px
   flex-direction column
 
+.sendSweepReview
+  background var(--wren-bg-canvas)
+
 .sendSweepChain
   display grid
   grid-template-columns auto minmax(0, 1fr)
@@ -375,24 +390,20 @@
   gap var(--wren-space-3)
   padding var(--wren-space-3) 0
 
-  label
+  .sendSweepChainLabel
     color var(--wren-text-muted)
     font-size var(--wren-type-caption)
     font-weight 600
     text-transform uppercase
 
-  select
-    min-height 44px
-    padding 0 12px
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-primary)
-    background var(--wren-surface-inset)
-    font-family var(--wren-font-ui)
+  .dropdownWrap
+    height 44px
 
-    &:focus-visible
-      outline 2px solid var(--wren-focus)
-      outline-offset 2px
+  .dropdown
+    width 100%
+    min-height 44px
+    height 44px
+    background-position calc(100% - 16px) 19px, calc(100% - 11px) 19px
 
 .sendSweepHeader
   display flex
@@ -415,17 +426,33 @@
 
 .sendSweepAssets
   display flex
-  border-top 1px solid var(--wren-border-subtle)
+  gap 0
   flex-direction column
 
   > label
+    position relative
     display grid
     min-height 62px
-    grid-template-columns 22px 34px minmax(0, 1fr) auto
+    grid-template-columns 24px 34px minmax(0, 1fr) auto
     align-items center
     gap 10px
-    border-bottom 1px solid var(--wren-border-subtle)
+    padding 0 10px
+    border 0
+    border-radius 0
+    background transparent
     cursor pointer
+    transition background-color var(--wren-motion-fast) var(--wren-ease)
+
+    &:hover
+      background var(--wren-ledger-hover)
+
+    &:focus-within
+      outline 2px solid var(--wren-focus)
+      outline-offset 1px
+
+    &.sendSweepAssetSelected
+      background var(--wren-ledger-selected)
+      box-shadow none
 
     > span
       min-width 0
@@ -448,8 +475,37 @@
         font-size var(--wren-type-caption)
 
     input
+      position absolute
+      z-index 2
+      left 0
+      width 44px
+      height 44px
+      margin 0
+      opacity 0
+      cursor pointer
+
+      &:disabled
+        cursor default
+
+    .sendSweepCheckbox
+      display flex
       width 18px
       height 18px
+      align-items center
+      justify-content center
+      box-sizing border-box
+      border 1px solid var(--wren-border-strong)
+      border-radius 3px
+      color var(--wren-text-inverse)
+      background var(--wren-surface-inset)
+      box-shadow var(--wren-shadow-inset)
+
+    &.sendSweepAssetSelected .sendSweepCheckbox
+      border-color var(--wren-accent-primary-hover)
+      background var(--wren-accent-primary)
+
+    &:has(input:disabled) .sendSweepCheckbox
+      opacity .55
 
 .sendSweepWarning
   display flex
@@ -539,7 +595,6 @@
   gap var(--wren-space-2)
   margin 10px -24px 0
   padding 14px 24px 16px
-  border-top 1px solid var(--wren-border-subtle)
   background var(--wren-bg-canvas)
 
 .sendSweepShelf
@@ -570,12 +625,15 @@
   box-sizing border-box
   margin-top 12px
   padding 14px 24px 16px
-  border-top 1px solid var(--wren-border-subtle)
-  background var(--wren-bg-canvas)
+  border-top 1px solid rgba(61, 73, 63, .62)
+  background rgba(7, 9, 7, .92)
   backdrop-filter blur(10px)
 
   button
     min-width 164px
+
+.sendActionShelf.sendSweepShelf
+  margin-top auto
 
 .sendPicker
   padding 14px 24px 24px
@@ -585,7 +643,6 @@
   height 48px
   align-items center
   gap 10px
-  border-bottom 1px solid var(--wren-border-subtle)
   color var(--wren-text-muted)
 
   input.wrenInput
@@ -626,7 +683,6 @@
 .sendPickerSectionTitle
   margin 0
   padding 22px 2px 8px
-  border-bottom 1px solid var(--wren-border-subtle)
   color var(--wren-text-tertiary)
   font-size var(--wren-type-caption)
   font-weight 620
@@ -641,7 +697,7 @@
   gap 10px
   padding 8px 2px
   border 0
-  border-bottom 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -721,7 +777,8 @@
   gap 10px
   padding 8px 2px
   border 0
-  border-bottom 1px solid var(--wren-border-subtle)
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -729,11 +786,22 @@
   cursor pointer
 
   &:hover
+    border-color var(--wren-border-subtle)
     background var(--wren-ledger-hover)
 
   &:focus-visible
     outline 2px solid var(--wren-focus)
     outline-offset -2px
+
+  &[aria-pressed='true'],
+  &.sendAssetOptionSelected
+    border-color var(--wren-border-default)
+    background var(--wren-ledger-selected)
+    box-shadow var(--wren-shadow-inset)
+
+    &:hover
+      border-color var(--wren-border-strong)
+      background var(--wren-surface-active)
 
 .sendAssetSelection
   display flex

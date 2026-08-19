@@ -1,5 +1,9 @@
 import { render, screen, waitFor } from '../../../../componentSetup'
-import { byRequestRecency, requestPreviewSummary, Requests } from '../../../../../app/tray/Account/Requests'
+import {
+  byRequestQueueOrder,
+  requestPreviewSummary,
+  Requests
+} from '../../../../../app/tray/Account/Requests'
 import RequestItem from '../../../../../resources/Components/RequestItem'
 import link from '../../../../../resources/link'
 
@@ -81,7 +85,7 @@ class ExpandedRequestsHarness extends Requests {
   }
 }
 
-it('sorts indexed requests newest-first and places legacy requests after them', () => {
+it('sorts indexed requests in FIFO order and places legacy requests after them', () => {
   const requests = [
     createRequest('legacy-newer', 30),
     createRequest('third', 10, 'https://example.test', 3),
@@ -89,21 +93,21 @@ it('sorts indexed requests newest-first and places legacy requests after them', 
     createRequest('legacy-older', 5)
   ]
 
-  expect(requests.sort(byRequestRecency).map(({ handlerId }) => handlerId)).toEqual([
-    'third',
+  expect(requests.sort(byRequestQueueOrder).map(({ handlerId }) => handlerId)).toEqual([
     'first',
-    'legacy-newer',
-    'legacy-older'
+    'third',
+    'legacy-older',
+    'legacy-newer'
   ])
 })
 
-it('falls back to newest creation time and stable identity for legacy requests', () => {
+it('falls back to oldest creation time and stable identity for legacy requests', () => {
   const requests = [createRequest('z-last', 2), createRequest('b-tie', 1), createRequest('a-tie', 1)]
 
-  expect(requests.sort(byRequestRecency).map(({ handlerId }) => handlerId)).toEqual([
-    'z-last',
+  expect(requests.sort(byRequestQueueOrder).map(({ handlerId }) => handlerId)).toEqual([
+    'a-tie',
     'b-tie',
-    'a-tie'
+    'z-last'
   ])
 })
 
@@ -124,13 +128,12 @@ it('shows the compact queue count and allows only the current FIFO request to op
   )
 
   expect(screen.getByText('3 requests').closest('.requestQueueStatus').textContent).toBe(
-    '3 requestsClear all'
+    '3 requests3 awaiting review · oldest firstClear all'
   )
-  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
-  expect(screen.getByText('Current')).toBeTruthy()
+  expect(screen.getByText('Current · 1 of 3')).toBeTruthy()
 
-  const current = screen.getByRole('button', { name: 'Review Account access. Current' })
-  const waiting = screen.getAllByRole('button', { name: 'Account access. Waiting' })
+  const current = screen.getByRole('button', { name: 'Review Account access. Current · 1 of 3' })
+  const waiting = screen.getAllByRole('button', { name: /Account access\. Queued · [23] of 3/ })
   expect(waiting).toHaveLength(2)
   expect(waiting.every((button) => button.disabled)).toBe(true)
 
@@ -144,7 +147,7 @@ it('shows the compact queue count and allows only the current FIFO request to op
   })
 })
 
-it('does not duplicate per-row waiting state in the queue heading', () => {
+it('states FIFO order once in the queue heading and exact position on each row', () => {
   render(
     <ExpandedRequestsHarness
       expanded
@@ -158,10 +161,32 @@ it('does not duplicate per-row waiting state in the queue heading', () => {
   )
 
   expect(screen.getByText('2 requests')).toBeTruthy()
-  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
+  expect(screen.getByText('2 awaiting review · oldest first')).toBeTruthy()
+  expect(screen.getByText('Current · 1 of 2')).toBeTruthy()
+  expect(screen.getByText('Queued · 2 of 2')).toBeTruthy()
 })
 
-it('keeps newest-first row order when request origins are interleaved', () => {
+it('reports the number of pending signatures separately from non-signing reviews', () => {
+  render(
+    <ExpandedRequestsHarness
+      expanded
+      account='0xabc'
+      activeRequestId='signing'
+      moduleId='requests'
+      requests={{
+        signing: {
+          ...createRequest('signing', 1, 'https://example.test', 1),
+          type: 'sign'
+        },
+        access: createRequest('access', 2, 'https://example.test', 2)
+      }}
+    />
+  )
+
+  expect(screen.getByText('1 pending signature · oldest first')).toBeTruthy()
+})
+
+it('keeps FIFO row order when request origins are interleaved', () => {
   const current = createRequest('current', 1, 'https://first.test', 1)
   const middle = { ...createRequest('middle', 2, 'https://second.test', 2), type: 'sign' }
   const last = { ...createRequest('last', 3, 'https://first.test', 3), type: 'addToken' }
@@ -181,7 +206,11 @@ it('keeps newest-first row order when request origins are interleaved', () => {
       .getAllByRole('button')
       .filter((button) => button.classList.contains('clusterValueAction'))
       .map((button) => button.getAttribute('aria-label'))
-  ).toEqual(['Add token. Waiting', 'Sign message. Waiting', 'Review Account access. Current'])
+  ).toEqual([
+    'Review Account access. Current · 1 of 3',
+    'Sign message. Queued · 2 of 3',
+    'Add token. Queued · 3 of 3'
+  ])
 })
 
 it('keeps monitor evidence inspectable while gating only the review queue', () => {
@@ -204,10 +233,9 @@ it('keeps monitor evidence inspectable while gating only the review queue', () =
   )
 
   expect(screen.getByRole('button', { name: 'Review Account access' }).disabled).toBe(false)
-  expect(screen.getByRole('button', { name: 'Review Account access. Current' }).disabled).toBe(false)
-  expect(screen.getByRole('button', { name: 'Account access. Waiting' }).disabled).toBe(true)
-  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
-  expect(screen.getAllByText('Current')).toHaveLength(1)
+  expect(screen.getByRole('button', { name: 'Review Account access. Current · 1 of 2' }).disabled).toBe(false)
+  expect(screen.getByRole('button', { name: 'Account access. Queued · 2 of 2' }).disabled).toBe(true)
+  expect(screen.getAllByText('Current · 1 of 2')).toHaveLength(1)
 })
 
 it('does not infer a current request when the account has not exposed one', () => {
@@ -225,8 +253,8 @@ it('does not infer a current request when the account has not exposed one', () =
   )
 
   expect(screen.queryByText('Current')).toBeNull()
-  expect(screen.getAllByRole('button', { name: 'Account access. Waiting' })).toHaveLength(2)
-  expect(screen.queryByText(/requests? waiting/i)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Account access. Queued · 1 of 2' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Account access. Queued · 2 of 2' })).toBeTruthy()
 })
 
 it('renders wallet-owned delegation revocations in the same active FIFO ledger', () => {
@@ -394,7 +422,7 @@ it('restores request focus to the current row when the originating request disap
     />
   )
 
-  const current = screen.getByRole('button', { name: 'Review Account access. Current' })
+  const current = screen.getByRole('button', { name: 'Review Account access. Current · 2 of 2' })
   await waitFor(() => expect(document.activeElement).toBe(current))
 })
 

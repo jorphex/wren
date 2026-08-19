@@ -14,8 +14,10 @@ export const SEND_ERROR = Object.freeze({
   MaxQuoteStale: 'max-quote-stale',
   MaxUnavailable: 'max-unavailable',
   NetworkUnavailable: 'network-unavailable',
+  OriginUnavailable: 'origin-unavailable',
   RecipientInvalid: 'recipient-invalid',
   RecipientLookupUnavailable: 'recipient-lookup-unavailable',
+  ValidationFailed: 'validation-failed',
   WatchOnly: 'watch-only'
 } as const)
 

@@ -152,6 +152,10 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   }
   nativeMax?: NativeMaxTrustedMetadata
   recentRecipient?: RecentRecipientTrustedMetadata
+  submission?: Readonly<{
+    status: 'unconfirmed'
+    detail: string
+  }>
   recoverableError?: {
     code:
       | 'account-code-evidence-unavailable'

@@ -28,6 +28,14 @@ let restorePreviewFocus = false
 const queueNumber = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : null)
 const terminalRequestStatuses = new Set(['confirmed', 'declined', 'error', 'success'])
 const inFlightRequestStatuses = new Set(['sending', 'verifying', 'sent', 'confirming'])
+const signingRequestTypes = new Set([
+  'transaction',
+  'sign',
+  'signTypedData',
+  'signErc20Permit',
+  'walletCalls',
+  'eip7702Revoke'
+])
 
 export const requestPreviewSummary = (requests = []) => {
   const unfinished = requests.filter((request) => !terminalRequestStatuses.has(request?.status))
@@ -39,21 +47,24 @@ export const requestPreviewSummary = (requests = []) => {
 
 const requestSummaryCopy = ({ pending, confirming }) => `${pending} pending · ${confirming} confirming`
 
-export const byRequestRecency = (a, b) => {
+export const isReviewQueueRequest = (request) =>
+  request?.mode !== 'monitor' && !terminalRequestStatuses.has(request?.status)
+
+export const byRequestQueueOrder = (a, b) => {
   const aQueueIndex = queueNumber(a.queueIndex)
   const bQueueIndex = queueNumber(b.queueIndex)
 
   if (aQueueIndex !== null || bQueueIndex !== null) {
     if (aQueueIndex === null) return 1
     if (bQueueIndex === null) return -1
-    if (aQueueIndex !== bQueueIndex) return bQueueIndex - aQueueIndex
+    if (aQueueIndex !== bQueueIndex) return aQueueIndex - bQueueIndex
   }
 
-  const aCreated = Number.isFinite(a.created) ? a.created : Number.MIN_SAFE_INTEGER
-  const bCreated = Number.isFinite(b.created) ? b.created : Number.MIN_SAFE_INTEGER
-  if (aCreated !== bCreated) return bCreated - aCreated
+  const aCreated = Number.isFinite(a.created) ? a.created : Number.MAX_SAFE_INTEGER
+  const bCreated = Number.isFinite(b.created) ? b.created : Number.MAX_SAFE_INTEGER
+  if (aCreated !== bCreated) return aCreated - bCreated
 
-  return String(b.handlerId || '').localeCompare(String(a.handlerId || ''))
+  return String(a.handlerId || '').localeCompare(String(b.handlerId || ''))
 }
 
 export class Requests extends React.Component {
@@ -252,7 +263,14 @@ export class Requests extends React.Component {
   requestQueueProps(req) {
     if (req.mode === 'monitor') return { active: false, queued: false }
     const active = req.handlerId === this.activeRequestId
-    return { active, queued: !active }
+    const position = this.reviewQueueIndexes.get(req.handlerId)
+    const showPosition = Boolean(position && this.reviewQueue.length > 1)
+    return {
+      active,
+      queued: !active,
+      queuePosition: showPosition ? position : undefined,
+      queueSize: showPosition ? this.reviewQueue.length : undefined
+    }
   }
 
   renderRequestGroup(origin, requests, groupKey) {
@@ -477,10 +495,17 @@ export class Requests extends React.Component {
 
   renderExpanded() {
     const activeAccount = this.store('main.accounts', this.props.account)
-    const requests = Object.values(activeAccount.requests || {}).sort(byRequestRecency)
+    const requests = Object.values(activeAccount.requests || {}).sort(byRequestQueueOrder)
     this.renderedRequests = requests
     this.activeRequestId = activeAccount.activeRequestId
     this.requestIndexes = new Map(requests.map((request, index) => [request.handlerId, index]))
+    this.reviewQueue = requests.filter(isReviewQueueRequest)
+    this.reviewQueueIndexes = new Map(
+      this.reviewQueue.map((request, index) => [request.handlerId, index + 1])
+    )
+    const pendingSignatures = this.reviewQueue.filter((request) =>
+      signingRequestTypes.has(request.type)
+    ).length
 
     const groups = requests.reduce((result, req) => {
       const previous = result[result.length - 1]
@@ -502,6 +527,15 @@ export class Requests extends React.Component {
               <span className='requestQueueStatusTitle'>{`${requests.length} ${
                 requests.length === 1 ? 'request' : 'requests'
               }`}</span>
+              {this.reviewQueue.length ? (
+                <span className='requestQueueStatusDetail'>
+                  {pendingSignatures
+                    ? `${pendingSignatures} pending ${
+                        pendingSignatures === 1 ? 'signature' : 'signatures'
+                      } · oldest first`
+                    : `${this.reviewQueue.length} awaiting review · oldest first`}
+                </span>
+              ) : null}
             </div>
             <button
               ref={this.clearReturnFocusRef}

@@ -72,8 +72,21 @@ class _RequestItem extends React.Component {
     link.send('nav:forward', 'panel', crumb)
   }
   render() {
-    const { account, title, svgName, img, color, headerMode, req, children, actionRef, active, queued } =
-      this.props
+    const {
+      account,
+      title,
+      svgName,
+      img,
+      color,
+      headerMode,
+      req,
+      children,
+      actionRef,
+      active,
+      queued,
+      queuePosition,
+      queueSize
+    } = this.props
 
     let requestItemDetailsClass = 'requestItemDetails'
     let requestItemNoticeClass = 'requestItemNotice'
@@ -95,6 +108,12 @@ class _RequestItem extends React.Component {
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
     const waiting = Boolean(queued) && !inactive
     const displayedStatus = waiting ? 'waiting' : status
+    const queuePositionLabel = queuePosition && queueSize ? `${queuePosition} of ${queueSize}` : undefined
+    const queueStateLabel = active
+      ? `Current${queuePositionLabel ? ` · ${queuePositionLabel}` : ''}`
+      : waiting && queuePositionLabel
+        ? `Queued · ${queuePositionLabel}`
+        : undefined
     const requestIcon = requestIcons[svgName]
     const statusIcon =
       req.status === 'error'
@@ -111,8 +130,8 @@ class _RequestItem extends React.Component {
           ariaLabel={
             !headerMode
               ? queued
-                ? `${title}. ${waiting ? 'Waiting' : status}`
-                : `Review ${title}${active ? '. Current' : ''}`
+                ? `${title}. ${waiting ? queueStateLabel || 'Waiting' : status}`
+                : `Review ${title}${active ? `. ${queueStateLabel || 'Current'}` : ''}`
               : undefined
           }
           actionRef={actionRef}
@@ -145,7 +164,9 @@ class _RequestItem extends React.Component {
                 <div className='requestItemMain'>
                   <div className='requestItemTitleMain'>
                     <span>{title}</span>
-                    {active && !headerMode ? <span className='requestItemQueueState'>Current</span> : null}
+                    {queueStateLabel && !headerMode ? (
+                      <span className='requestItemQueueState'>{queueStateLabel}</span>
+                    ) : null}
                   </div>
                   <div className='requestItemDetailsSlide'>
                     <div

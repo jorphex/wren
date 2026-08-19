@@ -330,6 +330,24 @@ describe('confirm', () => {
     expect(notice.textContent).toBe('confirming')
   })
 
+  it('shows exact FIFO context while reviewing one of several pending signatures', () => {
+    const req = {
+      handlerId: 'queued-review',
+      type: 'transaction',
+      data: { chainId: '0x89' },
+      classification: TxClassification.NATIVE_TRANSFER
+    }
+
+    addRequest(req)
+    render(
+      <TxRequest req={req} step='confirm' queueContext={{ position: 1, total: 3, pendingSignatures: 3 }} />
+    )
+
+    expect(document.querySelector('.transactionReviewQueueContext').textContent).toBe(
+      '3 pending signaturesCurrent request 1 of 3 · oldest pending'
+    )
+  })
+
   it('keeps a declined transaction document visible and inert without error styling', () => {
     const req = {
       handlerId: 'declined-req',
@@ -727,6 +745,8 @@ describe('simulation review', () => {
 
     expect(screen.getByText('RPC Reports Revert')).toBeTruthy()
     expect(screen.getByText('The configured RPC reports a revert.')).toBeTruthy()
+    expect(document.querySelector('.approveTransactionWarning .cluster')).toBeNull()
+    expect(document.querySelector('.approveTransactionWarningActions')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Sign Anyway' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',

@@ -148,8 +148,8 @@ it('opens directly on a native asset without a connection step and exposes the a
     data: { step: 'assetPicker', title: 'Choose an asset' }
   })
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  expect(screen.getByRole('button', { name: 'Select ETH' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Select USDC' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Select ETH' }).getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByRole('button', { name: 'Select USDC' }).getAttribute('aria-pressed')).toBe('false')
 })
 
 it('restores focus to the asset trigger after the picker closes', async () => {
@@ -393,6 +393,26 @@ it('validates a recipient and amount before queueing the existing transaction re
     })
   )
   expect(await screen.findByText('Transaction queued')).toBeTruthy()
+})
+
+it.each([
+  [
+    'origin-unavailable',
+    'Wren could not prepare its local Send connection. Close and reopen Send, then try again.'
+  ],
+  ['validation-failed', 'Wren could not validate this transfer. Check the recipient, amount, and network.'],
+  ['send-unavailable', 'Wren could not prepare this transaction.']
+])('shows truthful prequeue copy for %s', async (error, message) => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: false, error })
+  renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+
+  expect(await screen.findByText(message)).toBeTruthy()
 })
 
 it('associates canonical recipient evidence with the field and distinguishes lookup failure', async () => {
@@ -673,7 +693,9 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(recipient))
   fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
-  fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
+  const tokenCheckbox = screen.getByRole('checkbox', { name: /USDC/ })
+  fireEvent.click(tokenCheckbox)
+  expect(tokenCheckbox.closest('label').classList.contains('sendSweepAssetSelected')).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
 
   await waitFor(() =>

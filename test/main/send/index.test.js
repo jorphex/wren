@@ -72,6 +72,7 @@ beforeEach(() => {
     if (path.join('.') === 'main.networksMeta.ethereum.1.gas') {
       return { price: { levels: { fast: '0x3b9aca00' } } }
     }
+    if (path.join('.') === 'main.rememberRecentRecipients') return true
     if (path.join('.') === `main.origins.${originIdForName(FRAME_SEND_ORIGIN)}`) return undefined
   })
 })
@@ -142,6 +143,41 @@ it('queues a validated native transfer with immutable recipient metadata', async
   expect(actions.setDash).toHaveBeenCalledWith({ showing: true })
 })
 
+it('does not attach recipient metadata when recent-recipient memory is disabled', async () => {
+  const originalStore = store.getMockImplementation()
+  store.mockImplementation((...path) => {
+    if (path.join('.') === 'main.rememberRecentRecipients') return false
+    return originalStore(...path)
+  })
+  provider.sendTransaction.mockImplementation((_payload, _response, _chain, onQueued, metadata) => {
+    expect(metadata).not.toHaveProperty('recentRecipient')
+    onQueued('send-handler')
+  })
+
+  await expect(send.queue(draft)).resolves.toEqual({ success: true, handlerId: 'send-handler' })
+})
+
+it.each([
+  ['wrong name', { name: 'https://collision.example', provenance: 'managed' }],
+  ['wrong provenance', { name: FRAME_SEND_ORIGIN, provenance: 'direct' }],
+  [
+    'unexpected source identity',
+    { name: FRAME_SEND_ORIGIN, provenance: 'managed', sourceId: 'untrusted-source' }
+  ]
+])('rejects an existing Wren Send origin with %s', async (_label, invalidOrigin) => {
+  const originalStore = store.getMockImplementation()
+  store.mockImplementation((...path) => {
+    if (path.join('.') === `main.origins.${originIdForName(FRAME_SEND_ORIGIN)}`) {
+      return { ...invalidOrigin, chain: { type: 'ethereum', id: 1 } }
+    }
+    return originalStore(...path)
+  })
+
+  await expect(send.queue(draft)).resolves.toEqual({ success: false, error: 'origin-unavailable' })
+  expect(provider.sendTransaction).not.toHaveBeenCalled()
+  expect(actions.addOriginRequest).not.toHaveBeenCalled()
+})
+
 it('rejects watch-only accounts before calling the provider', async () => {
   accounts.current.mockReturnValue({ id: account, lastSignerType: 'address' })
 
@@ -155,6 +191,20 @@ it('returns a bounded generic failure instead of exposing provider error text', 
   })
 
   await expect(send.queue(draft)).resolves.toEqual({ success: false, error: 'send-unavailable' })
+})
+
+it.each([
+  [{ code: 4100, message: 'private origin detail' }, 'origin-unavailable'],
+  [{ code: -32602, message: 'private validation payload' }, 'validation-failed'],
+  [{ code: 4200, message: 'private unsupported detail' }, 'validation-failed'],
+  [{ code: -32603, message: 'Chain 0x1 not connected' }, 'network-unavailable'],
+  [{ code: -32603, message: 'Gas fee schedule unavailable at https://private-rpc' }, 'fee-unavailable']
+])('maps provider admission failure %j to bounded code %s', async (providerError, expected) => {
+  provider.sendTransaction.mockImplementation((_payload, response) => {
+    response({ error: providerError })
+  })
+
+  await expect(send.queue(draft)).resolves.toEqual({ success: false, error: expected })
 })
 
 it('distinguishes invalid address input from unavailable ENS lookup', async () => {
