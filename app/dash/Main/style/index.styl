@@ -463,7 +463,7 @@ button.dashModule.wrenControl.wrenControlGhost
   display flex
   min-height 72px
   margin-bottom var(--wren-space-3)
-  padding var(--wren-space-3) var(--wren-space-2)
+  padding var(--wren-space-3) var(--wren-space-2) var(--wren-space-3) calc(var(--wren-space-2) + 28px + var(--wren-space-2))
   align-items center
   gap var(--wren-space-3)
   border 0
@@ -504,7 +504,7 @@ button.dashSupportWrenButton.wrenControl
 
 .dashSupportWrenPreview
   position absolute
-  right 0
+  left 0
   bottom calc(100% - 1px)
   z-index 20001
   width 217px
@@ -521,7 +521,7 @@ button.dashSupportWrenButton.wrenControl
   &::after
     content ''
     position absolute
-    right 28px
+    left 28px
     bottom -5px
     width 9px
     height 9px

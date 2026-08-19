@@ -8,10 +8,10 @@ import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
 
 jest.mock(
-  '../../../../resources/Components/RingIcon',
+  '../../../../resources/Components/ChainIdentityMark',
   () =>
-    function MockRingIcon() {
-      return <span />
+    function MockChainIdentityMark(props) {
+      return <span data-chain-mark={props.chainId} />
     }
 )
 
@@ -76,6 +76,7 @@ test('renders application activity instead of the empty state', () => {
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Connected')).toBeTruthy()
   expect(screen.getByText('avg reqs/min')).toBeTruthy()
+  expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
   expect(screen.queryByText('No connected apps')).toBeNull()
 })
 

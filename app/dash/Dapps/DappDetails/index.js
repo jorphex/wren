@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import link from '../../../../resources/link'
 import Icon from '../../../../resources/Components/Icon'
-import RingIcon from '../../../../resources/Components/RingIcon'
+import ChainIdentityMark from '../../../../resources/Components/ChainIdentityMark'
 
 export class DappDetails extends React.Component {
   state = { switchingChainId: null }
@@ -52,7 +52,12 @@ export class DappDetails extends React.Component {
                 onClick={() => this.switchOriginChain(parseInt(id), selected)}
               >
                 <div className='originChainItemIcon'>
-                  <RingIcon color={`var(--${primaryColor})`} img={icon} />
+                  <ChainIdentityMark
+                    chainId={chain.id}
+                    icon={icon}
+                    isTestnet={chain.isTestnet}
+                    primaryColor={primaryColor}
+                  />
                 </div>
 
                 {chain.name}

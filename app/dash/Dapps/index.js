@@ -8,7 +8,7 @@ import {
   selectConnectedAppGroups
 } from '../../../resources/domain/connectedApps'
 
-import RingIcon from '../../../resources/Components/RingIcon'
+import ChainIdentityMark from '../../../resources/Components/ChainIdentityMark'
 
 import DappDetails from './DappDetails'
 
@@ -90,14 +90,20 @@ export class OriginModuleComponent extends React.Component {
 
 const OriginModule = Restore.connect(OriginModuleComponent)
 
-const ChainOrigins = ({ chain: { name }, connected, disconnected, primaryColor, icon }) => {
+const ChainOrigins = ({ chain, connected, disconnected, primaryColor, icon }) => {
   return (
     <section className='sliceOriginGroup'>
       <div className='originTitle'>
         <div className='originTitleIcon'>
-          <RingIcon small={true} color={`var(--${primaryColor})`} img={icon} />
+          <ChainIdentityMark
+            chainId={chain.id}
+            icon={icon}
+            isTestnet={chain.isTestnet}
+            primaryColor={primaryColor}
+            small
+          />
         </div>
-        <div className='originTitleText'>{name}</div>
+        <div className='originTitleText'>{chain.name}</div>
       </div>
       <div className='sliceOriginList'>
         {connected.map((origin) => (

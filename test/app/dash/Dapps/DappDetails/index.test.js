@@ -5,10 +5,10 @@ import link from '../../../../../resources/link'
 jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
 
 jest.mock(
-  '../../../../../resources/Components/RingIcon',
+  '../../../../../resources/Components/ChainIdentityMark',
   () =>
-    function MockRingIcon() {
-      return <span />
+    function MockChainIdentityMark(props) {
+      return <span data-chain-mark={props.chainId} />
     }
 )
 
@@ -37,6 +37,7 @@ test('announces the selected default network', () => {
 
   expect(screen.getByRole('button', { name: 'Ethereum' }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.getByRole('button', { name: 'Ethereum' }).disabled).toBe(true)
+  expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
 })
 
 test('switches an app network once and releases the pending guard', async () => {
