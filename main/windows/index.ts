@@ -405,7 +405,12 @@ class Dash {
 
     const workspaceView = createRendererView('dash')
     workspaceView.setBackgroundColor('#00000000')
-    this.workspace = new EmbeddedWorkspace(trayWindow, workspaceView, electronApp)
+    this.workspace = new EmbeddedWorkspace(trayWindow, workspaceView, electronApp, {
+      beforeReload: () => {
+        this.workspaceLoaded = false
+        requireStoreAction('closeDash')()
+      }
+    })
     this.workspace.setZoomFactor(
       normalizeInterfaceScale(store('view.interfaceScaleEffective') || requestedInterfaceScale())
     )

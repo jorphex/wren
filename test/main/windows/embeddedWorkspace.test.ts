@@ -1,19 +1,18 @@
 import { EventEmitter } from 'events'
 import { EmbeddedWorkspace } from '../../../main/windows/embeddedWorkspace'
 
-const createSetup = () => {
-  const webContents = {
+const createSetup = (recoveryOptions: { beforeReload?: () => void; unresponsiveDelay?: number } = {}) => {
+  const webContents = Object.assign(new EventEmitter(), {
     close: jest.fn(),
     focus: jest.fn(),
     getOSProcessId: jest.fn(() => 42),
     isDestroyed: jest.fn(() => false),
     loadURL: jest.fn(),
-    on: jest.fn(),
     openDevTools: jest.fn(),
     reload: jest.fn(),
     send: jest.fn(),
     setZoomFactor: jest.fn()
-  }
+  })
   const view = {
     setBounds: jest.fn(),
     setVisible: jest.fn(),
@@ -30,9 +29,12 @@ const createSetup = () => {
     setShape: jest.fn()
   }
   const app = new EventEmitter()
-  const workspace = new EmbeddedWorkspace(parent as never, view as never, app as never)
+  const workspace = new EmbeddedWorkspace(parent as never, view as never, app as never, recoveryOptions)
+  webContents.emit('did-finish-load')
   return { app, parent, view, webContents, workspace }
 }
+
+const visibleBounds = { x: 0, y: 0, width: 620, height: 900 }
 
 it('attaches once, starts hidden, and applies local pane bounds', () => {
   const { parent, view, workspace } = createSetup()
@@ -239,6 +241,19 @@ it('forwards state updates and reloads while active', () => {
   expect(webContents.reload).toHaveBeenCalledTimes(1)
 })
 
+it('defers an explicit reload until a visible workspace closes', () => {
+  const { webContents, workspace } = createSetup()
+
+  workspace.applyLayout(visibleBounds, true)
+  workspace.reload()
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+
+  workspace.applyLayout(visibleBounds, false)
+
+  expect(webContents.reload).toHaveBeenCalledTimes(1)
+})
+
 it('applies interface zoom to embedded renderer web contents', () => {
   const { webContents, workspace } = createSetup()
 
@@ -269,4 +284,176 @@ it('detaches and closes web contents before application shutdown', () => {
   expect(webContents.close).toHaveBeenCalledWith({ waitForBeforeUnload: false })
   expect(app.listenerCount('before-quit')).toBe(0)
   expect(workspace.isVisible()).toBe(false)
+})
+
+it('waits for an explicit close before recovering a visible failed renderer', () => {
+  const { view, webContents, workspace } = createSetup()
+
+  workspace.applyLayout(visibleBounds, true)
+  webContents.emit('render-process-gone')
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+  expect(view.setVisible).toHaveBeenLastCalledWith(true)
+
+  workspace.applyLayout(visibleBounds, false)
+
+  expect(view.setVisible).toHaveBeenLastCalledWith(false)
+  expect(webContents.reload).toHaveBeenCalledTimes(1)
+})
+
+it('waits for animated close completion before recovering a failed renderer', () => {
+  jest.useFakeTimers()
+  const { webContents, workspace } = createSetup()
+  const onComplete = jest.fn()
+
+  workspace.applyLayout(visibleBounds, true)
+  webContents.emit('render-process-gone')
+  workspace.applyShellLayout(
+    { x: 1160, y: 114, width: 760, height: 900 },
+    { x: 0, y: 0, width: 760, height: 900 },
+    visibleBounds,
+    false,
+    true,
+    onComplete
+  )
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+  jest.runAllTimers()
+
+  expect(onComplete).toHaveBeenCalledTimes(1)
+  expect(webContents.reload).toHaveBeenCalledTimes(1)
+  expect(onComplete.mock.invocationCallOrder[0]).toBeLessThan(webContents.reload.mock.invocationCallOrder[0])
+  jest.useRealTimers()
+})
+
+it('immediately recovers a failed renderer that is already hidden', () => {
+  const { webContents } = createSetup()
+
+  webContents.emit('render-process-gone')
+
+  expect(webContents.reload).toHaveBeenCalledTimes(1)
+})
+
+it('keeps a queued reopen hidden until recovery finishes loading', () => {
+  const { view, webContents, workspace } = createSetup()
+
+  webContents.emit('render-process-gone')
+  workspace.applyLayout(visibleBounds, true)
+
+  expect(view.setVisible).toHaveBeenLastCalledWith(false)
+  expect(workspace.isVisible()).toBe(false)
+})
+
+it('permits a queued reopen through the loaded reposition flow', () => {
+  const { view, webContents, workspace } = createSetup()
+  const reposition = jest.fn(() => workspace.applyLayout(visibleBounds, true))
+  workspace.onLoaded(reposition)
+
+  webContents.emit('render-process-gone')
+  workspace.applyLayout(visibleBounds, true)
+  webContents.emit('did-finish-load')
+
+  expect(reposition).toHaveBeenCalledTimes(1)
+  expect(view.setVisible).toHaveBeenLastCalledWith(true)
+  expect(workspace.isVisible()).toBe(true)
+})
+
+it('cancels unresponsive recovery when the renderer responds again', () => {
+  jest.useFakeTimers()
+  const { webContents } = createSetup()
+
+  webContents.emit('unresponsive')
+  webContents.emit('responsive')
+  jest.runAllTimers()
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+  jest.useRealTimers()
+})
+
+it('cancels a sustained visible unresponsive failure if the renderer recovers before close', () => {
+  jest.useFakeTimers()
+  const { webContents, workspace } = createSetup({ unresponsiveDelay: 50 })
+
+  workspace.applyLayout(visibleBounds, true)
+  webContents.emit('unresponsive')
+  jest.advanceTimersByTime(50)
+  webContents.emit('responsive')
+  workspace.applyLayout(visibleBounds, false)
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+  jest.useRealTimers()
+})
+
+it('recovers a sustained unresponsive renderer immediately when hidden', () => {
+  jest.useFakeTimers()
+  const beforeReload = jest.fn()
+  const { webContents } = createSetup({ beforeReload, unresponsiveDelay: 50 })
+
+  webContents.emit('unresponsive')
+  jest.advanceTimersByTime(50)
+
+  expect(beforeReload).toHaveBeenCalledTimes(1)
+  expect(webContents.reload).toHaveBeenCalledTimes(1)
+  expect(beforeReload.mock.invocationCallOrder[0]).toBeLessThan(
+    webContents.reload.mock.invocationCallOrder[0]
+  )
+  jest.useRealTimers()
+})
+
+it('bounds automatic recovery when failure events repeat', () => {
+  const { webContents, workspace } = createSetup()
+
+  workspace.applyLayout(visibleBounds, true)
+  webContents.emit('render-process-gone')
+  webContents.emit('render-process-gone')
+  webContents.emit('unresponsive')
+  workspace.applyLayout(visibleBounds, false)
+  webContents.emit('render-process-gone')
+
+  expect(webContents.reload).toHaveBeenCalledTimes(2)
+})
+
+it('retries a failed recovery load and permits a later explicit close to try again', () => {
+  const { webContents, workspace } = createSetup()
+
+  webContents.emit('render-process-gone')
+  webContents.emit('did-fail-load', {}, -105, 'Name not resolved', 'file:///dash.html', true)
+  webContents.emit('did-fail-load', {}, -105, 'Name not resolved', 'file:///dash.html', true)
+
+  expect(webContents.reload).toHaveBeenCalledTimes(2)
+
+  workspace.applyLayout(visibleBounds, false)
+
+  expect(webContents.reload).toHaveBeenCalledTimes(3)
+})
+
+it('does not let a recovery-triggered hide reset the automatic retry bound', () => {
+  let workspace: EmbeddedWorkspace
+  const setup = createSetup({ beforeReload: () => workspace.hide() })
+  workspace = setup.workspace
+
+  setup.webContents.emit('render-process-gone')
+  setup.webContents.emit('did-fail-load', {}, -105, 'Name not resolved', 'file:///dash.html', true)
+  setup.webContents.emit('did-fail-load', {}, -105, 'Name not resolved', 'file:///dash.html', true)
+  setup.webContents.emit('did-fail-load', {}, -105, 'Name not resolved', 'file:///dash.html', true)
+
+  expect(setup.webContents.reload).toHaveBeenCalledTimes(2)
+})
+
+it('removes recovery listeners and ignores lifecycle events after destruction', () => {
+  jest.useFakeTimers()
+  const { webContents, workspace } = createSetup()
+
+  workspace.destroy()
+  webContents.emit('render-process-gone')
+  webContents.emit('unresponsive')
+  jest.runAllTimers()
+
+  expect(webContents.reload).not.toHaveBeenCalled()
+  expect(webContents.listenerCount('did-finish-load')).toBe(0)
+  expect(webContents.listenerCount('did-fail-load')).toBe(0)
+  expect(webContents.listenerCount('render-process-gone')).toBe(0)
+  expect(webContents.listenerCount('unresponsive')).toBe(0)
+  expect(webContents.listenerCount('responsive')).toBe(0)
+  jest.useRealTimers()
 })
