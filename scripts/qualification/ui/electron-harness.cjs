@@ -481,7 +481,10 @@ const main = async () => {
     'send:maxAmount',
     'send:queue',
     'send:quoteSweep',
-    'send:queueSweep'
+    'send:queueSweep',
+    'yearn:getCatalog',
+    'yearn:getPositions',
+    'yearn:getWorkflows'
   ]) {
     ipcMain.handle(channel, (event, ...args) => {
       const scenario = scenarioByWebContents.get(event.sender.id)

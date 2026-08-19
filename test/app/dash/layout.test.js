@@ -19,6 +19,7 @@ const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf
 const badgeStyle = fs.readFileSync('app/tray/Badge/style/index.styl', 'utf8')
 const txApprovalStyle = fs.readFileSync('app/tray/Footer/RequestCommand/TxApproval/style/index.styl', 'utf8')
 const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'utf8')
+const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
@@ -57,6 +58,7 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
     /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/
   )
   expect(dashStyle).toMatch(/\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?overflow-y auto/)
+  expect(dashStyle).toMatch(/\.dashMainScroll[\s\S]*?scrollbar-gutter stable/)
   expect(dashStyle).not.toMatch(/scrollbar-gutter stable both-edges/)
 })
 
@@ -166,14 +168,24 @@ test('uses separator-free Earn lists, spacing-led detail regions, and the shared
   expect(earnStyle).toMatch(/\.earnPositionList, \.earnVaultList[\s\S]*?gap 0/)
   expect(earnStyle).not.toMatch(/\.earnVault \+ \.earnVault, \.earnPosition \+ \.earnPosition/)
   expect(earnStyle).toMatch(
-    /\.earnVariants, \.earnOwned, \.earnActionForm[\s\S]*?margin-top var\(--wren-space-6\)[\s\S]*?border 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+    /\.earnVariants, \.earnOwned, \.earnActionForm[\s\S]*?border 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
-  expect(earnStyle).toMatch(/\.earnApy[\s\S]*?strong[\s\S]*?color var\(--wren-accent-primary-hover\)/)
+  expect(earnStyle).toMatch(
+    /\.earnDetailsHero[\s\S]*?margin-bottom var\(--wren-space-2\)[\s\S]*?padding-bottom var\(--wren-space-3\)/
+  )
+  expect(earnStyle).toMatch(/\.earnDetailsMetrics[\s\S]*?margin 0/)
+  expect(earnStyle).toMatch(
+    /\.earnVariants\n {2}margin-top var\(--wren-space-2\)[\s\S]*?padding-top var\(--wren-space-2\)/
+  )
+  expect(earnStyle).toMatch(
+    /\.earnProductNote\.earnCooldownNotice[\s\S]*?margin var\(--wren-space-3\) var\(--wren-space-2\)/
+  )
+  expect(earnStyle).toMatch(/\.earnApy[\s\S]*?strong[\s\S]*?color var\(--wren-text-primary\)/)
   expect(earnStyle).toMatch(
     /\.earnPositionsOverview[\s\S]*?padding 0 0 var\(--wren-space-5\)[\s\S]*?border-bottom 0/
   )
   expect(earnStyle).toMatch(
-    /\.earnMetric[\s\S]*?padding var\(--wren-space-3\)[\s\S]*?border 0[\s\S]*?background transparent/
+    /\.earnMetric[\s\S]*?padding var\(--wren-space-2\) var\(--wren-space-3\)[\s\S]*?border 0[\s\S]*?background transparent/
   )
   expect(earnStyle).toMatch(
     /\.earnTabs button\.wrenControl:focus-visible,[\s\S]*?outline 2px solid var\(--wren-focus\)[\s\S]*?box-shadow none/
@@ -205,6 +217,21 @@ test('keeps watch and signer identities on the same account-list axis', () => {
   )
   expect(signerStyle).toMatch(/\.hardwareSignerPromptMark[\s\S]*?border 0[\s\S]*?background transparent/)
   expect(signerStyle).not.toMatch(/\.signerIconHardware[\s\S]{0,100}?transform/)
+  expect(signerStyle).toMatch(/\.signersList \.signer[\s\S]*?border-bottom 0/)
+  expect(signerStyle).not.toMatch(/\.signersList \.signer:last-child[\s\S]{0,120}?border-bottom/)
+})
+
+test('keeps utility alignment, support disclosure, and transaction facts inside established axes', () => {
+  expect(mainStyle).toMatch(
+    /\.dashCompanion[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-2\) var\(--wren-space-3\) calc\(var\(--wren-space-2\) \+ 28px \+ var\(--wren-space-2\)\)/
+  )
+  expect(mainStyle).toMatch(/\.dashSupportWrenPreview[\s\S]*?left 0[\s\S]*?&::after[\s\S]*?left 28px/)
+  expect(sendStyle).toMatch(/\.sendSweepChain[\s\S]*?\.dropdown\.wrenInput/)
+  expect(inputStyle).toMatch(/select\.wrenInput[\s\S]*?option:checked[\s\S]*?var\(--wren-accent-primary\)/)
+  expect(accountStyle).toMatch(/\.accountHomeRename[\s\S]*?max-width 100%[\s\S]*?min-width 0/)
+  expect(fs.readFileSync('resources/Components/Monitor/style/index.styl', 'utf8')).not.toMatch(
+    /\.gasDetails[\s\S]{0,220}?border-(?:top|left)/
+  )
 })
 
 test('keeps the Trezor PIN submit action in the Wren control language', () => {

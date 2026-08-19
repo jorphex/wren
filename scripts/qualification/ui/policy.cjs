@@ -163,12 +163,12 @@ const joinedCanvasScenarios = () => [
         logicalHeight,
         ready: 'body.workspace-open .chainMonitorPreview',
         requiredControls: [
-          'Previous network from Ethereum Mainnet',
-          'Next network from Ethereum Mainnet',
-          'View Ethereum Mainnet account on block explorer',
-          'Show gas details for Ethereum Mainnet'
+          'Previous network from Ethereum',
+          'Next network from Ethereum',
+          'View Ethereum account on block explorer',
+          'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details']
       },
       {
         id: `tray-account-home-${geometry}-right-${scale}`,
@@ -181,12 +181,12 @@ const joinedCanvasScenarios = () => [
         logicalHeight,
         ready: 'body.workspace-open .chainMonitorPreview',
         requiredControls: [
-          'Previous network from Ethereum Mainnet',
-          'Next network from Ethereum Mainnet',
-          'View Ethereum Mainnet account on block explorer',
-          'Show gas details for Ethereum Mainnet'
+          'Previous network from Ethereum',
+          'Next network from Ethereum',
+          'View Ethereum account on block explorer',
+          'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details']
       }
     ])
   )
@@ -259,7 +259,11 @@ const sendComposerScenarios = () =>
         },
         ready: '.sendSweepAssetSelected',
         requiredControls: ['Send one', 'Sweep assets'],
-        requiredText: ['Select positive balances', '1/16 selected', 'Sweep is sequential and non-atomic.']
+        requiredText: [
+          'Select positive balances',
+          '1 selected · 16 per sweep',
+          'Sweep is sequential and non-atomic.'
+        ]
       }
     ])
   )
@@ -268,6 +272,34 @@ const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
   ...updateDialogScenarios(),
   ...sendComposerScenarios(),
+  ...['unlocked', 'locked'].flatMap((variant) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `dash-earn-yvusd-${variant}-${geometry}-1`,
+      renderer: 'dash',
+      state: 'earn-yvusd',
+      variant,
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.earnDetails',
+      requiredControls:
+        variant === 'locked'
+          ? ['Flexible', 'Locked', 'Deposit', 'Start locked cooldown']
+          : ['Flexible', 'Locked', 'Deposit', 'Withdraw'],
+      requiredText: [
+        'yvUSD',
+        'Earn with flexible or time-locked yvUSD.',
+        'EST. APY',
+        'TVL',
+        'RISK',
+        'Choose how to earn',
+        'Locked withdrawal timing'
+      ]
+    }))
+  ),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -341,7 +373,7 @@ const reviewScenarios = () => [
       scale,
       logicalWidth: 620,
       logicalHeight,
-      action: { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+      action: { type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' },
       ready: '.dappGuardrailEditor',
       expectedInitialFocus: 'When a request exceeds a restriction',
       requiredControls: [
@@ -372,7 +404,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    action: { type: 'clickText', text: 'Add guardrail · Ethereum Mainnet (0x1)' },
+    action: { type: 'clickText', text: 'Add guardrail · Ethereum (0x1)' },
     ready: '.dappGuardrailEditor',
     expectedInitialFocus: 'When a request exceeds a restriction',
     requiredText: [
@@ -391,7 +423,7 @@ const reviewScenarios = () => [
     action: {
       type: 'sequence',
       steps: [
-        { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+        { type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' },
         { type: 'clickText', text: 'Save changes' },
         { type: 'clickText', text: 'Confirm save' }
       ]
@@ -409,7 +441,7 @@ const reviewScenarios = () => [
     action: {
       type: 'sequence',
       steps: [
-        { type: 'clickText', text: 'Edit guardrail · Ethereum Mainnet (0x1)' },
+        { type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' },
         { type: 'clickText', text: 'Save changes' },
         { type: 'clickText', text: 'Confirm save' }
       ]
@@ -675,12 +707,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.originSwapChainList',
-    requiredControls: [
-      'Ethereum Mainnet',
-      'Optimism Mainnet — Community RPC',
-      'Workshop Chain',
-      'Open Networks'
-    ],
+    requiredControls: ['Ethereum', 'Optimism Mainnet — Community RPC', 'Workshop Chain', 'Open Networks'],
     requiredText: ['Select a network']
   },
   {
@@ -692,7 +719,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.newTokenDetails',
     requiredControls: ['Add token'],
-    requiredText: ['Token details detected.', 'On Ethereum Mainnet']
+    requiredText: ['Token details detected.', 'On Ethereum']
   },
   {
     id: 'tray-transaction-advanced-pending-full-1',
@@ -1003,7 +1030,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkBreak',
-    requiredText: ['Ethereum Mainnet', 'Optimism Mainnet', 'Workshop Chain', 'Sepolia', 'Testnets']
+    requiredText: ['Ethereum', 'Optimism Mainnet', 'Workshop Chain', 'Sepolia', 'Testnets']
   },
   {
     id: 'dash-network-editor-full-1',
@@ -1013,7 +1040,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkEditor',
-    requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
+    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
     id: 'dash-network-editor-short-1',
@@ -1023,7 +1050,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
-    requiredText: ['Edit Ethereum Mainnet', 'RPC endpoints', 'Add RPC', 'Save changes']
+    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
     id: 'dash-network-add-full-1',
@@ -1066,7 +1093,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredText: [
-      'Ethereum Mainnet',
+      'Ethereum',
       'Balances',
       'Yearn WETH',
       'Activity',
@@ -1085,8 +1112,8 @@ const reviewScenarios = () => [
     action: {
       type: 'sequence',
       steps: [
-        { type: 'clickText', text: 'Show gas details for Ethereum Mainnet' },
-        { type: 'clickText', text: 'Next network from Ethereum Mainnet' }
+        { type: 'clickText', text: 'Show gas details for Ethereum' },
+        { type: 'clickText', text: 'Next network from Ethereum' }
       ]
     },
     ready: '.gasDetails',
@@ -1117,12 +1144,12 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.chainMonitorPreview',
     requiredControls: [
-      'Previous network from Ethereum Mainnet',
-      'Next network from Ethereum Mainnet',
-      'View Ethereum Mainnet account on block explorer',
-      'Show gas details for Ethereum Mainnet'
+      'Previous network from Ethereum',
+      'Next network from Ethereum',
+      'View Ethereum account on block explorer',
+      'Show gas details for Ethereum'
     ],
-    requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+    requiredText: ['Ethereum', '2', 'gwei', 'Details']
   },
   {
     id: 'tray-account-requests-summary-full-1',
@@ -1250,7 +1277,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
     requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
-    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum Mainnet'],
+    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
@@ -1321,7 +1348,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum Mainnet', 'Balances', 'Connected apps']
+    requiredText: ['Ethereum', 'Balances', 'Connected apps']
   },
   {
     id: 'tray-account-removal-confirm-full-1',
@@ -1388,12 +1415,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.chainMonitorPreview',
         requiredControls: [
-          'Previous network from Ethereum Mainnet',
-          'Next network from Ethereum Mainnet',
-          'View Ethereum Mainnet account on block explorer',
-          'Show gas details for Ethereum Mainnet'
+          'Previous network from Ethereum',
+          'Next network from Ethereum',
+          'View Ethereum account on block explorer',
+          'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details']
       },
       {
         id: `tray-account-home-short-${scale}`,
@@ -1404,12 +1431,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.chainMonitorPreview',
         requiredControls: [
-          'Previous network from Ethereum Mainnet',
-          'Next network from Ethereum Mainnet',
-          'View Ethereum Mainnet account on block explorer',
-          'Show gas details for Ethereum Mainnet'
+          'Previous network from Ethereum',
+          'Next network from Ethereum',
+          'View Ethereum account on block explorer',
+          'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum Mainnet', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details']
       },
       {
         id: `dash-delegation-full-${scale}`,

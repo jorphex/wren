@@ -99,6 +99,18 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
   const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
   const inspectors = scenarios.filter(({ state }) => state === 'inspector')
+  const earnYvusd = scenarios.filter(({ state }) => state === 'earn-yvusd')
+  expect(earnYvusd).toHaveLength(4)
+  expect(earnYvusd.map(({ variant }) => variant)).toEqual(['unlocked', 'unlocked', 'locked', 'locked'])
+  expect(invokeReplyFor(earnYvusd[0], 'yearn:getCatalog')).toMatchObject({
+    status: 'fresh',
+    vaults: [{ id: 'ethereum-yvusd', kind: 'yvUSD' }]
+  })
+  expect(invokeReplyFor(earnYvusd[0], 'yearn:getPositions')).toMatchObject({
+    account: { address: QUALIFICATION_ACCOUNT, readOnly: false },
+    chains: expect.arrayContaining([expect.objectContaining({ chainId: 1, status: 'ready' })])
+  })
+  expect(invokeReplyFor(earnYvusd[0], 'yearn:getWorkflows')).toEqual({ workflows: [] })
   expect(inspectors).toHaveLength(7)
   expect(inspectors.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
   expect(inspectors.every(({ requiredText }) => requiredText.includes('Never signs or broadcasts'))).toBe(
@@ -173,8 +185,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   expect(switchedGas.action).toEqual({
     type: 'sequence',
     steps: [
-      { type: 'clickText', text: 'Show gas details for Ethereum Mainnet' },
-      { type: 'clickText', text: 'Next network from Ethereum Mainnet' }
+      { type: 'clickText', text: 'Show gas details for Ethereum' },
+      { type: 'clickText', text: 'Next network from Ethereum' }
     ]
   })
   expect([chainFallback.logicalWidth, chainFallback.scale]).toEqual([520, 1])
@@ -474,7 +486,7 @@ it('qualifies the decorative Control Center Wren and selected-chain explorer geo
   const state = fixtureFor(accountHomes[0])
   expect(state.panel.account.moduleOrder).toEqual(['chains'])
   expect(state.main.networks.ethereum[1]).toMatchObject({
-    name: 'Ethereum Mainnet',
+    name: 'Ethereum',
     explorer: 'https://etherscan.io'
   })
 })

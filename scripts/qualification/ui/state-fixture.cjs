@@ -135,7 +135,7 @@ const accountHomeNetworks = () => ({
   networks: {
     1: {
       id: 1,
-      name: 'Ethereum Mainnet',
+      name: 'Ethereum',
       explorer: 'https://etherscan.io',
       on: true,
       isTestnet: false,
@@ -616,6 +616,120 @@ const prepareSelectedAccount = (state, request) => {
   }
 }
 
+const qualificationYearnCatalog = () => {
+  const asset = '0x1111111111111111111111111111111111111111'
+  const vault = '0x1212121212121212121212121212121212121212'
+  const locked = '0x1313131313131313131313131313131313131313'
+  const apy = (value) => ({ value, label: 'Est. APY', source: 'qualification' })
+  return {
+    status: 'fresh',
+    fetchedAt: 1_787_097_600_000,
+    errors: [],
+    vaults: [
+      {
+        id: 'ethereum-yvusd',
+        chainId: 1,
+        chainName: 'Ethereum',
+        address: vault,
+        kind: 'yvUSD',
+        name: 'yvUSD',
+        symbol: 'yvUSD',
+        description: 'Earn with flexible or time-locked yvUSD.',
+        asset: { address: asset, name: 'USD Coin', symbol: 'USDC', decimals: 6 },
+        decimals: 6,
+        tvlUsd: 1_500_000,
+        apy: apy(0.0512),
+        riskLevel: 1,
+        riskLabel: 'Conservative',
+        performanceFeeBps: 1000,
+        managementFeeBps: 0,
+        inceptionTime: 1_700_000_000,
+        yearnUrl: 'https://yearn.fi/vaults/1/0x1212121212121212121212121212121212121212',
+        status: 'available',
+        variants: [
+          {
+            id: 'unlocked',
+            address: vault,
+            name: 'yvUSD',
+            symbol: 'yvUSD',
+            asset: { address: asset, name: 'USD Coin', symbol: 'USDC', decimals: 6 },
+            decimals: 6,
+            tvlUsd: 1_000_000,
+            apy: apy(0.05)
+          },
+          {
+            id: 'locked',
+            address: locked,
+            name: 'Locked yvUSD',
+            symbol: 'styvUSD',
+            asset: { address: vault, name: 'yvUSD', symbol: 'yvUSD', decimals: 6 },
+            decimals: 6,
+            tvlUsd: 500_000,
+            apy: apy(0.07)
+          }
+        ]
+      }
+    ]
+  }
+}
+
+const qualificationYearnPositions = () => ({
+  account: { address: QUALIFICATION_ACCOUNT, name: 'Workshop account', readOnly: false },
+  chains: [
+    {
+      chainId: 1,
+      status: 'ready',
+      positions: [
+        {
+          vaultId: 'ethereum-yvusd',
+          chainId: 1,
+          status: 'available',
+          hasPosition: true,
+          assetBalanceRaw: '5000000',
+          assetBalance: '5.0',
+          variants: [
+            {
+              id: 'unlocked',
+              address: '0x1212121212121212121212121212121212121212',
+              symbol: 'yvUSD',
+              decimals: 6,
+              sharesRaw: '1500000',
+              shares: '1.5',
+              assetSymbol: 'USDC',
+              assetDecimals: 6,
+              assetsRaw: '1500000',
+              assets: '1.5'
+            },
+            {
+              id: 'locked',
+              address: '0x1313131313131313131313131313131313131313',
+              symbol: 'styvUSD',
+              decimals: 6,
+              sharesRaw: '2000000',
+              shares: '2.0',
+              assetSymbol: 'yvUSD',
+              assetDecimals: 6,
+              assetsRaw: '1900000',
+              assets: '1.9',
+              cooldown: {
+                status: 'none',
+                sharesRaw: '0',
+                shares: '0.0',
+                cooldownEnd: 0,
+                windowEnd: 0,
+                cooldownDuration: 1_209_600,
+                withdrawalWindow: 432_000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    { chainId: 8453, status: 'disabled', reason: 'Enable Base in Wren.', positions: [] },
+    { chainId: 747474, status: 'disabled', reason: 'Enable Katana in Wren.', positions: [] }
+  ]
+})
+
 const fixtureFor = (scenario) => {
   const state = baseState()
   if (scenario.glideSide === 'left' || scenario.glideSide === 'right') {
@@ -656,6 +770,35 @@ const fixtureFor = (scenario) => {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'inspector', data: {} }]
+    }
+  }
+
+  if (scenario.state === 'earn-yvusd') {
+    prepareSelectedAccount(state)
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'earn',
+          data: { vaultId: 'ethereum-yvusd', variant: scenario.variant }
+        }
+      ]
+    }
+    state.main.networks.ethereum = {
+      1: {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      }
+    }
+    state.main.networksMeta.ethereum = {
+      1: {
+        primaryColor: 'wren-chain-ethereum',
+        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
+      }
     }
   }
 
@@ -785,7 +928,7 @@ const fixtureFor = (scenario) => {
             notify: 'addToken',
             notifyData: {
               address,
-              chain: { id: 1, name: 'Ethereum Mainnet', color: 'wren-chain-ethereum' },
+              chain: { id: 1, name: 'Ethereum', color: 'wren-chain-ethereum' },
               tokenData: {
                 address,
                 name: 'USD Coin',
@@ -1010,7 +1153,7 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = {
       1: {
         id: 1,
-        name: 'Ethereum Mainnet',
+        name: 'Ethereum',
         explorer: 'https://etherscan.io',
         on: true,
         isTestnet: false,
@@ -1057,7 +1200,7 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = {
       1: {
         id: 1,
-        name: 'Ethereum Mainnet',
+        name: 'Ethereum',
         explorer: 'https://etherscan.io',
         on: true,
         isTestnet: false,
@@ -1587,6 +1730,15 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method) => {
+  if (scenario.state === 'earn-yvusd' && method === 'yearn:getCatalog') {
+    return qualificationYearnCatalog()
+  }
+  if (scenario.state === 'earn-yvusd' && method === 'yearn:getPositions') {
+    return qualificationYearnPositions()
+  }
+  if (scenario.state === 'earn-yvusd' && method === 'yearn:getWorkflows') {
+    return { workflows: [] }
+  }
   if (scenario.state.startsWith('settings') && method === 'signers:protectionStatus') {
     return {
       success: true,
