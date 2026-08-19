@@ -57,6 +57,8 @@ const state = {
     },
     launch: false,
     ledger: { derivation: 'live', liveAccountLimit: 5 },
+    rememberRecentRecipients: false,
+    recentRecipientUses: [],
     reveal: false,
     shortcuts: {
       summon: {
@@ -71,8 +73,8 @@ const state = {
   }
 }
 
-const renderSettings = () => {
-  const store = Restore.create(state, {})
+const renderSettings = (mutate = (value) => value) => {
+  const store = Restore.create(mutate(JSON.parse(JSON.stringify(state))), {})
   class TestSettings extends Settings {
     constructor(props) {
       super(props, { store })
@@ -90,6 +92,7 @@ it('groups settings into a short, semantic ledger', () => {
   expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
     'Desktop behavior',
     'Accounts and signing',
+    'Privacy',
     'Browser companions',
     'Local connections',
     'Recovery',
@@ -107,6 +110,89 @@ it('groups settings into a short, semantic ledger', () => {
       'Show private updates while Wren is hidden. They never include app, account, network, amounts, addresses, call data, transaction hashes, or delegation details.'
     )
   ).toBeTruthy()
+  expect(
+    within(setting('Recent recipients')).getByText(
+      'Store canonical destinations from Wren Send and managed Sweep only after successful network confirmation. Stored only on this device; never from incoming activity, indexers, chain history, or dapp calls. Recent recipients are not included in backups.'
+    )
+  ).toBeTruthy()
+})
+
+it('enables recent recipients without backfilling history', () => {
+  renderSettings()
+
+  fireEvent.click(
+    within(setting('Recent recipients')).getByRole('switch', { name: 'Save recent recipients' })
+  )
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'setRememberRecentRecipients', true)
+  expect(screen.queryByRole('alertdialog', { name: /Turn off and clear/ })).toBeNull()
+})
+
+it('confirms disabling recent recipients and restores focus', async () => {
+  const { user } = renderSettings((value) => {
+    value.main.rememberRecentRecipients = true
+    value.main.recentRecipientUses = [
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174000',
+        address: '0x2222222222222222222222222222222222222222',
+        confirmedAt: Date.now()
+      }
+    ]
+    return value
+  })
+  const toggle = within(setting('Recent recipients')).getByRole('switch', {
+    name: 'Save recent recipients'
+  })
+
+  await user.click(toggle)
+  const dialog = screen.getByRole('alertdialog', { name: 'Turn off and clear recent recipients?' })
+  expect(dialog.hasAttribute('aria-modal')).toBe(false)
+  expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }))
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('alertdialog', { name: 'Turn off and clear recent recipients?' })).toBeNull()
+  expect(document.activeElement).toBe(toggle)
+
+  await user.click(toggle)
+  await user.click(screen.getByRole('button', { name: 'Turn off and clear' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'setRememberRecentRecipients', false)
+  expect(screen.getByText('Recent recipients turned off and cleared')).toBeTruthy()
+  expect(document.activeElement).toBe(toggle)
+})
+
+it('clears recent recipients separately with destructive confirmation', async () => {
+  const { user } = renderSettings((value) => {
+    value.main.rememberRecentRecipients = true
+    value.main.recentRecipientUses = [
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174000',
+        address: '0x2222222222222222222222222222222222222222',
+        confirmedAt: Date.now()
+      }
+    ]
+    return value
+  })
+  const clear = within(setting('Clear recent recipients')).getByRole('button', { name: 'Clear' })
+
+  await user.click(clear)
+  const dialog = screen.getByRole('alertdialog', { name: 'Clear recent recipients?' })
+  expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }))
+  await user.click(within(dialog).getByRole('button', { name: 'Clear recipients' }))
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'clearRecentRecipients')
+  expect(screen.getByText('Recent recipients cleared')).toBeTruthy()
+  expect(document.activeElement).toBe(clear)
+})
+
+it('keeps Clear available while enabled so memory-only pending recipients can be purged', () => {
+  renderSettings((value) => {
+    value.main.rememberRecentRecipients = true
+    value.main.recentRecipientUses = []
+    return value
+  })
+
+  expect(within(setting('Clear recent recipients')).getByRole('button', { name: 'Clear' }).disabled).toBe(
+    false
+  )
 })
 
 it('shows native credentials as local apps using only their connection IDs', () => {

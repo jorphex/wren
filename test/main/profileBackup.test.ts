@@ -85,6 +85,14 @@ const fixture = () => {
       lastSubmittedAt: 1
     }
   }
+  fixtureMain.rememberRecentRecipients = true
+  fixtureMain.recentRecipientUses = [
+    {
+      operationId: '00000000-0000-4000-8000-000000000002',
+      address: `0x${'e'.repeat(40)}`,
+      confirmedAt: 1
+    }
+  ]
   fixtureMain.yearn = { catalogCache: { private: true }, workflows: { pending: 'private-workflow' } }
   fixtureMain.updater = { dontRemind: ['runtime-update-id'] }
   fixtureMain.dapps = {
@@ -231,6 +239,8 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('walletCallBatches')
   expect(recoveryMain).not.toHaveProperty('operationLifecycles')
   expect(recoveryMain).not.toHaveProperty('outboundAddressMemory')
+  expect(recoveryMain).not.toHaveProperty('rememberRecentRecipients')
+  expect(recoveryMain).not.toHaveProperty('recentRecipientUses')
   expect(recoveryMain).not.toHaveProperty('yearn')
   expect(recoveryMain).not.toHaveProperty('updater')
   expect(recoveryMain).not.toHaveProperty('extensionCredentials')
@@ -273,6 +283,30 @@ it('preserves address-book provenance in encrypted profile recovery data', () =>
   const [version] = Object.keys(configuration.main.__)
 
   expect(configuration.main.__[version].main.addressBook[address]).toEqual(current.main.addressBook[address])
+})
+
+it('excludes recent-recipient history and its opt-in preference from encrypted profile recovery data', () => {
+  const { profile } = fixture()
+  const configPath = path.join(profile, 'config.json')
+  const current = migratePersistedConfiguration(JSON.parse(fs.readFileSync(configPath, 'utf8')))
+  current.main.rememberRecentRecipients = true
+  current.main.recentRecipientUses = [
+    {
+      operationId: '00000000-0000-4000-8000-000000000003',
+      address: '0x1111111111111111111111111111111111111111',
+      confirmedAt: 1_786_752_000_000
+    }
+  ]
+  fs.writeFileSync(configPath, JSON.stringify({ main: { __: { [current.main._version]: current } } }))
+
+  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'))
+  const payload = decryptTestPayload(backup, password)
+  const configuration = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const [version] = Object.keys(configuration.main.__)
+  const recoveryMain = configuration.main.__[version].main
+
+  expect(recoveryMain).not.toHaveProperty('rememberRecentRecipients')
+  expect(recoveryMain).not.toHaveProperty('recentRecipientUses')
 })
 
 it('backs up only valid guardrails belonging to retained direct principals', () => {

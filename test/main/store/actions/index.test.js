@@ -50,7 +50,7 @@ afterAll(() => {
 const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
 
 describe('#clearActivity', () => {
-  it('clears displayed history and its privacy-preserving outbound-address memory together', () => {
+  it('clears displayed history and both outbound-address memories together', () => {
     const updates = []
     const update = (path, reducer) => updates.push([path, reducer({ retained: true })])
 
@@ -58,7 +58,45 @@ describe('#clearActivity', () => {
 
     expect(updates).toEqual([
       ['main.activity', []],
-      ['main.outboundAddressMemory', {}]
+      ['main.outboundAddressMemory', {}],
+      ['main.recentRecipientUses', []]
+    ])
+  })
+})
+
+describe('recent recipients', () => {
+  const use = {
+    operationId: '00000000-0000-4000-8000-000000000001',
+    address: '0x1111111111111111111111111111111111111111',
+    confirmedAt: Date.now()
+  }
+
+  it('records and removes uses through the trusted internal actions', () => {
+    let recorded
+    storeActions.recordRecentRecipientUse((path, reducer) => {
+      expect(path).toBe('main.recentRecipientUses')
+      recorded = reducer([])
+    }, use)
+    expect(recorded).toEqual([use])
+
+    storeActions.removeRecentRecipientUse((path, reducer) => {
+      expect(path).toBe('main.recentRecipientUses')
+      recorded = reducer(recorded)
+    }, use.operationId)
+    expect(recorded).toEqual([])
+  })
+
+  it('clears stored uses when disabled and supports a dedicated clear', () => {
+    const updates = []
+    const update = (path, reducer) => updates.push([path, reducer([use])])
+
+    storeActions.setRememberRecentRecipients(update, false)
+    storeActions.clearRecentRecipients(update)
+
+    expect(updates).toEqual([
+      ['main.rememberRecentRecipients', false],
+      ['main.recentRecipientUses', []],
+      ['main.recentRecipientUses', []]
     ])
   })
 })

@@ -57,6 +57,7 @@ import {
 import { osSignerStorage } from './signers/hot/runtimeStorage'
 import chains from './chains'
 import { inspect } from './inspector'
+import recentRecipientsRuntime, { shouldClearRecentRecipientCandidates } from './recentRecipients/runtime'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -571,6 +572,7 @@ onRenderer('frame:unmax', (e) => {
 })
 
 app.on('ready', () => {
+  recentRecipientsRuntime.start()
   walletCallBatchLedger.failAbandonedAdmissions()
   startWalletCallEvidenceRuntime()
   startOperationLifecycleRuntime()
@@ -603,6 +605,9 @@ app.on('ready', () => {
 onRenderer('tray:action', (e, action, ...args) => {
   const storeAction = typeof action === 'string' ? store[action] : undefined
   if (typeof storeAction === 'function') {
+    if (shouldClearRecentRecipientCandidates(action, args)) {
+      recentRecipientsRuntime.clearCandidates()
+    }
     if (action === 'saveDappGuardrail' || action === 'removeDappGuardrail') {
       return applyDappGuardrailRendererAction(action, args[0], {
         getAccount: (account) => store('main.accounts', account),
@@ -646,6 +651,7 @@ app.on('second-instance', (event, argv, workingDirectory) => {
 app.on('activate', () => windows.showTray())
 
 app.on('before-quit', () => {
+  recentRecipientsRuntime.stop()
   walletCallEvidenceRuntime.stop()
   operationLifecycleRuntime.stop()
   operationLifecycleProjectionRuntime.stop()

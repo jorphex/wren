@@ -12,6 +12,7 @@ import { clearSessionOnlyOrigins } from './session'
 import { normalizeInterfaceScale } from '../../windows/uiScale'
 import { createDesktopAuthIdentity, DesktopAuthIdentitySchema } from '../../api/desktopAuthIdentity'
 import { pruneOutboundAddressMemory } from './types/outboundAddressMemory'
+import { pruneRecentRecipientUses } from '../../../resources/domain/recentRecipients'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -21,6 +22,7 @@ export type { Account, AccountMetadata } from './types/account'
 export type { ActivityEntry } from './types/activity'
 export type { OperationLifecycle, OperationLifecycles } from './types/operationLifecycle'
 export type { AddressBook, AddressBookEntry } from './types/addressBook'
+export type { RecentRecipientUse, RecentRecipientUses } from './types/recentRecipients'
 export type { Balance } from './types/balance'
 export type { WithTokenId, Token } from './types/token'
 export type { Dapp } from './types/dapp'
@@ -168,6 +170,7 @@ const mainState = {
   showLocalNameWithENS: main('showLocalNameWithENS', false),
   autohide: main('autohide', false),
   transactionNotifications: main('transactionNotifications', true),
+  rememberRecentRecipients: main('rememberRecentRecipients', false),
   accountCloseLock: main('accountCloseLock', false),
   hardwareDerivation: main('hardwareDerivation', 'mainnet'),
   menubarGasPrice: main('menubarGasPrice', false),
@@ -204,6 +207,7 @@ const mainState = {
   activity: main('activity', []),
   operationLifecycles: main('operationLifecycles', {}),
   outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),
+  recentRecipientUses: pruneRecentRecipientUses(main('recentRecipientUses', [])),
   addressBook: main('addressBook', {}),
   ...(persistedMigrationVersion < 7 && get('addresses') !== undefined ? { addresses: get('addresses') } : {}),
   permissions: main('permissions', {}),

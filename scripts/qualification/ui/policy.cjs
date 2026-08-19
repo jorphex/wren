@@ -363,6 +363,46 @@ const reviewScenarios = () => [
         ]
       },
       {
+        id: `dash-send-recipient-picker-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-recipient-picker',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.sendRecentRecipients',
+        expectedInitialFocus: 'Search recipients',
+        requiredControls: [
+          'Workshop Software Account With A Long Name',
+          'Operations multisig with a deliberately long label',
+          'Recent recipient 0x5555555555555555555555555555555555555555'
+        ],
+        requiredText: [
+          'ACTIVE ACCOUNTS',
+          'SAVED CONTACTS',
+          'RECENT RECIPIENTS',
+          'Previously sent from this device · verify the full address',
+          '0x5555555555555555555555555555555555555555'
+        ]
+      },
+      {
+        id: `dash-settings-recent-recipients-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'settings-recent-recipients',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '#wren-settings-privacy',
+        requiredControls: ['Save recent recipients', 'Clear'],
+        requiredText: [
+          'Privacy',
+          'Recent recipients',
+          'Store canonical destinations from Wren Send and managed Sweep only after successful network confirmation.',
+          'Recent recipients are not included in backups.'
+        ],
+        captureScroll: 'target',
+        captureScrollSelector: '#wren-settings-privacy'
+      },
+      {
         id: `dash-send-confirmed-${geometry}-${scale}`,
         renderer: 'dash',
         state: 'send-confirmed',
@@ -469,6 +509,22 @@ const reviewScenarios = () => [
       'Remove Operations multisig with a deliberately long label?',
       'This removes the saved contact from Wren. Funds are not affected.'
     ]
+  },
+  {
+    id: 'dash-settings-recent-clear-short-1.5',
+    renderer: 'dash',
+    state: 'settings-recent-recipients',
+    variant: 'clear',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Clear' },
+    ready: '.recentRecipientsDialog',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Clear recipients'],
+    requiredText: ['Clear recent recipients?', 'This cannot be undone.', 'Saved contacts are not affected.'],
+    captureScroll: 'target',
+    captureScrollSelector: '.recentRecipientsDialog'
   },
   {
     id: 'dash-add-token-selector-short-1',

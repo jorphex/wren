@@ -64,7 +64,9 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
   or require an extra warning acknowledgement; normal request review still applies.
 - Stores local contacts with user-attested Saved or Verified out-of-band provenance,
   keeps the full address visible during review, and offers an explicit Save contact
-  action after confirmation without building a recipient history.
+  action after confirmation. An off-by-default local Recent recipients option can
+  remember confirmed Wren Send and managed Sweep destinations; it is bounded,
+  clearable, and excluded from backups.
 - Provides a fresh, recipient-bound native Max quote and an explicit multi-asset Sweep.
   Sweep reads selected ERC-20 balances from the configured RPC, places native value
   last, and uses Wren's ordinary sequential Wallet Call review; it is never atomic.

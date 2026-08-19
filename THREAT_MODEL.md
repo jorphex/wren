@@ -162,8 +162,18 @@ are unencrypted relationship metadata. "Verified out of band" records only the
 user's own statement, time, and optional note; it is not a trust score or proof and
 never suppresses the full address, lookalike evidence, simulation, approval, or
 signing warnings. Address-book JSON exports contain this metadata in plaintext.
-Wren offers Save contact explicitly after confirmation but does not retain a full
-recipient history.
+Wren offers Save contact explicitly after confirmation. Its separate Recent
+recipients feature is off by default and, when enabled, stores only canonical
+destinations from Wren Send and managed Sweep after successful canonical network
+confirmation. It keeps at most 50 operation uses for one year; the picker projects
+the newest use per address and never treats recency as trust. It never learns from
+generic dapp calls, incoming activity, indexers, chain history, simulation, contacts,
+declines, or failed pre-broadcast work. Pending candidates are bounded and memory-only,
+so restart or cap eviction may conservatively omit a later-successful recipient rather
+than persist an unconfirmed full address. Reorg, replacement, failure, and stop evidence
+remove the affected operation use without erasing an older successful use. Disabling,
+dedicated clearing, and clearing Activity erase stored uses and pending candidates.
+The preference and history are excluded from profile backups and support data.
 The address-safety index is also local unencrypted metadata: it keeps at most 500
 one-year records containing a profile-bound SHA-256 full-address digest, the first
 and last four hexadecimal characters needed for exact-end lookalike comparison,

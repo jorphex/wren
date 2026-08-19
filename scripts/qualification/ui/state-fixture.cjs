@@ -8,6 +8,7 @@ const QUALIFICATION_TX_HASH = `0x${'cd'.repeat(32)}`
 const QUALIFICATION_LOOKALIKE = `0x1234${'b'.repeat(32)}abcd`
 const QUALIFICATION_RECIPIENT = '0x2222222222222222222222222222222222222222'
 const QUALIFICATION_CONTACT = '0x3333333333333333333333333333333333333333'
+const QUALIFICATION_RECENT_RECIPIENT = '0x5555555555555555555555555555555555555555'
 const NATIVE_CURRENCY = `0x${'0'.repeat(40)}`
 const QUALIFICATION_GUARDRAIL_ORIGIN = '11111111-1111-4111-8111-111111111111'
 const QUALIFICATION_NATIVE_ORIGIN = '22222222-2222-4222-8222-222222222222'
@@ -95,6 +96,8 @@ const baseState = () => ({
     accounts: {},
     balances: {},
     activity: [],
+    rememberRecentRecipients: false,
+    recentRecipientUses: [],
     signers: {},
     permissions: {},
     dappGuardrails: {},
@@ -587,6 +590,7 @@ const fixtureFor = (scenario) => {
   if (
     scenario.state === 'address-book-list' ||
     scenario.state === 'address-book-editor' ||
+    scenario.state === 'send-recipient-picker' ||
     scenario.state === 'send-confirmed' ||
     scenario.state === 'send-max-review' ||
     scenario.state === 'send-sweep-review'
@@ -621,13 +625,21 @@ const fixtureFor = (scenario) => {
         {
           view: scenario.state.startsWith('send-') ? 'send' : 'addressBook',
           data:
-            scenario.state === 'address-book-editor' ? { screen: 'edit', address: QUALIFICATION_CONTACT } : {}
+            scenario.state === 'address-book-editor'
+              ? { screen: 'edit', address: QUALIFICATION_CONTACT }
+              : scenario.state === 'send-recipient-picker'
+                ? { step: 'contactPicker', title: 'Choose a recipient' }
+                : {}
         }
       ]
     }
   }
 
-  if (['send-confirmed', 'send-max-review', 'send-sweep-review'].includes(scenario.state)) {
+  if (
+    ['send-recipient-picker', 'send-confirmed', 'send-max-review', 'send-sweep-review'].includes(
+      scenario.state
+    )
+  ) {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -652,6 +664,22 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.main.rates = {}
+    if (scenario.state === 'send-recipient-picker') {
+      state.selected.hideBalances = true
+      state.main.rememberRecentRecipients = true
+      state.main.recentRecipientUses = [
+        {
+          operationId: '33333333-3333-4333-8333-333333333333',
+          address: QUALIFICATION_RECENT_RECIPIENT,
+          confirmedAt: Date.now() - 1_000
+        },
+        {
+          operationId: '44444444-4444-4444-8444-444444444444',
+          address: QUALIFICATION_ACCOUNT.toLowerCase(),
+          confirmedAt: Date.now() - 2_000
+        }
+      ]
+    }
   }
 
   if (scenario.state === 'add-token-selector') {
@@ -808,7 +836,11 @@ const fixtureFor = (scenario) => {
     )
   }
 
-  if (scenario.state === 'settings' || scenario.state === 'settings-local-connections') {
+  if (
+    scenario.state === 'settings' ||
+    scenario.state === 'settings-local-connections' ||
+    scenario.state === 'settings-recent-recipients'
+  ) {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
@@ -832,6 +864,16 @@ const fixtureFor = (scenario) => {
       showLocalNameWithENS: false,
       trezor: { derivation: 'standard' }
     })
+    if (scenario.state === 'settings-recent-recipients') {
+      state.main.rememberRecentRecipients = true
+      state.main.recentRecipientUses = [
+        {
+          operationId: '33333333-3333-4333-8333-333333333333',
+          address: QUALIFICATION_RECENT_RECIPIENT,
+          confirmedAt: Date.now() - 1_000
+        }
+      ]
+    }
     if (scenario.state === 'settings-local-connections') {
       state.main.transactionNotifications = true
       state.main.nativePeerCredentials = {
@@ -1343,6 +1385,19 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method) => {
+  if (scenario.state.startsWith('settings') && method === 'signers:protectionStatus') {
+    return {
+      success: true,
+      status: {
+        available: true,
+        backend: 'qualification-keychain',
+        enabled: false,
+        protectedFiles: 0,
+        signerFiles: 0,
+        state: 'disabled'
+      }
+    }
+  }
   if (scenario.state === 'inspector' && method === 'inspector:inspect') {
     return {
       success: true,

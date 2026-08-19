@@ -128,6 +128,7 @@ import {
 import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
 import type { NativeMaxTrustedMetadata } from '../send/max'
+import recentRecipientsRuntime from '../recentRecipients/runtime'
 
 const SUPPORTED_TRANSACTION_PARAMS = new Set([
   'nonce',
@@ -212,6 +213,13 @@ function snapshotNativeMaxMetadata(metadata: NativeMaxTrustedMetadata): NativeMa
   Object.freeze(snapshot.evidence.fee)
   Object.freeze(snapshot.evidence)
   return Object.freeze(snapshot)
+}
+
+function snapshotRecentRecipientMetadata(metadata: TransactionRequest['recentRecipient']) {
+  if (!metadata || typeof metadata.address !== 'string' || !isAddress(metadata.address)) {
+    throw new Error('Invalid recent-recipient metadata')
+  }
+  return Object.freeze({ address: metadata.address.toLowerCase() })
 }
 
 export class Provider extends EventEmitter {
@@ -332,8 +340,9 @@ export class Provider extends EventEmitter {
 
   private assertManagedSendRuntimeAuthorization(request: TransactionRequest | WalletCallsRequest) {
     const isNativeMax = 'nativeMax' in request && Boolean(request.nativeMax)
+    const hasRecentRecipient = 'recentRecipient' in request && Boolean(request.recentRecipient)
     const isManagedSweep = 'managedSweep' in request && Boolean(request.managedSweep)
-    if (!isNativeMax && !isManagedSweep) return
+    if (!isNativeMax && !hasRecentRecipient && !isManagedSweep) return
     const rawChainId = request.type === 'walletCalls' ? request.chainId : request.data.chainId
     let chainId: number
     try {
@@ -341,7 +350,11 @@ export class Provider extends EventEmitter {
     } catch {
       chainId = 0
     }
-    if (!this.managedSweepOriginAuthorized(request.account, chainId, request.origin)) {
+    const authorized =
+      request.type === 'walletCalls'
+        ? this.managedSweepOriginAuthorized(request.account, chainId, request.origin)
+        : this.managedSendOriginAuthorized(request.account, chainId, request.origin)
+    if (!authorized) {
       throw Object.assign(new Error('Managed Wren Send request is no longer authorized'), { code: 4100 })
     }
   }
@@ -905,38 +918,69 @@ export class Provider extends EventEmitter {
           accounts.claimWalletCallsRequestWithResponse(...args),
         settleWalletCallsRequest: (...args) => accounts.settleWalletCallsRequest(...args)
       },
-      execute: (input, handlerId) =>
-        executeWalletCallRuntime(input, {
-          accounts,
-          connection: this.connection,
-          ledger: walletCallBatchLedger,
-          evidenceAvailable: () => walletCallEvidenceRuntime.wake(),
-          assertBeforeSign: () => {
-            const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
-            this.assertManagedSendRuntimeAuthorization(request)
-            this.assertDappGuardrailReview(request)
-          },
-          revalidateBeforeCall: async (transaction, index) => {
-            if (!input.managedSweep) return
-            const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
-            if (
-              !request.managedSweep ||
-              JSON.stringify(request.managedSweep) !== JSON.stringify(input.managedSweep)
-            ) {
-              throw new ManagedSweepError('managed-sweep-changed', 'Managed sweep evidence changed')
-            }
-            await this.revalidateManagedSweepCall(request, transaction, index)
-          },
-          recordSubmittedTarget: (address, submittedAt) => {
-            try {
-              requireStoreAction('recordOutboundAddresses')(store('main.instanceId'), [address], submittedAt)
-            } catch (error) {
-              log.warn('Wallet-call address memory could not be updated', {
-                error: error instanceof Error ? error.message : String(error)
+      execute: async (input, handlerId) => {
+        const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
+        const recentRecipientCandidate =
+          input.managedSweep && request.activityId
+            ? Object.freeze({
+                operationId: request.activityId,
+                address: input.managedSweep.recipient
               })
+            : undefined
+        if (recentRecipientCandidate) recentRecipientsRuntime.track(recentRecipientCandidate)
+
+        try {
+          return await executeWalletCallRuntime(input, {
+            accounts,
+            connection: this.connection,
+            ledger: walletCallBatchLedger,
+            evidenceAvailable: () => walletCallEvidenceRuntime.wake(),
+            assertBeforeSign: () => {
+              const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
+              this.assertManagedSendRuntimeAuthorization(request)
+              this.assertDappGuardrailReview(request)
+            },
+            revalidateBeforeCall: async (transaction, index) => {
+              if (!input.managedSweep) return
+              const request = accounts.getRequestForAccount<WalletCallsRequest>(input.account, handlerId)
+              if (
+                !request.managedSweep ||
+                JSON.stringify(request.managedSweep) !== JSON.stringify(input.managedSweep)
+              ) {
+                throw new ManagedSweepError('managed-sweep-changed', 'Managed sweep evidence changed')
+              }
+              await this.revalidateManagedSweepCall(request, transaction, index)
+            },
+            recordSubmittedTarget: (address, submittedAt) => {
+              try {
+                requireStoreAction('recordOutboundAddresses')(
+                  store('main.instanceId'),
+                  [address],
+                  submittedAt
+                )
+              } catch (error) {
+                log.warn('Wallet-call address memory could not be updated', {
+                  error: error instanceof Error ? error.message : String(error)
+                })
+              }
+            }
+          })
+        } catch (error) {
+          if (recentRecipientCandidate) {
+            try {
+              if (
+                !walletCallBatchLedger.getByOperationId(recentRecipientCandidate.operationId)?.transactions
+                  .length
+              ) {
+                recentRecipientsRuntime.forget(recentRecipientCandidate.operationId)
+              }
+            } catch {
+              // Recipient convenience cleanup must not replace the authoritative execution error.
             }
           }
-        }),
+          throw error
+        }
+      },
       reportError: (error) => log.error('Wallet-call lifecycle error', error)
     })
   }
@@ -1545,7 +1589,7 @@ export class Provider extends EventEmitter {
     return Boolean(network && network.on !== false && connection?.chainConfig && activeConnection?.connected)
   }
 
-  private managedSweepOriginAuthorized(account: string, chainId: number, requestOrigin?: string) {
+  private managedSendOriginAuthorized(account: string, chainId: number, requestOrigin?: string) {
     const originId = originIdForName(FRAME_SEND_ORIGIN)
     const origin = store('main.origins', originId)
     const currentAccount = accounts.current()
@@ -1559,7 +1603,13 @@ export class Provider extends EventEmitter {
       currentAccount.id.toLowerCase() === account.toLowerCase() &&
       !isWatchOnlyAccountType(currentAccount.lastSignerType) &&
       origin.chain?.type === 'ethereum' &&
-      origin.chain.id === chainId &&
+      origin.chain.id === chainId
+    )
+  }
+
+  private managedSweepOriginAuthorized(account: string, chainId: number, requestOrigin?: string) {
+    return (
+      this.managedSendOriginAuthorized(account, chainId, requestOrigin) &&
       this.walletCallChainAvailable(chainId)
     )
   }
@@ -1824,7 +1874,7 @@ export class Provider extends EventEmitter {
     res: RPCRequestCallback,
     targetChain: Chain,
     onQueued?: (handlerId: string) => void,
-    trustedMetadata?: Pick<TransactionRequest, 'replacement' | 'nativeMax'>
+    trustedMetadata?: Pick<TransactionRequest, 'replacement' | 'nativeMax' | 'recentRecipient'>
   ) {
     try {
       const txParams = payload.params[0]
@@ -1892,12 +1942,18 @@ export class Provider extends EventEmitter {
       if (!currentAccount || !from || !hasAddress(currentAccount, from)) {
         return resError('Transaction is not from currently selected account', payload, res)
       }
-      if (
-        trustedMetadata?.nativeMax &&
-        !this.managedSweepOriginAuthorized(currentAccount.id, targetChain.id, payload._origin)
-      ) {
+      const managedSendOriginAuthorized =
+        (!trustedMetadata?.nativeMax && !trustedMetadata?.recentRecipient) ||
+        this.managedSendOriginAuthorized(currentAccount.id, targetChain.id, payload._origin)
+      if (trustedMetadata?.nativeMax && !managedSendOriginAuthorized) {
         return resError('Native Max metadata requires the exact managed Wren Send origin', payload, res)
       }
+      if (trustedMetadata?.recentRecipient && !managedSendOriginAuthorized) {
+        return resError('Recent recipient metadata requires the exact managed Wren Send origin', payload, res)
+      }
+      const recentRecipientMetadata = trustedMetadata?.recentRecipient
+        ? snapshotRecentRecipientMetadata(trustedMetadata.recentRecipient)
+        : undefined
 
       this.fillTransaction({ ...tx, from }, (err, transactionMetadata) => {
         if (err) {
@@ -1925,7 +1981,8 @@ export class Provider extends EventEmitter {
               ? {
                   nativeMax: snapshotNativeMaxMetadata(trustedMetadata.nativeMax)
                 }
-              : {})
+              : {}),
+            ...(recentRecipientMetadata ? { recentRecipient: recentRecipientMetadata } : {})
           } as Omit<TransactionRequest, 'classification'>
 
           const classification = classifyTransaction(unclassifiedReq)

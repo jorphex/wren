@@ -17,6 +17,7 @@ import {
   parseTokenBaseUnitAmount,
   parseTokenDecimalAmount
 } from '../../../resources/domain/token/amount'
+import { projectRecentRecipients } from '../../../resources/domain/recentRecipients/projection'
 import { isNetworkConnected } from '../../../resources/utils/chains'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import { maxSendAmount, queueSend, queueSweep, quoteSweep, resolveSendRecipient } from './api'
@@ -30,8 +31,8 @@ const COPY = Object.freeze({
   assetUnavailable: 'This asset is no longer available to send on this network. Choose another asset.',
   close: 'Close',
   chooseAsset: 'Choose an asset',
-  chooseContact: 'Choose contact',
-  chooseAContact: 'Choose a contact',
+  chooseContact: 'Choose recipient',
+  chooseAContact: 'Choose a recipient',
   clearRecipient: 'Clear recipient',
   currentAccount: 'Current account',
   declinedBody: 'You declined this transaction. Nothing was signed or sent.',
@@ -51,7 +52,8 @@ const COPY = Object.freeze({
   assetsDisconnected: 'Asset networks unavailable',
   assetsDisconnectedCopy: 'Reconnect the networks holding these assets before sending.',
   noAssetsFound: 'No assets found',
-  noContacts: 'No saved contacts yet.',
+  noContacts: 'No matching accounts or contacts.',
+  noRecipients: 'No matching accounts, contacts, or recent recipients.',
   activeAccounts: 'Active accounts',
   activeWrenAccount: 'Active Wren account',
   primaryDisabled: 'Enter send details',
@@ -70,7 +72,10 @@ const COPY = Object.freeze({
   recipientResolving: 'Checking address…',
   reviewFee: 'Wren estimates gas before anything is signed.',
   savedContacts: 'Saved contacts',
-  searchContacts: 'Search accounts and contacts',
+  recentRecipients: 'Recent recipients',
+  recentRecipientContext: 'Previously sent from this device · verify the full address',
+  recentRecipientSource: 'Recent recipient · verify the full address',
+  searchContacts: 'Search accounts, contacts, and recent recipients',
   searchAssets: 'Search assets',
   confirmedBody: 'Your transaction has been confirmed on the network.',
   confirmedHeading: 'Transaction confirmed',
@@ -374,7 +379,7 @@ export class Send extends React.Component {
     )
   }
 
-  async resolveRecipient(value) {
+  async resolveRecipient(value, fallbackSource = '') {
     const sequence = ++this.recipientSequence
     this.setState({
       recipientError: '',
@@ -401,6 +406,11 @@ export class Send extends React.Component {
       return typeof address === 'string' && address.toLowerCase() === resolvedAddress
     })
     const identity = resolveLocalAddressIdentity(this.store('main.addressBook'), accounts, result.address)
+    const recentRecipient =
+      this.store('main.rememberRecentRecipients') === true &&
+      projectRecentRecipients(this.store('main.recentRecipientUses') || []).some(
+        ({ address }) => address === resolvedAddress
+      )
     const currentAccount = this.store('selected.current') || ''
     const matchedAccountId = matchedAccount?.id || matchedAccount?.address || ''
     const isCurrentAccount =
@@ -412,13 +422,13 @@ export class Send extends React.Component {
         ? isCurrentAccount
           ? COPY.currentAccount
           : COPY.activeWrenAccount
-        : identity?.source || '',
+        : identity?.source || (recentRecipient ? COPY.recentRecipientSource : fallbackSource),
       recipientResolved: result.address,
       recipientStatus: 'resolved'
     })
   }
 
-  updateRecipient(recipient) {
+  updateRecipient(recipient, source = '') {
     clearTimeout(this.recipientTimer)
     clearTimeout(this.quoteExpiryTimer)
     this.maxSequence += 1
@@ -443,7 +453,7 @@ export class Send extends React.Component {
     const value = recipient.trim()
     if (value) {
       const delay = /^0x[0-9a-fA-F]{40}$/.test(value) ? 0 : 320
-      this.recipientTimer = setTimeout(() => this.resolveRecipient(value), delay)
+      this.recipientTimer = setTimeout(() => this.resolveRecipient(value, source), delay)
     }
   }
 
@@ -803,6 +813,7 @@ export class Send extends React.Component {
           <Icon name='search' size={15} />
           <input
             autoFocus
+            aria-label='Search assets'
             className='wrenInput wrenInputQuiet'
             onChange={(event) => this.setState({ assetFilter: event.target.value })}
             placeholder={COPY.searchAssets}
@@ -860,9 +871,11 @@ export class Send extends React.Component {
 
   renderContactPicker() {
     const filter = this.state.contactFilter.trim().toLowerCase()
-    const accounts = Object.values(this.store('main.accounts') || {})
-      .filter(({ address = '', ensName = '', id = '', name = '', status = 'ok' }) => {
-        if (status !== 'ok') return false
+    const allAccounts = Object.values(this.store('main.accounts') || {}).filter(
+      ({ status = 'ok' }) => status === 'ok'
+    )
+    const accounts = allAccounts
+      .filter(({ address = '', ensName = '', id = '', name = '' }) => {
         return !filter
           ? true
           : [address, ensName, id, name].some(
@@ -879,6 +892,19 @@ export class Send extends React.Component {
         !filter ? true : [address, name, note].some((value) => value.toLowerCase().includes(filter))
       )
       .sort((left, right) => left.name.localeCompare(right.name) || left.address.localeCompare(right.address))
+    const hiddenRecentAddresses = new Set([
+      ...allAccounts.flatMap(({ address, id }) =>
+        [address, id].filter((value) => typeof value === 'string').map((value) => value.toLowerCase())
+      ),
+      ...Object.values(this.store('main.addressBook') || {}).map(({ address }) => address.toLowerCase())
+    ])
+    const recentRecipients = this.store('main.rememberRecentRecipients')
+      ? projectRecentRecipients(this.store('main.recentRecipientUses') || [])
+          .filter(({ address }) => !hiddenRecentAddresses.has(address))
+          .filter(({ address }) => !filter || address.includes(filter))
+          .slice(0, 10)
+      : []
+    const noMatches = !accounts.length && !contacts.length && !recentRecipients.length
 
     return (
       <section className='sendPicker sendContactPicker cardShow' aria-label={COPY.chooseAContact}>
@@ -886,6 +912,7 @@ export class Send extends React.Component {
           <Icon name='search' size={15} />
           <input
             autoFocus
+            aria-label='Search recipients'
             className='wrenInput wrenInputQuiet'
             onChange={(event) => this.setState({ contactFilter: event.target.value })}
             placeholder={COPY.searchContacts}
@@ -928,32 +955,61 @@ export class Send extends React.Component {
             </div>
           ) : null}
           {contacts.length ? <h3 className='sendPickerSectionTitle'>{COPY.savedContacts}</h3> : null}
-          {contacts.length ? (
-            contacts.map((contact) => (
-              <button
-                className='sendContactOption'
-                key={contact.address.toLowerCase()}
-                onClick={() => {
-                  this.updateRecipient(contact.address)
-                  this.setState({ contactFilter: '' })
-                  this.closePicker()
-                }}
-                type='button'
-              >
-                <span className='sendContactIcon' aria-hidden='true'>
-                  <Icon name='contacts' size={17} />
-                </span>
-                <span className='sendContactIdentity'>
-                  <strong>{contact.name}</strong>
-                  <span>{contact.address}</span>
-                </span>
-                <span className='sendContactContext'>
-                  {contact.provenance.status === 'verified-out-of-band' ? 'Verified out of band' : 'Saved'}
-                </span>
-              </button>
-            ))
-          ) : !accounts.length ? (
-            <div className='sendPickerEmpty'>{COPY.noContacts}</div>
+          {contacts.length
+            ? contacts.map((contact) => (
+                <button
+                  className='sendContactOption'
+                  key={contact.address.toLowerCase()}
+                  onClick={() => {
+                    this.updateRecipient(contact.address)
+                    this.setState({ contactFilter: '' })
+                    this.closePicker()
+                  }}
+                  type='button'
+                >
+                  <span className='sendContactIcon' aria-hidden='true'>
+                    <Icon name='contacts' size={17} />
+                  </span>
+                  <span className='sendContactIdentity'>
+                    <strong>{contact.name}</strong>
+                    <span>{contact.address}</span>
+                  </span>
+                  <span className='sendContactContext'>
+                    {contact.provenance.status === 'verified-out-of-band' ? 'Verified out of band' : 'Saved'}
+                  </span>
+                </button>
+              ))
+            : null}
+          {recentRecipients.length ? (
+            <div className='sendPickerSection sendRecentRecipients' aria-labelledby='send-recent-title'>
+              <h3 id='send-recent-title'>{COPY.recentRecipients}</h3>
+              {recentRecipients.map(({ address }) => (
+                <button
+                  className='sendContactOption sendRecentRecipientOption'
+                  key={`recent:${address}`}
+                  onClick={() => {
+                    this.updateRecipient(address, COPY.recentRecipientSource)
+                    this.setState({ contactFilter: '' })
+                    this.closePicker()
+                  }}
+                  type='button'
+                >
+                  <span className='sendContactIcon' aria-hidden='true'>
+                    <Icon name='send' size={17} />
+                  </span>
+                  <span className='sendContactIdentity'>
+                    <strong>Recent recipient</strong>
+                    <code>{address}</code>
+                  </span>
+                  <span className='sendContactContext'>{COPY.recentRecipientContext}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {noMatches ? (
+            <div className='sendPickerEmpty'>
+              {this.store('main.rememberRecentRecipients') ? COPY.noRecipients : COPY.noContacts}
+            </div>
           ) : null}
         </div>
       </section>
@@ -1466,7 +1522,7 @@ export class Send extends React.Component {
         : this.state.recipientStatus === 'resolved'
           ? this.state.recipientName
             ? `${this.state.recipientName}${this.state.recipientSource ? ` · ${this.state.recipientSource}` : ''}`
-            : COPY.recipientResolved
+            : this.state.recipientSource || COPY.recipientResolved
           : ''
 
     return (

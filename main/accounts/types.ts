@@ -13,6 +13,8 @@ import type { TypedDataContext, TypedMessage } from '../../resources/domain/type
 import type { SweepEvidence } from '../../resources/domain/sweep'
 import type { NativeMaxTrustedMetadata } from '../send/max'
 
+export type RecentRecipientTrustedMetadata = Readonly<{ address: string }>
+
 export type {
   Eip3009Authorization,
   LegacyTypedData,
@@ -149,6 +151,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
     originalHash: string
   }
   nativeMax?: NativeMaxTrustedMetadata
+  recentRecipient?: RecentRecipientTrustedMetadata
   recoverableError?: {
     code:
       | 'account-code-evidence-unavailable'

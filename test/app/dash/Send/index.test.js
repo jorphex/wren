@@ -10,7 +10,7 @@ import {
 } from '../../../../app/dash/Send/api'
 import { NATIVE_CURRENCY } from '../../../../resources/constants'
 import link from '../../../../resources/link'
-import { act, fireEvent, render, screen, waitFor } from '../../../componentSetup'
+import { act, fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
 
 jest.mock('../../../../app/dash/Send/api', () => ({
   maxSendAmount: jest.fn(),
@@ -239,9 +239,9 @@ it('chooses a saved contact from the recipient field', async () => {
     return state
   })
 
-  fireEvent.click(screen.getByRole('button', { name: 'Choose contact' }))
-  setDashStep(store, 'contactPicker', 'Choose a contact')
-  expect(screen.getByRole('region', { name: 'Choose a contact' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
+  setDashStep(store, 'contactPicker', 'Choose a recipient')
+  expect(screen.getByRole('region', { name: 'Choose a recipient' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: /Garden Friend/ }))
   closeDashStep(store)
 
@@ -265,8 +265,8 @@ it('lists active accounts and identifies the current recipient account', async (
     return state
   })
 
-  fireEvent.click(screen.getByRole('button', { name: 'Choose contact' }))
-  setDashStep(store, 'contactPicker', 'Choose a contact')
+  fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
+  setDashStep(store, 'contactPicker', 'Choose a recipient')
 
   expect(screen.getByText('Active accounts')).toBeTruthy()
   expect(screen.getByRole('button', { name: /Garden/ }).textContent).toContain('Current account')
@@ -275,6 +275,72 @@ it('lists active accounts and identifies the current recipient account', async (
   fireEvent.click(screen.getByRole('button', { name: /Garden/ }))
   closeDashStep(store)
   expect(await screen.findByText('Garden · Current account')).toBeTruthy()
+})
+
+it('keeps recent recipients opt-in and separate from saved identities', () => {
+  const { store } = renderSend((state) => {
+    state.main.rememberRecentRecipients = false
+    state.main.recentRecipientUses = [
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174010',
+        address: secondRecipient,
+        confirmedAt: Date.now()
+      }
+    ]
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
+  setDashStep(store, 'contactPicker', 'Choose a recipient')
+
+  expect(screen.queryByText('Recent recipients')).toBeNull()
+  expect(screen.queryByText(secondRecipient)).toBeNull()
+})
+
+it('shows confirmed recent recipients with full-address provenance and canonical selection', async () => {
+  resolveSendRecipient.mockImplementation(async (value) => ({ success: true, address: value }))
+  const { store } = renderSend((state) => {
+    state.selected.hideBalances = true
+    state.main.rememberRecentRecipients = true
+    state.main.recentRecipientUses = [
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174011',
+        address: secondRecipient,
+        confirmedAt: Date.now()
+      },
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174012',
+        address: account,
+        confirmedAt: Date.now() - 1
+      },
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174013',
+        address: secondRecipient,
+        confirmedAt: Date.now() - 2
+      }
+    ]
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
+  setDashStep(store, 'contactPicker', 'Choose a recipient')
+
+  expect(document.activeElement).toBe(
+    screen.getByPlaceholderText('Search accounts, contacts, and recent recipients')
+  )
+  expect(document.activeElement.getAttribute('aria-label')).toBe('Search recipients')
+  const recent = screen.getByText('Recent recipients').closest('.sendRecentRecipients')
+  expect(within(recent).getAllByText(secondRecipient)).toHaveLength(1)
+  expect(within(recent).queryByText(account)).toBeNull()
+  expect(within(recent).getByText('Previously sent from this device · verify the full address')).toBeTruthy()
+
+  fireEvent.click(within(recent).getByRole('button', { name: new RegExp(secondRecipient) }))
+  closeDashStep(store)
+
+  await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(secondRecipient))
+  expect(await screen.findByText('Recent recipient · verify the full address')).toBeTruthy()
+  expect(screen.getByPlaceholderText('Enter an address').value).toBe(secondRecipient)
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'dash')
 })
 
 it('returns an open picker to the composer when the selected account changes', () => {
@@ -929,7 +995,7 @@ it('binds confirmation and contact actions to the queued recipient while queuein
   expect(recipientField.disabled).toBe(true)
   expect(screen.getByPlaceholderText('0.00').disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Choose an asset' }).disabled).toBe(true)
-  expect(screen.getByRole('button', { name: 'Choose contact' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Choose recipient' }).disabled).toBe(true)
   // Testing Library can dispatch an impossible browser change to a disabled field;
   // the receipt must still stay bound to the submitted snapshot.
   fireEvent.change(recipientField, { target: { value: secondRecipient } })

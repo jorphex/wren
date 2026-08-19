@@ -12,6 +12,7 @@ import { ExtensionCredentialsSchema } from './extensionCredential'
 import { OriginSchema } from './origin'
 import { OperationLifecyclesSchema } from './operationLifecycle'
 import { OutboundAddressMemorySchema } from './outboundAddressMemory'
+import { RecentRecipientUsesSchema } from './recentRecipients'
 import { DesktopAuthIdentitySchema } from '../../../api/desktopAuthIdentity'
 import { NativePeerCredentialsSchema } from './peerCredential'
 import { PermissionSchema } from './permission'
@@ -41,6 +42,10 @@ const PreferencesSchema = {
     .boolean()
     .default(true)
     .describe('Show privacy-safe terminal transaction notifications while Wren is hidden'),
+  rememberRecentRecipients: z
+    .boolean()
+    .default(false)
+    .describe('Store successful outbound recipients only on this device'),
   accountCloseLock: z
     .boolean()
     .default(false)
@@ -86,6 +91,7 @@ export const MainSchema = z.object({
   activity: ActivitySchema,
   operationLifecycles: OperationLifecyclesSchema,
   outboundAddressMemory: OutboundAddressMemorySchema,
+  recentRecipientUses: RecentRecipientUsesSchema,
   addressBook: AddressBookSchema,
   balances: z.record(z.string().describe('Address'), z.array(BalanceSchema)),
   dapps: z.record(z.string(), DappSchema),

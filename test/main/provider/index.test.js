@@ -24,6 +24,7 @@ import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { GasFeesSource } from '../../../resources/domain/transaction'
+import recentRecipientsRuntime from '../../../main/recentRecipients/runtime'
 import {
   TransactionFundingError,
   WalletCallFundingError,
@@ -125,7 +126,8 @@ beforeEach(() => {
         account: request.account,
         chainId: request.chainId,
         calls: request.calls,
-        preparation: request.preparation
+        preparation: request.preparation,
+        ...(request.managedSweep ? { managedSweep: request.managedSweep } : {})
       },
       responder
     }
@@ -1073,6 +1075,44 @@ describe('#wallet-call provider boundary', () => {
       admitted.handlerId,
       expect.objectContaining({ code: 4100 })
     )
+    authorized.mockRestore()
+  })
+
+  it('tracks the exact managed Sweep recipient against its durable operation before execution', async () => {
+    const sweepRecipient = '0x1111111111111111111111111111111111111111'
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.managedSweep = { recipient: sweepRecipient }
+    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
+    const forget = jest.spyOn(recentRecipientsRuntime, 'forget')
+    const authorized = jest.spyOn(provider, 'managedSweepOriginAuthorized').mockReturnValue(true)
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).resolves.toEqual(['0xhash'])
+
+    expect(track).toHaveBeenCalledWith({ operationId: request.activityId, address: sweepRecipient })
+    expect(forget).not.toHaveBeenCalled()
+    track.mockRestore()
+    forget.mockRestore()
+    authorized.mockRestore()
+  })
+
+  it('forgets a managed Sweep candidate when execution fails before any broadcast evidence', async () => {
+    const sweepRecipient = '0x1111111111111111111111111111111111111111'
+    const admitted = provider.sendWalletCalls(payload(), jest.fn())
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.managedSweep = { recipient: sweepRecipient }
+    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
+    const forget = jest.spyOn(recentRecipientsRuntime, 'forget')
+    const authorized = jest.spyOn(provider, 'managedSweepOriginAuthorized').mockReturnValue(true)
+    executeWalletCallRuntime.mockRejectedValueOnce(new Error('signing failed'))
+
+    await expect(provider.approveWalletCallsRequest(address, admitted.handlerId)).rejects.toThrow(
+      'signing failed'
+    )
+
+    expect(forget).toHaveBeenCalledWith(request.activityId)
+    track.mockRestore()
+    forget.mockRestore()
     authorized.mockRestore()
   })
 
@@ -3538,6 +3578,84 @@ describe('#send', () => {
           }
         },
         { nativeMax }
+      )
+    })
+
+    it('retains a normalized immutable recent-recipient snapshot for managed Wren Send', (done) => {
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      const recentRecipient = { address: tx.to.toUpperCase().replace('0X', '0x') }
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 10, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        () => {},
+        { type: 'ethereum', id: 1 },
+        () => {
+          try {
+            expect(accountRequests[0].recentRecipient).toEqual({ address: tx.to.toLowerCase() })
+            expect(accountRequests[0].recentRecipient).not.toBe(recentRecipient)
+            expect(Object.isFrozen(accountRequests[0].recentRecipient)).toBe(true)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { recentRecipient }
+      )
+    })
+
+    it('rejects recent-recipient metadata from a non-managed origin before review', (done) => {
+      provider.sendTransaction(
+        {
+          jsonrpc: '2.0',
+          id: 11,
+          method: 'eth_sendTransaction',
+          params: [tx],
+          _origin: defaultOriginId
+        },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/recent recipient.+exact managed Wren Send origin/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        { recentRecipient: { address: tx.to } }
+      )
+    })
+
+    it('rejects malformed recent-recipient metadata before asynchronous transaction preparation', (done) => {
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
+      store.set('main.origins', managedOrigin, {
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 12, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/invalid recent-recipient metadata/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        { recentRecipient: { address: 'not-an-address' } }
       )
     })
 

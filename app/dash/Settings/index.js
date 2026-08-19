@@ -88,6 +88,17 @@ const CompanionRevokeActions = styled.div`
   }
 `
 
+const RecentRecipientActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: var(--wren-space-3);
+
+  button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+`
+
 export class Settings extends Component {
   constructor(props, context) {
     super(props, context)
@@ -99,6 +110,10 @@ export class Settings extends Component {
     this.revokeNativeTriggerRefs = {}
     this.resetTriggerRef = createRef()
     this.resetCancelRef = createRef()
+    this.recentDisableTriggerRef = createRef()
+    this.recentDisableCancelRef = createRef()
+    this.recentClearTriggerRef = createRef()
+    this.recentClearCancelRef = createRef()
     this.state = {
       latticeEndpoint,
       latticeEndpointMode,
@@ -109,7 +124,10 @@ export class Settings extends Component {
       revokeCompanionError: '',
       revokeNativeConfirm: undefined,
       revokeNativePending: false,
-      revokeNativeError: ''
+      revokeNativeError: '',
+      recentDisableConfirm: false,
+      recentClearConfirm: false,
+      recentStatus: ''
     }
   }
 
@@ -121,6 +139,51 @@ export class Settings extends Component {
     this.mounted = false
     clearTimeout(this.instanceIdCopiedTimeout)
     clearTimeout(this.inputLatticeTimeout)
+  }
+
+  setRecentRecipients(enabled) {
+    if (enabled) {
+      link.send('tray:action', 'setRememberRecentRecipients', true)
+      this.setState({ recentDisableConfirm: false, recentClearConfirm: false, recentStatus: '' })
+      return
+    }
+    this.recentDisableTriggerRef.current = document.activeElement
+    this.setState({ recentDisableConfirm: true, recentClearConfirm: false, recentStatus: '' }, () =>
+      this.recentDisableCancelRef.current?.focus()
+    )
+  }
+
+  cancelRecentDisable() {
+    this.setState({ recentDisableConfirm: false }, () => this.recentDisableTriggerRef.current?.focus())
+  }
+
+  confirmRecentDisable() {
+    link.send('tray:action', 'setRememberRecentRecipients', false)
+    this.setState(
+      {
+        recentDisableConfirm: false,
+        recentClearConfirm: false,
+        recentStatus: 'Recent recipients turned off and cleared'
+      },
+      () => this.recentDisableTriggerRef.current?.focus()
+    )
+  }
+
+  armRecentClear() {
+    this.setState({ recentClearConfirm: true, recentDisableConfirm: false, recentStatus: '' }, () =>
+      this.recentClearCancelRef.current?.focus()
+    )
+  }
+
+  cancelRecentClear() {
+    this.setState({ recentClearConfirm: false }, () => this.recentClearTriggerRef.current?.focus())
+  }
+
+  confirmRecentClear() {
+    link.send('tray:action', 'clearRecentRecipients')
+    this.setState({ recentClearConfirm: false, recentStatus: 'Recent recipients cleared' }, () =>
+      this.recentClearTriggerRef.current?.focus()
+    )
   }
 
   appInfo() {
@@ -170,8 +233,8 @@ export class Settings extends Component {
             >
               <strong id='reset-app-title'>Reset Wren?</strong>
               <span>
-                This removes local accounts, signers, networks, contacts, custom tokens, permissions, and
-                settings from this device. This cannot be undone.
+                This removes local accounts, signers, networks, contacts, recent recipients, custom tokens,
+                permissions, and settings from this device. This cannot be undone.
               </span>
               <span className='appInfoLineResetConfirmButtons'>
                 <button
@@ -663,6 +726,125 @@ export class Settings extends Component {
                 />
               </div>
               <div className='signerPermissionDetails'>Choose when Wren relocks hot signers.</div>
+            </div>
+          </section>
+
+          <section className='wrenSettingsSection' aria-labelledby='wren-settings-privacy'>
+            <h2 id='wren-settings-privacy' className='wrenSettingsSectionTitle'>
+              Privacy
+            </h2>
+            <div className='signerPermission localSetting localSettingExplained recentRecipientsSetting'>
+              <div className='signerPermissionControls'>
+                <div className='signerPermissionSetting'>Recent recipients</div>
+                <Toggle
+                  checked={this.store('main.rememberRecentRecipients') === true}
+                  label='Save recent recipients'
+                  onChange={(enabled) => this.setRecentRecipients(enabled)}
+                />
+              </div>
+              <div className='signerPermissionDetails'>
+                Store canonical destinations from Wren Send and managed Sweep only after successful network
+                confirmation. Stored only on this device; never from incoming activity, indexers, chain
+                history, or dapp calls. Recent recipients are not included in backups.
+              </div>
+              {this.state.recentDisableConfirm ? (
+                <DialogSurface
+                  as={CompanionRevokeDialog}
+                  className='recentRecipientsDialog'
+                  role='alertdialog'
+                  modal={false}
+                  labelledBy='recent-recipients-disable-title'
+                  describedBy='recent-recipients-disable-body'
+                  initialFocusRef={this.recentDisableCancelRef}
+                  returnFocusRef={this.recentDisableTriggerRef}
+                  onCancel={() => this.cancelRecentDisable()}
+                >
+                  <CompanionRevokeTitle id='recent-recipients-disable-title'>
+                    Turn off and clear recent recipients?
+                  </CompanionRevokeTitle>
+                  <CompanionRevokeBody id='recent-recipients-disable-body'>
+                    This stops saving recent recipients and removes all stored recipients from this device.
+                    This cannot be undone. Saved contacts are not affected.
+                  </CompanionRevokeBody>
+                  <CompanionRevokeActions>
+                    <button
+                      type='button'
+                      ref={this.recentDisableCancelRef}
+                      className='wrenControl wrenControlGhost'
+                      onClick={() => this.cancelRecentDisable()}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type='button'
+                      className='wrenControl wrenControlDanger'
+                      onClick={() => this.confirmRecentDisable()}
+                    >
+                      Turn off and clear
+                    </button>
+                  </CompanionRevokeActions>
+                </DialogSurface>
+              ) : null}
+            </div>
+            <div className='signerPermission localSetting localSettingExplained recentRecipientsClear'>
+              <div className='signerPermissionControls'>
+                <div className='signerPermissionSetting'>Clear recent recipients</div>
+                <RecentRecipientActions>
+                  <button
+                    type='button'
+                    ref={this.recentClearTriggerRef}
+                    className='wrenControl wrenControlGhost'
+                    disabled={this.store('main.rememberRecentRecipients') !== true}
+                    onClick={() => this.armRecentClear()}
+                  >
+                    Clear
+                  </button>
+                </RecentRecipientActions>
+              </div>
+              <div className='signerPermissionDetails'>
+                Remove all recent recipients from this device. Saved contacts are not affected.
+              </div>
+              {this.state.recentClearConfirm ? (
+                <DialogSurface
+                  as={CompanionRevokeDialog}
+                  className='recentRecipientsDialog'
+                  role='alertdialog'
+                  modal={false}
+                  labelledBy='recent-recipients-clear-title'
+                  describedBy='recent-recipients-clear-body'
+                  initialFocusRef={this.recentClearCancelRef}
+                  returnFocusRef={this.recentClearTriggerRef}
+                  onCancel={() => this.cancelRecentClear()}
+                >
+                  <CompanionRevokeTitle id='recent-recipients-clear-title'>
+                    Clear recent recipients?
+                  </CompanionRevokeTitle>
+                  <CompanionRevokeBody id='recent-recipients-clear-body'>
+                    Remove all recent recipients from this device? This cannot be undone. Saved contacts are
+                    not affected.
+                  </CompanionRevokeBody>
+                  <CompanionRevokeActions>
+                    <button
+                      type='button'
+                      ref={this.recentClearCancelRef}
+                      className='wrenControl wrenControlGhost'
+                      onClick={() => this.cancelRecentClear()}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type='button'
+                      className='wrenControl wrenControlDanger'
+                      onClick={() => this.confirmRecentClear()}
+                    >
+                      Clear recipients
+                    </button>
+                  </CompanionRevokeActions>
+                </DialogSurface>
+              ) : null}
+            </div>
+            <div className='recentRecipientsStatus' role='status' aria-live='polite' aria-atomic='true'>
+              {this.state.recentStatus}
             </div>
           </section>
 

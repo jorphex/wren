@@ -12,6 +12,10 @@ const panelActions = require('../../../resources/store/actions.panel')
 const { isManagedPermission } = require('../../../resources/domain/permissions')
 const { pruneActivity } = require('../state/types/activity')
 const { recordOutboundAddresses } = require('../../addressSafety')
+const {
+  addRecentRecipientUse,
+  removeRecentRecipientUse
+} = require('../../../resources/domain/recentRecipients')
 const supportedNetworkTypes = ['ethereum']
 
 function switchChainForOrigins(origins, oldChainId, newChainId) {
@@ -275,9 +279,23 @@ module.exports = {
       recordOutboundAddresses(memory, instanceId, addresses, submittedAt)
     )
   },
+  recordRecentRecipientUse: (u, use) => {
+    u('main.recentRecipientUses', (uses = []) => addRecentRecipientUse(uses, use))
+  },
+  removeRecentRecipientUse: (u, operationId) => {
+    u('main.recentRecipientUses', (uses = []) => removeRecentRecipientUse(uses, operationId))
+  },
+  setRememberRecentRecipients: (u, value) => {
+    u('main.rememberRecentRecipients', () => Boolean(value))
+    if (!value) u('main.recentRecipientUses', () => [])
+  },
+  clearRecentRecipients: (u) => {
+    u('main.recentRecipientUses', () => [])
+  },
   clearActivity: (u) => {
     u('main.activity', () => [])
     u('main.outboundAddressMemory', () => ({}))
+    u('main.recentRecipientUses', () => [])
   },
   showAccountActivity: (u, account, activityId) => {
     const crumb = {

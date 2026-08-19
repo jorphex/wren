@@ -473,6 +473,7 @@ const main = async () => {
     return reply
   })
   for (const channel of [
+    'signers:protectionStatus',
     'send:resolveRecipient',
     'send:maxAmount',
     'send:queue',

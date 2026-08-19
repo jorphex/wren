@@ -40,6 +40,19 @@ test('allows only an argument-free activity clear action', () => {
   expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity', true]).success).toBe(false)
 })
 
+test('strictly validates recent-recipient renderer actions', () => {
+  expect(parse('event', 'tray:action', ['setRememberRecentRecipients', true])).toEqual([
+    'setRememberRecentRecipients',
+    true
+  ])
+  expect(parse('event', 'tray:action', ['clearRecentRecipients'])).toEqual(['clearRecentRecipients'])
+  expect(parseRendererIpcArgs('event', 'tray:action', ['setRememberRecentRecipients', 'true']).success).toBe(
+    false
+  )
+  expect(parseRendererIpcArgs('event', 'tray:action', ['clearRecentRecipients', true]).success).toBe(false)
+  expect(parseRendererIpcArgs('event', 'tray:action', ['recordRecentRecipientUse', {}]).success).toBe(false)
+})
+
 test('strictly validates dapp guardrail action payloads without renderer-owned metadata', () => {
   const target = '0x2222222222222222222222222222222222222222'
   const save = {

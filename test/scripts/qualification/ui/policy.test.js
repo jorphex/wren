@@ -300,12 +300,18 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
     ({ state, variant }) => state === 'address-book-list' && variant !== 'remove'
   )
   const contactEditors = scenarios.filter(({ state }) => state === 'address-book-editor')
+  const recipientPickers = scenarios.filter(({ state }) => state === 'send-recipient-picker')
+  const recentRecipientSettings = scenarios.filter(
+    ({ state, variant }) => state === 'settings-recent-recipients' && variant !== 'clear'
+  )
   const sendConfirmations = scenarios.filter(({ state }) => state === 'send-confirmed')
   const maxReviews = scenarios.filter(({ state }) => state === 'send-max-review')
   const sweepReviews = scenarios.filter(({ state }) => state === 'send-sweep-review')
 
   expect(contactLists).toHaveLength(6)
   expect(contactEditors).toHaveLength(6)
+  expect(recipientPickers).toHaveLength(6)
+  expect(recentRecipientSettings).toHaveLength(6)
   expect(sendConfirmations).toHaveLength(6)
   expect(maxReviews).toHaveLength(6)
   expect(sweepReviews).toHaveLength(6)
@@ -314,9 +320,16 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
     scale: 1.5,
     logicalHeight: 744
   })
+  expect(scenarios.find(({ id }) => id === 'dash-settings-recent-clear-short-1.5')).toMatchObject({
+    expectedInitialFocus: 'Cancel',
+    scale: 1.5,
+    logicalHeight: 744
+  })
   for (const scenario of [
     ...contactLists,
     ...contactEditors,
+    ...recipientPickers,
+    ...recentRecipientSettings,
     ...sendConfirmations,
     ...maxReviews,
     ...sweepReviews
@@ -331,6 +344,20 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   )
   expect(verified.provenance.verifiedAt).toBeLessThanOrEqual(verified.updatedAt)
   expect(verified.address).toBe('0x3333333333333333333333333333333333333333')
+
+  const recipientPickerState = fixtureFor(recipientPickers[0])
+  expect(recipientPickerState.main.rememberRecentRecipients).toBe(true)
+  expect(recipientPickerState.main.recentRecipientUses).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ address: '0x5555555555555555555555555555555555555555' })
+    ])
+  )
+  expect(recipientPickers[0].expectedInitialFocus).toBe('Search recipients')
+
+  expect(invokeReplyFor(recentRecipientSettings[0], 'signers:protectionStatus')).toMatchObject({
+    success: true,
+    status: { available: true, enabled: false }
+  })
 
   const sendScenario = sendConfirmations[0]
   expect(invokeReplyFor(sendScenario, 'send:resolveRecipient')).toEqual({

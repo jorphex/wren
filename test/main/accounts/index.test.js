@@ -19,7 +19,9 @@ import { computeAddress, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import operationLifecycleLedger from '../../../main/operationLifecycle'
+import operationLifecycleRuntime from '../../../main/operationLifecycle/runtime'
 import { observeOperationLifecycles } from '../../../main/operationLifecycle/events'
+import recentRecipientsRuntime from '../../../main/recentRecipients/runtime'
 import { OperationLifecycleProjection } from '../../../main/operationLifecycle/projection'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../../../main/store/state/types/operationLifecycle'
 import {
@@ -2175,6 +2177,35 @@ describe('#removeRequest', () => {
 })
 
 describe('ordinary transaction lifecycle outcomes', () => {
+  it('registers Wren Send recipient metadata only after its broadcast lifecycle is persisted', async () => {
+    const targetAccount = Accounts.current()
+    const hash = `0x${'a'.repeat(64)}`
+    Accounts.addRequest(request)
+    const target = targetAccount.getRequest(request.handlerId)
+    target.recentRecipient = { address: `0x${'2'.repeat(40)}` }
+    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
+    const reconcile = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+
+    try {
+      await Accounts.txMonitor(targetAccount, target.handlerId, hash)
+
+      expect(operationLifecycleLedger.get(target.activityId)).toMatchObject({
+        id: target.activityId,
+        state: 'submitted',
+        transaction: { hash }
+      })
+      expect(track).toHaveBeenCalledWith({
+        operationId: target.activityId,
+        address: target.recentRecipient.address
+      })
+      expect(reconcile).toHaveBeenCalledWith(target.activityId)
+    } finally {
+      operationLifecycleLedger.remove(target.activityId, -1)
+      track.mockRestore()
+      reconcile.mockRestore()
+    }
+  })
+
   it('confirms on the first canonical receipt and cancels stale cleanup when that receipt reorgs', () => {
     jest.useFakeTimers()
     const targetAccount = Accounts.current()
@@ -2978,6 +3009,7 @@ describe('#replaceTx', () => {
       simulation: { status: 'succeeded' },
       feesUpdatedByUser: false
     }
+    original.recentRecipient = { address: `0x${'2'.repeat(40)}` }
     current.requests[original.handlerId] = original
     const now = Date.now()
     operationLifecycleLedger.put(
@@ -3043,7 +3075,7 @@ describe('#replaceTx', () => {
 
     await expect(Accounts.replaceTx(current.id, original.handlerId, 'speed')).resolves.toBeUndefined()
 
-    const [payload, , chain] = provider.sendTransaction.mock.calls[0]
+    const [payload, , chain, , trustedMetadata] = provider.sendTransaction.mock.calls[0]
     expect(chain).toEqual({ type: 'ethereum', id: 1 })
     expect(payload._origin).toBe(original.origin)
     expect(payload.params[0]).toMatchObject({
@@ -3062,6 +3094,7 @@ describe('#replaceTx', () => {
       originalActivityId: activityId,
       originalHash
     })
+    expect(trustedMetadata.recentRecipient).toBe(original.recentRecipient)
   })
 
   it('queues a legacy cancel as a reviewed self-transfer using the original origin', async () => {
@@ -3083,6 +3116,7 @@ describe('#replaceTx', () => {
       data: '0x'
     })
     expect(current.requests['replacement-0x0'].replacement.kind).toBe('cancel')
+    expect(provider.sendTransaction.mock.calls[0][4]).not.toHaveProperty('recentRecipient')
   })
 
   it('fails closed when the original is included before replacement admission', async () => {

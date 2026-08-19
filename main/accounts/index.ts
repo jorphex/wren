@@ -74,6 +74,7 @@ import { operationLifecycleRpc } from '../operationLifecycle/rpc'
 import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
+import recentRecipientsRuntime from '../recentRecipients/runtime'
 import { transactionOutboundTargets } from '../addressSafety'
 import {
   isTransactionFundingError,
@@ -1571,7 +1572,12 @@ export class Accounts extends EventEmitter {
             currentAccount.update()
             resolve()
           },
-          { replacement }
+          {
+            replacement,
+            ...(type === ReplacementType.Speed && original.recentRecipient
+              ? { recentRecipient: original.recentRecipient }
+              : {})
+          }
         )
       })
     } finally {
@@ -1600,6 +1606,12 @@ export class Accounts extends EventEmitter {
     account.update()
     const operation = this.operationForTransaction(txRequest, hash)
     this.persistOperationLifecycle(operation)
+    if (txRequest.recentRecipient) {
+      recentRecipientsRuntime.track({
+        operationId: operation.id,
+        address: txRequest.recentRecipient.address
+      })
+    }
     await operationLifecycleRuntime.reconcile(operation.id)
   }
 

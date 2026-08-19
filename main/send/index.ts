@@ -200,7 +200,10 @@ async function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }
             requireStoreAction('setDash')({ showing: true })
             resolve({ success: true, handlerId })
           },
-          maxValidation ? ({ nativeMax: maxValidation.metadata } as never) : undefined
+          {
+            recentRecipient: Object.freeze({ address: getAddress(draft.recipient).toLowerCase() }),
+            ...(maxValidation ? { nativeMax: maxValidation.metadata } : {})
+          }
         )
       } catch (error) {
         if (maxQuoteId) nativeMaxQuotes.queueFailed(maxQuoteId)

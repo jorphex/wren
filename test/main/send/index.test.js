@@ -109,8 +109,8 @@ it.each([
   })
 })
 
-it('queues a validated native transfer through the existing provider request pipeline', async () => {
-  provider.sendTransaction.mockImplementation((payload, response, chain, onQueued) => {
+it('queues a validated native transfer with immutable recipient metadata', async () => {
+  provider.sendTransaction.mockImplementation((payload, response, chain, onQueued, metadata) => {
     expect(chain).toEqual({ type: 'ethereum', id: 1 })
     expect(payload).toEqual(
       expect.objectContaining({
@@ -127,6 +127,8 @@ it('queues a validated native transfer through the existing provider request pip
         ]
       })
     )
+    expect(metadata.recentRecipient).toEqual({ address: recipient })
+    expect(Object.isFrozen(metadata.recentRecipient)).toBe(true)
     onQueued('send-handler')
   })
 
@@ -255,6 +257,7 @@ it('binds a reviewed Max quote to the queued transaction and trusted metadata', 
         evidence: expect.objectContaining({ nonce: '0x5' })
       })
     )
+    expect(metadata.recentRecipient).toEqual({ address: recipient })
     onQueued('max-handler')
   })
 
