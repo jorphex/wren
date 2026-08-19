@@ -751,6 +751,47 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
   expect(quoteSweep).toHaveBeenCalledTimes(1)
 })
 
+it('uses the shared network field and selects all available assets within one Sweep', () => {
+  renderSend()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  const network = screen.getByLabelText('Network')
+  expect(network.classList.contains('wrenInput')).toBe(true)
+  fireEvent.change(network, { target: { value: '8453' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+
+  expect(screen.getByRole('checkbox', { name: /USDC/ }).checked).toBe(true)
+  expect(screen.getByText(/1 selected · 16 per sweep/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Clear selection' })).toBeTruthy()
+})
+
+it('makes the authoritative 16-call Sweep limit explicit when more assets are available', () => {
+  renderSend((state) => {
+    for (let index = 0; index < 17; index += 1) {
+      const address = `0x${String(index + 16).padStart(40, '0')}`
+      state.main.balances[account].push({
+        address,
+        balance: '0x1',
+        chainId: 8453,
+        decimals: 18,
+        displayBalance: '1.00',
+        name: `Token ${index + 1}`,
+        symbol: `T${index + 1}`
+      })
+    }
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Sweep assets' }))
+  fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Select first 16' }))
+
+  const choices = screen.getAllByRole('checkbox')
+  expect(choices.filter((choice) => choice.checked)).toHaveLength(16)
+  expect(choices.filter((choice) => !choice.checked).every((choice) => choice.disabled)).toBe(true)
+  expect(screen.getByText(/16 selected · 16 per sweep/)).toBeTruthy()
+})
+
 it('clears a consumed Sweep review after any queue failure', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   quoteSweep.mockResolvedValue({

@@ -431,12 +431,12 @@ export class AddressBook extends React.Component {
     return (
       <div className='addressBook cardShow'>
         <div className='addressBookToolbar'>
-          <label className='addressBookSearch'>
+          <label className='addressBookSearch wrenInputGroup'>
             <Icon name='search' size={15} />
             <input
               ref={this.searchRef}
               aria-label='Search contacts'
-              className='wrenInput wrenInputQuiet'
+              className='wrenInput'
               onChange={(event) => {
                 clearTimeout(this.statusTimer)
                 this.dismissRemoveConfirmation()

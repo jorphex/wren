@@ -130,7 +130,7 @@ export class AccountSelector extends React.Component {
         <div className='panelFilterInput'>
           <input
             aria-label='Filter accounts'
-            className='wrenInput wrenInputQuiet'
+            className='wrenInput'
             spellCheck='false'
             onChange={(e) => {
               const value = e.target.value

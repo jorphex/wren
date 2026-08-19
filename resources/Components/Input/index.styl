@@ -42,6 +42,17 @@ select.wrenInput
     cursor default
     opacity .7
 
+select.wrenInput
+  color-scheme dark
+
+  option
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+
+  option:checked
+    color var(--wren-text-inverse)
+    background var(--wren-accent-primary)
+
 input.wrenInputQuiet,
 textarea.wrenInputQuiet,
 select.wrenInputQuiet

@@ -654,6 +654,26 @@ export class Send extends React.Component {
     })
   }
 
+  selectSweepAssets(tokens, native) {
+    this.sweepQuoteSequence += 1
+    this.setState((state) => {
+      const selectedCount = state.sweepSelected.length + (state.sweepIncludeNative ? 1 : 0)
+      const availableCount = tokens.length + (native ? 1 : 0)
+      const targetCount = Math.min(availableCount, MAX_SWEEP_ASSETS)
+      const clear = selectedCount === targetCount
+      const selectedTokens = clear ? [] : tokens.slice(0, MAX_SWEEP_ASSETS).map(assetKey)
+      const includeNative = !clear && Boolean(native) && selectedTokens.length < MAX_SWEEP_ASSETS
+      return {
+        queueError: '',
+        sweepIncludeNative: includeNative,
+        sweepQuote: null,
+        sweepReview: false,
+        sweepSelected: selectedTokens,
+        sweepStatus: 'idle'
+      }
+    })
+  }
+
   async reviewSweep(event, context) {
     event.preventDefault()
     const { account, assets } = context
@@ -812,12 +832,12 @@ export class Send extends React.Component {
     )
     return (
       <section className='sendPicker cardShow' aria-label={COPY.chooseAsset}>
-        <div className='sendPickerSearch'>
+        <div className='sendPickerSearch wrenInputGroup'>
           <Icon name='search' size={15} />
           <input
             autoFocus
             aria-label='Search assets'
-            className='wrenInput wrenInputQuiet'
+            className='wrenInput'
             onChange={(event) => this.setState({ assetFilter: event.target.value })}
             placeholder={COPY.searchAssets}
             value={this.state.assetFilter}
@@ -912,12 +932,12 @@ export class Send extends React.Component {
 
     return (
       <section className='sendPicker sendContactPicker cardShow' aria-label={COPY.chooseAContact}>
-        <div className='sendPickerSearch'>
+        <div className='sendPickerSearch wrenInputGroup'>
           <Icon name='search' size={15} />
           <input
             autoFocus
             aria-label='Search recipients'
-            className='wrenInput wrenInputQuiet'
+            className='wrenInput'
             onChange={(event) => this.setState({ contactFilter: event.target.value })}
             placeholder={COPY.searchContacts}
             value={this.state.contactFilter}
@@ -1255,7 +1275,7 @@ export class Send extends React.Component {
           </label>
           <div className='dropdownWrap'>
             <select
-              className='dropdown'
+              className='dropdown wrenInput'
               disabled={busy}
               id='send-sweep-chain'
               onChange={(event) => this.setSweepChain(event.target.value)}
@@ -1273,12 +1293,26 @@ export class Send extends React.Component {
           <div>
             <strong>Select positive balances</strong>
             <span>
-              {selectedCount}/{MAX_SWEEP_ASSETS} selected · one network per sweep
+              {selectedCount} selected · {MAX_SWEEP_ASSETS} per sweep · one network
             </span>
           </div>
-          {this.state.sweepStatus === 'loading' ? (
-            <span aria-live='polite'>Scanning fresh balances…</span>
-          ) : null}
+          <div className='sendSweepHeaderActions'>
+            {this.state.sweepStatus === 'loading' ? (
+              <span aria-live='polite'>Scanning fresh balances…</span>
+            ) : null}
+            <button
+              className='sendSweepSelectAll wrenControl wrenControlGhost wrenControlCompact'
+              disabled={busy || (tokens.length === 0 && !native)}
+              onClick={() => this.selectSweepAssets(tokens, native)}
+              type='button'
+            >
+              {selectedCount === Math.min(tokens.length + (native ? 1 : 0), MAX_SWEEP_ASSETS)
+                ? 'Clear selection'
+                : tokens.length + (native ? 1 : 0) > MAX_SWEEP_ASSETS
+                  ? `Select first ${MAX_SWEEP_ASSETS}`
+                  : 'Select all'}
+            </button>
+          </div>
         </div>
         <div aria-label='Select sweep assets' className='sendSweepAssets' role='group'>
           {tokens.map((asset) => {

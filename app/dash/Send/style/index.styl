@@ -399,11 +399,15 @@
   .dropdownWrap
     height 44px
 
-  .dropdown
+  .dropdown.wrenInput
     width 100%
     min-height 44px
     height 44px
-    background-position calc(100% - 16px) 19px, calc(100% - 11px) 19px
+    padding-right 36px
+    background-image linear-gradient(45deg, transparent 50%, var(--wren-text-tertiary) 50%), linear-gradient(135deg, var(--wren-text-tertiary) 50%, transparent 50%), linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
+    background-position calc(100% - 16px) 19px, calc(100% - 11px) 19px, 0 0
+    background-repeat no-repeat
+    background-size 5px 5px, 5px 5px, auto
 
 .sendSweepHeader
   display flex
@@ -423,6 +427,16 @@
   span
     color var(--wren-text-muted)
     font-size var(--wren-type-caption)
+
+.sendSweepHeaderActions
+  display flex
+  flex none
+  align-items flex-end
+  gap var(--wren-space-2)
+
+button.sendSweepSelectAll.wrenControl
+  min-width max-content
+  color var(--wren-text-secondary)
 
 .sendSweepAssets
   display flex
