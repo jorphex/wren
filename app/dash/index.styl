@@ -375,7 +375,6 @@ button,
     .dashMainScroll
       border-radius 0
       overflow-y auto
-      scrollbar-gutter stable both-edges
 
     .dashMainOverlay
       display none
@@ -532,6 +531,7 @@ button,
   > .dashFooter
     opacity 0
     transition none
+    animation wrenShellContentRevealFallback 0s linear 700ms forwards
 
 .workspace-content-concealing .dash
   background transparent
@@ -541,6 +541,13 @@ button,
   > .dashFooter
     opacity 0
     transition-duration var(--wren-motion-standard)
+
+// Renderer-side opening failsafe: a missed prepared-state reveal must not
+// leave a visible workspace blank. Conceal remains fail-closed until main hides
+// the native window or sends an explicit reveal.
+@keyframes wrenShellContentRevealFallback
+  to
+    opacity 1
 
 // Wren account chooser
 .dash .dashMain .addAccounts

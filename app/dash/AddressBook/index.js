@@ -206,7 +206,7 @@ export class AddressBookEditor extends React.Component {
           </label>
 
           <fieldset className='addressBookProvenanceField'>
-            <legend>Contact provenance</legend>
+            <legend>Address check</legend>
             <div className='addressBookProvenanceOptions'>
               <label>
                 <input
@@ -217,7 +217,7 @@ export class AddressBookEditor extends React.Component {
                   type='radio'
                   value='saved'
                 />
-                <span>Saved</span>
+                <span>Saved only</span>
               </label>
               <label>
                 <input
@@ -228,20 +228,20 @@ export class AddressBookEditor extends React.Component {
                   type='radio'
                   value='verified-out-of-band'
                 />
-                <span>Verified out of band</span>
+                <span>Checked outside Wren</span>
               </label>
             </div>
             <small>
               {clearsVerification
-                ? 'Saving as Saved clears the existing verification date and note.'
+                ? 'Saving as Saved only clears the check date and note.'
                 : this.state.provenanceStatus === 'verified-out-of-band'
-                  ? 'You checked this address elsewhere. Always verify the full address before signing.'
-                  : 'A label you assigned locally. It does not verify this address.'}
+                  ? 'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
+                  : 'Wren stores your label. Wren does not verify this address.'}
             </small>
             {this.state.provenanceStatus === 'verified-out-of-band' ? (
               <label className='addressBookField addressBookVerificationNote'>
                 <span>
-                  Verification note <small>optional</small>
+                  Check note <small>optional</small>
                 </span>
                 <textarea
                   aria-describedby='addressBookVerificationCount'
@@ -257,7 +257,7 @@ export class AddressBookEditor extends React.Component {
               </label>
             ) : null}
             {this.props.entry?.provenance?.status === 'verified-out-of-band' ? (
-              <small>{`Last marked verified ${verifiedDate(this.props.entry)}`}</small>
+              <small>{`Checked ${verifiedDate(this.props.entry)}`}</small>
             ) : null}
           </fieldset>
 
@@ -447,13 +447,6 @@ export class AddressBook extends React.Component {
               value={this.state.filter}
             />
           </label>
-          <button
-            className='wrenControl wrenControlSecondary'
-            onClick={() => this.openEditor()}
-            type='button'
-          >
-            Add
-          </button>
         </div>
 
         {entries.length ? (
@@ -507,19 +500,16 @@ export class AddressBook extends React.Component {
                     <span className='addressBookIdentity'>
                       <strong>{entry.name}</strong>
                       <span className='addressBookAddress'>{entry.address}</span>
-                      <span className='addressBookProvenance'>
-                        <span className='addressBookProvenanceBadge'>
-                          {entry.provenance.status === 'verified-out-of-band'
-                            ? 'Verified out of band'
-                            : 'Saved'}
-                        </span>
-                        {entry.provenance.status === 'verified-out-of-band' ? (
-                          <span>{verifiedDate(entry)}</span>
-                        ) : null}
-                      </span>
                       {entry.note ? <span className='addressBookNote'>{entry.note}</span> : null}
-                      {entry.provenance.status === 'verified-out-of-band' && entry.provenance.note ? (
-                        <span className='addressBookVerificationSummary'>{entry.provenance.note}</span>
+                      {entry.provenance.status === 'verified-out-of-band' ? (
+                        <span
+                          className='addressBookVerificationSummary'
+                          title={entry.provenance.note || undefined}
+                        >
+                          {`Checked ${verifiedDate(entry)}${
+                            entry.provenance.note ? ` · ${entry.provenance.note}` : ''
+                          }`}
+                        </span>
                       ) : null}
                     </span>
                   </button>
@@ -586,6 +576,11 @@ export class AddressBook extends React.Component {
             {this.state.status}
           </div>
         ) : null}
+        <div className='addressBookAddAction'>
+          <button className='wrenControl wrenControlPrimary' onClick={() => this.openEditor()} type='button'>
+            Add contact
+          </button>
+        </div>
       </div>
     )
   }

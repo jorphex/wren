@@ -18,10 +18,21 @@ const ARRAY_SUFFIX = /\[(?:|[1-9][0-9]{0,5})\]$/
 const INTEGER_TYPE =
   /^(?:u?int)(?:8|16|24|32|40|48|56|64|72|80|88|96|104|112|120|128|136|144|152|160|168|176|184|192|200|208|216|224|232|240|248|256)$/
 const BYTES_TYPE = /^bytes(?:[1-9]|[12][0-9]|3[0-2])$/
+const DECIMAL_CHAIN_ID = /^[1-9][0-9]*$/
+const HEX_CHAIN_ID = /^0x[1-9a-fA-F][0-9a-fA-F]*$/
+const MAX_SAFE_CHAIN_ID = BigInt(Number.MAX_SAFE_INTEGER)
+
+function parseCanonicalChainContext(value: unknown): bigint | undefined {
+  if (typeof value !== 'string' || (!DECIMAL_CHAIN_ID.test(value) && !HEX_CHAIN_ID.test(value))) {
+    return
+  }
+  return BigInt(value)
+}
 
 const inputText = z.string().min(1).max(MAX_INSPECTOR_INPUT_BYTES)
 const address = z.string().regex(ADDRESS)
 const quantity = z.string().refine((value) => parseRpcQuantity(value) !== undefined, 'Invalid RPC quantity')
+const chainContext = z.string().min(1).max(80)
 const CalldataInputSchema = z
   .object({
     kind: z.literal('calldata'),
@@ -30,7 +41,7 @@ const CalldataInputSchema = z
       .min(2)
       .max(MAX_INSPECTOR_CALLDATA_BYTES * 2 + 2)
       .regex(DATA),
-    chainId: quantity.optional(),
+    chainId: chainContext.optional(),
     from: address.optional(),
     to: address.optional(),
     value: quantity.optional()
@@ -44,11 +55,11 @@ export const InspectorInputSchema = z.discriminatedUnion('kind', [
     .object({
       kind: z.literal('typed-data'),
       input: inputText,
-      chainId: quantity.optional(),
+      chainId: chainContext.optional(),
       version: z.enum(['V3', 'V4']).optional()
     })
     .strict(),
-  z.object({ kind: z.literal('json-rpc'), input: inputText, chainId: quantity.optional() }).strict()
+  z.object({ kind: z.literal('json-rpc'), input: inputText, chainId: chainContext.optional() }).strict()
 ])
 
 export type InspectorInput = z.infer<typeof InspectorInputSchema>
@@ -220,9 +231,21 @@ function normalizeData(value: unknown, label: string, required = false): string 
 }
 
 function normalizeChainContext(value: unknown, label: string): string | undefined {
+  if (value === undefined) return
+  const parsed = parseCanonicalChainContext(value)
+  if (parsed === undefined) {
+    throw new Error(`${label} must be a canonical positive decimal or hexadecimal integer`)
+  }
+  if (parsed > MAX_SAFE_CHAIN_ID) {
+    throw new Error(`${label} exceeds the supported safe-integer range`)
+  }
+  return toRpcQuantity(parsed)
+}
+
+function normalizeEmbeddedChainId(value: unknown, label: string): string | undefined {
   const chainId = normalizeQuantity(value, label)
   if (chainId === '0x0') throw new Error(`${label} must be positive`)
-  if (chainId && BigInt(chainId) > BigInt(Number.MAX_SAFE_INTEGER)) {
+  if (chainId && BigInt(chainId) > MAX_SAFE_CHAIN_ID) {
     throw new Error(`${label} exceeds the supported safe-integer range`)
   }
   return chainId
@@ -282,7 +305,7 @@ export function parseUnsignedTransaction(value: unknown, suppliedChainId?: strin
   }
   if (type === '0x2' && gasPrice) throw new Error('Type-2 transactions cannot contain gasPrice')
 
-  const embeddedChainId = normalizeChainContext(value.chainId, 'chainId')
+  const embeddedChainId = normalizeEmbeddedChainId(value.chainId, 'chainId')
   const requestedChainId = suppliedChainId
     ? normalizeChainContext(suppliedChainId, 'inspector chainId')
     : undefined

@@ -37,6 +37,7 @@ it('states its non-signing safety contract and focuses the local editor', () => 
 
   expect(screen.getByRole('heading', { name: 'Read-only inspector' })).toBeTruthy()
   expect(screen.getByText('Never signs or broadcasts')).toBeTruthy()
+  expect(screen.getByLabelText('Unsigned transaction JSON').classList.contains('wrenInput')).toBe(true)
   expect(document.activeElement).toBe(screen.getByLabelText('Unsigned transaction JSON'))
   expect(screen.getByRole('button', { name: 'Inspect read-only' }).disabled).toBe(true)
 })
@@ -59,6 +60,9 @@ it('sends the strict transaction request and renders evidence without a commit a
       'The pasted JSON-RPC method or envelope was not forwarded or used to sign, broadcast, or queue. When shown, configured-RPC evidence may use the disclosed transaction fields above.'
     )
   ).toBeTruthy()
+  expect(screen.getByText('Method')).toBeTruthy()
+  expect(screen.getByText('Arguments')).toBeTruthy()
+  expect(screen.getByText('transfer(address,uint256)')).toBeTruthy()
   expect(screen.queryByRole('button', { name: /^(sign|send|broadcast)/i })).toBeNull()
 })
 
@@ -113,6 +117,35 @@ it('sends only populated calldata context fields', async () => {
     data: '0x1234',
     chainId: '0x1',
     to: '0x2222222222222222222222222222222222222222'
+  })
+})
+
+it('accepts decimal chain context without rewriting it in the renderer', async () => {
+  const { user } = render(<Inspector />)
+  await user.click(screen.getByRole('tab', { name: 'Calldata' }))
+  expect(screen.getByPlaceholderText('1 or 0x1')).toBeTruthy()
+  await user.type(screen.getByRole('textbox', { name: 'Calldata' }), '0x1234')
+  await user.type(screen.getByLabelText(/Chain ID/), '1')
+  await user.click(screen.getByRole('button', { name: 'Inspect read-only' }))
+
+  expect(link.invoke).toHaveBeenCalledWith('inspector:inspect', {
+    kind: 'calldata',
+    data: '0x1234',
+    chainId: '1'
+  })
+})
+
+it('does not trim invalid whitespace from chain context before validation', async () => {
+  const { user } = render(<Inspector />)
+  await user.click(screen.getByRole('tab', { name: 'Calldata' }))
+  await user.type(screen.getByRole('textbox', { name: 'Calldata' }), '0x1234')
+  fireEvent.change(screen.getByLabelText(/Chain ID/), { target: { value: ' 1' } })
+  await user.click(screen.getByRole('button', { name: 'Inspect read-only' }))
+
+  expect(link.invoke).toHaveBeenCalledWith('inspector:inspect', {
+    kind: 'calldata',
+    data: '0x1234',
+    chainId: ' 1'
   })
 })
 
@@ -289,6 +322,34 @@ it('renders bounded simulation evidence instead of only its availability status'
   expect(screen.getByText('Allowance is too low')).toBeTruthy()
   expect(screen.getByText(/"type": "approval"/)).toBeTruthy()
   expect(screen.getByText(/"role": "target"/)).toBeTruthy()
+})
+
+it('renders unknown selectors without empty method or argument rows', async () => {
+  link.invoke.mockResolvedValueOnce({
+    success: true,
+    inspection: {
+      ...inspection,
+      decode: {
+        status: 'unknown',
+        source: 'bundled-standard-abi',
+        selector: '0x12345678',
+        reason: "Selector is not in Wren's bundled standard ABI set"
+      }
+    }
+  })
+  const { user } = render(<Inspector />)
+  fireEvent.change(screen.getByLabelText('Unsigned transaction JSON'), { target: { value: '{}' } })
+  await user.click(screen.getByRole('button', { name: 'Inspect read-only' }))
+
+  expect(await screen.findByText('Unknown function')).toBeTruthy()
+  expect(
+    screen.getByText(
+      'Wren could not decode selector 0x12345678 with its bundled local ABI set. Wren does not guess a function or use a remote ABI lookup.'
+    )
+  ).toBeTruthy()
+  expect(screen.getByText('0x12345678')).toBeTruthy()
+  expect(screen.queryByText('Method')).toBeNull()
+  expect(screen.queryByText('Arguments')).toBeNull()
 })
 
 it('renders exact typed data, domain, risks, and recognized authority', async () => {

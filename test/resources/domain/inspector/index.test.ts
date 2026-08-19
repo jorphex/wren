@@ -129,6 +129,47 @@ test('normalizes explicit calldata context while allowing honestly missing conte
   )
 })
 
+test.each([
+  ['1', '0x1'],
+  ['10', '0xa'],
+  ['0x1', '0x1'],
+  ['0xA', '0xa']
+])('normalizes canonical decimal or hexadecimal chain context %s', (chainId, expected) => {
+  expect(parseInspectorInput({ kind: 'calldata', data: '0x', chainId })).toMatchObject({
+    context: { chainId: expected }
+  })
+  expect(
+    parseInspectorInput({ kind: 'typed-data', input: JSON.stringify(typedData()), chainId })
+  ).toMatchObject({ chainId: expected })
+  expect(
+    parseInspectorInput({
+      kind: 'json-rpc',
+      input: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{}] }),
+      chainId
+    })
+  ).toMatchObject({ transaction: { chainId: expected } })
+})
+
+test.each([
+  '0',
+  '00',
+  '01',
+  '+1',
+  '-1',
+  ' 1',
+  '1 ',
+  '1.0',
+  '0x0',
+  '0x00',
+  '0x01',
+  '0X1',
+  '0xg',
+  '9007199254740992',
+  '0x20000000000000'
+])('rejects invalid or unsafe chain context %s', (chainId) => {
+  expect(() => parseInspectorInput({ kind: 'calldata', data: '0x', chainId })).toThrow()
+})
+
 test('reuses production EIP-712 validation and keeps request-chain context separate from domain evidence', () => {
   const domainOnly = parseInspectorInput({ kind: 'typed-data', input: JSON.stringify(typedData(1)) })
   expect(domainOnly).not.toHaveProperty('chainId')

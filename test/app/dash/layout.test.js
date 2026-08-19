@@ -7,10 +7,18 @@ const earnStyle = fs.readFileSync('app/dash/Earn/style/index.styl', 'utf8')
 const mainStyle = fs.readFileSync('app/dash/Main/style/index.styl', 'utf8')
 const settingsStyle = fs.readFileSync('app/dash/Settings/style/index.styl', 'utf8')
 const addressBookStyle = fs.readFileSync('app/dash/AddressBook/style/index.styl', 'utf8')
+const tokenStyle = fs.readFileSync('app/dash/Tokens/CustomTokens/style/index.styl', 'utf8')
+const chainEditorStyle = fs.readFileSync('app/dash/Chains/Chain/style/index.styl', 'utf8')
+const sendStyle = fs.readFileSync('app/dash/Send/style/index.styl', 'utf8')
 const dashStyle = fs.readFileSync('app/dash/index.styl', 'utf8')
 const chainsStyle = fs.readFileSync('app/dash/Chains/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/dash/Signer/style/index.styl', 'utf8')
+const signerStatusStyle = fs.readFileSync('app/dash/Signer/SignerStatus/style/index.styl', 'utf8')
 const accountAddStyle = fs.readFileSync('app/dash/Accounts/Add/style/index.styl', 'utf8')
+const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf8')
+const badgeStyle = fs.readFileSync('app/tray/Badge/style/index.styl', 'utf8')
+const txApprovalStyle = fs.readFileSync('app/tray/Footer/RequestCommand/TxApproval/style/index.styl', 'utf8')
+const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
@@ -49,9 +57,7 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
     /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/
   )
   expect(dashStyle).toMatch(/\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?overflow-y auto/)
-  expect(dashStyle).toMatch(
-    /\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?scrollbar-gutter stable both-edges/
-  )
+  expect(dashStyle).not.toMatch(/scrollbar-gutter stable both-edges/)
 })
 
 test('keeps disabled semantic controls visually neutral', () => {
@@ -95,6 +101,47 @@ test('groups chooser, settings, and networks with spacing instead of decorative 
   expect(settingsStyle).toMatch(/\.recoveryPanel[\s\S]*?border-radius 2px/)
   expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-2\)/)
   expect(chainsStyle).toMatch(/\.networkBreak[\s\S]*?margin-top var\(--wren-space-5\)/)
+})
+
+test('keeps network editors on the shared wallet canvas', () => {
+  expect(chainEditorStyle).toMatch(/\.networkEditor[\s\S]*?background transparent/)
+  expect(chainEditorStyle).not.toMatch(/\.networkEditor[\s\S]{0,260}?background var\(--wren-bg-canvas\)/)
+  expect(chainEditorStyle).not.toMatch(/\.networkEditorBody[\s\S]{0,260}?background-image/)
+})
+
+test('keeps contact and token list entrances separator-free and contacts compact', () => {
+  expect(addressBookStyle).toMatch(/\.addressBookRow[\s\S]*?min-height 82px/)
+  expect(addressBookStyle).toMatch(
+    /\.addressBookAddAction[\s\S]*?justify-content flex-end[\s\S]*?min-width 132px/
+  )
+  expect(addressBookStyle).not.toMatch(/\.addressBookList[\s\S]{0,140}?border-top/)
+  expect(tokenStyle).not.toMatch(/\.customTokensList[\s\S]{0,140}?border-top/)
+})
+
+test('wraps RPC warning prose at word boundaries while containing technical tokens', () => {
+  expect(txApprovalStyle).toMatch(
+    /\.approveTransactionWarningBody[\s\S]*?overflow-wrap anywhere[\s\S]*?word-break normal/
+  )
+  expect(txApprovalStyle).not.toContain('word-break break-all')
+})
+
+test('uses whole-surface selection feedback without directional side accents', () => {
+  expect(sendStyle).not.toMatch(/inset\s+\d+px\s+0\s+0/)
+  expect(sendStyle).toMatch(
+    /\.sendSweepAssets[\s\S]*?> label[\s\S]*?border 0[\s\S]*?border-radius 0[\s\S]*?&\.sendSweepAssetSelected[\s\S]*?background var\(--wren-ledger-selected\)[\s\S]*?box-shadow none/
+  )
+  expect(sendStyle).toMatch(
+    /&\.sendAssetOptionSelected[\s\S]*?background var\(--wren-ledger-selected\)[\s\S]*?box-shadow var\(--wren-shadow-inset\)/
+  )
+})
+
+test('matches update dialogs to the account QR surface tokens', () => {
+  for (const style of [accountStyle, badgeStyle]) {
+    expect(style).toMatch(/border-radius var\(--wren-radius-md\)/)
+    expect(style).toMatch(/background-color var\(--wren-bg-elevated\)/)
+    expect(style).toMatch(/background-image var\(--wren-control-texture-dark\)/)
+    expect(style).toMatch(/box-shadow var\(--wren-shadow-lg\), var\(--wren-shadow-inset\)/)
+  }
 })
 
 test('keeps account chooser and setup routes on the shared dashboard canvas', () => {
@@ -165,6 +212,32 @@ test('keeps the Trezor PIN submit action in the Wren control language', () => {
     /\.signerPinSubmit[\s\S]*?min-height 44px[\s\S]*?border-radius var\(--wren-radius-sm\)[\s\S]*?font-weight 550[\s\S]*?text-transform none[\s\S]*?&:disabled[\s\S]*?color var\(--wren-text-muted\)[\s\S]*?opacity 1/
   )
   expect(signerStyle).not.toMatch(/\.signerPinSubmit[\s\S]{0,180}?text-transform uppercase/)
+})
+
+test('leaves signer unlock action visuals to the shared Wren control', () => {
+  expect(signerStatusStyle).toMatch(
+    /\.signerUnlockSubmit\n {6}grid-column 2\n {6}grid-row 2\n {6}min-width 132px\n {6}margin 0/
+  )
+  expect(signerStatusStyle).not.toMatch(
+    /\.signerUnlockSubmit(?::[^\n]+)?[\s\S]{0,220}?(?:background|border-radius|box-shadow|height|font-size|text-transform|opacity) /
+  )
+  expect(signerStatusStyle).not.toMatch(
+    /\.signerUnlockInput\n {4}(?:position|height|border|outline|background|box-shadow|font-size|border-radius)/
+  )
+})
+
+test('keeps the remaining review surfaces on established flat primitives', () => {
+  expect(mainStyle).toMatch(
+    /\.dashSupportActions\n {2}display flex\n {2}flex-direction row\n {2}align-items center\n {2}justify-content space-evenly/
+  )
+  expect(txApprovalStyle).toMatch(
+    /\.approveTransactionWarningBody[\s\S]*?display grid[\s\S]*?grid-template-rows auto minmax\(0, 1fr\) 44px/
+  )
+  expect(inspectorStyle).toMatch(
+    /\.inspectorInputPanel,[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+  )
+  expect(inspectorStyle).toMatch(/\.inspectorEvidenceRow[\s\S]*?border 0[\s\S]*?dd[\s\S]*?border 0/)
+  expect(inspectorStyle).not.toMatch(/\.inspectorWarnings[\s\S]{0,260}?border-left/)
 })
 
 test('keeps hardware prompts opaque while giving their scrim and surface restrained depth', () => {

@@ -12,7 +12,8 @@ test('keeps the short network editor body scrollable above its fixed actions', (
   expect(editorStyle).toMatch(
     /\.networkEditorGrid\n\s{2}display grid\n\s{2}grid-template-columns minmax\(0, 2fr\) minmax\(0, 1fr\)/
   )
-  expect(editorStyle).toMatch(/background-attachment local, scroll/)
+  expect(editorStyle).not.toMatch(/background-attachment local, scroll/)
+  expect(editorStyle).toMatch(/\.networkEditor[\s\S]*?background transparent/)
 })
 
 test('keeps network editor copy readable and compact controls practically targetable', () => {

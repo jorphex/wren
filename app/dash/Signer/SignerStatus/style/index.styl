@@ -74,28 +74,6 @@
     font-weight 400
     text-shadow 0px 1px 2px var(--ghostX)
 
-  .signerUnlockInput
-    position relative
-    height 61px
-    width 100%
-    border 0
-    outline 0
-    background var(--ghostZ)
-    font-size 26px
-    letter-spacing 6px
-    display flex
-    justify-content center
-    align-items center
-    text-align center
-    color var(--outerspace)
-    box-sizing border-box
-    border-radius 8px
-    border-top-right-radius 17px
-    border-top-left-radius 17px
-    position relative
-    z-index 4
-    padding-bottom 10px
-
   .signerUnlockInputLabel
     position absolute
     top 46px
@@ -112,47 +90,6 @@
     z-index 40000
     letter-spacing 1px
     margin-left -1px
-
-  .signerUnlockSubmit
-    appearance none
-    border 0
-    font-family inherit
-    height 30px
-    background var(--ghostA)
-    color var(--outerspace)
-    font-size var(--wren-type-small)
-    box-sizing border-box
-    padding-top 1px
-    margin 3px 0px 0px 0px
-    width 140px
-    border-radius 8px
-    display flex
-    justify-content center
-    align-items center
-    font-weight 500
-    cursor pointer
-    width 100%
-    text-transform uppercase
-    cursor pointer 
-    border-bottom-left-radius 17px
-    border-bottom-right-radius 17px
-
-    *
-      pointer-events none
-
-  .signerUnlockSubmit:not(:disabled):hover
-    background var(--ghostB)
-    // animation 5s shake ease-in-out infinite alternate
-    // box-shadow 0px 2px 8px var(--ghostZ)
-
-  .signerUnlockSubmit:active
-    transform translateY(0px)
-    // animation shake-little 2s ease-in-out infinite
-    // box-shadow 0px 2px 8px var(--ghostZ)
-
-  .signerUnlockSubmit:disabled
-    cursor default
-    opacity 0.55
 
   .signerUnlockError
     color var(--bad)
@@ -202,30 +139,17 @@
       grid-column 1
       grid-row 2
       width 100%
-      height 39px
+      height 44px
       padding 0 var(--wren-space-3)
-      border 2px solid #050705
-      border-radius 0
-      background var(--wren-surface-inset)
-      box-shadow inset 0 0 0 1px var(--wren-border-subtle), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
-      color var(--wren-text-primary)
       font-family var(--wren-font-utility)
       font-size var(--wren-type-body)
       letter-spacing .08em
       text-align left
 
-      &:focus,
-      &:focus-visible
-        border-color var(--wren-accent-primary)
-        outline 0
-        box-shadow inset 0 0 0 1px #6f5b3e, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px var(--wren-accent-primary-hover), 0 0 0 2px rgba(166, 138, 97, .12)
-
     .signerUnlockSubmit
       grid-column 2
       grid-row 2
-      width auto
       min-width 132px
-      height 42px
       margin 0
 
     .signerUnlockError

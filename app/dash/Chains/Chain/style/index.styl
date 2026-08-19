@@ -175,7 +175,7 @@
   min-height calc(100vh - 64px)
   box-sizing border-box
   color var(--wren-text-primary)
-  background var(--wren-bg-canvas)
+  background transparent
   font-family var(--wren-font-ui)
 
 .networkEditorHeader
@@ -526,11 +526,6 @@ button.networkEditorRemove
   .networkEditorBody
     overflow-x hidden
     overflow-y auto
-    background-image linear-gradient(to top, var(--wren-bg-canvas) 60%, rgba(9, 12, 10, 0)), linear-gradient(to top, rgba(90, 105, 92, .24), rgba(90, 105, 92, 0))
-    background-position center bottom, center bottom
-    background-repeat no-repeat
-    background-size 100% 18px, 100% 14px
-    background-attachment local, scroll
 
 @media (max-width: 560px)
   .networkEditorHeader

@@ -44,7 +44,7 @@ test('searches contacts, copies rows, and opens add and edit navigation explicit
 
   expect(screen.getByText('Yearn Treasury')).toBeTruthy()
   expect(screen.getByText(address)).toBeTruthy()
-  expect(screen.getByText('Saved')).toBeTruthy()
+  expect(screen.queryByText('Saved')).toBeNull()
   await user.type(screen.getByRole('textbox', { name: 'Search contacts' }), 'missing')
   expect(screen.getByText('No contacts match')).toBeTruthy()
 
@@ -69,11 +69,36 @@ test('searches contacts, copies rows, and opens add and edit navigation explicit
     data: { screen: 'edit', address }
   })
 
-  await user.click(screen.getByRole('button', { name: 'Add' }))
+  await user.click(screen.getByRole('button', { name: 'Add contact' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'addressBook',
     data: { screen: 'edit' }
   })
+})
+
+test('orders a checked contact as note, date, then check note without a provenance pill', () => {
+  const checked = {
+    ...entry,
+    note: 'Quarterly treasury recipient',
+    provenance: {
+      status: 'verified-out-of-band',
+      verifiedAt: Date.UTC(2026, 7, 18),
+      note: 'Compared on a separate device'
+    }
+  }
+  const checkedStore = Restore.create({ main: { addressBook: { [address.toLowerCase()]: checked } } }, {})
+  const CheckedAddressBook = Restore.connect(AddressBook, checkedStore)
+
+  render(<CheckedAddressBook data={{}} />)
+
+  const identity = screen.getByText('Yearn Treasury').closest('.addressBookIdentity')
+  expect([...identity.children].map((child) => child.textContent)).toEqual([
+    'Yearn Treasury',
+    address,
+    'Quarterly treasury recipient',
+    'Checked 2026-08-18 · Compared on a separate device'
+  ])
+  expect(screen.queryByText('Checked outside Wren')).toBeNull()
 })
 
 test('orders contact actions as Copy, Edit, then Remove and exposes an explicit safe confirmation', async () => {
@@ -134,17 +159,19 @@ test('resolves ENS once, saves its address, and returns through Dash navigation'
   expect(link.send).toHaveBeenCalledWith('tray:action', 'backDash')
 })
 
-test('records explicit out-of-band verification without letting the renderer set its timestamp', async () => {
+test('records an explicit outside-Wren check without letting the renderer set its timestamp', async () => {
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor />)
 
   await user.type(screen.getByLabelText('Address or ENS name'), address)
   await user.type(screen.getByLabelText('Name'), 'Yearn Treasury')
-  await user.click(screen.getByRole('radio', { name: 'Verified out of band' }))
+  await user.click(screen.getByRole('radio', { name: 'Checked outside Wren' }))
   expect(
-    screen.getByText('You checked this address elsewhere. Always verify the full address before signing.')
+    screen.getByText(
+      'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
+    )
   ).toBeTruthy()
-  await user.type(screen.getByLabelText(/Verification note/), 'Compared during a voice call')
+  await user.type(screen.getByLabelText(/Check note/), 'Compared during a voice call')
   await user.click(screen.getByRole('button', { name: 'Save Contact' }))
 
   await waitFor(() =>
@@ -174,11 +201,11 @@ test('shows a verified contact date and preserves provenance when unrelated fiel
   saveAddressBookEntry.mockResolvedValue({ success: true, entry: verified })
   const { user } = render(<AddressBookEditor entry={verified} />)
 
-  expect(screen.getByText('Last marked verified 2026-08-18')).toBeTruthy()
+  expect(screen.getByText('Checked 2026-08-18')).toBeTruthy()
   expect(screen.getByLabelText('Address or ENS name').readOnly).toBe(true)
   expect(screen.getByLabelText('Address or ENS name').disabled).toBe(false)
-  expect(screen.getByLabelText(/Verification note/).value).toBe('Compared on a separate device')
-  expect(screen.getByLabelText(/Verification note/).getAttribute('aria-describedby')).toBe(
+  expect(screen.getByLabelText(/Check note/).value).toBe('Compared on a separate device')
+  expect(screen.getByLabelText(/Check note/).getAttribute('aria-describedby')).toBe(
     'addressBookVerificationCount'
   )
   expect(screen.getByLabelText(/^Note/).getAttribute('aria-describedby')).toBe('addressBookNoteCount')
@@ -210,7 +237,7 @@ test('renders malformed legacy verification dates defensively', () => {
     />
   )
 
-  expect(screen.getByText('Last marked verified Date unavailable')).toBeTruthy()
+  expect(screen.getByText('Checked Date unavailable')).toBeTruthy()
 })
 
 test('warns before explicitly clearing an out-of-band verification record', async () => {
@@ -225,8 +252,8 @@ test('warns before explicitly clearing an out-of-band verification record', asyn
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor entry={verified} />)
 
-  await user.click(screen.getByRole('radio', { name: 'Saved' }))
-  expect(screen.getByText('Saving as Saved clears the existing verification date and note.')).toBeTruthy()
+  await user.click(screen.getByRole('radio', { name: 'Saved only' }))
+  expect(screen.getByText('Saving as Saved only clears the check date and note.')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Save Contact' }))
 
   await waitFor(() =>
@@ -272,7 +299,7 @@ test('seeds a new contact form from the active search', async () => {
   const { user } = render(<ConnectedAddressBook data={{}} />)
 
   await user.type(screen.getByRole('textbox', { name: 'Search contacts' }), 'New teammate')
-  await user.click(screen.getByRole('button', { name: 'Add' }))
+  await user.click(screen.getByRole('button', { name: 'Add contact' }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'addressBook',

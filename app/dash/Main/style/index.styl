@@ -490,12 +490,89 @@ button.dashModule.wrenControl.wrenControlGhost
   flex none
   gap var(--wren-space-2)
 
+.dashSupportWrenDisclosure
+  position relative
+  min-width 0
+
+button.dashSupportWrenButton.wrenControl
+  width 100%
+  min-height 44px
+  padding 0 var(--wren-space-3)
+  gap var(--wren-space-1)
+  color var(--wren-text-secondary)
+  white-space nowrap
+
+.dashSupportWrenPreview
+  position absolute
+  right 0
+  bottom calc(100% - 1px)
+  z-index 20001
+  width 217px
+  padding var(--wren-space-3)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  color var(--wren-text-primary)
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-lg), var(--wren-shadow-inset)
+  animation cardShow var(--wren-motion-fast) var(--wren-ease) both
+
+  &::after
+    content ''
+    position absolute
+    right 28px
+    bottom -5px
+    width 9px
+    height 9px
+    border-right 1px solid var(--wren-border-default)
+    border-bottom 1px solid var(--wren-border-default)
+    background var(--wren-bg-elevated)
+    transform rotate(45deg)
+
+.dashSupportWrenQrCode
+  display block
+  width 185px
+  max-width 100%
+  height auto
+  margin 0 auto
+
+.dashSupportWrenAddress
+  margin-top var(--wren-space-2)
+  overflow-wrap anywhere
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  line-height 1.45
+
+.dashSupportWrenPreviewNote
+  margin var(--wren-space-2) 0 0
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  line-height 1.45
+
+.dashSupportWrenStatus
+  position absolute
+  width 1px
+  height 1px
+  overflow hidden
+  clip rect(0 0 0 0)
+  white-space nowrap
+
 .dashSupportActions
-  display grid
-  grid-template-columns repeat(3, minmax(0, 1fr))
-  gap var(--wren-space-2)
+  display flex
+  flex-direction row
+  align-items center
+  justify-content space-evenly
   padding-top var(--wren-space-3)
   margin-bottom var(--wren-space-6)
+
+  button.requestFeatureButton.wrenControl
+    min-height 44px
+    padding 0 var(--wren-space-2)
+    gap var(--wren-space-1)
+    font-size var(--wren-type-caption)
+    white-space nowrap
 
 @media (max-height: 760px)
   .localSettings .localSettingsWrap

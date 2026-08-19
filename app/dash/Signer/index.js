@@ -478,7 +478,9 @@ export class Signer extends React.Component {
     return (
       <section className={'expandedSigner cardShow'} style={{ zIndex }} aria-label={this.props.name}>
         {!signerStatus.ready ? this.statusText() : null}
-        {type === 'lattice' && signerStatus.input === 'pairingCode' ? (
+        {isLocked ? (
+          this.renderSignerStatus()
+        ) : type === 'lattice' && signerStatus.input === 'pairingCode' ? (
           <div className='signerLatticePair'>
             <div className='signerLatticePairTitle'>Enter the pairing code shown on your Lattice.</div>
             <div className='signerLatticePairInput wrenInputGroup'>
@@ -516,7 +518,7 @@ export class Signer extends React.Component {
               Pair
             </button>
           </div>
-        ) : signerStatus.ready || isLocked ? (
+        ) : signerStatus.ready ? (
           <>
             {this.renderSignerStatus()}
             <div className='signerAddedAccountTitle'>{'Available accounts'}</div>

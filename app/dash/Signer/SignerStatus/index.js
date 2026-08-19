@@ -109,7 +109,7 @@ export class SignerStatus extends React.Component {
               ) : null}
               <button
                 type='button'
-                className='signerUnlockSubmit wrenControl wrenControlPrimary'
+                className='signerUnlockSubmit wrenControl wrenControlPrimary wrenControlLarge'
                 disabled={!unlockInput || unlockPending}
                 onClick={this.unlockSubmit.bind(this)}
               >

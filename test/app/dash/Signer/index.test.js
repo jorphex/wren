@@ -1,6 +1,7 @@
 import { act, render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
 import { getAddressLimit, Signer } from '../../../../app/dash/Signer'
+import { SignerStatus } from '../../../../app/dash/Signer/SignerStatus'
 import { getAddress } from '../../../../resources/utils'
 
 jest.mock('../../../../resources/link', () => ({
@@ -10,7 +11,7 @@ jest.mock('../../../../resources/link', () => ({
 
 class SignerHarness extends Signer {
   renderSignerStatus() {
-    return null
+    return <SignerStatus signer={this.store('main.signers', this.props.id)} />
   }
 
   store(...path) {
@@ -288,6 +289,50 @@ it('names available signer account actions with their current add or remove beha
     name: `Remove ${checkSummedAddress} from accounts`
   })
   expect(removeAccount.title).toBe(checkSummedAddress)
+})
+
+it.each(['seed', 'ring'])('hides populated %s signer addresses and controls while locked', (type) => {
+  const address = '0x00000000000000000000000000000000000000aa'
+  renderSigner({
+    type,
+    status: 'locked',
+    addresses: [address],
+    addedAccounts: { [address]: { address } }
+  })
+
+  expect(screen.getByLabelText('Signer password')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Unlock' }).classList.contains('wrenControlLarge')).toBe(true)
+  expect(screen.queryByText('Available accounts')).toBeNull()
+  expect(screen.queryByText('0x0000…00AA')).toBeNull()
+  expect(screen.queryByRole('button', { name: /account$/ })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Previous address page' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Next address page' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Remove signer' })).toBeTruthy()
+})
+
+it('reveals hot signer address management only after the signer becomes ready', () => {
+  const address = '0x00000000000000000000000000000000000000aa'
+  const checkSummedAddress = getAddress(address)
+  const view = renderSigner({ type: 'seed', status: 'locked', addresses: [address] })
+
+  expect(screen.getByLabelText('Signer password')).toBeTruthy()
+  expect(screen.queryByText('Available accounts')).toBeNull()
+
+  view.rerender(
+    <SignerHarness
+      id='device-1'
+      expanded={true}
+      name='Test signer'
+      type='seed'
+      status='ready'
+      addresses={[address]}
+    />
+  )
+
+  expect(screen.queryByLabelText('Signer password')).toBeNull()
+  expect(screen.getByText('Available accounts')).toBeTruthy()
+  expect(screen.getByRole('button', { name: `Add ${checkSummedAddress} as an account` })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Remove signer' })).toBeTruthy()
 })
 
 it('arms signer removal, returns focus safely, and confirms once', async () => {

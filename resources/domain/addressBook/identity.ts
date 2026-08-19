@@ -23,7 +23,7 @@ export type LocalAddressIdentity =
   | {
       label: string
       kind: 'contact'
-      source: 'Saved contact' | 'Verified out of band'
+      source: 'Saved contact' | 'Checked outside Wren'
       provenance: LocalAddressBookEntry['provenance']
     }
   | { label: string; kind: 'account'; source: 'Wren account' }
@@ -149,7 +149,7 @@ export function resolveLocalAddressIdentity(
     return {
       label: saved.name,
       kind: 'contact',
-      source: saved.provenance.status === 'verified-out-of-band' ? 'Verified out of band' : 'Saved contact',
+      source: saved.provenance.status === 'verified-out-of-band' ? 'Checked outside Wren' : 'Saved contact',
       provenance: saved.provenance
     }
   }

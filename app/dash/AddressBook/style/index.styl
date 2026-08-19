@@ -5,6 +5,10 @@
   color var(--wren-text-primary)
   font-family var(--wren-font-ui)
 
+.addressBook
+  display flex
+  flex-direction column
+
 .addressBookHeader, .addressBookEditorHeader
   display flex
   align-items flex-start
@@ -41,12 +45,10 @@
   font-size 13px
 
 .addressBookToolbar
-  display grid
-  grid-template-columns minmax(0, 1fr) 72px
-  gap var(--wren-space-2)
+  display block
   margin-bottom var(--wren-space-4)
 
-  input, button
+  input
     height 44px
     box-sizing border-box
     border-radius var(--wren-radius-md)
@@ -71,26 +73,6 @@
 
     &:focus-visible
       border-color var(--wren-focus)
-      outline 2px solid var(--wren-focus)
-      outline-offset 2px
-
-  button
-    border 1px solid var(--wren-accent-primary)
-    background var(--wren-accent-primary)
-    color var(--wren-text-inverse)
-    cursor pointer
-    font-weight 600
-    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
-
-    &:hover
-      border-color var(--wren-accent-primary-hover)
-      background var(--wren-accent-primary-hover)
-
-    &:active
-      border-color var(--wren-accent-primary-active)
-      background var(--wren-accent-primary-active)
-
-    &:focus-visible
       outline 2px solid var(--wren-focus)
       outline-offset 2px
 
@@ -132,13 +114,12 @@
 .addressBookList
   display flex
   flex-direction column
-  border-top 1px solid var(--wren-ledger-rule)
   gap 0
 
 .addressBookRow
   display grid
   grid-template-columns minmax(0, 1fr) 54px 76px
-  min-height 112px
+  min-height 82px
   overflow hidden
   border 0
   border-bottom 1px solid var(--wren-ledger-rule)
@@ -159,7 +140,7 @@
   display flex
   align-items center
   gap var(--wren-space-3)
-  padding var(--wren-space-3)
+  padding var(--wren-space-2) var(--wren-space-3)
   background transparent
   text-align left
   transition background var(--wren-motion-fast) var(--wren-ease)
@@ -206,27 +187,6 @@
   font-family var(--wren-font-mono)
   font-size 12px
   line-height 18px
-
-.addressBookProvenance
-  display flex
-  flex-wrap wrap
-  align-items center
-  gap var(--wren-space-2)
-  color var(--wren-text-muted)
-  font-size 12px
-  line-height 18px
-
-.addressBookProvenanceBadge
-  display inline-flex
-  min-height 24px
-  box-sizing border-box
-  align-items center
-  padding 2px var(--wren-space-2)
-  border 1px solid var(--wren-border-default)
-  border-radius 999px
-  color var(--wren-text-secondary)
-  background var(--wren-bg-elevated)
-  font-weight 550
 
 .addressBookNote
   overflow hidden
@@ -351,6 +311,16 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 
   button
     min-width 104px
+
+.addressBookAddAction
+  display flex
+  justify-content flex-end
+  margin-top auto
+  padding var(--wren-space-4) 0 0
+
+  button.wrenControl.wrenControlPrimary
+    min-width 132px
+    min-height 44px
 
 .addressBookStatus, .addressBookError
   margin var(--wren-space-2) 0

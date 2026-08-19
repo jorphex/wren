@@ -151,6 +151,8 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
         : []
   const typedData = parsedTypedData(normalized.typedData)
   const isTyped = inspection?.kind === 'typed-data'
+  const isDecoded = decode.status === 'decoded'
+  const isUnknownFunction = decode.status === 'unknown'
 
   return (
     <section className='inspectorResult' aria-labelledby='inspector-result-title'>
@@ -247,14 +249,25 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
       {!isTyped ? (
         <section className='inspectorEvidenceSection' aria-labelledby='inspector-decode-title'>
           <h3 id='inspector-decode-title'>Calldata interpretation</h3>
+          {isUnknownFunction ? (
+            <div className='inspectorMissing' role='status'>
+              <strong>Unknown function</strong>
+              <span>
+                Wren could not decode selector {decode.selector || 'Unavailable'} with its bundled local ABI
+                set. Wren does not guess a function or use a remote ABI lookup.
+              </span>
+            </div>
+          ) : null}
           <dl>
             <EvidenceRow label='Status' value={decode.status} />
             <EvidenceRow label='Selector' value={decode.selector} copy={onCopy} />
-            <EvidenceRow label='Method' value={decode.method} copy={onCopy} />
-            <EvidenceRow label='Arguments' value={decode.arguments} copy={onCopy} />
+            {isDecoded ? <EvidenceRow label='Method' value={decode.method} copy={onCopy} /> : null}
+            {isDecoded ? <EvidenceRow label='Arguments' value={decode.arguments} copy={onCopy} /> : null}
             <EvidenceRow label='Decode source' value={decode.source} />
           </dl>
-          {decode.reason ? <p className='inspectorEvidenceReason'>{decode.reason}</p> : null}
+          {!isUnknownFunction && decode.reason ? (
+            <p className='inspectorEvidenceReason'>{decode.reason}</p>
+          ) : null}
         </section>
       ) : null}
 
@@ -398,7 +411,7 @@ export class Inspector extends React.Component {
       return {
         kind: mode,
         input: fields.typedData.trim(),
-        ...(fields.chainId.trim() ? { chainId: fields.chainId.trim() } : {}),
+        ...(fields.chainId !== '' ? { chainId: fields.chainId } : {}),
         version: fields.typedVersion
       }
     }
@@ -406,13 +419,13 @@ export class Inspector extends React.Component {
       return {
         kind: mode,
         input: fields.jsonRpc.trim(),
-        ...(fields.chainId.trim() ? { chainId: fields.chainId.trim() } : {})
+        ...(fields.chainId !== '' ? { chainId: fields.chainId } : {})
       }
     }
     return {
       kind: mode,
       data: fields.calldata.trim(),
-      ...(fields.chainId.trim() ? { chainId: fields.chainId.trim() } : {}),
+      ...(fields.chainId !== '' ? { chainId: fields.chainId } : {}),
       ...(fields.from.trim() ? { from: fields.from.trim() } : {}),
       ...(fields.to.trim() ? { to: fields.to.trim() } : {}),
       ...(fields.value.trim() ? { value: fields.value.trim() } : {})
@@ -470,9 +483,10 @@ export class Inspector extends React.Component {
             Chain ID <em>optional</em>
           </span>
           <input
+            className='wrenInput'
             type='text'
             value={fields.chainId}
-            placeholder='0x1'
+            placeholder='1 or 0x1'
             autoComplete='off'
             spellCheck='false'
             onChange={(event) => this.updateField('chainId', event.target.value)}
@@ -485,6 +499,7 @@ export class Inspector extends React.Component {
                 Sender <em>optional</em>
               </span>
               <input
+                className='wrenInput'
                 type='text'
                 value={fields.from}
                 placeholder='0x…'
@@ -498,6 +513,7 @@ export class Inspector extends React.Component {
                 Target <em>optional</em>
               </span>
               <input
+                className='wrenInput'
                 type='text'
                 value={fields.to}
                 placeholder='0x…'
@@ -511,6 +527,7 @@ export class Inspector extends React.Component {
                 Value <em>optional · wei quantity</em>
               </span>
               <input
+                className='wrenInput'
                 type='text'
                 value={fields.value}
                 placeholder='0x0'
@@ -525,6 +542,7 @@ export class Inspector extends React.Component {
           <label>
             <span>Typed-data version</span>
             <select
+              className='wrenInput'
               value={fields.typedVersion}
               onChange={(event) => this.updateField('typedVersion', event.target.value)}
             >
@@ -572,7 +590,7 @@ export class Inspector extends React.Component {
               aria-controls='inspector-input-panel'
               aria-selected={mode === item.id ? 'true' : 'false'}
               tabIndex={mode === item.id ? 0 : -1}
-              className={`wrenControl wrenControlSecondary${mode === item.id ? ' inspectorModeSelected' : ''}`}
+              className={`wrenControl wrenControlGhost${mode === item.id ? ' inspectorModeSelected' : ''}`}
               onClick={() => this.selectMode(item.id)}
               onKeyDown={(event) => this.selectModeFromKeyboard(event)}
             >
@@ -595,6 +613,7 @@ export class Inspector extends React.Component {
           <label className='inspectorRawInput'>
             <span>{selected.inputLabel}</span>
             <textarea
+              className='wrenInput'
               ref={this.editorRef}
               value={fields[field]}
               placeholder={selected.placeholder}

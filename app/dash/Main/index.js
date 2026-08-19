@@ -1,10 +1,18 @@
 import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../resources/Components/Icon'
+import QrCode from '../../../resources/Components/QrCode'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
-import { WREN_COMPANION_RELEASES_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
+import {
+  WREN_COMPANION_RELEASES_URL,
+  WREN_SUPPORT_ADDRESS,
+  WREN_SUPPORT_URL
+} from '../../../resources/constants'
+import { getAddress } from '../../../resources/utils'
 import controlCenterWren from 'url:../../../asset/ui/wren-control-center-v1.png'
+
+const supportAddress = getAddress(WREN_SUPPORT_ADDRESS)
 
 const dashboardSections = [
   {
@@ -17,6 +25,12 @@ const dashboardSections = [
         icon: 'accounts'
       },
       {
+        view: 'earn',
+        title: 'Earn',
+        description: 'Review selected Yearn vaults by network.',
+        icon: 'earn'
+      },
+      {
         view: 'addressBook',
         title: 'Contacts',
         description: 'Label addresses you know and verify often.',
@@ -27,23 +41,11 @@ const dashboardSections = [
         title: 'Connected apps',
         description: 'Review active connections, retained access, and default networks.',
         icon: 'apps'
-      },
-      {
-        view: 'inspector',
-        title: 'Read-only inspector',
-        description: 'Decode transactions and signing intent without signing or broadcasting.',
-        icon: 'search'
-      },
-      {
-        view: 'earn',
-        title: 'Earn',
-        description: 'Review selected Yearn vaults by network.',
-        icon: 'earn'
       }
     ]
   },
   {
-    label: 'Configuration',
+    label: 'Tools',
     items: [
       {
         view: 'chains',
@@ -58,6 +60,12 @@ const dashboardSections = [
         icon: 'tokens'
       },
       {
+        view: 'inspector',
+        title: 'Read-only inspector',
+        description: 'Inspect requests without signing.',
+        icon: 'search'
+      },
+      {
         view: 'settings',
         title: 'Settings',
         description: 'Adjust desktop behavior, shortcuts, and privacy.',
@@ -68,12 +76,35 @@ const dashboardSections = [
 ]
 
 export class Main extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {
+      supportCopied: false,
+      supportPreviewFocused: false,
+      supportPreviewHovered: false
+    }
+    this.supportCopyTimer = undefined
+  }
+
   componentDidMount() {
     const scroll = document.querySelector('.dashMainScroll')
     if (scroll) scroll.scrollTop = 0
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.supportCopyTimer)
+  }
+
+  copySupportAddress = () => {
+    link.send('tray:clipboardData', supportAddress)
+    clearTimeout(this.supportCopyTimer)
+    this.setState({ supportCopied: true })
+    this.supportCopyTimer = setTimeout(() => this.setState({ supportCopied: false }), 1800)
+  }
+
   render() {
+    const supportPreviewOpen = this.state.supportPreviewFocused || this.state.supportPreviewHovered
+
     return (
       <div className={'localSettings cardShow'}>
         <div className='localSettingsWrap'>
@@ -143,6 +174,47 @@ export class Main extends React.Component {
             </div>
           </section>
           <div className='dashSupportActions'>
+            <div
+              className='dashSupportWrenDisclosure'
+              onMouseEnter={() => this.setState({ supportPreviewHovered: true })}
+              onMouseLeave={() => this.setState({ supportPreviewHovered: false })}
+            >
+              <button
+                type='button'
+                className='dashSupportWrenButton requestFeatureButton wrenControl wrenControlGhost'
+                aria-controls='dash-support-wren-preview'
+                aria-describedby='dash-support-wren-description dash-support-wren-status'
+                aria-expanded={supportPreviewOpen}
+                onBlur={() => this.setState({ supportPreviewFocused: false })}
+                onClick={this.copySupportAddress}
+                onFocus={() => this.setState({ supportPreviewFocused: true })}
+                title='Copy support address; hover or focus to show its QR code'
+              >
+                <Icon name={this.state.supportCopied ? 'check' : 'copy'} size={15} />
+                Support Wren
+              </button>
+              {supportPreviewOpen ? (
+                <div id='dash-support-wren-preview' className='dashSupportWrenPreview'>
+                  <QrCode
+                    className='dashSupportWrenQrCode'
+                    label='QR code for the support address'
+                    value={supportAddress}
+                  />
+                  <div className='dashSupportWrenAddress'>{supportAddress}</div>
+                  <p id='dash-support-wren-description' className='dashSupportWrenPreviewNote'>
+                    Optional. Verify this EVM address and network before sending.
+                  </p>
+                </div>
+              ) : null}
+              <span
+                id='dash-support-wren-status'
+                className='dashSupportWrenStatus'
+                role='status'
+                aria-live='polite'
+              >
+                {this.state.supportCopied ? 'Address copied' : ''}
+              </span>
+            </div>
             <button
               type='button'
               className='requestFeatureButton wrenControl wrenControlGhost'

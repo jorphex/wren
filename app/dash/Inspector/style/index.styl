@@ -43,11 +43,11 @@
   align-items center
   gap var(--wren-space-2)
   min-width 168px
-  padding var(--wren-space-2) var(--wren-space-3)
-  border 1px solid rgba(120, 166, 184, .52)
-  border-radius var(--wren-radius-sm)
+  padding var(--wren-space-2) 0
+  border 0
+  border-radius 0
   color #a9cad5
-  background rgba(120, 166, 184, .09)
+  background transparent
 
   span
     display flex
@@ -64,8 +64,12 @@
 .inspectorModeTabs
   display grid
   grid-template-columns repeat(4, minmax(0, 1fr))
-  gap var(--wren-space-2)
+  gap var(--wren-space-1)
   margin var(--wren-space-4) 0 var(--wren-space-3)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
   button.wrenControl
     min-width 0
@@ -74,20 +78,23 @@
     padding var(--wren-space-2)
     font-size var(--wren-type-small)
     scroll-margin-top 144px
+    border-color transparent
+    border-radius var(--wren-radius-sm)
 
   button.inspectorModeSelected,
   button.inspectorModeSelected:hover:not(:disabled)
-    border-color rgba(120, 166, 184, .8)
+    border-color var(--wren-border-subtle)
     color var(--wren-text-primary)
-    background rgba(120, 166, 184, .12)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm)
 
 .inspectorInputPanel,
 .inspectorResult
-  padding var(--wren-space-4)
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-md)
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  padding var(--wren-space-4) 0
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
 
 .inspectorModeCopy
   h2
@@ -125,10 +132,6 @@
   select
     width 100%
     box-sizing border-box
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-primary)
-    background var(--wren-surface-inset)
     font-family var(--wren-font-mono)
     font-size 12px
     line-height 18px
@@ -140,14 +143,8 @@
 
   input,
   select
-    min-height 40px
+    min-height 44px
     padding 0 var(--wren-space-2)
-
-  textarea:focus-visible,
-  input:focus-visible,
-  select:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
 
 .inspectorContextFields
   display grid
@@ -223,7 +220,8 @@ button.inspectorInspectButton
   display flex
   flex-direction column
   gap 3px
-  border 1px solid rgba(210, 162, 75, .52)
+  border 0
+  border-radius 0
   color var(--wren-text-secondary)
   background rgba(210, 162, 75, .08)
 
@@ -243,13 +241,13 @@ button.inspectorInspectButton
 
   dl
     margin 0
-    border-top 1px solid var(--wren-ledger-rule)
+    border 0
 
 .inspectorEvidenceRow
   display grid
   grid-template-columns minmax(100px, .32fr) minmax(0, 1fr)
-  min-height 44px
-  border-bottom 1px solid var(--wren-ledger-rule)
+  min-height 40px
+  border 0
 
   dt,
   dd
@@ -267,7 +265,7 @@ button.inspectorInspectButton
   dd
     gap var(--wren-space-2)
     justify-content space-between
-    border-left 1px solid var(--wren-ledger-rule)
+    border 0
 
   code
     min-width 0
@@ -309,8 +307,8 @@ button.inspectorInspectButton
     margin-top var(--wren-space-2)
     padding var(--wren-space-2)
     overflow auto
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-sm)
+    border 0
+    border-radius 0
     background var(--wren-bg-wallet-canvas)
 
 .inspectorCopyBound
@@ -345,11 +343,11 @@ button.inspectorCopy
     display flex
     flex-wrap wrap
     gap 4px var(--wren-space-2)
-    padding var(--wren-space-2) var(--wren-space-3)
-    border 1px solid var(--wren-border-subtle)
-    border-radius var(--wren-radius-sm)
+    padding var(--wren-space-2) 0
+    border 0
+    border-radius 0
     color var(--wren-text-tertiary)
-    background var(--wren-surface-inset)
+    background transparent
     font-size var(--wren-type-caption)
 
   strong
@@ -365,7 +363,7 @@ button.inspectorCopy
   li
     margin-top var(--wren-space-2)
     padding var(--wren-space-2) var(--wren-space-3)
-    border-left 2px solid #d2a24b
+    border 0
     color var(--wren-text-secondary)
     background rgba(210, 162, 75, .08)
     font-family var(--wren-font-mono)

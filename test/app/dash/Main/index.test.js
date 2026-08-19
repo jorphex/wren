@@ -1,7 +1,11 @@
 import Restore from 'react-restore'
 
 import { Main } from '../../../../app/dash/Main'
-import { WREN_COMPANION_RELEASES_URL, WREN_SUPPORT_URL } from '../../../../resources/constants'
+import {
+  WREN_COMPANION_RELEASES_URL,
+  WREN_SUPPORT_ADDRESS,
+  WREN_SUPPORT_URL
+} from '../../../../resources/constants'
 import link from '../../../../resources/link'
 import { fireEvent, render, screen } from '../../../componentSetup'
 
@@ -31,10 +35,10 @@ const renderMain = () => {
 
 it.each([
   ['Accounts', 'accounts'],
+  ['Earn', 'earn'],
   ['Contacts', 'addressBook'],
   ['Connected apps', 'dapps'],
   ['Read-only inspector', 'inspector'],
-  ['Earn', 'earn'],
   ['Networks', 'chains'],
   ['Tokens', 'tokens'],
   ['Settings', 'settings']
@@ -78,6 +82,23 @@ it('includes each destination description in its accessible name', () => {
   ).toBeTruthy()
 })
 
+it('orders wallet destinations and places the concise inspector in Tools', () => {
+  renderMain()
+
+  const walletItems = [...document.querySelectorAll('.dashModuleSection:first-child .dashModuleTitle')].map(
+    (item) => item.textContent
+  )
+  const toolItems = [...document.querySelectorAll('.dashModuleSection:nth-child(2) .dashModuleTitle')].map(
+    (item) => item.textContent
+  )
+  expect(walletItems).toEqual(['Accounts', 'Earn', 'Contacts', 'Connected apps'])
+  expect(screen.getByText('Tools')).toBeTruthy()
+  expect(toolItems).toEqual(['Networks', 'Tokens', 'Read-only inspector', 'Settings'])
+  expect(
+    screen.getByRole('button', { name: 'Read-only inspector Inspect requests without signing.' })
+  ).toBeTruthy()
+})
+
 it.each(['Download Chrome companion', 'Download Firefox companion'])(
   'routes %s to community companion releases',
   (label) => {
@@ -101,6 +122,52 @@ it('routes support, tutorial, and quit actions', () => {
     ['tray:action', 'setOnboard', { showing: true }],
     ['tray:quit']
   ])
+})
+
+it('copies the exact checksummed support address without another IPC action', () => {
+  renderMain()
+
+  expect(screen.queryByText(/Sending funds is optional/i)).toBeNull()
+  expect(screen.queryByText(/Optional\. Verify this EVM address/i)).toBeNull()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Support Wren' }))
+
+  expect(WREN_SUPPORT_ADDRESS).toBe('0x6ac7F5A89E2eC6c30Aa687F9f2117bA1E31D0D97')
+  expect(link.send.mock.calls).toEqual([['tray:clipboardData', WREN_SUPPORT_ADDRESS]])
+  expect(screen.getByRole('status').textContent).toBe('Address copied')
+  expect(screen.getByRole('button', { name: 'Support Wren' })).toBeTruthy()
+})
+
+it('reveals a local QR preview with the exact support address on hover', () => {
+  renderMain()
+  const button = screen.getByRole('button', { name: 'Support Wren' })
+
+  fireEvent.mouseEnter(button.closest('.dashSupportWrenDisclosure'))
+
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+  const qr = screen.getByRole('img', { name: 'QR code for the support address' })
+  expect(qr.getAttribute('data-qr-payload')).toBe(WREN_SUPPORT_ADDRESS)
+  expect(screen.getByText(WREN_SUPPORT_ADDRESS)).toBeTruthy()
+
+  fireEvent.mouseLeave(button.closest('.dashSupportWrenDisclosure'))
+  expect(screen.queryByRole('img', { name: 'QR code for the support address' })).toBeNull()
+})
+
+it('reveals the support QR preview on keyboard focus', () => {
+  renderMain()
+  const button = screen.getByRole('button', { name: 'Support Wren' })
+
+  fireEvent.focus(button)
+
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+  expect(screen.getByRole('img', { name: 'QR code for the support address' })).toBeTruthy()
+  expect(button.getAttribute('aria-describedby')).toContain('dash-support-wren-description')
+
+  fireEvent.mouseLeave(button.closest('.dashSupportWrenDisclosure'))
+  expect(button.getAttribute('aria-expanded')).toBe('true')
+
+  fireEvent.blur(button)
+  expect(button.getAttribute('aria-expanded')).toBe('false')
 })
 
 it('returns the workspace home to its top-level navigation', () => {

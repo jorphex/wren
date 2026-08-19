@@ -69,7 +69,7 @@ test('exposes verification provenance without treating it as a safety bypass', (
   expect(resolveLocalAddressIdentity(addressBook, {}, alice)).toEqual({
     label: 'Treasury Contact',
     kind: 'contact',
-    source: 'Verified out of band',
+    source: 'Checked outside Wren',
     provenance: {
       status: 'verified-out-of-band',
       verifiedAt: 10,
