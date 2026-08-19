@@ -4,7 +4,10 @@ const commandLine = (switches: string[] = []) => ({
   hasSwitch: (name: string) => switches.includes(name)
 })
 
-it('rejects a production process with Chromium sandboxing disabled', () => {
+it('rejects packaged and production processes with Chromium sandboxing disabled', () => {
+  expect(() => assertSandboxEnabled(commandLine(['no-sandbox']), undefined)).toThrow(
+    'Wren refuses to run without the Chromium sandbox'
+  )
   expect(() => assertSandboxEnabled(commandLine(['no-sandbox']), 'production')).toThrow(
     'Wren refuses to run without the Chromium sandbox'
   )
