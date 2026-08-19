@@ -35,7 +35,7 @@ class ActivityHarness extends Activity {
     const key = path.join('.')
     if (key === 'main.activity') return this.props.entries || entries
     if (key === 'main.origins.origin-1.name') return 'garden.example'
-    if (key === 'main.networks.ethereum.1.name') return 'Ethereum Mainnet'
+    if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
   }
 }
 

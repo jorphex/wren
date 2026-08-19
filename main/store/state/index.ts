@@ -229,7 +229,7 @@ const mainState = {
         id: 1,
         type: 'ethereum',
         layer: 'mainnet',
-        name: 'Mainnet',
+        name: 'Ethereum',
         isTestnet: false,
         explorer: 'https://etherscan.io',
         gas: {

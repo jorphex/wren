@@ -51,7 +51,7 @@ describe('selecting token chain', () => {
       .getAllByRole('button')
       .filter((el) => el.classList.contains('originChainItem'))
       .map((el) => el.textContent)
-    expect(tokenChainNames).toEqual(['Mainnet', 'Polygon'])
+    expect(tokenChainNames).toEqual(['Ethereum', 'Polygon'])
     expect(screen.getByRole('heading', { name: 'Select a network' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Open Networks' })).toBeTruthy()
   })
@@ -59,7 +59,7 @@ describe('selecting token chain', () => {
   it('uses canonical chain identity marks instead of stored raster logos for known networks', () => {
     render(<AddToken />)
 
-    for (const name of ['Mainnet', 'Polygon']) {
+    for (const name of ['Ethereum', 'Polygon']) {
       const chainButton = screen.getByRole('button', { name })
       expect(chainButton.querySelector('.ringIconNoRing')).toBeTruthy()
       expect(chainButton.querySelector('img')).toBeNull()

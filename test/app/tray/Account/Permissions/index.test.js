@@ -241,7 +241,7 @@ const guardrailProps = {
     sourceId: 'native-source-fingerprint-with-distinguishing-evidence'
   },
   chainId: '0x1',
-  chainName: 'Ethereum Mainnet',
+  chainName: 'Ethereum',
   nativeDecimals: 18,
   onClose: jest.fn()
 }

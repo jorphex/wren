@@ -563,7 +563,7 @@ export class Settings extends Component {
                     onChange={(enabled) => link.send('tray:action', 'setMenubarGasPrice', enabled)}
                   />
                 </div>
-                <div className='signerPermissionDetails'>Show the mainnet gas price in the menu bar.</div>
+                <div className='signerPermissionDetails'>Show the Ethereum gas price in the menu bar.</div>
               </div>
             ) : null}
           </section>

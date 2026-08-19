@@ -45,7 +45,7 @@ it('removes the generic backing plate around chain artwork', () => {
       color='var(--accent1)'
       img='https://example.test/chain.png'
       req={{ created: Date.now(), handlerId, status: 'confirming', type: 'transaction' }}
-      title='Ethereum Mainnet transaction'
+      title='Ethereum transaction'
     />
   )
 

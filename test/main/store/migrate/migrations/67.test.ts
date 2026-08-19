@@ -12,7 +12,7 @@ test('initializes recent recipients disabled and empty without changing unrelate
   })
 })
 
-test('replaces spoofed pre-migration preference and recipient data and migrates through version 68', () => {
+test('replaces spoofed pre-migration preference and recipient data and migrates through version 69', () => {
   const state = createState(66)
   state.main['rememberRecentRecipients'] = true
   state.main['recentRecipientUses'] = [{ injected: true }]
@@ -21,6 +21,6 @@ test('replaces spoofed pre-migration preference and recipient data and migrates 
     rememberRecentRecipients: false,
     recentRecipientUses: []
   })
-  expect(migrations.apply(state).main._version).toBe(68)
+  expect(migrations.apply(state).main._version).toBe(69)
   expect(migration.migrate(null)).toBeNull()
 })

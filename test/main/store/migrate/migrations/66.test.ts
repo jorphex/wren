@@ -12,11 +12,11 @@ test('initializes empty guardrails without changing unrelated state', () => {
   })
 })
 
-test('replaces untrusted pre-migration guardrail data and migrates through current version 68', () => {
+test('replaces untrusted pre-migration guardrail data and migrates through current version 69', () => {
   const state = createState(65)
   state.main['dappGuardrails'] = { injected: true }
 
   expect(migration.migrate(state).main['dappGuardrails']).toEqual({})
-  expect(migrations.apply(state).main._version).toBe(68)
+  expect(migrations.apply(state).main._version).toBe(69)
   expect(migration.migrate(null)).toBeNull()
 })
