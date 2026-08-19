@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
 import link from '../../../../resources/link'
-import { capitalize } from '../../../../resources/utils'
 import svg from '../../../../resources/svg'
 
-const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, requestId, onClose }) => {
-  const browserName = capitalize(browser)
-  const browserIcon = svg[browser] || svg.chrome
-  const [copyId, setCopyId] = useState(false)
+const ExtensionConnectNotification = ({ fingerprint, pairingCode, requestId, onClose }) => {
+  const [copyFingerprint, setCopyFingerprint] = useState(false)
   const [responding, setResponding] = useState(false)
   const [responseError, setResponseError] = useState(false)
   const copyTimerRef = useRef()
@@ -20,11 +17,11 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
     if (responseError) errorCancelRef.current?.focus()
   }, [responseError])
 
-  const copyExtensionId = () => {
-    link.send('tray:clipboardData', extensionId)
-    setCopyId(true)
+  const copyPairingFingerprint = () => {
+    link.send('tray:clipboardData', fingerprint)
+    setCopyFingerprint(true)
     clearTimeout(copyTimerRef.current)
-    copyTimerRef.current = setTimeout(() => setCopyId(false), 2000)
+    copyTimerRef.current = setTimeout(() => setCopyFingerprint(false), 2000)
   }
 
   const respond = (accepted) => {
@@ -83,26 +80,26 @@ const ExtensionConnectNotification = ({ extensionId, browser, pairingCode, reque
       <div className='notifyBoxSlide'>
         <div className='notifyBox extensionConnectBox'>
           <div className='extensionConnectIcon' aria-hidden='true'>
-            {browserIcon(40)}
+            {svg.handshake(40)}
           </div>
           <h2 id='wren-notify-title' className='notifyTitle'>
-            {`A new ${browserName} extension is attempting to connect as "Wren Companion"`}
+            New "Wren Companion" pairing request
           </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Verify this code matches the code in the Wren Companion popup.
+              Approve only if this code matches the code shown in the Wren Companion popup.
             </div>
             <div className='extensionPairingCode'>{pairingCode}</div>
             <button
               type='button'
               className='extensionOriginButton wrenControl wrenControlSecondary'
-              aria-label='Copy extension origin'
-              onClick={copyExtensionId}
+              aria-label='Copy pairing fingerprint'
+              onClick={copyPairingFingerprint}
             >
-              {copyId ? 'Extension origin copied' : extensionId}
+              {copyFingerprint ? 'Pairing fingerprint copied' : fingerprint}
             </button>
             <div className='clusterStatus' role='status'>
-              {copyId ? 'Extension origin copied' : ''}
+              {copyFingerprint ? 'Pairing fingerprint copied' : ''}
             </div>
             <div className='notifyBodyQuestion'>Allow this extension to connect?</div>
           </div>

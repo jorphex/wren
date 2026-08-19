@@ -29,8 +29,6 @@ export const ExtensionCredentialSchema = z
   .object({
     protocolVersion: z.literal(PEER_AUTH_VERSION),
     installationId: ExtensionInstallationIdSchema,
-    browser: ExtensionBrowserSchema,
-    extensionId: z.string().min(1).max(128),
     publicKeys: ExtensionPublicKeyBundleSchema,
     fingerprint: ExtensionFingerprintSchema,
     pairedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
@@ -51,31 +49,8 @@ export const ExtensionCredentialSchema = z
     }
   })
 
-// Kept solely so profiles paired with the retired protocol can still load and
-// show their existing state. v2 records are never accepted by v3 pairing.
-const LegacyExtensionCredentialSchema = z
-  .object({
-    protocolVersion: z.literal(2),
-    installationId: ExtensionInstallationIdSchema,
-    browser: ExtensionBrowserSchema,
-    extensionId: z.string().min(1).max(128),
-    publicKey: ExtensionPublicKeySchema,
-    fingerprint: ExtensionFingerprintSchema,
-    pairedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-  })
-  .strict()
-  .superRefine((credential, context) => {
-    if (peerAuthFingerprint(credential.publicKey) !== credential.fingerprint) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['fingerprint'],
-        message: 'Fingerprint does not match the public key'
-      })
-    }
-  })
-
 export const ExtensionCredentialsSchema = z
-  .record(ExtensionFingerprintSchema, z.union([ExtensionCredentialSchema, LegacyExtensionCredentialSchema]))
+  .record(ExtensionFingerprintSchema, ExtensionCredentialSchema)
   .superRefine((credentials, context) => {
     Object.entries(credentials).forEach(([fingerprint, credential]) => {
       if (fingerprint !== credential.fingerprint) {

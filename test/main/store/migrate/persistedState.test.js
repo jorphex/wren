@@ -335,7 +335,7 @@ it('migrates version 52 Pylon presets through application state initialization',
 })
 
 it('keeps a current safe profile migration-invariant and reload-stable', async () => {
-  const fixture = loadFixture('v67-safe-current-state.json')
+  const fixture = loadFixture('v68-safe-current-state.json')
   const source = clone(fixture.state)
 
   expect(migrations.apply(clone(source))).toEqual(source)

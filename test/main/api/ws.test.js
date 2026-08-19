@@ -51,8 +51,6 @@ const extensionHello = (keys = extensionPublicKeys, channelRole = 'control') => 
   peerKind: 'companion',
   channelRole,
   clientNonce: Buffer.alloc(32, 1).toString('base64url'),
-  browser: 'chrome',
-  extensionId: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf',
   client: {
     installationId: extensionInstallationId,
     fingerprint: peerAuthClientBundleFingerprint(keys),
@@ -119,8 +117,6 @@ beforeEach(async () => {
     [extensionFingerprint]: {
       protocolVersion: 3,
       installationId: extensionInstallationId,
-      browser: 'chrome',
-      extensionId: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf',
       publicKeys: extensionPublicKeys,
       fingerprint: extensionFingerprint,
       pairedAt: 1_000

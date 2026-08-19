@@ -36,8 +36,6 @@ const state = {
     interfaceScale: 1.5,
     extensionCredentials: {
       companion: {
-        browser: 'Firefox',
-        extensionId: 'frame-companion@example.test',
         fingerprint: 'companion-fingerprint',
         pairedAt: 1
       }
@@ -318,12 +316,12 @@ it('requires confirmation before revoking a companion pairing', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(link.rpc).not.toHaveBeenCalled()
-  const dialog = screen.getByRole('alertdialog', { name: 'Revoke Firefox pairing?' })
+  const dialog = screen.getByRole('alertdialog', { name: 'Revoke companion pairing?' })
   expect(dialog.getAttribute('aria-modal')).toBeNull()
   expect(dialog.textContent).toContain(
-    'This disconnects the Firefox Companion pairing from Wren. A new pairing code will be required to connect it again.'
+    'This companion will be disconnected from Wren immediately. Pairing it again requires a new six-digit code comparison.'
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Revoke pairing' }))
 
   expect(link.rpc).toHaveBeenCalledWith(
     'revokeExtensionCredential',
@@ -352,7 +350,7 @@ it('cancels companion revocation and restores focus to its trigger', async () =>
 it('guards companion revocation while pending and recovers in place after failure', () => {
   renderSettings()
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
-  const confirm = screen.getByRole('button', { name: 'Confirm revoke' })
+  const confirm = screen.getByRole('button', { name: 'Revoke pairing' })
 
   fireEvent.click(confirm)
   fireEvent.click(confirm)
@@ -366,8 +364,8 @@ it('guards companion revocation while pending and recovers in place after failur
   expect(screen.getByRole('alert').textContent).toBe(
     'Couldn\u2019t revoke pairing. The pairing is unchanged. Try again.'
   )
-  expect(screen.getByRole('button', { name: 'Confirm revoke' }).disabled).toBe(false)
-  fireEvent.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect(screen.getByRole('button', { name: 'Revoke pairing' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Revoke pairing' }))
   expect(link.rpc).toHaveBeenCalledTimes(2)
 })
 
@@ -409,7 +407,7 @@ it('uses shared controls for companion revocation', () => {
   expect(revoke.classList.contains('wrenControlGhost')).toBe(true)
 
   fireEvent.click(revoke)
-  expect(screen.getByRole('button', { name: 'Confirm revoke' }).classList.contains('wrenControlDanger')).toBe(
+  expect(screen.getByRole('button', { name: 'Revoke pairing' }).classList.contains('wrenControlDanger')).toBe(
     true
   )
 })

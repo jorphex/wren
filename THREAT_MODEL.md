@@ -108,6 +108,14 @@ Recognizable protocol-v2 clients receive an explicit upgrade error and cannot
 downgrade. This authenticates the two applications and isolates their grants; it
 does not defend a compromised browser profile, native client, or host.
 
+Companion 0.1.1 does not send browser name or runtime extension UUID fields in
+its authentication hello. The browser-supplied extension WebSocket Origin is
+validated only as live transport admission evidence; Wren then discards its
+browser/runtime identity and persists only the signed Companion installation ID,
+control/page public keys, fingerprint, and pairing time. Migration 68 strips
+legacy transport metadata without changing fingerprint-bound permissions or
+revocation identity.
+
 ### Local state and signers
 
 #### Software signer files

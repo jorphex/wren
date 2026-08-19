@@ -869,9 +869,8 @@ export class Settings extends Component {
                   >
                     <div className='signerPermissionControls'>
                       <CompanionDetails>
-                        <div className='signerPermissionSetting'>{`${credential.browser} companion`}</div>
-                        <CompanionIdentity>{credential.extensionId}</CompanionIdentity>
-                        <CompanionIdentity>{credential.fingerprint}</CompanionIdentity>
+                        <div className='signerPermissionSetting'>Paired companion</div>
+                        <CompanionIdentity>{`Fingerprint: ${credential.fingerprint}`}</CompanionIdentity>
                       </CompanionDetails>
                       {!confirm ? (
                         <RevokeCompanion
@@ -900,11 +899,10 @@ export class Settings extends Component {
                         returnFocusRef={this.revokeTriggerRefs[credential.fingerprint]}
                         onCancel={() => this.cancelCompanionRevocation(credential.fingerprint)}
                       >
-                        <CompanionRevokeTitle id={titleId}>
-                          {`Revoke ${credential.browser} pairing?`}
-                        </CompanionRevokeTitle>
+                        <CompanionRevokeTitle id={titleId}>Revoke companion pairing?</CompanionRevokeTitle>
                         <CompanionRevokeBody id={bodyId}>
-                          {`This disconnects the ${credential.browser} Companion pairing from Wren. A new pairing code will be required to connect it again.`}
+                          This companion will be disconnected from Wren immediately. Pairing it again requires
+                          a new six-digit code comparison.
                         </CompanionRevokeBody>
                         {this.state.revokeCompanionError ? (
                           <CompanionRevokeError role='alert'>
@@ -927,7 +925,7 @@ export class Settings extends Component {
                             disabled={this.state.revokeCompanionPending}
                             onClick={() => this.revokeCompanion(credential)}
                           >
-                            {this.state.revokeCompanionPending ? 'Revoking pairing\u2026' : 'Confirm revoke'}
+                            {this.state.revokeCompanionPending ? 'Revoking pairing\u2026' : 'Revoke pairing'}
                           </button>
                         </CompanionRevokeActions>
                       </DialogSurface>

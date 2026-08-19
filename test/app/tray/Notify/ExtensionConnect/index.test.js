@@ -8,8 +8,7 @@ jest.mock('../../../../../asset/brand/exports/app/wren-app-icon-512.png', () => 
 
 it('routes the complete authentication candidate into the consent component', () => {
   const notifyData = {
-    browser: 'firefox',
-    extensionId: '4be0643f-1d98-573b-97cd-ca98a65347dd',
+    fingerprint: 'pairing-fingerprint',
     pairingCode: '654321',
     requestId: 'pairing-request'
   }
@@ -24,8 +23,7 @@ it('routes the complete authentication candidate into the consent component', ()
 
 it('presents extension consent as a modal with the safe action focused first', () => {
   const notifyData = {
-    browser: 'firefox',
-    extensionId: '4be0643f-1d98-573b-97cd-ca98a65347dd',
+    fingerprint: 'pairing-fingerprint',
     pairingCode: '654321',
     requestId: 'pairing-request'
   }
@@ -49,8 +47,7 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
   const onClose = jest.fn()
   const { user } = render(
     <ExtensionConnectNotification
-      browser='chrome'
-      extensionId='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      fingerprint='pairing-fingerprint'
       pairingCode='123456'
       requestId='pairing-request'
       onClose={onClose}
@@ -58,7 +55,7 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
   )
 
   expect(screen.getByText('123456')).toBeTruthy()
-  expect(screen.getByText('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBeTruthy()
+  expect(screen.getByText('pairing-fingerprint')).toBeTruthy()
 
   const accept = screen.getByRole('button', { name: 'Accept extension connection' })
   accept.focus()
@@ -79,8 +76,7 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
 it('settles one response for duplicate extension authorization input', async () => {
   const { user } = render(
     <ExtensionConnectNotification
-      browser='firefox'
-      extensionId='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+      fingerprint='pairing-fingerprint'
       pairingCode='654321'
       requestId='duplicate-request'
       onClose={jest.fn()}
@@ -96,8 +92,7 @@ it('keeps pairing open after an RPC error and permits one guarded retry', async 
   const onClose = jest.fn()
   const { user } = render(
     <ExtensionConnectNotification
-      browser='chrome'
-      extensionId='cccccccccccccccccccccccccccccccc'
+      fingerprint='pairing-fingerprint'
       pairingCode='111222'
       requestId='retry-request'
       onClose={onClose}

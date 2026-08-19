@@ -32,17 +32,13 @@ jest.mock('../../../main/provider', () => ({
 const accounts = require('../../../main/accounts').default
 const provider = require('../../../main/provider').default
 
-const installationId = '7a86842f-7c01-4d0d-b0f7-fc04e0acfd8f'
-
 function candidate(marker: string, overrides = {}): ExtensionPairingCandidate {
   const control = generatePeerAuthKeyPair()
   const page = generatePeerAuthKeyPair()
   const publicKeys = { control: control.publicKey, page: page.publicKey }
   return {
     protocolVersion: 3,
-    installationId,
-    browser: 'chrome',
-    extensionId: marker.repeat(32),
+    installationId: `00000000-0000-4000-8000-${String(marker.charCodeAt(0)).padStart(12, '0')}`,
     publicKeys,
     fingerprint: peerAuthClientBundleFingerprint(publicKeys),
     pairingCode: '123456',
@@ -133,7 +129,7 @@ it('deduplicates concurrent consent and an aborted waiter does not cancel anothe
 it('retains the old principal until an exact reconnect confirms the replacement survived its final acknowledgement', async () => {
   const previous = candidate('d')
   expect(commitExtensionPairing(previous)).toBe(true)
-  const replacement = candidate('e', { extensionId: previous.extensionId })
+  const replacement = candidate('e', { installationId: previous.installationId })
   const waiting = authorizeExtension(replacement)
   const request = store.notify.mock.calls[0][1]
 
@@ -154,7 +150,7 @@ it('retains the old principal until an exact reconnect confirms the replacement 
 
 it('uses full Companion cleanup when an acknowledged replacement retires the old principal', () => {
   const previous = candidate('e')
-  const replacement = candidate('f', { extensionId: previous.extensionId })
+  const replacement = candidate('f', { installationId: previous.installationId })
   const account = '0x1111111111111111111111111111111111111111'
   commitExtensionPairing(previous)
   commitExtensionPairing(replacement)
@@ -169,10 +165,23 @@ it('uses full Companion cleanup when an acknowledged replacement retires the old
   expect(store('main.permissions', account)).toEqual({})
 })
 
+it('never retires a credential belonging to another signed installation identity', () => {
+  const previous = candidate('l')
+  const unrelated = candidate('m')
+
+  expect(commitExtensionPairing(previous)).toBe(true)
+  expect(commitExtensionPairing(unrelated)).toBe(true)
+  expect(commitExtensionPairing(unrelated)).toBe(true)
+
+  expect(store.removeExtensionCredential).not.toHaveBeenCalled()
+  expect(store('main.extensionCredentials', previous.fingerprint)).toBeDefined()
+  expect(store('main.extensionCredentials', unrelated.fingerprint)).toBeDefined()
+})
+
 it('rejects a modified bundle during an active challenge instead of reusing consent', async () => {
   const first = candidate('f')
   const waiting = authorizeExtension(first)
-  const replacement = candidate('g', { extensionId: first.extensionId })
+  const replacement = candidate('g', { installationId: first.installationId })
   await expect(authorizeExtension(replacement)).resolves.toBe(false)
   expect(store.notify).toHaveBeenCalledTimes(1)
   respondToExtensionPairing(store.notify.mock.calls[0][1].requestId, false)
@@ -183,7 +192,9 @@ it('does not reuse an active prompt for another challenge code or competing bund
   const first = candidate('g')
   const waiting = authorizeExtension(first)
   await expect(authorizeExtension({ ...first, pairingCode: '654321' })).resolves.toBe(false)
-  await expect(authorizeExtension(candidate('h', { extensionId: first.extensionId }))).resolves.toBe(false)
+  await expect(authorizeExtension(candidate('h', { installationId: first.installationId }))).resolves.toBe(
+    false
+  )
   expect(store.notify).toHaveBeenCalledTimes(1)
 
   respondToExtensionPairing(store.notify.mock.calls[0][1].requestId, false)

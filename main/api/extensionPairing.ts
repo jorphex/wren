@@ -25,8 +25,7 @@ const activeByIdentity = new Map<string, PendingPairing>()
 const activeByRequest = new Map<string, PendingPairing>()
 const rejectedIdentities = new Set<string>()
 
-const pairingIdentity = ({ browser, extensionId, installationId }: ExtensionPairingCandidate) =>
-  `${browser}:${extensionId}:${installationId}`
+const pairingIdentity = ({ installationId }: ExtensionPairingCandidate) => installationId
 
 const pairingNotification = (requestId: string) =>
   notificationByOwner(
@@ -38,8 +37,6 @@ function credentialMatches(candidate: ExtensionPairingCandidate, credential: Ext
   return (
     credential.protocolVersion === candidate.protocolVersion &&
     credential.installationId === candidate.installationId &&
-    credential.browser === candidate.browser &&
-    credential.extensionId === candidate.extensionId &&
     credential.fingerprint === candidate.fingerprint &&
     credential.publicKeys.control.x === candidate.publicKeys.control.x &&
     credential.publicKeys.control.y === candidate.publicKeys.control.y &&
@@ -61,8 +58,6 @@ function retireReplacedIdentityCredentials(
     const parsed = ExtensionCredentialSchema.safeParse(value)
     if (
       parsed.success &&
-      parsed.data.browser === candidate.browser &&
-      parsed.data.extensionId === candidate.extensionId &&
       parsed.data.installationId === candidate.installationId &&
       fingerprint !== candidate.fingerprint
     ) {

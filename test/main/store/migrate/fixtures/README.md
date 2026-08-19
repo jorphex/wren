@@ -28,7 +28,7 @@ The test validates these fixtures individually:
 - `v41-current-state.json` — historical boundary name; it does not claim that
   version 41 is current.
 - `v52-pylon-network-state.json` — provider preset migration.
-- `v67-safe-current-state.json` — current no-migration invariant with contact provenance, dapp guardrails, and opt-in recent recipients.
+- `v68-safe-current-state.json` — current no-migration invariant with contact provenance, dapp guardrails, opt-in recent recipients, and metadata-minimized Companion credentials.
 
 The test loads each fixture through the application state initializer from a
 temporary mode-`0600` persistence envelope. It verifies migration, reload

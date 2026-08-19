@@ -47,11 +47,20 @@ const AuthHelloSchema = z
     peerKind: z.literal('companion'),
     channelRole: ChannelRoleSchema,
     clientNonce: PeerAuthNonceSchema,
-    browser: ExtensionBrowserSchema,
-    extensionId: z.string().min(1).max(128),
+    browser: ExtensionBrowserSchema.optional(),
+    extensionId: z.string().min(1).max(128).optional(),
     client: ClientIdentitySchema
   })
   .strict()
+  .superRefine((hello, context) => {
+    if ((hello.browser === undefined) !== (hello.extensionId === undefined)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hello.browser === undefined ? ['browser'] : ['extensionId'],
+        message: 'Legacy transport identity must include both browser and extensionId'
+      })
+    }
+  })
 
 const AuthResponseSchema = z
   .object({
@@ -289,6 +298,8 @@ export function verifyExtensionProof(
 
 export class ExtensionAuthSession {
   authenticated = false
+  private extension: ExtensionIdentity | undefined
+  private readonly channelRole: ExtensionIdentity['role']
   private pending: PendingChallenge | undefined
   private responsePending = false
   private readonly now: () => number
@@ -297,9 +308,11 @@ export class ExtensionAuthSession {
   private readonly desktopIdentity: () => DesktopAuthIdentity
 
   constructor(
-    private readonly extension: ExtensionIdentity,
+    extension: ExtensionIdentity,
     private readonly options: ExtensionAuthSessionOptions
   ) {
+    this.extension = extension
+    this.channelRole = extension.role
     this.now = options.now ?? Date.now
     this.randomNonce = options.randomNonce ?? (() => randomBytes(32).toString('base64url'))
     this.randomChallengeId = options.randomChallengeId ?? randomUUID
@@ -330,17 +343,22 @@ export class ExtensionAuthSession {
     if (this.pending || this.responsePending) {
       return errorMessage('invalid-state', 'Authentication challenge already issued')
     }
-    if (
-      hello.browser !== this.extension.browser ||
-      hello.extensionId !== this.extension.id ||
-      hello.channelRole !== this.extension.role
-    ) {
+    const extension = this.extension
+    if (!extension || hello.channelRole !== this.channelRole) {
+      return errorMessage('invalid-state', 'Companion identity does not match this connection')
+    }
+    const legacyIdentity = hello.browser !== undefined && hello.extensionId !== undefined
+    if (legacyIdentity && (hello.browser !== extension.browser || hello.extensionId !== extension.id)) {
       return errorMessage('invalid-state', 'Companion identity does not match this connection')
     }
     const rolePublicKey = peerAuthClientRoleKey(hello.client.publicKeys, hello.channelRole)
     if (peerAuthFingerprint(rolePublicKey) !== hello.client.roleFingerprint) {
       return errorMessage('invalid-message', 'Companion channel role key does not match its fingerprint')
     }
+
+    // The browser/runtime UUID is transport evidence only. It is validated for
+    // legacy clients, then discarded before pairing state is constructed.
+    this.extension = undefined
 
     try {
       const desktop = this.desktopIdentity()
@@ -381,8 +399,6 @@ export class ExtensionAuthSession {
       const credential = ExtensionCredentialSchema.parse({
         protocolVersion: EXTENSION_AUTH_VERSION,
         installationId: hello.client.installationId,
-        browser: hello.browser,
-        extensionId: hello.extensionId,
         publicKeys: hello.client.publicKeys,
         fingerprint: hello.client.fingerprint,
         pairedAt: this.now()

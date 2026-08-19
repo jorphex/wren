@@ -52,8 +52,6 @@ function hello(keys = bundle(), role: 'control' | 'page' = 'control', overrides 
     peerKind: 'companion',
     channelRole: role,
     clientNonce,
-    browser: 'chrome',
-    extensionId: 'a'.repeat(32),
     client: {
       installationId,
       fingerprint: keys.fingerprint,
@@ -153,7 +151,7 @@ it('returns the exact actionable v2 error only to a recognizable legacy hello', 
   })
 })
 
-it('loads a legacy v2 credential without allowing the retired protocol to authenticate', () => {
+it('rejects retired v2 credentials from current persisted state', () => {
   const legacy = generatePeerAuthKeyPair().publicKey
   const fingerprint = peerAuthFingerprint(legacy)
   expect(
@@ -168,7 +166,33 @@ it('loads a legacy v2 credential without allowing the retired protocol to authen
         pairedAt: 1
       }
     }).success
-  ).toBe(true)
+  ).toBe(false)
+})
+
+it('accepts privacy-minimized hellos, validates legacy transport evidence, and rejects partial identity', async () => {
+  await expect(session().auth.receive(hello())).resolves.toMatchObject({ step: 'challenge' })
+  const legacyKeys = bundle()
+  const legacy = session()
+  const legacyChallenge = await legacy.auth.receive(
+    hello(legacyKeys, 'control', { browser: 'chrome', extensionId: 'a'.repeat(32) })
+  )
+  expect(legacyChallenge).toMatchObject({ step: 'challenge' })
+  await expect(
+    legacy.auth.receive(response(legacyChallenge, legacyKeys.control.privateKey))
+  ).resolves.toMatchObject({ step: 'authenticated' })
+  expect(legacy.authorize).toHaveBeenCalledWith(
+    expect.not.objectContaining({ browser: expect.anything(), extensionId: expect.anything() }),
+    undefined
+  )
+  await expect(
+    session().auth.receive(hello(bundle(), 'control', { browser: 'firefox', extensionId: 'a'.repeat(32) }))
+  ).resolves.toMatchObject({ code: 'invalid-state' })
+  await expect(
+    session().auth.receive(hello(bundle(), 'control', { browser: 'chrome' }))
+  ).resolves.toMatchObject({ code: 'invalid-message' })
+  await expect(
+    session().auth.receive(hello(bundle(), 'control', { extensionId: 'a'.repeat(32) }))
+  ).resolves.toMatchObject({ code: 'invalid-message' })
 })
 
 it('requires a signed desktop challenge, channel-specific response, and signed final acknowledgement', async () => {
@@ -191,6 +215,10 @@ it('requires a signed desktop challenge, channel-specific response, and signed f
 
   const acknowledgement = await auth.receive(response(challenge, keys.control.privateKey))
   expect(acknowledgement).toMatchObject({ step: 'authenticated', challengeId, channelRole: 'control' })
+  expect(authorize).toHaveBeenCalledWith(
+    expect.not.objectContaining({ browser: expect.anything(), extensionId: expect.anything() }),
+    undefined
+  )
   expect(authorize).toHaveBeenCalledWith(
     expect.objectContaining({ fingerprint: keys.fingerprint }),
     undefined

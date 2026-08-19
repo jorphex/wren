@@ -78,7 +78,7 @@ interface FrameWebSocket extends WebSocket {
   extensionFingerprint: string | undefined
   id: string
   origin: string | undefined
-  frameExtension: FrameExtension | undefined
+  frameExtension: Pick<FrameExtension, 'role'> | undefined
   nativeAuth: boolean
   nativeFingerprint?: string
   nativeSessionId?: string
@@ -218,17 +218,21 @@ const handler = (
   extensionChallenges: FixedWindowRateLimiter
 ) => {
   socket.id = uuid()
-  socket.origin = req.headers.origin
-  socket.frameExtension = parseFrameExtension(req)
+  const frameExtension = parseFrameExtension(req)
+  const frameExtensionRole = frameExtension?.role
+  // Extension Origin is transport admission evidence. Retain only the channel
+  // role after parsing; browser/runtime UUID must not become durable identity.
+  socket.origin = frameExtension ? undefined : req.headers.origin
+  socket.frameExtension = frameExtension ? { role: frameExtension.role } : undefined
   socket.nativeAuth = nativeSocketRequest(req)
   socket.directRpcAuthorized =
     !!socket.frameExtension || socket.nativeAuth || isCanonicalExternalOrigin(socket.origin)
   socket.extensionFingerprint = undefined
   socket.authProcessing = false
-  socket.authSession = socket.frameExtension
-    ? new ExtensionAuthSession(socket.frameExtension, {
+  socket.authSession = frameExtension
+    ? new ExtensionAuthSession(frameExtension, {
         authorize: (candidate, signal) =>
-          authorizeExtension(candidate, signal, socket.frameExtension?.role === 'control'),
+          authorizeExtension(candidate, signal, frameExtensionRole === 'control'),
         commit: (candidate) => commitExtensionPairing(candidate, revokeCompanionAccess),
         desktopIdentity: () => DesktopAuthIdentitySchema.parse(store('main.desktopAuthIdentity'))
       })
