@@ -219,6 +219,27 @@ const joinedCanvasScenarios = () => [
   )
 ]
 
+const accountAccessReviewScenarios = () =>
+  [
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `tray-account-access-review-${geometry}-1`,
+    renderer: 'tray',
+    state: 'account-access-review',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.requestApproveCompact .requestSign:not(:disabled)',
+    requiredControls: ['Decline', 'Allow access'],
+    requiredText: ['Only this account'],
+    layoutExpectations: [
+      { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
+      { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
+      { kind: 'viewport-bottom', selector: '.requestApproveCompact' }
+    ]
+  }))
+
 const updateDialogScenarios = () =>
   INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -2152,7 +2173,9 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       ]
     }
   ]
-  return includeReview ? [...scenarios, ...reviewScenarios()] : scenarios
+  return includeReview
+    ? [...scenarios, ...accountAccessReviewScenarios(), ...reviewScenarios()]
+    : [...scenarios, ...accountAccessReviewScenarios()]
 }
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({

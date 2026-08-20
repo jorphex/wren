@@ -17,7 +17,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(70)
+  expect(scenarios).toHaveLength(72)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -51,9 +51,24 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
     expect.arrayContaining([
       'dash-control-center-capped-1.5',
       'dash-delegation-capped-1.5',
-      'tray-revocation-review-capped-1.5'
+      'tray-revocation-review-capped-1.5',
+      'tray-account-access-review-full-1',
+      'tray-account-access-review-short-1'
     ])
   )
+})
+
+it('qualifies compact account-access actions at the real tray width', () => {
+  const scenarios = scenarioMatrix().filter(({ state }) => state === 'account-access-review')
+
+  expect(scenarios).toHaveLength(2)
+  for (const scenario of scenarios) {
+    expect(scenario.logicalWidth).toBe(620)
+    expect(scenario.requiredControls).toEqual(['Decline', 'Allow access'])
+    expect(fixtureFor(scenario).main.accounts[QUALIFICATION_ACCOUNT].requests).toHaveProperty(
+      'qualification-account-access'
+    )
+  }
 })
 
 it('seats every RPC warning shelf at the viewport bottom with its exact reserved height', () => {

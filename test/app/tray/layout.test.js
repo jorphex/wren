@@ -318,7 +318,10 @@ test('keeps dapp access actions compact without changing transaction actions', (
     /req\.type === 'access'[\s\S]*?approveLabel: 'Allow access'[\s\S]*?compactActions: true/
   )
   expect(signingStyle).toMatch(
-    /\.requestApproveLightweight\.requestApproveCompact[\s\S]*?\.requestActionButtons[\s\S]*?width 272px[\s\S]*?justify-self end/
+    /\.requestApproveLightweight\.requestApproveCompact[\s\S]*?\.requestActionButtons[\s\S]*?width 240px[\s\S]*?grid-template-columns 104px 128px[\s\S]*?justify-self end/
+  )
+  expect(signingStyle).toMatch(
+    /\.requestApproveLightweight\.requestApproveCompact[\s\S]*?\.requestDecline,[\s\S]*?\.requestSign[\s\S]*?width 100%[\s\S]*?height 44px/
   )
   expect(signingStyle).toMatch(
     /@media \(max-width: 560px\)[\s\S]*?\.requestApproveTransaction,[\s\S]*?\.requestApproveSignature,[\s\S]*?\.requestApproveLightweight/

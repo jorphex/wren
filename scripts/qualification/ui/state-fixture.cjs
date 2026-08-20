@@ -50,7 +50,7 @@ const activePermission = (handlerId, origin) => ({
 
 const baseState = () => ({
   platform: 'linux',
-  version: '0.1.2',
+  version: '0.1.3',
   windows: {
     panel: { nav: [], footer: { height: 40 } },
     dash: { showing: false, nav: [], footer: { height: 40 } },
@@ -202,6 +202,14 @@ const qualificationAccount = (request) => ({
   balances: { lastUpdated: '2999-01-01T00:00:00.000Z' },
   activeRequestId: request?.handlerId,
   requests: request ? { [request.handlerId]: request } : {}
+})
+
+const accountAccessRequest = () => ({
+  handlerId: 'qualification-account-access',
+  type: 'access',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 70, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
 })
 
 const addressLookalikeRequest = () => ({
@@ -1671,6 +1679,23 @@ const fixtureFor = (scenario) => {
       }
     }
     state.main.origins = { wren: { name: 'Wren' } }
+  }
+
+  if (scenario.state === 'account-access-review') {
+    const request = accountAccessRequest()
+    prepareSelectedAccount(state, request)
+    state.main.origins = { workshop: { name: 'basescan.org' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 114
   }
 
   if (scenario.state === 'transaction-lookalike') {

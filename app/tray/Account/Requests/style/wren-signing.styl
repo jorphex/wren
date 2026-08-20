@@ -770,6 +770,9 @@
 .requestApproveTransaction
   animation none
 
+.requestApproveTransaction,
+.requestApproveSignature,
+.requestApproveLightweight
   .requestActionContext
     display flex
     min-width 0
@@ -906,6 +909,21 @@
     background var(--wren-control-texture-light), var(--wren-accent-primary)
     box-shadow var(--wren-control-primary-shadow)
 
+.requestApproveLightweight.requestApproveCompact
+  .requestActionButtons
+    display grid
+    width 240px
+    grid-template-columns 104px 128px
+    justify-self end
+
+  .requestDecline,
+  .requestSign
+    flex none
+    width 100%
+    min-width 0
+    max-width none
+    height 44px
+
 .requestNoticeApproval
   height 200px
   border-top 1px solid var(--wren-border-subtle)
@@ -984,13 +1002,18 @@
 
   .requestApproveLightweight.requestApproveCompact
     .requestActionButtons
-      width 272px
+      width 240px
       max-width 100%
+      grid-template-columns 104px 128px
       justify-self end
 
     .requestDecline,
     .requestSign
-      flex-basis auto
+      flex none
+      width 100%
+      min-width 0
+      max-width none
+      height 44px
 
 .requestNoticeTransactionStatus
   height auto
