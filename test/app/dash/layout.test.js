@@ -20,6 +20,7 @@ const badgeStyle = fs.readFileSync('app/tray/Badge/style/index.styl', 'utf8')
 const txApprovalStyle = fs.readFileSync('app/tray/Footer/RequestCommand/TxApproval/style/index.styl', 'utf8')
 const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'utf8')
 const deploymentStyle = fs.readFileSync('app/dash/Deployment/style/index.styl', 'utf8')
+const contractVerificationStyle = fs.readFileSync('app/dash/ContractVerification/style/index.styl', 'utf8')
 const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
@@ -284,6 +285,12 @@ test('keeps contract deployment on the flat wallet canvas and shared control pri
   )
   expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
   expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
+})
+
+test('keeps direct verification disclosure distinct from constructor helper copy', () => {
+  expect(contractVerificationStyle).toMatch(
+    /\.contractVerificationDirect p\.contractVerificationNotice[\s\S]*?margin-top var\(--wren-space-3\)[\s\S]*?color var\(--wren-text-secondary\)[\s\S]*?font-size var\(--wren-type-small\)[\s\S]*?line-height 19px/
+  )
 })
 
 test('keeps hardware prompts opaque while giving their scrim and surface restrained depth', () => {

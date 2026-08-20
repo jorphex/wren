@@ -117,6 +117,9 @@ const fillTarget = async (user) => {
 const confirmNoConstructorArguments = (user) =>
   user.click(screen.getByRole('checkbox', { name: 'This contract has no constructor arguments.' }))
 
+const consentToDirectEtherscan = (user) =>
+  user.click(screen.getByRole('checkbox', { name: 'I consent to direct Etherscan submission.' }))
+
 beforeEach(() => {
   for (const mock of [
     inspectVerificationArtifact,
@@ -298,6 +301,12 @@ it('publishes once with explicit acknowledgement and replaces the composer with 
   await fillTarget(user)
   await choose(user)
   await user.click(screen.getByRole('button', { name: 'Check source' }))
+  expect(
+    await screen.findByText(
+      /selected Solidity or Vyper source artifact and verification metadata to Sourcify/
+    )
+  ).toBeTruthy()
+  expect(screen.getByText(/Sourcify may forward them to Etherscan, Blockscout, or Routescan/)).toBeTruthy()
   await user.click(await screen.findByRole('checkbox'))
   await user.click(screen.getByRole('button', { name: 'Publish source' }))
   fireEvent.click(screen.getByRole('button', { name: 'Publishing source…' }))
@@ -347,6 +356,7 @@ it('checks credential status without exposing a key and preserves a Settings ret
   )
   await screen.findByText('Verification status')
   await confirmNoConstructorArguments(user)
+  await consentToDirectEtherscan(user)
   await user.click(screen.getByRole('button', { name: 'Submit directly with API key' }))
   expect(publishVerificationToEtherscan).not.toHaveBeenCalled()
   expect(await screen.findByText(/No Etherscan API key is configured/)).toBeTruthy()
@@ -378,9 +388,32 @@ it('submits the direct fallback only after confirming a configured credential', 
   )
   await screen.findByText('Verification status')
   await confirmNoConstructorArguments(user)
+  expect(screen.getByRole('button', { name: 'Submit directly with API key' }).disabled).toBe(true)
+  expect(
+    screen.getByText(
+      /already-checked source, metadata, and any encoded constructor arguments directly to Etherscan/
+    )
+  ).toBeTruthy()
+  await consentToDirectEtherscan(user)
   await user.click(screen.getByRole('button', { name: 'Submit directly with API key' }))
   await waitFor(() => expect(publishVerificationToEtherscan).toHaveBeenCalledWith('verification-1', '', true))
   expect(await screen.findByText('Checking')).toBeTruthy()
+})
+
+it('invalidates direct consent when constructor arguments change', async () => {
+  getVerification.mockResolvedValue({ success: true, job })
+  const { user } = render(
+    <ContractVerification networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  await screen.findByText('Verification status')
+  const argumentsInput = screen.getByRole('textbox', { name: 'Encoded constructor arguments' })
+  await user.type(argumentsInput, '12Ab')
+  await consentToDirectEtherscan(user)
+  expect(screen.getByRole('button', { name: 'Submit directly with API key' }).disabled).toBe(false)
+
+  await user.type(argumentsInput, '34')
+
+  expect(screen.getByRole('button', { name: 'Submit directly with API key' }).disabled).toBe(true)
 })
 
 it('retries a key-failed direct POST only without a remote id', async () => {
@@ -428,6 +461,7 @@ it('offers explicit source reselection after restart and validates the restored 
   )
   await screen.findByText('Verification status')
   await confirmNoConstructorArguments(user)
+  await consentToDirectEtherscan(user)
   await user.click(screen.getByRole('button', { name: 'Submit directly with API key' }))
   await user.click(await screen.findByRole('button', { name: 'Reselect source' }))
   await choose(user)

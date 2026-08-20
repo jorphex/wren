@@ -200,6 +200,7 @@ export class ContractVerification extends React.Component {
       keyMissing: false,
       constructorArguments: '',
       noConstructorArguments: false,
+      etherscanAcknowledged: false,
       busy: '',
       status: '',
       error: ''
@@ -317,6 +318,7 @@ export class ContractVerification extends React.Component {
       ...next,
       prepared: undefined,
       acknowledged: false,
+      etherscanAcknowledged: false,
       busy: '',
       error: '',
       status: announce ? STALE_MESSAGE : ''
@@ -478,7 +480,8 @@ export class ContractVerification extends React.Component {
   async submitDirect() {
     const constructorArgumentsReady =
       this.state.noConstructorArguments || /^(?:[0-9a-fA-F]{2})+$/u.test(this.state.constructorArguments)
-    if (!this.state.job || this.state.busy || !constructorArgumentsReady) return
+    if (!this.state.job || this.state.busy || !constructorArgumentsReady || !this.state.etherscanAcknowledged)
+      return
     const status = await this.run(
       'credential',
       getExplorerCredentialStatus,
@@ -497,7 +500,13 @@ export class ContractVerification extends React.Component {
           this.state.noConstructorArguments
         ),
       'Could not submit directly to Etherscan.',
-      ({ job }) => this.setState({ job, keyMissing: false, status: 'Direct submission started.' })
+      ({ job }) =>
+        this.setState({
+          job,
+          keyMissing: false,
+          etherscanAcknowledged: false,
+          status: 'Direct submission started.'
+        })
     )
   }
 
@@ -796,7 +805,11 @@ export class ContractVerification extends React.Component {
                 maxLength={2 * 1024 * 1024}
                 disabled={Boolean(this.state.busy) || this.state.noConstructorArguments}
                 onChange={(event) =>
-                  this.setState({ constructorArguments: event.target.value, noConstructorArguments: false })
+                  this.setState({
+                    constructorArguments: event.target.value,
+                    noConstructorArguments: false,
+                    etherscanAcknowledged: false
+                  })
                 }
               />
             </label>
@@ -808,6 +821,7 @@ export class ContractVerification extends React.Component {
                 onChange={(event) =>
                   this.setState({
                     noConstructorArguments: event.target.checked,
+                    etherscanAcknowledged: false,
                     ...(event.target.checked ? { constructorArguments: '' } : {})
                   })
                 }
@@ -815,11 +829,25 @@ export class ContractVerification extends React.Component {
               <span>This contract has no constructor arguments.</span>
             </label>
             <p>Paste ABI-encoded arguments without 0x, or confirm there are none.</p>
+            <p className='contractVerificationNotice'>
+              This fallback sends the already-checked source, metadata, and any encoded constructor arguments
+              directly to Etherscan. Publication is permanent, public, and irreversible.
+            </p>
+            <label className='contractVerificationAcknowledgement'>
+              <input
+                type='checkbox'
+                checked={this.state.etherscanAcknowledged}
+                disabled={Boolean(this.state.busy)}
+                onChange={(event) => this.setState({ etherscanAcknowledged: event.target.checked })}
+              />
+              <span>I consent to direct Etherscan submission.</span>
+            </label>
             <button
               type='button'
               className='wrenControl wrenControlGhost'
               disabled={
                 Boolean(this.state.busy) ||
+                !this.state.etherscanAcknowledged ||
                 (!this.state.noConstructorArguments &&
                   !/^(?:[0-9a-fA-F]{2})+$/u.test(this.state.constructorArguments))
               }
@@ -947,8 +975,9 @@ export class ContractVerification extends React.Component {
             {prepared ? (
               <div className='contractVerificationPublication'>
                 <p className='contractVerificationNotice'>
-                  Publishing is permanent and public. Anyone can view and copy the source and verification
-                  metadata. Wren cannot undo a submission.
+                  Submitting sends the selected Solidity or Vyper source artifact and verification metadata to
+                  Sourcify. Sourcify may forward them to Etherscan, Blockscout, or Routescan. Publication is
+                  permanent, public, and irreversible.
                 </p>
                 <label className='contractVerificationAcknowledgement'>
                   <input
@@ -957,7 +986,7 @@ export class ContractVerification extends React.Component {
                     disabled={busy || !preparedEvidenceReady(prepared)}
                     onChange={(event) => this.setState({ acknowledged: event.target.checked })}
                   />
-                  <span>I understand this source and verification metadata will be public permanently.</span>
+                  <span>I consent to this submission and possible forwarding.</span>
                 </label>
               </div>
             ) : null}

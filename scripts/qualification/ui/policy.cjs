@@ -383,7 +383,7 @@ const reviewScenarios = () => [
           },
           { type: 'clickText', text: 'Choose artifact' },
           { type: 'clickText', text: 'Check source' },
-          { type: 'clickCheckboxText', text: 'public permanently' }
+          { type: 'clickCheckboxText', text: 'possible forwarding' }
         ]
       },
       ready: '.contractVerificationPublication',
@@ -393,8 +393,8 @@ const reviewScenarios = () => [
       requiredText: [
         'Source check',
         'Matched locally',
-        'Publishing is permanent and public',
-        'Wren cannot undo a submission'
+        'selected Solidity or Vyper source artifact',
+        'Sourcify may forward them to Etherscan, Blockscout, or Routescan'
       ]
     }))
   ),
@@ -409,10 +409,23 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight,
-    action: { type: 'clickCheckboxText', text: 'no constructor arguments' },
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'clickCheckboxText', text: 'no constructor arguments' },
+        { type: 'clickCheckboxText', text: 'direct Etherscan submission' }
+      ]
+    },
     ready: '.contractVerificationResult',
     requiredControls: ['Refresh status', 'Submit directly with API key'],
-    requiredText: ['Verification status', 'Sourcify', 'Published', 'Blockscout', 'Verified', 'Etherscan']
+    requiredText: [
+      'Verification status',
+      'Sourcify',
+      'Published',
+      'Blockscout',
+      'Verified',
+      'directly to Etherscan'
+    ]
   })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -1839,14 +1852,14 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           },
           { type: 'clickText', text: 'Choose artifact' },
           { type: 'clickText', text: 'Check source' },
-          { type: 'clickCheckboxText', text: 'public permanently' }
+          { type: 'clickCheckboxText', text: 'possible forwarding' }
         ]
       },
       ready: '.contractVerificationPublication',
       captureScroll: 'target',
       captureScrollSelector: '.contractVerificationPublication',
       requiredControls: ['Edit and recheck', 'Publish source'],
-      requiredText: ['Publishing is permanent and public', 'Matched locally'],
+      requiredText: ['Sourcify may forward them to Etherscan, Blockscout, or Routescan', 'Matched locally'],
       layoutExpectations: [
         { kind: 'stacked', selector: '.contractVerificationLedgerRow' },
         {
