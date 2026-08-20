@@ -145,6 +145,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const inspectorForms = inspectors.filter(({ id }) => id.startsWith('dash-inspector-form-'))
   const inspectorResults = inspectors.filter(({ id }) => !id.startsWith('dash-inspector-form-'))
   const earnYvusd = scenarios.filter(({ state }) => state === 'earn-yvusd')
+  const earnLoading = scenarios.find(({ state }) => state === 'earn-loading')
   expect(earnYvusd).toHaveLength(4)
   expect(earnYvusd.map(({ variant }) => variant)).toEqual(['unlocked', 'unlocked', 'locked', 'locked'])
   expect(invokeReplyFor(earnYvusd[0], 'yearn:getCatalog')).toMatchObject({
@@ -156,6 +157,14 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     chains: expect.arrayContaining([expect.objectContaining({ chainId: 1, status: 'ready' })])
   })
   expect(invokeReplyFor(earnYvusd[0], 'yearn:getWorkflows')).toEqual({ workflows: [] })
+  expect(earnLoading).toMatchObject({
+    ready: '.earnPositionsLoading',
+    deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows']
+  })
+  expect(invokeReplyFor(earnLoading, 'yearn:getCatalog', [{ force: false, cacheOnly: true }])).toMatchObject({
+    status: 'unavailable',
+    fetchedAt: null
+  })
   expect(inspectors).toHaveLength(9)
   expect(inspectorForms.map(({ id }) => id)).toEqual([
     'dash-inspector-form-full-1',

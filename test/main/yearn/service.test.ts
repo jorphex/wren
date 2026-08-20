@@ -18,6 +18,40 @@ describe('Yearn catalog service', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
+  it('returns stale cached data immediately without starting a refresh', async () => {
+    const fetchImpl = jest.fn()
+    const cache = cachedCatalog(10_000)
+    const service = createYearnCatalogService({
+      readCache: () => cache,
+      writeCache: jest.fn(),
+      fetchImpl,
+      now: () => 10_000 + CATALOG_TTL_MS
+    })
+
+    await expect(service.getCatalog({ cacheOnly: true })).resolves.toMatchObject({
+      status: 'stale',
+      fetchedAt: 10_000,
+      vaults: cache.vaults
+    })
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('returns the bundled unavailable catalog immediately when no cache exists', async () => {
+    const fetchImpl = jest.fn()
+    const service = createYearnCatalogService({
+      readCache: () => null,
+      writeCache: jest.fn(),
+      fetchImpl
+    })
+
+    const result = await service.getCatalog({ cacheOnly: true })
+
+    expect(result).toMatchObject({ status: 'unavailable', fetchedAt: null })
+    expect(result.vaults).toHaveLength(8)
+    expect(result.vaults.every(({ status }) => status === 'unavailable')).toBe(true)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
   it('refreshes stale data, validates it, and deduplicates concurrent requests', async () => {
     const writeCache = jest.fn()
     const fetchImpl = jest.fn(

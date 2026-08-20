@@ -7,6 +7,7 @@ import link from '../../../resources/link'
 import {
   cancelYearnWorkflow,
   getYearnCatalog,
+  getYearnCatalogSnapshot,
   getYearnPositions,
   getYearnWorkflows,
   resumeYearnWorkflow,
@@ -139,7 +140,8 @@ const positionVariantLabel = (vault, variant, cooldown = false) => {
   return ''
 }
 
-const ChainStatus = ({ chain }) => {
+const ChainStatus = ({ chain, loading = false }) => {
+  if (loading) return null
   if (!chain) {
     return <div className='earnNotice'>Position data is unavailable.</div>
   }
@@ -166,14 +168,86 @@ const ChainStatus = ({ chain }) => {
   )
 }
 
-const Metric = ({ label, value }) => (
+const Skeleton = ({ className = '' }) => (
+  <span className={`earnSkeleton ${className}`.trim()} aria-hidden='true' />
+)
+
+const Metric = ({ label, value, loading = false }) => (
   <div className='earnMetric'>
     <div className='earnMetricLabel'>{label}</div>
-    <div className='earnMetricValue'>{value}</div>
+    <div className='earnMetricValue'>{loading ? <Skeleton className='earnSkeletonMetric' /> : value}</div>
   </div>
 )
 
-const VaultCard = ({ vault, position, onSelect }) => {
+const PositionLoading = () => (
+  <section
+    className='earnPositionsOverview earnPositionsLoading'
+    aria-labelledby='earn-positions-loading-heading'
+    role='status'
+  >
+    <h2 id='earn-positions-loading-heading'>Your positions</h2>
+    <div className='earnPosition earnPositionSkeleton'>
+      <Skeleton className='earnSkeletonArtwork' />
+      <div className='earnSkeletonCopy'>
+        <Skeleton className='earnSkeletonTitle' />
+        <Skeleton className='earnSkeletonLine' />
+      </div>
+      <Skeleton className='earnSkeletonAmount' />
+    </div>
+    <span className='earnLoadingLabel'>Loading account positions…</span>
+  </section>
+)
+
+const WorkflowLoading = () => (
+  <div className='earnWorkflows earnWorkflowsLoading' role='status'>
+    <h2>Recent activity</h2>
+    <div className='earnWorkflow'>
+      <Skeleton className='earnSkeletonTitle' />
+      <Skeleton className='earnSkeletonLine' />
+    </div>
+    <span className='earnLoadingLabel'>Loading Earn activity…</span>
+  </div>
+)
+
+const EarnCatalogLoading = () => (
+  <div className='earn earnCatalogLoading cardShow' role='status'>
+    <header className='earnHero'>
+      <div className='earnEyebrow earnProvider'>
+        <span>Vaults by</span>
+        <img src={yearnLogo} alt='Yearn' />
+      </div>
+      <h1>Earn</h1>
+      <p>A focused selection of established vaults, separated by chain.</p>
+    </header>
+    <div className='earnTabs earnTabsSkeleton' aria-hidden='true'>
+      {CHAINS.map(({ id }) => (
+        <Skeleton className='earnSkeletonTab' key={id} />
+      ))}
+    </div>
+    <div className='earnChain'>
+      <div className='earnChainHeading'>
+        <Skeleton className='earnSkeletonHeading' />
+      </div>
+      <div className='earnVaultList'>
+        {[0, 1].map((id) => (
+          <div className='earnVault earnVaultSkeleton' key={id}>
+            <div className='earnVaultTop'>
+              <Skeleton className='earnSkeletonArtwork' />
+              <div className='earnSkeletonCopy'>
+                <Skeleton className='earnSkeletonTitle' />
+                <Skeleton className='earnSkeletonLine' />
+              </div>
+              <Skeleton className='earnSkeletonAmount' />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <span className='earnLoadingLabel'>Loading saved Yearn catalog…</span>
+  </div>
+)
+
+const VaultCard = ({ vault, position, onSelect, metricsLoading = false }) => {
   const unavailable = vault.status !== 'available'
   const formattedApy = formatPercent(vault.apy.value)
   const showApyLabel = formattedApy.toLowerCase() !== vault.apy.label.toLowerCase()
@@ -195,13 +269,22 @@ const VaultCard = ({ vault, position, onSelect }) => {
           </div>
         </div>
         <div className='earnApy'>
-          <strong>{formattedApy}</strong>
-          {showApyLabel ? <span>{vault.apy.label}</span> : null}
+          <strong>{metricsLoading ? <Skeleton className='earnSkeletonMetric' /> : formattedApy}</strong>
+          {!metricsLoading && showApyLabel ? <span>{vault.apy.label}</span> : null}
         </div>
       </div>
       <div className='earnVaultMetrics'>
-        <span>{formatUsd(vault.tvlUsd)} TVL</span>
-        <span>{vault.riskLabel} risk</span>
+        {metricsLoading ? (
+          <>
+            <Skeleton className='earnSkeletonInline' />
+            <Skeleton className='earnSkeletonInline earnSkeletonInlineShort' />
+          </>
+        ) : (
+          <>
+            <span>{formatUsd(vault.tvlUsd)} TVL</span>
+            <span>{vault.riskLabel} risk</span>
+          </>
+        )}
         {position?.assetBalance !== null && position?.assetBalance !== undefined ? (
           <span>
             {formatAmount(position.assetBalance)} {vault.asset.symbol} available
@@ -618,6 +701,8 @@ class ActivityPreview extends React.Component {
 const ActivityView = ({
   vault,
   workflows,
+  workflowsLoading,
+  workflowsError,
   workflowBusy,
   canTransact,
   onResume,
@@ -631,19 +716,28 @@ const ActivityView = ({
       <h1>Earn activity</h1>
       <p>{vault.name}</p>
     </header>
-    <div className='earnWorkflows earnWorkflowsExpanded'>
-      {workflows.map((workflow) => (
-        <WorkflowCard
-          key={workflow.id}
-          workflow={workflow}
-          busy={workflowBusy}
-          canTransact={canTransact}
-          onResume={onResume}
-          onCancel={onCancel}
-          onRevoke={onRevoke}
-        />
-      ))}
-    </div>
+    {workflowsLoading && !workflows.length ? (
+      <WorkflowLoading />
+    ) : (
+      <div className='earnWorkflows earnWorkflowsExpanded'>
+        {workflows.map((workflow) => (
+          <WorkflowCard
+            key={workflow.id}
+            workflow={workflow}
+            busy={workflowBusy}
+            canTransact={canTransact}
+            onResume={onResume}
+            onCancel={onCancel}
+            onRevoke={onRevoke}
+          />
+        ))}
+      </div>
+    )}
+    {workflowsError ? (
+      <div className='earnNotice earnNoticeWarn' role='alert'>
+        {workflowsError}
+      </div>
+    ) : null}
   </div>
 )
 
@@ -748,6 +842,11 @@ const VaultDetails = ({
   account,
   chain,
   workflows,
+  metricsLoading,
+  positionsLoading,
+  positionsError,
+  workflowsLoading,
+  workflowsError,
   form,
   workflowBusy,
   selectedVariant: selectedVariantProp,
@@ -807,11 +906,12 @@ const VaultDetails = ({
         <p>{vault.description}</p>
       </div>
       <div className='earnDetailsMetrics'>
-        <Metric label='Est. APY' value={formatPercent(displayVariant?.apy.value)} />
-        <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} />
+        <Metric label='Est. APY' value={formatPercent(displayVariant?.apy.value)} loading={metricsLoading} />
+        <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} loading={metricsLoading} />
         <Metric
           label={selectedVariant === 'locked' ? 'Underlying vault risk' : 'Risk'}
           value={vault.riskLabel}
+          loading={metricsLoading}
         />
       </div>
       {vault.kind === 'yvUSD' ? (
@@ -848,7 +948,12 @@ const VaultDetails = ({
           Deposits finish staked as ysyBOLD. Existing unstaked yBOLD can be staked separately.
         </div>
       ) : null}
-      {position?.hasPosition ? (
+      {positionsLoading && !position ? (
+        <div className='earnNotice earnDetailsNotice earnNoticeLoading' role='status'>
+          <Skeleton className='earnSkeletonInline' />
+          <span>Loading account position…</span>
+        </div>
+      ) : position?.hasPosition ? (
         <div className='earnOwned'>
           <h2>Your position</h2>
           {position.variants
@@ -880,7 +985,12 @@ const VaultDetails = ({
         </div>
       ) : null}
       {cooldown ? <CooldownNotice cooldown={cooldown} /> : null}
-      {!signingAccount ? (
+      {positionsError ? (
+        <div className='earnNotice earnNoticeWarn earnDetailsNotice' role='alert'>
+          {positionsError}
+        </div>
+      ) : null}
+      {!positionsLoading && !signingAccount ? (
         <div className='earnNotice earnDetailsNotice'>
           {account?.readOnly
             ? 'Watch-only accounts can inspect positions but cannot transact.'
@@ -960,7 +1070,9 @@ const VaultDetails = ({
           formRef={formRef}
         />
       ) : null}
-      {workflows.length ? (
+      {workflowsLoading && !workflows.length ? (
+        <WorkflowLoading />
+      ) : workflows.length ? (
         <ActivityPreview
           workflows={workflows}
           workflowBusy={workflowBusy}
@@ -973,6 +1085,11 @@ const VaultDetails = ({
           onCancel={onCancel}
           onRevoke={onRevoke}
         />
+      ) : null}
+      {workflowsError ? (
+        <div className='earnNotice earnNoticeWarn' role='alert'>
+          {workflowsError}
+        </div>
       ) : null}
       <div className='earnDetailsFooter'>
         <button
@@ -1002,7 +1119,14 @@ export class Earn extends React.Component {
     super(props)
     const route = earnRoute(props.data)
     this.state = {
-      loading: true,
+      catalogLoading: true,
+      catalogRefreshing: false,
+      catalogError: '',
+      positionsLoading: true,
+      positionsError: '',
+      workflowsLoading: true,
+      workflowsLoaded: false,
+      workflowsError: '',
       refreshing: false,
       error: '',
       catalog: null,
@@ -1019,7 +1143,7 @@ export class Earn extends React.Component {
     this.mounted = true
     this.storeKey = this.currentStoreKey()
     this.accountKey = this.store('selected.current') || ''
-    this.load(false)
+    this.loadInitial()
     this.workflowTimer = setInterval(() => this.loadWorkflows(), 15_000)
   }
 
@@ -1099,40 +1223,78 @@ export class Earn extends React.Component {
     return JSON.stringify([selected, networks])
   }
 
-  async load(force) {
-    this.setState({ loading: !this.state.catalog, refreshing: Boolean(this.state.catalog), error: '' })
+  loadInitial() {
+    this.loadCatalogSnapshot()
+    this.loadCatalog(false)
+    this.loadPositions()
+    this.loadWorkflows()
+  }
+
+  async loadCatalogSnapshot() {
     try {
-      const [catalog, positions, workflowResult] = await Promise.all([
-        getYearnCatalog(force),
-        getYearnPositions(),
-        getYearnWorkflows()
-      ])
+      const catalog = await getYearnCatalogSnapshot()
+      if (this.mounted) {
+        this.setState((state) =>
+          state.catalog ? { catalogLoading: false } : { catalog, catalogLoading: false }
+        )
+      }
+    } catch {
+      if (this.mounted) this.setState({ catalogLoading: false })
+    }
+  }
+
+  async loadCatalog(force) {
+    this.setState({ catalogRefreshing: true, catalogError: '' })
+    try {
+      const catalog = await getYearnCatalog(force)
+      if (this.mounted) this.setState({ catalog, catalogLoading: false, catalogRefreshing: false })
+    } catch {
       if (this.mounted) {
         this.setState({
-          catalog,
+          catalogError: 'Current Yearn vault data could not be refreshed.',
+          catalogLoading: false,
+          catalogRefreshing: false
+        })
+      }
+    }
+  }
+
+  async load(force) {
+    if (!force) {
+      this.loadInitial()
+      return
+    }
+    this.setState({ refreshing: true, error: '' })
+    await Promise.allSettled([this.loadCatalog(true), this.loadPositions(), this.loadWorkflows()])
+    if (this.mounted) this.setState({ refreshing: false })
+  }
+
+  async loadPositions() {
+    const loading = !this.currentPositions()
+    this.setState({
+      positionsLoading: loading,
+      positionsError: ''
+    })
+    try {
+      const positions = await getYearnPositions()
+      if (this.mounted) {
+        this.setState({
           positions,
-          workflows: workflowResult.workflows,
-          loading: false,
-          refreshing: false
+          positionsLoading: false
         })
       }
     } catch {
       if (this.mounted) {
-        this.setState({ error: 'Earn data could not be loaded.', loading: false, refreshing: false })
+        this.setState({
+          positionsError: 'Account positions could not be refreshed.',
+          positionsLoading: false
+        })
       }
     }
   }
 
-  async loadPositions() {
-    try {
-      const positions = await getYearnPositions()
-      if (this.mounted) this.setState({ positions })
-    } catch {
-      if (this.mounted) this.setState({ error: 'Account positions could not be refreshed.' })
-    }
-  }
-
   async loadWorkflows() {
+    if (!this.state.workflowsLoaded) this.setState({ workflowsLoading: true, workflowsError: '' })
     try {
       const result = await getYearnWorkflows()
       if (this.mounted) {
@@ -1140,11 +1302,22 @@ export class Earn extends React.Component {
         const completed = result.workflows.some(
           ({ id, status }) => status === 'complete' && previous.get(id) !== 'complete'
         )
-        this.setState({ workflows: result.workflows })
+        this.setState({
+          workflows: result.workflows,
+          workflowsLoading: false,
+          workflowsLoaded: true,
+          workflowsError: ''
+        })
         if (completed) this.loadPositions()
       }
     } catch {
-      if (this.mounted) this.setState({ error: 'Earn activity could not be refreshed.' })
+      if (this.mounted) {
+        this.setState({
+          workflowsLoading: false,
+          workflowsLoaded: true,
+          workflowsError: 'Earn activity could not be refreshed.'
+        })
+      }
     }
   }
 
@@ -1279,7 +1452,7 @@ export class Earn extends React.Component {
     )
   }
 
-  renderChain(chainId, vaults) {
+  renderChain(chainId, vaults, metricsLoading) {
     const positionChain = this.currentPositions()?.chains.find((chain) => chain.chainId === chainId)
     return (
       <section className='earnChain' key={chainId} aria-labelledby={`earn-chain-${chainId}`}>
@@ -1289,13 +1462,14 @@ export class Earn extends React.Component {
             {vaults.length} curated {vaults.length === 1 ? 'vault' : 'vaults'}
           </span>
         </div>
-        <ChainStatus chain={positionChain} />
+        <ChainStatus chain={positionChain} loading={this.state.positionsLoading} />
         <div className='earnVaultList'>
           {vaults.map((vault) => (
             <VaultCard
               key={vault.id}
               vault={vault}
               position={this.positionFor(vault.id)}
+              metricsLoading={metricsLoading}
               onSelect={(selected, trigger) => this.selectVault(selected, trigger)}
             />
           ))}
@@ -1307,22 +1481,18 @@ export class Earn extends React.Component {
   render() {
     const { catalog, workflows, filter, selected } = this.state
     const currentPositions = this.currentPositions()
-    if (this.state.loading)
-      return (
-        <div className='earnState cardShow' role='status'>
-          Loading curated Yearn vaults...
-        </div>
-      )
+    if (!catalog && this.state.catalogLoading) return <EarnCatalogLoading />
     if (!catalog) {
       return (
         <div className='earnState cardShow'>
-          {this.state.error || 'Earn is unavailable.'}
+          {this.state.catalogError || this.state.error || 'Earn is unavailable.'}
           <button type='button' className='wrenControl wrenControlPrimary' onClick={() => this.load(true)}>
             Try again
           </button>
         </div>
       )
     }
+    const metricsLoading = catalog.status === 'unavailable' && this.state.catalogRefreshing
     const selectedVault = catalog.vaults.find(({ id }) => id === selected)
     if (selectedVault) {
       const selectedAccountId = this.store('selected.current')
@@ -1355,6 +1525,8 @@ export class Earn extends React.Component {
           <ActivityView
             vault={selectedVault}
             workflows={selectedWorkflows}
+            workflowsLoading={this.state.workflowsLoading}
+            workflowsError={this.state.workflowsError}
             workflowBusy={this.state.workflowBusy}
             canTransact={Boolean(signingAccount)}
             viewRef={(element) => {
@@ -1374,6 +1546,11 @@ export class Earn extends React.Component {
           account={selectedAccount}
           chain={selectedChain}
           workflows={selectedWorkflows}
+          metricsLoading={metricsLoading}
+          positionsLoading={this.state.positionsLoading}
+          positionsError={this.state.positionsError}
+          workflowsLoading={this.state.workflowsLoading}
+          workflowsError={this.state.workflowsError}
           form={this.state.form}
           workflowBusy={this.state.workflowBusy}
           selectedVariant={this.state.selectedVariant}
@@ -1409,13 +1586,22 @@ export class Earn extends React.Component {
           <button
             type='button'
             className='earnRefresh wrenControl wrenControlSecondary wrenControlCompact'
-            disabled={this.state.refreshing}
+            disabled={this.state.refreshing || this.state.catalogRefreshing}
             onClick={() => this.load(true)}
           >
-            {this.state.refreshing ? 'Refreshing...' : 'Refresh'}
+            {this.state.refreshing
+              ? 'Refreshing...'
+              : this.state.catalogRefreshing
+                ? 'Updating...'
+                : 'Refresh'}
           </button>
         </header>
-        {catalog.status !== 'fresh' ? (
+        {metricsLoading ? (
+          <div className='earnNotice earnNoticeLoading' role='status'>
+            <Skeleton className='earnSkeletonInline' />
+            <span>Loading current Yearn metrics…</span>
+          </div>
+        ) : catalog.status !== 'fresh' ? (
           <div className='earnNotice earnNoticeWarn'>
             Showing {catalog.status === 'stale' ? 'cached' : 'unavailable'} Yearn data. New deposits are
             disabled; existing positions remain manageable.
@@ -1459,12 +1645,27 @@ export class Earn extends React.Component {
             {this.state.error}
           </div>
         ) : null}
-        {this.renderPositions(visiblePositions)}
+        {this.state.catalogError ? (
+          <div className='earnNotice earnNoticeWarn' role='alert'>
+            {this.state.catalogError}
+          </div>
+        ) : null}
+        {this.state.positionsError ? (
+          <div className='earnNotice earnNoticeWarn' role='alert'>
+            {this.state.positionsError}
+          </div>
+        ) : null}
+        {this.state.positionsLoading && !currentPositions ? (
+          <PositionLoading />
+        ) : (
+          this.renderPositions(visiblePositions)
+        )}
         <div id='earn-chain-panels' role='tabpanel' aria-labelledby={`earn-tab-${filter}`}>
           {visibleChains.map(({ id }) =>
             this.renderChain(
               id,
-              catalog.vaults.filter(({ chainId }) => chainId === id)
+              catalog.vaults.filter(({ chainId }) => chainId === id),
+              metricsLoading
             )
           )}
         </div>

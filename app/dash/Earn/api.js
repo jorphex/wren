@@ -1,7 +1,7 @@
 import link from '../../../resources/link'
 
-export const getYearnCatalog = async (force = false) => {
-  const result = await link.invoke('yearn:getCatalog', { force })
+const requestYearnCatalog = async (options) => {
+  const result = await link.invoke('yearn:getCatalog', options)
   if (
     !result ||
     !Array.isArray(result.vaults) ||
@@ -11,6 +11,10 @@ export const getYearnCatalog = async (force = false) => {
   }
   return result
 }
+
+export const getYearnCatalog = async (force = false) => requestYearnCatalog({ force })
+
+export const getYearnCatalogSnapshot = async () => requestYearnCatalog({ force: false, cacheOnly: true })
 
 export const getYearnPositions = async () => {
   const result = await link.invoke('yearn:getPositions')

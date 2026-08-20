@@ -823,7 +823,7 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'earn-yvusd') {
+  if (['earn-yvusd', 'earn-loading'].includes(scenario.state)) {
     prepareSelectedAccount(state)
     state.windows.dash = {
       ...state.windows.dash,
@@ -831,7 +831,10 @@ const fixtureFor = (scenario) => {
       nav: [
         {
           view: 'earn',
-          data: { vaultId: 'ethereum-yvusd', variant: scenario.variant }
+          data:
+            scenario.state === 'earn-loading'
+              ? {}
+              : { vaultId: 'ethereum-yvusd', variant: scenario.variant }
         }
       ]
     }
@@ -1923,7 +1926,33 @@ const rpcReplyFor = (scenario, method) => {
   }
 }
 
-const invokeReplyFor = (scenario, method) => {
+const invokeReplyFor = (scenario, method, args = []) => {
+  if (scenario.state === 'earn-loading' && method === 'yearn:getCatalog') {
+    const catalog = qualificationYearnCatalog()
+    if (args[0]?.cacheOnly) {
+      return {
+        ...catalog,
+        status: 'unavailable',
+        fetchedAt: null,
+        errors: [{ chainId: 1, message: 'Yearn data is loading' }],
+        vaults: catalog.vaults.map((vault) => ({
+          ...vault,
+          status: 'unavailable',
+          statusReason: 'Loading current Yearn data',
+          tvlUsd: 0,
+          apy: { value: null, label: 'Unavailable', source: 'unavailable' },
+          riskLevel: null,
+          riskLabel: 'Unrated',
+          variants: vault.variants.map((variant) => ({
+            ...variant,
+            tvlUsd: 0,
+            apy: { value: null, label: 'Unavailable', source: 'unavailable' }
+          }))
+        }))
+      }
+    }
+    return catalog
+  }
   if (scenario.state === 'earn-yvusd' && method === 'yearn:getCatalog') {
     return qualificationYearnCatalog()
   }

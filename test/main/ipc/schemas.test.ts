@@ -546,6 +546,9 @@ test('strictly bounds dashboard Sweep requests and results', () => {
 
 test('requires explicit Yearn catalog options and validates returned metadata', () => {
   expect(parse('invoke', 'yearn:getCatalog', [{ force: false }])).toEqual([{ force: false }])
+  expect(parse('invoke', 'yearn:getCatalog', [{ force: false, cacheOnly: true }])).toEqual([
+    { force: false, cacheOnly: true }
+  ])
   expect(parseRendererIpcArgs('invoke', 'yearn:getCatalog', [{}]).success).toBe(false)
   expect(
     parseRendererIpcArgs('invoke', 'yearn:getCatalog', [{ force: false, endpoint: 'https://evil.test' }])

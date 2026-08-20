@@ -581,6 +581,10 @@ const main = async () => {
   ]) {
     ipcMain.handle(channel, (event, ...args) => {
       const scenario = scenarioByWebContents.get(event.sender.id)
+      const cacheOnlyCatalog = channel === 'yearn:getCatalog' && args[0]?.cacheOnly === true
+      if (scenario?.deferInvokes?.includes(channel) && !cacheOnlyCatalog) {
+        return new Promise(() => {})
+      }
       const reply = scenario ? invokeReplyFor(scenario, channel, args) : undefined
       if (reply === undefined) throw new Error(`Qualification harness does not provide ${channel}`)
       return reply

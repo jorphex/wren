@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { render, screen, waitFor } from '../../../componentSetup'
+import { act, render, screen, waitFor } from '../../../componentSetup'
 import {
   Earn,
   activityPreviewLimit,
@@ -11,6 +11,7 @@ import {
 } from '../../../../app/dash/Earn'
 import {
   getYearnCatalog,
+  getYearnCatalogSnapshot,
   getYearnPositions,
   getYearnWorkflows,
   revokeYearnWorkflow,
@@ -20,6 +21,7 @@ import link from '../../../../resources/link'
 
 jest.mock('../../../../app/dash/Earn/api', () => ({
   getYearnCatalog: jest.fn(),
+  getYearnCatalogSnapshot: jest.fn(),
   getYearnPositions: jest.fn(),
   getYearnWorkflows: jest.fn(),
   startYearnWorkflow: jest.fn(),
@@ -273,12 +275,57 @@ const store = Restore.create(
 const ConnectedEarn = Restore.connect(Earn, store)
 
 beforeEach(() => {
-  getYearnCatalog.mockResolvedValue({ status: 'fresh', fetchedAt: 1234, vaults, errors: [] })
+  const catalog = { status: 'fresh', fetchedAt: 1234, vaults, errors: [] }
+  getYearnCatalog.mockResolvedValue(catalog)
+  getYearnCatalogSnapshot.mockResolvedValue(catalog)
   getYearnPositions.mockResolvedValue(makePositions())
   getYearnWorkflows.mockResolvedValue({ workflows: [] })
   startYearnWorkflow.mockReset()
   revokeYearnWorkflow.mockReset()
   link.send.mockClear()
+})
+
+it('renders a saved catalog before positions, live metrics, or workflows finish loading', async () => {
+  let resolveCatalog
+  let resolvePositions
+  let resolveWorkflows
+  const freshCatalog = { status: 'fresh', fetchedAt: 1234, vaults, errors: [] }
+  getYearnCatalogSnapshot.mockResolvedValue({
+    ...freshCatalog,
+    status: 'stale',
+    fetchedAt: 1000
+  })
+  getYearnCatalog.mockReturnValue(
+    new Promise((resolve) => {
+      resolveCatalog = resolve
+    })
+  )
+  getYearnPositions.mockReturnValue(
+    new Promise((resolve) => {
+      resolvePositions = resolve
+    })
+  )
+  getYearnWorkflows.mockReturnValue(
+    new Promise((resolve) => {
+      resolveWorkflows = resolve
+    })
+  )
+
+  render(<ConnectedEarn />)
+
+  expect(await screen.findByRole('heading', { name: 'Ethereum' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'View yvUSD on Ethereum' })).toBeTruthy()
+  expect(screen.getByText('Loading account positions…')).toBeTruthy()
+  expect(screen.getByText(/Showing cached Yearn data/)).toBeTruthy()
+
+  await act(async () => resolvePositions(makePositions()))
+  expect(await screen.findByRole('button', { name: 'Manage yvUSD position' })).toBeTruthy()
+  expect(screen.queryByText('Loading account positions…')).toBeNull()
+  expect(screen.getByText(/Showing cached Yearn data/)).toBeTruthy()
+
+  await act(async () => resolveCatalog(freshCatalog))
+  await waitFor(() => expect(screen.queryByText(/Showing cached Yearn data/)).toBeNull())
+  await act(async () => resolveWorkflows({ workflows: [] }))
 })
 
 it('formats receipt base units without floating-point conversion', () => {

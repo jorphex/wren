@@ -91,9 +91,22 @@ export function createYearnCatalogService({
   }
 
   return {
-    getCatalog: async ({ force = false }: { force?: boolean } = {}): Promise<YearnCatalogResult> => {
+    getCatalog: async ({
+      force = false,
+      cacheOnly = false
+    }: { force?: boolean; cacheOnly?: boolean } = {}): Promise<YearnCatalogResult> => {
       const cached = getCached()
-      if (!force && cached && now() - cached.fetchedAt < CATALOG_TTL_MS) {
+      const fresh = cached && now() - cached.fetchedAt < CATALOG_TTL_MS
+      if (cacheOnly) {
+        if (!cached) return unavailableResult('Yearn data is loading')
+        return {
+          status: fresh ? 'fresh' : 'stale',
+          fetchedAt: cached.fetchedAt,
+          vaults: cached.vaults,
+          errors: []
+        }
+      }
+      if (!force && fresh) {
         return {
           status: 'fresh',
           fetchedAt: cached.fetchedAt,

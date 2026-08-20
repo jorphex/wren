@@ -230,6 +230,11 @@ test('uses separator-free Earn lists, spacing-led detail regions, and the shared
   expect(earnStyle).toMatch(
     /\.earnActions[\s\S]*?gap var\(--wren-space-1\)[\s\S]*?padding var\(--wren-space-1\)[\s\S]*?button\.wrenControl[\s\S]*?border-radius var\(--wren-radius-sm\)[\s\S]*?button\.wrenControl\.active[\s\S]*?background var\(--wren-surface-active\)/
   )
+  expect(earnStyle).toMatch(/@keyframes earnSkeletonPulse/)
+  expect(earnStyle).toMatch(/\.earnPositionSkeleton[\s\S]*?pointer-events none[\s\S]*?transition none/)
+  expect(earnStyle).toMatch(
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.earnSkeleton\n\s{4}animation none/
+  )
 })
 
 test('keeps dashboard add actions compact and inactive network toggles neutral', () => {

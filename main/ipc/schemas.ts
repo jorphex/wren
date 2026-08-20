@@ -902,7 +902,7 @@ const invokeSchemas = {
   'send:queueSweep': z.tuple([SweepQueueRequestSchema]),
   'send:resolveRecipient': z.tuple([z.string().trim().min(1).max(255)]),
   'tokens:save': z.tuple([TokenSchema, AssetSuggestionReferenceSchema.optional()]),
-  'yearn:getCatalog': z.tuple([z.object({ force: z.boolean() }).strict()]),
+  'yearn:getCatalog': z.tuple([z.object({ force: z.boolean(), cacheOnly: z.boolean().optional() }).strict()]),
   'yearn:getPositions': z.tuple([]),
   'yearn:getWorkflows': z.tuple([]),
   'yearn:startWorkflow': z.tuple([YearnWorkflowRequestSchema]),

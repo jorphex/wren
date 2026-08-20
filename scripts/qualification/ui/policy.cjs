@@ -346,6 +346,25 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  {
+    id: 'dash-earn-loading-full-1',
+    renderer: 'dash',
+    state: 'earn-loading',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.earnPositionsLoading',
+    deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows'],
+    requiredControls: ['View yvUSD on Ethereum'],
+    requiredText: [
+      'Earn',
+      'Loading current Yearn metrics…',
+      'Loading account positions…',
+      'Ethereum',
+      'yvUSD'
+    ],
+    layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }]
+  },
   ...[
     ['full', FULL_SHELL_HEIGHT],
     ['short', SHORT_SHELL_HEIGHT]
