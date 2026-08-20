@@ -698,6 +698,11 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   expect(artifact).toMatchObject({ success: true, artifact: { summary: { localRuntimeMatch: true } } })
   expect(JSON.stringify(artifact)).not.toMatch(/filePath|stdJsonInput|sourceContent|apiKey/u)
   expect(confirmations[0].requiredControls).toEqual(['View details', 'Verify source', 'Close'])
+  expect(confirmations[0].layoutExpectations).toContainEqual({
+    kind: 'viewport-bottom',
+    selector: '.requestNoticeTransactionDeploymentStatus'
+  })
+  expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(250)
 })
 
 it('forces the dashboard and tray capped-width fallback layouts at 150%', () => {

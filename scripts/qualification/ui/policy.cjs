@@ -308,6 +308,9 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.txLifecycle-success',
+      layoutExpectations: [
+        { kind: 'viewport-bottom', selector: '.requestNoticeTransactionDeploymentStatus' }
+      ],
       requiredControls: ['View details', 'Verify source', 'Close'],
       requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
     }))

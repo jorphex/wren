@@ -77,6 +77,16 @@ export function isNoSignerError(error) {
   return error === 'No signer' || error === WATCH_ONLY_SIGNING_ERROR
 }
 
+export function canContinueContractVerification(req) {
+  return Boolean(
+    req?.status === 'confirmed' &&
+    req.origin === originIdForName(WREN_DEPLOY_ORIGIN) &&
+    req.deployment &&
+    req.activityId &&
+    req.tx?.receipt?.contractAddress
+  )
+}
+
 export class RequestCommand extends React.Component {
   constructor(props, context) {
     super(props, context)
@@ -296,13 +306,7 @@ export class RequestCommand extends React.Component {
       hash && !receipt && !unconfirmedSubmission && ['verifying', 'sent'].includes(status)
     )
     const terminal = ['confirmed', 'error'].includes(status)
-    const canVerifySource = Boolean(
-      status === 'confirmed' &&
-      req.origin === originIdForName(WREN_DEPLOY_ORIGIN) &&
-      req.deployment &&
-      req.activityId &&
-      receipt?.contractAddress
-    )
+    const canVerifySource = canContinueContractVerification(req)
 
     return (
       <div className='txLifecycleEvidence'>
@@ -583,8 +587,11 @@ export class RequestCommand extends React.Component {
       return this.signingStatus(req)
     } else {
       const monitoring = notice || req.status !== undefined
+      const deploymentStatusClass = canContinueContractVerification(req)
+        ? ' requestNoticeTransactionDeploymentStatus'
+        : ''
       const commandClass = monitoring
-        ? 'requestNotice requestNoticeTransaction requestNoticeTransactionStatus'
+        ? `requestNotice requestNoticeTransaction requestNoticeTransactionStatus${deploymentStatusClass}`
         : 'requestNotice requestNoticeTransaction requestNoticeTransactionReview'
       return (
         <div className={commandClass}>

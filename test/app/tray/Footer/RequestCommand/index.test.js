@@ -131,7 +131,9 @@ it('opens source verification only for a confirmed managed deployment', async ()
   })
   const address = `0x${'2'.repeat(40)}`
   link.invoke.mockResolvedValue({ success: true, operationId, chainId: 1, address })
-  const view = renderMountedCommand(req, 'sentStatus', commandStore())
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
+
+  expect(document.querySelector('.requestNoticeTransactionDeploymentStatus')).toBeTruthy()
 
   await view.user.click(screen.getByRole('button', { name: 'Verify source' }))
 

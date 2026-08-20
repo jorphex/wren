@@ -1787,7 +1787,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = 230
+    state.windows.panel.footer.height = 250
   }
 
   if (scenario.state === 'wallet-calls-funding') {
