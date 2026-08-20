@@ -15,7 +15,7 @@ import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { snapshotPreparedWalletCallExecutionInput } from '../../../main/provider/walletCallPreparedExecution'
 import { SignerUserRejectedError } from '../../../main/signers/errors'
 import nav from '../../../main/windows/nav'
-import { computeAddress, keccak256, SigningKey, Transaction } from 'ethers'
+import { computeAddress, getCreateAddress, keccak256, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import operationLifecycleLedger from '../../../main/operationLifecycle'
@@ -2374,6 +2374,95 @@ describe('ordinary transaction lifecycle outcomes', () => {
       expect(targetAccount.getRequest(target.handlerId)).toBe(target)
     } finally {
       operationLifecycleLedger.remove(target.activityId, -1)
+      jest.useRealTimers()
+    }
+  })
+
+  it('keeps a confirmed managed deployment review available for verification for thirty seconds', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.current()
+    const hash = `0x${'a'.repeat(64)}`
+    const blockHash = `0x${'b'.repeat(64)}`
+    const contractAddress = getCreateAddress({ from: targetAccount.address, nonce: 10 })
+    Accounts.addRequest({
+      ...request,
+      origin: originIdForName(WREN_DEPLOY_ORIGIN),
+      deployment: {
+        version: 1,
+        inspectionId: 'a'.repeat(32),
+        account: targetAccount.address,
+        chainId: '0x1',
+        initcodeHash: `0x${'c'.repeat(64)}`,
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: Date.now(),
+        expiresAt: Date.now() + 60_000
+      }
+    })
+    const target = targetAccount.getRequest(request.handlerId)
+    target.status = 'verifying'
+    target.tx = { hash, confirmations: 0 }
+    const now = Date.now()
+    const operation = {
+      id: target.activityId,
+      kind: 'transaction',
+      account: target.account,
+      origin: target.origin,
+      chainId: 1,
+      state: 'confirmed',
+      createdAt: now,
+      updatedAt: now + 1,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: {
+        hash,
+        nonce: target.data.nonce,
+        deployment: {
+          version: 1,
+          inspectionId: target.deployment.inspectionId,
+          initcodeHash: target.deployment.initcodeHash,
+          initcodeBytes: target.deployment.initcodeBytes,
+          value: target.deployment.value
+        }
+      },
+      receipt: {
+        transactionHash: hash,
+        blockHash,
+        blockNumber: '0x5',
+        status: '0x1',
+        contractAddress
+      },
+      settlement: { status: 'monitoring' }
+    }
+    const receipt = {
+      transactionHash: hash,
+      blockHash,
+      blockNumber: '0x5',
+      gasUsed: '0x5208',
+      status: '0x1',
+      contractAddress
+    }
+    const dismiss = jest.spyOn(targetAccount, 'dismissRequestReview')
+
+    try {
+      operationLifecycleLedger.put(operation, now + 1)
+      Accounts.observeOperationLifecycle(operation, 1, receipt)
+
+      expect(Accounts.confirmedDeploymentOperation(target.handlerId, target.account)).toEqual({
+        operationId: target.activityId,
+        chainId: 1,
+        address: contractAddress.toLowerCase()
+      })
+      jest.advanceTimersByTime(4000)
+      expect(dismiss).not.toHaveBeenCalled()
+      jest.advanceTimersByTime(25_999)
+      expect(dismiss).not.toHaveBeenCalled()
+      jest.advanceTimersByTime(1)
+      expect(dismiss).toHaveBeenCalledWith(target.handlerId)
+    } finally {
+      operationLifecycleLedger.remove(target.activityId, -1)
+      dismiss.mockRestore()
       jest.useRealTimers()
     }
   })

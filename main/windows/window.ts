@@ -13,6 +13,7 @@ import store from '../store'
 
 import type { ChainId } from '../store/state'
 import { rendererRoleForWindow } from '../../resources/bridge/roles'
+import type { ContractVerificationDestination } from '../../resources/domain/contractVerification'
 import {
   WREN_COMPANION_RELEASES_URL,
   WREN_LICENSE_URL,
@@ -194,6 +195,64 @@ const externalWhitelist = [
 const isValidReleasePage = (url: string) => url.startsWith('https://github.com/jorphex/wren/releases/tag/')
 const isWhitelistedHost = (url: string) =>
   externalWhitelist.some((entry) => url === entry || url.startsWith(entry + '/'))
+
+const contractVerificationResultHosts: Readonly<
+  Partial<Record<ContractVerificationDestination, readonly string[]>>
+> = Object.freeze({
+  sourcify: Object.freeze(['sourcify.dev']),
+  'etherscan-forwarded': Object.freeze([
+    'etherscan.io',
+    'etherscan.com',
+    'arbiscan.io',
+    'basescan.org',
+    'bscscan.com',
+    'celoscan.io',
+    'ftmscan.com',
+    'lineascan.build',
+    'polygonscan.com',
+    'snowtrace.io',
+    'scrollscan.com'
+  ]),
+  'blockscout-forwarded': Object.freeze(['blockscout.com']),
+  'routescan-forwarded': Object.freeze(['routescan.io']),
+  'etherscan-direct': Object.freeze([
+    'etherscan.io',
+    'etherscan.com',
+    'arbiscan.io',
+    'basescan.org',
+    'bscscan.com',
+    'celoscan.io',
+    'ftmscan.com',
+    'lineascan.build',
+    'polygonscan.com',
+    'snowtrace.io',
+    'scrollscan.com'
+  ])
+})
+
+export function openContractVerificationResult(
+  destination: ContractVerificationDestination,
+  value: string
+): boolean {
+  const hosts = contractVerificationResultHosts[destination]
+  if (!hosts || typeof value !== 'string' || value.length > 2_048) return false
+  try {
+    const url = new URL(value)
+    const hostname = url.hostname.toLowerCase()
+    if (
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      !hosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+    ) {
+      return false
+    }
+    void Promise.resolve(shell.openExternal(url.toString())).catch(() => undefined)
+    return true
+  } catch {
+    return false
+  }
+}
 
 export function openExternal(url = '') {
   if (isWhitelistedHost(url) || isValidReleasePage(url)) {

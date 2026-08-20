@@ -217,7 +217,10 @@ type PendingNonceAdjustment = {
 }
 
 const CONFIRMED_TRANSACTION_REVIEW_DWELL_MS = 4000
+const CONFIRMED_DEPLOYMENT_REVIEW_DWELL_MS = 30_000
 const CONFIRMED_TRANSACTION_RETENTION_MS = 60_000
+const contractAddressFromReceipt = (receipt?: TransactionReceipt) =>
+  typeof receipt?.['contractAddress'] === 'string' ? receipt['contractAddress'] : undefined
 
 export class Accounts extends EventEmitter {
   _current: string
@@ -294,7 +297,18 @@ export class Accounts extends EventEmitter {
       transaction: {
         hash: hash.toLowerCase(),
         nonce: toRpcQuantity(nonce),
-        ...(request.replacement ? { replacementOf: request.replacement.originalActivityId } : {})
+        ...(request.replacement ? { replacementOf: request.replacement.originalActivityId } : {}),
+        ...(request.deployment
+          ? {
+              deployment: {
+                version: 1 as const,
+                inspectionId: request.deployment.inspectionId,
+                initcodeHash: request.deployment.initcodeHash,
+                initcodeBytes: request.deployment.initcodeBytes,
+                value: request.deployment.value
+              }
+            }
+          : {})
       }
     }
   }
@@ -406,6 +420,44 @@ export class Accounts extends EventEmitter {
         request.type === 'eip7702Revoke') &&
       operationLifecycleLedger.listStored().some(({ id }) => id === request.activityId)
     )
+  }
+
+  confirmedDeploymentOperation(handlerId: string, accountId: string) {
+    const account = this.requestAccount(handlerId, accountId)
+    const request = account?.getRequest<TransactionRequest>(handlerId)
+    const receiptContractAddress = contractAddressFromReceipt(request?.tx?.receipt)
+    if (
+      !request ||
+      request.type !== 'transaction' ||
+      request.status !== RequestStatus.Confirmed ||
+      request.origin !== originIdForName(WREN_DEPLOY_ORIGIN) ||
+      !request.deployment ||
+      !request.activityId ||
+      !request.tx?.hash ||
+      !receiptContractAddress
+    ) {
+      return undefined
+    }
+
+    const operation = operationLifecycleLedger.get(request.activityId)
+    if (
+      !operation ||
+      operation.kind !== 'transaction' ||
+      operation.state !== 'confirmed' ||
+      operation.origin !== request.origin ||
+      !operation.transaction?.deployment ||
+      operation.transaction.hash !== request.tx.hash.toLowerCase() ||
+      operation.receipt?.status !== '0x1' ||
+      operation.receipt.contractAddress !== receiptContractAddress.toLowerCase()
+    ) {
+      return undefined
+    }
+
+    return Object.freeze({
+      operationId: operation.id,
+      chainId: operation.chainId,
+      address: operation.receipt.contractAddress
+    })
   }
 
   releaseOperationLifecycleAdmission(activityId: string) {
@@ -529,6 +581,12 @@ export class Accounts extends EventEmitter {
   private scheduleConfirmedTransactionHandoff(account: FrameAccount, request: TransactionRequest) {
     const key = this.transactionTerminalTimerKey(account.id, request.handlerId)
     const completedAt = request.completed || Date.now()
+    const reviewDwell =
+      request.origin === originIdForName(WREN_DEPLOY_ORIGIN) &&
+      request.deployment &&
+      contractAddressFromReceipt(request.tx?.receipt)
+        ? CONFIRMED_DEPLOYMENT_REVIEW_DWELL_MS
+        : CONFIRMED_TRANSACTION_REVIEW_DWELL_MS
 
     if (!this.transactionReviewDismissTimers.has(key)) {
       const dismissTimer = setTimeout(() => {
@@ -537,7 +595,7 @@ export class Accounts extends EventEmitter {
         if (current?.type === 'transaction' && current.status === RequestStatus.Confirmed) {
           account.dismissRequestReview(request.handlerId)
         }
-      }, CONFIRMED_TRANSACTION_REVIEW_DWELL_MS)
+      }, reviewDwell)
       dismissTimer.unref?.()
       this.transactionReviewDismissTimers.set(key, dismissTimer)
     }

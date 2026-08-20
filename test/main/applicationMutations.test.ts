@@ -1,4 +1,8 @@
-import { persistAddressBookEntry, persistCustomToken } from '../../main/applicationMutations'
+import {
+  persistAddressBookEntry,
+  persistCustomToken,
+  resetApplicationProfile
+} from '../../main/applicationMutations'
 
 const address = '0x0000000000000000000000000000000000000001'
 
@@ -60,4 +64,29 @@ test('persists a token before resolving its asset-suggestion request', () => {
     })
   ).toEqual({ success: true })
   expect(order).toEqual(['save', 'resolve'])
+})
+
+test('removes the verifier credential before clearing persisted state', () => {
+  const order: string[] = []
+  expect(
+    resetApplicationProfile({
+      removeContractVerificationCredential: () => {
+        order.push('credential')
+        return { success: true }
+      },
+      clearPersistedState: () => order.push('persisted-state')
+    })
+  ).toBe(true)
+  expect(order).toEqual(['credential', 'persisted-state'])
+})
+
+test('fails closed when the verifier credential cannot be removed', () => {
+  const clearPersistedState = jest.fn()
+  expect(
+    resetApplicationProfile({
+      removeContractVerificationCredential: () => ({ success: false }),
+      clearPersistedState
+    })
+  ).toBe(false)
+  expect(clearPersistedState).not.toHaveBeenCalled()
 })

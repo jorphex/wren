@@ -6,6 +6,7 @@ import {
   createViewInstance,
   createWindow,
   openBlockExplorer,
+  openContractVerificationResult,
   openExternal,
   restoreWindow
 } from '../../../main/windows/window'
@@ -283,6 +284,35 @@ describe('openExternal', () => {
     openExternal('https://shop.trezor.io/?offer_id=10&aff_id=3270')
 
     expect(shell.openExternal.mock.calls).toEqual([['https://shop.ledger.com/'], ['https://shop.trezor.io/']])
+  })
+})
+
+describe('openContractVerificationResult', () => {
+  beforeEach(() => {
+    shell.openExternal.mockClear()
+  })
+
+  it('opens only the official host for the matching verification destination', () => {
+    expect(
+      openContractVerificationResult(
+        'blockscout-forwarded',
+        'https://eth.blockscout.com/address/0x0000000000000000000000000000000000000001'
+      )
+    ).toBe(true)
+    expect(
+      openContractVerificationResult(
+        'routescan-forwarded',
+        'https://eth.blockscout.com/address/0x0000000000000000000000000000000000000001'
+      )
+    ).toBe(false)
+    expect(
+      openContractVerificationResult(
+        'blockscout-forwarded',
+        'https://blockscout.com.evil.example/address/0x0000000000000000000000000000000000000001'
+      )
+    ).toBe(false)
+
+    expect(shell.openExternal).toHaveBeenCalledTimes(1)
   })
 })
 

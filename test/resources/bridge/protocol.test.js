@@ -235,6 +235,44 @@ describe('renderer bridge protocol', () => {
     }
   })
 
+  test('isolates contract verification channels by exact trusted renderer role', () => {
+    const request = (role, channel) =>
+      decodeBridgeMessage(
+        encode({ source: LINK_SOURCE, method: 'invoke', id, args: [channel] }),
+        LINK_SOURCE,
+        role
+      )
+    const verificationChannels = [
+      'contractVerification:credentialStatus',
+      'contractVerification:get',
+      'contractVerification:inspectArtifact',
+      'contractVerification:list',
+      'contractVerification:openResult',
+      'contractVerification:prepare',
+      'contractVerification:publish',
+      'contractVerification:publishEtherscan',
+      'contractVerification:refresh',
+      'contractVerification:removeCredential',
+      'contractVerification:reselect',
+      'contractVerification:saveCredential',
+      'contractVerification:selectArtifact'
+    ]
+
+    for (const channel of verificationChannels) {
+      expect(request('dash', channel)).not.toBeNull()
+      expect(request('tray', channel)).toBeNull()
+      expect(request('dapp', channel)).toBeNull()
+      expect(request('onboard', channel)).toBeNull()
+    }
+
+    expect(request('dash', 'contractVerification:unknown')).toBeNull()
+    expect(request('tray', 'contractVerification:unknown')).toBeNull()
+    expect(request('tray', 'tray:continueContractVerification')).not.toBeNull()
+    expect(request('dash', 'tray:continueContractVerification')).not.toBeNull()
+    expect(request('dapp', 'tray:continueContractVerification')).toBeNull()
+    expect(request('onboard', 'tray:continueContractVerification')).toBeNull()
+  })
+
   test('rejects requests without a valid role while preserving responses', () => {
     const request = encode({ source: LINK_SOURCE, method: 'rpc', id, args: ['getState'] })
     const response = encode({ source: BRIDGE_SOURCE, method: 'rpc', id, args: [null, {}] })

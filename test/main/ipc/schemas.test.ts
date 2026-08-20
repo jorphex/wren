@@ -926,3 +926,272 @@ test('rejects unsafe and oversized nested navigation collections', () => {
     parseRendererIpcArgs('event', 'nav:update', ['panel', { data: { values: Array(1025).fill(1) } }]).success
   ).toBe(false)
 })
+
+describe('contract verification renderer IPC', () => {
+  const jobId = '4b25b5d0-b4c0-4c11-914c-c2f9936f6982'
+  const artifactToken = '398ec34b-1bfc-47a9-a431-6e31e78b165c'
+  const acknowledgementToken = 'c5890403-fc22-49d3-b68e-4605289d310d'
+  const runtimeCodeHash = `0x${'a'.repeat(64)}`
+  const sourceHash = 'b'.repeat(64)
+  const submissionHash = 'c'.repeat(64)
+  const job = {
+    id: jobId,
+    target: { address, chainId: 1, runtimeCodeHash },
+    language: 'Solidity',
+    compilerVersion: '0.8.26+commit.8a97fa7a',
+    contractIdentifier: 'src/Vault.sol:Vault',
+    sourceHash,
+    submissionHash,
+    status: 'published',
+    destinations: [{ destination: 'sourcify', status: 'published' }],
+    createdAt: 1,
+    updatedAt: 2
+  }
+  const artifact = {
+    token: artifactToken,
+    summary: {
+      format: 'solidity-standard-json',
+      language: 'Solidity',
+      compilerStatus: 'required',
+      compilerVersion: null,
+      sourceCount: 1,
+      contractCandidates: [],
+      localRuntimeMatch: false,
+      selectionRequired: false,
+      selectedContractIdentifier: null
+    }
+  }
+
+  test('accepts only exact bounded invoke arguments', () => {
+    const noArgumentChannels = [
+      'contractVerification:credentialStatus',
+      'contractVerification:inspectArtifact',
+      'contractVerification:list',
+      'contractVerification:removeCredential'
+    ]
+    for (const channel of noArgumentChannels) {
+      expect(parseRendererIpcArgs('invoke', channel, []).success).toBe(true)
+      expect(parseRendererIpcArgs('invoke', channel, [null]).success).toBe(false)
+    }
+
+    expect(parse('invoke', 'contractVerification:get', [jobId])).toEqual([jobId])
+    expect(parse('invoke', 'contractVerification:refresh', [jobId])).toEqual([jobId])
+    expect(
+      parse('invoke', 'contractVerification:selectArtifact', [artifactToken, 'src/Vault.sol:Vault'])
+    ).toEqual([artifactToken, 'src/Vault.sol:Vault'])
+    expect(
+      parse('invoke', 'contractVerification:prepare', [
+        {
+          artifactToken,
+          chainId: 1,
+          address,
+          compilerVersion: '0.8.26+commit.8a97fa7a',
+          contractIdentifier: 'src/Vault.sol:Vault'
+        }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parse('invoke', 'contractVerification:publish', [
+        { acknowledgementToken, confirmation: 'PUBLISH_CONTRACT_SOURCE' }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parse('invoke', 'contractVerification:reselect', [
+        { artifactToken, jobId, contractIdentifier: 'src/Vault.sol:Vault' }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parse('invoke', 'contractVerification:publishEtherscan', [
+        { jobId, confirmation: 'PUBLISH_TO_ETHERSCAN', noConstructorArguments: true }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parse('invoke', 'contractVerification:publishEtherscan', [
+        { jobId, confirmation: 'PUBLISH_TO_ETHERSCAN', constructorArguments: '1234' }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:publishEtherscan', [
+        { jobId, confirmation: 'PUBLISH_TO_ETHERSCAN' }
+      ]).success
+    ).toBe(false)
+    expect(
+      parse('invoke', 'contractVerification:openResult', [{ jobId, destination: 'blockscout-forwarded' }])
+    ).toHaveLength(1)
+    expect(parse('invoke', 'contractVerification:saveCredential', ['etherscan_key_1234567890'])).toHaveLength(
+      1
+    )
+  })
+
+  test('rejects extra arguments, fields, invalid identifiers, addresses, chain IDs, and credentials', () => {
+    expect(parseRendererIpcArgs('invoke', 'contractVerification:get', [jobId, jobId]).success).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:prepare', [
+        { artifactToken, chainId: 1, address, path: '/tmp/build-info.json' }
+      ]).success
+    ).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:prepare', [{ artifactToken, chainId: 0, address }])
+        .success
+    ).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:prepare', [
+        { artifactToken, chainId: 1, address: address.toUpperCase() }
+      ]).success
+    ).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:prepare', [
+        { artifactToken, chainId: 1, address, contractIdentifier: 'x'.repeat(1025) }
+      ]).success
+    ).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:publish', [
+        { acknowledgementToken, confirmation: 'YES' }
+      ]).success
+    ).toBe(false)
+    for (const apiKey of ['short', 'has spaces 123456789', 'x'.repeat(129)]) {
+      expect(parseRendererIpcArgs('invoke', 'contractVerification:saveCredential', [apiKey]).success).toBe(
+        false
+      )
+    }
+  })
+
+  test('projects only bounded artifact summaries and explicit cancellation', () => {
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: true,
+        artifact
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: false,
+        canceled: true
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:selectArtifact', {
+        success: false,
+        error: 'invalid-contract-selection'
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: true,
+        artifact: { ...artifact, path: '/tmp/build-info.json' }
+      }).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: true,
+        artifact: {
+          ...artifact,
+          summary: { ...artifact.summary, contractCandidates: Array(1025).fill('src/Vault.sol:Vault') }
+        }
+      }).success
+    ).toBe(false)
+  })
+
+  test('accepts exact prepared and job results while rejecting private or raw fields', () => {
+    const prepared = {
+      acknowledgementToken,
+      target: job.target,
+      language: 'Solidity',
+      compilerVersion: job.compilerVersion,
+      contractIdentifier: job.contractIdentifier,
+      sourceCount: 1,
+      localRuntimeMatch: 'matched',
+      deploymentSettlement: 'not-applicable'
+    }
+    expect(
+      parseRendererInvokeResult('contractVerification:prepare', { success: true, prepared }).success
+    ).toBe(true)
+    expect(parseRendererInvokeResult('contractVerification:get', { success: true, job }).success).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:list', { success: true, jobs: [job] }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:refresh', {
+        success: false,
+        error: 'refresh-unavailable',
+        job
+      }).success
+    ).toBe(true)
+
+    for (const leaked of [
+      { source: 'contract Vault {}' },
+      { stdJsonInput: { language: 'Solidity' } },
+      { path: '/tmp/build-info.json' },
+      { apiKey: 'etherscan_key_1234567890' },
+      { rawError: 'upstream body' }
+    ]) {
+      expect(
+        parseRendererInvokeResult('contractVerification:get', {
+          success: true,
+          job: { ...job, ...leaked }
+        }).success
+      ).toBe(false)
+    }
+    expect(
+      parseRendererInvokeResult('contractVerification:get', {
+        success: true,
+        job: { ...job, target: { ...job.target, address: address.toUpperCase() } }
+      }).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('contractVerification:list', { success: true, jobs: [job, job] }).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('contractVerification:get', {
+        success: false,
+        error: 'job-unavailable',
+        rawError: 'upstream body'
+      }).success
+    ).toBe(false)
+  })
+
+  test('accepts only renderer-safe credential and deployment continuation results', () => {
+    const credential = { available: true, backend: 'secret_service', configured: true }
+    expect(
+      parseRendererInvokeResult('contractVerification:credentialStatus', {
+        success: true,
+        credential
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:credentialStatus', {
+        success: true,
+        credential: { available: false, backend: 'unsupported', configured: true }
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:credentialStatus', {
+        success: true,
+        credential: { ...credential, apiKey: 'etherscan_key_1234567890' }
+      }).success
+    ).toBe(false)
+    expect(
+      parseRendererIpcArgs('invoke', 'tray:continueContractVerification', [{ account: address, handlerId }])
+        .success
+    ).toBe(true)
+    expect(
+      parseRendererIpcArgs('invoke', 'tray:continueContractVerification', [
+        { account: address, handlerId, operationId: jobId }
+      ]).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('tray:continueContractVerification', {
+        success: true,
+        operationId: jobId,
+        chainId: 1,
+        address
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('tray:continueContractVerification', {
+        success: false,
+        error: 'operation-unsettled'
+      }).success
+    ).toBe(false)
+  })
+})

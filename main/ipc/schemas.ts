@@ -26,6 +26,19 @@ import {
   MAX_DEPLOYMENT_INITCODE_BYTES
 } from '../../resources/domain/deployment'
 import { DEPLOYMENT_SERVICE_ERROR_CODES } from '../deployment'
+import {
+  CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES,
+  type ContractVerificationArtifactIntakeSummary
+} from '../contractVerification/artifactIntake'
+import { CONTRACT_VERIFICATION_SERVICE_ERROR_CODES } from '../contractVerification/service'
+import {
+  CONTRACT_VERIFICATION_DESTINATIONS,
+  MAX_CONTRACT_VERIFICATION_CANDIDATES,
+  MAX_CONTRACT_VERIFICATION_JOBS,
+  MAX_CONTRACT_VERIFICATION_REMOTE_ID_CHARS,
+  MAX_CONTRACT_VERIFICATION_URL_CHARS,
+  validateContractVerificationJobLedger
+} from '../../resources/domain/contractVerification'
 
 const MAX_TEXT = 4096
 const MAX_URL = 8192
@@ -390,6 +403,195 @@ const BreadcrumbUpdateSchema = z
 const AccountRequestReferenceSchema = z
   .object({ account: AddressSchema, handlerId: HandlerIdSchema })
   .transform(({ account, handlerId }) => ({ account, handlerId }))
+const ContractVerificationRequestReferenceSchema = z
+  .object({ account: AddressSchema, handlerId: HandlerIdSchema })
+  .strict()
+const ContractVerificationAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/)
+const ContractVerificationHashSchema = z.string().regex(/^0x[0-9a-f]{64}$/)
+const ContractVerificationSha256Schema = z.string().regex(/^[0-9a-f]{64}$/)
+const ContractVerificationCompilerVersionSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^(?:v)?[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)*$/)
+const ContractVerificationIdentifierSchema = z.string().min(1).max(1024)
+const ContractVerificationQuantitySchema = z
+  .string()
+  .max(66)
+  .regex(/^0x(?:0|[1-9a-f][0-9a-f]*)$/)
+const ContractVerificationUrlSchema = z
+  .string()
+  .min(1)
+  .max(MAX_CONTRACT_VERIFICATION_URL_CHARS)
+  .url()
+  .refine((value) => {
+    const parsed = new URL(value)
+    return parsed.protocol === 'https:' && !parsed.username && !parsed.password
+  })
+const ContractVerificationRemoteIdSchema = z
+  .string()
+  .min(1)
+  .max(MAX_CONTRACT_VERIFICATION_REMOTE_ID_CHARS)
+  .regex(/^[A-Za-z0-9._:-]+$/)
+const ContractVerificationCreationEvidenceSchema = z
+  .object({
+    transactionHash: ContractVerificationHashSchema,
+    blockNumber: ContractVerificationQuantitySchema,
+    blockHash: ContractVerificationHashSchema,
+    operationId: z.uuid().optional()
+  })
+  .strict()
+const ContractVerificationTargetSchema = z
+  .object({
+    address: ContractVerificationAddressSchema,
+    chainId: ChainNumberSchema,
+    runtimeCodeHash: ContractVerificationHashSchema,
+    creationEvidence: ContractVerificationCreationEvidenceSchema.optional()
+  })
+  .strict()
+const ContractVerificationDestinationSchema = z
+  .object({
+    destination: z.enum(CONTRACT_VERIFICATION_DESTINATIONS),
+    status: z.enum([
+      'not-submitted',
+      'checking',
+      'published',
+      'verified',
+      'already-published',
+      'already-verified',
+      'rejected',
+      'unavailable',
+      'needs-api-key',
+      'unknown'
+    ]),
+    remoteId: ContractVerificationRemoteIdSchema.optional(),
+    statusUrl: ContractVerificationUrlSchema.optional(),
+    explorerUrl: ContractVerificationUrlSchema.optional(),
+    reasonCode: z
+      .enum([
+        'already-verified',
+        'api-key-required',
+        'destination-rejected',
+        'destination-unavailable',
+        'publication-rejected',
+        'request-timeout',
+        'status-unavailable',
+        'transport-failure'
+      ])
+      .optional()
+  })
+  .strict()
+const ContractVerificationJobSchema = z
+  .object({
+    id: z.uuid(),
+    target: ContractVerificationTargetSchema,
+    language: z.enum(['Solidity', 'Vyper']),
+    compilerVersion: ContractVerificationCompilerVersionSchema,
+    contractIdentifier: ContractVerificationIdentifierSchema,
+    sourceHash: ContractVerificationSha256Schema,
+    submissionHash: ContractVerificationSha256Schema,
+    status: z.enum(['preparing', 'publishing', 'published', 'partial', 'rejected', 'unknown']),
+    destinations: z.array(ContractVerificationDestinationSchema).min(1).max(5),
+    createdAt: ExpirySchema,
+    updatedAt: ExpirySchema
+  })
+  .strict()
+  .superRefine((job, context) => {
+    try {
+      validateContractVerificationJobLedger([job])
+    } catch {
+      context.addIssue({ code: 'custom', message: 'invalid contract verification job' })
+    }
+  })
+const ContractVerificationArtifactFormatSchema = z.enum([
+  'solidity-standard-json',
+  'vyper-standard-json',
+  'hardhat-2-build-info',
+  'foundry-build-info',
+  'hardhat-3-build-info'
+])
+const ContractVerificationArtifactSummarySchema: z.ZodType<ContractVerificationArtifactIntakeSummary> = z
+  .object({
+    format: ContractVerificationArtifactFormatSchema,
+    language: z.enum(['Solidity', 'Vyper']),
+    compilerStatus: z.enum(['required', 'included']),
+    compilerVersion: ContractVerificationCompilerVersionSchema.nullable(),
+    sourceCount: z.number().int().positive().max(1024),
+    contractCandidates: z
+      .array(ContractVerificationIdentifierSchema)
+      .max(MAX_CONTRACT_VERIFICATION_CANDIDATES),
+    localRuntimeMatch: z.boolean(),
+    selectionRequired: z.boolean(),
+    selectedContractIdentifier: ContractVerificationIdentifierSchema.nullable()
+  })
+  .strict()
+  .superRefine((summary, context) => {
+    const selectedByDefault = summary.contractCandidates.length === 1 ? summary.contractCandidates[0] : null
+    if (
+      (summary.compilerStatus === 'included') !== (summary.compilerVersion !== null) ||
+      new Set(summary.contractCandidates).size !== summary.contractCandidates.length ||
+      summary.selectionRequired !==
+        (summary.contractCandidates.length > 1 && summary.selectedContractIdentifier === null) ||
+      (summary.contractCandidates.length <= 1 && summary.selectedContractIdentifier !== selectedByDefault) ||
+      (summary.selectedContractIdentifier !== null &&
+        !summary.contractCandidates.includes(summary.selectedContractIdentifier))
+    ) {
+      context.addIssue({ code: 'custom', message: 'inconsistent contract verification artifact summary' })
+    }
+  })
+const ContractVerificationArtifactHandleSchema = z
+  .object({ token: z.uuid(), summary: ContractVerificationArtifactSummarySchema })
+  .strict()
+const PreparedContractVerificationSchema = z
+  .object({
+    acknowledgementToken: z.uuid(),
+    target: ContractVerificationTargetSchema,
+    language: z.enum(['Solidity', 'Vyper']),
+    compilerVersion: ContractVerificationCompilerVersionSchema,
+    contractIdentifier: ContractVerificationIdentifierSchema,
+    sourceCount: z.number().int().positive().max(1024),
+    localRuntimeMatch: z.enum(['matched', 'server-required']),
+    deploymentSettlement: z.enum(['complete', 'not-applicable', 'pending'])
+  })
+  .strict()
+  .superRefine((prepared, context) => {
+    if (
+      (prepared.target.creationEvidence === undefined) !==
+      (prepared.deploymentSettlement === 'not-applicable')
+    ) {
+      context.addIssue({ code: 'custom', message: 'inconsistent verification deployment settlement' })
+    }
+  })
+const ContractVerificationCredentialSchema = z
+  .object({
+    available: z.boolean(),
+    backend: z.enum(['kwallet', 'kwallet5', 'kwallet6', 'secret_service', 'unsupported', 'windows_dpapi']),
+    configured: z.boolean()
+  })
+  .strict()
+  .superRefine((credential, context) => {
+    if (credential.available === (credential.backend === 'unsupported')) {
+      context.addIssue({ code: 'custom', message: 'inconsistent explorer credential status' })
+    }
+  })
+const ContractVerificationApiKeySchema = z
+  .string()
+  .min(16)
+  .max(128)
+  .regex(/^[A-Za-z0-9_-]+$/)
+const ContractVerificationServiceFailureSchema = z
+  .object({ success: z.literal(false), error: z.enum(CONTRACT_VERIFICATION_SERVICE_ERROR_CODES) })
+  .strict()
+const ContractVerificationServiceFailureWithJobSchema = z
+  .object({
+    success: z.literal(false),
+    error: z.enum(CONTRACT_VERIFICATION_SERVICE_ERROR_CODES),
+    job: ContractVerificationJobSchema.optional()
+  })
+  .strict()
+const ContractVerificationArtifactFailureSchema = z
+  .object({ success: z.literal(false), error: z.enum(CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES) })
+  .strict()
 const AssetSuggestionReferenceSchema = AccountRequestReferenceSchema
 const WalletCallFeeAdjustmentSchema = z
   .object({
@@ -608,6 +810,67 @@ const invokeSchemas = {
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'contractVerification:credentialStatus': z.tuple([]),
+  'contractVerification:get': z.tuple([z.uuid()]),
+  'contractVerification:inspectArtifact': z.tuple([]),
+  'contractVerification:list': z.tuple([]),
+  'contractVerification:openResult': z.tuple([
+    z.object({ jobId: z.uuid(), destination: z.enum(CONTRACT_VERIFICATION_DESTINATIONS) }).strict()
+  ]),
+  'contractVerification:prepare': z.tuple([
+    z
+      .object({
+        artifactToken: z.uuid(),
+        chainId: ChainNumberSchema,
+        address: ContractVerificationAddressSchema,
+        operationId: z.uuid().optional(),
+        compilerVersion: ContractVerificationCompilerVersionSchema.optional(),
+        contractIdentifier: ContractVerificationIdentifierSchema.optional()
+      })
+      .strict()
+  ]),
+  'contractVerification:publish': z.tuple([
+    z
+      .object({
+        acknowledgementToken: z.uuid(),
+        confirmation: z.literal('PUBLISH_CONTRACT_SOURCE')
+      })
+      .strict()
+  ]),
+  'contractVerification:publishEtherscan': z.tuple([
+    z
+      .object({
+        jobId: z.uuid(),
+        confirmation: z.literal('PUBLISH_TO_ETHERSCAN'),
+        constructorArguments: z
+          .string()
+          .min(2)
+          .max(2 * 1024 * 1024)
+          .regex(/^(?:[0-9a-fA-F]{2})+$/u)
+          .optional(),
+        noConstructorArguments: z.literal(true).optional()
+      })
+      .strict()
+      .superRefine((value, context) => {
+        if ((value.constructorArguments === undefined) === (value.noConstructorArguments === undefined)) {
+          context.addIssue({ code: 'custom', message: 'constructor arguments must be explicit' })
+        }
+      })
+  ]),
+  'contractVerification:refresh': z.tuple([z.uuid()]),
+  'contractVerification:removeCredential': z.tuple([]),
+  'contractVerification:reselect': z.tuple([
+    z
+      .object({
+        artifactToken: z.uuid(),
+        jobId: z.uuid(),
+        compilerVersion: ContractVerificationCompilerVersionSchema.optional(),
+        contractIdentifier: ContractVerificationIdentifierSchema.optional()
+      })
+      .strict()
+  ]),
+  'contractVerification:saveCredential': z.tuple([ContractVerificationApiKeySchema]),
+  'contractVerification:selectArtifact': z.tuple([z.uuid(), ContractVerificationIdentifierSchema]),
   'deployment:prepare': z.tuple([DeploymentDraftSchema]),
   'deployment:queue': z.tuple([
     z.object({ inspectionId: DeploymentInspectionIdSchema, draft: DeploymentDraftSchema }).strict()
@@ -647,6 +910,7 @@ const invokeSchemas = {
   'yearn:cancelWorkflow': z.tuple([YearnWorkflowIdRequestSchema]),
   'yearn:revokeWorkflow': z.tuple([YearnWorkflowIdRequestSchema]),
   'tray:addChain': z.tuple([AddChainSchema, AddChainRequestReferenceSchema.nullish()]),
+  'tray:continueContractVerification': z.tuple([ContractVerificationRequestReferenceSchema]),
   'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema]),
   'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema]),
   'tray:refreshWalletCallsStatus': z.tuple([WalletCallsStatusRefreshSchema])
@@ -676,6 +940,73 @@ const invokeResultSchemas = {
   'addressBook:save': z.union([
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'contractVerification:credentialStatus': z.union([
+    z.object({ success: z.literal(true), credential: ContractVerificationCredentialSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:get': z.union([
+    z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:inspectArtifact': z.union([
+    z.object({ success: z.literal(true), artifact: ContractVerificationArtifactHandleSchema }).strict(),
+    z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
+    ContractVerificationArtifactFailureSchema
+  ]),
+  'contractVerification:list': z.union([
+    z
+      .object({
+        success: z.literal(true),
+        jobs: z
+          .array(ContractVerificationJobSchema)
+          .max(MAX_CONTRACT_VERIFICATION_JOBS)
+          .superRefine((jobs, context) => {
+            try {
+              validateContractVerificationJobLedger(jobs)
+            } catch {
+              context.addIssue({ code: 'custom', message: 'invalid contract verification job list' })
+            }
+          })
+      })
+      .strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:openResult': z.union([
+    z.object({ success: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.literal('job-unavailable') }).strict()
+  ]),
+  'contractVerification:prepare': z.union([
+    z.object({ success: z.literal(true), prepared: PreparedContractVerificationSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:publish': z.union([
+    z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:publishEtherscan': z.union([
+    z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
+    ContractVerificationServiceFailureWithJobSchema
+  ]),
+  'contractVerification:refresh': z.union([
+    z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
+    ContractVerificationServiceFailureWithJobSchema
+  ]),
+  'contractVerification:removeCredential': z.union([
+    z.object({ success: z.literal(true), credential: ContractVerificationCredentialSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:reselect': z.union([
+    z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:saveCredential': z.union([
+    z.object({ success: z.literal(true), credential: ContractVerificationCredentialSchema }).strict(),
+    ContractVerificationServiceFailureSchema
+  ]),
+  'contractVerification:selectArtifact': z.union([
+    z.object({ success: z.literal(true), artifact: ContractVerificationArtifactHandleSchema }).strict(),
+    ContractVerificationArtifactFailureSchema
   ]),
   'deployment:prepare': z.union([
     z.object({ success: z.literal(true), inspection: DeploymentInspectionSchema }).strict(),
@@ -784,6 +1115,22 @@ const invokeResultSchemas = {
   'tray:addChain': z.union([
     z.object({ success: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(1024).optional() }).strict()
+  ]),
+  'tray:continueContractVerification': z.union([
+    z
+      .object({
+        success: z.literal(true),
+        operationId: z.uuid(),
+        chainId: ChainNumberSchema,
+        address: ContractVerificationAddressSchema
+      })
+      .strict(),
+    z
+      .object({
+        success: z.literal(false),
+        error: z.enum(['invalid-request', 'invalid-operation', 'operation-not-confirmed', 'job-unavailable'])
+      })
+      .strict()
   ]),
   'tray:getTokenDetails': z
     .object({

@@ -32,6 +32,24 @@ const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
   }
 } as const
 
+const dashboardOnlyInvokeChannels = new Set([
+  'contractVerification:credentialStatus',
+  'contractVerification:get',
+  'contractVerification:inspectArtifact',
+  'contractVerification:list',
+  'contractVerification:openResult',
+  'contractVerification:prepare',
+  'contractVerification:publish',
+  'contractVerification:publishEtherscan',
+  'contractVerification:refresh',
+  'contractVerification:removeCredential',
+  'contractVerification:reselect',
+  'contractVerification:saveCredential',
+  'contractVerification:selectArtifact'
+])
+
+const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'])
+
 export const isRendererRole = (value: unknown): value is RendererRole =>
   typeof value === 'string' && rendererRoles.includes(value as RendererRole)
 
@@ -42,6 +60,12 @@ export const hasRendererCapability = (
 ) => {
   if (!rendererRole) return false
   const channel = args[0]
+  if (method === 'invoke' && typeof channel === 'string') {
+    if (dashboardOnlyInvokeChannels.has(channel)) return rendererRole === 'dash'
+    if (trustedWindowInvokeChannels.has(channel)) {
+      return rendererRole === 'dash' || rendererRole === 'tray'
+    }
+  }
   if (
     method === 'invoke' &&
     typeof channel === 'string' &&

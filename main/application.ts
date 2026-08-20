@@ -28,7 +28,7 @@ import {
   saveProfileBackupDialog,
   showUnhandledExceptionDialog
 } from './windows/dialog'
-import { openBlockExplorer, openExternal } from './windows/window'
+import { openBlockExplorer, openContractVerificationResult, openExternal } from './windows/window'
 import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
@@ -46,7 +46,7 @@ import yearn from './yearn'
 import send, { revalidateNativeMaxBeforeSign } from './send'
 import addressBookFiles from './addressBook/files'
 import { installShutdownHandlers } from './lifecycle/shutdown'
-import { persistAddressBookEntry, persistCustomToken } from './applicationMutations'
+import { persistAddressBookEntry, persistCustomToken, resetApplicationProfile } from './applicationMutations'
 import { installSignerPowerLockHandlers } from './security/signerLockLifecycle'
 import {
   inspectEncryptedProfileBackupFile,
@@ -59,6 +59,11 @@ import chains from './chains'
 import { inspect } from './inspector'
 import recentRecipientsRuntime, { shouldClearRecentRecipientCandidates } from './recentRecipients/runtime'
 import deployment from './deployment/runtime'
+import contractVerification, {
+  contractVerificationArtifactIntake,
+  contractVerificationPollingRuntime
+} from './contractVerification/runtime'
+import { ContractVerificationArtifactIntakeError } from './contractVerification/artifactIntake'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -95,6 +100,7 @@ log.info(`Node: v${process.versions.node}`)
 let closing = false
 let walletCallEvidenceLifecycleReady = false
 let operationLifecycleReady = false
+let contractVerificationPollingReady = false
 let removeSignerPowerLockHandlers = () => {}
 let profileRestoreRelaunchTimer: ReturnType<typeof setTimeout> | undefined
 const PROFILE_INSPECTION_TOKEN_TTL_MS = 5 * 60 * 1000
@@ -123,6 +129,15 @@ function startOperationLifecycleRuntime() {
   }
   operationLifecycleProjectionRuntime.start()
   operationLifecycleRuntime.start()
+}
+
+function startContractVerificationPollingRuntime() {
+  if (!contractVerificationPollingReady) {
+    contractVerificationPollingReady = true
+    powerMonitor.on('suspend', () => contractVerificationPollingRuntime.stop())
+    powerMonitor.on('resume', () => contractVerificationPollingRuntime.start())
+  }
+  contractVerificationPollingRuntime.start()
 }
 
 process.on('uncaughtException', (e) => {
@@ -167,7 +182,14 @@ global.eval = () => {
 }
 
 onRenderer('tray:resetAllSettings', () => {
-  persist.clear()
+  if (
+    !resetApplicationProfile({
+      removeContractVerificationCredential: () => contractVerification.removeCredential(),
+      clearPersistedState: () => persist.clear()
+    })
+  ) {
+    return
+  }
 
   if (updater.updateReady) {
     return updater.quitAndInstall()
@@ -328,6 +350,68 @@ handleRenderer('deployment:prepare', async (e, draft) => deployment.prepare(draf
 handleRenderer('deployment:queue', async (e, request) => {
   const result = await deployment.queue(request)
   return result.success ? { success: true, handlerId: result.handlerId } : result
+})
+
+const contractVerificationArtifactMutation = async (operation: () => Promise<unknown> | unknown) => {
+  try {
+    return await operation()
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof ContractVerificationArtifactIntakeError ? error.code : ('invalid-file' as const)
+    }
+  }
+}
+
+handleRenderer('contractVerification:inspectArtifact', async () =>
+  contractVerificationArtifactMutation(async () => {
+    const artifact = await contractVerificationArtifactIntake.inspect()
+    return artifact
+      ? { success: true as const, artifact }
+      : { success: false as const, canceled: true as const }
+  })
+)
+handleRenderer('contractVerification:selectArtifact', async (e, token, contractIdentifier) =>
+  contractVerificationArtifactMutation(() => ({
+    success: true as const,
+    artifact: contractVerificationArtifactIntake.select(token, contractIdentifier)
+  }))
+)
+handleRenderer('contractVerification:prepare', async (e, request) => contractVerification.prepare(request))
+handleRenderer('contractVerification:publish', async (e, request) => {
+  const result = await contractVerification.publish(request)
+  if (result.success) contractVerificationPollingRuntime.wake()
+  return result
+})
+handleRenderer('contractVerification:list', async () => contractVerification.list())
+handleRenderer('contractVerification:openResult', async (e, request) => {
+  const result = contractVerification.get(request.jobId)
+  if (!result.success) return { success: false as const, error: 'job-unavailable' as const }
+  const destination = result.job.destinations.find((entry) => entry.destination === request.destination)
+  if (
+    !destination?.explorerUrl ||
+    !openContractVerificationResult(destination.destination, destination.explorerUrl)
+  ) {
+    return { success: false as const, error: 'job-unavailable' as const }
+  }
+  return { success: true as const }
+})
+handleRenderer('contractVerification:get', async (e, jobId) => contractVerification.get(jobId))
+handleRenderer('contractVerification:refresh', async (e, jobId) => contractVerification.refresh(jobId))
+handleRenderer('contractVerification:reselect', async (e, request) => contractVerification.reselect(request))
+handleRenderer('contractVerification:publishEtherscan', async (e, request) =>
+  contractVerification.publishEtherscan(request)
+)
+handleRenderer('contractVerification:credentialStatus', async () => contractVerification.credentialStatus())
+handleRenderer('contractVerification:saveCredential', async (e, apiKey) =>
+  contractVerification.saveCredential(apiKey)
+)
+handleRenderer('contractVerification:removeCredential', async () => contractVerification.removeCredential())
+handleRenderer('tray:continueContractVerification', async (e, request) => {
+  const target = accounts.confirmedDeploymentOperation(request.handlerId, request.account)
+  return target
+    ? { success: true as const, ...target }
+    : { success: false as const, error: 'operation-not-confirmed' as const }
 })
 
 const profileBackupMutation = async (publicError: string, operation: () => Promise<unknown> | unknown) => {
@@ -582,6 +666,7 @@ app.on('ready', () => {
   walletCallBatchLedger.failAbandonedAdmissions()
   startWalletCallEvidenceRuntime()
   startOperationLifecycleRuntime()
+  startContractVerificationPollingRuntime()
   void signers.rescanHotSigners()
   menu()
   windows.init()
@@ -661,6 +746,7 @@ app.on('before-quit', () => {
   walletCallEvidenceRuntime.stop()
   operationLifecycleRuntime.stop()
   operationLifecycleProjectionRuntime.stop()
+  contractVerificationPollingRuntime.stop()
   if (!updater.updateReady) {
     updater.stop()
   }
@@ -675,6 +761,7 @@ installShutdownHandlers(
     if (profileRestoreRelaunchTimer) clearTimeout(profileRestoreRelaunchTimer)
     profileRestoreRelaunchTimer = undefined
     profileInspectionTokens.clear()
+    contractVerification.dispose()
     removeSignerPowerLockHandlers()
     accounts.close()
     walletCallBatchLedger.failAbandonedAdmissions()

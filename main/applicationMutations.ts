@@ -3,6 +3,16 @@ import type { Token } from './store/state/types/token'
 
 type AssetSuggestionReference = { account: string; handlerId: string }
 
+export function resetApplicationProfile(dependencies: {
+  removeContractVerificationCredential(): { success: boolean }
+  clearPersistedState(): void
+}): boolean {
+  const credential = dependencies.removeContractVerificationCredential()
+  if (!credential.success) return false
+  dependencies.clearPersistedState()
+  return true
+}
+
 export function persistAddressBookEntry(
   request: AddressBookSaveRequest,
   dependencies: {
