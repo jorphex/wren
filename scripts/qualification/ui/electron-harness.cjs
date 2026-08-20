@@ -249,10 +249,14 @@ const inputByLabel = async (webContents, label, value) => {
 const selectByLabel = async (webContents, label, value) => {
   const changed = await webContents.executeJavaScript(
     `(() => {
-      const select = Array.from(document.querySelectorAll('select')).find((element) =>
-        Array.from(element.labels || []).some(
-          (candidate) => candidate.textContent.trim() === ${JSON.stringify(label)}
-        )
+      const select = Array.from(document.querySelectorAll('select')).find(
+        (element) =>
+          element.getAttribute('aria-label') === ${JSON.stringify(label)} ||
+          Array.from(element.labels || []).some(
+            (candidate) =>
+              candidate.textContent.trim() === ${JSON.stringify(label)} ||
+              candidate.querySelector(':scope > span')?.textContent.trim() === ${JSON.stringify(label)}
+          )
       )
       if (!select) return false
       const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
@@ -318,10 +322,14 @@ const performAction = async (webContents, action) => {
   if (action.type === 'selectLabel') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('select')).some((element) =>
-        Array.from(element.labels || []).some(
-          (candidate) => candidate.textContent.trim() === ${JSON.stringify(action.label)}
-        )
+      `Array.from(document.querySelectorAll('select')).some(
+        (element) =>
+          element.getAttribute('aria-label') === ${JSON.stringify(action.label)} ||
+          Array.from(element.labels || []).some(
+            (candidate) =>
+              candidate.textContent.trim() === ${JSON.stringify(action.label)} ||
+              candidate.querySelector(':scope > span')?.textContent.trim() === ${JSON.stringify(action.label)}
+          )
       )`
     )
     await selectByLabel(webContents, action.label, action.value)
@@ -484,6 +492,19 @@ const main = async () => {
     'send:queueSweep',
     'deployment:prepare',
     'deployment:queue',
+    'contractVerification:credentialStatus',
+    'contractVerification:get',
+    'contractVerification:inspectArtifact',
+    'contractVerification:list',
+    'contractVerification:openResult',
+    'contractVerification:prepare',
+    'contractVerification:publish',
+    'contractVerification:publishEtherscan',
+    'contractVerification:refresh',
+    'contractVerification:removeCredential',
+    'contractVerification:reselect',
+    'contractVerification:saveCredential',
+    'contractVerification:selectArtifact',
     'yearn:getCatalog',
     'yearn:getPositions',
     'yearn:getWorkflows'
@@ -521,6 +542,8 @@ const main = async () => {
         'custom-token management',
         'account-scoped connected-app guardrail editor',
         'guardrail source identity, confirmation, busy, and refused-save states',
+        'contract source verification form, immutable evidence, public consent, result, and credential states',
+        'confirmed managed-deployment verification handoff',
         'delegation revocation review',
         'ambiguous delegation revocation monitoring',
         'onboarding intro',

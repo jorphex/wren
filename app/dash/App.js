@@ -15,6 +15,7 @@ import AddressBook from './AddressBook'
 import Dapps from './Dapps'
 import Inspector from './Inspector'
 import Deployment from './Deployment'
+import ContractVerification from './ContractVerification'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
@@ -94,6 +95,9 @@ export class Dash extends React.Component {
           networksMeta={this.store('main.networksMeta.ethereum') || {}}
         />
       )
+    }
+    if (view === 'contractVerification') {
+      return <ContractVerification data={data} networks={this.store('main.networks.ethereum') || {}} />
     }
     if (view === 'expandedSigner' && data.signer) {
       const signerId = data.signer

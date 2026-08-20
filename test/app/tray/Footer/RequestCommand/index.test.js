@@ -9,8 +9,9 @@ import {
   clearTransactionFeeDraftSafety,
   setTransactionFeeDraftSafety
 } from '../../../../../resources/domain/request'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../../resources/domain/origin'
 
-jest.mock('../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../../resources/link', () => ({ invoke: jest.fn(), rpc: jest.fn(), send: jest.fn() }))
 
 const request = {
   account: '0x0000000000000000000000000000000000000001',
@@ -104,9 +105,96 @@ const renderCommandResult = (command, method) => {
 }
 
 beforeEach(() => {
+  link.invoke.mockReset()
   link.rpc.mockReset()
   link.send.mockReset()
   clearTransactionFeeDraftSafety(request.handlerId)
+})
+
+it('opens source verification only for a confirmed managed deployment', async () => {
+  const operationId = '33333333-3333-4333-8333-333333333333'
+  const req = transaction({
+    activityId: operationId,
+    origin: originIdForName(WREN_DEPLOY_ORIGIN),
+    status: 'confirmed',
+    deployment: { inspectionId: 'a'.repeat(32) },
+    tx: {
+      hash: `0x${'a'.repeat(64)}`,
+      confirmations: 1,
+      receipt: {
+        blockNumber: '0x1',
+        gasUsed: '0x5208',
+        status: '0x1',
+        contractAddress: `0x${'2'.repeat(40)}`
+      }
+    }
+  })
+  const address = `0x${'2'.repeat(40)}`
+  link.invoke.mockResolvedValue({ success: true, operationId, chainId: 1, address })
+  const view = renderMountedCommand(req, 'sentStatus', commandStore())
+
+  await view.user.click(screen.getByRole('button', { name: 'Verify source' }))
+
+  expect(link.invoke).toHaveBeenCalledWith('tray:continueContractVerification', {
+    account: req.account,
+    handlerId: req.handlerId
+  })
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'contractVerification',
+    data: { operationId, chainId: 1, address }
+  })
+  view.unmount()
+})
+
+it('keeps an unavailable verification handoff visible and retryable', async () => {
+  const req = transaction({
+    activityId: '33333333-3333-4333-8333-333333333333',
+    origin: originIdForName(WREN_DEPLOY_ORIGIN),
+    status: 'confirmed',
+    deployment: { inspectionId: 'a'.repeat(32) },
+    tx: {
+      hash: `0x${'a'.repeat(64)}`,
+      receipt: {
+        blockNumber: '0x1',
+        gasUsed: '0x5208',
+        status: '0x1',
+        contractAddress: `0x${'2'.repeat(40)}`
+      }
+    }
+  })
+  link.invoke.mockResolvedValue({ success: false, error: 'invalid-operation' })
+  const view = renderMountedCommand(req, 'sentStatus', commandStore())
+
+  await view.user.click(screen.getByRole('button', { name: 'Verify source' }))
+
+  expect((await screen.findByRole('alert')).textContent).toMatch(/could not be opened/i)
+  expect(screen.getByRole('button', { name: 'Verify source' }).disabled).toBe(false)
+  expect(link.send).not.toHaveBeenCalledWith('tray:action', 'navDash', expect.anything())
+  view.unmount()
+})
+
+it.each([
+  ['ordinary confirmation', {}],
+  ['managed transaction without deployment evidence', { origin: originIdForName(WREN_DEPLOY_ORIGIN) }],
+  [
+    'managed deployment without a confirmed contract address',
+    {
+      activityId: '33333333-3333-4333-8333-333333333333',
+      origin: originIdForName(WREN_DEPLOY_ORIGIN),
+      deployment: { inspectionId: 'a'.repeat(32) }
+    }
+  ]
+])('does not offer source verification for %s', (_label, overrides) => {
+  const req = transaction({
+    status: 'confirmed',
+    tx: { hash: `0x${'a'.repeat(64)}`, receipt: { blockNumber: '0x1', gasUsed: '0x5208' } },
+    ...overrides
+  })
+  const view = renderMountedCommand(req, 'sentStatus', commandStore())
+
+  expect(screen.queryByRole('button', { name: 'Verify source' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  view.unmount()
 })
 
 const commandWithStore = () => {

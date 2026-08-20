@@ -93,6 +93,7 @@ it('groups settings into a short, semantic ledger', () => {
     'Privacy',
     'Browser companions',
     'Local connections',
+    'Contract verification',
     'Recovery',
     'Software signers',
     'About'

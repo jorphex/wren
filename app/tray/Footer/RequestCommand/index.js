@@ -18,6 +18,7 @@ import {
   subscribeToTransactionFeeDraftSafety
 } from '../../../../resources/domain/request'
 import { WATCH_ONLY_SIGNING_ERROR } from '../../../../resources/domain/signer'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
 import { requestReference } from '../../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
@@ -197,6 +198,40 @@ export class RequestCommand extends React.Component {
     })
   }
 
+  async continueContractVerification(req) {
+    if (this.state.requestActionPending) return
+    this.setState({ requestActionPending: true, requestActionError: '' })
+    try {
+      const result = await link.invoke('tray:continueContractVerification', {
+        account: req.account,
+        handlerId: req.handlerId
+      })
+      if (!this.mounted) return
+      if (!result?.success) {
+        this.setState({
+          requestActionPending: false,
+          requestActionError: 'Verification could not be opened. The deployment is still confirmed.'
+        })
+        return
+      }
+      this.setState({ requestActionPending: false, requestActionError: '' })
+      link.send('tray:action', 'navDash', {
+        view: 'contractVerification',
+        data: {
+          operationId: result.operationId,
+          chainId: result.chainId,
+          address: result.address
+        }
+      })
+    } catch {
+      if (!this.mounted) return
+      this.setState({
+        requestActionPending: false,
+        requestActionError: 'Verification could not be opened. The deployment is still confirmed.'
+      })
+    }
+  }
+
   handleSignerCompatibilityFailure(error, compatibility, req) {
     if (!error && compatibility) return false
 
@@ -260,6 +295,13 @@ export class RequestCommand extends React.Component {
       hash && !receipt && !unconfirmedSubmission && ['verifying', 'sent'].includes(status)
     )
     const terminal = ['confirmed', 'error'].includes(status)
+    const canVerifySource = Boolean(
+      status === 'confirmed' &&
+      req.origin === originIdForName(WREN_DEPLOY_ORIGIN) &&
+      req.deployment &&
+      req.activityId &&
+      receipt?.contractAddress
+    )
 
     return (
       <div className='txLifecycleEvidence'>
@@ -331,6 +373,16 @@ export class RequestCommand extends React.Component {
               }}
             >
               Speed Up
+            </button>
+          )}
+          {canVerifySource && (
+            <button
+              type='button'
+              className='txLifecycleAction txLifecycleActionVerify'
+              disabled={this.state.requestActionPending}
+              onClick={() => this.continueContractVerification(req)}
+            >
+              {this.state.requestActionPending ? 'Opening…' : 'Verify source'}
             </button>
           )}
           {terminal && (

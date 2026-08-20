@@ -57,6 +57,15 @@ const auditPage = async ({
     String(value || '')
       .replace(/\s+/gu, ' ')
       .trim()
+  const controlName = (control) =>
+    normalizedText(
+      control.getAttribute('aria-label') ||
+        Array.from(control.labels || [])
+          .map((label) => label.textContent)
+          .join(' ') ||
+        control.innerText ||
+        control.getAttribute('placeholder')
+    )
   const initialFocus = normalizedText(
     document.activeElement?.getAttribute?.('aria-label') || document.activeElement?.innerText
   )
@@ -103,9 +112,10 @@ const auditPage = async ({
         }
         const elementRect = element.getBoundingClientRect()
         const containerRect = container.getBoundingClientRect()
+        const inset = expectation.inset || 0
         if (
-          Math.abs(elementRect.left - containerRect.left) > 2 ||
-          Math.abs(elementRect.right - containerRect.right) > 2
+          Math.abs(elementRect.left - (containerRect.left + inset)) > 2 ||
+          Math.abs(elementRect.right - (containerRect.right - inset)) > 2
         ) {
           violations.push({
             kind: 'required-layout',
@@ -165,27 +175,30 @@ const auditPage = async ({
   )
 
   for (const name of requiredControls) {
-    const matchingControl = controls.find((control) =>
-      normalizedText(control.getAttribute('aria-label') || control.innerText).includes(name)
-    )
+    const matchingControl = controls.find((control) => controlName(control).includes(name))
     if (!matchingControl) violations.push({ kind: 'required-control', detail: name })
   }
 
   for (const control of controls) {
     const label = describe(control)
-    let rect = control.getBoundingClientRect()
+    const associatedLabel =
+      control.tagName === 'INPUT' && ['checkbox', 'radio'].includes(control.type)
+        ? Array.from(control.labels || []).find(visible)
+        : undefined
+    const target = associatedLabel || control
+    let rect = target.getBoundingClientRect()
     if (!accessibleName(control)) violations.push({ kind: 'control-name', detail: label })
     if (rect.width <= 0 || rect.height <= 0) {
       violations.push({ kind: 'control-size', detail: `${label} has no rendered area` })
       continue
     }
 
-    if (!fullyInViewport(rect) || !unobscured(control, rect)) {
-      control.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (!fullyInViewport(rect) || !unobscured(target, rect)) {
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      rect = control.getBoundingClientRect()
+      rect = target.getBoundingClientRect()
     }
-    if (!fullyInViewport(rect) || !unobscured(control, rect)) {
+    if (!fullyInViewport(rect) || !unobscured(target, rect)) {
       violations.push({ kind: 'control-reachability', detail: label })
     }
 

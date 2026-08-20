@@ -14,6 +14,10 @@ const QUALIFICATION_GUARDRAIL_ORIGIN = '11111111-1111-4111-8111-111111111111'
 const QUALIFICATION_NATIVE_ORIGIN = '22222222-2222-4222-8222-222222222222'
 const QUALIFICATION_GUARDRAIL_TARGET = '0x4444444444444444444444444444444444444444'
 const QUALIFICATION_GUARDRAIL_TOKEN = '0x5555555555555555555555555555555555555555'
+const QUALIFICATION_VERIFICATION_ADDRESS = '0x6666666666666666666666666666666666666666'
+const QUALIFICATION_VERIFICATION_JOB = '66666666-6666-4666-8666-666666666666'
+const QUALIFICATION_VERIFICATION_TOKEN = '77777777-7777-4777-8777-777777777777'
+const QUALIFICATION_VERIFICATION_RUNTIME_HASH = `0x${'67'.repeat(32)}`
 
 const qualificationPairingCode = () => {
   const code = process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
@@ -790,6 +794,31 @@ const fixtureFor = (scenario) => {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'deployment', data: {} }]
+    }
+  }
+
+  if (scenario.state === 'contract-verification') {
+    const { networks, metadata } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'contractVerification',
+          data:
+            scenario.variant === 'confirmed'
+              ? {
+                  operationId: '88888888-8888-4888-8888-888888888888',
+                  chainId: 10,
+                  address: QUALIFICATION_VERIFICATION_ADDRESS
+                }
+              : scenario.variant === 'result'
+                ? { verificationId: QUALIFICATION_VERIFICATION_JOB }
+                : {}
+        }
+      ]
     }
   }
 
@@ -1708,6 +1737,58 @@ const fixtureFor = (scenario) => {
     state.windows.panel.footer.height = 200
   }
 
+  if (scenario.state === 'transaction-deployment-confirmed') {
+    const request = monitoredTransactionRequest('confirmed')
+    request.handlerId = 'qualification-deployment-confirmed'
+    request.activityId = '88888888-8888-4888-8888-888888888888'
+    request.origin = 'ae9af752-884b-5edc-a215-5d472486a6b9'
+    request.classification = 'CONTRACT_DEPLOY'
+    request.data = {
+      from: QUALIFICATION_ACCOUNT,
+      chainId: '0x1',
+      data: '0x60006000',
+      nonce: '0x7',
+      type: '0x2',
+      value: '0x0',
+      gasLimit: '0x186a0',
+      maxFeePerGas: '0x77359400',
+      maxPriorityFeePerGas: '0x3b9aca00'
+    }
+    request.payload.params = [request.data]
+    delete request.recipient
+    delete request.recipientType
+    request.deployment = {
+      version: 1,
+      inspectionId: '0123456789abcdef0123456789abcdef',
+      account: QUALIFICATION_ACCOUNT.toLowerCase(),
+      chainId: '0x1',
+      initcodeHash: '0x5e3ce470a8506d55e59815db7232a08774174ae0c7fdb2fbc81a49e4e242b0d6',
+      initcodeBytes: 4,
+      value: '0x0',
+      preparedAt: Date.UTC(2026, 7, 20, 12, 0, 0),
+      expiresAt: Date.UTC(2026, 7, 20, 12, 1, 0)
+    }
+    request.tx.receipt.contractAddress = QUALIFICATION_VERIFICATION_ADDRESS
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = {
+      [request.origin]: { name: 'http://deploy.wren.localhost:8421' }
+    }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 230
+  }
+
   if (scenario.state === 'wallet-calls-funding') {
     const request = walletCallsFundingRequest()
     prepareSelectedAccount(state, request)
@@ -1890,6 +1971,84 @@ const invokeReplyFor = (scenario, method) => {
           provisionalAddress: '0x3333333333333333333333333333333333333333',
           provisional: true
         }
+      }
+    }
+  }
+  if (method === 'contractVerification:inspectArtifact') {
+    return {
+      success: true,
+      artifact: {
+        token: QUALIFICATION_VERIFICATION_TOKEN,
+        summary: {
+          format: 'foundry-build-info',
+          language: 'Solidity',
+          compilerStatus: 'included',
+          compilerVersion: '0.8.28',
+          sourceCount: 4,
+          contractCandidates: ['src/CommunityVault.sol:CommunityVault'],
+          localRuntimeMatch: true,
+          selectionRequired: false,
+          selectedContractIdentifier: 'src/CommunityVault.sol:CommunityVault'
+        }
+      }
+    }
+  }
+  if (method === 'contractVerification:list') return { success: true, jobs: [] }
+  if (method === 'contractVerification:openResult') return { success: true }
+  if (method === 'contractVerification:credentialStatus') {
+    return {
+      success: true,
+      credential: { available: true, configured: false, backend: 'secret_service' }
+    }
+  }
+  if (method === 'contractVerification:prepare') {
+    return {
+      success: true,
+      prepared: {
+        acknowledgementToken: '99999999-9999-4999-8999-999999999999',
+        target: {
+          address: QUALIFICATION_VERIFICATION_ADDRESS,
+          chainId: 10,
+          runtimeCodeHash: QUALIFICATION_VERIFICATION_RUNTIME_HASH
+        },
+        language: 'Solidity',
+        compilerVersion: '0.8.28',
+        contractIdentifier: 'src/CommunityVault.sol:CommunityVault',
+        sourceCount: 4,
+        localRuntimeMatch: 'matched',
+        deploymentSettlement: 'not-applicable'
+      }
+    }
+  }
+  if (method === 'contractVerification:get') {
+    return {
+      success: true,
+      job: {
+        id: QUALIFICATION_VERIFICATION_JOB,
+        target: {
+          address: QUALIFICATION_VERIFICATION_ADDRESS,
+          chainId: 10,
+          runtimeCodeHash: QUALIFICATION_VERIFICATION_RUNTIME_HASH
+        },
+        language: 'Solidity',
+        compilerVersion: '0.8.28',
+        contractIdentifier: 'src/CommunityVault.sol:CommunityVault',
+        sourceHash: '68'.repeat(32),
+        submissionHash: '69'.repeat(32),
+        status: 'partial',
+        destinations: [
+          { destination: 'sourcify', status: 'published' },
+          {
+            destination: 'etherscan-forwarded',
+            status: 'unavailable',
+            reasonCode: 'destination-unavailable'
+          },
+          { destination: 'blockscout-forwarded', status: 'verified' },
+          { destination: 'routescan-forwarded', status: 'not-submitted' },
+          { destination: 'etherscan-direct', status: 'not-submitted' }
+        ],
+        createdAt: Date.UTC(2026, 7, 20, 12, 0, 0),
+        updatedAt: Date.UTC(2026, 7, 20, 12, 1, 0)
       }
     }
   }

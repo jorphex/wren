@@ -133,6 +133,44 @@
 
   .recentRecipientsDialog
     width 100%
+
+  .contractVerificationCredential
+    height auto
+
+  .contractVerificationCredentialIdentity
+    min-width 150px
+    flex 1
+
+  .contractVerificationCredentialStatus,
+  .contractVerificationCredentialMessage,
+  .contractVerificationCredentialError
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+  .contractVerificationCredentialActions
+    display flex
+    align-items center
+    justify-content flex-end
+    gap var(--wren-space-2)
+
+    button
+      min-height 44px
+      flex none
+
+  .contractVerificationCredentialInput
+    width 180px
+    height 44px
+    box-sizing border-box
+
+  .contractVerificationCredentialMessage
+    min-height 18px
+    color var(--wren-success)
+
+  .contractVerificationCredentialError
+    min-height 18px
+    color var(--wren-danger)
     box-sizing border-box
 
   .recentRecipientsStatus
@@ -518,3 +556,13 @@
 
     .recoveryMetadata
       grid-template-columns 1fr
+
+    .contractVerificationCredentialControls,
+    .contractVerificationCredentialActions
+      width 100%
+      align-items stretch
+      flex-direction column
+
+    .contractVerificationCredentialInput,
+    .contractVerificationCredentialActions button
+      width 100%

@@ -59,3 +59,10 @@ it('uses the authored Connected apps title', () => {
   expect(screen.getByText('Connected apps')).toBeTruthy()
   expect(screen.queryByText('dapps')).toBeNull()
 })
+
+it('uses the authored Contract verification title', () => {
+  renderCommand([{ view: 'contractVerification', data: {} }])
+
+  expect(screen.getByText('Contract verification')).toBeTruthy()
+  expect(screen.queryByText('contractVerification')).toBeNull()
+})

@@ -17,7 +17,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(69)
+  expect(scenarios).toHaveLength(70)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -664,6 +664,40 @@ it('qualifies account-scoped guardrails across shell geometry, scale, provenance
     targets: ['0x4444444444444444444444444444444444444444'],
     spenders: []
   })
+})
+
+it('qualifies source verification entry, evidence, results, credentials, and confirmed handoff', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const forms = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-form-'))
+  const evidence = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-evidence-'))
+  const confirmations = scenarios.filter(({ id }) => id.startsWith('tray-transaction-deployment-confirmed-'))
+  const results = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-result-'))
+  const credential = scenarios.find(({ id }) => id === 'dash-settings-contract-verification-short-1.5')
+  const capped = scenarios.find(({ id }) => id === 'dash-contract-verification-evidence-capped-1.5')
+
+  expect(forms).toHaveLength(6)
+  expect(evidence).toHaveLength(7)
+  expect(confirmations).toHaveLength(6)
+  expect(results).toHaveLength(2)
+  expect(credential.captureScrollSelector).toBe('#wren-settings-contract-verification')
+  expect(capped.layoutExpectations).toEqual(
+    expect.arrayContaining([
+      { kind: 'stacked', selector: '.contractVerificationLedgerRow' },
+      {
+        kind: 'full-width',
+        selector: '.contractVerificationActionShelf button',
+        container: '.contractVerificationActionShelf',
+        inset: 12
+      }
+    ])
+  )
+
+  const state = fixtureFor(forms[0])
+  expect(state.windows.dash.nav).toEqual([{ view: 'contractVerification', data: {} }])
+  const artifact = invokeReplyFor(forms[0], 'contractVerification:inspectArtifact')
+  expect(artifact).toMatchObject({ success: true, artifact: { summary: { localRuntimeMatch: true } } })
+  expect(JSON.stringify(artifact)).not.toMatch(/filePath|stdJsonInput|sourceContent|apiKey/u)
+  expect(confirmations[0].requiredControls).toEqual(['View details', 'Verify source', 'Close'])
 })
 
 it('forces the dashboard and tray capped-width fallback layouts at 150%', () => {

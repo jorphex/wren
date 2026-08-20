@@ -9,6 +9,7 @@ import Toggle from '../../../resources/Components/Toggle'
 import DialogSurface from '../../../resources/Components/DialogSurface'
 import Recovery from './Recovery'
 import SignerProtection from './SignerProtection'
+import ContractVerificationCredential from './ContractVerificationCredential'
 
 import styled from 'styled-components'
 
@@ -1029,6 +1030,12 @@ export class Settings extends Component {
               })}
             </section>
           ) : null}
+          <section className='wrenSettingsSection' aria-labelledby='wren-settings-contract-verification'>
+            <h2 id='wren-settings-contract-verification' className='wrenSettingsSectionTitle'>
+              Contract verification
+            </h2>
+            <ContractVerificationCredential />
+          </section>
           <section className='wrenSettingsSection' aria-labelledby='wren-settings-recovery'>
             <h2 id='wren-settings-recovery' className='wrenSettingsSectionTitle'>
               Recovery

@@ -296,6 +296,22 @@ const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
   ...updateDialogScenarios(),
   ...sendComposerScenarios(),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `tray-transaction-deployment-confirmed-${geometry}-${scale}`,
+      renderer: 'tray',
+      state: 'transaction-deployment-confirmed',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.txLifecycle-success',
+      requiredControls: ['View details', 'Verify source', 'Close'],
+      requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
+    }))
+  ),
   ...['unlocked', 'locked'].flatMap((variant) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -324,6 +340,80 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `dash-contract-verification-form-${geometry}-${scale}`,
+      renderer: 'dash',
+      state: 'contract-verification',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.contractVerificationForm',
+      requiredControls: ['Network', 'Contract address', 'Choose artifact'],
+      requiredText: [
+        'Verify contract source',
+        'publish the verification record publicly',
+        'Solidity or Vyper standard JSON',
+        'Foundry or Hardhat build-info'
+      ]
+    }))
+  ),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `dash-contract-verification-evidence-${geometry}-${scale}`,
+      renderer: 'dash',
+      state: 'contract-verification',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: {
+        type: 'sequence',
+        steps: [
+          { type: 'selectLabel', label: 'Network', value: '10' },
+          {
+            type: 'inputLabel',
+            label: 'Contract address',
+            value: '0x6666666666666666666666666666666666666666'
+          },
+          { type: 'clickText', text: 'Choose artifact' },
+          { type: 'clickText', text: 'Check source' },
+          { type: 'clickCheckboxText', text: 'public permanently' }
+        ]
+      },
+      ready: '.contractVerificationPublication',
+      captureScroll: 'target',
+      captureScrollSelector: '.contractVerificationPublication',
+      requiredControls: ['Edit and recheck', 'Publish source'],
+      requiredText: [
+        'Source check',
+        'Matched locally',
+        'Publishing is permanent and public',
+        'Wren cannot undo a submission'
+      ]
+    }))
+  ),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-contract-verification-result-${geometry}-1`,
+    renderer: 'dash',
+    state: 'contract-verification',
+    variant: 'result',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    action: { type: 'clickCheckboxText', text: 'no constructor arguments' },
+    ready: '.contractVerificationResult',
+    requiredControls: ['Refresh status', 'Submit directly with API key'],
+    requiredText: ['Verification status', 'Sourcify', 'Published', 'Blockscout', 'Verified', 'Etherscan']
+  })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -1060,6 +1150,24 @@ const reviewScenarios = () => [
     captureScrollSelector: '#wren-settings-recovery'
   },
   {
+    id: 'dash-settings-contract-verification-short-1.5',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.contractVerificationCredential',
+    requiredControls: ['Etherscan API key', 'Save'],
+    requiredText: [
+      'Contract verification',
+      'Not configured',
+      'OS credential protection',
+      'Not included in profile backups'
+    ],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-contract-verification'
+  },
+  {
     id: 'dash-settings-recovery-export-full-1',
     renderer: 'dash',
     state: 'settings',
@@ -1713,6 +1821,42 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Ready to begin']
       }
     ]),
+    {
+      id: 'dash-contract-verification-evidence-capped-1.5',
+      renderer: 'dash',
+      state: 'contract-verification',
+      scale: 1.5,
+      logicalWidth: 530,
+      logicalHeight: SHORT_SHELL_HEIGHT,
+      action: {
+        type: 'sequence',
+        steps: [
+          { type: 'selectLabel', label: 'Network', value: '10' },
+          {
+            type: 'inputLabel',
+            label: 'Contract address',
+            value: '0x6666666666666666666666666666666666666666'
+          },
+          { type: 'clickText', text: 'Choose artifact' },
+          { type: 'clickText', text: 'Check source' },
+          { type: 'clickCheckboxText', text: 'public permanently' }
+        ]
+      },
+      ready: '.contractVerificationPublication',
+      captureScroll: 'target',
+      captureScrollSelector: '.contractVerificationPublication',
+      requiredControls: ['Edit and recheck', 'Publish source'],
+      requiredText: ['Publishing is permanent and public', 'Matched locally'],
+      layoutExpectations: [
+        { kind: 'stacked', selector: '.contractVerificationLedgerRow' },
+        {
+          kind: 'full-width',
+          selector: '.contractVerificationActionShelf button',
+          container: '.contractVerificationActionShelf',
+          inset: 12
+        }
+      ]
+    },
     {
       id: 'dash-control-center-capped-1.5',
       renderer: 'dash',

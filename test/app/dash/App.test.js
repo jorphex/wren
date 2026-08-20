@@ -2,6 +2,7 @@ import { Dash } from '../../../app/dash/App'
 import Dapps from '../../../app/dash/Dapps'
 import Inspector from '../../../app/dash/Inspector'
 import Deployment from '../../../app/dash/Deployment'
+import ContractVerification from '../../../app/dash/ContractVerification'
 import link from '../../../resources/link'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
@@ -47,6 +48,22 @@ it('renders deployment with the exact account and network state needed by the to
     networks: values['main.networks.ethereum'],
     networksMeta: values['main.networksMeta.ethereum']
   })
+})
+
+it('renders contract verification with its immutable route data and connected network state', () => {
+  const dash = new Dash({})
+  const data = {
+    operationId: '11111111-1111-4111-8111-111111111111',
+    chainId: 1,
+    address: `0x${'1'.repeat(40)}`
+  }
+  const networks = { 1: { id: 1, name: 'Ethereum', on: true } }
+  dash.store = jest.fn((path) => (path === 'main.networks.ethereum' ? networks : undefined))
+
+  const view = dash.renderPanel('contractVerification', data)
+
+  expect(view.type).toBe(ContractVerification)
+  expect(view.props).toEqual({ data, networks })
 })
 
 it('gives an active hardware prompt exclusive ownership of signer authentication', () => {
