@@ -58,7 +58,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
 
 it('seats every RPC warning shelf at the viewport bottom with its exact reserved height', () => {
   const warnings = scenarioMatrix({ includeReview: true }).filter(
-    ({ state }) => state === 'transaction-rpc-warning'
+    ({ state, action }) => state === 'transaction-rpc-warning' && !action
   )
 
   expect(warnings).toHaveLength(16)
@@ -69,6 +69,48 @@ it('seats every RPC warning shelf at the viewport bottom with its exact reserved
     })
     expect(fixtureFor(warning).windows.panel.footer.height).toBe(200)
   }
+})
+
+it('visually qualifies the primary RPC warning hover state', () => {
+  const warning = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'tray-rpc-warning-revert-hover-full-1'
+  )
+  expect(warning).toMatchObject({
+    state: 'transaction-rpc-warning',
+    variant: 'revert',
+    action: { type: 'hoverText', text: 'Sign Anyway' }
+  })
+})
+
+it('qualifies the warning-to-sign transition without empty-frame animations', () => {
+  const warning = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'tray-rpc-warning-revert-confirmed-full-1'
+  )
+  expect(warning).toMatchObject({
+    ready: '.requestApproveTransaction',
+    action: {
+      type: 'confirmRequestWarning',
+      text: 'Sign Anyway',
+      requestId: 'qualification-rpc-warning-revert'
+    },
+    requiredText: expect.arrayContaining(['Decline', 'Sign transaction'])
+  })
+  expect(warning.layoutExpectations).toEqual(
+    expect.arrayContaining([
+      {
+        kind: 'computed-style',
+        selector: '.footerModule',
+        property: 'transitionDuration',
+        value: '0s'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.requestApproveTransaction',
+        property: 'animationName',
+        value: 'none'
+      }
+    ])
+  )
 })
 
 it('fixtures the separator-review surfaces at native scale and geometry', () => {
@@ -93,6 +135,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   )
   const networks = scenarios.find(({ state }) => state === 'networks')
   const editor = scenarios.find(({ state }) => state === 'network-editor')
+  const overflowingNetworkEditor = scenarios.find(({ id }) => id === 'dash-network-add-overflow-short-1')
   const ledger = scenarios.find(({ state }) => state === 'account-ledger')
   const startup = scenarios.find(({ state }) => state === 'account-startup')
   const balances = scenarios.find(({ state }) => state === 'account-balances')
@@ -305,6 +348,12 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     true
   )
   expect(fixtureFor(editor).main.networks.ethereum[1].connection.endpoints).toHaveLength(2)
+  expect(overflowingNetworkEditor).toMatchObject({
+    captureScroll: 'bottom',
+    captureScrollSelector: '.localSettingsWrap',
+    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.localSettingsWrap' }]
+  })
+  expect(overflowingNetworkEditor.action.steps).toHaveLength(4)
   expect(Object.keys(fixtureFor(drawer).main.accounts)).toHaveLength(6)
   expect(Object.keys(fixtureFor(startup).main.accounts)).toHaveLength(3)
   expect(fixtureFor(startup).selected.open).toBe(false)

@@ -165,6 +165,15 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'scroll-overflows') {
+      for (const element of elements) {
+        if (element.scrollHeight <= element.clientHeight) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} should scroll once repeated content exceeds its viewport`
+          })
+        }
+      }
     } else if (expectation.kind === 'computed-style') {
       for (const element of elements) {
         const actual = getComputedStyle(element)[expectation.property]

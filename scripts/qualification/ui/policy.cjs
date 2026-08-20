@@ -1407,6 +1407,24 @@ const reviewScenarios = () => [
     requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
   },
   {
+    id: 'dash-network-add-overflow-short-1',
+    renderer: 'dash',
+    state: 'network-add',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    action: {
+      type: 'sequence',
+      delayMs: 20,
+      steps: Array.from({ length: 4 }, () => ({ type: 'clickText', text: 'Add RPC' }))
+    },
+    captureScroll: 'bottom',
+    captureScrollSelector: '.localSettingsWrap',
+    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.localSettingsWrap' }],
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Test network', 'Add network']
+  },
+  {
     id: 'tray-account-startup-full-1',
     renderer: 'tray',
     state: 'account-startup',
@@ -1564,6 +1582,68 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  {
+    id: 'tray-rpc-warning-revert-hover-full-1',
+    renderer: 'tray',
+    state: 'transaction-rpc-warning',
+    variant: 'revert',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.approveTransactionWarning',
+    action: { type: 'hoverText', text: 'Sign Anyway' },
+    requiredControls: ['Reject', 'Sign Anyway'],
+    requiredText: ['RPC Reports Revert', 'Your configured RPC reports that this transaction will revert.'],
+    layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestNoticeApproval' }]
+  },
+  {
+    id: 'tray-rpc-warning-revert-confirmed-full-1',
+    renderer: 'tray',
+    state: 'transaction-rpc-warning',
+    variant: 'revert',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestApproveTransaction',
+    action: {
+      type: 'confirmRequestWarning',
+      text: 'Sign Anyway',
+      requestId: 'qualification-rpc-warning-revert'
+    },
+    requiredText: [
+      'Ready for review',
+      'Verify on your signer before approving.',
+      'Decline',
+      'Sign transaction'
+    ],
+    layoutExpectations: [
+      { kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' },
+      {
+        kind: 'computed-style',
+        selector: '.requestNoticeTransactionReview',
+        property: 'animationName',
+        value: 'none'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.requestApproveTransaction',
+        property: 'animationName',
+        value: 'none'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.footerModule',
+        property: 'transitionDuration',
+        value: '0s'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountViewRequest',
+        property: 'transitionDuration',
+        value: '0s'
+      }
+    ]
+  },
   {
     id: 'tray-transaction-safety-unavailable-short-1',
     renderer: 'tray',

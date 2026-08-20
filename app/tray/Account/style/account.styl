@@ -60,6 +60,10 @@
   z-index 99999999
   transition var(--standard)
 
+  &:has(.requestNoticeApproval),
+  &:has(.requestNoticeTransactionReview)
+    transition none
+
   .footerWrap
     width 100%
     display flow-root
@@ -1297,6 +1301,10 @@
 // Account home follows the approved controls study: the selected-account switcher
 // owns the header, so the startup dashboard control stays out of the selected state.
 #panel
+  &:has(.requestNoticeApproval) .accountViewRequest,
+  &:has(.requestNoticeTransactionReview) .accountViewRequest
+    transition none
+
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
 

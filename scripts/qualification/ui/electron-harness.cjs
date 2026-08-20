@@ -223,6 +223,24 @@ const clickText = async (webContents, text) => {
   if (!clicked) throw new Error(`Could not find button text ${text}`)
 }
 
+const hoverText = async (webContents, text) => {
+  const point = await webContents.executeJavaScript(
+    `(() => {
+      const target = Array.from(document.querySelectorAll('button')).find(
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(text)}
+      )
+      if (!target) return undefined
+      const rect = target.getBoundingClientRect()
+      return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }
+    })()`,
+    true
+  )
+  if (!point) throw new Error(`Could not find button text ${text}`)
+  webContents.sendInputEvent({ type: 'mouseMove', x: point.x, y: point.y })
+}
+
 const inputByLabel = async (webContents, label, value) => {
   const changed = await webContents.executeJavaScript(
     `(() => {
@@ -305,6 +323,18 @@ const performAction = async (webContents, action) => {
     await clickText(webContents, action.text)
     return
   }
+  if (action.type === 'hoverText') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('button')).some(
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(action.text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
+      )`
+    )
+    await hoverText(webContents, action.text)
+    return
+  }
   if (action.type === 'inputLabel') {
     await waitFor(
       webContents,
@@ -343,6 +373,46 @@ const performAction = async (webContents, action) => {
       )`
     )
     await clickCheckboxText(webContents, action.text)
+    return
+  }
+  if (action.type === 'confirmRequestWarning') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('button')).some(
+        (button) => button.innerText.trim() === ${JSON.stringify(action.text)}
+      )`
+    )
+    await clickText(webContents, action.text)
+    const state = stateByWebContents.get(webContents.id)
+    const accountEntry = Object.entries(state?.main?.accounts || {}).find(
+      ([, account]) => account?.requests?.[action.requestId]
+    )
+    if (!accountEntry) throw new Error('Could not confirm qualification request warning')
+    const [accountId, account] = accountEntry
+    const approvals = (account.requests[action.requestId].approvals || []).map((approval) => ({
+      ...approval,
+      approved: true
+    }))
+    account.requests[action.requestId].approvals = approvals
+    state.windows.panel.footer.height = 114
+    webContents.send(
+      'main:action',
+      'stateSync',
+      JSON.stringify([
+        {
+          name: 'qualification-confirm-request-warning',
+          count: 1,
+          deferred: false,
+          updates: [
+            {
+              path: `main.accounts.${accountId}.requests.${action.requestId}.approvals`,
+              value: approvals
+            },
+            { path: 'windows.panel.footer.height', value: 114 }
+          ]
+        }
+      ])
+    )
     return
   }
   if (action.type === 'setRequestStatus') {

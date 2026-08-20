@@ -711,6 +711,7 @@
 .requestNoticeTransactionReview
   height 114px
   background var(--wren-bg-subtle)
+  animation none
 
   .requestNoticeInner
     display block
@@ -765,6 +766,9 @@
   align-items center
   gap var(--wren-space-6)
   animation 0.24s fadeUp ease-out
+
+.requestApproveTransaction
+  animation none
 
   .requestActionContext
     display flex
@@ -941,6 +945,16 @@
     color var(--wren-text-inverse)
     border-color var(--wren-control-primary-border)
     background var(--wren-control-texture-light), var(--wren-accent-primary)
+
+    &:hover
+      border-color var(--wren-control-primary-border-hover)
+      background var(--wren-control-texture-light), var(--wren-accent-primary-hover)
+      box-shadow var(--wren-control-primary-shadow-hover)
+
+    &:active
+      border-color var(--wren-control-primary-border)
+      background var(--wren-control-texture-light), var(--wren-accent-primary-active)
+      box-shadow var(--wren-control-primary-shadow-pressed)
 
   ._txActionButtonBad
     color var(--wren-danger)

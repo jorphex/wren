@@ -3,12 +3,10 @@ import fs from 'fs'
 const editorStyle = fs.readFileSync('app/dash/Chains/Chain/style/index.styl', 'utf8')
 const toggleStyle = fs.readFileSync('resources/Components/Toggle/index.styl', 'utf8')
 
-test('keeps the short network editor body scrollable above its fixed actions', () => {
+test('lets the network editor grow naturally once RPC rows reach its bottom actions', () => {
   expect(editorStyle).toMatch(/@media \(max-height: 760px\) and \(min-width: 561px\)/)
-  expect(editorStyle).toMatch(
-    /\.networkEditor\n\s{4}height calc\(100vh - 64px\)\n\s{4}min-height 0\n\s{4}overflow hidden/
-  )
-  expect(editorStyle).toMatch(/\.networkEditorBody\n\s{4}overflow-x hidden\n\s{4}overflow-y auto/)
+  expect(editorStyle).not.toMatch(/\.networkEditor\n\s{4}height calc\(100vh - 64px\)/)
+  expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{4}overflow-y auto/)
   expect(editorStyle).toMatch(
     /\.networkEditorHeader\n\s{4}min-height 60px\n\s{4}padding-top 10px\n\s{4}padding-bottom 8px/
   )
@@ -25,10 +23,9 @@ test('keeps the short network editor body scrollable above its fixed actions', (
   expect(editorStyle).toMatch(/\.networkEditor[\s\S]*?background transparent/)
 })
 
-test('keeps add and edit actions directly after the intrinsic one-endpoint form', () => {
+test('anchors add and edit actions at the bottom while the form fits', () => {
   expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?min-height calc\(100vh - 64px\)/)
-  expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 0 1 auto/)
-  expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
+  expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
   expect(editorStyle).toMatch(
     /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap\n\s{2}padding-top 0\n\s{2}padding-bottom 0/
   )

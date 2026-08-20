@@ -264,6 +264,17 @@ test('keeps transaction review on one flat details ledger', () => {
   expect(signingStyle).toMatch(
     /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
   )
+  expect(signingStyle).toMatch(/\.requestNoticeTransactionReview\n[\s\S]*?animation none/)
+  expect(signingStyle).toMatch(/\.requestApproveTransaction\n\s{2}animation none/)
+  expect(signingStyle).toMatch(
+    /\._txActionButtonGood[\s\S]*?&:hover[\s\S]*?var\(--wren-accent-primary-hover\)/
+  )
+  expect(accountStyle).toMatch(
+    /\.footerModule[\s\S]*?&:has\(\.requestNoticeApproval\),[\s\S]*?&:has\(\.requestNoticeTransactionReview\)[\s\S]*?transition none/
+  )
+  expect(accountStyle).toMatch(
+    /#panel[\s\S]*?&:has\(\.requestNoticeApproval\) \.accountViewRequest,[\s\S]*?&:has\(\.requestNoticeTransactionReview\) \.accountViewRequest[\s\S]*?transition none/
+  )
   expect(signingStyle).toMatch(
     /\.transactionReviewSectionTitle[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-1\)/
   )
