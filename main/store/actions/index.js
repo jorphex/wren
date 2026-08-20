@@ -267,6 +267,9 @@ module.exports = {
   setOperationLifecycles: (u, operations) => {
     u('main.operationLifecycles', () => operations)
   },
+  setContractVerificationJobs: (u, jobs) => {
+    u('main.contractVerificationJobs', () => jobs)
+  },
   recordActivity: (u, entry) => {
     u('main.activity', (activity = []) => {
       const current = activity.find(({ id }) => id === entry.id)

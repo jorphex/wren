@@ -77,6 +77,25 @@ const fixture = () => {
   ]
   fixtureMain.walletCallBatches = { execution: 'private-call-history' }
   fixtureMain.operationLifecycles = { pending: { evidence: 'private-operation-lifecycle' } }
+  fixtureMain.contractVerificationJobs = [
+    {
+      id: '00000000-0000-4000-8000-000000000009',
+      target: {
+        address: `0x${'a'.repeat(40)}`,
+        chainId: 1,
+        runtimeCodeHash: `0x${'b'.repeat(64)}`
+      },
+      language: 'Solidity',
+      compilerVersion: '0.8.28+commit.7893614a',
+      contractIdentifier: 'contracts/Private.sol:Private',
+      sourceHash: 'a'.repeat(64),
+      submissionHash: 'b'.repeat(64),
+      status: 'published',
+      destinations: [{ destination: 'sourcify', status: 'published' }],
+      createdAt: 1,
+      updatedAt: 2
+    }
+  ]
   fixtureMain.outboundAddressMemory = {
     ['a'.repeat(64)]: {
       digest: 'a'.repeat(64),
@@ -238,6 +257,7 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('activity')
   expect(recoveryMain).not.toHaveProperty('walletCallBatches')
   expect(recoveryMain).not.toHaveProperty('operationLifecycles')
+  expect(recoveryMain).not.toHaveProperty('contractVerificationJobs')
   expect(recoveryMain).not.toHaveProperty('outboundAddressMemory')
   expect(recoveryMain).not.toHaveProperty('rememberRecentRecipients')
   expect(recoveryMain).not.toHaveProperty('recentRecipientUses')
@@ -249,7 +269,7 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('dapps')
   expect(recoveryMain).not.toHaveProperty('balances')
   expect(configurationText).not.toMatch(
-    /transient-request-secret|privateRuntimeObservation|activeRequestId|private-call-history|private-operation-lifecycle|private-workflow|private-provider-evidence|private-notification-data|private-token-cache|private-installed-content|runtime-update-id/
+    /transient-request-secret|privateRuntimeObservation|activeRequestId|private-call-history|private-operation-lifecycle|contracts\/Private\.sol|private-workflow|private-provider-evidence|private-notification-data|private-token-cache|private-installed-content|runtime-update-id/
   )
   expect(Buffer.from(payload.files.signers[0].bytes, 'base64').toString('utf8')).toContain(
     'secret-shaped-but-encrypted'

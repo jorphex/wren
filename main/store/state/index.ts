@@ -21,6 +21,7 @@ export type { Permission } from './types/permission'
 export type { Account, AccountMetadata } from './types/account'
 export type { ActivityEntry } from './types/activity'
 export type { OperationLifecycle, OperationLifecycles } from './types/operationLifecycle'
+export type { ContractVerificationJobs } from './types/contractVerification'
 export type { AddressBook, AddressBookEntry } from './types/addressBook'
 export type { RecentRecipientUse, RecentRecipientUses } from './types/recentRecipients'
 export type { Balance } from './types/balance'
@@ -206,6 +207,7 @@ const mainState = {
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
   operationLifecycles: main('operationLifecycles', {}),
+  contractVerificationJobs: main('contractVerificationJobs', []),
   outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),
   recentRecipientUses: pruneRecentRecipientUses(main('recentRecipientUses', [])),
   addressBook: main('addressBook', {}),

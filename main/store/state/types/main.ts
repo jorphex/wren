@@ -6,6 +6,7 @@ import { AddressBookSchema } from './addressBook'
 import { BalanceSchema } from './balance'
 import { ChainMetadataSchema, ChainSchema } from './chain'
 import { ColorwayPrimarySchema } from './colors'
+import { ContractVerificationJobsSchema } from './contractVerification'
 import { DappSchema } from './dapp'
 import { DappGuardrailsSchema } from './dappGuardrail'
 import { ExtensionCredentialsSchema } from './extensionCredential'
@@ -90,6 +91,7 @@ export const MainSchema = z.object({
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
   operationLifecycles: OperationLifecyclesSchema,
+  contractVerificationJobs: ContractVerificationJobsSchema.default([]).catch([]),
   outboundAddressMemory: OutboundAddressMemorySchema,
   recentRecipientUses: RecentRecipientUsesSchema,
   addressBook: AddressBookSchema,

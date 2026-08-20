@@ -1,5 +1,8 @@
+import { getCreateAddress } from 'ethers'
+
 import { OperationLifecycleLedger } from '../../../main/operationLifecycle/ledger'
 import { OperationLifecycleReconciler } from '../../../main/operationLifecycle/reconciler'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../resources/domain/origin'
 import {
   MAX_OPERATION_LIFECYCLE_AGE_MS,
   type OperationLifecycle,
@@ -88,6 +91,44 @@ test('ordinary transactions resolve on their first canonical receipt and keep mo
   await expect(noncanonical.reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({
     state: 'reorged'
   })
+})
+
+test('persists the canonical CREATE address only for an exact managed deployment receipt', async () => {
+  const contractAddress = getCreateAddress({ from: account, nonce: 1 }).toLowerCase()
+  const deployment = {
+    version: 1 as const,
+    inspectionId: 'a'.repeat(32),
+    initcodeHash: `0x${'e'.repeat(64)}`,
+    initcodeBytes: 12,
+    value: '0x0'
+  }
+  const managed = operation({
+    origin: originIdForName(WREN_DEPLOY_ORIGIN),
+    transaction: { hash, nonce: '0x1', deployment }
+  })
+  const exact = fixture(managed, {
+    ...canonical('0x1', '0x5'),
+    [`eth_getTransactionReceipt:${hash}`]: {
+      ...canonical('0x1', '0x5')[`eth_getTransactionReceipt:${hash}`],
+      contractAddress
+    }
+  })
+  await expect(exact.reconciler.reconcile(managed.id, 20)).resolves.toMatchObject({
+    state: 'confirmed',
+    receipt: { contractAddress }
+  })
+
+  const mismatched = fixture(managed, {
+    ...canonical('0x1', '0x5'),
+    [`eth_getTransactionReceipt:${hash}`]: {
+      ...canonical('0x1', '0x5')[`eth_getTransactionReceipt:${hash}`],
+      contractAddress: `0x${'f'.repeat(40)}`
+    }
+  })
+  await expect(mismatched.reconciler.reconcile(managed.id, 20)).resolves.toMatchObject({
+    state: 'confirmed'
+  })
+  expect(mismatched.ledger.get(managed.id, 20)?.receipt).not.toHaveProperty('contractAddress')
 })
 
 test('background settlement uses a finalized head without moving user completion time', async () => {
@@ -317,6 +358,38 @@ test('a known confirmed sibling with the same account, chain, and nonce replaces
   const rpc = jest.fn()
   const reconciler = new OperationLifecycleReconciler(ledger, rpc)
   await expect(reconciler.reconcile(operation().id, 20)).resolves.toMatchObject({ state: 'replaced' })
+  expect(rpc).not.toHaveBeenCalled()
+})
+
+test('restart reconciliation never observes an invalid persisted replacement graph', async () => {
+  const first = operation({
+    transaction: {
+      hash,
+      nonce: '0x1',
+      replacementOf: '00000000-0000-4000-8000-000000000002'
+    }
+  })
+  const second = operation({
+    id: '00000000-0000-4000-8000-000000000002',
+    transaction: {
+      hash: `0x${'e'.repeat(64)}`,
+      nonce: '0x1',
+      replacementOf: first.id
+    }
+  })
+  let stored: unknown = { [first.id]: first, [second.id]: second }
+  const ledger = new OperationLifecycleLedger({
+    load: () => stored,
+    save: (value) => {
+      stored = value
+    }
+  })
+  const rpc = jest.fn()
+  const reconciler = new OperationLifecycleReconciler(ledger, rpc)
+
+  await expect(reconciler.reconcileAll(20)).resolves.toBeUndefined()
+  expect(ledger.listStored()).toEqual([])
+  expect(stored).toEqual({})
   expect(rpc).not.toHaveBeenCalled()
 })
 

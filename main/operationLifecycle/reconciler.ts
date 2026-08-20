@@ -1,3 +1,5 @@
+import { getCreateAddress } from 'ethers'
+
 import { parseAccountCode } from '../../resources/domain/account/code'
 import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
@@ -14,6 +16,7 @@ type ReceiptEvidence = Readonly<{
   blockHash: string
   blockNumber: string
   status: '0x0' | '0x1'
+  contractAddress?: string | undefined
 }>
 
 export type OperationReconciliationObservation = Readonly<{
@@ -50,7 +53,8 @@ const parseBlock = (value: unknown): BlockEvidence => {
 
 const parseReceipt = (
   value: unknown,
-  expectedHash: string
+  expectedHash: string,
+  expectedContractAddress?: string
 ): Readonly<{ persisted: ReceiptEvidence; live: Readonly<Record<string, unknown>> }> | undefined => {
   if (value === null || value === undefined) return
   if (!isRecord(value)) throw new Error('Invalid transaction receipt response')
@@ -74,7 +78,13 @@ const parseReceipt = (
       transactionHash: expectedHash,
       blockHash: blockHash.toLowerCase(),
       blockNumber,
-      status
+      status,
+      ...(status === '0x1' &&
+      expectedContractAddress &&
+      typeof value['contractAddress'] === 'string' &&
+      value['contractAddress'].toLowerCase() === expectedContractAddress
+        ? { contractAddress: expectedContractAddress }
+        : {})
     }),
     live: Object.freeze({ ...value })
   })
@@ -82,6 +92,14 @@ const parseReceipt = (
 
 const operationHash = (operation: OperationLifecycle) =>
   operation.transaction?.hash ?? operation.eip7702Revoke?.hash
+
+const canonicalReceiptIdentity = (receipt: ReceiptEvidence) =>
+  JSON.stringify({
+    transactionHash: receipt.transactionHash,
+    blockHash: receipt.blockHash,
+    blockNumber: receipt.blockNumber,
+    status: receipt.status
+  })
 
 const withoutReceipt = (operation: OperationLifecycle, state: OperationLifecycle['state'], now: number) => {
   const { receipt: _receipt, settlement: _settlement, replacement: _replacement, ...without } = operation
@@ -194,10 +212,31 @@ export class OperationLifecycleReconciler {
   private async canonicalEvidence(operation: OperationLifecycle) {
     const hash = operationHash(operation)
     if (!hash) throw new Error('Operation is missing a transaction hash')
+    const deploymentNonce = operation.transaction?.deployment
+      ? parseRpcQuantity(operation.transaction.nonce)
+      : undefined
+    const expectedContractAddress =
+      deploymentNonce !== undefined
+        ? getCreateAddress({ from: operation.account, nonce: deploymentNonce }).toLowerCase()
+        : undefined
     const rawReceipt = await this.rpc(operation.chainId, 'eth_getTransactionReceipt', [hash])
-    const receipt = parseReceipt(rawReceipt, hash)
-    if (!receipt) return
-    if (operation.receipt && JSON.stringify(operation.receipt) !== JSON.stringify(receipt.persisted)) {
+    const observedReceipt = parseReceipt(rawReceipt, hash, expectedContractAddress)
+    if (!observedReceipt) return
+    const receipt =
+      operation.receipt?.contractAddress &&
+      canonicalReceiptIdentity(operation.receipt) === canonicalReceiptIdentity(observedReceipt.persisted)
+        ? Object.freeze({
+            ...observedReceipt,
+            persisted: Object.freeze({
+              ...observedReceipt.persisted,
+              contractAddress: operation.receipt.contractAddress
+            })
+          })
+        : observedReceipt
+    if (
+      operation.receipt &&
+      canonicalReceiptIdentity(operation.receipt) !== canonicalReceiptIdentity(receipt.persisted)
+    ) {
       return { reorged: true as const }
     }
     const [receiptBlockValue, latestBlockValue] = await Promise.all([

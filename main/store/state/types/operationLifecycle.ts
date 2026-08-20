@@ -1,4 +1,8 @@
+import { getCreateAddress } from 'ethers'
 import { z } from 'zod'
+
+import { MAX_DEPLOYMENT_INITCODE_BYTES } from '../../../../resources/domain/deployment'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u
 const HASH = /^0x[0-9a-fA-F]{64}$/u
@@ -38,7 +42,18 @@ const ReceiptEvidenceSchema = z
     transactionHash: HashSchema,
     blockHash: HashSchema,
     blockNumber: QuantitySchema,
-    status: z.enum(['0x0', '0x1'])
+    status: z.enum(['0x0', '0x1']),
+    contractAddress: AddressSchema.optional()
+  })
+  .strict()
+
+const DeploymentEvidenceSchema = z
+  .object({
+    version: z.literal(1),
+    inspectionId: z.string().regex(/^[0-9a-f]{32}$/u),
+    initcodeHash: HashSchema,
+    initcodeBytes: z.number().int().positive().max(MAX_DEPLOYMENT_INITCODE_BYTES),
+    value: QuantitySchema
   })
   .strict()
 
@@ -76,7 +91,12 @@ export const OperationLifecycleSchema = z
     visibleInActivity: z.boolean(),
     notification: NotificationStateSchema,
     transaction: z
-      .object({ hash: HashSchema, nonce: QuantitySchema, replacementOf: z.uuid().optional() })
+      .object({
+        hash: HashSchema,
+        nonce: QuantitySchema,
+        replacementOf: z.uuid().optional(),
+        deployment: DeploymentEvidenceSchema.optional()
+      })
       .strict()
       .optional(),
     replacement: z.object({ operationId: z.uuid() }).strict().optional(),
@@ -108,6 +128,27 @@ export const OperationLifecycleSchema = z
     const operationHash = operation.transaction?.hash ?? operation.eip7702Revoke?.hash
     if (operation.receipt && operation.receipt.transactionHash !== operationHash) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'receipt transaction hash does not match' })
+    }
+
+    const hasDeploymentReceiptAddress = operation.receipt?.contractAddress !== undefined
+    if (operation.transaction?.deployment && operation.origin !== originIdForName(WREN_DEPLOY_ORIGIN)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'deployment evidence requires managed origin' })
+    }
+    if (!operation.transaction?.deployment && hasDeploymentReceiptAddress) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ordinary transaction has deployment evidence' })
+    }
+    if (hasDeploymentReceiptAddress) {
+      let expectedAddress: string | undefined
+      try {
+        const nonce = operation.transaction ? BigInt(operation.transaction.nonce) : undefined
+        expectedAddress =
+          nonce !== undefined ? getCreateAddress({ from: operation.account, nonce }).toLowerCase() : undefined
+      } catch {
+        expectedAddress = undefined
+      }
+      if (operation.receipt?.status !== '0x1' || operation.receipt.contractAddress !== expectedAddress) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid deployment receipt address' })
+      }
     }
 
     if (

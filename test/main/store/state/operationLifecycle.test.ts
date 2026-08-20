@@ -1,9 +1,12 @@
+import { getCreateAddress } from 'ethers'
+
 import {
   MAX_OPERATION_LIFECYCLES,
   MAX_OPERATION_LIFECYCLE_AGE_MS,
   OperationLifecycleSchema,
   pruneOperationLifecycles
 } from '../../../../main/store/state/types/operationLifecycle'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
 
 const id = (index: number) => `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`
 const transaction = (index = 1) => ({
@@ -53,6 +56,62 @@ test('requires receipt evidence to match its operation transaction', () => {
     OperationLifecycleSchema.parse({
       ...transaction(),
       receipt: { ...receipt, transactionHash: `0x${'d'.repeat(64)}` }
+    })
+  ).toThrow()
+})
+
+test('keeps managed deployment evidence bounded, private, and paired with deployment receipts', () => {
+  const deployment = {
+    version: 1 as const,
+    inspectionId: 'a'.repeat(32),
+    initcodeHash: `0x${'d'.repeat(64)}`,
+    initcodeBytes: 123,
+    value: '0x0'
+  }
+  const managed = {
+    ...transaction(),
+    origin: originIdForName(WREN_DEPLOY_ORIGIN),
+    transaction: { ...transaction().transaction, deployment }
+  }
+  expect(OperationLifecycleSchema.parse(managed).transaction?.deployment).toEqual(deployment)
+
+  const contractAddress = getCreateAddress({ from: managed.account, nonce: 0 }).toLowerCase()
+  const receipt = {
+    transactionHash: managed.transaction.hash,
+    blockHash: `0x${'c'.repeat(64)}`,
+    blockNumber: '0xa',
+    status: '0x1' as const,
+    contractAddress
+  }
+  expect(OperationLifecycleSchema.parse({ ...managed, receipt }).receipt).toEqual(receipt)
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...transaction(),
+      receipt
+    })
+  ).toThrow('ordinary transaction has deployment evidence')
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      receipt: { ...receipt, contractAddress: `0x${'e'.repeat(40)}` }
+    })
+  ).toThrow('invalid deployment receipt address')
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      receipt: { ...receipt, status: '0x0' }
+    })
+  ).toThrow('invalid deployment receipt address')
+  expect(() => OperationLifecycleSchema.parse({ ...managed, origin: 'foreign-origin' })).toThrow(
+    'deployment evidence requires managed origin'
+  )
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      transaction: {
+        ...managed.transaction,
+        deployment: { ...deployment, initcodeBytes: 49_153 }
+      }
     })
   ).toThrow()
 })
