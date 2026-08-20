@@ -17,6 +17,7 @@ test('keeps the short network editor body scrollable above its fixed actions', (
 })
 
 test('keeps add and edit actions directly after the intrinsic one-endpoint form', () => {
+  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?min-height calc\(100vh - 88px\)/)
   expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 0 1 auto/)
   expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
 })
