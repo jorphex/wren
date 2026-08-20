@@ -204,10 +204,12 @@
   gap var(--wren-space-3)
   margin 0 calc(-1 * var(--wren-space-4)) calc(-1 * var(--wren-space-8))
   padding var(--wren-space-6) var(--wren-space-4) var(--wren-space-4)
-  background linear-gradient(180deg, transparent, var(--wren-bg-wallet-canvas) var(--wren-space-5))
+  background transparent
+  pointer-events none
 
   button
     min-width 168px
+    pointer-events auto
 
 @media (max-width: 540px)
   .deployment

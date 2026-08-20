@@ -73,7 +73,7 @@ queued nor persisted.
 
 The Control Center's prepared deployment tool is also dashboard-only and is not a
 provider method or dapp capability. It accepts at most 49,152 bytes of complete,
-even-length hexadecimal EVM creation data, including any encoded constructor data,
+even-length hexadecimal EVM deployment data (initcode), including any encoded constructor data,
 plus an exact decimal native value. Preparation uses only the selected configured RPC
 for gas estimation, simulation, and pending-nonce lookup. Evidence is short-lived and
 one-use; it is bound to the exact account, chain, creation-data hash and length, and

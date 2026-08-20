@@ -90,6 +90,7 @@ describe('confirm', () => {
     )
 
     expect(screen.getByLabelText('Prepared deployment evidence')).toBeTruthy()
+    expect(screen.getByText('Deployment data')).toBeTruthy()
     expect(screen.getByText('4 bytes')).toBeTruthy()
     expect(screen.getByText(hash)).toBeTruthy()
     expect(screen.getByText(provisionalAddress)).toBeTruthy()

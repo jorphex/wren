@@ -13,7 +13,7 @@ jest.mock('../../../../resources/link', () => ({ invoke: jest.fn() }))
 beforeEach(() => link.invoke.mockReset())
 
 it('validates complete whole-byte creation data within the protocol limit', () => {
-  expect(validateCreationData('')).toBe('Creation data is required.')
+  expect(validateCreationData('')).toBe('Deployment data is required.')
   expect(validateCreationData('6000')).toMatch(/begin with 0x/i)
   expect(validateCreationData('0x600')).toMatch(/even number/i)
   expect(validateCreationData('0x60zz')).toMatch(/only hexadecimal/i)

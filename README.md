@@ -59,8 +59,8 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
   locally, uses only the configured RPC for optional simulation, and cannot sign,
   queue, forward, or broadcast the pasted request.
 - Includes a dashboard-only prepared contract deployment tool. It accepts complete
-  EVM creation data, including already encoded constructor arguments, and an optional
-  native value. Preparation sends the selected account context, creation data, and
+  EVM deployment data—creation bytecode with encoded constructor arguments—and an optional
+  native value. Preparation sends the selected account context, deployment data, and
   value only to the configured RPC for gas, simulation, and pending-nonce evidence;
   queueing then enters Wren's ordinary native review, signer, and one-shot broadcast
   lifecycle. Wren does not compile Solidity, parse artifacts or ABIs, or verify source

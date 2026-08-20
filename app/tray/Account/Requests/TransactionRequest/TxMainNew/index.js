@@ -28,7 +28,7 @@ export const DeploymentReviewEvidence = ({ deployment }) => {
   return (
     <div className='transactionReviewDeployment' aria-label='Prepared deployment evidence'>
       <div className='transactionReviewDeploymentRow'>
-        <span className='transactionReviewMetaLabel'>Creation data</span>
+        <span className='transactionReviewMetaLabel'>Deployment data</span>
         <span className='transactionReviewDeploymentValue'>
           <span>{`${deployment.initcodeBytes} bytes`}</span>
           <span className='transactionReviewDeploymentHash'>{deployment.initcodeHash}</span>

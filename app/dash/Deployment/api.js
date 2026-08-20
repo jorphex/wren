@@ -13,18 +13,18 @@ export const deploymentByteCount = (value) => {
 }
 
 export const validateCreationData = (value) => {
-  if (!value) return 'Creation data is required.'
+  if (!value) return 'Deployment data is required.'
   if (!value.startsWith('0x')) {
-    return 'Creation data must begin with 0x and contain an even number of hexadecimal characters.'
+    return 'Deployment data must begin with 0x and contain an even number of hexadecimal characters.'
   }
   if (!HEX_VALUE.test(value.slice(2))) {
-    return 'Creation data can contain only hexadecimal characters after 0x.'
+    return 'Deployment data can contain only hexadecimal characters after 0x.'
   }
   if (value.length === 2 || value.length % 2 !== 0) {
-    return 'Creation data must begin with 0x and contain an even number of hexadecimal characters.'
+    return 'Deployment data must begin with 0x and contain an even number of hexadecimal characters.'
   }
   if (value.length > MAX_DEPLOYMENT_HEX_LENGTH) {
-    return 'Creation data cannot exceed 49,152 bytes.'
+    return 'Deployment data cannot exceed 49,152 bytes.'
   }
   return ''
 }

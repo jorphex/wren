@@ -420,7 +420,7 @@ export class Deployment extends React.Component {
         <header className='deploymentHeader'>
           <span className='deploymentEyebrow'>CONTRACT DEPLOYMENT</span>
           <h1>Check deployment data</h1>
-          <p>Check creation data before native review</p>
+          <p>Review bytecode and constructor arguments before native review</p>
         </header>
 
         <form className='deploymentForm' onSubmit={(event) => this.prepare(event)}>
@@ -476,10 +476,10 @@ export class Deployment extends React.Component {
           ) : null}
 
           <label className='deploymentField'>
-            <span>Creation data</span>
+            <span>Deployment data</span>
             <textarea
               className='wrenInput'
-              aria-label='Creation data'
+              aria-label='Deployment data'
               value={this.state.initcode}
               rows='9'
               placeholder='0x…'
@@ -492,7 +492,7 @@ export class Deployment extends React.Component {
               onChange={(event) => this.updateField('initcode', event.target.value)}
             />
             <small id='deployment-initcode-helper'>
-              Paste full creation data, including encoded constructor arguments.
+              Paste creation bytecode with encoded constructor arguments.
             </small>
             <small id='deployment-initcode-count' className='deploymentByteCount'>
               {deploymentByteCount(this.state.initcode).toLocaleString()} / 49,152 bytes
@@ -527,7 +527,7 @@ export class Deployment extends React.Component {
           </label>
 
           <p className='deploymentRpcDisclosure'>
-            Checks send creation data, value, and account context only to your configured RPC for gas
+            Checks send deployment data, value, and account context only to your configured RPC for gas
             estimate, simulation, and pending nonce. Checking does not sign or broadcast.
           </p>
 

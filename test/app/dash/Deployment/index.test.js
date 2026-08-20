@@ -114,7 +114,7 @@ const props = (overrides = {}) => ({
 })
 
 const fillDraft = () => {
-  fireEvent.change(screen.getByLabelText('Creation data'), { target: { value: '0x6000' } })
+  fireEvent.change(screen.getByLabelText('Deployment data'), { target: { value: '0x6000' } })
   fireEvent.change(screen.getByLabelText(/Optional native value/), { target: { value: '0.25' } })
 }
 
@@ -192,10 +192,10 @@ it('changes Wren’s active account and updates the controlled selection only af
 it('renders tailored validation with shared input semantics', async () => {
   const { user } = render(<Deployment {...props()} />)
   await user.click(screen.getByRole('button', { name: 'Check deployment' }))
-  expect(screen.getByText('Creation data is required.')).toBeTruthy()
-  expect(screen.getByLabelText('Creation data').getAttribute('aria-invalid')).toBe('true')
+  expect(screen.getByText('Deployment data is required.')).toBeTruthy()
+  expect(screen.getByLabelText('Deployment data').getAttribute('aria-invalid')).toBe('true')
 
-  fireEvent.change(screen.getByLabelText('Creation data'), { target: { value: '0x60z0' } })
+  fireEvent.change(screen.getByLabelText('Deployment data'), { target: { value: '0x60z0' } })
   fireEvent.change(screen.getByLabelText(/Optional native value/), { target: { value: '-1' } })
   await user.click(screen.getByRole('button', { name: 'Check deployment' }))
   expect(screen.getByText(/only hexadecimal characters/i)).toBeTruthy()
@@ -257,7 +257,7 @@ it('invalidates frozen evidence after an edit', async () => {
   await user.click(screen.getByRole('button', { name: 'Edit and recheck' }))
   expect(screen.queryByText('Check results')).toBeNull()
   expect(screen.getByText(/changed\. Check deployment again/)).toBeTruthy()
-  expect(screen.getByLabelText('Creation data').value).toBe('0x6000')
+  expect(screen.getByLabelText('Deployment data').value).toBe('0x6000')
 })
 
 it('ignores a stale preparation response after account context changes', async () => {
@@ -326,12 +326,12 @@ it('connects every field to helper text and exposes polite busy status', async (
   fillDraft()
   fireEvent.click(screen.getByRole('button', { name: 'Check deployment' }))
 
-  expect(screen.getByLabelText('Creation data').getAttribute('aria-describedby')).toContain(
+  expect(screen.getByLabelText('Deployment data').getAttribute('aria-describedby')).toContain(
     'deployment-initcode-helper'
   )
   expect(screen.getByLabelText('Account').getAttribute('aria-describedby')).toBe('deployment-account-helper')
   expect(screen.getByRole('status').textContent).toBe('Checking…')
-  expect(screen.getByLabelText('Creation data').disabled).toBe(true)
+  expect(screen.getByLabelText('Deployment data').disabled).toBe(true)
 
   await act(async () => resolvePreparation({ success: true, inspection }))
   expect(await screen.findByText('Check results')).toBeTruthy()

@@ -130,7 +130,7 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
   requiredText: [
     'Deploy contract',
     'Wren Deploy',
-    'Creation data',
+    'Deployment data',
     '4 bytes',
     'Provisional address',
     'may change before signing'
@@ -375,7 +375,13 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.deploymentForm',
-      requiredControls: ['Account', 'Network', 'Creation data', 'Optional native value', 'Check deployment'],
+      requiredControls: [
+        'Account',
+        'Network',
+        'Deployment data',
+        'Optional native value',
+        'Check deployment'
+      ],
       requiredText: [
         'Check deployment data',
         'Workshop Software Account With A Long Name',
@@ -399,7 +405,7 @@ const reviewScenarios = () => [
       action: {
         type: 'sequence',
         steps: [
-          { type: 'inputLabel', label: 'Creation data', value: '0x60006000' },
+          { type: 'inputLabel', label: 'Deployment data', value: '0x60006000' },
           { type: 'inputLabel', label: 'Optional native value', value: '0.01' },
           { type: 'clickText', text: 'Check deployment' }
         ]

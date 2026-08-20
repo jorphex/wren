@@ -266,7 +266,7 @@ request filtering.
 
 The prepared-deployment invoke is dashboard-only. The main process validates and
 binds a short-lived one-use inspection to the exact current signer-capable account,
-connected configured chain, creation data, and value. A distinct managed Deploy
+connected configured chain, deployment data, and value. A distinct managed Deploy
 principal is hidden from external connected-app, permission, activity-origin, and
 profile-recovery surfaces. It is authorized only for the evidence-bearing creation
 transaction and is revalidated after asynchronous filling and immediately before

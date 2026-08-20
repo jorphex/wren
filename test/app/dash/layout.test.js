@@ -276,6 +276,12 @@ test('keeps contract deployment on the flat wallet canvas and shared control pri
   expect(deploymentStyle).toMatch(
     /\.deploymentActionShelf[\s\S]*?position sticky[\s\S]*?bottom 0[\s\S]*?justify-content flex-end/
   )
+  expect(deploymentStyle).toMatch(
+    /\.deploymentActionShelf[\s\S]*?background transparent[\s\S]*?pointer-events none[\s\S]*?button[\s\S]*?pointer-events auto/
+  )
+  expect(deploymentStyle).not.toMatch(
+    /\.deploymentActionShelf[\s\S]{0,420}?background linear-gradient\(180deg, transparent, var\(--wren-bg-wallet-canvas\)/
+  )
   expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
   expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
 })
