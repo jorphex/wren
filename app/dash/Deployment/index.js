@@ -13,7 +13,9 @@ import {
 
 const STALE_MESSAGE = 'Inputs changed. Check deployment again.'
 const QUEUE_FAILURE =
-  'Could not queue native review. Nothing was signed or broadcast. Run Check deployment again.'
+  'Could not queue native review. Nothing was signed or broadcast. Run “Check deployment” again.'
+const PENDING_DEPLOYMENT_MESSAGE =
+  'A deployment is already waiting for review on another network. Finish or decline it, then check this deployment again.'
 const PREPARE_FAILURE = 'Could not check this deployment. Nothing was signed or broadcast.'
 
 const compactAddress = (value = '') => (value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value)
@@ -318,7 +320,7 @@ export class Deployment extends React.Component {
             queueing: false,
             inspection: undefined,
             frozenDraft: undefined,
-            message: QUEUE_FAILURE,
+            message: result?.error === 'deployment-pending' ? PENDING_DEPLOYMENT_MESSAGE : QUEUE_FAILURE,
             messageTone: 'alert'
           },
           () => {
@@ -423,9 +425,9 @@ export class Deployment extends React.Component {
       >
         {!this.props.embedded ? (
           <header className='deploymentHeader'>
-            <span className='deploymentEyebrow'>CONTRACT DEPLOYMENT</span>
+            <span className='deploymentEyebrow'>Contract deployment</span>
             <h1>Check deployment data</h1>
-            <p>Review bytecode and constructor arguments before native review</p>
+            <p>Review bytecode and constructor arguments before native review.</p>
           </header>
         ) : null}
 
@@ -533,8 +535,8 @@ export class Deployment extends React.Component {
           </label>
 
           <p className='deploymentRpcDisclosure'>
-            Checks send deployment data, value, and account context only to your configured RPC for gas
-            estimate, simulation, and pending nonce. Checking does not sign or broadcast.
+            Checking sends deployment data, value, and account context only to your configured RPC for gas
+            estimates, simulation, and pending nonce. It does not sign or broadcast.
           </p>
 
           {hasEvidence ? this.renderEvidence(this.state.inspection) : null}

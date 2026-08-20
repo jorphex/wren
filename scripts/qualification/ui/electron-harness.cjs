@@ -223,6 +223,23 @@ const clickText = async (webContents, text) => {
   if (!clicked) throw new Error(`Could not find button text ${text}`)
 }
 
+const focusText = async (webContents, text) => {
+  const focused = await webContents.executeJavaScript(
+    `(() => {
+      const target = Array.from(document.querySelectorAll('button')).find(
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(text)}
+      )
+      if (!target) return false
+      target.focus()
+      return document.activeElement === target
+    })()`,
+    true
+  )
+  if (!focused) throw new Error(`Could not focus button text ${text}`)
+}
+
 const hoverText = async (webContents, text) => {
   const point = await webContents.executeJavaScript(
     `(() => {
@@ -321,6 +338,18 @@ const performAction = async (webContents, action) => {
       )`
     )
     await clickText(webContents, action.text)
+    return
+  }
+  if (action.type === 'focusText') {
+    await waitFor(
+      webContents,
+      `Array.from(document.querySelectorAll('button')).some(
+        (button) =>
+          button.innerText.trim() === ${JSON.stringify(action.text)} ||
+          button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
+      )`
+    )
+    await focusText(webContents, action.text)
     return
   }
   if (action.type === 'hoverText') {

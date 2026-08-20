@@ -63,7 +63,7 @@ it('opens inventory from a native Wren control', async () => {
     <InventoryPreviewHarness account={account} moduleId='inventory' readStore={inventoryStore(inventory)} />
   )
 
-  const more = screen.getByRole('button', { name: 'More' })
+  const more = screen.getByRole('button', { name: 'View all collections' })
   expect(more.classList.contains('wrenControl')).toBe(true)
   await user.click(more)
 

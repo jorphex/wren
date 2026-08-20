@@ -48,7 +48,7 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
         <div className='notifyBoxSlide'>
           <div className='notifyBox extensionConnectBox'>
             <h2 id='wren-notify-title' className='notifyTitle'>
-              Could not connect the local app
+              Could not connect to the local app
             </h2>
             <div className='notifyBody'>Wren could not complete this local pairing.</div>
             <div className='notifyInput'>

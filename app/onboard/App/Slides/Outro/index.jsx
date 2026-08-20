@@ -11,7 +11,7 @@ const Outro = ({ setTitle, setProceed }) => {
   return (
     <Slide $background={onboardingReady}>
       <SlideBody>
-        <SlideItem>Wren is ready. Add an account when you want to connect, watch, or sign.</SlideItem>
+        <SlideItem>Wren is ready. Add an account to connect, watch, or sign.</SlideItem>
         <SlideItem>Review each request in Wren before anything is signed.</SlideItem>
       </SlideBody>
     </Slide>

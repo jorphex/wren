@@ -213,11 +213,11 @@ const EarnCatalogLoading = () => (
   <div className='earn earnCatalogLoading cardShow' role='status'>
     <header className='earnHero'>
       <div className='earnEyebrow earnProvider'>
-        <span>Vaults by</span>
+        <span>Vaults from</span>
         <img src={yearnLogo} alt='Yearn' />
       </div>
       <h1>Earn</h1>
-      <p>A focused selection of established vaults, separated by chain.</p>
+      <p>A selected set of vaults, grouped by network.</p>
     </header>
     <div className='earnTabs earnTabsSkeleton' aria-hidden='true'>
       {CHAINS.map(({ id }) => (
@@ -452,6 +452,19 @@ const CooldownNotice = ({ cooldown }) => {
 }
 
 const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransact }) => {
+  const statusLabel = (status) =>
+    ({
+      active: 'Awaiting approval',
+      'awaiting-review': 'Awaiting approval',
+      canceled: 'Canceled',
+      complete: 'Complete',
+      confirmed: 'Confirmed',
+      error: 'Needs attention',
+      pending: 'Queued',
+      ready: 'Ready',
+      submitted: 'Confirming',
+      'waiting-confirmation': 'Confirming'
+    })[status] || status.replaceAll('-', ' ').replace(/^./u, (letter) => letter.toUpperCase())
   const lastConfirmedApproval = [...workflow.steps]
     .reverse()
     .find(({ kind, status }) => ['approve', 'revoke'].includes(kind) && status === 'confirmed')
@@ -472,7 +485,7 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
       <div className='earnWorkflowHead'>
         <strong>{actionTitle(workflow.action)}</strong>
         <span role='status' aria-live='polite'>
-          {workflow.status.replaceAll('-', ' ')}
+          {statusLabel(workflow.status)}
         </span>
       </div>
       <div className='earnWorkflowAmount'>
@@ -489,7 +502,7 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
               <span>{index + 1}</span>
               <div>
                 <strong>{step.label}</strong>
-                <em>{status.replaceAll('-', ' ')}</em>
+                <em>{statusLabel(status)}</em>
                 {step.txHash ? (
                   <button
                     type='button'
@@ -509,11 +522,13 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
                         {formatReceiptAmount(transfer.amountRaw, transfer.decimals)} {transfer.symbol}
                       </span>
                     ))}
-                    {step.receiptTransfersTruncated ? <em>Additional transfer evidence omitted</em> : null}
+                    {step.receiptTransfersTruncated ? (
+                      <em>Some transfer details are hidden because the list is limited.</em>
+                    ) : null}
                   </div>
                 ) : step.receiptTransfersTruncated ? (
                   <div className='earnReceiptTransfers' role='status' aria-live='polite'>
-                    Transfer evidence exceeded the display bound
+                    Some transfer details are hidden because the list is limited.
                   </div>
                 ) : null}
               </div>
@@ -690,7 +705,7 @@ class ActivityPreview extends React.Component {
             }}
             onClick={(event) => onMore(event.currentTarget)}
           >
-            +{hidden} More
+            View {hidden} more
           </button>
         ) : null}
       </section>
@@ -829,7 +844,7 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
         disabled={disabled || form.busy || (!isCancel && !form.max && !form.amount)}
         onClick={onSubmit}
       >
-        {form.busy ? 'Preparing...' : `Review ${actionTitle(form.action)}`}
+        {form.busy ? 'Preparing…' : `Review ${actionTitle(form.action)}`}
       </button>
     </div>
   )
@@ -977,7 +992,13 @@ const VaultDetails = ({
                     <strong>
                       {formatAmount(variant.cooldown.shares)} {variant.symbol}
                     </strong>
-                    <em>{variant.cooldown.status.replace('-', ' ')}</em>
+                    <em>
+                      {{
+                        'cooling-down': 'Cooling down',
+                        expired: 'Expired',
+                        'withdrawal-window': 'Withdrawal window'
+                      }[variant.cooldown.status] || variant.cooldown.status.replace('-', ' ')}
+                    </em>
                   </div>
                 ) : null}
               </React.Fragment>
@@ -1485,9 +1506,9 @@ export class Earn extends React.Component {
     if (!catalog) {
       return (
         <div className='earnState cardShow'>
-          {this.state.catalogError || this.state.error || 'Earn is unavailable.'}
+          {this.state.catalogError || this.state.error || 'Earn data is unavailable.'}
           <button type='button' className='wrenControl wrenControlPrimary' onClick={() => this.load(true)}>
-            Try again
+            Refresh
           </button>
         </div>
       )
@@ -1578,22 +1599,18 @@ export class Earn extends React.Component {
       <div className='earn cardShow'>
         <header className='earnHero'>
           <div className='earnEyebrow earnProvider'>
-            <span>Vaults by</span>
+            <span>Vaults from</span>
             <img src={yearnLogo} alt='Yearn' />
           </div>
           <h1>Earn</h1>
-          <p>A focused selection of established vaults, separated by chain.</p>
+          <p>A selected set of vaults, grouped by network.</p>
           <button
             type='button'
             className='earnRefresh wrenControl wrenControlSecondary wrenControlCompact'
             disabled={this.state.refreshing || this.state.catalogRefreshing}
             onClick={() => this.load(true)}
           >
-            {this.state.refreshing
-              ? 'Refreshing...'
-              : this.state.catalogRefreshing
-                ? 'Updating...'
-                : 'Refresh'}
+            {this.state.refreshing ? 'Refreshing…' : this.state.catalogRefreshing ? 'Updating…' : 'Refresh'}
           </button>
         </header>
         {metricsLoading ? (
@@ -1604,7 +1621,7 @@ export class Earn extends React.Component {
         ) : catalog.status !== 'fresh' ? (
           <div className='earnNotice earnNoticeWarn'>
             Showing {catalog.status === 'stale' ? 'cached' : 'unavailable'} Yearn data. New deposits are
-            disabled; existing positions remain manageable.
+            disabled. Existing positions can still be managed.
           </div>
         ) : null}
         {currentPositions?.account ? (
@@ -1612,7 +1629,7 @@ export class Earn extends React.Component {
             <span>Account</span>
             <strong>
               {currentPositions.account.name ||
-                `${currentPositions.account.address.slice(0, 6)}...${currentPositions.account.address.slice(-4)}`}
+                `${currentPositions.account.address.slice(0, 6)}…${currentPositions.account.address.slice(-4)}`}
             </strong>
             {currentPositions.account.readOnly ? <em>Watch-only</em> : null}
           </div>

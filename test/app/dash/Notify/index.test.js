@@ -26,7 +26,7 @@ test('keeps approval pending until RPC success and permits a truthful retry afte
   })
   render(<NotifyHarness data={{ notify: 'gasFeeWarning', notifyData: { req } }} />)
 
-  const proceed = screen.getByRole('button', { name: 'Proceed' })
+  const proceed = screen.getByRole('button', { name: 'Approve request' })
   fireEvent.click(proceed)
   fireEvent.click(proceed)
 
@@ -70,7 +70,7 @@ test('routes direct signer compatibility approval through the guarded request pa
     })
   )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   expect(notify.approveRequest).toHaveBeenCalledWith(req, expect.any(Function))
 })
 
@@ -93,7 +93,7 @@ test('replaces signer compatibility with a fee warning instead of stacking reque
     })
   )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
 
   expect(link.send).toHaveBeenCalledWith(
     'nav:update',
@@ -123,6 +123,8 @@ test('renders a labelled modal with safe focus, trapped focus, Escape cancellati
   const cancel = screen.getByRole('button', { name: 'Cancel' })
   const suppression = screen.getByRole('button', { name: "Don't show this warning again" })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
+  expect(previousControl.getAttribute('aria-hidden')).toBe('true')
+  expect(previousControl.hasAttribute('inert')).toBe(true)
   expect(document.activeElement).toBe(cancel)
 
   cancel.focus()
@@ -136,6 +138,8 @@ test('renders a labelled modal with safe focus, trapped focus, Escape cancellati
   expect(link.send).toHaveBeenCalledWith('tray:action', 'backDash')
 
   unmount()
+  expect(previousControl.hasAttribute('aria-hidden')).toBe(false)
+  expect(previousControl.hasAttribute('inert')).toBe(false)
   expect(document.activeElement).toBe(previousControl)
   previousControl.remove()
 })
@@ -177,7 +181,7 @@ test('uses a narrow request reference and ignores a stale approval callback', ()
     <NotifyHarness data={{ notifyId: 'notice-1', notify: 'gasFeeWarning', notifyData: { req } }} />
   )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   expect(link.rpc).toHaveBeenCalledWith(
     'approveRequest',
     { handlerId: req.handlerId, account: req.account, type: req.type },
@@ -204,7 +208,7 @@ test('resets approval errors and initial focus for a new notification identity',
     <NotifyHarness data={{ notifyId: 'notice-1', notify: 'gasFeeWarning', notifyData: { req } }} />
   )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   act(() => approveCallback(new Error('failed')))
   expect(screen.getByRole('alert')).toBeTruthy()
 

@@ -23,6 +23,7 @@ const deploymentStyle = fs.readFileSync('app/dash/Deployment/style/index.styl', 
 const contractVerificationStyle = fs.readFileSync('app/dash/ContractVerification/style/index.styl', 'utf8')
 const contractsStyle = fs.readFileSync('app/dash/Contracts/style/index.styl', 'utf8')
 const dappsStyle = fs.readFileSync('app/dash/Dapps/style/index.styl', 'utf8')
+const dappStyle = fs.readFileSync('app/dapp/index.styl', 'utf8')
 const dropdownStyle = fs.readFileSync('resources/Components/Dropdown/index.styl', 'utf8')
 const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
@@ -32,6 +33,14 @@ test('defines every shared dashboard typography role', () => {
   expect(baseStyle).toMatch(/--wren-page-gutter var\(--wren-space-5\)/)
   expect(baseStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?--wren-page-gutter var\(--wren-space-3\)/)
   expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
+})
+
+test('keeps embedded-app transitions opaque and lets reduced motion override loaders', () => {
+  expect(dappStyle).toMatch(/body[\s\S]*?background var\(--wren-bg-canvas\)/)
+  expect(dappStyle).toMatch(/\.splash[\s\S]*?background var\(--wren-bg-canvas\)/)
+  expect(dappStyle).toMatch(/\.main[\s\S]*?background var\(--wren-bg-canvas\)/)
+  expect(dappStyle).not.toMatch(/animation[^\n]*!important/)
+  expect(mainStyle).not.toMatch(/animation[^\n]*!important/)
 })
 
 test('uses one page gutter across comparable dashboard destinations', () => {

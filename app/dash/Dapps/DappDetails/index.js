@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import link from '../../../../resources/link'
 import Icon from '../../../../resources/Components/Icon'
 import ChainIdentityMark from '../../../../resources/Components/ChainIdentityMark'
+import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 
 export class DappDetails extends React.Component {
   state = { switchingChainId: null }
@@ -41,7 +42,10 @@ export class DappDetails extends React.Component {
           .map((id) => {
             const chain = this.store('main.networks.ethereum', id)
             const selected = origin.chain.id === parseInt(id)
-            const { primaryColor, icon } = this.store('main.networksMeta.ethereum', id)
+            const { primaryColor, icon } = safeNetworkMetadata(
+              this.store('main.networksMeta.ethereum', id),
+              chain
+            )
             return (
               <button
                 type='button'

@@ -293,8 +293,10 @@ async function inspectTransactionSubject(
   const canSimulate =
     Boolean(normalized.chainId && normalized.from) &&
     (subject.kind === 'transaction' || Boolean(normalized.to))
+  const requestedBlock = subject.source.kind === 'json-rpc' ? subject.source.block : undefined
+  const requestedNonLatestBlock = Boolean(requestedBlock && requestedBlock !== 'latest')
   let simulation: ReturnType<typeof projectInspectorSimulation> | undefined
-  if (canSimulate) {
+  if (canSimulate && !requestedNonLatestBlock) {
     const raw =
       subject.kind === 'transaction'
         ? subject.transaction
@@ -320,14 +322,14 @@ async function inspectTransactionSubject(
         : undefined
     evidence.push(simulationEvidence(inspected, sourceDisclosure))
   } else {
+    const reason = requestedNonLatestBlock
+      ? `Wren does not simulate requested block ${requestedBlock}; only current configured-RPC state is available, so no simulation result is shown`
+      : `Simulation requires ${missingContext.join(', ') || 'complete transaction context'}`
     evidence.push({
       kind: 'simulation',
       status: 'unavailable',
       source: 'configured-rpc',
-      reason: `Simulation requires ${missingContext.join(', ') || 'complete transaction context'}`.slice(
-        0,
-        240
-      )
+      reason: reason.slice(0, 240)
     })
   }
 

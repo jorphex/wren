@@ -104,6 +104,10 @@ class _RequestItem extends React.Component {
 
     const status = (req.status || 'pending').toLowerCase()
     const notice = (req.notice || '').toLowerCase()
+    const displayedNotice =
+      notice === 'network changed before signing'
+        ? `${req.type === 'transaction' ? 'Transaction' : 'Request'} canceled. The network changed before signing. Nothing was signed or sent.`
+        : notice
 
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
     const waiting = Boolean(queued) && !inactive
@@ -204,7 +208,7 @@ class _RequestItem extends React.Component {
                   className={requestItemNoticeClass}
                   style={notice === 'see signer' ? { color: 'var(--good)' } : {}}
                 >
-                  {notice}
+                  {displayedNotice}
                 </div>
               )}
           </div>

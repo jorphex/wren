@@ -174,7 +174,7 @@ it('confirms stopping ambiguous-submission monitoring and restores focus on Esca
   await user.click(trigger)
 
   expect(screen.getByRole('alertdialog')).toBeTruthy()
-  expect(screen.getByRole('alertdialog').hasAttribute('aria-modal')).toBe(false)
+  expect(screen.getByRole('alertdialog').getAttribute('aria-modal')).toBe('true')
   expect(screen.getByText('Stop monitoring this revocation?')).toBeTruthy()
   expect(
     screen.getByText(
@@ -233,7 +233,7 @@ it('stops known-submission monitoring once and reports the unverified terminal s
     )
   ).toBeTruthy()
 
-  const commit = screen.getByRole('button', { name: 'Stop monitoring and continue requests' })
+  const commit = screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' })
   await user.click(commit)
   expect(link.rpc).toHaveBeenCalledWith(
     'stopEip7702RevocationMonitoring',
@@ -271,11 +271,13 @@ it('recovers the stop-monitoring dialog after an RPC failure', async () => {
   const { user } = renderRequestFooter(req, 'ring')
 
   await user.click(screen.getByRole('button', { name: 'Stop monitoring' }))
-  await user.click(screen.getByRole('button', { name: 'Stop monitoring and continue requests' }))
+  await user.click(screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' }))
   act(() => callback(new Error('bridge failed')))
 
   expect(screen.getByRole('alert').textContent).toBe('Monitoring could not be stopped. Try again.')
-  expect(screen.getByRole('button', { name: 'Stop monitoring and continue requests' }).disabled).toBe(false)
+  expect(
+    screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' }).disabled
+  ).toBe(false)
 })
 
 it('blocks delegation revocation while its visible fee draft is invalid', async () => {
@@ -347,7 +349,7 @@ it('submits a lookalike wallet-call batch through the standard review actions', 
     }
   })
   const { user } = renderRequestFooter(req)
-  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+  const submit = screen.getByRole('button', { name: 'Submit batch' })
 
   expect(submit.disabled).toBe(false)
   await user.click(submit)
@@ -408,7 +410,7 @@ it('exposes native wallet-call decisions and locks actions once submitted', asyn
   const req = request({ account: '0x0000000000000000000000000000000000000001' })
   const { user } = renderRequestFooter(req)
   const decline = screen.getByRole('button', { name: 'Decline' })
-  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+  const submit = screen.getByRole('button', { name: 'Submit batch' })
 
   expect(decline.disabled).toBe(false)
   expect(submit.disabled).toBe(false)
@@ -521,7 +523,7 @@ it.each([
   })
   const { user } = renderRequestFooter(req)
 
-  await user.click(screen.getByRole('button', { name: 'Submit Batch' }))
+  await user.click(screen.getByRole('button', { name: 'Submit batch' }))
 
   expect(screen.getByText(title)).toBeTruthy()
   expect(screen.getByText(detail)).toBeTruthy()
@@ -550,13 +552,13 @@ it('returns from the simulation acknowledgement without submitting', async () =>
   const { user } = renderRequestFooter(
     request({ simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence } })
   )
-  const submit = screen.getByRole('button', { name: 'Submit Batch' })
+  const submit = screen.getByRole('button', { name: 'Submit batch' })
 
   await user.click(submit)
   await user.click(screen.getByRole('button', { name: 'Back' }))
 
   expect(screen.queryByText('Simulation failed')).toBeNull()
-  expect(screen.getByRole('button', { name: 'Submit Batch' })).toBe(document.activeElement)
+  expect(screen.getByRole('button', { name: 'Submit batch' })).toBe(document.activeElement)
   expect(link.rpc).not.toHaveBeenCalled()
 })
 
@@ -565,12 +567,12 @@ it('returns from the simulation acknowledgement with Escape', async () => {
     request({ simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence } })
   )
 
-  await user.click(screen.getByRole('button', { name: 'Submit Batch' }))
+  await user.click(screen.getByRole('button', { name: 'Submit batch' }))
   expect(screen.getByRole('region', { name: 'Simulation failed' }).hasAttribute('aria-modal')).toBe(false)
   await user.keyboard('{Escape}')
 
   expect(screen.queryByText('Simulation failed')).toBeNull()
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Submit Batch' }))
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Submit batch' }))
   expect(link.rpc).not.toHaveBeenCalled()
 })
 
@@ -601,10 +603,18 @@ it('renders neutral terminal feedback after declining a wallet call', async () =
 
   expect(screen.getByText('Request declined')).toBeTruthy()
   expect(screen.getByText('You declined this wallet call. Nothing was submitted.')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Submit Batch' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Submit batch' })).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(link.send).toHaveBeenCalledWith('nav:back', 'panel')
+})
+
+it('does not attribute an automatic wallet-call route cancellation to the user', () => {
+  renderRequestFooter(request({ status: 'declined', notice: 'Network changed before signing' }))
+
+  expect(screen.getByText('Request canceled')).toBeTruthy()
+  expect(screen.getByText('The network changed before signing. Nothing was submitted.')).toBeTruthy()
+  expect(screen.queryByText('You declined this wallet call. Nothing was submitted.')).toBeNull()
 })
 
 it('renders watch-only wallet-call submission as a disabled native button', () => {

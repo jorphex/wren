@@ -46,7 +46,7 @@ const LocateKeystore = ({ addKeystore, error, setError, active, selectionPending
 const Locating = ({ active }) => (
   <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
     <div role={'status'} className='addAccountItemOptionTitle' style={{ marginTop: '15px' }}>
-      Opening file picker...
+      Opening file picker…
     </div>
   </div>
 )

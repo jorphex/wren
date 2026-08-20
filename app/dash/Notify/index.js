@@ -7,9 +7,11 @@ import BigNumber from 'bignumber.js'
 import { usesBaseFee } from '../../../resources/domain/transaction'
 
 import Confirm from '../../../resources/Components/Confirm'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import wrenIcon from '../../../asset/brand/exports/app/wren-app-icon-512.png'
 import { WREN_LICENSE_URL, WREN_SUPPORT_URL } from '../../../resources/constants'
 import { notificationIdentity, requestReference } from '../../../resources/store/notifications'
+import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 
 const FEE_WARNING_THRESHOLD_USD = 50
 const capitalize = (s) => s[0].toUpperCase() + s.slice(1)
@@ -19,21 +21,16 @@ export class Notify extends React.Component {
     super(props, context)
     this.state = { approvalPending: false, approvalError: false }
     this.dialogRef = React.createRef()
-    this.activeDialog = null
-    this.previousFocus = null
     this.approvalInFlight = false
+    this.focusedNotificationId = null
   }
 
   componentDidMount() {
-    this.syncDialogFocus()
+    this.focusedNotificationId = this.activeNotificationId()
   }
 
   componentDidUpdate() {
-    this.syncDialogFocus()
-  }
-
-  componentWillUnmount() {
-    this.previousFocus?.focus?.()
+    this.syncNotificationState()
   }
 
   activeNotificationId() {
@@ -65,8 +62,7 @@ export class Notify extends React.Component {
     })
   }
 
-  syncDialogFocus() {
-    const dialog = this.dialogRef.current
+  syncNotificationState() {
     const notificationId = this.activeNotificationId()
     const notificationChanged = notificationId !== this.focusedNotificationId
 
@@ -77,61 +73,24 @@ export class Notify extends React.Component {
         this.setState({ approvalPending: false, approvalError: false })
       }
     }
-
-    if (dialog && (dialog !== this.activeDialog || notificationChanged)) {
-      if (!this.activeDialog) this.previousFocus = document.activeElement
-      this.activeDialog = dialog
-      const firstControl =
-        dialog.querySelector('[data-dialog-initial-focus]') ||
-        dialog.querySelector('button:not(:disabled), a[href], [tabindex="0"]')
-      ;(firstControl || dialog).focus()
-    } else if (!dialog && this.activeDialog) {
-      this.activeDialog = null
-      this.previousFocus?.focus?.()
-      this.previousFocus = null
-      this.approvalInFlight = false
-      if (this.state.approvalPending || this.state.approvalError) {
-        this.setState({ approvalPending: false, approvalError: false })
-      }
-    }
-  }
-
-  handleDialogKeyDown(event, dismissible) {
-    if (event.key === 'Escape' && dismissible && !this.approvalInFlight) {
-      event.preventDefault()
-      this.dismissNotification()
-      return
-    }
-
-    if (event.key !== 'Tab' || !this.dialogRef.current) return
-
-    const focusable = Array.from(
-      this.dialogRef.current.querySelectorAll('button:not(:disabled), a[href], [tabindex="0"]')
-    )
-    if (!focusable.length) return
-
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first.focus()
-    }
   }
 
   renderDialog(content, dismissible = true, ariaLabel) {
     return (
-      <div
+      <DialogSurface
+        key={this.activeNotificationId()}
         ref={this.dialogRef}
         className='notify cardShow'
-        role='dialog'
-        aria-modal='true'
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabel ? undefined : 'wren-dash-notify-title'}
-        tabIndex={-1}
-        onKeyDown={(event) => this.handleDialogKeyDown(event, dismissible)}
+        modal
+        ariaLabel={ariaLabel}
+        labelledBy={ariaLabel ? undefined : 'wren-dash-notify-title'}
+        onCancel={
+          dismissible
+            ? () => {
+                if (!this.approvalInFlight) this.dismissNotification()
+              }
+            : undefined
+        }
         onMouseDown={
           dismissible
             ? () => {
@@ -141,7 +100,7 @@ export class Notify extends React.Component {
         }
       >
         {content}
-      </div>
+      </DialogSurface>
     )
   }
 
@@ -259,7 +218,7 @@ export class Notify extends React.Component {
               disabled={approvalPending}
               onClick={() => this.approveRequest(req, (expectedId) => this.dismissNotification(expectedId))}
             >
-              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Approve request'}</div>
             </button>
           </div>
           <button
@@ -298,7 +257,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>OK</div>
+              <div className='notifyInputOptionText'>Close</div>
             </button>
           </div>
         </div>
@@ -326,7 +285,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>OK</div>
+              <div className='notifyInputOptionText'>Close</div>
             </button>
           </div>
         </div>
@@ -358,7 +317,7 @@ export class Notify extends React.Component {
                 {`Check for a ${capitalize(signer)} update that supports this transaction type.`}
               </div>
             ) : null}
-            <div className='notifyBodyQuestion'>Do you want to proceed?</div>
+            <div className='notifyBodyQuestion'>Continue with this transaction format?</div>
             {approvalError ? (
               <div className='notifyBodyLine' role='alert'>
                 Couldn’t approve this request. It’s still pending.
@@ -385,10 +344,13 @@ export class Notify extends React.Component {
                 const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
                 const {
                   nativeCurrency,
-                  nativeCurrency: { symbol: currentSymbol = '?' }
-                } = this.store('main.networksMeta', chain.type, chain.id)
+                  nativeCurrency: { symbol: currentSymbol }
+                } = safeNetworkMetadata(
+                  this.store('main.networksMeta', chain.type, chain.id),
+                  this.store('main.networks', chain.type, chain.id)
+                )
                 const nativeUSD =
-                  nativeCurrency && nativeCurrency.usd && !isTestnet ? nativeCurrency.usd.price : 0
+                  nativeCurrency && nativeCurrency.usd && !isTestnet ? (nativeCurrency.usd.price ?? 0) : 0
 
                 let maxFeePerGas, maxFee, maxFeeUSD
 
@@ -426,7 +388,7 @@ export class Notify extends React.Component {
                 }
               }}
             >
-              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Proceed'}</div>
+              <div className='notifyInputOptionText'>{approvalError ? 'Retry' : 'Approve request'}</div>
             </button>
           </div>
           <button
@@ -457,8 +419,7 @@ export class Notify extends React.Component {
       >
         <div className='notifyBox'>
           <div id='wren-dash-notify-title' className='notifyTitle'>
-            <div>Blind signing</div>
-            <div>disabled</div>
+            <div>Blind signing is disabled</div>
           </div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
@@ -481,7 +442,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>OK</div>
+              <div className='notifyInputOptionText'>Close</div>
             </button>
           </div>
         </div>
@@ -519,7 +480,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>OK</div>
+              <div className='notifyInputOptionText'>Close</div>
             </button>
           </div>
         </div>
@@ -556,7 +517,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>OK</div>
+              <div className='notifyInputOptionText'>Close</div>
             </button>
           </div>
         </div>

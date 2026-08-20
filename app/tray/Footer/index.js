@@ -386,6 +386,7 @@ export class Footer extends React.Component {
       <DialogSurface
         className='requestApprove requestApproveLightweight eip7702StopMonitoringDialog'
         role='alertdialog'
+        modal
         labelledBy='eip7702-stop-monitoring-title'
         describedBy='eip7702-stop-monitoring-detail'
         busy={pending}
@@ -422,7 +423,7 @@ export class Footer extends React.Component {
             onClick={() => this.stopEip7702RevocationMonitoring(req)}
           >
             <span className='requestSignButton _txButton'>
-              <span>Stop monitoring and continue requests</span>
+              <span>Stop monitoring and continue with queued requests</span>
             </span>
           </button>
         </div>
@@ -514,6 +515,7 @@ export class Footer extends React.Component {
           )
 
           if (req.status === 'declined') {
+            const routeChanged = req.notice === 'Network changed before signing'
             return (
               <div className='requestApprove requestApproveLightweight walletCallsTerminalActions'>
                 <div className='requestActionContext' role='status'>
@@ -521,8 +523,12 @@ export class Footer extends React.Component {
                     <Icon name='blocked' size={19} />
                   </span>
                   <span className='requestActionContextCopy'>
-                    <strong>Request declined</strong>
-                    <span>You declined this wallet call. Nothing was submitted.</span>
+                    <strong>{routeChanged ? 'Request canceled' : 'Request declined'}</strong>
+                    <span>
+                      {routeChanged
+                        ? 'The network changed before signing. Nothing was submitted.'
+                        : 'You declined this wallet call. Nothing was submitted.'}
+                    </span>
                   </span>
                 </div>
                 <div className='requestActionButtons'>
@@ -822,7 +828,7 @@ export class Footer extends React.Component {
                   }}
                 >
                   <span className='requestSignButton _txButton'>
-                    <span>{watchOnly ? 'Watch-only' : 'Submit Batch'}</span>
+                    <span>{watchOnly ? 'Watch-only' : 'Submit batch'}</span>
                   </span>
                 </button>
               </div>

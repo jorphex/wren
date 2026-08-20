@@ -1,4 +1,5 @@
 import React from 'react'
+import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
@@ -268,7 +269,18 @@ export class RequestCommand extends React.Component {
     return bn.toFixed(2, BigNumber.ROUND_UP).toString()
   }
 
-  declinedStatus(isTransaction) {
+  declinedStatus(isTransaction, notice) {
+    if (notice === 'Network changed before signing') {
+      return (
+        <div className='requestNotice requestNoticeDeclined'>
+          <div className='requestNoticeInner requestNoticeDeclinedInner' role='status'>
+            <strong>{isTransaction ? 'Transaction canceled' : 'Request canceled'}</strong>
+            <span>The network changed before signing. Nothing was signed or sent.</span>
+          </div>
+        </div>
+      )
+    }
+
     const title = isTransaction ? 'Transaction declined' : 'Request declined'
     const message = 'Nothing was signed or sent.'
 
@@ -292,7 +304,7 @@ export class RequestCommand extends React.Component {
 
     const { isTestnet, explorer } = this.store('main.networks', chain.type, chain.id) || {}
     const nativeCurrency = this.store('main.networksMeta', chain.type, chain.id, 'nativeCurrency')
-    const nativeUSD = nativeCurrency && nativeCurrency.usd && !isTestnet ? nativeCurrency.usd.price : 0
+    const nativeUSD = nativeCurrency && nativeCurrency.usd && !isTestnet ? (nativeCurrency.usd.price ?? 0) : 0
 
     let feeAtTime = '?.??'
 
@@ -377,7 +389,7 @@ export class RequestCommand extends React.Component {
                 this.runReplacementAction('speed', req)
               }}
             >
-              Speed Up
+              Speed up
             </button>
           )}
           {canVerifySource && (
@@ -420,7 +432,7 @@ export class RequestCommand extends React.Component {
                     }
                   }}
                 >
-                  Open Explorer
+                  Open explorer
                 </button>
               )}
               <button
@@ -431,7 +443,7 @@ export class RequestCommand extends React.Component {
                   this.scheduleTimer('txHashCopiedTimer', () => this.setState({ txHashCopied: false }), 3000)
                 }}
               >
-                Copy Hash
+                Copy hash
               </button>
               <span className='txLifecycleCopyStatus' role='status' aria-live='polite'>
                 {this.state.txHashCopied
@@ -464,9 +476,12 @@ export class RequestCommand extends React.Component {
     const isTestnet = this.store('main.networks', chain.type, chain.id, 'isTestnet')
     const {
       nativeCurrency,
-      nativeCurrency: { symbol: currentSymbol = '?' }
-    } = this.store('main.networksMeta', chain.type, chain.id)
-    const nativeUSD = nativeCurrency && nativeCurrency.usd && !isTestnet ? nativeCurrency.usd.price : 0
+      nativeCurrency: { symbol: currentSymbol }
+    } = safeNetworkMetadata(
+      this.store('main.networksMeta', chain.type, chain.id),
+      this.store('main.networks', chain.type, chain.id)
+    )
+    const nativeUSD = nativeCurrency && nativeCurrency.usd && !isTestnet ? (nativeCurrency.usd.price ?? 0) : 0
 
     const gasLimit = BigNumber(req.data.gasLimit, 16)
     const maxFeePerGas = BigNumber(usesBaseFee(req.data) ? req.data.maxFeePerGas : req.data.gasPrice, 16)
@@ -567,7 +582,7 @@ export class RequestCommand extends React.Component {
     const { req } = this.props
     const { notice, mode } = req
 
-    if (req.status === 'declined') return this.declinedStatus(true)
+    if (req.status === 'declined') return this.declinedStatus(true, req.notice)
     if (req.status === 'error' && req.retainedPreBroadcastError) {
       return this.retainedPreBroadcastFailureStatus(req)
     }
@@ -821,7 +836,7 @@ export class RequestCommand extends React.Component {
     const { req } = this.props
     const { status, notice } = req
 
-    if (status === 'declined') return this.declinedStatus(false)
+    if (status === 'declined') return this.declinedStatus(false, req.notice)
 
     const requiredApproval = getRequiredRequestApproval(req)
 
@@ -846,7 +861,7 @@ export class RequestCommand extends React.Component {
                     <div style={{ paddingBottom: 20 }}>
                       <div className='loader' />
                     </div>
-                    <div className='requestNoticeInnerText'>See Signer</div>
+                    <div className='requestNoticeInnerText'>View signer</div>
                     <button type='button' className='cancelRequest' onClick={() => this.decline(req)}>
                       Cancel
                     </button>

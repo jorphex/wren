@@ -1,4 +1,5 @@
 import React from 'react'
+import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 import Restore from 'react-restore'
 
 import Icon from '../../../resources/Components/Icon'
@@ -445,7 +446,10 @@ class _AccountBody extends React.Component {
     if (req.type !== 'signErc20Permit') return { requestChainId, requestChainName }
     const chainId = req.typedMessage.data.domain.chainId
     const chainName = this.store('main.networks.ethereum', chainId, 'name')
-    const { primaryColor: chainColor, icon } = this.store('main.networksMeta.ethereum', chainId)
+    const { primaryColor: chainColor, icon } = safeNetworkMetadata(
+      this.store('main.networksMeta.ethereum', chainId),
+      this.store('main.networks.ethereum', chainId)
+    )
 
     return { chainId, chainName, chainColor, icon, requestChainId, requestChainName }
   }

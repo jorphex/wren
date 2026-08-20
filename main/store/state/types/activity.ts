@@ -19,6 +19,7 @@ export const ActivityEntrySchema = z
     ]),
     outcome: z.enum([
       'completed',
+      'canceled',
       'declined',
       'submitted',
       'confirming',

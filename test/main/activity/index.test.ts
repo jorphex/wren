@@ -49,6 +49,12 @@ it('normalizes legacy dropped outcomes without persisting a transaction hash', (
   expect(requestActivityEntry(transaction(), 'dropped', 200)).not.toHaveProperty('transactionHash')
 })
 
+it('records an automatic cancellation without attributing it to the user', () => {
+  expect(
+    requestActivityEntry(transaction({ status: undefined, tx: undefined }), 'canceled', 200)
+  ).toMatchObject({ outcome: 'canceled' })
+})
+
 it('does not record nonterminal requests without an explicit outcome', () => {
   expect(requestActivityEntry(transaction({ status: undefined, tx: undefined }))).toBeUndefined()
 })

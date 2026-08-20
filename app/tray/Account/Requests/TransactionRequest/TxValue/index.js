@@ -14,6 +14,7 @@ import AddressIdentity from '../../../../../../resources/Components/AddressIdent
 import { addressSafetyTarget } from '../../../../../../resources/Components/AddressSafetyStatus'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
+import { safeNetworkMetadata } from '../../../../../../resources/domain/networkMetadata'
 
 export class TxSending extends React.Component {
   constructor(...args) {
@@ -49,8 +50,11 @@ export class TxSending extends React.Component {
     const isTestnet = this.store('main.networks', this.props.chain.type, this.props.chain.id, 'isTestnet')
     const {
       nativeCurrency,
-      nativeCurrency: { symbol: currentSymbol = '?' }
-    } = this.store('main.networksMeta', this.props.chain.type, this.props.chain.id)
+      nativeCurrency: { symbol: currentSymbol }
+    } = safeNetworkMetadata(
+      this.store('main.networksMeta', this.props.chain.type, this.props.chain.id),
+      this.store('main.networks', this.props.chain.type, this.props.chain.id)
+    )
     const chainName = this.store('main.networks.ethereum', this.props.chain.id, 'name')
 
     return (

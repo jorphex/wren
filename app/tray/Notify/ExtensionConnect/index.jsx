@@ -83,7 +83,7 @@ const ExtensionConnectNotification = ({ fingerprint, pairingCode, requestId, onC
             {svg.handshake(40)}
           </div>
           <h2 id='wren-notify-title' className='notifyTitle'>
-            New "Wren Companion" pairing request
+            New Wren Companion pairing request
           </h2>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>

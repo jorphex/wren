@@ -69,23 +69,23 @@ test('scopes copy feedback and timer resets to normalized token identity', async
 
   await user.click(screen.getByRole('button', { name: 'Expand ALPHA token on chain 1' }))
   await user.click(screen.getByRole('button', { name: 'Copy ALPHA token address' }))
-  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address Copied')
+  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address copied')
   expect(screen.getByRole('status').textContent).toBe('ALPHA token address copied')
   expect(screen.queryByRole('button', { name: 'Copy BETA token address' })).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Expand BETA token on chain 137' }))
   expect(screen.getByRole('button', { name: 'Copy BETA token address' }).textContent).toBe(beta.address)
   await user.click(screen.getByRole('button', { name: 'Expand ALPHA token on chain 1' }))
-  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address Copied')
+  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address copied')
 
   act(() => jest.advanceTimersByTime(500))
   await user.click(screen.getByRole('button', { name: 'Copy ALPHA token address' }))
 
   act(() => store.setTokens([beta, { ...alpha, address: alpha.address.toLowerCase() }]))
-  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address Copied')
+  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address copied')
 
   act(() => jest.advanceTimersByTime(999))
-  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address Copied')
+  expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe('Address copied')
   act(() => jest.advanceTimersByTime(1))
   expect(screen.getByRole('button', { name: 'Copy ALPHA token address' }).textContent).toBe(
     alpha.address.toLowerCase()

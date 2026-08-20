@@ -53,7 +53,7 @@ describe('selecting token chain', () => {
       .map((el) => el.textContent)
     expect(tokenChainNames).toEqual(['Ethereum', 'Polygon'])
     expect(screen.getByRole('heading', { name: 'Select a network' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Open Networks' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Open networks' })).toBeTruthy()
   })
 
   it('uses canonical chain identity marks instead of stored raster logos for known networks', () => {
@@ -80,7 +80,7 @@ describe('selecting token chain', () => {
     try {
       const view = render(<AddToken />)
       expect(screen.getByRole('status').textContent).toBe('No enabled networks')
-      expect(screen.getByRole('button', { name: 'Open Networks' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Open networks' })).toBeTruthy()
       view.unmount()
     } finally {
       store.activateNetwork('ethereum', 1, true)
@@ -157,7 +157,7 @@ describe('selecting token chain', () => {
     const { user } = render(<AddToken />)
 
     await user.click(screen.getByRole('button', { name: 'Polygon' }))
-    const enableChains = screen.getByRole('button', { name: 'Open Networks' })
+    const enableChains = screen.getByRole('button', { name: 'Open networks' })
     expect(enableChains.disabled).toBe(true)
     enableChains.click()
     act(() => jest.advanceTimersByTime(200))
@@ -180,7 +180,7 @@ describe('selecting token chain', () => {
   it('opens chain settings only once for duplicate activation', async () => {
     const { user } = render(<AddToken />)
 
-    await user.dblClick(screen.getByRole('button', { name: 'Open Networks' }))
+    await user.dblClick(screen.getByRole('button', { name: 'Open networks' }))
 
     expect(link.send.mock.calls).toEqual([['tray:action', 'navDash', { view: 'chains', data: {} }]])
   })

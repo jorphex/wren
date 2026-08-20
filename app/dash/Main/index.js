@@ -33,13 +33,13 @@ const dashboardSections = [
       {
         view: 'addressBook',
         title: 'Contacts',
-        description: 'Label addresses you know and verify often.',
+        description: 'Save labels for addresses. Compare the full address before signing.',
         icon: 'contacts'
       },
       {
         view: 'dapps',
         title: 'Connected apps',
-        description: 'Review active connections, retained access, and default networks.',
+        description: 'Review active connections, access, and default networks.',
         icon: 'apps'
       }
     ]
@@ -194,7 +194,7 @@ export class Main extends React.Component {
                 onBlur={() => this.setState({ supportPreviewFocused: false })}
                 onClick={this.copySupportAddress}
                 onFocus={() => this.setState({ supportPreviewFocused: true })}
-                title='Copy support address; hover or focus to show its QR code'
+                title='Copy support address. Hover or focus to view its QR code.'
               >
                 <Icon name={this.state.supportCopied ? 'check' : 'copy'} size={15} />
                 Support Wren
@@ -208,7 +208,7 @@ export class Main extends React.Component {
                   />
                   <div className='dashSupportWrenAddress'>{supportAddress}</div>
                   <p id='dash-support-wren-description' className='dashSupportWrenPreviewNote'>
-                    Support is optional, but always appreciated.
+                    Support is optional.
                   </p>
                 </div>
               ) : null}

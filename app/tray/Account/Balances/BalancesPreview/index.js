@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import { safeNetworkMetadata } from '../../../../../resources/domain/networkMetadata'
 import BigNumber from 'bignumber.js'
 
 import emptyBalances from 'url:../../../../../asset/ui/wren-empty-balances-v2.png'
@@ -64,7 +65,10 @@ export class BalancesPreview extends React.Component {
         .filter((rawBalance) => isNetworkConnected(networks[rawBalance.chainId]))
         .map((rawBalance) => {
           const isNative = isNativeCurrency(rawBalance.address)
-          const nativeCurrencyInfo = networksMeta[rawBalance.chainId].nativeCurrency || {}
+          const nativeCurrencyInfo = safeNetworkMetadata(
+            networksMeta?.[rawBalance.chainId],
+            networks[rawBalance.chainId]
+          ).nativeCurrency
 
           const rate = isNative ? nativeCurrencyInfo : rates[rawBalance.address || rawBalance.symbol] || {}
           const logoURI = (isNative && nativeCurrencyInfo.icon) || rawBalance.logoURI
@@ -166,8 +170,8 @@ export class BalancesPreview extends React.Component {
                   }}
                 >
                   {filteredBalances.length - balances.length > 0
-                    ? `+${filteredBalances.length - balances.length} More`
-                    : 'More'}
+                    ? `View ${filteredBalances.length - balances.length} more balances`
+                    : 'View all balances'}
                 </button>
               </div>
             ) : (
@@ -206,7 +210,7 @@ export class BalancesPreview extends React.Component {
             onClick={() => this.setState({ showHighHotMessage: !this.state.showHighHotMessage })}
             style={scanning ? { opacity: 0 } : { opacity: 1 }}
           >
-            <div className='signerBalanceWarningTitle'>High-value account using a hot signer</div>
+            <div className='signerBalanceWarningTitle'>High-value account uses a hot signer</div>
             {this.state.showHighHotMessage ? (
               <div className='signerBalanceWarningMessage'>
                 {'Use a hardware signer to better protect this account.'}

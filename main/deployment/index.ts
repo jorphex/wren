@@ -39,6 +39,7 @@ export const DEPLOYMENT_SERVICE_ERROR_CODES = Object.freeze([
   'inspection-expired',
   'inspection-used',
   'inspection-changed',
+  'deployment-pending',
   'origin-unavailable',
   'queue-unavailable'
 ] as const)
@@ -170,6 +171,14 @@ export class DeploymentEvidenceError extends Error {
   constructor(readonly code: 'unavailable' | 'failed') {
     super(code === 'unavailable' ? 'Configured RPC unavailable' : 'Configured RPC request failed')
     this.name = 'DeploymentEvidenceError'
+  }
+}
+
+/** A managed deployment on another chain is still awaiting review. */
+export class DeploymentPendingError extends Error {
+  constructor() {
+    super('A managed deployment is already pending on another chain')
+    this.name = 'DeploymentPendingError'
   }
 }
 
@@ -657,7 +666,8 @@ export function createDeploymentService(
       let originId: string
       try {
         originId = await dependencies.ensureDeploymentOrigin(chainId)
-      } catch {
+      } catch (error) {
+        if (error instanceof DeploymentPendingError) return failure('deployment-pending')
         return failure('origin-unavailable')
       }
       if (typeof originId !== 'string' || originId.length === 0 || originId.length > 256) {

@@ -14,7 +14,7 @@ export const FailedToLoad = ({ dappId }) => {
   return (
     <div className='mainDappState' role='alert'>
       <div className='mainDappLoadingText'>
-        <strong>Couldn’t load app</strong>
+        <strong>App unavailable</strong>
         <span>Wren couldn’t load this app.</span>
       </div>
       <div className='mainDappStateActions'>

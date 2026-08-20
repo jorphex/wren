@@ -7,6 +7,7 @@ import { isRequestInteractionLocked } from '../../../../../../resources/domain/r
 import { usesBaseFee } from '../../../../../../resources/domain/transaction'
 import { displayValueData } from '../../../../../../resources/utils/displayValue'
 import { chainUsesOptimismFees } from '../../../../../../resources/utils/chains'
+import { safeNetworkMetadata } from '../../../../../../resources/domain/networkMetadata'
 import { ClusterBox } from '../../../../../../resources/Components/Cluster'
 import AdjustFee from '../AdjustFee'
 
@@ -92,7 +93,10 @@ export class TxFee extends React.Component {
       id: parseInt(req.data.chainId, 16)
     }
     const { isTestnet } = this.store('main.networks', chain.type, chain.id)
-    const { nativeCurrency } = this.store('main.networksMeta', chain.type, chain.id)
+    const { nativeCurrency } = safeNetworkMetadata(
+      this.store('main.networksMeta', chain.type, chain.id),
+      this.store('main.networks', chain.type, chain.id)
+    )
 
     const maxGas = BigNumber(req.data.gasLimit, 16)
     const maxFeePerGas = BigNumber(req.data[usesBaseFee(req.data) ? 'maxFeePerGas' : 'gasPrice'], 16)

@@ -107,7 +107,8 @@ const endpointStatus = (endpoint, localStatus) => {
   if (endpoint.status === 'connected') return 'Connected'
   if (endpoint.status === 'standby') return 'Not checked'
   if (['loading', 'pending', 'syncing'].includes(endpoint.status)) return 'Checking connection…'
-  if (['disconnected', 'error', 'chain mismatch'].includes(endpoint.status)) return 'Can’t connect'
+  if (endpoint.status === 'chain mismatch') return 'Wrong network'
+  if (['disconnected', 'error'].includes(endpoint.status)) return 'Can’t connect'
   return 'Not checked'
 }
 
@@ -126,7 +127,7 @@ const endpointStatusPresentation = (endpoint, status, index) => {
   if (label === 'Checking connection…') {
     return { accessibleLabel, icon: 'sync', tone: 'checking' }
   }
-  if (label === 'Can’t connect' || label === 'Use an HTTPS RPC URL') {
+  if (['Can’t connect', 'Wrong network', 'Enter a valid RPC URL.', 'Use an HTTPS RPC URL.'].includes(label)) {
     return { accessibleLabel, icon: 'alert', tone: 'error' }
   }
 
@@ -154,8 +155,8 @@ export const RpcEndpointLedger = ({
     <div className='rpcEndpointLedger'>
       {endpoints.map((endpoint, index) => {
         const status = endpointStatus(endpoint, statuses[endpoint.id])
-        const error = status === 'Can’t connect' || status === 'Use an HTTPS RPC URL'
         const statusPresentation = endpointStatusPresentation(endpoint, status, index)
+        const error = statusPresentation.tone === 'error'
         return (
           <div
             className={endpoint.on ? 'rpcEndpointRow' : 'rpcEndpointRow rpcEndpointRowOff'}
@@ -223,7 +224,7 @@ export const RpcEndpointLedger = ({
     <div className='rpcEndpointAddRow'>
       <button type='button' disabled={endpoints.length >= 5} onClick={onAdd}>
         <Icon name='add' size={14} />
-        <span>Add RPC</span>
+        <span>Add RPC endpoint</span>
       </button>
       {endpoints.length >= 5 && <span>Maximum of 5 RPC endpoints</span>}
     </div>
@@ -316,7 +317,7 @@ const accents = [
 export const EditChainColor = ({ currentColor, onChange }) => {
   return (
     <div className='chainRow'>
-      <div className='chainInputLabel'>Chain Color</div>
+      <div className='chainInputLabel'>Network color</div>
       <div className='chainColorSwatches'>
         {accents.map(([color, label]) => (
           <button

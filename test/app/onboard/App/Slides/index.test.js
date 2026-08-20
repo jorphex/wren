@@ -31,7 +31,7 @@ it('introduces every supported account type without internal signer terminology'
   expect(
     screen.getByText('Connect a hardware wallet, create a local account, or add a watch-only address.')
   ).toBeTruthy()
-  expect(screen.getByText('Select Add account, then choose how to connect it.')).toBeTruthy()
+  expect(screen.getByText('Select Add account, then choose how to add it.')).toBeTruthy()
 })
 
 it('labels both Companion download controls without the compact icon-only override', () => {

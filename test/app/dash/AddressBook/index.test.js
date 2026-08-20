@@ -141,12 +141,12 @@ test('resolves ENS once, saves its address, and returns through Dash navigation'
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor />)
 
-  expect(screen.getByRole('button', { name: 'Save Contact' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Save contact' }).disabled).toBe(true)
 
   await user.type(screen.getByLabelText('Address or ENS name'), 'treasury.eth')
   await user.type(screen.getByLabelText('Name'), 'Yearn Treasury')
   await user.type(screen.getByLabelText(/Note/), 'Operations')
-  await user.click(screen.getByRole('button', { name: 'Save Contact' }))
+  await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   await waitFor(() =>
     expect(saveAddressBookEntry).toHaveBeenCalledWith({
@@ -171,8 +171,8 @@ test('records an explicit outside-Wren check without letting the renderer set it
       'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
     )
   ).toBeTruthy()
-  await user.type(screen.getByLabelText(/Check note/), 'Compared during a voice call')
-  await user.click(screen.getByRole('button', { name: 'Save Contact' }))
+  await user.type(screen.getByLabelText(/Verification note/), 'Compared during a voice call')
+  await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   await waitFor(() =>
     expect(saveAddressBookEntry).toHaveBeenCalledWith({
@@ -204,14 +204,14 @@ test('shows a verified contact date and preserves provenance when unrelated fiel
   expect(screen.getByText('Checked 2026-08-18')).toBeTruthy()
   expect(screen.getByLabelText('Address or ENS name').readOnly).toBe(true)
   expect(screen.getByLabelText('Address or ENS name').disabled).toBe(false)
-  expect(screen.getByLabelText(/Check note/).value).toBe('Compared on a separate device')
-  expect(screen.getByLabelText(/Check note/).getAttribute('aria-describedby')).toBe(
+  expect(screen.getByLabelText(/Verification note/).value).toBe('Compared on a separate device')
+  expect(screen.getByLabelText(/Verification note/).getAttribute('aria-describedby')).toBe(
     'addressBookVerificationCount'
   )
   expect(screen.getByLabelText(/^Note/).getAttribute('aria-describedby')).toBe('addressBookNoteCount')
   await user.clear(screen.getByLabelText('Name'))
   await user.type(screen.getByLabelText('Name'), 'Treasury')
-  await user.click(screen.getByRole('button', { name: 'Save Contact' }))
+  await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   await waitFor(() =>
     expect(saveAddressBookEntry).toHaveBeenCalledWith({
@@ -252,9 +252,11 @@ test('warns before explicitly clearing an out-of-band verification record', asyn
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor entry={verified} />)
 
-  await user.click(screen.getByRole('radio', { name: 'Saved only' }))
-  expect(screen.getByText('Saving as Saved only clears the check date and note.')).toBeTruthy()
-  await user.click(screen.getByRole('button', { name: 'Save Contact' }))
+  await user.click(screen.getByRole('radio', { name: 'Saved — not independently verified' }))
+  expect(
+    screen.getByText('Saving as “Saved — not independently verified” clears the check date and note.')
+  ).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   await waitFor(() =>
     expect(saveAddressBookEntry).toHaveBeenCalledWith({
@@ -276,7 +278,7 @@ test('resolves a completed ENS name inline and seeds an untouched contact name',
   await act(async () => jest.advanceTimersByTime(320))
 
   expect(await screen.findByText('ENS name resolved')).toBeTruthy()
-  expect(screen.getByPlaceholderText('0x... or name.eth').value).toBe(address)
+  expect(screen.getByPlaceholderText('0x… or name.eth').value).toBe(address)
   expect(screen.getByLabelText('Name').value).toBe('treasury.eth')
 })
 
@@ -358,7 +360,7 @@ test('surfaces validation and service errors without navigating away', async () 
 
   await user.type(screen.getByLabelText('Address or ENS name'), address)
   await user.type(screen.getByLabelText('Name'), 'Duplicate')
-  await user.click(screen.getByRole('button', { name: 'Save Contact' }))
+  await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   expect((await screen.findByRole('alert')).textContent).toContain('Name is already used')
   expect(link.send).not.toHaveBeenCalled()
@@ -378,7 +380,7 @@ test('does not turn a stale edit route into a new contact', async () => {
   )
 
   expect(screen.getByText('Contact not found')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Save Contact' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Save contact' })).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Return to Contacts' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'backDash')
 })

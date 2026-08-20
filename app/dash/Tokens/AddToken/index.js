@@ -4,6 +4,7 @@ import Restore from 'react-restore'
 import ChainIdentityMark from '../../../../resources/Components/ChainIdentityMark'
 import Icon from '../../../../resources/Components/Icon'
 import link from '../../../../resources/link'
+import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 
 const COPY = Object.freeze({
   addToken: 'Add token',
@@ -16,7 +17,7 @@ const COPY = Object.freeze({
   lookupFailed: 'Token details could not be verified.',
   lookupFailedManual: 'Token details could not be verified. Enter the details manually.',
   noEnabledNetworks: 'No enabled networks',
-  openNetworks: 'Open Networks',
+  openNetworks: 'Open networks',
   save: 'Save',
   saveFailed: 'Token could not be saved. Check the details and try again.',
   selectNetwork: 'Select a network',
@@ -100,7 +101,10 @@ class AddTokenChainScreenComponent extends Component {
               <div className='originSwapChainList'>
                 {activeChains.map((chain) => {
                   const chainId = chain.id
-                  const { primaryColor, icon } = this.store('main.networksMeta.ethereum', chainId)
+                  const { primaryColor, icon } = safeNetworkMetadata(
+                    this.store('main.networksMeta.ethereum', chainId),
+                    chain
+                  )
 
                   return (
                     <button

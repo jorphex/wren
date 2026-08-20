@@ -32,6 +32,14 @@ test('keeps the compact wallet shell and its canvas on the same width contract',
   expect(trayStyle).not.toMatch(/width 760px/)
 })
 
+test('keeps tray loaders subordinate to the shared reduced-motion override', () => {
+  expect(baseStyle).toMatch(
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation-duration 1ms !important[\s\S]*?animation-iteration-count 1 !important/
+  )
+  expect(requestsStyle).not.toMatch(/animation[^\n]*!important/)
+  expect(balancesStyle).not.toMatch(/animation[^\n]*!important/)
+})
+
 test('squares the canvas and panel corners only along an open workspace seam', () => {
   expect(trayStyle).toMatch(
     /\.workspace-open\.workspace-edge-right\n[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/

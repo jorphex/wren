@@ -275,7 +275,12 @@ it('migrates the version 41 boundary and reloads it without another migration', 
   const fixture = loadFixture('v41-current-state.json')
   const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
   const expected = clone(fixture.state.main)
-  const { networks: expectedNetworks, instanceId: _legacyInstanceId, ...expectedMain } = expected
+  const {
+    networks: expectedNetworks,
+    networksMeta: _legacyNetworksMeta,
+    instanceId: _legacyInstanceId,
+    ...expectedMain
+  } = expected
   const expectedChain = expectedNetworks.ethereum[31337]
   const { connection: expectedConnection, ...expectedChainIdentity } = expectedChain
 
@@ -338,7 +343,7 @@ it('migrates a previous safe profile and keeps it reload-stable', async () => {
   const fixture = loadFixture('v69-safe-current-state.json')
   const source = clone(fixture.state)
 
-  expect(migrations.apply(clone(source))).toEqual({
+  expect(migrations.apply(clone(source))).toMatchObject({
     ...source,
     main: { ...source.main, _version: migrations.latest }
   })
@@ -383,6 +388,31 @@ it('recovers a current profile containing custom-network metadata without a USD 
     decimals: 18,
     usd: { price: 0, change24hr: 0 }
   })
+  expect(reloaded.main).toEqual(migrated.main)
+})
+
+it('loads a valid profile when Ethereum metadata is missing or malformed', async () => {
+  const fixture = loadFixture('v69-safe-current-state.json')
+  fixture.state.main.networks.ethereum[4153] = {
+    ...clone(fixture.state.main.networks.ethereum[31337]),
+    id: 4153,
+    name: 'Fixture Repaired Chain'
+  }
+  fixture.state.main.networksMeta.ethereum[31337] = null
+  fixture.state.main.networksMeta.ethereum[4153] = {
+    nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 'invalid' }
+  }
+  fixture.state.main.networksMeta.ethereum[999999] = { nativeCurrency: { symbol: 'ORPHAN' } }
+
+  const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
+
+  expect(migrated.main.networksMeta.ethereum[31337]).toMatchObject({
+    nativeCurrency: { symbol: 'ETH', decimals: 18, usd: { price: 0, change24hr: 0 } }
+  })
+  expect(migrated.main.networksMeta.ethereum[4153]).toMatchObject({
+    nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: { price: 0, change24hr: 0 } }
+  })
+  expect(migrated.main.networksMeta.ethereum[999999]).toBeUndefined()
   expect(reloaded.main).toEqual(migrated.main)
 })
 

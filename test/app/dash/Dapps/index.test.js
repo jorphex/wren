@@ -43,11 +43,16 @@ const permission = (handlerId, origin) => ({
   grantedAt: Date.now()
 })
 
-function renderDapps(origins, permissions = {}, networks = { 1: chain }) {
+function renderDapps(
+  origins,
+  permissions = {},
+  networks = { 1: chain },
+  networksMeta = { 1: { primaryColor: 'accent1', icon: '' } }
+) {
   const store = Restore.create({
     main: {
       networks: { ethereum: networks },
-      networksMeta: { ethereum: { 1: { primaryColor: 'accent1', icon: '' } } },
+      networksMeta: { ethereum: networksMeta },
       origins,
       permissions
     }
@@ -78,6 +83,25 @@ test('renders application activity instead of the empty state', () => {
   expect(screen.getByText('avg reqs/min')).toBeTruthy()
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
   expect(screen.queryByText('No connected apps')).toBeNull()
+})
+
+test('renders application activity while metadata is unavailable', () => {
+  renderDapps(
+    {
+      origin: {
+        chain: { id: 1 },
+        name: 'example.test',
+        session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+      }
+    },
+    {},
+    { 1: chain },
+    {}
+  )
+
+  expect(screen.getByText('example.test')).toBeTruthy()
+  expect(screen.getByText('Connected')).toBeTruthy()
+  expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
 })
 
 test('opens connected-app details once from native keyboard input', async () => {
@@ -172,7 +196,7 @@ test('keeps an expired disconnected app visible while any account retains its pe
     },
     {
       [account]: {
-        permission: permission('permission', 'durable.test')
+        origin: permission('origin', 'durable.test')
       }
     }
   )

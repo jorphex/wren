@@ -7,6 +7,7 @@ import {
   requestsPerMinute,
   selectConnectedAppGroups
 } from '../../../resources/domain/connectedApps'
+import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 
 import ChainIdentityMark from '../../../resources/Components/ChainIdentityMark'
 
@@ -154,7 +155,7 @@ export class Dapps extends React.Component {
   render() {
     const chainGroups = this.getGroups().map((group) => ({
       ...group,
-      meta: this.store('main.networksMeta.ethereum', group.chain.id)
+      meta: safeNetworkMetadata(this.store('main.networksMeta.ethereum', group.chain.id), group.chain)
     }))
 
     const { dappDetails } = this.props.data

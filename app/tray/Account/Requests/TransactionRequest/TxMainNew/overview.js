@@ -501,14 +501,14 @@ const TxOverview = ({
           (replacementStatus.possible ? (
             <ClusterRow>
               <ClusterValue>
-                <div className='_txMainTag _txMainTagGood'>valid replacement</div>
+                <div className='_txMainTag _txMainTagGood'>Valid replacement</div>
               </ClusterValue>
             </ClusterRow>
           ) : (
             <ClusterRow>
               <ClusterValue>
                 <div className='_txMainTag _txMainTagBad'>
-                  {replacementStatus.notice || 'invalid duplicate'}
+                  {replacementStatus.notice || 'Invalid duplicate'}
                 </div>
               </ClusterValue>
             </ClusterRow>

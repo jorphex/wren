@@ -353,14 +353,14 @@ class FrameAccount {
     }
   }
 
-  rejectRequest({ handlerId }: AccountRequest, error: EVMError) {
+  rejectRequest({ handlerId }: AccountRequest, error: EVMError, outcome?: ActivityOutcome) {
     const knownRequest = this.requests[handlerId]
 
     if (knownRequest) {
       const payload = knownRequest.payload
       const responder = knownRequest.res
       try {
-        this.clearRequest(knownRequest.handlerId, error.code === 4001 ? 'declined' : 'failed')
+        this.clearRequest(knownRequest.handlerId, outcome ?? (error.code === 4001 ? 'declined' : 'failed'))
       } finally {
         if (responder && payload) {
           const { id, jsonrpc } = payload
@@ -476,10 +476,15 @@ class FrameAccount {
             delete request.notice
             delete request.recoverableError
           }
-          this.rejectRequest(request, {
-            code: 4901,
-            message: `Request cancelled because the origin switched away from chain ${chainId}`
-          })
+          request.notice = 'Network changed before signing'
+          this.rejectRequest(
+            request,
+            {
+              code: 4001,
+              message: 'Request cancelled because its origin route changed before signing'
+            },
+            'canceled'
+          )
         }
       })
     })

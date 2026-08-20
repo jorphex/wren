@@ -1527,6 +1527,52 @@ describe('#updateNetwork', () => {
     })
   })
 
+  it('moves the complete metadata record when the chain ID changes', () => {
+    main.networksMeta.ethereum[4] = {
+      blockHeight: 123,
+      gas: { samples: [], price: { selected: 'standard', levels: {} } },
+      primaryColor: 'accent3',
+      nativeCurrency: {
+        symbol: 'OLD',
+        name: 'Old currency',
+        icon: 'https://example.test/currency.png',
+        decimals: 18,
+        usd: { price: 2, change24hr: 1 }
+      }
+    }
+
+    updateNetwork(
+      { id: '0x4', type: 'ethereum', name: '', explorer: '', symbol: '' },
+      {
+        id: '0x42',
+        type: 'ethereum',
+        name: 'test',
+        explorer: 'explorer.test',
+        symbol: 'NEW',
+        nativeCurrencyName: 'New currency',
+        nativeCurrencyIcon: 'https://example.test/new-currency.png',
+        nativeCurrencyDecimals: 6,
+        icon: 'https://example.test/network.png'
+      }
+    )
+
+    expect(main.networksMeta.ethereum[4]).toBeUndefined()
+    expect(main.networksMeta.ethereum[66]).toEqual({
+      blockHeight: 123,
+      gas: { samples: [], price: { selected: 'standard', levels: {} } },
+      primaryColor: 'accent3',
+      symbol: 'NEW',
+      icon: 'https://example.test/network.png',
+      nativeCurrency: {
+        symbol: 'NEW',
+        name: 'New currency',
+        icon: 'https://example.test/new-currency.png',
+        decimals: 6,
+        usd: { price: 2, change24hr: 1 }
+      }
+    })
+  })
+
   it('should update native currency decimals', () => {
     updateNetwork(
       { id: '0x4', type: 'ethereum', name: '', explorer: '', symbol: '' },

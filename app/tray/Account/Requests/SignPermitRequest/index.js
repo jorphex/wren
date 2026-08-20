@@ -150,7 +150,7 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
                   <ClusterRow>
                     <ClusterValue>
                       <div className='permitReviewRow'>
-                        <span className='permitReviewLabel'>Permit Expires In</span>
+                        <span className='permitReviewLabel'>Permit expires in</span>
                         <Countdown
                           end={deadline * 1000}
                           innerClass='permitReviewValue'

@@ -959,7 +959,7 @@ export class ContractVerification extends React.Component {
       >
         {!this.props.embedded ? (
           <header className='contractVerificationHeader'>
-            <span>CONTRACT VERIFICATION</span>
+            <span>Contract verification</span>
             <h1>Verify contract source</h1>
             <p>
               Match a source artifact to this deployed contract, then publish the verification record

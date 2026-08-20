@@ -595,8 +595,16 @@ module.exports = {
           main.dappGuardrails = withoutGuardrailChain(main.dappGuardrails, `0x${net.id.toString(16)}`)
         }
 
-        const existingNetworkMeta = main.networksMeta[updatedNetwork.type][updatedNetwork.id] || {}
+        const existingNetworkMeta =
+          main.networksMeta[net.type]?.[net.id] ||
+          main.networksMeta[updatedNetwork.type]?.[updatedNetwork.id] ||
+          {}
         const networkCurrency = existingNetworkMeta.nativeCurrency || {}
+
+        if (!main.networksMeta[updatedNetwork.type]) main.networksMeta[updatedNetwork.type] = {}
+        if (net.type !== updatedNetwork.type || net.id !== updatedNetwork.id) {
+          delete main.networksMeta[net.type][net.id]
+        }
 
         main.networksMeta[updatedNetwork.type][updatedNetwork.id] = {
           ...existingNetworkMeta,

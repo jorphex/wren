@@ -135,7 +135,7 @@ export class InventoryPreview extends React.Component {
                   link.send('nav:forward', 'panel', crumb)
                 }}
               >
-                {moreCollections > 0 ? `+${moreCollections} More` : 'More'}
+                {moreCollections > 0 ? `View ${moreCollections} more collections` : 'View all collections'}
               </button>
             </div>
           </div>

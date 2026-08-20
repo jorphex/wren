@@ -367,7 +367,7 @@ it('shows account positions in a distinct section before the chain-separated vau
 
   const ethereumHeading = await screen.findByRole('heading', { name: 'Ethereum' })
   expect(screen.getByRole('img', { name: 'Yearn' })).toBeTruthy()
-  expect(screen.getByText('A focused selection of established vaults, separated by chain.')).toBeTruthy()
+  expect(screen.getByText('A selected set of vaults, grouped by network.')).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Base' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Katana' })).toBeTruthy()
   const positionHeading = screen.getByRole('heading', { name: 'Your positions' })
@@ -687,7 +687,7 @@ it('bounds recent activity and opens the complete history without nested scrolli
 
   expect(document.querySelectorAll('.earnWorkflowsPreview .earnWorkflow')).toHaveLength(3)
   expect(document.querySelector('.earnDetailsFooter')).toBeTruthy()
-  await user.click(screen.getByRole('button', { name: '+2 More' }))
+  await user.click(screen.getByRole('button', { name: 'View 2 more' }))
 
   expect(screen.getByRole('heading', { name: 'Earn activity' })).toBeTruthy()
   expect(document.querySelectorAll('.earnWorkflowsExpanded .earnWorkflow')).toHaveLength(5)
@@ -699,7 +699,9 @@ it('bounds recent activity and opens the complete history without nested scrolli
 
   rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'activity' }} />)
   rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
-  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '+2 More' })))
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'View 2 more' }))
+  )
 })
 
 it('requires a separate recheck before offering to retry an unknown approval cleanup', async () => {

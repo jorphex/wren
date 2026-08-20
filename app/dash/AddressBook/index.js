@@ -173,7 +173,7 @@ export class AddressBookEditor extends React.Component {
               disabled={this.state.saving}
               maxLength={255}
               onChange={(event) => this.updateAddress(event.target.value)}
-              placeholder='0x... or name.eth'
+              placeholder='0x… or name.eth'
               spellCheck={false}
               readOnly={editing}
               value={this.state.address}
@@ -217,7 +217,7 @@ export class AddressBookEditor extends React.Component {
                   type='radio'
                   value='saved'
                 />
-                <span>Saved only</span>
+                <span>Saved — not independently verified</span>
               </label>
               <label>
                 <input
@@ -233,7 +233,7 @@ export class AddressBookEditor extends React.Component {
             </div>
             <small>
               {clearsVerification
-                ? 'Saving as Saved only clears the check date and note.'
+                ? 'Saving as “Saved — not independently verified” clears the check date and note.'
                 : this.state.provenanceStatus === 'verified-out-of-band'
                   ? 'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
                   : 'Wren stores your label. Wren does not verify this address.'}
@@ -241,7 +241,7 @@ export class AddressBookEditor extends React.Component {
             {this.state.provenanceStatus === 'verified-out-of-band' ? (
               <label className='addressBookField addressBookVerificationNote'>
                 <span>
-                  Check note <small>optional</small>
+                  Verification note <small>optional</small>
                 </span>
                 <textarea
                   aria-describedby='addressBookVerificationCount'
@@ -294,7 +294,7 @@ export class AddressBookEditor extends React.Component {
             }
             type='submit'
           >
-            {this.state.resolving ? 'Resolving ENS…' : this.state.saving ? 'Saving…' : 'Save Contact'}
+            {this.state.resolving ? 'Resolving ENS…' : this.state.saving ? 'Saving…' : 'Save contact'}
           </button>
         </div>
       </form>

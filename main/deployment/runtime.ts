@@ -6,7 +6,7 @@ import { requireStoreAction } from '../store/action'
 import { isWatchOnlyAccountType } from '../../resources/domain/signer'
 import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../resources/domain/origin'
 import { simulateTransaction } from '../transaction/simulation'
-import { createDeploymentService, DeploymentEvidenceError } from '.'
+import { createDeploymentService, DeploymentEvidenceError, DeploymentPendingError } from '.'
 
 import type { TransactionData } from '../../resources/domain/transaction'
 
@@ -51,6 +51,35 @@ function pendingNonce(transaction: TransactionData) {
   })
 }
 
+function hasPendingDeploymentOnAnotherChain(chainId: number) {
+  const storedAccounts = store('main.accounts') as
+    Record<string, { requests?: Record<string, unknown> }> | undefined
+  return Object.values(storedAccounts || {}).some((account) =>
+    Object.values(account?.requests || {}).some((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return false
+      const request = candidate as {
+        origin?: unknown
+        type?: unknown
+        status?: unknown
+        data?: { chainId?: unknown }
+      }
+      if (
+        request.origin !== deploymentOriginId ||
+        request.type !== 'transaction' ||
+        (request.status !== undefined && request.status !== 'pending')
+      ) {
+        return false
+      }
+      try {
+        return Number(BigInt(request.data?.chainId as string)) !== chainId
+      } catch {
+        // A malformed pending managed request must not be invalidated by moving its only origin.
+        return true
+      }
+    })
+  )
+}
+
 function ensureDeploymentOrigin(chainId: number) {
   const existing = store('main.origins', deploymentOriginId)
   if (!existing) {
@@ -65,6 +94,9 @@ function ensureDeploymentOrigin(chainId: number) {
 
   if (existing.name !== WREN_DEPLOY_ORIGIN || existing.provenance !== 'managed' || existing.sourceId) {
     throw new Error('Managed deployment origin is unavailable')
+  }
+  if (hasPendingDeploymentOnAnotherChain(chainId)) {
+    throw new DeploymentPendingError()
   }
   requireStoreAction('addOriginRequest')(deploymentOriginId)
   if (existing.chain?.type !== 'ethereum' || existing.chain?.id !== chainId) {

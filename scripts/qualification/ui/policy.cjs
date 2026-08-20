@@ -747,9 +747,8 @@ const reviewScenarios = () => [
       scale,
       logicalWidth: 620,
       logicalHeight,
-      action: { type: 'clickText', text: 'Show account address QR code' },
+      action: { type: 'focusText', text: 'Account address QR code' },
       ready: '.accountAddressQrPopover',
-      requiredControls: ['Close'],
       requiredText: ['Account address', 'Workshop Software Account With A Long Name'],
       layoutExpectations: [{ kind: 'size', selector: '.accountAddressQrCode', width: 185, height: 185 }]
     }))
@@ -1925,7 +1924,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.customTokens',
-        requiredControls: ['Add New Token'],
+        requiredControls: ['Add token'],
         requiredText: ['No custom tokens']
       },
       {
@@ -1936,7 +1935,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.customTokens',
-        requiredControls: ['Add New Token'],
+        requiredControls: ['Add token'],
         requiredText: ['No custom tokens']
       },
       {
@@ -1971,7 +1970,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
-        requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+        requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests'],
         requiredText: ['Submission status unclear', 'cannot cancel a transaction']
       },
       {
@@ -1984,7 +1983,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
-        requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests'],
+        requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests'],
         requiredText: ['Submission status unclear', 'cannot cancel a transaction']
       },
       {

@@ -34,6 +34,7 @@ const TYPE_META = Object.freeze({
 
 const OUTCOME_LABELS = Object.freeze({
   completed: 'Completed',
+  canceled: 'Canceled',
   declined: 'Declined',
   submitted: 'Submitted',
   confirming: 'Confirming',
@@ -47,6 +48,7 @@ const OUTCOME_LABELS = Object.freeze({
 })
 
 const OUTCOME_DETAILS = Object.freeze({
+  canceled: 'The network changed before signing',
   submitted: 'Sent to network',
   confirming: 'Included; waiting for final confirmation',
   replaced: 'A submitted wallet activity was replaced',

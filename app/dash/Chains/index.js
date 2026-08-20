@@ -4,6 +4,7 @@ import Restore from 'react-restore'
 import Chain from './Chain'
 import link from '../../../resources/link'
 import { WREN_SUPPORT_URL } from '../../../resources/constants'
+import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 
 export class Settings extends React.Component {
   constructor(props, context) {
@@ -36,7 +37,7 @@ export class Settings extends React.Component {
         onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
       >
         <span>Need help?</span>
-        <span className='discordLink'>Open GitHub Issues</span>
+        <span className='discordLink'>Open GitHub issues</span>
       </button>
     )
   }
@@ -63,9 +64,9 @@ export class Settings extends React.Component {
               const key = type + id
               const { explorer, isTestnet, connection, on, name } = networks[type][id]
               const {
-                nativeCurrency: { symbol = '?', name: nativeCurrencyName, icon: nativeCurrencyIcon },
+                nativeCurrency: { symbol, name: nativeCurrencyName, icon: nativeCurrencyIcon },
                 icon
-              } = metadata[type][id]
+              } = safeNetworkMetadata(metadata?.[type]?.[id], networks[type][id])
               const chain = {
                 id,
                 type,
@@ -115,23 +116,26 @@ export class Settings extends React.Component {
     const { id, type } = chain
     const networks = this.store('main.networks')
     const metadata = this.store('main.networksMeta')
+    const network = networks?.[type]?.[id]
+    if (!network) return null
+    const networkMetadata = safeNetworkMetadata(metadata?.[type]?.[id], network)
     return (
       <div className={'localSettings cardShow'}>
         <div className='localSettingsWrap'>
           <Chain
             key={type + id}
             id={id}
-            name={networks[type][id].name}
-            symbol={metadata[type][id].nativeCurrency.symbol}
-            explorer={networks[type][id].explorer}
-            isTestnet={networks[type][id].isTestnet}
+            name={network.name}
+            symbol={networkMetadata.nativeCurrency.symbol}
+            explorer={network.explorer}
+            isTestnet={network.isTestnet}
             type={type}
-            connection={networks[type][id].connection}
-            on={networks[type][id].on}
-            nativeCurrencyName={metadata[type][id].nativeCurrency.name}
-            nativeCurrencyDecimals={metadata[type][id].nativeCurrency.decimals}
-            nativeCurrencyIcon={metadata[type][id].nativeCurrency.icon}
-            icon={metadata[type][id].icon}
+            connection={network.connection}
+            on={network.on}
+            nativeCurrencyName={networkMetadata.nativeCurrency.name}
+            nativeCurrencyDecimals={networkMetadata.nativeCurrency.decimals}
+            nativeCurrencyIcon={networkMetadata.nativeCurrency.icon}
+            icon={networkMetadata.icon}
             view={'expanded'}
           />
         </div>

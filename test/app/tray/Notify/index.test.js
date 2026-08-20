@@ -10,7 +10,7 @@ test('uses safety labels without release-maturity wording', () => {
   notify.store = jest.fn(() => '')
   const { rerender } = render(notify.betaDisclosure())
 
-  expect(screen.getByRole('heading', { name: 'Important Safety Notice' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Safety notice' })).toBeTruthy()
   rerender(notify.hotAccountWarning())
   expect(screen.getByRole('heading', { name: 'Hot signer warning' })).toBeTruthy()
 })
@@ -49,7 +49,7 @@ test('keeps approval pending until RPC success and permits a truthful retry afte
   })
   render(<NotifyHarness />)
 
-  const proceed = screen.getByRole('button', { name: 'Proceed' })
+  const proceed = screen.getByRole('button', { name: 'Approve request' })
   fireEvent.click(proceed)
   fireEvent.click(proceed)
 
@@ -89,7 +89,7 @@ test('routes direct signer compatibility approval through the guarded request pa
     })
   )
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   expect(notify.approveRequest).toHaveBeenCalledWith(req, expect.any(Function))
 })
 
@@ -135,7 +135,7 @@ test('uses a narrow request reference and ignores a stale approval callback', ()
   })
   render(<NotifyHarness />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   expect(link.rpc).toHaveBeenCalledWith(
     'approveRequest',
     { handlerId: req.handlerId, account: req.account, type: req.type },
@@ -175,7 +175,7 @@ test('resets approval errors and initial focus when the active notification chan
   })
   const { rerender } = render(<NotifyHarness tick={0} />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve request' }))
   act(() => approveCallback(new Error('failed')))
   expect(screen.getByRole('alert')).toBeTruthy()
 

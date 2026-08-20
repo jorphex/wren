@@ -5,6 +5,7 @@ import AccountController, { AccountTypeMark } from './AccountController'
 
 import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
 import Icon from '../../../resources/Components/Icon'
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import { accountSort as byCreation } from '../../../resources/domain/account'
 import { getAddress, matchFilter } from '../../../resources/utils'
 
@@ -21,86 +22,6 @@ export class AccountSelector extends React.Component {
     this.accountTriggerRef = React.createRef()
     this.accountDrawerRef = React.createRef()
     this.accountChooserRef = React.createRef()
-    this.accountChooserWasOpen = Boolean(context.store('selected.showAccounts'))
-    this.handleDrawerKeyDown = this.handleDrawerKeyDown.bind(this)
-  }
-
-  componentDidMount() {
-    document.addEventListener('keydown', this.handleDrawerKeyDown)
-    if (this.accountChooserWasOpen) this.focusAccountChooser()
-  }
-
-  componentDidUpdate() {
-    const chooserOpen = Boolean(this.store('selected.showAccounts'))
-
-    if (chooserOpen && !this.accountChooserWasOpen) this.focusAccountChooser()
-    if (!chooserOpen && this.accountChooserWasOpen) this.accountTriggerRef.current?.focus()
-
-    this.accountChooserWasOpen = chooserOpen
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.handleDrawerKeyDown)
-  }
-
-  handleDrawerKeyDown(event) {
-    if (!this.store('selected.showAccounts')) return
-
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      this.store.toggleShowAccounts(false)
-      return
-    }
-
-    if (event.key !== 'Tab') return
-
-    const focusable = this.getAccountDrawerFocusable()
-    if (!focusable.length) {
-      event.preventDefault()
-      this.accountChooserRef.current?.focus()
-      return
-    }
-
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-    const active = document.activeElement
-
-    if (!(this.accountDrawerRef.current || this.accountChooserRef.current)?.contains(active)) {
-      event.preventDefault()
-      ;(event.shiftKey ? last : first).focus()
-    } else if (event.shiftKey && active === first) {
-      event.preventDefault()
-      last.focus()
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault()
-      first.focus()
-    }
-  }
-
-  getAccountChooserFocusable() {
-    if (!this.accountChooserRef.current) return []
-
-    return Array.from(
-      this.accountChooserRef.current.querySelectorAll(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
-  }
-
-  getAccountDrawerFocusable() {
-    const root = this.accountDrawerRef.current || this.accountChooserRef.current
-    if (!root) return []
-
-    return Array.from(
-      root.querySelectorAll(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((element) => element.getAttribute('aria-hidden') !== 'true')
-  }
-
-  focusAccountChooser() {
-    const [first] = this.getAccountChooserFocusable()
-    ;(first || this.accountChooserRef.current)?.focus()
   }
 
   reportScroll() {
@@ -131,6 +52,7 @@ export class AccountSelector extends React.Component {
           <input
             aria-label='Filter accounts'
             className='wrenInput'
+            data-dialog-initial-focus
             spellCheck='false'
             onChange={(e) => {
               const value = e.target.value
@@ -161,7 +83,7 @@ export class AccountSelector extends React.Component {
     return (
       <header className='accountSelectorWelcome'>
         <h1>Choose an account</h1>
-        <p>Choose an account to open your wallet.</p>
+        <p>Open your wallet with an account.</p>
       </header>
     )
   }
@@ -332,18 +254,29 @@ export class AccountSelector extends React.Component {
     const accountDrawerOpen = Boolean(this.store('selected.showAccounts'))
 
     if (open && currentAccount) {
-      return (
-        <div
-          ref={this.accountDrawerRef}
-          className='accountSelector accountSelectorOpen'
-          role={accountDrawerOpen ? 'dialog' : undefined}
-          aria-modal={accountDrawerOpen ? 'true' : undefined}
-          aria-label={accountDrawerOpen ? 'Accounts' : undefined}
-        >
+      const content = (
+        <>
           {this.renderCurrentAccount(currentAccount)}
           {this.renderAccountPanel(accounts)}
-        </div>
+        </>
       )
+
+      if (accountDrawerOpen) {
+        return (
+          <DialogSurface
+            ref={this.accountDrawerRef}
+            className='accountSelector accountSelectorOpen'
+            modal
+            ariaLabel='Accounts'
+            returnFocusRef={this.accountTriggerRef}
+            onCancel={() => this.store.toggleShowAccounts(false)}
+          >
+            {content}
+          </DialogSurface>
+        )
+      }
+
+      return <div className='accountSelector accountSelectorOpen'>{content}</div>
     }
 
     return (

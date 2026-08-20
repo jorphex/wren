@@ -588,8 +588,8 @@ it('omits explorer access without a configured explorer while preserving hash co
   const view = renderMountedCommand(req, 'sentStatus', commandStore({ explorer: '' }))
 
   await view.user.click(screen.getByRole('button', { name: 'View details' }))
-  expect(screen.queryByRole('button', { name: 'Open Explorer' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Copy Hash' }).disabled).toBe(false)
+  expect(screen.queryByRole('button', { name: 'Open explorer' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Copy hash' }).disabled).toBe(false)
   view.unmount()
 })
 
@@ -636,13 +636,13 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   expect(screen.getByText('Confirmations')).toBeTruthy()
   expect(screen.getByText('2')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Speed Up' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Speed up' })).toBeTruthy()
 
   await view.user.click(screen.getByRole('button', { name: 'View details' }))
-  expect(screen.getByRole('button', { name: 'Open Explorer' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Copy Hash' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Open explorer' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy hash' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Speed Up' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Speed up' })).toBeTruthy()
   expect(screen.queryByLabelText('Show signing status')).toBeNull()
   view.unmount()
 })
@@ -669,7 +669,7 @@ it('shows truthful unconfirmed-submission evidence without replacement actions',
   expect(screen.getByText('Unconfirmed')).toBeTruthy()
   expect(screen.queryByText('Confirmations')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Speed Up' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Speed up' })).toBeNull()
   expect(link.rpc).not.toHaveBeenCalledWith(
     'replaceTransactionRequest',
     expect.anything(),
@@ -678,8 +678,8 @@ it('shows truthful unconfirmed-submission evidence without replacement actions',
   )
 
   await view.user.click(screen.getByRole('button', { name: 'View details' }))
-  expect(screen.getByRole('button', { name: 'Open Explorer' })).toBeTruthy()
-  await view.user.click(screen.getByRole('button', { name: 'Copy Hash' }))
+  expect(screen.getByRole('button', { name: 'Open explorer' })).toBeTruthy()
+  await view.user.click(screen.getByRole('button', { name: 'Copy hash' }))
   expect(screen.getByText('Expected transaction hash copied')).toBeTruthy()
   expect(link.send).toHaveBeenCalledWith('tray:copyTxHash', hash)
   view.unmount()
@@ -696,7 +696,7 @@ it.each(['cancel', 'speed'])(
     link.rpc.mockImplementation((_method, _reference, _kind, callback) => callback(new Error('stale')))
     const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
 
-    await view.user.click(screen.getByRole('button', { name: kind === 'cancel' ? 'Cancel' : 'Speed Up' }))
+    await view.user.click(screen.getByRole('button', { name: kind === 'cancel' ? 'Cancel' : 'Speed up' }))
 
     expect(link.rpc).toHaveBeenCalledWith(
       'replaceTransactionRequest',
@@ -748,6 +748,18 @@ it('renders a declined transaction without monitor chrome', () => {
   expect(screen.queryByLabelText('Show signing status')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Decline' })).toBeNull()
   expect(screen.queryByText('Signature Declined')).toBeNull()
+  command.componentWillUnmount()
+})
+
+it('does not attribute an automatic network-change cancellation to the user', () => {
+  const req = transaction({ status: 'declined', notice: 'Network changed before signing' })
+  const command = new RequestCommand({ req, signingDelay: 0 })
+  command.store = commandStore()
+  renderCommandResult(command, 'renderTxCommand')
+
+  expect(screen.getByText('Transaction canceled')).toBeTruthy()
+  expect(screen.getByText('The network changed before signing. Nothing was signed or sent.')).toBeTruthy()
+  expect(screen.queryByText('Transaction declined')).toBeNull()
   command.componentWillUnmount()
 })
 

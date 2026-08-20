@@ -9,20 +9,6 @@ import {
   RpcEndpointLedger
 } from '../Components'
 
-const isChainFilled = (chain) => {
-  return (
-    chain.id &&
-    chain.id !== chainDefault.id &&
-    chain.name &&
-    chain.name !== chainDefault.name &&
-    chain.symbol &&
-    chain.symbol !== chainDefault.symbol &&
-    chain.nativeCurrencyName &&
-    chain.nativeCurrencyName !== chainDefault.nativeCurrencyName &&
-    chain.rpcUrls[0]
-  )
-}
-
 const getUrl = (urlStr) => {
   try {
     return new URL(urlStr)
@@ -125,31 +111,43 @@ export const Chain = ({
 
   const validateChain = (chain) => {
     if (existingChains.includes(parseInt(chain.id))) {
-      return { valid: false, text: 'A network with this Chain ID already exists' }
+      return { valid: false, text: 'A network with this Chain ID already exists.' }
     }
 
     if (!Number.isSafeInteger(Number(chain.id)) || Number(chain.id) <= 0) {
-      return { valid: false, text: 'Enter the required details' }
+      return { valid: false, text: 'Enter a valid Chain ID.' }
     }
 
-    if (!isChainFilled(chain)) {
-      return { valid: false, text: 'Enter the required details' }
+    if (!chain.name || chain.name === chainDefault.name) {
+      return { valid: false, text: 'Enter a network name.' }
+    }
+
+    if (!chain.symbol || chain.symbol === chainDefault.symbol) {
+      return { valid: false, text: 'Enter a native currency symbol.' }
+    }
+
+    if (!chain.nativeCurrencyName || chain.nativeCurrencyName === chainDefault.nativeCurrencyName) {
+      return { valid: false, text: 'Enter a native currency name.' }
+    }
+
+    if (!chain.rpcUrls[0]) {
+      return { valid: false, text: 'Enter an RPC URL.' }
     }
 
     if (chain.icon && !isValidIcon(chain.icon)) {
-      return { valid: false, text: 'Enter the required details' }
+      return { valid: false, text: 'Enter a valid network icon URL.' }
     }
 
     if (chain.nativeCurrencyIcon && !isValidIcon(chain.nativeCurrencyIcon)) {
-      return { valid: false, text: 'Enter the required details' }
+      return { valid: false, text: 'Enter a valid currency icon URL.' }
     }
 
     if (chain.rpcUrls.some((url) => !isValidRpc(url))) {
-      return { valid: false, text: 'Can’t connect' }
+      return { valid: false, text: 'Enter a valid RPC URL.' }
     }
 
     if (requestReference && chain.rpcUrls.some((url) => getUrl(url)?.protocol !== 'https:')) {
-      return { valid: false, text: 'Use an HTTPS RPC URL' }
+      return { valid: false, text: 'Use an HTTPS RPC URL.' }
     }
 
     if (
@@ -157,7 +155,7 @@ export const Chain = ({
       chain.nativeCurrencyDecimals < 0 ||
       chain.nativeCurrencyDecimals > 255
     ) {
-      return { valid: false, text: 'Enter the required details' }
+      return { valid: false, text: 'Enter decimals from 0 to 255.' }
     }
 
     return { valid: true, text: '' }
@@ -168,15 +166,16 @@ export const Chain = ({
   const endpointStatuses = Object.fromEntries(
     endpoints.map((endpoint, index) => {
       const value = endpointValues[endpoint.id]
+      const parsedUrl = value ? getUrl(value) : undefined
       const invalid =
         (index === 0 && !value) ||
         (Boolean(value) && (requestReference ? getUrl(value)?.protocol !== 'https:' : !isValidRpc(value)))
       return [
         endpoint.id,
         endpointTouched[endpoint.id] && invalid
-          ? requestReference && value
-            ? 'Use an HTTPS RPC URL'
-            : 'Can’t connect'
+          ? requestReference && parsedUrl && parsedUrl.protocol !== 'https:'
+            ? 'Use an HTTPS RPC URL.'
+            : 'Enter a valid RPC URL.'
           : ''
       ]
     })
@@ -235,7 +234,7 @@ export const Chain = ({
             technical
             inputMode='numeric'
             error={duplicateChain}
-            status={duplicateChain ? 'A network with this Chain ID already exists' : ''}
+            status={duplicateChain ? 'A network with this Chain ID already exists.' : ''}
             onChange={setChainId}
           />
           <NetworkEditorField label='Native currency' value={currentSymbol} onChange={setSymbol} />
@@ -245,7 +244,7 @@ export const Chain = ({
             technical
             inputMode='numeric'
             error={decimalsInvalid}
-            status={decimalsInvalid ? 'Enter the required details' : ''}
+            status={decimalsInvalid ? 'Enter decimals from 0 to 255.' : ''}
             onChange={setDecimals}
           />
           <div className='networkEditorWide'>

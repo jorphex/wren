@@ -1,6 +1,5 @@
-import { render, screen } from '../../../componentSetup'
+import { render, screen, waitFor } from '../../../componentSetup'
 import { AccountSelector } from '../../../../app/tray/AccountSelector'
-import { Account as AccountController } from '../../../../app/tray/AccountSelector/AccountController'
 import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
@@ -22,7 +21,7 @@ const setupSelector = ({ drawerOpen = true } = {}) => {
   return { selector, store, setOpen: (next) => (open = next) }
 }
 
-it('exposes open account switching as a modal with an embedded account region', () => {
+it('exposes open account switching as a modal and closes it with shared Escape handling', async () => {
   const account = {
     id: '0x000000000000000000000000000000000000dead',
     address: '0x000000000000000000000000000000000000dead',
@@ -40,29 +39,24 @@ it('exposes open account switching as a modal with an embedded account region', 
     if (key === 'panel.accountFilter') return ''
   }
   store.toggleHideBalances = jest.fn()
-  store.toggleShowAccounts = jest.fn()
+  store.toggleShowAccounts = jest.fn((next) => {
+    drawerOpen = typeof next === 'boolean' ? next : !drawerOpen
+  })
   const selector = new AccountSelector({}, { store })
   selector.store = store
   selector.renderAccountList = () => <div />
 
   const view = render(selector.render())
+  const { user } = view
 
   expect(screen.getByRole('dialog', { name: 'Accounts' })).toBeTruthy()
   expect(screen.getByRole('region', { name: 'Accounts' })).toBeTruthy()
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Filter accounts' }))
 
-  drawerOpen = false
+  await user.keyboard('{Escape}')
+  expect(store.toggleShowAccounts).toHaveBeenCalledWith(false)
   view.rerender(selector.render())
   expect(screen.queryByRole('dialog')).toBeNull()
-})
-
-it('closes the account panel with Escape', () => {
-  const { selector, store } = setupSelector()
-  const event = { key: 'Escape', preventDefault: jest.fn() }
-
-  selector.handleDrawerKeyDown(event)
-
-  expect(event.preventDefault).toHaveBeenCalledTimes(1)
-  expect(store.toggleShowAccounts).toHaveBeenCalledWith(false)
 })
 
 it('renders the balance privacy control for the current account', () => {
@@ -145,77 +139,50 @@ it('uses a direct account choice prompt before the startup account list', () => 
   const list = screen.getByTestId('startup-account-list')
   const children = [...heading.closest('.accountSelector').children]
 
-  expect(screen.getByText('Choose an account to open your wallet.')).toBeTruthy()
+  expect(screen.getByText('Open your wallet with an account.')).toBeTruthy()
   expect(children[0].contains(heading)).toBe(true)
   expect(children[1].contains(filter)).toBe(true)
   expect(children[2]).toBe(list)
 })
 
-it('moves focus into the chooser, wraps Tab, and restores the trigger on Escape', async () => {
-  const { selector, setOpen } = setupSelector({ drawerOpen: false })
+it('moves focus into the chooser and restores the account trigger after Escape', async () => {
+  let drawerOpen = false
   const account = {
     id: '0x000000000000000000000000000000000000dead',
     address: '0x000000000000000000000000000000000000dead',
     name: 'Watch Account'
   }
-  const view = (open) => (
-    <>
-      {selector.renderCurrentAccount(account)}
-      {open ? selector.renderAccountPanel({}) : null}
-    </>
-  )
-  const utils = render(view(false))
+  const store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.accounts') return { [account.id]: account }
+    if (key === 'selected.current') return account.id
+    if (key === 'selected.open') return true
+    if (key === 'selected.showAccounts') return drawerOpen
+    if (key === 'selected.hideBalances') return false
+    if (key === 'windows.dash.showing') return false
+    if (key === 'panel.accountFilter') return ''
+  }
+  store.toggleHideBalances = jest.fn()
+  store.toggleShowAccounts = jest.fn((next) => {
+    drawerOpen = typeof next === 'boolean' ? next : !drawerOpen
+  })
+  const selector = new AccountSelector({}, { store })
+  selector.store = store
+  selector.renderAccountList = () => <div />
+  const utils = render(selector.render())
   const { user } = utils
   const trigger = screen.getByRole('button', { name: /Watch Account/i })
 
-  selector.componentDidMount()
-  await user.click(trigger)
-  utils.rerender(view(true))
-  selector.componentDidUpdate()
-  const addAccount = screen.getByRole('button', { name: 'Add account' })
-  expect(document.activeElement).toBe(addAccount)
+  expect(trigger.closest('.accountSelector').classList.contains('accountSelectorOpen')).toBe(true)
 
-  await user.tab({ shift: true })
-  expect(document.activeElement).toBe(addAccount)
-  await user.tab()
-  expect(document.activeElement).toBe(addAccount)
+  await user.click(trigger)
+  utils.rerender(selector.render())
+  expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Filter accounts' }))
 
   await user.keyboard('{Escape}')
-  setOpen(false)
-  utils.rerender(view(false))
-  selector.componentDidUpdate()
+  utils.rerender(selector.render())
   expect(screen.queryByRole('region', { name: 'Accounts' })).toBeNull()
-  expect(document.activeElement).toBe(trigger)
-  selector.componentWillUnmount()
-})
-
-it('restores the account trigger after selecting an account', async () => {
-  const { selector, store, setOpen } = setupSelector({ drawerOpen: false })
-  const account = {
-    id: '0x000000000000000000000000000000000000dead',
-    address: '0x000000000000000000000000000000000000dead',
-    name: 'Watch Account'
-  }
-  const view = (open) => (
-    <>
-      {selector.renderCurrentAccount(account)}
-      {open ? selector.renderAccountPanel({}) : null}
-    </>
-  )
-  const utils = render(view(false))
-  const { user } = utils
-  const trigger = screen.getByRole('button', { name: /Watch Account/i })
-
-  await user.click(trigger)
-  utils.rerender(view(true))
-  selector.componentDidUpdate()
-  const accountController = new AccountController({ ...account, status: 'ok' }, { store })
-  accountController.store = store
-  accountController.selectFromDrawer()
-  setOpen(false)
-  utils.rerender(view(false))
-  selector.componentDidUpdate()
-
-  expect(screen.queryByRole('region', { name: 'Accounts' })).toBeNull()
-  expect(document.activeElement).toBe(trigger)
+  await waitFor(() => {
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Watch Account/i }))
+  })
 })

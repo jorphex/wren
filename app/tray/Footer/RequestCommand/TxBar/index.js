@@ -25,7 +25,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
         detail: 'Wren is waiting for your signer to sign this transaction.',
         icon: 'sign',
         position: -1,
-        title: 'See signer',
+        title: 'View signer',
         tone: 'pending'
       }
     case 'sending':

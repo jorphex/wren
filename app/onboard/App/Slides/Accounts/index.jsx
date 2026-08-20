@@ -16,7 +16,7 @@ const Chains = ({ setTitle, setProceed }) => {
     <Slide $background={onboardingAccounts}>
       <SlideBody>
         <SlideItem>Connect a hardware wallet, create a local account, or add a watch-only address.</SlideItem>
-        <SlideItem>Select Add account, then choose how to connect it.</SlideItem>
+        <SlideItem>Select Add account, then choose how to add it.</SlideItem>
       </SlideBody>
     </Slide>
   )

@@ -125,16 +125,13 @@ const restoreFocus = (returnFocusRef, previousFocus) => {
   const requested = returnFocusRef?.current
   if (requested?.isConnected) {
     requested.focus?.()
-    return
-  }
-  if (previousFocus?.isConnected && previousFocus !== document.body) {
+  } else if (previousFocus?.isConnected && previousFocus !== document.body) {
     previousFocus.focus?.()
-    return
   }
 
   if (returnFocusRef) {
     queueMicrotask(() => {
-      if (document.activeElement !== document.body) return
+      if (document.activeElement?.isConnected && document.activeElement !== document.body) return
       const deferredTarget = returnFocusRef.current
       if (deferredTarget?.isConnected) deferredTarget.focus?.()
     })

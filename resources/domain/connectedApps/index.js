@@ -5,7 +5,7 @@ import { isWrenOwnedOriginName } from '../origin'
 export const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 
 const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) => {
-  const accessByOrigin = new Map()
+  const accessByHandler = new Map()
   Object.values(permissionsByAccount).forEach((permissions = {}) => {
     Object.values(permissions).forEach((permission) => {
       if (
@@ -17,10 +17,12 @@ const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) =
         return
       }
 
-      accessByOrigin.set(permission.origin, true)
+      // `origin` is display metadata. A handler id is the persisted principal
+      // identity and includes Companion/native source provenance.
+      accessByHandler.set(permission.handlerId, true)
     })
   })
-  return accessByOrigin
+  return accessByHandler
 }
 
 const sessionIsActive = (session = {}) => {
@@ -46,7 +48,7 @@ export function selectConnectedAppGroups({
       Object.entries(origins).forEach(([id, origin]) => {
         if (origin?.chain?.id !== chain.id || isWrenOwnedOriginName(origin?.name)) return
 
-        const durable = permissionAccess.get(origin.name) === true
+        const durable = permissionAccess.get(id) === true
         const connectedNow = chain.on === true && isNetworkConnected(chain) && sessionIsActive(origin.session)
         const expiresAt = origin.session.lastUpdatedAt + RECENT_ORIGIN_TTL
         if (!connectedNow && !durable && expiresAt <= now) return

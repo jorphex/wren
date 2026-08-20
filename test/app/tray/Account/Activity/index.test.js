@@ -144,6 +144,7 @@ it('announces when notification navigation targets cleared history', () => {
 })
 
 it.each([
+  ['canceled', 'Canceled', 'The network changed before signing'],
   ['submitted', 'Submitted', 'Sent to network'],
   ['confirming', 'Confirming', 'Included; waiting for final confirmation'],
   ['replaced', 'Replaced', 'A submitted wallet activity was replaced'],

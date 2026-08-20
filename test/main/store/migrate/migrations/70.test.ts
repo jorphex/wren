@@ -2,8 +2,18 @@ import migrations from '../../../../../main/store/migrate'
 import migration from '../../../../../main/store/migrate/migrations/70'
 import { createState } from '../setup'
 
+const network = (id: number) => ({
+  id,
+  name: `Chain ${id}`,
+  on: true,
+  connection: {
+    endpoints: [{ id: 'rpc-1', on: true, connected: false, current: 'custom', status: 'loading', custom: '' }]
+  }
+})
+
 test('repairs missing and incomplete native-currency rates without replacing valid values', () => {
   const state = createState(69)
+  state.main.networks.ethereum[4153] = network(4153)
   state.main.networksMeta = {
     ethereum: {
       1: { nativeCurrency: { symbol: 'ETH', usd: { price: 3200, change24hr: -1.5 } } },
@@ -27,6 +37,7 @@ test('repairs missing and incomplete native-currency rates without replacing val
 
 test('migrates the reported current-version shape and is idempotent', () => {
   const state = createState(69)
+  state.main.networks.ethereum[4153] = network(4153)
   state.main.networksMeta = {
     ethereum: {
       4153: {

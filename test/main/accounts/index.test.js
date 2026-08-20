@@ -2538,10 +2538,13 @@ describe('#clearRequests', () => {
 
 describe('#rejectUnapprovedRequestsForOriginChain', () => {
   it('rejects only untouched requests for the switching origin and old chain', () => {
+    store.clearActivity()
     const activeAccount = Accounts.current()
     const responses = {
       transaction: jest.fn(),
       sign: jest.fn(),
+      typedData: jest.fn(),
+      permit: jest.fn(),
       walletCalls: jest.fn(),
       retainedWalletCalls: jest.fn()
     }
@@ -2559,6 +2562,21 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
         data: { context: { requestChainId: 1 } }
       }),
       responses.sign
+    )
+    Accounts.addRequest(
+      requestFor('old-typed-data', {
+        type: 'signTypedData',
+        context: { requestChainId: 1, risks: [] }
+      }),
+      responses.typedData
+    )
+    Accounts.addRequest(
+      requestFor('old-permit', {
+        type: 'signErc20Permit',
+        context: { requestChainId: 1, risks: [] },
+        typedMessage: { data: { message: { value: '1' } } }
+      }),
+      responses.permit
     )
     Accounts.addRequest(
       requestFor('old-wallet-calls', {
@@ -2608,18 +2626,44 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
     expect(Object.keys(activeAccount.requests).sort()).toEqual(
       ['already-approved', 'other-chain', 'other-origin'].sort()
     )
+    expect(activeAccount.activeReviewHandlerId).toBe('other-chain')
     expect(responses.transaction).toHaveBeenCalledWith(
-      expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
     )
     expect(responses.sign).toHaveBeenCalledWith(
-      expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
+    )
+    expect(responses.typedData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
+    )
+    expect(responses.permit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
     )
     expect(responses.walletCalls).toHaveBeenCalledWith(
-      expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
     )
     expect(responses.retainedWalletCalls).toHaveBeenCalledWith(
-      expect.objectContaining({ error: { code: 4901, message: expect.stringContaining('chain 1') } })
+      expect.objectContaining({
+        error: { code: 4001, message: expect.stringContaining('route changed before signing') }
+      })
     )
+    expect(store('main.activity')).toEqual(
+      expect.arrayContaining([expect.objectContaining({ origin: request.origin, outcome: 'canceled' })])
+    )
+    expect(store('main.activity')).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ origin: request.origin, outcome: 'declined' })])
+    )
+    store.clearActivity()
   })
 })
 

@@ -57,7 +57,9 @@ const ChainExpanded = ({
     )
   }
 
-  const endpointInvalid = Object.values(endpointStatuses).some((status) => status === 'Can’t connect')
+  const endpointInvalid = Object.values(endpointStatuses).some(
+    (status) => status === 'Enter a valid RPC URL.'
+  )
   const decimals = Number(currentDecimals)
   const formValid =
     currentName.trim() &&
@@ -70,7 +72,7 @@ const ChainExpanded = ({
     const value = endpointValues[endpointId]
     const currentEndpoint = endpoints.find(({ id: currentId }) => currentId === endpointId)
     if (!value || isInvalidCustomTarget(value)) {
-      setEndpointStatuses((statuses) => ({ ...statuses, [endpointId]: 'Can’t connect' }))
+      setEndpointStatuses((statuses) => ({ ...statuses, [endpointId]: 'Enter a valid RPC URL.' }))
       return
     }
 

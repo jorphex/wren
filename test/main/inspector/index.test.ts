@@ -27,7 +27,7 @@ const readOnlyRpc = () => {
   return { requests, send }
 }
 
-test('inspects through configured chain reads without forwarding a pasted JSON-RPC method', async () => {
+test('refuses current-state simulation for a non-latest JSON-RPC block selector', async () => {
   const rpc = readOnlyRpc()
   const result = await inspect(
     {
@@ -50,20 +50,17 @@ test('inspects through configured chain reads without forwarding a pasted JSON-R
       source: 'json-rpc',
       sourceMethod: 'eth_call',
       normalized: { chainId: '0x1', from: sender, to: target, requestedBlock: 'safe' },
-      decode: { status: 'decoded', method: 'transfer' },
-      simulation: { status: 'succeeded', source: 'eth_call' }
+      decode: { status: 'decoded', method: 'transfer' }
     }
   })
-  expect(rpc.requests.length).toBeGreaterThan(0)
-  expect(rpc.requests.every(({ target: chain }) => chain.type === 'ethereum' && chain.id === 1)).toBe(true)
-  expect(rpc.requests.map(({ method }) => method)).not.toContain('eth_sendTransaction')
-  expect(rpc.requests.map(({ method }) => method)).not.toContain('eth_sendRawTransaction')
-  expect(rpc.requests.map(({ method }) => method)).not.toContain('eth_call_safe')
+  expect(rpc.requests).toHaveLength(0)
   if (!result.success || result.inspection.kind === 'typed-data') throw new Error('transaction expected')
+  expect(result.inspection).not.toHaveProperty('simulation')
   expect(result.inspection.evidence).toContainEqual(
     expect.objectContaining({
       kind: 'simulation',
-      reason: expect.stringMatching(/block safe.*not forwarded.*configured-RPC review path/)
+      status: 'unavailable',
+      reason: expect.stringMatching(/does not simulate requested block safe.*no simulation result/i)
     })
   )
 })

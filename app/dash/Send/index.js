@@ -32,7 +32,7 @@ const COPY = Object.freeze({
   close: 'Close',
   chooseAsset: 'Choose an asset',
   chooseContact: 'Choose recipient',
-  chooseAContact: 'Choose a recipient',
+  chooseAContact: 'Choose recipient',
   clearRecipient: 'Clear recipient',
   currentAccount: 'Current account',
   declinedBody: 'You declined this transaction. Nothing was signed or sent.',
@@ -41,7 +41,7 @@ const COPY = Object.freeze({
   errorHeading: 'Transaction failed',
   fee: 'Network fee',
   feeReview: 'Calculated during review',
-  maxNeedsRecipient: 'Enter a recipient to enable Max so we can estimate gas.',
+  maxNeedsRecipient: 'Enter a recipient to use Max; Wren needs it to estimate gas.',
   maxQuoteExpired: 'Maximum-send quote expired. Request a fresh quote.',
   maxQuoteFailed: 'Maximum-send quote unavailable. No amount was kept.',
   noAccount: 'Select an account to send',
@@ -73,7 +73,7 @@ const COPY = Object.freeze({
   reviewFee: 'Wren estimates gas before anything is signed.',
   savedContacts: 'Saved contacts',
   recentRecipients: 'Recent recipients',
-  recentRecipientContext: 'Previously sent from this device · verify the full address',
+  recentRecipientContext: 'Previously used on this device · verify the full address',
   recentRecipientSource: 'Recent recipient · verify the full address',
   searchContacts: 'Search accounts, contacts, and recent recipients',
   searchAssets: 'Search assets',
@@ -100,8 +100,7 @@ const errorCopy = Object.freeze({
     'Wren could not prepare its local Send connection. Close and reopen Send, then try again.',
   'recipient-invalid': COPY.recipientInvalid,
   'recipient-lookup-unavailable': COPY.recipientLookupUnavailable,
-  'sweep-quote-changed':
-    'Balances, fees, or nonce changed. Scan a fresh Sweep; nothing was changed silently.',
+  'sweep-quote-changed': 'Balances, fees, or nonce changed. Scan a fresh Sweep. Nothing was sent.',
   'sweep-quote-expired': 'Sweep quote expired. Scan again before queueing.',
   'validation-failed': 'Wren could not validate this transfer. Check the recipient, amount, and network.',
   'watch-only': COPY.watchOnly
@@ -1046,7 +1045,7 @@ export class Send extends React.Component {
       return (
         <section aria-busy='true' aria-live='polite' className='sendQuotePanel' role='status'>
           <strong>{COPY.quotingMax}</strong>
-          <span>The previous amount was cleared while Wren requests current fee evidence.</span>
+          <span>The previous amount was cleared while Wren refreshed fee evidence.</span>
         </section>
       )
     }
@@ -1070,7 +1069,7 @@ export class Send extends React.Component {
     return (
       <section
         className={`sendQuotePanel ${maxReview ? 'sendQuotePanelReview' : ''}`}
-        aria-label='Safe Max quote'
+        aria-label='Maximum-send quote'
       >
         <div className='sendQuoteHeading'>
           <div>
@@ -1142,7 +1141,7 @@ export class Send extends React.Component {
       return (
         <section className='sendSweepReview' aria-label='Review sweep'>
           <div className='sendSweepWarning' role='alert'>
-            <strong>Sequential, not atomic</strong>
+            <strong>Sequential execution — not atomic</strong>
             <span>
               These transfers are submitted one-by-one. If one fails, earlier transfers stay on-chain and
               later transfers may not run. No bridge or batch contract is used. Wren does not retry
@@ -1795,7 +1794,7 @@ export class Send extends React.Component {
                 : this.state.maxReview
                   ? 'Queue transfer'
                   : this.state.maxQuote
-                    ? 'Review Max send'
+                    ? 'Review maximum send'
                     : canSubmit
                       ? COPY.primaryReady
                       : COPY.primaryDisabled}

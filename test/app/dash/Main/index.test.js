@@ -56,7 +56,7 @@ it('opens the cross-account connected-app view without exposing internal instanc
 
   expect(
     screen.getByRole('button', {
-      name: 'Connected apps Review active connections, retained access, and default networks.'
+      name: 'Connected apps Review active connections, access, and default networks.'
     })
   ).toBeTruthy()
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
@@ -154,7 +154,7 @@ it('reveals a local QR preview with the exact support address on hover', () => {
   const qr = screen.getByRole('img', { name: 'QR code for the support address' })
   expect(qr.getAttribute('data-qr-payload')).toBe(WREN_SUPPORT_ADDRESS)
   expect(screen.getByText(WREN_SUPPORT_ADDRESS)).toBeTruthy()
-  expect(screen.getByText('Support is optional, but always appreciated.')).toBeTruthy()
+  expect(screen.getByText('Support is optional.')).toBeTruthy()
 
   fireEvent.mouseLeave(button.closest('.dashSupportWrenDisclosure'))
   expect(screen.queryByRole('img', { name: 'QR code for the support address' })).toBeNull()

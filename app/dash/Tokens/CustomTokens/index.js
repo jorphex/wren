@@ -192,7 +192,7 @@ class CustomTokens extends React.Component {
                           disabled={removalActive}
                           onClick={() => this.copyAddress(token)}
                         >
-                          {copied ? 'Address Copied' : token.address}
+                          {copied ? 'Address copied' : token.address}
                         </button>
                         <span className='customTokensCopyStatus' role='status' aria-live='polite'>
                           {copied ? `${token.symbol} token address copied` : ''}

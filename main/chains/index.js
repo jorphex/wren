@@ -57,12 +57,14 @@ class ChainConnection extends EventEmitter {
 
     this.active = {
       id: '',
+      generation: 0,
       status: 'off',
       network: '',
       type: '',
       currentTarget: '',
       connected: false
     }
+    this.providerGeneration = 0
 
     this.observer = store.observer(() => {
       const chain = store('main.networks', type, chainId)
@@ -77,11 +79,16 @@ class ChainConnection extends EventEmitter {
       name: endpointId,
       origin: 'wren'
     })
-    this.active.blockMonitor = this._createBlockMonitor(this.active.provider)
+    this.active.blockMonitor = this._createBlockMonitor(this.active.provider, this.active.generation)
   }
 
-  _handleConnection(endpointId) {
-    this._updateStatus(endpointId, 'connected')
+  isActiveProvider(provider, generation) {
+    return this.active.provider === provider && this.active.generation === generation
+  }
+
+  _handleConnection(endpointId, provider, generation) {
+    if (!this.isActiveProvider(provider, generation)) return
+    this._updateStatus(endpointId, 'connected', provider, generation)
     this.emit('connect')
   }
 
@@ -170,11 +177,13 @@ class ChainConnection extends EventEmitter {
     return this.txEstimates(type, chainId, gasPrice, currentSymbol, provider)
   }
 
-  _createBlockMonitor(provider) {
+  _createBlockMonitor(provider, generation) {
     const monitor = new BlockMonitor(provider)
     const allowEip1559 = supportsFeeHistory(this.chainId)
+    const isCurrent = () => this.isActiveProvider(provider, generation)
 
     monitor.on('data', async (block) => {
+      if (!isCurrent()) return
       log.debug(`Updating to block ${parseInt(block.number)} for chain ${parseInt(this.chainId)}`)
 
       let feeMarket = null
@@ -185,6 +194,7 @@ class ChainConnection extends EventEmitter {
         try {
           // only consider this an EIP-1559 block if fee market can be loaded
           const feeHistory = await gasMonitor.getFeeHistory(20, [10, 60])
+          if (!isCurrent()) return
           feeMarket = this.gasCalculator.calculateGas(feeHistory)
 
           this.chainConfig.setHardforkByBlockNumber(block.number)
@@ -200,6 +210,7 @@ class ChainConnection extends EventEmitter {
       }
 
       try {
+        if (!isCurrent()) return
         if (feeMarket) {
           const gasPrice = BigInt(feeMarket.maxBaseFeePerGas) + BigInt(feeMarket.maxPriorityFeePerGas)
 
@@ -207,6 +218,7 @@ class ChainConnection extends EventEmitter {
           store.setGasDefault(this.type, this.chainId, 'fast')
         } else {
           const gas = await gasMonitor.getGasPrices()
+          if (!isCurrent()) return
           const customLevel = store('main.networksMeta', this.type, this.chainId, 'gas.price.levels.custom')
 
           store.setGasPrices(this.type, this.chainId, {
@@ -223,11 +235,14 @@ class ChainConnection extends EventEmitter {
 
           this.feeEstimatesUSD(parseInt(this.chainId), estimatedGasPrice, createRpcProvider(provider)).then(
             (samples) => {
-              store.addSampleGasCosts(this.type, this.chainId, samples)
+              if (isCurrent()) {
+                store.addSampleGasCosts(this.type, this.chainId, samples)
+              }
             }
           )
         }
 
+        if (!isCurrent()) return
         store.setGasFees(this.type, this.chainId, feeMarket)
         store.setBlockHeight(this.chainId, parseInt(block.number, 16))
 
@@ -240,7 +255,8 @@ class ChainConnection extends EventEmitter {
     return monitor
   }
 
-  update(endpointId) {
+  update(endpointId, provider, generation) {
+    if (provider && !this.isActiveProvider(provider, generation)) return
     const network = store('main.networks', this.type, this.chainId)
 
     if (!network) {
@@ -255,8 +271,9 @@ class ChainConnection extends EventEmitter {
     store.setEndpoint(this.type, this.chainId, endpointId, details)
   }
 
-  getNetwork(provider, cb) {
+  getNetwork(provider, isCurrent, cb) {
     provider.sendAsync({ jsonrpc: '2.0', method: 'eth_chainId', params: [], id: 1 }, (err, response) => {
+      if (!isCurrent()) return
       try {
         response.result =
           !err && response && !response.error ? parseInt(response.result, 'hex').toString() : ''
@@ -271,7 +288,8 @@ class ChainConnection extends EventEmitter {
     provider.sendAsync({ jsonrpc: '2.0', method: 'web3_clientVersion', params: [], id: 1 }, cb)
   }
 
-  _updateStatus(endpointId, status) {
+  _updateStatus(endpointId, status, provider, generation) {
+    if (provider && !this.isActiveProvider(provider, generation)) return
     log.debug('Chains.updateStatus', { endpointId, status })
 
     this.active.status = status
@@ -283,10 +301,10 @@ class ChainConnection extends EventEmitter {
   resetConnection(status = 'off', target = '', endpointId = this.active.id) {
     log.debug('resetConnection', { endpointId, status, endpoint: summarizeRpcEndpoint(target) })
 
-    this.killProvider(this.active.provider)
-    this.stopBlockMonitor()
+    const previous = this.active
     this.active = {
       id: endpointId || '',
+      generation: ++this.providerGeneration,
       provider: null,
       blockMonitor: null,
       connected: false,
@@ -296,6 +314,8 @@ class ChainConnection extends EventEmitter {
       status,
       latencyMs: undefined
     }
+    this.killProvider(previous.provider)
+    this.stopBlockMonitor(previous.blockMonitor)
   }
 
   killProvider(provider) {
@@ -307,13 +327,13 @@ class ChainConnection extends EventEmitter {
     }
   }
 
-  stopBlockMonitor() {
+  stopBlockMonitor(monitor = this.active.blockMonitor) {
     log.debug('stopBlockMonitor', { chainId: this.chainId, endpointId: this.active.id })
 
-    if (this.active.blockMonitor) {
-      this.active.blockMonitor.stop()
-      this.active.blockMonitor.removeAllListeners()
-      this.active.blockMonitor = null
+    if (monitor) {
+      monitor.stop()
+      monitor.removeAllListeners()
+      if (this.active.blockMonitor === monitor) this.active.blockMonitor = null
     }
   }
 
@@ -387,24 +407,31 @@ class ChainConnection extends EventEmitter {
     const startedAt = Date.now()
     this._createProvider(target, endpoint.id)
     const activeProvider = this.active.provider
-    this.update(endpoint.id)
+    const generation = this.active.generation
+    const isCurrent = () => this.isActiveProvider(activeProvider, generation)
+    this.update(endpoint.id, activeProvider, generation)
 
     const failover = (status) => {
-      if (this.active.id !== endpoint.id) return
+      if (!isCurrent()) return
       store.setEndpoint(this.type, this.chainId, endpoint.id, {
         connected: false,
         status,
         latencyMs: undefined
       })
-      this.killProvider(this.active.provider)
-      this.stopBlockMonitor()
+      const failedProvider = this.active.provider
+      const failedMonitor = this.active.blockMonitor
       this.active.provider = null
+      this.active.connected = false
+      this.active.generation = ++this.providerGeneration
+      this.killProvider(failedProvider)
+      this.stopBlockMonitor(failedMonitor)
       this.connectEndpoint(endpoints, index + 1, failoverFrom || endpoint.id)
     }
 
     activeProvider.on('connect', () => {
-      if (this.active.id !== endpoint.id) return
-      this.getNetwork(activeProvider, (err, response) => {
+      if (!isCurrent()) return
+      this.getNetwork(activeProvider, isCurrent, (err, response) => {
+        if (!isCurrent()) return
         if (err) return failover('error')
         this.active.network = response && !response.error ? response.result : ''
         if (!this.active.network || this.active.network !== this.chainId) return failover('chain mismatch')
@@ -415,16 +442,23 @@ class ChainConnection extends EventEmitter {
         if (failoverFrom) {
           this.emit('failover', { from: failoverFrom, to: endpoint.id, chainId: this.chainId })
         }
-        this._handleConnection(endpoint.id)
+        this._handleConnection(endpoint.id, activeProvider, generation)
       })
     })
     activeProvider.on('close', () => failover('disconnected'))
     activeProvider.on('status', (status) => {
+      if (!isCurrent()) return
       if (['disconnected', 'error'].includes(status)) return failover(status)
-      if (this.active.status !== status && status !== 'connected') this._updateStatus(endpoint.id, status)
+      if (this.active.status !== status && status !== 'connected') {
+        this._updateStatus(endpoint.id, status, activeProvider, generation)
+      }
     })
-    activeProvider.on('data', (data) => this.emit('data', data))
-    activeProvider.on('error', (err) => this.emit('error', err))
+    activeProvider.on('data', (data) => {
+      if (isCurrent()) this.emit('data', data)
+    })
+    activeProvider.on('error', (err) => {
+      if (isCurrent()) this.emit('error', err)
+    })
   }
 
   close(update = true, removeObserver = false) {
@@ -432,11 +466,11 @@ class ChainConnection extends EventEmitter {
 
     if (removeObserver && this.observer) this.observer.remove()
 
-    const endpointId = this.active.id
-    this.killProvider(this.active.provider)
-    this.stopBlockMonitor()
+    const previous = this.active
+    const endpointId = previous.id
     this.active = {
       id: endpointId || '',
+      generation: ++this.providerGeneration,
       provider: null,
       blockMonitor: null,
       connected: false,
@@ -446,6 +480,8 @@ class ChainConnection extends EventEmitter {
       status: update ? 'loading' : 'off',
       latencyMs: undefined
     }
+    this.killProvider(previous.provider)
+    this.stopBlockMonitor(previous.blockMonitor)
 
     if (update && endpointId) {
       this.update(endpointId)
@@ -454,7 +490,16 @@ class ChainConnection extends EventEmitter {
 
   send(payload, res) {
     if (this.active.provider && this.active.connected) {
+      const activeProvider = this.active.provider
+      const generation = this.active.generation
       this.active.provider.sendAsync(payload, (err, result) => {
+        if (!this.isActiveProvider(activeProvider, generation)) {
+          return resError(
+            { message: `Wren is not connected to chain ${this.chainId}`, code: 4901 },
+            payload,
+            res
+          )
+        }
         if (err) return resError(err, payload, res)
         res(result)
       })

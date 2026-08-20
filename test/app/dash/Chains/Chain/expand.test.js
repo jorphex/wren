@@ -148,9 +148,22 @@ test('keeps an invalid RPC local and marks the field', () => {
   fireEvent.change(rpc, { target: { value: 'not-a-url' } })
   fireEvent.blur(rpc)
 
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Can’t connect' })).toBeTruthy()
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Enter a valid RPC URL.' })).toBeTruthy()
   expect(rpc.getAttribute('aria-invalid')).toBe('true')
   expect(link.send).not.toHaveBeenCalledWith('tray:action', 'setEndpointUrl', expect.anything())
+})
+
+test('distinguishes a wrong-network RPC from a connection failure', () => {
+  const mismatchedConnection = {
+    endpoints: connection.endpoints.map((endpoint, index) =>
+      index === 0 ? { ...endpoint, connected: false, status: 'chain mismatch' } : endpoint
+    )
+  }
+
+  render(<Chain view='expanded' {...chain} connection={mismatchedConnection} />)
+
+  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Wrong network' })).toBeTruthy()
+  expect(screen.getByLabelText('RPC URL 1').getAttribute('aria-invalid')).toBe('true')
 })
 
 test('marks an empty fallback endpoint invalid without changing persisted state', () => {

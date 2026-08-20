@@ -40,7 +40,7 @@ const AddNewItemButton = ({ view, req }) => {
         <div className='newAccountIcon'>
           <Icon name='add' size={16} />
         </div>
-        Add New {itemName(view)}
+        Add {itemName(view).toLowerCase()}
       </button>
     </div>
   )

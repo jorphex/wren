@@ -227,7 +227,7 @@ class AddAddress extends React.Component {
                         disabled={!normalizeInput(address) || resolvingEnsName || creating}
                         onClick={() => this.create()}
                       >
-                        Create
+                        Add watch account
                       </button>
                     </>
                   ) : (
@@ -268,7 +268,7 @@ class AddAddress extends React.Component {
                   ) : creating ? (
                     <>
                       <div role='status' className='addAccountItemOptionTitle'>
-                        Adding watch account...
+                        Adding watch account…
                       </div>
                     </>
                   ) : status === 'Successful' ? (

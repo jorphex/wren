@@ -141,6 +141,100 @@ it('rejects a colliding managed Deploy principal before provider admission', asy
   expect(provider.sendTransaction).not.toHaveBeenCalled()
 })
 
+it('does not move the managed Deploy origin while another-chain deployment awaits review', async () => {
+  const otherDraft = { ...draft, chainId: 10 }
+  ;(provider.connection.connections.ethereum as Record<number, unknown>)[10] = {
+    chainConfig: { id: 10 },
+    primary: { connected: true }
+  }
+  const originalStore = (store as unknown as jest.Mock).getMockImplementation()
+  ;(store as unknown as jest.Mock).mockImplementation((...path: Array<string | number>) => {
+    if (path.join('.') === `main.origins.${originId}`) {
+      return {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      }
+    }
+    if (path.join('.') === 'main.accounts') {
+      return {
+        [account]: {
+          requests: {
+            pendingDeployment: {
+              type: 'transaction',
+              origin: originId,
+              status: 'pending',
+              data: { chainId: '0x1' }
+            }
+          }
+        }
+      }
+    }
+    if (path.join('.') === 'main.networks.ethereum.10') return { id: 10, on: true }
+    if (path.join('.') === 'main.networksMeta.ethereum.10.nativeCurrency.decimals') return 18
+    return originalStore?.(...path)
+  })
+
+  const prepared = await deployment.prepare(otherDraft)
+  if (!prepared.success) throw new Error(prepared.error)
+  await expect(
+    deployment.queue({ inspectionId: prepared.inspection.id, draft: otherDraft })
+  ).resolves.toEqual({
+    success: false,
+    error: 'deployment-pending'
+  })
+  expect(actions.addOriginRequest).not.toHaveBeenCalled()
+  expect(actions.switchOriginChain).not.toHaveBeenCalled()
+  expect(provider.sendTransaction).not.toHaveBeenCalled()
+})
+
+it('rejects another-chain deployment when a stale origin route already matches its target', async () => {
+  const otherDraft = { ...draft, chainId: 137 }
+  ;(provider.connection.connections.ethereum as Record<number, unknown>)[137] = {
+    chainConfig: { id: 137 },
+    primary: { connected: true }
+  }
+  const originalStore = (store as unknown as jest.Mock).getMockImplementation()
+  ;(store as unknown as jest.Mock).mockImplementation((...path: Array<string | number>) => {
+    if (path.join('.') === `main.origins.${originId}`) {
+      return {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 137 }
+      }
+    }
+    if (path.join('.') === 'main.accounts') {
+      return {
+        [account]: {
+          requests: {
+            pendingDeployment: {
+              type: 'transaction',
+              origin: originId,
+              status: 'pending',
+              data: { chainId: '0x1' }
+            }
+          }
+        }
+      }
+    }
+    if (path.join('.') === 'main.networks.ethereum.137') return { id: 137, on: true }
+    if (path.join('.') === 'main.networksMeta.ethereum.137.nativeCurrency.decimals') return 18
+    return originalStore?.(...path)
+  })
+
+  const prepared = await deployment.prepare(otherDraft)
+  if (!prepared.success) throw new Error(prepared.error)
+  await expect(
+    deployment.queue({ inspectionId: prepared.inspection.id, draft: otherDraft })
+  ).resolves.toEqual({
+    success: false,
+    error: 'deployment-pending'
+  })
+  expect(actions.addOriginRequest).not.toHaveBeenCalled()
+  expect(actions.switchOriginChain).not.toHaveBeenCalled()
+  expect(provider.sendTransaction).not.toHaveBeenCalled()
+})
+
 it('maps private provider admission failures to a bounded queue error', async () => {
   const prepared = await deployment.prepare(draft)
   if (!prepared.success) throw new Error(prepared.error)

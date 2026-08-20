@@ -240,8 +240,8 @@ it('chooses a saved contact from the recipient field', async () => {
   })
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
-  setDashStep(store, 'contactPicker', 'Choose a recipient')
-  expect(screen.getByRole('region', { name: 'Choose a recipient' })).toBeTruthy()
+  setDashStep(store, 'contactPicker', 'Choose recipient')
+  expect(screen.getByRole('region', { name: 'Choose recipient' })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: /Garden Friend/ }))
   closeDashStep(store)
 
@@ -266,7 +266,7 @@ it('lists active accounts and identifies the current recipient account', async (
   })
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
-  setDashStep(store, 'contactPicker', 'Choose a recipient')
+  setDashStep(store, 'contactPicker', 'Choose recipient')
 
   expect(screen.getByText('Active accounts')).toBeTruthy()
   expect(screen.getByRole('button', { name: /Garden/ }).textContent).toContain('Current account')
@@ -291,7 +291,7 @@ it('keeps recent recipients opt-in and separate from saved identities', () => {
   })
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
-  setDashStep(store, 'contactPicker', 'Choose a recipient')
+  setDashStep(store, 'contactPicker', 'Choose recipient')
 
   expect(screen.queryByText('Recent recipients')).toBeNull()
   expect(screen.queryByText(secondRecipient)).toBeNull()
@@ -323,7 +323,7 @@ it('shows confirmed recent recipients with full-address provenance and canonical
   })
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose recipient' }))
-  setDashStep(store, 'contactPicker', 'Choose a recipient')
+  setDashStep(store, 'contactPicker', 'Choose recipient')
 
   expect(document.activeElement).toBe(
     screen.getByPlaceholderText('Search accounts, contacts, and recent recipients')
@@ -332,7 +332,7 @@ it('shows confirmed recent recipients with full-address provenance and canonical
   const recent = screen.getByText('Recent recipients').closest('.sendRecentRecipients')
   expect(within(recent).getAllByText(secondRecipient)).toHaveLength(1)
   expect(within(recent).queryByText(account)).toBeNull()
-  expect(within(recent).getByText('Previously sent from this device · verify the full address')).toBeTruthy()
+  expect(within(recent).getByText('Previously used on this device · verify the full address')).toBeTruthy()
 
   fireEvent.click(within(recent).getByRole('button', { name: new RegExp(secondRecipient) }))
   closeDashStep(store)
@@ -472,7 +472,7 @@ it('uses the main-process maximum and blocks an amount above the stored balance'
 
   expect(screen.getByRole('button', { name: 'Use Max' }).disabled).toBe(true)
   expect(screen.getByText('Available: 1.00 ETH')).toBeTruthy()
-  expect(screen.getByText('Enter a recipient to enable Max so we can estimate gas.')).toBeTruthy()
+  expect(screen.getByText('Enter a recipient to use Max; Wren needs it to estimate gas.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Use Max' }).getAttribute('aria-describedby')).toBe(
     'sendMaxReason'
   )
@@ -533,7 +533,7 @@ it('clears stale native amount while quoting, exposes exact reserve evidence, an
   expect(screen.getByText('Maximum sendable')).toBeTruthy()
   expect(screen.getByText('42000900000000 wei')).toBeTruthy()
   expect(screen.getByText('900000000 wei')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Review Max send' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review maximum send' }))
   expect(queueSend).not.toHaveBeenCalled()
   expect(screen.getByText('Review maximum send')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
@@ -629,8 +629,8 @@ it('trusts a valid bound native Max quote over a stale lower cached scanner bala
   fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   await screen.findByText('Maximum sendable')
   expect(screen.queryByText('Amount exceeds available balance')).toBeNull()
-  expect(screen.getByRole('button', { name: 'Review Max send' }).disabled).toBe(false)
-  fireEvent.click(screen.getByRole('button', { name: 'Review Max send' }))
+  expect(screen.getByRole('button', { name: 'Review maximum send' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Review maximum send' }))
   fireEvent.click(screen.getByRole('button', { name: 'Queue transfer' }))
   await waitFor(() =>
     expect(queueSend).toHaveBeenCalledWith(
@@ -707,7 +707,7 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
       includeNative: false
     })
   )
-  expect(await screen.findByText('Sequential, not atomic')).toBeTruthy()
+  expect(await screen.findByText('Sequential execution — not atomic')).toBeTruthy()
   expect(screen.getByText(token)).toBeTruthy()
   expect(screen.getByText('100000000')).toBeTruthy()
   expect(screen.getByText(/No bridge or batch contract is used/i)).toBeTruthy()
@@ -746,7 +746,7 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
   link.rpc.mockImplementationOnce((method, request, callback) => callback(null))
   fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
   expect(screen.queryByText('Sweep changed; close this review and create a fresh Sweep.')).toBeNull()
-  expect(screen.queryByText('Sequential, not atomic')).toBeNull()
+  expect(screen.queryByText('Sequential execution — not atomic')).toBeNull()
   expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
   expect(quoteSweep).toHaveBeenCalledTimes(1)
 })
@@ -818,11 +818,11 @@ it('clears a consumed Sweep review after any queue failure', async () => {
   fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
   fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
-  await screen.findByText('Sequential, not atomic')
+  await screen.findByText('Sequential execution — not atomic')
   fireEvent.click(screen.getByRole('button', { name: 'Queue 1 transfer' }))
 
   await waitFor(() => expect(queueSweep).toHaveBeenCalledTimes(1))
-  await waitFor(() => expect(screen.queryByText('Sequential, not atomic')).toBeNull())
+  await waitFor(() => expect(screen.queryByText('Sequential execution — not atomic')).toBeNull())
   expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
 })
 
@@ -854,7 +854,7 @@ it('masks Sweep amounts and encoded calldata and disables amount copy under bala
   fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
   fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
-  await screen.findByText('Sequential, not atomic')
+  await screen.findByText('Sequential execution — not atomic')
 
   expect(screen.queryByText('100000000')).toBeNull()
   expect(screen.queryByText(/a9059cbb-secret-amount/)).toBeNull()
@@ -901,7 +901,7 @@ it('ignores a stale Sweep quote after selection changes', async () => {
       }
     })
   )
-  expect(screen.queryByText('Sequential, not atomic')).toBeNull()
+  expect(screen.queryByText('Sequential execution — not atomic')).toBeNull()
   expect(queueSweep).not.toHaveBeenCalled()
 })
 

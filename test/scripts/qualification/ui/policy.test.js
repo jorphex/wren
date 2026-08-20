@@ -208,7 +208,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   })
   expect(addressQrReviews).toHaveLength(6)
   expect(addressQrReviews.every(({ ready }) => ready === '.accountAddressQrPopover')).toBe(true)
-  expect(addressQrReviews.every(({ requiredControls }) => requiredControls.join(',') === 'Close')).toBe(true)
+  expect(addressQrReviews.every(({ requiredControls }) => requiredControls === undefined)).toBe(true)
   expect(
     addressQrReviews.every(({ layoutExpectations }) =>
       layoutExpectations.some(
@@ -592,7 +592,7 @@ it('keeps the custom-token action present in full and short dashboard geometry',
     const state = fixtureFor(scenario)
     expect(state.windows.dash.nav).toEqual([{ view: 'tokens', data: {} }])
     expect(state.main.tokens).toEqual({ custom: [], known: {} })
-    expect(scenario.requiredControls).toEqual(['Add New Token'])
+    expect(scenario.requiredControls).toEqual(['Add token'])
   }
 })
 
@@ -707,7 +707,7 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
   expect(monitor).toMatchObject({
     action: { type: 'clickText', text: 'Stop monitoring' },
     expectedInitialFocus: 'Keep monitoring',
-    requiredControls: ['Keep monitoring', 'Stop monitoring and continue requests']
+    requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests']
   })
 })
 

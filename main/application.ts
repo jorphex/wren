@@ -38,7 +38,10 @@ import walletCallBatchLedger from './provider/walletCallLedger'
 import { showWalletCallStatus } from './provider/walletCallStatusView'
 import { applyAccountPermissionRendererAction } from './provider/accountPermissionActions'
 import { applyDappGuardrailRendererAction } from './provider/dappGuardrailActions'
-import { applyOriginChainRendererAction } from './provider/originChainActions'
+import {
+  applyNetworkRouteRendererAction,
+  applyOriginChainRendererAction
+} from './provider/originChainActions'
 import { handleRenderer, onRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
@@ -727,7 +730,18 @@ onRenderer('tray:action', (e, action, ...args) => {
       return applyOriginChainRendererAction(args, {
         getOrigin: (originId) => store('main.origins', originId),
         getChain: (chainId) => store('main.networks.ethereum', chainId),
+        rejectUnapprovedRequestsForOriginChain: (originId, chainId) =>
+          accounts.rejectUnapprovedRequestsForOriginChain(originId, chainId),
         mutate: (originId, chainId, type) => storeAction(originId, chainId, type)
+      })
+    }
+    if (action === 'activateNetwork' || action === 'removeNetwork') {
+      return applyNetworkRouteRendererAction(action, args, {
+        getOrigins: () => store('main.origins') || {},
+        getNetworks: () => store('main.networks.ethereum') || {},
+        rejectUnapprovedRequestsForOriginChain: (originId, chainId) =>
+          accounts.rejectUnapprovedRequestsForOriginChain(originId, chainId),
+        mutate: (...mutationArgs) => storeAction(...mutationArgs)
       })
     }
     return storeAction(...args)

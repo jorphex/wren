@@ -22,6 +22,7 @@ import { Cluster } from '../../../../resources/Components/Cluster'
 
 import link from '../../../../resources/link'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
+import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 
 let restorePreviewFocus = false
 
@@ -347,7 +348,10 @@ export class Requests extends React.Component {
             } else if (req.type === 'signErc20Permit') {
               const chainId = req.typedMessage.data.domain.chainId
               const chainName = this.store('main.networks.ethereum', chainId, 'name')
-              const { primaryColor, icon } = this.store('main.networksMeta.ethereum', chainId)
+              const { primaryColor, icon } = safeNetworkMetadata(
+                this.store('main.networksMeta.ethereum', chainId),
+                this.store('main.networks.ethereum', chainId)
+              )
 
               return (
                 <RequestItem
@@ -438,8 +442,11 @@ export class Requests extends React.Component {
               const {
                 primaryColor,
                 icon,
-                nativeCurrency: { symbol: currentSymbol = '?' }
-              } = this.store('main.networksMeta.ethereum', chainId)
+                nativeCurrency: { symbol: currentSymbol }
+              } = safeNetworkMetadata(
+                this.store('main.networksMeta.ethereum', chainId),
+                this.store('main.networks.ethereum', chainId)
+              )
               const originName = getOriginDisplayName(this.store('main.origins', req.origin, 'name'))
               return (
                 <RequestItem

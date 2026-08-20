@@ -17,7 +17,7 @@ it('allows a user to enter an address or ENS name', async () => {
 
   expect(screen.getByText('Enter an address or ENS name')).toBeTruthy()
   expect(screen.getByRole('textbox')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Create' }).disabled).toBe(true)
+  expect(screen.getByRole('button', { name: 'Add watch account' }).disabled).toBe(true)
 })
 
 it('adds an account by address', async () => {
@@ -97,7 +97,7 @@ it('does not report success before watch-account creation completes', async () =
   await enterText(address)
   await clickCreate()
 
-  expect(screen.getByRole('status').textContent).toBe('Adding watch account...')
+  expect(screen.getByRole('status').textContent).toBe('Adding watch account…')
   expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
 })
 
@@ -173,6 +173,6 @@ function setupComponent() {
   return {
     user,
     enterText: async (text) => user.type(screen.getByLabelText('Enter an address or ENS name'), text),
-    clickCreate: async () => user.click(screen.getByRole('button', { name: 'Create' }))
+    clickCreate: async () => user.click(screen.getByRole('button', { name: 'Add watch account' }))
   }
 }

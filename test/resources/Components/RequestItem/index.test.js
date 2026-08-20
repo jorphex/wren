@@ -155,3 +155,27 @@ it('presents a declined request as neutral and inactive rather than failed', () 
   expect(details.querySelector('[data-icon="close"]')).toBeTruthy()
   expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
 })
+
+it.each([
+  ['transaction', 'Transaction canceled.'],
+  ['sign', 'Request canceled.']
+])('presents an automatic %s cancellation truthfully', (type, outcome) => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      req={{
+        created: Date.now(),
+        handlerId,
+        status: 'declined',
+        type,
+        notice: 'Network changed before signing'
+      }}
+      title='Queued request'
+    />
+  )
+
+  expect(screen.getByRole('alert').textContent).toBe(
+    `${outcome} The network changed before signing. Nothing was signed or sent.`
+  )
+})

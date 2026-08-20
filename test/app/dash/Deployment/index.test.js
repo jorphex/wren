@@ -310,7 +310,7 @@ it.each(['queue-unavailable', 'inspection-expired', 'inspection-unavailable'])(
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toBe(
-      'Could not queue native review. Nothing was signed or broadcast. Run Check deployment again.'
+      'Could not queue native review. Nothing was signed or broadcast. Run “Check deployment” again.'
     )
     expect(document.activeElement).toBe(alert)
     expect(screen.queryByText('Check results')).toBeNull()
@@ -318,6 +318,18 @@ it.each(['queue-unavailable', 'inspection-expired', 'inspection-unavailable'])(
     expect(link.send).not.toHaveBeenCalled()
   }
 )
+
+it('explains when a deployment is already awaiting review on another network', async () => {
+  queueDeployment.mockResolvedValue({ success: false, error: 'deployment-pending' })
+  const { user } = render(<Deployment {...props()} />)
+  fillDraft()
+  await user.click(screen.getByRole('button', { name: 'Check deployment' }))
+  await user.click(await screen.findByRole('button', { name: 'Review deployment' }))
+
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'A deployment is already waiting for review on another network. Finish or decline it, then check this deployment again.'
+  )
+})
 
 it('connects every field to helper text and exposes polite busy status', async () => {
   let resolvePreparation

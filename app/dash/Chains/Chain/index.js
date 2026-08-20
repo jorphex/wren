@@ -4,6 +4,7 @@ import Restore from 'react-restore'
 import ChainPreview from './ChainPreview'
 import ChainExpanded from './ChainExpanded'
 import { Chain } from './ChainNew'
+import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 
 class ChainWrapper extends React.Component {
   renderNew() {
@@ -56,7 +57,7 @@ class ChainWrapper extends React.Component {
       icon,
       nativeCurrencyIcon
     } = this.props
-    const { primaryColor } = this.store('main.networksMeta.ethereum', id)
+    const { primaryColor } = safeNetworkMetadata(this.store('main.networksMeta.ethereum', id), this.props)
     const price = this.store('main.networksMeta.ethereum', id, 'nativeCurrency.usd.price') || '?'
     return (
       <ChainExpanded
@@ -81,7 +82,7 @@ class ChainWrapper extends React.Component {
 
   renderPreview() {
     const { id, name, type, symbol, filter, isTestnet, on, explorer, icon } = this.props
-    const { primaryColor } = this.store('main.networksMeta.ethereum', id)
+    const { primaryColor } = safeNetworkMetadata(this.store('main.networksMeta.ethereum', id), this.props)
     const price = this.store('main.networksMeta.ethereum', id, 'nativeCurrency.usd.price') || '?'
 
     if (

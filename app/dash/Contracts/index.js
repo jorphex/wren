@@ -56,7 +56,7 @@ export class Contracts extends React.Component {
     return (
       <main className='contracts cardShow'>
         <header className='contractsHeader'>
-          <span>CONTRACT TOOLS</span>
+          <span>Contract tools</span>
           <h1>Contracts</h1>
           <p>{description}</p>
         </header>

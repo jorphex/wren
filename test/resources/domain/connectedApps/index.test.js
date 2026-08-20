@@ -1,4 +1,8 @@
-import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN } from '../../../../resources/domain/origin'
+import {
+  FRAME_SEND_ORIGIN,
+  WREN_DEPLOY_ORIGIN,
+  originIdForInvoker
+} from '../../../../resources/domain/origin'
 import { createAccountPermission } from '../../../../main/provider/permissions'
 import {
   RECENT_ORIGIN_TTL,
@@ -26,10 +30,10 @@ const origin = (name, chainId, session = {}) => ({
   }
 })
 const account = '0x1111111111111111111111111111111111111111'
-const permission = (name, active = true) =>
+const permission = (handlerId, originName = handlerId, active = true) =>
   active
-    ? createAccountPermission({ account, chains: [1, 10], handlerId: name, origin: name, now: 1 })
-    : { handlerId: name, origin: name, provider: false }
+    ? createAccountPermission({ account, chains: [1, 10], handlerId, origin: originName, now: 1 })
+    : { handlerId, origin: originName, provider: false }
 
 it('retains expired origins with durable permissions across accounts and disabled networks', () => {
   const lastUpdatedAt = now - RECENT_ORIGIN_TTL - 1
@@ -43,8 +47,8 @@ it('retains expired origins with durable permissions across accounts and disable
     networks: { 1: chain(1), 10: chain(10, false, true) },
     origins: { durable: durable, expired: origin('expired.example', 1, durable.session) },
     permissions: {
-      accountA: { durable: permission('durable.example') },
-      accountB: { duplicate: permission('durable.example', false) }
+      accountA: { durable: permission('durable', 'durable.example') },
+      accountB: { duplicate: permission('durable', 'durable.example', false) }
     },
     now
   })
@@ -79,7 +83,7 @@ it('treats an explicit disabled permission as transient activity rather than a d
   const groups = selectConnectedAppGroups({
     networks: { 1: chain(1, true, false) },
     origins: { denied: origin('denied.example', 1) },
-    permissions: { account: { denied: permission('denied.example', false) } },
+    permissions: { account: { denied: permission('denied', 'denied.example', false) } },
     now
   })
 
@@ -102,8 +106,8 @@ it('hides managed and internal origins even when their sessions are recent', () 
     },
     permissions: {
       account: {
-        managed: permission(FRAME_SEND_ORIGIN),
-        deployment: permission(WREN_DEPLOY_ORIGIN)
+        managed: permission('managed', FRAME_SEND_ORIGIN),
+        deployment: permission('deployment', WREN_DEPLOY_ORIGIN)
       }
     },
     now
@@ -111,6 +115,55 @@ it('hides managed and internal origins even when their sessions are recent', () 
 
   expect(groups).toHaveLength(1)
   expect(groups[0].connected.map(({ id }) => id)).toEqual(['external'])
+})
+
+it('keeps durable Companion access bound to its source-specific origin id after another same-URL peer is revoked', () => {
+  const displayUrl = 'https://same-url.example'
+  const first = originIdForInvoker(displayUrl, {
+    provenance: 'companion',
+    sourceId: 'A'.repeat(43)
+  })
+  const second = originIdForInvoker(displayUrl, {
+    provenance: 'companion',
+    sourceId: 'B'.repeat(43)
+  })
+  const expiredAt = now - RECENT_ORIGIN_TTL - 1
+  const companionOrigin = (sourceId) => ({
+    ...origin(displayUrl, 1, { startedAt: expiredAt - 1, lastUpdatedAt: expiredAt, endedAt: expiredAt }),
+    provenance: 'companion',
+    sourceId
+  })
+  const permissions = {
+    account: {
+      [first]: permission(first, displayUrl),
+      [second]: permission(second, displayUrl)
+    }
+  }
+
+  expect(
+    selectConnectedAppGroups({
+      networks: { 1: chain(1, false, false) },
+      origins: { [first]: companionOrigin('A'.repeat(43)), [second]: companionOrigin('B'.repeat(43)) },
+      permissions,
+      now
+    })[0]
+      .disconnected.map(({ id, durable }) => [id, durable])
+      .sort()
+  ).toEqual(
+    [
+      [first, true],
+      [second, true]
+    ].sort()
+  )
+
+  expect(
+    selectConnectedAppGroups({
+      networks: { 1: chain(1, false, false) },
+      origins: { [first]: companionOrigin('A'.repeat(43)), [second]: companionOrigin('B'.repeat(43)) },
+      permissions: { account: { [second]: permission(second, displayUrl) } },
+      now
+    })[0].disconnected.map(({ id, durable }) => [id, durable])
+  ).toEqual([[second, true]])
 })
 
 it('calculates average requests per minute with a fixed ended-session duration', () => {

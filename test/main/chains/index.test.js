@@ -77,6 +77,8 @@ class MockConnection extends EventEmitter {
 
 let block, feeHistoryResponse, gasPrice, observer, connectionObserver
 const fallbackTarget = 'https://polygon-fallback.example'
+const staleTarget = 'https://polygon-stale.example'
+const replacementTarget = 'https://polygon-replacement.example'
 
 const state = {
   main: {
@@ -162,8 +164,11 @@ const state = {
 }
 
 const fallbackConnection = new MockConnection(137)
-const mockEthProvider = jest.fn((target) =>
-  target === fallbackTarget ? fallbackConnection : mockConnections[target].connection
+const deferredConnections = {}
+const mockEthProvider = jest.fn(
+  (target) =>
+    deferredConnections[target] ||
+    (target === fallbackTarget ? fallbackConnection : mockConnections[target].connection)
 )
 jest.mock('eth-provider', () => (target, options) => mockEthProvider(target, options))
 jest.mock('../../../main/store/state', () => () => state)
@@ -196,6 +201,7 @@ beforeEach(() => {
   block = {}
   feeHistoryResponse = undefined
   mockNotification.mockClear()
+  Object.keys(deferredConnections).forEach((target) => delete deferredConnections[target])
 
   connectionObserver = store.observer(() => {
     Object.values(mockConnections).forEach((chain) => {
@@ -372,6 +378,62 @@ it('creates a standby provider only after the active endpoint loses connectivity
 
   store.toggleEndpoint('ethereum', '137', 'rpc-1', true)
   store.toggleEndpoint('ethereum', '137', 'rpc-2', true)
+})
+
+it('ignores deferred callbacks from a replaced URL with the same endpoint ID', () => {
+  const stale = new MockConnection(137)
+  const replacement = new MockConnection(137)
+  let staleChainIdCallback
+  let replacementChainIdCallback
+  stale.sendAsync = (payload, cb) => {
+    if (payload.method === 'eth_chainId') staleChainIdCallback = cb
+    else cb('unknown method!')
+  }
+  replacement.sendAsync = (payload, cb) => {
+    if (payload.method === 'eth_chainId') replacementChainIdCallback = cb
+    else cb('unknown method!')
+  }
+  deferredConnections[staleTarget] = stale
+  deferredConnections[replacementTarget] = replacement
+
+  const chain = chains.connections.ethereum[137]
+  const onConnect = jest.fn()
+  chain.on('connect', onConnect)
+
+  try {
+    store.setEndpointUrl('ethereum', '137', 'rpc-1', staleTarget)
+    store.toggleEndpoint('ethereum', '137', 'rpc-1', true)
+    chain.connect(store('main.networks', 'ethereum', '137'))
+    stale.emit('connect')
+    expect(staleChainIdCallback).toEqual(expect.any(Function))
+
+    store.setEndpointUrl('ethereum', '137', 'rpc-1', replacementTarget)
+    chain.connect(store('main.networks', 'ethereum', '137'))
+    expect(chain.active.provider).toBe(replacement)
+    replacement.emit('connect')
+    expect(replacementChainIdCallback).toEqual(expect.any(Function))
+
+    replacementChainIdCallback(null, { result: '0x89' })
+    expect(chain.active).toMatchObject({
+      provider: replacement,
+      connected: true,
+      currentTarget: replacementTarget,
+      status: 'connected'
+    })
+
+    staleChainIdCallback(new Error('stale provider failure'))
+    expect(chain.active).toMatchObject({
+      provider: replacement,
+      connected: true,
+      currentTarget: replacementTarget,
+      status: 'connected'
+    })
+    expect(onConnect).toHaveBeenCalledTimes(1)
+  } finally {
+    chain.removeListener('connect', onConnect)
+    store.setEndpointUrl('ethereum', '137', 'rpc-1', 'https://polygon-bor-rpc.publicnode.com')
+    store.toggleEndpoint('ethereum', '137', 'rpc-1', false)
+  }
 })
 
 Object.values(mockConnections).forEach((chain) => {

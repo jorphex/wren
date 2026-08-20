@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import { safeNetworkMetadata } from '../../../../../resources/domain/networkMetadata'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
@@ -55,8 +56,11 @@ export class ChainsPreview extends React.Component {
     })
     const currentChainId = existingChains[this.state.index] || '1'
     const currentChain = this.store('main.networks.ethereum', currentChainId)
-    const currentChainMeta = this.store('main.networksMeta.ethereum', currentChainId)
-    if (!currentChain || !currentChainMeta) return null
+    if (!currentChain) return null
+    const currentChainMeta = safeNetworkMetadata(
+      this.store('main.networksMeta.ethereum', currentChainId),
+      currentChain
+    )
     const { name } = currentChain
     const { icon, primaryColor } = currentChainMeta
     const chainIdentity = resolveChainIdentityColor(currentChainId, currentChain.isTestnet, primaryColor)

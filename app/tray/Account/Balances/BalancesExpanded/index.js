@@ -15,6 +15,7 @@ import {
   isNativeCurrency
 } from '../../../../../resources/domain/balance'
 import { matchFilter } from '../../../../../resources/utils'
+import { safeNetworkMetadata } from '../../../../../resources/domain/networkMetadata'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
@@ -43,7 +44,10 @@ export class BalancesExpanded extends React.Component {
       .filter((rawBalance) => isNetworkConnected(networks[rawBalance.chainId]))
       .map((rawBalance) => {
         const isNative = isNativeCurrency(rawBalance.address)
-        const nativeCurrencyInfo = networksMeta[rawBalance.chainId].nativeCurrency || {}
+        const nativeCurrencyInfo = safeNetworkMetadata(
+          networksMeta?.[rawBalance.chainId],
+          networks[rawBalance.chainId]
+        ).nativeCurrency
 
         const rate = isNative ? nativeCurrencyInfo : rates[rawBalance.address || rawBalance.symbol] || {}
         const logoURI = (isNative && nativeCurrencyInfo.icon) || rawBalance.logoURI
@@ -199,7 +203,7 @@ export class BalancesExpanded extends React.Component {
               onClick={() => this.setState({ showHighHotMessage: !this.state.showHighHotMessage })}
               style={scanning ? { opacity: 0 } : { opacity: 1 }}
             >
-              <div className='signerBalanceWarningTitle'>High-value account using a hot signer</div>
+              <div className='signerBalanceWarningTitle'>High-value account uses a hot signer</div>
               {this.state.showHighHotMessage ? (
                 <div className='signerBalanceWarningMessage'>
                   {'Use a hardware signer to better protect this account.'}

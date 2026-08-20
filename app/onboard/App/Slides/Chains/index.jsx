@@ -17,7 +17,7 @@ const Chains = ({ setTitle, setProceed }) => {
       <SlideBody>
         <SlideItem>Use the main panel to enable networks. You can change this later.</SlideItem>
         <SlideItem>Wren includes common EVM networks. Add a custom RPC when you need one.</SlideItem>
-        <SlideItem>Dapps may request a network. Review its details before adding it.</SlideItem>
+        <SlideItem>A dapp may request a network. Review the request before adding it.</SlideItem>
       </SlideBody>
     </Slide>
   )
