@@ -793,7 +793,7 @@ const fixtureFor = (scenario) => {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
-      nav: [{ view: 'deployment', data: {} }]
+      nav: [{ view: 'contracts', data: { mode: 'deploy' } }]
     }
   }
 
@@ -806,17 +806,18 @@ const fixtureFor = (scenario) => {
       showing: true,
       nav: [
         {
-          view: 'contractVerification',
+          view: 'contracts',
           data:
             scenario.variant === 'confirmed'
               ? {
+                  mode: 'verify',
                   operationId: '88888888-8888-4888-8888-888888888888',
                   chainId: 10,
                   address: QUALIFICATION_VERIFICATION_ADDRESS
                 }
               : scenario.variant === 'result'
-                ? { verificationId: QUALIFICATION_VERIFICATION_JOB }
-                : {}
+                ? { mode: 'verify', verificationId: QUALIFICATION_VERIFICATION_JOB }
+                : { mode: 'verify' }
         }
       ]
     }

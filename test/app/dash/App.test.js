@@ -1,8 +1,7 @@
 import { Dash } from '../../../app/dash/App'
 import Dapps from '../../../app/dash/Dapps'
 import Inspector from '../../../app/dash/Inspector'
-import Deployment from '../../../app/dash/Deployment'
-import ContractVerification from '../../../app/dash/ContractVerification'
+import Contracts from '../../../app/dash/Contracts'
 import link from '../../../resources/link'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
@@ -27,7 +26,7 @@ it('renders the read-only inspector as an explicit dashboard destination', () =>
   expect(dash.renderPanel('inspector', {}).type).toBe(Inspector)
 })
 
-it('renders deployment with the exact account and network state needed by the tool', () => {
+it('renders Contracts with the exact account and network state needed by deployment', () => {
   const dash = new Dash({})
   const values = {
     'main.accounts': { account: {} },
@@ -38,10 +37,12 @@ it('renders deployment with the exact account and network state needed by the to
   }
   dash.store = jest.fn((path) => values[path])
 
-  const view = dash.renderPanel('deployment', {})
+  const view = dash.renderPanel('contracts', {})
 
-  expect(view.type).toBe(Deployment)
+  expect(view.type).toBe(Contracts)
   expect(view.props).toEqual({
+    initialMode: 'deploy',
+    data: {},
     accounts: values['main.accounts'],
     signers: values['main.signers'],
     currentAccount: 'account',
@@ -50,7 +51,7 @@ it('renders deployment with the exact account and network state needed by the to
   })
 })
 
-it('renders contract verification with its immutable route data and connected network state', () => {
+it('maps the verification compatibility route into Contracts Verify mode', () => {
   const dash = new Dash({})
   const data = {
     operationId: '11111111-1111-4111-8111-111111111111',
@@ -62,8 +63,16 @@ it('renders contract verification with its immutable route data and connected ne
 
   const view = dash.renderPanel('contractVerification', data)
 
-  expect(view.type).toBe(ContractVerification)
-  expect(view.props).toEqual({ data, networks })
+  expect(view.type).toBe(Contracts)
+  expect(view.props).toEqual({
+    initialMode: 'verify',
+    data,
+    accounts: {},
+    signers: {},
+    currentAccount: '',
+    networks,
+    networksMeta: {}
+  })
 })
 
 it('gives an active hardware prompt exclusive ownership of signer authentication', () => {

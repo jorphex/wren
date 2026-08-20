@@ -354,8 +354,9 @@ const reviewScenarios = () => [
       ready: '.contractVerificationForm',
       requiredControls: ['Network', 'Contract address', 'Choose artifact'],
       requiredText: [
-        'Verify contract source',
-        'publish the verification record publicly',
+        'Contracts',
+        'Verify source',
+        'Match source to deployed bytecode and publish a public record.',
         'Solidity or Vyper standard JSON',
         'Foundry or Hardhat build-info'
       ]
@@ -486,7 +487,9 @@ const reviewScenarios = () => [
         'Check deployment'
       ],
       requiredText: [
-        'Check deployment data',
+        'Contracts',
+        'Deploy contract',
+        'Check prepared creation data, then queue it for native review.',
         'Workshop Software Account With A Long Name',
         'Optimism',
         'configured RPC',

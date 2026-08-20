@@ -693,7 +693,7 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   )
 
   const state = fixtureFor(forms[0])
-  expect(state.windows.dash.nav).toEqual([{ view: 'contractVerification', data: {} }])
+  expect(state.windows.dash.nav).toEqual([{ view: 'contracts', data: { mode: 'verify' } }])
   const artifact = invokeReplyFor(forms[0], 'contractVerification:inspectArtifact')
   expect(artifact).toMatchObject({ success: true, artifact: { summary: { localRuntimeMatch: true } } })
   expect(JSON.stringify(artifact)).not.toMatch(/filePath|stdJsonInput|sourceContent|apiKey/u)

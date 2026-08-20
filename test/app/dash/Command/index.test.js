@@ -60,9 +60,12 @@ it('uses the authored Connected apps title', () => {
   expect(screen.queryByText('dapps')).toBeNull()
 })
 
-it('uses the authored Contract verification title', () => {
-  renderCommand([{ view: 'contractVerification', data: {} }])
+it.each(['contracts', 'deployment', 'contractVerification'])(
+  'uses the authored Contracts title for the %s route',
+  (view) => {
+    renderCommand([{ view, data: {} }])
 
-  expect(screen.getByText('Contract verification')).toBeTruthy()
-  expect(screen.queryByText('contractVerification')).toBeNull()
-})
+    expect(screen.getByText('Contracts')).toBeTruthy()
+    expect(screen.queryByText(view)).toBeNull()
+  }
+)

@@ -21,6 +21,7 @@ const txApprovalStyle = fs.readFileSync('app/tray/Footer/RequestCommand/TxApprov
 const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'utf8')
 const deploymentStyle = fs.readFileSync('app/dash/Deployment/style/index.styl', 'utf8')
 const contractVerificationStyle = fs.readFileSync('app/dash/ContractVerification/style/index.styl', 'utf8')
+const contractsStyle = fs.readFileSync('app/dash/Contracts/style/index.styl', 'utf8')
 const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
@@ -285,6 +286,14 @@ test('keeps contract deployment on the flat wallet canvas and shared control pri
   )
   expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
   expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
+})
+
+test('uses one flat Contracts workspace with the established Send-style peer switch', () => {
+  expect(contractsStyle).toMatch(
+    /\.contracts[\s\S]*?overflow-x hidden[\s\S]*?\.contractsModeSwitch\.sendModeSwitch[\s\S]*?margin 0 0 var\(--wren-space-4\)/
+  )
+  expect(contractsStyle).toMatch(/\.contractsPanel\[hidden\][\s\S]*?display none/)
+  expect(contractsStyle).not.toMatch(/border-left|border-right|box-shadow|linear-gradient/)
 })
 
 test('keeps direct verification disclosure distinct from constructor helper copy', () => {

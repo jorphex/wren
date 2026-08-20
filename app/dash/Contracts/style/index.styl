@@ -1,0 +1,49 @@
+.contracts
+  width 100%
+  min-height 100%
+  box-sizing border-box
+  padding 0 var(--wren-space-4)
+  overflow-x hidden
+  color var(--wren-text-primary)
+
+.contractsHeader
+  padding var(--wren-space-5) 0 var(--wren-space-3)
+
+  > span
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    letter-spacing .08em
+
+  h1
+    margin var(--wren-space-1) 0
+    font-size 25px
+    font-weight 500
+    letter-spacing -.4px
+
+  p
+    max-width 620px
+    margin 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 19px
+
+.contractsModeSwitch.sendModeSwitch
+  margin 0 0 var(--wren-space-4)
+
+.contractsPanel[hidden]
+  display none
+
+.contractsPanel
+  min-width 0
+
+  > .deployment,
+  > .contractVerification
+    min-height 0
+    padding-right 0
+    padding-left 0
+
+@media (max-width: 540px)
+  .contracts
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)

@@ -362,8 +362,8 @@ it('checks credential status without exposing a key and preserves a Settings ret
   expect(await screen.findByText(/No Etherscan API key is configured/)).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Open Settings' }))
   expect(onNavigateSettings).toHaveBeenCalledWith({
-    view: 'contractVerification',
-    data: { verificationId: 'verification-1' }
+    view: 'contracts',
+    data: { mode: 'verify', verificationId: 'verification-1' }
   })
   expect(document.body.textContent).not.toContain('my-secret-explorer-key')
 })

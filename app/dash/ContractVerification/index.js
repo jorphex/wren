@@ -511,7 +511,10 @@ export class ContractVerification extends React.Component {
   }
 
   openSettings() {
-    const returnData = { view: 'contractVerification', data: { verificationId: this.state.job?.id } }
+    const returnData = {
+      view: 'contracts',
+      data: { mode: 'verify', verificationId: this.state.job?.id }
+    }
     if (this.props.onNavigateSettings) this.props.onNavigateSettings(returnData)
     else link.send('tray:action', 'navDash', { view: 'settings', data: { returnTo: returnData } })
   }
@@ -948,15 +951,22 @@ export class ContractVerification extends React.Component {
       this.artifactSelectionValid()
     const canPublish = !busy && preparedEvidenceReady(prepared) && this.state.acknowledged
 
+    const Root = this.props.embedded ? 'div' : 'main'
     return (
-      <main className='contractVerification cardShow' aria-busy={busy ? 'true' : 'false'}>
-        <header className='contractVerificationHeader'>
-          <span>CONTRACT VERIFICATION</span>
-          <h1>Verify contract source</h1>
-          <p>
-            Match a source artifact to this deployed contract, then publish the verification record publicly.
-          </p>
-        </header>
+      <Root
+        className={`contractVerification cardShow ${this.props.embedded ? 'contractVerificationEmbedded' : ''}`}
+        aria-busy={busy ? 'true' : 'false'}
+      >
+        {!this.props.embedded ? (
+          <header className='contractVerificationHeader'>
+            <span>CONTRACT VERIFICATION</span>
+            <h1>Verify contract source</h1>
+            <p>
+              Match a source artifact to this deployed contract, then publish the verification record
+              publicly.
+            </p>
+          </header>
+        ) : null}
 
         {this.renderTarget(networks)}
         {this.renderRecent(networks)}
@@ -1024,7 +1034,7 @@ export class ContractVerification extends React.Component {
             </div>
           </form>
         )}
-      </main>
+      </Root>
     )
   }
 }

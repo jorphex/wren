@@ -415,13 +415,19 @@ export class Deployment extends React.Component {
           ? 'Preparing review…'
           : this.state.message
 
+    const Root = this.props.embedded ? 'div' : 'main'
     return (
-      <main className='deployment cardShow' aria-busy={busy ? 'true' : 'false'}>
-        <header className='deploymentHeader'>
-          <span className='deploymentEyebrow'>CONTRACT DEPLOYMENT</span>
-          <h1>Check deployment data</h1>
-          <p>Review bytecode and constructor arguments before native review</p>
-        </header>
+      <Root
+        className={`deployment cardShow ${this.props.embedded ? 'deploymentEmbedded' : ''}`}
+        aria-busy={busy ? 'true' : 'false'}
+      >
+        {!this.props.embedded ? (
+          <header className='deploymentHeader'>
+            <span className='deploymentEyebrow'>CONTRACT DEPLOYMENT</span>
+            <h1>Check deployment data</h1>
+            <p>Review bytecode and constructor arguments before native review</p>
+          </header>
+        ) : null}
 
         <form className='deploymentForm' onSubmit={(event) => this.prepare(event)}>
           <div className='deploymentSelectors'>
@@ -577,7 +583,7 @@ export class Deployment extends React.Component {
             </button>
           </div>
         </form>
-      </main>
+      </Root>
     )
   }
 }

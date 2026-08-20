@@ -14,8 +14,7 @@ import Send from './Send'
 import AddressBook from './AddressBook'
 import Dapps from './Dapps'
 import Inspector from './Inspector'
-import Deployment from './Deployment'
-import ContractVerification from './ContractVerification'
+import Contracts from './Contracts'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
@@ -85,9 +84,12 @@ export class Dash extends React.Component {
     if (view === 'addressBook') return <AddressBook data={data} />
     if (view === 'dapps') return <Dapps data={data} />
     if (view === 'inspector') return <Inspector />
-    if (view === 'deployment') {
+    if (['contracts', 'deployment', 'contractVerification'].includes(view)) {
+      const initialMode = view === 'contractVerification' || data?.mode === 'verify' ? 'verify' : 'deploy'
       return (
-        <Deployment
+        <Contracts
+          initialMode={initialMode}
+          data={data}
           accounts={this.store('main.accounts') || {}}
           signers={this.store('main.signers') || {}}
           currentAccount={this.store('selected.current') || ''}
@@ -95,9 +97,6 @@ export class Dash extends React.Component {
           networksMeta={this.store('main.networksMeta.ethereum') || {}}
         />
       )
-    }
-    if (view === 'contractVerification') {
-      return <ContractVerification data={data} networks={this.store('main.networks.ethereum') || {}} />
     }
     if (view === 'expandedSigner' && data.signer) {
       const signerId = data.signer

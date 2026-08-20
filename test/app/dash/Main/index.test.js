@@ -39,8 +39,7 @@ it.each([
   ['Contacts', 'addressBook'],
   ['Connected apps', 'dapps'],
   ['Read-only inspector', 'inspector'],
-  ['Deploy contract', 'deployment'],
-  ['Verify contract source', 'contractVerification'],
+  ['Contracts', 'contracts'],
   ['Networks', 'chains'],
   ['Tokens', 'tokens'],
   ['Settings', 'settings']
@@ -95,25 +94,13 @@ it('orders wallet destinations and places the concise inspector in Tools', () =>
   )
   expect(walletItems).toEqual(['Accounts', 'Earn', 'Contacts', 'Connected apps'])
   expect(screen.getByText('Tools')).toBeTruthy()
-  expect(toolItems).toEqual([
-    'Networks',
-    'Tokens',
-    'Read-only inspector',
-    'Deploy contract',
-    'Verify contract source',
-    'Settings'
-  ])
+  expect(toolItems).toEqual(['Networks', 'Tokens', 'Read-only inspector', 'Contracts', 'Settings'])
   expect(
     screen.getByRole('button', { name: 'Read-only inspector Inspect requests without signing.' })
   ).toBeTruthy()
   expect(
     screen.getByRole('button', {
-      name: 'Deploy contract Check prepared creation data, then queue it for review.'
-    })
-  ).toBeTruthy()
-  expect(
-    screen.getByRole('button', {
-      name: 'Verify contract source Match source to deployed bytecode and publish a public record.'
+      name: 'Contracts Deploy prepared bytecode or publish verified source.'
     })
   ).toBeTruthy()
 })

@@ -216,8 +216,9 @@ export class RequestCommand extends React.Component {
       }
       this.setState({ requestActionPending: false, requestActionError: '' })
       link.send('tray:action', 'navDash', {
-        view: 'contractVerification',
+        view: 'contracts',
         data: {
+          mode: 'verify',
           operationId: result.operationId,
           chainId: result.chainId,
           address: result.address

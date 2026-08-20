@@ -66,16 +66,10 @@ const dashboardSections = [
         icon: 'search'
       },
       {
-        view: 'deployment',
-        title: 'Deploy contract',
-        description: 'Check prepared creation data, then queue it for review.',
+        view: 'contracts',
+        title: 'Contracts',
+        description: 'Deploy prepared bytecode or publish verified source.',
         icon: 'file'
-      },
-      {
-        view: 'contractVerification',
-        title: 'Verify contract source',
-        description: 'Match source to deployed bytecode and publish a public record.',
-        icon: 'verified'
       },
       {
         view: 'settings',

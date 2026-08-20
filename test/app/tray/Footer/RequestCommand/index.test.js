@@ -140,8 +140,8 @@ it('opens source verification only for a confirmed managed deployment', async ()
     handlerId: req.handlerId
   })
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
-    view: 'contractVerification',
-    data: { operationId, chainId: 1, address }
+    view: 'contracts',
+    data: { mode: 'verify', operationId, chainId: 1, address }
   })
   view.unmount()
 })
