@@ -15,7 +15,7 @@ const state = (name: string) => ({
 test.each(['Mainnet', 'Ethereum Mainnet'])('renames the legacy Ethereum label %s', (name) => {
   const migrated = migrations.apply(state(name))
 
-  expect(migrated.main._version).toBe(69)
+  expect(migrated.main._version).toBe(migrations.latest)
   expect(migrated.main.networks.ethereum[1].name).toBe('Ethereum')
   expect(migrated.main.networks.ethereum[10].name).toBe('Optimism Mainnet')
 })

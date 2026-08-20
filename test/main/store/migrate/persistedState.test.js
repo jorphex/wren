@@ -334,14 +334,17 @@ it('migrates version 52 Pylon presets through application state initialization',
   expect(reloaded.main).toEqual(migrated.main)
 })
 
-it('keeps a current safe profile migration-invariant and reload-stable', async () => {
+it('migrates a previous safe profile and keeps it reload-stable', async () => {
   const fixture = loadFixture('v69-safe-current-state.json')
   const source = clone(fixture.state)
 
-  expect(migrations.apply(clone(source))).toEqual(source)
+  expect(migrations.apply(clone(source))).toEqual({
+    ...source,
+    main: { ...source.main, _version: migrations.latest }
+  })
 
   const { migrated, mode, reloaded } = await migrateTemporaryProfile(fixture)
-  expect(migrated.main).toMatchObject(source.main)
+  expect(migrated.main).toMatchObject({ ...source.main, _version: migrations.latest })
   expect(migrated.main._version).toBe(migrations.latest)
   expect(migrated.main.instanceId).toBe(source.main.instanceId)
   expect(migrated.main.networks.ethereum[31337]).toMatchObject(source.main.networks.ethereum[31337])
@@ -351,6 +354,35 @@ it('keeps a current safe profile migration-invariant and reload-stable', async (
   expect(migrated.main.rememberRecentRecipients).toBe(true)
   expect(migrated.main.recentRecipientUses).toEqual(source.main.recentRecipientUses)
   expect(mode).toBe(0o600)
+  expect(reloaded.main).toEqual(migrated.main)
+})
+
+it('recovers a current profile containing custom-network metadata without a USD rate', async () => {
+  const fixture = loadFixture('v69-safe-current-state.json')
+  fixture.state.main.networks.ethereum[4153] = {
+    ...clone(fixture.state.main.networks.ethereum[31337]),
+    id: 4153,
+    name: 'Fixture Custom Chain'
+  }
+  fixture.state.main.networksMeta.ethereum[4153] = {
+    ...clone(fixture.state.main.networksMeta.ethereum[31337]),
+    nativeCurrency: {
+      symbol: 'ETH',
+      icon: '',
+      name: 'Ether',
+      decimals: 18
+    }
+  }
+
+  const { migrated, reloaded } = await migrateTemporaryProfile(fixture)
+
+  expect(migrated.main.networksMeta.ethereum[4153].nativeCurrency).toEqual({
+    symbol: 'ETH',
+    icon: '',
+    name: 'Ether',
+    decimals: 18,
+    usd: { price: 0, change24hr: 0 }
+  })
   expect(reloaded.main).toEqual(migrated.main)
 })
 

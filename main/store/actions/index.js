@@ -540,7 +540,8 @@ module.exports = {
           symbol: net.symbol,
           icon: net.nativeCurrencyIcon || '',
           name: net.nativeCurrencyName || '',
-          decimals: net.nativeCurrencyDecimals ?? 18
+          decimals: net.nativeCurrencyDecimals ?? 18,
+          usd: { price: 0, change24hr: 0 }
         },
         gas: {
           price: {

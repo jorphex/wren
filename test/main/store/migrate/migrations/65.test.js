@@ -44,7 +44,7 @@ it('replays frozen v1 migrations before upgrading instead of deleting legacy con
   state.main.addressBook = { [address]: legacy }
 
   const migrated = migrations.apply(state)
-  expect(migrated.main._version).toBe(69)
+  expect(migrated.main._version).toBe(migrations.latest)
   expect(migrated.main.dappGuardrails).toEqual({})
   expect(migrated.main.addressBook).toEqual({
     [address]: { ...legacy, provenance: { status: 'saved' } }

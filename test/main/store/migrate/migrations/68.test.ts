@@ -40,7 +40,7 @@ test('strips browser transport metadata while preserving the signed Companion pr
   expect(migrated.main.origins).toEqual(state.main.origins)
   expect(JSON.stringify(migrated.main.extensionCredentials)).not.toContain('extensionId')
   expect(JSON.stringify(migrated.main.extensionCredentials)).not.toContain('firefox')
-  expect(migrations.apply(state).main._version).toBe(69)
+  expect(migrations.apply(state).main._version).toBe(migrations.latest)
 })
 
 test('drops malformed or incorrectly keyed credentials and leaves invalid state unchanged', () => {
