@@ -219,6 +219,8 @@ describe('renderer bridge protocol', () => {
       'signers:protectionStatus',
       'signers:enableProtection',
       'signers:disableProtection',
+      'deployment:prepare',
+      'deployment:queue',
       'inspector:inspect',
       'send:maxAmount',
       'send:queue',

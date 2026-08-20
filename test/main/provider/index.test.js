@@ -22,7 +22,7 @@ import { showWalletCallStatus } from '../../../main/provider/walletCallStatusVie
 import { ApprovalType } from '../../../resources/constants'
 import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { createAccountPermission } from '../../../main/provider/permissions'
-import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { GasFeesSource } from '../../../resources/domain/transaction'
 import recentRecipientsRuntime from '../../../main/recentRecipients/runtime'
 import {
@@ -3623,6 +3623,394 @@ describe('#send', () => {
       )
     })
 
+    it('admits only an exact immutable managed deployment and classifies it as contract creation', (done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      tx = {
+        from: address,
+        chainId: '0x1',
+        data: initcode,
+        value: '0x0',
+        gasLimit: intToHex(100000),
+        type: '0x1'
+      }
+      const deployment = {
+        version: 1,
+        inspectionId: 'a'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 },
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 14, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        () => {},
+        { type: 'ethereum', id: 1 },
+        () => {
+          try {
+            expect(accountRequests[0]).toMatchObject({
+              account: address,
+              classification: 'CONTRACT_DEPLOY',
+              origin: managedOrigin,
+              deployment
+            })
+            expect(accountRequests[0].data.to).toBeUndefined()
+            expect(accountRequests[0].recentRecipient).toBeUndefined()
+            expect(Object.isFrozen(accountRequests[0].deployment)).toBe(true)
+            deployment.initcodeHash = `0x${'0'.repeat(64)}`
+            expect(accountRequests[0].deployment.initcodeHash).toBe(keccak256(initcode))
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { deployment }
+      )
+    })
+
+    it('admits an exact managed deployment speed-up with its frozen creation evidence', (done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      tx = {
+        from: address,
+        chainId: '0x1',
+        data: initcode,
+        value: '0x0',
+        gasLimit: intToHex(100000),
+        type: '0x2',
+        nonce: '0x5'
+      }
+      const deployment = {
+        version: 1,
+        inspectionId: '2'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      const replacement = {
+        kind: 'speed',
+        originalActivityId: '00000000-0000-4000-8000-000000000041',
+        originalHash: `0x${'4'.repeat(64)}`
+      }
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      })
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 141, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        () => {},
+        { type: 'ethereum', id: 1 },
+        () => {
+          try {
+            expect(accountRequests[0]).toMatchObject({
+              origin: managedOrigin,
+              classification: 'CONTRACT_DEPLOY',
+              deployment,
+              replacement
+            })
+            expect(accountRequests[0].data.to).toBeUndefined()
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { deployment, replacement }
+      )
+    })
+
+    it('keeps managed deployment speed-ups bound to the original creation data', (done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      const deployment = {
+        version: 1,
+        inspectionId: '3'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      const replacement = {
+        kind: 'speed',
+        originalActivityId: '00000000-0000-4000-8000-000000000042',
+        originalHash: `0x${'5'.repeat(64)}`
+      }
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      })
+
+      provider.sendTransaction(
+        {
+          jsonrpc: '2.0',
+          id: 142,
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: address,
+              chainId: '0x1',
+              data: '0x6001',
+              value: '0x0',
+              gasLimit: intToHex(100000),
+              nonce: '0x5'
+            }
+          ],
+          _origin: managedOrigin
+        },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/prepared evidence/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        () => done(new Error('changed deployment speed-up reached the request queue')),
+        { deployment, replacement }
+      )
+    })
+
+    it('does not widen Wren Deploy authorization to cancellation self-transfers', (done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      const deployment = {
+        version: 1,
+        inspectionId: '4'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      })
+
+      provider.sendTransaction(
+        {
+          jsonrpc: '2.0',
+          id: 143,
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: address,
+              to: address,
+              chainId: '0x1',
+              data: '0x',
+              value: '0x0',
+              gasLimit: intToHex(21000),
+              nonce: '0x5'
+            }
+          ],
+          _origin: managedOrigin
+        },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/only be combined with an exact speed-up/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        () => done(new Error('managed deployment cancel reached the request queue')),
+        {
+          deployment,
+          replacement: {
+            kind: 'cancel',
+            originalActivityId: '00000000-0000-4000-8000-000000000043',
+            originalHash: `0x${'6'.repeat(64)}`
+          }
+        }
+      )
+    })
+
+    it('revalidates managed deployment authorization after asynchronous transaction filling', (done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      tx = {
+        from: address,
+        chainId: '0x1',
+        data: initcode,
+        value: '0x0',
+        gasLimit: intToHex(100000),
+        type: '0x1'
+      }
+      const deployment = {
+        version: 1,
+        inspectionId: 'f'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      })
+      let finishFill
+      const fill = jest
+        .spyOn(provider, 'fillTransaction')
+        .mockImplementationOnce((_transaction, callback) => {
+          finishFill = callback
+        })
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 140, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        (response) => {
+          try {
+            expect(response.error).toEqual({
+              code: 4100,
+              message: 'Managed Wren Deploy origin is no longer authorized'
+            })
+            expect(accountRequests).toHaveLength(0)
+            fill.mockRestore()
+            done()
+          } catch (error) {
+            fill.mockRestore()
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        () => done(new Error('stale deployment reached the request queue')),
+        { deployment }
+      )
+
+      accounts.current.mockReturnValue({
+        ...currentAccount,
+        id: '0x1111111111111111111111111111111111111111'
+      })
+      finishFill(null, { tx: { ...tx }, approvals: [] })
+    })
+
+    it.each([
+      ['missing evidence', undefined, undefined],
+      ['destination', { to: address }, 'prepared evidence'],
+      ['changed creation data', { data: '0x6001' }, 'prepared evidence'],
+      ['combined metadata', {}, 'only be combined']
+    ])('rejects a managed deployment with %s', (_label, transactionChange, message, done) => {
+      const managedOrigin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+      const initcode = '0x60006000'
+      tx = {
+        from: address,
+        chainId: '0x1',
+        data: initcode,
+        value: '0x0',
+        gasLimit: intToHex(100000),
+        type: '0x1',
+        ...(transactionChange || {})
+      }
+      const deployment = {
+        version: 1,
+        inspectionId: 'b'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.origins', managedOrigin, {
+        name: WREN_DEPLOY_ORIGIN,
+        provenance: 'managed',
+        chain: { type: 'ethereum', id: 1 }
+      })
+      const trustedMetadata =
+        _label === 'missing evidence'
+          ? undefined
+          : { deployment, ...(_label === 'combined metadata' ? { recentRecipient: { address } } : {}) }
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 15, method: 'eth_sendTransaction', params: [tx], _origin: managedOrigin },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(new RegExp(message || 'requires deployment evidence', 'i'))
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        trustedMetadata
+      )
+    })
+
+    it('rejects deployment metadata from every non-deployment origin before review', (done) => {
+      const initcode = '0x60006000'
+      const deployment = {
+        version: 1,
+        inspectionId: 'c'.repeat(32),
+        account: address,
+        chainId: '0x1',
+        initcodeHash: keccak256(initcode),
+        initcodeBytes: 4,
+        value: '0x0',
+        preparedAt: 1_000,
+        expiresAt: 61_000
+      }
+      tx = { from: address, chainId: '0x1', data: initcode, value: '0x0', gasLimit: intToHex(100000) }
+
+      provider.sendTransaction(
+        { jsonrpc: '2.0', id: 16, method: 'eth_sendTransaction', params: [tx], _origin: defaultOriginId },
+        (response) => {
+          try {
+            expect(response.error.message).toMatch(/exact managed Wren Deploy origin/i)
+            expect(accountRequests).toHaveLength(0)
+            done()
+          } catch (error) {
+            done(error)
+          }
+        },
+        { type: 'ethereum', id: 1 },
+        undefined,
+        { deployment }
+      )
+    })
+
     it('retains an immutable native Max snapshot only for the exact managed Wren Send origin', (done) => {
       accounts.current.mockReturnValue({ id: address, lastSignerType: 'ring' })
       const managedOrigin = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
@@ -5333,6 +5721,178 @@ describe('#signAndSend', () => {
             expect(error).toMatchObject({
               code: 4100,
               message: 'Managed Wren Send request is no longer authorized'
+            })
+            expect(connection.send).not.toHaveBeenCalled()
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
+      it.each([
+        [
+          'selected account',
+          () => {
+            currentAccount.id = '0x1111111111111111111111111111111111111111'
+          }
+        ],
+        [
+          'signer mode',
+          () => {
+            currentAccount.lastSignerType = 'address'
+          }
+        ],
+        [
+          'managed origin identity',
+          () => {
+            store.set('main.origins', request.origin, 'sourceId', 'colliding-source')
+          }
+        ],
+        [
+          'network connection',
+          () => {
+            connection.connections.ethereum[1].primary.connected = false
+          }
+        ]
+      ])('blocks a prepared deployment when the %s changes before signing', (_label, mutate, done) => {
+        const initcode = '0x60006000'
+        request.type = 'transaction'
+        request.origin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+        Object.assign(request.data, { from: address, data: initcode, value: '0x0' })
+        request.deployment = {
+          version: 1,
+          inspectionId: 'd'.repeat(32),
+          account: address,
+          chainId: '0x1',
+          initcodeHash: keccak256(initcode),
+          initcodeBytes: 4,
+          value: '0x0',
+          preparedAt: 1_000,
+          expiresAt: 61_000
+        }
+        store.set('main.networks.ethereum', 1, { id: 1, on: true })
+        store.set('main.origins', request.origin, {
+          chain: { type: 'ethereum', id: 1 },
+          name: WREN_DEPLOY_ORIGIN,
+          provenance: 'managed',
+          sessionOnly: false,
+          session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce(
+          (_accountId, _transaction, callback, assertBeforeSign) => {
+            mutate()
+            try {
+              assertBeforeSign()
+              callback(null, signedTx)
+            } catch (error) {
+              callback(error)
+            }
+          }
+        )
+
+        signAndSend((error) => {
+          try {
+            expect(error).toMatchObject({
+              code: 4100,
+              message: 'Managed Wren Deploy request is no longer authorized'
+            })
+            expect(connection.send).not.toHaveBeenCalled()
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
+      it('blocks a prepared deployment whose creation data changes before signing', (done) => {
+        const initcode = '0x60006000'
+        request.type = 'transaction'
+        request.origin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+        Object.assign(request.data, { from: address, data: initcode, value: '0x0' })
+        request.deployment = {
+          version: 1,
+          inspectionId: 'e'.repeat(32),
+          account: address,
+          chainId: '0x1',
+          initcodeHash: keccak256(initcode),
+          initcodeBytes: 4,
+          value: '0x0',
+          preparedAt: 1_000,
+          expiresAt: 61_000
+        }
+        store.set('main.networks.ethereum', 1, { id: 1, on: true })
+        store.set('main.origins', request.origin, {
+          chain: { type: 'ethereum', id: 1 },
+          name: WREN_DEPLOY_ORIGIN,
+          provenance: 'managed',
+          sessionOnly: false,
+          session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce(
+          (_accountId, transaction, callback, assertBeforeSign) => {
+            transaction.data = '0x6001'
+            try {
+              assertBeforeSign()
+              callback(null, signedTx)
+            } catch (error) {
+              callback(error)
+            }
+          }
+        )
+
+        signAndSend((error) => {
+          try {
+            expect(error.message).toMatch(/creation data does not match/i)
+            expect(connection.send).not.toHaveBeenCalled()
+            done()
+          } catch (assertionError) {
+            done(assertionError)
+          }
+        })
+      })
+
+      it('blocks a managed deployment whose trusted evidence disappears before signing', (done) => {
+        const initcode = '0x60006000'
+        request.type = 'transaction'
+        request.origin = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+        Object.assign(request.data, { from: address, data: initcode, value: '0x0' })
+        request.deployment = {
+          version: 1,
+          inspectionId: '1'.repeat(32),
+          account: address,
+          chainId: '0x1',
+          initcodeHash: keccak256(initcode),
+          initcodeBytes: 4,
+          value: '0x0',
+          preparedAt: 1_000,
+          expiresAt: 61_000
+        }
+        store.set('main.networks.ethereum', 1, { id: 1, on: true })
+        store.set('main.origins', request.origin, {
+          chain: { type: 'ethereum', id: 1 },
+          name: WREN_DEPLOY_ORIGIN,
+          provenance: 'managed',
+          sessionOnly: false,
+          session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+        })
+        accounts.signTransactionForAccount.mockImplementationOnce(
+          (_accountId, _transaction, callback, assertBeforeSign) => {
+            delete request.deployment
+            try {
+              assertBeforeSign()
+              callback(null, signedTx)
+            } catch (error) {
+              callback(error)
+            }
+          }
+        )
+
+        signAndSend((error) => {
+          try {
+            expect(error).toMatchObject({
+              code: 4100,
+              message: 'Managed Wren Deploy request is missing deployment evidence'
             })
             expect(connection.send).not.toHaveBeenCalled()
             done()

@@ -587,6 +587,35 @@
     color var(--wren-text-tertiary)
     font-size var(--wren-type-small)
 
+  .transactionReviewDeployment
+    display grid
+    gap 0
+
+  .transactionReviewDeploymentRow
+    display grid
+    min-height 56px
+    grid-template-columns 96px minmax(0, 1fr)
+    align-items center
+    column-gap var(--wren-space-4)
+
+  .transactionReviewDeploymentValue
+    display grid
+    min-width 0
+    gap var(--wren-space-1)
+    padding var(--wren-space-2) 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+
+  .transactionReviewDeploymentHash
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+
+  .transactionReviewDeploymentNote
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-ui)
+    line-height 1.4
+
   .transactionNonceActions
     display flex
     gap var(--wren-space-2)

@@ -381,6 +381,124 @@ test('strictly bounds native Send requests and results', () => {
   )
 })
 
+test('strictly bounds prepared deployment requests and public evidence', () => {
+  const draft = { account: address, chainId: 1, initcode: '0x60006000', value: '' }
+  const inspectionId = 'a'.repeat(32)
+  expect(parse('invoke', 'deployment:prepare', [draft])).toEqual([draft])
+  expect(parse('invoke', 'deployment:queue', [{ inspectionId, draft }])).toEqual([{ inspectionId, draft }])
+
+  for (const invalid of [
+    { ...draft, initcode: '0x' },
+    { ...draft, initcode: '0x0' },
+    { ...draft, value: '1e18' },
+    { ...draft, endpoint: 'https://evil.test' }
+  ]) {
+    expect(parseRendererIpcArgs('invoke', 'deployment:prepare', [invalid]).success).toBe(false)
+  }
+  expect(
+    parseRendererIpcArgs('invoke', 'deployment:prepare', [{ ...draft, initcode: `0x${'00'.repeat(49_153)}` }])
+      .success
+  ).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'deployment:queue', [{ inspectionId: 'bad', draft }]).success).toBe(
+    false
+  )
+  expect(parseRendererIpcArgs('invoke', 'deployment:queue', [{ inspectionId, ...draft }]).success).toBe(false)
+
+  const result = {
+    success: true,
+    inspection: {
+      id: inspectionId,
+      preparedAt: 1_000,
+      expiresAt: 61_000,
+      account: address,
+      chainId: '0x1',
+      initcode: { bytes: 4, hash: `0x${'1'.repeat(64)}` },
+      value: '0x0',
+      gasEstimate: {
+        status: 'succeeded',
+        source: 'configured-rpc',
+        method: 'eth_estimateGas',
+        value: '0x10000',
+        padded: true
+      },
+      simulation: {
+        status: 'succeeded',
+        source: 'configured-rpc',
+        method: 'eth_call',
+        advancedChecks: 'partly-unavailable'
+      },
+      pendingNonce: {
+        status: 'succeeded',
+        source: 'configured-rpc',
+        method: 'eth_getTransactionCount',
+        nonce: '0x1',
+        provisionalAddress: '0x0000000000000000000000000000000000000002',
+        provisional: true
+      }
+    }
+  }
+  expect(parseRendererInvokeResult('deployment:prepare', result).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('deployment:prepare', {
+      ...result,
+      inspection: {
+        ...result.inspection,
+        simulation: {
+          status: 'succeeded',
+          source: 'configured-rpc',
+          advancedChecks: 'partly-unavailable'
+        }
+      }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('deployment:prepare', {
+      ...result,
+      inspection: {
+        ...result.inspection,
+        simulation: {
+          status: 'reverted',
+          source: 'configured-rpc',
+          reasonCode: 'execution-reverted',
+          reason: 'Execution reverted',
+          advancedChecks: 'complete'
+        }
+      }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('deployment:prepare', {
+      ...result,
+      inspection: { ...result.inspection, trace: { secret: true } }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('deployment:prepare', {
+      ...result,
+      inspection: {
+        ...result.inspection,
+        simulation: {
+          status: 'reverted',
+          source: 'configured-rpc',
+          reasonCode: 'rpc-error',
+          reason: 'Failed',
+          advancedChecks: 'not-run'
+        }
+      }
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('deployment:queue', { success: true, handlerId: 'deployment-request' }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('deployment:queue', {
+      success: true,
+      handlerId: 'deployment-request',
+      metadata: { initcode: draft.initcode }
+    }).success
+  ).toBe(false)
+})
+
 test('strictly bounds dashboard Sweep requests and results', () => {
   const recipient = '0x0000000000000000000000000000000000000002'
   const account = '0x0000000000000000000000000000000000000001'

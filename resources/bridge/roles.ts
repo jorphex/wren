@@ -47,6 +47,7 @@ export const hasRendererCapability = (
     typeof channel === 'string' &&
     (channel.startsWith('profile:') ||
       channel.startsWith('signers:') ||
+      channel.startsWith('deployment:') ||
       channel.startsWith('inspector:') ||
       channel.startsWith('send:'))
   ) {

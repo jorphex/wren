@@ -1,7 +1,7 @@
 import { matchFilter } from '../utils'
-import { FRAME_SEND_ORIGIN } from './origin'
+import { isManagedOriginName } from './origin'
 
-export const isManagedPermission = (permission) => permission?.origin === FRAME_SEND_ORIGIN
+export const isManagedPermission = (permission) => isManagedOriginName(permission?.origin)
 
 export const isPermissionActive = (permission, now = Date.now()) =>
   permission?.version === 1 &&

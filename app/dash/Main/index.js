@@ -66,6 +66,12 @@ const dashboardSections = [
         icon: 'search'
       },
       {
+        view: 'deployment',
+        title: 'Deploy contract',
+        description: 'Check prepared creation data, then queue it for review',
+        icon: 'file'
+      },
+      {
         view: 'settings',
         title: 'Settings',
         description: 'Adjust desktop behavior, shortcuts, and privacy.',

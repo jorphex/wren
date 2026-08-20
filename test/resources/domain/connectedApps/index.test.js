@@ -1,4 +1,4 @@
-import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN } from '../../../../resources/domain/origin'
 import { createAccountPermission } from '../../../../main/provider/permissions'
 import {
   RECENT_ORIGIN_TTL,
@@ -95,14 +95,22 @@ it('hides managed and internal origins even when their sessions are recent', () 
     networks: { 1: chain(1) },
     origins: {
       managed: origin(FRAME_SEND_ORIGIN, 1, { endedAt: undefined }),
+      deployment: origin(WREN_DEPLOY_ORIGIN, 1, { endedAt: undefined }),
       internal: origin('frame-internal', 1, { endedAt: undefined }),
-      extension: origin('frame-extension', 1, { endedAt: undefined })
+      extension: origin('frame-extension', 1, { endedAt: undefined }),
+      external: origin('https://app.example', 1, { endedAt: undefined })
     },
-    permissions: { account: { managed: permission(FRAME_SEND_ORIGIN) } },
+    permissions: {
+      account: {
+        managed: permission(FRAME_SEND_ORIGIN),
+        deployment: permission(WREN_DEPLOY_ORIGIN)
+      }
+    },
     now
   })
 
-  expect(groups).toEqual([])
+  expect(groups).toHaveLength(1)
+  expect(groups[0].connected.map(({ id }) => id)).toEqual(['external'])
 })
 
 it('calculates average requests per minute with a fixed ended-session duration', () => {

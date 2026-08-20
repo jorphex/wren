@@ -1,6 +1,7 @@
 import { Dash } from '../../../app/dash/App'
 import Dapps from '../../../app/dash/Dapps'
 import Inspector from '../../../app/dash/Inspector'
+import Deployment from '../../../app/dash/Deployment'
 import link from '../../../resources/link'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
@@ -23,6 +24,29 @@ it('renders the read-only inspector as an explicit dashboard destination', () =>
   const dash = new Dash({})
 
   expect(dash.renderPanel('inspector', {}).type).toBe(Inspector)
+})
+
+it('renders deployment with the exact account and network state needed by the tool', () => {
+  const dash = new Dash({})
+  const values = {
+    'main.accounts': { account: {} },
+    'main.signers': { signer: {} },
+    'selected.current': 'account',
+    'main.networks.ethereum': { 1: {} },
+    'main.networksMeta.ethereum': { 1: { nativeCurrency: { decimals: 18 } } }
+  }
+  dash.store = jest.fn((path) => values[path])
+
+  const view = dash.renderPanel('deployment', {})
+
+  expect(view.type).toBe(Deployment)
+  expect(view.props).toEqual({
+    accounts: values['main.accounts'],
+    signers: values['main.signers'],
+    currentAccount: 'account',
+    networks: values['main.networks.ethereum'],
+    networksMeta: values['main.networksMeta.ethereum']
+  })
 })
 
 it('gives an active hardware prompt exclusive ownership of signer authentication', () => {

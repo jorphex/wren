@@ -482,6 +482,8 @@ const main = async () => {
     'send:queue',
     'send:quoteSweep',
     'send:queueSweep',
+    'deployment:prepare',
+    'deployment:queue',
     'yearn:getCatalog',
     'yearn:getPositions',
     'yearn:getWorkflows'

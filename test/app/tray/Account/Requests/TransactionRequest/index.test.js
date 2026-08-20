@@ -4,7 +4,10 @@ import store from '../../../../../../main/store'
 import { act, screen, render } from '../../../../../componentSetup'
 import TxRequestComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest'
 import { TransactionRequest } from '../../../../../../app/tray/Account/Requests/TransactionRequest'
-import { TxMain } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
+import {
+  DeploymentReviewEvidence,
+  TxMain
+} from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
 import TxRecipientComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxRecipient'
 import { TxFee } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxFee'
 import { TxSending as TxValue } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxValue'
@@ -72,6 +75,27 @@ function addRequest(req) {
 }
 
 describe('confirm', () => {
+  it('shows exact prepared creation evidence and labels the CREATE address as provisional', () => {
+    const hash = `0x${'ab'.repeat(32)}`
+    const provisionalAddress = '0x1111111111111111111111111111111111111111'
+    render(
+      <DeploymentReviewEvidence
+        deployment={{
+          initcodeBytes: 4,
+          initcodeHash: hash,
+          pendingNonce: '0x5',
+          provisionalAddress
+        }}
+      />
+    )
+
+    expect(screen.getByLabelText('Prepared deployment evidence')).toBeTruthy()
+    expect(screen.getByText('4 bytes')).toBeTruthy()
+    expect(screen.getByText(hash)).toBeTruthy()
+    expect(screen.getByText(provisionalAddress)).toBeTruthy()
+    expect(screen.getByText(/Based on pending nonce 5.*may change before signing/)).toBeTruthy()
+  })
+
   it('copies the displayed sender identity from the main review', () => {
     const txMain = new TxMain({})
     txMain.setState = jest.fn()

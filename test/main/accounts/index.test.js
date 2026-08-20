@@ -15,7 +15,7 @@ import { bindRequestSignal } from '../../../main/provider/requestSignal'
 import { snapshotPreparedWalletCallExecutionInput } from '../../../main/provider/walletCallPreparedExecution'
 import { SignerUserRejectedError } from '../../../main/signers/errors'
 import nav from '../../../main/windows/nav'
-import { computeAddress, SigningKey, Transaction } from 'ethers'
+import { computeAddress, keccak256, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import operationLifecycleLedger from '../../../main/operationLifecycle'
@@ -30,6 +30,7 @@ import {
   TRANSACTION_FUNDING_ERROR,
   WALLET_CALL_FUNDING_ERROR
 } from '../../../resources/domain/transaction/funding'
+import { WREN_DEPLOY_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForName } from '../../../resources/domain/origin'
 
 jest.mock('electron', () => ({
   Notification: class {
@@ -3130,6 +3131,27 @@ describe('#replaceTx', () => {
     return { current, original }
   }
 
+  const installManagedDeploymentOriginal = () => {
+    const installed = installOriginal()
+    const initcode = '0x60006000'
+    delete installed.original.data.to
+    installed.original.data.data = initcode
+    installed.original.data.value = '0x0'
+    installed.original.origin = originIdForName(WREN_DEPLOY_ORIGIN)
+    installed.original.deployment = Object.freeze({
+      version: 1,
+      inspectionId: 'd'.repeat(32),
+      account: installed.current.id,
+      chainId: '0x1',
+      initcodeHash: keccak256(initcode),
+      initcodeBytes: 4,
+      value: '0x0',
+      preparedAt: 1_000,
+      expiresAt: 61_000
+    })
+    return installed
+  }
+
   beforeEach(() => {
     provider.sendTransaction.mockReset()
     provider.connection.send.mockReset()
@@ -3215,6 +3237,59 @@ describe('#replaceTx', () => {
     })
     expect(current.requests['replacement-0x0'].replacement.kind).toBe('cancel')
     expect(provider.sendTransaction.mock.calls[0][4]).not.toHaveProperty('recentRecipient')
+  })
+
+  it('carries frozen deployment evidence into an exact managed speed-up', async () => {
+    const { current, original } = installManagedDeploymentOriginal()
+    store.setGasFees('ethereum', 1, {
+      maxBaseFeePerGas: '0x70',
+      maxPriorityFeePerGas: '0x5'
+    })
+
+    await expect(Accounts.replaceTx(current.id, original.handlerId, 'speed')).resolves.toBeUndefined()
+
+    const [payload, , , , trustedMetadata] = provider.sendTransaction.mock.calls[0]
+    expect(payload._origin).toBe(originIdForName(WREN_DEPLOY_ORIGIN))
+    expect(payload.params[0]).not.toHaveProperty('to')
+    expect(payload.params[0]).toMatchObject({
+      data: original.data.data,
+      value: original.data.value,
+      nonce: original.data.nonce
+    })
+    expect(trustedMetadata).toEqual({
+      replacement: {
+        kind: 'speed',
+        originalActivityId: activityId,
+        originalHash
+      },
+      deployment: original.deployment
+    })
+  })
+
+  it('routes a managed deployment cancellation through the internal recovery origin', async () => {
+    const { current, original } = installManagedDeploymentOriginal()
+    store.setGasFees('ethereum', 1, {
+      maxBaseFeePerGas: '0x70',
+      maxPriorityFeePerGas: '0x5'
+    })
+
+    await expect(Accounts.replaceTx(current.id, original.handlerId, 'cancel')).resolves.toBeUndefined()
+
+    const [payload, , , , trustedMetadata] = provider.sendTransaction.mock.calls[0]
+    expect(payload._origin).toBe(originIdForName(WREN_INTERNAL_ORIGIN))
+    expect(payload.params[0]).toMatchObject({
+      to: current.id,
+      value: '0x0',
+      data: '0x',
+      nonce: original.data.nonce
+    })
+    expect(trustedMetadata).toEqual({
+      replacement: {
+        kind: 'cancel',
+        originalActivityId: activityId,
+        originalHash
+      }
+    })
   })
 
   it('fails closed when the original is included before replacement admission', async () => {

@@ -4,7 +4,7 @@ import {
   isRequestOriginAuthorized
 } from '../../../main/rpc/requestAuthorization'
 import { createAccountPermission } from '../../../main/provider/permissions'
-import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 
 const origin = 'https://alpha.example'
 const account = '0x0000000000000000000000000000000000000001'
@@ -15,6 +15,11 @@ const request = {
   account,
   data: { chainId: '0x1' },
   payload: { method: 'eth_sendTransaction' }
+}
+const deploymentRequest = {
+  ...request,
+  origin: originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' }),
+  deployment: { chainId: '0x1' }
 }
 const permission = createAccountPermission({ account, chains: [1], handlerId: originId, origin })
 const directPrincipalState = {
@@ -73,7 +78,7 @@ it('allows an access request to establish permission', () => {
   expect(isRequestOriginAuthorized({ type: 'access', origin: request.origin }, {})).toBe(true)
 })
 
-it('allows the application-owned Send surface without a persisted external grant', () => {
+it('allows the exact application-owned Send surface without a persisted external grant', () => {
   expect(
     isRequestOriginAuthorized(
       {
@@ -84,6 +89,99 @@ it('allows the application-owned Send surface without a persisted external grant
     )
   ).toBe(true)
 })
+
+it('allows only an evidence-bound deployment operation through the managed Deploy surface', () => {
+  expect(isRequestOriginAuthorized(deploymentRequest, {})).toBe(true)
+  expect(isRequestOriginAuthorized({ ...deploymentRequest, deployment: undefined }, {})).toBe(false)
+  expect(isRequestOriginAuthorized({ ...deploymentRequest, type: 'message' }, {})).toBe(false)
+  expect(isRequestOriginAuthorized({ ...deploymentRequest, payload: { method: 'personal_sign' } }, {})).toBe(
+    false
+  )
+  expect(isRequestOriginAuthorized({ ...deploymentRequest, data: { chainId: '0x2' } }, {})).toBe(false)
+})
+
+it('does not grant local authorization to another managed-origin-shaped identity', () => {
+  expect(
+    isRequestOriginAuthorized(
+      {
+        ...request,
+        origin: originIdForInvoker('http://other.wren.localhost:8421', { provenance: 'managed' })
+      },
+      {}
+    )
+  ).toBe(false)
+})
+
+it.each([FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN])(
+  'revalidates the exact current managed principal for %s at the final signer boundary',
+  (managedOrigin) => {
+    const managedId = originIdForInvoker(managedOrigin, { provenance: 'managed' })
+    const principal = {
+      chain: { id: 1, type: 'ethereum' as const },
+      name: managedOrigin,
+      provenance: 'managed' as const,
+      sessionOnly: false,
+      session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+    }
+    const state = {
+      origins: { [managedId]: principal },
+      extensionCredentials: {},
+      nativePeerCredentials: {}
+    }
+    const managedRequest = {
+      ...request,
+      origin: managedId,
+      ...(managedOrigin === WREN_DEPLOY_ORIGIN ? { deployment: { chainId: '0x1' } } : {})
+    }
+
+    expect(isCurrentRequestOriginAuthorized(managedRequest, {}, state)).toBe(true)
+    if (managedOrigin === WREN_DEPLOY_ORIGIN) {
+      expect(isCurrentRequestOriginAuthorized({ ...managedRequest, deployment: undefined }, {}, state)).toBe(
+        false
+      )
+      expect(
+        isCurrentRequestOriginAuthorized(
+          managedRequest,
+          {},
+          {
+            ...state,
+            origins: { [managedId]: { ...principal, chain: { id: 2, type: 'ethereum' as const } } }
+          }
+        )
+      ).toBe(false)
+    }
+    expect(
+      isCurrentRequestOriginAuthorized(
+        managedRequest,
+        {},
+        {
+          ...state,
+          origins: { [managedId]: { ...principal, name: 'http://forged.wren.localhost:8421' } }
+        }
+      )
+    ).toBe(false)
+    expect(
+      isCurrentRequestOriginAuthorized(
+        managedRequest,
+        {},
+        {
+          ...state,
+          origins: { [managedId]: { ...principal, provenance: 'direct' as const } }
+        }
+      )
+    ).toBe(false)
+    expect(
+      isCurrentRequestOriginAuthorized(
+        managedRequest,
+        {},
+        {
+          ...state,
+          origins: { [managedId]: { ...principal, sourceId: 'forged-source' } }
+        }
+      )
+    ).toBe(false)
+  }
+)
 
 it('keeps a locally-created cancel recoverable after its original dapp is disconnected', () => {
   const cancel = {

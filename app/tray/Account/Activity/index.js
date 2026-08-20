@@ -5,9 +5,10 @@ import Icon from '../../../../resources/Components/Icon'
 import DialogSurface from '../../../../resources/Components/DialogSurface'
 import link from '../../../../resources/link'
 import {
-  FRAME_SEND_ORIGIN,
   WREN_INTERNAL_ORIGIN,
-  getOriginDisplayName
+  getManagedOriginNameForId,
+  getOriginDisplayName,
+  isManagedOriginName
 } from '../../../../resources/domain/origin'
 
 export const ACTIVITY_PREVIEW_LIMIT = 4
@@ -59,7 +60,9 @@ export const activityTypeMeta = (type) => TYPE_META[type] || TYPE_META.transacti
 
 export const activityOriginLabel = (origin, knownName) => {
   if (knownName) return getOriginDisplayName(knownName)
-  if (origin === FRAME_SEND_ORIGIN || origin === WREN_INTERNAL_ORIGIN) return getOriginDisplayName(origin)
+  const managedOriginName = getManagedOriginNameForId(origin)
+  if (managedOriginName) return getOriginDisplayName(managedOriginName)
+  if (isManagedOriginName(origin) || origin === WREN_INTERNAL_ORIGIN) return getOriginDisplayName(origin)
 
   try {
     const parsed = new URL(origin)
@@ -75,7 +78,7 @@ export const filterActivity = (entries, category, filter = '') => {
     const meta = activityTypeMeta(entry.type)
     if (category !== 'all' && meta.category !== category) return false
     if (!query) return true
-    return [meta.label, OUTCOME_LABELS[entry.outcome], entry.origin]
+    return [meta.label, OUTCOME_LABELS[entry.outcome], activityOriginLabel(entry.origin)]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query))
   })

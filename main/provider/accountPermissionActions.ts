@@ -1,4 +1,4 @@
-import { FRAME_SEND_ORIGIN } from '../../resources/domain/origin'
+import { isManagedOriginName } from '../../resources/domain/origin'
 import type { Permission } from '../store/state'
 
 import { applyPermissionAction } from './permissionEvents'
@@ -37,10 +37,10 @@ export function applyAccountPermissionRendererAction(
 
   if (action === 'toggleAccess') {
     if (!permission || typeof desiredAccess !== 'boolean') return false
-    if (permission.origin === FRAME_SEND_ORIGIN || desiredAccess !== false) return false
+    if (isManagedOriginName(permission.origin) || desiredAccess !== false) return false
   }
 
-  const externalPermissions = Object.values(permissions).filter(({ origin }) => origin !== FRAME_SEND_ORIGIN)
+  const externalPermissions = Object.values(permissions).filter(({ origin }) => !isManagedOriginName(origin))
   if (action === 'clearPermissions' && externalPermissions.length === 0) return false
 
   const revokedPermissions =

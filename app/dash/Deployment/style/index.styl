@@ -1,0 +1,249 @@
+.deployment
+  width 100%
+  min-height 100%
+  box-sizing border-box
+  padding 0 var(--wren-space-4) var(--wren-space-8)
+  overflow-x hidden
+  color var(--wren-text-primary)
+
+.deploymentHeader
+  padding var(--wren-space-5) 0 var(--wren-space-4)
+
+  h1
+    margin var(--wren-space-1) 0
+    font-size 25px
+    font-weight 500
+    letter-spacing -.4px
+
+  p
+    max-width 560px
+    margin 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 19px
+
+.deploymentEyebrow,
+.deploymentEvidenceHeader span
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  letter-spacing .08em
+  text-transform uppercase
+
+.deploymentForm
+  display flex
+  min-width 0
+  flex-direction column
+  gap var(--wren-space-4)
+
+.deploymentSelectors
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-3)
+
+  label
+    display flex
+    min-width 0
+    flex-direction column
+    gap 6px
+
+  span
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  select
+    width 100%
+    min-height 44px
+    padding 0 var(--wren-space-2)
+    font-family var(--wren-font-mono)
+    font-size 12px
+
+  small
+    color var(--wren-text-muted)
+    font-size 12px
+    line-height 17px
+
+.deploymentField
+  position relative
+  display flex
+  min-width 0
+  flex-direction column
+  gap 6px
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+
+  textarea,
+  input
+    width 100%
+    box-sizing border-box
+    padding var(--wren-space-3)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    line-height 18px
+
+  textarea
+    min-height 180px
+    max-height 420px
+
+  input
+    min-height 44px
+    padding-top 0
+    padding-bottom 0
+
+  small
+    max-width 620px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-ui)
+    font-size 12px
+    line-height 17px
+
+.deploymentValueField
+  max-width 340px
+
+.deploymentByteCount
+  position absolute
+  right 0
+  top 1px
+  font-family var(--wren-font-mono) !important
+  text-align right
+
+.deploymentFieldError
+  min-height 17px
+  color var(--wren-danger) !important
+
+.deploymentEmpty,
+.deploymentRpcDisclosure,
+.deploymentBoundary,
+.deploymentProvisionalNote,
+.deploymentMessage
+  margin 0
+  font-size var(--wren-type-small)
+  line-height 19px
+
+.deploymentEmpty
+  color var(--wren-text-secondary)
+
+.deploymentRpcDisclosure
+  max-width 700px
+  color var(--wren-text-secondary)
+
+.deploymentBoundary,
+.deploymentProvisionalNote
+  max-width 700px
+  color var(--wren-text-tertiary)
+
+.deploymentEvidence
+  min-width 0
+  padding var(--wren-space-2) 0 0
+  scroll-margin-top var(--wren-space-4)
+
+  dl
+    margin var(--wren-space-3) 0 0
+    border 0
+
+.deploymentEvidenceHeader
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 4px
+
+  h2
+    margin var(--wren-space-1) 0 0
+    font-size 20px
+    font-weight 500
+
+.deploymentEvidenceRow
+  display grid
+  grid-template-columns minmax(150px, .32fr) minmax(0, 1fr)
+  min-height 42px
+  border 0
+
+  dt,
+  dd
+    display flex
+    align-items center
+    min-width 0
+    margin 0
+    padding var(--wren-space-2)
+
+  dt
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  dd
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 18px
+
+.deploymentMono
+  font-family var(--wren-font-mono)
+
+.deploymentProvisionalNote
+  margin-top var(--wren-space-2)
+
+.deploymentMessage
+  min-height 19px
+  color var(--wren-text-secondary)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 3px
+
+.deploymentMessage-alert
+  color var(--wren-danger)
+
+.deploymentActionShelf
+  position sticky
+  z-index 4
+  bottom 0
+  display flex
+  justify-content flex-end
+  gap var(--wren-space-3)
+  margin 0 calc(-1 * var(--wren-space-4)) calc(-1 * var(--wren-space-8))
+  padding var(--wren-space-6) var(--wren-space-4) var(--wren-space-4)
+  background linear-gradient(180deg, transparent, var(--wren-bg-wallet-canvas) var(--wren-space-5))
+
+  button
+    min-width 168px
+
+@media (max-width: 540px)
+  .deployment
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)
+
+  .deploymentSelectors
+    grid-template-columns 1fr
+
+  .deploymentByteCount
+    position static
+    text-align left
+
+  .deploymentEvidenceRow
+    grid-template-columns 1fr
+    padding var(--wren-space-2) 0
+
+    dt,
+    dd
+      padding var(--wren-space-1) 0
+
+  .deploymentActionShelf
+    margin-right calc(-1 * var(--wren-space-3))
+    margin-left calc(-1 * var(--wren-space-3))
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)
+
+    button
+      min-width 0
+      flex 1
+
+@media (prefers-reduced-motion: reduce)
+  .deployment,
+  .deployment *,
+  .deployment *::before,
+  .deployment *::after
+    scroll-behavior auto !important
+    transition-duration .01ms !important
+    animation-duration .01ms !important

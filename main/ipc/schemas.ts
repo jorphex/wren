@@ -21,6 +21,11 @@ import {
 } from '../provider/dappGuardrailActions'
 import { InspectorInputSchema } from '../../resources/domain/inspector'
 import { InspectorInvokeResultSchema } from '../inspector/schema'
+import {
+  MAX_DEPLOYMENT_INITCODE_HEX_LENGTH,
+  MAX_DEPLOYMENT_INITCODE_BYTES
+} from '../../resources/domain/deployment'
+import { DEPLOYMENT_SERVICE_ERROR_CODES } from '../deployment'
 
 const MAX_TEXT = 4096
 const MAX_URL = 8192
@@ -90,6 +95,111 @@ const CalldataSchema = z
   .string()
   .max(131_074)
   .regex(/^0x(?:[0-9a-fA-F]{2})*$/)
+const DeploymentInitcodeSchema = z
+  .string()
+  .max(MAX_DEPLOYMENT_INITCODE_HEX_LENGTH)
+  .regex(/^0x(?:[0-9a-fA-F]{2})+$/)
+const DeploymentDraftSchema = z
+  .object({
+    account: AddressSchema,
+    chainId: ChainNumberSchema,
+    initcode: DeploymentInitcodeSchema,
+    value: z.union([z.literal(''), DecimalAmountSchema])
+  })
+  .strict()
+const DeploymentInspectionIdSchema = z.string().regex(/^[0-9a-f]{32}$/)
+const DeploymentEvidenceReasonSchema = z.enum(['timeout', 'rpc-unavailable', 'rpc-error', 'invalid-response'])
+const DeploymentEvidenceFailureSchema = z
+  .object({
+    status: z.enum(['unavailable', 'failed']),
+    source: z.literal('configured-rpc'),
+    reasonCode: DeploymentEvidenceReasonSchema,
+    reason: z.string().min(1).max(240)
+  })
+  .strict()
+const DeploymentGasEstimateSchema = z.union([
+  z
+    .object({
+      status: z.literal('succeeded'),
+      source: z.literal('configured-rpc'),
+      method: z.literal('eth_estimateGas'),
+      value: RpcQuantitySchema,
+      padded: z.literal(true)
+    })
+    .strict(),
+  DeploymentEvidenceFailureSchema.extend({ method: z.literal('eth_estimateGas') }).strict()
+])
+const DeploymentSimulationSchema = z
+  .object({
+    status: z.enum(['succeeded', 'reverted', 'unavailable', 'failed']),
+    source: z.literal('configured-rpc'),
+    method: z.enum(['eth_simulateV1', 'eth_call']).optional(),
+    gasUsed: RpcQuantitySchema.optional(),
+    reasonCode: z.union([DeploymentEvidenceReasonSchema, z.literal('execution-reverted')]).optional(),
+    reason: z.string().min(1).max(240).optional(),
+    advancedChecks: z.enum(['complete', 'partly-unavailable', 'pending', 'not-run'])
+  })
+  .strict()
+  .superRefine((simulation, context) => {
+    const expectedReason =
+      simulation.status === 'succeeded'
+        ? undefined
+        : simulation.status === 'reverted'
+          ? 'execution-reverted'
+          : simulation.status === 'unavailable'
+            ? simulation.reasonCode
+            : simulation.reasonCode
+    if (simulation.status === 'succeeded' && (simulation.reasonCode || simulation.reason)) {
+      context.addIssue({ code: 'custom', message: 'successful deployment simulation cannot have an error' })
+    } else if (
+      (simulation.status === 'succeeded' || simulation.status === 'reverted') &&
+      !simulation.method
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'completed deployment simulation requires its configured-RPC method'
+      })
+    } else if (simulation.status !== 'succeeded' && (!expectedReason || !simulation.reason)) {
+      context.addIssue({ code: 'custom', message: 'failed deployment simulation requires bounded evidence' })
+    } else if (simulation.status === 'reverted' && simulation.reasonCode !== 'execution-reverted') {
+      context.addIssue({ code: 'custom', message: 'reverted deployment simulation has invalid evidence' })
+    }
+  })
+const DeploymentPendingNonceSchema = z.union([
+  z
+    .object({
+      status: z.literal('succeeded'),
+      source: z.literal('configured-rpc'),
+      method: z.literal('eth_getTransactionCount'),
+      nonce: RpcQuantitySchema,
+      provisionalAddress: AddressSchema,
+      provisional: z.literal(true)
+    })
+    .strict(),
+  DeploymentEvidenceFailureSchema.extend({ method: z.literal('eth_getTransactionCount') }).strict()
+])
+const DeploymentInspectionSchema = z
+  .object({
+    id: DeploymentInspectionIdSchema,
+    preparedAt: ExpirySchema,
+    expiresAt: ExpirySchema,
+    account: AddressSchema,
+    chainId: RpcQuantitySchema,
+    initcode: z
+      .object({
+        bytes: z.number().int().positive().max(MAX_DEPLOYMENT_INITCODE_BYTES),
+        hash: HashSchema
+      })
+      .strict(),
+    value: RpcQuantitySchema,
+    gasEstimate: DeploymentGasEstimateSchema,
+    simulation: DeploymentSimulationSchema,
+    pendingNonce: DeploymentPendingNonceSchema
+  })
+  .strict()
+  .refine((inspection) => inspection.expiresAt > inspection.preparedAt, {
+    message: 'deployment inspection expiry must follow preparation'
+  })
 const NativeMaxRequestSchema = z
   .object({
     account: AddressSchema,
@@ -498,6 +608,10 @@ const invokeSchemas = {
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'deployment:prepare': z.tuple([DeploymentDraftSchema]),
+  'deployment:queue': z.tuple([
+    z.object({ inspectionId: DeploymentInspectionIdSchema, draft: DeploymentDraftSchema }).strict()
+  ]),
   'inspector:inspect': z.tuple([InspectorInputSchema]),
   'profile:export': z.tuple([BackupPasswordSchema]),
   'profile:inspectBackup': z.tuple([BackupPasswordSchema]),
@@ -562,6 +676,14 @@ const invokeResultSchemas = {
   'addressBook:save': z.union([
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'deployment:prepare': z.union([
+    z.object({ success: z.literal(true), inspection: DeploymentInspectionSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.enum(DEPLOYMENT_SERVICE_ERROR_CODES) }).strict()
+  ]),
+  'deployment:queue': z.union([
+    z.object({ success: z.literal(true), handlerId: IdSchema }).strict(),
+    z.object({ success: z.literal(false), error: z.enum(DEPLOYMENT_SERVICE_ERROR_CODES) }).strict()
   ]),
   'inspector:inspect': InspectorInvokeResultSchema,
   'profile:export': z.union([

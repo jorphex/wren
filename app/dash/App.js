@@ -14,6 +14,7 @@ import Send from './Send'
 import AddressBook from './AddressBook'
 import Dapps from './Dapps'
 import Inspector from './Inspector'
+import Deployment from './Deployment'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
@@ -83,6 +84,17 @@ export class Dash extends React.Component {
     if (view === 'addressBook') return <AddressBook data={data} />
     if (view === 'dapps') return <Dapps data={data} />
     if (view === 'inspector') return <Inspector />
+    if (view === 'deployment') {
+      return (
+        <Deployment
+          accounts={this.store('main.accounts') || {}}
+          signers={this.store('main.signers') || {}}
+          currentAccount={this.store('selected.current') || ''}
+          networks={this.store('main.networks.ethereum') || {}}
+          networksMeta={this.store('main.networksMeta.ethereum') || {}}
+        />
+      )
+    }
     if (view === 'expandedSigner' && data.signer) {
       const signerId = data.signer
       const signer = this.store('main.signers', signerId)

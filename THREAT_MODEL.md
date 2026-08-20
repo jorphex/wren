@@ -264,6 +264,15 @@ main-process work. Compromised tray/dash and broad renderer network/image policy
 remain high-impact; embedded dapps depend on partitioning, session checks, and
 request filtering.
 
+The prepared-deployment invoke is dashboard-only. The main process validates and
+binds a short-lived one-use inspection to the exact current signer-capable account,
+connected configured chain, creation data, and value. A distinct managed Deploy
+principal is hidden from external connected-app, permission, activity-origin, and
+profile-recovery surfaces. It is authorized only for the evidence-bearing creation
+transaction and is revalidated after asynchronous filling and immediately before
+signing. Missing or changed evidence, a destination, an account/network/origin change,
+or replay fails closed. Preparation evidence is not signing authorization.
+
 #### Balance worker
 
 The hidden balance worker has no localhost provider authority. Its parent IPC

@@ -10,7 +10,11 @@ import {
 } from './profileMigration'
 import migrations from './store/migrate'
 import { DappGuardrailSchema } from '../resources/domain/dappGuardrails'
-import { FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForInvoker } from '../resources/domain/origin'
+import {
+  WREN_MANAGED_ORIGIN_IDS,
+  isWrenOwnedOriginName,
+  originIdForInvoker
+} from '../resources/domain/origin'
 
 const FORMAT = 'wren-profile-backup'
 const VERSION = 1
@@ -258,9 +262,11 @@ const recoveryOrigins = (value: unknown) =>
     Object.entries(recordValue(value)).flatMap(([id, originValue]) => {
       const origin = recordValue(originValue)
       if (
+        WREN_MANAGED_ORIGIN_IDS.includes(id) ||
         origin['sessionOnly'] === true ||
         origin['provenance'] === 'companion' ||
-        origin['provenance'] === 'native'
+        origin['provenance'] === 'native' ||
+        isWrenOwnedOriginName(origin['name'])
       ) {
         return []
       }
@@ -287,6 +293,7 @@ const recoveryPermissions = (value: unknown, droppedOriginIds: Set<string>) =>
           const legacyOrigin = permission['origin']
           return (
             !droppedOriginIds.has(originId) &&
+            !isWrenOwnedOriginName(legacyOrigin) &&
             !(
               typeof legacyOrigin === 'string' &&
               (legacyOrigin === 'Unknown' || legacyOrigin.startsWith('Unknown/'))
@@ -316,9 +323,7 @@ const recoveryDappGuardrails = (
             origin['provenance'] !== 'direct' ||
             origin['sourceId'] !== undefined ||
             origin['sessionOnly'] === true ||
-            [FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, 'frame-extension'].includes(
-              String(permission['origin'])
-            ) ||
+            isWrenOwnedOriginName(permission['origin']) ||
             permission['handlerId'] !== originId ||
             permission['origin'] !== origin['name'] ||
             originIdForInvoker(String(permission['origin']), { provenance: 'direct' }) !== originId
@@ -424,12 +429,14 @@ const recoveryMainState = (value: unknown) => {
   const origins = recoveryOrigins(persistedOrigins)
   const droppedOriginIds = new Set(
     Object.entries(persistedOrigins)
-      .filter(([, originValue]) => {
+      .filter(([id, originValue]) => {
         const origin = recordValue(originValue)
         return (
+          WREN_MANAGED_ORIGIN_IDS.includes(id) ||
           origin['sessionOnly'] === true ||
           origin['provenance'] === 'companion' ||
-          origin['provenance'] === 'native'
+          origin['provenance'] === 'native' ||
+          isWrenOwnedOriginName(origin['name'])
         )
       })
       .map(([id]) => id)

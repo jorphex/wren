@@ -17,6 +17,40 @@ const replacementNotices = {
   'gas-fees-too-low': 'gas fees too low'
 }
 
+export const DeploymentReviewEvidence = ({ deployment }) => {
+  if (!deployment) return null
+  let nonce
+  try {
+    nonce = deployment.pendingNonce ? BigInt(deployment.pendingNonce).toString(10) : undefined
+  } catch {
+    nonce = undefined
+  }
+  return (
+    <div className='transactionReviewDeployment' aria-label='Prepared deployment evidence'>
+      <div className='transactionReviewDeploymentRow'>
+        <span className='transactionReviewMetaLabel'>Creation data</span>
+        <span className='transactionReviewDeploymentValue'>
+          <span>{`${deployment.initcodeBytes} bytes`}</span>
+          <span className='transactionReviewDeploymentHash'>{deployment.initcodeHash}</span>
+        </span>
+      </div>
+      {deployment.provisionalAddress ? (
+        <div className='transactionReviewDeploymentRow'>
+          <span className='transactionReviewMetaLabel'>Provisional address</span>
+          <span className='transactionReviewDeploymentValue'>
+            <span className='transactionReviewDeploymentHash'>{deployment.provisionalAddress}</span>
+            <span className='transactionReviewDeploymentNote'>
+              {nonce
+                ? `Based on pending nonce ${nonce}. This address may change before signing.`
+                : 'This address may change before signing.'}
+            </span>
+          </span>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export class TxMain extends React.Component {
   constructor(...args) {
     super(...args)
@@ -112,6 +146,7 @@ export class TxMain extends React.Component {
                 </span>
               </button>
             ) : null}
+            <DeploymentReviewEvidence deployment={req.deployment} />
             <ClusterStatus>{this.state.copied ? 'Transaction sender address copied' : ''}</ClusterStatus>
           </div>
         </div>

@@ -113,6 +113,30 @@ const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
   ]
 })
 
+const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
+  id: `tray-transaction-deployment-${geometry}-${scale}`,
+  renderer: 'tray',
+  state: 'transaction-deployment',
+  scale,
+  logicalWidth: 620,
+  logicalHeight,
+  ready: '.requestApproveTransaction .requestSign:not(:disabled)',
+  requiredControls: [
+    'View transaction data',
+    'Copy transaction sender address',
+    'Decline',
+    'Sign transaction'
+  ],
+  requiredText: [
+    'Deploy contract',
+    'Wren Deploy',
+    'Creation data',
+    '4 bytes',
+    'Provisional address',
+    'may change before signing'
+  ]
+})
+
 const joinedCanvasScenarios = () => [
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -339,6 +363,61 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `dash-deployment-form-${geometry}-${scale}`,
+      renderer: 'dash',
+      state: 'deployment',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      ready: '.deploymentForm',
+      requiredControls: ['Account', 'Network', 'Creation data', 'Optional native value', 'Check deployment'],
+      requiredText: [
+        'Check deployment data',
+        'Workshop Software Account With A Long Name',
+        'Optimism',
+        'configured RPC',
+        'does not compile Solidity'
+      ]
+    }))
+  ),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].map(([geometry, logicalHeight]) => ({
+      id: `dash-deployment-result-${geometry}-${scale}`,
+      renderer: 'dash',
+      state: 'deployment',
+      scale,
+      logicalWidth: 620,
+      logicalHeight,
+      action: {
+        type: 'sequence',
+        steps: [
+          { type: 'inputLabel', label: 'Creation data', value: '0x60006000' },
+          { type: 'inputLabel', label: 'Optional native value', value: '0.01' },
+          { type: 'clickText', text: 'Check deployment' }
+        ]
+      },
+      ready: '.deploymentEvidence',
+      captureScroll: 'target',
+      captureScrollSelector: '.deploymentEvidence',
+      captureScrollOffset: -80,
+      requiredControls: ['Edit and recheck', 'Review deployment'],
+      requiredText: [
+        'PREPARED EVIDENCE',
+        'Keccak-256',
+        'Simulation completed',
+        'Provisional CREATE address',
+        'does not compile Solidity'
+      ]
+    }))
+  ),
   {
     id: 'dash-inspector-result-full-1',
     renderer: 'dash',
@@ -453,6 +532,8 @@ const reviewScenarios = () => [
   ...INTERFACE_SCALES.flatMap((scale) => [
     transactionLookalikeScenario('full', scale, FULL_SHELL_HEIGHT),
     transactionLookalikeScenario('short', scale, SHORT_SHELL_HEIGHT),
+    transactionDeploymentScenario('full', scale, FULL_SHELL_HEIGHT),
+    transactionDeploymentScenario('short', scale, SHORT_SHELL_HEIGHT),
     ...[
       ['full', FULL_SHELL_HEIGHT],
       ['short', SHORT_SHELL_HEIGHT]

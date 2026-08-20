@@ -1,4 +1,4 @@
-import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { applyAccountPermissionRendererAction } from '../../../main/provider/accountPermissionActions'
 
 const account = '0x0000000000000000000000000000000000000001'
@@ -8,6 +8,7 @@ const externalId = originIdForInvoker(externalOrigin, { provenance: 'direct' })
 const disabledId = originIdForInvoker(disabledOrigin, { provenance: 'direct' })
 const permissions = {
   managed: { handlerId: 'managed', origin: FRAME_SEND_ORIGIN, provider: true },
+  deployment: { handlerId: 'deployment', origin: WREN_DEPLOY_ORIGIN, provider: true },
   [externalId]: { handlerId: externalId, origin: externalOrigin, provider: true },
   [disabledId]: { handlerId: disabledId, origin: disabledOrigin, provider: false }
 }
@@ -87,12 +88,23 @@ it.each([
   expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalled()
 })
 
-it('ignores clearing when only managed Wren Send access remains', () => {
-  const { accounts, provider, dependencies } = setup({ managed: permissions.managed })
+it('ignores clearing when only managed Wren access remains', () => {
+  const { accounts, provider, dependencies } = setup({
+    managed: permissions.managed,
+    deployment: permissions.deployment
+  })
 
   expect(applyAccountPermissionRendererAction('clearPermissions', [account], dependencies)).toBe(false)
   expect(dependencies.mutate).not.toHaveBeenCalled()
   expect(dependencies.removeGuardrails).not.toHaveBeenCalled()
   expect(provider.accountsChanged).not.toHaveBeenCalled()
   expect(accounts.rejectUnapprovedRequestsForOrigins).not.toHaveBeenCalled()
+})
+
+it.each(['managed', 'deployment'])('never toggles the %s permission from the external-app UI', (id) => {
+  const { provider, dependencies } = setup()
+
+  expect(applyAccountPermissionRendererAction('toggleAccess', [account, id, false], dependencies)).toBe(false)
+  expect(dependencies.mutate).not.toHaveBeenCalled()
+  expect(provider.accountsChanged).not.toHaveBeenCalled()
 })

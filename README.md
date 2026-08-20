@@ -58,6 +58,13 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
   calldata context, EIP-712, and supported JSON-RPC intent wrappers. It decodes
   locally, uses only the configured RPC for optional simulation, and cannot sign,
   queue, forward, or broadcast the pasted request.
+- Includes a dashboard-only prepared contract deployment tool. It accepts complete
+  EVM creation data, including already encoded constructor arguments, and an optional
+  native value. Preparation sends the selected account context, creation data, and
+  value only to the configured RPC for gas, simulation, and pending-nonce evidence;
+  queueing then enters Wren's ordinary native review, signer, and one-shot broadcast
+  lifecycle. Wren does not compile Solidity, parse artifacts or ABIs, or verify source
+  or bytecode through this tool.
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
 - Lets users add optional local per-dapp, per-account, per-chain guardrails for
   destinations, approval spenders, native/token amounts, and expiry. Guardrails block

@@ -58,6 +58,7 @@ import { osSignerStorage } from './signers/hot/runtimeStorage'
 import chains from './chains'
 import { inspect } from './inspector'
 import recentRecipientsRuntime, { shouldClearRecentRecipientCandidates } from './recentRecipients/runtime'
+import deployment from './deployment/runtime'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -323,6 +324,11 @@ handleRenderer('addressBook:remove', async (e, address) =>
 handleRenderer('addressBook:import', async () => addressBookMutation(() => addressBookFiles.importFile()))
 handleRenderer('addressBook:export', async () => addressBookMutation(() => addressBookFiles.exportFile()))
 handleRenderer('inspector:inspect', async (e, input) => inspect(input, { send: chains.send.bind(chains) }))
+handleRenderer('deployment:prepare', async (e, draft) => deployment.prepare(draft))
+handleRenderer('deployment:queue', async (e, request) => {
+  const result = await deployment.queue(request)
+  return result.success ? { success: true, handlerId: result.handlerId } : result
+})
 
 const profileBackupMutation = async (publicError: string, operation: () => Promise<unknown> | unknown) => {
   try {

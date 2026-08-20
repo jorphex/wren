@@ -1,6 +1,11 @@
 import fs from 'fs'
 
 import { Activity, activityOriginLabel, filterActivity } from '../../../../../app/tray/Account/Activity'
+import {
+  WREN_DEPLOY_DISPLAY_NAME,
+  WREN_DEPLOY_ORIGIN,
+  originIdForInvoker
+} from '../../../../../resources/domain/origin'
 import link from '../../../../../resources/link'
 import { fireEvent, render, screen } from '../../../../componentSetup'
 
@@ -173,6 +178,18 @@ it('does not expose opaque origin identifiers as app names', () => {
   expect(activityOriginLabel('9d6ac046-3188-4eb3-9472-1cd540f61eae')).toBe('Unknown app')
   expect(activityOriginLabel('https://garden.example/private/path')).toBe('garden.example')
   expect(activityOriginLabel('opaque', 'Named app')).toBe('Named app')
+})
+
+it('presents deployment activity with its friendly name and never searches its private origin', () => {
+  expect(activityOriginLabel(WREN_DEPLOY_ORIGIN)).toBe(WREN_DEPLOY_DISPLAY_NAME)
+  expect(activityOriginLabel('managed-id', WREN_DEPLOY_ORIGIN)).toBe(WREN_DEPLOY_DISPLAY_NAME)
+
+  const deploymentOriginId = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+  expect(activityOriginLabel(deploymentOriginId)).toBe(WREN_DEPLOY_DISPLAY_NAME)
+
+  const deployment = [entry({ origin: deploymentOriginId })]
+  expect(filterActivity(deployment, 'transactions', 'Wren Deploy')).toHaveLength(1)
+  expect(filterActivity(deployment, 'transactions', deploymentOriginId)).toHaveLength(0)
 })
 
 it('keeps keyword filtering within the selected family', () => {

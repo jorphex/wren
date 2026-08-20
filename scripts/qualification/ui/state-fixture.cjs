@@ -773,6 +773,26 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'deployment') {
+    prepareSelectedAccount(state)
+    const signerId = 'qualification-deployment-signer'
+    state.main.accounts[QUALIFICATION_ACCOUNT].signer = signerId
+    state.main.signers = {
+      [signerId]: {
+        id: signerId,
+        name: 'Qualification signer',
+        type: 'ring',
+        status: 'ready',
+        addresses: [QUALIFICATION_ACCOUNT]
+      }
+    }
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'deployment', data: {} }]
+    }
+  }
+
   if (scenario.state === 'earn-yvusd') {
     prepareSelectedAccount(state)
     state.windows.dash = {
@@ -1600,6 +1620,58 @@ const fixtureFor = (scenario) => {
     state.windows.panel.footer.height = 132
   }
 
+  if (scenario.state === 'transaction-deployment') {
+    const request = addressLookalikeRequest()
+    const initcodeHash = '0x5e3ce470a8506d55e59815db7232a08774174ae0c7fdb2fbc81a49e4e242b0d6'
+    request.handlerId = 'qualification-deployment-review'
+    request.origin = 'qualification-wren-deploy'
+    request.classification = 'CONTRACT_DEPLOY'
+    request.data = {
+      from: QUALIFICATION_ACCOUNT,
+      chainId: '0x1',
+      data: '0x60006000',
+      nonce: '0x5',
+      type: '0x2',
+      value: '0x0',
+      gasLimit: '0x186a0',
+      maxFeePerGas: '0x77359400',
+      maxPriorityFeePerGas: '0x3b9aca00'
+    }
+    request.deployment = {
+      version: 1,
+      inspectionId: '0123456789abcdef0123456789abcdef',
+      account: QUALIFICATION_ACCOUNT.toLowerCase(),
+      chainId: '0x1',
+      initcodeHash,
+      initcodeBytes: 4,
+      value: '0x0',
+      preparedAt: Date.UTC(2026, 7, 20, 12, 0, 0),
+      expiresAt: Date.UTC(2026, 7, 20, 12, 1, 0),
+      pendingNonce: '0x5',
+      provisionalAddress: '0x3333333333333333333333333333333333333333'
+    }
+    delete request.addressSafety
+    delete request.recipientType
+    prepareSelectedAccount(state, request)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = {
+      'qualification-wren-deploy': { name: 'http://deploy.wren.localhost:8421' }
+    }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 114
+  }
+
   if (scenario.state === 'transaction-rpc-warning') {
     const request = addressLookalikeRequest()
     const warning = RPC_WARNING_FIXTURES[scenario.variant]
@@ -1779,6 +1851,44 @@ const invokeReplyFor = (scenario, method) => {
           effects: [],
           nativeBalanceChanges: { status: 'succeeded', changes: [] },
           callTrace: { calls: [], truncated: false }
+        }
+      }
+    }
+  }
+  if (scenario.state === 'deployment' && method === 'deployment:prepare') {
+    return {
+      success: true,
+      inspection: {
+        id: '0123456789abcdef0123456789abcdef',
+        preparedAt: Date.UTC(2026, 7, 20, 12, 0, 0),
+        expiresAt: Date.UTC(2026, 7, 20, 12, 1, 0),
+        account: QUALIFICATION_ACCOUNT.toLowerCase(),
+        chainId: '0xa',
+        initcode: {
+          bytes: 4,
+          hash: '0x5e3ce470a8506d55e59815db7232a08774174ae0c7fdb2fbc81a49e4e242b0d6'
+        },
+        value: '0x2386f26fc10000',
+        gasEstimate: {
+          status: 'succeeded',
+          source: 'configured-rpc',
+          method: 'eth_estimateGas',
+          value: '0x186a0',
+          padded: true
+        },
+        simulation: {
+          status: 'succeeded',
+          source: 'configured-rpc',
+          method: 'eth_call',
+          advancedChecks: 'partly-unavailable'
+        },
+        pendingNonce: {
+          status: 'succeeded',
+          source: 'configured-rpc',
+          method: 'eth_getTransactionCount',
+          nonce: '0x5',
+          provisionalAddress: '0x3333333333333333333333333333333333333333',
+          provisional: true
         }
       }
     }

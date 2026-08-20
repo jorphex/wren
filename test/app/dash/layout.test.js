@@ -19,6 +19,7 @@ const accountStyle = fs.readFileSync('app/tray/Account/style/account.styl', 'utf
 const badgeStyle = fs.readFileSync('app/tray/Badge/style/index.styl', 'utf8')
 const txApprovalStyle = fs.readFileSync('app/tray/Footer/RequestCommand/TxApproval/style/index.styl', 'utf8')
 const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'utf8')
+const deploymentStyle = fs.readFileSync('app/dash/Deployment/style/index.styl', 'utf8')
 const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
@@ -265,6 +266,18 @@ test('keeps the remaining review surfaces on established flat primitives', () =>
   )
   expect(inspectorStyle).toMatch(/\.inspectorEvidenceRow[\s\S]*?border 0[\s\S]*?dd[\s\S]*?border 0/)
   expect(inspectorStyle).not.toMatch(/\.inspectorWarnings[\s\S]{0,260}?border-left/)
+})
+
+test('keeps contract deployment on the flat wallet canvas and shared control primitives', () => {
+  expect(deploymentStyle).toMatch(
+    /\.deploymentForm[\s\S]*?display flex[\s\S]*?\.deploymentEvidence[\s\S]*?dl[\s\S]*?border 0/
+  )
+  expect(deploymentStyle).toMatch(/\.deploymentEvidenceRow[\s\S]*?display grid[\s\S]*?border 0/)
+  expect(deploymentStyle).toMatch(
+    /\.deploymentActionShelf[\s\S]*?position sticky[\s\S]*?bottom 0[\s\S]*?justify-content flex-end/
+  )
+  expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
+  expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
 })
 
 test('keeps hardware prompts opaque while giving their scrim and surface restrained depth', () => {

@@ -15,7 +15,7 @@ import {
 } from '../../main/profileBackup'
 import { migratePersistedConfiguration } from '../../main/profileMigration'
 import { OsSignerStorage } from '../../main/signers/hot/storage'
-import { originIdForInvoker } from '../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../resources/domain/origin'
 import { createAccountPermission } from '../../main/provider/permissions'
 
 const roots: string[] = []
@@ -307,6 +307,73 @@ it('excludes recent-recipient history and its opt-in preference from encrypted p
 
   expect(recoveryMain).not.toHaveProperty('rememberRecentRecipients')
   expect(recoveryMain).not.toHaveProperty('recentRecipientUses')
+})
+
+it('excludes managed Wren principals and permissions while retaining unrelated direct origins', () => {
+  const { profile } = fixture()
+  const configPath = path.join(profile, 'config.json')
+  const current = migratePersistedConfiguration(JSON.parse(fs.readFileSync(configPath, 'utf8')))
+  const account = Object.keys(current.main.accounts)[0] as string
+  const chainId = Number(Object.keys(current.main.networks.ethereum)[0])
+  const session = { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+  const externalOrigin = 'https://app.example'
+  const externalId = originIdForInvoker(externalOrigin, { provenance: 'direct' })
+  const managedOrigins = [FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN]
+
+  current.main.origins[externalId] = {
+    name: externalOrigin,
+    provenance: 'direct',
+    sessionOnly: false,
+    chain: { id: chainId, type: 'ethereum' },
+    session
+  }
+  current.main.permissions[account] = {
+    ...current.main.permissions[account],
+    [externalId]: createAccountPermission({
+      account,
+      chains: [chainId],
+      handlerId: externalId,
+      origin: externalOrigin,
+      now: 1
+    })
+  }
+  managedOrigins.forEach((managedOrigin) => {
+    const managedId = originIdForInvoker(managedOrigin, { provenance: 'managed' })
+    current.main.origins[managedId] = {
+      name: managedOrigin,
+      provenance: 'managed',
+      sessionOnly: false,
+      chain: { id: chainId, type: 'ethereum' },
+      session
+    }
+    current.main.permissions[account][managedId] = createAccountPermission({
+      account,
+      chains: [chainId],
+      handlerId: managedId,
+      origin: managedOrigin,
+      now: 1
+    })
+  })
+  const forgedDeployId = originIdForInvoker(WREN_DEPLOY_ORIGIN, { provenance: 'managed' })
+  current.main.origins[forgedDeployId].name = 'https://forged-managed-id.example'
+  current.main.origins[forgedDeployId].provenance = 'direct'
+  current.main.permissions[account][forgedDeployId].origin = 'https://forged-managed-id.example'
+  fs.writeFileSync(configPath, JSON.stringify({ main: { __: { [current.main._version]: current } } }))
+
+  const backup = createEncryptedProfileBackup(profile, password, new Date('2026-08-12T00:00:00.000Z'))
+  const payload = decryptTestPayload(backup, password)
+  const configuration = JSON.parse(Buffer.from(payload.files.config, 'base64').toString('utf8'))
+  const [version] = Object.keys(configuration.main.__)
+  const recoveryMain = configuration.main.__[version].main
+
+  expect(recoveryMain.origins).toHaveProperty(externalId)
+  expect(recoveryMain.permissions[account]).toHaveProperty(externalId)
+  managedOrigins.forEach((managedOrigin) => {
+    const managedId = originIdForInvoker(managedOrigin, { provenance: 'managed' })
+    expect(recoveryMain.origins).not.toHaveProperty(managedId)
+    expect(recoveryMain.permissions[account]).not.toHaveProperty(managedId)
+    expect(JSON.stringify(recoveryMain)).not.toContain(managedOrigin)
+  })
 })
 
 it('backs up only valid guardrails belonging to retained direct principals', () => {

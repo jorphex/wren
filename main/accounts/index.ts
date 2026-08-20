@@ -81,6 +81,7 @@ import {
   type TransactionFundingError,
   type WalletCallFundingError
 } from '../../resources/domain/transaction/funding'
+import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../resources/domain/origin'
 
 const MAX_FEE_PER_GAS = 9_999n * 1_000_000_000n
 const MAX_GAS_LIMIT = 12_500_000n
@@ -1563,7 +1564,15 @@ export class Accounts extends EventEmitter {
         method: 'eth_sendTransaction',
         chainId: toRpcQuantity(BigInt(chainId)),
         params: [params],
-        _origin: original.origin
+        _origin:
+          type === ReplacementType.Cancel && original.origin === originIdForName(WREN_DEPLOY_ORIGIN)
+            ? frameOriginId
+            : original.origin
+      }
+
+      const isManagedDeployment = original.origin === originIdForName(WREN_DEPLOY_ORIGIN)
+      if (isManagedDeployment && !original.deployment) {
+        throw new Error('Managed deployment replacement requires deployment evidence')
       }
 
       return await new Promise<void>((resolve, reject) => {
@@ -1588,7 +1597,10 @@ export class Accounts extends EventEmitter {
           },
           {
             replacement,
-            ...(type === ReplacementType.Speed && original.recentRecipient
+            ...(type === ReplacementType.Speed && isManagedDeployment
+              ? { deployment: original.deployment }
+              : {}),
+            ...(type === ReplacementType.Speed && !isManagedDeployment && original.recentRecipient
               ? { recentRecipient: original.recentRecipient }
               : {})
           }

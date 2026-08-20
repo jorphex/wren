@@ -5,7 +5,7 @@ import {
   DappGuardrailsSchema,
   type DappGuardrail
 } from '../../resources/domain/dappGuardrails'
-import { FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForInvoker } from '../../resources/domain/origin'
+import { isWrenOwnedOriginName, originIdForInvoker } from '../../resources/domain/origin'
 import { permissionCovers } from './permissions'
 import type { Origin, Permission } from '../store/state'
 
@@ -86,7 +86,6 @@ export type SaveDappGuardrailRequest = z.infer<typeof SaveDappGuardrailRequestSc
 export type RemoveDappGuardrailRequest = z.infer<typeof RemoveDappGuardrailRequestSchema>
 
 type GuardrailAction = 'saveDappGuardrail' | 'removeDappGuardrail'
-const excludedOriginNames = new Set([FRAME_SEND_ORIGIN, WREN_INTERNAL_ORIGIN, 'frame-extension'])
 
 interface DappGuardrailActionDependencies {
   getAccount(account: string): unknown
@@ -116,10 +115,7 @@ const hasCurrentPrincipal = (
   origin: Origin,
   dependencies: DappGuardrailActionDependencies
 ) => {
-  if (
-    excludedOriginNames.has(origin.name) ||
-    !['direct', 'companion', 'native'].includes(origin.provenance)
-  ) {
+  if (isWrenOwnedOriginName(origin.name) || !['direct', 'companion', 'native'].includes(origin.provenance)) {
     return false
   }
 

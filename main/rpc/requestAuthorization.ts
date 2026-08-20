@@ -1,15 +1,19 @@
 import { permissionCovers } from '../provider/permissions'
-import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../resources/domain/origin'
+import {
+  WREN_DEPLOY_ORIGIN,
+  getManagedOriginNameForId,
+  originIdForInvoker
+} from '../../resources/domain/origin'
+import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { ExtensionCredentialSchema } from '../store/state/types/extensionCredential'
 import { NativePeerCredentialSchema } from '../store/state/types/peerCredential'
 import { OriginSchema } from '../store/state/types/origin'
-
-const managedSendOriginId = originIdForInvoker(FRAME_SEND_ORIGIN, { provenance: 'managed' })
 
 type RequestOrigin = {
   account?: string
   chainId?: string
   data?: unknown
+  deployment?: unknown
   context?: { requestChainId?: string | number }
   origin: string
   payload?: { chainId?: string; method?: string }
@@ -51,13 +55,44 @@ const requestChainId = (request: RequestOrigin) => {
 const isLocalCancelRecovery = (request: RequestOrigin) =>
   request.type === 'transaction' && request.replacement?.kind === 'cancel'
 
+const recordValue = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
+
+const deploymentRequestChain = (request: RequestOrigin) => {
+  const deployment = recordValue(request.deployment)
+  if (request.type !== 'transaction' || request.payload?.method !== 'eth_sendTransaction' || !deployment) {
+    return
+  }
+  const requestChain = parseRpcQuantity(requestChainId(request))
+  const evidenceChain = parseRpcQuantity(deployment['chainId'])
+  if (requestChain === undefined || requestChain === 0n || requestChain !== evidenceChain) return
+  return requestChain
+}
+
+const managedRequestAuthorized = (
+  request: RequestOrigin,
+  managedOriginName: string,
+  principal?: { chain: { type: string; id: number } }
+) => {
+  if (managedOriginName !== WREN_DEPLOY_ORIGIN) return true
+  const chainId = deploymentRequestChain(request)
+  if (chainId === undefined) return false
+  if (!principal) return true
+  return (
+    principal.chain.type === 'ethereum' &&
+    Number.isSafeInteger(principal.chain.id) &&
+    BigInt(principal.chain.id) === chainId
+  )
+}
+
 export function isRequestOriginAuthorized(
   request: RequestOrigin,
   permissions: Record<string, OriginPermission>
 ) {
   if (request.type === 'access') return true
   if (isLocalCancelRecovery(request)) return true
-  if (request.origin === managedSendOriginId) return true
+  const managedOriginName = getManagedOriginNameForId(request.origin)
+  if (managedOriginName) return managedRequestAuthorized(request, managedOriginName)
 
   if (!request.account || !request.payload?.method) return false
   const permission = permissions[request.origin]
@@ -78,13 +113,15 @@ export function isCurrentRequestOriginAuthorized(
 ) {
   if (request.type === 'access') return true
   if (isLocalCancelRecovery(request)) return true
-  if (request.origin === managedSendOriginId) {
+  const managedOriginName = getManagedOriginNameForId(request.origin)
+  if (managedOriginName) {
     const origin = OriginSchema.safeParse(state.origins[request.origin])
     return !!(
       origin.success &&
-      origin.data.name === FRAME_SEND_ORIGIN &&
+      origin.data.name === managedOriginName &&
       origin.data.provenance === 'managed' &&
-      !origin.data.sourceId
+      !origin.data.sourceId &&
+      managedRequestAuthorized(request, managedOriginName, origin.data)
     )
   }
 

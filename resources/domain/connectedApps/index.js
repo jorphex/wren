@@ -1,10 +1,8 @@
 import { isNetworkConnected } from '../../utils/chains'
 import { isManagedPermission, isPermissionActive } from '../permissions'
-import { FRAME_SEND_ORIGIN } from '../origin'
+import { isWrenOwnedOriginName } from '../origin'
 
 export const RECENT_ORIGIN_TTL = 60 * 60 * 1000
-
-const hiddenOriginNames = new Set(['frame-internal', 'frame-extension', FRAME_SEND_ORIGIN])
 
 const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) => {
   const accessByOrigin = new Map()
@@ -13,7 +11,7 @@ const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) =
       if (
         isManagedPermission(permission) ||
         typeof permission?.origin !== 'string' ||
-        hiddenOriginNames.has(permission.origin) ||
+        isWrenOwnedOriginName(permission.origin) ||
         !isPermissionActive(permission, now)
       ) {
         return
@@ -46,7 +44,7 @@ export function selectConnectedAppGroups({
       const disconnected = []
 
       Object.entries(origins).forEach(([id, origin]) => {
-        if (origin?.chain?.id !== chain.id || hiddenOriginNames.has(origin?.name)) return
+        if (origin?.chain?.id !== chain.id || isWrenOwnedOriginName(origin?.name)) return
 
         const durable = permissionAccess.get(origin.name) === true
         const connectedNow = chain.on === true && isNetworkConnected(chain) && sessionIsActive(origin.session)

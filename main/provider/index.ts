@@ -96,6 +96,7 @@ import {
   LegacyTypedData,
   MessageSigningMethod,
   PermitSignatureRequest,
+  ReplacementType,
   RequestStatus,
   SignRequest,
   TypedData,
@@ -106,7 +107,7 @@ import { parseMessageRequest } from '../signatures/message'
 import { hasAddress } from '../../resources/domain/account'
 import { isLegacyRequestEnvelope, normalizeTransactionChainId } from '../requests'
 import { chainUsesOptimismFees } from '../../resources/utils/chains'
-import { FRAME_SEND_ORIGIN, originIdForName } from '../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForName } from '../../resources/domain/origin'
 import {
   buildSweepBalanceCall,
   createSweepEvidence,
@@ -129,6 +130,8 @@ import type { TokenData } from '../contracts/erc20'
 import type { Origin, Token } from '../store/state'
 import type { NativeMaxTrustedMetadata } from '../send/max'
 import recentRecipientsRuntime from '../recentRecipients/runtime'
+import type { DeploymentTrustedMetadata } from '../deployment'
+import { snapshotDeploymentMetadata } from '../deployment/metadata'
 
 const SUPPORTED_TRANSACTION_PARAMS = new Set([
   'nonce',
@@ -350,10 +353,22 @@ export class Provider extends EventEmitter {
   private assertManagedSendRuntimeAuthorization(request: TransactionRequest | WalletCallsRequest) {
     const isNativeMax = 'nativeMax' in request && Boolean(request.nativeMax)
     const hasRecentRecipient = 'recentRecipient' in request && Boolean(request.recentRecipient)
+    const hasDeployment = 'deployment' in request && Boolean(request.deployment)
     const isManagedSweep = 'managedSweep' in request && Boolean(request.managedSweep)
     const isManagedSend =
       request.type === 'transaction' && request.origin === originIdForName(FRAME_SEND_ORIGIN)
-    if (!isNativeMax && !hasRecentRecipient && !isManagedSweep && !isManagedSend) return
+    const isManagedDeployment =
+      request.type === 'transaction' && request.origin === originIdForName(WREN_DEPLOY_ORIGIN)
+    if (
+      !isNativeMax &&
+      !hasRecentRecipient &&
+      !hasDeployment &&
+      !isManagedSweep &&
+      !isManagedSend &&
+      !isManagedDeployment
+    ) {
+      return
+    }
     const rawChainId = request.type === 'walletCalls' ? request.chainId : request.data.chainId
     let chainId: number
     try {
@@ -364,9 +379,20 @@ export class Provider extends EventEmitter {
     const authorized =
       request.type === 'walletCalls'
         ? this.managedSweepOriginAuthorized(request.account, chainId, request.origin)
-        : this.managedSendOriginAuthorized(request.account, chainId, request.origin)
+        : hasDeployment || isManagedDeployment
+          ? this.managedDeploymentOriginAuthorized(request.account, chainId, request.origin)
+          : this.managedSendOriginAuthorized(request.account, chainId, request.origin)
     if (!authorized) {
-      throw Object.assign(new Error('Managed Wren Send request is no longer authorized'), { code: 4100 })
+      const managedName = hasDeployment || isManagedDeployment ? 'Wren Deploy' : 'Wren Send'
+      throw Object.assign(new Error(`Managed ${managedName} request is no longer authorized`), { code: 4100 })
+    }
+    if (isManagedDeployment) {
+      if (!request.deployment) {
+        throw Object.assign(new Error('Managed Wren Deploy request is missing deployment evidence'), {
+          code: 4100
+        })
+      }
+      snapshotDeploymentMetadata(request.deployment, request.data)
     }
   }
 
@@ -1675,6 +1701,25 @@ export class Provider extends EventEmitter {
     )
   }
 
+  private managedDeploymentOriginAuthorized(account: string, chainId: number, requestOrigin?: string) {
+    const originId = originIdForName(WREN_DEPLOY_ORIGIN)
+    const origin = store('main.origins', originId)
+    const currentAccount = accounts.current()
+    return Boolean(
+      origin &&
+      requestOrigin === originId &&
+      origin.name === WREN_DEPLOY_ORIGIN &&
+      origin.provenance === 'managed' &&
+      !origin.sourceId &&
+      currentAccount &&
+      currentAccount.id.toLowerCase() === account.toLowerCase() &&
+      !isWatchOnlyAccountType(currentAccount.lastSignerType) &&
+      origin.chain?.type === 'ethereum' &&
+      origin.chain.id === chainId &&
+      this.walletCallChainAvailable(chainId)
+    )
+  }
+
   private ensureManagedSweepOrigin(account: string, chainId: number) {
     const originId = originIdForName(FRAME_SEND_ORIGIN)
     const existing = store('main.origins', originId)
@@ -1935,7 +1980,7 @@ export class Provider extends EventEmitter {
     res: RPCRequestCallback,
     targetChain: Chain,
     onQueued?: (handlerId: string) => void,
-    trustedMetadata?: Pick<TransactionRequest, 'replacement' | 'nativeMax' | 'recentRecipient'>
+    trustedMetadata?: Pick<TransactionRequest, 'replacement' | 'nativeMax' | 'recentRecipient' | 'deployment'>
   ) {
     try {
       const txParams = payload.params[0]
@@ -2008,8 +2053,31 @@ export class Provider extends EventEmitter {
         targetChain.id,
         payload._origin
       )
+      const managedDeploymentOriginAuthorized = this.managedDeploymentOriginAuthorized(
+        currentAccount.id,
+        targetChain.id,
+        payload._origin
+      )
       if (payload._origin === originIdForName(FRAME_SEND_ORIGIN) && !managedSendOriginAuthorized) {
         return resError({ code: 4100, message: 'Managed Wren Send origin is not authorized' }, payload, res)
+      }
+      if (payload._origin === originIdForName(WREN_DEPLOY_ORIGIN) && !managedDeploymentOriginAuthorized) {
+        return resError({ code: 4100, message: 'Managed Wren Deploy origin is not authorized' }, payload, res)
+      }
+      if (payload._origin === originIdForName(WREN_DEPLOY_ORIGIN) && !trustedMetadata?.deployment) {
+        return resError('Managed Wren Deploy origin requires deployment evidence', payload, res)
+      }
+      if (
+        trustedMetadata?.deployment &&
+        (trustedMetadata.nativeMax ||
+          trustedMetadata.recentRecipient ||
+          (trustedMetadata.replacement && trustedMetadata.replacement.kind !== ReplacementType.Speed))
+      ) {
+        return resError(
+          'Deployment metadata can only be combined with an exact speed-up replacement',
+          payload,
+          res
+        )
       }
       if (trustedMetadata?.nativeMax && !managedSendOriginAuthorized) {
         return resError('Native Max metadata requires the exact managed Wren Send origin', payload, res)
@@ -2017,18 +2085,49 @@ export class Provider extends EventEmitter {
       if (trustedMetadata?.recentRecipient && !managedSendOriginAuthorized) {
         return resError('Recent recipient metadata requires the exact managed Wren Send origin', payload, res)
       }
+      if (trustedMetadata?.deployment && !managedDeploymentOriginAuthorized) {
+        return resError('Deployment metadata requires the exact managed Wren Deploy origin', payload, res)
+      }
       const recentRecipientMetadata = trustedMetadata?.recentRecipient
         ? snapshotRecentRecipientMetadata(trustedMetadata.recentRecipient)
         : undefined
+      let deploymentMetadata: DeploymentTrustedMetadata | undefined
+      if (trustedMetadata?.deployment) {
+        try {
+          deploymentMetadata = snapshotDeploymentMetadata(trustedMetadata.deployment, tx)
+        } catch {
+          return resError('Deployment transaction does not match its prepared evidence', payload, res)
+        }
+      }
 
       this.fillTransaction({ ...tx, from }, (err, transactionMetadata) => {
         if (err) {
           resError(err, payload, res)
         } else {
-          const handlerId = this.addRequestHandler(res)
-          if (!handlerId) return
           const txMetadata = transactionMetadata as TransactionMetadata
           const { feesUpdated, recipientType, ...data } = txMetadata.tx
+          if (deploymentMetadata) {
+            if (
+              !this.managedDeploymentOriginAuthorized(
+                (currentAccount as FrameAccount).id,
+                targetChain.id,
+                payload._origin
+              )
+            ) {
+              return resError(
+                { code: 4100, message: 'Managed Wren Deploy origin is no longer authorized' },
+                payload,
+                res
+              )
+            }
+            try {
+              deploymentMetadata = snapshotDeploymentMetadata(deploymentMetadata, data)
+            } catch {
+              return resError('Prepared deployment changed during transaction admission', payload, res)
+            }
+          }
+          const handlerId = this.addRequestHandler(res)
+          if (!handlerId) return
 
           const unclassifiedReq = {
             handlerId,
@@ -2048,7 +2147,8 @@ export class Provider extends EventEmitter {
                   nativeMax: snapshotNativeMaxMetadata(trustedMetadata.nativeMax)
                 }
               : {}),
-            ...(recentRecipientMetadata ? { recentRecipient: recentRecipientMetadata } : {})
+            ...(recentRecipientMetadata ? { recentRecipient: recentRecipientMetadata } : {}),
+            ...(deploymentMetadata ? { deployment: deploymentMetadata } : {})
           } as Omit<TransactionRequest, 'classification'>
 
           const classification = classifyTransaction(unclassifiedReq)

@@ -71,6 +71,19 @@ through Wren's current configured-RPC review path only when sender and chain con
 are sufficient. Missing context remains explicit, and inspected payloads are neither
 queued nor persisted.
 
+The Control Center's prepared deployment tool is also dashboard-only and is not a
+provider method or dapp capability. It accepts at most 49,152 bytes of complete,
+even-length hexadecimal EVM creation data, including any encoded constructor data,
+plus an exact decimal native value. Preparation uses only the selected configured RPC
+for gas estimation, simulation, and pending-nonce lookup. Evidence is short-lived and
+one-use; it is bound to the exact account, chain, creation-data hash and length, and
+value. Queueing creates a no-destination `eth_sendTransaction` under Wren's distinct
+managed Deploy principal, then uses the ordinary native review, permission recheck,
+signer, single-attempt broadcast, and reconciliation lifecycle. The provisional
+CREATE address can change when the pending nonce changes. The tool does not compile,
+decode constructor arguments, verify source/compiler/bytecode, or guarantee safety or
+deployment.
+
 Only `wallet_requestPermissions` and legacy `eth_requestAccounts` can open
 account-access consent. A grant is replaced through fresh consent after expiry
 or when newly enabled chains exceed its snapshot. Revocation deletes the grant.

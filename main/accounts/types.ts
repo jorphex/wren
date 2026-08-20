@@ -12,6 +12,7 @@ import type { AddressSafetyAssessment } from '../addressSafety/types'
 import type { TypedDataContext, TypedMessage } from '../../resources/domain/typedData'
 import type { SweepEvidence } from '../../resources/domain/sweep'
 import type { NativeMaxTrustedMetadata } from '../send/max'
+import type { DeploymentTrustedMetadata } from '../deployment'
 
 export type RecentRecipientTrustedMetadata = Readonly<{ address: string }>
 
@@ -152,6 +153,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   }
   nativeMax?: NativeMaxTrustedMetadata
   recentRecipient?: RecentRecipientTrustedMetadata
+  deployment?: DeploymentTrustedMetadata
   submission?: Readonly<{
     status: 'unconfirmed'
     detail: string

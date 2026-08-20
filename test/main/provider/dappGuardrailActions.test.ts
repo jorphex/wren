@@ -1,4 +1,4 @@
-import { originIdForInvoker } from '../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import { applyDappGuardrailRendererAction } from '../../../main/provider/dappGuardrailActions'
 
@@ -257,6 +257,40 @@ test.each([
   expect(dependencies.save).not.toHaveBeenCalled()
   expect(dependencies.onPolicyChanged).not.toHaveBeenCalled()
 })
+
+test.each([FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN])(
+  'never treats the managed origin %s as an external guardrail principal',
+  (managedOrigin) => {
+    const managedId = originIdForInvoker(managedOrigin, { provenance: 'managed' })
+    const dependencies = setup({
+      getOrigin: jest.fn(() => ({
+        name: managedOrigin,
+        provenance: 'managed' as const,
+        sessionOnly: false,
+        chain: { id: 1, type: 'ethereum' as const },
+        session: { requests: 1, startedAt: now, lastUpdatedAt: now }
+      })),
+      getPermission: jest.fn(() =>
+        createAccountPermission({
+          account,
+          chains: [1],
+          handlerId: managedId,
+          origin: managedOrigin,
+          now
+        })
+      )
+    })
+
+    expect(
+      applyDappGuardrailRendererAction(
+        'saveDappGuardrail',
+        { account, originId: managedId, chainId: '0x1', body },
+        dependencies
+      )
+    ).toBe(false)
+    expect(dependencies.save).not.toHaveBeenCalled()
+  }
+)
 
 test('rejects renderer-owned metadata and removes only an existing policy', () => {
   const existing = {
