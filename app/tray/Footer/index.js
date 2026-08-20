@@ -175,6 +175,7 @@ export class Footer extends React.Component {
   }
   renderLightweightRequestFooter({
     approveLabel,
+    compactActions = false,
     contextDetail,
     contextIcon,
     contextTitle,
@@ -182,7 +183,9 @@ export class Footer extends React.Component {
     onDecline
   }) {
     return (
-      <div className='requestApprove requestApproveLightweight'>
+      <div
+        className={`requestApprove requestApproveLightweight${compactActions ? ' requestApproveCompact' : ''}`}
+      >
         <div className='requestActionContext'>
           <span className='requestActionContextIcon'>
             <Icon name={contextIcon} size={19} />
@@ -907,6 +910,7 @@ export class Footer extends React.Component {
           const accountName = account.ensName || account.name || 'Account'
           return this.renderLightweightRequestFooter({
             approveLabel: 'Allow access',
+            compactActions: true,
             contextDetail: 'Only this account',
             contextIcon: 'accounts',
             contextTitle: accountName,

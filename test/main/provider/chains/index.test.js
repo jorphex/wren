@@ -4,6 +4,7 @@ import {
   getActiveChains
 } from '../../../../main/provider/chains'
 import store from '../../../../main/store'
+import log from 'electron-log'
 
 jest.mock('../../../../main/store', () => jest.fn())
 
@@ -93,6 +94,33 @@ describe('#getActiveChains', () => {
       connected: true
     })
   })
+
+  it('isolates an active network with invalid metadata from the valid catalog', () => {
+    const invalid = {
+      name: 'Invalid network',
+      id: 4153,
+      explorer: 'https://example.test',
+      connection: connection(),
+      on: true
+    }
+    const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
+    setChains({ ...chains, 4153: invalid }, chainMeta)
+
+    expect(getActiveChains().map((chain) => chain.chainId)).toEqual([1, 11155111])
+    expect(warning).toHaveBeenCalledWith(
+      'Skipping invalid active network in Companion catalog',
+      expect.objectContaining({ chainId: 4153, error: 'metadata is missing' })
+    )
+    warning.mockRestore()
+  })
+
+  it('reports an unusable catalog when every active network is invalid', () => {
+    const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
+    setChains({ 1: chains[1] }, {})
+
+    expect(() => getActiveChains()).toThrow('No active network has usable Companion metadata: 1')
+    warning.mockRestore()
+  })
 })
 
 describe('#createChainsObserver', () => {
@@ -108,6 +136,15 @@ describe('#createChainsObserver', () => {
     }
 
     handler.chainsChanged = jest.fn()
+  })
+
+  it('keeps the last valid catalog while all active network metadata is unusable', () => {
+    const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
+    setChains({ 1: chains[1] }, {})
+
+    expect(() => fireObserver()).not.toThrow()
+    expect(handler.chainsChanged).not.toHaveBeenCalled()
+    warning.mockRestore()
   })
 
   it('invokes the handler with EVM chain objects', () => {

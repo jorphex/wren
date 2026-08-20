@@ -24,6 +24,7 @@ const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip770
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
 const trayShellStyle = fs.readFileSync('app/tray/style/index.styl', 'utf8')
+const footerSource = fs.readFileSync('app/tray/Footer/index.js', 'utf8')
 
 test('keeps the compact wallet shell and its canvas on the same width contract', () => {
   expect(trayStyle).toMatch(/body::before[\s\S]*?width 620px/)
@@ -310,6 +311,18 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
   expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)
+})
+
+test('keeps dapp access actions compact without changing transaction actions', () => {
+  expect(footerSource).toMatch(
+    /req\.type === 'access'[\s\S]*?approveLabel: 'Allow access'[\s\S]*?compactActions: true/
+  )
+  expect(signingStyle).toMatch(
+    /\.requestApproveLightweight\.requestApproveCompact[\s\S]*?\.requestActionButtons[\s\S]*?width 272px[\s\S]*?justify-self end/
+  )
+  expect(signingStyle).toMatch(
+    /@media \(max-width: 560px\)[\s\S]*?\.requestApproveTransaction,[\s\S]*?\.requestApproveSignature,[\s\S]*?\.requestApproveLightweight/
+  )
 })
 
 test('keeps compact transfer summaries inline and revocation review on one focused canvas', () => {
