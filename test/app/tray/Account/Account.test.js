@@ -1,5 +1,5 @@
 import Restore from 'react-restore'
-import { render, screen, waitFor, within } from '../../../componentSetup'
+import { fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
 import { AccountBody, AccountMain } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
@@ -48,47 +48,41 @@ it('keeps Send and copy address actions connected to their existing tray behavio
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })
 
-it('shows the selected account address QR from an explicit modal action', async () => {
+it('shows the selected account address QR on hover without a click action', () => {
   const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
-  const qrTrigger = screen.getByRole('button', { name: 'Show account address QR code' })
+  render(main.renderHomeHeader())
+  const qrTrigger = screen.getByRole('button', { name: 'Account address QR code' })
+  const disclosure = qrTrigger.closest('.accountHomeQrDisclosure')
 
   expect(qrTrigger.getAttribute('aria-expanded')).toBe('false')
-  await user.click(qrTrigger)
-
-  const dialog = screen.getByRole('dialog', { name: 'Account address' })
+  fireEvent.click(qrTrigger)
+  expect(qrTrigger.getAttribute('aria-expanded')).toBe('false')
+  fireEvent.mouseEnter(disclosure)
   expect(qrTrigger.getAttribute('aria-expanded')).toBe('true')
-  expect(dialog.getAttribute('aria-modal')).toBe('true')
-  expect(within(dialog).getByText('Workshop')).toBeTruthy()
-  expect(within(dialog).getByText(address)).toBeTruthy()
-
-  const qr = within(dialog).getByRole('img', { name: 'QR code for account address' })
+  const preview = document.getElementById(qrTrigger.getAttribute('aria-controls'))
+  expect(within(preview).getByText('Workshop')).toBeTruthy()
+  expect(within(preview).getByText(address)).toBeTruthy()
+  const qr = within(preview).getByRole('img', { name: 'QR code for account address' })
   expect(qr.getAttribute('data-qr-payload')).toBe(address)
   expect(qr.getAttribute('data-qr-quiet-zone')).toBe('4')
-  const close = within(dialog).getByRole('button', { name: 'Close' })
-  expect(document.activeElement).toBe(close)
 
-  await user.click(close)
-  expect(screen.queryByRole('dialog', { name: 'Account address' })).toBeNull()
-  await waitFor(() => expect(document.activeElement).toBe(qrTrigger))
-
-  await user.click(qrTrigger)
-  expect(screen.getByRole('dialog', { name: 'Account address' })).toBeTruthy()
-
-  await user.keyboard('{Escape}')
-  expect(screen.queryByRole('dialog', { name: 'Account address' })).toBeNull()
-  await waitFor(() => expect(document.activeElement).toBe(qrTrigger))
+  fireEvent.mouseLeave(disclosure)
+  expect(qrTrigger.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByRole('img', { name: 'QR code for account address' })).toBeNull()
 })
 
-it('dismisses the account address QR when clicking outside its anchored surface', async () => {
+it('keeps the account address QR available to keyboard focus', () => {
   const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
+  render(main.renderHomeHeader())
+  const qrTrigger = screen.getByRole('button', { name: 'Account address QR code' })
 
-  await user.click(screen.getByRole('button', { name: 'Show account address QR code' }))
-  expect(screen.getByRole('dialog', { name: 'Account address' })).toBeTruthy()
+  fireEvent.focus(qrTrigger)
+  expect(qrTrigger.getAttribute('aria-expanded')).toBe('true')
+  expect(screen.getByRole('img', { name: 'QR code for account address' })).toBeTruthy()
 
-  await user.click(screen.getByRole('banner'))
-  expect(screen.queryByRole('dialog', { name: 'Account address' })).toBeNull()
+  fireEvent.blur(qrTrigger)
+  expect(qrTrigger.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByRole('img', { name: 'QR code for account address' })).toBeNull()
 })
 
 it('edits the account name from the header and returns focus after saving', async () => {

@@ -202,7 +202,7 @@ export class Main extends React.Component {
                   />
                   <div className='dashSupportWrenAddress'>{supportAddress}</div>
                   <p id='dash-support-wren-description' className='dashSupportWrenPreviewNote'>
-                    Optional. Verify this EVM address and network before sending.
+                    Support is optional, but always appreciated.
                   </p>
                 </div>
               ) : null}

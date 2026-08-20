@@ -2,7 +2,6 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import Icon from '../../../resources/Components/Icon'
-import DialogSurface from '../../../resources/Components/DialogSurface'
 import QrCode from '../../../resources/Components/QrCode'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
@@ -61,52 +60,37 @@ const modules = {
 
 export const AccountAddressActions = ({ address, name }) => {
   const [copied, copyAddress] = useCopiedMessage(address, 1800)
-  const [showQr, setShowQr] = React.useState(false)
-  const actionsRef = React.useRef()
-  const qrTriggerRef = React.useRef()
-  const dialogId = React.useId()
-  const titleId = `${dialogId}-title`
-
-  React.useEffect(() => {
-    if (!showQr) return undefined
-
-    const dismissOutside = (event) => {
-      if (!actionsRef.current?.contains(event.target)) setShowQr(false)
-    }
-
-    document.addEventListener('pointerdown', dismissOutside, true)
-    return () => document.removeEventListener('pointerdown', dismissOutside, true)
-  }, [showQr])
+  const [qrFocused, setQrFocused] = React.useState(false)
+  const [qrHovered, setQrHovered] = React.useState(false)
+  const previewId = React.useId()
+  const titleId = `${previewId}-title`
+  const showQr = qrFocused || qrHovered
 
   return (
-    <div ref={actionsRef} className='accountHomeAddressActions'>
+    <div className='accountHomeAddressActions'>
       <button type='button' className='accountHomeAddress' aria-label='Copy address' onClick={copyAddress}>
         <span>{address}</span>
         <Icon name={copied ? 'check' : 'copy'} size={14} />
       </button>
-      <div className='accountHomeQrDisclosure'>
+      <div
+        className='accountHomeQrDisclosure'
+        onMouseEnter={() => setQrHovered(true)}
+        onMouseLeave={() => setQrHovered(false)}
+      >
         <button
-          ref={qrTriggerRef}
           type='button'
-          aria-controls={showQr ? dialogId : undefined}
+          aria-controls={previewId}
           aria-expanded={showQr}
-          aria-haspopup='dialog'
-          aria-label='Show account address QR code'
+          aria-label='Account address QR code'
           className='accountHomeQrTrigger wrenControl wrenControlGhost wrenControlIcon'
-          title='Show account address QR code'
-          onClick={() => setShowQr((visible) => !visible)}
+          title='Hover or focus to show the account address QR code'
+          onBlur={() => setQrFocused(false)}
+          onFocus={() => setQrFocused(true)}
         >
           <Icon name='qr' size={16} />
         </button>
         {showQr ? (
-          <DialogSurface
-            id={dialogId}
-            labelledBy={titleId}
-            className='accountAddressQrPopover'
-            modal
-            returnFocusRef={qrTriggerRef}
-            onCancel={() => setShowQr(false)}
-          >
+          <div id={previewId} className='accountAddressQrPopover' aria-labelledby={titleId}>
             <div className='accountAddressQrHeader'>
               <div>
                 <h2 id={titleId} className='accountAddressQrTitle'>
@@ -114,22 +98,14 @@ export const AccountAddressActions = ({ address, name }) => {
                 </h2>
                 <div className='accountAddressQrAccount'>{name}</div>
               </div>
-              <button
-                type='button'
-                aria-label='Close'
-                className='accountAddressQrClose wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
-                onClick={() => setShowQr(false)}
-              >
-                <Icon name='close' size={12} />
-              </button>
             </div>
             <QrCode className='accountAddressQrCode' label='QR code for account address' value={address} />
             <div className='accountAddressQrValue'>{address}</div>
-          </DialogSurface>
+          </div>
         ) : null}
       </div>
       <span className='clusterStatus' role='status' aria-live='polite'>
-        {copied ? 'Address copied.' : showQr ? 'Address QR code opened.' : ''}
+        {copied ? 'Address copied.' : ''}
       </span>
     </div>
   )
