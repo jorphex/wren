@@ -525,7 +525,10 @@ export class Accounts extends EventEmitter {
       request.notice = 'Confirmed'
       request.completed = operation.updatedAt
       recordRequestActivity(request, 'confirmed')
-      if (request.type === 'transaction') this.scheduleConfirmedTransactionHandoff(account, request)
+      if (request.type === 'transaction') {
+        request.mode = RequestMode.Monitor
+        this.scheduleConfirmedTransactionHandoff(account, request)
+      }
     } else if (operation.state === 'verified-clearance' && request.type === 'eip7702Revoke') {
       request.status = RequestStatus.Confirmed
       request.notice = 'Delegation removed'
@@ -593,7 +596,7 @@ export class Accounts extends EventEmitter {
         this.transactionReviewDismissTimers.delete(key)
         const current = this.accounts[account.address]?.getRequest<TransactionRequest>(request.handlerId)
         if (current?.type === 'transaction' && current.status === RequestStatus.Confirmed) {
-          account.dismissRequestReview(request.handlerId)
+          account.releaseRequestReview(request.handlerId)
         }
       }, reviewDwell)
       dismissTimer.unref?.()
@@ -2839,6 +2842,7 @@ export class Accounts extends EventEmitter {
       delete request.submission
       request.notice = 'Verifying'
       currentAccount.update()
+      currentAccount.releaseRequestReview(handlerId)
       return true
     }
 
@@ -2860,6 +2864,7 @@ export class Accounts extends EventEmitter {
       submittedRequest.notice = 'Verifying'
       submittedRequest.mode = RequestMode.Monitor
       currentAccount.update()
+      currentAccount.releaseRequestReview(handlerId)
 
       void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
         const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)

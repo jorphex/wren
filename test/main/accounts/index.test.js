@@ -1933,6 +1933,30 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('advances the FIFO as soon as a signed transaction enters monitoring', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('signed-transaction-handoff')
+    const next = targetRequest('request-after-signed-transaction', 'sign')
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    targetAccount.addRequest(explicit)
+    targetAccount.addRequest(next)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'verifying',
+        mode: 'monitor'
+      })
+      expect(targetAccount.getActiveReviewRequest(next.handlerId)).toBe(next)
+      expect(targetAccount.summary().activeRequestId).toBe(next.handlerId)
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
   it('starts lifecycle reconciliation for an unconfirmed one-shot submission without remembering metadata', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = {
@@ -2400,6 +2424,8 @@ describe('ordinary transaction lifecycle outcomes', () => {
       }
     })
     const target = targetAccount.getRequest(request.handlerId)
+    const next = { ...request, handlerId: 'request-after-confirmed-deployment', type: 'sign' }
+    targetAccount.addRequest(next)
     target.status = 'verifying'
     target.tx = { hash, confirmations: 0 }
     const now = Date.now()
@@ -2443,7 +2469,7 @@ describe('ordinary transaction lifecycle outcomes', () => {
       status: '0x1',
       contractAddress
     }
-    const dismiss = jest.spyOn(targetAccount, 'dismissRequestReview')
+    const release = jest.spyOn(targetAccount, 'releaseRequestReview')
 
     try {
       operationLifecycleLedger.put(operation, now + 1)
@@ -2455,14 +2481,15 @@ describe('ordinary transaction lifecycle outcomes', () => {
         address: contractAddress.toLowerCase()
       })
       jest.advanceTimersByTime(4000)
-      expect(dismiss).not.toHaveBeenCalled()
+      expect(release).not.toHaveBeenCalled()
       jest.advanceTimersByTime(25_999)
-      expect(dismiss).not.toHaveBeenCalled()
+      expect(release).not.toHaveBeenCalled()
       jest.advanceTimersByTime(1)
-      expect(dismiss).toHaveBeenCalledWith(target.handlerId)
+      expect(release).toHaveBeenCalledWith(target.handlerId)
+      expect(targetAccount.getActiveReviewRequest(next.handlerId)).toBe(next)
     } finally {
       operationLifecycleLedger.remove(target.activityId, -1)
-      dismiss.mockRestore()
+      release.mockRestore()
       jest.useRealTimers()
     }
   })

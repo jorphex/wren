@@ -16,6 +16,11 @@ test('keeps the short network editor body scrollable above its fixed actions', (
   expect(editorStyle).toMatch(/\.networkEditor[\s\S]*?background transparent/)
 })
 
+test('keeps add and edit actions directly after the intrinsic one-endpoint form', () => {
+  expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 0 1 auto/)
+  expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
+})
+
 test('keeps network editor copy readable and compact controls practically targetable', () => {
   expect(editorStyle).not.toMatch(/font-size (?:10|11)px/)
   expect(editorStyle).toMatch(/\.rpcEndpointMove\n[\s\S]*?height 44px/)
