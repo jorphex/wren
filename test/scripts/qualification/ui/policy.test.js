@@ -99,6 +99,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
   const chainFallback = scenarios.find(({ id }) => id === 'tray-account-chain-fallback-narrow-1')
   const inspectors = scenarios.filter(({ state }) => state === 'inspector')
+  const inspectorForms = inspectors.filter(({ id }) => id.startsWith('dash-inspector-form-'))
+  const inspectorResults = inspectors.filter(({ id }) => !id.startsWith('dash-inspector-form-'))
   const earnYvusd = scenarios.filter(({ state }) => state === 'earn-yvusd')
   expect(earnYvusd).toHaveLength(4)
   expect(earnYvusd.map(({ variant }) => variant)).toEqual(['unlocked', 'unlocked', 'locked', 'locked'])
@@ -111,12 +113,23 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     chains: expect.arrayContaining([expect.objectContaining({ chainId: 1, status: 'ready' })])
   })
   expect(invokeReplyFor(earnYvusd[0], 'yearn:getWorkflows')).toEqual({ workflows: [] })
-  expect(inspectors).toHaveLength(7)
-  expect(inspectors.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
+  expect(inspectors).toHaveLength(9)
+  expect(inspectorForms.map(({ id }) => id)).toEqual([
+    'dash-inspector-form-full-1',
+    'dash-inspector-form-short-1'
+  ])
+  expect(
+    inspectorForms.every(({ layoutExpectations }) =>
+      layoutExpectations.some(
+        ({ kind, selector }) => kind === 'scroll-fits' && selector === '.dashMainScroll'
+      )
+    )
+  ).toBe(true)
+  expect(inspectorResults.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
   expect(inspectors.every(({ requiredText }) => requiredText.includes('Never signs or broadcasts'))).toBe(
     true
   )
-  expect(invokeReplyFor(inspectors[0], 'inspector:inspect')).toMatchObject({
+  expect(invokeReplyFor(inspectorResults[0], 'inspector:inspect')).toMatchObject({
     success: true,
     inspection: {
       kind: 'transaction',
@@ -342,6 +355,13 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   expect(sendConfirmations).toHaveLength(6)
   expect(maxReviews).toHaveLength(6)
   expect(sweepReviews).toHaveLength(6)
+  expect(
+    contactLists.every(({ layoutExpectations }) =>
+      layoutExpectations.some(
+        ({ kind, selector }) => kind === 'scroll-fits' && selector === '.dashMainScroll'
+      )
+    )
+  ).toBe(true)
   expect(scenarios.find(({ id }) => id === 'dash-address-book-remove-short-1.5')).toMatchObject({
     action: { type: 'clickText', text: 'Remove Operations multisig with a deliberately long label' },
     scale: 1.5,
@@ -687,7 +707,7 @@ it('qualifies source verification entry, evidence, results, credentials, and con
         kind: 'full-width',
         selector: '.contractVerificationActionShelf button',
         container: '.contractVerificationActionShelf',
-        inset: 12
+        inset: 0
       }
     ])
   )
@@ -703,6 +723,36 @@ it('qualifies source verification entry, evidence, results, credentials, and con
     selector: '.requestNoticeTransactionDeploymentStatus'
   })
   expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(250)
+})
+
+it('qualifies connected-app destination margins at full and short heights', () => {
+  const matrix = scenarioMatrix({ includeReview: true })
+  const scenarios = matrix.filter(({ id }) => id.startsWith('dash-connected-apps-'))
+  const details = matrix.filter(({ id }) => id.startsWith('dash-connected-app-details-'))
+
+  expect(scenarios.map(({ id }) => id)).toEqual([
+    'dash-connected-apps-full-1',
+    'dash-connected-apps-short-1',
+    'dash-connected-apps-capped-1'
+  ])
+  expect(scenarios.every(({ ready }) => ready === '.connectedApps .sliceOrigin')).toBe(true)
+  expect(
+    scenarios
+      .filter(({ id }) => id !== 'dash-connected-apps-capped-1')
+      .every(({ layoutExpectations }) =>
+        layoutExpectations.some(
+          ({ kind, selector }) => kind === 'scroll-fits' && selector === '.dashMainScroll'
+        )
+      )
+  ).toBe(true)
+  expect(fixtureFor(scenarios[0]).windows.dash.nav).toEqual([{ view: 'dapps', data: {} }])
+  expect(details.map(({ id }) => id)).toEqual([
+    'dash-connected-app-details-full-1',
+    'dash-connected-app-details-short-1'
+  ])
+  expect(fixtureFor(details[0]).windows.dash.nav).toEqual([
+    { view: 'dapps', data: { dappDetails: 'workshop' } }
+  ])
 })
 
 it('forces the dashboard and tray capped-width fallback layouts at 150%', () => {

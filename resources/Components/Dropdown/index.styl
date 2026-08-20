@@ -8,6 +8,7 @@
 
 .dropdown
   appearance none
+  color-scheme dark
   min-width 130px
   max-width 100%
   height 32px
@@ -29,6 +30,19 @@
   box-shadow var(--wren-shadow-inset)
   cursor pointer
   transition background-color var(--wren-motion-fast), border-color var(--wren-motion-fast)
+
+  option
+    color var(--wren-text-primary)
+    background var(--wren-surface-inset)
+
+  option:checked
+    color var(--wren-text-inverse)
+    background var(--wren-accent-primary)
+
+  option:hover,
+  option:focus
+    color var(--wren-text-primary)
+    background var(--wren-surface-active)
 
   &:hover:not(:disabled)
     background-color var(--wren-surface-hover)

@@ -1241,6 +1241,46 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'connected-apps') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'dapps',
+          data: scenario.variant === 'details' ? { dappDetails: 'workshop' } : {}
+        }
+      ]
+    }
+    state.main.networks.ethereum = {
+      1: {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      },
+      10: {
+        id: 10,
+        name: 'Optimism Mainnet',
+        on: true,
+        isTestnet: false,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      }
+    }
+    state.main.networksMeta.ethereum = {
+      1: { primaryColor: 'accent1', nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } },
+      10: { primaryColor: 'accent4', nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 } }
+    }
+    state.main.origins = {
+      workshop: {
+        chain: { id: 1 },
+        name: 'workshop.example',
+        session: { startedAt: Date.now() - 60_000, lastUpdatedAt: Date.now(), requests: 12 }
+      }
+    }
+  }
+
   if (scenario.state === 'network-editor') {
     state.windows.dash = {
       ...state.windows.dash,

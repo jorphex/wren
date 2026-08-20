@@ -163,7 +163,7 @@ export class Dapps extends React.Component {
       return <DappDetails originId={dappDetails} />
     } else {
       return (
-        <div className='cardShow' style={{ padding: '0px 0px 64px 0px' }}>
+        <div className='connectedApps cardShow'>
           {chainGroups.length ? (
             chainGroups.map(({ chain, connected, disconnected, meta: { primaryColor, icon } }) => (
               <ChainOrigins

@@ -2,12 +2,12 @@
   width 100%
   min-height 100%
   box-sizing border-box
-  padding 0 var(--wren-space-4) var(--wren-space-8)
-  overflow-x hidden
+  padding 0 var(--wren-page-gutter) var(--wren-space-6)
+  overflow-x clip
   color var(--wren-text-primary)
 
 .deploymentHeader
-  padding var(--wren-space-5) 0 var(--wren-space-4)
+  padding var(--wren-space-4) 0 var(--wren-space-3)
 
   h1
     margin var(--wren-space-1) 0
@@ -34,7 +34,7 @@
   display flex
   min-width 0
   flex-direction column
-  gap var(--wren-space-4)
+  gap var(--wren-space-3)
 
 .deploymentSelectors
   display grid
@@ -112,6 +112,9 @@
 .deploymentFieldError
   min-height 17px
   color var(--wren-danger) !important
+
+  &:empty
+    display none
 
 .deploymentEmpty,
 .deploymentRpcDisclosure,
@@ -202,8 +205,8 @@
   display flex
   justify-content flex-end
   gap var(--wren-space-3)
-  margin 0 calc(-1 * var(--wren-space-4)) calc(-1 * var(--wren-space-8))
-  padding var(--wren-space-6) var(--wren-space-4) var(--wren-space-4)
+  margin 0 calc(-1 * var(--wren-page-gutter)) calc(-1 * var(--wren-space-6))
+  padding var(--wren-space-4) var(--wren-page-gutter) var(--wren-space-4)
   background transparent
   pointer-events none
 

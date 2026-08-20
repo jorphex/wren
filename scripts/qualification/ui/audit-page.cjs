@@ -133,6 +133,48 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'edge-clearance') {
+      for (const element of elements) {
+        const container = element.closest(expectation.container)
+        if (!container) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} has no ${expectation.container} container`
+          })
+          continue
+        }
+        const elementRect = element.getBoundingClientRect()
+        const containerRect = container.getBoundingClientRect()
+        const inset = expectation.inset || 0
+        if (
+          elementRect.left < containerRect.left + inset - 1 ||
+          elementRect.right > containerRect.right - inset + 1
+        ) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} does not keep ${inset}px horizontal clearance in ${expectation.container}`
+          })
+        }
+      }
+    } else if (expectation.kind === 'scroll-fits') {
+      for (const element of elements) {
+        if (element.scrollHeight > element.clientHeight + 1) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} scrolls ${element.scrollHeight - element.clientHeight}px at rest`
+          })
+        }
+      }
+    } else if (expectation.kind === 'computed-style') {
+      for (const element of elements) {
+        const actual = getComputedStyle(element)[expectation.property]
+        if (actual !== expectation.value) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} has ${expectation.property} ${actual}; expected ${expectation.value}`
+          })
+        }
+      }
     } else if (expectation.kind === 'viewport-bottom') {
       for (const element of elements) {
         const rect = element.getBoundingClientRect()

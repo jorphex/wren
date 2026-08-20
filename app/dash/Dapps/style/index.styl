@@ -1,3 +1,10 @@
+.connectedApps
+  display flow-root
+  width 100%
+  min-height 100%
+  box-sizing border-box
+  padding 0 var(--wren-page-gutter) var(--wren-space-8)
+
 .sliceTileUsage
   display flex
   align-items center
@@ -78,7 +85,7 @@
   display block
 
 .sliceOriginList
-  margin 0 var(--wren-space-2) var(--wren-space-3)
+  margin 0 0 var(--wren-space-3)
   border-top 1px solid var(--wren-ledger-rule)
 
   .sliceOrigin:last-child
@@ -236,6 +243,15 @@
   .originChainItemActive
     color var(--wren-success)
 
+.connectedAppsDetails
+  .originSwapTitle
+    padding-right 0
+    padding-left 0
+
+  .originSwapChainList
+    margin-right 0
+    margin-left 0
+
 .connectedAppMissing
   display flex
   align-items center
@@ -244,3 +260,8 @@
   padding var(--wren-space-6)
   color var(--wren-text-secondary)
   text-align center
+
+@media (max-width: 540px)
+  .connectedApps
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)

@@ -338,6 +338,13 @@ button,
 @import './card.styl'
 
 // Wren dashboard shell
+@keyframes dashPageShow
+  0%
+    opacity 0
+
+  100%
+    opacity 1
+
 .frameOverlay
   display none
 
@@ -378,6 +385,13 @@ button,
       border-radius 0
       overflow-y auto
       scrollbar-gutter stable
+
+      // A translated child expands Chromium's scrollable overflow while the
+      // route enters, which flashes a 4px scrollbar on otherwise fitting pages.
+      // Keep the shared fade here; translated cards outside this viewport retain
+      // the fuller cardShow motion.
+      .cardShow
+        animation-name dashPageShow
 
     .dashMainOverlay
       display none
@@ -558,7 +572,7 @@ button,
 
 .dash .dashMain .addAccounts.addAccountsChooser
   display block
-  padding 0 var(--wren-space-5) var(--wren-space-6)
+  padding 0 var(--wren-page-gutter) var(--wren-space-6)
   box-sizing border-box
 
   .addAccountsHeader

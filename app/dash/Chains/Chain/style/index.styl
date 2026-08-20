@@ -182,7 +182,7 @@
   flex none
   min-height 70px
   box-sizing border-box
-  padding 15px 48px 12px
+  padding 15px var(--wren-page-gutter) 12px
 
   h1,
   p
@@ -210,7 +210,7 @@
   position relative
   flex 1 1 auto
   min-height 0
-  padding 34px 48px 26px
+  padding 34px var(--wren-page-gutter) 26px
 
 .networkEditorGrid
   display grid
@@ -483,7 +483,7 @@ input.rpcEndpointInput
   flex none
   min-height 104px
   box-sizing border-box
-  padding 26px 24px
+  padding 26px var(--wren-page-gutter)
   align-items center
   justify-content space-between
   gap var(--wren-space-3)
@@ -529,11 +529,11 @@ button.networkEditorRemove
 
 @media (max-width: 560px)
   .networkEditorHeader
-    padding-right var(--wren-space-5)
-    padding-left var(--wren-space-5)
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)
 
   .networkEditorBody
-    padding var(--wren-space-5)
+    padding var(--wren-space-5) var(--wren-space-3)
 
   .networkEditorGrid
     grid-template-columns 1fr
@@ -543,6 +543,8 @@ button.networkEditorRemove
 
   .networkEditorFooter
     flex-wrap wrap
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)
 
   .networkEditorFooterActions
     width 100%

@@ -174,7 +174,10 @@ const joinedCanvasScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.dashModules',
-        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+        layoutExpectations: [
+          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
+          ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
+        ]
       },
       {
         id: `tray-account-home-${geometry}-left-${scale}`,
@@ -343,6 +346,21 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-inspector-form-${geometry}-1`,
+    renderer: 'dash',
+    state: 'inspector',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.inspectorInputPanel',
+    layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }],
+    requiredControls: ['Transaction', 'Calldata', 'EIP-712', 'JSON-RPC'],
+    requiredText: ['Read-only inspector', 'Never signs or broadcasts', 'Raw input is not saved.']
+  })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -355,6 +373,21 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.contractVerificationForm',
+      layoutExpectations: [
+        {
+          kind: 'computed-style',
+          selector: '.contracts, .contractVerification',
+          property: 'overflowY',
+          value: 'visible'
+        },
+        {
+          kind: 'edge-clearance',
+          selector: '.contractVerification .wrenInput',
+          container: '.contractsPanel',
+          inset: 2
+        },
+        ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
+      ],
       requiredControls: ['Network', 'Contract address', 'Choose artifact'],
       requiredText: [
         'Contracts',
@@ -482,6 +515,21 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.deploymentForm',
+      layoutExpectations: [
+        {
+          kind: 'computed-style',
+          selector: '.contracts, .deployment',
+          property: 'overflowY',
+          value: 'visible'
+        },
+        {
+          kind: 'edge-clearance',
+          selector: '.deploymentForm .wrenInput',
+          container: '.contractsPanel',
+          inset: 2
+        },
+        ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
+      ],
       requiredControls: [
         'Account',
         'Network',
@@ -709,6 +757,7 @@ const reviewScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.addressBookList',
+        layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }],
         requiredControls: [
           'Copy address for Operations multisig with a deliberately long label',
           'Edit Operations multisig with a deliberately long label',
@@ -1246,6 +1295,61 @@ const reviewScenarios = () => [
     ready: '.networkBreak',
     requiredText: ['Ethereum', 'Optimism Mainnet', 'Workshop Chain', 'Sepolia', 'Testnets']
   },
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-connected-apps-${geometry}-1`,
+    renderer: 'dash',
+    state: 'connected-apps',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.connectedApps .sliceOrigin',
+    layoutExpectations: [
+      { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 20 },
+      { kind: 'scroll-fits', selector: '.dashMainScroll' }
+    ],
+    requiredControls: ['Open workshop.example connection details, connected'],
+    requiredText: ['Ethereum', 'workshop.example', 'Connected', 'avg reqs/min']
+  })),
+  {
+    id: 'dash-connected-apps-capped-1',
+    renderer: 'dash',
+    state: 'connected-apps',
+    scale: 1,
+    logicalWidth: 530,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.connectedApps .sliceOrigin',
+    layoutExpectations: [
+      { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 12 }
+    ],
+    requiredControls: ['Open workshop.example connection details, connected'],
+    requiredText: ['Ethereum', 'workshop.example', 'Connected', 'avg reqs/min']
+  },
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-connected-app-details-${geometry}-1`,
+    renderer: 'dash',
+    state: 'connected-apps',
+    variant: 'details',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.connectedAppsDetails .originSwapChainList',
+    layoutExpectations: [
+      {
+        kind: 'full-width',
+        selector: '.originSwapChainList',
+        container: '.connectedAppsDetails',
+        inset: 20
+      }
+    ],
+    requiredControls: ['Optimism Mainnet'],
+    requiredText: ['workshop.example', 'Default network', 'Ethereum', 'Optimism Mainnet']
+  })),
   {
     id: 'dash-network-editor-full-1',
     renderer: 'dash',
@@ -1608,7 +1712,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.dashModules',
-        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+        layoutExpectations: [
+          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
+          { kind: 'scroll-fits', selector: '.dashMainScroll' }
+        ]
       },
       {
         id: `dash-control-center-short-${scale}`,
@@ -1872,7 +1979,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           kind: 'full-width',
           selector: '.contractVerificationActionShelf button',
           container: '.contractVerificationActionShelf',
-          inset: 12
+          inset: 0
         }
       ]
     },

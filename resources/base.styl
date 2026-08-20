@@ -175,6 +175,7 @@ body
   --wren-space-8 32px
   --wren-space-10 40px
   --wren-space-12 48px
+  --wren-page-gutter var(--wren-space-5)
 
   --wren-radius-sm 5px
   --wren-radius-md 8px
@@ -528,6 +529,10 @@ button
   --accent6 #9b8cb6
   --accent7 var(--wren-info)
   --accent8 var(--wren-text-tertiary)
+
+@media (max-width: 540px)
+  body
+    --wren-page-gutter var(--wren-space-3)
 
 @keyframes cardShow
   0%

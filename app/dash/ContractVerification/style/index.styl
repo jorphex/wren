@@ -2,13 +2,12 @@
   width 100%
   min-height 100%
   box-sizing border-box
-  padding 0 var(--wren-space-4) var(--wren-space-8)
-  overflow-x hidden
+  padding 0 var(--wren-page-gutter) var(--wren-space-6)
+  overflow-x clip
   color var(--wren-text-primary)
-  scrollbar-gutter stable
 
 .contractVerificationHeader
-  padding var(--wren-space-5) 0 var(--wren-space-4)
+  padding var(--wren-space-4) 0 var(--wren-space-3)
 
   > span
     color var(--wren-text-tertiary)
@@ -33,7 +32,7 @@
   display flex
   min-width 0
   flex-direction column
-  gap var(--wren-space-4)
+  gap var(--wren-space-3)
 
 .contractVerificationTargetFields,
 .contractVerificationContext
@@ -239,6 +238,7 @@ button.contractVerificationRecentRow
   font-size var(--wren-type-small)
   line-height 19px
   cursor pointer
+  scroll-margin-bottom 152px
 
   input
     width 18px
@@ -320,8 +320,8 @@ button.contractVerificationRecentRow
   display flex
   justify-content flex-end
   gap var(--wren-space-3)
-  margin 0 calc(-1 * var(--wren-space-4)) calc(-1 * var(--wren-space-8))
-  padding var(--wren-space-6) var(--wren-space-4) var(--wren-space-4)
+  margin 0 calc(-1 * var(--wren-page-gutter)) calc(-1 * var(--wren-space-6))
+  padding var(--wren-space-4) var(--wren-page-gutter) var(--wren-space-4)
   background transparent
   pointer-events none
 

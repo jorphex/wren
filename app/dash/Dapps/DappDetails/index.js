@@ -76,14 +76,14 @@ export class DappDetails extends React.Component {
     const origin = this.store('main.origins', this.props.originId)
     if (!origin) {
       return (
-        <div className='cardShow connectedAppMissing' role='status'>
+        <div className='connectedApps cardShow connectedAppMissing' role='status'>
           This connected app is no longer available.
         </div>
       )
     }
 
     return (
-      <div className='cardShow'>
+      <div className='connectedApps connectedAppsDetails cardShow'>
         <div className='originSwapOrigin'>
           <Icon name='apps' size={20} />
           <div className='originSwapOriginText'>{origin.name}</div>

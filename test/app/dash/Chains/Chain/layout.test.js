@@ -40,5 +40,5 @@ test('uses spacing and boxed controls instead of decorative editor rules', () =>
     /wren-(?:seam|rule)|border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/
   )
   expect(editorStyle).toMatch(/\.rpcEndpointRow[\s\S]*?min-height 56px/)
-  expect(editorStyle).toMatch(/\.networkEditorFooter[\s\S]*?padding 26px 24px/)
+  expect(editorStyle).toMatch(/\.networkEditorFooter[\s\S]*?padding 26px var\(--wren-page-gutter\)/)
 })

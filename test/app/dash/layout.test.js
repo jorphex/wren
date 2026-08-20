@@ -22,12 +22,36 @@ const inspectorStyle = fs.readFileSync('app/dash/Inspector/style/index.styl', 'u
 const deploymentStyle = fs.readFileSync('app/dash/Deployment/style/index.styl', 'utf8')
 const contractVerificationStyle = fs.readFileSync('app/dash/ContractVerification/style/index.styl', 'utf8')
 const contractsStyle = fs.readFileSync('app/dash/Contracts/style/index.styl', 'utf8')
+const dappsStyle = fs.readFileSync('app/dash/Dapps/style/index.styl', 'utf8')
+const dropdownStyle = fs.readFileSync('resources/Components/Dropdown/index.styl', 'utf8')
 const inputStyle = fs.readFileSync('resources/Components/Input/index.styl', 'utf8')
 const canvasGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 
 test('defines every shared dashboard typography role', () => {
   expect(baseStyle).toMatch(/--wren-type-label var\(--wren-type-caption\)/)
+  expect(baseStyle).toMatch(/--wren-page-gutter var\(--wren-space-5\)/)
+  expect(baseStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?--wren-page-gutter var\(--wren-space-3\)/)
   expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
+})
+
+test('uses one page gutter across comparable dashboard destinations', () => {
+  expect(mainStyle).toMatch(
+    /\.localSettingsWrap[\s\S]*?padding var\(--wren-space-5\) var\(--wren-page-gutter\)/
+  )
+  expect(settingsStyle).toMatch(/\.localSettingsWrap[\s\S]*?var\(--wren-page-gutter\)/)
+  expect(addressBookStyle).toMatch(/\.addressBook, \.addressBookEditor[\s\S]*?var\(--wren-page-gutter\)/)
+  expect(chainEditorStyle).toMatch(/\.networkEditorHeader[\s\S]*?padding 15px var\(--wren-page-gutter\) 12px/)
+  expect(contractsStyle).toMatch(/\.contracts[\s\S]*?padding 0 var\(--wren-page-gutter\)/)
+  expect(inspectorStyle).toMatch(/\.inspector[\s\S]*?padding 0 var\(--wren-page-gutter\)/)
+  expect(dappsStyle).toMatch(/\.connectedApps[\s\S]*?padding 0 var\(--wren-page-gutter\)/)
+})
+
+test('supplies dark native-menu hints and Wren selection roles to both select families', () => {
+  for (const style of [inputStyle, dropdownStyle]) {
+    expect(style).toMatch(/color-scheme dark/)
+    expect(style).toMatch(/option:checked[\s\S]*?var\(--wren-accent-primary\)/)
+    expect(style).toMatch(/option:hover,[\s\S]*?option:focus[\s\S]*?var\(--wren-surface-active\)/)
+  }
 })
 
 test('continues the joined wallet canvas according to its dock edge', () => {
@@ -63,6 +87,13 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   expect(dashStyle).toMatch(/\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?overflow-y auto/)
   expect(dashStyle).toMatch(/\.dashMainScroll[\s\S]*?scrollbar-gutter stable/)
   expect(dashStyle).not.toMatch(/scrollbar-gutter stable both-edges/)
+})
+
+test('keeps route-entry motion out of dashboard scroll geometry', () => {
+  expect(dashStyle).toMatch(
+    /@keyframes dashPageShow[\s\S]*?opacity 0[\s\S]*?opacity 1[\s\S]*?\.dashMainScroll[\s\S]*?\.cardShow[\s\S]*?animation-name dashPageShow/
+  )
+  expect(dappsStyle).toMatch(/\.connectedApps\n {2}display flow-root/)
 })
 
 test('keeps disabled semantic controls visually neutral', () => {
@@ -285,14 +316,19 @@ test('keeps contract deployment on the flat wallet canvas and shared control pri
     /\.deploymentActionShelf[\s\S]{0,420}?background linear-gradient\(180deg, transparent, var\(--wren-bg-wallet-canvas\)/
   )
   expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
+  expect(deploymentStyle).toMatch(/\.deploymentFieldError[\s\S]*?&:empty[\s\S]*?display none/)
   expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
 })
 
 test('uses one flat Contracts workspace with the established Send-style peer switch', () => {
   expect(contractsStyle).toMatch(
-    /\.contracts[\s\S]*?overflow-x hidden[\s\S]*?\.contractsModeSwitch\.sendModeSwitch[\s\S]*?margin 0 0 var\(--wren-space-4\)/
+    /\.contracts[\s\S]*?overflow-x clip[\s\S]*?\.contractsModeSwitch\.sendModeSwitch[\s\S]*?margin 0 0 var\(--wren-space-3\)/
   )
   expect(contractsStyle).toMatch(/\.contractsPanel\[hidden\][\s\S]*?display none/)
+  expect(contractsStyle).toMatch(/\.contractsPanel[\s\S]*?padding 0 2px/)
+  expect(contractsStyle).toMatch(
+    /> \.deployment \.deploymentActionShelf,[\s\S]*?margin-right 0[\s\S]*?padding-right 0/
+  )
   expect(contractsStyle).not.toMatch(/border-left|border-right|box-shadow|linear-gradient/)
 })
 
