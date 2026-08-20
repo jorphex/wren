@@ -63,8 +63,14 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
   native value. Preparation sends the selected account context, deployment data, and
   value only to the configured RPC for gas, simulation, and pending-nonce evidence;
   queueing then enters Wren's ordinary native review, signer, and one-shot broadcast
-  lifecycle. Wren does not compile Solidity, parse artifacts or ABIs, or verify source
-  or bytecode through this tool.
+  lifecycle. Wren does not compile Solidity or Vyper in the deployment tool.
+- Verifies source for a confirmed Wren deployment or an existing contract from
+  Control Center Tools. Wren reads bounded Solidity/Vyper standard JSON or
+  Foundry/Hardhat build-info locally, binds it to the exact chain, address, and
+  deployed runtime code, and publishes only after explicit permanent-public
+  consent. Sourcify is the keyless primary destination; direct Etherscan V2 is a
+  manual supported-chain fallback using an OS-protected user API key and an
+  explicit encoded-constructor-arguments value (or confirmation that there are none).
 - Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
 - Lets users add optional local per-dapp, per-account, per-chain guardrails for
   destinations, approval spenders, native/token amounts, and expiry. Guardrails block

@@ -16,8 +16,9 @@ does not by itself qualify the unsigned Windows package for release.
 - [1. Record the candidate and automated evidence](#1-record-the-candidate-and-automated-evidence)
 - [2. Run the required operator checks](#2-run-the-required-operator-checks)
 - [3. Qualify EIP-5792 and EIP-7702 boundaries](#3-qualify-eip-5792-and-eip-7702-boundaries)
-- [4. Run Earn-only qualification](#4-run-earn-only-qualification)
-- [5. Decide pass or fail and retain evidence](#5-decide-pass-or-fail-and-retain-evidence)
+- [4. Qualify contract source verification](#4-qualify-contract-source-verification)
+- [5. Run Earn-only qualification](#5-run-earn-only-qualification)
+- [6. Decide pass or fail and retain evidence](#6-decide-pass-or-fail-and-retain-evidence)
 - [Historical 0.8.0 Linux x64 evidence](#historical-080-linux-x64-evidence)
 
 ## 1. Record the candidate and automated evidence
@@ -153,7 +154,42 @@ This qualifies only the exercised desktop, RPC, testnet state, and exact browser
 archives. It does not audit delegate code, qualify every chain/RPC, qualify atomic
 EIP-5792, create or replace delegation, or qualify EIP-7702 hardware signing.
 
-## 4. Run Earn-only qualification
+## 4. Qualify contract source verification
+
+Use a disposable testnet contract and source that may be published permanently.
+Never use private or embargoed source. Confirm an exact managed deployment shows
+**Verify source** alongside Close for thirty seconds while an ordinary confirmed
+transaction retains its four-second handoff. Activity must remain non-clickable
+and gain no verification action or details.
+
+From both the confirmed-deployment continuation and Control Center Tools, inspect
+Solidity and Vyper standard JSON plus applicable Foundry/Hardhat build-info. Test
+cancel, malformed JSON, symlink/FIFO/directory, oversize input, ambiguous contract
+selection, wrong compiler, wrong chain/address, empty code, mismatched runtime,
+RPC disconnect, and a target changing during inspection. Require all failures to
+occur before publication. For raw standard JSON, require the UI to say matching is
+completed by Sourcify rather than claiming a local compiler match.
+
+On the exact disposable source, compare the frozen chain, full address, runtime
+hash, compiler, contract identifier, and deployment finality. The permanent-public
+notice and acknowledgement must sit immediately above the single Publish action.
+Cancel or edit any field and confirm the checked evidence is invalidated. Publish
+once to Sourcify; confirm restart resumes only accepted status polling and never
+submits the source twice. Record Sourcify, Etherscan, Blockscout, and Routescan
+results independently—forwarding failure must not turn a Sourcify match into
+failure.
+
+Where supported, exercise direct Etherscan fallback only after forwarding is
+unavailable or unsuccessful. Test absent, invalid, replaced, and removed API keys;
+test explicit ABI-encoded constructor arguments and the separate no-arguments
+confirmation, and reject malformed or implicit-empty values before any request;
+an accepted GUID with a bad key must resume GET status after replacement, never a
+second source POST. Confirm unsupported OS credential protection stores no key,
+profile backup excludes the key and source, and restore requires re-entry. Scan
+state, backup, Activity, logs, and rendered navigation for source text, file paths,
+API keys, and credential-bearing URLs without printing those fixtures.
+
+## 5. Run Earn-only qualification
 
 Run this only when [`YEARN_EARN.md`](YEARN_EARN.md) is present. Use an isolated
 `0700` profile, four disposable accounts (private key, seed, Safe 7, Model One),
@@ -201,7 +237,7 @@ notification may contain only Wren's shortened hash. Restart after completed
 flows: positions refresh, terminal workflows stay bounded, broadcasts do not
 duplicate, and approvals never exceed the request.
 
-## 5. Decide pass or fail and retain evidence
+## 6. Decide pass or fail and retain evidence
 
 After each signer run, relock/disconnect/quit, ensure no pending request after
 restart, scan the isolated profile/logs for exact disposable fixtures without

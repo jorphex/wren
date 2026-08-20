@@ -382,6 +382,23 @@ UnixFS directory, not mutable ENS; bundled token inventory can become stale.
 External links are allowlisted except configured explorers, whose final OS launch
 still permits only credential-free HTTP(S).
 
+Contract verification deliberately publishes user-selected source and compiler
+metadata to Sourcify after an explicit permanent-public acknowledgement. Sourcify
+and any explorer it forwards to can observe the source, contract address, chain,
+IP address, and timing, and published source cannot be withdrawn by Wren. Direct
+Etherscan V2 fallback is manual and supported-chain only; the user API key is
+stored in a dedicated OS-protected credential file, excluded from profile backup,
+and sent only to Etherscan's fixed HTTPS API. Because the documented API requires
+authentication parameters in the request URL, Wren must not log, persist, expose,
+or include that URL in renderer state or errors. Direct submission also requires
+explicit ABI-encoded constructor arguments, or confirmation that the contract has
+none; Wren does not guess them. Source bundles remain bounded
+main-process memory and are never placed in Activity, ordinary state, backup, or
+logs. Persisted jobs contain hashes, public target evidence, bounded remote IDs,
+and fixed destination states only. A restart before remote acceptance requires
+source reselection; an accepted job resumes status checks and is never blindly
+resubmitted.
+
 #### Transactions and EIP-7702
 
 The exact `eth_getCode` EIP-7702 indicator triggers extra approval for ordinary
