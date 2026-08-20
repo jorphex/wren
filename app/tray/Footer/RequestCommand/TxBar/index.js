@@ -1,8 +1,24 @@
 import Icon from '../../../../../resources/Components/Icon'
 
 const steps = ['Sending', 'Submitted', 'Confirming', 'Confirmed']
+const unconfirmedSteps = ['Broadcast once', 'Checking', 'Confirming', 'Confirmed']
+
+export const isUnconfirmedSubmission = (req) =>
+  req?.status === 'verifying' && req?.submission?.status === 'unconfirmed'
 
 export const transactionLifecyclePresentation = (req, networkName = 'the network') => {
+  if (isUnconfirmedSubmission(req)) {
+    return {
+      detail:
+        'Wren made one broadcast attempt, but the RPC has not confirmed acceptance yet. Wren is checking the network and will not automatically resubmit.',
+      icon: 'pending',
+      position: 1,
+      steps: unconfirmedSteps,
+      title: 'Submission unconfirmed',
+      tone: 'pending'
+    }
+  }
+
   switch (req?.status) {
     case 'pending':
       return {
@@ -67,6 +83,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
 
 const TxBar = ({ networkName, req }) => {
   const presentation = transactionLifecyclePresentation(req, networkName)
+  const lifecycleSteps = presentation.steps || steps
 
   return (
     <section
@@ -85,7 +102,7 @@ const TxBar = ({ networkName, req }) => {
         </span>
       </div>
       <ol className='txLifecycleSteps' aria-label='Transaction progress'>
-        {steps.map((step, index) => {
+        {lifecycleSteps.map((step, index) => {
           const state =
             index < presentation.position ? 'complete' : index === presentation.position ? 'current' : 'next'
           return (

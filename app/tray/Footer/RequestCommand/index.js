@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
 
-import TxBar from './TxBar'
+import TxBar, { isUnconfirmedSubmission } from './TxBar'
 import TxApproval from './TxApproval'
 import Time from '../Time'
 
@@ -255,7 +255,10 @@ export class RequestCommand extends React.Component {
 
     const hash = req.tx?.hash
     const receipt = req.tx?.receipt
-    const replaceable = Boolean(hash && !receipt && ['verifying', 'sent'].includes(status))
+    const unconfirmedSubmission = isUnconfirmedSubmission(req)
+    const replaceable = Boolean(
+      hash && !receipt && !unconfirmedSubmission && ['verifying', 'sent'].includes(status)
+    )
     const terminal = ['confirmed', 'error'].includes(status)
 
     return (
@@ -264,11 +267,17 @@ export class RequestCommand extends React.Component {
           <dl className='txLifecycleFacts'>
             {hash && (
               <div>
-                <dt>Transaction hash</dt>
+                <dt>{unconfirmedSubmission ? 'Expected transaction hash' : 'Transaction hash'}</dt>
                 <dd title={hash}>{`${hash.slice(0, 10)}…${hash.slice(-8)}`}</dd>
               </div>
             )}
-            {typeof req.tx?.confirmations === 'number' && (
+            {unconfirmedSubmission && (
+              <div>
+                <dt>RPC acceptance</dt>
+                <dd>Unconfirmed</dd>
+              </div>
+            )}
+            {!unconfirmedSubmission && typeof req.tx?.confirmations === 'number' && (
               <div>
                 <dt>Confirmations</dt>
                 <dd>{req.tx.confirmations}</dd>
@@ -368,7 +377,11 @@ export class RequestCommand extends React.Component {
                 Copy Hash
               </button>
               <span className='txLifecycleCopyStatus' role='status' aria-live='polite'>
-                {this.state.txHashCopied ? 'Transaction hash copied' : ''}
+                {this.state.txHashCopied
+                  ? unconfirmedSubmission
+                    ? 'Expected transaction hash copied'
+                    : 'Transaction hash copied'
+                  : ''}
               </span>
             </div>
           </div>

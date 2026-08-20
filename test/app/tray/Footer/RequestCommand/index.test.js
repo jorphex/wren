@@ -516,6 +516,21 @@ it.each([
   })
 })
 
+it('presents an ambiguous one-shot broadcast without claiming network acceptance', () => {
+  const req = transaction({
+    status: 'verifying',
+    submission: { status: 'unconfirmed' },
+    tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
+  })
+
+  expect(transactionLifecyclePresentation(req, 'Ethereum')).toMatchObject({
+    title: 'Submission unconfirmed',
+    detail:
+      'Wren made one broadcast attempt, but the RPC has not confirmed acceptance yet. Wren is checking the network and will not automatically resubmit.',
+    steps: ['Broadcast once', 'Checking', 'Confirming', 'Confirmed']
+  })
+})
+
 it('keeps transaction monitor evidence and actions stable without hover substitution', async () => {
   const req = transaction({
     notice: 'Verifying',
@@ -539,6 +554,44 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Speed Up' })).toBeTruthy()
   expect(screen.queryByLabelText('Show signing status')).toBeNull()
+  view.unmount()
+})
+
+it('shows truthful unconfirmed-submission evidence without replacement actions', async () => {
+  const hash = `0x${'b'.repeat(64)}`
+  const req = transaction({
+    notice: 'Submission unconfirmed; checking network',
+    status: 'verifying',
+    mode: 'monitor',
+    submission: { status: 'unconfirmed' },
+    tx: { hash, confirmations: 0 }
+  })
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
+
+  const status = document.querySelector('.txLifecycle')
+  expect(status.getAttribute('role')).toBe('status')
+  expect(status.getAttribute('aria-live')).toBe('polite')
+  expect(status.textContent).toContain('Submission unconfirmed')
+  expect(status.textContent).toContain('Wren made one broadcast attempt')
+  expect(status.textContent).toContain('will not automatically resubmit')
+  expect(screen.getByText('Expected transaction hash')).toBeTruthy()
+  expect(screen.getByText('RPC acceptance')).toBeTruthy()
+  expect(screen.getByText('Unconfirmed')).toBeTruthy()
+  expect(screen.queryByText('Confirmations')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Speed Up' })).toBeNull()
+  expect(link.rpc).not.toHaveBeenCalledWith(
+    'replaceTransactionRequest',
+    expect.anything(),
+    expect.anything(),
+    expect.any(Function)
+  )
+
+  await view.user.click(screen.getByRole('button', { name: 'View details' }))
+  expect(screen.getByRole('button', { name: 'Open Explorer' })).toBeTruthy()
+  await view.user.click(screen.getByRole('button', { name: 'Copy Hash' }))
+  expect(screen.getByText('Expected transaction hash copied')).toBeTruthy()
+  expect(link.send).toHaveBeenCalledWith('tray:copyTxHash', hash)
   view.unmount()
 })
 
