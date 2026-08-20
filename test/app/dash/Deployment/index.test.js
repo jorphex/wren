@@ -218,19 +218,16 @@ it('prepares the exact draft and renders authoritative success evidence', async 
   expect(screen.getByText('2 bytes')).toBeTruthy()
   expect(screen.getByText(`0x${'ab'.repeat(32)}`)).toBeTruthy()
   expect(screen.getByText('21,000 gas · Wren padded configured-RPC estimate')).toBeTruthy()
-  expect(screen.getByText(/Simulation completed/)).toBeTruthy()
+  expect(screen.getByText(/Simulation is evidence only/)).toBeTruthy()
   expect(screen.getByText('2')).toBeTruthy()
-  expect(screen.getByText(/This address depends on the account and nonce/)).toBeTruthy()
+  expect(screen.getByText(/Provisional address\. It can change/)).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Check results' }).parentElement)
 })
 
 it.each([
-  ['reverted', 'Simulation reverted. Review the data and network state.'],
-  [
-    'unavailable',
-    'Simulation unavailable from the configured RPC. Check the RPC or continue without simulation.'
-  ],
-  ['failed', 'Simulation unavailable from the configured RPC. Check the RPC or continue without simulation.']
+  ['reverted', 'Simulation reverted. Check the data and network state.'],
+  ['unavailable', 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.'],
+  ['failed', 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.']
 ])('keeps review available when simulation is %s', async (status, message) => {
   prepareDeployment.mockResolvedValue({
     success: true,
@@ -273,7 +270,7 @@ it('ignores a stale preparation response after account context changes', async (
   const view = render(<Deployment {...props()} />)
   fillDraft()
   fireEvent.click(screen.getByRole('button', { name: 'Check deployment' }))
-  expect(screen.getByText(/Checking deployment through/)).toBeTruthy()
+  expect(screen.getByText('Checking…')).toBeTruthy()
 
   view.rerender(<Deployment {...props({ currentAccount: hardware })} />)
   await act(async () => resolvePreparation({ success: true, inspection }))
@@ -313,7 +310,7 @@ it.each(['queue-unavailable', 'inspection-expired', 'inspection-unavailable'])(
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toBe(
-      'Deployment could not be queued for native review. Nothing was signed or broadcast. Run Check deployment again before retrying.'
+      'Could not queue native review. Nothing was signed or broadcast. Run Check deployment again.'
     )
     expect(document.activeElement).toBe(alert)
     expect(screen.queryByText('Check results')).toBeNull()
@@ -333,7 +330,7 @@ it('connects every field to helper text and exposes polite busy status', async (
     'deployment-initcode-helper'
   )
   expect(screen.getByLabelText('Account').getAttribute('aria-describedby')).toBe('deployment-account-helper')
-  expect(screen.getByRole('status').textContent).toMatch(/configured RPC/i)
+  expect(screen.getByRole('status').textContent).toBe('Checking…')
   expect(screen.getByLabelText('Creation data').disabled).toBe(true)
 
   await act(async () => resolvePreparation({ success: true, inspection }))

@@ -412,7 +412,7 @@ const reviewScenarios = () => [
       requiredText: [
         'PREPARED EVIDENCE',
         'Keccak-256',
-        'Simulation completed',
+        'Simulation is evidence only',
         'Provisional CREATE address',
         'does not compile Solidity'
       ]

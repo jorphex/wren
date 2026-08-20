@@ -11,10 +11,10 @@ import {
   validateNativeValue
 } from './api'
 
-const STALE_MESSAGE = 'The account, network, value, or creation data changed. Check deployment again.'
+const STALE_MESSAGE = 'Inputs changed. Check deployment again.'
 const QUEUE_FAILURE =
-  'Deployment could not be queued for native review. Nothing was signed or broadcast. Run Check deployment again before retrying.'
-const PREPARE_FAILURE = 'Could not check this deployment. No transaction was signed or sent.'
+  'Could not queue native review. Nothing was signed or broadcast. Run Check deployment again.'
+const PREPARE_FAILURE = 'Could not check this deployment. Nothing was signed or broadcast.'
 
 const compactAddress = (value = '') => (value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value)
 
@@ -76,12 +76,12 @@ const rpcQuantity = (value) => {
 
 const simulationCopy = (simulation) => {
   if (simulation?.status === 'succeeded') {
-    return 'Simulation completed. This is evidence for the selected account, network, value, and current state.'
+    return 'Simulation is evidence only for the selected account, network, value, and current state.'
   }
   if (simulation?.status === 'reverted') {
-    return 'Simulation reverted. Review the data and network state.'
+    return 'Simulation reverted. Check the data and network state.'
   }
-  return 'Simulation unavailable from the configured RPC. Check the RPC or continue without simulation.'
+  return 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.'
 }
 
 const evidenceValue = (evidence, formatter = (value) => value) =>
@@ -388,7 +388,7 @@ export class Deployment extends React.Component {
         </dl>
         {inspection.pendingNonce?.status === 'succeeded' ? (
           <p className='deploymentProvisionalNote'>
-            This address depends on the account and nonce. It can change if the pending nonce changes.
+            Provisional address. It can change if the pending nonce changes.
           </p>
         ) : null}
       </section>
@@ -410,9 +410,9 @@ export class Deployment extends React.Component {
     const statusMessage = this.state.selectingAccount
       ? 'Selecting signer account…'
       : this.state.preparing
-        ? 'Checking deployment through the configured RPC…'
+        ? 'Checking…'
         : this.state.queueing
-          ? 'Queueing native transaction review…'
+          ? 'Preparing review…'
           : this.state.message
 
     return (
@@ -420,7 +420,7 @@ export class Deployment extends React.Component {
         <header className='deploymentHeader'>
           <span className='deploymentEyebrow'>CONTRACT DEPLOYMENT</span>
           <h1>Check deployment data</h1>
-          <p>Review prepared EVM creation data before native transaction review</p>
+          <p>Check creation data before native review</p>
         </header>
 
         <form className='deploymentForm' onSubmit={(event) => this.prepare(event)}>
@@ -442,7 +442,7 @@ export class Deployment extends React.Component {
                   </option>
                 ))}
               </select>
-              <small id='deployment-account-helper'>Select the active signer account.</small>
+              <small id='deployment-account-helper'>Select the active signer.</small>
             </label>
             <label>
               <span>Network</span>
@@ -492,7 +492,7 @@ export class Deployment extends React.Component {
               onChange={(event) => this.updateField('initcode', event.target.value)}
             />
             <small id='deployment-initcode-helper'>
-              Paste complete contract creation data, including encoded constructor arguments.
+              Paste full creation data, including encoded constructor arguments.
             </small>
             <small id='deployment-initcode-count' className='deploymentByteCount'>
               {deploymentByteCount(this.state.initcode).toLocaleString()} / 49,152 bytes
@@ -519,7 +519,7 @@ export class Deployment extends React.Component {
               onChange={(event) => this.updateField('value', event.target.value)}
             />
             <small id='deployment-value-helper'>
-              Native currency sent with creation. Leave blank or enter 0 for none.
+              Native value sent with creation. Blank or 0 means none.
             </small>
             <small id='deployment-value-error' className='deploymentFieldError'>
               {this.state.errors.value || ''}
@@ -528,8 +528,7 @@ export class Deployment extends React.Component {
 
           <p className='deploymentRpcDisclosure'>
             Checks send creation data, value, and account context only to your configured RPC for gas
-            estimation, simulation, and pending-nonce lookup. This tool does not sign or broadcast a
-            transaction.
+            estimate, simulation, and pending nonce. Checking does not sign or broadcast.
           </p>
 
           {hasEvidence ? this.renderEvidence(this.state.inspection) : null}
