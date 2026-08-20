@@ -1358,6 +1358,10 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkEditor',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.dashMainScroll' },
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' }
+    ],
     requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
@@ -1368,6 +1372,10 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'scroll-fits', selector: '.networkEditorBody' }
+    ],
     requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
   },
   {
@@ -1378,6 +1386,10 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkEditor',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.dashMainScroll' },
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' }
+    ],
     requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
   },
   {
@@ -1388,6 +1400,10 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'scroll-fits', selector: '.networkEditorBody' }
+    ],
     requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
   },
   {

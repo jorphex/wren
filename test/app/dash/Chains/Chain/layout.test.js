@@ -6,9 +6,18 @@ const toggleStyle = fs.readFileSync('resources/Components/Toggle/index.styl', 'u
 test('keeps the short network editor body scrollable above its fixed actions', () => {
   expect(editorStyle).toMatch(/@media \(max-height: 760px\) and \(min-width: 561px\)/)
   expect(editorStyle).toMatch(
-    /\.networkEditor\n\s{4}height calc\(100vh - 88px\)\n\s{4}min-height 0\n\s{4}overflow hidden/
+    /\.networkEditor\n\s{4}height calc\(100vh - 64px\)\n\s{4}min-height 0\n\s{4}overflow hidden/
   )
   expect(editorStyle).toMatch(/\.networkEditorBody\n\s{4}overflow-x hidden\n\s{4}overflow-y auto/)
+  expect(editorStyle).toMatch(
+    /\.networkEditorHeader\n\s{4}min-height 60px\n\s{4}padding-top 10px\n\s{4}padding-bottom 8px/
+  )
+  expect(editorStyle).toMatch(/\.networkEditorBody\n[\s\S]*?padding-top 12px\n\s{4}padding-bottom 8px/)
+  expect(editorStyle).toMatch(/\.networkEditorGrid\n\s{4}row-gap 14px/)
+  expect(editorStyle).toMatch(/\.networkEditorToggleRow\n\s{4}margin-top 6px/)
+  expect(editorStyle).toMatch(
+    /\.networkEditorFooter\n\s{4}min-height 74px\n\s{4}padding-top 13px\n\s{4}padding-bottom 13px/
+  )
   expect(editorStyle).toMatch(
     /\.networkEditorGrid\n\s{2}display grid\n\s{2}grid-template-columns minmax\(0, 2fr\) minmax\(0, 1fr\)/
   )
@@ -17,9 +26,12 @@ test('keeps the short network editor body scrollable above its fixed actions', (
 })
 
 test('keeps add and edit actions directly after the intrinsic one-endpoint form', () => {
-  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?min-height calc\(100vh - 88px\)/)
+  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?min-height calc\(100vh - 64px\)/)
   expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 0 1 auto/)
   expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
+  expect(editorStyle).toMatch(
+    /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap\n\s{2}padding-top 0\n\s{2}padding-bottom 0/
+  )
 })
 
 test('keeps network editor copy readable and compact controls practically targetable', () => {

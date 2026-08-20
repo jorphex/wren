@@ -158,7 +158,7 @@ const auditPage = async ({
       }
     } else if (expectation.kind === 'scroll-fits') {
       for (const element of elements) {
-        if (element.scrollHeight > element.clientHeight + 1) {
+        if (element.scrollHeight > element.clientHeight) {
           violations.push({
             kind: 'required-layout',
             detail: `${expectation.selector} scrolls ${element.scrollHeight - element.clientHeight}px at rest`

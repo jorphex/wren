@@ -172,11 +172,17 @@
   display flex
   flex-direction column
   width 100%
-  min-height calc(100vh - 88px)
+  min-height calc(100vh - 64px)
   box-sizing border-box
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
+
+// The editor owns its vertical rhythm. General settings-page padding otherwise
+// adds a small, empty scroll range around an editor that already fits.
+.localSettings:has(.networkEditor) > .localSettingsWrap
+  padding-top 0
+  padding-bottom 0
 
 .networkEditorHeader
   flex none
@@ -514,18 +520,35 @@ button.networkEditorCancel
 button.networkEditorRemove
   min-height 44px
 
-// The dash header and the short-shell content padding leave a 656px editor viewport
-// in the supported 760 × 744 shell. Keep the actions anchored while the complete
-// form remains scrollable there.
+// The dash header leaves a 680px editor viewport in the supported 760 × 744 shell.
+// Keep the actions anchored while the complete form remains scrollable there.
 @media (max-height: 760px) and (min-width: 561px)
   .networkEditor
-    height calc(100vh - 88px)
+    height calc(100vh - 64px)
     min-height 0
     overflow hidden
+
+  .networkEditorHeader
+    min-height 60px
+    padding-top 10px
+    padding-bottom 8px
 
   .networkEditorBody
     overflow-x hidden
     overflow-y auto
+    padding-top 12px
+    padding-bottom 8px
+
+  .networkEditorGrid
+    row-gap 14px
+
+  .networkEditorToggleRow
+    margin-top 6px
+
+  .networkEditorFooter
+    min-height 74px
+    padding-top 13px
+    padding-bottom 13px
 
 @media (max-width: 560px)
   .networkEditorHeader
