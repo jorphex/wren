@@ -15,6 +15,7 @@ export const SEND_ERROR = Object.freeze({
   MaxUnavailable: 'max-unavailable',
   NetworkUnavailable: 'network-unavailable',
   OriginUnavailable: 'origin-unavailable',
+  PendingChain: 'pending-chain',
   RecipientInvalid: 'recipient-invalid',
   RecipientLookupUnavailable: 'recipient-lookup-unavailable',
   ValidationFailed: 'validation-failed',

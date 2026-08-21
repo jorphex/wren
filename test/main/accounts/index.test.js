@@ -1957,6 +1957,50 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('keeps a submitted transaction review open when no request is waiting behind it', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('submitted-transaction-review')
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'verifying',
+        mode: 'monitor'
+      })
+      expect(targetAccount.getActiveReviewRequest(explicit.handlerId)).toBe(explicit)
+      expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
+  it('keeps a submitted transaction review open when only a terminal error remains behind it', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const terminal = targetRequest('retained-terminal-error', 'sign')
+    terminal.status = 'error'
+    const explicit = targetRequest('submitted-with-terminal-row')
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    targetAccount.addRequest(explicit)
+    targetAccount.addRequest(terminal)
+    targetAccount.requests[terminal.handlerId].status = 'error'
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
+      expect(targetAccount.getActiveReviewRequest(explicit.handlerId)).toBe(explicit)
+      expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
   it('starts lifecycle reconciliation for an unconfirmed one-shot submission without remembering metadata', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = {

@@ -2842,7 +2842,7 @@ export class Accounts extends EventEmitter {
       delete request.submission
       request.notice = 'Verifying'
       currentAccount.update()
-      currentAccount.releaseRequestReview(handlerId)
+      currentAccount.releaseRequestReviewIfQueued(handlerId)
       return true
     }
 
@@ -2864,7 +2864,7 @@ export class Accounts extends EventEmitter {
       submittedRequest.notice = 'Verifying'
       submittedRequest.mode = RequestMode.Monitor
       currentAccount.update()
-      currentAccount.releaseRequestReview(handlerId)
+      currentAccount.releaseRequestReviewIfQueued(handlerId)
 
       void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
         const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)

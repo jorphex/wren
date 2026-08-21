@@ -2,6 +2,7 @@ import deepEqual from 'deep-equal'
 import log from 'electron-log'
 
 import { Colorway, getColor } from '../../../resources/colors'
+import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 import store from '../../store'
 
 import type { Chain, ChainMetadata, Origin } from '../../store/state'
@@ -89,7 +90,6 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
   const chains = storeApi.getChains()
   const meta = storeApi.getChainsMeta()
   const colorway = storeApi.getColorway()
-  const invalidChainIds: number[] = []
   const invalidChainErrors = new Map<number, string>()
 
   const activeChains = Object.values(chains)
@@ -98,14 +98,23 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
   const availableChains = activeChains.flatMap((chain) => {
     try {
       const { id, explorer, name } = chain
-      const chainMetadata = meta[id]
-      if (!chainMetadata) throw new Error('metadata is missing')
+      const storedMetadata = meta[id]
+      if (!storedMetadata) {
+        invalidChainErrors.set(id, 'metadata is missing; using safe fallback')
+      }
+      const chainMetadata = safeNetworkMetadata(storedMetadata, chain)
       const { nativeCurrency, primaryColor } = chainMetadata
-      if (!nativeCurrency) throw new Error('native currency metadata is missing')
       const { icon: currencyIcon, name: currencyName, symbol, decimals } = nativeCurrency
 
       const icons = currencyIcon ? [{ url: currencyIcon }] : []
-      const colors = primaryColor ? [getColor(primaryColor, colorway)] : []
+      let colors: ReturnType<typeof getColor>[] = []
+      if (primaryColor) {
+        try {
+          colors = [getColor(primaryColor, colorway)]
+        } catch {
+          invalidChainErrors.set(id, 'primary color is invalid; omitting wallet color')
+        }
+      }
 
       return [
         {
@@ -126,7 +135,6 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
         }
       ]
     } catch (error) {
-      invalidChainIds.push(chain.id)
       invalidChainErrors.set(chain.id, error instanceof Error ? error.message : String(error))
       return []
     }
@@ -134,13 +142,9 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
 
   for (const [chainId, error] of invalidChainErrors) {
     if (reportedInvalidChainErrors.get(chainId) === error) continue
-    log.warn('Skipping invalid active network in Companion catalog', { chainId, error })
+    log.warn('Active network needed Companion catalog recovery', { chainId, error })
   }
   reportedInvalidChainErrors = invalidChainErrors
-
-  if (activeChains.length > 0 && availableChains.length === 0) {
-    throw new Error(`No active network has usable Companion metadata: ${invalidChainIds.join(', ')}`)
-  }
 
   return availableChains
 }

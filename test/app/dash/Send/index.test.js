@@ -396,10 +396,8 @@ it('validates a recipient and amount before queueing the existing transaction re
 })
 
 it.each([
-  [
-    'origin-unavailable',
-    'Wren could not prepare its local Send connection. Close and reopen Send, then try again.'
-  ],
+  ['origin-unavailable', 'Wren could not prepare Send’s local authorization. Restart Wren, then try again.'],
+  ['pending-chain', 'Finish or decline the pending Send transaction before sending on another network.'],
   ['validation-failed', 'Wren could not validate this transfer. Check the recipient, amount, and network.'],
   ['send-unavailable', 'Wren could not prepare this transaction.']
 ])('shows truthful prequeue copy for %s', async (error, message) => {

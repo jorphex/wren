@@ -619,6 +619,103 @@ describe('#addRequest', () => {
     expect(account.getActiveReviewRequest(first.handlerId)).toBeUndefined()
   })
 
+  it('advances a retained monitor review when a new request arrives later', () => {
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+    })
+    const submitted = request('submitted-monitor')
+    account.addRequest(submitted)
+    submitted.mode = 'monitor'
+    submitted.type = 'transaction'
+    submitted.data = { chainId: '0x1' }
+    nav.forward.mockClear()
+
+    const next = request('arrived-later')
+    account.addRequest(next)
+
+    expect(store.navClearReq).toHaveBeenCalledWith(account.id, submitted.handlerId, true)
+    expect(account.getActiveReviewRequest(next.handlerId)).toBe(next)
+    expect(account.getActiveReviewRequest(submitted.handlerId)).toBeUndefined()
+    expect(nav.forward).toHaveBeenCalledWith(
+      'panel',
+      expect.objectContaining({
+        view: 'requestView',
+        data: expect.objectContaining({ requestId: next.handlerId })
+      })
+    )
+  })
+
+  it('does not replace a retained transaction monitor with a later terminal request', () => {
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') return []
+    })
+    const submitted = request('submitted-monitor')
+    account.addRequest(submitted)
+    submitted.mode = 'monitor'
+    submitted.type = 'transaction'
+    submitted.data = { chainId: '0x1' }
+    nav.forward.mockClear()
+    store.navClearReq.mockClear()
+
+    const terminal = request('terminal-error')
+    terminal.status = 'error'
+    account.addRequest(terminal)
+
+    expect(store.navClearReq).not.toHaveBeenCalled()
+    expect(account.getActiveReviewRequest(submitted.handlerId)).toBe(submitted)
+    expect(account.getActiveReviewRequest(terminal.handlerId)).toBeUndefined()
+    expect(nav.forward).not.toHaveBeenCalled()
+  })
+
+  it('opens the request inbox when a normal request arrives behind a retained terminal error', () => {
+    const request = (handlerId) => ({
+      handlerId,
+      type: 'access',
+      account: accountState.address,
+      origin: 'origin-id',
+      payload: { id: handlerId, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
+    })
+    const terminal = request('retained-terminal-error')
+    store.mockImplementation((...path) => {
+      const key = path.join('.')
+      if (key === 'selected.current') return accountState.address
+      if (key === 'windows.panel.nav') {
+        return [
+          {
+            view: 'requestView',
+            data: { accountId: accountState.address, requestId: terminal.handlerId }
+          }
+        ]
+      }
+    })
+    account.addRequest(terminal)
+    terminal.status = 'error'
+    store.navClearReq.mockClear()
+
+    account.addRequest(request('arrived-after-error'))
+
+    expect(store.navClearReq).toHaveBeenCalledWith(accountState.address, terminal.handlerId, true)
+    expect(account.getActiveReviewRequest(terminal.handlerId)).toBe(terminal)
+  })
+
   it('dismisses a completed review to the wallet without deleting it or opening the next request', () => {
     const request = (handlerId) => ({
       handlerId,

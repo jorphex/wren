@@ -194,7 +194,7 @@ it('returns a bounded generic failure instead of exposing provider error text', 
 })
 
 it.each([
-  [{ code: 4100, message: 'private origin detail' }, 'origin-unavailable'],
+  [{ code: 4100, message: 'Managed Wren Send origin is not authorized' }, 'origin-unavailable'],
   [{ code: -32602, message: 'private validation payload' }, 'validation-failed'],
   [{ code: 4200, message: 'private unsupported detail' }, 'validation-failed'],
   [{ code: -32603, message: 'Chain 0x1 not connected' }, 'network-unavailable'],
@@ -205,6 +205,66 @@ it.each([
   })
 
   await expect(send.queue(draft)).resolves.toEqual({ success: false, error: expected })
+})
+
+it('does not mislabel an unrelated authorization rejection as a local Send origin failure', async () => {
+  provider.sendTransaction.mockImplementation((_payload, response) => {
+    response({ error: { code: 4100, message: 'Account access changed' } })
+  })
+
+  await expect(send.queue(draft)).resolves.toEqual({ success: false, error: 'send-unavailable' })
+})
+
+it('preserves a pending managed Send route instead of switching it to another chain', async () => {
+  const pending = {
+    type: 'transaction',
+    origin: originIdForName(FRAME_SEND_ORIGIN),
+    mode: 'normal',
+    data: { chainId: '0x1' }
+  }
+  const originalStore = store.getMockImplementation()
+  store.mockImplementation((...path) => {
+    if (path.join('.') === 'main.accounts') return { [account]: { requests: { pending } } }
+    return originalStore(...path)
+  })
+
+  await expect(send.queue({ ...draft, chainId: 10 })).resolves.toEqual({
+    success: false,
+    error: 'pending-chain'
+  })
+  expect(provider.sendTransaction).not.toHaveBeenCalled()
+  expect(actions.switchOriginChain).not.toHaveBeenCalled()
+})
+
+it('does not switch the profile-wide Send origin beneath another account’s pending request', async () => {
+  const otherAccount = '0x4444444444444444444444444444444444444444'
+  const pending = {
+    type: 'transaction',
+    origin: originIdForName(FRAME_SEND_ORIGIN),
+    mode: 'normal',
+    data: { chainId: '0x1' }
+  }
+  const originalStore = store.getMockImplementation()
+  store.mockImplementation((...path) => {
+    const key = path.join('.')
+    if (key === 'main.accounts') return { [otherAccount]: { requests: { pending } } }
+    if (key === `main.origins.${originIdForName(FRAME_SEND_ORIGIN)}`) {
+      return {
+        chain: { type: 'ethereum', id: 10 },
+        name: FRAME_SEND_ORIGIN,
+        provenance: 'managed'
+      }
+    }
+    return originalStore(...path)
+  })
+
+  await expect(send.queue({ ...draft, chainId: 10 })).resolves.toEqual({
+    success: false,
+    error: 'pending-chain'
+  })
+  expect(provider.sendTransaction).not.toHaveBeenCalled()
+  expect(actions.addOriginRequest).not.toHaveBeenCalled()
+  expect(actions.switchOriginChain).not.toHaveBeenCalled()
 })
 
 it('distinguishes invalid address input from unavailable ENS lookup', async () => {

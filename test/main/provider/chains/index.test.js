@@ -95,7 +95,7 @@ describe('#getActiveChains', () => {
     })
   })
 
-  it('isolates an active network with invalid metadata from the valid catalog', () => {
+  it('recovers an active network with missing metadata into the valid catalog', () => {
     const invalid = {
       name: 'Invalid network',
       id: 4153,
@@ -106,19 +106,50 @@ describe('#getActiveChains', () => {
     const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
     setChains({ ...chains, 4153: invalid }, chainMeta)
 
-    expect(getActiveChains().map((chain) => chain.chainId)).toEqual([1, 11155111])
+    expect(getActiveChains().map((chain) => chain.chainId)).toEqual([1, 4153, 11155111])
     expect(warning).toHaveBeenCalledWith(
-      'Skipping invalid active network in Companion catalog',
-      expect.objectContaining({ chainId: 4153, error: 'metadata is missing' })
+      'Active network needed Companion catalog recovery',
+      expect.objectContaining({ chainId: 4153, error: 'metadata is missing; using safe fallback' })
     )
     warning.mockRestore()
   })
 
-  it('reports an unusable catalog when every active network is invalid', () => {
+  it('returns a safe Companion catalog when every active network is missing metadata', () => {
     const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
     setChains({ 1: chains[1] }, {})
 
-    expect(() => getActiveChains()).toThrow('No active network has usable Companion metadata: 1')
+    expect(getActiveChains()).toEqual([
+      expect.objectContaining({
+        chainId: 1,
+        name: 'Ethereum Mainnet',
+        connected: true,
+        nativeCurrency: { name: '', symbol: '?', decimals: 18 }
+      })
+    ])
+    expect(warning).toHaveBeenCalledWith(
+      'Active network needed Companion catalog recovery',
+      expect.objectContaining({ chainId: 1, error: 'metadata is missing; using safe fallback' })
+    )
+    warning.mockRestore()
+  })
+
+  it('keeps an active network when its stored primary color is invalid', () => {
+    const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
+    setChains({ 1: chains[1] }, { 1: { ...chainMeta[1], primaryColor: 'not-a-palette-key' } })
+
+    expect(getActiveChains()).toEqual([
+      expect.objectContaining({
+        chainId: 1,
+        external: { wallet: { colors: [] } }
+      })
+    ])
+    expect(warning).toHaveBeenCalledWith(
+      'Active network needed Companion catalog recovery',
+      expect.objectContaining({
+        chainId: 1,
+        error: 'primary color is invalid; omitting wallet color'
+      })
+    )
     warning.mockRestore()
   })
 })
@@ -138,12 +169,15 @@ describe('#createChainsObserver', () => {
     handler.chainsChanged = jest.fn()
   })
 
-  it('keeps the last valid catalog while all active network metadata is unusable', () => {
+  it('publishes a safe catalog when all active network metadata is unavailable', () => {
     const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
     setChains({ 1: chains[1] }, {})
 
     expect(() => fireObserver()).not.toThrow()
-    expect(handler.chainsChanged).not.toHaveBeenCalled()
+    expect(handler.chainsChanged).toHaveBeenCalledWith(
+      selectedAddress,
+      expect.arrayContaining([expect.objectContaining({ chainId: 1 })])
+    )
     warning.mockRestore()
   })
 

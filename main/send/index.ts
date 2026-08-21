@@ -91,7 +91,9 @@ const failure = <T extends Record<string, unknown> = Record<string, never>>(
 function providerAdmissionFailure(error: unknown): SendResult<{ handlerId: string }> {
   if (!error || typeof error !== 'object') return { success: false, error: 'send-unavailable' }
   const { code, message } = error as { code?: unknown; message?: unknown }
-  if (code === 4100) return { success: false, error: SEND_ERROR.OriginUnavailable }
+  if (code === 4100 && typeof message === 'string' && message.includes('Managed Wren Send origin')) {
+    return { success: false, error: SEND_ERROR.OriginUnavailable }
+  }
   if (code === -32602 || code === 4200) {
     return { success: false, error: SEND_ERROR.ValidationFailed }
   }
@@ -112,6 +114,37 @@ function currentAccount() {
 
 function chainAvailable(chain: Chain | undefined) {
   return Boolean(chain?.on && chain.connection.endpoints.some((endpoint) => endpoint.connected))
+}
+
+function hasPendingManagedSendOnAnotherChain(chainId: number) {
+  const storedAccounts = store('main.accounts') as
+    Record<string, { requests?: Record<string, unknown> }> | undefined
+  return Object.values(storedAccounts || {}).some((account) =>
+    Object.values(account?.requests || {}).some((candidate) => {
+      if (!candidate || typeof candidate !== 'object') return false
+      const request = candidate as {
+        origin?: unknown
+        type?: unknown
+        mode?: unknown
+        status?: unknown
+        data?: { chainId?: unknown }
+      }
+      if (
+        request.origin !== sendOriginId ||
+        request.type !== 'transaction' ||
+        request.mode === 'monitor' ||
+        ['confirmed', 'declined', 'error', 'success'].includes(String(request.status || ''))
+      ) {
+        return false
+      }
+      try {
+        return Number(BigInt(request.data?.chainId as string)) !== chainId
+      } catch {
+        // A malformed pending managed request must not be invalidated by moving its only origin.
+        return true
+      }
+    })
+  )
 }
 
 function assetsWithNativeDecimals(assets: Balance[], chainId: number): Balance[] {
@@ -152,6 +185,9 @@ async function queue(draft: SendDraft): Promise<SendResult<{ handlerId: string }
   let maxQuoteId: string | undefined
   try {
     const account = currentAccount()
+    if (hasPendingManagedSendOnAnotherChain(draft.chainId)) {
+      throw new SendValidationError(SEND_ERROR.PendingChain)
+    }
     const chain = store('main.networks.ethereum', draft.chainId) as Chain | undefined
     const assets = assetsWithNativeDecimals(
       (store('main.balances', account.id) || []) as Balance[],

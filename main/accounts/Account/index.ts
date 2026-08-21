@@ -97,6 +97,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
+const terminalRequestStatuses = new Set(['confirmed', 'declined', 'error', 'success'])
+
 interface SignerOptions {
   type?: string
 }
@@ -1493,6 +1495,10 @@ class FrameAccount {
       })
   }
 
+  private orderedReviewQueueRequests() {
+    return this.orderedRequests().filter((request) => !terminalRequestStatuses.has(request.status || ''))
+  }
+
   private presentRequest(req: AnyAccountRequest, summon: boolean) {
     requireStoreAction('setSignerView')('default')
     requireStoreAction('setPanelView')('default')
@@ -1546,13 +1552,27 @@ class FrameAccount {
   }
 
   private presentNextRequest(summon: boolean) {
-    const knownActive = this.activeReviewHandlerId ? this.requests[this.activeReviewHandlerId] : undefined
-    if (knownActive) return knownActive
+    const knownActiveId = this.activeReviewHandlerId
+    const knownActive = knownActiveId ? this.requests[knownActiveId] : undefined
+    const retainedTransactionMonitor =
+      knownActive?.type === 'transaction' && knownActive.mode === RequestMode.Monitor
+    if (knownActive && !retainedTransactionMonitor) return knownActive
 
-    const next = this.orderedRequests()[0]
+    const next = retainedTransactionMonitor ? this.orderedReviewQueueRequests()[0] : this.orderedRequests()[0]
+    if (knownActive && next) {
+      this.activeReviewHandlerId = undefined
+      requireStoreAction('navClearReq')(this.id, knownActive.handlerId, true)
+    }
+    if (knownActive && !next) return knownActive
     this.activeReviewHandlerId = next?.handlerId
     if (next) this.presentRequest(next, summon)
     return next
+  }
+
+  releaseRequestReviewIfQueued(handlerId: string) {
+    if (this.activeReviewHandlerId !== handlerId) return false
+    const queued = this.orderedReviewQueueRequests().some((request) => request.handlerId !== handlerId)
+    return queued ? this.releaseRequestReview(handlerId) : false
   }
 
   private presentRequestInboxForConcurrentReview() {

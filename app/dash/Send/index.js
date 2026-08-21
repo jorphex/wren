@@ -96,8 +96,8 @@ const errorCopy = Object.freeze({
   'asset-unavailable': COPY.assetUnavailable,
   'fee-unavailable': 'Fee estimate unavailable',
   'network-unavailable': 'Network unavailable. Check your connection and try again.',
-  'origin-unavailable':
-    'Wren could not prepare its local Send connection. Close and reopen Send, then try again.',
+  'origin-unavailable': 'Wren could not prepare Send’s local authorization. Restart Wren, then try again.',
+  'pending-chain': 'Finish or decline the pending Send transaction before sending on another network.',
   'recipient-invalid': COPY.recipientInvalid,
   'recipient-lookup-unavailable': COPY.recipientLookupUnavailable,
   'sweep-quote-changed': 'Balances, fees, or nonce changed. Scan a fresh Sweep. Nothing was sent.',
