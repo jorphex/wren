@@ -152,6 +152,28 @@ describe('#getActiveChains', () => {
     )
     warning.mockRestore()
   })
+
+  it('does not let a malformed persisted network break the Companion catalog', () => {
+    setChains({ ...chains, 8453: null }, chainMeta)
+
+    expect(() => getActiveChains()).not.toThrow()
+    expect(getActiveChains().map((chain) => chain.chainId)).toEqual([1, 11155111])
+  })
+
+  it('omits an enabled network with an invalid id while retaining valid networks', () => {
+    const warning = jest.spyOn(log, 'warn').mockImplementation(() => {})
+    setChains({ ...chains, 8453: { ...chains[1], id: '8453' } }, chainMeta)
+
+    expect(getActiveChains().map((chain) => chain.chainId)).toEqual([1, 11155111])
+    expect(warning).toHaveBeenCalledWith(
+      'Active network needed Companion catalog recovery',
+      expect.objectContaining({
+        chainId: 8453,
+        error: 'network entry is invalid; omitting it from Companion'
+      })
+    )
+    warning.mockRestore()
+  })
 })
 
 describe('#createChainsObserver', () => {

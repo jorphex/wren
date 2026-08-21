@@ -67,7 +67,7 @@ const onboardingAction = (nextCount = 0) => ({
 
 const generatedWalletPresentationAction = () => ({
   type: 'sequence',
-  delayMs: 650,
+  delayMs: 900,
   steps: [
     { type: 'inputLabel', label: 'Create password', value: 'correct horse battery staple' },
     { type: 'clickText', text: 'Continue' },
@@ -1186,7 +1186,7 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       action: generatedWalletPresentationAction(),
-      ready: '.generatedWalletPhrase',
+      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletPhrase',
       requiredControls: ['Copy recovery phrase', "I've written it down"],
       requiredText: [
         'Your recovery phrase',
@@ -1204,7 +1204,7 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       action: generatedWalletPresentationAction(),
-      ready: '.generatedWalletEvidence',
+      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletEvidence',
       requiredControls: ['Copy address', 'Show private key', 'Copy private key'],
       requiredText: [
         'Your private key',
@@ -1224,7 +1224,7 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       action: generatedWalletVerificationAction('phrase'),
-      ready: '.generatedWalletVerify',
+      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletVerify',
       requiredText: [
         'Verify your backup',
         'Enter the requested words from your saved copy.',
@@ -1243,7 +1243,7 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       action: generatedWalletVerificationAction('private-key'),
-      ready: '.generatedWalletKeyInput',
+      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletKeyInput',
       requiredText: [
         'Verify your backup',
         'Enter the private key from your saved copy.',

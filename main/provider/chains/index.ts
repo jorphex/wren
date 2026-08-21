@@ -92,8 +92,18 @@ function getActiveChains(): RPC.GetEthereumChains.Chain[] {
   const colorway = storeApi.getColorway()
   const invalidChainErrors = new Map<number, string>()
 
-  const activeChains = Object.values(chains)
-    .filter((chain) => chain.on)
+  const activeChains = Object.entries(chains)
+    .flatMap(([storedId, chain]) => {
+      if (!chain || typeof chain !== 'object' || chain.on !== true) return []
+      if (!Number.isSafeInteger(chain.id) || chain.id <= 0) {
+        const parsedId = Number.parseInt(storedId, 10)
+        if (Number.isSafeInteger(parsedId) && parsedId > 0) {
+          invalidChainErrors.set(parsedId, 'network entry is invalid; omitting it from Companion')
+        }
+        return []
+      }
+      return [chain]
+    })
     .sort((a, b) => a.id - b.id)
   const availableChains = activeChains.flatMap((chain) => {
     try {

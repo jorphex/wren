@@ -921,6 +921,25 @@
     .addAccountItemOption
       top 170px
 
+    // Recovery material must never share a moving viewport with its
+    // verification step. Focus changes inside the translated track can make
+    // an overflow-hidden carousel scroll and expose the adjacent secret step.
+    .addAccountItemOptionSetup
+      transform none !important
+      transition none
+
+      .addAccountItemOptionSetupFrames
+        position relative
+        width 100%
+
+        .addAccountItemOptionSetupFrame
+          display none
+          width 100%
+          transition none
+
+          &[aria-hidden='false']
+            display flex
+
 @media (max-height: 760px)
   .addAccountItem
     &.generatedWalletSetup

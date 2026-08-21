@@ -52,6 +52,7 @@ describe('generated recovery-phrase wallet', () => {
   afterEach(() => jest.useRealTimers())
 
   test('requests entropy only after password confirmation and presents twelve words once', async () => {
+    const focus = jest.spyOn(HTMLElement.prototype, 'focus')
     const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: true })
     await advancePassword(view, phrasePresentation)
 
@@ -63,12 +64,14 @@ describe('generated recovery-phrase wallet', () => {
       password,
       expect.any(Function)
     )
-    expect(screen.getByRole('heading', { name: 'Your recovery phrase' })).toBeTruthy()
+    const heading = screen.getByRole('heading', { name: 'Your recovery phrase' })
     expect(screen.getAllByRole('listitem')).toHaveLength(12)
     expectActiveText('Leaving now deletes this new wallet.')
     expect(link.send).not.toHaveBeenCalledWith(expect.anything(), expect.stringContaining('test test'))
     act(() => jest.advanceTimersByTime(100))
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Your recovery phrase' }))
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(document.activeElement).toBe(heading)
+    focus.mockRestore()
   })
 
   test('shows a fail-closed generation error without leaving the frame carousel blank', async () => {

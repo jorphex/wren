@@ -19,7 +19,7 @@ const useActivationFocus = (active, delay = 100) => {
 
   useEffect(() => {
     if (!active) return
-    const timer = setTimeout(() => ref.current?.focus(), delay)
+    const timer = setTimeout(() => ref.current?.focus({ preventScroll: true }), delay)
     return () => clearTimeout(timer)
   }, [active, delay])
 

@@ -79,6 +79,17 @@ it('qualifies compact account-access actions at the real tray width', () => {
   }
 })
 
+it('waits for the active generated-wallet frame instead of hidden adjacent content', () => {
+  const generated = scenarioMatrix({ includeReview: true }).filter(({ state }) =>
+    ['account-create-phrase', 'account-create-private-key'].includes(state)
+  )
+
+  expect(generated).toHaveLength(8)
+  for (const scenario of generated) {
+    expect(scenario.ready).toMatch(/^\.generatedWalletFrame\[aria-hidden="false"\] /u)
+  }
+})
+
 it('seats every RPC warning shelf at the viewport bottom with its exact reserved height', () => {
   const warnings = scenarioMatrix({ includeReview: true }).filter(
     ({ state, action }) => state === 'transaction-rpc-warning' && !action

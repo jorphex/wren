@@ -373,6 +373,12 @@ test('renders page actions with their destination instead of delaying the footer
   expect(dashStyle).not.toMatch(/\.dashFooter[\s\S]*?animation showFooter/)
 })
 
+test('keeps generated secrets in a stable single-frame viewport', () => {
+  expect(accountAddStyle).toMatch(
+    /&\.generatedWalletSetup[\s\S]*?\.addAccountItemOptionSetup\n {6}transform none !important\n {6}transition none[\s\S]*?\.addAccountItemOptionSetupFrames\n {8}position relative\n {8}width 100%[\s\S]*?\.addAccountItemOptionSetupFrame\n {10}display none\n {10}width 100%\n {10}transition none[\s\S]*?&\[aria-hidden='false'\]\n {12}display flex/
+  )
+})
+
 test('keeps local interaction states stronger than the later shared ghost-control rules', () => {
   expect(settingsStyle).toMatch(
     /\.interfaceScaleOption[\s\S]*?&\.wrenControlGhost:hover:not\(:disabled\)[\s\S]*?background-color var\(--wren-surface-active\)[\s\S]*?box-shadow inset/

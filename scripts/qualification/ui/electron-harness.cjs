@@ -480,7 +480,33 @@ const runScenario = async (scenario) => {
     window.webContents.setZoomFactor(scenario.scale)
     if (scenario.action) await performAction(window.webContents, scenario.action)
     await waitFor(window.webContents, `document.querySelector(${JSON.stringify(scenario.ready)})`)
+    const assertGeneratedViewport = async () => {
+      const state = await window.webContents.executeJavaScript(
+        `(() => {
+          const setup = document.querySelector('.generatedWalletSetup')
+          if (!setup) return null
+          const viewport = setup.querySelector('.addAccountItemOption')
+          const frames = [...setup.querySelectorAll('.generatedWalletFrame')]
+          return {
+            scrollLeft: viewport?.scrollLeft ?? -1,
+            active: frames.filter((frame) => frame.getAttribute('aria-hidden') === 'false').length,
+            renderedInactive: frames.filter(
+              (frame) => frame.getAttribute('aria-hidden') === 'true' && frame.getClientRects().length > 0
+            ).length
+          }
+        })()`,
+        true
+      )
+      if (
+        state &&
+        (state.scrollLeft !== 0 || state.active !== 1 || state.renderedInactive !== 0)
+      ) {
+        throw new Error(`Generated-wallet viewport is unstable: ${JSON.stringify(state)}`)
+      }
+    }
+    await assertGeneratedViewport()
     await new Promise((resolve) => setTimeout(resolve, 900))
+    await assertGeneratedViewport()
 
     const audit = await window.webContents.executeJavaScript(
       `(${auditPage.toString()})(${JSON.stringify({

@@ -12,6 +12,7 @@ import ws, {
 } from '../../../main/api/ws'
 import { MAX_REQUEST_BYTES } from '../../../main/api/validPayload'
 import { getRequestSignal } from '../../../main/provider/requestSignal'
+import { getActiveChains } from '../../../main/provider/chains'
 import { extensionAuthPayload } from '../../../main/api/extensionAuth'
 import { respondToExtensionPairing } from '../../../main/api/extensionPairing'
 import {
@@ -107,6 +108,7 @@ beforeEach(async () => {
   provider.send.mockReset()
   provider.on.mockReset()
   store.initOrigin = jest.fn()
+  store.set('main.origins', {})
   store.notify = jest.fn((notification, data) => {
     store.set('view.notify', notification)
     store.set('view.notifyData', data)
@@ -715,6 +717,49 @@ it('keeps Companion control and page authorization roles separate after authenti
   })
   expect(provider.send).not.toHaveBeenCalled()
   pageSocket.emit('close')
+})
+
+it('returns a recovered network catalog through the authenticated Companion control channel', async () => {
+  store.initOrigin.mockImplementationOnce((originId, origin) => store.set('main.origins', originId, origin))
+  store.set('main.networks.ethereum', {
+    1: {
+      id: 1,
+      name: 'Mainnet',
+      explorer: 'https://etherscan.io',
+      connection: { endpoints: [{ id: 'rpc-1', connected: true }] },
+      on: true
+    },
+    8453: null
+  })
+  store.set('main.networksMeta.ethereum', {
+    1: {
+      nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
+      primaryColor: 'accent1'
+    }
+  })
+  store.set('main.colorway', 'dark')
+  provider.send.mockImplementationOnce((payload, response) =>
+    response({ id: payload.id, jsonrpc: payload.jsonrpc, result: getActiveChains() })
+  )
+
+  mockSocket.emit(
+    'message',
+    JSON.stringify({ id: 16, jsonrpc: '2.0', method: 'wallet_getEthereumChains', params: [] })
+  )
+  await flushPromises()
+
+  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toEqual({
+    id: 16,
+    jsonrpc: '2.0',
+    result: [
+      expect.objectContaining({
+        chainId: 1,
+        connected: true,
+        name: 'Mainnet',
+        nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' }
+      })
+    ]
+  })
 })
 
 it.each([
