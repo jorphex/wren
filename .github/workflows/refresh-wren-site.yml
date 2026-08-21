@@ -1,0 +1,25 @@
+name: Refresh Wren site activity
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  refresh-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger site rebuild
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.WREN_SITE_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::error::WREN_SITE_DEPLOY_HOOK_URL is not configured"
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            --request POST "$DEPLOY_HOOK_URL"
