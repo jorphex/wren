@@ -108,26 +108,41 @@
 
       .customTokensListItemExpand
         appearance none
-        width 30px
-        height 30px
-        margin-left var(--wren-space-2)
-        padding 6px
+        position relative
+        width 44px
+        height 44px
+        margin-left var(--wren-space-1)
+        padding 14px
         box-sizing border-box
-        border 1px solid var(--wren-border-default)
-        border-radius var(--wren-radius-sm)
-        background var(--wren-bg-elevated)
+        border 0
+        background transparent
         color var(--wren-text-secondary)
         cursor pointer
-        transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
-        transform rotate(-180deg)
+
+        &::before
+          content ''
+          position absolute
+          inset 7px
+          border 1px solid var(--wren-border-default)
+          border-radius var(--wren-radius-sm)
+          background var(--wren-bg-elevated)
+          transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
+
+        svg
+          position relative
+          z-index 1
+          transform rotate(-180deg)
+          transition transform var(--wren-motion-fast) var(--wren-ease)
 
         *
           pointer-events none
 
       .customTokensListItemExpand:hover
-        background var(--wren-surface-hover)
-        border-color var(--wren-border-strong)
         color var(--wren-text-primary)
+
+        &::before
+          background var(--wren-surface-hover)
+          border-color var(--wren-border-strong)
 
       .customTokensListItemExpand:focus-visible
         outline 2px solid var(--wren-focus)
@@ -139,7 +154,8 @@
         opacity .6
 
       .customTokensListItemExpandActive
-        transform rotate(0deg)
+        svg
+          transform rotate(0deg)
 
       .customTokensListItemName
         min-width 0

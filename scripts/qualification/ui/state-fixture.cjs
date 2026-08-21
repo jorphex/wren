@@ -769,11 +769,23 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (scenario.state === 'tokens') {
+  if (scenario.state === 'tokens' || scenario.state === 'tokens-list') {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
       nav: [{ view: 'tokens', data: {} }]
+    }
+    if (scenario.state === 'tokens-list') {
+      state.main.tokens.custom = [
+        {
+          address: '0xc56413869c6cdf96496f2b1ef801fedbdfa7ddb0',
+          artworkKey: 'ethereum-yvweth-1',
+          chainId: 1,
+          decimals: 18,
+          name: 'Yearn Wrapped Ether',
+          symbol: 'yvWETH-1'
+        }
+      ]
     }
   }
 
@@ -840,9 +852,7 @@ const fixtureFor = (scenario) => {
         {
           view: 'earn',
           data:
-            scenario.state === 'earn-loading'
-              ? {}
-              : { vaultId: 'ethereum-yvusd', variant: scenario.variant }
+            scenario.state === 'earn-loading' ? {} : { vaultId: 'ethereum-yvusd', variant: scenario.variant }
         }
       ]
     }
@@ -867,6 +877,7 @@ const fixtureFor = (scenario) => {
     scenario.state === 'address-book-list' ||
     scenario.state === 'address-book-editor' ||
     scenario.state === 'send-composer' ||
+    scenario.state === 'send-asset-picker' ||
     scenario.state === 'send-sweep-selection' ||
     scenario.state === 'send-recipient-picker' ||
     scenario.state === 'send-confirmed' ||
@@ -907,7 +918,9 @@ const fixtureFor = (scenario) => {
               ? { screen: 'edit', address: QUALIFICATION_CONTACT }
               : scenario.state === 'send-recipient-picker'
                 ? { step: 'contactPicker', title: 'Choose a recipient' }
-                : {}
+                : scenario.state === 'send-asset-picker'
+                  ? { step: 'assetPicker', title: 'Choose an asset' }
+                  : {}
         }
       ]
     }
@@ -916,6 +929,7 @@ const fixtureFor = (scenario) => {
   if (
     [
       'send-composer',
+      'send-asset-picker',
       'send-sweep-selection',
       'send-recipient-picker',
       'send-confirmed',

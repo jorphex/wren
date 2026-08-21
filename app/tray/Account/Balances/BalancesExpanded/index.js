@@ -17,7 +17,7 @@ import {
 import { matchFilter } from '../../../../../resources/utils'
 import { safeNetworkMetadata } from '../../../../../resources/domain/networkMetadata'
 
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 
 export class BalancesExpanded extends React.Component {
@@ -81,7 +81,7 @@ export class BalancesExpanded extends React.Component {
     return (
       <div className={`panelFilterAccount balanceFilter${hasFilter ? ' balanceFilterHasValue' : ''}`}>
         <div className='panelFilterIcon'>
-          <Icon name='search' size={12} />
+          <Icon name='search' size={15} />
         </div>
         <div className='panelFilterInput'>
           <input
@@ -149,25 +149,23 @@ export class BalancesExpanded extends React.Component {
               />
             )
           ) : (
-            <ClusterBox>
-              <Cluster>
-                {balances.map(({ chainId, symbol, ...balance }, i) => {
-                  return (
-                    <ClusterRow key={chainId + symbol}>
-                      <ClusterValue>
-                        <Balance
-                          chainId={chainId}
-                          symbol={symbol}
-                          balance={balance}
-                          i={i}
-                          scanning={scanning}
-                        />
-                      </ClusterValue>
-                    </ClusterRow>
-                  )
-                })}
-              </Cluster>
-            </ClusterBox>
+            <Cluster>
+              {balances.map(({ chainId, symbol, ...balance }, i) => {
+                return (
+                  <ClusterRow key={chainId + symbol}>
+                    <ClusterValue>
+                      <Balance
+                        chainId={chainId}
+                        symbol={symbol}
+                        balance={balance}
+                        i={i}
+                        scanning={scanning}
+                      />
+                    </ClusterValue>
+                  </ClusterRow>
+                )
+              })}
+            </Cluster>
           )}
           <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
             <div className='signerBalanceButtons'>

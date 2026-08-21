@@ -154,7 +154,12 @@ class CustomTokens extends React.Component {
                   >
                     <div className='customTokensListItemTitle'>
                       <div className='customTokensListItemName'>
-                        <AssetMark asset={token} className='customTokensAssetMark' showChain={false} />
+                        <AssetMark
+                          appearance='plain'
+                          asset={token}
+                          className='customTokensAssetMark'
+                          showChain={false}
+                        />
                         <div className='customTokensListItemText'>
                           <div className='customTokensListItemSymbol'>{token.symbol}</div>
                           <div className='customTokensListItemSub'>{token.name}</div>

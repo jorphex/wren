@@ -869,7 +869,7 @@ export class Send extends React.Component {
                   }}
                   type='button'
                 >
-                  <AssetMark asset={asset} />
+                  <AssetMark appearance='plain' asset={asset} />
                   <span className='sendAssetIdentity'>
                     <strong>{asset.symbol}</strong>
                     <span>{asset.chainName}</span>
@@ -1327,7 +1327,7 @@ export class Send extends React.Component {
                 <span className='sendSweepCheckbox' aria-hidden='true'>
                   {checked ? <Icon name='check' size={14} /> : null}
                 </span>
-                <AssetMark asset={asset} />
+                <AssetMark appearance='plain' asset={asset} />
                 <span>
                   <strong>{asset.symbol}</strong>
                   <code>{asset.address}</code>
@@ -1347,7 +1347,7 @@ export class Send extends React.Component {
               <span className='sendSweepCheckbox' aria-hidden='true'>
                 {this.state.sweepIncludeNative ? <Icon name='check' size={14} /> : null}
               </span>
-              <AssetMark asset={native} />
+              <AssetMark appearance='plain' asset={native} />
               <span>
                 <strong>Include {native.symbol}</strong>
                 <code>Native currency · sent last</code>
@@ -1612,7 +1612,7 @@ export class Send extends React.Component {
                 type='button'
               >
                 <span className='sendAssetIdentityCluster'>
-                  <AssetMark asset={selected} />
+                  <AssetMark appearance='plain' asset={selected} />
                   <span>
                     <strong>{selected.symbol}</strong>
                     <small>{selected.chainName}</small>

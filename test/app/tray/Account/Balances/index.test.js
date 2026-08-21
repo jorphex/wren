@@ -171,6 +171,7 @@ it('hides holdings while keeping public unit prices visible', () => {
     screen.getByRole('img', { name: 'TST asset' }).style.getPropertyValue('--asset-mark-chain-color')
   ).toBe('var(--wren-chain-ethereum)')
   expect(screen.getByRole('img', { name: 'TST asset' }).classList.contains('balancesAssetMark')).toBe(true)
+  expect(screen.getByRole('img', { name: 'TST asset' }).classList.contains('assetMark-plain')).toBe(true)
 })
 
 it.each([

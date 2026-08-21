@@ -46,7 +46,7 @@ export class AccountSelector extends React.Component {
     return (
       <div className='panelFilterMain accountDrawerFilter'>
         <div className='panelFilterIcon'>
-          <Icon name='search' size={12} />
+          <Icon name='search' size={15} />
         </div>
         <div className='panelFilterInput'>
           <input

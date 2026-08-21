@@ -93,7 +93,7 @@ export const resolveAssetArtwork = (asset = {}) => {
   }
 }
 
-const AssetMark = ({ asset, className = '', showChain = true, size = 'default' }) => {
+const AssetMark = ({ appearance = 'framed', asset, className = '', showChain = true, size = 'default' }) => {
   const symbol = asset?.symbol || '?'
   const chainColor =
     asset?.chainColor || (asset?.primaryColor ? `var(--${asset.primaryColor})` : 'var(--wren-chain-custom)')
@@ -102,7 +102,7 @@ const AssetMark = ({ asset, className = '', showChain = true, size = 'default' }
   return (
     <span
       aria-label={`${symbol} asset`}
-      className={`assetMark assetMark-${size} ${className}`.trim()}
+      className={`assetMark assetMark-${size} assetMark-${appearance} ${className}`.trim()}
       role='img'
       style={{ '--asset-mark-chain-color': chainColor }}
     >

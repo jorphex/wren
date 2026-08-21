@@ -148,7 +148,9 @@ it('opens directly on a native asset without a connection step and exposes the a
     data: { step: 'assetPicker', title: 'Choose an asset' }
   })
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  expect(screen.getByRole('button', { name: 'Select ETH' }).getAttribute('aria-pressed')).toBe('true')
+  const selectedAsset = screen.getByRole('button', { name: 'Select ETH' })
+  expect(selectedAsset.getAttribute('aria-pressed')).toBe('true')
+  expect(within(selectedAsset).getByRole('img', { name: 'ETH asset' }).classList).toContain('assetMark-plain')
   expect(screen.getByRole('button', { name: 'Select USDC' }).getAttribute('aria-pressed')).toBe('false')
 })
 

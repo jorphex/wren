@@ -38,6 +38,7 @@ test('uses the canonical asset placeholder when a token has no logo', () => {
 
   const mark = screen.getByRole('img', { name: 'ALPHA asset' })
   expect(mark.classList.contains('customTokensAssetMark')).toBe(true)
+  expect(mark.classList.contains('assetMark-plain')).toBe(true)
   expect(within(mark).getByText('A')).toBeTruthy()
   expect(within(mark).queryByRole('img')).toBeNull()
   expect(mark.querySelector('.assetMarkChain')).toBeNull()

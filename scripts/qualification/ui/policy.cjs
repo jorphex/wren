@@ -291,6 +291,22 @@ const sendComposerScenarios = () =>
         requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH']
       },
       {
+        id: `dash-send-asset-picker-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'send-asset-picker',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.sendAssetList',
+        expectedInitialFocus: 'Search assets',
+        requiredControls: ['Select ETH', 'Select USDC'],
+        requiredText: ['Ethereum', 'Optimism Mainnet', 'Ether', 'USD Coin'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.sendPickerSearch > svg', width: 15, height: 15 },
+          { kind: 'size', selector: '.sendAssetOption .assetMarkChain', width: 12, height: 12 }
+        ]
+      },
+      {
         id: `dash-send-sweep-selection-${geometry}-${scale}`,
         renderer: 'dash',
         state: 'send-sweep-selection',
@@ -319,7 +335,7 @@ const sendComposerScenarios = () =>
 const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
   ...updateDialogScenarios(),
-  ...sendComposerScenarios(),
+  ...sendComposerScenarios().filter(({ state }) => state !== 'send-asset-picker'),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -1524,7 +1540,12 @@ const reviewScenarios = () => [
     ready: '.accountLedgerView',
     requiredControls: ['Back', 'Filter balances', 'Add token'],
     requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
-    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'hidden', selector: '.balancesExpandedScroll > ._txMain' },
+      { kind: 'size', selector: '.balancesAssetMark .assetMarkChain', width: 12, height: 12 },
+      { kind: 'size', selector: '.balanceFilter .panelFilterIcon > svg', width: 15, height: 15 }
+    ]
   },
   {
     id: 'tray-account-chain-fallback-narrow-1',
@@ -1706,7 +1727,8 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.txLifecycle',
     requiredControls: ['View details'],
-    requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4']
+    requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
+    layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
   },
   {
     id: 'tray-transaction-confirmed-full-1',
@@ -1717,7 +1739,8 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.txLifecycle-success',
     requiredControls: ['View details', 'Close'],
-    requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
+    requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
+    layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
   },
   {
     id: 'tray-account-activity-full-1',
@@ -1937,6 +1960,21 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.customTokens',
         requiredControls: ['Add token'],
         requiredText: ['No custom tokens']
+      },
+      {
+        id: `dash-tokens-list-full-${scale}`,
+        renderer: 'dash',
+        state: 'tokens-list',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.customTokensListItem',
+        requiredControls: ['Add token', 'Expand yvWETH-1 token on chain 1'],
+        requiredText: ['Yearn Wrapped Ether', 'yvWETH-1'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.customTokensAssetMark .assetMarkGlyph', width: 30, height: 30 },
+          { kind: 'size', selector: '.customTokensListItemExpand', width: 44, height: 44 }
+        ]
       },
       {
         id: `tray-revocation-review-full-${scale}`,
@@ -2172,9 +2210,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       ]
     }
   ]
-  return includeReview
-    ? [...scenarios, ...accountAccessReviewScenarios(), ...reviewScenarios()]
-    : [...scenarios, ...accountAccessReviewScenarios()]
+  const defaultScenarios = [
+    ...scenarios,
+    ...accountAccessReviewScenarios(),
+    ...sendComposerScenarios().filter(({ state }) => state === 'send-asset-picker')
+  ]
+  return includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
 }
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({

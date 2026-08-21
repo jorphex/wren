@@ -17,7 +17,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(72)
+  expect(scenarios).toHaveLength(81)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -31,6 +31,9 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `dash-delegation-short-${scale}`,
         `dash-tokens-full-${scale}`,
         `dash-tokens-short-${scale}`,
+        `dash-tokens-list-full-${scale}`,
+        `dash-send-asset-picker-full-${scale}`,
+        `dash-send-asset-picker-short-${scale}`,
         `tray-revocation-review-full-${scale}`,
         `tray-revocation-review-short-${scale}`,
         `tray-revocation-monitor-full-${scale}`,
@@ -414,6 +417,7 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   )
   const contactEditors = scenarios.filter(({ state }) => state === 'address-book-editor')
   const recipientPickers = scenarios.filter(({ state }) => state === 'send-recipient-picker')
+  const assetPickers = scenarios.filter(({ state }) => state === 'send-asset-picker')
   const recentRecipientSettings = scenarios.filter(
     ({ state, variant }) => state === 'settings-recent-recipients' && variant !== 'clear'
   )
@@ -424,10 +428,15 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   expect(contactLists).toHaveLength(6)
   expect(contactEditors).toHaveLength(6)
   expect(recipientPickers).toHaveLength(6)
+  expect(assetPickers).toHaveLength(6)
   expect(recentRecipientSettings).toHaveLength(6)
   expect(sendConfirmations).toHaveLength(6)
   expect(maxReviews).toHaveLength(6)
   expect(sweepReviews).toHaveLength(6)
+  expect(fixtureFor(assetPickers[0]).windows.dash.nav[0]).toMatchObject({
+    view: 'send',
+    data: { step: 'assetPicker', title: 'Choose an asset' }
+  })
   expect(
     contactLists.every(({ layoutExpectations }) =>
       layoutExpectations.some(

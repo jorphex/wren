@@ -6,6 +6,8 @@ const accountGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 const accountSource = fs.readFileSync('app/tray/Account/Account.js', 'utf8')
 const accountSelectorStyle = fs.readFileSync('app/tray/AccountSelector/style/index.styl', 'utf8')
 const balancesStyle = fs.readFileSync('app/tray/Account/Balances/style/index.styl', 'utf8')
+const balanceSource = fs.readFileSync('app/tray/Account/Balances/Balance/index.js', 'utf8')
+const balancesExpandedSource = fs.readFileSync('app/tray/Account/Balances/BalancesExpanded/index.js', 'utf8')
 const inventoryStyle = fs.readFileSync('app/tray/Account/Inventory/style/index.styl', 'utf8')
 const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
@@ -138,6 +140,14 @@ test('centers shared filter icons in the 44px field and anchors the startup cont
   expect(trayShellStyle).toMatch(/\.panelMenuItemOpen[\s\S]*?right var\(--wren-space-2\)[\s\S]*?left auto/)
 })
 
+test('keeps expanded balances as a plain ledger with crisp circular progress markers', () => {
+  expect(balancesExpandedSource).not.toMatch(/ClusterBox/)
+  expect(balancesExpandedSource).toMatch(/<Icon name='search' size=\{15\}/)
+  expect(signingStyle).toMatch(
+    /\.txLifecycleStepMarker[\s\S]*?width 8px[\s\S]*?height 8px[\s\S]*?box-sizing border-box[\s\S]*?border-radius 999px/
+  )
+})
+
 test('keeps account modules free of decorative seams', () => {
   expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
   expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
@@ -213,9 +223,8 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
   expect(balancesStyle).toMatch(
     /\.signerBalanceIcon[\s\S]*?top 19px[\s\S]*?left var\(--wren-space-4\)[\s\S]*?width 32px[\s\S]*?height 32px[\s\S]*?align-items center[\s\S]*?justify-content center/
   )
-  expect(balancesStyle).toMatch(
-    /\.balancesAssetMark \.assetMarkGlyph[\s\S]*?border-color transparent[\s\S]*?background transparent[\s\S]*?box-shadow none/
-  )
+  expect(balanceSource).toMatch(/<AssetMark[\s\S]*?appearance='plain'[\s\S]*?className='balancesAssetMark'/)
+  expect(balancesStyle).not.toMatch(/\.balancesAssetMark \.assetMarkGlyph/)
 })
 
 test('keeps the account selector and privacy control on one optical axis', () => {

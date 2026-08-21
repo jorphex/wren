@@ -83,6 +83,18 @@ it('accepts the resolved semantic chain color without reinterpreting it', () => 
   ).toBe('var(--wren-chain-ethereum)')
 })
 
+it('offers a shared plain artwork treatment while keeping a round chain marker', () => {
+  render(<AssetMark appearance='plain' asset={yvWeth} />)
+
+  expect(screen.getByRole('img', { name: 'yvWETH-1 asset' }).classList.contains('assetMark-plain')).toBe(true)
+  expect(assetMarkStyle).toMatch(
+    /\.assetMark-plain \.assetMarkGlyph[\s\S]*?border-color transparent[\s\S]*?background transparent[\s\S]*?box-shadow none/
+  )
+  expect(assetMarkStyle).toMatch(
+    /\.assetMarkChain[\s\S]*?aspect-ratio 1[\s\S]*?box-sizing border-box[\s\S]*?border-radius 999px/
+  )
+})
+
 it('falls back to the asset initial if bundled artwork cannot load', () => {
   render(<AssetMark asset={yvWeth} size='hero' />)
 

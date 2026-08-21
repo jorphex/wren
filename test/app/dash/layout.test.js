@@ -180,6 +180,13 @@ test('uses whole-surface selection feedback without directional side accents', (
   )
 })
 
+test('aligns Send picker search content with the shared contact search inset', () => {
+  expect(sendStyle).toMatch(/\.sendPickerSearch[\s\S]*?gap 10px[\s\S]*?padding 0 var\(--wren-space-3\)/)
+  expect(addressBookStyle).toMatch(
+    /\.addressBookSearch[\s\S]*?gap var\(--wren-space-2\)[\s\S]*?padding 0 var\(--wren-space-3\)/
+  )
+})
+
 test('matches update dialogs to the account QR surface tokens', () => {
   for (const style of [accountStyle, badgeStyle]) {
     expect(style).toMatch(/border-radius var\(--wren-radius-md\)/)
