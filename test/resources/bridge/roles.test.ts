@@ -39,3 +39,12 @@ test('does not treat an unregistered verification-like prefix as a dashboard-onl
   expect(hasRendererCapability('dapp', 'invoke', ['contractVerification:unknown'])).toBe(false)
   expect(hasRendererCapability('onboard', 'invoke', ['contractVerification:unknown'])).toBe(false)
 })
+
+test('limits generated-wallet secret lifecycle RPCs to the dashboard role', () => {
+  for (const method of ['beginGeneratedWallet', 'completeGeneratedWallet', 'discardGeneratedWallet']) {
+    expect(hasRendererCapability('dash', 'rpc', [method])).toBe(true)
+    expect(hasRendererCapability('tray', 'rpc', [method])).toBe(false)
+    expect(hasRendererCapability('dapp', 'rpc', [method])).toBe(false)
+    expect(hasRendererCapability('onboard', 'rpc', [method])).toBe(false)
+  }
+})

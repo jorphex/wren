@@ -50,6 +50,12 @@ const dashboardOnlyInvokeChannels = new Set([
 
 const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'])
 
+const dashboardOnlyRpcMethods = new Set([
+  'beginGeneratedWallet',
+  'completeGeneratedWallet',
+  'discardGeneratedWallet'
+])
+
 export const isRendererRole = (value: unknown): value is RendererRole =>
   typeof value === 'string' && rendererRoles.includes(value as RendererRole)
 
@@ -75,6 +81,9 @@ export const hasRendererCapability = (
       channel.startsWith('inspector:') ||
       channel.startsWith('send:'))
   ) {
+    return rendererRole === 'dash'
+  }
+  if (method === 'rpc' && typeof channel === 'string' && dashboardOnlyRpcMethods.has(channel)) {
     return rendererRole === 'dash'
   }
   if (rendererRole === 'dash' || rendererRole === 'tray') return true

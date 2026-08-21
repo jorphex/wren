@@ -69,6 +69,14 @@ class GeneratedWalletSessions {
     const secret = kind === 'phrase' ? generated.secret : generated.privateKey
     stage(this.signers, secret, password, (error, signer) => {
       if (error) return cb(error)
+      if (
+        kind === 'private-key' &&
+        String(signer.addresses?.[0] || '').toLowerCase() !== generated.address.toLowerCase()
+      ) {
+        signer.close()
+        this.signers.untrackHotSigner?.(signer)
+        return cb(new Error('Generated private-key address does not match'))
+      }
       if (this.signers.exists?.(signer.id)) {
         signer.close()
         this.signers.untrackHotSigner?.(signer)

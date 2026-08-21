@@ -42,6 +42,7 @@ const mockMakeSigner = (kind) => ({
 })
 
 const { GeneratedWalletSessions } = require('../../../main/signers/generated')
+const hot = require('../../../main/signers/hot')
 
 const setup = () => {
   let counter = 0
@@ -114,6 +115,23 @@ describe('generated wallet sessions', () => {
     })
     expect(success.error).toBe(null)
     expect(mockStagedSigners[0].signer.commitStaged).toHaveBeenCalledTimes(1)
+  })
+
+  test('rejects a private-key signer whose independently derived address does not match', async () => {
+    const { sessions, signers } = setup()
+    const signer = mockMakeSigner('private-key')
+    signer.addresses = ['0x0000000000000000000000000000000000000002']
+    hot.stageFromPrivateKey.mockImplementationOnce((manager, secret, password, cb) => cb(null, signer))
+
+    const result = await new Promise((resolve) =>
+      sessions.begin('private-key', PASSWORD, (error, presentation) => resolve({ error, presentation }))
+    )
+
+    expect(result.error.message).toBe('Generated private-key address does not match')
+    expect(result.presentation).toBeUndefined()
+    expect(signer.close).toHaveBeenCalledTimes(1)
+    expect(signers.untrackHotSigner).toHaveBeenCalledWith(signer)
+    expect(signers.add).not.toHaveBeenCalled()
   })
 
   test('discard and expiry destroy an uncommitted signer', async () => {
