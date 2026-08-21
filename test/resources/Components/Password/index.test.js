@@ -12,14 +12,14 @@ describe('creating password', () => {
     return {
       user,
       getSubmitButton: () => screen.getByRole('button', { name: 'Continue' }),
-      enterPassword: async (text) => user.type(screen.getByRole('textbox', { name: 'Create Password' }), text)
+      enterPassword: async (text) => user.type(screen.getByRole('textbox', { name: 'Create password' }), text)
     }
   }
 
   it('should display the correct title when entering the password', () => {
     setupComponent()
 
-    expect(screen.getByRole('heading').textContent).toBe('Create Password')
+    expect(screen.getByRole('heading').textContent).toBe('Create password')
   })
 
   it('should show an error when the password is too short', async () => {
@@ -27,7 +27,7 @@ describe('creating password', () => {
 
     await enterPassword('INVALID')
 
-    expect(screen.getByRole('alert').textContent).toBe('PASSWORD MUST BE AT LEAST 12 CHARACTERS')
+    expect(screen.getByRole('alert').textContent).toBe('Password must be at least 12 characters')
   })
 
   it('should show the warning when the password is too weak', async () => {
@@ -35,7 +35,7 @@ describe('creating password', () => {
 
     await enterPassword('aaaaaaaaaaaa')
 
-    expect(screen.getByRole('alert').textContent).toBe('REPEATS LIKE "AAA" ARE EASY TO GUESS')
+    expect(screen.getByRole('alert').textContent).toBe('Repeats like "aaa" are easy to guess')
   })
 
   it('should show the continue button when a valid password is entered', async () => {
@@ -67,7 +67,7 @@ describe('confirming password', () => {
       user,
       getConfirmButton: () => screen.getByRole('button', { name: 'Create' }),
       enterPassword: async (text) =>
-        user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), text)
+        user.type(screen.getByRole('textbox', { name: 'Confirm password' }), text)
     }
   }
   it('should show an error when the password does not match previously entered password', async () => {
@@ -75,7 +75,7 @@ describe('confirming password', () => {
 
     await enterPassword('DOES_NOT_MATCH')
 
-    expect(screen.getByRole('alert').textContent).toBe('PASSWORDS DO NOT MATCH')
+    expect(screen.getByRole('alert').textContent).toBe('Passwords do not match')
   })
 
   it('should show the create button when a valid password is entered', async () => {
@@ -123,7 +123,7 @@ describe('confirming password', () => {
       { advanceTimersAfterInput: true }
     )
 
-    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), validPassword)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), validPassword)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
     expect(screen.getByRole('status').textContent).toBe('Processing...')
 
@@ -135,7 +135,7 @@ describe('confirming password', () => {
     )
 
     expect(screen.getByRole('alert').textContent).toBe('Enter password')
-    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), validPassword)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), validPassword)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
     expect(onConfirm).toHaveBeenCalledTimes(2)
   })

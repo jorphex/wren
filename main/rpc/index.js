@@ -386,6 +386,15 @@ const rpc = {
   createFromPrivateKey(privateKey, password, cb) {
     signers.createFromPrivateKey(privateKey, password, cb)
   },
+  beginGeneratedWallet(kind, password, cb) {
+    signers.beginGeneratedWallet(kind, password, cb)
+  },
+  completeGeneratedWallet(id, proof, cb) {
+    signers.completeGeneratedWallet(id, proof, cb)
+  },
+  discardGeneratedWallet(id, cb) {
+    signers.discardGeneratedWallet(id, cb)
+  },
   unlockSigner(id, password, cb) {
     const signer = signers.get(id)
     if (!signer || typeof signer.unlock !== 'function') return cb(new Error('Signer is unavailable'))

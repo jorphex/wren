@@ -128,21 +128,21 @@ export const PasswordInput = ({
 
 export const CreatePassword = ({ onCreate, autofocus, active }) => {
   const getError = (password) => {
-    if (password.length < 12) return 'PASSWORD MUST BE AT LEAST 12 CHARACTERS'
+    if (password.length < 12) return 'Password must be at least 12 characters'
     const {
       feedback: { warning },
       score
     } = zxcvbn(password)
     if (score > 2) return
 
-    return (warning || 'PLEASE CHOOSE A STRONGER PASSWORD').toUpperCase()
+    return warning || 'Choose a stronger password'
   }
 
   return (
     <PasswordInput
       getError={getError}
       next={onCreate}
-      title='Create Password'
+      title='Create password'
       buttonText='Continue'
       autofocus={autofocus}
       active={active}
@@ -152,14 +152,14 @@ export const CreatePassword = ({ onCreate, autofocus, active }) => {
 
 export const ConfirmPassword = ({ password, onConfirm, autofocus, active, lastStep }) => {
   const getError = (confirmedPassword) => {
-    if (password !== confirmedPassword) return 'PASSWORDS DO NOT MATCH'
+    if (password !== confirmedPassword) return 'Passwords do not match'
   }
 
   return (
     <PasswordInput
       getError={getError}
       next={onConfirm}
-      title='Confirm Password'
+      title='Confirm password'
       buttonText='Create'
       autofocus={autofocus}
       active={active}

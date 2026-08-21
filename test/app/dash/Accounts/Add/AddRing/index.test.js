@@ -27,7 +27,7 @@ const advanceToPassword = async (view) => {
 
 const advanceToConfirmation = async (view) => {
   await advanceToPassword(view)
-  await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), password)
+  await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), password)
   await view.user.click(screen.getByRole('button', { name: 'Continue' }))
   view.rerender(<AddRing accountSetupStep='confirm' />)
 }
@@ -98,7 +98,7 @@ describe('entering password', () => {
     const view = setupComponent()
     await advanceToPassword(view)
 
-    const passwordEntry = screen.getByRole('textbox', { name: 'Create Password' })
+    const passwordEntry = screen.getByRole('textbox', { name: 'Create password' })
     expect(passwordEntry.getAttribute('autocomplete')).toBe('off')
     expect(passwordEntry.getAttribute('autocapitalize')).toBe('none')
     expect(passwordEntry.getAttribute('spellcheck')).toBe('false')
@@ -117,7 +117,7 @@ describe('confirming password', () => {
     const view = setupComponent()
     await advanceToConfirmation(view)
 
-    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), password)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.rpc).toHaveBeenCalledWith('createFromPrivateKey', privateKey, password, expect.any(Function))
@@ -128,7 +128,7 @@ describe('confirming password', () => {
     const view = setupComponent()
     await advanceToConfirmation(view)
 
-    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), password)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), password)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 4)

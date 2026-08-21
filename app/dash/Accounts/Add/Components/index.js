@@ -20,7 +20,7 @@ const navForward = (newAccountType, accountSetupStep, error) =>
 const normalizeSecret = (secret, accountType) =>
   accountType === 'seed' ? secret.replace(/\s+/g, ' ') : secret.replace(/\s+/g, '')
 
-const AddHotAccountWrapper = ({ children, title, svgName, summary, index }) => {
+export const AddHotAccountWrapper = ({ children, title, svgName, summary, index }) => {
   return (
     <div className={'addAccountItem addAccountItemSmart addAccountItemAdding'}>
       <div className='addAccountItemBar addAccountItemHot' />

@@ -15,6 +15,8 @@ import AddHardware from './Add/AddHardware'
 import AddHardwareLattice from './Add/AddHardwareLattice'
 import AddPhrase from './Add/AddPhrase'
 import AddRing from './Add/AddRing'
+import CreatePhrase from './Add/CreatePhrase'
+import CreatePrivateKey from './Add/CreatePrivateKey'
 import AddKeystore from './Add/AddKeystore'
 import AddAddress from './Add/AddAddress'
 import { compactAccountAddress } from './address'
@@ -52,6 +54,20 @@ export class AddAccounts extends React.Component {
     return (
       <div className='addAccounts cardShow'>
         <AddPhrase close={this.props.close} accountSetupStep={accountSetupStep} error={error} />
+      </div>
+    )
+  }
+  renderCreateSeed() {
+    return (
+      <div className='addAccounts cardShow'>
+        <CreatePhrase />
+      </div>
+    )
+  }
+  renderCreateKeyring() {
+    return (
+      <div className='addAccounts cardShow'>
+        <CreatePrivateKey />
       </div>
     )
   }
@@ -128,16 +144,43 @@ export class AddAccounts extends React.Component {
             </button>
           </div>
         </section>
-        <section className='accountTypeGroup' aria-labelledby='account-type-local'>
-          <h2 id='account-type-local' className='accountTypeGroupTitle'>
-            Local accounts
+        <section className='accountTypeGroup' aria-labelledby='account-type-create'>
+          <h2 id='account-type-create' className='accountTypeGroupTitle'>
+            Create new
+          </h2>
+          <div className='accountTypeList'>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('create-seed')}
+            >
+              <div className='accountTypeSelectIcon'>
+                <AccountTypeMark type='seed' size={20} />
+              </div>
+              <div>{'Recovery phrase'}</div>
+            </button>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('create-keyring')}
+            >
+              <div className='accountTypeSelectIcon'>
+                <Icon name='key' size={20} />
+              </div>
+              <div>{'Private key'}</div>
+            </button>
+          </div>
+        </section>
+        <section className='accountTypeGroup' aria-labelledby='account-type-import'>
+          <h2 id='account-type-import' className='accountTypeGroupTitle'>
+            Import existing
           </h2>
           <div className='accountTypeList'>
             <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('seed')}>
               <div className='accountTypeSelectIcon'>
                 <AccountTypeMark type='seed' size={20} />
               </div>
-              <div>{'Seed phrase'}</div>
+              <div>{'Recovery phrase'}</div>
             </button>
             <button
               type='button'
@@ -194,6 +237,10 @@ export class AddAccounts extends React.Component {
       return this.renderAddSeed({ accountSetupStep, error })
     } else if (newAccountType === 'keyring') {
       return this.renderAddKeyring({ accountSetupStep, error })
+    } else if (newAccountType === 'create-seed') {
+      return this.renderCreateSeed()
+    } else if (newAccountType === 'create-keyring') {
+      return this.renderCreateKeyring()
     } else if (newAccountType === 'keystore') {
       return this.renderAddKeystore({ accountSetupStep, error })
     } else if (newAccountType === 'nonsigning') {

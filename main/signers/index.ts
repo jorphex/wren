@@ -17,6 +17,8 @@ import { requireStoreAction } from '../store/action'
 import { onCloseToTray } from '../windows/closeToTray'
 import { isSignerReady } from '../../resources/domain/signer'
 
+const { GeneratedWalletSessions } = require('./generated')
+
 interface AdapterSpec {
   [key: string]: {
     adapter: SignerAdapter
@@ -40,6 +42,7 @@ export class Signers extends EventEmitter {
   private pendingHotSigners = new Set<Signer>()
   private pendingCloseLocks = new Set<string>()
   private removeCloseToTrayListener: () => boolean
+  private generatedWallets: InstanceType<typeof GeneratedWalletSessions>
   private closed = false
 
   constructor(adapters?: SignerAdapter[]) {
@@ -47,6 +50,7 @@ export class Signers extends EventEmitter {
 
     this.signers = {}
     this.adapters = {}
+    this.generatedWallets = new GeneratedWalletSessions(this)
 
     const registeredAdapters = adapters || [
       new HotSignerAdapter(
@@ -66,6 +70,7 @@ export class Signers extends EventEmitter {
     if (this.closed) return
     this.closed = true
     this.removeCloseToTrayListener()
+    this.generatedWallets.close()
 
     const hotSigners = new Set([
       ...Object.values(this.signers).filter((signer) => this.isHotSigner(signer)),
@@ -256,6 +261,18 @@ export class Signers extends EventEmitter {
 
   createFromPrivateKey(privateKey: string, password: string, cb: Callback<Signer>) {
     hot.createFromPrivateKey(this, privateKey, password, cb)
+  }
+
+  beginGeneratedWallet(kind: 'phrase' | 'private-key', password: string, cb: Callback<unknown>) {
+    this.generatedWallets.begin(kind, password, cb)
+  }
+
+  completeGeneratedWallet(id: string, proof: unknown, cb: Callback<{ id: string }>) {
+    this.generatedWallets.complete(id, proof, cb)
+  }
+
+  discardGeneratedWallet(id: string, cb: Callback<void>) {
+    this.generatedWallets.discard(id, cb)
   }
 
   createFromKeystore(keystore: Keystore, keystorePassword: string, password: string, cb: Callback<Signer>) {

@@ -1,5 +1,4 @@
 const log = require('electron-log')
-const bip39 = require('bip39')
 const zxcvbn = require('zxcvbn')
 
 const crypt = require('../../crypt')
@@ -8,21 +7,47 @@ const SeedSigner = require('./SeedSigner')
 const RingSigner = require('./RingSigner')
 const { osSignerStorage } = require('./runtimeStorage')
 const { stripHexPrefix } = require('@ethereumjs/util')
+const { recoveryPhrase } = require('./generate')
 
 const wait = async (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const trackSigner = (signers, signer) =>
   typeof signers.trackHotSigner !== 'function' || signers.trackHotSigner(signer)
 const untrackSigner = (signers, signer) => signers.untrackHotSigner?.(signer)
 
+const validatePassword = (password) => {
+  if (!password) throw new Error('Password required to create hot signer')
+  if (password.length < 12) throw new Error('Hot account password is too short')
+  if (zxcvbn(password).score < 3) throw new Error('Hot account password is too weak')
+}
+
+const discardPendingSigner = (signers, signer, error, cb) => {
+  signer.close()
+  untrackSigner(signers, signer)
+  cb(error)
+}
+
+const lockStagedSigner = (signers, signer, cb) => {
+  signer.lock((error) => {
+    if (error) return discardPendingSigner(signers, signer, error, cb)
+    cb(null, signer)
+  })
+}
+
 module.exports = {
   newPhrase: (cb) => {
-    cb(null, bip39.generateMnemonic())
+    try {
+      cb(null, recoveryPhrase())
+    } catch (error) {
+      cb(error)
+    }
   },
   createFromSeed: (signers, seed, password, cb) => {
     if (!seed) return cb(new Error('Seed required to create hot signer'))
-    if (!password) return cb(new Error('Password required to create hot signer'))
-    if (password.length < 12) return cb(new Error('Hot account password is too short'))
-    if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
     const signer = new SeedSigner()
     if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
     signer.addSeed(seed, password, (err) => {
@@ -41,9 +66,11 @@ module.exports = {
   },
   createFromPhrase: (signers, phrase, password, cb) => {
     if (!phrase) return cb(new Error('Phrase required to create hot signer'))
-    if (!password) return cb(new Error('Password required to create hot signer'))
-    if (password.length < 12) return cb(new Error('Hot account password is too short'))
-    if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
     const signer = new SeedSigner()
     if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
     signer.addPhrase(phrase, password, (err) => {
@@ -64,9 +91,11 @@ module.exports = {
     const privateKeyHex = stripHexPrefix(privateKey)
 
     if (!privateKeyHex) return cb(new Error('Private key required to create hot signer'))
-    if (!password) return cb(new Error('Password required to create hot signer'))
-    if (password.length < 12) return cb(new Error('Hot account password is too short'))
-    if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
     const signer = new RingSigner()
     if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
 
@@ -87,9 +116,11 @@ module.exports = {
   createFromKeystore: (signers, keystore, keystorePassword, password, cb) => {
     if (!keystore) return cb(new Error('Keystore required'))
     if (!keystorePassword) return cb(new Error('Keystore password required'))
-    if (!password) return cb(new Error('Password required to create hot signer'))
-    if (password.length < 12) return cb(new Error('Hot account password is too short'))
-    if (zxcvbn(password).score < 3) return cb(new Error('Hot account password is too weak'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
     const signer = new RingSigner()
     if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
     signer.addKeystore(keystore, keystorePassword, password, (err) => {
@@ -106,6 +137,36 @@ module.exports = {
       cb(null, signer)
     })
   },
+  stageFromPhrase: (signers, phrase, password, cb) => {
+    if (!phrase) return cb(new Error('Phrase required to create hot signer'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
+    const signer = new SeedSigner(undefined, { deferPersistence: true })
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
+    signer.addPhrase(phrase, password, (error) => {
+      if (error) return discardPendingSigner(signers, signer, error, cb)
+      lockStagedSigner(signers, signer, cb)
+    })
+  },
+  stageFromPrivateKey: (signers, privateKey, password, cb) => {
+    const privateKeyHex = stripHexPrefix(privateKey)
+    if (!privateKeyHex) return cb(new Error('Private key required to create hot signer'))
+    try {
+      validatePassword(password)
+    } catch (error) {
+      return cb(error)
+    }
+    const signer = new RingSigner(undefined, { deferPersistence: true })
+    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
+    signer.addPrivateKey(privateKeyHex, password, (error) => {
+      if (error) return discardPendingSigner(signers, signer, error, cb)
+      lockStagedSigner(signers, signer, cb)
+    })
+  },
+  validatePassword,
   createScanner: (signers, delay = 4000, storage = osSignerStorage) => {
     let closed = false
 

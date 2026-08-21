@@ -122,6 +122,50 @@ test('validates sensitive signer methods without coercion', () => {
   ).toBe(false)
 })
 
+test('bounds generated-wallet creation and its one-time presentation payload', () => {
+  const sessionId = 'a'.repeat(32)
+  const phrase = 'test test test test test test test test test test test junk'
+  const privateKey = `0x${'1'.padStart(64, '0')}`
+
+  expect(parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', 'phrase', 'password'))).toMatchObject({
+    success: true,
+    data: { args: ['phrase', 'password'] }
+  })
+  expect(parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', 'seed', 'password')).success).toBe(false)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'completeGeneratedWallet', sessionId, { words: ['test', 'test', 'test'] })
+    ).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcRequest(wire(1, 'completeGeneratedWallet', sessionId, { words: ['test'] })).success
+  ).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, 'discardGeneratedWallet', sessionId)).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'discardGeneratedWallet', 'not-a-session')).success).toBe(false)
+
+  expect(
+    parseRendererRpcResponse('beginGeneratedWallet', [
+      null,
+      { address, challenge: [2, 6, 10], kind: 'phrase', secret: phrase, sessionId }
+    ]).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcResponse('beginGeneratedWallet', [
+      null,
+      { address, challenge: 'private-key', kind: 'private-key', secret: privateKey, sessionId }
+    ]).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcResponse('beginGeneratedWallet', [
+      null,
+      { address, challenge: 'private-key', kind: 'private-key', secret: phrase, sessionId }
+    ]).success
+  ).toBe(false)
+  expect(
+    parseRendererRpcResponse('completeGeneratedWallet', [null, { id: 'signer-id', secret: privateKey }])
+  ).toEqual({ success: true, data: [null, { id: 'signer-id' }] })
+})
+
 test('validates fee quantities and request identifiers', () => {
   expect(parseRendererRpcRequest(wire(1, 'setGasLimit', address, '0x5208', handlerId)).success).toBe(true)
   expect(parseRendererRpcRequest(wire(1, 'setGasLimit', address, '21000', handlerId)).success).toBe(false)

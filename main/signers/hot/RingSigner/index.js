@@ -7,8 +7,8 @@ const HotSigner = require('../HotSigner')
 const WORKER_PATH = path.resolve(__dirname, 'worker.js')
 
 class RingSigner extends HotSigner {
-  constructor(signer) {
-    super(signer, WORKER_PATH)
+  constructor(signer, options) {
+    super(signer, WORKER_PATH, options)
     this.type = 'ring'
     this.model = 'keyring'
     this.encryptedKeys = signer && signer.encryptedKeys

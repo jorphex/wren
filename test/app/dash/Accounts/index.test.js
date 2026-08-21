@@ -24,10 +24,11 @@ it('groups account methods into a semantic ruled chooser', () => {
 
   expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
     'Hardware devices',
-    'Local accounts',
+    'Create new',
+    'Import existing',
     'Watch-only'
   ])
-  expect(screen.getAllByRole('button')).toHaveLength(7)
+  expect(screen.getAllByRole('button')).toHaveLength(9)
 })
 
 it('uses the seed identity mark for the seed phrase route', () => {
@@ -44,6 +45,23 @@ it('keeps each account method a one-click route', () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'accounts',
     data: { showAddAccounts: true, newAccountType: 'ledger' }
+  })
+})
+
+it('routes creation separately from recovery-phrase import', () => {
+  render(<AddAccounts data={{}} />)
+  const recoveryPhraseButtons = screen.getAllByRole('button', { name: 'Recovery phrase' })
+
+  fireEvent.click(recoveryPhraseButtons[0])
+  fireEvent.click(recoveryPhraseButtons[1])
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'accounts',
+    data: { showAddAccounts: true, newAccountType: 'create-seed' }
+  })
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'accounts',
+    data: { showAddAccounts: true, newAccountType: 'seed' }
   })
 })
 

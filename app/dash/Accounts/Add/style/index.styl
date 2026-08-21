@@ -683,3 +683,211 @@
 
     .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
       padding-top var(--wren-space-4)
+
+.addAccountItem
+  .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .generatedWalletFrame
+    padding 0 var(--wren-space-8)
+    overflow hidden
+
+  .generatedWalletFrameBody
+    width 100%
+    max-width 620px
+    min-height 0
+    margin 0 auto
+    padding var(--wren-space-5) 0 var(--wren-space-3)
+    overflow-y auto
+    box-sizing border-box
+    scrollbar-width thin
+
+  .generatedWalletGuidance,
+  .generatedWalletConsequence
+    margin var(--wren-space-2) auto 0
+    color var(--wren-text-secondary)
+    font-size 13px
+    line-height 20px
+    text-align center
+    text-transform none
+
+  .generatedWalletConsequence
+    color var(--wren-text-muted)
+
+  .generatedWalletPhrase
+    display grid
+    grid-template-columns repeat(2, minmax(0, 1fr))
+    gap var(--wren-space-2)
+    width 100%
+    margin var(--wren-space-4) 0
+    padding 0
+    list-style none
+
+    li
+      display grid
+      grid-template-columns 28px minmax(0, 1fr)
+      align-items center
+      min-height 40px
+      padding 0 var(--wren-space-3)
+      border-radius var(--wren-radius-sm)
+      color var(--wren-text-primary)
+      background var(--wren-surface-inset)
+      box-sizing border-box
+      font-family var(--wren-font-mono)
+      font-size 13px
+      text-transform none
+
+      span
+        color var(--wren-text-muted)
+        font-size 12px
+
+      strong
+        font-weight 500
+
+  .generatedWalletActionShelf
+    display flex
+    flex 0 0 68px
+    align-items center
+    justify-content center
+    width 100%
+    border-top 1px solid var(--wren-border-subtle)
+
+    .addAccountItemOptionSubmit
+      min-height 44px
+      margin 0
+
+  .generatedWalletQuietControl
+    display inline-flex
+    align-items center
+    justify-content center
+    gap var(--wren-space-2)
+    min-height 38px
+    padding 0 var(--wren-space-3)
+    border-radius var(--wren-radius-sm)
+    font-family var(--wren-font-ui)
+    font-size 13px
+    text-transform none
+
+  .generatedWalletCopyGroup
+    position relative
+    display inline-flex
+    justify-content center
+
+  .generatedWalletCopyStatus
+    position absolute
+    width 1px
+    height 1px
+    overflow hidden
+    clip-path inset(50%)
+
+  .generatedWalletEvidence
+    display grid
+    grid-template-columns minmax(0, 1fr) auto
+    gap var(--wren-space-2) var(--wren-space-3)
+    align-items center
+    margin-top var(--wren-space-4)
+    padding var(--wren-space-4)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
+
+  .generatedWalletEvidenceLabel
+    grid-column 1 / -1
+    color var(--wren-text-secondary)
+    font-size 12px
+    font-weight 500
+    text-transform none
+
+  .generatedWalletEvidenceValue
+    min-width 0
+    overflow-wrap anywhere
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    line-height 19px
+    text-transform none
+
+    &.concealed
+      color var(--wren-text-secondary)
+      letter-spacing 2px
+
+  .generatedWalletEvidenceControls
+    grid-column 1 / -1
+    display flex
+    flex-wrap wrap
+    gap var(--wren-space-2)
+
+  .generatedWalletVerify
+    display flex
+    align-items center
+    flex-direction column
+
+  .generatedWalletVerifyField
+    display grid
+    grid-template-columns 72px minmax(0, 1fr)
+    gap var(--wren-space-3)
+    align-items center
+    width 100%
+    max-width 440px
+    margin-top var(--wren-space-3)
+    color var(--wren-text-secondary)
+    font-size 13px
+    text-transform none
+
+    .wrenInputGroup
+      height 44px
+
+    input
+      width 100%
+      height 100%
+      padding 0 var(--wren-space-3)
+      border 0
+      outline 0
+      color var(--wren-text-primary)
+      background transparent
+      font-family var(--wren-font-mono)
+      font-size 14px
+
+  .generatedWalletKeyInput
+    width 100%
+    max-width 620px
+    min-height 108px
+    margin-top var(--wren-space-4)
+
+    textarea
+      width 100%
+      min-height 108px
+      padding var(--wren-space-3)
+      border 0
+      outline 0
+      resize none
+      color var(--wren-text-primary)
+      background transparent
+      font-family var(--wren-font-mono)
+      font-size 13px
+      line-height 20px
+      box-sizing border-box
+
+  .generatedWalletVerifyError
+    margin-top var(--wren-space-3)
+    color var(--wren-danger)
+    font-size 13px
+    line-height 20px
+    text-align center
+    text-transform none
+
+  .generatedWalletError
+    display flex
+    align-items center
+    justify-content center
+    flex-direction column
+
+@media (max-height: 760px)
+  .addAccountItem
+    .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .generatedWalletFrame
+      padding 0 var(--wren-space-5)
+
+    .generatedWalletFrameBody
+      padding-top var(--wren-space-3)
+
+    .generatedWalletPhrase
+      grid-template-columns repeat(3, minmax(0, 1fr))
+
+    .generatedWalletActionShelf
+      flex-basis 60px

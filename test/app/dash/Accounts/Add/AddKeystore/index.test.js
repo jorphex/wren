@@ -37,7 +37,7 @@ const advanceToSignerPassword = async (view) => {
 
 const advanceToConfirmation = async (view) => {
   await advanceToSignerPassword(view)
-  await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), signerPassword)
+  await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), signerPassword)
   await view.user.click(screen.getByRole('button', { name: 'Continue' }))
   view.rerender(<AddKeystore accountSetupStep='confirm' />)
 }
@@ -74,7 +74,7 @@ describe('entering passwords', () => {
       data: { showAddAccounts: true, newAccountType: 'keystore', accountSetupStep: 'password' }
     })
 
-    await view.user.type(screen.getByRole('textbox', { name: 'Create Password' }), signerPassword)
+    await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), signerPassword)
     await view.user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
@@ -87,7 +87,7 @@ describe('entering passwords', () => {
     const view = setupComponent()
     await advanceToConfirmation(view)
 
-    await view.user.type(screen.getByRole('textbox', { name: 'Confirm Password' }), signerPassword)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), signerPassword)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(link.rpc).toHaveBeenCalledWith(

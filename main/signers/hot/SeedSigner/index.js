@@ -7,8 +7,8 @@ const { computeAddress, hexlify } = require('ethers')
 const WORKER_PATH = path.resolve(__dirname, 'worker.js')
 
 class SeedSigner extends HotSigner {
-  constructor(signer) {
-    super(signer, WORKER_PATH)
+  constructor(signer, options) {
+    super(signer, WORKER_PATH, options)
     this.encryptedSeed = signer && signer.encryptedSeed
     this.type = 'seed'
     this.model = 'phrase'

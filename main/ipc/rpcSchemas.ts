@@ -113,6 +113,30 @@ const result = <T extends z.ZodType>(schema: T) =>
     .transform((args) => (typeof args[0] === 'string' ? [args[0]] : args))
 
 const SignerIdSchema = z.object({ id: IdSchema }).transform(({ id }) => ({ id }))
+const GeneratedWalletSessionIdSchema = z.string().regex(/^[0-9a-f]{32}$/)
+const GeneratedWalletPresentationSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      address: AddressSchema,
+      challenge: z.tuple([z.literal(2), z.literal(6), z.literal(10)]),
+      kind: z.literal('phrase'),
+      secret: z
+        .string()
+        .max(512)
+        .refine((value) => value.split(' ').length === 12),
+      sessionId: GeneratedWalletSessionIdSchema
+    })
+    .strict(),
+  z
+    .object({
+      address: AddressSchema,
+      challenge: z.literal('private-key'),
+      kind: z.literal('private-key'),
+      secret: z.string().regex(/^0x[0-9a-f]{64}$/),
+      sessionId: GeneratedWalletSessionIdSchema
+    })
+    .strict()
+])
 const CompatibilitySchema = z
   .object({ signer: z.string().max(32), tx: z.string().max(32), compatible: z.boolean() })
   .strict()
@@ -203,6 +227,24 @@ const rpcSchemas = {
   createFromPrivateKey: {
     request: z.tuple([z.string().regex(/^(?:0x)?[0-9a-fA-F]{64}$/), PasswordSchema]),
     response: result(SignerIdSchema)
+  },
+  beginGeneratedWallet: {
+    request: z.tuple([z.enum(['phrase', 'private-key']), PasswordSchema]),
+    response: result(GeneratedWalletPresentationSchema)
+  },
+  completeGeneratedWallet: {
+    request: z.tuple([
+      GeneratedWalletSessionIdSchema,
+      z.union([
+        z.object({ words: z.tuple([z.string().max(64), z.string().max(64), z.string().max(64)]) }).strict(),
+        z.object({ privateKey: z.string().max(68) }).strict()
+      ])
+    ]),
+    response: result(SignerIdSchema)
+  },
+  discardGeneratedWallet: {
+    request: z.tuple([GeneratedWalletSessionIdSchema]),
+    response: actionResult
   },
   createLattice: {
     request: z.tuple([z.string().min(1).max(64), z.string().max(14)]),

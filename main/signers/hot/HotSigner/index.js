@@ -43,6 +43,7 @@ class HotSigner extends Signer {
     this._rpcTimeoutMs = options.rpcTimeoutMs || DEFAULT_RPC_TIMEOUT_MS
     this._pending = new Map()
     this._closed = false
+    this._deferPersistence = options.deferPersistence === true
     this._handleWorkerMessage = this._handleWorkerMessage.bind(this)
     this._handleWorkerError = this._handleWorkerError.bind(this)
     this._handleWorkerExit = this._handleWorkerExit.bind(this)
@@ -160,7 +161,7 @@ class HotSigner extends Signer {
       log.warn('Unable to disconnect hot signer worker', error)
     }
 
-    store.removeSigner(this.id)
+    if (!this._deferPersistence) store.removeSigner(this.id)
     log.info('Signer closed')
     cb(null)
   }
@@ -174,21 +175,31 @@ class HotSigner extends Signer {
       // Update id
       this.id = derivedId
       // Write to disk
-      this.save()
+      if (!this._deferPersistence) this.save()
     } else if (this.id !== derivedId) {
       // On changed ID
       // Erase from disk
-      this.delete(this.id)
-      // Remove from store
-      store.removeSigner(this.id)
+      if (!this._deferPersistence) {
+        this.delete(this.id)
+        // Remove from store
+        store.removeSigner(this.id)
+      }
       // Update id
       this.id = derivedId
       // Write to disk
-      this.save()
+      if (!this._deferPersistence) this.save()
     }
 
-    store.updateSigner(this.summary())
+    if (!this._deferPersistence) store.updateSigner(this.summary())
     log.info('Signer updated')
+  }
+
+  commitStaged() {
+    if (!this._deferPersistence || !this.id) {
+      throw new Error('Hot signer is not ready to commit')
+    }
+    this.save()
+    this._deferPersistence = false
   }
 
   signMessage(index, message, cb) {
