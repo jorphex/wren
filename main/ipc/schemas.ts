@@ -913,7 +913,8 @@ const invokeSchemas = {
   'tray:continueContractVerification': z.tuple([ContractVerificationRequestReferenceSchema]),
   'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema]),
   'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema]),
-  'tray:refreshWalletCallsStatus': z.tuple([WalletCallsStatusRefreshSchema])
+  'tray:refreshWalletCallsStatus': z.tuple([WalletCallsStatusRefreshSchema]),
+  'tray:writeClipboard': z.tuple([z.object({ secret: z.boolean(), value: BoundedStringSchema }).strict()])
 } satisfies Record<string, z.ZodType>
 
 const invokeResultSchemas = {
@@ -1150,7 +1151,8 @@ const invokeResultSchemas = {
   'tray:refreshWalletCallsStatus': z.union([
     z.object({ success: z.literal(true) }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
-  ])
+  ]),
+  'tray:writeClipboard': z.object({ success: z.literal(true) }).strict()
 } satisfies Record<keyof typeof invokeSchemas, z.ZodType>
 
 export const assertRendererIpcSchema = (method: Exclude<BridgeMethod, 'rpc'>, channel: string) => {

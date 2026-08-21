@@ -1,18 +1,24 @@
-import { render, screen } from '../../../../../componentSetup'
+import { render, screen, waitFor } from '../../../../../componentSetup'
 import {
   LightweightRequest,
   RequestFact
 } from '../../../../../../app/tray/Account/Requests/LightweightRequest'
 import link from '../../../../../../resources/link'
 
-jest.mock('../../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  send: jest.fn()
+}))
 jest.mock('../../../../../../resources/Components/Icon', () => {
   const MockIcon = ({ name }) => <span data-testid={`icon-${name}`} />
   MockIcon.displayName = 'MockIcon'
   return MockIcon
 })
 
-beforeEach(() => link.send.mockReset())
+beforeEach(() => {
+  link.invoke.mockClear()
+  link.send.mockReset()
+})
 
 it('keeps a copyable fact stable while exposing copy feedback', async () => {
   const value = 'https://rpc.example/long/path'
@@ -27,8 +33,8 @@ it('keeps a copyable fact stable while exposing copy feedback', async () => {
 
   await user.click(copy)
   expect(copy.textContent).toContain('rpc.example/…')
-  expect(screen.getByRole('status').textContent).toBe('Copied')
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', value)
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Copied'))
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value })
 })
 
 it('uses neutral terminal feedback for a declined lightweight request', () => {

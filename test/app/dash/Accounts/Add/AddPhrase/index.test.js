@@ -92,7 +92,7 @@ describe('entering password', () => {
     await advanceToPassword(view)
 
     const passwordEntry = screen.getByRole('textbox', { name: 'Create password' })
-    expect(passwordEntry.getAttribute('autocomplete')).toBe('off')
+    expect(passwordEntry.getAttribute('autocomplete')).toBe('new-password')
     expect(passwordEntry.getAttribute('autocapitalize')).toBe('none')
     expect(passwordEntry.getAttribute('spellcheck')).toBe('false')
 

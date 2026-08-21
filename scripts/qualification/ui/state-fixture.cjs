@@ -1945,14 +1945,21 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (scenario.state === 'account-create-phrase' && method === 'reserveGeneratedWallet') {
+    return { sessionId: '1'.repeat(32) }
+  }
   if (scenario.state === 'account-create-phrase' && method === 'beginGeneratedWallet') {
     return {
       address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
       challenge: [2, 6, 10],
       kind: 'phrase',
       secret: 'test test test test test test test test test test test junk',
-      sessionId: '1'.repeat(32)
+      sessionId: '1'.repeat(32),
+      expiresAt: Date.now() + 600_000
     }
+  }
+  if (scenario.state === 'account-create-private-key' && method === 'reserveGeneratedWallet') {
+    return { sessionId: '2'.repeat(32) }
   }
   if (scenario.state === 'account-create-private-key' && method === 'beginGeneratedWallet') {
     return {
@@ -1960,7 +1967,8 @@ const rpcReplyFor = (scenario, method) => {
       challenge: 'private-key',
       kind: 'private-key',
       secret: `0x${'1'.padStart(64, '0')}`,
-      sessionId: '2'.repeat(32)
+      sessionId: '2'.repeat(32),
+      expiresAt: Date.now() + 600_000
     }
   }
   if (scenario.state === 'delegation' && method === 'getAccountExecutionState') {

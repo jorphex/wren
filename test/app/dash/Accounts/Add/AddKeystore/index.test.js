@@ -67,7 +67,13 @@ describe('selecting a keystore', () => {
 describe('entering passwords', () => {
   it('keeps keystore and signer passwords out of navigation data', async () => {
     const view = setupComponent()
-    await advanceToSignerPassword(view)
+    await advanceToKeystorePassword(view)
+    expect(
+      screen.getByRole('textbox', { name: 'Enter keystore password' }).getAttribute('autocomplete')
+    ).toBe('off')
+    await view.user.type(screen.getByRole('textbox', { name: 'Enter keystore password' }), keystorePassword)
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+    view.rerender(<AddKeystore accountSetupStep='password' />)
 
     expect(link.send).toHaveBeenLastCalledWith('nav:forward', 'dash', {
       view: 'accounts',

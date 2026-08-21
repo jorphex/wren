@@ -2,9 +2,15 @@ import { fireEvent, render, screen } from '../../../../../componentSetup'
 import { ProviderRequest } from '../../../../../../app/tray/Account/Requests/ProviderRequest'
 import link from '../../../../../../resources/link'
 
-jest.mock('../../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  send: jest.fn()
+}))
 
-beforeEach(() => link.send.mockReset())
+beforeEach(() => {
+  link.invoke.mockClear()
+  link.send.mockReset()
+})
 
 it('explains account visibility boundaries and copies the shared address', async () => {
   const address = '0x0000000000000000000000000000000000000001'
@@ -33,6 +39,6 @@ it('explains account visibility boundaries and copies the shared address', async
   expect(copyAddress.textContent).toBe('0x0000…0001')
 
   await user.click(copyAddress)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)
-  expect(screen.getByText('Copied')).toBeTruthy()
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: address })
+  expect(await screen.findByText('Copied')).toBeTruthy()
 })

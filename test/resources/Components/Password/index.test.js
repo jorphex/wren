@@ -22,6 +22,17 @@ describe('creating password', () => {
     expect(screen.getByRole('heading').textContent).toBe('Create password')
   })
 
+  it('supports password-manager creation semantics and an explicit reveal action', async () => {
+    const { user } = setupComponent()
+    const input = screen.getByRole('textbox', { name: 'Create password' })
+
+    expect(input.getAttribute('autocomplete')).toBe('new-password')
+    expect(input.getAttribute('type')).toBe('password')
+    await user.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(input.getAttribute('type')).toBe('text')
+    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy()
+  })
+
   it('should show an error when the password is too short', async () => {
     const { enterPassword } = setupComponent()
 
@@ -78,6 +89,16 @@ describe('confirming password', () => {
     expect(screen.getByRole('alert').textContent).toBe('Passwords do not match')
   })
 
+  it('uses confirmation-specific empty guidance', () => {
+    setupComponent()
+
+    expect(screen.getByText('Enter your password again')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Confirm password' }).getAttribute('aria-describedby')).toBe(
+      screen.getByText('Enter your password again').id
+    )
+  })
+
   it('should show the create button when a valid password is entered', async () => {
     const { enterPassword, getConfirmButton } = setupComponent()
 
@@ -125,7 +146,7 @@ describe('confirming password', () => {
 
     await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), validPassword)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
-    expect(screen.getByRole('status').textContent).toBe('Processing...')
+    expect(screen.getByRole('status').textContent).toBe('Processing…')
 
     view.rerender(
       <ConfirmPassword password={validPassword} onConfirm={onConfirm} active={false} lastStep={true} />
@@ -134,7 +155,8 @@ describe('confirming password', () => {
       <ConfirmPassword password={validPassword} onConfirm={onConfirm} active={true} lastStep={true} />
     )
 
-    expect(screen.getByRole('alert').textContent).toBe('Enter password')
+    expect(screen.getByText('Enter your password again')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
     await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), validPassword)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
     expect(onConfirm).toHaveBeenCalledTimes(2)

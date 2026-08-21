@@ -4,6 +4,7 @@ import { AccountBody, AccountMain } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
   send: jest.fn()
 }))
 
@@ -42,7 +43,7 @@ it('keeps Send and copy address actions connected to their existing tray behavio
   expect(screen.queryByRole('button', { name: /block explorer/i })).toBeNull()
 
   await user.click(addressCopyTarget)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', address)
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: address })
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })

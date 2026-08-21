@@ -78,6 +78,7 @@ export const requestInvokeChannels = new Set([
   'tray:continueContractVerification',
   'tray:refreshWalletCallsStatus',
   'tray:getTokenDetails',
+  'tray:writeClipboard',
   'yearn:getCatalog',
   'yearn:getPositions',
   'yearn:getWorkflows',

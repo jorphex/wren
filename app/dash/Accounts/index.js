@@ -151,6 +151,7 @@ export class AddAccounts extends React.Component {
           <div className='accountTypeList'>
             <button
               type='button'
+              aria-label='Create recovery phrase'
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('create-seed')}
             >
@@ -161,6 +162,7 @@ export class AddAccounts extends React.Component {
             </button>
             <button
               type='button'
+              aria-label='Create private key'
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('create-keyring')}
             >
@@ -176,7 +178,12 @@ export class AddAccounts extends React.Component {
             Import existing
           </h2>
           <div className='accountTypeList'>
-            <button type='button' className='accountTypeSelect' onClick={() => this.createNewAccount('seed')}>
+            <button
+              type='button'
+              aria-label='Import recovery phrase'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('seed')}
+            >
               <div className='accountTypeSelectIcon'>
                 <AccountTypeMark type='seed' size={20} />
               </div>
@@ -184,6 +191,7 @@ export class AddAccounts extends React.Component {
             </button>
             <button
               type='button'
+              aria-label='Import private key'
               className='accountTypeSelect'
               onClick={() => this.createNewAccount('keyring')}
             >

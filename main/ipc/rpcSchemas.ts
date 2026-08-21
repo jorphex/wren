@@ -114,11 +114,16 @@ const result = <T extends z.ZodType>(schema: T) =>
 
 const SignerIdSchema = z.object({ id: IdSchema }).transform(({ id }) => ({ id }))
 const GeneratedWalletSessionIdSchema = z.string().regex(/^[0-9a-f]{32}$/)
+const GeneratedWalletReservationSchema = z.object({ sessionId: GeneratedWalletSessionIdSchema }).strict()
+const GeneratedWalletChallengeSchema = z
+  .tuple([z.number().int().min(1).max(12), z.number().int().min(1).max(12), z.number().int().min(1).max(12)])
+  .refine((positions) => new Set(positions).size === positions.length)
 const GeneratedWalletPresentationSchema = z.discriminatedUnion('kind', [
   z
     .object({
       address: AddressSchema,
-      challenge: z.tuple([z.literal(2), z.literal(6), z.literal(10)]),
+      challenge: GeneratedWalletChallengeSchema,
+      expiresAt: z.number().int().positive(),
       kind: z.literal('phrase'),
       secret: z
         .string()
@@ -131,12 +136,22 @@ const GeneratedWalletPresentationSchema = z.discriminatedUnion('kind', [
     .object({
       address: AddressSchema,
       challenge: z.literal('private-key'),
+      expiresAt: z.number().int().positive(),
       kind: z.literal('private-key'),
       secret: z.string().regex(/^0x[0-9a-f]{64}$/),
       sessionId: GeneratedWalletSessionIdSchema
     })
     .strict()
 ])
+const GeneratedWalletCompletionSchema = z
+  .object({
+    accountId: AddressSchema,
+    address: AddressSchema,
+    id: IdSchema,
+    selected: z.literal(true),
+    type: z.enum(['ring', 'seed'])
+  })
+  .strict()
 const CompatibilitySchema = z
   .object({ signer: z.string().max(32), tx: z.string().max(32), compatible: z.boolean() })
   .strict()
@@ -228,8 +243,12 @@ const rpcSchemas = {
     request: z.tuple([z.string().regex(/^(?:0x)?[0-9a-fA-F]{64}$/), PasswordSchema]),
     response: result(SignerIdSchema)
   },
+  reserveGeneratedWallet: {
+    request: noArgs,
+    response: result(GeneratedWalletReservationSchema)
+  },
   beginGeneratedWallet: {
-    request: z.tuple([z.enum(['phrase', 'private-key']), PasswordSchema]),
+    request: z.tuple([GeneratedWalletSessionIdSchema, z.enum(['phrase', 'private-key']), PasswordSchema]),
     response: result(GeneratedWalletPresentationSchema)
   },
   completeGeneratedWallet: {
@@ -240,7 +259,7 @@ const rpcSchemas = {
         z.object({ privateKey: z.string().max(68) }).strict()
       ])
     ]),
-    response: result(SignerIdSchema)
+    response: result(GeneratedWalletCompletionSchema)
   },
   discardGeneratedWallet: {
     request: z.tuple([GeneratedWalletSessionIdSchema]),

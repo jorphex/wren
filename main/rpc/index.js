@@ -24,6 +24,7 @@ const { isSignatureRequest } = require('../signatures')
 const { default: TrezorBridge } = require('../../main/signers/trezor/bridge')
 const { onRendererRpc } = require('../ipc/renderer')
 const { encodeRendererRpcValues, parseRendererRpcResponse } = require('../ipc/rpcSchemas')
+const { completeGeneratedWalletAccount } = require('./generatedWallet')
 
 const callbackWhenDone = (fn, cb) => {
   try {
@@ -386,11 +387,14 @@ const rpc = {
   createFromPrivateKey(privateKey, password, cb) {
     signers.createFromPrivateKey(privateKey, password, cb)
   },
-  beginGeneratedWallet(kind, password, cb) {
-    signers.beginGeneratedWallet(kind, password, cb)
+  reserveGeneratedWallet(cb) {
+    signers.reserveGeneratedWallet(cb)
+  },
+  beginGeneratedWallet(id, kind, password, cb) {
+    signers.beginGeneratedWallet(id, kind, password, cb)
   },
   completeGeneratedWallet(id, proof, cb) {
-    signers.completeGeneratedWallet(id, proof, cb)
+    completeGeneratedWalletAccount({ accounts, log, provider, signers }, id, proof, cb)
   },
   discardGeneratedWallet(id, cb) {
     signers.discardGeneratedWallet(id, cb)
@@ -441,19 +445,27 @@ onRendererRpc((event, id, method, ...args) => {
   const handler = rpc[method]
   let responded = false
   const respond = (...responseArgs) => {
-    if (responded) return
+    if (responded) return true
     responded = true
     const parsed = parseRendererRpcResponse(method, responseArgs)
+    let encoded
     if (!parsed.success) {
       log.warn('Rejected invalid renderer RPC response', { method })
-      event.sender.send('main:rpc', id, ...encodeRendererRpcValues(['Invalid renderer RPC response']))
-      return
+      encoded = encodeRendererRpcValues(['Invalid renderer RPC response'])
+    } else {
+      try {
+        encoded = encodeRendererRpcValues(parsed.data)
+      } catch {
+        log.warn('Could not encode renderer RPC response', { method })
+        encoded = encodeRendererRpcValues(['Invalid renderer RPC response'])
+      }
     }
     try {
-      event.sender.send('main:rpc', id, ...encodeRendererRpcValues(parsed.data))
-    } catch {
-      log.warn('Could not encode renderer RPC response', { method })
-      event.sender.send('main:rpc', id, ...encodeRendererRpcValues(['Invalid renderer RPC response']))
+      event.sender.send('main:rpc', id, ...encoded)
+      return true
+    } catch (error) {
+      log.warn('Could not deliver renderer RPC response', { method, error })
+      return false
     }
   }
 

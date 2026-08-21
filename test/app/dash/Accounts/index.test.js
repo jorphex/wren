@@ -50,10 +50,9 @@ it('keeps each account method a one-click route', () => {
 
 it('routes creation separately from recovery-phrase import', () => {
   render(<AddAccounts data={{}} />)
-  const recoveryPhraseButtons = screen.getAllByRole('button', { name: 'Recovery phrase' })
 
-  fireEvent.click(recoveryPhraseButtons[0])
-  fireEvent.click(recoveryPhraseButtons[1])
+  fireEvent.click(screen.getByRole('button', { name: 'Create recovery phrase' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Import recovery phrase' }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
     view: 'accounts',

@@ -41,10 +41,27 @@ test('does not treat an unregistered verification-like prefix as a dashboard-onl
 })
 
 test('limits generated-wallet secret lifecycle RPCs to the dashboard role', () => {
-  for (const method of ['beginGeneratedWallet', 'completeGeneratedWallet', 'discardGeneratedWallet']) {
+  for (const method of [
+    'reserveGeneratedWallet',
+    'beginGeneratedWallet',
+    'completeGeneratedWallet',
+    'discardGeneratedWallet'
+  ]) {
     expect(hasRendererCapability('dash', 'rpc', [method])).toBe(true)
     expect(hasRendererCapability('tray', 'rpc', [method])).toBe(false)
     expect(hasRendererCapability('dapp', 'rpc', [method])).toBe(false)
     expect(hasRendererCapability('onboard', 'rpc', [method])).toBe(false)
   }
+})
+
+test('allows acknowledged public copies in trusted windows but keeps secret copies dashboard-only', () => {
+  const channel = 'tray:writeClipboard'
+  const publicCopy = [channel, { secret: false, value: 'public' }]
+  const secretCopy = [channel, { secret: true, value: 'secret' }]
+
+  expect(hasRendererCapability('dash', 'invoke', publicCopy)).toBe(true)
+  expect(hasRendererCapability('tray', 'invoke', publicCopy)).toBe(true)
+  expect(hasRendererCapability('dash', 'invoke', secretCopy)).toBe(true)
+  expect(hasRendererCapability('tray', 'invoke', secretCopy)).toBe(false)
+  expect(hasRendererCapability('dapp', 'invoke', secretCopy)).toBe(false)
 })

@@ -7,9 +7,13 @@ import {
   revokeLifecyclePresentation
 } from '../../../../../../app/tray/Account/Requests/Eip7702RevokeRequest'
 import link from '../../../../../../resources/link'
-import { act, fireEvent, render, screen } from '../../../../../componentSetup'
+import { act, fireEvent, render, screen, waitFor } from '../../../../../componentSetup'
 
-jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  rpc: jest.fn(),
+  send: jest.fn()
+}))
 
 const delegate = '0x0000000000000000000000000000000000000002'
 const request = (overrides = {}) => ({
@@ -21,6 +25,7 @@ const request = (overrides = {}) => ({
 })
 
 beforeEach(() => {
+  link.invoke.mockClear()
   link.rpc.mockReset()
   link.send.mockReset()
 })
@@ -244,14 +249,17 @@ it('renders directly copyable evidence without authorization or signature materi
   const codeHashCopy = screen.getByRole('button', { name: 'Copy delegation code hash' })
 
   await user.click(accountCopy)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', account)
-  expect(accountCopy.textContent).toContain('Copied')
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: account })
+  await waitFor(() => expect(accountCopy.textContent).toContain('Copied'))
   await user.click(delegateCopy)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', delegate)
-  expect(delegateCopy.textContent).toContain('Copied')
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: delegate })
+  await waitFor(() => expect(delegateCopy.textContent).toContain('Copied'))
   await user.click(codeHashCopy)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', req.evidence.codeHash)
-  expect(codeHashCopy.textContent).toContain('Copied')
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+    secret: false,
+    value: req.evidence.codeHash
+  })
+  await waitFor(() => expect(codeHashCopy.textContent).toContain('Copied'))
   expect(document.body.textContent.toLowerCase()).not.toContain('authorization signature')
   expect(document.body.textContent.toLowerCase()).not.toContain('raw transaction')
 })

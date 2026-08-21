@@ -48,9 +48,13 @@ describe('staged hot signers', () => {
   })
 
   test('encrypts and locks a phrase without persisting before commit', async () => {
-    const signer = await waitForCallback((cb) => hot.stageFromPhrase(signers, PHRASE, PASSWORD, cb))
+    let staged
+    const signer = await waitForCallback((cb) => {
+      staged = hot.stageFromPhrase(signers, PHRASE, PASSWORD, cb)
+    })
     const signerFile = path.join(SIGNER_PATH, `${signer.id}.json`)
 
+    expect(staged).toEqual({ cancel: expect.any(Function), signer })
     expect(signer.status).toBe('locked')
     expect(signer.encryptedSeed).toMatchObject({ version: 2, cipher: { name: 'aes-256-gcm' } })
     expect(fs.existsSync(signerFile)).toBe(false)
@@ -64,9 +68,13 @@ describe('staged hot signers', () => {
   }, 10_000)
 
   test('destroys an abandoned private-key signer without creating a file', async () => {
-    const signer = await waitForCallback((cb) => hot.stageFromPrivateKey(signers, PRIVATE_KEY, PASSWORD, cb))
+    let staged
+    const signer = await waitForCallback((cb) => {
+      staged = hot.stageFromPrivateKey(signers, PRIVATE_KEY, PASSWORD, cb)
+    })
     const signerFile = path.join(SIGNER_PATH, `${signer.id}.json`)
 
+    expect(staged).toEqual({ cancel: expect.any(Function), signer })
     expect(signer.status).toBe('locked')
     expect(signer.encryptedKeys).toMatchObject({ version: 2, cipher: { name: 'aes-256-gcm' } })
     expect(fs.existsSync(signerFile)).toBe(false)
@@ -77,7 +85,8 @@ describe('staged hot signers', () => {
 
   test('completes a real generated-wallet session into encrypted persisted storage', async () => {
     const sessions = new GeneratedWalletSessions(signers)
-    const presentation = await waitForCallback((cb) => sessions.begin('phrase', PASSWORD, cb))
+    const { sessionId } = await waitForCallback((cb) => sessions.reserve(cb))
+    const presentation = await waitForCallback((cb) => sessions.begin(sessionId, 'phrase', PASSWORD, cb))
     const words = presentation.secret.split(' ')
     const completed = await waitForCallback((cb) =>
       sessions.complete(

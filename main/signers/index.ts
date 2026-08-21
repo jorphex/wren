@@ -50,7 +50,9 @@ export class Signers extends EventEmitter {
 
     this.signers = {}
     this.adapters = {}
-    this.generatedWallets = new GeneratedWalletSessions(this)
+    this.generatedWallets = new GeneratedWalletSessions(this, {
+      onError: (error: Error) => log.warn('Could not deliver generated wallet presentation', error)
+    })
 
     const registeredAdapters = adapters || [
       new HotSignerAdapter(
@@ -146,13 +148,28 @@ export class Signers extends EventEmitter {
       return false
     }
 
-    this.pendingHotSigners.delete(signer)
     const id = signer.id
 
     if (!(id in this.signers)) {
+      const addToStore = requireStoreAction('newSigner')
+      const removeFromStore = requireStoreAction('removeSigner')
+      const wasPending = this.pendingHotSigners.delete(signer)
       this.signers[id] = signer
 
-      requireStoreAction('newSigner')(signer.summary())
+      try {
+        addToStore(signer.summary())
+      } catch (error) {
+        if (this.signers[id] === signer) delete this.signers[id]
+        if (wasPending && !this.closed) this.pendingHotSigners.add(signer)
+        try {
+          removeFromStore(id)
+        } catch (rollbackError) {
+          log.warn('Unable to roll back failed signer store admission', rollbackError)
+        }
+        throw error
+      }
+    } else {
+      this.pendingHotSigners.delete(signer)
     }
 
     return true
@@ -263,8 +280,12 @@ export class Signers extends EventEmitter {
     hot.createFromPrivateKey(this, privateKey, password, cb)
   }
 
-  beginGeneratedWallet(kind: 'phrase' | 'private-key', password: string, cb: Callback<unknown>) {
-    this.generatedWallets.begin(kind, password, cb)
+  reserveGeneratedWallet(cb: Callback<{ sessionId: string }>) {
+    this.generatedWallets.reserve(cb)
+  }
+
+  beginGeneratedWallet(id: string, kind: 'phrase' | 'private-key', password: string, cb: Callback<unknown>) {
+    this.generatedWallets.begin(id, kind, password, cb)
   }
 
   completeGeneratedWallet(id: string, proof: unknown, cb: Callback<{ id: string }>) {

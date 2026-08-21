@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
+import { requestDashNavigation } from '../navigationGuard'
 
 export class Command extends React.Component {
   renderSignerIcon(type) {
@@ -64,7 +65,7 @@ export class Command extends React.Component {
             aria-label='Back'
             className='commandItem commandItemBack cardShow wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
             onClick={() => {
-              link.send('tray:action', 'backDash')
+              requestDashNavigation('back', () => link.send('tray:action', 'backDash'))
             }}
           >
             <Icon name='back' size={19} />
@@ -78,7 +79,7 @@ export class Command extends React.Component {
           aria-label='Close'
           className='commandItem commandItemClose wrenControl wrenControlSecondary wrenControlIcon wrenShellNav'
           onClick={() => {
-            link.send('tray:action', 'closeDash')
+            requestDashNavigation('close', () => link.send('tray:action', 'closeDash'))
           }}
         >
           <Icon name='close' size={19} />

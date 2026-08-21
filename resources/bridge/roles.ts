@@ -51,6 +51,7 @@ const dashboardOnlyInvokeChannels = new Set([
 const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'])
 
 const dashboardOnlyRpcMethods = new Set([
+  'reserveGeneratedWallet',
   'beginGeneratedWallet',
   'completeGeneratedWallet',
   'discardGeneratedWallet'
@@ -67,6 +68,15 @@ export const hasRendererCapability = (
   if (!rendererRole) return false
   const channel = args[0]
   if (method === 'invoke' && typeof channel === 'string') {
+    if (
+      channel === 'tray:writeClipboard' &&
+      typeof args[1] === 'object' &&
+      args[1] !== null &&
+      'secret' in args[1] &&
+      args[1].secret === true
+    ) {
+      return rendererRole === 'dash'
+    }
     if (dashboardOnlyInvokeChannels.has(channel)) return rendererRole === 'dash'
     if (trustedWindowInvokeChannels.has(channel)) {
       return rendererRole === 'dash' || rendererRole === 'tray'

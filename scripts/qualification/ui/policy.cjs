@@ -81,6 +81,7 @@ const generatedWalletVerificationAction = (kind) => ({
   delayMs: 650,
   steps: [
     ...generatedWalletPresentationAction().steps,
+    ...(kind === 'private-key' ? [{ type: 'clickText', text: 'Show private key' }] : []),
     { type: 'clickText', text: kind === 'phrase' ? "I've written it down" : "I've saved my key" }
   ]
 })
@@ -1190,6 +1191,8 @@ const reviewScenarios = () => [
       requiredText: [
         'Your recovery phrase',
         'Write these 12 words down in order. Wren will not show them again.',
+        'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
+        'Finish setup within about 10 minutes.',
         'Leaving now deletes this new wallet.'
       ]
     },
@@ -1202,11 +1205,14 @@ const reviewScenarios = () => [
       logicalHeight,
       action: generatedWalletPresentationAction(),
       ready: '.generatedWalletEvidence',
-      requiredControls: ['Copy address', 'Show private key', 'Copy private key', "I've saved my key"],
+      requiredControls: ['Copy address', 'Show private key', 'Copy private key'],
       requiredText: [
         'Your private key',
         'Account address',
-        'Save this key somewhere safe. Wren will not show it again.',
+        'Show or copy this key, then save it somewhere safe. Wren will not show it again.',
+        "I've saved my key",
+        'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
+        'Finish setup within about 10 minutes.',
         'Leaving now deletes this new account.'
       ]
     },
@@ -1225,6 +1231,7 @@ const reviewScenarios = () => [
         'Word 2',
         'Word 6',
         'Word 10',
+        'Finish setup within about 10 minutes.',
         'Leaving now deletes this new wallet.'
       ]
     },
@@ -1240,6 +1247,7 @@ const reviewScenarios = () => [
       requiredText: [
         'Verify your backup',
         'Enter the private key from your saved copy.',
+        'Finish setup within about 10 minutes.',
         'Leaving now deletes this new account.'
       ]
     }

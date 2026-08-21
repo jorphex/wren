@@ -35,6 +35,22 @@ test('enforces exact event tuple arity and Ethereum values', () => {
   expect(parseRendererIpcArgs('event', 'dash:dismissHardwarePrompt', []).success).toBe(false)
 })
 
+test('strictly validates acknowledged clipboard writes and results', () => {
+  expect(parse('invoke', 'tray:writeClipboard', [{ secret: true, value: 'secret' }])).toEqual([
+    { secret: true, value: 'secret' }
+  ])
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:writeClipboard', [{ secret: true, value: 'secret', extra: true }])
+      .success
+  ).toBe(false)
+  expect(
+    parseRendererIpcArgs('invoke', 'tray:writeClipboard', [{ secret: false, value: 'x'.repeat(4097) }])
+      .success
+  ).toBe(false)
+  expect(parseRendererInvokeResult('tray:writeClipboard', { success: true }).success).toBe(true)
+  expect(parseRendererInvokeResult('tray:writeClipboard', { success: false }).success).toBe(false)
+})
+
 test('allows only an argument-free activity clear action', () => {
   expect(parse('event', 'tray:action', ['clearActivity'])).toEqual(['clearActivity'])
   expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity', true]).success).toBe(false)

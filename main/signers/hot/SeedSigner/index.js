@@ -41,13 +41,22 @@ class SeedSigner extends HotSigner {
     })
   }
 
-  async addPhrase(phrase, password, cb) {
+  addPhrase(phrase, password, cb) {
     // Validate phrase
     if (!bip39.validateMnemonic(phrase)) return cb(new Error('Invalid mnemonic phrase'))
     // Get seed
-    const seed = await bip39.mnemonicToSeed(phrase)
-    // Add seed to signer
-    this.addSeed(seed.toString('hex'), password, cb)
+    Promise.resolve()
+      .then(() => bip39.mnemonicToSeed(phrase))
+      .then(
+        (seed) => {
+          try {
+            this.addSeed(seed.toString('hex'), password, cb)
+          } finally {
+            if (seed instanceof Uint8Array) seed.fill(0)
+          }
+        },
+        (error) => cb(error)
+      )
   }
 
   save(options) {

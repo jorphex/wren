@@ -2,9 +2,15 @@ import { screen, render } from '../../../../../componentSetup'
 import { ChainRequest } from '../../../../../../app/tray/Account/Requests/ChainRequest'
 import link from '../../../../../../resources/link'
 
-jest.mock('../../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  send: jest.fn()
+}))
 
-beforeEach(() => link.send.mockReset())
+beforeEach(() => {
+  link.invoke.mockClear()
+  link.send.mockReset()
+})
 
 it('shows the proposed network evidence and copies exact endpoints', async () => {
   const { user } = render(
@@ -32,5 +38,8 @@ it('shows the proposed network evidence and copies exact endpoints', async () =>
   expect(screen.getByText('ETH · 18 decimals')).toBeTruthy()
 
   await user.click(screen.getByRole('button', { name: 'Copy proposed RPC endpoint' }))
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', 'https://optimism.example/rpc')
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+    secret: false,
+    value: 'https://optimism.example/rpc'
+  })
 })

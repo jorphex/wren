@@ -2,7 +2,11 @@ import { act, screen, render } from '../../../../../componentSetup'
 import SignPermitRequest from '../../../../../../app/tray/Account/Requests/SignPermitRequest'
 import link from '../../../../../../resources/link'
 
-jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  rpc: jest.fn(),
+  send: jest.fn()
+}))
 
 jest.mock(
   '../../../../../../resources/Components/RingIcon',
@@ -120,8 +124,11 @@ it('preserves raw-data navigation and spender copying on named controls', async 
   await user.click(screen.getByRole('button', { name: 'Copy permit spender address' }))
 
   expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', { data: { step: 'viewRaw' } })
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', req.permit.spender.address)
-  expect(screen.getByText('Permit spender address copied')).toBeTruthy()
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+    secret: false,
+    value: req.permit.spender.address
+  })
+  expect(await screen.findByText('Permit spender address copied')).toBeTruthy()
 })
 
 it.each([undefined, 'viewRaw'])('warns about hash-only device review in the %s permit view', (step) => {

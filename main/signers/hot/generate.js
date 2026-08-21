@@ -11,9 +11,10 @@ const MAX_PRIVATE_KEY_ATTEMPTS = 128
 const readSecureBytes = (length, randomBytes = crypto.randomBytes) => {
   const result = randomBytes(length)
   if (!(result instanceof Uint8Array) || result.length !== length) {
+    if (result instanceof Uint8Array) result.fill(0)
     throw new Error('Secure random source returned invalid entropy')
   }
-  return Buffer.from(result)
+  return Buffer.isBuffer(result) ? result : Buffer.from(result.buffer, result.byteOffset, result.byteLength)
 }
 
 const recoveryPhrase = (randomBytes = crypto.randomBytes) => {

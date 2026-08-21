@@ -4,7 +4,10 @@ import link from '../../../../resources/link'
 import BigNumber from 'bignumber.js'
 import { max } from '../../../../resources/utils/numbers'
 
-jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../resources/link', () => ({
+  invoke: jest.fn(() => Promise.resolve({ success: true })),
+  send: jest.fn()
+}))
 
 const maxIntStr = max.toString(10)
 
@@ -528,8 +531,14 @@ describe('changing approval amounts', () => {
     await user.click(screen.getByRole('button', { name: 'Copy spender address' }))
     await user.click(screen.getByRole('button', { name: 'Copy token contract address' }))
 
-    expect(link.send).toHaveBeenNthCalledWith(1, 'tray:clipboardData', approval.data.spender.address)
-    expect(link.send).toHaveBeenNthCalledWith(2, 'tray:clipboardData', approval.data.contract.address)
+    expect(link.invoke).toHaveBeenNthCalledWith(1, 'tray:writeClipboard', {
+      secret: false,
+      value: approval.data.spender.address
+    })
+    expect(link.invoke).toHaveBeenNthCalledWith(2, 'tray:writeClipboard', {
+      secret: false,
+      value: approval.data.contract.address
+    })
   })
 
   it('allows the user to revert the token approval back to the original amount when no decimal data is present', async () => {

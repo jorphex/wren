@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import zxcvbn from 'zxcvbn'
+import Icon from '../Icon'
 import useFocusableRef from '../../Hooks/useFocusableRef'
 
 import { debounce } from '../../utils'
@@ -13,9 +14,13 @@ export const PasswordInput = ({
   buttonText,
   autofocus,
   active = true,
+  autoComplete = 'off',
+  emptyError = NO_PASSWORD_ENTERED,
   lastStep = false
 }) => {
-  const [error, setError] = useState(NO_PASSWORD_ENTERED)
+  const [error, setError] = useState(emptyError)
+  const messageId = useId()
+  const [revealed, setRevealed] = useState(false)
   const inputRef = useFocusableRef(autofocus)
   const [disabled, setDisabled] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -25,7 +30,7 @@ export const PasswordInput = ({
 
   useEffect(() => () => clearTimeout(resetTimer.current), [])
 
-  const resetError = useCallback(() => setError(NO_PASSWORD_ENTERED), [])
+  const resetError = useCallback(() => setError(emptyError), [emptyError])
 
   const clear = useCallback(() => {
     inputRef.current && (inputRef.current.value = '')
@@ -37,6 +42,7 @@ export const PasswordInput = ({
       submitting.current = false
       setDisabled(false)
       setProcessing(false)
+      setRevealed(false)
       resetError()
       clear()
     }
@@ -61,7 +67,7 @@ export const PasswordInput = ({
 
   const getError = () => {
     const value = inputRef.current?.value || ''
-    return value ? getInputError(value) || '' : NO_PASSWORD_ENTERED
+    return value ? getInputError(value) || '' : emptyError
   }
 
   const validateInput = () => {
@@ -83,18 +89,19 @@ export const PasswordInput = ({
       </div>
       <div
         className={
-          error && error !== NO_PASSWORD_ENTERED
+          error && error !== emptyError
             ? 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup wrenInputGroupError'
             : 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup'
         }
       >
         <input
-          className={error && error !== NO_PASSWORD_ENTERED ? 'wrenInput wrenInputError' : 'wrenInput'}
+          className={error && error !== emptyError ? 'wrenInput wrenInputError' : 'wrenInput'}
           role='textbox'
-          type='password'
+          type={revealed ? 'text' : 'password'}
           aria-label={title}
+          aria-describedby={error ? messageId : undefined}
           autoCapitalize='none'
-          autoComplete='off'
+          autoComplete={autoComplete}
           spellCheck={false}
           ref={inputRef}
           onChange={validateInput}
@@ -102,15 +109,27 @@ export const PasswordInput = ({
             if (!error && e.key === 'Enter' && !disabled && !submitting.current) handleSubmit()
           }}
         />
+        <button
+          type='button'
+          className='addAccountItemOptionPasswordReveal wrenControl wrenControlSecondary wrenControlIcon'
+          aria-label={revealed ? 'Hide password' : 'Show password'}
+          onClick={() => setRevealed((value) => !value)}
+        >
+          <Icon name='eye' size={18} />
+        </button>
       </div>
 
       {error ? (
-        <div role='alert' className='addAccountItemOptionError'>
+        <div
+          id={messageId}
+          role={error === emptyError ? undefined : 'alert'}
+          className='addAccountItemOptionError'
+        >
           {error}
         </div>
       ) : processing ? (
         <div role='status' className='addAccountItemOptionProcessing'>
-          Processing...
+          Processing…
         </div>
       ) : (
         <button
@@ -146,6 +165,7 @@ export const CreatePassword = ({ onCreate, autofocus, active }) => {
       buttonText='Continue'
       autofocus={autofocus}
       active={active}
+      autoComplete='new-password'
     />
   )
 }
@@ -163,6 +183,8 @@ export const ConfirmPassword = ({ password, onConfirm, autofocus, active, lastSt
       buttonText='Create'
       autofocus={autofocus}
       active={active}
+      autoComplete='new-password'
+      emptyError='Enter your password again'
       lastStep={lastStep}
     />
   )

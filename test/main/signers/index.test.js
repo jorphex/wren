@@ -4,12 +4,20 @@ import { Signers } from '../../../main/signers'
 import { installCloseToTray } from '../../../main/windows/closeToTray'
 
 let mockCloseLock = false
+const mockNewSignerAction = jest.fn()
+const mockRemoveSignerAction = jest.fn()
+const mockStoreActions = {
+  newSigner: mockNewSignerAction,
+  removeSigner: mockRemoveSignerAction
+}
 
 jest.mock('../../../main/store', () => ({
   __esModule: true,
   default: jest.fn((path) => (path === 'main.accountCloseLock' ? mockCloseLock : undefined))
 }))
-jest.mock('../../../main/store/action', () => ({ requireStoreAction: () => jest.fn() }))
+jest.mock('../../../main/store/action', () => ({
+  requireStoreAction: (name) => mockStoreActions[name] || jest.fn()
+}))
 
 jest.mock('../../../main/signers/hot/adapter', () => {
   const { EventEmitter: MockEventEmitter } = require('events')
@@ -82,6 +90,10 @@ const hotSigner = (id = 'hot-1') => ({
 })
 
 describe('signer manager lifecycle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   afterEach(() => {
     mockCloseLock = false
   })
@@ -120,6 +132,22 @@ describe('signer manager lifecycle', () => {
     expect(manager.add(late)).toBe(false)
     expect(late.close).toHaveBeenCalledTimes(2)
     expect(late.delete).not.toHaveBeenCalled()
+  })
+
+  it('rolls back map, store, and pending admission when the store update throws', async () => {
+    const manager = new Signers([])
+    const signer = hotSigner('store-failure')
+    manager.trackHotSigner(signer)
+    mockNewSignerAction.mockImplementationOnce(() => {
+      throw new Error('store update failed')
+    })
+
+    expect(() => manager.add(signer)).toThrow('store update failed')
+    expect(manager.get(signer.id)).toBeUndefined()
+    expect(mockRemoveSignerAction).toHaveBeenCalledWith(signer.id)
+
+    await manager.close()
+    expect(signer.close).toHaveBeenCalledTimes(1)
   })
 
   it('locks an unlocked hot signer when a normal close is configured to lock', async () => {

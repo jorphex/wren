@@ -18,6 +18,7 @@ import Contracts from './Contracts'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
+import { requestDashNavigation } from './navigationGuard'
 
 function itemName(view) {
   return capitalize(view.slice(0, -1))
@@ -74,8 +75,11 @@ export class Dash extends React.Component {
       return
     }
     const nav = this.store('windows.dash.nav') || []
-    if (nav.length) link.send('tray:action', 'backDash')
-    else link.send('tray:action', 'closeDash')
+    if (nav.length) {
+      requestDashNavigation('back', () => link.send('tray:action', 'backDash'))
+    } else {
+      requestDashNavigation('close', () => link.send('tray:action', 'closeDash'))
+    }
   }
 
   renderPanel(view, data, hardwarePrompt) {

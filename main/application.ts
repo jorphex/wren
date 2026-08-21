@@ -67,6 +67,7 @@ import contractVerification, {
   contractVerificationPollingRuntime
 } from './contractVerification/runtime'
 import { ContractVerificationArtifactIntakeError } from './contractVerification/artifactIntake'
+import { createSecretClipboard } from './security/secretClipboard'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -111,6 +112,9 @@ const profileInspectionTokens = new Map<
   string,
   { source: string; binding: ProfileBackupFileBinding; expiresAt: number }
 >()
+const managedClipboard = createSecretClipboard(clipboard, {
+  onError: (error) => log.warn('Could not clear expired sensitive clipboard data', error)
+})
 
 function startWalletCallEvidenceRuntime() {
   if (!walletCallEvidenceLifecycleReady) {
@@ -195,15 +199,23 @@ onRenderer('tray:resetAllSettings', () => {
   }
 
   if (updater.updateReady) {
+    managedClipboard.dispose()
     return updater.quitAndInstall()
   }
 
   app.relaunch()
+  managedClipboard.dispose()
   app.exit(0)
 })
 
 onRenderer('tray:clipboardData', (e, data) => {
-  if (data) clipboard.writeText(data)
+  if (data) managedClipboard.writePublic(data)
+})
+
+handleRenderer('tray:writeClipboard', async (e, request) => {
+  if (request.secret) managedClipboard.writeSecret(request.value)
+  else managedClipboard.writePublic(request.value)
+  return { success: true as const }
 })
 
 onRenderer('tray:installAvailableUpdate', () => {
@@ -257,7 +269,7 @@ onRenderer('tray:openExplorer', (e, chain, hash, account) => {
 })
 
 onRenderer('tray:copyTxHash', (e, hash) => {
-  if (hash) clipboard.writeText(hash)
+  if (hash) managedClipboard.writePublic(hash)
 })
 
 onRenderer('tray:giveAccess', (e, req, access) => {
@@ -645,6 +657,7 @@ onRenderer('tray:ready', () => {
 })
 
 onRenderer('tray:updateRestart', () => {
+  managedClipboard.dispose()
   updater.quitAndInstall()
 })
 
@@ -756,6 +769,7 @@ app.on('second-instance', (event, argv, workingDirectory) => {
 app.on('activate', () => windows.showTray())
 
 app.on('before-quit', () => {
+  managedClipboard.dispose()
   recentRecipientsRuntime.stop()
   walletCallEvidenceRuntime.stop()
   operationLifecycleRuntime.stop()
@@ -774,6 +788,7 @@ installShutdownHandlers(
     // await clients.stop()
     if (profileRestoreRelaunchTimer) clearTimeout(profileRestoreRelaunchTimer)
     profileRestoreRelaunchTimer = undefined
+    managedClipboard.dispose()
     profileInspectionTokens.clear()
     contractVerification.dispose()
     removeSignerPowerLockHandlers()

@@ -499,6 +499,19 @@
   .addAccountItemOptionInputPassword
     height 72px
 
+    input
+      padding-left 52px
+      padding-right 52px
+
+    .addAccountItemOptionPasswordReveal
+      position absolute
+      top 50%
+      right 8px
+      width 40px
+      min-width 40px
+      height 40px
+      transform translateY(-50%)
+
   .addAccountItemColorBar
     position absolute
     top 0px
@@ -691,6 +704,7 @@
     overflow hidden
 
   .generatedWalletFrameBody
+    flex 1 1 auto
     width 100%
     max-width 620px
     min-height 0
@@ -701,7 +715,9 @@
     scrollbar-width thin
 
   .generatedWalletGuidance,
-  .generatedWalletConsequence
+  .generatedWalletConsequence,
+  .generatedWalletClipboardNote,
+  .generatedWalletSessionNote
     margin var(--wren-space-2) auto 0
     color var(--wren-text-secondary)
     font-size 13px
@@ -711,6 +727,15 @@
 
   .generatedWalletConsequence
     color var(--wren-text-muted)
+
+  .generatedWalletClipboardNote,
+  .generatedWalletSessionNote
+    margin var(--wren-space-2) auto 0
+    color var(--wren-text-muted)
+    font-size 12px
+    line-height 18px
+    text-align center
+    text-transform none
 
   .generatedWalletPhrase
     display grid
@@ -773,6 +798,13 @@
     justify-content center
 
   .generatedWalletCopyStatus
+    position absolute
+    width 1px
+    height 1px
+    overflow hidden
+    clip-path inset(50%)
+
+  .generatedWalletScreenReaderOnly
     position absolute
     width 1px
     height 1px
@@ -906,3 +938,52 @@
 
     .generatedWalletActionShelf
       flex-basis 60px
+
+.generatedWalletAbandonDialog
+  position fixed
+  z-index 50000000
+  top 0
+  right 0
+  bottom 0
+  left 0
+  display flex
+  align-items center
+  justify-content center
+  padding var(--wren-space-5)
+  background rgba(18, 20, 22, .72)
+  box-sizing border-box
+
+.generatedWalletAbandonPanel
+  width 100%
+  max-width 460px
+  padding var(--wren-space-5)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-bg-elevated)
+  box-shadow 0 18px 48px rgba(0, 0, 0, .34)
+  box-sizing border-box
+
+.generatedWalletAbandonTitle
+  color var(--wren-text-primary)
+  font-size 15px
+  font-weight 600
+  line-height 20px
+  text-transform none
+
+.generatedWalletAbandonDescription
+  margin var(--wren-space-2) 0 0
+  color var(--wren-text-secondary)
+  font-size 13px
+  line-height 20px
+  text-transform none
+
+.generatedWalletAbandonActions
+  display flex
+  justify-content flex-end
+  flex-wrap wrap
+  gap var(--wren-space-3)
+  margin-top var(--wren-space-5)
+
+  .wrenControl
+    min-height 44px
+    padding 0 var(--wren-space-4)

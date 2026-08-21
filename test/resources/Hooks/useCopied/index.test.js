@@ -1,5 +1,5 @@
-import { render, screen } from '../../../componentSetup'
-import useCopiedMessage from '../../../../resources/Hooks/useCopiedMessage'
+import { act, render, screen, waitFor } from '../../../componentSetup'
+import useCopiedMessage, { useSecretCopiedMessage } from '../../../../resources/Hooks/useCopiedMessage'
 import link from '../../../../resources/link'
 
 const TestComponent = () => {
@@ -13,9 +13,24 @@ const TestComponent = () => {
   )
 }
 
+const SecretTestComponent = () => {
+  const [showCopiedMessage, copyText] = useSecretCopiedMessage('use frame!')
+
+  return (
+    <>
+      <button onClick={copyText}>Copy secret</button>
+      <div data-testid='secret-copied'>{showCopiedMessage ? 'copied' : 'waiting'}</div>
+    </>
+  )
+}
+
 jest.mock('../../../../resources/link', () => ({
-  send: jest.fn()
+  invoke: jest.fn(() => Promise.resolve({ success: true }))
 }))
+
+beforeEach(() => {
+  link.invoke.mockReset().mockResolvedValue({ success: true })
+})
 
 it('should not display the copied text by default', () => {
   render(<TestComponent />)
@@ -28,8 +43,9 @@ it('should let the component know to display the copied text after the copy func
 
   const clickToCopyButton = screen.getByRole('button')
   await user.click(clickToCopyButton)
+  await act(async () => Promise.resolve())
 
-  expect(screen.getByTestId('iscopied').textContent).toBe('message copied!')
+  await waitFor(() => expect(screen.getByTestId('iscopied').textContent).toBe('message copied!'))
 })
 
 it('should reset the copied text after one second', async () => {
@@ -37,6 +53,7 @@ it('should reset the copied text after one second', async () => {
 
   const clickToCopyButton = screen.getByRole('button')
   await user.click(clickToCopyButton)
+  await act(async () => Promise.resolve())
 
   expect(screen.getByTestId('iscopied').textContent).toBe('waiting for click')
 })
@@ -46,7 +63,34 @@ it('send the copied data to the clipboard', async () => {
 
   const clickToCopyButton = screen.getByRole('button')
   await user.click(clickToCopyButton)
+  await act(async () => Promise.resolve())
 
-  expect(link.send).toHaveBeenCalledTimes(1)
-  expect(link.send).toHaveBeenCalledWith('tray:clipboardData', 'use frame!')
+  expect(link.invoke).toHaveBeenCalledTimes(1)
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+    secret: false,
+    value: 'use frame!'
+  })
+})
+
+it('uses the expiring clipboard channel only for explicit secret copies', async () => {
+  const { user } = render(<SecretTestComponent />)
+
+  await user.click(screen.getByRole('button', { name: 'Copy secret' }))
+  await act(async () => Promise.resolve())
+
+  expect(link.invoke).toHaveBeenCalledTimes(1)
+  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+    secret: true,
+    value: 'use frame!'
+  })
+})
+
+it('does not claim success when the clipboard write is rejected', async () => {
+  link.invoke.mockResolvedValueOnce({})
+  const { user } = render(<SecretTestComponent />)
+
+  await user.click(screen.getByRole('button', { name: 'Copy secret' }))
+  await act(async () => Promise.resolve())
+
+  expect(screen.getByTestId('secret-copied').textContent).toBe('waiting')
 })

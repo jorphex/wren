@@ -20,17 +20,59 @@ const validatePassword = (password) => {
   if (zxcvbn(password).score < 3) throw new Error('Hot account password is too weak')
 }
 
-const discardPendingSigner = (signers, signer, error, cb) => {
-  signer.close()
-  untrackSigner(signers, signer)
-  cb(error)
-}
+const stageSigner = (signers, signer, addSecret, cb) => {
+  if (!trackSigner(signers, signer)) {
+    cb(new Error('Signer manager is closed'))
+    return undefined
+  }
 
-const lockStagedSigner = (signers, signer, cb) => {
-  signer.lock((error) => {
-    if (error) return discardPendingSigner(signers, signer, error, cb)
-    cb(null, signer)
-  })
+  let cancelled = false
+  let settled = false
+  const cleanup = () => {
+    let cleanupError
+    try {
+      signer.close()
+    } catch (error) {
+      cleanupError = error
+    }
+    try {
+      untrackSigner(signers, signer)
+    } catch (error) {
+      cleanupError ||= error
+    }
+    if (cleanupError) throw cleanupError
+  }
+  const cancel = () => {
+    if (cancelled || settled) return
+    cancelled = true
+    cleanup()
+  }
+  const fail = (error) => {
+    if (cancelled || settled) return
+    settled = true
+    cleanup()
+    cb(error)
+  }
+
+  let callbackStarted = false
+  try {
+    addSecret((error) => {
+      callbackStarted = true
+      if (cancelled || settled) return
+      if (error) return fail(error)
+      signer.lock((lockError) => {
+        if (cancelled || settled) return
+        if (lockError) return fail(lockError)
+        settled = true
+        cb(null, signer)
+      })
+    })
+  } catch (error) {
+    if (callbackStarted) throw error
+    fail(error)
+  }
+
+  return { cancel, signer }
 }
 
 module.exports = {
@@ -145,11 +187,7 @@ module.exports = {
       return cb(error)
     }
     const signer = new SeedSigner(undefined, { deferPersistence: true })
-    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
-    signer.addPhrase(phrase, password, (error) => {
-      if (error) return discardPendingSigner(signers, signer, error, cb)
-      lockStagedSigner(signers, signer, cb)
-    })
+    return stageSigner(signers, signer, (done) => signer.addPhrase(phrase, password, done), cb)
   },
   stageFromPrivateKey: (signers, privateKey, password, cb) => {
     const privateKeyHex = stripHexPrefix(privateKey)
@@ -160,11 +198,7 @@ module.exports = {
       return cb(error)
     }
     const signer = new RingSigner(undefined, { deferPersistence: true })
-    if (!trackSigner(signers, signer)) return cb(new Error('Signer manager is closed'))
-    signer.addPrivateKey(privateKeyHex, password, (error) => {
-      if (error) return discardPendingSigner(signers, signer, error, cb)
-      lockStagedSigner(signers, signer, cb)
-    })
+    return stageSigner(signers, signer, (done) => signer.addPrivateKey(privateKeyHex, password, done), cb)
   },
   validatePassword,
   createScanner: (signers, delay = 4000, storage = osSignerStorage) => {

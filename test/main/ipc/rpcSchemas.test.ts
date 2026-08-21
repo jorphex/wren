@@ -126,12 +126,21 @@ test('bounds generated-wallet creation and its one-time presentation payload', (
   const sessionId = 'a'.repeat(32)
   const phrase = 'test test test test test test test test test test test junk'
   const privateKey = `0x${'1'.padStart(64, '0')}`
+  const expiresAt = Date.now() + 60_000
 
-  expect(parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', 'phrase', 'password'))).toMatchObject({
+  expect(parseRendererRpcRequest(wire(1, 'reserveGeneratedWallet'))).toMatchObject({
     success: true,
-    data: { args: ['phrase', 'password'] }
+    data: { args: [] }
   })
-  expect(parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', 'seed', 'password')).success).toBe(false)
+  expect(
+    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'phrase', 'password'))
+  ).toMatchObject({
+    success: true,
+    data: { args: [sessionId, 'phrase', 'password'] }
+  })
+  expect(
+    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'seed', 'password')).success
+  ).toBe(false)
   expect(
     parseRendererRpcRequest(
       wire(1, 'completeGeneratedWallet', sessionId, { words: ['test', 'test', 'test'] })
@@ -143,27 +152,43 @@ test('bounds generated-wallet creation and its one-time presentation payload', (
   expect(parseRendererRpcRequest(wire(1, 'discardGeneratedWallet', sessionId)).success).toBe(true)
   expect(parseRendererRpcRequest(wire(1, 'discardGeneratedWallet', 'not-a-session')).success).toBe(false)
 
+  expect(parseRendererRpcResponse('reserveGeneratedWallet', [null, { sessionId }])).toEqual({
+    success: true,
+    data: [null, { sessionId }]
+  })
   expect(
     parseRendererRpcResponse('beginGeneratedWallet', [
       null,
-      { address, challenge: [2, 6, 10], kind: 'phrase', secret: phrase, sessionId }
+      { address, challenge: [2, 6, 10], expiresAt, kind: 'phrase', secret: phrase, sessionId }
     ]).success
   ).toBe(true)
   expect(
     parseRendererRpcResponse('beginGeneratedWallet', [
       null,
-      { address, challenge: 'private-key', kind: 'private-key', secret: privateKey, sessionId }
+      { address, challenge: 'private-key', expiresAt, kind: 'private-key', secret: privateKey, sessionId }
     ]).success
   ).toBe(true)
   expect(
     parseRendererRpcResponse('beginGeneratedWallet', [
       null,
-      { address, challenge: 'private-key', kind: 'private-key', secret: phrase, sessionId }
+      { address, challenge: 'private-key', expiresAt, kind: 'private-key', secret: phrase, sessionId }
     ]).success
   ).toBe(false)
   expect(
-    parseRendererRpcResponse('completeGeneratedWallet', [null, { id: 'signer-id', secret: privateKey }])
-  ).toEqual({ success: true, data: [null, { id: 'signer-id' }] })
+    parseRendererRpcResponse('completeGeneratedWallet', [
+      null,
+      { accountId: address, address, id: 'signer-id', selected: true, type: 'seed' }
+    ])
+  ).toEqual({
+    success: true,
+    data: [null, { accountId: address, address, id: 'signer-id', selected: true, type: 'seed' }]
+  })
+  expect(
+    parseRendererRpcResponse('beginGeneratedWallet', [
+      null,
+      { address, challenge: [2, 2, 10], expiresAt, kind: 'phrase', secret: phrase, sessionId }
+    ]).success
+  ).toBe(false)
 })
 
 test('validates fee quantities and request identifiers', () => {
