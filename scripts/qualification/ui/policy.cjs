@@ -65,6 +65,26 @@ const onboardingAction = (nextCount = 0) => ({
   ]
 })
 
+const generatedWalletPresentationAction = () => ({
+  type: 'sequence',
+  delayMs: 650,
+  steps: [
+    { type: 'inputLabel', label: 'Create password', value: 'correct horse battery staple' },
+    { type: 'clickText', text: 'Continue' },
+    { type: 'inputLabel', label: 'Confirm password', value: 'correct horse battery staple' },
+    { type: 'clickText', text: 'Create' }
+  ]
+})
+
+const generatedWalletVerificationAction = (kind) => ({
+  type: 'sequence',
+  delayMs: 650,
+  steps: [
+    ...generatedWalletPresentationAction().steps,
+    { type: 'clickText', text: kind === 'phrase' ? "I've written it down" : "I've saved my key" }
+  ]
+})
+
 const COMPACT_TARGET_EXCEPTIONS = Object.freeze([
   {
     selector: '.wrenControlChrome',
@@ -1151,8 +1171,79 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredText: ['Watch-only']
+    requiredText: ['Create new', 'Import existing', 'Watch-only']
   },
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].flatMap(([geometry, logicalHeight]) => [
+    {
+      id: `dash-account-create-phrase-${geometry}-1`,
+      renderer: 'dash',
+      state: 'account-create-phrase',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      action: generatedWalletPresentationAction(),
+      ready: '.generatedWalletPhrase',
+      requiredControls: ['Copy recovery phrase', "I've written it down"],
+      requiredText: [
+        'Your recovery phrase',
+        'Write these 12 words down in order. Wren will not show them again.',
+        'Leaving now deletes this new wallet.'
+      ]
+    },
+    {
+      id: `dash-account-create-private-key-${geometry}-1`,
+      renderer: 'dash',
+      state: 'account-create-private-key',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      action: generatedWalletPresentationAction(),
+      ready: '.generatedWalletEvidence',
+      requiredControls: ['Copy address', 'Show private key', 'Copy private key', "I've saved my key"],
+      requiredText: [
+        'Your private key',
+        'Account address',
+        'Save this key somewhere safe. Wren will not show it again.',
+        'Leaving now deletes this new account.'
+      ]
+    },
+    {
+      id: `dash-account-verify-phrase-${geometry}-1`,
+      renderer: 'dash',
+      state: 'account-create-phrase',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      action: generatedWalletVerificationAction('phrase'),
+      ready: '.generatedWalletVerify',
+      requiredText: [
+        'Verify your backup',
+        'Enter the requested words from your saved copy.',
+        'Word 2',
+        'Word 6',
+        'Word 10',
+        'Leaving now deletes this new wallet.'
+      ]
+    },
+    {
+      id: `dash-account-verify-private-key-${geometry}-1`,
+      renderer: 'dash',
+      state: 'account-create-private-key',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight,
+      action: generatedWalletVerificationAction('private-key'),
+      ready: '.generatedWalletKeyInput',
+      requiredText: [
+        'Verify your backup',
+        'Enter the private key from your saved copy.',
+        'Leaving now deletes this new account.'
+      ]
+    }
+  ]),
   {
     id: 'dash-account-add-watch-full-1',
     renderer: 'dash',
@@ -1927,9 +2018,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle',
         requiredControls: ['View details'],
         requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
-        layoutExpectations: [
-          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }
-        ]
+        layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
       },
       {
         id: `tray-transaction-confirmed-full-${scale}`,
@@ -1941,9 +2030,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle-success',
         requiredControls: ['View details', 'Close'],
         requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
-        layoutExpectations: [
-          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }
-        ]
+        layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
       },
       {
         id: `dash-delegation-full-${scale}`,

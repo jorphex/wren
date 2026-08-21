@@ -11,13 +11,22 @@ const SIGNER_PATH = path.resolve(__dirname, '../.userData/signers')
 jest.mock('electron')
 jest.mock('../../../../main/store/persist')
 
+const { GeneratedWalletSessions } = require('../../../../main/signers/generated')
+
 const waitForCallback = (action) =>
   new Promise((resolve, reject) => action((error, result) => (error ? reject(error) : resolve(result))))
 
 describe('staged hot signers', () => {
   let hot
   const pending = new Set()
+  const accepted = new Set()
   const signers = {
+    add: (signer) => {
+      pending.delete(signer)
+      accepted.add(signer)
+      return true
+    },
+    exists: (id) => [...accepted].some((signer) => signer.id === id),
     trackHotSigner: (signer) => {
       pending.add(signer)
       return true
@@ -33,6 +42,7 @@ describe('staged hot signers', () => {
 
   afterAll(async () => {
     pending.forEach((signer) => signer.close())
+    accepted.forEach((signer) => signer.close())
     await remove(SIGNER_PATH)
     log.transports.console.level = 'debug'
   })
@@ -63,5 +73,35 @@ describe('staged hot signers', () => {
     signer.close()
     pending.delete(signer)
     expect(fs.existsSync(signerFile)).toBe(false)
+  }, 10_000)
+
+  test('completes a real generated-wallet session into encrypted persisted storage', async () => {
+    const sessions = new GeneratedWalletSessions(signers)
+    const presentation = await waitForCallback((cb) => sessions.begin('phrase', PASSWORD, cb))
+    const words = presentation.secret.split(' ')
+    const completed = await waitForCallback((cb) =>
+      sessions.complete(
+        presentation.sessionId,
+        { words: presentation.challenge.map((position) => words[position - 1]) },
+        cb
+      )
+    )
+    const signer = [...accepted].find((candidate) => candidate.id === completed.id)
+    const signerFile = path.join(SIGNER_PATH, `${completed.id}.json`)
+
+    expect(presentation.secret.split(' ')).toHaveLength(12)
+    expect(signer).toBeDefined()
+    expect(fs.existsSync(signerFile)).toBe(true)
+    const stored = fs.readFileSync(signerFile, 'utf8')
+    expect(stored).not.toContain(presentation.secret)
+    expect(JSON.parse(stored).encryptedSeed).toMatchObject({
+      version: 2,
+      cipher: { name: 'aes-256-gcm' }
+    })
+
+    signer.delete()
+    signer.close()
+    accepted.delete(signer)
+    sessions.close()
   }, 10_000)
 })

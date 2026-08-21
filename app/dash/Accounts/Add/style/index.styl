@@ -585,6 +585,7 @@
 
     .addAccountItemTopTitle
       text-shadow none
+      text-transform none
 
     .addAccountItemIcon
       border 0
@@ -714,21 +715,22 @@
   .generatedWalletPhrase
     display grid
     grid-template-columns repeat(2, minmax(0, 1fr))
-    gap var(--wren-space-2)
+    gap 0 var(--wren-space-4)
     width 100%
     margin var(--wren-space-4) 0
-    padding 0
+    padding var(--wren-space-2) var(--wren-space-3)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
     list-style none
+    box-sizing border-box
 
     li
       display grid
       grid-template-columns 28px minmax(0, 1fr)
       align-items center
       min-height 40px
-      padding 0 var(--wren-space-3)
-      border-radius var(--wren-radius-sm)
+      padding 0 var(--wren-space-1)
       color var(--wren-text-primary)
-      background var(--wren-surface-inset)
       box-sizing border-box
       font-family var(--wren-font-mono)
       font-size 13px
@@ -758,7 +760,7 @@
     align-items center
     justify-content center
     gap var(--wren-space-2)
-    min-height 38px
+    min-height 44px
     padding 0 var(--wren-space-3)
     border-radius var(--wren-radius-sm)
     font-family var(--wren-font-ui)
@@ -777,15 +779,20 @@
     overflow hidden
     clip-path inset(50%)
 
+  .generatedWalletEvidenceGroup
+    margin-top var(--wren-space-4)
+    padding var(--wren-space-4)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
+
   .generatedWalletEvidence
     display grid
     grid-template-columns minmax(0, 1fr) auto
     gap var(--wren-space-2) var(--wren-space-3)
     align-items center
-    margin-top var(--wren-space-4)
-    padding var(--wren-space-4)
-    border-radius var(--wren-radius-sm)
-    background var(--wren-surface-inset)
+
+    & + .generatedWalletEvidence
+      margin-top var(--wren-space-5)
 
   .generatedWalletEvidenceLabel
     grid-column 1 / -1
@@ -799,8 +806,8 @@
     overflow-wrap anywhere
     color var(--wren-text-primary)
     font-family var(--wren-font-mono)
-    font-size 12px
-    line-height 19px
+    font-size 13px
+    line-height 20px
     text-transform none
 
     &.concealed
@@ -831,11 +838,11 @@
     text-transform none
 
     .wrenInputGroup
-      height 44px
+      height 48px
 
     input
       width 100%
-      height 100%
+      height 44px
       padding 0 var(--wren-space-3)
       border 0
       outline 0
@@ -878,8 +885,16 @@
     justify-content center
     flex-direction column
 
+  &.generatedWalletSetup
+    .addAccountItemOption
+      top 170px
+
 @media (max-height: 760px)
   .addAccountItem
+    &.generatedWalletSetup
+      .addAccountItemOption
+        top 160px
+
     .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .generatedWalletFrame
       padding 0 var(--wren-space-5)
 

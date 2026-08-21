@@ -1032,7 +1032,9 @@ const fixtureFor = (scenario) => {
   const accountSetupTypes = {
     'account-add-watch': 'nonsigning',
     'account-add-seed': 'seed',
-    'account-add-trezor': 'trezor'
+    'account-add-trezor': 'trezor',
+    'account-create-phrase': 'create-seed',
+    'account-create-private-key': 'create-keyring'
   }
   if (accountSetupTypes[scenario.state]) {
     state.windows.dash = {
@@ -1943,6 +1945,24 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (scenario.state === 'account-create-phrase' && method === 'beginGeneratedWallet') {
+    return {
+      address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      challenge: [2, 6, 10],
+      kind: 'phrase',
+      secret: 'test test test test test test test test test test test junk',
+      sessionId: '1'.repeat(32)
+    }
+  }
+  if (scenario.state === 'account-create-private-key' && method === 'beginGeneratedWallet') {
+    return {
+      address: '0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf',
+      challenge: 'private-key',
+      kind: 'private-key',
+      secret: `0x${'1'.padStart(64, '0')}`,
+      sessionId: '2'.repeat(32)
+    }
+  }
   if (scenario.state === 'delegation' && method === 'getAccountExecutionState') {
     return {
       status: 'delegated',

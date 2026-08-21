@@ -8,6 +8,10 @@ import { AddHotAccountWrapper } from '../Components'
 
 const normalizePrivateKey = (value) => value.trim().replace(/^0x/iu, '').toLowerCase()
 
+const BlankFrame = ({ active }) => (
+  <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active} />
+)
+
 const CopyControl = ({ copied, label, onCopy }) => (
   <span className='generatedWalletCopyGroup'>
     <button
@@ -81,28 +85,30 @@ const PrivateKeyPresentation = ({ active, onContinue, presentation }) => {
           Your private key
         </div>
         <p className='generatedWalletGuidance'>Save this key somewhere safe. Wren will not show it again.</p>
-        <div className='generatedWalletEvidence'>
-          <div className='generatedWalletEvidenceLabel'>Account address</div>
-          <code className='generatedWalletEvidenceValue'>{presentation.address}</code>
-          <CopyControl copied={addressCopied} label='Copy address' onCopy={copyAddress} />
-        </div>
-        <div className='generatedWalletEvidence'>
-          <div className='generatedWalletEvidenceLabel'>Private key</div>
-          <code
-            className={revealed ? 'generatedWalletEvidenceValue' : 'generatedWalletEvidenceValue concealed'}
-          >
-            {revealed ? presentation.secret : `0x${'•'.repeat(32)}`}
-          </code>
-          <div className='generatedWalletEvidenceControls'>
-            <button
-              type='button'
-              className='generatedWalletQuietControl wrenControl wrenControlSecondary'
-              aria-pressed={revealed}
-              onClick={() => setRevealed((value) => !value)}
+        <div className='generatedWalletEvidenceGroup'>
+          <div className='generatedWalletEvidence'>
+            <div className='generatedWalletEvidenceLabel'>Account address</div>
+            <code className='generatedWalletEvidenceValue'>{presentation.address}</code>
+            <CopyControl copied={addressCopied} label='Copy address' onCopy={copyAddress} />
+          </div>
+          <div className='generatedWalletEvidence'>
+            <div className='generatedWalletEvidenceLabel'>Private key</div>
+            <code
+              className={revealed ? 'generatedWalletEvidenceValue' : 'generatedWalletEvidenceValue concealed'}
             >
-              {revealed ? 'Hide private key' : 'Show private key'}
-            </button>
-            <CopyControl copied={keyCopied} label='Copy private key' onCopy={copyPrivateKey} />
+              {revealed ? presentation.secret : `0x${'•'.repeat(32)}`}
+            </code>
+            <div className='generatedWalletEvidenceControls'>
+              <button
+                type='button'
+                className='generatedWalletQuietControl wrenControl wrenControlSecondary'
+                aria-pressed={revealed}
+                onClick={() => setRevealed((value) => !value)}
+              >
+                {revealed ? 'Hide private key' : 'Show private key'}
+              </button>
+              <CopyControl copied={keyCopied} label='Copy private key' onCopy={copyPrivateKey} />
+            </div>
           </div>
         </div>
         <p className='generatedWalletConsequence'>Leaving now deletes this new account.</p>
@@ -161,6 +167,7 @@ const PhraseVerification = ({ active, challenge, onComplete, submitting, error }
             {error}
           </div>
         ) : null}
+        <p className='generatedWalletConsequence'>Leaving now deletes this new wallet.</p>
       </div>
       <div className='generatedWalletActionShelf'>
         <button
@@ -214,6 +221,7 @@ const PrivateKeyVerification = ({ active, onComplete, submitting, error }) => {
             {error}
           </div>
         ) : null}
+        <p className='generatedWalletConsequence'>Leaving now deletes this new account.</p>
       </div>
       <div className='generatedWalletActionShelf'>
         <button
@@ -342,7 +350,7 @@ export default function CreateGenerated({ kind }) {
         <PrivateKeyPresentation key='present' presentation={presentation} onContinue={() => setStep(3)} />
       )
     ) : (
-      <div key='present' />
+      <BlankFrame key='present' />
     ),
     presentation ? (
       isPhrase ? (
@@ -357,7 +365,7 @@ export default function CreateGenerated({ kind }) {
         <PrivateKeyVerification key='verify' onComplete={complete} submitting={submitting} error={error} />
       )
     ) : (
-      <div key='verify' />
+      <BlankFrame key='verify' />
     ),
     <ErrorFrame key='error' error={error} onRetry={retry} />
   ]
@@ -368,6 +376,7 @@ export default function CreateGenerated({ kind }) {
       summary={summary}
       svgName={isPhrase ? 'seedling' : 'key'}
       index={step}
+      setupClass='generatedWalletSetup'
     >
       {frames.map((frame, index) => cloneElement(frame, { active: index === step }))}
     </AddHotAccountWrapper>

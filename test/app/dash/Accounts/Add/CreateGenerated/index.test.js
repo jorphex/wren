@@ -36,6 +36,9 @@ const advancePassword = async (view, presentation) => {
   await view.user.click(screen.getByRole('button', { name: 'Create' }))
 }
 
+const expectActiveText = (text) =>
+  expect(screen.getAllByText(text).some((element) => element.closest('[aria-hidden="false"]'))).toBe(true)
+
 describe('generated recovery-phrase wallet', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -51,8 +54,22 @@ describe('generated recovery-phrase wallet', () => {
     expect(link.rpc).toHaveBeenCalledWith('beginGeneratedWallet', 'phrase', password, expect.any(Function))
     expect(screen.getByRole('heading', { name: 'Your recovery phrase' })).toBeTruthy()
     expect(screen.getAllByRole('listitem')).toHaveLength(12)
-    expect(screen.getByText('Leaving now deletes this new wallet.')).toBeTruthy()
+    expectActiveText('Leaving now deletes this new wallet.')
     expect(link.send).not.toHaveBeenCalledWith(expect.anything(), expect.stringContaining('test test'))
+  })
+
+  test('shows a fail-closed generation error without leaving the frame carousel blank', async () => {
+    const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: true })
+    await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), password)
+    act(() => jest.advanceTimersByTime(300))
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), password)
+    act(() => jest.advanceTimersByTime(300))
+    link.rpc.mockImplementationOnce((method, kind, enteredPassword, cb) => cb('rng unavailable'))
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(screen.getByRole('alert').textContent).toBe('Wren could not create this account safely.')
+    expect(screen.getByText('Nothing was saved.')).toBeTruthy()
   })
 
   test('copies explicitly, verifies requested words, and opens the committed signer', async () => {
@@ -62,6 +79,7 @@ describe('generated recovery-phrase wallet', () => {
     await view.user.click(screen.getByRole('button', { name: 'Copy recovery phrase' }))
     expect(link.send).toHaveBeenCalledWith('tray:clipboardData', phrase)
     await view.user.click(screen.getByRole('button', { name: "I've written it down" }))
+    expectActiveText('Leaving now deletes this new wallet.')
 
     for (const position of phrasePresentation.challenge) {
       await view.user.type(screen.getByRole('textbox', { name: `Word ${position}` }), 'test')
@@ -125,6 +143,7 @@ describe('generated private-key account', () => {
     const view = render(<CreateGenerated kind='private-key' />, { advanceTimersAfterInput: true })
     await advancePassword(view, keyPresentation)
     await view.user.click(screen.getByRole('button', { name: "I've saved my key" }))
+    expectActiveText('Leaving now deletes this new account.')
 
     const finish = screen.getByRole('button', { name: 'Finish backup' })
     expect(finish.disabled).toBe(true)
