@@ -21,6 +21,8 @@ import {
   peerAuthFingerprint
 } from '../../../main/api/peerAuth'
 import { createDesktopAuthIdentity } from '../../../main/api/desktopAuthIdentity'
+import { WREN_EXTENSION_ORIGIN, originIdForName } from '../../../resources/domain/origin'
+import migration73 from '../../../main/store/migrate/migrations/73'
 
 let socketConnection, mockSocket, authenticatedResponse
 
@@ -101,7 +103,7 @@ const createAuthenticatedPageSocket = async () => {
 jest.mock('ws')
 jest.mock('../../../main/store')
 jest.mock('../../../main/provider', () => ({ on: jest.fn(), send: jest.fn() }))
-jest.mock('../../../main/accounts', () => ({ getSelectedAddresses: jest.fn(() => []) }))
+jest.mock('../../../main/accounts', () => ({ current: jest.fn(), getSelectedAddresses: jest.fn(() => []) }))
 jest.mock('../../../main/windows', () => {})
 
 beforeEach(async () => {
@@ -760,6 +762,52 @@ it('returns a recovered network catalog through the authenticated Companion cont
       })
     ]
   })
+})
+
+it('restores authenticated wallet_getEthereumChains after migrating a schema-72 legacy Companion origin', async () => {
+  const originId = originIdForName(WREN_EXTENSION_ORIGIN)
+  accounts.getSelectedAddresses.mockReturnValue(['0x0000000000000000000000000000000000000001'])
+  store.addOriginRequest = jest.fn()
+  const legacyOrigin = {
+    name: WREN_EXTENSION_ORIGIN,
+    chain: { type: 'ethereum', id: 1 },
+    provenance: 'legacy'
+  }
+  store.set('main.origins', originId, legacyOrigin)
+
+  mockSocket.emit(
+    'message',
+    JSON.stringify({ id: 17, jsonrpc: '2.0', method: 'wallet_getEthereumChains', params: [] })
+  )
+  await flushPromises()
+
+  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toMatchObject({
+    id: 17,
+    error: { code: 4100, message: 'Origin is not authorized' }
+  })
+  expect(provider.send).not.toHaveBeenCalled()
+
+  const migrated = migration73.migrate({
+    main: { _version: 72, origins: { [originId]: legacyOrigin } }
+  })
+  store.set('main.origins', migrated.main.origins)
+  mockSocket.send.mockClear()
+  provider.send.mockImplementationOnce((payload, response) =>
+    response({ id: payload.id, jsonrpc: payload.jsonrpc, result: [] })
+  )
+
+  mockSocket.emit(
+    'message',
+    JSON.stringify({ id: 18, jsonrpc: '2.0', method: 'wallet_getEthereumChains', params: [] })
+  )
+  await flushPromises()
+
+  expect(JSON.parse(mockSocket.send.mock.calls[0][0])).toEqual({
+    id: 18,
+    jsonrpc: '2.0',
+    result: []
+  })
+  expect(provider.send).toHaveBeenCalledTimes(1)
 })
 
 it.each([
