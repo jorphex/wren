@@ -17,7 +17,8 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(81)
+  expect(scenarios).toHaveLength(93)
+  expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining([
@@ -27,11 +28,15 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `dash-control-center-short-${scale}`,
         `tray-account-home-full-${scale}`,
         `tray-account-home-short-${scale}`,
+        `tray-account-balances-full-${scale}`,
+        `tray-transaction-confirming-full-${scale}`,
+        `tray-transaction-confirmed-full-${scale}`,
         `dash-delegation-full-${scale}`,
         `dash-delegation-short-${scale}`,
         `dash-tokens-full-${scale}`,
         `dash-tokens-short-${scale}`,
         `dash-tokens-list-full-${scale}`,
+        `dash-tokens-list-short-${scale}`,
         `dash-send-asset-picker-full-${scale}`,
         `dash-send-asset-picker-short-${scale}`,
         `tray-revocation-review-full-${scale}`,

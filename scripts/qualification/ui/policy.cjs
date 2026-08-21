@@ -303,7 +303,19 @@ const sendComposerScenarios = () =>
         requiredText: ['Ethereum', 'Optimism Mainnet', 'Ether', 'USD Coin'],
         layoutExpectations: [
           { kind: 'size', selector: '.sendPickerSearch > svg', width: 15, height: 15 },
-          { kind: 'size', selector: '.sendAssetOption .assetMarkChain', width: 12, height: 12 }
+          { kind: 'size', selector: '.sendAssetOption .assetMarkChain', width: 12, height: 12 },
+          {
+            kind: 'computed-style',
+            selector: '.sendAssetOption .assetMarkGlyph',
+            property: 'borderTopColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendAssetOption .assetMarkGlyph',
+            property: 'backgroundColor',
+            value: 'rgba(0, 0, 0, 0)'
+          }
         ]
       },
       {
@@ -1528,26 +1540,6 @@ const reviewScenarios = () => [
     requiredText: ['Optimism Mainnet', 'Next base fee', 'Priority fee']
   },
   {
-    id: 'tray-account-balances-full-1',
-    renderer: 'tray',
-    state: 'account-balances',
-    balanceArtwork: true,
-    glideSide: 'left',
-    workspaceOpen: true,
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.accountLedgerView',
-    requiredControls: ['Back', 'Filter balances', 'Add token'],
-    requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
-    layoutExpectations: [
-      { kind: 'hidden', selector: '.accountSelectorOpen' },
-      { kind: 'hidden', selector: '.balancesExpandedScroll > ._txMain' },
-      { kind: 'size', selector: '.balancesAssetMark .assetMarkChain', width: 12, height: 12 },
-      { kind: 'size', selector: '.balanceFilter .panelFilterIcon > svg', width: 15, height: 15 }
-    ]
-  },
-  {
     id: 'tray-account-chain-fallback-narrow-1',
     renderer: 'tray',
     state: 'account-home',
@@ -1717,30 +1709,6 @@ const reviewScenarios = () => [
       'Safety check unavailable',
       'The safety check could not be repeated. Nothing was signed or sent.'
     ]
-  },
-  {
-    id: 'tray-transaction-confirming-full-1',
-    renderer: 'tray',
-    state: 'transaction-confirming',
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.txLifecycle',
-    requiredControls: ['View details'],
-    requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
-    layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
-  },
-  {
-    id: 'tray-transaction-confirmed-full-1',
-    renderer: 'tray',
-    state: 'transaction-confirmed',
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.txLifecycle-success',
-    requiredControls: ['View details', 'Close'],
-    requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
-    layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
   },
   {
     id: 'tray-account-activity-full-1',
@@ -1918,6 +1886,66 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Ethereum', '2', 'gwei', 'Details']
       },
       {
+        id: `tray-account-balances-full-${scale}`,
+        renderer: 'tray',
+        state: 'account-balances',
+        balanceArtwork: true,
+        glideSide: 'left',
+        workspaceOpen: true,
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.accountLedgerView',
+        requiredControls: ['Back', 'Filter balances', 'Add token'],
+        requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
+        layoutExpectations: [
+          { kind: 'hidden', selector: '.accountSelectorOpen' },
+          { kind: 'hidden', selector: '.balancesExpandedScroll > ._txMain' },
+          { kind: 'size', selector: '.balancesAssetMark .assetMarkChain', width: 12, height: 12 },
+          { kind: 'size', selector: '.balanceFilter .panelFilterIcon > svg', width: 15, height: 15 },
+          {
+            kind: 'computed-style',
+            selector: '.balancesAssetMark .assetMarkGlyph',
+            property: 'borderTopColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.balancesAssetMark .assetMarkGlyph',
+            property: 'backgroundColor',
+            value: 'rgba(0, 0, 0, 0)'
+          }
+        ]
+      },
+      {
+        id: `tray-transaction-confirming-full-${scale}`,
+        renderer: 'tray',
+        state: 'transaction-confirming',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.txLifecycle',
+        requiredControls: ['View details'],
+        requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }
+        ]
+      },
+      {
+        id: `tray-transaction-confirmed-full-${scale}`,
+        renderer: 'tray',
+        state: 'transaction-confirmed',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.txLifecycle-success',
+        requiredControls: ['View details', 'Close'],
+        requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }
+        ]
+      },
+      {
         id: `dash-delegation-full-${scale}`,
         renderer: 'dash',
         state: 'delegation',
@@ -1973,6 +2001,45 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Yearn Wrapped Ether', 'yvWETH-1'],
         layoutExpectations: [
           { kind: 'size', selector: '.customTokensAssetMark .assetMarkGlyph', width: 30, height: 30 },
+          {
+            kind: 'computed-style',
+            selector: '.customTokensAssetMark .assetMarkGlyph',
+            property: 'borderTopColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.customTokensAssetMark .assetMarkGlyph',
+            property: 'backgroundColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          { kind: 'size', selector: '.customTokensListItemExpand', width: 44, height: 44 }
+        ]
+      },
+      {
+        id: `dash-tokens-list-short-${scale}`,
+        renderer: 'dash',
+        state: 'tokens-list',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: SHORT_SHELL_HEIGHT,
+        ready: '.customTokensListItem',
+        requiredControls: ['Add token', 'Expand yvWETH-1 token on chain 1'],
+        requiredText: ['Yearn Wrapped Ether', 'yvWETH-1'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.customTokensAssetMark .assetMarkGlyph', width: 30, height: 30 },
+          {
+            kind: 'computed-style',
+            selector: '.customTokensAssetMark .assetMarkGlyph',
+            property: 'borderTopColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.customTokensAssetMark .assetMarkGlyph',
+            property: 'backgroundColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
           { kind: 'size', selector: '.customTokensListItemExpand', width: 44, height: 44 }
         ]
       },
