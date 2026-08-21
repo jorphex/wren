@@ -948,6 +948,18 @@ export class Footer extends React.Component {
               })
             }
           })
+        } else if (req.type === 'switchChain') {
+          const destinationName =
+            this.store('main.networks', req.chain.type, req.chain.id, 'name') || `Chain ${req.chain.id}`
+          return this.renderLightweightRequestFooter({
+            approveLabel: 'Switch network',
+            compactActions: true,
+            contextDetail: `Chain ${req.chain.id}`,
+            contextIcon: 'network',
+            contextTitle: destinationName,
+            onApprove: () => this.approve(req.handlerId, req),
+            onDecline: () => this.decline(req.handlerId, req)
+          })
         } else if (req.type === 'addToken') {
           const requestReference = { account: req.account, handlerId: req.handlerId }
           return this.renderLightweightRequestFooter({

@@ -560,7 +560,7 @@ it('forwards explicit account consent without a standing capability check', asyn
   expect(provider.send).toHaveBeenCalled()
 })
 
-it('uses unauthorized rather than user-rejected when a chain switch lacks permission', async () => {
+it('forwards chain switching to the provider-owned consent boundary', async () => {
   accounts.getSelectedAddresses.mockReturnValue(['0xc93452A74e596e81E4f73Ca1AcFF532089AD4c62'])
   const payload = {
     id: 7,
@@ -569,11 +569,23 @@ it('uses unauthorized rather than user-rejected when a chain switch lacks permis
     params: [{ chainId: '0x1' }]
   }
 
+  provider.send.mockImplementationOnce((requestPayload, response) =>
+    response({
+      id: requestPayload.id,
+      jsonrpc: requestPayload.jsonrpc,
+      error: { code: 4100, message: 'Origin is not authorized to switch chains' }
+    })
+  )
+
   await expect(send({ body: JSON.stringify(payload) })).resolves.toMatchObject({
     status: 200,
     body: { id: 7, jsonrpc: '2.0', error: { code: 4100 } }
   })
-  expect(provider.send).not.toHaveBeenCalled()
+  expect(isTrusted).not.toHaveBeenCalled()
+  expect(provider.send).toHaveBeenCalledWith(
+    expect.objectContaining({ method: 'wallet_switchEthereumChain', _origin: 'test-origin' }),
+    expect.any(Function)
+  )
 })
 
 it.each(['caip_request', 'wallet_request'])(

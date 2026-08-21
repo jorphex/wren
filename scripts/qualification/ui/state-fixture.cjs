@@ -212,6 +212,21 @@ const accountAccessRequest = () => ({
   payload: { id: 70, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
 })
 
+const switchChainRequest = () => ({
+  handlerId: 'qualification-switch-chain',
+  type: 'switchChain',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'basescan',
+  sourceChainId: 1,
+  chain: { type: 'ethereum', id: 8453 },
+  payload: {
+    id: 71,
+    jsonrpc: '2.0',
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: '0x2105' }]
+  }
+})
+
 const addressLookalikeRequest = () => ({
   handlerId: 'qualification-address-lookalike',
   activityId: '77777777-7777-4777-8777-777777777777',
@@ -1701,6 +1716,47 @@ const fixtureFor = (scenario) => {
     const request = accountAccessRequest()
     prepareSelectedAccount(state, request)
     state.main.origins = { workshop: { name: 'basescan.org' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: {
+          step: 'confirm',
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId
+        }
+      }
+    ]
+    state.windows.panel.footer.height = 114
+  }
+
+  if (scenario.state === 'switch-chain-review') {
+    const request = switchChainRequest()
+    prepareSelectedAccount(state, request)
+    state.main.origins = { basescan: { name: 'https://basescan.org' } }
+    state.main.networks.ethereum = {
+      1: {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      },
+      8453: {
+        id: 8453,
+        name: 'Base',
+        on: true,
+        connection: { endpoints: [{ connected: true, status: 'connected' }] }
+      }
+    }
+    state.main.networksMeta.ethereum = {
+      1: {
+        primaryColor: 'wren-chain-ethereum',
+        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
+      },
+      8453: {
+        primaryColor: 'wren-chain-base',
+        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
+      }
+    }
     state.windows.panel.nav = [
       {
         view: 'requestView',

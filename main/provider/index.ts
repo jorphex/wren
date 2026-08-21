@@ -16,6 +16,7 @@ import accounts, {
   TransactionRequest,
   SignTypedDataRequest,
   AddChainRequest,
+  SwitchChainRequest,
   AddTokenRequest,
   WalletCallsClaimEvidence,
   WalletCallsRequest
@@ -72,7 +73,10 @@ import { getRequestSignal, inheritRequestSignal } from './requestSignal'
 import { summarizeRpcError } from '../security/rpcLogging'
 import { isRecoverableAccountCodeEvidenceError, simulateWalletCalls } from '../transaction/simulation'
 import { assertDappGuardrailReviewStable, guardrailWarningData, reviewDappGuardrail } from './dappGuardrails'
-import { isCurrentRequestOriginAuthorized } from '../rpc/requestAuthorization'
+import {
+  isCurrentPreAccessSwitchOriginAuthorized,
+  isCurrentRequestOriginAuthorized
+} from '../rpc/requestAuthorization'
 
 import { Subscription, SubscriptionType, hasSubscriptionPermission } from './subscriptions'
 import {
@@ -449,14 +453,9 @@ export class Provider extends EventEmitter {
 
   chainChanged(chainId: number, originId: string) {
     const chain = intToHex(chainId)
-    const address = accounts.getSelectedAddresses()[0]
 
     this.subscriptions.chainChanged
-      .filter(
-        (subscription) =>
-          subscription.originId === originId &&
-          hasSubscriptionPermission(SubscriptionType.CHAIN, address, subscription.originId, chainId)
-      )
+      .filter((subscription) => subscription.originId === originId)
       .forEach((subscription) => this.sendSubscriptionData(subscription.id, chain))
   }
 
@@ -468,13 +467,8 @@ export class Provider extends EventEmitter {
   }
 
   networkChanged(netId: number | string, originId: string) {
-    const address = accounts.getSelectedAddresses()[0]
     this.subscriptions.networkChanged
-      .filter(
-        (subscription) =>
-          subscription.originId === originId &&
-          hasSubscriptionPermission(SubscriptionType.NETWORK, address, subscription.originId, netId)
-      )
+      .filter((subscription) => subscription.originId === originId)
       .forEach((subscription) => this.sendSubscriptionData(subscription.id, netId))
   }
 
@@ -2468,12 +2462,53 @@ export class Provider extends EventEmitter {
       if (!origin) {
         return resError({ message: 'Unknown requesting origin', code: 4100 }, payload, res)
       }
-
-      if (!hasOriginCapability(payload, { method: payload.method, chainId })) {
-        return resError({ message: 'Origin is not authorized to switch chains', code: 4100 }, payload, res)
-      }
       if (origin.chain.id === chainId) return res({ id: payload.id, jsonrpc: '2.0', result: null })
 
+      const authorized = hasOriginCapability(payload, { method: payload.method, chainId })
+      if (!authorized) {
+        const currentAccount = accounts.current()
+        if (!currentAccount) {
+          return resError(
+            { message: 'No account selected to approve the chain-switch request', code: 4100 },
+            payload,
+            res
+          )
+        }
+
+        const handlerId = this.addRequestHandler(res)
+        if (!handlerId) return
+        const request: SwitchChainRequest = {
+          handlerId,
+          type: 'switchChain',
+          chain: { type: origin.chain.type, id: chainId },
+          sourceChainId: origin.chain.id,
+          account: currentAccount.id,
+          origin: originId,
+          payload
+        }
+        const principalState = {
+          origins: store('main.origins') || {},
+          extensionCredentials: store('main.extensionCredentials') || {},
+          nativePeerCredentials: store('main.nativePeerCredentials') || {}
+        }
+        if (!isCurrentPreAccessSwitchOriginAuthorized(request, principalState)) {
+          return resError(
+            { message: 'Origin is not authorized to switch chains', code: 4100 },
+            payload,
+            (response) => this.respondToRequest(handlerId, response)
+          )
+        }
+
+        const requestResponder = inheritRequestSignal(res, (response: RPCResponsePayload) => {
+          this.respondToRequest(handlerId, response)
+        })
+        try {
+          accounts.addRequest(request, requestResponder)
+        } catch (error) {
+          return resError(error as Error, payload, requestResponder)
+        }
+        return
+      }
       let switchOriginChain: ReturnType<typeof requireStoreAction>
       try {
         switchOriginChain = requireStoreAction('switchOriginChain')
@@ -2491,6 +2526,62 @@ export class Provider extends EventEmitter {
     } catch (e) {
       return resError(e as EVMError, payload, res)
     }
+  }
+
+  approveSwitchChain(accountId: string, handlerId: string, cb: Callback<void>) {
+    const currentAccount = accounts.current()
+    let request: SwitchChainRequest | undefined
+    try {
+      const candidate = accounts.getActiveRequestForAccount(accountId, handlerId)
+      if (candidate.type === 'switchChain') request = candidate as SwitchChainRequest
+    } catch {
+      request = undefined
+    }
+
+    if (
+      !currentAccount ||
+      currentAccount.id.toLowerCase() !== accountId.toLowerCase() ||
+      !request ||
+      request.account.toLowerCase() !== currentAccount.id.toLowerCase()
+    ) {
+      return cb(new Error('Chain-switch request is no longer available'))
+    }
+
+    const reject = (error: EVMError) => {
+      currentAccount.rejectRequest(request as SwitchChainRequest, error)
+      cb(Object.assign(new Error(error.message), { code: error.code }))
+    }
+    const principalState = {
+      origins: store('main.origins') || {},
+      extensionCredentials: store('main.extensionCredentials') || {},
+      nativePeerCredentials: store('main.nativePeerCredentials') || {}
+    }
+    if (!isCurrentPreAccessSwitchOriginAuthorized(request, principalState)) {
+      return reject({ code: 4100, message: 'Chain-switch origin is no longer authorized' })
+    }
+
+    const targetChain = store('main.networks', request.chain.type, request.chain.id)
+    if (!targetChain) return reject({ code: 4902, message: 'Requested chain is no longer available' })
+    if (targetChain.on === false) {
+      return reject({ code: 4901, message: `Wren is not connected to chain ${request.chain.id}` })
+    }
+
+    const origin = storeApi.getOrigin(request.origin)
+    if (!origin || origin.chain.id !== request.sourceChainId || origin.chain.type !== request.chain.type) {
+      return reject({ code: 4901, message: 'Chain-switch request is stale' })
+    }
+
+    let switchOriginChain: ReturnType<typeof requireStoreAction>
+    try {
+      switchOriginChain = requireStoreAction('switchOriginChain')
+    } catch {
+      return reject({ code: -32603, message: 'Store action switchOriginChain is unavailable' })
+    }
+
+    accounts.rejectUnapprovedRequestsForOriginChain(request.origin, request.sourceChainId, request.handlerId)
+    switchOriginChain(request.origin, request.chain.id, request.chain.type)
+    currentAccount.resolveRequest(request, null)
+    cb(null)
   }
 
   private addEthereumChain(payload: RPCRequestPayload, res: RPCRequestCallback) {

@@ -210,6 +210,10 @@ const rpc = {
       }
       return
     }
+    if (req.type === 'switchChain') {
+      provider.approveSwitchChain(req.account, req.handlerId, cb)
+      return
+    }
     const permissions = store('main.permissions', req.account) || {}
     const authorizationError = enforceRequestOriginAuthorization(
       req,
@@ -333,7 +337,7 @@ const rpc = {
       return
     }
 
-    if (req.type === 'transaction' || isSignatureRequest(req)) {
+    if (req.type === 'transaction' || isSignatureRequest(req) || req.type === 'switchChain') {
       if (!accounts.declineRequest(req.handlerId, req.account)) {
         return cb(new Error('Request can no longer be cancelled'))
       }

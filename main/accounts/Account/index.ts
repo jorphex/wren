@@ -69,6 +69,7 @@ import type {
   PermitSignatureRequest,
   SignatureRequest,
   SignRequest,
+  SwitchChainRequest,
   TypedMessage,
   WalletCallsClaimEvidence,
   WalletCallsResponder
@@ -444,7 +445,7 @@ class FrameAccount {
     })
   }
 
-  rejectUnapprovedRequestsForOriginChain(origin: string, chainId: number) {
+  rejectUnapprovedRequestsForOriginChain(origin: string, chainId: number, exceptHandlerId?: string) {
     const requestChainId = (request: AccountRequest) => {
       if (request.type === 'transaction') {
         return parseInt((request as TransactionRequest).data.chainId, 16)
@@ -458,6 +459,9 @@ class FrameAccount {
       if (request.type === 'addToken') {
         return Number((request as AddTokenRequest).token.chainId)
       }
+      if (request.type === 'switchChain') {
+        return (request as SwitchChainRequest).sourceChainId
+      }
       if (request.type === 'walletCalls') {
         return parseInt((request as WalletCallsRequest).chainId, 16)
       }
@@ -469,6 +473,7 @@ class FrameAccount {
         const retainedWalletCalls =
           request.type === 'walletCalls' && Boolean(request.recoverableError) && !request.locked
         if (
+          request.handlerId !== exceptHandlerId &&
           request.origin === origin &&
           (request.status === undefined || retainedWalletCalls) &&
           requestChainId(request) === chainId

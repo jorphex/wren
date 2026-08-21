@@ -702,6 +702,21 @@ it.each([
   expect(link.send).toHaveBeenCalledWith(...expected)
 })
 
+it('routes network consent approval through the stored request lifecycle', async () => {
+  const req = {
+    type: 'switchChain',
+    handlerId: 'switch-footer-action',
+    account: '0x0000000000000000000000000000000000000001',
+    sourceChainId: 1,
+    chain: { type: 'ethereum', id: 8453 }
+  }
+  const { user } = renderRequestFooter(req)
+
+  await user.click(screen.getByRole('button', { name: 'Switch network' }))
+
+  expect(link.rpc).toHaveBeenCalledWith('approveRequest', req, expect.any(Function))
+})
+
 describe('asset suggestion lifecycle', () => {
   const account = '0x0000000000000000000000000000000000000001'
   const handlerId = '11111111-1111-4111-8111-111111111111'

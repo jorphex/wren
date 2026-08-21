@@ -13,6 +13,7 @@ export const ActivityEntrySchema = z
       'transaction',
       'access',
       'addChain',
+      'switchChain',
       'addToken',
       'walletCalls',
       'eip7702Revoke'

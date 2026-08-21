@@ -1,4 +1,5 @@
 import { createPrivateKey, sign } from 'crypto'
+import log from 'electron-log'
 import WebSocket from 'ws'
 import { EventEmitter } from 'stream'
 
@@ -21,7 +22,7 @@ import {
   peerAuthFingerprint
 } from '../../../main/api/peerAuth'
 import { createDesktopAuthIdentity } from '../../../main/api/desktopAuthIdentity'
-import { WREN_EXTENSION_ORIGIN, originIdForName } from '../../../resources/domain/origin'
+import { WREN_EXTENSION_ORIGIN, originIdForInvoker, originIdForName } from '../../../resources/domain/origin'
 import migration73 from '../../../main/store/migrate/migrations/73'
 
 let socketConnection, mockSocket, authenticatedResponse
@@ -43,11 +44,23 @@ const extensionPublicKeys = {
 }
 const extensionFingerprint = peerAuthClientBundleFingerprint(extensionPublicKeys)
 const extensionInstallationId = '7a86842f-7c01-4d0d-b0f7-fc04e0acfd8f'
+const alternateExtensionKeyPair = generatePeerAuthKeyPair()
+const alternateExtensionPageKeyPair = generatePeerAuthKeyPair()
+const alternateExtensionPublicKeys = {
+  control: alternateExtensionKeyPair.publicKey,
+  page: alternateExtensionPageKeyPair.publicKey
+}
+const alternateExtensionFingerprint = peerAuthClientBundleFingerprint(alternateExtensionPublicKeys)
+const alternateExtensionInstallationId = '8b97953f-8d1e-4e1e-91f2-2f14f7f76c6d'
 const flushPromises = async () => {
   for (let index = 0; index < 6; index += 1) await Promise.resolve()
 }
 
-const extensionHello = (keys = extensionPublicKeys, channelRole = 'control') => ({
+const extensionHello = (
+  keys = extensionPublicKeys,
+  channelRole = 'control',
+  installationId = extensionInstallationId
+) => ({
   type: 'frame-auth',
   version: 3,
   step: 'hello',
@@ -55,20 +68,34 @@ const extensionHello = (keys = extensionPublicKeys, channelRole = 'control') => 
   channelRole,
   clientNonce: Buffer.alloc(32, 1).toString('base64url'),
   client: {
-    installationId: extensionInstallationId,
+    installationId,
     fingerprint: peerAuthClientBundleFingerprint(keys),
     roleFingerprint: peerAuthFingerprint(keys[channelRole]),
     publicKeys: keys
   }
 })
 
-const authenticateExtension = async (socket, channelRole = 'control') => {
-  socket.emit('message', JSON.stringify(extensionHello(extensionPublicKeys, channelRole)))
+const authenticateExtension = async (
+  socket,
+  channelRole = 'control',
+  identity = {
+    publicKeys: extensionPublicKeys,
+    privateKeys: {
+      control: extensionKeyPair.privateKey,
+      page: extensionPageKeyPair.privateKey
+    },
+    installationId: extensionInstallationId
+  }
+) => {
+  socket.emit(
+    'message',
+    JSON.stringify(extensionHello(identity.publicKeys, channelRole, identity.installationId))
+  )
   await flushPromises()
   const challenge = JSON.parse(socket.send.mock.calls.at(-1)[0])
   const signature = sign('sha256', extensionAuthPayload(challenge, 'client-response'), {
     key: createPrivateKey({
-      key: channelRole === 'control' ? extensionKeyPair.privateKey : extensionPageKeyPair.privateKey,
+      key: identity.privateKeys[channelRole],
       format: 'jwk'
     }),
     dsaEncoding: 'ieee-p1363'
@@ -89,19 +116,25 @@ const authenticateExtension = async (socket, channelRole = 'control') => {
   return JSON.parse(socket.send.mock.calls.at(-1)[0])
 }
 
-const createAuthenticatedPageSocket = async () => {
+const createAuthenticatedPageSocket = async (identity) => {
   const socket = new EventEmitter()
   socket.readyState = WebSocket.OPEN
   socket.close = jest.fn()
   socket.send = jest.fn()
   socketConnection.emit('connection', socket, extensionRequestFor('page'))
-  await authenticateExtension(socket, 'page')
+  await authenticateExtension(socket, 'page', identity)
   socket.send.mockClear()
   return socket
 }
 
 jest.mock('ws')
 jest.mock('../../../main/store')
+jest.mock('../../../main/chains', () => ({
+  connections: { ethereum: {} },
+  on: jest.fn(),
+  send: jest.fn(),
+  syncDataEmit: jest.fn()
+}))
 jest.mock('../../../main/provider', () => ({ on: jest.fn(), send: jest.fn() }))
 jest.mock('../../../main/accounts', () => ({ current: jest.fn(), getSelectedAddresses: jest.fn(() => []) }))
 jest.mock('../../../main/windows', () => {})
@@ -123,6 +156,13 @@ beforeEach(async () => {
       installationId: extensionInstallationId,
       publicKeys: extensionPublicKeys,
       fingerprint: extensionFingerprint,
+      pairedAt: 1_000
+    },
+    [alternateExtensionFingerprint]: {
+      protocolVersion: 3,
+      installationId: alternateExtensionInstallationId,
+      publicKeys: alternateExtensionPublicKeys,
+      fingerprint: alternateExtensionFingerprint,
       pairedAt: 1_000
     }
   })
@@ -642,6 +682,277 @@ it('forwards a passive companion account probe without opening access UI', async
   expect(store.notify).not.toHaveBeenCalled()
   expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toMatchObject({ result: [] })
   pageSocket.emit('close')
+})
+
+it('keeps BaseScan network consent and account access as separate requests on one authenticated page socket', async () => {
+  const pageSocket = await createAuthenticatedPageSocket()
+  const callbacks = []
+  provider.send.mockImplementation((payload, callback) => callbacks.push({ payload, callback }))
+
+  pageSocket.emit(
+    'message',
+    JSON.stringify({
+      id: 51,
+      jsonrpc: '2.0',
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x2105' }],
+      __frameOrigin: 'https://basescan.org'
+    })
+  )
+  await flushPromises()
+
+  expect(callbacks).toHaveLength(1)
+  expect(callbacks[0].payload).toMatchObject({
+    id: 51,
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: '0x2105' }]
+  })
+  expect(pageSocket.send).not.toHaveBeenCalled()
+
+  callbacks[0].callback({ id: 51, jsonrpc: '2.0', result: null })
+  expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toEqual({ id: 51, jsonrpc: '2.0', result: null })
+
+  pageSocket.emit(
+    'message',
+    JSON.stringify({
+      id: 52,
+      jsonrpc: '2.0',
+      method: 'eth_requestAccounts',
+      params: [],
+      __frameOrigin: 'https://basescan.org'
+    })
+  )
+  await flushPromises()
+
+  expect(callbacks).toHaveLength(2)
+  expect(callbacks[1].payload).toMatchObject({ id: 52, method: 'eth_requestAccounts' })
+  expect(pageSocket.send).toHaveBeenCalledTimes(1)
+
+  callbacks[1].callback({
+    id: 52,
+    jsonrpc: '2.0',
+    result: ['0x0000000000000000000000000000000000000001']
+  })
+  expect(JSON.parse(pageSocket.send.mock.calls[1][0])).toEqual({
+    id: 52,
+    jsonrpc: '2.0',
+    result: ['0x0000000000000000000000000000000000000001']
+  })
+  pageSocket.emit('close')
+})
+
+it('carries approved BaseScan network consent and exact-origin events through the authenticated socket', async () => {
+  const actualProvider = jest.requireActual('../../../main/provider').default
+  const pageSocket = await createAuthenticatedPageSocket()
+  const alternatePageSocket = await createAuthenticatedPageSocket({
+    publicKeys: alternateExtensionPublicKeys,
+    privateKeys: {
+      control: alternateExtensionKeyPair.privateKey,
+      page: alternateExtensionPageKeyPair.privateKey
+    },
+    installationId: alternateExtensionInstallationId
+  })
+  const baseScan = 'https://basescan.org'
+  const etherScan = 'https://etherscan.io'
+  const account = '0x0000000000000000000000000000000000000001'
+  const exactOriginId = originIdForInvoker(baseScan, {
+    provenance: 'companion',
+    sourceId: extensionFingerprint
+  })
+  const pending = []
+  const previousConsoleLevel = log.transports.console.level
+  const currentAccount = {
+    id: account,
+    address: account,
+    rejectRequest: jest.fn(),
+    resolveRequest: jest.fn((request, result) => {
+      request.res({ id: request.payload.id, jsonrpc: request.payload.jsonrpc, result })
+      pending.splice(pending.indexOf(request), 1)
+    })
+  }
+  const forwardSubscription = (payload, chain) => handleWebSocketSubscription(payload, chain)
+
+  const sendPageRequest = async (socket, payload) => {
+    const responseIndex = socket.send.mock.calls.length
+    socket.emit('message', JSON.stringify(payload))
+    await flushPromises()
+    return socket.send.mock.calls.slice(responseIndex).map(([message]) => JSON.parse(message))
+  }
+
+  try {
+    log.transports.console.level = false
+    actualProvider.handlers = {}
+    Object.keys(actualProvider.subscriptions).forEach(
+      (subscriptionType) => (actualProvider.subscriptions[subscriptionType] = [])
+    )
+    actualProvider.on('data:subscription', forwardSubscription)
+    provider.send.mockImplementation(actualProvider.send.bind(actualProvider))
+    accounts.current.mockReturnValue(currentAccount)
+    accounts.getSelectedAddresses.mockReturnValue([account])
+    accounts.addRequest = jest.fn((request, responder) => {
+      request.res = responder
+      pending.push(request)
+    })
+    accounts.getActiveRequestForAccount = jest.fn((accountId, handlerId) => {
+      const request = pending.find(
+        (candidate) => candidate.account === accountId && candidate.handlerId === handlerId
+      )
+      if (!request) throw new Error('request is waiting for review')
+      return request
+    })
+    accounts.rejectUnapprovedRequestsForOriginChain = jest.fn()
+    store.set('main.permissions', {})
+    store.set('main.networks.ethereum', {
+      1: { id: 1, on: true },
+      8453: { id: 8453, on: true }
+    })
+    store.initOrigin.mockImplementation((originId, origin) => {
+      store.set('main.origins', originId, {
+        ...origin,
+        sessionOnly: false,
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      store.getObserver('provider:origins').fire()
+    })
+    store.addOriginRequest = jest.fn()
+    store.switchOriginChain = jest.fn((originId, chainId, type) => {
+      store.set('main.origins', originId, 'chain', { id: chainId, type })
+      store.getObserver('provider:origins').fire()
+    })
+
+    const [chainSubscriptionResponse] = await sendPageRequest(pageSocket, {
+      id: 61,
+      jsonrpc: '2.0',
+      method: 'eth_subscribe',
+      params: ['chainChanged'],
+      __frameOrigin: baseScan
+    })
+    const [networkSubscriptionResponse] = await sendPageRequest(pageSocket, {
+      id: 62,
+      jsonrpc: '2.0',
+      method: 'eth_subscribe',
+      params: ['networkChanged'],
+      __frameOrigin: baseScan
+    })
+    await sendPageRequest(pageSocket, {
+      id: 63,
+      jsonrpc: '2.0',
+      method: 'eth_subscribe',
+      params: ['chainChanged'],
+      __frameOrigin: etherScan
+    })
+    await sendPageRequest(alternatePageSocket, {
+      id: 64,
+      jsonrpc: '2.0',
+      method: 'eth_subscribe',
+      params: ['chainChanged'],
+      __frameOrigin: baseScan
+    })
+    pageSocket.send.mockClear()
+    alternatePageSocket.send.mockClear()
+
+    expect(store('main.origins', exactOriginId)).toMatchObject({
+      name: baseScan,
+      provenance: 'companion',
+      sourceId: extensionFingerprint,
+      chain: { id: 1, type: 'ethereum' }
+    })
+    expect(
+      jest
+        .requireActual('../../../main/store/state/types/extensionCredential')
+        .ExtensionCredentialSchema.safeParse(store('main.extensionCredentials', extensionFingerprint)).success
+    ).toBe(true)
+    expect(
+      jest.requireActual('../../../main/rpc/requestAuthorization').isCurrentPreAccessSwitchOriginAuthorized(
+        {
+          type: 'switchChain',
+          origin: exactOriginId,
+          account,
+          payload: { method: 'wallet_switchEthereumChain' }
+        },
+        {
+          origins: store('main.origins'),
+          extensionCredentials: store('main.extensionCredentials'),
+          nativePeerCredentials: {}
+        }
+      )
+    ).toBe(true)
+
+    pageSocket.emit(
+      'message',
+      JSON.stringify({
+        id: 65,
+        jsonrpc: '2.0',
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x2105' }],
+        __frameOrigin: baseScan
+      })
+    )
+    await flushPromises()
+
+    expect(pageSocket.send).not.toHaveBeenCalled()
+    expect(pending).toHaveLength(1)
+    expect(pending[0]).toMatchObject({ type: 'switchChain', origin: exactOriginId })
+
+    await new Promise((resolve, reject) =>
+      actualProvider.approveSwitchChain(account, pending[0].handlerId, (error) =>
+        error ? reject(error) : resolve()
+      )
+    )
+    await flushPromises()
+
+    const switchMessages = pageSocket.send.mock.calls.map(([message]) => JSON.parse(message))
+    expect(switchMessages).toEqual(
+      expect.arrayContaining([
+        {
+          jsonrpc: '2.0',
+          method: 'eth_subscription',
+          params: { subscription: chainSubscriptionResponse.result, result: '0x2105' }
+        },
+        {
+          jsonrpc: '2.0',
+          method: 'eth_subscription',
+          params: { subscription: networkSubscriptionResponse.result, result: 8453 }
+        },
+        { id: 65, jsonrpc: '2.0', result: null }
+      ])
+    )
+    expect(switchMessages).toHaveLength(3)
+    expect(alternatePageSocket.send).not.toHaveBeenCalled()
+    expect(store('main.permissions', account, exactOriginId)).toBeUndefined()
+
+    pageSocket.send.mockClear()
+    pageSocket.emit(
+      'message',
+      JSON.stringify({
+        id: 66,
+        jsonrpc: '2.0',
+        method: 'eth_requestAccounts',
+        params: [],
+        __frameOrigin: baseScan
+      })
+    )
+    await flushPromises()
+
+    expect(pageSocket.send).not.toHaveBeenCalled()
+    expect(pending).toHaveLength(1)
+    expect(pending[0]).toMatchObject({ type: 'access', origin: exactOriginId })
+    store.set('main.permissions', account, exactOriginId, pending[0].permission)
+    pending[0].res()
+    await flushPromises()
+
+    expect(pageSocket.send).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(pageSocket.send.mock.calls[0][0])).toEqual({
+      id: 66,
+      jsonrpc: '2.0',
+      result: [account]
+    })
+  } finally {
+    log.transports.console.level = previousConsoleLevel
+    actualProvider.off('data:subscription', forwardSubscription)
+    pageSocket.emit('close')
+    alternatePageSocket.emit('close')
+  }
 })
 
 it('rejects non-canonical companion origins and extension metadata from local clients', async () => {

@@ -1,4 +1,5 @@
 import protectedMethods, {
+  accountCapabilityConsentMethods,
   capabilityConsentMethods,
   passivePermissionMethods,
   requiresStandingCapability
@@ -27,6 +28,12 @@ it.each(['eth_requestAccounts', 'eth_sendTransaction', 'wallet_switchEthereumCha
       !passivePermissionMethods.has(method) && !capabilityConsentMethods.has(method)
     )
 )
+
+it('routes chain switching to its dedicated consent flow without treating it as standing access', () => {
+  expect(capabilityConsentMethods).toContain('wallet_switchEthereumChain')
+  expect(accountCapabilityConsentMethods).not.toContain('wallet_switchEthereumChain')
+  expect(requiresStandingCapability('wallet_switchEthereumChain')).toBe(false)
+})
 
 it.each(['wallet_sendCalls', 'wallet_getCallsStatus', 'wallet_showCallsStatus', 'wallet_getCapabilities'])(
   'requires an authorized origin for %s',

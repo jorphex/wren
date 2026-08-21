@@ -25,6 +25,7 @@ import { createAccountPermission } from '../../../main/provider/permissions'
 import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { GasFeesSource } from '../../../resources/domain/transaction'
 import recentRecipientsRuntime from '../../../main/recentRecipients/runtime'
+import { generatePeerAuthKeyPair, peerAuthClientBundleFingerprint } from '../../../main/api/peerAuth'
 import {
   TransactionFundingError,
   WalletCallFundingError,
@@ -1984,7 +1985,7 @@ describe('#send', () => {
     })
 
     it('rejects instead of hanging when no account can approve the request', (done) => {
-      accounts.current.mockReturnValueOnce(null)
+      accounts.current.mockReturnValue(null)
 
       sendRequest(validChain, (response) => {
         try {
@@ -2085,6 +2086,152 @@ describe('#send', () => {
       )
     })
 
+    it('keeps BaseScan network consent separate from account access on a fresh origin', async () => {
+      const originName = 'https://basescan.org'
+      const publicKeys = {
+        control: generatePeerAuthKeyPair().publicKey,
+        page: generatePeerAuthKeyPair().publicKey
+      }
+      const sourceId = peerAuthClientBundleFingerprint(publicKeys)
+      const originId = originIdForInvoker(originName, { provenance: 'companion', sourceId })
+      const otherOriginId = originIdForInvoker('https://etherscan.io', {
+        provenance: 'companion',
+        sourceId
+      })
+      const otherFingerprintOriginId = originIdForInvoker(originName, {
+        provenance: 'companion',
+        sourceId: 'B'.repeat(43)
+      })
+      store.set('main.origins', originId, {
+        chain: { id: 1, type: 'ethereum' },
+        name: originName,
+        provenance: 'companion',
+        sourceId,
+        sessionOnly: false,
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      store.set('main.extensionCredentials', sourceId, {
+        protocolVersion: 3,
+        installationId: '11111111-1111-4111-8111-111111111111',
+        publicKeys,
+        fingerprint: sourceId,
+        pairedAt: 1
+      })
+      store.set('main.networks.ethereum', 1, { id: 1, on: true })
+      store.set('main.networks.ethereum', 8453, { id: 8453, on: true })
+      connection.connections.ethereum[8453] = {
+        chainConfig: chainConfig(8453, 'london'),
+        primary: { connected: true }
+      }
+      const subscriptionEvents = []
+      const subscriptionListener = (event) => subscriptionEvents.push(event)
+      provider.on('data:subscription', subscriptionListener)
+      provider.subscriptions.chainChanged = [
+        { id: 'chain-exact', originId },
+        { id: 'chain-other-origin', originId: otherOriginId },
+        { id: 'chain-other-fingerprint', originId: otherFingerprintOriginId }
+      ]
+      provider.subscriptions.networkChanged = [
+        { id: 'network-exact', originId },
+        { id: 'network-other-origin', originId: otherOriginId },
+        { id: 'network-other-fingerprint', originId: otherFingerprintOriginId }
+      ]
+      hasSubscriptionPermission.mockClear()
+      store.switchOriginChain = jest.fn((selectedOrigin, chainId, type) => {
+        store.set('main.origins', selectedOrigin, 'chain', { id: chainId, type })
+        provider.chainChanged(chainId, selectedOrigin)
+        provider.networkChanged(chainId, selectedOrigin)
+      })
+
+      let queuedResponder
+      accounts.addRequest.mockImplementationOnce((req, responder) => {
+        req.res = responder
+        queuedResponder = responder
+        accountRequests.push(req)
+      })
+      currentAccount.resolveRequest.mockImplementationOnce((req, result) => {
+        req.res({ id: req.payload.id, jsonrpc: req.payload.jsonrpc, result })
+      })
+      const switchResponse = jest.fn()
+
+      provider.send(
+        {
+          id: 41,
+          jsonrpc: '2.0',
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }],
+          _origin: originId
+        },
+        switchResponse
+      )
+
+      expect(switchResponse).not.toHaveBeenCalled()
+      expect(accountRequests).toHaveLength(1)
+      expect(accountRequests[0]).toMatchObject({
+        type: 'switchChain',
+        account: address,
+        origin: originId,
+        sourceChainId: 1,
+        chain: { type: 'ethereum', id: 8453 }
+      })
+      expect(store('main.permissions', address, originId)).toBeUndefined()
+
+      await new Promise((resolve, reject) =>
+        provider.approveSwitchChain(address, accountRequests[0].handlerId, (error) =>
+          error ? reject(error) : resolve()
+        )
+      )
+
+      expect(queuedResponder).toBeDefined()
+      expect(switchResponse).toHaveBeenCalledWith({ id: 41, jsonrpc: '2.0', result: null })
+      expect(store.switchOriginChain).toHaveBeenCalledWith(originId, 8453, 'ethereum')
+      expect(store('main.permissions', address, originId)).toBeUndefined()
+      expect(subscriptionEvents).toEqual([
+        {
+          jsonrpc: '2.0',
+          method: 'eth_subscription',
+          params: { subscription: 'chain-exact', result: '0x2105' }
+        },
+        {
+          jsonrpc: '2.0',
+          method: 'eth_subscription',
+          params: { subscription: 'network-exact', result: 8453 }
+        }
+      ])
+      expect(hasSubscriptionPermission).not.toHaveBeenCalledWith(
+        expect.stringMatching(/^(?:chain|network)Changed$/),
+        expect.anything(),
+        expect.anything(),
+        expect.anything()
+      )
+
+      const accountsProbe = await new Promise((resolve) =>
+        provider.send(
+          { id: 42, jsonrpc: '2.0', method: 'eth_accounts', params: [], _origin: originId },
+          resolve
+        )
+      )
+      expect(accountsProbe.result).toEqual([])
+
+      accounts.addRequest.mockImplementationOnce((req, callback) => {
+        accountRequests.push(req)
+        store.set('main.permissions', address, { [originId]: req.permission })
+        callback()
+      })
+      const accessResponse = await new Promise((resolve) =>
+        provider.send(
+          { id: 43, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [], _origin: originId },
+          resolve
+        )
+      )
+      expect(accessResponse.result).toEqual([address])
+      expect(accountRequests).toHaveLength(2)
+      expect(accountRequests[1]).toMatchObject({ type: 'access', origin: originId, account: address })
+      provider.off('data:subscription', subscriptionListener)
+      store.set('main.networks.ethereum', 8453, undefined)
+      delete connection.connections.ethereum[8453]
+    })
+
     it('resolves without prompting when the origin is already on the requested chain', (done) => {
       store.set('main.networks.ethereum', 1, { id: 1 })
       authorizeOrigin()
@@ -2097,19 +2244,108 @@ describe('#send', () => {
       })
     })
 
-    it('rejects instead of hanging when no account has authorized the switch', (done) => {
+    it('treats a permissionless same-chain request as a no-op without exposing an account', () => {
+      store.set('main.networks.ethereum', 1, { id: 1 })
+      const response = jest.fn()
+
+      send({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] }, response)
+
+      expect(response).toHaveBeenCalledWith(expect.objectContaining({ result: null }))
+      expect(accountRequests).toHaveLength(0)
+      expect(store('main.permissions', address, defaultOriginId)).toBeUndefined()
+    })
+
+    it('rejects instead of hanging when no account is selected for network consent', (done) => {
       store.set('main.networks.ethereum', 5, { id: 5 })
-      accounts.current.mockReturnValueOnce(null)
+      accounts.current.mockReturnValue(null)
 
       send({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x5' }] }, (response) => {
         expect(response.error).toEqual({
           code: 4100,
-          message: 'Origin is not authorized to switch chains'
+          message: 'No account selected to approve the chain-switch request'
         })
         expect(accountRequests).toHaveLength(0)
         expect(store.switchOriginChain).not.toHaveBeenCalled()
         done()
       })
+    })
+
+    it('returns user rejection without granting account access when network consent is declined', () => {
+      const originName = 'https://basescan.org'
+      const originId = originIdForInvoker(originName, { provenance: 'direct' })
+      store.set('main.origins', originId, {
+        chain: { id: 1, type: 'ethereum' },
+        name: originName,
+        provenance: 'direct',
+        sessionOnly: false,
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      store.set('main.networks.ethereum', 8453, { id: 8453, on: true })
+      store.switchOriginChain = jest.fn()
+      accounts.addRequest.mockImplementationOnce((req) => accountRequests.push(req))
+      const response = jest.fn()
+
+      provider.send(
+        {
+          id: 44,
+          jsonrpc: '2.0',
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }],
+          _origin: originId
+        },
+        response
+      )
+      provider.declineRequest(accountRequests[0])
+
+      expect(response).toHaveBeenCalledWith({
+        id: 44,
+        jsonrpc: '2.0',
+        error: { code: 4001, message: 'User rejected the request' }
+      })
+      expect(store('main.permissions', address, originId)).toBeUndefined()
+      expect(store.switchOriginChain).not.toHaveBeenCalled()
+      store.set('main.networks.ethereum', 8453, undefined)
+    })
+
+    it('fails approval when the origin route changed while network consent was pending', () => {
+      const originName = 'https://basescan.org'
+      const originId = originIdForInvoker(originName, { provenance: 'direct' })
+      store.set('main.origins', originId, {
+        chain: { id: 1, type: 'ethereum' },
+        name: originName,
+        provenance: 'direct',
+        sessionOnly: false,
+        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+      })
+      store.set('main.networks.ethereum', 8453, { id: 8453, on: true })
+      store.switchOriginChain = jest.fn()
+      accounts.addRequest.mockImplementationOnce((req) => accountRequests.push(req))
+      currentAccount.rejectRequest.mockImplementationOnce((req, error) => {
+        req.res?.({ id: req.payload.id, jsonrpc: req.payload.jsonrpc, error })
+      })
+
+      provider.send(
+        {
+          id: 45,
+          jsonrpc: '2.0',
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x2105' }],
+          _origin: originId
+        },
+        jest.fn()
+      )
+      store.set('main.origins', originId, 'chain', { id: 10, type: 'ethereum' })
+      const callback = jest.fn()
+
+      provider.approveSwitchChain(address, accountRequests[0].handlerId, callback)
+
+      expect(callback.mock.calls[0][0]).toMatchObject({ message: 'Chain-switch request is stale' })
+      expect(currentAccount.rejectRequest).toHaveBeenCalledWith(
+        accountRequests[0],
+        expect.objectContaining({ code: 4901 })
+      )
+      expect(store.switchOriginChain).not.toHaveBeenCalled()
+      store.set('main.networks.ethereum', 8453, undefined)
     })
 
     it('rejects a known origin that lacks account permission', (done) => {
@@ -6045,17 +6281,26 @@ describe('state change events', () => {
     store.getObserver('provider:origins').fire()
   })
 
-  it('does not deliver chain changes after subscription permission expires or is revoked', () => {
-    provider.subscriptions.chainChanged = [subscription]
+  it('delivers chain and network changes only to the exact origin without account permission', () => {
+    const otherOriginSubscription = { id: 'other-origin', originId: 'other-origin' }
+    provider.subscriptions.chainChanged = [subscription, otherOriginSubscription]
+    provider.subscriptions.networkChanged = [
+      { id: 'network-exact', originId: subscription.originId },
+      { id: 'network-other', originId: otherOriginSubscription.originId }
+    ]
     hasSubscriptionPermission.mockReturnValue(false)
     const listener = jest.fn()
     provider.on('data:subscription', listener)
 
     provider.chainChanged(10, subscription.originId)
+    provider.networkChanged(10, subscription.originId)
 
     provider.off('data:subscription', listener)
-    expect(listener).not.toHaveBeenCalled()
-    expect(hasSubscriptionPermission).toHaveBeenCalledWith('chainChanged', address, subscription.originId, 10)
+    expect(listener.mock.calls.map(([event]) => event.params)).toEqual([
+      { subscription: subscription.id, result: '0xa' },
+      { subscription: 'network-exact', result: 10 }
+    ])
+    expect(hasSubscriptionPermission).not.toHaveBeenCalled()
   })
 
   it('fires a chainsChanged event to subscribers', (done) => {

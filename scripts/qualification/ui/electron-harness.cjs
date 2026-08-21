@@ -497,10 +497,7 @@ const runScenario = async (scenario) => {
         })()`,
         true
       )
-      if (
-        state &&
-        (state.scrollLeft !== 0 || state.active !== 1 || state.renderedInactive !== 0)
-      ) {
+      if (state && (state.scrollLeft !== 0 || state.active !== 1 || state.renderedInactive !== 0)) {
         throw new Error(`Generated-wallet viewport is unstable: ${JSON.stringify(state)}`)
       }
     }
@@ -667,6 +664,7 @@ const main = async () => {
         'empty account tray',
         'control center dashboard',
         'selected account network and gas module',
+        'site network-change consent review',
         'selected software account delegation',
         'custom-token management',
         'account-scoped connected-app guardrail editor',

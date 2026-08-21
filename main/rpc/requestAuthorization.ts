@@ -55,6 +55,69 @@ const requestChainId = (request: RequestOrigin) => {
 const isLocalCancelRecovery = (request: RequestOrigin) =>
   request.type === 'transaction' && request.replacement?.kind === 'cancel'
 
+const isCanonicalExternalWebOrigin = (origin: string) => {
+  try {
+    const parsed = new URL(origin)
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.origin === origin
+  } catch {
+    return false
+  }
+}
+
+const sourceBoundPrincipalMatches = (
+  originId: string,
+  principal: import('../store/state/types/origin').Origin,
+  state: RequestPrincipalState
+) => {
+  if (principal.provenance === 'direct') {
+    return !principal.sourceId && originIdForInvoker(principal.name, { provenance: 'direct' }) === originId
+  }
+  if (!principal.sourceId) return false
+  if (principal.provenance === 'companion') {
+    const credential = ExtensionCredentialSchema.safeParse(state.extensionCredentials[principal.sourceId])
+    return !!(
+      credential.success &&
+      credential.data.fingerprint === principal.sourceId &&
+      originIdForInvoker(principal.name, {
+        provenance: 'companion',
+        sourceId: principal.sourceId
+      }) === originId
+    )
+  }
+  if (principal.provenance === 'native') {
+    const credential = NativePeerCredentialSchema.safeParse(state.nativePeerCredentials[principal.sourceId])
+    return !!(
+      credential.success &&
+      credential.data.fingerprint === principal.sourceId &&
+      originIdForInvoker(principal.name, {
+        provenance: 'native',
+        sourceId: principal.sourceId
+      }) === originId
+    )
+  }
+  return false
+}
+
+export function isCurrentPreAccessSwitchOriginAuthorized(
+  request: RequestOrigin,
+  state: RequestPrincipalState
+) {
+  if (
+    request.type !== 'switchChain' ||
+    request.payload?.method !== 'wallet_switchEthereumChain' ||
+    !request.account
+  ) {
+    return false
+  }
+  const origin = OriginSchema.safeParse(state.origins[request.origin])
+  return !!(
+    origin.success &&
+    isCanonicalExternalWebOrigin(origin.data.name) &&
+    (origin.data.provenance === 'direct' || origin.data.provenance === 'companion') &&
+    sourceBoundPrincipalMatches(request.origin, origin.data, state)
+  )
+}
+
 const recordValue = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 
@@ -90,6 +153,7 @@ export function isRequestOriginAuthorized(
   permissions: Record<string, OriginPermission>
 ) {
   if (request.type === 'access') return true
+  if (request.type === 'switchChain') return request.payload?.method === 'wallet_switchEthereumChain'
   if (isLocalCancelRecovery(request)) return true
   const managedOriginName = getManagedOriginNameForId(request.origin)
   if (managedOriginName) return managedRequestAuthorized(request, managedOriginName)
@@ -144,36 +208,7 @@ export function isCurrentRequestOriginAuthorized(
   if (!origin.success || !permission || origin.data.name !== permission['origin']) return false
   const principal = origin.data
 
-  if (principal.provenance === 'direct') {
-    return (
-      !principal.sourceId && originIdForInvoker(principal.name, { provenance: 'direct' }) === request.origin
-    )
-  }
-  if (!principal.sourceId) return false
-
-  if (principal.provenance === 'companion') {
-    const credential = ExtensionCredentialSchema.safeParse(state.extensionCredentials[principal.sourceId])
-    return !!(
-      credential.success &&
-      credential.data.fingerprint === principal.sourceId &&
-      originIdForInvoker(principal.name, {
-        provenance: 'companion',
-        sourceId: principal.sourceId
-      }) === request.origin
-    )
-  }
-  if (principal.provenance === 'native') {
-    const credential = NativePeerCredentialSchema.safeParse(state.nativePeerCredentials[principal.sourceId])
-    return !!(
-      credential.success &&
-      credential.data.fingerprint === principal.sourceId &&
-      originIdForInvoker(principal.name, {
-        provenance: 'native',
-        sourceId: principal.sourceId
-      }) === request.origin
-    )
-  }
-  return false
+  return sourceBoundPrincipalMatches(request.origin, principal, state)
 }
 
 export function enforceRequestOriginAuthorization(

@@ -2246,6 +2246,29 @@ describe('#cancelUnapprovedRequestForAccount', () => {
     expect(Accounts.current().id).toBe(account.address)
   })
 
+  it('removes an untouched network-consent request when its page transport disconnects', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const controller = new AbortController()
+    const response = bindRequestSignal(jest.fn(), controller.signal)
+    const switchRequest = {
+      ...accessRequest('transport-switch'),
+      type: 'switchChain',
+      payload: { id: 'transport-switch', jsonrpc: '2.0', method: 'wallet_switchEthereumChain' },
+      sourceChainId: 1,
+      chain: { type: 'ethereum', id: 8453 }
+    }
+
+    Accounts.addRequestForAccount(account2.address, switchRequest, response)
+    controller.abort()
+
+    expect(response).toHaveBeenCalledWith({
+      id: 'transport-switch',
+      jsonrpc: '2.0',
+      error: { code: 4900, message: 'Requesting client disconnected' }
+    })
+    expect(targetAccount.requests['transport-switch']).toBeUndefined()
+  })
+
   it('preserves a request that was claimed before its transport aborts', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const controller = new AbortController()
@@ -2708,6 +2731,32 @@ describe('#rejectUnapprovedRequestsForOriginChain', () => {
       expect.arrayContaining([expect.objectContaining({ origin: request.origin, outcome: 'declined' })])
     )
     store.clearActivity()
+  })
+
+  it('cancels old-chain work while preserving the network consent being approved', () => {
+    const activeAccount = Accounts.current()
+    const oldResponse = jest.fn()
+    const switchResponse = jest.fn()
+    const oldRequest = { ...request, handlerId: 'old-chain-request' }
+    const switchRequest = {
+      ...request,
+      handlerId: 'approved-network-consent',
+      type: 'switchChain',
+      payload: { id: 72, jsonrpc: '2.0', method: 'wallet_switchEthereumChain' },
+      sourceChainId: 1,
+      chain: { type: 'ethereum', id: 8453 }
+    }
+
+    Accounts.addRequest(oldRequest, oldResponse)
+    Accounts.addRequest(switchRequest, switchResponse)
+    activeAccount.rejectUnapprovedRequestsForOriginChain(request.origin, 1, switchRequest.handlerId)
+
+    expect(activeAccount.requests[oldRequest.handlerId]).toBeUndefined()
+    expect(activeAccount.requests[switchRequest.handlerId]).toBe(switchRequest)
+    expect(oldResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4001 }) })
+    )
+    expect(switchResponse).not.toHaveBeenCalled()
   })
 })
 

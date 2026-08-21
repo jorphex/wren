@@ -261,6 +261,34 @@ const accountAccessReviewScenarios = () =>
     ]
   }))
 
+const switchChainReviewScenarios = () =>
+  [
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `tray-switch-chain-review-${geometry}-1`,
+    renderer: 'tray',
+    state: 'switch-chain-review',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.requestApproveCompact .requestSign:not(:disabled)',
+    requiredControls: ['Decline', 'Switch network'],
+    requiredText: [
+      'NETWORK CHANGE',
+      'Switch to Base?',
+      'https://basescan.org',
+      'Ethereum',
+      'Base',
+      'Account access remains separate.'
+    ],
+    layoutExpectations: [
+      { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
+      { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
+      { kind: 'viewport-bottom', selector: '.requestApproveCompact' }
+    ]
+  }))
+
 const updateDialogScenarios = () =>
   INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -2375,6 +2403,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   const defaultScenarios = [
     ...scenarios,
     ...accountAccessReviewScenarios(),
+    ...switchChainReviewScenarios(),
     ...sendComposerScenarios().filter(({ state }) => state === 'send-asset-picker')
   ]
   return includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios

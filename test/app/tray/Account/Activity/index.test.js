@@ -1,6 +1,11 @@
 import fs from 'fs'
 
-import { Activity, activityOriginLabel, filterActivity } from '../../../../../app/tray/Account/Activity'
+import {
+  Activity,
+  activityOriginLabel,
+  activityTypeMeta,
+  filterActivity
+} from '../../../../../app/tray/Account/Activity'
 import {
   WREN_DEPLOY_DISPLAY_NAME,
   WREN_DEPLOY_ORIGIN,
@@ -56,6 +61,14 @@ afterAll(() => {
 })
 
 beforeEach(() => link.send.mockReset())
+
+it('classifies network changes as connection activity', () => {
+  expect(activityTypeMeta('switchChain')).toEqual({
+    category: 'connections',
+    icon: 'network',
+    label: 'Network change'
+  })
+})
 
 it('keeps non-interactive activity rows visually inert', () => {
   const styles = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')

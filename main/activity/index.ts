@@ -31,6 +31,7 @@ const chainIdFor = (request: AnyAccountRequest) => {
   else if (request.type === 'walletCalls' || request.type === 'eip7702Revoke') {
     value = valueAt(request, 'chainId')
   } else if (request.type === 'addChain') value = valueAt(request, 'chain', 'id')
+  else if (request.type === 'switchChain') value = valueAt(request, 'chain', 'id')
   else value = valueAt(request, 'permission', 'caveats', '0', 'value', 'chains', '0')
 
   const parsed =

@@ -386,6 +386,23 @@ export class Requests extends React.Component {
                   <div style={{ height: '10px' }} />
                 </RequestItem>
               )
+            } else if (req.type === 'switchChain') {
+              return (
+                <RequestItem
+                  key={req.handlerId}
+                  req={req}
+                  {...this.requestQueueProps(req)}
+                  account={this.props.account}
+                  handlerId={req.handlerId}
+                  i={this.requestIndexes.get(req.handlerId)}
+                  actionRef={(element) => this.setRequestRef(req.handlerId, element)}
+                  title={'Change network'}
+                  color={'var(--outerspace)'}
+                  svgName={'chain'}
+                >
+                  <div style={{ height: '10px' }} />
+                </RequestItem>
+              )
             } else if (req.type === 'addToken') {
               return (
                 <RequestItem

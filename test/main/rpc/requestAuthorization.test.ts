@@ -1,10 +1,12 @@
 import {
   enforceRequestOriginAuthorization,
+  isCurrentPreAccessSwitchOriginAuthorized,
   isCurrentRequestOriginAuthorized,
   isRequestOriginAuthorized
 } from '../../../main/rpc/requestAuthorization'
 import { createAccountPermission } from '../../../main/provider/permissions'
 import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
+import { generatePeerAuthKeyPair, peerAuthClientBundleFingerprint } from '../../../main/api/peerAuth'
 
 const origin = 'https://alpha.example'
 const account = '0x0000000000000000000000000000000000000001'
@@ -76,6 +78,85 @@ it.each(['frame-internal', 'frame-extension'])(
 
 it('allows an access request to establish permission', () => {
   expect(isRequestOriginAuthorized({ type: 'access', origin: request.origin }, {})).toBe(true)
+})
+
+it('authorizes permissionless network consent only for the exact current external principal', () => {
+  const switchRequest = {
+    type: 'switchChain',
+    origin: originId,
+    account,
+    payload: { method: 'wallet_switchEthereumChain' }
+  }
+
+  expect(isRequestOriginAuthorized(switchRequest, {})).toBe(true)
+  expect(isCurrentPreAccessSwitchOriginAuthorized(switchRequest, directPrincipalState)).toBe(true)
+  expect(
+    isCurrentPreAccessSwitchOriginAuthorized(
+      { ...switchRequest, payload: { method: 'eth_requestAccounts' } },
+      directPrincipalState
+    )
+  ).toBe(false)
+  expect(
+    isCurrentPreAccessSwitchOriginAuthorized(
+      { ...switchRequest, origin: originIdForInvoker('https://other.example', { provenance: 'direct' }) },
+      directPrincipalState
+    )
+  ).toBe(false)
+})
+
+it('binds Companion network consent to its live credential and canonical page origin', () => {
+  const control = generatePeerAuthKeyPair()
+  const page = generatePeerAuthKeyPair()
+  const publicKeys = { control: control.publicKey, page: page.publicKey }
+  const sourceId = peerAuthClientBundleFingerprint(publicKeys)
+  const companionOrigin = 'https://basescan.org'
+  const companionOriginId = originIdForInvoker(companionOrigin, {
+    provenance: 'companion',
+    sourceId
+  })
+  const principal = {
+    chain: { id: 1, type: 'ethereum' as const },
+    name: companionOrigin,
+    provenance: 'companion' as const,
+    sourceId,
+    sessionOnly: false,
+    session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
+  }
+  const credential = {
+    protocolVersion: 3 as const,
+    installationId: '11111111-1111-4111-8111-111111111111',
+    publicKeys,
+    fingerprint: sourceId,
+    pairedAt: 1
+  }
+  const switchRequest = {
+    type: 'switchChain',
+    origin: companionOriginId,
+    account,
+    payload: { method: 'wallet_switchEthereumChain' }
+  }
+  const state = {
+    origins: { [companionOriginId]: principal },
+    extensionCredentials: { [sourceId]: credential },
+    nativePeerCredentials: {}
+  }
+
+  expect(isCurrentPreAccessSwitchOriginAuthorized(switchRequest, state)).toBe(true)
+  expect(
+    isCurrentPreAccessSwitchOriginAuthorized(switchRequest, { ...state, extensionCredentials: {} })
+  ).toBe(false)
+  expect(
+    isCurrentPreAccessSwitchOriginAuthorized(switchRequest, {
+      ...state,
+      origins: { [companionOriginId]: { ...principal, sourceId: 'B'.repeat(43) } }
+    })
+  ).toBe(false)
+  expect(
+    isCurrentPreAccessSwitchOriginAuthorized(switchRequest, {
+      ...state,
+      origins: { [companionOriginId]: { ...principal, name: 'https://basescan.org/path' } }
+    })
+  ).toBe(false)
 })
 
 it('allows the exact application-owned Send surface without a persisted external grant', () => {

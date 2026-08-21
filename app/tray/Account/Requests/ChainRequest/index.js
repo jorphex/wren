@@ -13,6 +13,31 @@ export class ChainRequest extends React.Component {
     const { req } = this.props
     const { chain } = req
     const originName = this.props.originName || 'Unknown origin'
+    if (req.type === 'switchChain') {
+      const sourceName = this.props.chainData?.sourceChainName || `Chain ${req.sourceChainId}`
+      const destinationName = this.props.chainData?.destinationChainName || `Chain ${chain.id}`
+      return (
+        <LightweightRequest
+          req={req}
+          icon='network'
+          eyebrow='Network change'
+          title={`Switch to ${destinationName}?`}
+          help={`This changes the network used by ${originName}. It does not share your account.`}
+        >
+          <RequestSection title='Request details'>
+            <RequestFactGrid>
+              <RequestFact label='Requested by' value={originName} technical={true} />
+              <RequestFact label='Current network' value={sourceName} />
+              <RequestFact label='New network' value={destinationName} />
+              <RequestFact label='Chain ID' value={String(chain.id)} technical={true} />
+            </RequestFactGrid>
+          </RequestSection>
+          <RequestNote>
+            Account access remains separate. The site must still ask before Wren shares your address.
+          </RequestNote>
+        </LightweightRequest>
+      )
+    }
     const currency = chain.symbol || chain.nativeCurrencyName || 'Unknown'
     const decimals = chain.nativeCurrencyDecimals
     const currencyDisplay = decimals === undefined ? currency : `${currency} · ${decimals} decimals`

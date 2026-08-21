@@ -3,7 +3,7 @@ import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 
 import type { SignerCapabilities } from '../signers/capabilities'
 import { PermissionSchema } from '../store/state/types/permission'
-import { capabilityConsentMethods } from '../api/protectedMethods'
+import { accountCapabilityConsentMethods } from '../api/protectedMethods'
 import protectedMethods from '../api/protectedMethods'
 import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 
@@ -73,7 +73,7 @@ export function findUnsupportedRequiredMethod(methods: readonly string[], capabi
 }
 
 const normalizedMethods = [...new Set(protectedMethods)]
-  .filter((method) => !capabilityConsentMethods.has(method))
+  .filter((method) => !accountCapabilityConsentMethods.has(method))
   .sort()
 
 const canonicalChain = (value: number | bigint | string) => {

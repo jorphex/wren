@@ -29,7 +29,12 @@ export const passivePermissionMethods = new Set([
   'wallet_getCapabilities'
 ])
 
-export const capabilityConsentMethods = new Set(['eth_requestAccounts', 'wallet_requestPermissions'])
+export const accountCapabilityConsentMethods = new Set(['eth_requestAccounts', 'wallet_requestPermissions'])
+
+export const capabilityConsentMethods = new Set([
+  ...accountCapabilityConsentMethods,
+  'wallet_switchEthereumChain'
+])
 
 export const requiresStandingCapability = (method: string) =>
   protectedMethods.includes(method) &&

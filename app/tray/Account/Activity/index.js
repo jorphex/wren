@@ -29,6 +29,7 @@ const TYPE_META = Object.freeze({
   signErc20Permit: { category: 'signatures', icon: 'sign', label: 'Token permission signature' },
   access: { category: 'connections', icon: 'apps', label: 'Account access' },
   addChain: { category: 'connections', icon: 'network', label: 'Network addition' },
+  switchChain: { category: 'connections', icon: 'network', label: 'Network change' },
   addToken: { category: 'connections', icon: 'tokens', label: 'Token addition' }
 })
 

@@ -17,7 +17,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(93)
+  expect(scenarios).toHaveLength(95)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -61,9 +61,24 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
       'dash-delegation-capped-1.5',
       'tray-revocation-review-capped-1.5',
       'tray-account-access-review-full-1',
-      'tray-account-access-review-short-1'
+      'tray-account-access-review-short-1',
+      'tray-switch-chain-review-full-1',
+      'tray-switch-chain-review-short-1'
     ])
   )
+})
+
+it('qualifies network consent separately from account access at the real tray width', () => {
+  const scenarios = scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')
+
+  expect(scenarios).toHaveLength(2)
+  for (const scenario of scenarios) {
+    expect(scenario.logicalWidth).toBe(620)
+    expect(scenario.requiredControls).toEqual(['Decline', 'Switch network'])
+    expect(fixtureFor(scenario).main.accounts[QUALIFICATION_ACCOUNT].requests).toHaveProperty(
+      'qualification-switch-chain'
+    )
+  }
 })
 
 it('qualifies compact account-access actions at the real tray width', () => {

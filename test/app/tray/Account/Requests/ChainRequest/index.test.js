@@ -43,3 +43,26 @@ it('shows the proposed network evidence and copies exact endpoints', async () =>
     value: 'https://optimism.example/rpc'
   })
 })
+
+it('shows the requesting site and both networks without implying account access', () => {
+  render(
+    <ChainRequest
+      originName='https://basescan.org'
+      chainData={{ sourceChainName: 'Ethereum', destinationChainName: 'Base' }}
+      req={{
+        handlerId: 'switch-request',
+        type: 'switchChain',
+        sourceChainId: 1,
+        chain: { type: 'ethereum', id: 8453 }
+      }}
+    />
+  )
+
+  expect(screen.getByText('Switch to Base?')).toBeTruthy()
+  expect(screen.getByText('https://basescan.org')).toBeTruthy()
+  expect(screen.getByText('Ethereum')).toBeTruthy()
+  expect(screen.getByText('Base')).toBeTruthy()
+  expect(screen.getByText('8453')).toBeTruthy()
+  expect(screen.getByText(/does not share your account/i)).toBeTruthy()
+  expect(screen.getByText(/must still ask before Wren shares your address/i)).toBeTruthy()
+})
