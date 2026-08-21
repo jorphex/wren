@@ -47,7 +47,7 @@ export class Command extends React.Component {
       chains: 'Networks',
       contracts: 'Contracts',
       contractVerification: 'Contracts',
-      dapps: 'Connected apps',
+      dapps: 'App activity',
       deployment: 'Contracts',
       earn: 'Earn',
       notify: 'Notice',

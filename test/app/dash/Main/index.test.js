@@ -37,7 +37,7 @@ it.each([
   ['Accounts', 'accounts'],
   ['Earn', 'earn'],
   ['Contacts', 'addressBook'],
-  ['Connected apps', 'dapps'],
+  ['App activity', 'dapps'],
   ['Read-only inspector', 'inspector'],
   ['Contracts', 'contracts'],
   ['Networks', 'chains'],
@@ -51,12 +51,12 @@ it.each([
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
 })
 
-it('opens the cross-account connected-app view without exposing internal instance controls', () => {
+it('opens the cross-account app-activity view without exposing internal instance controls', () => {
   renderMain()
 
   expect(
     screen.getByRole('button', {
-      name: 'Connected apps Review active connections, access, and default networks.'
+      name: 'App activity Review recent activity, account access, and default networks.'
     })
   ).toBeTruthy()
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
@@ -92,7 +92,7 @@ it('orders wallet destinations and places the concise inspector in Tools', () =>
   const toolItems = [...document.querySelectorAll('.dashModuleSection:nth-child(2) .dashModuleTitle')].map(
     (item) => item.textContent
   )
-  expect(walletItems).toEqual(['Accounts', 'Earn', 'Contacts', 'Connected apps'])
+  expect(walletItems).toEqual(['Accounts', 'Earn', 'Contacts', 'App activity'])
   expect(screen.getByText('Tools')).toBeTruthy()
   expect(toolItems).toEqual(['Networks', 'Tokens', 'Read-only inspector', 'Contracts', 'Settings'])
   expect(

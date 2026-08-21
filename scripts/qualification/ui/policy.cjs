@@ -756,6 +756,25 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `tray-account-access-revoke-${geometry}-1`,
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    action: { type: 'clickText', text: 'Revoke access' },
+    ready: '.revokeAccessDialog',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Confirm revoke'],
+    requiredText: [
+      'Revoke access for https://treasury.workshop.example?',
+      'Its guardrails will be removed, and it must request access again.'
+    ]
+  })),
   {
     id: 'tray-account-guardrail-native-source-full-1',
     renderer: 'tray',
@@ -1504,8 +1523,15 @@ const reviewScenarios = () => [
       { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 20 },
       { kind: 'scroll-fits', selector: '.dashMainScroll' }
     ],
-    requiredControls: ['Open workshop.example connection details, connected'],
-    requiredText: ['Ethereum', 'workshop.example', 'Connected', 'avg reqs/min']
+    requiredControls: ['Open workshop.example app details, active · no account access'],
+    requiredText: [
+      'App activity',
+      'Recent activity, account access, and default networks across all accounts.',
+      'workshop.example',
+      'Active · No account access',
+      'treasury.example',
+      'Inactive · Access to 1 account'
+    ]
   })),
   {
     id: 'dash-connected-apps-capped-1',
@@ -1518,8 +1544,8 @@ const reviewScenarios = () => [
     layoutExpectations: [
       { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 12 }
     ],
-    requiredControls: ['Open workshop.example connection details, connected'],
-    requiredText: ['Ethereum', 'workshop.example', 'Connected', 'avg reqs/min']
+    requiredControls: ['Open workshop.example app details, active · no account access'],
+    requiredText: ['App activity', 'workshop.example', 'Active · No account access']
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -1643,7 +1669,7 @@ const reviewScenarios = () => [
       'Balances',
       'Yearn WETH',
       'Activity',
-      'Connected apps',
+      'Apps with access',
       'Signer',
       'Remove account'
     ]
@@ -1906,7 +1932,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredControls: ['View all activity'],
-    requiredText: ['Connected apps', 'Signer', 'Remove account'],
+    requiredText: ['Apps with access', 'Signer', 'Remove account'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
   },
@@ -1919,7 +1945,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum', 'Balances', 'Connected apps']
+    requiredText: ['Ethereum', 'Balances', 'Apps with access']
   },
   {
     id: 'tray-account-removal-confirm-full-1',

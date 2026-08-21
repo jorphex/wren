@@ -4,7 +4,6 @@ import emptyConnections from 'url:../../../asset/ui/empty-connections-v15.png'
 import link from '../../../resources/link'
 import {
   nextTransientConnectedAppExpiry,
-  requestsPerMinute,
   selectConnectedAppGroups
 } from '../../../resources/domain/connectedApps'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
@@ -25,32 +24,14 @@ export class OriginModuleComponent extends React.Component {
     super(...args)
 
     this.state = {
-      opening: false,
-      rateNow: Date.now()
+      opening: false
     }
 
     this.navigationPending = false
-  }
-
-  componentDidMount() {
-    this.updateRateTimer()
-  }
-
-  componentDidUpdate(previousProps) {
-    if (previousProps.connected !== this.props.connected) this.updateRateTimer()
   }
 
   componentWillUnmount() {
     this.navigationPending = false
-    clearInterval(this.requestUpdates)
-  }
-
-  updateRateTimer() {
-    clearInterval(this.requestUpdates)
-    this.setState({ rateNow: Date.now() })
-    if (this.props.connected) {
-      this.requestUpdates = setInterval(() => this.setState({ rateNow: Date.now() }), 1000)
-    }
   }
 
   openDetails(originId) {
@@ -62,15 +43,16 @@ export class OriginModuleComponent extends React.Component {
 
   render() {
     const { origin, connected } = this.props
-    const rateEnd = connected ? this.state.rateNow : (origin.session.endedAt ?? origin.session.lastUpdatedAt)
-    const averageRequests = requestsPerMinute(origin.session, rateEnd).toFixed(2)
-    const connectionStatus = connected ? 'Connected' : origin.durable ? 'Access granted' : 'Not active'
+    const accountLabel = origin.accessCount
+      ? `Access to ${origin.accessCount} ${origin.accessCount === 1 ? 'account' : 'accounts'}`
+      : 'No account access'
+    const activityLabel = connected ? 'Active' : origin.durable ? 'Inactive' : 'Recent'
+    const connectionStatus = `${activityLabel} · ${accountLabel}`
 
     return (
       <button
         type='button'
-        aria-label={`Open ${origin.name} connection details, ${connectionStatus.toLowerCase()}`}
-        aria-describedby={`origin-rate-${origin.id}`}
+        aria-label={`Open ${origin.name} app details, ${connectionStatus.toLowerCase()}`}
         className='sliceOrigin'
         disabled={this.state.opening}
         onClick={() => this.openDetails(origin.id)}
@@ -79,10 +61,6 @@ export class OriginModuleComponent extends React.Component {
         <span className='sliceOriginIdentity'>
           <span className='sliceOriginTitle'>{origin.name}</span>
           <span className='sliceOriginStatus'>{connectionStatus}</span>
-        </span>
-        <span className='sliceOriginReqs' id={`origin-rate-${origin.id}`}>
-          <span className='sliceOriginReqsNumber'>{averageRequests}</span>
-          <span className='sliceOriginReqsLabel'>avg reqs/min</span>
         </span>
       </button>
     )
@@ -166,20 +144,25 @@ export class Dapps extends React.Component {
       return (
         <div className='connectedApps cardShow'>
           {chainGroups.length ? (
-            chainGroups.map(({ chain, connected, disconnected, meta: { primaryColor, icon } }) => (
-              <ChainOrigins
-                key={chain.id}
-                chain={chain}
-                connected={connected}
-                disconnected={disconnected}
-                primaryColor={primaryColor}
-                icon={icon}
-              />
-            ))
+            <>
+              <p className='connectedAppsScope'>
+                Recent activity, account access, and default networks across all accounts.
+              </p>
+              {chainGroups.map(({ chain, connected, disconnected, meta: { primaryColor, icon } }) => (
+                <ChainOrigins
+                  key={chain.id}
+                  chain={chain}
+                  connected={connected}
+                  disconnected={disconnected}
+                  primaryColor={primaryColor}
+                  icon={icon}
+                />
+              ))}
+            </>
           ) : (
             <div className='connectedAppsEmpty'>
               <img alt='' aria-hidden='true' className='connectedAppsEmptyArtwork' src={emptyConnections} />
-              <strong>No connected apps</strong>
+              <strong>No app activity</strong>
               <span>Open a dapp with the Wren Companion to see it here.</span>
             </div>
           )}

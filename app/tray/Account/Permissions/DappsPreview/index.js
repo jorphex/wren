@@ -6,7 +6,7 @@ import emptyConnections from 'url:../../../../../asset/ui/wren-empty-connections
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
-import PermissionToggle from '../PermissionToggle'
+import RevokeAccess from '../RevokeAccess'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
@@ -15,6 +15,7 @@ export class DappsPermissionsPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
+    this.revokeStatusRef = React.createRef()
     this.state = { navigating: false }
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
@@ -33,6 +34,21 @@ export class DappsPermissionsPreview extends React.Component {
 
   componentWillUnmount() {
     if (this.resizeObserver) this.resizeObserver.disconnect()
+  }
+
+  componentDidUpdate() {
+    const revoked = this.state.revokeRequested
+    if (!revoked) return
+    const permissions = this.store('main.permissions', this.props.account) || {}
+    if (getPermissionIds(permissions).includes(revoked.id)) return
+
+    this.setState(
+      {
+        revokeRequested: null,
+        revokeStatus: `Access revoked for ${revoked.origin}. The app must request access again.`
+      },
+      () => this.revokeStatusRef.current?.focus()
+    )
   }
 
   openExpanded() {
@@ -61,7 +77,7 @@ export class DappsPermissionsPreview extends React.Component {
           <span>
             <Icon name='apps' size={14} />
           </span>
-          <span>{'Connected apps'}</span>
+          <span>Apps with access</span>
         </div>
         {permissionList.length === 0 ? (
           allPermissionIds.length ? (
@@ -70,8 +86,8 @@ export class DappsPermissionsPreview extends React.Component {
             <WrenEmptyState
               image={emptyConnections}
               transparentImage={true}
-              title='No connected apps'
-              copy='Apps with access to this account appear here.'
+              title='No app access'
+              copy='Apps allowed to use this account appear here.'
             />
           )
         ) : (
@@ -83,11 +99,13 @@ export class DappsPermissionsPreview extends React.Component {
                     <div className='signerPermission'>
                       <div className='signerPermissionControls'>
                         <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
-                        <PermissionToggle
+                        <RevokeAccess
                           account={this.props.account}
                           permissionId={o}
                           origin={permissions[o].origin}
-                          checked={permissions[o].provider}
+                          onRevokeRequested={(id, origin) =>
+                            this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
+                          }
                         />
                       </div>
                     </div>
@@ -104,9 +122,14 @@ export class DappsPermissionsPreview extends React.Component {
             disabled={this.state.navigating}
             onClick={() => this.openExpanded()}
           >
-            <span>View all connected apps</span>
+            <span>View all app access</span>
             <Icon name='chevron-right' size={16} />
           </button>
+        ) : null}
+        {this.state.revokeStatus ? (
+          <div className='revokeAccessStatus' role='status' tabIndex={-1} ref={this.revokeStatusRef}>
+            {this.state.revokeStatus}
+          </div>
         ) : null}
       </div>
     )

@@ -1319,7 +1319,20 @@ const fixtureFor = (scenario) => {
         chain: { id: 1 },
         name: 'workshop.example',
         session: { startedAt: Date.now() - 60_000, lastUpdatedAt: Date.now(), requests: 12 }
+      },
+      treasury: {
+        chain: { id: 1 },
+        name: 'treasury.example',
+        session: {
+          startedAt: Date.now() - 180_000,
+          endedAt: Date.now() - 120_000,
+          lastUpdatedAt: Date.now() - 120_000,
+          requests: 4
+        }
       }
+    }
+    state.main.permissions[QUALIFICATION_ACCOUNT] = {
+      treasury: activePermission('treasury', 'treasury.example')
     }
   }
 
@@ -1527,7 +1540,7 @@ const fixtureFor = (scenario) => {
     state.windows.panel.nav = [
       {
         view: 'expandedModule',
-        data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Connected apps' }
+        data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Apps with access' }
       }
     ]
   }

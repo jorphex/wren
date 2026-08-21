@@ -783,7 +783,7 @@ it('qualifies account-scoped guardrails across shell geometry, scale, provenance
   const originId = '11111111-1111-4111-8111-111111111111'
   expect(state.windows.panel.nav[0]).toEqual({
     view: 'expandedModule',
-    data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Connected apps' }
+    data: { id: 'permissions', account: QUALIFICATION_ACCOUNT, title: 'Apps with access' }
   })
   expect(state.main.permissions[QUALIFICATION_ACCOUNT][originId]).toMatchObject({
     handlerId: originId,

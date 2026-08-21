@@ -38,8 +38,8 @@ const dashboardSections = [
       },
       {
         view: 'dapps',
-        title: 'Connected apps',
-        description: 'Review active connections, access, and default networks.',
+        title: 'App activity',
+        description: 'Review recent activity, account access, and default networks.',
         icon: 'apps'
       }
     ]

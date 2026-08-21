@@ -61,10 +61,10 @@ function renderDapps(
   return render(<ConnectedDapps data={{}} />)
 }
 
-test('shows one global empty state when no apps are connected', () => {
+test('shows one global empty state when there is no app activity', () => {
   renderDapps({})
 
-  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(screen.getByText('No app activity')).toBeTruthy()
   expect(screen.getByText('Open a dapp with the Wren Companion to see it here.')).toBeTruthy()
   expect(screen.getAllByAltText('')).toHaveLength(1)
 })
@@ -79,10 +79,13 @@ test('renders application activity instead of the empty state', () => {
   })
 
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Connected')).toBeTruthy()
-  expect(screen.getByText('avg reqs/min')).toBeTruthy()
+  expect(screen.getByText('Active · No account access')).toBeTruthy()
+  expect(
+    screen.getByText('Recent activity, account access, and default networks across all accounts.')
+  ).toBeTruthy()
+  expect(screen.queryByText('avg reqs/min')).toBeNull()
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
-  expect(screen.queryByText('No connected apps')).toBeNull()
+  expect(screen.queryByText('No app activity')).toBeNull()
 })
 
 test('renders application activity while metadata is unavailable', () => {
@@ -100,8 +103,42 @@ test('renders application activity while metadata is unavailable', () => {
   )
 
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Connected')).toBeTruthy()
+  expect(screen.getByText('Active · No account access')).toBeTruthy()
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
+})
+
+test('shows global account-access scope without exposing account addresses', () => {
+  const secondAccount = '0x0000000000000000000000000000000000000002'
+  renderDapps(
+    {
+      origin: {
+        chain: { id: 1 },
+        name: 'example.test',
+        session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
+      }
+    },
+    {
+      [account]: { origin: permission('origin', 'example.test') },
+      [secondAccount]: {
+        origin: {
+          ...permission('origin', 'example.test'),
+          caveats: [
+            {
+              ...permission('origin', 'example.test').caveats[0],
+              value: {
+                ...permission('origin', 'example.test').caveats[0].value,
+                account: secondAccount
+              }
+            }
+          ]
+        }
+      }
+    }
+  )
+
+  expect(screen.getByText('Active · Access to 2 accounts')).toBeTruthy()
+  expect(screen.queryByText(account)).toBeNull()
+  expect(screen.queryByText(secondAccount)).toBeNull()
 })
 
 test('opens connected-app details once from native keyboard input', async () => {
@@ -113,9 +150,9 @@ test('opens connected-app details once from native keyboard input', async () => 
     }
   })
   const app = screen.getByRole('button', {
-    name: /^Open example\.test connection details, connected/
+    name: /^Open example\.test app details, active · no account access/
   })
-  expect(document.getElementById(app.getAttribute('aria-describedby')).textContent).toMatch(/avg reqs\/min/)
+  expect(app.getAttribute('aria-describedby')).toBeNull()
 
   app.focus()
   await user.keyboard('{Enter}')
@@ -138,15 +175,14 @@ test('ignores duplicate connected-app activation', async () => {
   })
 
   await user.dblClick(
-    screen.getByRole('button', { name: /^Open example\.test connection details, connected/ })
+    screen.getByRole('button', { name: /^Open example\.test app details, active · no account access/ })
   )
 
   expect(link.send).toHaveBeenCalledTimes(1)
 })
 
-test('clears connected request-rate updates on unmount', () => {
+test('clears its navigation guard on unmount', () => {
   const ref = { current: null }
-  const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
   const origin = {
     id: 'origin',
     name: 'example.test',
@@ -154,11 +190,10 @@ test('clears connected request-rate updates on unmount', () => {
   }
   const { unmount } = render(<OriginModuleComponent ref={ref} connected origin={origin} />)
 
-  const requestUpdates = ref.current.requestUpdates
+  ref.current.navigationPending = true
   unmount()
 
-  expect(clearIntervalSpy).toHaveBeenCalledWith(requestUpdates)
-  clearIntervalSpy.mockRestore()
+  expect(ref.current).toBeNull()
 })
 
 test('expires the last recently disconnected app without a store update', () => {
@@ -180,7 +215,7 @@ test('expires the last recently disconnected app without a store update', () => 
 
   act(() => jest.advanceTimersByTime(1_002))
 
-  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(screen.getByText('No app activity')).toBeTruthy()
   expect(screen.queryByText('recent.test')).toBeNull()
 })
 
@@ -202,7 +237,7 @@ test('keeps an expired disconnected app visible while any account retains its pe
   )
 
   expect(screen.getByText('durable.test')).toBeTruthy()
-  expect(screen.getByText('Access granted')).toBeTruthy()
+  expect(screen.getByText('Inactive · Access to 1 account')).toBeTruthy()
 })
 
 test('does not expose managed Wren Send activity as a connected app', () => {
@@ -221,6 +256,6 @@ test('does not expose managed Wren Send activity as a connected app', () => {
     }
   )
 
-  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(screen.getByText('No app activity')).toBeTruthy()
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })

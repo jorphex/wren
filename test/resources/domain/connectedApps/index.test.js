@@ -7,7 +7,6 @@ import { createAccountPermission } from '../../../../main/provider/permissions'
 import {
   RECENT_ORIGIN_TTL,
   nextTransientConnectedAppExpiry,
-  requestsPerMinute,
   selectConnectedAppGroups
 } from '../../../../resources/domain/connectedApps'
 
@@ -55,7 +54,32 @@ it('retains expired origins with durable permissions across accounts and disable
 
   expect(groups).toHaveLength(1)
   expect(groups[0].chain.id).toBe(10)
-  expect(groups[0].disconnected.map(({ id, durable }) => [id, durable])).toEqual([['durable', true]])
+  expect(groups[0].disconnected.map(({ id, durable, accessCount }) => [id, durable, accessCount])).toEqual([
+    ['durable', true, 1]
+  ])
+})
+
+it('counts active access once per account for a source-bound origin', () => {
+  const secondAccount = '0x2222222222222222222222222222222222222222'
+  const groups = selectConnectedAppGroups({
+    networks: { 1: chain(1) },
+    origins: { shared: origin('shared.example', 1, { endedAt: undefined }) },
+    permissions: {
+      [account]: { shared: permission('shared', 'shared.example') },
+      [secondAccount]: {
+        shared: createAccountPermission({
+          account: secondAccount,
+          chains: [1],
+          handlerId: 'shared',
+          origin: 'shared.example',
+          now: 1
+        })
+      }
+    },
+    now
+  })
+
+  expect(groups[0].connected[0]).toMatchObject({ id: 'shared', durable: true, accessCount: 2 })
 })
 
 it('keeps recent transient activity until its exact expiry and exposes the next deadline', () => {
@@ -164,10 +188,4 @@ it('keeps durable Companion access bound to its source-specific origin id after 
       now
     })[0].disconnected.map(({ id, durable }) => [id, durable])
   ).toEqual([[second, true]])
-})
-
-it('calculates average requests per minute with a fixed ended-session duration', () => {
-  expect(requestsPerMinute({ requests: 12, startedAt: 0, endedAt: 120_000 }, 999_999)).toBe(6)
-  expect(requestsPerMinute({ requests: 3, startedAt: 0 }, 30_000)).toBe(6)
-  expect(requestsPerMinute({ requests: -1, startedAt: 0, endedAt: 120_000 })).toBe(0)
 })

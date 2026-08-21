@@ -5,7 +5,7 @@ import emptyConnections from 'url:../../../../../asset/ui/wren-empty-connections
 
 import link from '../../../../../resources/link'
 import { getPermissionIds } from '../../../../../resources/domain/permissions'
-import PermissionToggle from '../PermissionToggle'
+import RevokeAccess from '../RevokeAccess'
 import DappGuardrailEditor, { canonicalChainId } from '../DappGuardrailEditor'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
@@ -19,6 +19,7 @@ export class DappsPermissionsExpanded extends React.Component {
     this.clearButtonRef = React.createRef()
     this.cancelClearRef = React.createRef()
     this.clearStatusRef = React.createRef()
+    this.revokeStatusRef = React.createRef()
     this.guardrailButtonRefs = new Map()
     this.state = {
       clearConfirm: false,
@@ -38,6 +39,16 @@ export class DappsPermissionsExpanded extends React.Component {
         () => {
           this.clearStatusRef.current?.focus()
         }
+      )
+    }
+    const revoked = this.state.revokeRequested
+    if (revoked && !getPermissionIds(permissions).includes(revoked.id)) {
+      this.setState(
+        {
+          revokeRequested: null,
+          revokeStatus: `Access revoked for ${revoked.origin}. The app must request access again.`
+        },
+        () => this.revokeStatusRef.current?.focus()
       )
     }
   }
@@ -117,8 +128,8 @@ export class DappsPermissionsExpanded extends React.Component {
             <WrenEmptyState
               image={emptyConnections}
               transparentImage={true}
-              title='No connected apps'
-              copy='Apps with access to this account appear here.'
+              title='No app access'
+              copy='Apps allowed to use this account appear here.'
               expanded
             />
           )
@@ -141,11 +152,13 @@ export class DappsPermissionsExpanded extends React.Component {
                               <div className='signerPermissionOrigin'>{permission.origin}</div>
                               <div className='signerPermissionPrincipal'>Principal {originId}</div>
                             </div>
-                            <PermissionToggle
+                            <RevokeAccess
                               account={this.props.account}
-                              permissionId={originId}
+                              permissionId={o}
                               origin={permission.origin}
-                              checked={permission.provider}
+                              onRevokeRequested={(id, origin) =>
+                                this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
+                              }
                             />
                           </div>
                           <div className='dappGuardrailChainActions'>
@@ -217,6 +230,11 @@ export class DappsPermissionsExpanded extends React.Component {
         {permissionList.length === 0 && this.state.clearStatus ? (
           <div className='clearPermissionsStatus' role='status' tabIndex={-1} ref={this.clearStatusRef}>
             All app permissions cleared.
+          </div>
+        ) : null}
+        {this.state.revokeStatus ? (
+          <div className='revokeAccessStatus' role='status' tabIndex={-1} ref={this.revokeStatusRef}>
+            {this.state.revokeStatus}
           </div>
         ) : null}
         {permissionList.length > 0 && (

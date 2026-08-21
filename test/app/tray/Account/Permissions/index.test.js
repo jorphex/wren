@@ -2,7 +2,7 @@ import Restore from 'react-restore'
 
 import { DappsPermissionsPreview } from '../../../../../app/tray/Account/Permissions/DappsPreview'
 import { DappsPermissionsExpanded } from '../../../../../app/tray/Account/Permissions/DappsExpanded'
-import { PermissionToggle } from '../../../../../app/tray/Account/Permissions/PermissionToggle'
+import { RevokeAccess } from '../../../../../app/tray/Account/Permissions/RevokeAccess'
 import {
   DappGuardrailEditor,
   guardrailBodyFor,
@@ -66,6 +66,7 @@ const renderWithStore = (Component, props = {}, storedPermissions = permissions)
 it('sorts permission rows by their displayed origin', () => {
   renderWithStore(DappsPermissionsPreview)
 
+  expect(screen.getByText('Apps with access')).toBeTruthy()
   expect(document.querySelector('.connectedAppsList')).toBeTruthy()
   expect(screen.getAllByText(/\.example$/).map((node) => node.textContent)).toEqual([
     'alpha.example',
@@ -74,38 +75,76 @@ it('sorts permission rows by their displayed origin', () => {
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
 
-it('revokes a permission once and settles from the store value', async () => {
+it('announces a store-confirmed revoke and moves focus to the result', async () => {
+  class TestPreview extends DappsPermissionsPreview {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
   const { rerender, user } = render(
-    <PermissionToggle account={account} permissionId='first' origin='alpha.example' checked />
+    <TestPreview account={account} moduleId='permissions' permissions={permissions} />
   )
-  const toggle = screen.getByRole('switch', { name: 'Access for alpha.example' })
 
-  await user.dblClick(toggle)
-
-  expect(link.send).toHaveBeenCalledTimes(1)
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleAccess', account, 'first', false)
-  expect(toggle.disabled).toBe(true)
-
-  rerender(<PermissionToggle account={account} permissionId='first' origin='alpha.example' checked={false} />)
-  expect(screen.getByRole('switch', { name: 'Access for alpha.example' }).disabled).toBe(false)
-  expect(screen.getByRole('switch', { name: 'Access for alpha.example' }).getAttribute('aria-checked')).toBe(
-    'false'
+  await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  rerender(
+    <TestPreview
+      account={account}
+      moduleId='permissions'
+      permissions={{ managed: permissions.managed, second: permissions.second }}
+    />
   )
+
+  const status = screen.getByRole('status')
+  expect(status.textContent).toBe('Access revoked for alpha.example. The app must request access again.')
+  expect(document.activeElement).toBe(status)
 })
 
-it('retries a dropped permission update with the same desired state and clears its timer', async () => {
+it('requires confirmation and revokes a permission once', async () => {
+  const onRevokeRequested = jest.fn()
+  const { user } = render(
+    <RevokeAccess
+      account={account}
+      permissionId='first'
+      origin='alpha.example'
+      onRevokeRequested={onRevokeRequested}
+    />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+  const dialog = screen.getByRole('alertdialog', { name: 'Revoke access for alpha.example?' })
+  expect(dialog.getAttribute('aria-modal')).toBe('true')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.getByText(/guardrails will be removed/u)).toBeTruthy()
+  expect(link.send).not.toHaveBeenCalled()
+
+  await user.dblClick(screen.getByRole('button', { name: 'Confirm revoke' }))
+
+  expect(link.send.mock.calls).toEqual([['tray:action', 'toggleAccess', account, 'first', false]])
+  expect(onRevokeRequested).toHaveBeenCalledWith('first', 'alpha.example')
+  expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
+})
+
+it('cancels safely, retries a dropped revoke, and clears its timer', async () => {
   const ref = { current: null }
   const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
   const { unmount, user } = render(
-    <PermissionToggle ref={ref} account={account} permissionId='first' origin='alpha.example' checked />
+    <RevokeAccess ref={ref} account={account} permissionId='first' origin='alpha.example' />
   )
 
-  await user.click(screen.getByRole('switch', { name: 'Access for alpha.example' }))
+  const trigger = screen.getByRole('button', { name: 'Revoke access' })
+  await user.click(trigger)
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(document.activeElement).toBe(trigger)
+  expect(link.send).not.toHaveBeenCalled()
+
+  await user.click(trigger)
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
   const pendingTimer = ref.current.pendingTimer
   act(() => jest.advanceTimersByTime(600))
-  expect(screen.getByRole('switch', { name: 'Access for alpha.example' }).disabled).toBe(false)
+  expect(screen.getByRole('button', { name: 'Confirm revoke' }).disabled).toBe(false)
 
-  await user.click(screen.getByRole('switch', { name: 'Access for alpha.example' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
   expect(link.send.mock.calls).toEqual([
     ['tray:action', 'toggleAccess', account, 'first', false],
     ['tray:action', 'toggleAccess', account, 'first', false]
@@ -137,10 +176,23 @@ it('opens account-scoped management with the permission handler and granted chai
   )
 })
 
+it('revokes the stored permission key while retaining its handler as the app principal', async () => {
+  const storedPermissions = {
+    stored: permission('principal', 'alpha.example')
+  }
+  const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true }, storedPermissions)
+
+  expect(screen.getByText('Principal principal')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleAccess', account, 'stored', false)
+})
+
 it('ends cleanly when every connected app is visible', () => {
   renderWithStore(DappsPermissionsPreview)
 
-  expect(screen.queryByRole('button', { name: 'View all connected apps' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View all app access' })).toBeNull()
 })
 
 it('opens truncated permission management once from a continuation row', async () => {
@@ -153,7 +205,7 @@ it('opens truncated permission management once from a continuation row', async (
     fifth: permission('fifth', 'zeta.example')
   }
   const { user } = renderWithStore(DappsPermissionsPreview, {}, crowdedPermissions)
-  const more = screen.getByRole('button', { name: 'View all connected apps' })
+  const more = screen.getByRole('button', { name: 'View all app access' })
 
   expect(more.classList.contains('accountContinuationRow')).toBe(true)
 
@@ -222,9 +274,9 @@ it('announces late store-confirmed permission clearing and moves focus to the st
 
 it('does not offer permission management or clearing for an empty list', () => {
   const { unmount } = renderWithStore(DappsPermissionsPreview, {}, {})
-  expect(screen.getByText('No connected apps')).toBeTruthy()
+  expect(screen.getByText('No app access')).toBeTruthy()
   expect(document.querySelector('.wrenEmptyStateImage')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'View all connected apps' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View all app access' })).toBeNull()
   unmount()
 
   renderWithStore(DappsPermissionsExpanded, { expanded: true }, {})

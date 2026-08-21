@@ -29,6 +29,73 @@ button.wrenControl.clearPermissionsAction
 .signerPermissionControls .wrenToggle
   margin-top 0
 
+.revokeAccessButton
+  flex none
+  padding 0 var(--wren-space-3)
+
+button.wrenControl.revokeAccessButton
+  min-height 44px
+
+.revokeAccessDialog
+  position fixed
+  z-index 50000000
+  inset 0
+  display flex
+  align-items center
+  justify-content center
+  padding var(--wren-space-4)
+  box-sizing border-box
+  background rgba(18, 20, 22, .76)
+
+.revokeAccessPanel
+  width 100%
+  max-width 430px
+  max-height calc(100vh - 32px)
+  overflow auto
+  padding var(--wren-space-5)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-md)
+  background var(--wren-bg-elevated)
+  box-shadow var(--wren-shadow-lg), var(--wren-shadow-inset)
+
+  strong
+    display block
+    overflow-wrap anywhere
+    color var(--wren-text-primary)
+    font-size var(--wren-type-body)
+    font-weight 600
+
+  p
+    margin var(--wren-space-2) 0 0
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    line-height 20px
+
+.revokeAccessActions
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-2)
+  margin-top var(--wren-space-5)
+
+  button.wrenControl
+    width 100%
+    min-height 44px
+
+.revokeAccessStatus
+  margin var(--wren-space-2)
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-inset)
+  font-size var(--wren-type-small)
+  line-height 20px
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
 .moduleMainPermissions
   overflow auto
   border 1px solid var(--wren-border-subtle)
@@ -102,7 +169,7 @@ button.wrenControl.clearPermissionsAction
     min-width 0
     flex 1
 
-  .wrenToggle
+  .revokeAccessButton
     flex none
 
 .signerPermissionPrincipal
@@ -304,4 +371,7 @@ button.wrenControl.dappGuardrailManage
 
   .dappGuardrailActions,
   .dappGuardrailConfirmActions
+    grid-template-columns 1fr
+
+  .revokeAccessActions
     grid-template-columns 1fr
