@@ -121,10 +121,31 @@ export const ReplacementNotice = ({ replacement }) => {
   return (
     <ClusterRow>
       <ClusterValue>
-        <div className='_txMainTag'>
+        <div className='_txMainTag' role='status' aria-live='polite'>
           {replacement.kind === 'cancel'
             ? `Cancellation attempt for ${shortHash}. This self-transfer only cancels it if this transaction confirms first.`
             : `Speed-up attempt for ${shortHash}. This transaction uses the same nonce and must confirm first.`}
+        </div>
+      </ClusterValue>
+    </ClusterRow>
+  )
+}
+
+export const ReplacementAssessment = ({ status }) => {
+  if (!status?.replacement) return null
+  return status.possible ? (
+    <ClusterRow>
+      <ClusterValue>
+        <div className='_txMainTag _txMainTagGood' role='status' aria-live='polite'>
+          Valid replacement
+        </div>
+      </ClusterValue>
+    </ClusterRow>
+  ) : (
+    <ClusterRow>
+      <ClusterValue>
+        <div className='_txMainTag _txMainTagBad' role='alert'>
+          {status.notice || 'Invalid duplicate'}
         </div>
       </ClusterValue>
     </ClusterRow>
@@ -497,22 +518,7 @@ const TxOverview = ({
           </ClusterRow>
         )}
         <ReplacementNotice replacement={req.replacement} />
-        {replacementStatus.replacement &&
-          (replacementStatus.possible ? (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='_txMainTag _txMainTagGood'>Valid replacement</div>
-              </ClusterValue>
-            </ClusterRow>
-          ) : (
-            <ClusterRow>
-              <ClusterValue>
-                <div className='_txMainTag _txMainTagBad'>
-                  {replacementStatus.notice || 'Invalid duplicate'}
-                </div>
-              </ClusterValue>
-            </ClusterRow>
-          ))}
+        <ReplacementAssessment status={replacementStatus} />
         {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )

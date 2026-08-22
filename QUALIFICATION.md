@@ -46,6 +46,13 @@ installer, GUI, hardware, signing, or platform-qualification evidence.
 and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
 delegation entry, revocation review, ambiguous monitoring, safe focus,
 reachability, text, and targets.
+Panel-contained permission dialogs cannot inert or dim the joined dashboard because
+the dashboard is a separate WebContents. Their `aria-modal`, focus containment, and
+background inerting guarantees apply to the wallet panel only; the joined dashboard
+intentionally remains visually unchanged. In joined-window qualification, verify
+that the dialog stays inside the panel and retains panel focus, and do not treat the
+unchanged dashboard as part of the modal surface or operate it until the dialog is
+closed. A cross-window modal veil is outside the current release claim.
 Companion's `npm run qualify:browser` uses disposable temporary builds and profiles
 to exercise exact protocol 3 mutual authentication, EIP-6963, provider requests, and top/frame origin isolation
 in real Chrome and Firefox. These automated checks do not replace the candidate-
@@ -103,6 +110,9 @@ archive and active-desktop checks below.
    tabs; ensure request results/signing payloads stay tab-local; verify restart
    reconnect; revoke, re-pair, and reset; and ensure rejected/malformed requests
    leave no spinner, stale approval, or reconnect loop.
+   `npm run qualify:browser` uses an isolated desktop mock and does not satisfy
+   the revoke check: record the real Wren permission-row removal and one
+   `accountsChanged` event with an empty account list in every affected tab.
 5. Complete each signer row through a qualified browser; private-key signing must
    run in Chrome and seed signing in Firefox. Reject each request once before
    approving personal message, EIP-712 v4, and a zero-value testnet self-transfer.

@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 
 import { OperationLifecycleSchema } from '../../../main/store/state/types/operationLifecycle'
+import { FRAME_SEND_ORIGIN, originIdForName } from '../../../resources/domain/origin'
 
 jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on: jest.fn() } }))
 
@@ -16,7 +17,7 @@ test('the provider exclusively owns successful transaction lifecycle admission',
   expect(rpcSource).not.toMatch(/accounts\.setTxSent\s*\(/u)
 })
 
-test('submitted transaction recovery is on disk before response while queued writes are pending', () => {
+test('broadcast-attempt recovery is on disk before response while queued writes are pending', () => {
   jest.useFakeTimers()
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wren-submitted-transaction-'))
 
@@ -27,7 +28,7 @@ test('submitted transaction recovery is on disk before response while queued wri
       id: '00000000-0000-4000-8000-000000000001',
       kind: 'transaction',
       account: `0x${'a'.repeat(40)}`,
-      origin: 'app.example',
+      origin: originIdForName(FRAME_SEND_ORIGIN),
       chainId: 1,
       state: 'submitted',
       createdAt: 10,
@@ -35,6 +36,11 @@ test('submitted transaction recovery is on disk before response while queued wri
       expiresAt: 20,
       visibleInActivity: true,
       notification: {},
+      broadcast: {
+        phase: 'broadcasting',
+        pendingRecipient: `0x${'c'.repeat(40)}`,
+        pendingOutboundFingerprints: [{ digest: 'd'.repeat(64), prefix: '1234', suffix: 'abcd' }]
+      },
       transaction: { hash: `0x${'b'.repeat(64)}`, nonce: '0x0' }
     })
     const main = {
@@ -42,7 +48,12 @@ test('submitted transaction recovery is on disk before response while queued wri
         [operation.account]: {
           activeRequestId: 'transient-request',
           id: operation.account,
-          requests: { 'transient-request': { payload: 'private' } }
+          requests: {
+            'transient-request': {
+              payload: 'private',
+              submission: { status: 'unconfirmed', detail: 'transient transport evidence' }
+            }
+          }
         }
       },
       operationLifecycles: { [operation.id]: operation },
@@ -61,6 +72,11 @@ test('submitted transaction recovery is on disk before response while queued wri
     expect(responded).toBe(false)
     expect(jest.getTimerCount()).toBeGreaterThan(0)
     expect(restored?.operationLifecycles[operation.id]).toEqual(operation)
+    // `submitted` records one broadcast attempt under the locally derived hash. It does not
+    // persist or imply RPC acceptance; canonical reconciliation establishes later outcomes.
+    expect(restored?.operationLifecycles[operation.id].state).toBe('submitted')
+    expect(restored?.operationLifecycles[operation.id].transaction?.hash).toBe(operation.transaction?.hash)
+    expect(restored?.operationLifecycles[operation.id].broadcast).toEqual(operation.broadcast)
     expect(restored?.accounts[operation.account]).not.toHaveProperty('requests')
     expect(restored?.accounts[operation.account]).not.toHaveProperty('activeRequestId')
 

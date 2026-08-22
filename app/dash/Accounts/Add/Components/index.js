@@ -4,7 +4,7 @@ import useFocusableRef from '../../../../../resources/Hooks/useFocusableRef'
 import Icon from '../../../../../resources/Components/Icon'
 import { ConfirmPassword, CreatePassword } from '../../../../../resources/Components/Password'
 import link from '../../../../../resources/link'
-import { debounce } from '../../../../../resources/utils'
+import { debounce, isUnmodifiedEnter } from '../../../../../resources/utils'
 
 const navForward = (newAccountType, accountSetupStep, error) =>
   link.send('nav:forward', 'dash', {
@@ -123,7 +123,10 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
             validateInput(e)
           }}
           onKeyDown={(e) => {
-            if (!error && !submitting && e.key === 'Enter') handleSubmit()
+            if (!error && !submitting && isUnmodifiedEnter(e)) {
+              e.preventDefault()
+              handleSubmit()
+            }
           }}
         />
       </div>

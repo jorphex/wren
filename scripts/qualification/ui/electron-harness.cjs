@@ -6,7 +6,12 @@ const { app, BrowserWindow, ipcMain, session } = require('electron')
 
 const { auditPage } = require('./audit-page.cjs')
 const { COMPACT_TARGET_EXCEPTIONS, physicalSize, scenarioMatrix } = require('./policy.cjs')
-const { fixtureFor, invokeReplyFor, rpcReplyFor } = require('./state-fixture.cjs')
+const {
+  QUALIFICATION_INVOKE_CHANNELS,
+  fixtureFor,
+  invokeReplyFor,
+  rpcReplyFor
+} = require('./state-fixture.cjs')
 
 const projectRoot = path.resolve(__dirname, '../../..')
 const runRoot = path.resolve(process.env.WREN_UI_QUALIFICATION_ROOT || '')
@@ -446,6 +451,12 @@ const performAction = async (webContents, action) => {
   }
   if (action.type === 'setRequestStatus') {
     await waitFor(webContents, `document.body.innerText.includes('Transaction queued')`)
+    const requestState = {
+      handlerId: action.requestId,
+      status: action.status,
+      ...(action.submission ? { submission: action.submission } : {}),
+      ...(action.notice ? { notice: action.notice } : {})
+    }
     const updated = await webContents.executeJavaScript(
       `(() => {
         if (!window.store?.api?.replaceState) return false
@@ -453,10 +464,7 @@ const performAction = async (webContents, action) => {
         const account = state.main?.accounts?.[${JSON.stringify(action.account)}]
         if (!account) return false
         account.requests ||= {}
-        account.requests[${JSON.stringify(action.requestId)}] = {
-          handlerId: ${JSON.stringify(action.requestId)},
-          status: ${JSON.stringify(action.status)}
-        }
+        account.requests[${JSON.stringify(action.requestId)}] = ${JSON.stringify(requestState)}
         window.store.api.replaceState(state)
         return true
       })()`,
@@ -605,32 +613,7 @@ const main = async () => {
     if (reply === undefined) throw new Error('Qualification harness does not provide inspector:inspect')
     return reply
   })
-  for (const channel of [
-    'signers:protectionStatus',
-    'send:resolveRecipient',
-    'send:maxAmount',
-    'send:queue',
-    'send:quoteSweep',
-    'send:queueSweep',
-    'deployment:prepare',
-    'deployment:queue',
-    'contractVerification:credentialStatus',
-    'contractVerification:get',
-    'contractVerification:inspectArtifact',
-    'contractVerification:list',
-    'contractVerification:openResult',
-    'contractVerification:prepare',
-    'contractVerification:publish',
-    'contractVerification:publishEtherscan',
-    'contractVerification:refresh',
-    'contractVerification:removeCredential',
-    'contractVerification:reselect',
-    'contractVerification:saveCredential',
-    'contractVerification:selectArtifact',
-    'yearn:getCatalog',
-    'yearn:getPositions',
-    'yearn:getWorkflows'
-  ]) {
+  for (const channel of QUALIFICATION_INVOKE_CHANNELS) {
     ipcMain.handle(channel, (event, ...args) => {
       const scenario = scenarioByWebContents.get(event.sender.id)
       const cacheOnlyCatalog = channel === 'yearn:getCatalog' && args[0]?.cacheOnly === true

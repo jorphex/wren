@@ -3,19 +3,34 @@ import { isManagedPermission, isPermissionActive } from '../permissions'
 import { isWrenOwnedOriginName } from '../origin'
 
 export const RECENT_ORIGIN_TTL = 60 * 60 * 1000
+export const MAX_TIMER_DELAY = 2 ** 31 - 1
+
+const isActiveExternalPermission = (permission, now) =>
+  !isManagedPermission(permission) &&
+  typeof permission?.origin === 'string' &&
+  !isWrenOwnedOriginName(permission.origin) &&
+  isPermissionActive(permission, now)
+
+export function nextActiveExternalPermissionExpiry(permissionsByAccount = {}, now = Date.now()) {
+  let nextExpiry
+
+  Object.values(permissionsByAccount).forEach((permissions = {}) => {
+    Object.values(permissions).forEach((permission) => {
+      if (!isActiveExternalPermission(permission, now)) return
+
+      const expiresAt = permission.caveats[0].value.expiresAt
+      if (nextExpiry === undefined || expiresAt < nextExpiry) nextExpiry = expiresAt
+    })
+  })
+
+  return nextExpiry
+}
 
 const externalPermissionAccess = (permissionsByAccount = {}, now = Date.now()) => {
   const accessByHandler = new Map()
   Object.entries(permissionsByAccount).forEach(([account, permissions = {}]) => {
     Object.values(permissions).forEach((permission) => {
-      if (
-        isManagedPermission(permission) ||
-        typeof permission?.origin !== 'string' ||
-        isWrenOwnedOriginName(permission.origin) ||
-        !isPermissionActive(permission, now)
-      ) {
-        return
-      }
+      if (!isActiveExternalPermission(permission, now)) return
 
       // `origin` is display metadata. A handler id is the persisted principal
       // identity and includes Companion/native source provenance.

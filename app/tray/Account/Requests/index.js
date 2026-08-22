@@ -23,21 +23,13 @@ import { Cluster } from '../../../../resources/Components/Cluster'
 import link from '../../../../resources/link'
 import { getOriginDisplayName } from '../../../../resources/domain/origin'
 import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
+import { isPendingSigningRequest } from '../../../../resources/domain/request'
 
 let restorePreviewFocus = false
 
 const queueNumber = (value) => (Number.isSafeInteger(value) && value >= 0 ? value : null)
 const terminalRequestStatuses = new Set(['confirmed', 'declined', 'error', 'success'])
 const inFlightRequestStatuses = new Set(['sending', 'verifying', 'sent', 'confirming'])
-const signingRequestTypes = new Set([
-  'transaction',
-  'sign',
-  'signTypedData',
-  'signErc20Permit',
-  'walletCalls',
-  'eip7702Revoke'
-])
-
 export const requestPreviewSummary = (requests = []) => {
   const unfinished = requests.filter((request) => !terminalRequestStatuses.has(request?.status))
   const confirming = unfinished.filter(
@@ -527,9 +519,7 @@ export class Requests extends React.Component {
     this.reviewQueueIndexes = new Map(
       this.reviewQueue.map((request, index) => [request.handlerId, index + 1])
     )
-    const pendingSignatures = this.reviewQueue.filter((request) =>
-      signingRequestTypes.has(request.type)
-    ).length
+    const pendingSignatures = this.reviewQueue.filter(isPendingSigningRequest).length
 
     const groups = requests.reduce((result, req) => {
       const previous = result[result.length - 1]

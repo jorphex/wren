@@ -207,10 +207,28 @@ button.contractVerificationRecentRow
   justify-content space-between
   gap var(--wren-space-2)
 
-.contractVerificationExternal
+.contractVerificationDestinationStatus
+  display flex
+  flex-direction column
+  gap var(--wren-space-1)
+
+  small
+    max-width 560px
+    color var(--wren-text-muted)
+    font-size 12px
+    line-height 17px
+
+.contractVerificationDestination button.contractVerificationExternal
   min-height 44px
 
-.contractVerificationResult .contractVerificationSectionHeading > button
+.contractVerificationResultActions
+  display flex
+  align-items center
+  justify-content flex-end
+  flex-wrap wrap
+  gap var(--wren-space-2)
+
+.contractVerificationResultActions button.wrenControl
   min-height 44px
 
 .contractVerificationMono
@@ -296,6 +314,9 @@ button.contractVerificationRecentRow
     outline 2px solid var(--wren-focus)
     outline-offset 2px
 
+.contractVerificationFieldError
+  color var(--wren-danger) !important
+
 .contractVerificationFeedback
   min-height 40px
   padding-top var(--wren-space-2)
@@ -346,7 +367,9 @@ button.contractVerificationRecentRow
     flex-direction column
 
   .contractVerificationChoose button,
-  .contractVerificationSectionHeading > button
+  .contractVerificationSectionHeading > button,
+  .contractVerificationResultActions,
+  .contractVerificationResultActions button
     width 100%
 
   .contractVerificationLedgerRow,

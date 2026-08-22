@@ -39,6 +39,51 @@ test('writes cloned valid lifecycle rows and preserves their identity', () => {
   expect(save).toHaveBeenCalledTimes(1)
 })
 
+test('promotes broadcast evidence monotonically and only permits pending metadata removal', () => {
+  let persisted: unknown = {}
+  const ledger = new OperationLifecycleLedger({
+    load: () => persisted,
+    save: (value) => {
+      persisted = value
+    }
+  })
+  const fingerprints = [{ digest: 'd'.repeat(64), prefix: '1234', suffix: 'abcd' }]
+  const admitted = {
+    ...operation(),
+    broadcast: { phase: 'broadcasting' as const, pendingOutboundFingerprints: fingerprints }
+  }
+  ledger.put(admitted, 10)
+  ledger.put({ ...admitted, updatedAt: 11, broadcast: { ...admitted.broadcast, phase: 'unconfirmed' } }, 11)
+
+  expect(() => ledger.put({ ...admitted, updatedAt: 12 }, 12)).toThrow('phase cannot move backwards')
+  expect(() =>
+    ledger.put(
+      {
+        ...admitted,
+        updatedAt: 12,
+        broadcast: {
+          phase: 'unconfirmed',
+          pendingOutboundFingerprints: [{ ...fingerprints[0], digest: 'e'.repeat(64) }]
+        }
+      },
+      12
+    )
+  ).toThrow('pending outbound fingerprints cannot change')
+  expect(
+    ledger.put({ ...admitted, updatedAt: 12, broadcast: { phase: 'acknowledged' } }, 12).broadcast
+  ).toEqual({ phase: 'acknowledged' })
+  expect(() =>
+    ledger.put(
+      {
+        ...admitted,
+        updatedAt: 13,
+        broadcast: { phase: 'acknowledged', pendingOutboundFingerprints: fingerprints }
+      },
+      13
+    )
+  ).toThrow('pending outbound fingerprints cannot be added')
+})
+
 test('does not allow durable deployment evidence to change after admission', () => {
   let persisted: unknown = {}
   const ledger = new OperationLifecycleLedger({

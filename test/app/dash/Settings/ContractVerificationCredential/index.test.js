@@ -17,7 +17,40 @@ it('fails closed when OS credential protection is unavailable', async () => {
 
   expect(await screen.findByText('Secure storage unavailable')).toBeTruthy()
   expect(screen.queryByLabelText('Etherscan API key')).toBeNull()
+  expect(screen.getByText(/OS credential protection is unavailable/i)).toBeTruthy()
+  expect(screen.queryByText(/Stored with OS credential protection/i)).toBeNull()
   expect(screen.getByText(/not included in profile backups/i)).toBeTruthy()
+  view.unmount()
+})
+
+it('does not claim OS protection when credential status cannot be checked', async () => {
+  link.invoke.mockResolvedValue({ success: false, error: 'credential-unavailable' })
+  const view = render(<ContractVerificationCredential />)
+
+  expect(await screen.findByText('Storage status unavailable')).toBeTruthy()
+  expect(screen.getByText(/could not confirm OS credential protection/i)).toBeTruthy()
+  expect(screen.queryByText(/Stored with OS credential protection/i)).toBeNull()
+  expect(screen.queryByLabelText('Etherscan API key')).toBeNull()
+  view.unmount()
+})
+
+it('shows the accepted format while Save is disabled', async () => {
+  link.invoke.mockResolvedValue({ success: true, credential: available })
+  const view = render(<ContractVerificationCredential />)
+  const input = await screen.findByLabelText('Etherscan API key')
+  const save = screen.getByRole('button', { name: 'Save' })
+  const format = screen.getByText('Use 16–128 letters, numbers, underscores, or hyphens.')
+
+  expect(save.disabled).toBe(true)
+  expect(save.getAttribute('aria-describedby')).toBe(format.id)
+  expect(input.getAttribute('aria-describedby')).toBe(format.id)
+  await view.user.type(input, 'not valid')
+  expect(save.disabled).toBe(true)
+  expect(screen.getByText('Use 16–128 letters, numbers, underscores, or hyphens.')).toBeTruthy()
+  await view.user.clear(input)
+  await view.user.type(input, 'etherscan_key_1234')
+  expect(save.disabled).toBe(false)
+  expect(screen.queryByText('Use 16–128 letters, numbers, underscores, or hyphens.')).toBeNull()
   view.unmount()
 })
 

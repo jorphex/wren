@@ -2,7 +2,8 @@ import { getCreateAddress } from 'ethers'
 import { z } from 'zod'
 
 import { MAX_DEPLOYMENT_INITCODE_BYTES } from '../../../../resources/domain/deployment'
-import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
+import { MAX_OUTBOUND_ADDRESS_MEMORY, OutboundAddressFingerprintSchema } from './outboundAddressMemory'
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u
 const HASH = /^0x[0-9a-fA-F]{64}$/u
@@ -67,6 +68,17 @@ const SettlementSchema = z.discriminatedUnion('status', [
     .strict()
 ])
 
+const BroadcastEvidenceSchema = z
+  .object({
+    phase: z.enum(['broadcasting', 'unconfirmed', 'acknowledged']),
+    pendingRecipient: AddressSchema.optional(),
+    pendingOutboundFingerprints: z
+      .array(OutboundAddressFingerprintSchema)
+      .max(MAX_OUTBOUND_ADDRESS_MEMORY)
+      .optional()
+  })
+  .strict()
+
 export const OperationLifecycleSchema = z
   .object({
     id: z.uuid(),
@@ -90,6 +102,7 @@ export const OperationLifecycleSchema = z
     expiresAt: z.number().int().positive(),
     visibleInActivity: z.boolean(),
     notification: NotificationStateSchema,
+    broadcast: BroadcastEvidenceSchema.optional(),
     transaction: z
       .object({
         hash: HashSchema,
@@ -133,6 +146,15 @@ export const OperationLifecycleSchema = z
     const hasDeploymentReceiptAddress = operation.receipt?.contractAddress !== undefined
     if (operation.transaction?.deployment && operation.origin !== originIdForName(WREN_DEPLOY_ORIGIN)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'deployment evidence requires managed origin' })
+    }
+    if (operation.broadcast && operation.kind !== 'transaction') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'broadcast evidence requires transaction kind' })
+    }
+    if (operation.broadcast?.pendingRecipient && operation.origin !== originIdForName(FRAME_SEND_ORIGIN)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'pending recipient evidence requires managed send origin'
+      })
     }
     if (!operation.transaction?.deployment && hasDeploymentReceiptAddress) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'ordinary transaction has deployment evidence' })

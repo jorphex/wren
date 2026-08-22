@@ -32,11 +32,17 @@ export const ActivityEntrySchema = z
       'clearance-unverified',
       'verified-clearance'
     ]),
+    broadcastPhase: z.enum(['broadcasting', 'unconfirmed', 'acknowledged']).optional(),
     createdAt: z.number().int().nonnegative(),
     completedAt: z.number().int().nonnegative(),
     chainId: z.number().int().positive().optional()
   })
   .strict()
+  .refine(
+    (entry) =>
+      entry.broadcastPhase === undefined || (entry.type === 'transaction' && entry.outcome === 'submitted'),
+    { message: 'broadcast phase requires a submitted transaction activity' }
+  )
   .refine((entry) => entry.completedAt >= entry.createdAt, {
     message: 'Activity completion cannot predate creation'
   })

@@ -30,7 +30,12 @@ import {
   TRANSACTION_FUNDING_ERROR,
   WALLET_CALL_FUNDING_ERROR
 } from '../../../resources/domain/transaction/funding'
-import { WREN_DEPLOY_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForName } from '../../../resources/domain/origin'
+import {
+  FRAME_SEND_ORIGIN,
+  WREN_DEPLOY_ORIGIN,
+  WREN_INTERNAL_ORIGIN,
+  originIdForName
+} from '../../../resources/domain/origin'
 
 jest.mock('electron', () => ({
   Notification: class {
@@ -1917,7 +1922,7 @@ describe('account-bound request transitions', () => {
   it('does not cancel or revive a request after signing', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('signed-is-not-cancelable')
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
     Accounts.setRequestPending(explicit)
@@ -1927,8 +1932,10 @@ describe('account-bound request transitions', () => {
       expect(Accounts.declineRequest(explicit.handlerId, account2.address)).toBe(false)
       expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
       expect(targetAccount.requests[explicit.handlerId].status).toBe('verifying')
-      expect(monitor).toHaveBeenCalledWith(targetAccount, explicit.handlerId, `0x${'a'.repeat(64)}`)
+      expect(monitor).toHaveBeenCalledWith(explicit.activityId)
     } finally {
+      operationLifecycleLedger.remove(explicit.activityId, -1)
+      targetAccount.clearRequest(explicit.handlerId)
       monitor.mockRestore()
     }
   })
@@ -1937,7 +1944,7 @@ describe('account-bound request transitions', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('signed-transaction-handoff')
     const next = targetRequest('request-after-signed-transaction', 'sign')
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     targetAccount.addRequest(next)
     explicit.simulation = { status: 'succeeded', calls: [] }
@@ -1962,7 +1969,7 @@ describe('account-bound request transitions', () => {
     const explicit = targetRequest('ambiguous-transaction-handoff')
     const next = targetRequest('request-after-ambiguous-transaction', 'sign')
     const hash = `0x${'a'.repeat(64)}`
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     targetAccount.addRequest(next)
     explicit.simulation = { status: 'succeeded', calls: [] }
@@ -1986,7 +1993,7 @@ describe('account-bound request transitions', () => {
   it('keeps a submitted transaction review open when no request is waiting behind it', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('submitted-transaction-review')
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
     Accounts.setRequestPending(explicit)
@@ -2010,7 +2017,7 @@ describe('account-bound request transitions', () => {
     const terminal = targetRequest('retained-terminal-error', 'sign')
     terminal.status = 'error'
     const explicit = targetRequest('submitted-with-terminal-row')
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     targetAccount.addRequest(terminal)
     targetAccount.requests[terminal.handlerId].status = 'error'
@@ -2034,7 +2041,7 @@ describe('account-bound request transitions', () => {
       recentRecipient: { address: `0x${'2'.repeat(40)}` }
     }
     const hash = `0x${'a'.repeat(64)}`
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     const track = jest.spyOn(recentRecipientsRuntime, 'track')
     const record = jest.spyOn(store, 'recordOutboundAddresses')
     targetAccount.addRequest(explicit)
@@ -2051,7 +2058,7 @@ describe('account-bound request transitions', () => {
         submission: { status: 'unconfirmed' },
         tx: { hash, confirmations: 0 }
       })
-      expect(monitor).toHaveBeenCalledWith(targetAccount, explicit.handlerId, hash, false)
+      expect(monitor).toHaveBeenCalledWith(explicit.activityId)
       expect(record).not.toHaveBeenCalled()
       expect(track).not.toHaveBeenCalled()
     } finally {
@@ -2065,7 +2072,7 @@ describe('account-bound request transitions', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('unconfirmed-transport-error')
     const hash = `0x${'a'.repeat(64)}`
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
     Accounts.setRequestPending(explicit)
@@ -2093,16 +2100,50 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('releases the next queued review and reconciles once when live projection throws', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('submitted-projection-failure')
+    const queued = targetRequest('after-submitted-projection-failure', 'sign')
+    const hash = `0x${'a'.repeat(64)}`
+    const reconcile = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+    targetAccount.addRequest(explicit)
+    targetAccount.addRequest(queued)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+    const update = jest.spyOn(targetAccount, 'update').mockImplementationOnce(() => {
+      throw new Error('renderer projection unavailable')
+    })
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(operationLifecycleLedger.get(explicit.activityId)).toMatchObject({
+        broadcast: { phase: 'acknowledged' },
+        transaction: { hash }
+      })
+      expect(targetAccount.summary().activeRequestId).toBe(queued.handlerId)
+      expect(reconcile).toHaveBeenCalledTimes(1)
+      expect(reconcile).toHaveBeenCalledWith(explicit.activityId)
+    } finally {
+      update.mockRestore()
+      reconcile.mockRestore()
+      targetAccount.clearRequest(explicit.handlerId)
+      targetAccount.clearRequest(queued.handlerId)
+      operationLifecycleLedger.remove(explicit.activityId, -1)
+    }
+  })
+
   it('records metadata once when an unconfirmed submission later returns its expected hash', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const recipient = `0x${'2'.repeat(40)}`
     const explicit = {
       ...targetRequest('late-confirmed-one-shot-submission'),
+      origin: originIdForName(FRAME_SEND_ORIGIN),
       recentRecipient: { address: recipient }
     }
     const hash = `0x${'a'.repeat(64)}`
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
-    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+    store.setRememberRecentRecipients(true)
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
     Accounts.setRequestPending(explicit)
@@ -2113,26 +2154,120 @@ describe('account-bound request transitions', () => {
       expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(true)
       expect(targetAccount.requests[explicit.handlerId].submission).toBeUndefined()
       expect(targetAccount.requests[explicit.handlerId].notice).toBe('Verifying')
-      expect(track).toHaveBeenCalledWith({
-        operationId: explicit.activityId,
-        address: recipient
+      expect(operationLifecycleLedger.get(explicit.activityId)).toMatchObject({
+        broadcast: { phase: 'acknowledged', pendingRecipient: recipient }
       })
-      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(false)
-      expect(track).toHaveBeenCalledTimes(1)
+      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(monitor).toHaveBeenCalledTimes(1)
     } finally {
+      store.setRememberRecentRecipients(false)
       monitor.mockRestore()
-      track.mockRestore()
     }
   })
 
-  it('records the full outbound target only after broadcast returns a transaction hash', () => {
+  it('admits one detached lifecycle when the live request is removed after signing', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('removed-after-signing')
+    const hash = `0x${'c'.repeat(64)}`
+    const reconcile = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+    const context = Accounts.transactionSubmissionContext(explicit.handlerId, account2.address)
+    expect(context).toBeDefined()
+    targetAccount.clearRequest(explicit.handlerId)
+
+    try {
+      expect(Accounts.setTxSent(explicit.handlerId, hash, account2.address, context)).toBe(true)
+      expect(operationLifecycleLedger.get(explicit.activityId)).toMatchObject({
+        id: explicit.activityId,
+        state: 'submitted',
+        transaction: { hash }
+      })
+      expect(store('main.operationLifecycles', explicit.activityId)).toMatchObject({
+        id: explicit.activityId,
+        transaction: { hash }
+      })
+      expect(reconcile).toHaveBeenCalledTimes(1)
+      expect(reconcile).toHaveBeenCalledWith(explicit.activityId)
+    } finally {
+      operationLifecycleLedger.remove(explicit.activityId, -1)
+      reconcile.mockRestore()
+    }
+  })
+
+  it('admits an exact signed broadcast fence only once', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('one-shot-broadcast-fence')
+    const hash = `0x${'a'.repeat(64)}`
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+    const context = Accounts.transactionSubmissionContext(explicit.handlerId, account2.address)
+    expect(context).toBeDefined()
+
+    try {
+      expect(Accounts.admitTxBroadcast(explicit.handlerId, hash, account2.address, context)).toBe(true)
+      expect(Accounts.admitTxBroadcast(explicit.handlerId, hash, account2.address, context)).toBe(false)
+      expect(operationLifecycleLedger.get(explicit.activityId)).toMatchObject({
+        broadcast: { phase: 'broadcasting' },
+        transaction: { hash }
+      })
+    } finally {
+      operationLifecycleLedger.remove(explicit.activityId, -1)
+      targetAccount.clearRequest(explicit.handlerId)
+      jest.clearAllTimers()
+      jest.useRealTimers()
+    }
+  })
+
+  it('uses the approved immutable context when live request identity mutates after signing', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('mutated-after-signing')
+    const hash = `0x${'d'.repeat(64)}`
+    const reconcile = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+    const context = Accounts.transactionSubmissionContext(explicit.handlerId, account2.address)
+    expect(context).toBeDefined()
+    const operationId = context.activityId
+    targetAccount.requests[explicit.handlerId].activityId = '00000000-0000-4000-8000-0000000000ff'
+    targetAccount.requests[explicit.handlerId].account = account.address
+    targetAccount.requests[explicit.handlerId].data.nonce = '0xff'
+
+    try {
+      expect(Accounts.setTxSubmissionUnclear(explicit.handlerId, hash, account2.address, context)).toBe(true)
+      expect(operationLifecycleLedger.get(operationId)).toMatchObject({
+        id: operationId,
+        state: 'submitted',
+        transaction: { hash, nonce: context.nonce }
+      })
+      expect(store('main.operationLifecycles', operationId)).toMatchObject({
+        id: operationId,
+        transaction: { hash, nonce: context.nonce }
+      })
+      expect(targetAccount.requests[explicit.handlerId]).not.toHaveProperty('tx')
+      expect(reconcile).toHaveBeenCalledTimes(1)
+    } finally {
+      operationLifecycleLedger.remove(operationId, -1)
+      targetAccount.clearRequest(explicit.handlerId)
+      reconcile.mockRestore()
+    }
+  })
+
+  it('persists only the outbound fingerprint until canonical confirmation', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const destination = `0x1234${'a'.repeat(32)}abcd`
     const explicit = {
       ...targetRequest('record-outbound-after-broadcast'),
       data: { ...targetRequest('record-outbound-after-broadcast').data, to: destination }
     }
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    const monitor = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
     store.clearActivity()
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
@@ -2143,39 +2278,15 @@ describe('account-bound request transitions', () => {
       targetAccount.requests[explicit.handlerId].status = 'sending'
       expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
 
-      const memory = store('main.outboundAddressMemory')
-      expect(Object.values(memory)).toEqual([
-        expect.objectContaining({ prefix: '1234', suffix: 'abcd', lastSubmittedAt: expect.any(Number) })
+      expect(store('main.outboundAddressMemory')).toEqual({})
+      const operation = operationLifecycleLedger.get(explicit.activityId)
+      expect(operation.broadcast.pendingOutboundFingerprints).toEqual([
+        expect.objectContaining({ prefix: '1234', suffix: 'abcd' })
       ])
-      expect(JSON.stringify(memory)).not.toContain(destination.slice(6, -4))
+      expect(JSON.stringify(operation.broadcast)).not.toContain(destination.slice(6, -4))
     } finally {
       monitor.mockRestore()
       store.clearActivity()
-    }
-  })
-
-  it('keeps transaction monitoring authoritative when outbound-address persistence fails', () => {
-    const targetAccount = Accounts.accounts[account2.address]
-    const explicit = {
-      ...targetRequest('address-memory-persistence-failure'),
-      data: { ...targetRequest('address-memory-persistence-failure').data, to: `0x${'1'.repeat(40)}` }
-    }
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
-    const record = jest.spyOn(store, 'recordOutboundAddresses').mockImplementation(() => {
-      throw new Error('address memory unavailable')
-    })
-    targetAccount.addRequest(explicit)
-    explicit.simulation = { status: 'succeeded', calls: [] }
-    Accounts.setRequestPending(explicit)
-    targetAccount.requests[explicit.handlerId].status = 'sending'
-
-    try {
-      expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
-      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({ status: 'verifying' })
-      expect(monitor).toHaveBeenCalledTimes(1)
-    } finally {
-      record.mockRestore()
-      monitor.mockRestore()
     }
   })
 
@@ -2205,7 +2316,9 @@ describe('account-bound request transitions', () => {
   it('contains a rejected durable monitor handoff after broadcast', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('monitor-storage-failure')
-    const monitor = jest.spyOn(Accounts, 'txMonitor').mockRejectedValue(new Error('disk unavailable'))
+    const monitor = jest
+      .spyOn(operationLifecycleRuntime, 'reconcile')
+      .mockRejectedValue(new Error('RPC unavailable'))
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
     Accounts.setRequestPending(explicit)
@@ -2215,12 +2328,14 @@ describe('account-bound request transitions', () => {
       expect(Accounts.setTxSent(explicit.handlerId, `0x${'a'.repeat(64)}`, account2.address)).toBe(true)
       await new Promise(setImmediate)
       expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
-        status: 'sent',
-        notice: 'Sent; monitoring unavailable',
+        status: 'verifying',
+        notice: 'Verifying',
         mode: 'monitor',
         tx: { hash: `0x${'a'.repeat(64)}`, confirmations: 0 }
       })
     } finally {
+      operationLifecycleLedger.remove(explicit.activityId, -1)
+      targetAccount.clearRequest(explicit.handlerId)
       monitor.mockRestore()
     }
   })
@@ -2393,31 +2508,36 @@ describe('#removeRequest', () => {
 })
 
 describe('ordinary transaction lifecycle outcomes', () => {
-  it('registers Wren Send recipient metadata only after its broadcast lifecycle is persisted', async () => {
+  it('registers Wren Send recipient metadata only after its broadcast lifecycle is persisted', () => {
+    jest.useFakeTimers()
     const targetAccount = Accounts.current()
     const hash = `0x${'a'.repeat(64)}`
     Accounts.addRequest(request)
     const target = targetAccount.getRequest(request.handlerId)
+    target.origin = originIdForName(FRAME_SEND_ORIGIN)
     target.recentRecipient = { address: `0x${'2'.repeat(40)}` }
-    const track = jest.spyOn(recentRecipientsRuntime, 'track').mockReturnValue(true)
     const reconcile = jest.spyOn(operationLifecycleRuntime, 'reconcile').mockResolvedValue(undefined)
+    store.setRememberRecentRecipients(true)
 
     try {
-      await Accounts.txMonitor(targetAccount, target.handlerId, hash)
+      target.status = 'sending'
+      expect(Accounts.setTxSent(target.handlerId, hash, target.account)).toBe(true)
 
       expect(operationLifecycleLedger.get(target.activityId)).toMatchObject({
         id: target.activityId,
         state: 'submitted',
         transaction: { hash }
       })
-      expect(track).toHaveBeenCalledWith({
-        operationId: target.activityId,
-        address: target.recentRecipient.address
+      expect(operationLifecycleLedger.get(target.activityId)).toMatchObject({
+        broadcast: { pendingRecipient: target.recentRecipient.address }
       })
       expect(reconcile).toHaveBeenCalledWith(target.activityId)
     } finally {
+      store.setRememberRecentRecipients(false)
       operationLifecycleLedger.remove(target.activityId, -1)
-      track.mockRestore()
+      targetAccount.clearRequest(target.handlerId)
+      jest.clearAllTimers()
+      jest.useRealTimers()
       reconcile.mockRestore()
     }
   })

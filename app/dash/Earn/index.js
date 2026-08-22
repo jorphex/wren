@@ -26,6 +26,7 @@ const CHAINS = [
 
 const ACTIVITY_PREVIEW_MAX = 3
 const ACTIVITY_MORE_FALLBACK_HEIGHT = 45
+const HIDDEN_AMOUNT = '••••'
 
 const earnRoute = (data = {}) => ({
   selected: typeof data.vaultId === 'string' ? data.vaultId : '',
@@ -45,8 +46,11 @@ export const formatPercent = (value) =>
 
 export const formatPercentLabel = (value, label) => {
   const formatted = formatPercent(value)
-  return formatted === label ? formatted : `${formatted} ${label}`
+  return !label || formatted.toLowerCase() === label.toLowerCase() ? formatted : `${formatted} ${label}`
 }
+
+const apyMetricLabel = (apy) =>
+  formatPercent(apy?.value).toLowerCase() === apy?.label?.toLowerCase() ? 'APY' : apy?.label || 'APY'
 
 export const formatUsd = (value) => {
   if (typeof value !== 'number') return 'Unavailable'
@@ -75,6 +79,9 @@ export const formatReceiptAmount = (raw, decimals) => {
   const visible = fraction.slice(0, 6)
   return `${fraction.length > visible.length ? '~' : ''}${whole}.${visible}`
 }
+
+const displayAmount = (value, hideBalances, formatter = formatAmount) =>
+  hideBalances ? HIDDEN_AMOUNT : formatter(value)
 
 export const activityPreviewLimit = ({ cardHeights, total, budget, headingHeight, moreHeight }) => {
   const maximum = Math.min(ACTIVITY_PREVIEW_MAX, total, cardHeights.length)
@@ -140,8 +147,8 @@ const positionVariantLabel = (vault, variant, cooldown = false) => {
   return ''
 }
 
-const ChainStatus = ({ chain, loading = false }) => {
-  if (loading) return null
+const ChainStatus = ({ chain, loading = false, suppressed = false }) => {
+  if (loading || suppressed) return null
   if (!chain) {
     return <div className='earnNotice'>Position data is unavailable.</div>
   }
@@ -247,7 +254,7 @@ const EarnCatalogLoading = () => (
   </div>
 )
 
-const VaultCard = ({ vault, position, onSelect, metricsLoading = false }) => {
+const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBalances = false }) => {
   const unavailable = vault.status !== 'available'
   const formattedApy = formatPercent(vault.apy.value)
   const showApyLabel = formattedApy.toLowerCase() !== vault.apy.label.toLowerCase()
@@ -287,7 +294,7 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false }) => {
         )}
         {position?.assetBalance !== null && position?.assetBalance !== undefined ? (
           <span>
-            {formatAmount(position.assetBalance)} {vault.asset.symbol} available
+            {displayAmount(position.assetBalance, hideBalances)} {vault.asset.symbol} available
           </span>
         ) : null}
         {position?.hasPosition ? <span className='earnPositionPill'>Position</span> : null}
@@ -297,7 +304,7 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false }) => {
   )
 }
 
-const PositionCard = ({ vault, position, onSelect }) => {
+const PositionCard = ({ vault, position, onSelect, hideBalances = false }) => {
   const owned = position.variants.filter(
     ({ sharesRaw, cooldown }) => sharesRaw !== '0' || (cooldown?.sharesRaw || '0') !== '0'
   )
@@ -324,7 +331,7 @@ const PositionCard = ({ vault, position, onSelect }) => {
                   <span>{positionVariantLabel(vault, variant)}</span>
                 ) : null}
                 <strong>
-                  {variant.assets !== null ? formatAmount(variant.assets) : formatAmount(variant.shares)}{' '}
+                  {displayAmount(variant.assets !== null ? variant.assets : variant.shares, hideBalances)}{' '}
                   {variant.assets !== null ? variant.assetSymbol : variant.symbol}
                 </strong>
               </div>
@@ -333,7 +340,7 @@ const PositionCard = ({ vault, position, onSelect }) => {
               <div className='earnPositionAmount'>
                 <span>{positionVariantLabel(vault, variant, true)}</span>
                 <strong>
-                  {formatAmount(variant.cooldown.shares)} {variant.symbol}
+                  {displayAmount(variant.cooldown.shares, hideBalances)} {variant.symbol}
                 </strong>
               </div>
             ) : null}
@@ -451,7 +458,15 @@ const CooldownNotice = ({ cooldown }) => {
   )
 }
 
-const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransact }) => {
+const WorkflowCard = ({
+  workflow,
+  onResume,
+  onCancel,
+  onRevoke,
+  busy,
+  canTransact,
+  hideBalances = false
+}) => {
   const statusLabel = (status) =>
     ({
       active: 'Awaiting approval',
@@ -489,7 +504,7 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
         </span>
       </div>
       <div className='earnWorkflowAmount'>
-        {workflow.displayAmount} {workflow.symbol}
+        {hideBalances ? HIDDEN_AMOUNT : workflow.displayAmount} {workflow.symbol}
       </div>
       <ol>
         {workflow.steps.map((step, index) => {
@@ -519,7 +534,10 @@ const WorkflowCard = ({ workflow, onResume, onCancel, onRevoke, busy, canTransac
                     {step.receiptTransfers.map((transfer) => (
                       <span key={`${transfer.token}:${transfer.direction}`} title={transfer.token}>
                         {transfer.direction === 'in' ? 'Received' : 'Sent'}{' '}
-                        {formatReceiptAmount(transfer.amountRaw, transfer.decimals)} {transfer.symbol}
+                        {displayAmount(transfer.amountRaw, hideBalances, (amount) =>
+                          formatReceiptAmount(amount, transfer.decimals)
+                        )}{' '}
+                        {transfer.symbol}
                       </span>
                     ))}
                     {step.receiptTransfersTruncated ? (
@@ -657,7 +675,8 @@ class ActivityPreview extends React.Component {
   }
 
   render() {
-    const { workflows, workflowBusy, canTransact, onResume, onCancel, onRevoke, onMore } = this.props
+    const { workflows, workflowBusy, canTransact, hideBalances, onResume, onCancel, onRevoke, onMore } =
+      this.props
     const ordered = workflowPreviewOrder(workflows)
     const visible = ordered.slice(0, this.state.visibleCount)
     const hidden = workflows.length - visible.length
@@ -690,6 +709,7 @@ class ActivityPreview extends React.Component {
               workflow={workflow}
               busy={workflowBusy}
               canTransact={canTransact}
+              hideBalances={hideBalances}
               onResume={onResume}
               onCancel={onCancel}
               onRevoke={onRevoke}
@@ -720,6 +740,7 @@ const ActivityView = ({
   workflowsError,
   workflowBusy,
   canTransact,
+  hideBalances,
   onResume,
   onCancel,
   onRevoke,
@@ -741,6 +762,7 @@ const ActivityView = ({
             workflow={workflow}
             busy={workflowBusy}
             canTransact={canTransact}
+            hideBalances={hideBalances}
             onResume={onResume}
             onCancel={onCancel}
             onRevoke={onRevoke}
@@ -756,7 +778,16 @@ const ActivityView = ({
   </div>
 )
 
-const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formRef }) => {
+const ActionForm = ({
+  vault,
+  position,
+  form,
+  disabled,
+  hideBalances = false,
+  onChange,
+  onSubmit,
+  formRef
+}) => {
   const variant = vault.variants.find(({ id }) => id === form.variant)
   const isCancel = form.action === 'cancel-cooldown'
   const needsApproval = routeNeedsApproval(form.action, form.variant)
@@ -794,7 +825,7 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
               autoComplete='off'
               aria-describedby={form.error ? 'earn-action-error' : undefined}
               aria-invalid={Boolean(form.error)}
-              value={form.amount}
+              value={hideBalances && form.max ? '' : form.amount}
               disabled={form.max || form.busy || disabled}
               onChange={(event) => onChange({ amount: event.target.value, max: false, error: '' })}
               placeholder='0.0'
@@ -808,7 +839,7 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
               disabled={form.busy || disabled || (!form.max && !maxAvailable)}
               onClick={() =>
                 onChange({
-                  amount: form.max ? '' : String(available?.amount || ''),
+                  amount: form.max || hideBalances ? '' : String(available?.amount || ''),
                   max: !form.max,
                   error: ''
                 })
@@ -822,7 +853,7 @@ const ActionForm = ({ vault, position, form, disabled, onChange, onSubmit, formR
       {available ? (
         <div className='earnAvailable'>
           <span>
-            {available.label}: {formatAmount(available.amount)} {available.symbol}
+            {available.label}: {displayAmount(available.amount, hideBalances)} {available.symbol}
           </span>
         </div>
       ) : null}
@@ -864,6 +895,7 @@ const VaultDetails = ({
   workflowsError,
   form,
   workflowBusy,
+  hideBalances,
   selectedVariant: selectedVariantProp,
   onOpenAction,
   onFormChange,
@@ -921,13 +953,20 @@ const VaultDetails = ({
         <p>{vault.description}</p>
       </div>
       <div className='earnDetailsMetrics'>
-        <Metric label='Est. APY' value={formatPercent(displayVariant?.apy.value)} loading={metricsLoading} />
+        <Metric
+          label={apyMetricLabel(displayVariant?.apy)}
+          value={formatPercent(displayVariant?.apy.value)}
+          loading={metricsLoading}
+        />
         <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} loading={metricsLoading} />
         <Metric
           label={selectedVariant === 'locked' ? 'Underlying vault risk' : 'Risk'}
           value={vault.riskLabel}
           loading={metricsLoading}
         />
+      </div>
+      <div className='earnRiskDisclosure'>
+        APY is variable and not guaranteed. Yearn vaults involve smart-contract and strategy risk.
       </div>
       {vault.kind === 'yvUSD' ? (
         <div className='earnVariants'>
@@ -981,7 +1020,7 @@ const VaultDetails = ({
                       <span>{positionVariantLabel(vault, variant)}</span>
                     ) : null}
                     <strong>
-                      {formatAmount(variant.assets ?? variant.shares)}{' '}
+                      {displayAmount(variant.assets ?? variant.shares, hideBalances)}{' '}
                       {variant.assets !== null ? variant.assetSymbol : variant.symbol}
                     </strong>
                   </div>
@@ -990,7 +1029,7 @@ const VaultDetails = ({
                   <div className='earnOwnedLine'>
                     <span>In cooldown</span>
                     <strong>
-                      {formatAmount(variant.cooldown.shares)} {variant.symbol}
+                      {displayAmount(variant.cooldown.shares, hideBalances)} {variant.symbol}
                     </strong>
                     <em>
                       {{
@@ -1011,7 +1050,7 @@ const VaultDetails = ({
           {positionsError}
         </div>
       ) : null}
-      {!positionsLoading && !signingAccount ? (
+      {!positionsLoading && !signingAccount && (account?.readOnly || !positionsError) ? (
         <div className='earnNotice earnDetailsNotice'>
           {account?.readOnly
             ? 'Watch-only accounts can inspect positions but cannot transact.'
@@ -1086,6 +1125,7 @@ const VaultDetails = ({
           position={position}
           form={form}
           disabled={!actionEnabled[form.action]}
+          hideBalances={hideBalances}
           onChange={onFormChange}
           onSubmit={onSubmit}
           formRef={formRef}
@@ -1098,6 +1138,7 @@ const VaultDetails = ({
           workflows={workflows}
           workflowBusy={workflowBusy}
           canTransact={Boolean(signingAccount)}
+          hideBalances={hideBalances}
           layoutKey={`${form?.action}:${form?.variant}:${Boolean(form?.error)}:${workflows
             .map(({ id, updatedAt, status }) => `${id}:${updatedAt}:${status}`)
             .join('|')}`}
@@ -1129,7 +1170,6 @@ const VaultDetails = ({
         >
           View vault contract (external)
         </button>
-        <div className='earnDisclosure'>Yearn vaults involve smart-contract and strategy risk.</div>
       </div>
     </div>
   )
@@ -1186,8 +1226,11 @@ export class Earn extends React.Component {
           if (route.activityExpanded) {
             this.earnActivity?.focus()
           } else if (route.selected) {
-            if (previousRoute.activityExpanded) document.querySelector('.earnMoreButton')?.focus()
-            else this.earnDetails?.focus()
+            if (previousRoute.activityExpanded) {
+              const activityTrigger = document.querySelector('.earnMoreButton')
+              if (activityTrigger) activityTrigger.focus()
+              else this.earnDetails?.focus()
+            } else this.earnDetails?.focus()
           } else if (previousRoute.selected) {
             const trigger = [...document.querySelectorAll('button')].find(
               (button) => button.getAttribute('aria-label') === this.vaultTriggerLabel
@@ -1453,7 +1496,7 @@ export class Earn extends React.Component {
       .filter(({ position }) => position?.hasPosition)
   }
 
-  renderPositions(positions) {
+  renderPositions(positions, hideBalances) {
     if (!positions.length) return null
 
     return (
@@ -1465,6 +1508,7 @@ export class Earn extends React.Component {
               key={vault.id}
               vault={vault}
               position={position}
+              hideBalances={hideBalances}
               onSelect={(selected, trigger) => this.selectVault(selected, trigger)}
             />
           ))}
@@ -1473,7 +1517,7 @@ export class Earn extends React.Component {
     )
   }
 
-  renderChain(chainId, vaults, metricsLoading) {
+  renderChain(chainId, vaults, metricsLoading, hideBalances) {
     const positionChain = this.currentPositions()?.chains.find((chain) => chain.chainId === chainId)
     return (
       <section className='earnChain' key={chainId} aria-labelledby={`earn-chain-${chainId}`}>
@@ -1483,7 +1527,11 @@ export class Earn extends React.Component {
             {vaults.length} curated {vaults.length === 1 ? 'vault' : 'vaults'}
           </span>
         </div>
-        <ChainStatus chain={positionChain} loading={this.state.positionsLoading} />
+        <ChainStatus
+          chain={positionChain}
+          loading={this.state.positionsLoading}
+          suppressed={Boolean(this.state.positionsError)}
+        />
         <div className='earnVaultList'>
           {vaults.map((vault) => (
             <VaultCard
@@ -1491,6 +1539,7 @@ export class Earn extends React.Component {
               vault={vault}
               position={this.positionFor(vault.id)}
               metricsLoading={metricsLoading}
+              hideBalances={hideBalances}
               onSelect={(selected, trigger) => this.selectVault(selected, trigger)}
             />
           ))}
@@ -1502,11 +1551,12 @@ export class Earn extends React.Component {
   render() {
     const { catalog, workflows, filter, selected } = this.state
     const currentPositions = this.currentPositions()
+    const hideBalances = Boolean(this.store('selected.hideBalances'))
     if (!catalog && this.state.catalogLoading) return <EarnCatalogLoading />
     if (!catalog) {
       return (
         <div className='earnState cardShow'>
-          {this.state.catalogError || this.state.error || 'Earn data is unavailable.'}
+          <div role='alert'>{this.state.catalogError || this.state.error || 'Earn data is unavailable.'}</div>
           <button type='button' className='wrenControl wrenControlPrimary' onClick={() => this.load(true)}>
             Refresh
           </button>
@@ -1550,6 +1600,7 @@ export class Earn extends React.Component {
             workflowsError={this.state.workflowsError}
             workflowBusy={this.state.workflowBusy}
             canTransact={Boolean(signingAccount)}
+            hideBalances={hideBalances}
             viewRef={(element) => {
               this.earnActivity = element
             }}
@@ -1574,6 +1625,7 @@ export class Earn extends React.Component {
           workflowsError={this.state.workflowsError}
           form={this.state.form}
           workflowBusy={this.state.workflowBusy}
+          hideBalances={hideBalances}
           selectedVariant={this.state.selectedVariant}
           detailsRef={(element) => {
             this.earnDetails = element
@@ -1675,14 +1727,15 @@ export class Earn extends React.Component {
         {this.state.positionsLoading && !currentPositions ? (
           <PositionLoading />
         ) : (
-          this.renderPositions(visiblePositions)
+          this.renderPositions(visiblePositions, hideBalances)
         )}
         <div id='earn-chain-panels' role='tabpanel' aria-labelledby={`earn-tab-${filter}`}>
           {visibleChains.map(({ id }) =>
             this.renderChain(
               id,
               catalog.vaults.filter(({ chainId }) => chainId === id),
-              metricsLoading
+              metricsLoading,
+              hideBalances
             )
           )}
         </div>

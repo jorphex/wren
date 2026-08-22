@@ -1,8 +1,10 @@
 import {
   Deployment,
   connectedDeploymentNetworks,
-  eligibleDeploymentAccounts
+  eligibleDeploymentAccounts,
+  nativeQuantity
 } from '../../../../app/dash/Deployment'
+import { requestDashNavigation } from '../../../../app/dash/navigationGuard'
 import { prepareDeployment, queueDeployment } from '../../../../app/dash/Deployment/api'
 import link from '../../../../resources/link'
 import { act, fireEvent, render, screen } from '../../../componentSetup'
@@ -94,7 +96,7 @@ const inspection = {
   account,
   chainId: '0x1',
   initcode: { bytes: 2, hash: `0x${'ab'.repeat(32)}` },
-  value: '0x0',
+  value: '0x3782dace9d90000',
   gasEstimate: { status: 'succeeded', value: '0x5208', padded: true },
   simulation: { status: 'succeeded', advancedChecks: 'complete' },
   pendingNonce: {
@@ -130,13 +132,19 @@ beforeEach(() => {
 it('includes locked software and hardware signers but excludes watch-only and missing associations', () => {
   expect(eligibleDeploymentAccounts(accounts, signers).map((item) => item.id)).toEqual([account, hardware])
   expect(connectedDeploymentNetworks(networks, networksMeta)).toEqual([
-    { id: 1, name: 'Ethereum', symbol: 'ETH' }
+    { id: 1, name: 'Ethereum', symbol: 'ETH', decimals: 18 }
   ])
 
   render(<Deployment {...props()} />)
   const accountOptions = [...screen.getByLabelText('Account').options].map((option) => option.textContent)
   expect(accountOptions).toEqual(['Workshop · 0x111111…111111', 'Ledger · 0x222222…222222'])
   expect(screen.getByLabelText('Network').options).toHaveLength(1)
+})
+
+it('formats exact RPC quantities as user-readable native values', () => {
+  expect(nativeQuantity('0xde0b6b3a7640000', 18, 'ETH')).toBe('1 ETH')
+  expect(nativeQuantity('0x1', 18, 'ETH')).toBe('0.000000000000000001 ETH')
+  expect(nativeQuantity('invalid', 18, 'ETH')).toBe('Unavailable')
 })
 
 it('disables preparation when the selected signer association disappears before checking', () => {
@@ -215,6 +223,7 @@ it('prepares the exact draft and renders authoritative success evidence', async 
     value: '0.25'
   })
   expect(await screen.findByRole('heading', { name: 'Check results' })).toBeTruthy()
+  expect(screen.getByText(/Value 0.25 ETH · Canonical 0x3782dace9d90000 · Chain 1/)).toBeTruthy()
   expect(screen.getByText('2 bytes')).toBeTruthy()
   expect(screen.getByText(`0x${'ab'.repeat(32)}`)).toBeTruthy()
   expect(screen.getByText('21,000 gas · Wren padded configured-RPC estimate')).toBeTruthy()
@@ -222,6 +231,40 @@ it('prepares the exact draft and renders authoritative success evidence', async 
   expect(screen.getByText('2')).toBeTruthy()
   expect(screen.getByText(/Provisional address\. It can change/)).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Check results' }).parentElement)
+})
+
+it('confirms Back or Escape navigation before discarding a non-empty deployment', async () => {
+  const view = render(<Deployment {...props()} />)
+  fillDraft()
+  const navigate = jest.fn()
+
+  let navigated
+  act(() => {
+    navigated = requestDashNavigation('back', navigate)
+  })
+  expect(navigated).toBe(false)
+  expect(screen.getByRole('alertdialog', { name: 'Discard this deployment?' })).toBeTruthy()
+  expect(navigate).not.toHaveBeenCalled()
+
+  await view.user.click(screen.getByRole('button', { name: 'Keep editing' }))
+  expect(screen.getByLabelText('Deployment data').value).toBe('0x6000')
+
+  act(() => requestDashNavigation('close', navigate))
+  await view.user.click(screen.getByRole('button', { name: 'Discard and leave' }))
+  expect(navigate).toHaveBeenCalledTimes(1)
+})
+
+it('does not intercept Back or Escape while the mounted deployment workspace is inactive', () => {
+  const view = render(<Deployment {...props({ active: true })} />)
+  fillDraft()
+  view.rerender(<Deployment {...props({ active: false })} />)
+  const navigate = jest.fn()
+
+  expect(requestDashNavigation('back', navigate)).toBe(true)
+  expect(navigate).toHaveBeenCalledTimes(1)
+  expect(requestDashNavigation('close', navigate)).toBe(true)
+  expect(navigate).toHaveBeenCalledTimes(2)
+  expect(screen.queryByRole('alertdialog', { name: 'Discard this deployment?' })).toBeNull()
 })
 
 it.each([

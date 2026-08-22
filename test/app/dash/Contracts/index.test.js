@@ -4,8 +4,8 @@ import { fireEvent, render, screen } from '../../../componentSetup'
 jest.mock(
   '../../../../app/dash/Deployment',
   () =>
-    function DeploymentMock() {
-      return <input aria-label='Deployment draft' defaultValue='' />
+    function DeploymentMock({ active }) {
+      return <input aria-label='Deployment draft' data-active={String(active)} defaultValue='' />
     }
 )
 
@@ -29,11 +29,13 @@ it('defaults to deployment and preserves both independent drafts across mode swi
 
   fireEvent.change(screen.getByLabelText('Deployment draft'), { target: { value: '0x6000' } })
   await user.click(verify)
+  expect(screen.getByLabelText('Deployment draft').dataset.active).toBe('false')
   fireEvent.change(screen.getByLabelText('Verification target'), {
     target: { value: '0x1111111111111111111111111111111111111111' }
   })
   await user.click(deploy)
 
+  expect(screen.getByLabelText('Deployment draft').dataset.active).toBe('true')
   expect(screen.getByLabelText('Deployment draft').value).toBe('0x6000')
   await user.click(verify)
   expect(screen.getByLabelText('Verification target').value).toBe(

@@ -418,12 +418,13 @@ export class Footer extends React.Component {
           </button>
           <button
             type='button'
+            aria-label='Stop monitoring'
             className='requestSign'
             disabled={pending}
             onClick={() => this.stopEip7702RevocationMonitoring(req)}
           >
             <span className='requestSignButton _txButton'>
-              <span>Stop monitoring and continue with queued requests</span>
+              <span>Stop</span>
             </span>
           </button>
         </div>

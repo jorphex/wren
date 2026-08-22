@@ -85,6 +85,9 @@ const COPY = Object.freeze({
   submittedBody:
     'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.',
   submittedHeading: 'Transaction submitted',
+  unconfirmedBody:
+    'Wren attempted one broadcast, but the network response was not confirmed. Wren is checking the signed transaction hash.',
+  unconfirmedHeading: 'Submission status unconfirmed',
   tryAgain: 'Try again',
   watchOnly: 'Watch-only accounts cannot sign transactions.'
 })
@@ -164,6 +167,8 @@ export class Send extends React.Component {
     this.assetTriggerRef = React.createRef()
     this.amountRef = React.createRef()
     this.contactTriggerRef = React.createRef()
+    this.requestHeadingRef = React.createRef()
+    this.focusedRequestStateKey = ''
     this.pickerStep = ''
     this.pickerReturnTarget = null
     this.state = {
@@ -214,11 +219,13 @@ export class Send extends React.Component {
     const accountId = this.store('selected.current') || ''
     if (accountId === this.accountId) {
       this.lockInitialAsset()
+      this.focusRequestStateHeading()
       return
     }
     this.accountId = accountId
     clearTimeout(this.quoteExpiryTimer)
     this.lastRequest = null
+    this.focusedRequestStateKey = ''
     this.maxSequence += 1
     this.queueSequence += 1
     this.recipientSequence += 1
@@ -267,17 +274,88 @@ export class Send extends React.Component {
   requestForState() {
     if (!this.state.requestId) return null
     const request = this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId)
-    if (request) this.lastRequest = { notice: request.notice, status: request.status }
+    if (request) {
+      this.lastRequest = {
+        notice: request.notice,
+        status: request.status,
+        ...(request.submission ? { submission: request.submission } : {})
+      }
+    }
     return request || this.lastRequest
   }
 
-  closeConfirmedRequest() {
+  focusRequestStateHeading() {
+    if (!this.state.requestId || !this.requestHeadingRef.current) return
+    const request = this.requestForState()
+    const { key: presentationKey } = this.requestStatePresentation(request)
+    const key = `${this.state.requestId}:${presentationKey}`
+    if (key === this.focusedRequestStateKey) return
+    this.focusedRequestStateKey = key
+    this.requestHeadingRef.current.focus()
+  }
+
+  requestStatePresentation(request) {
+    const status = request?.status
+    const declined = status === 'declined'
+    const failed = status === 'error'
+    const confirmed = status === 'confirmed'
+    const unconfirmed = status === 'verifying' && request?.submission?.status === 'unconfirmed'
+    const changedSweep = failed && request?.recoverableError?.code === 'managed-sweep-changed'
+    const retainedTransactionFailure = failed && Boolean(request?.retainedPreBroadcastError)
+    const changedMax = retainedTransactionFailure && Boolean(request?.nativeMax)
+    const retainedFailure = changedSweep || retainedTransactionFailure
+    const submitted = ['success', 'verifying', 'sent', 'confirming'].includes(status)
+    const heading = declined
+      ? COPY.declinedHeading
+      : retainedFailure
+        ? changedSweep
+          ? 'Sweep changed'
+          : changedMax
+            ? 'Maximum send changed'
+            : 'Transaction not sent'
+        : failed
+          ? COPY.errorHeading
+          : confirmed
+            ? COPY.confirmedHeading
+            : unconfirmed
+              ? COPY.unconfirmedHeading
+              : submitted
+                ? COPY.submittedHeading
+                : COPY.queuedHeading
+    const body = declined
+      ? COPY.declinedBody
+      : failed
+        ? request?.notice || COPY.errorBody
+        : confirmed
+          ? COPY.confirmedBody
+          : unconfirmed
+            ? COPY.unconfirmedBody
+            : submitted
+              ? COPY.submittedBody
+              : COPY.queuedBody
+
+    return {
+      key: `${heading}\u0000${body}`,
+      heading,
+      body,
+      changedSweep,
+      changedMax,
+      confirmed,
+      declined,
+      failed,
+      retainedFailure,
+      retainedTransactionFailure
+    }
+  }
+
+  closeRequestPanel() {
     link.send('tray:action', 'closeDash')
   }
 
-  copyConfirmedAddress() {
+  copyAddress(address) {
+    if (!address) return
     clearTimeout(this.copyStatusTimer)
-    link.send('tray:clipboardData', this.state.requestRecipient)
+    link.send('tray:clipboardData', address)
     this.setState({ copyStatus: 'Address copied' })
     this.copyStatusTimer = setTimeout(() => {
       if (this.mounted) this.setState({ copyStatus: '' })
@@ -431,6 +509,7 @@ export class Send extends React.Component {
   }
 
   updateRecipient(recipient, source = '') {
+    clearTimeout(this.copyStatusTimer)
     clearTimeout(this.recipientTimer)
     clearTimeout(this.quoteExpiryTimer)
     this.maxSequence += 1
@@ -441,6 +520,7 @@ export class Send extends React.Component {
       maxQuote: null,
       maxQuoteStatus: 'idle',
       maxReview: false,
+      copyStatus: '',
       queueError: '',
       recipient,
       recipientError: '',
@@ -576,6 +656,7 @@ export class Send extends React.Component {
       return
     }
     this.lastRequest = null
+    this.focusedRequestStateKey = ''
     this.setState({
       queueing: false,
       requestAccount: account.id,
@@ -846,9 +927,14 @@ export class Send extends React.Component {
           {assets.length ? (
             assets.map((asset) => {
               const selected = context.selected && assetKey(asset) === assetKey(context.selected)
+              const chainLabel =
+                asset.chainName ||
+                (Number.isSafeInteger(Number(asset.chainId))
+                  ? `Chain ${Number(asset.chainId)}`
+                  : 'Unknown network')
               return (
                 <button
-                  aria-label={`Select ${asset.symbol}`}
+                  aria-label={`Select ${asset.symbol} on ${chainLabel}`}
                   aria-pressed={selected}
                   className={`sendAssetOption ${selected ? 'sendAssetOptionSelected' : ''}`}
                   key={assetKey(asset)}
@@ -872,7 +958,7 @@ export class Send extends React.Component {
                   <AssetMark appearance='plain' asset={asset} />
                   <span className='sendAssetIdentity'>
                     <strong>{asset.symbol}</strong>
-                    <span>{asset.chainName}</span>
+                    <span>{chainLabel}</span>
                   </span>
                   <span className='sendAssetBalance'>
                     <strong>{this.store('selected.hideBalances') ? '••••' : asset.displayBalance}</strong>
@@ -1380,37 +1466,19 @@ export class Send extends React.Component {
   }
 
   renderRequestState(request) {
-    const status = request?.status
-    const declined = status === 'declined'
-    const failed = status === 'error'
-    const confirmed = status === 'confirmed'
-    const changedSweep = failed && request?.recoverableError?.code === 'managed-sweep-changed'
-    const changedMax = failed && Boolean(request?.nativeMax) && Boolean(request?.retainedPreBroadcastError)
-    const retainedFailure = changedSweep || changedMax
-    const submitted = ['success', 'verifying', 'sent', 'confirming'].includes(status)
-    const heading = declined
-      ? COPY.declinedHeading
-      : retainedFailure
-        ? changedSweep
-          ? 'Sweep changed'
-          : 'Maximum send changed'
-        : failed
-          ? COPY.errorHeading
-          : confirmed
-            ? COPY.confirmedHeading
-            : submitted
-              ? COPY.submittedHeading
-              : COPY.queuedHeading
-    const body = declined
-      ? COPY.declinedBody
-      : failed
-        ? request?.notice || COPY.errorBody
-        : confirmed
-          ? COPY.confirmedBody
-          : submitted
-            ? COPY.submittedBody
-            : COPY.queuedBody
+    const {
+      body,
+      changedMax,
+      changedSweep,
+      confirmed,
+      declined,
+      failed,
+      heading,
+      retainedFailure,
+      retainedTransactionFailure
+    } = this.requestStatePresentation(request)
     const savedContact = confirmed ? this.confirmedContact() : undefined
+    const assertive = failed
 
     return (
       <section className={`sendRequestState cardShow ${confirmed ? 'sendRequestStateSuccess' : ''}`}>
@@ -1418,18 +1486,16 @@ export class Send extends React.Component {
           <Icon name={confirmed ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
         </div>
         <div
-          aria-atomic={confirmed ? 'true' : undefined}
-          aria-live={confirmed ? 'polite' : undefined}
-          role={confirmed ? 'status' : undefined}
+          aria-atomic='true'
+          aria-live={assertive ? 'assertive' : 'polite'}
+          role={assertive ? 'alert' : 'status'}
         >
-          <h2>{heading}</h2>
+          <h2 ref={this.requestHeadingRef} tabIndex={-1}>
+            {heading}
+          </h2>
           <p>{body}</p>
+          {this.state.queueError ? <div className='sendComposerError'>{this.state.queueError}</div> : null}
         </div>
-        {this.state.queueError ? (
-          <div className='sendComposerError' role='alert'>
-            {this.state.queueError}
-          </div>
-        ) : null}
         {confirmed && this.state.requestRecipient ? (
           <div className='sendConfirmedDestination'>
             <span>{COPY.destination}</span>
@@ -1437,7 +1503,7 @@ export class Send extends React.Component {
             <code>{this.state.requestRecipient}</code>
             <button
               className='wrenControl wrenControlGhost wrenControlCompact'
-              onClick={() => this.copyConfirmedAddress()}
+              onClick={() => this.copyAddress(this.state.requestRecipient)}
               type='button'
             >
               Copy address
@@ -1460,11 +1526,13 @@ export class Send extends React.Component {
                   request,
                   'Could not close the stale Sweep request. Open Wren and try again.'
                 )
-              } else if (changedMax) {
+              } else if (retainedTransactionFailure) {
                 this.closeRetainedRequest(
                   'transaction',
                   request,
-                  'Could not close the stale Max request. Open Wren and try again.'
+                  changedMax
+                    ? 'Could not close the stale Max request. Open Wren and try again.'
+                    : 'Could not close the failed transaction request. Open Wren and try again.'
                 )
               } else {
                 this.resetRequest(false)
@@ -1485,13 +1553,21 @@ export class Send extends React.Component {
             </button>
             <button
               className='wrenControl wrenControlSecondary wrenControlLarge'
-              onClick={() => this.closeConfirmedRequest()}
+              onClick={() => this.closeRequestPanel()}
               type='button'
             >
               {COPY.close}
             </button>
           </div>
-        ) : null}
+        ) : (
+          <button
+            className='wrenControl wrenControlGhost wrenControlLarge'
+            onClick={() => this.closeRequestPanel()}
+            type='button'
+          >
+            {COPY.close}
+          </button>
+        )}
       </section>
     )
   }
@@ -1671,7 +1747,13 @@ export class Send extends React.Component {
             <span
               className='sendRowHint sendRecipientFeedback'
               id='sendRecipientFeedback'
-              role={this.state.recipientError ? 'alert' : this.state.recipientStatus ? 'status' : undefined}
+              role={
+                this.state.recipientError
+                  ? 'alert'
+                  : this.state.recipientStatus && !this.state.copyStatus
+                    ? 'status'
+                    : undefined
+              }
             >
               {this.state.recipientError ||
                 (this.state.recipientResolved ? (
@@ -1682,11 +1764,16 @@ export class Send extends React.Component {
                       aria-label='Copy recipient address'
                       className='sendRecipientCopy'
                       disabled={derivationBusy || this.state.queueing || this.state.sweepReview}
-                      onClick={() => link.send('tray:clipboardData', this.state.recipientResolved)}
+                      onClick={() => this.copyAddress(this.state.recipientResolved)}
                       type='button'
                     >
                       Copy
                     </button>
+                    {this.state.copyStatus ? (
+                      <span aria-atomic='true' aria-live='polite' className='sendCopyStatus' role='status'>
+                        {this.state.copyStatus}
+                      </span>
+                    ) : null}
                   </span>
                 ) : (
                   recipientHint
@@ -1702,6 +1789,13 @@ export class Send extends React.Component {
               <span className={`sendInputWrap wrenInputGroup ${amountError ? 'wrenInputGroupError' : ''}`}>
                 <input
                   autoComplete='off'
+                  aria-describedby={[
+                    amountError ? 'sendAmountError' : '',
+                    'sendAvailableBalance',
+                    maxNeedsRecipient && !amountError ? 'sendMaxReason' : ''
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   aria-invalid={amountError ? 'true' : undefined}
                   className='sendAmountInput wrenInput'
                   disabled={derivationBusy || this.state.queueing || Boolean(this.state.maxQuote)}
@@ -1738,24 +1832,22 @@ export class Send extends React.Component {
                   {COPY.quoteMax}
                 </button>
               </span>
-              <span
-                className={`sendRowHint ${!amountError ? 'sendAmountHints' : ''}`}
-                role={amountError ? 'alert' : undefined}
-              >
-                {amountError || (
-                  <>
-                    <span className='sendAvailableHint'>
-                      {this.store('selected.hideBalances')
-                        ? 'Available balance hidden'
-                        : `Available: ${selected.displayBalance} ${selected.symbol}`}
-                    </span>
-                    {maxNeedsRecipient ? (
-                      <span className='sendMaxReason' id='sendMaxReason'>
-                        {COPY.maxNeedsRecipient}
-                      </span>
-                    ) : null}
-                  </>
-                )}
+              <span className='sendRowHint sendAmountHints'>
+                {amountError ? (
+                  <span className='sendAmountError' id='sendAmountError' role='alert'>
+                    {amountError}
+                  </span>
+                ) : null}
+                <span className='sendAvailableHint' id='sendAvailableBalance'>
+                  {this.store('selected.hideBalances')
+                    ? 'Available balance hidden'
+                    : `Available: ${selected.displayBalance} ${selected.symbol}`}
+                </span>
+                {maxNeedsRecipient ? (
+                  <span className='sendMaxReason' id='sendMaxReason'>
+                    {COPY.maxNeedsRecipient}
+                  </span>
+                ) : null}
               </span>
             </div>
           ) : null}

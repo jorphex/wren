@@ -4,7 +4,8 @@ import store from '../store'
 import windows from '../windows'
 import { requireStoreAction } from '../store/action'
 
-export type WalletActivityNotificationOutcome = 'confirmed' | 'failed' | 'replaced' | 'long-pending'
+export type WalletActivityNotificationOutcome =
+  'confirmed' | 'failed' | 'replaced' | 'long-pending' | 'long-pending-broadcasting'
 export type TransactionNotificationOutcome = WalletActivityNotificationOutcome | 'dropped'
 
 const copy: Record<WalletActivityNotificationOutcome, { title: string; body: string }> = {
@@ -14,6 +15,10 @@ const copy: Record<WalletActivityNotificationOutcome, { title: string; body: str
   'long-pending': {
     title: 'Wallet activity still pending',
     body: 'Wren is still checking a submitted wallet activity.'
+  },
+  'long-pending-broadcasting': {
+    title: 'Wallet activity broadcast status unknown',
+    body: 'Wren is checking whether a signed wallet activity was broadcast.'
   }
 }
 
@@ -27,7 +32,7 @@ export function notifyTransactionOutcome(
   outcome: TransactionNotificationOutcome
 ) {
   const normalizedOutcome = outcome === 'dropped' ? 'replaced' : outcome
-  const deliveryKey = `${activityId}:${normalizedOutcome === 'long-pending' ? 'pending' : 'terminal'}`
+  const deliveryKey = `${activityId}:${normalizedOutcome.startsWith('long-pending') ? 'pending' : 'terminal'}`
   if (
     !activityId ||
     delivered.has(deliveryKey) ||

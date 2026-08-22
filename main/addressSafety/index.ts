@@ -3,8 +3,10 @@ import { createHash } from 'crypto'
 import type { TransactionRequest, WalletCallsRequest } from '../accounts/types'
 import {
   MAX_OUTBOUND_ADDRESS_MEMORY,
+  OutboundAddressFingerprintSchema,
   pruneOutboundAddressMemory
 } from '../store/state/types/outboundAddressMemory'
+import type { OutboundAddressFingerprint } from '../store/state/types/outboundAddressMemory'
 import type { AddressSafetyAssessment } from './types'
 
 const ADDRESS = /^0x[0-9a-f]{40}$/iu
@@ -21,6 +23,31 @@ const addressDigest = (instanceId: string, address: string) => {
 }
 
 const ends = (address: string) => ({ prefix: address.slice(2, 6), suffix: address.slice(-4) })
+
+export const fingerprintOutboundAddresses = (
+  instanceId: string,
+  addresses: readonly unknown[]
+): OutboundAddressFingerprint[] =>
+  addresses
+    .flatMap((candidate) => normalizeAddress(candidate) || [])
+    .filter((address, index, normalized) => normalized.indexOf(address) === index)
+    .slice(0, MAX_OUTBOUND_ADDRESS_MEMORY)
+    .map((address) => ({ digest: addressDigest(instanceId, address), ...ends(address) }))
+
+export const recordOutboundAddressFingerprints = (
+  value: unknown,
+  fingerprints: readonly unknown[],
+  now = Date.now()
+) => {
+  if (!Number.isSafeInteger(now) || now < 0) throw new Error('Invalid address-safety timestamp')
+  const memory = pruneOutboundAddressMemory(value, now)
+  for (const candidate of fingerprints.slice(0, MAX_OUTBOUND_ADDRESS_MEMORY)) {
+    const parsed = OutboundAddressFingerprintSchema.safeParse(candidate)
+    if (!parsed.success) continue
+    memory[parsed.data.digest] = { ...parsed.data, lastSubmittedAt: now }
+  }
+  return pruneOutboundAddressMemory(memory, now)
+}
 
 export const transactionOutboundTargets = (
   request: Pick<TransactionRequest, 'data' | 'recognizedActions'>
@@ -53,15 +80,7 @@ export const recordOutboundAddresses = (
   addresses: readonly unknown[],
   now = Date.now()
 ) => {
-  if (!Number.isSafeInteger(now) || now < 0) throw new Error('Invalid address-safety timestamp')
-  const memory = pruneOutboundAddressMemory(value, now)
-  for (const candidate of addresses.slice(0, MAX_OUTBOUND_ADDRESS_MEMORY)) {
-    const address = normalizeAddress(candidate)
-    if (!address) continue
-    const digest = addressDigest(instanceId, address)
-    memory[digest] = { digest, ...ends(address), lastSubmittedAt: now }
-  }
-  return pruneOutboundAddressMemory(memory, now)
+  return recordOutboundAddressFingerprints(value, fingerprintOutboundAddresses(instanceId, addresses), now)
 }
 
 export const assessOutboundAddresses = (

@@ -69,7 +69,12 @@ it.each([
   ['confirmed', 'Wallet activity confirmed', 'A submitted wallet activity completed.'],
   ['failed', 'Wallet activity failed', 'A submitted wallet activity did not complete.'],
   ['replaced', 'Wallet activity replaced', 'A submitted wallet activity was replaced.'],
-  ['long-pending', 'Wallet activity still pending', 'Wren is still checking a submitted wallet activity.']
+  ['long-pending', 'Wallet activity still pending', 'Wren is still checking a submitted wallet activity.'],
+  [
+    'long-pending-broadcasting',
+    'Wallet activity broadcast status unknown',
+    'Wren is checking whether a signed wallet activity was broadcast.'
+  ]
 ])('shows one immediate privacy-static %s notification', (outcome, title, body) => {
   expect(notifyTransactionOutcome(activityId, account, outcome as never)).toBe(true)
   expect(mockNotifications).toHaveLength(1)
@@ -88,12 +93,12 @@ it('normalizes the legacy dropped outcome without changing private copy', () => 
 })
 
 it('delivers a later terminal update after one long-pending update for the same activity', () => {
-  expect(notifyTransactionOutcome(activityId, account, 'long-pending')).toBe(true)
+  expect(notifyTransactionOutcome(activityId, account, 'long-pending-broadcasting')).toBe(true)
   expect(notifyTransactionOutcome(activityId, account, 'long-pending')).toBe(false)
   expect(notifyTransactionOutcome(activityId, account, 'confirmed')).toBe(true)
   expect(notifyTransactionOutcome(activityId, account, 'confirmed')).toBe(false)
   expect(mockNotifications.map(({ options }) => options.title)).toEqual([
-    'Wallet activity still pending',
+    'Wallet activity broadcast status unknown',
     'Wallet activity confirmed'
   ])
 })

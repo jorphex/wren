@@ -1,4 +1,8 @@
-import { ContractVerification, verificationNetworks } from '../../../../app/dash/ContractVerification'
+import {
+  ACTIVE_JOB_REFRESH_MS,
+  ContractVerification,
+  verificationNetworks
+} from '../../../../app/dash/ContractVerification'
 import {
   getExplorerCredentialStatus,
   getVerification,
@@ -13,7 +17,7 @@ import {
   selectVerificationArtifact
 } from '../../../../app/dash/ContractVerification/api'
 import link from '../../../../resources/link'
-import { fireEvent, render, screen, waitFor } from '../../../componentSetup'
+import { act, fireEvent, render, screen, waitFor } from '../../../componentSetup'
 
 jest.mock('../../../../app/dash/ContractVerification/api', () => ({
   inspectVerificationArtifact: jest.fn(),
@@ -151,6 +155,10 @@ it('accepts only configured connected networks and renders the shared target fie
   expect(screen.getByLabelText('Network').classList.contains('wrenInput')).toBe(true)
   expect(screen.getByLabelText('Contract address').classList.contains('wrenInput')).toBe(true)
   expect(screen.getByRole('button', { name: 'Check source' }).disabled).toBe(true)
+
+  fireEvent.change(screen.getByLabelText('Contract address'), { target: { value: '0x1234' } })
+  expect(screen.getByLabelText('Contract address').getAttribute('aria-invalid')).toBe('true')
+  expect(screen.getByText('Enter a 20-byte hexadecimal address beginning with 0x.')).toBeTruthy()
 })
 
 it('loads a bounded flat recent list on the Tools route and opens a saved record explicitly', async () => {
@@ -258,6 +266,18 @@ it('prepares the exact source selection, shows local evidence, and resets consen
   expect(screen.getByLabelText('Contract address')).toBeTruthy()
 })
 
+it('announces source checking while the read-only check is in flight', async () => {
+  let resolveCheck
+  prepareVerification.mockReturnValue(new Promise((resolve) => (resolveCheck = resolve)))
+  const { user } = render(<ContractVerification networks={networks} />)
+  await fillTarget(user)
+  await choose(user)
+  await user.click(screen.getByRole('button', { name: 'Check source' }))
+
+  expect(screen.getByRole('status').textContent).toBe('Checking source… Nothing has been published.')
+  await act(async () => resolveCheck({ success: true, prepared }))
+})
+
 it('fails closed while managed deployment finality is pending', async () => {
   prepareVerification.mockResolvedValue({
     success: true,
@@ -313,6 +333,7 @@ it('publishes once with explicit acknowledgement and replaces the composer with 
   expect(publishVerification).toHaveBeenCalledTimes(1)
   expect(publishVerification).toHaveBeenCalledWith('ack-token')
   expect(screen.getByRole('button', { name: 'Publishing source…' }).disabled).toBe(true)
+  expect(screen.getByRole('status').textContent).toBe('Publishing source…')
 
   resolvePublish({ success: true, job })
   expect(await screen.findByRole('heading', { name: 'Verification status' })).toBeTruthy()
@@ -340,19 +361,144 @@ it('loads existing results, refreshes only on request, and opens external result
   )
 })
 
-it('checks credential status without exposing a key and preserves a Settings return', async () => {
+it('observes an active checking job locally without refreshing or resubmitting it', async () => {
+  const checkingJob = {
+    ...job,
+    status: 'publishing',
+    destinations: destinations.map((entry) =>
+      entry.destination === 'sourcify'
+        ? { ...entry, status: 'checking', remoteId: 'verification-ticket' }
+        : entry
+    )
+  }
+  const completedJob = {
+    ...checkingJob,
+    status: 'published',
+    destinations: checkingJob.destinations.map((entry) =>
+      entry.destination === 'sourcify' ? { ...entry, status: 'published' } : entry
+    )
+  }
+  getVerification
+    .mockResolvedValueOnce({ success: true, job: checkingJob })
+    .mockResolvedValueOnce({ success: true, job: completedJob })
+  const view = render(
+    <ContractVerification active networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  expect(await screen.findByText('Verification status')).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toBe('1 verification destination checking.')
+
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(2)
+  expect(screen.getByText('Verification status updated.')).toBeTruthy()
+  expect(screen.getByText('Published')).toBeTruthy()
+  expect(refreshVerification).not.toHaveBeenCalled()
+  expect(publishVerification).not.toHaveBeenCalled()
+
+  view.unmount()
+})
+
+it('observes the persisted Sourcify publication handoff and cleans up its active-only timer', async () => {
+  const handedOffJob = {
+    ...job,
+    status: 'publishing',
+    destinations: destinations.map((entry) =>
+      entry.destination === 'sourcify' ? { ...entry, status: 'not-submitted' } : entry
+    )
+  }
+  getVerification.mockResolvedValue({ success: true, job: handedOffJob })
+  const view = render(
+    <ContractVerification active networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  expect(await screen.findByText('Verification status')).toBeTruthy()
+
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(2)
+  expect(refreshVerification).not.toHaveBeenCalled()
+  expect(publishVerification).not.toHaveBeenCalled()
+
+  view.rerender(
+    <ContractVerification active={false} networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS * 2)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(2)
+
+  view.rerender(
+    <ContractVerification active networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  view.unmount()
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS * 2)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(2)
+})
+
+it('stops checking-job observation while hidden and after unmount', async () => {
+  const checkingJob = {
+    ...job,
+    destinations: destinations.map((entry) =>
+      entry.destination === 'sourcify' ? { ...entry, status: 'checking' } : entry
+    )
+  }
+  getVerification.mockResolvedValue({ success: true, job: checkingJob })
+  const view = render(
+    <ContractVerification active networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  expect(await screen.findByText('Verification status')).toBeTruthy()
+  view.rerender(
+    <ContractVerification active={false} networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS * 2)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(1)
+
+  view.rerender(
+    <ContractVerification active networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  view.unmount()
+  await act(async () => {
+    jest.advanceTimersByTime(ACTIVE_JOB_REFRESH_MS * 2)
+    await Promise.resolve()
+  })
+  expect(getVerification).toHaveBeenCalledTimes(1)
+})
+
+it('returns quietly from a saved job to a fresh contract check', async () => {
+  getVerification.mockResolvedValue({ success: true, job })
+  const { user } = render(
+    <ContractVerification networks={networks} data={{ verificationId: 'verification-1' }} />
+  )
+  await screen.findByText('Verification status')
+  await user.click(screen.getByRole('button', { name: 'Check another contract' }))
+
+  const addressInput = screen.getByLabelText('Contract address')
+  expect(addressInput.value).toBe('')
+  expect(document.activeElement).toBe(addressInput)
+  expect(screen.getByRole('button', { name: 'Choose artifact' })).toBeTruthy()
+  expect(screen.queryByText('Verification status')).toBeNull()
+  expect(listVerifications).toHaveBeenCalledTimes(1)
+})
+
+it('checks credential status without exposing a key and opens Settings on the existing nav stack', async () => {
   getVerification.mockResolvedValue({ success: true, job })
   getExplorerCredentialStatus.mockResolvedValue({
     success: true,
     credential: { available: true, configured: false, backend: 'safeStorage' }
   })
-  const onNavigateSettings = jest.fn()
   const { user } = render(
-    <ContractVerification
-      networks={networks}
-      data={{ verificationId: 'verification-1' }}
-      onNavigateSettings={onNavigateSettings}
-    />
+    <ContractVerification networks={networks} data={{ verificationId: 'verification-1' }} />
   )
   await screen.findByText('Verification status')
   await confirmNoConstructorArguments(user)
@@ -361,15 +507,22 @@ it('checks credential status without exposing a key and preserves a Settings ret
   expect(publishVerificationToEtherscan).not.toHaveBeenCalled()
   expect(await screen.findByText(/No Etherscan API key is configured/)).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Open Settings' }))
-  expect(onNavigateSettings).toHaveBeenCalledWith({
-    view: 'contracts',
-    data: { mode: 'verify', verificationId: 'verification-1' }
-  })
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'settings', data: {} })
   expect(document.body.textContent).not.toContain('my-secret-explorer-key')
 })
 
 it('submits the direct fallback only after confirming a configured credential', async () => {
-  getVerification.mockResolvedValue({ success: true, job })
+  getVerification.mockResolvedValue({
+    success: true,
+    job: {
+      ...job,
+      destinations: destinations.map((entry) =>
+        entry.destination === 'etherscan-forwarded'
+          ? { ...entry, status: 'unknown', reasonCode: 'status-unavailable' }
+          : entry
+      )
+    }
+  })
   getExplorerCredentialStatus.mockResolvedValue({
     success: true,
     credential: { available: true, configured: true, backend: 'safeStorage' }
@@ -407,6 +560,11 @@ it('invalidates direct consent when constructor arguments change', async () => {
   )
   await screen.findByText('Verification status')
   const argumentsInput = screen.getByRole('textbox', { name: 'Encoded constructor arguments' })
+  expect(screen.getByText('Paste encoded constructor arguments, or confirm there are none.')).toBeTruthy()
+  await user.type(argumentsInput, '0x')
+  expect(argumentsInput.getAttribute('aria-invalid')).toBe('true')
+  expect(screen.getByText('Use an even number of hexadecimal characters without 0x.')).toBeTruthy()
+  await user.clear(argumentsInput)
   await user.type(argumentsInput, '12Ab')
   await consentToDirectEtherscan(user)
   expect(screen.getByRole('button', { name: 'Submit directly with API key' }).disabled).toBe(false)
@@ -440,6 +598,33 @@ it('retries a key-failed direct POST only without a remote id', async () => {
   getVerification.mockResolvedValue({ success: true, job: pollingJob })
   render(<ContractVerification networks={networks} data={{ verificationId: 'verification-1' }} />)
   expect(await screen.findByText(/then refresh the existing submission/)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Submit directly with API key' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Refresh status' })).toBeTruthy()
+})
+
+it.each([
+  [
+    'transport-failure',
+    'Etherscan’s response was not confirmed. Wren will not submit this publication again; check the contract on Etherscan later.'
+  ],
+  [
+    'status-unavailable',
+    'Wren cannot confirm whether direct publication began. It will not submit this publication again; check the contract on Etherscan later.'
+  ]
+])('explains a terminal direct unknown result for %s without offering replay', async (reasonCode, copy) => {
+  const unknownDirect = {
+    ...job,
+    destinations: destinations.map((entry) =>
+      entry.destination === 'etherscan-direct'
+        ? { ...entry, status: 'unknown', reasonCode, publicationHash: hash.slice(2) }
+        : entry
+    )
+  }
+  getVerification.mockResolvedValue({ success: true, job: unknownDirect })
+
+  render(<ContractVerification networks={networks} data={{ verificationId: 'verification-1' }} />)
+
+  expect(await screen.findByText(copy)).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Submit directly with API key' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Refresh status' })).toBeTruthy()
 })

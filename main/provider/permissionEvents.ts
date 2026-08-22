@@ -6,6 +6,18 @@ interface AccountSubscriptionProvider {
   accountsChanged(addresses: string[], originIds?: readonly string[]): void
 }
 
+export function notifyPermissionAction(
+  address: string,
+  accounts: AccountSelection,
+  provider: AccountSubscriptionProvider,
+  affectedOriginIds?: readonly string[]
+) {
+  const selected = accounts.getSelectedAddresses()
+  if (selected.some((candidate) => candidate.toLowerCase() === address.toLowerCase())) {
+    provider.accountsChanged(selected, affectedOriginIds)
+  }
+}
+
 export function applyPermissionAction(
   address: string,
   action: () => void,
@@ -14,9 +26,5 @@ export function applyPermissionAction(
   affectedOriginIds?: readonly string[]
 ) {
   action()
-
-  const selected = accounts.getSelectedAddresses()
-  if (selected.some((candidate) => candidate.toLowerCase() === address.toLowerCase())) {
-    provider.accountsChanged(selected, affectedOriginIds)
-  }
+  notifyPermissionAction(address, accounts, provider, affectedOriginIds)
 }

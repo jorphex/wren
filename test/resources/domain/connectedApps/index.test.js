@@ -6,6 +6,7 @@ import {
 import { createAccountPermission } from '../../../../main/provider/permissions'
 import {
   RECENT_ORIGIN_TTL,
+  nextActiveExternalPermissionExpiry,
   nextTransientConnectedAppExpiry,
   selectConnectedAppGroups
 } from '../../../../resources/domain/connectedApps'
@@ -80,6 +81,28 @@ it('counts active access once per account for a source-bound origin', () => {
   })
 
   expect(groups[0].connected[0]).toMatchObject({ id: 'shared', durable: true, accessCount: 2 })
+})
+
+it('exposes the earliest active external permission expiry across accounts', () => {
+  const first = permission('first', 'first.example')
+  const second = permission('second', 'second.example')
+  first.caveats[0].value.expiresAt = now + 2_000
+  second.caveats[0].value.expiresAt = now + 1_000
+
+  expect(
+    nextActiveExternalPermissionExpiry(
+      {
+        [account]: { first },
+        other: {
+          second,
+          expired: { ...permission('expired', 'expired.example'), provider: false },
+          internal: permission('internal', 'frame-extension')
+        }
+      },
+      now
+    )
+  ).toBe(now + 1_000)
+  expect(nextActiveExternalPermissionExpiry({ [account]: { second } }, now + 1_000)).toBeUndefined()
 })
 
 it('keeps recent transient activity until its exact expiry and exposes the next deadline', () => {

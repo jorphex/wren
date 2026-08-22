@@ -11,7 +11,7 @@ import {
 const panelActions = require('../../../resources/store/actions.panel')
 const { isManagedPermission } = require('../../../resources/domain/permissions')
 const { pruneActivity } = require('../state/types/activity')
-const { recordOutboundAddresses } = require('../../addressSafety')
+const { recordOutboundAddresses, recordOutboundAddressFingerprints } = require('../../addressSafety')
 const {
   addRecentRecipientUse,
   removeRecentRecipientUse
@@ -280,6 +280,11 @@ module.exports = {
   recordOutboundAddresses: (u, instanceId, addresses, submittedAt) => {
     u('main.outboundAddressMemory', (memory = {}) =>
       recordOutboundAddresses(memory, instanceId, addresses, submittedAt)
+    )
+  },
+  recordOutboundAddressFingerprints: (u, fingerprints, submittedAt) => {
+    u('main.outboundAddressMemory', (memory = {}) =>
+      recordOutboundAddressFingerprints(memory, fingerprints, submittedAt)
     )
   },
   recordRecentRecipientUse: (u, use) => {

@@ -32,7 +32,7 @@ import WalletCallsRequest from './Requests/WalletCallsRequest'
 import Eip7702RevokeRequest from './Requests/Eip7702RevokeRequest'
 import WalletCallsStatus from './WalletCallsStatus'
 import { isHardwareSigner } from '../../../resources/domain/signer'
-import { accountViewTitles } from '../../../resources/domain/request'
+import { accountViewTitles, isPendingSigningRequest } from '../../../resources/domain/request'
 import { getOriginDisplayName } from '../../../resources/domain/origin'
 
 const requests = {
@@ -490,16 +490,7 @@ class _AccountBody extends React.Component {
         ? {
             position: queueIndex + 1,
             total: reviewQueue.length,
-            pendingSignatures: reviewQueue.filter((request) =>
-              [
-                'transaction',
-                'sign',
-                'signTypedData',
-                'signErc20Permit',
-                'walletCalls',
-                'eip7702Revoke'
-              ].includes(request.type)
-            ).length
+            pendingSignatures: reviewQueue.filter(isPendingSigningRequest).length
           }
         : undefined
 

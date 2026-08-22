@@ -297,7 +297,7 @@ test('refuses redirects and requests redirect:error', async () => {
   }) as unknown as typeof fetch
 
   await expect(createEtherscanV2Client(fetchImpl).submit(solidityInput(), API_KEY)).resolves.toEqual({
-    status: 'unavailable'
+    status: 'unknown'
   })
 })
 
@@ -311,7 +311,7 @@ test('does not return a key-bearing request URL from transport failures', async 
   const result = await createEtherscanV2Client(fetchImpl).submit(solidityInput(), API_KEY)
 
   expect(rawFailure).toContain(API_KEY)
-  expect(result).toEqual({ status: 'unavailable' })
+  expect(result).toEqual({ status: 'unknown' })
   expect(JSON.stringify(result)).not.toContain(API_KEY)
   expect(JSON.stringify(result)).not.toContain(rawFailure)
 })
@@ -336,7 +336,7 @@ test('keeps the ten-second timeout active through response body reading', async 
     const request = createEtherscanV2Client(fetchImpl).submit(solidityInput(), API_KEY)
     await Promise.resolve()
     jest.advanceTimersByTime(FETCH_TIMEOUT_MS)
-    await expect(request).resolves.toEqual({ status: 'unavailable' })
+    await expect(request).resolves.toEqual({ status: 'unknown' })
   } finally {
     jest.useRealTimers()
   }
@@ -359,7 +359,7 @@ test('rejects oversized, malformed, non-JSON, and non-strict responses', async (
   for (const response of responses) {
     const fetchImpl = jest.fn(async () => response) as unknown as typeof fetch
     await expect(createEtherscanV2Client(fetchImpl).submit(solidityInput(), API_KEY)).resolves.toEqual({
-      status: 'unavailable'
+      status: 'unknown'
     })
   }
 })
@@ -371,7 +371,7 @@ test('rejects a response reported as redirected even when a fetch mock returns i
   const fetchImpl = jest.fn(async () => response) as unknown as typeof fetch
 
   await expect(createEtherscanV2Client(fetchImpl).submit(solidityInput(), API_KEY)).resolves.toEqual({
-    status: 'unavailable'
+    status: 'unknown'
   })
 })
 

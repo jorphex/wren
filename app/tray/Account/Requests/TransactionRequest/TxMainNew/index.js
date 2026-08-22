@@ -8,6 +8,7 @@ import { getReplacementStatus } from '../../../../../../resources/domain/transac
 import { getOriginDisplayName } from '../../../../../../resources/domain/origin'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
 import { getAddress } from '../../../../../../resources/utils'
+import useCopiedMessage from '../../../../../../resources/Hooks/useCopiedMessage'
 import link from '../../../../../../resources/link'
 import TxOverview from './overview'
 
@@ -15,6 +16,28 @@ const replacementNotices = {
   'nonce-used': 'nonce used',
   'gas-price-too-low': 'gas price too low',
   'gas-fees-too-low': 'gas fees too low'
+}
+
+const CopyableDeploymentIdentity = ({ kind, value }) => {
+  const [copied, copyValue] = useCopiedMessage(value, 1800)
+  const label = kind === 'hash' ? 'deployment initcode hash' : 'provisional deployment address'
+  const statusId = `transaction-review-deployment-${kind}-copy-status`
+  return (
+    <span className='transactionReviewDeploymentIdentity'>
+      <button
+        type='button'
+        className='transactionReviewDeploymentHash transactionReviewDeploymentCopy'
+        aria-label={`Copy ${label}`}
+        aria-describedby={statusId}
+        onClick={() => copyValue()}
+      >
+        {value}
+      </button>
+      <span id={statusId} className='transactionReviewDeploymentCopyStatus' role='status' aria-live='polite'>
+        {copied ? `${kind === 'hash' ? 'Hash' : 'Address'} copied` : ''}
+      </span>
+    </span>
+  )
 }
 
 export const DeploymentReviewEvidence = ({ deployment }) => {
@@ -26,19 +49,26 @@ export const DeploymentReviewEvidence = ({ deployment }) => {
     nonce = undefined
   }
   return (
-    <div className='transactionReviewDeployment' aria-label='Prepared deployment evidence'>
+    <div
+      className='transactionReviewDeployment'
+      role='group'
+      aria-labelledby='transaction-review-deployment-title'
+    >
+      <div id='transaction-review-deployment-title' className='transactionReviewDeploymentTitle'>
+        Prepared deployment evidence
+      </div>
       <div className='transactionReviewDeploymentRow'>
         <span className='transactionReviewMetaLabel'>Deployment data</span>
         <span className='transactionReviewDeploymentValue'>
           <span>{`${deployment.initcodeBytes} bytes`}</span>
-          <span className='transactionReviewDeploymentHash'>{deployment.initcodeHash}</span>
+          <CopyableDeploymentIdentity kind='hash' value={deployment.initcodeHash} />
         </span>
       </div>
       {deployment.provisionalAddress ? (
         <div className='transactionReviewDeploymentRow'>
           <span className='transactionReviewMetaLabel'>Provisional address</span>
           <span className='transactionReviewDeploymentValue'>
-            <span className='transactionReviewDeploymentHash'>{deployment.provisionalAddress}</span>
+            <CopyableDeploymentIdentity kind='address' value={deployment.provisionalAddress} />
             <span className='transactionReviewDeploymentNote'>
               {nonce
                 ? `Based on pending nonce ${nonce}. This address may change before signing.`

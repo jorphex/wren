@@ -21,6 +21,9 @@ const activityEntry = (operation: OperationLifecycle): ActivityEntry => ({
   origin: operation.origin,
   type: operation.kind,
   outcome: operation.state,
+  ...(operation.state === 'submitted' && operation.broadcast
+    ? { broadcastPhase: operation.broadcast.phase }
+    : {}),
   createdAt: operation.createdAt,
   completedAt: operation.updatedAt,
   chainId: operation.chainId
@@ -78,7 +81,9 @@ export class OperationLifecycleProjection {
     if (recordObservation || unhandledTerminal || pendingDue) this.record(operation)
 
     if (pendingDue) {
-      const delivered = notifyWalletActivity(operation.id, operation.account, 'long-pending')
+      const outcome =
+        operation.broadcast?.phase === 'broadcasting' ? 'long-pending-broadcasting' : 'long-pending'
+      const delivered = notifyWalletActivity(operation.id, operation.account, outcome)
       if (delivered) notification.longPendingShownAt = Math.min(now, operation.expiresAt)
     }
 
@@ -109,5 +114,12 @@ export class OperationLifecycleProjection {
 
   projectAll(now = Date.now()) {
     this.ledger.listStored().forEach(({ id }) => this.project(id, now, false))
+  }
+
+  restoreBroadcastReservations(now = Date.now()) {
+    this.ledger
+      .listStored()
+      .filter(({ broadcast, state }) => state === 'submitted' && broadcast?.phase === 'broadcasting')
+      .forEach(({ id }) => this.project(id, now, true))
   }
 }

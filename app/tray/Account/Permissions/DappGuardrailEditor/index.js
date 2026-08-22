@@ -396,7 +396,7 @@ export class DappGuardrailEditor extends React.Component {
             <dd>{origin?.name || 'Unknown origin'}</dd>
           </div>
           <div>
-            <dt>App principal</dt>
+            <dt>App connection ID</dt>
             <dd>{originId}</dd>
           </div>
           <div>

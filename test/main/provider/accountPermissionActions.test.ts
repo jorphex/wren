@@ -47,6 +47,48 @@ it('disables an external permission and rejects its untouched pending requests',
   expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
 })
 
+it('commits the permission and guardrail removal before notifying subscribers', () => {
+  const events: string[] = []
+  const { accounts, provider, dependencies } = setup()
+  dependencies.mutate.mockImplementation(() => events.push('permission'))
+  dependencies.removeGuardrails.mockImplementation(() => events.push('guardrails'))
+  accounts.getSelectedAddresses.mockImplementation(() => {
+    events.push('selected')
+    return [account]
+  })
+  provider.accountsChanged.mockImplementation(() => events.push('notified'))
+  accounts.rejectUnapprovedRequestsForOrigins.mockImplementation(() => {
+    events.push('rejected')
+    return true
+  })
+
+  expect(
+    applyAccountPermissionRendererAction('toggleAccess', [account, externalId, false], {
+      ...dependencies,
+      commit: () => events.push('committed')
+    })
+  ).toBe(true)
+
+  expect(events).toEqual(['permission', 'guardrails', 'committed', 'selected', 'notified', 'rejected'])
+})
+
+it('notifies the affected origin after commit failure while preserving the persistence error', () => {
+  const commitError = new Error('profile commit failed')
+  const { accounts, provider, dependencies } = setup()
+
+  expect(() =>
+    applyAccountPermissionRendererAction('toggleAccess', [account, externalId, false], {
+      ...dependencies,
+      commit: () => {
+        throw commitError
+      }
+    })
+  ).toThrow(commitError)
+
+  expect(provider.accountsChanged).toHaveBeenCalledWith([account], [externalId])
+  expect(accounts.rejectUnapprovedRequestsForOrigins).toHaveBeenCalledWith(account, [externalId])
+})
+
 it('clears external permissions while preserving managed access and rejecting only enabled origins', () => {
   const { accounts, provider, dependencies } = setup()
 

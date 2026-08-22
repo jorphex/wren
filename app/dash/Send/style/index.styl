@@ -193,7 +193,11 @@
 .sendAmountHints
   display flex
   align-items center
+  flex-wrap wrap
   gap var(--wren-space-3)
+  overflow visible
+  text-overflow clip
+  white-space normal
 
 .sendAvailableHint
   flex none
@@ -204,7 +208,7 @@
   text-overflow ellipsis
 
 .sendRowError
-  .sendRowHint
+  .sendAmountError
     color var(--wren-danger)
 
 .sendInlineAction,
@@ -746,6 +750,14 @@ button.sendSweepSelectAll.wrenControl
     text-overflow ellipsis
     white-space nowrap
 
+  > span
+    overflow visible
+    text-overflow clip
+    white-space normal
+    overflow-wrap anywhere
+    word-break break-all
+    line-height 17px
+
   strong
     font-size var(--wren-type-body)
     font-weight 610
@@ -953,6 +965,9 @@ button.sendSweepSelectAll.wrenControl
 
 .sendRecipientFeedback
   min-height 18px
+  overflow visible
+  text-overflow clip
+  white-space normal
 
 .sendRecipientResolved
   min-width 0
@@ -969,6 +984,7 @@ button.sendSweepSelectAll.wrenControl
   code
     min-width 0
     overflow-wrap anywhere
+    word-break break-all
     color var(--wren-accent-primary-hover)
     font-family var(--wren-font-mono)
     font-size var(--wren-type-caption)

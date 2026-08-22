@@ -12,9 +12,9 @@ import {
   originIdForInvoker
 } from '../../../../../resources/domain/origin'
 import link from '../../../../../resources/link'
-import { fireEvent, render, screen } from '../../../../componentSetup'
+import { act, fireEvent, render, screen } from '../../../../componentSetup'
 
-jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../resources/link', () => ({ invoke: jest.fn(), send: jest.fn() }))
 
 const account = '0x1111111111111111111111111111111111111111'
 const transactionHash = `0x${'a'.repeat(64)}`
@@ -60,7 +60,10 @@ afterAll(() => {
   delete global.ResizeObserver
 })
 
-beforeEach(() => link.send.mockReset())
+beforeEach(() => {
+  link.invoke.mockReset().mockResolvedValue({ success: true, durable: true })
+  link.send.mockReset()
+})
 
 it('classifies network changes as connection activity', () => {
   expect(activityTypeMeta('switchChain')).toEqual({
@@ -158,7 +161,7 @@ it('announces when notification navigation targets cleared history', () => {
 
 it.each([
   ['canceled', 'Canceled', 'The network changed before signing'],
-  ['submitted', 'Submitted', 'Sent to network'],
+  ['submitted', 'Submitted', 'Broadcast status is not yet confirmed; Wren is checking the network.'],
   ['confirming', 'Confirming', 'Included; waiting for final confirmation'],
   ['replaced', 'Replaced', 'A submitted wallet activity was replaced'],
   ['reorged', 'Reorg detected', 'A prior confirmation changed; Wren is checking again'],
@@ -176,6 +179,27 @@ it.each([
   )
   expect(screen.getByText(label)).toBeTruthy()
   expect(screen.getByText(new RegExp(detail, 'i'))).toBeTruthy()
+})
+
+it.each([
+  ['broadcasting', 'Broadcast may not have started; Wren is checking the signed transaction hash.'],
+  [
+    'unconfirmed',
+    'Broadcast was attempted, but the network response was not confirmed. Wren is checking the network.'
+  ]
+])('truthfully distinguishes the %s transaction submission phase', (broadcastPhase, detail) => {
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[entry({ outcome: 'submitted', broadcastPhase })]}
+      moduleId='activity'
+      expanded
+    />
+  )
+
+  expect(screen.getByText('Submission unconfirmed')).toBeTruthy()
+  expect(screen.getByText(detail)).toBeTruthy()
+  expect(screen.queryByText('Submitted')).toBeNull()
 })
 
 it('uses an explicit privacy-preserving empty state', () => {
@@ -212,6 +236,7 @@ it('keeps keyword filtering within the selected family', () => {
 })
 
 it('clears all device activity through an explicit accessible confirmation', () => {
+  link.invoke.mockReturnValueOnce(new Promise(() => {}))
   render(<ActivityHarness account={account} moduleId='activity' expanded />)
 
   const clear = screen.getByRole('button', { name: 'Clear activity' })
@@ -230,20 +255,60 @@ it('clears all device activity through an explicit accessible confirmation', () 
 
   fireEvent.click(restoredClear)
   fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'clearActivity')
+  expect(link.invoke).toHaveBeenCalledWith('activity:clear')
   expect(screen.getByRole('alertdialog').getAttribute('aria-busy')).toBe('true')
   expect(screen.getByRole('button', { name: 'Clearing…' }).disabled).toBe(true)
 })
 
-it('announces successful clearing after the persisted history is removed', () => {
-  const view = render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
+it('announces durable success only after the invoked clear is acknowledged', async () => {
+  let acknowledge
+  link.invoke.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        acknowledge = resolve
+      })
+  )
+  render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
 
   fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
   fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
-  view.rerender(<ActivityHarness account={account} entries={[]} moduleId='activity' expanded />)
+  expect(screen.queryByText('Activity history and address memory cleared from this device.')).toBeNull()
+  await act(async () => acknowledge({ success: true, durable: true }))
 
-  const status = screen.getByText('Activity history cleared.')
+  const status = await screen.findByText('Activity history and address memory cleared from this device.')
   expect(status.getAttribute('role')).toBe('status')
   expect(document.activeElement).toBe(status)
-  expect(screen.queryByRole('button', { name: 'Clear activity' })).toBeNull()
+})
+
+it('announces session-only Activity clearing when persistence is not acknowledged', async () => {
+  link.invoke.mockResolvedValueOnce({
+    success: false,
+    durable: false,
+    sessionOnly: true,
+    error: 'persistence-failed'
+  })
+  render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+
+  expect(
+    await screen.findByText(
+      'Activity history and address memory are cleared for this session, but Wren could not confirm the change was saved. Restart may restore prior data.'
+    )
+  ).toBeTruthy()
+})
+
+it('does not claim clearing when the Activity acknowledgement is unavailable', async () => {
+  link.invoke.mockRejectedValueOnce(new Error('bridge unavailable'))
+  render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+
+  expect(
+    await screen.findByText(
+      'Wren could not confirm that Activity history and address memory were cleared. Try again.'
+    )
+  ).toBeTruthy()
 })

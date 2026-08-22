@@ -137,6 +137,11 @@ const remoteEvidenceMatches = (
   candidate: ContractVerificationDestinationRecord
 ) =>
   (current.remoteId === undefined || current.remoteId === candidate.remoteId) &&
+  (current.publicationHash === undefined ||
+    current.publicationHash === candidate.publicationHash ||
+    (current.destination === 'etherscan-direct' &&
+      (candidate.status === 'unavailable' ||
+        (candidate.status === 'needs-api-key' && !candidate.remoteId)))) &&
   (current.statusUrl === undefined || current.statusUrl === candidate.statusUrl) &&
   (current.explorerUrl === undefined || current.explorerUrl === candidate.explorerUrl)
 
@@ -155,9 +160,47 @@ const destinationsAdvance = (
   })
 }
 
+const hasResumableRemoteEvidence = (job: ContractVerificationJobRecord) =>
+  job.destinations.some(
+    ({ remoteId, status }) =>
+      Boolean(remoteId) && (status === 'checking' || status === 'needs-api-key' || status === 'unknown')
+  )
+
+const hasDirectPublicationFence = (job: ContractVerificationJobRecord) => {
+  const direct = job.destinations.find(({ destination }) => destination === 'etherscan-direct')
+  return Boolean(
+    direct &&
+    direct.status !== 'not-submitted' &&
+    direct.status !== 'unavailable' &&
+    !(direct.status === 'needs-api-key' && !direct.remoteId)
+  )
+}
+
+const hasSourcifyPublicationFence = (job: ContractVerificationJobRecord) => {
+  const sourcify = job.destinations.find(({ destination }) => destination === 'sourcify')
+  return Boolean(sourcify && sourcify.publicationHash && sourcify.status !== 'not-submitted')
+}
+
+const hasPublicationFence = (job: ContractVerificationJobRecord) =>
+  hasSourcifyPublicationFence(job) || hasDirectPublicationFence(job)
+
 const safelyEvictable = (job: ContractVerificationJobRecord) =>
   (job.status === 'published' || job.status === 'rejected') &&
-  job.destinations.every(({ status }) => status !== 'checking')
+  job.destinations.every(({ status }) => status !== 'checking') &&
+  !hasResumableRemoteEvidence(job) &&
+  !hasPublicationFence(job)
+
+const safelyEvictableIncomplete = (job: ContractVerificationJobRecord) =>
+  (job.status === 'partial' || job.status === 'unknown') &&
+  !job.destinations.some(({ status }) => status === 'checking') &&
+  !hasResumableRemoteEvidence(job) &&
+  !hasPublicationFence(job)
+
+const oldest = (jobs: readonly ContractVerificationJobRecord[]) =>
+  [...jobs].sort(
+    (left, right) =>
+      left.updatedAt - right.updatedAt || left.createdAt - right.createdAt || left.id.localeCompare(right.id)
+  )[0]
 
 export class ContractVerificationJobLedger {
   constructor(private readonly storage: ContractVerificationJobStorage) {}
@@ -193,16 +236,10 @@ export class ContractVerificationJobLedger {
 
     let retained = jobs
     if (retained.length >= MAX_CONTRACT_VERIFICATION_JOBS) {
-      const oldestTerminal = [...retained]
-        .filter(safelyEvictable)
-        .sort(
-          (left, right) =>
-            left.updatedAt - right.updatedAt ||
-            left.createdAt - right.createdAt ||
-            left.id.localeCompare(right.id)
-        )[0]
-      if (!oldestTerminal) throw new Error('Contract verification job limit reached')
-      retained = retained.filter(({ id }) => id !== oldestTerminal.id)
+      const candidate =
+        oldest(retained.filter(safelyEvictable)) || oldest(retained.filter(safelyEvictableIncomplete))
+      if (!candidate) throw new Error('Contract verification job limit reached')
+      retained = retained.filter(({ id }) => id !== candidate.id)
     }
 
     this.write([...retained, parsed])

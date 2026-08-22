@@ -493,6 +493,7 @@ export class RequestCommand extends React.Component {
 
     const advancedPending = req.simulation?.advancedChecks?.status === 'pending'
     const reviewPending = req.simulation?.status === 'pending'
+    const simulationFailed = ['failed', 'reverted'].includes(req.simulation?.status)
     return (
       <div className='requestApprove requestApproveTransaction'>
         <div className='requestActionContext'>
@@ -524,7 +525,7 @@ export class RequestCommand extends React.Component {
               if (this.state.allowInput) this.decline(req)
             }}
           >
-            <span className='requestDeclineButton _txButton _txButtonBad'>
+            <span className={`requestDeclineButton _txButton${simulationFailed ? '' : ' _txButtonBad'}`}>
               <span>Decline</span>
             </span>
           </button>

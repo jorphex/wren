@@ -3,6 +3,12 @@
 const INTERFACE_SCALES = Object.freeze([1, 1.25, 1.5])
 const FULL_SHELL_HEIGHT = 900
 const SHORT_SHELL_HEIGHT = 744
+const GENERATED_EXPIRY_COLOR = Object.freeze({
+  kind: 'computed-style',
+  selector: '.generatedWalletExpiryNotice',
+  property: 'color',
+  value: 'rgb(208, 214, 206)'
+})
 
 const RPC_WARNING_SCENARIOS = Object.freeze([
   {
@@ -131,7 +137,9 @@ const transactionLookalikeScenario = (geometry, scale, logicalHeight) => ({
   requiredText: [
     'Possible address poisoning.',
     'Verify the full address. Its first and last four characters match a destination you used before.'
-  ]
+  ],
+  layoutExpectations:
+    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' }] : []
 })
 
 const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
@@ -145,6 +153,8 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
   requiredControls: [
     'View transaction data',
     'Copy transaction sender address',
+    'Copy deployment initcode hash',
+    'Copy provisional deployment address',
     'Decline',
     'Sign transaction'
   ],
@@ -155,7 +165,9 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
     '4 bytes',
     'Provisional address',
     'may change before signing'
-  ]
+  ],
+  layoutExpectations:
+    geometry === 'short' ? [{ kind: 'viewport-bottom', selector: '.requestNoticeTransactionReview' }] : []
 })
 
 const joinedCanvasScenarios = () => [
@@ -393,10 +405,100 @@ const sendComposerScenarios = () =>
     ])
   )
 
+const SEND_LIFECYCLE_CASES = [
+  {
+    variant: 'queued',
+    geometry: 'full',
+    logicalHeight: FULL_SHELL_HEIGHT,
+    scale: 1,
+    heading: 'Transaction queued',
+    requiredControls: ['Close']
+  },
+  {
+    variant: 'submitted',
+    geometry: 'short',
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    scale: 1,
+    status: 'verifying',
+    heading: 'Transaction submitted',
+    requiredControls: ['Close']
+  },
+  {
+    variant: 'unconfirmed',
+    geometry: 'full',
+    logicalHeight: FULL_SHELL_HEIGHT,
+    scale: 1.25,
+    status: 'verifying',
+    submission: { status: 'unconfirmed' },
+    heading: 'Submission status unconfirmed',
+    requiredControls: ['Close']
+  },
+  {
+    variant: 'declined',
+    geometry: 'short',
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    scale: 1.25,
+    status: 'declined',
+    heading: 'Transaction declined',
+    requiredControls: ['Try again', 'Close']
+  },
+  {
+    variant: 'failed',
+    geometry: 'short',
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    scale: 1.5,
+    status: 'error',
+    notice: 'The configured RPC could not confirm the request.',
+    heading: 'Transaction failed',
+    requiredControls: ['Try again', 'Close']
+  }
+]
+
+const sendLifecycleScenarios = () =>
+  SEND_LIFECYCLE_CASES.map(
+    ({ variant, geometry, logicalHeight, scale, status, submission, notice, heading, requiredControls }) => {
+      const steps = [
+        {
+          type: 'inputLabel',
+          label: 'Recipient',
+          value: '0x2222222222222222222222222222222222222222'
+        },
+        { type: 'inputLabel', label: 'Amount', value: '0.25' },
+        { type: 'clickText', text: 'Review send' }
+      ]
+      if (status) {
+        steps.push({
+          type: 'setRequestStatus',
+          account: '0x9A91D79cB7d27d71E109F4DFD177475E1D35dD02',
+          requestId: 'qualification-send-request',
+          status,
+          ...(submission ? { submission } : {}),
+          ...(notice ? { notice } : {})
+        })
+      }
+      return {
+        id: `dash-send-lifecycle-${variant}-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: `send-lifecycle-${variant}`,
+        variant,
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: { type: 'sequence', delayMs: 300, steps },
+        ready: '.sendRequestState',
+        expectedInitialFocus: heading,
+        requiredControls,
+        requiredText: [heading],
+        layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }]
+      }
+    }
+  )
+
 const reviewScenarios = () => [
   ...joinedCanvasScenarios(),
   ...updateDialogScenarios(),
   ...sendComposerScenarios().filter(({ state }) => state !== 'send-asset-picker'),
+  ...sendLifecycleScenarios(),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -416,41 +518,48 @@ const reviewScenarios = () => [
       requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
     }))
   ),
-  ...['unlocked', 'locked'].flatMap((variant) =>
-    [
-      ['full', FULL_SHELL_HEIGHT],
-      ['short', SHORT_SHELL_HEIGHT]
-    ].map(([geometry, logicalHeight]) => ({
-      id: `dash-earn-yvusd-${variant}-${geometry}-1`,
-      renderer: 'dash',
-      state: 'earn-yvusd',
-      variant,
-      scale: 1,
-      logicalWidth: 620,
-      logicalHeight,
-      ready: '.earnDetails',
-      requiredControls:
-        variant === 'locked'
-          ? ['Flexible', 'Locked', 'Deposit', 'Start locked cooldown']
-          : ['Flexible', 'Locked', 'Deposit', 'Withdraw'],
-      requiredText: [
-        'yvUSD',
-        'Earn with flexible or time-locked yvUSD.',
-        'EST. APY',
-        'TVL',
-        'RISK',
-        'Choose how to earn',
-        'Locked withdrawal timing'
-      ]
-    }))
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    ['unlocked', 'locked'].flatMap((variant) =>
+      [
+        ['full', FULL_SHELL_HEIGHT],
+        ['short', SHORT_SHELL_HEIGHT]
+      ].map(([geometry, logicalHeight]) => ({
+        id: `dash-earn-yvusd-${variant}-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'earn-yvusd',
+        variant,
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        ready: '.earnDetails',
+        requiredControls:
+          variant === 'locked'
+            ? ['Flexible', 'Locked', 'Deposit', 'Start locked cooldown']
+            : ['Flexible', 'Locked', 'Deposit', 'Withdraw'],
+        requiredText: [
+          'yvUSD',
+          'Earn with flexible or time-locked yvUSD.',
+          'EST. APY',
+          'TVL',
+          'RISK',
+          'Choose how to earn',
+          'Locked withdrawal timing',
+          'APY is variable and not guaranteed.',
+          'Yearn vaults involve smart-contract and strategy risk.'
+        ]
+      }))
+    )
   ),
-  {
-    id: 'dash-earn-loading-full-1',
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-earn-loading-${geometry}-1`,
     renderer: 'dash',
     state: 'earn-loading',
     scale: 1,
     logicalWidth: 620,
-    logicalHeight: FULL_SHELL_HEIGHT,
+    logicalHeight,
     ready: '.earnPositionsLoading',
     deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows'],
     requiredControls: ['View yvUSD on Ethereum'],
@@ -461,7 +570,34 @@ const reviewScenarios = () => [
       'Ethereum',
       'yvUSD'
     ],
-    layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }]
+    layoutExpectations: [
+      {
+        kind: geometry === 'short' ? 'scroll-overflows' : 'scroll-fits',
+        selector: '.dashMainScroll'
+      }
+    ]
+  })),
+  {
+    id: 'dash-earn-list-full-1',
+    renderer: 'dash',
+    state: 'earn-list',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.earnPositionList',
+    requiredControls: ['Refresh', 'Manage yvUSD position', 'View yvUSD on Ethereum'],
+    requiredText: ['Earn', 'YOUR POSITIONS', '1.5 USDC', '5.12%', '$1.5M TVL']
+  },
+  {
+    id: 'dash-earn-privacy-short-1',
+    renderer: 'dash',
+    state: 'earn-privacy',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.earnPositionList',
+    requiredControls: ['Manage yvUSD position', 'View yvUSD on Ethereum'],
+    requiredText: ['YOUR POSITIONS', '•••• USDC', '•••• USDC available', '5.12%', '$1.5M TVL']
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -581,6 +717,26 @@ const reviewScenarios = () => [
       'directly to Etherscan'
     ]
   })),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-contract-verification-direct-unknown-${geometry}-1`,
+    renderer: 'dash',
+    state: 'contract-verification',
+    variant: 'direct-transport-unknown',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.contractVerificationResult',
+    requiredControls: ['Check another contract', 'Refresh status'],
+    requiredText: [
+      'Verification status',
+      'Etherscan · direct',
+      'Status unknown',
+      'Etherscan’s response was not confirmed. Wren will not submit this publication again; check the contract on Etherscan later.'
+    ]
+  })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -645,6 +801,16 @@ const reviewScenarios = () => [
           container: '.contractsPanel',
           inset: 2
         },
+        ...(geometry === 'short'
+          ? [
+              {
+                kind: 'computed-style',
+                selector: '.deploymentActionShelf',
+                property: 'backgroundColor',
+                value: 'rgb(9, 12, 10)'
+              }
+            ]
+          : []),
         ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
       ],
       requiredControls: [
@@ -688,6 +854,17 @@ const reviewScenarios = () => [
       captureScroll: 'target',
       captureScrollSelector: '.deploymentEvidence',
       captureScrollOffset: -80,
+      layoutExpectations:
+        geometry === 'short'
+          ? [
+              {
+                kind: 'computed-style',
+                selector: '.deploymentActionShelf',
+                property: 'backgroundColor',
+                value: 'rgb(9, 12, 10)'
+              }
+            ]
+          : [],
       requiredControls: ['Edit and recheck', 'Review deployment'],
       requiredText: [
         'PREPARED EVIDENCE',
@@ -698,6 +875,32 @@ const reviewScenarios = () => [
       ]
     }))
   ),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-deployment-abandon-${geometry}-1`,
+    renderer: 'dash',
+    state: 'deployment',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'inputLabel', label: 'Deployment data', value: '0x60006000' },
+        { type: 'clickText', text: 'Back' }
+      ]
+    },
+    ready: '.deploymentAbandonDialog[aria-modal="true"]',
+    expectedInitialFocus: 'Keep editing',
+    requiredControls: ['Keep editing', 'Discard and leave'],
+    requiredText: [
+      'Discard this deployment?',
+      'Leaving now clears the deployment data and any prepared evidence.',
+      'Nothing has been signed or broadcast.'
+    ]
+  })),
   {
     id: 'dash-inspector-result-full-1',
     renderer: 'dash',
@@ -772,9 +975,53 @@ const reviewScenarios = () => [
     requiredControls: ['Cancel', 'Confirm revoke'],
     requiredText: [
       'Revoke access for https://treasury.workshop.example?',
+      'App connection ID 11111111-1111-4111-8111-111111111111',
       'Its guardrails will be removed, and it must request access again.'
     ]
   })),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `tray-account-access-clear-${geometry}-1`,
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    action: { type: 'clickText', text: 'Revoke all app access' },
+    ready: '.clearPermissionsConfirm',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Confirm revoke'],
+    requiredText: [
+      'Revoke all app access?',
+      'External apps will lose access to this account.',
+      'Their guardrails will be removed, and they must request access again.'
+    ]
+  })),
+  {
+    id: 'tray-account-access-revoke-failed-short-1',
+    renderer: 'tray',
+    state: 'account-permissions',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      delayMs: 650,
+      steps: [
+        { type: 'clickText', text: 'Revoke access' },
+        { type: 'clickText', text: 'Confirm revoke' }
+      ]
+    },
+    ready: '.revokeAccessFailure',
+    expectedInitialFocus: 'Confirm revoke',
+    requiredControls: ['Cancel', 'Confirm revoke'],
+    requiredText: [
+      'Revoke access for https://treasury.workshop.example?',
+      'Revocation confirmation is unavailable. Wren will keep checking for the access change.'
+    ]
+  },
   ...['left', 'right'].map((glideSide) => ({
     id: `tray-account-access-revoke-workspace-${glideSide}-1`,
     renderer: 'tray',
@@ -788,7 +1035,11 @@ const reviewScenarios = () => [
     ready: '.revokeAccessDialog',
     expectedInitialFocus: 'Cancel',
     requiredControls: ['Cancel', 'Confirm revoke'],
-    requiredText: ['Revoke access for https://treasury.workshop.example?'],
+    requiredText: [
+      'Revoke access for https://treasury.workshop.example?',
+      'App connection ID 11111111-1111-4111-8111-111111111111',
+      'Its guardrails will be removed, and it must request access again.'
+    ],
     layoutExpectations: [
       { kind: 'edge-clearance', selector: '.revokeAccessPanel', container: '#panel', inset: 16 }
     ]
@@ -1203,6 +1454,18 @@ const reviewScenarios = () => [
     requiredText: ['Method verified · ABI source: Sourcify', 'Workshop Token', 'transfer']
   },
   {
+    id: 'dash-notify-remove-network-short-1',
+    renderer: 'dash',
+    state: 'dash-notify-remove-network',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '[role="dialog"][aria-label="Remove Optimism Mainnet?"]',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Remove network'],
+    requiredText: ['Remove Optimism Mainnet?', 'This removes the network from Wren.']
+  },
+  {
     id: 'tray-transaction-method-verified-full-1.5',
     renderer: 'tray',
     state: 'transaction-responsive',
@@ -1239,84 +1502,90 @@ const reviewScenarios = () => [
     ready: '.addAccountsChooser',
     requiredText: ['Create new', 'Import existing', 'Watch-only']
   },
-  ...[
-    ['full', FULL_SHELL_HEIGHT],
-    ['short', SHORT_SHELL_HEIGHT]
-  ].flatMap(([geometry, logicalHeight]) => [
-    {
-      id: `dash-account-create-phrase-${geometry}-1`,
-      renderer: 'dash',
-      state: 'account-create-phrase',
-      scale: 1,
-      logicalWidth: 620,
-      logicalHeight,
-      action: generatedWalletPresentationAction(),
-      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletPhrase',
-      requiredControls: ['Copy recovery phrase', "I've written it down"],
-      requiredText: [
-        'Your recovery phrase',
-        'Write these 12 words down in order. Wren will not show them again.',
-        'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
-        'Finish setup within about 10 minutes.',
-        'Leaving now deletes this new wallet.'
-      ]
-    },
-    {
-      id: `dash-account-create-private-key-${geometry}-1`,
-      renderer: 'dash',
-      state: 'account-create-private-key',
-      scale: 1,
-      logicalWidth: 620,
-      logicalHeight,
-      action: generatedWalletPresentationAction(),
-      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletEvidence',
-      requiredControls: ['Copy address', 'Show private key', 'Copy private key'],
-      requiredText: [
-        'Your private key',
-        'Account address',
-        'Show or copy this key, then save it somewhere safe. Wren will not show it again.',
-        "I've saved my key",
-        'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
-        'Finish setup within about 10 minutes.',
-        'Leaving now deletes this new account.'
-      ]
-    },
-    {
-      id: `dash-account-verify-phrase-${geometry}-1`,
-      renderer: 'dash',
-      state: 'account-create-phrase',
-      scale: 1,
-      logicalWidth: 620,
-      logicalHeight,
-      action: generatedWalletVerificationAction('phrase'),
-      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletVerify',
-      requiredText: [
-        'Verify your backup',
-        'Enter the requested words from your saved copy.',
-        'Word 2',
-        'Word 6',
-        'Word 10',
-        'Finish setup within about 10 minutes.',
-        'Leaving now deletes this new wallet.'
-      ]
-    },
-    {
-      id: `dash-account-verify-private-key-${geometry}-1`,
-      renderer: 'dash',
-      state: 'account-create-private-key',
-      scale: 1,
-      logicalWidth: 620,
-      logicalHeight,
-      action: generatedWalletVerificationAction('private-key'),
-      ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletKeyInput',
-      requiredText: [
-        'Verify your backup',
-        'Enter the private key from your saved copy.',
-        'Finish setup within about 10 minutes.',
-        'Leaving now deletes this new account.'
-      ]
-    }
-  ]),
+  ...INTERFACE_SCALES.flatMap((scale) =>
+    [
+      ['full', FULL_SHELL_HEIGHT],
+      ['short', SHORT_SHELL_HEIGHT]
+    ].flatMap(([geometry, logicalHeight]) => [
+      {
+        id: `dash-account-create-phrase-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'account-create-phrase',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: generatedWalletPresentationAction(),
+        ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletPhrase',
+        requiredControls: ['Copy recovery phrase', "I've written it down"],
+        requiredText: [
+          'Your recovery phrase',
+          'Write these 12 words down in order. Wren will not show them again.',
+          'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
+          'Finish setup within about 10 minutes.',
+          'Leaving now deletes this new wallet.'
+        ],
+        layoutExpectations: [GENERATED_EXPIRY_COLOR]
+      },
+      {
+        id: `dash-account-create-private-key-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'account-create-private-key',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: generatedWalletPresentationAction(),
+        ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletEvidence',
+        requiredControls: ['Copy address', 'Show private key', 'Copy private key'],
+        requiredText: [
+          'Your private key',
+          'Account address',
+          'Show or copy this key, then save it somewhere safe. Wren will not show it again.',
+          "I've saved my key",
+          'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
+          'Finish setup within about 10 minutes.',
+          'Leaving now deletes this new account.'
+        ],
+        layoutExpectations: [GENERATED_EXPIRY_COLOR]
+      },
+      {
+        id: `dash-account-verify-phrase-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'account-create-phrase',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: generatedWalletVerificationAction('phrase'),
+        ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletVerify',
+        requiredText: [
+          'Verify your backup',
+          'Enter the requested words from your saved copy.',
+          'Word 2',
+          'Word 6',
+          'Word 10',
+          'Finish setup within about 10 minutes.',
+          'Leaving now deletes this new wallet.'
+        ],
+        layoutExpectations: [GENERATED_EXPIRY_COLOR]
+      },
+      {
+        id: `dash-account-verify-private-key-${geometry}-${scale}`,
+        renderer: 'dash',
+        state: 'account-create-private-key',
+        scale,
+        logicalWidth: 620,
+        logicalHeight,
+        action: generatedWalletVerificationAction('private-key'),
+        ready: '.generatedWalletFrame[aria-hidden="false"] .generatedWalletKeyInput',
+        requiredText: [
+          'Verify your backup',
+          'Enter the private key from your saved copy.',
+          'Finish setup within about 10 minutes.',
+          'Leaving now deletes this new account.'
+        ],
+        layoutExpectations: [GENERATED_EXPIRY_COLOR]
+      }
+    ])
+  ),
   {
     id: 'dash-account-add-watch-full-1',
     renderer: 'dash',
@@ -1461,7 +1730,26 @@ const reviewScenarios = () => [
       'Contract verification',
       'Not configured',
       'OS credential protection',
+      'Use 16–128 letters, numbers, underscores, or hyphens.',
       'Not included in profile backups'
+    ],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-contract-verification'
+  },
+  {
+    id: 'dash-settings-contract-verification-unavailable-short-1.5',
+    renderer: 'dash',
+    state: 'settings',
+    variant: 'credential-status-unavailable',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.contractVerificationCredentialError',
+    requiredText: [
+      'Contract verification',
+      'Storage status unavailable',
+      'Wren could not confirm OS credential protection, so it will not accept a key.',
+      'Credential status unavailable.'
     ],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-contract-verification'
@@ -1586,7 +1874,14 @@ const reviewScenarios = () => [
       }
     ],
     requiredControls: ['Optimism Mainnet'],
-    requiredText: ['workshop.example', 'Default network', 'Ethereum', 'Optimism Mainnet']
+    requiredText: [
+      'workshop.example',
+      'Account access',
+      'Open an account in the wallet, then choose Apps with access to review or revoke this app.',
+      'Default network',
+      'Ethereum',
+      'Optimism Mainnet'
+    ]
   })),
   {
     id: 'dash-network-editor-full-1',
@@ -1598,9 +1893,11 @@ const reviewScenarios = () => [
     ready: '.networkEditor',
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.dashMainScroll' },
-      { kind: 'scroll-fits', selector: '.localSettingsWrap' }
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
     ],
-    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
+    requiredControls: ['Cancel', 'Save changes'],
+    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
   },
   {
     id: 'dash-network-editor-short-1',
@@ -1612,9 +1909,28 @@ const reviewScenarios = () => [
     ready: '.networkEditor',
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.localSettingsWrap' },
-      { kind: 'scroll-fits', selector: '.networkEditorBody' }
+      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
     ],
-    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Add RPC', 'Save changes']
+    requiredControls: ['Cancel', 'Save changes'],
+    requiredText: ['Edit Ethereum', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
+  },
+  {
+    id: 'dash-network-editor-removable-short-1',
+    renderer: 'dash',
+    state: 'network-editor',
+    variant: 'removable',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.networkEditor',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+    ],
+    requiredControls: ['Remove network', 'Cancel', 'Save changes'],
+    requiredText: ['Edit Optimism Mainnet', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
   },
   {
     id: 'dash-network-add-full-1',
@@ -1626,9 +1942,11 @@ const reviewScenarios = () => [
     ready: '.networkEditor',
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.dashMainScroll' },
-      { kind: 'scroll-fits', selector: '.localSettingsWrap' }
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
     ],
-    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
+    requiredControls: ['Cancel', 'Add network'],
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Not checked', '1 of 5 RPC endpoints used']
   },
   {
     id: 'dash-network-add-short-1',
@@ -1640,9 +1958,11 @@ const reviewScenarios = () => [
     ready: '.networkEditor',
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.localSettingsWrap' },
-      { kind: 'scroll-fits', selector: '.networkEditorBody' }
+      { kind: 'scroll-fits', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
     ],
-    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Add RPC', 'Add network']
+    requiredControls: ['Cancel', 'Add network'],
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Not checked', '1 of 5 RPC endpoints used']
   },
   {
     id: 'dash-network-add-overflow-short-1',
@@ -1655,12 +1975,17 @@ const reviewScenarios = () => [
     action: {
       type: 'sequence',
       delayMs: 20,
-      steps: Array.from({ length: 4 }, () => ({ type: 'clickText', text: 'Add RPC' }))
+      steps: Array.from({ length: 4 }, () => ({ type: 'clickText', text: 'Add RPC endpoint' }))
     },
     captureScroll: 'bottom',
-    captureScrollSelector: '.localSettingsWrap',
-    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.localSettingsWrap' }],
-    requiredText: ['Add Base Mainnet', 'RPC endpoints', 'Test network', 'Add network']
+    captureScrollSelector: '.networkEditorBody',
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+    ],
+    requiredControls: ['Cancel', 'Add network'],
+    requiredText: ['Add Base Mainnet', 'RPC endpoints', '5 of 5 RPC endpoints used', 'Test network']
   },
   {
     id: 'tray-account-startup-full-1',
@@ -1797,7 +2122,7 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.approveTransactionWarning',
-      requiredControls: ['Reject', confirmLabel],
+      requiredControls: ['Decline', confirmLabel],
       requiredText: [title, message],
       layoutExpectations: [
         { kind: 'hidden', selector: '.accountSelectorOpen' },
@@ -1815,7 +2140,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.approveTransactionWarning',
     action: { type: 'hoverText', text: 'Sign Anyway' },
-    requiredControls: ['Reject', 'Sign Anyway'],
+    requiredControls: ['Decline', 'Sign Anyway'],
     requiredText: ['RPC Reports Revert', 'Your configured RPC reports that this transaction will revert.'],
     layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestNoticeApproval' }]
   },
@@ -1864,6 +2189,12 @@ const reviewScenarios = () => [
         selector: '.accountViewRequest',
         property: 'transitionDuration',
         value: '0s'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.requestApproveTransaction .requestDeclineButton',
+        property: 'color',
+        value: 'rgb(242, 244, 239)'
       }
     ]
   },
@@ -2056,8 +2387,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ],
         requiredText: ['Ethereum', '2', 'gwei', 'Details']
       },
-      {
-        id: `tray-account-balances-full-${scale}`,
+      ...[
+        ['full', FULL_SHELL_HEIGHT],
+        ['short', SHORT_SHELL_HEIGHT]
+      ].map(([geometry, logicalHeight]) => ({
+        id: `tray-account-balances-${geometry}-${scale}`,
         renderer: 'tray',
         state: 'account-balances',
         balanceArtwork: true,
@@ -2065,7 +2399,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         workspaceOpen: true,
         scale,
         logicalWidth: 620,
-        logicalHeight: FULL_SHELL_HEIGHT,
+        logicalHeight,
         ready: '.accountLedgerView',
         requiredControls: ['Back', 'Filter balances', 'Add token'],
         requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
@@ -2085,9 +2419,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
             selector: '.balancesAssetMark .assetMarkGlyph',
             property: 'backgroundColor',
             value: 'rgba(0, 0, 0, 0)'
-          }
+          },
+          ...(geometry === 'short' ? [{ kind: 'scroll-fits', selector: '.balancesExpandedScroll' }] : [])
         ]
-      },
+      })),
       {
         id: `tray-transaction-confirming-full-${scale}`,
         renderer: 'tray',
@@ -2242,7 +2577,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
-        requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests'],
+        requiredControls: ['Keep monitoring', 'Stop monitoring'],
         requiredText: ['Submission status unclear', 'cannot cancel a transaction']
       },
       {
@@ -2255,7 +2590,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.eip7702StopMonitoringDialog',
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
-        requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests'],
+        requiredControls: ['Keep monitoring', 'Stop monitoring'],
         requiredText: ['Submission status unclear', 'cannot cancel a transaction']
       },
       {

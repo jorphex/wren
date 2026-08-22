@@ -217,6 +217,7 @@ export type ContractVerificationJobStatus =
 export interface ContractVerificationDestinationRecord {
   readonly destination: ContractVerificationDestination
   readonly status: ContractVerificationDestinationStatus
+  readonly publicationHash?: string
   readonly remoteId?: string
   readonly statusUrl?: string
   readonly explorerUrl?: string
@@ -274,7 +275,13 @@ const JOB_KEYS = [
   'updatedAt'
 ] as const
 const DESTINATION_REQUIRED_KEYS = ['destination', 'status'] as const
-const DESTINATION_OPTIONAL_KEYS = ['remoteId', 'statusUrl', 'explorerUrl', 'reasonCode'] as const
+const DESTINATION_OPTIONAL_KEYS = [
+  'publicationHash',
+  'remoteId',
+  'statusUrl',
+  'explorerUrl',
+  'reasonCode'
+] as const
 const COMPILER_VERSION = /^(?:v)?[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)*$/u
 const CANONICAL_QUANTITY = /^0x(?:0|[1-9a-f][0-9a-f]*)$/u
 const HASH_32 = /^0x[0-9a-f]{64}$/u
@@ -1092,6 +1099,7 @@ function validateDestinationRecord(value: unknown): ContractVerificationDestinat
   const result: {
     destination: ContractVerificationDestination
     status: ContractVerificationDestinationStatus
+    publicationHash?: string
     remoteId?: string
     statusUrl?: string
     explorerUrl?: string
@@ -1101,13 +1109,27 @@ function validateDestinationRecord(value: unknown): ContractVerificationDestinat
     status: status as ContractVerificationDestinationStatus
   }
   if (!statusesByDestination[result.destination].has(result.status)) fail('invalid-job-ledger')
+  if (hasOwn(value, 'publicationHash')) {
+    const publicationHash = ownValue(value, 'publicationHash')
+    const allowed =
+      (result.destination === 'sourcify' && result.status !== 'not-submitted') ||
+      (result.destination === 'etherscan-direct' &&
+        result.status !== 'not-submitted' &&
+        result.status !== 'unavailable')
+    if (!allowed || typeof publicationHash !== 'string' || !SHA_256.test(publicationHash)) {
+      fail('invalid-job-ledger')
+    }
+    result.publicationHash = publicationHash
+  }
   if (hasOwn(value, 'remoteId')) {
     const remoteId = ownValue(value, 'remoteId')
     const allowed =
       (result.destination === 'sourcify' &&
         ['checking', 'published', 'already-published', 'rejected', 'unknown'].includes(result.status)) ||
       (result.destination === 'etherscan-direct' &&
-        ['checking', 'verified', 'already-verified', 'needs-api-key', 'unknown'].includes(result.status))
+        ['checking', 'verified', 'already-verified', 'rejected', 'needs-api-key', 'unknown'].includes(
+          result.status
+        ))
     if (
       !allowed ||
       typeof remoteId !== 'string' ||
@@ -1124,6 +1146,9 @@ function validateDestinationRecord(value: unknown): ContractVerificationDestinat
     (result.destination === 'sourcify' || result.destination === 'etherscan-direct') &&
     !result.remoteId
   ) {
+    fail('invalid-job-ledger')
+  }
+  if (result.status === 'needs-api-key' && !result.remoteId && result.publicationHash) {
     fail('invalid-job-ledger')
   }
   if (hasOwn(value, 'statusUrl')) result.statusUrl = parseLedgerUrl(ownValue(value, 'statusUrl'))

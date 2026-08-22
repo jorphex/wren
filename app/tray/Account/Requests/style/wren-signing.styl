@@ -591,6 +591,14 @@
     display grid
     gap 0
 
+  .transactionReviewDeploymentTitle
+    padding var(--wren-space-2) 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    letter-spacing .04em
+    text-transform uppercase
+
   .transactionReviewDeploymentRow
     display grid
     min-height 56px
@@ -610,6 +618,37 @@
   .transactionReviewDeploymentHash
     overflow-wrap anywhere
     color var(--wren-text-secondary)
+
+  .transactionReviewDeploymentIdentity
+    display grid
+    min-width 0
+    gap 2px
+
+  button.transactionReviewDeploymentCopy
+    display flex
+    align-items center
+    width fit-content
+    max-width 100%
+    min-height 44px
+    border 0
+    padding 0
+    background transparent
+    font inherit
+    text-align left
+    cursor pointer
+
+    &:hover
+      color var(--wren-text-primary)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 3px
+
+  .transactionReviewDeploymentCopyStatus
+    min-height 15px
+    color var(--wren-success)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
 
   .transactionReviewDeploymentNote
     color var(--wren-text-tertiary)
@@ -866,8 +905,11 @@
       display none
 
   .requestDeclineButton
-    color var(--wren-danger)
+    color var(--wren-text-primary)
     background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+
+    &._txButtonBad
+      color var(--wren-danger)
 
   .requestSignButton
     color var(--wren-text-inverse)

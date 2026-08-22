@@ -50,7 +50,7 @@ const OUTCOME_LABELS = Object.freeze({
 
 const OUTCOME_DETAILS = Object.freeze({
   canceled: 'The network changed before signing',
-  submitted: 'Sent to network',
+  submitted: 'Broadcast status is not yet confirmed; Wren is checking the network.',
   confirming: 'Included; waiting for final confirmation',
   replaced: 'A submitted wallet activity was replaced',
   reorged: 'A prior confirmation changed; Wren is checking again',
@@ -58,6 +58,30 @@ const OUTCOME_DETAILS = Object.freeze({
   'clearance-unverified': 'Transaction confirmed. Wren could not verify that the delegation is cleared.',
   'verified-clearance': 'Wren verified this account no longer delegates execution.'
 })
+
+const submittedPresentation = (entry) => {
+  if (entry.outcome !== 'submitted') return null
+  if (entry.broadcastPhase === 'broadcasting') {
+    return {
+      label: 'Submission unconfirmed',
+      detail: 'Broadcast may not have started; Wren is checking the signed transaction hash.'
+    }
+  }
+  if (entry.broadcastPhase === 'unconfirmed') {
+    return {
+      label: 'Submission unconfirmed',
+      detail:
+        'Broadcast was attempted, but the network response was not confirmed. Wren is checking the network.'
+    }
+  }
+  return null
+}
+
+const outcomePresentation = (entry) =>
+  submittedPresentation(entry) || {
+    label: OUTCOME_LABELS[entry.outcome],
+    detail: OUTCOME_DETAILS[entry.outcome]
+  }
 
 export const activityTypeMeta = (type) => TYPE_META[type] || TYPE_META.transaction
 
@@ -81,7 +105,7 @@ export const filterActivity = (entries, category, filter = '') => {
     const meta = activityTypeMeta(entry.type)
     if (category !== 'all' && meta.category !== category) return false
     if (!query) return true
-    return [meta.label, OUTCOME_LABELS[entry.outcome], activityOriginLabel(entry.origin)]
+    return [meta.label, outcomePresentation(entry).label, activityOriginLabel(entry.origin)]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query))
   })
@@ -98,6 +122,7 @@ const formatTime = (timestamp) =>
 const ActivityRow = ({ entry, networkName, originName, selected }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
+  const outcome = outcomePresentation(entry)
   return (
     <li
       className={`activityRow${selected ? ' activityRowSelected' : ''}`}
@@ -114,13 +139,9 @@ const ActivityRow = ({ entry, networkName, originName, selected }) => {
           {networkName ? ` · ${networkName}` : ''}
         </span>
       </span>
-      <span className='activityResult' title={OUTCOME_DETAILS[entry.outcome]}>
-        <span className={`activityOutcome activityOutcome-${entry.outcome}`}>
-          {OUTCOME_LABELS[entry.outcome]}
-        </span>
-        {OUTCOME_DETAILS[entry.outcome] ? (
-          <span className='activityOutcomeDetail'>{OUTCOME_DETAILS[entry.outcome]}</span>
-        ) : null}
+      <span className='activityResult' title={outcome.detail}>
+        <span className={`activityOutcome activityOutcome-${entry.outcome}`}>{outcome.label}</span>
+        {outcome.detail ? <span className='activityOutcomeDetail'>{outcome.detail}</span> : null}
         <time dateTime={new Date(entry.completedAt).toISOString()}>{formatTime(entry.completedAt)}</time>
       </span>
     </li>
@@ -138,9 +159,8 @@ export class Activity extends React.Component {
       category: 'all',
       navigating: false,
       clearConfirm: false,
-      clearRequested: false,
       clearing: false,
-      clearStatus: false,
+      clearStatus: '',
       missingSelected: false
     }
 
@@ -155,23 +175,19 @@ export class Activity extends React.Component {
   }
 
   componentDidMount() {
+    this.mounted = true
     this.resizeObserver?.observe(this.moduleRef.current)
     this.focusSelectedEntry()
     this.announceMissingSelectedEntry()
   }
 
   componentDidUpdate() {
-    const activity = this.store('main.activity') || []
-    if (this.state.clearRequested && activity.length === 0) {
-      this.setState({ clearConfirm: false, clearRequested: false, clearing: false, clearStatus: true }, () =>
-        this.clearStatusRef.current?.focus()
-      )
-    }
     this.focusSelectedEntry()
     this.announceMissingSelectedEntry()
   }
 
   componentWillUnmount() {
+    this.mounted = false
     this.resizeObserver?.disconnect()
   }
 
@@ -213,7 +229,7 @@ export class Activity extends React.Component {
 
   beginClear() {
     if (this.state.clearConfirm || this.state.clearing) return
-    this.setState({ clearConfirm: true, clearStatus: false }, () => this.cancelClearRef.current?.focus())
+    this.setState({ clearConfirm: true, clearStatus: '' }, () => this.cancelClearRef.current?.focus())
   }
 
   cancelClear() {
@@ -221,10 +237,28 @@ export class Activity extends React.Component {
     this.setState({ clearConfirm: false }, () => this.clearButtonRef.current?.focus())
   }
 
-  confirmClear() {
+  async confirmClear() {
     if (!this.state.clearConfirm || this.state.clearing) return
-    this.setState({ clearRequested: true, clearing: true })
-    link.send('tray:action', 'clearActivity')
+    this.setState({ clearing: true })
+    let status
+    try {
+      const result = await link.invoke('activity:clear')
+      if (result?.success === true && result.durable === true) {
+        status = 'Activity history and address memory cleared from this device.'
+      } else if (result?.success === false && result.sessionOnly === true) {
+        status =
+          'Activity history and address memory are cleared for this session, but Wren could not confirm the change was saved. Restart may restore prior data.'
+      }
+    } catch {
+      status = undefined
+    }
+    if (!status) {
+      status = 'Wren could not confirm that Activity history and address memory were cleared. Try again.'
+    }
+    if (!this.mounted) return
+    this.setState({ clearConfirm: false, clearing: false, clearStatus: status }, () =>
+      this.clearStatusRef.current?.focus()
+    )
   }
 
   render() {
@@ -306,7 +340,7 @@ export class Activity extends React.Component {
 
         {this.props.expanded && this.state.clearStatus ? (
           <div className='activityClearStatus' role='status' tabIndex={-1} ref={this.clearStatusRef}>
-            Activity history cleared.
+            {this.state.clearStatus}
           </div>
         ) : null}
 

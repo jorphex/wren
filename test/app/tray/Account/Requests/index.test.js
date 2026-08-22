@@ -186,6 +186,31 @@ it('reports the number of pending signatures separately from non-signing reviews
   expect(screen.getByText('1 pending signature · oldest first')).toBeTruthy()
 })
 
+it('does not count a request already sending as a pending signature', () => {
+  render(
+    <ExpandedRequestsHarness
+      expanded
+      account='0xabc'
+      activeRequestId='sending'
+      moduleId='requests'
+      requests={{
+        sending: {
+          ...createRequest('sending', 1, 'https://example.test', 1),
+          status: 'sending',
+          type: 'sign'
+        },
+        signing: {
+          ...createRequest('signing', 2, 'https://example.test', 2),
+          type: 'signTypedData'
+        }
+      }}
+    />
+  )
+
+  expect(screen.getByText('1 pending signature · oldest first')).toBeTruthy()
+  expect(screen.queryByText('2 pending signatures · oldest first')).toBeNull()
+})
+
 it('keeps FIFO row order when request origins are interleaved', () => {
   const current = createRequest('current', 1, 'https://first.test', 1)
   const middle = { ...createRequest('middle', 2, 'https://second.test', 2), type: 'sign' }

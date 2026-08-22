@@ -6,7 +6,7 @@ import {
   OperationLifecycleSchema,
   pruneOperationLifecycles
 } from '../../../../main/store/state/types/operationLifecycle'
-import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
+import { FRAME_SEND_ORIGIN, WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domain/origin'
 
 const id = (index: number) => `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`
 const transaction = (index = 1) => ({
@@ -40,6 +40,42 @@ test('accepts only bounded payload-free operation metadata', () => {
     OperationLifecycleSchema.parse({
       ...transaction(),
       expiresAt: transaction().createdAt + MAX_OPERATION_LIFECYCLE_AGE_MS + 1
+    })
+  ).toThrow()
+})
+
+test('accepts only bounded public broadcast recovery evidence', () => {
+  const fingerprint = { digest: 'd'.repeat(64), prefix: '1234', suffix: 'abcd' }
+  const managed = {
+    ...transaction(),
+    origin: originIdForName(FRAME_SEND_ORIGIN),
+    broadcast: {
+      phase: 'broadcasting' as const,
+      pendingRecipient: `0x${'c'.repeat(40)}`,
+      pendingOutboundFingerprints: [fingerprint]
+    }
+  }
+
+  expect(OperationLifecycleSchema.parse(managed).broadcast).toEqual(managed.broadcast)
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      origin: 'foreign-origin'
+    })
+  ).toThrow('pending recipient evidence requires managed send origin')
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      broadcast: {
+        ...managed.broadcast,
+        pendingOutboundFingerprints: [{ ...fingerprint, fullAddress: `0x${'c'.repeat(40)}` }]
+      }
+    })
+  ).toThrow()
+  expect(() =>
+    OperationLifecycleSchema.parse({
+      ...managed,
+      broadcast: { ...managed.broadcast, payload: '0xprivate' }
     })
   ).toThrow()
 })

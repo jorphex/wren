@@ -128,6 +128,7 @@ export class Settings extends Component {
       revokeNativeError: '',
       recentDisableConfirm: false,
       recentClearConfirm: false,
+      recentPrivacyPending: false,
       recentStatus: ''
     }
   }
@@ -155,16 +156,33 @@ export class Settings extends Component {
   }
 
   cancelRecentDisable() {
+    if (this.state.recentPrivacyPending) return
     this.setState({ recentDisableConfirm: false }, () => this.recentDisableTriggerRef.current?.focus())
   }
 
-  confirmRecentDisable() {
-    link.send('tray:action', 'setRememberRecentRecipients', false)
+  async confirmRecentDisable() {
+    if (this.state.recentPrivacyPending) return
+    this.setState({ recentPrivacyPending: true })
+    let durable = false
+    let sessionOnly = false
+    try {
+      const result = await link.invoke('settings:clearRecentRecipients', 'disable')
+      durable = result?.success === true && result.durable === true
+      sessionOnly = result?.success === false && result.sessionOnly === true
+    } catch {
+      durable = false
+    }
+    if (!this.mounted) return
     this.setState(
       {
         recentDisableConfirm: false,
         recentClearConfirm: false,
-        recentStatus: 'Recent recipients turned off and cleared'
+        recentPrivacyPending: false,
+        recentStatus: durable
+          ? 'Recent recipients turned off and cleared from this device'
+          : sessionOnly
+            ? 'Recent recipients are off for this session, but Wren could not confirm the clearing was saved. Restart may restore prior data.'
+            : 'Wren could not confirm that recent recipients were turned off or cleared. Try again.'
       },
       () => this.recentDisableTriggerRef.current?.focus()
     )
@@ -177,13 +195,34 @@ export class Settings extends Component {
   }
 
   cancelRecentClear() {
+    if (this.state.recentPrivacyPending) return
     this.setState({ recentClearConfirm: false }, () => this.recentClearTriggerRef.current?.focus())
   }
 
-  confirmRecentClear() {
-    link.send('tray:action', 'clearRecentRecipients')
-    this.setState({ recentClearConfirm: false, recentStatus: 'Recent recipients cleared' }, () =>
-      this.recentClearTriggerRef.current?.focus()
+  async confirmRecentClear() {
+    if (this.state.recentPrivacyPending) return
+    this.setState({ recentPrivacyPending: true })
+    let durable = false
+    let sessionOnly = false
+    try {
+      const result = await link.invoke('settings:clearRecentRecipients', 'clear')
+      durable = result?.success === true && result.durable === true
+      sessionOnly = result?.success === false && result.sessionOnly === true
+    } catch {
+      durable = false
+    }
+    if (!this.mounted) return
+    this.setState(
+      {
+        recentClearConfirm: false,
+        recentPrivacyPending: false,
+        recentStatus: durable
+          ? 'Recent recipients cleared from this device'
+          : sessionOnly
+            ? 'Recent recipients are cleared for this session, but Wren could not confirm the clearing was saved. Restart may restore prior data.'
+            : 'Wren could not confirm that recent recipients were cleared. Try again.'
+      },
+      () => this.recentClearTriggerRef.current?.focus()
     )
   }
 
@@ -772,6 +811,7 @@ export class Settings extends Component {
                       type='button'
                       ref={this.recentDisableCancelRef}
                       className='wrenControl wrenControlGhost'
+                      disabled={this.state.recentPrivacyPending}
                       onClick={() => this.cancelRecentDisable()}
                     >
                       Cancel
@@ -779,6 +819,7 @@ export class Settings extends Component {
                     <button
                       type='button'
                       className='wrenControl wrenControlDanger'
+                      disabled={this.state.recentPrivacyPending}
                       onClick={() => this.confirmRecentDisable()}
                     >
                       Turn off and clear
@@ -829,6 +870,7 @@ export class Settings extends Component {
                       type='button'
                       ref={this.recentClearCancelRef}
                       className='wrenControl wrenControlGhost'
+                      disabled={this.state.recentPrivacyPending}
                       onClick={() => this.cancelRecentClear()}
                     >
                       Cancel
@@ -836,6 +878,7 @@ export class Settings extends Component {
                     <button
                       type='button'
                       className='wrenControl wrenControlDanger'
+                      disabled={this.state.recentPrivacyPending}
                       onClick={() => this.confirmRecentClear()}
                     >
                       Clear recipients

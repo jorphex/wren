@@ -27,6 +27,7 @@ const secondRecipient = '0x5555555555555555555555555555555555555555'
 const token = '0x3333333333333333333333333333333333333333'
 const sweepRequestId = '123e4567-e89b-42d3-a456-426614174000'
 const maxRequestId = '123e4567-e89b-42d3-a456-426614174001'
+const retainedRequestId = '123e4567-e89b-42d3-a456-426614174002'
 
 const baseState = () => ({
   selected: { current: account },
@@ -148,10 +149,12 @@ it('opens directly on a native asset without a connection step and exposes the a
     data: { step: 'assetPicker', title: 'Choose an asset' }
   })
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  const selectedAsset = screen.getByRole('button', { name: 'Select ETH' })
+  const selectedAsset = screen.getByRole('button', { name: 'Select ETH on Ethereum' })
   expect(selectedAsset.getAttribute('aria-pressed')).toBe('true')
   expect(within(selectedAsset).getByRole('img', { name: 'ETH asset' }).classList).toContain('assetMark-plain')
-  expect(screen.getByRole('button', { name: 'Select USDC' }).getAttribute('aria-pressed')).toBe('false')
+  expect(screen.getByRole('button', { name: 'Select USDC on Base' }).getAttribute('aria-pressed')).toBe(
+    'false'
+  )
 })
 
 it('restores focus to the asset trigger after the picker closes', async () => {
@@ -162,7 +165,7 @@ it('restores focus to the asset trigger after the picker closes', async () => {
   setDashStep(store, 'assetPicker', 'Choose an asset')
   expect(document.activeElement).toBe(screen.getByPlaceholderText('Search assets'))
 
-  await user.click(screen.getByRole('button', { name: 'Select ETH' }))
+  await user.click(screen.getByRole('button', { name: 'Select ETH on Ethereum' }))
   closeDashStep(store)
 
   await waitFor(() =>
@@ -220,11 +223,24 @@ it('keeps the asset label inert and opens the picker from the asset control only
   const { store } = renderSend()
 
   fireEvent.click(screen.getByText('Asset'))
-  expect(screen.queryByRole('button', { name: 'Select ETH' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Select ETH on Ethereum' })).toBeNull()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  expect(screen.getByRole('button', { name: 'Select ETH' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Select ETH on Ethereum' })).toBeTruthy()
+})
+
+it('uses a truthful chain fallback in asset option names', () => {
+  const { store } = renderSend((state) => {
+    delete state.main.networks.ethereum[1].name
+    return state
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
+  setDashStep(store, 'assetPicker', 'Choose an asset')
+
+  expect(screen.getByRole('button', { name: 'Select ETH on Chain 1' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /undefined/u })).toBeNull()
 })
 
 it('chooses a saved contact from the recipient field', async () => {
@@ -273,6 +289,8 @@ it('lists active accounts and identifies the current recipient account', async (
   expect(screen.getByText('Active accounts')).toBeTruthy()
   expect(screen.getByRole('button', { name: /Garden/ }).textContent).toContain('Current account')
   expect(screen.getByRole('button', { name: /Meadow/ }).textContent).toContain('Active Wren account')
+  expect(screen.getByRole('button', { name: /Garden/ }).textContent).toContain(account)
+  expect(screen.getByRole('button', { name: /Meadow/ }).textContent).toContain(secondAccount)
 
   fireEvent.click(screen.getByRole('button', { name: /Garden/ }))
   closeDashStep(store)
@@ -395,6 +413,11 @@ it('validates a recipient and amount before queueing the existing transaction re
     })
   )
   expect(await screen.findByText('Transaction queued')).toBeTruthy()
+  expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite')
+  const close = screen.getByRole('button', { name: 'Close' })
+  expect(close.className).toContain('wrenControlGhost')
+  fireEvent.click(close)
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
 })
 
 it.each([
@@ -425,6 +448,7 @@ it('associates canonical recipient evidence with the field and distinguishes loo
   expect(field.getAttribute('aria-describedby')).toBe('sendRecipientFeedback')
   fireEvent.click(screen.getByRole('button', { name: 'Copy recipient address' }))
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
+  expect(screen.getByRole('status').textContent).toBe('Address copied')
 
   resolveSendRecipient.mockResolvedValueOnce({
     success: false,
@@ -492,6 +516,11 @@ it('uses the main-process maximum and blocks an amount above the stored balance'
 
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '2' } })
   expect(screen.getByRole('alert').textContent).toContain('Amount exceeds available balance')
+  expect(screen.getByText('Available: 1.00 ETH')).toBeTruthy()
+  expect(screen.getByPlaceholderText('0.00').getAttribute('aria-describedby')).toContain('sendAmountError')
+  expect(screen.getByPlaceholderText('0.00').getAttribute('aria-describedby')).toContain(
+    'sendAvailableBalance'
+  )
   expect(screen.getByRole('button', { name: 'Enter send details' }).disabled).toBe(true)
 })
 
@@ -565,6 +594,48 @@ it('clears stale native amount while quoting, exposes exact reserve evidence, an
   expect(screen.queryByText('Maximum sendable')).toBeNull()
   expect(screen.getByPlaceholderText('0.00').value).toBe('')
   expect(screen.getByRole('button', { name: 'Use Max' })).toBeTruthy()
+})
+
+it('closes an ordinary retained pre-broadcast failure before composing another send', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: retainedRequestId })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests[retainedRequestId] = {
+      account,
+      handlerId: retainedRequestId,
+      type: 'transaction',
+      status: 'error',
+      notice: 'The account balance could not be verified. Nothing was signed or sent.',
+      recoverableError: {
+        code: 'transaction-funding-unavailable',
+        message: 'The account balance could not be verified. Nothing was signed or sent.'
+      },
+      retainedPreBroadcastError: { responderPending: true }
+    }
+  })
+
+  expect(screen.getByText('Transaction not sent')).toBeTruthy()
+  expect(
+    screen.getByText('The account balance could not be verified. Nothing was signed or sent.')
+  ).toBeTruthy()
+  link.rpc.mockImplementationOnce((method, request, callback) => callback(null))
+  fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'closeFailedTransactionRequest',
+    expect.objectContaining({ account, handlerId: retainedRequestId, type: 'transaction' }),
+    expect.any(Function)
+  )
+  expect(screen.queryByText('Transaction not sent')).toBeNull()
+  expect(screen.getByPlaceholderText('0.00').value).toBe('0.25')
+  expect(screen.getByRole('button', { name: 'Review send' })).toBeTruthy()
 })
 
 it('never leaves a submit-able amount after Max failure and lets the user explicitly edit', async () => {
@@ -788,8 +859,10 @@ it('makes the authoritative 16-call Sweep limit explicit when more assets are av
 
   const choices = screen.getAllByRole('checkbox')
   expect(choices.filter((choice) => choice.checked)).toHaveLength(16)
+  expect(choices.slice(0, 16).every((choice) => choice.checked)).toBe(true)
   expect(choices.filter((choice) => !choice.checked).every((choice) => choice.disabled)).toBe(true)
   expect(screen.getByText(/16 selected · 16 per sweep/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Clear selection' })).toBeTruthy()
 })
 
 it('clears a consumed Sweep review after any queue failure', async () => {
@@ -911,7 +984,7 @@ it('preserves an unavailable explicit asset instead of silently sending the fall
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  fireEvent.click(screen.getByRole('button', { name: 'Select USDC' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Select USDC on Base' }))
   closeDashStep(store)
   fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25' } })
@@ -933,12 +1006,12 @@ it('ignores a delayed Max result after the selected asset changes', async () => 
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  fireEvent.click(screen.getByRole('button', { name: 'Select USDC' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Select USDC on Base' }))
   closeDashStep(store)
   fireEvent.click(screen.getByRole('button', { name: 'Use Max' }))
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))
   setDashStep(store, 'assetPicker', 'Choose an asset')
-  fireEvent.click(screen.getByRole('button', { name: 'Select ETH' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Select ETH on Ethereum' }))
   closeDashStep(store)
   await act(async () => finishMax({ success: true, amount: '50000000' }))
 
@@ -1006,6 +1079,36 @@ it('keeps a submitted transaction visible without treating it as final success',
     )
   ).toBeTruthy()
   expect(screen.queryByText('Transaction queued')).toBeNull()
+  expect(screen.getByRole('status').textContent).toContain('Transaction submitted')
+  const close = screen.getByRole('button', { name: 'Close' })
+  expect(close.className).toContain('wrenControlGhost')
+  fireEvent.click(close)
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'closeDash')
+})
+
+it('distinguishes an unconfirmed submission from a validated network response', async () => {
+  resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
+  queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
+  const { store } = renderSend()
+
+  fireEvent.change(screen.getByPlaceholderText('Enter an address'), { target: { value: recipient } })
+  fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
+  await screen.findByText('Transaction queued')
+
+  replaceStore(store, (state) => {
+    state.main.accounts[account].requests['send-request'] = {
+      status: 'verifying',
+      submission: { status: 'unconfirmed' }
+    }
+  })
+
+  const status = screen.getByRole('status')
+  expect(status.getAttribute('aria-live')).toBe('polite')
+  expect(status.textContent).toContain('Submission status unconfirmed')
+  expect(status.textContent).toContain('network response was not confirmed')
+  expect(status.textContent).not.toContain('Transaction submitted')
 })
 
 it('announces a confirmed transaction, keeps it open, and offers the unsaved destination', async () => {
@@ -1111,7 +1214,7 @@ it('opens an existing confirmed recipient contact without creating a duplicate',
   })
 })
 
-it('keeps submitted, declined, and failed requests open until the user acts', async () => {
+it('focuses each request-state heading once and announces only failures assertively', async () => {
   resolveSendRecipient.mockResolvedValue({ success: true, address: recipient })
   queueSend.mockResolvedValue({ success: true, handlerId: 'send-request' })
   const { store } = renderSend()
@@ -1121,15 +1224,57 @@ it('keeps submitted, declined, and failed requests open until the user acts', as
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
   await screen.findByText('Transaction queued')
+  const queuedHeading = screen.getByRole('heading', { name: 'Transaction queued' })
+  expect(queuedHeading.tabIndex).toBe(-1)
+  expect(document.activeElement).toBe(queuedHeading)
 
   jest.useFakeTimers()
-  for (const status of ['verifying', 'declined', 'error']) {
+  for (const { request, heading, role, live } of [
+    {
+      request: { status: 'verifying' },
+      heading: 'Transaction submitted',
+      role: 'status',
+      live: 'polite'
+    },
+    {
+      request: { status: 'verifying', submission: { status: 'unconfirmed' } },
+      heading: 'Submission status unconfirmed',
+      role: 'status',
+      live: 'polite'
+    },
+    { request: { status: 'declined' }, heading: 'Transaction declined', role: 'status', live: 'polite' },
+    { request: { status: 'error' }, heading: 'Transaction failed', role: 'alert', live: 'assertive' },
+    { request: { status: 'confirmed' }, heading: 'Transaction confirmed', role: 'status', live: 'polite' }
+  ]) {
     replaceStore(store, (state) => {
-      state.main.accounts[account].requests['send-request'] = { status }
+      state.main.accounts[account].requests['send-request'] = request
     })
     act(() => jest.advanceTimersByTime(3_000))
     expect(link.send).not.toHaveBeenCalledWith('tray:action', 'closeDash')
+    const announcement = screen.getByRole(role)
+    expect(announcement.getAttribute('aria-live')).toBe(live)
+    const stateHeading = screen.getByRole('heading', { name: heading })
+    expect(stateHeading.tabIndex).toBe(-1)
+    expect(document.activeElement).toBe(stateHeading)
+    if (heading === 'Transaction submitted') {
+      const close = screen.getByRole('button', { name: 'Close' })
+      close.focus()
+      for (const equivalentStatus of ['success', 'sent', 'confirming']) {
+        replaceStore(store, (state) => {
+          state.main.accounts[account].requests['send-request'] = { status: equivalentStatus }
+        })
+        expect(screen.getByRole('heading', { name: 'Transaction submitted' })).toBeTruthy()
+        expect(document.activeElement).toBe(close)
+      }
+    }
   }
+
+  const close = screen.getByRole('button', { name: 'Close' })
+  close.focus()
+  replaceStore(store, (state) => {
+    state.main.rates[token].price = 1.01
+  })
+  expect(document.activeElement).toBe(close)
 })
 
 it('closes the dashboard directly from confirmed success instead of returning to the send form', async () => {

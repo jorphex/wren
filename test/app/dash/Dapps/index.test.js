@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import { act, render, screen } from '../../../componentSetup'
 import { Dapps, OriginModuleComponent } from '../../../../app/dash/Dapps'
 import link from '../../../../resources/link'
+import { MAX_TIMER_DELAY } from '../../../../resources/domain/connectedApps'
 import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
 
 jest.mock('../../../../resources/link', () => ({ send: jest.fn() }))
@@ -23,7 +24,7 @@ const chain = {
 }
 const RECENT_ORIGIN_TTL = 60 * 60 * 1000
 const account = '0x0000000000000000000000000000000000000001'
-const permission = (handlerId, origin) => ({
+const permission = (handlerId, origin, expiresAt = Date.now() + 60_000) => ({
   version: 1,
   handlerId,
   origin,
@@ -36,7 +37,7 @@ const permission = (handlerId, origin) => ({
         account,
         methods: ['eth_accounts'],
         chains: ['0x1'],
-        expiresAt: Date.now() + 60_000
+        expiresAt
       }
     }
   ],
@@ -238,6 +239,36 @@ test('keeps an expired disconnected app visible while any account retains its pe
 
   expect(screen.getByText('durable.test')).toBeTruthy()
   expect(screen.getByText('Inactive · Access to 1 account')).toBeTruthy()
+})
+
+test('reschedules long permission deadlines and removes an app at the exact boundary', () => {
+  const now = Date.now()
+  const lastUpdatedAt = now - RECENT_ORIGIN_TTL - 1
+  const expiresAt = now + MAX_TIMER_DELAY + 1_000
+  renderDapps(
+    {
+      origin: {
+        chain: { id: 1 },
+        name: 'expiring.test',
+        session: { startedAt: lastUpdatedAt, endedAt: lastUpdatedAt, lastUpdatedAt, requests: 1 }
+      }
+    },
+    {
+      [account]: {
+        origin: permission('origin', 'expiring.test', expiresAt)
+      }
+    }
+  )
+
+  expect(screen.getByText('Inactive · Access to 1 account')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(MAX_TIMER_DELAY))
+  expect(screen.getByText('expiring.test')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(999))
+  expect(screen.getByText('expiring.test')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(1))
+  expect(screen.getByText('No app activity')).toBeTruthy()
+  expect(screen.queryByText('expiring.test')).toBeNull()
+  jest.setSystemTime(now)
 })
 
 test('does not expose managed Wren Send activity as a connected app', () => {

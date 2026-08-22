@@ -6,6 +6,7 @@ import Icon from '../../../../../resources/Components/Icon'
 import { ConfirmPassword, CreatePassword } from '../../../../../resources/Components/Password'
 import useCopiedMessage, { useSecretCopiedMessage } from '../../../../../resources/Hooks/useCopiedMessage'
 import link from '../../../../../resources/link'
+import { isUnmodifiedEnter } from '../../../../../resources/utils'
 import { setDashNavigationGuard } from '../../../navigationGuard'
 import { AddHotAccountWrapper } from '../Components'
 
@@ -13,6 +14,12 @@ const normalizePrivateKey = (value) => value.trim().replace(/^0x/iu, '').toLower
 const validPrivateKey = (value) => /^[0-9a-f]{64}$/u.test(normalizePrivateKey(value))
 const COMPLETION_TIMEOUT_MS = 30_000
 const GENERATION_TIMEOUT_MS = 65_000
+
+const commitOnEnter = (event, enabled, commit) => {
+  if (!enabled || !isUnmodifiedEnter(event)) return
+  event.preventDefault()
+  commit()
+}
 
 const useActivationFocus = (active, delay = 100) => {
   const ref = useRef(null)
@@ -72,11 +79,15 @@ const SetupExpiry = ({ expiresAt }) => {
   if (!Number.isFinite(expiresAt)) return null
   const remaining = Math.max(0, expiresAt - now)
   if (remaining <= 60_000) {
-    return <p className='generatedWalletSessionNote'>Finish setup within less than a minute.</p>
+    return (
+      <p className='generatedWalletSessionNote generatedWalletExpiryNotice'>
+        Finish setup within less than a minute.
+      </p>
+    )
   }
   const minutes = Math.ceil(remaining / 60_000)
   return (
-    <p className='generatedWalletSessionNote'>
+    <p className='generatedWalletSessionNote generatedWalletExpiryNotice'>
       Finish setup within about {minutes} {minutes === 1 ? 'minute' : 'minutes'}.
     </p>
   )
@@ -168,13 +179,14 @@ const PrivateKeyPresentation = ({ active, onContinue, presentation }) => {
           <div className='generatedWalletEvidence'>
             <div className='generatedWalletEvidenceLabel'>Private key</div>
             <code
+              id='generated-private-key-value'
               className={revealed ? 'generatedWalletEvidenceValue' : 'generatedWalletEvidenceValue concealed'}
             >
               {revealed ? (
                 presentation.secret
               ) : (
                 <>
-                  <span aria-hidden='true'>{`0x${'•'.repeat(32)}`}</span>
+                  <span aria-hidden='true'>{`0x${'•'.repeat(64)}`}</span>
                   <span className='generatedWalletScreenReaderOnly'>Private key concealed</span>
                 </>
               )}
@@ -184,6 +196,8 @@ const PrivateKeyPresentation = ({ active, onContinue, presentation }) => {
                 type='button'
                 ref={revealRef}
                 className='generatedWalletQuietControl wrenControl wrenControlSecondary'
+                aria-controls='generated-private-key-value'
+                aria-pressed={revealed}
                 onClick={() => {
                   if (!revealed) setSecretAccessed(true)
                   setRevealed((value) => !value)
@@ -256,6 +270,7 @@ const PhraseVerification = ({ active, challenge, expiresAt, onComplete, onEdit, 
                   setWords(next)
                   onEdit()
                 }}
+                onKeyDown={(event) => commitOnEnter(event, ready && !submitting, () => onComplete({ words }))}
               />
             </span>
           </label>
@@ -328,6 +343,11 @@ const PrivateKeyVerification = ({ active, expiresAt, onComplete, onEdit, submitt
               setPrivateKey(event.target.value.replace(/\s+/gu, ''))
               onEdit()
             }}
+            onKeyDown={(event) =>
+              commitOnEnter(event, validPrivateKey(privateKey) && !submitting, () =>
+                onComplete({ privateKey })
+              )
+            }
           />
         </div>
         {error ? (

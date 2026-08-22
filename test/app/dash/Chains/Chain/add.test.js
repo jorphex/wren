@@ -41,6 +41,9 @@ test('renders the quiet network fields without legacy metadata controls', () => 
   expect(screen.getByLabelText('RPC URL 1').value).toBe('https://polygon.example/rpc')
   expect(screen.getByLabelText('Block explorer').value).toBe('https://polygonscan.com')
   expect(screen.queryByLabelText('RPC URL 2')).toBeNull()
+  expect(screen.queryByRole('switch', { name: /RPC endpoint/u })).toBeNull()
+  expect(screen.getByText('1 of 5 RPC endpoints used')).toBeTruthy()
+  expect(screen.getByText('Not checked')).toBeTruthy()
   expect(screen.queryByText('Chain Color')).toBeNull()
 })
 
@@ -110,7 +113,28 @@ test('caps direct endpoint entry at five rows', async () => {
   expect(screen.getByLabelText('RPC URL 5')).toBeTruthy()
   expect(screen.queryByLabelText('RPC URL 6')).toBeNull()
   expect(addRpc.disabled).toBe(true)
-  expect(screen.getByText('Maximum of 5 RPC endpoints')).toBeTruthy()
+  expect(screen.getByText('5 of 5 RPC endpoints used')).toBeTruthy()
+})
+
+test('moves focus to the adjacent endpoint when a row is removed', async () => {
+  const { user } = render(
+    <Chain
+      view='setup'
+      {...polygon}
+      rpcUrls={[
+        'https://polygon.example/rpc',
+        'https://polygon.example/fallback',
+        'https://polygon.example/last'
+      ]}
+    />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Remove RPC endpoint 2' }))
+  expect(screen.getByLabelText('RPC URL 2').value).toBe('https://polygon.example/last')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Remove RPC endpoint 2' }))
+
+  await user.click(screen.getByRole('button', { name: 'Remove RPC endpoint 2' }))
+  expect(document.activeElement).toBe(screen.getByLabelText('RPC URL 1'))
 })
 
 test('lets the user edit proposal details before approval', async () => {
@@ -148,8 +172,21 @@ test('shows RPC feedback in the field label after focus leaves', async () => {
   await user.type(rpc, 'not-a-url')
   await user.tab()
 
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Enter a valid RPC URL.' })).toBeTruthy()
+  const status = document.getElementById(rpc.getAttribute('aria-describedby'))
+  expect(status.textContent).toBe('Enter a valid RPC URL.')
+  expect(status.getAttribute('role')).toBe('status')
   expect(rpc.getAttribute('aria-invalid')).toBe('true')
+})
+
+test('associates field validation status with its input', () => {
+  render(<Chain view='setup' {...polygon} id={1} />)
+
+  const chainId = screen.getByLabelText('Chain ID')
+  const status = document.getElementById(chainId.getAttribute('aria-describedby'))
+  expect(status.id).toBe('network-chain-id-status')
+  expect(status.getAttribute('role')).toBe('status')
+  expect(status.getAttribute('aria-live')).toBe('polite')
+  expect(status.textContent).toBe('A network with this Chain ID already exists.')
 })
 
 test('requires HTTPS for a dapp proposal', async () => {
@@ -169,7 +206,9 @@ test('requires HTTPS for a dapp proposal', async () => {
   await user.click(screen.getByLabelText('RPC URL 1'))
   await user.tab()
 
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Use an HTTPS RPC URL.' })).toBeTruthy()
+  expect(
+    document.getElementById(screen.getByLabelText('RPC URL 1').getAttribute('aria-describedby')).textContent
+  ).toBe('Use an HTTPS RPC URL.')
   expect(screen.getByRole('button', { name: 'Add network' }).disabled).toBe(true)
 })
 
@@ -179,7 +218,10 @@ test('uses calm failure copy when verification fails', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Add network' }))
 
-  expect(await screen.findByText('Couldn’t add network')).toBeTruthy()
+  const error = await screen.findByRole('alert')
+  expect(error.textContent).toBe('Couldn’t add network')
+  expect(error.tabIndex).toBe(-1)
+  expect(document.activeElement).toBe(error)
   expect(screen.queryByText('RPC chain mismatch')).toBeNull()
   expect(link.send).not.toHaveBeenCalled()
 })

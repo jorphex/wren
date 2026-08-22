@@ -25,6 +25,7 @@ import {
   getReviewStatusPresentation,
   getSimulationEffectsPresentation,
   getSimulationPresentation,
+  ReplacementAssessment,
   ReplacementNotice,
   TransactionDataRow,
   YearnOverview
@@ -57,7 +58,7 @@ import { FRAME_SEND_DISPLAY_NAME, FRAME_SEND_ORIGIN } from '../../../../../../re
 import { TxClassification } from '../../../../../../main/accounts/types'
 
 jest.mock('../../../../../../main/store/persist')
-jest.mock('../../../../../../resources/link', () => ({ rpc: jest.fn(), send: jest.fn() }))
+jest.mock('../../../../../../resources/link', () => ({ invoke: jest.fn(), rpc: jest.fn(), send: jest.fn() }))
 
 const TxRequest = Restore.connect(TxRequestComponent, store)
 const TxRecipient = Restore.connect(TxRecipientComponent, store)
@@ -75,10 +76,11 @@ function addRequest(req) {
 }
 
 describe('confirm', () => {
-  it('shows exact prepared creation evidence and labels the CREATE address as provisional', () => {
+  it('groups and copies exact prepared creation identities while labeling the address provisional', async () => {
     const hash = `0x${'ab'.repeat(32)}`
     const provisionalAddress = '0x1111111111111111111111111111111111111111'
-    render(
+    link.invoke.mockResolvedValue({ success: true })
+    const { user } = render(
       <DeploymentReviewEvidence
         deployment={{
           initcodeBytes: 4,
@@ -89,12 +91,23 @@ describe('confirm', () => {
       />
     )
 
-    expect(screen.getByLabelText('Prepared deployment evidence')).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Prepared deployment evidence' })).toBeTruthy()
     expect(screen.getByText('Deployment data')).toBeTruthy()
     expect(screen.getByText('4 bytes')).toBeTruthy()
     expect(screen.getByText(hash)).toBeTruthy()
     expect(screen.getByText(provisionalAddress)).toBeTruthy()
     expect(screen.getByText(/Based on pending nonce 5.*may change before signing/)).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Copy deployment initcode hash' }))
+    expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: hash })
+    expect(await screen.findByText('Hash copied')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Copy provisional deployment address' }))
+    expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', {
+      secret: false,
+      value: provisionalAddress
+    })
+    expect(await screen.findByText('Address copied')).toBeTruthy()
   })
 
   it('copies the displayed sender identity from the main review', () => {
@@ -772,6 +785,9 @@ describe('simulation review', () => {
     expect(screen.getByText('The configured RPC reports a revert.')).toBeTruthy()
     expect(document.querySelector('.approveTransactionWarning .cluster')).toBeNull()
     expect(document.querySelector('.approveTransactionWarningActions')).toBeTruthy()
+    const decline = screen.getByRole('button', { name: 'Decline' })
+    expect(decline.classList.contains('_txActionButtonBad')).toBe(false)
+    expect(screen.getByRole('button', { name: 'Sign Anyway' }).classList).toContain('_txActionButtonGood')
     await user.click(screen.getByRole('button', { name: 'Sign Anyway' }))
     expect(link.rpc).toHaveBeenCalledWith(
       'confirmRequestApproval',
@@ -791,7 +807,7 @@ describe('simulation review', () => {
     const { user } = render(<TxApproval req={req} approval={approval} />)
 
     await user.tab()
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Reject' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Decline' }))
     await user.keyboard('{Enter}')
 
     expect(link.rpc).toHaveBeenCalledWith('declineRequest', req, expect.any(Function))
@@ -1579,7 +1595,9 @@ describe('replacement status', () => {
     ['speed', /uses the same nonce and must confirm first/i]
   ])('explains %s replacement semantics in review', (kind, message) => {
     render(<ReplacementNotice replacement={{ kind, originalHash: `0x${'a'.repeat(64)}` }} />)
-    expect(screen.getByText(message)).toBeTruthy()
+    const status = screen.getByRole('status')
+    expect(status.getAttribute('aria-live')).toBe('polite')
+    expect(status.textContent).toMatch(message)
   })
 
   it('maps a below-minimum fee assessment to the existing transaction-card notice', () => {
@@ -1607,5 +1625,20 @@ describe('replacement status', () => {
       possible: true,
       notice: ''
     })
+  })
+
+  it.each([
+    ['valid', { replacement: true, possible: true }, 'status', 'Valid replacement'],
+    [
+      'invalid',
+      { replacement: true, possible: false, notice: 'gas price too low' },
+      'alert',
+      'gas price too low'
+    ]
+  ])('announces a %s replacement assessment', (_label, status, role, message) => {
+    render(<ReplacementAssessment status={status} />)
+    const announcement = screen.getByRole(role)
+    expect(announcement.textContent).toContain(message)
+    if (role === 'status') expect(announcement.getAttribute('aria-live')).toBe('polite')
   })
 })

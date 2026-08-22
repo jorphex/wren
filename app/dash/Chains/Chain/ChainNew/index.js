@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import chainDefault from '../chainDefault'
 import link from '../../../../../resources/link'
@@ -77,7 +77,7 @@ export const Chain = ({
   const [endpoints, setEndpoints] = useState(() =>
     (newChain.rpcUrls.length ? newChain.rpcUrls : ['']).slice(0, 5).map((url, index) => ({
       id: `rpc-${index + 1}`,
-      on: Boolean(url),
+      on: true,
       connected: false,
       current: 'custom',
       status: 'off',
@@ -91,6 +91,11 @@ export const Chain = ({
   const [endpointTouched, setEndpointTouched] = useState({})
   const [submissionError, setSubmissionError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const submissionErrorRef = useRef(null)
+
+  useEffect(() => {
+    if (submissionError) submissionErrorRef.current?.focus()
+  }, [submissionError])
 
   const currencyIcon = currentCurrencyIcon === chainDefault.nativeCurrencyIcon ? '' : currentCurrencyIcon
   const chainIcon = currentChainIcon === chainDefault.icon ? '' : currentChainIcon
@@ -205,7 +210,7 @@ export const Chain = ({
     while (used.has(`rpc-${suffix}`)) suffix += 1
     const endpoint = {
       id: `rpc-${suffix}`,
-      on: false,
+      on: true,
       connected: false,
       current: 'custom',
       status: 'off',
@@ -257,16 +262,10 @@ export const Chain = ({
                 setEndpointTouched((touched) => ({ ...touched, [endpointId]: false }))
               }}
               onCommit={(endpointId) => setEndpointTouched((touched) => ({ ...touched, [endpointId]: true }))}
-              onToggle={(endpointId, endpointOn) =>
-                setEndpoints((items) =>
-                  items.map((endpoint) =>
-                    endpoint.id === endpointId ? { ...endpoint, on: endpointOn } : endpoint
-                  )
-                )
-              }
               onMove={moveEndpoint}
               onAdd={addEndpoint}
               onRemove={removeEndpoint}
+              showToggles={false}
             />
           </div>
           <div className='networkEditorWide'>
@@ -279,7 +278,11 @@ export const Chain = ({
           </div>
         </div>
         <NetworkEditorToggle label='Test network' checked={currentTestnet} onChange={setTestnet} />
-        {submissionError && <div className='networkEditorMessage'>{submissionError}</div>}
+        {submissionError && (
+          <div className='networkEditorMessage' role='alert' tabIndex={-1} ref={submissionErrorRef}>
+            {submissionError}
+          </div>
+        )}
       </div>
       <NetworkEditorActions
         primaryLabel={submitting ? 'Verifying network…' : 'Add network'}

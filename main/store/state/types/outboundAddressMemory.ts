@@ -5,14 +5,17 @@ export const OUTBOUND_ADDRESS_RETENTION_MS = 365 * 24 * 60 * 60 * 1000
 
 const DigestSchema = z.string().regex(/^[0-9a-f]{64}$/u)
 
-export const OutboundAddressMemoryEntrySchema = z
+export const OutboundAddressFingerprintSchema = z
   .object({
     digest: DigestSchema,
     prefix: z.string().regex(/^[0-9a-f]{4}$/u),
-    suffix: z.string().regex(/^[0-9a-f]{4}$/u),
-    lastSubmittedAt: z.number().int().nonnegative()
+    suffix: z.string().regex(/^[0-9a-f]{4}$/u)
   })
   .strict()
+
+export const OutboundAddressMemoryEntrySchema = OutboundAddressFingerprintSchema.extend({
+  lastSubmittedAt: z.number().int().nonnegative()
+}).strict()
 
 export const OutboundAddressMemorySchema = z
   .record(DigestSchema, OutboundAddressMemoryEntrySchema)
@@ -28,6 +31,7 @@ export const OutboundAddressMemorySchema = z
   })
 
 export type OutboundAddressMemoryEntry = z.infer<typeof OutboundAddressMemoryEntrySchema>
+export type OutboundAddressFingerprint = z.infer<typeof OutboundAddressFingerprintSchema>
 export type OutboundAddressMemory = z.infer<typeof OutboundAddressMemorySchema>
 
 export const pruneOutboundAddressMemory = (value: unknown, now = Date.now()): OutboundAddressMemory => {

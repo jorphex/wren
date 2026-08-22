@@ -18,6 +18,7 @@ import {
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u
 const HASH = /^0x[0-9a-f]{64}$/u
 const STALE_MESSAGE = 'Choose the artifact again, then check source.'
+export const ACTIVE_JOB_REFRESH_MS = 2_000
 
 const ERROR_COPY = Object.freeze({
   'address-has-no-code': 'No deployed contract code was found at this address.',
@@ -115,6 +116,25 @@ const destinationStatus = (status) =>
   })[status] || 'Status unavailable'
 
 const validTarget = (chainId, address) => Number(chainId) > 0 && ADDRESS.test(address.trim())
+const hasActiveJobObservation = (job) =>
+  Boolean(
+    job?.destinations?.some(({ status }) => status === 'checking') ||
+    (job?.status === 'publishing' &&
+      job?.destinations?.some(
+        ({ destination, status }) => destination === 'sourcify' && status === 'not-submitted'
+      ))
+  )
+
+const destinationGuidance = (entry) => {
+  if (entry?.destination !== 'etherscan-direct' || entry.status !== 'unknown') return ''
+  if (entry.reasonCode === 'transport-failure') {
+    return 'Etherscan’s response was not confirmed. Wren will not submit this publication again; check the contract on Etherscan later.'
+  }
+  if (entry.reasonCode === 'status-unavailable') {
+    return 'Wren cannot confirm whether direct publication began. It will not submit this publication again; check the contract on Etherscan later.'
+  }
+  return 'Wren cannot confirm this direct submission. It will not be submitted again; check the contract on Etherscan later.'
+}
 
 const preparedEvidenceReady = (prepared) =>
   Boolean(
@@ -207,8 +227,11 @@ export class ContractVerification extends React.Component {
     }
     this.generation = 0
     this.recentGeneration = 0
+    this.jobObservationGeneration = 0
+    this.jobObservationTimer = undefined
     this.activeOperation = false
     this.mounted = false
+    this.addressInput = React.createRef()
     this.artifactButton = React.createRef()
     this.errorRef = React.createRef()
     this.resultRef = React.createRef()
@@ -229,25 +252,66 @@ export class ContractVerification extends React.Component {
     this.mounted = false
     this.generation += 1
     this.recentGeneration += 1
+    this.jobObservationGeneration += 1
+    clearTimeout(this.jobObservationTimer)
     this.activeOperation = false
   }
 
   componentDidUpdate(previousProps, previousState) {
     if (this.state.error && this.state.error !== previousState.error) this.errorRef.current?.focus()
     if (this.state.prepared && this.state.prepared !== previousState.prepared) this.resultRef.current?.focus()
-    if (this.state.job && this.state.job !== previousState.job) this.resultRef.current?.focus()
+    if (this.state.job && !previousState.job) this.resultRef.current?.focus()
 
     if (previousProps.networks !== this.props.networks && !this.state.immutableTarget && !this.state.job) {
       const networks = verificationNetworks(this.props.networks)
       if (!networks.some(({ id }) => id === Number(this.state.chainId))) {
         this.invalidate({ chainId: networks[0]?.id || '' }, Boolean(this.state.prepared))
+        return
       }
     }
+    this.scheduleJobObservation()
+  }
+
+  scheduleJobObservation() {
+    clearTimeout(this.jobObservationTimer)
+    this.jobObservationTimer = undefined
+    if (!this.mounted || this.props.active === false || !hasActiveJobObservation(this.state.job)) return
+    this.jobObservationTimer = setTimeout(() => this.observeJob(), ACTIVE_JOB_REFRESH_MS)
+  }
+
+  async observeJob() {
+    this.jobObservationTimer = undefined
+    const jobId = this.state.job?.id
+    if (!this.mounted || this.props.active === false || !jobId || !hasActiveJobObservation(this.state.job)) {
+      return
+    }
+    if (this.activeOperation || this.state.busy) {
+      this.scheduleJobObservation()
+      return
+    }
+    const generation = ++this.jobObservationGeneration
+    try {
+      const result = await getVerification(jobId)
+      if (!this.mounted || generation !== this.jobObservationGeneration || this.state.job?.id !== jobId) {
+        return
+      }
+      if (result?.success && result.job) {
+        if (JSON.stringify(result.job) !== JSON.stringify(this.state.job)) {
+          this.setState({ job: result.job, status: 'Verification status updated.' })
+          return
+        }
+      }
+    } catch {
+      // The visible manual refresh remains authoritative; local observation is best effort.
+    }
+    this.scheduleJobObservation()
   }
 
   async run(name, work, failure, onSuccess) {
     if (this.state.busy || this.activeOperation) return
     const generation = ++this.generation
+    this.jobObservationGeneration += 1
+    clearTimeout(this.jobObservationTimer)
     this.activeOperation = true
     this.setState({ busy: name, error: '', status: '' })
     try {
@@ -511,12 +575,44 @@ export class ContractVerification extends React.Component {
   }
 
   openSettings() {
-    const returnData = {
-      view: 'contracts',
-      data: { mode: 'verify', verificationId: this.state.job?.id }
-    }
-    if (this.props.onNavigateSettings) this.props.onNavigateSettings(returnData)
-    else link.send('tray:action', 'navDash', { view: 'settings', data: { returnTo: returnData } })
+    link.send('tray:action', 'navDash', { view: 'settings', data: {} })
+  }
+
+  checkAnother() {
+    this.generation += 1
+    this.jobObservationGeneration += 1
+    clearTimeout(this.jobObservationTimer)
+    this.activeOperation = false
+    const networks = verificationNetworks(this.props.networks)
+    const chainId = networks.some(({ id }) => id === Number(this.state.chainId))
+      ? this.state.chainId
+      : networks[0]?.id || ''
+    this.setState(
+      {
+        chainId,
+        address: '',
+        operationId: '',
+        immutableTarget: false,
+        artifact: undefined,
+        compilerVersion: '',
+        contractIdentifier: '',
+        prepared: undefined,
+        acknowledged: false,
+        job: undefined,
+        recoveringSource: false,
+        keyMissing: false,
+        constructorArguments: '',
+        noConstructorArguments: false,
+        etherscanAcknowledged: false,
+        busy: '',
+        status: '',
+        error: ''
+      },
+      () => {
+        this.addressInput.current?.focus()
+        this.loadRecent()
+      }
+    )
   }
 
   renderTarget(networks) {
@@ -537,6 +633,7 @@ export class ContractVerification extends React.Component {
         </section>
       )
     }
+    const invalidAddress = Boolean(this.state.address && !ADDRESS.test(this.state.address.trim()))
     return (
       <div className='contractVerificationTargetFields'>
         <label htmlFor='contract-verification-network'>
@@ -560,6 +657,8 @@ export class ContractVerification extends React.Component {
           <span>Contract address</span>
           <input
             id='contract-verification-address'
+            ref={this.addressInput}
+            aria-label='Contract address'
             className='wrenInput contractVerificationMono'
             type='text'
             value={this.state.address}
@@ -568,9 +667,15 @@ export class ContractVerification extends React.Component {
             autoComplete='off'
             spellCheck='false'
             disabled={Boolean(this.state.busy)}
-            aria-invalid={this.state.address && !ADDRESS.test(this.state.address.trim()) ? 'true' : 'false'}
+            aria-invalid={invalidAddress ? 'true' : 'false'}
+            aria-describedby={invalidAddress ? 'contract-verification-address-error' : undefined}
             onChange={(event) => this.update('address', event.target.value)}
           />
+          {invalidAddress ? (
+            <small id='contract-verification-address-error' className='contractVerificationFieldError'>
+              Enter a 20-byte hexadecimal address beginning with 0x.
+            </small>
+          ) : null}
         </label>
       </div>
     )
@@ -753,6 +858,14 @@ export class ContractVerification extends React.Component {
     const direct = job.destinations?.find(({ destination }) => destination === 'etherscan-direct')
     const directPollNeedsKey = direct?.status === 'needs-api-key' && Boolean(direct.remoteId)
     const directNeedsSettings = this.state.keyMissing || direct?.status === 'needs-api-key'
+    const constructorArgumentsValid = /^(?:[0-9a-fA-F]{2})+$/u.test(this.state.constructorArguments)
+    const constructorArgumentsHelp = this.state.noConstructorArguments
+      ? ''
+      : this.state.constructorArguments
+        ? constructorArgumentsValid
+          ? ''
+          : 'Use an even number of hexadecimal characters without 0x.'
+        : 'Paste encoded constructor arguments, or confirm there are none.'
     return (
       <section className='contractVerificationResult' ref={this.resultRef} tabIndex='-1'>
         <div className='contractVerificationSectionHeading'>
@@ -764,34 +877,50 @@ export class ContractVerification extends React.Component {
                 : 'Each destination reports its own result.'}
             </p>
           </div>
-          <button
-            type='button'
-            className='wrenControl wrenControlGhost'
-            disabled={Boolean(this.state.busy)}
-            onClick={() => this.refresh()}
-          >
-            {this.state.busy === 'refreshing' ? 'Refreshing…' : 'Refresh status'}
-          </button>
+          <div className='contractVerificationResultActions'>
+            <button
+              type='button'
+              className='wrenControl wrenControlGhost'
+              disabled={Boolean(this.state.busy)}
+              onClick={() => this.checkAnother()}
+            >
+              Check another contract
+            </button>
+            <button
+              type='button'
+              className='wrenControl wrenControlGhost'
+              disabled={Boolean(this.state.busy)}
+              onClick={() => this.refresh()}
+            >
+              {this.state.busy === 'refreshing' ? 'Refreshing…' : 'Refresh status'}
+            </button>
+          </div>
         </div>
         <dl className='contractVerificationDestinations'>
-          {(job.destinations || []).map((entry) => (
-            <div className='contractVerificationDestination' key={entry.destination}>
-              <dt>{destinationLabel(entry.destination)}</dt>
-              <dd>
-                <span>{destinationStatus(entry.status)}</span>
-                {entry.explorerUrl ? (
-                  <button
-                    type='button'
-                    className='wrenControl wrenControlGhost contractVerificationExternal'
-                    disabled={Boolean(this.state.busy)}
-                    onClick={() => this.openResult(entry.destination)}
-                  >
-                    Open result
-                  </button>
-                ) : null}
-              </dd>
-            </div>
-          ))}
+          {(job.destinations || []).map((entry) => {
+            const guidance = destinationGuidance(entry)
+            return (
+              <div className='contractVerificationDestination' key={entry.destination}>
+                <dt>{destinationLabel(entry.destination)}</dt>
+                <dd>
+                  <span className='contractVerificationDestinationStatus'>
+                    <span>{destinationStatus(entry.status)}</span>
+                    {guidance ? <small>{guidance}</small> : null}
+                  </span>
+                  {entry.explorerUrl ? (
+                    <button
+                      type='button'
+                      className='wrenControl wrenControlGhost contractVerificationExternal'
+                      disabled={Boolean(this.state.busy)}
+                      onClick={() => this.openResult(entry.destination)}
+                    >
+                      Open result
+                    </button>
+                  ) : null}
+                </dd>
+              </div>
+            )
+          })}
         </dl>
         {this.directEligible(job) ? (
           <div className='contractVerificationDirect'>
@@ -807,6 +936,10 @@ export class ContractVerification extends React.Component {
                 placeholder='Hex without 0x'
                 maxLength={2 * 1024 * 1024}
                 disabled={Boolean(this.state.busy) || this.state.noConstructorArguments}
+                aria-invalid={
+                  this.state.constructorArguments && !constructorArgumentsValid ? 'true' : 'false'
+                }
+                aria-describedby='contract-verification-constructor-arguments-help'
                 onChange={(event) =>
                   this.setState({
                     constructorArguments: event.target.value,
@@ -831,7 +964,16 @@ export class ContractVerification extends React.Component {
               />
               <span>This contract has no constructor arguments.</span>
             </label>
-            <p>Paste ABI-encoded arguments without 0x, or confirm there are none.</p>
+            <p
+              id='contract-verification-constructor-arguments-help'
+              className={
+                this.state.constructorArguments && !constructorArgumentsValid
+                  ? 'contractVerificationFieldError'
+                  : undefined
+              }
+            >
+              {constructorArgumentsHelp || 'Constructor arguments are ready.'}
+            </p>
             <p className='contractVerificationNotice'>
               This fallback sends the already-checked source, metadata, and any encoded constructor arguments
               directly to Etherscan. Publication is permanent, public, and irreversible.
@@ -851,8 +993,7 @@ export class ContractVerification extends React.Component {
               disabled={
                 Boolean(this.state.busy) ||
                 !this.state.etherscanAcknowledged ||
-                (!this.state.noConstructorArguments &&
-                  !/^(?:[0-9a-fA-F]{2})+$/u.test(this.state.constructorArguments))
+                (!this.state.noConstructorArguments && !constructorArgumentsValid)
               }
               onClick={() => this.submitDirect()}
             >
@@ -922,14 +1063,22 @@ export class ContractVerification extends React.Component {
   }
 
   renderFeedback() {
+    const checking = this.state.job?.destinations?.filter(({ status }) => status === 'checking') || []
+    const checkingStatus = checking.length
+      ? `${checking.length} verification destination${checking.length === 1 ? '' : 's'} checking.`
+      : ''
     return (
       <div className='contractVerificationFeedback'>
-        <p role='status' aria-live='polite'>
+        <p role='status' aria-live='polite' aria-atomic='true'>
           {this.state.busy === 'loading'
             ? 'Loading verification…'
-            : this.state.busy && !['checking', 'publishing'].includes(this.state.busy)
-              ? 'Working…'
-              : this.state.status}
+            : this.state.busy === 'checking'
+              ? 'Checking source… Nothing has been published.'
+              : this.state.busy === 'publishing'
+                ? 'Publishing source…'
+                : this.state.busy
+                  ? 'Working…'
+                  : this.state.status || checkingStatus}
         </p>
         {this.state.error ? (
           <p role='alert' ref={this.errorRef} tabIndex='-1'>

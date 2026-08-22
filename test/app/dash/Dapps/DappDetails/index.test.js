@@ -35,6 +35,8 @@ beforeEach(() => {
 test('announces the selected default network', () => {
   render(<DappDetailsHarness originId='origin' />)
 
+  expect(screen.getByText('Account access')).toBeTruthy()
+  expect(screen.getByText(/choose Apps with access to review or revoke this app/u)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Ethereum' }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.getByRole('button', { name: 'Ethereum' }).disabled).toBe(true)
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()

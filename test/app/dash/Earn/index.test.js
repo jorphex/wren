@@ -46,6 +46,7 @@ it('keeps selected-account workflows visible without position data', () => {
 
 it('does not repeat an unavailable percentage label', () => {
   expect(formatPercentLabel(undefined, 'Unavailable')).toBe('Unavailable')
+  expect(formatPercentLabel(null, 'UNAVAILABLE')).toBe('Unavailable')
   expect(formatPercentLabel(0.07, 'Est. APY')).toBe('7% Est. APY')
 })
 
@@ -259,7 +260,7 @@ const makePositions = (readOnly = false) => ({
 
 const store = Restore.create(
   {
-    selected: { current: address },
+    selected: { current: address, hideBalances: false },
     main: {
       networks: {
         ethereum: {
@@ -274,7 +275,14 @@ const store = Restore.create(
 )
 const ConnectedEarn = Restore.connect(Earn, store)
 
+const setHideBalances = (hideBalances) => {
+  const state = JSON.parse(JSON.stringify(store()))
+  state.selected.hideBalances = hideBalances
+  act(() => store.api.replaceState(state))
+}
+
 beforeEach(() => {
+  setHideBalances(false)
   const catalog = { status: 'fresh', fetchedAt: 1234, vaults, errors: [] }
   getYearnCatalog.mockResolvedValue(catalog)
   getYearnCatalogSnapshot.mockResolvedValue(catalog)
@@ -326,7 +334,7 @@ it('renders a saved catalog before positions, live metrics, or workflows finish 
   await act(async () => resolveCatalog(freshCatalog))
   await waitFor(() => expect(screen.queryByText(/Showing cached Yearn data/)).toBeNull())
   await act(async () => resolveWorkflows({ workflows: [] }))
-})
+}, 1500)
 
 it('formats receipt base units without floating-point conversion', () => {
   expect(formatReceiptAmount('1200000', 6)).toBe('1.2')
@@ -474,6 +482,60 @@ it('opens product details and keeps watch-only transactions disabled', async () 
   expect(screen.queryByText(/Performance fee/)).toBeNull()
   expect(screen.queryByText(/Yearn data updated/)).toBeNull()
   expect(screen.getByRole('button', { name: 'View vault contract (external)' })).toBeTruthy()
+  const disclosure = screen.getByText(
+    'APY is variable and not guaranteed. Yearn vaults involve smart-contract and strategy risk.'
+  )
+  expect(
+    disclosure.compareDocumentPosition(screen.getByRole('button', { name: /^Flexible/ })) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+  expect(
+    disclosure.compareDocumentPosition(document.querySelector('.earnActions')) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+  expect(
+    disclosure.compareDocumentPosition(
+      screen.getByRole('button', { name: 'View vault contract (external)' })
+    ) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy()
+})
+
+it('keeps the watch-only capability notice visible through a transient positions failure', async () => {
+  getYearnPositions
+    .mockResolvedValueOnce(makePositions(true))
+    .mockRejectedValueOnce(new Error('positions unavailable'))
+  const { user, rerender } = render(<ConnectedEarn data={{}} />)
+
+  await screen.findByRole('heading', { name: 'Ethereum' })
+  await user.click(screen.getByRole('button', { name: 'Refresh' }))
+  expect(await screen.findByText('Account positions could not be refreshed.')).toBeTruthy()
+
+  rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
+
+  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  expect(screen.getByText('Account positions could not be refreshed.')).toBeTruthy()
+  expect(screen.getByText(/Watch-only accounts/)).toBeTruthy()
+})
+
+it('uses APY as the metric label when null APY is already labeled unavailable', async () => {
+  const unavailableVault = {
+    ...vaults[0],
+    apy: { value: null, label: 'UNAVAILABLE', source: 'unavailable' },
+    variants: vaults[0].variants.map((variant) => ({
+      ...variant,
+      apy: { value: null, label: 'UNAVAILABLE', source: 'unavailable' }
+    }))
+  }
+  const catalog = { status: 'fresh', fetchedAt: 1234, vaults: [unavailableVault], errors: [] }
+  getYearnCatalog.mockResolvedValue(catalog)
+  getYearnCatalogSnapshot.mockResolvedValue(catalog)
+
+  render(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
+
+  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  expect(document.querySelector('.earnMetricLabel').textContent).toBe('APY')
+  expect(document.querySelector('.earnMetricValue').textContent).toBe('Unavailable')
+  expect(document.body.textContent).not.toMatch(/Unavailable\s+UNAVAILABLE/iu)
 })
 
 it('moves focus through vault details and restores the invoking controls', async () => {
@@ -519,6 +581,98 @@ it('uses selected locked yvUSD metrics and labels root risk explicitly', async (
     },
     false
   )
+})
+
+it('uses the selected variant APY label in the detail metric', async () => {
+  const labeledVaults = vaults.map((vault) =>
+    vault.id === 'ethereum-yvusd'
+      ? {
+          ...vault,
+          variants: vault.variants.map((variant) =>
+            variant.id === 'locked'
+              ? { ...variant, apy: { ...variant.apy, label: '7-day average APY' } }
+              : variant
+          )
+        }
+      : vault
+  )
+  const catalog = { status: 'fresh', fetchedAt: 1234, vaults: labeledVaults, errors: [] }
+  getYearnCatalog.mockResolvedValue(catalog)
+  getYearnCatalogSnapshot.mockResolvedValue(catalog)
+
+  render(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'locked', screen: 'vault' }} />)
+
+  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  expect(document.querySelector('.earnMetricLabel').textContent).toBe('7-day average APY')
+})
+
+it('conceals every account-derived Earn amount while keeping public metrics visible', async () => {
+  const workflow = {
+    ...makeWorkflow(),
+    steps: [
+      {
+        ...makeWorkflow().steps[0],
+        receiptTransfers: [
+          {
+            token: address,
+            direction: 'in',
+            amountRaw: '1200000',
+            symbol: 'yvUSD',
+            decimals: 6
+          }
+        ]
+      }
+    ]
+  }
+  const privacyPosition = {
+    ...lockedPosition,
+    variants: lockedPosition.variants.map((variant) =>
+      variant.id === 'locked'
+        ? {
+            ...variant,
+            cooldown: { ...variant.cooldown, sharesRaw: '2000000', shares: '2.0' }
+          }
+        : variant
+    )
+  }
+  setHideBalances(true)
+  getYearnPositions.mockResolvedValue({
+    ...makePositions(),
+    chains: makePositions().chains.map((chain) =>
+      chain.chainId === 1 ? { ...chain, positions: [privacyPosition] } : chain
+    )
+  })
+  getYearnWorkflows.mockResolvedValue({ workflows: [workflow] })
+  const { user, rerender } = render(<ConnectedEarn data={{}} />)
+  await screen.findByRole('heading', { name: 'Ethereum' })
+
+  const vaultCard = screen.getByRole('button', { name: 'View yvUSD on Ethereum' })
+  const positionCard = screen.getByRole('button', { name: 'Manage yvUSD position' })
+  expect(vaultCard.textContent).toContain('5.12%')
+  expect(vaultCard.textContent).toContain('TVL')
+  expect(vaultCard.textContent).toContain('•••• USDC available')
+  expect(positionCard.textContent).toContain('•••• USDC')
+  expect(document.body.textContent).not.toContain('1.5 USDC')
+  expect(document.body.textContent).not.toContain('1.9 yvUSD')
+  expect(document.body.textContent).not.toContain('2 styvUSD')
+  expect(document.body.textContent).not.toContain('5 USDC')
+
+  await user.click(positionCard)
+  expect(document.querySelector('.earnOwned').textContent).toContain('•••• USDC')
+  expect(screen.getByText('Available to deposit: •••• USDC')).toBeTruthy()
+  expect(document.querySelector('.earnWorkflowAmount').textContent).toContain('•••• USDC')
+  expect(screen.getByTitle(address).textContent).toMatch(/Received.*••••.*yvUSD/)
+
+  await user.click(screen.getByRole('button', { name: 'Max' }))
+  expect(screen.getByRole('textbox', { name: 'Amount in USDC' }).value).toBe('')
+  expect(screen.getByRole('button', { name: 'Max' }).getAttribute('aria-pressed')).toBe('true')
+
+  rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'activity' }} />)
+  await screen.findByRole('heading', { name: 'Earn activity' })
+  expect(document.querySelector('.earnWorkflowAmount').textContent).toContain('•••• USDC')
+  expect(screen.getByTitle(address).textContent).toMatch(/Received.*••••.*yvUSD/)
+  expect(document.body.textContent).not.toContain('1.25 USDC')
+  expect(document.body.textContent).not.toContain('1.2 yvUSD')
 })
 
 it('explains an inactive locked withdrawal cooldown in user-facing terms', async () => {
@@ -702,6 +856,45 @@ it('bounds recent activity and opens the complete history without nested scrolli
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'View 2 more' }))
   )
+})
+
+it('restores activity-back focus to vault details when there is no more-activity button', async () => {
+  getYearnWorkflows.mockResolvedValue({ workflows: [makeWorkflow()] })
+  const { rerender } = render(
+    <ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'activity' }} />
+  )
+  await screen.findByRole('heading', { name: 'Earn activity' })
+  expect(document.querySelector('.earnMoreButton')).toBeNull()
+
+  rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
+
+  await waitFor(() => expect(document.activeElement).toBe(document.querySelector('.earnDetails')))
+})
+
+it('announces a total catalog failure', async () => {
+  getYearnCatalogSnapshot.mockRejectedValue(new Error('snapshot unavailable'))
+  getYearnCatalog.mockRejectedValue(new Error('catalog unavailable'))
+
+  render(<ConnectedEarn />)
+
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'Current Yearn vault data could not be refreshed.'
+  )
+  expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
+})
+
+it('shows one account-position failure without repeating chain or signer notices', async () => {
+  getYearnPositions.mockRejectedValue(new Error('positions unavailable'))
+  const { rerender } = render(<ConnectedEarn data={{}} />)
+
+  await screen.findByRole('heading', { name: 'Ethereum' })
+  expect(screen.getAllByText('Account positions could not be refreshed.')).toHaveLength(1)
+  expect(screen.queryByText('Position data is unavailable.')).toBeNull()
+
+  rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
+  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  expect(screen.getAllByText('Account positions could not be refreshed.')).toHaveLength(1)
+  expect(screen.queryByText('Select a signing account to transact.')).toBeNull()
 })
 
 it('requires a separate recheck before offering to retry an unknown approval cleanup', async () => {

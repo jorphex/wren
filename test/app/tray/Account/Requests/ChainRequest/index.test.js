@@ -66,3 +66,18 @@ it('shows the requesting site and both networks without implying account access'
   expect(screen.getByText(/does not share your account/i)).toBeTruthy()
   expect(screen.getByText(/must still ask before Wren shares your address/i)).toBeTruthy()
 })
+
+it('uses neutral network fallbacks instead of rendering undefined identifiers', () => {
+  const { rerender } = render(
+    <ChainRequest req={{ handlerId: 'switch-request', type: 'switchChain', chain: { type: 'ethereum' } }} />
+  )
+
+  expect(screen.getByText('Switch to Unknown network?')).toBeTruthy()
+  expect(screen.getAllByText('Unknown network')).toHaveLength(2)
+  expect(screen.getByText('Not supplied')).toBeTruthy()
+  expect(document.body.textContent).not.toContain('undefined')
+
+  rerender(<ChainRequest req={{ handlerId: 'add-request', type: 'addChain', chain: { type: 'ethereum' } }} />)
+  expect(screen.getByText('Add Unknown network to Wren?')).toBeTruthy()
+  expect(document.body.textContent).not.toContain('undefined')
+})

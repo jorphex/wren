@@ -239,6 +239,65 @@ test('records pre-submit failures and pauses accepted explorer polling for a rep
   ).toMatchObject({ destinations: [expect.anything(), { status: 'checking', remoteId: 'GUID_12345678' }] })
 })
 
+test('preserves direct publication identity through acceptance and drops it only for retryable outcomes', () => {
+  const publicationHash = '7'.repeat(64)
+  const intent = job(1, {
+    status: 'partial',
+    destinations: [
+      { destination: 'sourcify', status: 'published' },
+      { destination: 'etherscan-direct', status: 'unknown', publicationHash }
+    ]
+  })
+  const accepted = {
+    ...intent,
+    destinations: [
+      intent.destinations[0]!,
+      {
+        destination: 'etherscan-direct' as const,
+        status: 'checking' as const,
+        publicationHash,
+        remoteId: 'GUID_12345678'
+      }
+    ],
+    updatedAt: 2
+  }
+  const acceptedLedger = fixture([intent]).ledger
+  expect(acceptedLedger.update(intent.id, accepted)).toEqual(accepted)
+  expect(() =>
+    acceptedLedger.update(intent.id, {
+      ...accepted,
+      destinations: [
+        accepted.destinations[0]!,
+        { ...accepted.destinations[1]!, publicationHash: '8'.repeat(64) }
+      ],
+      updatedAt: 3
+    })
+  ).toThrow('evidence cannot move backwards or change')
+  expect(() =>
+    acceptedLedger.update(intent.id, {
+      ...accepted,
+      destinations: [
+        accepted.destinations[0]!,
+        {
+          destination: 'etherscan-direct',
+          status: 'rejected',
+          remoteId: 'GUID_12345678'
+        }
+      ],
+      updatedAt: 3
+    })
+  ).toThrow('evidence cannot move backwards or change')
+
+  const retryableLedger = fixture([intent]).ledger
+  expect(
+    retryableLedger.update(intent.id, {
+      ...intent,
+      destinations: [intent.destinations[0]!, { destination: 'etherscan-direct', status: 'unavailable' }],
+      updatedAt: 2
+    })
+  ).toMatchObject({ destinations: [expect.anything(), { status: 'unavailable' }] })
+})
+
 test('adds a destination without changing existing evidence and supports callback updates', () => {
   const original = job(1, {
     status: 'partial',
@@ -309,8 +368,206 @@ test('at capacity evicts only the oldest fully terminal row and never active acc
   expect(active.every(({ id: candidate }) => ids.includes(candidate))).toBe(true)
 })
 
+test.each(['unknown', 'partial'] as const)(
+  'at capacity evicts the oldest inactive %s row when no terminal row exists',
+  (status) => {
+    const oldestInactive = job(1, {
+      status,
+      destinations: [{ destination: 'sourcify', status: 'unavailable' }]
+    })
+    const newerInactive = job(2, {
+      status,
+      destinations: [{ destination: 'sourcify', status: 'unavailable' }]
+    })
+    const active = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS - 2 }, (_, offset) => job(offset + 3))
+    const { ledger, persisted } = fixture([newerInactive, ...active, oldestInactive])
+
+    ledger.put(job(999))
+
+    const ids = (persisted() as readonly ContractVerificationJobRecord[]).map(
+      ({ id: candidate }) => candidate
+    )
+    expect(ids).toHaveLength(MAX_CONTRACT_VERIFICATION_JOBS)
+    expect(ids).not.toContain(oldestInactive.id)
+    expect(ids).toContain(newerInactive.id)
+    expect(ids).toContain(id(999))
+  }
+)
+
+test('prefers a terminal eviction candidate over an older inactive incomplete row', () => {
+  const olderIncomplete = job(1, {
+    status: 'unknown',
+    destinations: [{ destination: 'sourcify', status: 'unavailable' }]
+  })
+  const terminal = job(2, {
+    status: 'published',
+    destinations: [{ destination: 'sourcify', status: 'published' }],
+    updatedAt: 100
+  })
+  const active = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS - 2 }, (_, offset) => job(offset + 3))
+  const { ledger, persisted } = fixture([olderIncomplete, terminal, ...active])
+
+  ledger.put(job(999))
+
+  const ids = (persisted() as readonly ContractVerificationJobRecord[]).map(({ id: candidate }) => candidate)
+  expect(ids).toContain(olderIncomplete.id)
+  expect(ids).not.toContain(terminal.id)
+})
+
+test.each(['unknown', 'already-verified', 'rejected'] as const)(
+  'retains a direct-publication %s fence while evicting inactive incomplete history',
+  (directStatus) => {
+    const fence = job(1, {
+      status: 'published',
+      destinations: [
+        { destination: 'sourcify', status: 'published' },
+        {
+          destination: 'etherscan-direct',
+          status: directStatus,
+          ...(directStatus === 'unknown' ? { reasonCode: 'transport-failure' as const } : {})
+        }
+      ]
+    })
+    const incomplete = job(2, {
+      status: 'unknown',
+      destinations: [{ destination: 'sourcify', status: 'unavailable' }]
+    })
+    const active = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS - 2 }, (_, offset) => job(offset + 3))
+    const { ledger, persisted } = fixture([fence, incomplete, ...active])
+
+    ledger.put(job(999))
+
+    const ids = (persisted() as readonly ContractVerificationJobRecord[]).map(
+      ({ id: candidate }) => candidate
+    )
+    expect(ids).toHaveLength(MAX_CONTRACT_VERIFICATION_JOBS)
+    expect(ids).toContain(fence.id)
+    expect(ids).not.toContain(incomplete.id)
+  }
+)
+
+test.each(['unknown', 'checking', 'published', 'already-published', 'rejected', 'unavailable'] as const)(
+  'retains a Sourcify %s publication fence while evicting inactive history',
+  (sourcifyStatus) => {
+    const status =
+      sourcifyStatus === 'rejected'
+        ? ('rejected' as const)
+        : ['published', 'already-published'].includes(sourcifyStatus)
+          ? ('published' as const)
+          : ('unknown' as const)
+    const fence = job(1, {
+      status,
+      destinations: [
+        {
+          destination: 'sourcify',
+          status: sourcifyStatus,
+          publicationHash: '7'.repeat(64),
+          ...(sourcifyStatus === 'checking' ? { remoteId: 'poll-1' } : {})
+        }
+      ]
+    })
+    const incomplete = job(2, {
+      status: 'unknown',
+      destinations: [{ destination: 'sourcify', status: 'unavailable' }]
+    })
+    const active = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS - 2 }, (_, offset) => job(offset + 3))
+    const { ledger, persisted } = fixture([fence, incomplete, ...active])
+
+    ledger.put(job(999))
+
+    const ids = (persisted() as readonly ContractVerificationJobRecord[]).map(
+      ({ id: candidate }) => candidate
+    )
+    expect(ids).toHaveLength(MAX_CONTRACT_VERIFICATION_JOBS)
+    expect(ids).toContain(fence.id)
+    expect(ids).not.toContain(incomplete.id)
+  }
+)
+
+test('never drops or changes an admitted Sourcify publication identity', () => {
+  const publicationHash = '7'.repeat(64)
+  const intent = job(1, {
+    status: 'unknown',
+    destinations: [
+      {
+        destination: 'sourcify',
+        status: 'unknown',
+        publicationHash,
+        reasonCode: 'status-unavailable'
+      }
+    ]
+  })
+  const { ledger } = fixture([intent])
+
+  for (const replacement of [
+    { destination: 'sourcify' as const, status: 'unavailable' as const },
+    {
+      destination: 'sourcify' as const,
+      status: 'rejected' as const,
+      publicationHash: '8'.repeat(64)
+    }
+  ]) {
+    expect(() =>
+      ledger.update(intent.id, {
+        ...intent,
+        destinations: [replacement],
+        updatedAt: 2
+      })
+    ).toThrow('evidence cannot move backwards or change')
+  }
+})
+
+test('keeps ambiguous direct-publication fences within the hard ledger cap', () => {
+  const fences = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS }, (_, offset) =>
+    job(offset + 1, {
+      status: 'published',
+      destinations: [
+        { destination: 'sourcify', status: 'published' },
+        {
+          destination: 'etherscan-direct',
+          status: 'unknown',
+          reasonCode: 'transport-failure'
+        }
+      ]
+    })
+  )
+  const { ledger, save } = fixture(fences.reverse())
+
+  expect(() => ledger.put(job(999))).toThrow('limit reached')
+  expect(save).not.toHaveBeenCalled()
+})
+
+test.each([
+  ['unknown', 'sourcify', 'unknown'],
+  ['partial', 'etherscan-direct', 'needs-api-key'],
+  ['published', 'etherscan-direct', 'needs-api-key']
+] as const)(
+  'preserves resumable remote evidence for an active %s row',
+  (jobStatus, destination, destinationStatus) => {
+    const rows = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS }, (_, offset) =>
+      job(offset + 1, {
+        status: jobStatus,
+        destinations: [
+          ...(destination === 'etherscan-direct'
+            ? [{ destination: 'sourcify' as const, status: 'published' as const }]
+            : []),
+          {
+            destination,
+            status: destinationStatus,
+            remoteId: `poll-${offset + 1}`
+          }
+        ]
+      })
+    )
+    const { ledger, save } = fixture(rows.reverse())
+
+    expect(() => ledger.put(job(999))).toThrow('limit reached')
+    expect(save).not.toHaveBeenCalled()
+  }
+)
+
 test.each(['partial', 'unknown', 'preparing', 'publishing'] as const)(
-  'does not evict a %s row to append at capacity',
+  'does not evict an active %s row to append at capacity',
   (status) => {
     const rows = Array.from({ length: MAX_CONTRACT_VERIFICATION_JOBS }, (_, offset) =>
       job(offset + 1, { status })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Icon from '../../../../../resources/Components/Icon'
 import Toggle from '../../../../../resources/Components/Toggle'
@@ -32,6 +32,7 @@ export const NetworkEditorField = ({
   inputMode
 }) => {
   const id = `network-${label.toLowerCase().replace(/\s+/g, '-')}`
+  const statusId = `${id}-status`
 
   return (
     <label className={error ? 'networkEditorField networkEditorFieldError' : 'networkEditorField'}>
@@ -39,6 +40,9 @@ export const NetworkEditorField = ({
         <span>{label}</span>
         {status && (
           <span
+            id={statusId}
+            role='status'
+            aria-live='polite'
             className={
               error ? 'networkEditorFieldStatus networkEditorFieldStatusError' : 'networkEditorFieldStatus'
             }
@@ -49,6 +53,7 @@ export const NetworkEditorField = ({
       </span>
       <input
         id={id}
+        aria-describedby={status ? statusId : undefined}
         aria-label={label}
         aria-invalid={error || undefined}
         className={
@@ -120,18 +125,19 @@ const endpointStatusPresentation = (endpoint, status, index) => {
       ? `, ${Math.round(latency)} milliseconds`
       : ''
   const accessibleLabel = `RPC endpoint ${index + 1}: ${label}${latencyDetail}`
+  const visibleLabel = `${label}${latencyDetail ? ` · ${Math.round(latency)} ms` : ''}`
 
   if (label === 'Connected') {
-    return { accessibleLabel, icon: 'check', tone: 'connected' }
+    return { accessibleLabel, icon: 'check', tone: 'connected', visibleLabel }
   }
   if (label === 'Checking connection…') {
-    return { accessibleLabel, icon: 'sync', tone: 'checking' }
+    return { accessibleLabel, icon: 'sync', tone: 'checking', visibleLabel }
   }
   if (['Can’t connect', 'Wrong network', 'Enter a valid RPC URL.', 'Use an HTTPS RPC URL.'].includes(label)) {
-    return { accessibleLabel, icon: 'alert', tone: 'error' }
+    return { accessibleLabel, icon: 'alert', tone: 'error', visibleLabel }
   }
 
-  return { accessibleLabel, icon: 'pending', tone: endpoint.on ? 'standby' : 'off' }
+  return { accessibleLabel, icon: 'pending', tone: endpoint.on ? 'standby' : 'off', visibleLabel }
 }
 
 export const RpcEndpointLedger = ({
@@ -143,93 +149,133 @@ export const RpcEndpointLedger = ({
   onToggle,
   onMove,
   onAdd,
-  onRemove
-}) => (
-  <section className='rpcEndpointSection' aria-labelledby='rpc-endpoints-title'>
-    <div className='rpcEndpointHeading'>
-      <div>
-        <h2 id='rpc-endpoints-title'>RPC endpoints</h2>
-        <p>Wren uses endpoints in order and tries the next one only if the current endpoint fails.</p>
+  onRemove,
+  showToggles = true
+}) => {
+  const endpointRows = useRef(new Map())
+  const pendingFocusId = useRef()
+
+  useEffect(() => {
+    if (!pendingFocusId.current) return
+    const row = endpointRows.current.get(pendingFocusId.current)
+    const target = row?.querySelector('.rpcEndpointRemove') || row?.querySelector('.rpcEndpointInput')
+    target?.focus()
+    pendingFocusId.current = undefined
+  }, [endpoints])
+
+  const removeEndpoint = (endpointId, index) => {
+    pendingFocusId.current = endpoints[index + 1]?.id || endpoints[index - 1]?.id
+    onRemove(endpointId)
+  }
+
+  return (
+    <section className='rpcEndpointSection' aria-labelledby='rpc-endpoints-title'>
+      <div className='rpcEndpointHeading'>
+        <div>
+          <h2 id='rpc-endpoints-title'>RPC endpoints</h2>
+          <p>Wren uses endpoints in order and tries the next one only if the current endpoint fails.</p>
+        </div>
       </div>
-    </div>
-    <div className='rpcEndpointLedger'>
-      {endpoints.map((endpoint, index) => {
-        const status = endpointStatus(endpoint, statuses[endpoint.id])
-        const statusPresentation = endpointStatusPresentation(endpoint, status, index)
-        const error = statusPresentation.tone === 'error'
-        return (
-          <div
-            className={endpoint.on ? 'rpcEndpointRow' : 'rpcEndpointRow rpcEndpointRowOff'}
-            key={endpoint.id}
-          >
-            <span className='rpcEndpointOrder'>{index + 1}</span>
-            <span
-              aria-label={statusPresentation.accessibleLabel}
-              className={`rpcEndpointState rpcEndpointState-${statusPresentation.tone}`}
-              role='img'
-              title={statusPresentation.accessibleLabel}
+      <div className='rpcEndpointLedger'>
+        {endpoints.map((endpoint, index) => {
+          const status = endpointStatus(endpoint, statuses[endpoint.id])
+          const statusPresentation = endpointStatusPresentation(endpoint, status, index)
+          const error = statusPresentation.tone === 'error'
+          const statusId = `rpc-endpoint-status-${endpoint.id}`
+          const rowClass = [
+            'rpcEndpointRow',
+            endpoint.on ? '' : 'rpcEndpointRowOff',
+            showToggles ? '' : 'rpcEndpointRowNoToggle'
+          ]
+            .filter(Boolean)
+            .join(' ')
+          return (
+            <div
+              className={rowClass}
+              key={endpoint.id}
+              ref={(node) => {
+                if (node) endpointRows.current.set(endpoint.id, node)
+                else endpointRows.current.delete(endpoint.id)
+              }}
             >
-              <Icon aria-hidden='true' name={statusPresentation.icon} size={13} />
-            </span>
-            <label className='rpcEndpointInputWrap'>
-              <input
-                aria-label={`RPC URL ${index + 1}`}
-                aria-invalid={error || undefined}
-                className='rpcEndpointInput wrenInput'
-                spellCheck='false'
-                value={values[endpoint.id] ?? ''}
-                onBlur={() => onCommit(endpoint.id)}
-                onChange={(event) => onValueChange(endpoint.id, event.target.value.replace(/\s+/g, ''))}
-              />
-            </label>
-            <div className='rpcEndpointMove'>
-              <button
-                type='button'
-                aria-label={`Move RPC endpoint ${index + 1} up`}
-                disabled={index === 0}
-                onClick={() => onMove(endpoint.id, -1)}
+              <span className='rpcEndpointOrder'>{index + 1}</span>
+              <span
+                aria-hidden='true'
+                className={`rpcEndpointState rpcEndpointState-${statusPresentation.tone}`}
+                title={statusPresentation.accessibleLabel}
               >
-                <Icon name='chevron-up' size={13} />
-              </button>
-              <button
-                type='button'
-                aria-label={`Move RPC endpoint ${index + 1} down`}
-                disabled={index === endpoints.length - 1}
-                onClick={() => onMove(endpoint.id, 1)}
-              >
-                <Icon name='chevron-down' size={13} />
-              </button>
+                <Icon name={statusPresentation.icon} size={13} />
+              </span>
+              <label className='rpcEndpointInputWrap'>
+                <input
+                  aria-describedby={statusId}
+                  aria-label={`RPC URL ${index + 1}`}
+                  aria-invalid={error || undefined}
+                  className='rpcEndpointInput wrenInput'
+                  spellCheck='false'
+                  value={values[endpoint.id] ?? ''}
+                  onBlur={() => onCommit(endpoint.id)}
+                  onChange={(event) => onValueChange(endpoint.id, event.target.value.replace(/\s+/g, ''))}
+                />
+                <span
+                  className={`rpcEndpointStatus rpcEndpointStatus-${statusPresentation.tone}`}
+                  id={statusId}
+                  role='status'
+                >
+                  {statusPresentation.visibleLabel}
+                </span>
+              </label>
+              <div className='rpcEndpointMove'>
+                <button
+                  type='button'
+                  aria-label={`Move RPC endpoint ${index + 1} up`}
+                  disabled={index === 0}
+                  onClick={() => onMove(endpoint.id, -1)}
+                >
+                  <Icon name='chevron-up' size={13} />
+                </button>
+                <button
+                  type='button'
+                  aria-label={`Move RPC endpoint ${index + 1} down`}
+                  disabled={index === endpoints.length - 1}
+                  onClick={() => onMove(endpoint.id, 1)}
+                >
+                  <Icon name='chevron-down' size={13} />
+                </button>
+              </div>
+              {showToggles ? (
+                <Toggle
+                  checked={endpoint.on}
+                  label={`${endpoint.on ? 'Disable' : 'Enable'} RPC endpoint ${index + 1}`}
+                  onChange={(enabled) => onToggle(endpoint.id, enabled)}
+                />
+              ) : null}
+              {index > 0 ? (
+                <button
+                  type='button'
+                  className='rpcEndpointRemove'
+                  aria-label={`Remove RPC endpoint ${index + 1}`}
+                  onClick={() => removeEndpoint(endpoint.id, index)}
+                >
+                  <Icon name='remove' size={14} />
+                </button>
+              ) : (
+                <span className='rpcEndpointRemoveSpacer' />
+              )}
             </div>
-            <Toggle
-              checked={endpoint.on}
-              label={`${endpoint.on ? 'Disable' : 'Enable'} RPC endpoint ${index + 1}`}
-              onChange={(enabled) => onToggle(endpoint.id, enabled)}
-            />
-            {index > 0 ? (
-              <button
-                type='button'
-                className='rpcEndpointRemove'
-                aria-label={`Remove RPC endpoint ${index + 1}`}
-                onClick={() => onRemove(endpoint.id)}
-              >
-                <Icon name='remove' size={14} />
-              </button>
-            ) : (
-              <span className='rpcEndpointRemoveSpacer' />
-            )}
-          </div>
-        )
-      })}
-    </div>
-    <div className='rpcEndpointAddRow'>
-      <button type='button' disabled={endpoints.length >= 5} onClick={onAdd}>
-        <Icon name='add' size={14} />
-        <span>Add RPC endpoint</span>
-      </button>
-      {endpoints.length >= 5 && <span>Maximum of 5 RPC endpoints</span>}
-    </div>
-  </section>
-)
+          )
+        })}
+      </div>
+      <div className='rpcEndpointAddRow'>
+        <button type='button' disabled={endpoints.length >= 5} onClick={onAdd}>
+          <Icon name='add' size={14} />
+          <span>Add RPC endpoint</span>
+        </button>
+        <span aria-live='polite'>{endpoints.length} of 5 RPC endpoints used</span>
+      </div>
+    </section>
+  )
+}
 
 export const ChainHeader = ({
   type,

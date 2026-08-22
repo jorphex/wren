@@ -20,12 +20,12 @@ const TxApproval = ({ req, approval }) => {
         <div className='approveTransactionWarningActions'>
           <button
             type='button'
-            className='_txActionButton _txActionButtonBad'
+            className='_txActionButton'
             onClick={() => {
               link.rpc('declineRequest', req, () => {})
             }}
           >
-            Reject
+            Decline
           </button>
           <button
             type='button'

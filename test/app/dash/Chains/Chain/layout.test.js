@@ -3,10 +3,13 @@ import fs from 'fs'
 const editorStyle = fs.readFileSync('app/dash/Chains/Chain/style/index.styl', 'utf8')
 const toggleStyle = fs.readFileSync('resources/Components/Toggle/index.styl', 'utf8')
 
-test('lets the network editor grow naturally once RPC rows reach its bottom actions', () => {
+test('gives the form body sole overflow ownership while actions stay anchored', () => {
   expect(editorStyle).toMatch(/@media \(max-height: 760px\) and \(min-width: 561px\)/)
-  expect(editorStyle).not.toMatch(/\.networkEditor\n\s{4}height calc\(100vh - 64px\)/)
-  expect(editorStyle).not.toMatch(/\.networkEditorBody\n\s{4}overflow-y auto/)
+  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?height calc\(100vh - 64px\)[\s\S]*?overflow hidden/)
+  expect(editorStyle).toMatch(/\.networkEditorBody\n[\s\S]*?overflow-y auto/)
+  expect(editorStyle).toMatch(
+    /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap[\s\S]*?overflow-y hidden/
+  )
   expect(editorStyle).toMatch(
     /\.networkEditorHeader\n\s{4}min-height 60px\n\s{4}padding-top 10px\n\s{4}padding-bottom 8px/
   )
@@ -24,10 +27,16 @@ test('lets the network editor grow naturally once RPC rows reach its bottom acti
 })
 
 test('anchors add and edit actions at the bottom while the form fits', () => {
-  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?min-height calc\(100vh - 64px\)/)
+  expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?height calc\(100vh - 64px\)/)
   expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
   expect(editorStyle).toMatch(
     /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap\n\s{2}padding-top 0\n\s{2}padding-bottom 0/
+  )
+  expect(editorStyle).toMatch(
+    /\.networkEditorFooter[\s\S]*?border-top 1px solid var\(--wren-border-subtle\)[\s\S]*?background var\(--wren-surface-overlay\)/
+  )
+  expect(editorStyle).toMatch(
+    /button\.networkEditorRemove\.wrenControl\n\s{2}height 44px\n\s{2}min-height 44px/
   )
 })
 
@@ -48,12 +57,14 @@ test('keeps network editor copy readable and compact controls practically target
   )
   expect(toggleStyle).toMatch(/&:disabled \.wrenToggleThumb\n\s{4}opacity 1/)
   expect(editorStyle).toMatch(/\.rpcEndpointAddRow[\s\S]*?button\n[\s\S]*?height 44px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointStatus[\s\S]*?font-family var\(--wren-font-ui\)/)
+  expect(editorStyle).toMatch(/\.rpcEndpointState-standby\n\s{2}color var\(--wren-text-muted\)/)
 })
 
 test('uses spacing and boxed controls instead of decorative editor rules', () => {
   expect(editorStyle).not.toMatch(
     /wren-(?:seam|rule)|border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/
   )
-  expect(editorStyle).toMatch(/\.rpcEndpointRow[\s\S]*?min-height 56px/)
+  expect(editorStyle).toMatch(/\.rpcEndpointRow[\s\S]*?min-height 70px/)
   expect(editorStyle).toMatch(/\.networkEditorFooter[\s\S]*?padding 26px var\(--wren-page-gutter\)/)
 })

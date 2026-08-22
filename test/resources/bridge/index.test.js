@@ -123,9 +123,30 @@ describe('preload renderer bridge', () => {
     )
   })
 
+  test('preserves the typed session-only permission result from main', async () => {
+    const result = {
+      success: false,
+      uncertain: true,
+      sessionOnly: true,
+      error: 'persistence-failed'
+    }
+    mockIpcRenderer.invoke.mockResolvedValue(result)
+    dispatch(JSON.stringify({ source: LINK_SOURCE, method: 'invoke', id, args: ['tray:revokeAccess', {}] }))
+    await Promise.resolve()
+
+    expect(rendererWindow.postMessage).toHaveBeenCalledWith(
+      JSON.stringify({ method: 'invoke', id, args: result, source: 'bridge:link' }),
+      '*'
+    )
+  })
+
   test.each([
     ['tray:addChain', { success: false, error: 'Main IPC invocation failed' }],
     ['tokens:save', { success: false, error: 'Main IPC invocation failed' }],
+    [
+      'tray:revokeAccess',
+      { success: false, uncertain: true, error: 'Revocation confirmation is unavailable' }
+    ],
     ['tray:getTokenDetails', {}]
   ])('settles rejected %s invokes with its exact failure result', async (channel, result) => {
     mockIpcRenderer.invoke.mockRejectedValue(new Error('sensitive internal failure'))

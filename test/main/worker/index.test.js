@@ -1,5 +1,5 @@
 import log from 'electron-log'
-import { fork, _forkedChildProcess as childProcess } from 'child_process'
+import { fork } from 'child_process'
 
 import WorkerProcess from '../../../main/worker/process'
 
@@ -14,6 +14,7 @@ afterAll(() => {
 })
 
 let worker
+const currentChildProcess = () => fork.mock.results.at(-1).value
 
 describe('initializing', () => {
   it('should create a forked process using the provided module', () => {
@@ -45,7 +46,7 @@ describe('initializing', () => {
 
     jest.advanceTimersByTime(60000)
 
-    expect(childProcess.kill).toHaveBeenCalledWith('SIGABRT')
+    expect(currentChildProcess().kill).toHaveBeenCalledWith('SIGABRT')
 
     jest.useRealTimers()
   })
@@ -61,7 +62,7 @@ describe('events', () => {
 
     worker.once('update', (data) => (emittedData = data))
 
-    childProcess.emit('message', { event: 'update', payload: 'hello, world!' })
+    currentChildProcess().emit('message', { event: 'update', payload: 'hello, world!' })
 
     expect(emittedData).toBe('hello, world!')
   })
@@ -70,7 +71,7 @@ describe('events', () => {
     const handler = jest.fn()
     worker.on('update', handler)
 
-    childProcess.emit('message', { event: 'update' })
+    currentChildProcess().emit('message', { event: 'update' })
 
     expect(handler).toHaveBeenCalledWith(undefined)
   })
@@ -79,7 +80,7 @@ describe('events', () => {
     const handler = jest.fn()
     worker.on('update', handler)
 
-    childProcess.emit('message', { event: 1, payload: 'unexpected' })
+    currentChildProcess().emit('message', { event: 1, payload: 'unexpected' })
 
     expect(handler).not.toHaveBeenCalled()
   })
@@ -89,9 +90,9 @@ describe('events', () => {
 
     worker.once('exit', () => (exitEmitted = true))
 
-    childProcess.emit('error')
+    currentChildProcess().emit('error')
 
-    expect(childProcess.kill).toHaveBeenCalled()
+    expect(currentChildProcess().kill).toHaveBeenCalled()
     expect(exitEmitted).toBe(true)
   })
 
@@ -100,9 +101,9 @@ describe('events', () => {
 
     worker.once('exit', () => (exitEmitted = true))
 
-    childProcess.emit('exit')
+    currentChildProcess().emit('exit')
 
-    expect(childProcess.kill).toHaveBeenCalled()
+    expect(currentChildProcess().kill).toHaveBeenCalled()
     expect(exitEmitted).toBe(true)
   })
 })
@@ -116,7 +117,7 @@ describe('api', () => {
     it('sends a command and args to the worker process', () => {
       worker.send('testCommand', { fruit: 'orange' }, 'metadata')
 
-      expect(childProcess.send).toHaveBeenCalledWith({
+      expect(currentChildProcess().send).toHaveBeenCalledWith({
         command: 'testCommand',
         args: [{ fruit: 'orange' }, 'metadata']
       })
@@ -136,7 +137,7 @@ describe('api', () => {
     it('kills the worker process', () => {
       worker.kill('SIGHUP')
 
-      expect(childProcess.kill).toHaveBeenCalledWith('SIGHUP')
+      expect(currentChildProcess().kill).toHaveBeenCalledWith('SIGHUP')
     })
 
     it('removes listeners after emitting the exit event', () => {
@@ -148,5 +149,30 @@ describe('api', () => {
 
       expect(numExitEvents).toBe(1)
     })
+  })
+})
+
+describe('process isolation', () => {
+  it('routes messages only to the worker that owns the forked process', () => {
+    const firstWorker = new WorkerProcess({ name: 'first-worker', modulePath: './first.js' })
+    const firstChildProcess = currentChildProcess()
+    const secondWorker = new WorkerProcess({ name: 'second-worker', modulePath: './second.js' })
+    const secondChildProcess = currentChildProcess()
+    const firstHandler = jest.fn()
+    const secondHandler = jest.fn()
+    firstWorker.on('update', firstHandler)
+    secondWorker.on('update', secondHandler)
+
+    expect(firstChildProcess).not.toBe(secondChildProcess)
+    expect(firstChildProcess.listenerCount('message')).toBe(1)
+    expect(secondChildProcess.listenerCount('message')).toBe(1)
+
+    firstChildProcess.emit('message', { event: 'update', payload: 'first' })
+    expect(firstHandler).toHaveBeenCalledWith('first')
+    expect(secondHandler).not.toHaveBeenCalled()
+
+    secondChildProcess.emit('message', { event: 'update', payload: 'second' })
+    expect(secondHandler).toHaveBeenCalledWith('second')
+    expect(firstHandler).toHaveBeenCalledTimes(1)
   })
 })

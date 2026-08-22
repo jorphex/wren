@@ -15,6 +15,7 @@ class OperationLifecycleProjectionRuntime {
       this.projection.project(current.id, Date.now(), true, pendingEvidence)
     })
     this.projection.projectAll()
+    this.projection.restoreBroadcastReservations()
     this.timer = setInterval(() => this.projection.projectAll(), PROJECTION_INTERVAL_MS)
     this.timer.unref?.()
   }

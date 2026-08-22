@@ -77,8 +77,11 @@ test('renders directly editable network and RPC fields', () => {
   expect(screen.getByLabelText('Chain ID').readOnly).toBe(true)
   expect(screen.getByLabelText('RPC URL 1').value).toBe('https://rpc.example')
   expect(screen.getByLabelText('RPC URL 2').value).toBe('https://fallback.example')
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Connected, 84 milliseconds' })).toBeTruthy()
-  expect(screen.getByRole('img', { name: 'RPC endpoint 2: Connected' })).toBeTruthy()
+  expect(screen.getByText('Connected · 84 ms')).toBeTruthy()
+  expect(screen.getByText('Connected')).toBeTruthy()
+  expect(screen.getByLabelText('RPC URL 1').getAttribute('aria-describedby')).toBe(
+    'rpc-endpoint-status-rpc-1'
+  )
 })
 
 test('commits a valid primary RPC when focus leaves the input', () => {
@@ -119,6 +122,7 @@ test('does not enable a disabled endpoint when its URL changes', () => {
     'https://quiet.example'
   )
   expect(screen.getByRole('switch', { name: 'Enable RPC endpoint 2' })).toBeTruthy()
+  expect(screen.getByText('Off')).toBeTruthy()
   expect(screen.queryByText('Checking connection…')).toBeNull()
 })
 
@@ -139,6 +143,7 @@ test('removes a fallback endpoint without entering a management mode', async () 
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'removeEndpoint', 'ethereum', 1337, 'rpc-2')
   expect(screen.queryByLabelText('RPC URL 2')).toBeNull()
+  expect(document.activeElement).toBe(screen.getByLabelText('RPC URL 1'))
 })
 
 test('keeps an invalid RPC local and marks the field', () => {
@@ -148,7 +153,9 @@ test('keeps an invalid RPC local and marks the field', () => {
   fireEvent.change(rpc, { target: { value: 'not-a-url' } })
   fireEvent.blur(rpc)
 
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Enter a valid RPC URL.' })).toBeTruthy()
+  expect(document.getElementById(rpc.getAttribute('aria-describedby')).textContent).toBe(
+    'Enter a valid RPC URL.'
+  )
   expect(rpc.getAttribute('aria-invalid')).toBe('true')
   expect(link.send).not.toHaveBeenCalledWith('tray:action', 'setEndpointUrl', expect.anything())
 })
@@ -162,7 +169,7 @@ test('distinguishes a wrong-network RPC from a connection failure', () => {
 
   render(<Chain view='expanded' {...chain} connection={mismatchedConnection} />)
 
-  expect(screen.getByRole('img', { name: 'RPC endpoint 1: Wrong network' })).toBeTruthy()
+  expect(screen.getByText('Wrong network')).toBeTruthy()
   expect(screen.getByLabelText('RPC URL 1').getAttribute('aria-invalid')).toBe('true')
 })
 

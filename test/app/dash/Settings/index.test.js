@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import { Settings } from '../../../../app/dash/Settings'
 import { WREN_LICENSE_URL } from '../../../../resources/constants'
 import link from '../../../../resources/link'
-import { act, fireEvent, render, screen, within } from '../../../componentSetup'
+import { act, fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
 
 jest.mock('../../../../resources/link', () => ({
   invoke: jest.fn().mockResolvedValue({
@@ -21,6 +21,18 @@ jest.mock('../../../../resources/link', () => ({
   send: jest.fn()
 }))
 jest.mock('../../../../resources/Components/KeyboardShortcutConfigurator', () => () => null)
+
+const signerProtectionStatus = {
+  success: true,
+  status: {
+    available: true,
+    backend: 'gnome_libsecret',
+    enabled: false,
+    protectedFiles: 0,
+    signerFiles: 0,
+    state: 'disabled'
+  }
+}
 
 const state = {
   platform: 'linux',
@@ -72,6 +84,11 @@ const state = {
 }
 
 const renderSettings = (mutate = (value) => value) => {
+  link.invoke.mockImplementation((channel) =>
+    Promise.resolve(
+      channel === 'settings:clearRecentRecipients' ? { success: true, durable: true } : signerProtectionStatus
+    )
+  )
   const store = Restore.create(mutate(JSON.parse(JSON.stringify(state))), {})
   class TestSettings extends Settings {
     constructor(props) {
@@ -153,8 +170,8 @@ it('confirms disabling recent recipients and restores focus', async () => {
 
   await user.click(toggle)
   await user.click(screen.getByRole('button', { name: 'Turn off and clear' }))
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'setRememberRecentRecipients', false)
-  expect(screen.getByText('Recent recipients turned off and cleared')).toBeTruthy()
+  expect(link.invoke).toHaveBeenCalledWith('settings:clearRecentRecipients', 'disable')
+  expect(await screen.findByText('Recent recipients turned off and cleared from this device')).toBeTruthy()
   expect(document.activeElement).toBe(toggle)
 })
 
@@ -177,9 +194,47 @@ it('clears recent recipients separately with destructive confirmation', async ()
   expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }))
   await user.click(within(dialog).getByRole('button', { name: 'Clear recipients' }))
 
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'clearRecentRecipients')
-  expect(screen.getByText('Recent recipients cleared')).toBeTruthy()
+  expect(link.invoke).toHaveBeenCalledWith('settings:clearRecentRecipients', 'clear')
+  expect(await screen.findByText('Recent recipients cleared from this device')).toBeTruthy()
   expect(document.activeElement).toBe(clear)
+})
+
+it('announces session-only clearing when the durable acknowledgement fails', async () => {
+  const { user } = renderSettings((value) => {
+    value.main.rememberRecentRecipients = true
+    value.main.recentRecipientUses = [
+      {
+        operationId: '123e4567-e89b-42d3-a456-426614174000',
+        address: '0x2222222222222222222222222222222222222222',
+        confirmedAt: Date.now()
+      }
+    ]
+    return value
+  })
+  link.invoke.mockImplementation((channel) =>
+    Promise.resolve(
+      channel === 'settings:clearRecentRecipients'
+        ? {
+            success: false,
+            durable: false,
+            sessionOnly: true,
+            error: 'persistence-failed'
+          }
+        : signerProtectionStatus
+    )
+  )
+
+  await user.click(
+    within(setting('Recent recipients')).getByRole('switch', { name: 'Save recent recipients' })
+  )
+  await user.click(screen.getByRole('button', { name: 'Turn off and clear' }))
+
+  await waitFor(() =>
+    expect(within(screen.getByRole('region', { name: 'Privacy' })).getByRole('status').textContent).toBe(
+      'Recent recipients are off for this session, but Wren could not confirm the clearing was saved. Restart may restore prior data.'
+    )
+  )
+  expect(screen.queryByText('Recent recipients turned off and cleared from this device')).toBeNull()
 })
 
 it('keeps Clear available while enabled so memory-only pending recipients can be purged', () => {

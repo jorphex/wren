@@ -1,7 +1,13 @@
-import { screen, render } from '../../../componentSetup'
-import { CreatePassword, ConfirmPassword } from '../../../../resources/Components/Password'
+import { fireEvent, screen, render } from '../../../componentSetup'
+import { CreatePassword, ConfirmPassword, isUnmodifiedEnter } from '../../../../resources/Components/Password'
 
 const validPassword = 'thisisagoodpassword123'
+
+it('rejects both synthetic and native composition Enter events', () => {
+  expect(isUnmodifiedEnter({ key: 'Enter', isComposing: true, nativeEvent: {} })).toBe(false)
+  expect(isUnmodifiedEnter({ key: 'Enter', nativeEvent: { isComposing: true } })).toBe(false)
+  expect(isUnmodifiedEnter({ key: 'Enter', nativeEvent: {} })).toBe(true)
+})
 
 describe('creating password', () => {
   const setupComponent = ({ onCreate = jest.fn() } = {}) => {
@@ -28,9 +34,11 @@ describe('creating password', () => {
 
     expect(input.getAttribute('autocomplete')).toBe('new-password')
     expect(input.getAttribute('type')).toBe('password')
-    await user.click(screen.getByRole('button', { name: 'Show password' }))
+    const reveal = screen.getByRole('button', { name: 'Show password' })
+    expect(reveal.getAttribute('aria-pressed')).toBe('false')
+    await user.click(reveal)
     expect(input.getAttribute('type')).toBe('text')
-    expect(screen.getByRole('button', { name: 'Hide password' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Hide password' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('should show an error when the password is too short', async () => {
@@ -125,6 +133,32 @@ describe('confirming password', () => {
     await user.keyboard('{Enter}')
 
     expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['Shift', 'Alt', 'Control', 'Meta'])(
+    'does not submit a valid confirmation from %s+Enter',
+    async (modifier) => {
+      const onConfirm = jest.fn()
+      const { user, enterPassword } = setupComponent({ onConfirm })
+
+      await enterPassword(validPassword)
+      await user.keyboard(`{${modifier}>}{Enter}{/${modifier}}`)
+
+      expect(onConfirm).not.toHaveBeenCalled()
+    }
+  )
+
+  it('does not submit a valid confirmation while text composition is active', async () => {
+    const onConfirm = jest.fn()
+    const { enterPassword } = setupComponent({ onConfirm })
+
+    await enterPassword(validPassword)
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Confirm password' }), {
+      key: 'Enter',
+      isComposing: true
+    })
+
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 
   it('locks final confirmation against repeated activation', async () => {

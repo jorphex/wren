@@ -3,6 +3,27 @@
 
 .clearPermissionsConfirm
   display flex
+  flex-direction column
+  gap var(--wren-space-2)
+
+.clearPermissionsCopy
+  strong
+    display block
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-body)
+    font-weight 600
+
+  p
+    margin var(--wren-space-2) 0 0
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    line-height 20px
+
+.clearPermissionsActions
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
   gap var(--wren-space-2)
 
 .clearPermissionsAction
@@ -11,7 +32,7 @@
 button.wrenControl.clearPermissionsAction
   min-height 44px
 
-.clearPermissionsConfirm .clearPermissionsAction
+.clearPermissionsActions .clearPermissionsAction
   flex 1
 
 .clearPermissionsStatus
@@ -91,6 +112,25 @@ button.wrenControl.revokeAccessButton
   font-size var(--wren-type-caption)
   line-height 18px
   text-align center
+
+  &:focus
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.revokeAccessFailure
+  margin-top var(--wren-space-3)
+  padding var(--wren-space-2)
+  border 1px solid var(--wren-danger)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-danger)
+  background var(--wren-danger-soft)
+  font-size var(--wren-type-small)
+  line-height 20px
+
+.permissionsModuleHeader:focus,
+.permissionsLedgerView:focus
+  outline 2px solid var(--wren-focus)
+  outline-offset -2px
 
 .moduleMainPermissions
   overflow auto

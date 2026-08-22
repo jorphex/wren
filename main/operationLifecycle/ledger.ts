@@ -8,6 +8,7 @@ import {
 import { WREN_DEPLOY_ORIGIN, WREN_INTERNAL_ORIGIN, originIdForName } from '../../resources/domain/origin'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+const BROADCAST_PHASE = Object.freeze({ broadcasting: 0, unconfirmed: 1, acknowledged: 2 })
 
 export interface OperationLifecycleStorage {
   load(): unknown
@@ -154,6 +155,45 @@ export class OperationLifecycleLedger {
     }
     if (current && JSON.stringify(current.transaction) !== JSON.stringify(parsed.data.transaction)) {
       throw new Error('Operation lifecycle transaction evidence cannot change')
+    }
+    if (current) {
+      const previousBroadcast = current.broadcast
+      const nextBroadcast = parsed.data.broadcast
+      if (Boolean(previousBroadcast) !== Boolean(nextBroadcast)) {
+        throw new Error('Operation lifecycle broadcast evidence cannot be added or removed')
+      }
+      if (
+        previousBroadcast &&
+        nextBroadcast &&
+        BROADCAST_PHASE[nextBroadcast.phase] < BROADCAST_PHASE[previousBroadcast.phase]
+      ) {
+        throw new Error('Operation lifecycle broadcast phase cannot move backwards')
+      }
+      if (
+        previousBroadcast?.pendingRecipient !== undefined &&
+        nextBroadcast?.pendingRecipient !== undefined &&
+        previousBroadcast.pendingRecipient !== nextBroadcast.pendingRecipient
+      ) {
+        throw new Error('Operation lifecycle pending recipient cannot change')
+      }
+      if (
+        previousBroadcast?.pendingRecipient === undefined &&
+        nextBroadcast?.pendingRecipient !== undefined
+      ) {
+        throw new Error('Operation lifecycle pending recipient cannot be added')
+      }
+      const previousFingerprints = previousBroadcast?.pendingOutboundFingerprints
+      const nextFingerprints = nextBroadcast?.pendingOutboundFingerprints
+      if (
+        previousFingerprints !== undefined &&
+        nextFingerprints !== undefined &&
+        JSON.stringify(previousFingerprints) !== JSON.stringify(nextFingerprints)
+      ) {
+        throw new Error('Operation lifecycle pending outbound fingerprints cannot change')
+      }
+      if (previousFingerprints === undefined && nextFingerprints !== undefined) {
+        throw new Error('Operation lifecycle pending outbound fingerprints cannot be added')
+      }
     }
     if (
       current?.receipt?.contractAddress &&

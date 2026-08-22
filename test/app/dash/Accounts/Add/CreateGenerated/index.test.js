@@ -74,6 +74,16 @@ describe('generated recovery-phrase wallet', () => {
     focus.mockRestore()
   })
 
+  test('marks the one-time secret expiry as intentional secondary guidance', async () => {
+    const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: 300 })
+    await advancePassword(view, { ...phrasePresentation, expiresAt: Date.now() + 600_000 })
+
+    const notice = screen
+      .getAllByText('Finish setup within about 10 minutes.')
+      .find((element) => element.closest('[aria-hidden="false"]'))
+    expect(notice.className).toBe('generatedWalletSessionNote generatedWalletExpiryNotice')
+  })
+
   test('shows a fail-closed generation error without leaving the frame carousel blank', async () => {
     const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: true })
     await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), password)
@@ -119,6 +129,31 @@ describe('generated recovery-phrase wallet', () => {
     expect(link.send).toHaveBeenCalledWith('nav:back', 'dash', 2)
     expect(link.send).toHaveBeenCalledWith('nav:forward', 'dash', { view: 'accounts', data: {} })
     expect(screen.queryByText('test')).toBeNull()
+  })
+
+  test('submits backup verification on unmodified Enter only when Finish setup is enabled', async () => {
+    const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: true })
+    await advancePassword(view, phrasePresentation)
+    await view.user.click(screen.getByRole('button', { name: "I've written it down" }))
+    const fields = phrasePresentation.challenge.map((position) =>
+      screen.getByRole('textbox', { name: `Word ${position}` })
+    )
+
+    await view.user.type(fields[0], 'test')
+    await view.user.type(fields[1], 'test')
+    await view.user.keyboard('{Enter}')
+    expect(link.rpc.mock.calls.some(([method]) => method === 'completeGeneratedWallet')).toBe(false)
+
+    await view.user.type(fields[2], 'test')
+    link.rpc.mockImplementationOnce((method, id, proof, cb) => cb(null, { id: 'new-seed-signer' }))
+    await view.user.keyboard('{Enter}')
+
+    expect(link.rpc).toHaveBeenLastCalledWith(
+      'completeGeneratedWallet',
+      phrasePresentation.sessionId,
+      { words: ['test', 'test', 'test'] },
+      expect.any(Function)
+    )
   })
 
   test('keeps proof mismatches retryable, clears the stale error on edit, and marks invalid fields', async () => {
@@ -420,12 +455,15 @@ describe('generated private-key account', () => {
     expect(screen.getByText(address)).toBeTruthy()
     expect(screen.queryByText(privateKey)).toBeNull()
     const concealed = screen.getByText('Private key concealed')
-    expect(concealed.closest('code').querySelector('[aria-hidden="true"]')).toBeTruthy()
+    const placeholder = concealed.closest('code').querySelector('[aria-hidden="true"]')
+    expect(placeholder.textContent).toBe(`0x${'•'.repeat(64)}`)
     expect(screen.getByRole('button', { name: 'Copy address' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Copy private key' })).toBeTruthy()
     expect(screen.getByRole('button', { name: "I've saved my key" }).disabled).toBe(true)
     act(() => jest.advanceTimersByTime(100))
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show private key' }))
+    const reveal = screen.getByRole('button', { name: 'Show private key' })
+    expect(document.activeElement).toBe(reveal)
+    expect(reveal.getAttribute('aria-pressed')).toBe('false')
     let resolveSecretCopy
     link.invoke.mockImplementationOnce(
       () =>
@@ -439,11 +477,12 @@ describe('generated private-key account', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Show private key' }))
     expect(screen.getByText(privateKey)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Hide private key' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: "I've saved my key" }).disabled).toBe(false)
     await view.user.click(screen.getByRole('button', { name: 'Copy address' }))
     expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: address })
     expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: true, value: privateKey })
-  })
+  }, 1500)
 
   test('requires the complete saved key before committing', async () => {
     const view = render(<CreateGenerated kind='private-key' />, { advanceTimersAfterInput: true })
@@ -465,6 +504,28 @@ describe('generated private-key account', () => {
 
     link.rpc.mockImplementationOnce((method, id, proof, cb) => cb(null, { id: 'new-key-signer' }))
     await view.user.click(finish)
+    expect(link.rpc).toHaveBeenLastCalledWith(
+      'completeGeneratedWallet',
+      keyPresentation.sessionId,
+      { privateKey },
+      expect.any(Function)
+    )
+  })
+
+  test('preserves modified Enter in the key field and submits a valid key on plain Enter', async () => {
+    const view = render(<CreateGenerated kind='private-key' />, { advanceTimersAfterInput: true })
+    await advancePassword(view, keyPresentation)
+    await view.user.click(screen.getByRole('button', { name: 'Show private key' }))
+    await view.user.click(screen.getByRole('button', { name: "I've saved my key" }))
+    const confirmation = screen.getByRole('textbox', { name: 'Verify your backup' })
+
+    await view.user.type(confirmation, privateKey)
+    await view.user.keyboard('{Shift>}{Enter}{/Shift}')
+    expect(link.rpc.mock.calls.some(([method]) => method === 'completeGeneratedWallet')).toBe(false)
+
+    link.rpc.mockImplementationOnce((method, id, proof, cb) => cb(null, { id: 'new-key-signer' }))
+    await view.user.keyboard('{Enter}')
+
     expect(link.rpc).toHaveBeenLastCalledWith(
       'completeGeneratedWallet',
       keyPresentation.sessionId,

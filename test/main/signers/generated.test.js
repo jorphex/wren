@@ -218,6 +218,29 @@ describe('generated wallet sessions', () => {
     expect(sessions.sessions.size).toBe(0)
   })
 
+  test('rejects an expired reservation before password validation or wallet entropy', async () => {
+    let timestamp = 1_000
+    const timer = { unref: jest.fn() }
+    const setTimeout = jest.fn(() => timer)
+    const clearTimeout = jest.fn()
+    const { sessions } = setup({
+      clearTimeout,
+      now: () => timestamp,
+      setTimeout,
+      stagingTtlMs: 100
+    })
+    const { sessionId } = await reserve(sessions)
+
+    timestamp = 1_100
+    await expect(beginReserved(sessions, sessionId, 'phrase')).rejects.toThrow(SESSION_UNAVAILABLE_ERROR)
+
+    expect(mockCallOrder).toEqual([])
+    expect(hot.validatePassword).not.toHaveBeenCalled()
+    expect(hot.stageFromPhrase).not.toHaveBeenCalled()
+    expect(clearTimeout).toHaveBeenCalledWith(timer)
+    expect(sessions.sessions.has(sessionId)).toBe(false)
+  })
+
   test('keeps the signer staged until all requested phrase words match', async () => {
     const { sessions, signers } = setup()
     const presentation = await begin(sessions, 'phrase')
@@ -304,6 +327,24 @@ describe('generated wallet sessions', () => {
     expect(sessions.sessions.has(expiring.sessionId)).toBe(false)
     const expired = await complete(sessions, expiring.sessionId, { privateKey: MOCK_PRIVATE_KEY })
     expect(expired.error.message).toBe(SESSION_UNAVAILABLE_ERROR)
+  })
+
+  test('enforces the stored expiry deadline even when its cleanup timer is delayed', async () => {
+    let timestamp = 1_000
+    const { sessions, signers } = setup({ now: () => timestamp, sessionTtlMs: 5_000 })
+    const presentation = await begin(sessions, 'private-key')
+    const signer = mockStagedSigners[0].signer
+
+    timestamp = presentation.expiresAt
+    const expired = await complete(sessions, presentation.sessionId, { privateKey: MOCK_PRIVATE_KEY })
+
+    expect(expired.error.message).toBe(SESSION_UNAVAILABLE_ERROR)
+    expect(expired.result).toBeUndefined()
+    expect(signer.commitStaged).not.toHaveBeenCalled()
+    expect(signers.add).not.toHaveBeenCalled()
+    expect(signer.close).toHaveBeenCalledTimes(1)
+    expect(signers.untrackHotSigner).toHaveBeenCalledWith(signer)
+    expect(sessions.sessions.has(presentation.sessionId)).toBe(false)
   })
 
   test('bounds reservations and releases capacity when staging settles', () => {
@@ -450,6 +491,39 @@ describe('generated wallet sessions', () => {
     expect(stagedSigner.close).toHaveBeenCalledTimes(1)
     expect(signers.untrackHotSigner).toHaveBeenCalledWith(stagedSigner)
     expect(sessions.sessions.size).toBe(0)
+  })
+
+  test('rejects staging completed after its deadline even when the cleanup timer is delayed', async () => {
+    let timestamp = 1_000
+    let stageCallback
+    const stagedSigner = mockMakeSigner('phrase')
+    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => {
+      stageCallback = cb
+      return { cancel: jest.fn(), signer: stagedSigner }
+    })
+    const timer = { unref: jest.fn() }
+    const setTimeout = jest.fn(() => timer)
+    const clearTimeout = jest.fn()
+    const { sessions, signers } = setup({
+      clearTimeout,
+      now: () => timestamp,
+      setTimeout,
+      stagingTtlMs: 100
+    })
+    const { sessionId } = await reserve(sessions)
+    const presented = jest.fn()
+
+    sessions.begin(sessionId, 'phrase', PASSWORD, presented)
+    timestamp = 1_100
+    stageCallback(null, stagedSigner)
+
+    expect(presented).toHaveBeenCalledTimes(1)
+    expect(presented.mock.calls[0][0].message).toBe(SESSION_UNAVAILABLE_ERROR)
+    expect(presented.mock.calls[0][1]).toBeUndefined()
+    expect(stagedSigner.close).toHaveBeenCalledTimes(1)
+    expect(signers.untrackHotSigner).toHaveBeenCalledWith(stagedSigner)
+    expect(clearTimeout).toHaveBeenCalledWith(timer)
+    expect(sessions.sessions.has(sessionId)).toBe(false)
   })
 
   test('does not roll back a committed signer when the success callback throws', async () => {

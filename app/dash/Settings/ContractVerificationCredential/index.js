@@ -3,6 +3,7 @@ import { Component, createRef } from 'react'
 import link from '../../../../resources/link'
 
 const emptyCredential = { available: false, configured: false, backend: 'unsupported' }
+const keyFormatId = 'contract-verification-credential-key-format'
 
 export class ContractVerificationCredential extends Component {
   constructor(props) {
@@ -10,6 +11,7 @@ export class ContractVerificationCredential extends Component {
     this.apiKeyRef = createRef()
     this.state = {
       credential: emptyCredential,
+      statusKnown: false,
       loading: true,
       busy: false,
       keyReady: false,
@@ -33,11 +35,12 @@ export class ContractVerificationCredential extends Component {
       const result = await link.invoke('contractVerification:credentialStatus')
       if (!this.mounted) return
       if (!result?.success || !result.credential) throw new Error('status unavailable')
-      this.setState({ credential: result.credential, loading: false, error: '' })
+      this.setState({ credential: result.credential, statusKnown: true, loading: false, error: '' })
     } catch {
       if (this.mounted) {
         this.setState({
           credential: emptyCredential,
+          statusKnown: false,
           loading: false,
           error: 'Credential status unavailable.'
         })
@@ -86,8 +89,9 @@ export class ContractVerificationCredential extends Component {
   }
 
   render() {
-    const { credential, loading, busy, keyReady, error, notice } = this.state
+    const { credential, statusKnown, loading, busy, keyReady, error, notice } = this.state
     const unavailable = !loading && !credential.available
+    const formatHintVisible = credential.available && !busy && !keyReady
     return (
       <div className='signerPermission localSetting localSettingExplained contractVerificationCredential'>
         <div className='signerPermissionControls contractVerificationCredentialControls'>
@@ -96,11 +100,13 @@ export class ContractVerificationCredential extends Component {
             <div className='contractVerificationCredentialStatus'>
               {loading
                 ? 'Checking secure storage…'
-                : unavailable
-                  ? 'Secure storage unavailable'
-                  : credential.configured
-                    ? 'Stored securely'
-                    : 'Not configured'}
+                : !statusKnown
+                  ? 'Storage status unavailable'
+                  : unavailable
+                    ? 'Secure storage unavailable'
+                    : credential.configured
+                      ? 'Stored securely'
+                      : 'Not configured'}
             </div>
           </div>
           {credential.available || credential.configured ? (
@@ -112,8 +118,9 @@ export class ContractVerificationCredential extends Component {
                     type='password'
                     className='wrenInput contractVerificationCredentialInput'
                     aria-label={credential.configured ? 'Replace Etherscan API key' : 'Etherscan API key'}
+                    aria-describedby={formatHintVisible ? keyFormatId : undefined}
                     autoComplete='off'
-                    spellCheck='false'
+                    spellCheck={false}
                     minLength='16'
                     maxLength='128'
                     disabled={busy}
@@ -125,6 +132,7 @@ export class ContractVerificationCredential extends Component {
                   <button
                     type='button'
                     className='wrenControl wrenControlGhost'
+                    aria-describedby={formatHintVisible ? keyFormatId : undefined}
                     disabled={busy || !keyReady}
                     onClick={() => this.save()}
                   >
@@ -145,9 +153,21 @@ export class ContractVerificationCredential extends Component {
             </div>
           ) : null}
         </div>
+        {formatHintVisible ? (
+          <div id={keyFormatId} className='contractVerificationCredentialHint'>
+            Use 16–128 letters, numbers, underscores, or hyphens.
+          </div>
+        ) : null}
         <div className='signerPermissionDetails'>
-          Used only for direct Etherscan verification when Sourcify forwarding is unavailable. Stored with OS
-          credential protection on this device. Not included in profile backups; re-enter it after a restore.
+          Used only for direct Etherscan verification when Sourcify forwarding is unavailable.
+          {loading
+            ? ' Wren is checking whether OS credential protection is available.'
+            : !statusKnown
+              ? ' Wren could not confirm OS credential protection, so it will not accept a key.'
+              : credential.available
+                ? ' Stored with OS credential protection on this device.'
+                : ' OS credential protection is unavailable, so Wren cannot save a key.'}{' '}
+          Not included in profile backups; re-enter it after a restore.
         </div>
         <div className='contractVerificationCredentialMessage' role='status' aria-live='polite'>
           {notice}

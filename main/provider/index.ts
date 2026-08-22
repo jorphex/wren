@@ -15,6 +15,7 @@ import proxyConnection from './proxy'
 import accounts, {
   AccountRequest,
   TransactionRequest,
+  type TransactionSubmissionContext,
   SignTypedDataRequest,
   AddChainRequest,
   SwitchChainRequest,
@@ -670,9 +671,12 @@ export class Provider extends EventEmitter {
   }
 
   signAndSend(req: TransactionRequest, cb: Callback<string>) {
+    const handlerId = req.handlerId
+    const accountId = req.account
+    const activityId = req.activityId
     const rawTx = req.data
     const res = (data: RPCResponsePayload) => {
-      this.respondToRequest(req.handlerId, data)
+      this.respondToRequest(handlerId, data)
     }
 
     const payload = req.payload
@@ -689,7 +693,7 @@ export class Provider extends EventEmitter {
       cb(new Error(err))
     } else {
       accounts.signTransactionForAccount(
-        req.account,
+        accountId,
         rawTx,
         (err, signedTx) => {
           // Sign Transaction
@@ -710,9 +714,49 @@ export class Provider extends EventEmitter {
               return cb(error)
             }
             accounts.setTxSigned(
-              req.handlerId,
+              handlerId,
               (err) => {
                 if (err) return cb(err)
+                const submissionContext = accounts.transactionSubmissionContext(handlerId, accountId)
+                if (!submissionContext) {
+                  if (activityId) accounts.releaseOperationLifecycleAdmission(activityId)
+                  const error = new Error('Transaction monitoring context is unavailable')
+                  resError(error, payload, res)
+                  return cb(error)
+                }
+                const broadcastAdmitted = accounts.admitTxBroadcast(
+                  handlerId,
+                  signedHash,
+                  accountId,
+                  submissionContext
+                )
+                if (!broadcastAdmitted) {
+                  if (activityId) accounts.releaseOperationLifecycleAdmission(activityId)
+                  const error = new Error(
+                    'Transaction monitoring could not be prepared. No additional broadcast was made.'
+                  )
+                  resError(error, payload, res)
+                  return cb(error)
+                }
+                try {
+                  commitMainState(store('main'))
+                } catch (error) {
+                  accounts.cancelTxBroadcastAdmission(submissionContext, signedHash)
+                  log.error('Pre-broadcast transaction recovery could not be committed', {
+                    ...summarizeRpcError(error)
+                  })
+                  const persistenceError = new Error(
+                    'Transaction monitoring could not be persisted. Nothing was broadcast.'
+                  )
+                  resError(persistenceError, payload, res)
+                  return cb(persistenceError)
+                }
+                let monitoringStarted = false
+                const startBroadcastMonitoring = () => {
+                  if (monitoringStarted) return
+                  monitoringStarted = true
+                  accounts.startTxBroadcastMonitoring(submissionContext)
+                }
                 let transportSettled = false
                 let callbackSettled = false
                 const settleCallback = (error: Error | null, result?: string) => {
@@ -720,8 +764,29 @@ export class Provider extends EventEmitter {
                   callbackSettled = true
                   cb(error, result)
                 }
+                const commitSubmissionLifecycle = (
+                  message: string,
+                  admit: (context: TransactionSubmissionContext) => boolean
+                ) => {
+                  const admitted = admit(submissionContext)
+                  if (!admitted) {
+                    log.error('Transaction lifecycle could not be admitted after broadcast', {
+                      handlerId
+                    })
+                    return false
+                  }
+                  try {
+                    commitMainState(store('main'))
+                  } catch (error) {
+                    log.error(message, { ...summarizeRpcError(error) })
+                  }
+                  return true
+                }
                 const markSubmissionUnclear = () =>
-                  accounts.setTxSubmissionUnclear(req.handlerId, signedHash, req.account)
+                  commitSubmissionLifecycle(
+                    'Unconfirmed transaction restart recovery could not be committed',
+                    (context) => accounts.setTxSubmissionUnclear(handlerId, signedHash, accountId, context)
+                  )
                 const callbackTimer = setTimeout(() => {
                   if (transportSettled) return
                   markSubmissionUnclear()
@@ -737,13 +802,14 @@ export class Provider extends EventEmitter {
                 try {
                   this.connection.send(
                     {
-                      id: req.payload.id,
-                      jsonrpc: req.payload.jsonrpc,
+                      id: payload.id,
+                      jsonrpc: payload.jsonrpc,
                       method: 'eth_sendRawTransaction',
                       params: [signedTx]
                     },
                     (response) => {
                       if (transportSettled) return
+                      startBroadcastMonitoring()
                       transportSettled = true
                       clearTimeout(callbackTimer)
                       if (response.error) {
@@ -765,13 +831,13 @@ export class Provider extends EventEmitter {
                           resError(error.message, payload, res)
                           return settleCallback(error)
                         }
-                        accounts.setTxSent(req.handlerId, response.result, req.account)
-                        try {
-                          commitMainState(store('main'))
-                        } catch (error) {
-                          log.error('Submitted transaction restart recovery could not be committed', {
-                            ...summarizeRpcError(error)
-                          })
+                        const lifecycleAdmitted = commitSubmissionLifecycle(
+                          'Submitted transaction restart recovery could not be committed',
+                          (context) =>
+                            accounts.setTxSent(handlerId, response.result as string, accountId, context)
+                        )
+                        if (!lifecycleAdmitted) {
+                          markSubmissionUnclear()
                         }
                         res(response)
                         settleCallback(null, response.result)
@@ -779,10 +845,12 @@ export class Provider extends EventEmitter {
                     },
                     {
                       type: 'ethereum',
-                      id: parseInt(req.data.chainId, 16)
+                      id: submissionContext.chainId
                     }
                   )
+                  startBroadcastMonitoring()
                 } catch (error) {
+                  startBroadcastMonitoring()
                   if (transportSettled) return
                   transportSettled = true
                   clearTimeout(callbackTimer)
@@ -793,7 +861,7 @@ export class Provider extends EventEmitter {
                   settleCallback(submissionUnconfirmedError(broadcastError.message, signedHash))
                 }
               },
-              req.account
+              accountId
             )
           }
         },

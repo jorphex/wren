@@ -75,7 +75,8 @@ import { publishOperationLifecycleObservation } from '../operationLifecycle/even
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 import recentRecipientsRuntime from '../recentRecipients/runtime'
-import { transactionOutboundTargets } from '../addressSafety'
+import { fingerprintOutboundAddresses, transactionOutboundTargets } from '../addressSafety'
+import type { OutboundAddressFingerprint } from '../store/state/types/outboundAddressMemory'
 import {
   isTransactionFundingError,
   type TransactionFundingError,
@@ -92,6 +93,19 @@ const EIP7702_MONITOR_INTERVAL_MS = 15_000
 const EIP7702_SUBMISSION_UNCLEAR_NOTICE = 'Submission status unclear'
 const EIP7702_SUBMISSION_UNCLEAR_DETAIL =
   'Wren is monitoring the expected transaction hash, and this account’s request queue is paused until its status is known.'
+
+export type TransactionSubmissionContext = Readonly<{
+  handlerId: string
+  activityId: string
+  account: string
+  origin: string
+  chainId: number
+  nonce: string
+  replacementOf?: string
+  deployment?: NonNullable<NonNullable<OperationLifecycle['transaction']>['deployment']>
+  recentRecipient?: string
+  outboundFingerprints: readonly OutboundAddressFingerprint[]
+}>
 
 class Eip7702EligibilityError extends Error {
   constructor(
@@ -274,21 +288,82 @@ export class Accounts extends EventEmitter {
     }
   }
 
-  private operationForTransaction(request: TransactionRequest, hash: string): OperationLifecycle {
-    const now = Date.now()
-    if (!request.activityId) throw new Error('Transaction is missing its durable activity identity')
+  private transactionSubmissionContextFor(
+    handlerId: string,
+    request: TransactionRequest
+  ): TransactionSubmissionContext | undefined {
+    const activityId = request.activityId
     const chainId = parseRpcQuantity(request.data.chainId)
     const nonce = parseRpcQuantity(request.data.nonce)
-    if (chainId === undefined || chainId <= 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
-      throw new Error('Transaction is missing its durable chain identity')
+    if (
+      !activityId ||
+      chainId === undefined ||
+      chainId <= 0n ||
+      chainId > BigInt(Number.MAX_SAFE_INTEGER) ||
+      nonce === undefined
+    ) {
+      return undefined
     }
-    if (nonce === undefined) throw new Error('Transaction is missing its durable nonce')
-    return {
-      id: request.activityId,
-      kind: 'transaction',
+    let outboundFingerprints: readonly OutboundAddressFingerprint[]
+    try {
+      outboundFingerprints = Object.freeze(
+        fingerprintOutboundAddresses(store('main.instanceId'), transactionOutboundTargets(request)).map(
+          (fingerprint) => Object.freeze(fingerprint)
+        )
+      )
+    } catch {
+      return undefined
+    }
+    return Object.freeze({
+      handlerId,
+      activityId,
       account: request.account.toLowerCase(),
       origin: request.origin,
       chainId: Number(chainId),
+      nonce: toRpcQuantity(nonce),
+      ...(request.replacement ? { replacementOf: request.replacement.originalActivityId } : {}),
+      ...(request.deployment
+        ? {
+            deployment: Object.freeze({
+              version: 1 as const,
+              inspectionId: request.deployment.inspectionId,
+              initcodeHash: request.deployment.initcodeHash,
+              initcodeBytes: request.deployment.initcodeBytes,
+              value: request.deployment.value
+            })
+          }
+        : {}),
+      ...(request.recentRecipient && store('main.rememberRecentRecipients') === true
+        ? { recentRecipient: request.recentRecipient.address.toLowerCase() }
+        : {}),
+      outboundFingerprints
+    })
+  }
+
+  transactionSubmissionContext(
+    handlerId: string,
+    accountId?: string
+  ): TransactionSubmissionContext | undefined {
+    let currentAccount: FrameAccount | undefined
+    try {
+      currentAccount = this.requestAccount(handlerId, accountId)
+    } catch {
+      return undefined
+    }
+    const request = currentAccount?.getRequest<TransactionRequest>(handlerId)
+    return request?.type === 'transaction' && request.status === RequestStatus.Sending
+      ? this.transactionSubmissionContextFor(handlerId, request)
+      : undefined
+  }
+
+  private operationForTransaction(context: TransactionSubmissionContext, hash: string): OperationLifecycle {
+    const now = Date.now()
+    return {
+      id: context.activityId,
+      kind: 'transaction',
+      account: context.account,
+      origin: context.origin,
+      chainId: context.chainId,
       state: 'submitted',
       createdAt: now,
       updatedAt: now,
@@ -297,19 +372,9 @@ export class Accounts extends EventEmitter {
       notification: {},
       transaction: {
         hash: hash.toLowerCase(),
-        nonce: toRpcQuantity(nonce),
-        ...(request.replacement ? { replacementOf: request.replacement.originalActivityId } : {}),
-        ...(request.deployment
-          ? {
-              deployment: {
-                version: 1 as const,
-                inspectionId: request.deployment.inspectionId,
-                initcodeHash: request.deployment.initcodeHash,
-                initcodeBytes: request.deployment.initcodeBytes,
-                value: request.deployment.value
-              }
-            }
-          : {})
+        nonce: context.nonce,
+        ...(context.replacementOf ? { replacementOf: context.replacementOf } : {}),
+        ...(context.deployment ? { deployment: context.deployment } : {})
       }
     }
   }
@@ -501,7 +566,6 @@ export class Accounts extends EventEmitter {
       request.submission?.status === 'unconfirmed' &&
       ['confirming', 'confirmed', 'failed'].includes(operation.state)
     ) {
-      this.recordLateTransactionSubmissionMetadata(request)
       delete request.submission
     }
 
@@ -1685,27 +1749,93 @@ export class Accounts extends EventEmitter {
     provider.send({ id: 1, jsonrpc: '2.0', method, params, chainId, _origin }, cb)
   }
 
-  private async txMonitor(
-    account: FrameAccount,
-    requestId: string,
-    hash: string,
-    rememberRecentRecipient = true
+  private transactionLifecycleMatches(
+    operation: OperationLifecycle,
+    context: TransactionSubmissionContext,
+    hash: string
   ) {
-    if (!account) return log.error('txMonitor had no target account')
+    const deployment = operation.transaction?.deployment
+    const expectedDeployment = context.deployment
+    const deploymentMatches =
+      (!deployment && !expectedDeployment) ||
+      (deployment?.version === expectedDeployment?.version &&
+        deployment?.inspectionId === expectedDeployment?.inspectionId &&
+        deployment?.initcodeHash === expectedDeployment?.initcodeHash &&
+        deployment?.initcodeBytes === expectedDeployment?.initcodeBytes &&
+        deployment?.value === expectedDeployment?.value)
+    return (
+      operation.kind === 'transaction' &&
+      operation.id === context.activityId &&
+      operation.account === context.account &&
+      operation.origin === context.origin &&
+      operation.chainId === context.chainId &&
+      operation.transaction?.hash === hash.toLowerCase() &&
+      operation.transaction.nonce === context.nonce &&
+      operation.transaction.replacementOf === context.replacementOf &&
+      deploymentMatches
+    )
+  }
 
-    const txRequest = this.getTransactionRequest(account, requestId)
-    txRequest.tx = { hash, confirmations: 0 }
-    recordRequestActivity(txRequest, 'submitted')
-    account.update()
-    const operation = this.operationForTransaction(txRequest, hash)
-    this.persistOperationLifecycle(operation)
-    if (rememberRecentRecipient && txRequest.recentRecipient) {
-      recentRecipientsRuntime.track({
-        operationId: operation.id,
-        address: txRequest.recentRecipient.address
-      })
+  private admitTransactionLifecycle(
+    context: TransactionSubmissionContext,
+    hash: string,
+    phase: NonNullable<OperationLifecycle['broadcast']>['phase']
+  ) {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) return undefined
+    const existing = operationLifecycleLedger.listStored().find(({ id }) => id === context.activityId)
+    if (existing) {
+      if (!this.transactionLifecycleMatches(existing, context, hash) || !existing.broadcast) return undefined
+      const phaseRank = { broadcasting: 0, unconfirmed: 1, acknowledged: 2 } as const
+      if (phaseRank[phase] <= phaseRank[existing.broadcast.phase]) {
+        return { operation: existing, admitted: false }
+      }
+      try {
+        const operation = this.persistOperationLifecycle({
+          ...existing,
+          updatedAt: Math.min(Date.now(), existing.expiresAt),
+          broadcast: { ...existing.broadcast, phase }
+        })
+        return { operation, admitted: false }
+      } catch (error) {
+        log.error('Transaction lifecycle promotion failed', {
+          handlerId: context.handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+        return undefined
+      }
     }
-    await operationLifecycleRuntime.reconcile(operation.id)
+    try {
+      return {
+        operation: this.persistOperationLifecycle({
+          ...this.operationForTransaction(context, hash),
+          broadcast: {
+            phase,
+            ...(context.recentRecipient ? { pendingRecipient: context.recentRecipient } : {}),
+            ...(context.outboundFingerprints.length
+              ? { pendingOutboundFingerprints: [...context.outboundFingerprints] }
+              : {})
+          }
+        }),
+        admitted: true
+      }
+    } catch (error) {
+      operationLifecycleLedger.releaseReservation(context.activityId)
+      log.error('Transaction lifecycle admission failed', {
+        handlerId: context.handlerId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      return undefined
+    }
+  }
+
+  private reconcileTransactionLifecycle(operation: OperationLifecycle, admitted: boolean) {
+    if (!admitted) return
+    void operationLifecycleRuntime.reconcile(operation.id).catch((error) => {
+      log.warn('Transaction lifecycle monitor could not start', {
+        operationId: operation.id,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    })
   }
 
   // Set Current Account
@@ -2827,130 +2957,188 @@ export class Accounts extends EventEmitter {
     }
   }
 
-  setTxSent(handlerId: string, hash: string, accountId?: string) {
-    log.info('setTxSent', handlerId, 'Hash', hash)
-
+  admitTxBroadcast(
+    handlerId: string,
+    hash: string,
+    accountId: string,
+    approvedContext: TransactionSubmissionContext
+  ) {
     const currentAccount = this.requestAccount(handlerId, accountId)
-    const request = currentAccount?.requests[handlerId]
+    const request = currentAccount?.getRequest<TransactionRequest>(handlerId)
     if (
-      currentAccount &&
-      request?.type === 'transaction' &&
-      request.status === RequestStatus.Verifying &&
-      request.submission?.status === 'unconfirmed' &&
-      request.tx?.hash === hash.toLowerCase()
-    ) {
-      this.recordLateTransactionSubmissionMetadata(request)
-      delete request.submission
-      request.notice = 'Verifying'
-      currentAccount.update()
-      currentAccount.releaseRequestReviewIfQueued(handlerId)
-      return true
-    }
-
-    if (currentAccount && request?.status === RequestStatus.Sending) {
-      const submittedRequest = currentAccount.requests[handlerId] as TransactionRequest
-      try {
-        requireStoreAction('recordOutboundAddresses')(
-          store('main.instanceId'),
-          transactionOutboundTargets(submittedRequest),
-          Date.now()
-        )
-      } catch (error) {
-        log.warn('Outbound address memory could not be updated', {
-          handlerId,
-          error: error instanceof Error ? error.message : String(error)
-        })
-      }
-      submittedRequest.status = RequestStatus.Verifying
-      submittedRequest.notice = 'Verifying'
-      submittedRequest.mode = RequestMode.Monitor
-      currentAccount.update()
-      currentAccount.releaseRequestReviewIfQueued(handlerId)
-
-      void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash)).catch((error) => {
-        const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)
-        if (failedRequest?.activityId) {
-          operationLifecycleLedger.releaseReservation(failedRequest.activityId)
-        }
-        log.warn('Transaction lifecycle monitor could not start', {
-          handlerId,
-          error: error instanceof Error ? error.message : String(error)
-        })
-        const request = currentAccount.getRequest<TransactionRequest>(handlerId)
-        if (
-          request?.type === 'transaction' &&
-          [RequestStatus.Verifying, RequestStatus.Sent].includes(request.status as RequestStatus)
-        ) {
-          request.status = RequestStatus.Sent
-          request.notice = 'Sent; monitoring unavailable'
-          request.mode = RequestMode.Monitor
-          request.tx = { hash, confirmations: request.tx?.confirmations ?? 0 }
-          currentAccount.update()
-        }
-      })
-      return true
-    }
-
-    return false
-  }
-
-  private recordLateTransactionSubmissionMetadata(request: TransactionRequest) {
-    try {
-      requireStoreAction('recordOutboundAddresses')(
-        store('main.instanceId'),
-        transactionOutboundTargets(request),
-        Date.now()
-      )
-    } catch (error) {
-      log.warn('Outbound address memory could not be updated', {
-        handlerId: request.handlerId,
-        error: error instanceof Error ? error.message : String(error)
-      })
-    }
-    if (request.recentRecipient && request.activityId) {
-      recentRecipientsRuntime.track({
-        operationId: request.activityId,
-        address: request.recentRecipient.address
-      })
-    }
-  }
-
-  setTxSubmissionUnclear(handlerId: string, hash: string, accountId?: string) {
-    const currentAccount = this.requestAccount(handlerId, accountId)
-    const request = currentAccount?.requests[handlerId]
-    if (
-      !currentAccount ||
       request?.type !== 'transaction' ||
       request.status !== RequestStatus.Sending ||
-      !/^0x[0-9a-fA-F]{64}$/.test(hash)
+      request.activityId !== approvedContext.activityId ||
+      approvedContext.handlerId !== handlerId ||
+      approvedContext.account !== accountId.toLowerCase()
     ) {
       return false
     }
+    return this.admitTransactionLifecycle(approvedContext, hash, 'broadcasting')?.admitted === true
+  }
 
-    request.status = RequestStatus.Verifying
-    request.notice = 'Submission unconfirmed; checking network'
-    request.mode = RequestMode.Monitor
-    request.submission = Object.freeze({
-      status: 'unconfirmed',
-      detail: 'The signed transaction was submitted once, but the RPC response was not confirmed.'
-    })
-    request.tx = { hash: hash.toLowerCase(), confirmations: 0 }
-    currentAccount.update()
-    currentAccount.releaseRequestReviewIfQueued(handlerId)
+  startTxBroadcastMonitoring(context: TransactionSubmissionContext) {
+    const operation = operationLifecycleLedger.listStored().find(({ id }) => id === context.activityId)
+    if (!operation?.broadcast || operation.kind !== 'transaction') return false
+    this.reconcileTransactionLifecycle(operation, true)
+    return true
+  }
 
-    void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash, false)).catch((error) => {
-      const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)
-      if (failedRequest?.activityId) operationLifecycleLedger.releaseReservation(failedRequest.activityId)
-      log.warn('Unconfirmed transaction lifecycle monitor could not start', {
-        handlerId,
-        error: error instanceof Error ? error.message : String(error)
-      })
-      if (failedRequest?.type === 'transaction' && failedRequest.status === RequestStatus.Verifying) {
-        failedRequest.status = RequestStatus.Sent
-        failedRequest.notice = 'Submission unconfirmed; monitoring unavailable'
-        currentAccount.update()
+  cancelTxBroadcastAdmission(context: TransactionSubmissionContext, hash: string) {
+    const operation = operationLifecycleLedger.listStored().find(({ id }) => id === context.activityId)
+    if (
+      !operation ||
+      operation.broadcast?.phase !== 'broadcasting' ||
+      !this.transactionLifecycleMatches(operation, context, hash)
+    ) {
+      return false
+    }
+    operationLifecycleRuntime.release(operation.id)
+    recentRecipientsRuntime.forget(operation.id)
+    const removed = operationLifecycleLedger.remove(operation.id, -1)
+    operationLifecycleLedger.releaseReservation(operation.id)
+    return removed
+  }
+
+  setTxSent(
+    handlerId: string,
+    hash: string,
+    accountId?: string,
+    approvedContext?: TransactionSubmissionContext
+  ) {
+    log.info('setTxSent', handlerId, 'Hash', hash)
+
+    let currentAccount: FrameAccount | undefined
+    try {
+      currentAccount = this.requestAccount(handlerId, accountId)
+    } catch {
+      if (!approvedContext) return false
+    }
+    const request = currentAccount?.requests[handlerId]
+    const context =
+      approvedContext ||
+      (request?.type === 'transaction' ? this.transactionSubmissionContextFor(handlerId, request) : undefined)
+    const expectedAccount = (accountId || currentAccount?.id || '').toLowerCase()
+    if (!context || context.handlerId !== handlerId || context.account !== expectedAccount) {
+      return false
+    }
+    const lifecycle = this.admitTransactionLifecycle(context, hash, 'acknowledged')
+    if (!lifecycle) return false
+    const lateAcknowledgement =
+      currentAccount &&
+      request?.type === 'transaction' &&
+      request.activityId === context.activityId &&
+      request.status === RequestStatus.Verifying &&
+      request.submission?.status === 'unconfirmed' &&
+      request.tx?.hash === hash.toLowerCase()
+    const sendingRequest =
+      currentAccount &&
+      request?.type === 'transaction' &&
+      request.activityId === context.activityId &&
+      request.status === RequestStatus.Sending
+    const transitioned = Boolean(lateAcknowledgement || sendingRequest)
+
+    if (lateAcknowledgement) {
+      try {
+        delete request.submission
+        request.notice = 'Verifying'
+        currentAccount?.update()
+      } catch (error) {
+        log.warn('Submitted transaction request projection could not be updated', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
       }
-    })
+    } else if (sendingRequest) {
+      try {
+        request.status = RequestStatus.Verifying
+        request.notice = 'Verifying'
+        request.mode = RequestMode.Monitor
+        request.tx = { hash: hash.toLowerCase(), confirmations: 0 }
+        recordRequestActivity(request, 'submitted')
+        currentAccount?.update()
+      } catch (error) {
+        log.warn('Submitted transaction request projection could not be updated', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    if (transitioned && currentAccount) {
+      try {
+        currentAccount.releaseRequestReviewIfQueued(handlerId)
+      } catch (error) {
+        log.warn('Submitted transaction review queue could not be released cleanly', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+    this.reconcileTransactionLifecycle(lifecycle.operation, lifecycle.admitted)
+    return true
+  }
+
+  setTxSubmissionUnclear(
+    handlerId: string,
+    hash: string,
+    accountId?: string,
+    approvedContext?: TransactionSubmissionContext
+  ) {
+    let currentAccount: FrameAccount | undefined
+    try {
+      currentAccount = this.requestAccount(handlerId, accountId)
+    } catch {
+      if (!approvedContext) return false
+    }
+    const request = currentAccount?.requests[handlerId]
+    const context =
+      approvedContext ||
+      (request?.type === 'transaction' ? this.transactionSubmissionContextFor(handlerId, request) : undefined)
+    const expectedAccount = (accountId || currentAccount?.id || '').toLowerCase()
+    if (!context || context.handlerId !== handlerId || context.account !== expectedAccount) {
+      return false
+    }
+    const lifecycle = this.admitTransactionLifecycle(context, hash, 'unconfirmed')
+    if (!lifecycle) return false
+
+    const transitioned = Boolean(
+      currentAccount &&
+      request?.type === 'transaction' &&
+      request.activityId === context.activityId &&
+      request.status === RequestStatus.Sending
+    )
+    if (transitioned && currentAccount && request?.type === 'transaction') {
+      try {
+        request.status = RequestStatus.Verifying
+        request.notice = 'Submission unconfirmed; checking network'
+        request.mode = RequestMode.Monitor
+        request.submission = Object.freeze({
+          status: 'unconfirmed',
+          detail: 'Wren attempted one broadcast, but the RPC response was not confirmed.'
+        })
+        request.tx = { hash: hash.toLowerCase(), confirmations: 0 }
+        recordRequestActivity(request, 'submitted')
+        currentAccount.update()
+      } catch (error) {
+        log.warn('Unconfirmed transaction request projection could not be updated', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+    if (transitioned && currentAccount) {
+      try {
+        currentAccount.releaseRequestReviewIfQueued(handlerId)
+      } catch (error) {
+        log.warn('Unconfirmed transaction review queue could not be released cleanly', {
+          handlerId,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    }
+
+    this.reconcileTransactionLifecycle(lifecycle.operation, lifecycle.admitted)
     return true
   }
 

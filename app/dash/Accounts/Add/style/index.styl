@@ -737,6 +737,10 @@
     text-align center
     text-transform none
 
+  .generatedWalletSessionNote.generatedWalletExpiryNotice
+    color var(--wren-text-secondary)
+    font-weight 500
+
   .generatedWalletPhrase
     display grid
     grid-template-columns repeat(2, minmax(0, 1fr))
@@ -920,6 +924,9 @@
   &.generatedWalletSetup
     .addAccountItemOption
       top 170px
+
+    .addAccountItemOptionSubmit
+      min-height 44px
 
     // Recovery material must never share a moving viewport with its
     // verification step. Focus changes inside the translated track can make

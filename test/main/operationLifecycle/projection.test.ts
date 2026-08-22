@@ -75,6 +75,25 @@ test('projects one stable privacy-only row for every lifecycle state', () => {
   expect(mocks.notify).not.toHaveBeenCalled()
 })
 
+test('restores a truthful activity row for a pre-invocation broadcast reservation', () => {
+  const current = operation({ broadcast: { phase: 'broadcasting' } })
+  const { ledger } = fixture(current)
+
+  const restarted = new OperationLifecycleProjection(ledger)
+  restarted.restoreBroadcastReservations(20)
+
+  expect(mocks.recordActivity).toHaveBeenCalledTimes(1)
+  expect(mocks.recordActivity).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: current.id,
+      outcome: 'submitted',
+      broadcastPhase: 'broadcasting'
+    })
+  )
+  expect(JSON.stringify(mocks.recordActivity.mock.calls)).not.toMatch(/hash|nonce|value|calldata/i)
+  expect(mocks.notify).not.toHaveBeenCalled()
+})
+
 test.each([
   ['ordinary transaction', {}],
   [
@@ -135,6 +154,20 @@ test('clears in-memory pending evidence when a lifecycle becomes terminal withou
   projection.project(current.id, now + 1)
 
   expect(mocks.notify).not.toHaveBeenCalled()
+})
+
+test('uses broadcast-neutral long-pending copy after pre-invocation recovery and fresh reconciliation', () => {
+  const now = 10 + LONG_PENDING_NOTIFICATION_MS
+  const current = operation({ broadcast: { phase: 'broadcasting' } })
+  const { ledger } = fixture(current)
+  const restarted = new OperationLifecycleProjection(ledger)
+
+  restarted.restoreBroadcastReservations(now)
+  expect(mocks.notify).not.toHaveBeenCalled()
+  restarted.project(current.id, now + 1, true, true)
+
+  expect(mocks.notify).toHaveBeenCalledTimes(1)
+  expect(mocks.notify).toHaveBeenCalledWith(current.id, current.account, 'long-pending-broadcasting')
 })
 
 test.each([

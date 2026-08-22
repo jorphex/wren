@@ -233,7 +233,8 @@ it('stops known-submission monitoring once and reports the unverified terminal s
     )
   ).toBeTruthy()
 
-  const commit = screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' })
+  const commit = screen.getByRole('button', { name: 'Stop monitoring' })
+  expect(commit.textContent).toBe('Stop')
   await user.click(commit)
   expect(link.rpc).toHaveBeenCalledWith(
     'stopEip7702RevocationMonitoring',
@@ -271,13 +272,11 @@ it('recovers the stop-monitoring dialog after an RPC failure', async () => {
   const { user } = renderRequestFooter(req, 'ring')
 
   await user.click(screen.getByRole('button', { name: 'Stop monitoring' }))
-  await user.click(screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' }))
+  await user.click(screen.getByRole('button', { name: 'Stop monitoring' }))
   act(() => callback(new Error('bridge failed')))
 
   expect(screen.getByRole('alert').textContent).toBe('Monitoring could not be stopped. Try again.')
-  expect(
-    screen.getByRole('button', { name: 'Stop monitoring and continue with queued requests' }).disabled
-  ).toBe(false)
+  expect(screen.getByRole('button', { name: 'Stop monitoring' }).disabled).toBe(false)
 })
 
 it('blocks delegation revocation while its visible fee draft is invalid', async () => {

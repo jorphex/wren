@@ -26,3 +26,11 @@ it('bounds history to the 500 newest valid entries deterministically', () => {
   expect(pruned[0]).toEqual(entries[0])
   expect(pruned[499]).toEqual(entries[499])
 })
+
+it('retains broadcast phase only for a submitted transaction projection', () => {
+  const submitted = { ...entry(1), outcome: 'submitted', broadcastPhase: 'broadcasting' }
+
+  expect(pruneActivity([submitted], now)).toEqual([submitted])
+  expect(pruneActivity([{ ...submitted, type: 'sign' }], now)).toEqual([])
+  expect(pruneActivity([{ ...submitted, outcome: 'confirmed' }], now)).toEqual([])
+})

@@ -33,6 +33,14 @@ test('allows only trusted application windows to continue from a deployment revi
   expect(hasRendererCapability('onboard', 'invoke', [channel])).toBe(false)
 })
 
+test('limits acknowledged Activity clearing to the tray renderer', () => {
+  const channel = 'activity:clear'
+  expect(hasRendererCapability('tray', 'invoke', [channel])).toBe(true)
+  expect(hasRendererCapability('dash', 'invoke', [channel])).toBe(false)
+  expect(hasRendererCapability('dapp', 'invoke', [channel])).toBe(false)
+  expect(hasRendererCapability('onboard', 'invoke', [channel])).toBe(false)
+})
+
 test('does not treat an unregistered verification-like prefix as a dashboard-only exception', () => {
   expect(hasRendererCapability('dash', 'invoke', ['contractVerification:unknown'])).toBe(true)
   expect(hasRendererCapability('tray', 'invoke', ['contractVerification:unknown'])).toBe(true)

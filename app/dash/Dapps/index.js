@@ -3,6 +3,8 @@ import Restore from 'react-restore'
 import emptyConnections from 'url:../../../asset/ui/empty-connections-v15.png'
 import link from '../../../resources/link'
 import {
+  MAX_TIMER_DELAY,
+  nextActiveExternalPermissionExpiry,
   nextTransientConnectedAppExpiry,
   selectConnectedAppGroups
 } from '../../../resources/domain/connectedApps'
@@ -107,6 +109,7 @@ export class Dapps extends React.Component {
 
   componentWillUnmount() {
     clearTimeout(this.originExpiryTimer)
+    this.originExpiryDeadline = undefined
   }
 
   getGroups(now = Date.now()) {
@@ -119,12 +122,22 @@ export class Dapps extends React.Component {
   }
 
   scheduleOriginExpiry() {
-    clearTimeout(this.originExpiryTimer)
+    const now = Date.now()
+    const permissions = this.store('main.permissions') || {}
+    const expiries = [
+      nextTransientConnectedAppExpiry(this.getGroups(now)),
+      nextActiveExternalPermissionExpiry(permissions, now)
+    ].filter((expiry) => expiry !== undefined)
+    const nextExpiry = expiries.length ? Math.min(...expiries) : undefined
 
-    const nextExpiry = nextTransientConnectedAppExpiry(this.getGroups())
+    if (nextExpiry === this.originExpiryDeadline) return
+
+    clearTimeout(this.originExpiryTimer)
+    this.originExpiryDeadline = nextExpiry
     if (nextExpiry !== undefined) {
-      const delay = Math.max(1, nextExpiry - Date.now() + 1)
+      const delay = Math.max(1, Math.min(nextExpiry - now, MAX_TIMER_DELAY))
       this.originExpiryTimer = setTimeout(() => {
+        this.originExpiryDeadline = undefined
         this.setState((state) => ({ originExpiryTick: (state?.originExpiryTick || 0) + 1 }))
       }, delay)
     }

@@ -177,7 +177,7 @@ describe('Seed signer', () => {
 
     expect(fs.existsSync(backupPath)).toBe(false)
     await waitForCallback((cb) => signer.lock(cb))
-  })
+  }, 3_000)
 
   test('Scan for signers', (done) => {
     jest.useFakeTimers()

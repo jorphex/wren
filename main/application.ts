@@ -22,7 +22,7 @@ import provider from './provider'
 import * as launch from './launch'
 import updater from './updater'
 import signers from './signers'
-import persist from './store/persist'
+import persist, { commitMainState } from './store/persist'
 import {
   openProfileBackupDialog,
   saveProfileBackupDialog,
@@ -60,13 +60,14 @@ import {
 import { osSignerStorage } from './signers/hot/runtimeStorage'
 import chains from './chains'
 import { inspect } from './inspector'
-import recentRecipientsRuntime, { shouldClearRecentRecipientCandidates } from './recentRecipients/runtime'
+import recentRecipientsRuntime, { applyRecentRecipientPrivacyAction } from './recentRecipients/runtime'
 import deployment from './deployment/runtime'
 import contractVerification, {
   contractVerificationArtifactIntake,
   contractVerificationPollingRuntime
 } from './contractVerification/runtime'
 import { ContractVerificationArtifactIntakeError } from './contractVerification/artifactIntake'
+import { wakeContractVerificationPollingForActiveResult } from './contractVerification/pollingRuntime'
 import { createSecretClipboard } from './security/secretClipboard'
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -216,6 +217,77 @@ handleRenderer('tray:writeClipboard', async (e, request) => {
   if (request.secret) managedClipboard.writeSecret(request.value)
   else managedClipboard.writePublic(request.value)
   return { success: true as const }
+})
+
+handleRenderer('settings:clearRecentRecipients', async (e, action) => {
+  const result = applyRecentRecipientPrivacyAction(action, {
+    updateSession: (requestedAction) => {
+      if (requestedAction === 'disable') requireStoreAction('setRememberRecentRecipients')(false)
+      else requireStoreAction('clearRecentRecipients')()
+    },
+    clearPendingMetadata: () => recentRecipientsRuntime.clearCandidates(),
+    commit: () => commitMainState(store('main'))
+  })
+  if (!result.success) {
+    log.error('Recent-recipient privacy clearing was limited to the current session', {
+      reason: result.error
+    })
+  }
+  return result
+})
+
+handleRenderer('activity:clear', async () => {
+  const result = applyRecentRecipientPrivacyAction('activity', {
+    updateSession: () => requireStoreAction('clearActivity')(),
+    clearPendingMetadata: () => recentRecipientsRuntime.clearCandidates({ outbound: true }),
+    commit: () => commitMainState(store('main'))
+  })
+  if (!result.success) {
+    log.error('Activity privacy clearing was limited to the current session', {
+      reason: result.error
+    })
+  }
+  return result
+})
+
+handleRenderer('tray:revokeAccess', async (e, account, permissionId) => {
+  let revokedInMemory = false
+  let committed = false
+  try {
+    const action = permissionId ? 'toggleAccess' : 'clearPermissions'
+    const args = permissionId ? [account, permissionId, false] : [account]
+    const accepted = applyAccountPermissionRendererAction(action, args, {
+      accounts,
+      provider,
+      getPermissions: (address) => store('main.permissions', address) || {},
+      mutate: (address, ...mutationArgs) => {
+        requireStoreAction(action)(address, ...mutationArgs)
+        revokedInMemory = true
+      },
+      removeGuardrails: (address, originIds) =>
+        requireStoreAction('removeDappGuardrailsForOrigins')(address, originIds),
+      commit: () => {
+        commitMainState(store('main'))
+        committed = true
+      },
+      onNotificationError: (notificationError) =>
+        log.warn('Could not notify origins after in-memory permission revocation', notificationError)
+    })
+    return accepted
+      ? { success: true as const }
+      : { success: false as const, error: 'Permission could not be revoked' }
+  } catch (error) {
+    log.warn('Could not revoke account permission', error)
+    if (committed) return { success: true as const }
+    return revokedInMemory
+      ? {
+          success: false as const,
+          uncertain: true as const,
+          sessionOnly: true as const,
+          error: 'persistence-failed' as const
+        }
+      : { success: false as const, error: 'Permission could not be revoked' }
+  }
 })
 
 onRenderer('tray:installAvailableUpdate', () => {
@@ -412,11 +484,15 @@ handleRenderer('contractVerification:openResult', async (e, request) => {
   return { success: true as const }
 })
 handleRenderer('contractVerification:get', async (e, jobId) => contractVerification.get(jobId))
-handleRenderer('contractVerification:refresh', async (e, jobId) => contractVerification.refresh(jobId))
+handleRenderer('contractVerification:refresh', async (e, jobId) => {
+  const result = await contractVerification.refresh(jobId)
+  return wakeContractVerificationPollingForActiveResult(contractVerificationPollingRuntime, result)
+})
 handleRenderer('contractVerification:reselect', async (e, request) => contractVerification.reselect(request))
-handleRenderer('contractVerification:publishEtherscan', async (e, request) =>
-  contractVerification.publishEtherscan(request)
-)
+handleRenderer('contractVerification:publishEtherscan', async (e, request) => {
+  const result = await contractVerification.publishEtherscan(request)
+  return wakeContractVerificationPollingForActiveResult(contractVerificationPollingRuntime, result)
+})
 handleRenderer('contractVerification:credentialStatus', async () => contractVerification.credentialStatus())
 handleRenderer('contractVerification:saveCredential', async (e, apiKey) =>
   contractVerification.saveCredential(apiKey)
@@ -712,9 +788,6 @@ app.on('ready', () => {
 onRenderer('tray:action', (e, action, ...args) => {
   const storeAction = typeof action === 'string' ? store[action] : undefined
   if (typeof storeAction === 'function') {
-    if (shouldClearRecentRecipientCandidates(action, args)) {
-      recentRecipientsRuntime.clearCandidates()
-    }
     if (action === 'saveDappGuardrail' || action === 'removeDappGuardrail') {
       return applyDappGuardrailRendererAction(action, args[0], {
         getAccount: (account) => store('main.accounts', account),
@@ -727,16 +800,6 @@ onRenderer('tray:action', (e, action, ...args) => {
         save: (guardrail) => requireStoreAction('saveDappGuardrail')(guardrail),
         remove: (request) => requireStoreAction('removeDappGuardrail')(request),
         onPolicyChanged: (account, originId) => provider.refreshDappGuardrails(account, originId)
-      })
-    }
-    if ((action === 'toggleAccess' || action === 'clearPermissions') && typeof args[0] === 'string') {
-      return applyAccountPermissionRendererAction(action, args, {
-        accounts,
-        provider,
-        getPermissions: (address) => store('main.permissions', address) || {},
-        mutate: (address, ...mutationArgs) => storeAction(address, ...mutationArgs),
-        removeGuardrails: (address, originIds) =>
-          requireStoreAction('removeDappGuardrailsForOrigins')(address, originIds)
       })
     }
     if (action === 'switchOriginChain') {

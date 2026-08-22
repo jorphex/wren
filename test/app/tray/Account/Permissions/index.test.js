@@ -1,8 +1,12 @@
+import React from 'react'
 import Restore from 'react-restore'
 
 import { DappsPermissionsPreview } from '../../../../../app/tray/Account/Permissions/DappsPreview'
 import { DappsPermissionsExpanded } from '../../../../../app/tray/Account/Permissions/DappsExpanded'
-import { RevokeAccess } from '../../../../../app/tray/Account/Permissions/RevokeAccess'
+import {
+  REVOKE_ACCESS_SESSION_ONLY,
+  RevokeAccess
+} from '../../../../../app/tray/Account/Permissions/RevokeAccess'
 import {
   DappGuardrailEditor,
   guardrailBodyFor,
@@ -10,13 +14,17 @@ import {
   nativeQuantityToDecimal
 } from '../../../../../app/tray/Account/Permissions/DappGuardrailEditor'
 import link from '../../../../../resources/link'
+import { MAX_TIMER_DELAY } from '../../../../../resources/domain/connectedApps'
 import { FRAME_SEND_ORIGIN } from '../../../../../resources/domain/origin'
 import { act, render, screen } from '../../../../componentSetup'
 
-jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
+jest.mock('../../../../../resources/link', () => ({
+  send: jest.fn(),
+  invoke: jest.fn().mockResolvedValue({ success: true })
+}))
 
 const account = '0x0000000000000000000000000000000000000001'
-const permission = (handlerId, origin) => ({
+const permission = (handlerId, origin, expiresAt = Date.now() + 60_000) => ({
   version: 1,
   handlerId,
   origin,
@@ -29,7 +37,7 @@ const permission = (handlerId, origin) => ({
         account,
         methods: ['eth_accounts'],
         chains: ['0x1'],
-        expiresAt: Date.now() + 60_000
+        expiresAt
       }
     }
   ],
@@ -74,6 +82,133 @@ it('sorts permission rows by their displayed origin', () => {
   ])
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])('removes an expired permission from the %s view at its boundary', (_label, Component, props) => {
+  const now = Date.now()
+  renderWithStore(Component, props, {
+    first: permission('first', 'alpha.example', now + MAX_TIMER_DELAY + 1_000)
+  })
+
+  expect(screen.getByText('alpha.example')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(MAX_TIMER_DELAY))
+  expect(screen.getByText('alpha.example')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(999))
+  expect(screen.getByText('alpha.example')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(1))
+  expect(screen.queryByText('alpha.example')).toBeNull()
+  expect(screen.getByText('No app access')).toBeTruthy()
+  jest.setSystemTime(now)
+})
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleHeader'],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }, 'permissionsLedgerView']
+])(
+  'moves %s dialog focus to a visible fallback when its last permission expires',
+  async (_label, Component, props, fallbackClass) => {
+    const now = Date.now()
+    const { user } = renderWithStore(Component, props, {
+      first: permission('first', 'alpha.example', now + 1_000)
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+
+    act(() => jest.advanceTimersByTime(1_000))
+
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByText('No app access')).toBeTruthy()
+    expect(document.activeElement.classList.contains(fallbackClass)).toBe(true)
+    jest.setSystemTime(now)
+  }
+)
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])(
+  'announces an inverse-order %s session-only failure without stealing focus',
+  async (_label, Component, props) => {
+    const ref = React.createRef()
+    let settleRevoke
+    link.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          settleRevoke = resolve
+        })
+    )
+    class TestPermissions extends Component {
+      store(...path) {
+        if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+      }
+    }
+    const componentProps = { account, moduleId: 'permissions', ...props }
+    const view = (storedPermissions) => (
+      <>
+        <button type='button'>Outside action</button>
+        <TestPermissions ref={ref} {...componentProps} permissions={storedPermissions} />
+      </>
+    )
+    const { rerender, user } = render(view(permissions))
+
+    await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+    await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+    rerender(view({ managed: permissions.managed, second: permissions.second }))
+    expect(ref.current.state.revokeRequested).toBeNull()
+    expect(ref.current.orphanedRevokeId).toBe('first')
+
+    const outside = screen.getByRole('button', { name: 'Outside action' })
+    outside.focus()
+    await act(async () =>
+      settleRevoke({
+        success: false,
+        uncertain: true,
+        sessionOnly: true,
+        error: 'persistence-failed'
+      })
+    )
+
+    expect(screen.getByRole('alert').textContent).toBe(REVOKE_ACCESS_SESSION_ONLY)
+    expect(document.activeElement).toBe(outside)
+    expect(ref.current.orphanedRevokeId).toBeUndefined()
+    act(() => jest.advanceTimersByTime(4000))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(document.activeElement).toBe(outside)
+  }
+)
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])(
+  'moves %s dialog focus to a surviving row when its permission expires',
+  async (_label, Component, props) => {
+    const now = Date.now()
+    const { user } = renderWithStore(Component, props, {
+      first: permission('first', 'alpha.example', now + 1_000),
+      second: permission('second', 'zeta.example', now + 60_000)
+    })
+
+    const expiringAction = screen
+      .getByText('alpha.example')
+      .closest('.signerPermission')
+      .querySelector('.revokeAccessButton')
+    await user.click(expiringAction)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
+
+    act(() => jest.advanceTimersByTime(1_000))
+
+    expect(screen.queryByText('alpha.example')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByText('zeta.example').closest('.signerPermission').querySelector('.revokeAccessButton')
+    )
+    jest.setSystemTime(now)
+  }
+)
 
 it('announces a store-confirmed revoke, advances focus, and dismisses the inline status', async () => {
   class TestPreview extends DappsPermissionsPreview {
@@ -133,6 +268,252 @@ it('uses the same transient revoke status lifecycle in expanded account access',
   expect(screen.queryByRole('status')).toBeNull()
 })
 
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])(
+  'silently drops a %s revoke whose permission disappears before the invoke settles',
+  async (_label, Component, props) => {
+    const ref = React.createRef()
+    let settleRevoke
+    link.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          settleRevoke = resolve
+        })
+    )
+    class TestPermissions extends Component {
+      store(...path) {
+        if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+      }
+    }
+    const componentProps = { account, moduleId: 'permissions', ...props }
+    const view = (storedPermissions) => (
+      <>
+        <button type='button'>Outside action</button>
+        <TestPermissions ref={ref} {...componentProps} permissions={storedPermissions} />
+      </>
+    )
+    const { rerender, user } = render(view(permissions))
+    const outside = screen.getByRole('button', { name: 'Outside action' })
+
+    await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+    await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+    rerender(view({ managed: permissions.managed, second: permissions.second }))
+
+    expect(ref.current.state.revokeRequested).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Revoke access' }))
+
+    outside.focus()
+    await act(async () => settleRevoke({ success: true }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(document.activeElement).toBe(outside)
+  }
+)
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}, REVOKE_ACCESS_SESSION_ONLY],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }, REVOKE_ACCESS_SESSION_ONLY]
+])(
+  'reports a %s session-only revoke without claiming durable success',
+  async (_label, Component, props, expectedCopy) => {
+    let settleRevoke
+    link.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          settleRevoke = resolve
+        })
+    )
+    class TestPermissions extends Component {
+      store(...path) {
+        if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+      }
+    }
+    const componentProps = { account, moduleId: 'permissions', ...props }
+    const { rerender, user } = render(<TestPermissions {...componentProps} permissions={permissions} />)
+
+    await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+    await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+    await act(async () =>
+      settleRevoke({
+        success: false,
+        uncertain: true,
+        sessionOnly: true,
+        error: 'persistence-failed'
+      })
+    )
+    rerender(
+      <TestPermissions
+        {...componentProps}
+        permissions={{ managed: permissions.managed, second: permissions.second }}
+      />
+    )
+
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toBe(expectedCopy)
+    expect(alert.textContent).not.toContain('Access revoked for')
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke access' }))
+  }
+)
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])(
+  'ignores a %s revoke rejection after an orphaned request was cleared',
+  async (_label, Component, props) => {
+    let rejectRevoke
+    link.invoke.mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectRevoke = reject
+        })
+    )
+    class TestPermissions extends Component {
+      store(...path) {
+        if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+      }
+    }
+    const componentProps = { account, moduleId: 'permissions', ...props }
+    const { rerender, user } = render(<TestPermissions {...componentProps} permissions={permissions} />)
+
+    await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+    await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+    rerender(
+      <TestPermissions
+        {...componentProps}
+        permissions={{ managed: permissions.managed, second: permissions.second }}
+      />
+    )
+    await act(async () => rejectRevoke(new Error('transport unavailable')))
+
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+  }
+)
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])('reconciles %s store removal that arrives after a rejected invoke', async (_label, Component, props) => {
+  link.invoke.mockRejectedValueOnce(new Error('transport unavailable'))
+  class TestPermissions extends Component {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const componentProps = { account, moduleId: 'permissions', ...props }
+  const { rerender, user } = render(<TestPermissions {...componentProps} permissions={permissions} />)
+
+  await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('confirmation is unavailable')
+
+  rerender(
+    <TestPermissions
+      {...componentProps}
+      permissions={{ managed: permissions.managed, second: permissions.second }}
+    />
+  )
+  const alert = screen.getByRole('alert')
+  expect(alert.textContent).toContain('could not confirm the saved change')
+  expect(alert.textContent).not.toContain('Access revoked for')
+  act(() => jest.advanceTimersByTime(4_000))
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }]
+])('stops %s uncertainty UI reconciliation after cancellation', async (_label, Component, props) => {
+  link.invoke.mockRejectedValueOnce(new Error('transport unavailable'))
+  class TestPermissions extends Component {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const componentProps = { account, moduleId: 'permissions', ...props }
+  const view = (storedPermissions) => (
+    <>
+      <button type='button'>Outside action</button>
+      <TestPermissions {...componentProps} permissions={storedPermissions} />
+    </>
+  )
+  const { rerender, user } = render(view(permissions))
+
+  await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('confirmation is unavailable')
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  const outside = screen.getByRole('button', { name: 'Outside action' })
+  outside.focus()
+
+  rerender(view({ managed: permissions.managed, second: permissions.second }))
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(document.activeElement).toBe(outside)
+})
+
+it.each([
+  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleHeader'],
+  ['expanded', DappsPermissionsExpanded, { expanded: true }, 'permissionsLedgerView']
+])(
+  'keeps %s revoke focus on the next row, then the previous row, then a visible fallback',
+  async (_label, Component, componentProps, fallbackClass) => {
+    class TestPermissions extends Component {
+      store(...path) {
+        const key = path.join('.')
+        if (key === `main.permissions.${account}`) return this.props.permissions
+        if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
+        if (key === 'main.networksMeta.ethereum.1.nativeCurrency.decimals') return 18
+      }
+    }
+    const initial = {
+      first: permission('first', 'alpha.example'),
+      middle: permission('middle', 'beta.example'),
+      last: permission('last', 'zeta.example')
+    }
+    const props = { account, moduleId: 'permissions', ...componentProps }
+    const { rerender, user } = render(<TestPermissions {...props} permissions={initial} />)
+    const revoke = async (origin) => {
+      const action = screen
+        .getByText(origin)
+        .closest('.signerPermission')
+        .querySelector('.revokeAccessButton')
+      await user.click(action)
+      await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+    }
+
+    await revoke('beta.example')
+    const afterMiddle = { first: initial.first, last: initial.last }
+    rerender(<TestPermissions {...props} permissions={afterMiddle} />)
+    expect(document.activeElement).toBe(
+      screen.getByText('zeta.example').closest('.signerPermission').querySelector('.revokeAccessButton')
+    )
+
+    await revoke('zeta.example')
+    const afterLast = { first: initial.first }
+    rerender(<TestPermissions {...props} permissions={afterLast} />)
+    expect(document.activeElement).toBe(
+      screen.getByText('alpha.example').closest('.signerPermission').querySelector('.revokeAccessButton')
+    )
+
+    await revoke('alpha.example')
+    rerender(<TestPermissions {...props} permissions={{}} />)
+    const status = screen.getByRole('status')
+    expect(document.activeElement).toBe(status)
+    expect(status.tabIndex).toBe(-1)
+
+    act(() => jest.advanceTimersByTime(4000))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(document.activeElement.classList.contains(fallbackClass)).toBe(true)
+  }
+)
+
 it('requires confirmation and revokes a permission once', async () => {
   const onRevokeRequested = jest.fn()
   const { user } = render(
@@ -150,6 +531,9 @@ it('requires confirmation and revokes a permission once', async () => {
   await user.click(trigger)
   const dialog = screen.getByRole('alertdialog', { name: 'Revoke access for alpha.example?' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
+  const descriptionId = dialog.getAttribute('aria-describedby')
+  expect(descriptionId).toBeTruthy()
+  expect(document.getElementById(descriptionId).textContent).toContain('This app will lose access')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
   expect(screen.getByText(/guardrails will be removed/u)).toBeTruthy()
   expect(link.send).not.toHaveBeenCalled()
@@ -158,8 +542,8 @@ it('requires confirmation and revokes a permission once', async () => {
   expect(confirm.classList.contains('wrenControlDanger')).toBe(true)
   await user.dblClick(confirm)
 
-  expect(link.send.mock.calls).toEqual([['tray:action', 'toggleAccess', account, 'first', false]])
-  expect(onRevokeRequested).toHaveBeenCalledWith('first', 'alpha.example')
+  expect(link.invoke).toHaveBeenCalledWith('tray:revokeAccess', account, 'first')
+  expect(onRevokeRequested).toHaveBeenCalledWith('first', 'alpha.example', [])
   expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
 })
 
@@ -176,34 +560,68 @@ it('hosts confirmation inside the wallet panel instead of the wider workspace sh
   expect(document.body.querySelector(':scope > .revokeAccessDialog')).toBeNull()
 })
 
-it('cancels safely, retries a dropped revoke, and clears its timer', async () => {
+it('cancels safely, reports a refused revoke, and allows a retry', async () => {
   const ref = { current: null }
+  const onRevokeFailed = jest.fn()
   const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
   const { unmount, user } = render(
-    <RevokeAccess ref={ref} account={account} permissionId='first' origin='alpha.example' />
+    <RevokeAccess
+      ref={ref}
+      account={account}
+      permissionId='first'
+      origin='alpha.example'
+      onRevokeFailed={onRevokeFailed}
+    />
   )
 
   const trigger = screen.getByRole('button', { name: 'Revoke access' })
   await user.click(trigger)
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(document.activeElement).toBe(trigger)
-  expect(link.send).not.toHaveBeenCalled()
+  expect(link.invoke).not.toHaveBeenCalled()
 
+  link.invoke.mockResolvedValueOnce({ success: false, error: 'permission unavailable' })
   await user.click(trigger)
   await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
-  const pendingTimer = ref.current.pendingTimer
-  act(() => jest.advanceTimersByTime(600))
-  expect(screen.getByRole('button', { name: 'Confirm revoke' }).disabled).toBe(false)
+  expect((await screen.findByRole('alert')).textContent).toBe('Access was not revoked. Try again.')
+  expect(onRevokeFailed).toHaveBeenCalledWith('first')
+  const retry = screen.getByRole('button', { name: 'Confirm revoke' })
+  expect(retry.disabled).toBe(false)
+  expect(document.activeElement).toBe(retry)
+
+  act(() => jest.advanceTimersByTime(4000))
+  expect(screen.queryByRole('alert')).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
-  expect(link.send.mock.calls).toEqual([
-    ['tray:action', 'toggleAccess', account, 'first', false],
-    ['tray:action', 'toggleAccess', account, 'first', false]
+  expect(link.invoke.mock.calls).toEqual([
+    ['tray:revokeAccess', account, 'first'],
+    ['tray:revokeAccess', account, 'first']
   ])
 
   unmount()
-  expect(clearTimeoutSpy).toHaveBeenCalledWith(pendingTimer)
   clearTimeoutSpy.mockRestore()
+})
+
+it('keeps a delayed successful revoke pending without inventing a timeout failure', async () => {
+  let resolveRevoke
+  link.invoke.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveRevoke = resolve
+      })
+  )
+  const { user } = render(<RevokeAccess account={account} permissionId='first' origin='alpha.example' />)
+
+  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  act(() => jest.advanceTimersByTime(1_200))
+
+  expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
+  expect(screen.queryByRole('alert')).toBeNull()
+
+  await act(async () => resolveRevoke({ success: true }))
+  expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
+  expect(screen.queryByRole('alert')).toBeNull()
 })
 
 it('applies the account filter in the expanded permission view', () => {
@@ -213,12 +631,12 @@ it('applies the account filter in the expanded permission view', () => {
   expect(screen.getByText('zeta.example')).toBeTruthy()
 })
 
-it('opens account-scoped management with the permission handler and granted chain', async () => {
+it('opens account-scoped management with the app connection ID and granted chain', async () => {
   const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true })
 
   await user.click(screen.getAllByRole('button', { name: 'Add guardrail · Chain 0x1 (0x1)' })[0])
 
-  expect(screen.getByText('Principal first')).toBeTruthy()
+  expect(screen.getByText('App connection ID first')).toBeTruthy()
   expect(screen.getByText(account)).toBeTruthy()
   expect(screen.getByText('first')).toBeTruthy()
   expect(screen.getByText('Chain 0x1 · 0x1')).toBeTruthy()
@@ -227,17 +645,17 @@ it('opens account-scoped management with the permission handler and granted chai
   )
 })
 
-it('revokes the stored permission key while retaining its handler as the app principal', async () => {
+it('revokes the stored permission key while retaining its app connection ID', async () => {
   const storedPermissions = {
     stored: permission('principal', 'alpha.example')
   }
   const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true }, storedPermissions)
 
-  expect(screen.getByText('Principal principal')).toBeTruthy()
+  expect(screen.getByText('App connection ID principal')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Revoke access' }))
   await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
 
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleAccess', account, 'stored', false)
+  expect(link.invoke).toHaveBeenCalledWith('tray:revokeAccess', account, 'stored')
 })
 
 it('ends cleanly when every connected app is visible', () => {
@@ -268,31 +686,45 @@ it('opens truncated permission management once from a continuation row', async (
   expect(more.disabled).toBe(true)
 })
 
-it('requires safe confirmation before clearing all permissions and sends once', async () => {
+it('requires safe confirmation and keeps a delayed clear pending without a false timeout', async () => {
+  link.invoke.mockImplementationOnce(() => new Promise(() => {}))
   const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true })
 
-  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
-  expect(link.send).not.toHaveBeenCalled()
-  expect(screen.getByRole('alertdialog', { name: 'Clear all permissions?' }).getAttribute('aria-modal')).toBe(
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  expect(link.invoke).not.toHaveBeenCalled()
+  expect(screen.getByRole('alertdialog', { name: 'Revoke all app access?' }).getAttribute('aria-modal')).toBe(
     'true'
   )
+  const clearDialog = screen.getByRole('alertdialog', { name: 'Revoke all app access?' })
+  const descriptionId = clearDialog.getAttribute('aria-describedby')
+  expect(document.getElementById(descriptionId).textContent).toContain('guardrails will be removed')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
+  const trigger = screen.getByRole('button', { name: 'Revoke all app access' })
+  expect(document.activeElement).toBe(trigger)
+  expect(trigger.classList.contains('wrenControlSecondary')).toBe(true)
+  expect(trigger.classList.contains('wrenControlDanger')).toBe(false)
 
-  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
-  await user.dblClick(screen.getByRole('button', { name: 'Confirm clear' }))
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Confirm revoke' }))
 
-  expect(link.send.mock.calls).toEqual([['tray:action', 'clearPermissions', account]])
-  expect(screen.getByRole('button', { name: 'Clearing…' }).disabled).toBe(true)
+  expect(link.invoke.mock.calls).toEqual([['tray:revokeAccess', account]])
+  expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
 
-  act(() => jest.advanceTimersByTime(600))
-  expect(screen.getByRole('button', { name: 'Clear all permissions' })).toBeTruthy()
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
+  act(() => jest.advanceTimersByTime(1_200))
+  expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
+  expect(screen.queryByRole('alert')).toBeNull()
 })
 
-it('announces late store-confirmed permission clearing and moves focus to the status', async () => {
+it('announces only acknowledged permission clearing and moves focus to the status', async () => {
+  let settleClear
+  link.invoke.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        settleClear = resolve
+      })
+  )
   class TestExpanded extends DappsPermissionsExpanded {
     constructor(props) {
       super(props)
@@ -308,19 +740,168 @@ it('announces late store-confirmed permission clearing and moves focus to the st
     <TestExpanded account={account} moduleId='permissions' permissions={permissions} />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
-  await user.click(screen.getByRole('button', { name: 'Confirm clear' }))
-  act(() => jest.advanceTimersByTime(600))
-  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear all permissions' }))
-  await user.click(screen.getByRole('button', { name: 'Clear all permissions' }))
-  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
   rerender(
     <TestExpanded account={account} moduleId='permissions' permissions={{ managed: permissions.managed }} />
   )
 
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Revoking…' })).toBeTruthy()
+  await act(async () => settleClear({ success: true }))
+
   const status = screen.getByRole('status')
-  expect(status.textContent).toBe('All app permissions cleared.')
+  expect(status.textContent).toBe('All app access revoked.')
   expect(document.activeElement).toBe(status)
+  act(() => jest.advanceTimersByTime(3_999))
+  expect(screen.getByRole('status')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(1))
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(document.activeElement.classList.contains('permissionsLedgerView')).toBe(true)
+})
+
+it('reports a refused clear in its dialog and restores the confirm action', async () => {
+  link.invoke.mockResolvedValueOnce({ success: false, error: 'Permission could not be revoked' })
+  const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true })
+
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+
+  expect((await screen.findByRole('alert')).textContent).toContain('App access was not revoked')
+  const confirm = screen.getByRole('button', { name: 'Confirm revoke' })
+  expect(confirm.disabled).toBe(false)
+  expect(document.activeElement).toBe(confirm)
+})
+
+it('reports session-only clearing without claiming durable success', async () => {
+  const ref = React.createRef()
+  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
+  let settleClear
+  link.invoke.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        settleClear = resolve
+      })
+  )
+  class TestExpanded extends DappsPermissionsExpanded {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const { rerender, unmount, user } = render(
+    <TestExpanded ref={ref} account={account} moduleId='permissions' permissions={permissions} />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  await act(async () =>
+    settleClear({
+      success: false,
+      uncertain: true,
+      sessionOnly: true,
+      error: 'persistence-failed'
+    })
+  )
+  expect(screen.getByRole('alert').textContent).toBe(REVOKE_ACCESS_SESSION_ONLY)
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Confirm revoke' }))
+
+  rerender(
+    <TestExpanded
+      account={account}
+      ref={ref}
+      moduleId='permissions'
+      permissions={{ managed: permissions.managed }}
+    />
+  )
+
+  const alert = screen.getByRole('alert')
+  expect(alert.textContent).toBe(REVOKE_ACCESS_SESSION_ONLY)
+  expect(screen.queryByText('All app access revoked.')).toBeNull()
+  expect(document.activeElement).toBe(alert)
+  const statusTimer = ref.current.clearStatusTimer
+  unmount()
+  expect(clearTimeoutSpy).toHaveBeenCalledWith(statusTimer)
+  clearTimeoutSpy.mockRestore()
+})
+
+it('reconciles clear-all store removal that arrives before a rejected invoke', async () => {
+  let rejectClear
+  link.invoke.mockImplementationOnce(
+    () =>
+      new Promise((resolve, reject) => {
+        rejectClear = reject
+      })
+  )
+  class TestExpanded extends DappsPermissionsExpanded {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const { rerender, user } = render(
+    <TestExpanded account={account} moduleId='permissions' permissions={permissions} />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  rerender(
+    <TestExpanded account={account} moduleId='permissions' permissions={{ managed: permissions.managed }} />
+  )
+  await act(async () => rejectClear(new Error('transport unavailable')))
+
+  const alert = screen.getByRole('alert')
+  expect(alert.textContent).toContain('could not confirm the saved change')
+  expect(screen.queryByText('All app access revoked.')).toBeNull()
+})
+
+it('reconciles clear-all store removal that arrives after a rejected invoke', async () => {
+  link.invoke.mockRejectedValueOnce(new Error('transport unavailable'))
+  class TestExpanded extends DappsPermissionsExpanded {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const { rerender, user } = render(
+    <TestExpanded account={account} moduleId='permissions' permissions={permissions} />
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('confirmation is unavailable')
+
+  rerender(
+    <TestExpanded account={account} moduleId='permissions' permissions={{ managed: permissions.managed }} />
+  )
+  const alert = screen.getByRole('alert')
+  expect(alert.textContent).toContain('could not confirm the saved change')
+  expect(screen.queryByText('All app access revoked.')).toBeNull()
+})
+
+it('stops clear-all uncertainty UI reconciliation after cancellation', async () => {
+  link.invoke.mockRejectedValueOnce(new Error('transport unavailable'))
+  class TestExpanded extends DappsPermissionsExpanded {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+    }
+  }
+  const view = (storedPermissions) => (
+    <>
+      <button type='button'>Outside action</button>
+      <TestExpanded account={account} moduleId='permissions' permissions={storedPermissions} />
+    </>
+  )
+  const { rerender, user } = render(view(permissions))
+
+  await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('confirmation is unavailable')
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  const outside = screen.getByRole('button', { name: 'Outside action' })
+  outside.focus()
+
+  rerender(view({ managed: permissions.managed }))
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(document.activeElement).toBe(outside)
 })
 
 it('does not offer permission management or clearing for an empty list', () => {
@@ -332,7 +913,7 @@ it('does not offer permission management or clearing for an empty list', () => {
 
   renderWithStore(DappsPermissionsExpanded, { expanded: true }, {})
   expect(document.querySelector('.wrenEmptyStateExpanded')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Clear all permissions' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Revoke all app access' })).toBeNull()
 })
 
 const guardrailProps = {

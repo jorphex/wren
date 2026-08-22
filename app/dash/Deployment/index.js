@@ -1,8 +1,11 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
+import DialogSurface from '../../../resources/Components/DialogSurface'
 import link from '../../../resources/link'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 import { isNetworkConnected } from '../../../resources/utils/chains'
+import { setDashNavigationGuard } from '../navigationGuard'
 import {
   deploymentByteCount,
   prepareDeployment,
@@ -62,7 +65,8 @@ export const connectedDeploymentNetworks = (networks = {}, networksMeta = {}) =>
       return {
         id,
         name: network.name || `Chain ${id}`,
-        symbol: networksMeta[id]?.nativeCurrency?.symbol || ''
+        symbol: networksMeta[id]?.nativeCurrency?.symbol || '',
+        decimals: networksMeta[id]?.nativeCurrency?.decimals
       }
     })
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -71,6 +75,27 @@ const rpcQuantity = (value) => {
   if (typeof value !== 'string' || !/^0x[0-9a-f]+$/iu.test(value)) return value || 'Unavailable'
   try {
     return BigInt(value).toLocaleString('en-US')
+  } catch {
+    return 'Unavailable'
+  }
+}
+
+export const nativeQuantity = (value, decimals, symbol) => {
+  if (
+    typeof value !== 'string' ||
+    !/^0x[0-9a-f]+$/iu.test(value) ||
+    !Number.isInteger(decimals) ||
+    decimals < 0 ||
+    decimals > 255
+  ) {
+    return 'Unavailable'
+  }
+  try {
+    const integer = BigInt(value).toString(10)
+    const padded = decimals ? integer.padStart(decimals + 1, '0') : integer
+    const whole = decimals ? padded.slice(0, -decimals) : padded
+    const fraction = decimals ? padded.slice(-decimals).replace(/0+$/u, '') : ''
+    return `${whole}${fraction ? `.${fraction}` : ''}${symbol ? ` ${symbol}` : ''}`
   } catch {
     return 'Unavailable'
   }
@@ -113,6 +138,7 @@ export class Deployment extends React.Component {
       preparing: false,
       queueing: false,
       selectingAccount: false,
+      pendingNavigation: false,
       message: '',
       messageTone: 'status'
     }
@@ -120,18 +146,37 @@ export class Deployment extends React.Component {
     this.mounted = false
     this.resultRef = React.createRef()
     this.alertRef = React.createRef()
+    this.abandonCancelRef = React.createRef()
+    this.pendingNavigation = undefined
   }
 
   componentDidMount() {
     this.mounted = true
+    this.removeNavigationGuard = setDashNavigationGuard(({ navigate }) => {
+      if (this.props.active === false) return false
+      if (!this.hasDraft()) return false
+      if (!this.state.pendingNavigation) {
+        this.pendingNavigation = navigate
+        this.setState({ pendingNavigation: true })
+      }
+      return true
+    })
   }
 
   componentWillUnmount() {
     this.mounted = false
     this.operationGeneration += 1
+    this.removeNavigationGuard?.()
+    this.pendingNavigation = undefined
   }
 
   componentDidUpdate(previousProps) {
+    if (previousProps.active !== false && this.props.active === false && this.state.pendingNavigation) {
+      this.pendingNavigation = undefined
+      this.setState({ pendingNavigation: false })
+      return
+    }
+
     const currentChanged = !sameAccount(previousProps.currentAccount, this.props.currentAccount)
     if (currentChanged && !this.state.selectingAccount) {
       const accounts = eligibleDeploymentAccounts(this.props.accounts, this.props.signers)
@@ -245,6 +290,28 @@ export class Deployment extends React.Component {
     }
   }
 
+  hasDraft() {
+    return Boolean(
+      this.state.initcode.trim() ||
+      this.state.value.trim() ||
+      this.state.inspection ||
+      this.state.preparing ||
+      this.state.queueing
+    )
+  }
+
+  cancelAbandon() {
+    this.pendingNavigation = undefined
+    this.setState({ pendingNavigation: false })
+  }
+
+  confirmAbandon() {
+    const navigate = this.pendingNavigation
+    this.pendingNavigation = undefined
+    this.operationGeneration += 1
+    this.setState({ pendingNavigation: false }, () => navigate?.())
+  }
+
   validate() {
     const errors = {
       initcode: validateCreationData(this.state.initcode),
@@ -356,7 +423,7 @@ export class Deployment extends React.Component {
     }
   }
 
-  renderEvidence(inspection) {
+  renderEvidence(inspection, network) {
     const gas = evidenceValue(
       inspection.gasEstimate,
       (value) => `${rpcQuantity(value)} gas · Wren padded configured-RPC estimate`
@@ -373,7 +440,7 @@ export class Deployment extends React.Component {
         </div>
         <dl>
           <EvidenceRow label='Prepared data' mono>
-            {`Value ${inspection.value} · Chain ${rpcQuantity(inspection.chainId)} · ${new Date(inspection.preparedAt).toLocaleString()}`}
+            {`Value ${nativeQuantity(inspection.value, network?.decimals, network?.symbol)} · Canonical ${inspection.value} · Chain ${rpcQuantity(inspection.chainId)} · ${new Date(inspection.preparedAt).toLocaleString()}`}
           </EvidenceRow>
           <EvidenceRow label='Payload size'>{inspection.initcode?.bytes?.toLocaleString()} bytes</EvidenceRow>
           <EvidenceRow label='Keccak-256' mono>
@@ -539,7 +606,7 @@ export class Deployment extends React.Component {
             estimates, simulation, and pending nonce. It does not sign or broadcast.
           </p>
 
-          {hasEvidence ? this.renderEvidence(this.state.inspection) : null}
+          {hasEvidence ? this.renderEvidence(this.state.inspection, selectedNetwork) : null}
 
           <p className='deploymentBoundary'>
             Wren does not compile Solidity, parse artifacts or ABIs, decode constructor arguments, verify
@@ -585,6 +652,45 @@ export class Deployment extends React.Component {
             </button>
           </div>
         </form>
+        {this.state.pendingNavigation
+          ? createPortal(
+              <DialogSurface
+                className='deploymentAbandonDialog'
+                role='alertdialog'
+                modal
+                labelledBy='deployment-abandon-title'
+                describedBy='deployment-abandon-description'
+                initialFocusRef={this.abandonCancelRef}
+                onCancel={() => this.cancelAbandon()}
+              >
+                <div className='deploymentAbandonPanel'>
+                  <h2 id='deployment-abandon-title'>Discard this deployment?</h2>
+                  <p id='deployment-abandon-description'>
+                    Leaving now clears the deployment data and any prepared evidence. Nothing has been signed
+                    or broadcast.
+                  </p>
+                  <div className='deploymentAbandonActions'>
+                    <button
+                      ref={this.abandonCancelRef}
+                      type='button'
+                      className='wrenControl wrenControlSecondary'
+                      onClick={() => this.cancelAbandon()}
+                    >
+                      Keep editing
+                    </button>
+                    <button
+                      type='button'
+                      className='wrenControl wrenControlDanger'
+                      onClick={() => this.confirmAbandon()}
+                    >
+                      Discard and leave
+                    </button>
+                  </div>
+                </div>
+              </DialogSurface>,
+              document.body
+            )
+          : null}
       </Root>
     )
   }

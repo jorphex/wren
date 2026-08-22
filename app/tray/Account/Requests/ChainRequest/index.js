@@ -8,14 +8,17 @@ import {
   RequestSection
 } from '../LightweightRequest'
 
+const networkName = (name, chainId) => name || (chainId == null ? 'Unknown network' : `Chain ${chainId}`)
+const chainIdValue = (chainId) => (chainId == null ? 'Not supplied' : String(chainId))
+
 export class ChainRequest extends React.Component {
   render() {
     const { req } = this.props
     const { chain } = req
     const originName = this.props.originName || 'Unknown origin'
     if (req.type === 'switchChain') {
-      const sourceName = this.props.chainData?.sourceChainName || `Chain ${req.sourceChainId}`
-      const destinationName = this.props.chainData?.destinationChainName || `Chain ${chain.id}`
+      const sourceName = networkName(this.props.chainData?.sourceChainName, req.sourceChainId)
+      const destinationName = networkName(this.props.chainData?.destinationChainName, chain.id)
       return (
         <LightweightRequest
           req={req}
@@ -29,7 +32,7 @@ export class ChainRequest extends React.Component {
               <RequestFact label='Requested by' value={originName} technical={true} />
               <RequestFact label='Current network' value={sourceName} />
               <RequestFact label='New network' value={destinationName} />
-              <RequestFact label='Chain ID' value={String(chain.id)} technical={true} />
+              <RequestFact label='Chain ID' value={chainIdValue(chain.id)} technical={true} />
             </RequestFactGrid>
           </RequestSection>
           <RequestNote>
@@ -47,13 +50,13 @@ export class ChainRequest extends React.Component {
         req={req}
         icon='network'
         eyebrow='Network proposal'
-        title={`Add ${chain.name} to Wren?`}
+        title={`Add ${networkName(chain.name, chain.id)} to Wren?`}
         help='Inspect the network identity and endpoints before continuing to Wren’s network editor.'
       >
         <RequestSection title='Network details'>
           <RequestFactGrid>
-            <RequestFact label='Network' value={chain.name} />
-            <RequestFact label='Chain ID' value={String(chain.id)} technical={true} />
+            <RequestFact label='Network' value={networkName(chain.name, chain.id)} />
+            <RequestFact label='Chain ID' value={chainIdValue(chain.id)} technical={true} />
             <RequestFact label='Native currency' value={currencyDisplay} />
             <RequestFact label='Requested by' value={originName} technical={true} />
           </RequestFactGrid>

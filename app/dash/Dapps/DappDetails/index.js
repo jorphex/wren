@@ -92,6 +92,10 @@ export class DappDetails extends React.Component {
           <Icon name='apps' size={20} />
           <div className='originSwapOriginText'>{origin.name}</div>
         </div>
+        <section className='originAccessContext'>
+          <div className='originSwapTitle'>Account access</div>
+          <p>Open an account in the wallet, then choose Apps with access to review or revoke this app.</p>
+        </section>
         <div className='originSwapTitle'>Default network</div>
         <div>{this.updateOriginChain(origin)}</div>
       </div>

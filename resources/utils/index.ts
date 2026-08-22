@@ -54,6 +54,28 @@ function debounce<Args extends unknown[]>(func: (...args: Args) => unknown, time
   }
 }
 
+type EnterKeyEvent = {
+  key: string
+  isComposing?: boolean
+  nativeEvent?: { isComposing?: boolean }
+  shiftKey?: boolean
+  altKey?: boolean
+  ctrlKey?: boolean
+  metaKey?: boolean
+}
+
+function isUnmodifiedEnter(event: EnterKeyEvent) {
+  return (
+    event.key === 'Enter' &&
+    !event.isComposing &&
+    !event.nativeEvent?.isComposing &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey
+  )
+}
+
 function instanceOfNodeError<T extends ErrorConstructor>(
   value: Error,
   errorType: T
@@ -103,6 +125,7 @@ export {
   arraysEqual,
   arraysMatch,
   debounce,
+  isUnmodifiedEnter,
   weiToGwei,
   weiToHex,
   gweiToWei,

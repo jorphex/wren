@@ -61,6 +61,20 @@ export const isTransactionRequest = (request: AccountRequest): request is Transa
 export const isTypedMessageSignatureRequest = (request: AccountRequest): request is SignTypedDataRequest =>
   ['signTypedData', 'signErc20Permit'].includes(request.type)
 
+const signingRequestTypes = new Set<RequestType>([
+  'transaction',
+  'sign',
+  'signTypedData',
+  'signErc20Permit',
+  'walletCalls',
+  'eip7702Revoke'
+])
+
+export const isSigningRequest = (request: AccountRequest): boolean => signingRequestTypes.has(request.type)
+
+export const isPendingSigningRequest = (request: AccountRequest): boolean =>
+  request.status !== 'sending' && isSigningRequest(request)
+
 export const accountViewTitles: Record<RequestType, string> = {
   sign: 'Sign Message',
   signTypedData: 'Sign Data',

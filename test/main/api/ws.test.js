@@ -129,6 +129,10 @@ const createAuthenticatedPageSocket = async (identity) => {
 
 jest.mock('ws')
 jest.mock('../../../main/store')
+jest.mock('../../../main/store/persist', () => ({
+  __esModule: true,
+  commitMainState: jest.fn()
+}))
 jest.mock('../../../main/chains', () => ({
   connections: { ethereum: {} },
   on: jest.fn(),
@@ -817,7 +821,7 @@ it('carries approved BaseScan network consent and exact-origin events through th
     store.addOriginRequest = jest.fn()
     store.switchOriginChain = jest.fn((originId, chainId, type) => {
       store.set('main.origins', originId, 'chain', { id: chainId, type })
-      store.getObserver('provider:origins').fire()
+      setTimeout(() => store.getObserver('provider:origins').fire(), 0)
     })
 
     const [chainSubscriptionResponse] = await sendPageRequest(pageSocket, {
@@ -901,23 +905,27 @@ it('carries approved BaseScan network consent and exact-origin events through th
     )
     await flushPromises()
 
+    expect(pageSocket.send.mock.calls.map(([message]) => JSON.parse(message))).toEqual([
+      { id: 65, jsonrpc: '2.0', result: null }
+    ])
+
+    jest.advanceTimersByTime(0)
+    await flushPromises()
+
     const switchMessages = pageSocket.send.mock.calls.map(([message]) => JSON.parse(message))
-    expect(switchMessages).toEqual(
-      expect.arrayContaining([
-        {
-          jsonrpc: '2.0',
-          method: 'eth_subscription',
-          params: { subscription: chainSubscriptionResponse.result, result: '0x2105' }
-        },
-        {
-          jsonrpc: '2.0',
-          method: 'eth_subscription',
-          params: { subscription: networkSubscriptionResponse.result, result: 8453 }
-        },
-        { id: 65, jsonrpc: '2.0', result: null }
-      ])
-    )
-    expect(switchMessages).toHaveLength(3)
+    expect(switchMessages).toEqual([
+      { id: 65, jsonrpc: '2.0', result: null },
+      {
+        jsonrpc: '2.0',
+        method: 'eth_subscription',
+        params: { subscription: chainSubscriptionResponse.result, result: '0x2105' }
+      },
+      {
+        jsonrpc: '2.0',
+        method: 'eth_subscription',
+        params: { subscription: networkSubscriptionResponse.result, result: 8453 }
+      }
+    ])
     expect(alternatePageSocket.send).not.toHaveBeenCalled()
     expect(store('main.permissions', account, exactOriginId)).toBeUndefined()
 

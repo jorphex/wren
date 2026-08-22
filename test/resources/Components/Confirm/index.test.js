@@ -1,5 +1,13 @@
+import fs from 'fs'
+
 import { screen, render } from '../../../componentSetup'
 import Confirm from '../../../../resources/Components/Confirm'
+
+const confirmStyle = fs.readFileSync('resources/Components/Confirm/index.styl', 'utf8')
+
+it('keeps confirmation actions at a full control height', () => {
+  expect(confirmStyle).toMatch(/\.confirmButton[\s\S]*?height 44px/)
+})
 
 it('renders the confirmation prompt', () => {
   render(<Confirm prompt='you sure you wanna do that?' />)

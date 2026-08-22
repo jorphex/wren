@@ -8,6 +8,7 @@ const {
 } = require('../../../../scripts/qualification/ui/policy.cjs')
 const {
   QUALIFICATION_ACCOUNT,
+  QUALIFICATION_INVOKE_CHANNELS,
   fixtureFor,
   invokeReplyFor,
   rpcReplyFor
@@ -17,7 +18,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(95)
+  expect(scenarios).toHaveLength(98)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -29,6 +30,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `tray-account-home-full-${scale}`,
         `tray-account-home-short-${scale}`,
         `tray-account-balances-full-${scale}`,
+        `tray-account-balances-short-${scale}`,
         `tray-transaction-confirming-full-${scale}`,
         `tray-transaction-confirmed-full-${scale}`,
         `dash-delegation-full-${scale}`,
@@ -68,6 +70,23 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   )
 })
 
+it('qualifies unavailable explorer credential status without secure-storage claims', () => {
+  const scenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'dash-settings-contract-verification-unavailable-short-1.5'
+  )
+
+  expect(scenario).toMatchObject({
+    state: 'settings',
+    variant: 'credential-status-unavailable',
+    logicalHeight: 744,
+    ready: '.contractVerificationCredentialError'
+  })
+  expect(invokeReplyFor(scenario, 'contractVerification:credentialStatus')).toEqual({
+    success: false,
+    error: 'credential-unavailable'
+  })
+})
+
 it('qualifies network consent separately from account access at the real tray width', () => {
   const scenarios = scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')
 
@@ -99,9 +118,20 @@ it('waits for the active generated-wallet frame instead of hidden adjacent conte
     ['account-create-phrase', 'account-create-private-key'].includes(state)
   )
 
-  expect(generated).toHaveLength(8)
+  expect(generated).toHaveLength(24)
   for (const scenario of generated) {
     expect(scenario.ready).toMatch(/^\.generatedWalletFrame\[aria-hidden="false"\] /u)
+    expect(scenario.layoutExpectations).toContainEqual({
+      kind: 'computed-style',
+      selector: '.generatedWalletExpiryNotice',
+      property: 'color',
+      value: 'rgb(208, 214, 206)'
+    })
+  }
+  for (const scale of [1, 1.25, 1.5]) {
+    const scaled = generated.filter((scenario) => scenario.scale === scale)
+    expect(scaled).toHaveLength(8)
+    expect(new Set(scaled.map(({ logicalHeight }) => logicalHeight))).toEqual(new Set([900, 744]))
   }
 })
 
@@ -112,12 +142,77 @@ it('seats every RPC warning shelf at the viewport bottom with its exact reserved
 
   expect(warnings).toHaveLength(16)
   for (const warning of warnings) {
+    expect(warning.requiredControls).toContain('Decline')
+    expect(warning.requiredControls).not.toContain('Reject')
     expect(warning.layoutExpectations).toContainEqual({
       kind: 'viewport-bottom',
       selector: '.requestNoticeApproval'
     })
     expect(fixtureFor(warning).windows.panel.footer.height).toBe(200)
   }
+})
+
+it('seats short transaction-review shelves at the viewport bottom', () => {
+  const reviews = scenarioMatrix({ includeReview: true }).filter(
+    ({ id }) =>
+      id.includes('-short-') &&
+      (id.startsWith('tray-transaction-lookalike-') ||
+        (id.startsWith('tray-transaction-deployment-') &&
+          !id.startsWith('tray-transaction-deployment-confirmed-')))
+  )
+
+  expect(reviews).toHaveLength(6)
+  expect(
+    reviews.every(({ layoutExpectations }) =>
+      layoutExpectations.some(
+        ({ kind, selector }) => kind === 'viewport-bottom' && selector === '.requestNoticeTransactionReview'
+      )
+    )
+  ).toBe(true)
+})
+
+it('qualifies BalancesExpanded at full and short height for every supported scale', () => {
+  const balances = scenarioMatrix().filter(({ state }) => state === 'account-balances')
+
+  expect(balances).toHaveLength(6)
+  for (const scale of INTERFACE_SCALES) {
+    expect(balances.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([`tray-account-balances-full-${scale}`, `tray-account-balances-short-${scale}`])
+    )
+  }
+  expect(
+    balances
+      .filter(({ id }) => id.includes('-short-'))
+      .every(({ layoutExpectations }) =>
+        layoutExpectations.some(
+          ({ kind, selector }) => kind === 'scroll-fits' && selector === '.balancesExpandedScroll'
+        )
+      )
+  ).toBe(true)
+})
+
+it('qualifies dashboard Notify separately from the tray-native pairing notification', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const dashboard = scenarios.find(({ id }) => id === 'dash-notify-remove-network-short-1')
+  const nativePairing = scenarios.find(({ id }) => id === 'tray-native-pairing-full-1')
+
+  expect(dashboard.renderer).toBe('dash')
+  expect(fixtureFor(dashboard).windows.dash.nav).toEqual([
+    {
+      view: 'notify',
+      data: {
+        notify: 'confirmRemoveChain',
+        notifyData: {
+          chain: { id: 10, type: 'ethereum', name: 'Optimism Mainnet' }
+        }
+      }
+    }
+  ])
+  expect(nativePairing.renderer).toBe('tray')
+  expect(fixtureFor(nativePairing).view).toMatchObject({
+    notify: 'nativeConnect',
+    notifyId: 'native:qualification-native-pairing'
+  })
 })
 
 it('visually qualifies the primary RPC warning hover state', () => {
@@ -144,6 +239,10 @@ it('qualifies the warning-to-sign transition without empty-frame animations', ()
     },
     requiredText: expect.arrayContaining(['Decline', 'Sign transaction'])
   })
+  expect(
+    fixtureFor(warning).main.accounts[QUALIFICATION_ACCOUNT].requests['qualification-rpc-warning-revert']
+      .simulation.status
+  ).toBe('reverted')
   expect(warning.layoutExpectations).toEqual(
     expect.arrayContaining([
       {
@@ -157,6 +256,12 @@ it('qualifies the warning-to-sign transition without empty-frame animations', ()
         selector: '.requestApproveTransaction',
         property: 'animationName',
         value: 'none'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.requestApproveTransaction .requestDeclineButton',
+        property: 'color',
+        value: 'rgb(242, 244, 239)'
       }
     ])
   )
@@ -194,9 +299,16 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const inspectorForms = inspectors.filter(({ id }) => id.startsWith('dash-inspector-form-'))
   const inspectorResults = inspectors.filter(({ id }) => !id.startsWith('dash-inspector-form-'))
   const earnYvusd = scenarios.filter(({ state }) => state === 'earn-yvusd')
-  const earnLoading = scenarios.find(({ state }) => state === 'earn-loading')
-  expect(earnYvusd).toHaveLength(4)
-  expect(earnYvusd.map(({ variant }) => variant)).toEqual(['unlocked', 'unlocked', 'locked', 'locked'])
+  const earnLoading = scenarios.filter(({ state }) => state === 'earn-loading')
+  const earnList = scenarios.find(({ state }) => state === 'earn-list')
+  const earnPrivacy = scenarios.find(({ state }) => state === 'earn-privacy')
+  expect(earnYvusd).toHaveLength(12)
+  for (const scale of [1, 1.25, 1.5]) {
+    const scaled = earnYvusd.filter((scenario) => scenario.scale === scale)
+    expect(scaled).toHaveLength(4)
+    expect(scaled.map(({ variant }) => variant)).toEqual(['unlocked', 'unlocked', 'locked', 'locked'])
+    expect(scaled.map(({ logicalHeight }) => logicalHeight)).toEqual([900, 744, 900, 744])
+  }
   expect(invokeReplyFor(earnYvusd[0], 'yearn:getCatalog')).toMatchObject({
     status: 'fresh',
     vaults: [{ id: 'ethereum-yvusd', kind: 'yvUSD' }]
@@ -206,13 +318,29 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     chains: expect.arrayContaining([expect.objectContaining({ chainId: 1, status: 'ready' })])
   })
   expect(invokeReplyFor(earnYvusd[0], 'yearn:getWorkflows')).toEqual({ workflows: [] })
-  expect(earnLoading).toMatchObject({
+  expect(earnLoading.map(({ logicalHeight }) => logicalHeight)).toEqual([900, 744])
+  expect(earnLoading[1]).toMatchObject({
+    id: 'dash-earn-loading-short-1',
     ready: '.earnPositionsLoading',
-    deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows']
+    deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows'],
+    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.dashMainScroll' }]
   })
-  expect(invokeReplyFor(earnLoading, 'yearn:getCatalog', [{ force: false, cacheOnly: true }])).toMatchObject({
+  expect(
+    invokeReplyFor(earnLoading[0], 'yearn:getCatalog', [{ force: false, cacheOnly: true }])
+  ).toMatchObject({
     status: 'unavailable',
     fetchedAt: null
+  })
+  expect(earnList).toMatchObject({
+    id: 'dash-earn-list-full-1',
+    ready: '.earnPositionList',
+    requiredText: expect.arrayContaining(['1.5 USDC', '5.12%', '$1.5M TVL'])
+  })
+  expect(fixtureFor(earnPrivacy).selected.hideBalances).toBe(true)
+  expect(earnPrivacy).toMatchObject({
+    id: 'dash-earn-privacy-short-1',
+    logicalHeight: 744,
+    requiredText: expect.arrayContaining(['•••• USDC', '•••• USDC available', '5.12%', '$1.5M TVL'])
   })
   expect(inspectors).toHaveLength(9)
   expect(inspectorForms.map(({ id }) => id)).toEqual([
@@ -408,10 +536,26 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   expect(fixtureFor(editor).main.networks.ethereum[1].connection.endpoints).toHaveLength(2)
   expect(overflowingNetworkEditor).toMatchObject({
     captureScroll: 'bottom',
-    captureScrollSelector: '.localSettingsWrap',
-    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.localSettingsWrap' }]
+    captureScrollSelector: '.networkEditorBody',
+    layoutExpectations: expect.arrayContaining([
+      { kind: 'scroll-fits', selector: '.localSettingsWrap' },
+      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+    ])
   })
   expect(overflowingNetworkEditor.action.steps).toHaveLength(4)
+  const removableNetworkEditor = scenarios.find(({ id }) => id === 'dash-network-editor-removable-short-1')
+  expect(removableNetworkEditor).toMatchObject({
+    logicalWidth: 620,
+    logicalHeight: 744,
+    variant: 'removable',
+    requiredControls: ['Remove network', 'Cancel', 'Save changes'],
+    layoutExpectations: expect.arrayContaining([
+      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
+      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+    ])
+  })
+  expect(fixtureFor(removableNetworkEditor).main.networks.ethereum[10].name).toBe('Optimism Mainnet')
   expect(Object.keys(fixtureFor(drawer).main.accounts)).toHaveLength(6)
   expect(Object.keys(fixtureFor(startup).main.accounts)).toHaveLength(3)
   expect(fixtureFor(startup).selected.open).toBe(false)
@@ -453,6 +597,7 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
     ({ state, variant }) => state === 'settings-recent-recipients' && variant !== 'clear'
   )
   const sendConfirmations = scenarios.filter(({ state }) => state === 'send-confirmed')
+  const sendLifecycles = scenarios.filter(({ state }) => state.startsWith('send-lifecycle-'))
   const maxReviews = scenarios.filter(({ state }) => state === 'send-max-review')
   const sweepReviews = scenarios.filter(({ state }) => state === 'send-sweep-review')
 
@@ -462,6 +607,7 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   expect(assetPickers).toHaveLength(6)
   expect(recentRecipientSettings).toHaveLength(6)
   expect(sendConfirmations).toHaveLength(6)
+  expect(sendLifecycles).toHaveLength(5)
   expect(maxReviews).toHaveLength(6)
   expect(sweepReviews).toHaveLength(6)
   expect(fixtureFor(assetPickers[0]).windows.dash.nav[0]).toMatchObject({
@@ -485,12 +631,25 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
     scale: 1.5,
     logicalHeight: 744
   })
+  expect(new Set(sendLifecycles.map(({ variant }) => variant))).toEqual(
+    new Set(['queued', 'submitted', 'unconfirmed', 'declined', 'failed'])
+  )
+  expect(new Set(sendLifecycles.map(({ scale }) => scale))).toEqual(new Set([1, 1.25, 1.5]))
+  expect(new Set(sendLifecycles.map(({ logicalHeight }) => logicalHeight))).toEqual(new Set([744, 900]))
+  for (const lifecycle of sendLifecycles) {
+    expect(lifecycle.expectedInitialFocus).toBe(lifecycle.requiredText[0])
+    expect(lifecycle.layoutExpectations).toContainEqual({
+      kind: 'scroll-fits',
+      selector: '.dashMainScroll'
+    })
+  }
   for (const scenario of [
     ...contactLists,
     ...contactEditors,
     ...recipientPickers,
     ...recentRecipientSettings,
     ...sendConfirmations,
+    ...sendLifecycles,
     ...maxReviews,
     ...sweepReviews
   ]) {
@@ -747,7 +906,7 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
   expect(monitor).toMatchObject({
     action: { type: 'clickText', text: 'Stop monitoring' },
     expectedInitialFocus: 'Keep monitoring',
-    requiredControls: ['Keep monitoring', 'Stop monitoring and continue with queued requests']
+    requiredControls: ['Keep monitoring', 'Stop monitoring']
   })
 })
 
@@ -812,6 +971,33 @@ it('qualifies revoke confirmation inside both edges of the production-width work
     true
   )
   expect(scenarios.every(({ layoutExpectations }) => layoutExpectations[0].container === '#panel')).toBe(true)
+  expect(
+    scenarios.every(({ requiredText }) =>
+      requiredText.includes('Its guardrails will be removed, and it must request access again.')
+    )
+  ).toBe(true)
+})
+
+it('qualifies explicit revoke failure feedback at the short production width', () => {
+  const scenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'tray-account-access-revoke-failed-short-1'
+  )
+
+  expect(scenario).toMatchObject({
+    logicalWidth: 620,
+    logicalHeight: 744,
+    ready: '.revokeAccessFailure',
+    expectedInitialFocus: 'Confirm revoke',
+    requiredText: expect.arrayContaining([
+      'Revocation confirmation is unavailable. Wren will keep checking for the access change.'
+    ])
+  })
+  expect(invokeReplyFor(scenario, 'tray:revokeAccess')).toEqual({
+    success: false,
+    uncertain: true,
+    error: 'Revocation confirmation is unavailable'
+  })
+  expect(QUALIFICATION_INVOKE_CHANNELS).toContain('tray:revokeAccess')
 })
 
 it('qualifies source verification entry, evidence, results, credentials, and confirmed handoff', () => {
@@ -820,6 +1006,9 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   const evidence = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-evidence-'))
   const confirmations = scenarios.filter(({ id }) => id.startsWith('tray-transaction-deployment-confirmed-'))
   const results = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-result-'))
+  const directUnknown = scenarios.filter(({ id }) =>
+    id.startsWith('dash-contract-verification-direct-unknown-')
+  )
   const credential = scenarios.find(({ id }) => id === 'dash-settings-contract-verification-short-1.5')
   const capped = scenarios.find(({ id }) => id === 'dash-contract-verification-evidence-capped-1.5')
 
@@ -827,6 +1016,36 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   expect(evidence).toHaveLength(7)
   expect(confirmations).toHaveLength(6)
   expect(results).toHaveLength(2)
+  expect(directUnknown.map(({ id }) => id)).toEqual([
+    'dash-contract-verification-direct-unknown-full-1',
+    'dash-contract-verification-direct-unknown-short-1'
+  ])
+  expect(directUnknown.every(({ logicalWidth }) => logicalWidth === 620)).toBe(true)
+  expect(directUnknown.map(({ logicalHeight }) => logicalHeight)).toEqual([900, 744])
+  expect(
+    directUnknown.every(
+      ({ requiredControls, requiredText }) =>
+        requiredControls.includes('Check another contract') &&
+        requiredText.includes(
+          'Etherscan’s response was not confirmed. Wren will not submit this publication again; check the contract on Etherscan later.'
+        )
+    )
+  ).toBe(true)
+  expect(fixtureFor(directUnknown[0]).windows.dash.nav).toEqual([
+    {
+      view: 'contracts',
+      data: { mode: 'verify', verificationId: '66666666-6666-4666-8666-666666666666' }
+    }
+  ])
+  expect(
+    invokeReplyFor(directUnknown[0], 'contractVerification:get').job.destinations.find(
+      ({ destination }) => destination === 'etherscan-direct'
+    )
+  ).toMatchObject({
+    status: 'unknown',
+    reasonCode: 'transport-failure',
+    publicationHash: '70'.repeat(32)
+  })
   expect(credential.captureScrollSelector).toBe('#wren-settings-contract-verification')
   expect(capped.layoutExpectations).toEqual(
     expect.arrayContaining([
@@ -851,6 +1070,58 @@ it('qualifies source verification entry, evidence, results, credentials, and con
     selector: '.requestNoticeTransactionDeploymentStatus'
   })
   expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(250)
+})
+
+it('qualifies deployment identity controls and an opaque short-geometry action shelf', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const reviews = scenarios.filter(
+    ({ id }) =>
+      id.startsWith('tray-transaction-deployment-') &&
+      !id.startsWith('tray-transaction-deployment-confirmed-')
+  )
+  const shortDeploymentShelves = scenarios.filter(
+    ({ id }) =>
+      (id.startsWith('dash-deployment-form-') || id.startsWith('dash-deployment-result-')) &&
+      id.includes('-short-')
+  )
+  const abandon = scenarios.filter(({ id }) => id.startsWith('dash-deployment-abandon-'))
+
+  expect(reviews).toHaveLength(6)
+  expect(reviews[0].requiredControls).toEqual(
+    expect.arrayContaining(['Copy deployment initcode hash', 'Copy provisional deployment address'])
+  )
+  expect(shortDeploymentShelves).toHaveLength(6)
+  expect(
+    shortDeploymentShelves.every(({ layoutExpectations }) =>
+      layoutExpectations.some(
+        ({ kind, selector, property, value }) =>
+          kind === 'computed-style' &&
+          selector === '.deploymentActionShelf' &&
+          property === 'backgroundColor' &&
+          value === 'rgb(9, 12, 10)'
+      )
+    )
+  ).toBe(true)
+  expect(abandon.map(({ id }) => id)).toEqual([
+    'dash-deployment-abandon-full-1',
+    'dash-deployment-abandon-short-1'
+  ])
+  expect(abandon.map(({ logicalHeight }) => logicalHeight)).toEqual([900, 744])
+  expect(
+    abandon.every(
+      ({ logicalWidth, ready, expectedInitialFocus, requiredControls }) =>
+        logicalWidth === 620 &&
+        ready === '.deploymentAbandonDialog[aria-modal="true"]' &&
+        expectedInitialFocus === 'Keep editing' &&
+        requiredControls.length === 2 &&
+        requiredControls.includes('Keep editing') &&
+        requiredControls.includes('Discard and leave')
+    )
+  ).toBe(true)
+  expect(abandon[0].action.steps).toEqual([
+    { type: 'inputLabel', label: 'Deployment data', value: '0x60006000' },
+    { type: 'clickText', text: 'Back' }
+  ])
 })
 
 it('qualifies connected-app destination margins at full and short heights', () => {
@@ -878,6 +1149,13 @@ it('qualifies connected-app destination margins at full and short heights', () =
     'dash-connected-app-details-full-1',
     'dash-connected-app-details-short-1'
   ])
+  expect(
+    details.every(({ requiredText }) =>
+      requiredText.includes(
+        'Open an account in the wallet, then choose Apps with access to review or revoke this app.'
+      )
+    )
+  ).toBe(true)
   expect(fixtureFor(details[0]).windows.dash.nav).toEqual([
     { view: 'dapps', data: { dappDetails: 'workshop' } }
   ])

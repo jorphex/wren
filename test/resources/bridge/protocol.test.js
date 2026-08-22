@@ -17,6 +17,22 @@ describe('renderer bridge protocol', () => {
   test('accepts bounded requests for registered IPC channels and main RPC methods', () => {
     expect(
       decodeBridgeMessage(
+        encode({ source: LINK_SOURCE, method: 'invoke', id, args: ['activity:clear'] }),
+        LINK_SOURCE,
+        'tray'
+      )
+    ).toEqual({ source: LINK_SOURCE, method: 'invoke', id, args: ['activity:clear'] })
+
+    expect(
+      decodeBridgeMessage(
+        encode({ source: LINK_SOURCE, method: 'invoke', id, args: ['activity:clear'] }),
+        LINK_SOURCE,
+        'dash'
+      )
+    ).toBeNull()
+
+    expect(
+      decodeBridgeMessage(
         encode({ source: LINK_SOURCE, method: 'event', args: ['tray:ready'] }),
         LINK_SOURCE,
         'tray'

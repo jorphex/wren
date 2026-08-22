@@ -18,6 +18,33 @@ const QUALIFICATION_VERIFICATION_ADDRESS = '0x6666666666666666666666666666666666
 const QUALIFICATION_VERIFICATION_JOB = '66666666-6666-4666-8666-666666666666'
 const QUALIFICATION_VERIFICATION_TOKEN = '77777777-7777-4777-8777-777777777777'
 const QUALIFICATION_VERIFICATION_RUNTIME_HASH = `0x${'67'.repeat(32)}`
+const QUALIFICATION_INVOKE_CHANNELS = Object.freeze([
+  'signers:protectionStatus',
+  'tray:revokeAccess',
+  'send:resolveRecipient',
+  'send:maxAmount',
+  'send:queue',
+  'send:quoteSweep',
+  'send:queueSweep',
+  'deployment:prepare',
+  'deployment:queue',
+  'contractVerification:credentialStatus',
+  'contractVerification:get',
+  'contractVerification:inspectArtifact',
+  'contractVerification:list',
+  'contractVerification:openResult',
+  'contractVerification:prepare',
+  'contractVerification:publish',
+  'contractVerification:publishEtherscan',
+  'contractVerification:refresh',
+  'contractVerification:removeCredential',
+  'contractVerification:reselect',
+  'contractVerification:saveCredential',
+  'contractVerification:selectArtifact',
+  'yearn:getCatalog',
+  'yearn:getPositions',
+  'yearn:getWorkflows'
+])
 
 const qualificationPairingCode = () => {
   const code = process.env.WREN_UI_QUALIFICATION_PAIRING_CODE
@@ -850,7 +877,7 @@ const fixtureFor = (scenario) => {
                   chainId: 10,
                   address: QUALIFICATION_VERIFICATION_ADDRESS
                 }
-              : scenario.variant === 'result'
+              : ['result', 'direct-transport-unknown'].includes(scenario.variant)
                 ? { mode: 'verify', verificationId: QUALIFICATION_VERIFICATION_JOB }
                 : { mode: 'verify' }
         }
@@ -858,7 +885,7 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (['earn-yvusd', 'earn-loading'].includes(scenario.state)) {
+  if (['earn-yvusd', 'earn-loading', 'earn-list', 'earn-privacy'].includes(scenario.state)) {
     prepareSelectedAccount(state)
     state.windows.dash = {
       ...state.windows.dash,
@@ -867,7 +894,7 @@ const fixtureFor = (scenario) => {
         {
           view: 'earn',
           data:
-            scenario.state === 'earn-loading' ? {} : { vaultId: 'ethereum-yvusd', variant: scenario.variant }
+            scenario.state === 'earn-yvusd' ? { vaultId: 'ethereum-yvusd', variant: scenario.variant } : {}
         }
       ]
     }
@@ -886,6 +913,7 @@ const fixtureFor = (scenario) => {
         nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
       }
     }
+    if (scenario.state === 'earn-privacy') state.selected.hideBalances = true
   }
 
   if (
@@ -896,6 +924,7 @@ const fixtureFor = (scenario) => {
     scenario.state === 'send-sweep-selection' ||
     scenario.state === 'send-recipient-picker' ||
     scenario.state === 'send-confirmed' ||
+    scenario.state.startsWith('send-lifecycle-') ||
     scenario.state === 'send-max-review' ||
     scenario.state === 'send-sweep-review'
   ) {
@@ -942,6 +971,7 @@ const fixtureFor = (scenario) => {
   }
 
   if (
+    scenario.state.startsWith('send-lifecycle-') ||
     [
       'send-composer',
       'send-asset-picker',
@@ -1236,6 +1266,24 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'dash-notify-remove-network') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [
+        {
+          view: 'notify',
+          data: {
+            notify: 'confirmRemoveChain',
+            notifyData: {
+              chain: { id: 10, type: 'ethereum', name: 'Optimism Mainnet' }
+            }
+          }
+        }
+      ]
+    }
+  }
+
   if (scenario.state === 'networks') {
     state.windows.dash = {
       ...state.windows.dash,
@@ -1337,16 +1385,18 @@ const fixtureFor = (scenario) => {
   }
 
   if (scenario.state === 'network-editor') {
+    const selectedNetworkId = scenario.variant === 'removable' ? 10 : 1
+    const selectedNetworkName = selectedNetworkId === 1 ? 'Ethereum' : 'Optimism Mainnet'
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
-      nav: [{ view: 'chains', data: { selectedChain: { id: 1, type: 'ethereum' } } }]
+      nav: [{ view: 'chains', data: { selectedChain: { id: selectedNetworkId, type: 'ethereum' } } }]
     }
     state.main.networks.ethereum = {
-      1: {
-        id: 1,
-        name: 'Ethereum',
-        explorer: 'https://etherscan.io',
+      [selectedNetworkId]: {
+        id: selectedNetworkId,
+        name: selectedNetworkName,
+        explorer: selectedNetworkId === 1 ? 'https://etherscan.io' : 'https://optimistic.etherscan.io',
         on: true,
         isTestnet: false,
         connection: {
@@ -1372,7 +1422,7 @@ const fixtureFor = (scenario) => {
       }
     }
     state.main.networksMeta.ethereum = {
-      1: {
+      [selectedNetworkId]: {
         icon: '',
         nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, icon: '' }
       }
@@ -1800,7 +1850,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = 132
+    state.windows.panel.footer.height = 114
   }
 
   if (scenario.state === 'transaction-deployment') {
@@ -1872,6 +1922,13 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
+    if (scenario.variant === 'revert') {
+      request.simulation = {
+        ...request.simulation,
+        status: 'reverted',
+        calls: request.simulation.calls.map((call) => ({ ...call, status: 'reverted' }))
+      }
+    }
     delete request.addressSafety
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
@@ -2063,6 +2120,16 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method, args = []) => {
+  if (method === 'tray:revokeAccess') {
+    if (scenario.id === 'tray-account-access-revoke-failed-short-1') {
+      return {
+        success: false,
+        uncertain: true,
+        error: 'Revocation confirmation is unavailable'
+      }
+    }
+    return { success: true }
+  }
   if (scenario.state === 'earn-loading' && method === 'yearn:getCatalog') {
     const catalog = qualificationYearnCatalog()
     if (args[0]?.cacheOnly) {
@@ -2089,13 +2156,19 @@ const invokeReplyFor = (scenario, method, args = []) => {
     }
     return catalog
   }
-  if (scenario.state === 'earn-yvusd' && method === 'yearn:getCatalog') {
+  if (['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) && method === 'yearn:getCatalog') {
     return qualificationYearnCatalog()
   }
-  if (scenario.state === 'earn-yvusd' && method === 'yearn:getPositions') {
+  if (
+    ['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
+    method === 'yearn:getPositions'
+  ) {
     return qualificationYearnPositions()
   }
-  if (scenario.state === 'earn-yvusd' && method === 'yearn:getWorkflows') {
+  if (
+    ['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
+    method === 'yearn:getWorkflows'
+  ) {
     return { workflows: [] }
   }
   if (scenario.state.startsWith('settings') && method === 'signers:protectionStatus') {
@@ -2202,6 +2275,9 @@ const invokeReplyFor = (scenario, method, args = []) => {
   if (method === 'contractVerification:list') return { success: true, jobs: [] }
   if (method === 'contractVerification:openResult') return { success: true }
   if (method === 'contractVerification:credentialStatus') {
+    if (scenario.variant === 'credential-status-unavailable') {
+      return { success: false, error: 'credential-unavailable' }
+    }
     return {
       success: true,
       credential: { available: true, configured: false, backend: 'secret_service' }
@@ -2241,7 +2317,7 @@ const invokeReplyFor = (scenario, method, args = []) => {
         contractIdentifier: 'src/CommunityVault.sol:CommunityVault',
         sourceHash: '68'.repeat(32),
         submissionHash: '69'.repeat(32),
-        status: 'partial',
+        status: 'published',
         destinations: [
           { destination: 'sourcify', status: 'published' },
           {
@@ -2251,7 +2327,14 @@ const invokeReplyFor = (scenario, method, args = []) => {
           },
           { destination: 'blockscout-forwarded', status: 'verified' },
           { destination: 'routescan-forwarded', status: 'not-submitted' },
-          { destination: 'etherscan-direct', status: 'not-submitted' }
+          scenario.variant === 'direct-transport-unknown'
+            ? {
+                destination: 'etherscan-direct',
+                status: 'unknown',
+                reasonCode: 'transport-failure',
+                publicationHash: '70'.repeat(32)
+              }
+            : { destination: 'etherscan-direct', status: 'not-submitted' }
         ],
         createdAt: Date.UTC(2026, 7, 20, 12, 0, 0),
         updatedAt: Date.UTC(2026, 7, 20, 12, 1, 0)
@@ -2301,7 +2384,10 @@ const invokeReplyFor = (scenario, method, args = []) => {
       }
     }
   }
-  if (scenario.state === 'send-confirmed' && method === 'send:queue') {
+  if (
+    (scenario.state === 'send-confirmed' || scenario.state.startsWith('send-lifecycle-')) &&
+    method === 'send:queue'
+  ) {
     return { success: true, handlerId: 'qualification-send-request' }
   }
   if (scenario.id === 'dash-settings-recovery-restore-confirm-full-1' && method === 'profile:inspectBackup') {
@@ -2322,6 +2408,7 @@ module.exports = {
   QUALIFICATION_ACCOUNT,
   QUALIFICATION_CODE_HASH,
   QUALIFICATION_DELEGATE,
+  QUALIFICATION_INVOKE_CHANNELS,
   QUALIFICATION_REQUEST,
   baseState,
   fixtureFor,

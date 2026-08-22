@@ -223,8 +223,22 @@ beforeEach(() => {
   accounts.signTransaction = jest.fn()
   accounts.signTransactionForAccount = jest.fn()
   accounts.setTxSigned = jest.fn()
+  accounts.admitTxBroadcast = jest.fn(() => true)
+  accounts.startTxBroadcastMonitoring = jest.fn(() => true)
+  accounts.cancelTxBroadcastAdmission = jest.fn(() => true)
   accounts.setTxSent = jest.fn(() => true)
   accounts.setTxSubmissionUnclear = jest.fn(() => true)
+  accounts.transactionSubmissionContext = jest.fn((handlerId, account) =>
+    Object.freeze({
+      handlerId,
+      activityId: '00000000-0000-4000-8000-000000000099',
+      account,
+      origin: 'example.test',
+      chainId: 1,
+      nonce: '0x0'
+    })
+  )
+  accounts.releaseOperationLifecycleAdmission = jest.fn()
   accounts.lockRequest = jest.fn()
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
@@ -5727,6 +5741,50 @@ describe('#signAndSend', () => {
       })
     })
 
+    it('fails before broadcast when the immutable lifecycle context cannot be captured', () => {
+      request.activityId = '00000000-0000-4000-8000-000000000098'
+      accounts.transactionSubmissionContext.mockReturnValueOnce(undefined)
+      const handler = jest.fn()
+      const callback = jest.fn()
+      provider.handlers[request.handlerId] = handler
+
+      signAndSend(callback)
+
+      expect(connection.send).not.toHaveBeenCalled()
+      expect(accounts.releaseOperationLifecycleAdmission).toHaveBeenCalledWith(request.activityId)
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ message: 'Transaction monitoring context is unavailable' })
+        })
+      )
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Transaction monitoring context is unavailable' })
+      )
+    })
+
+    it('does not rebroadcast an already admitted signed transaction', () => {
+      request.activityId = '00000000-0000-4000-8000-000000000099'
+      accounts.admitTxBroadcast.mockReturnValueOnce(false)
+      const handler = jest.fn()
+      const callback = jest.fn()
+      provider.handlers[request.handlerId] = handler
+
+      signAndSend(callback)
+
+      expect(commitMainState).not.toHaveBeenCalled()
+      expect(connection.send).not.toHaveBeenCalled()
+      expect(accounts.startTxBroadcastMonitoring).not.toHaveBeenCalled()
+      expect(accounts.releaseOperationLifecycleAdmission).toHaveBeenCalledWith(request.activityId)
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ message: expect.stringContaining('No additional broadcast') })
+        })
+      )
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('No additional broadcast') })
+      )
+    })
+
     describe('success', () => {
       beforeEach(() => {
         connection.send.mockImplementation((payload, cb) => {
@@ -5754,6 +5812,42 @@ describe('#signAndSend', () => {
         })
       })
 
+      it('does not broadcast when the pre-broadcast lifecycle commit fails', () => {
+        const commitError = new Error('profile write failed')
+        const errorLog = jest.spyOn(log, 'error').mockImplementation()
+        commitMainState.mockImplementationOnce(() => {
+          throw commitError
+        })
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        try {
+          signAndSend(callback)
+
+          expect(accounts.admitTxBroadcast).toHaveBeenCalledTimes(1)
+          expect(accounts.cancelTxBroadcastAdmission).toHaveBeenCalledWith(
+            expect.objectContaining({ handlerId: request.handlerId, account: address }),
+            txHash
+          )
+          expect(accounts.startTxBroadcastMonitoring).not.toHaveBeenCalled()
+          expect(connection.send).not.toHaveBeenCalled()
+          expect(handler).toHaveBeenCalledWith(
+            expect.objectContaining({
+              error: expect.objectContaining({ message: expect.stringContaining('Nothing was broadcast') })
+            })
+          )
+          expect(callback).toHaveBeenCalledWith(
+            expect.objectContaining({ message: expect.stringContaining('Nothing was broadcast') })
+          )
+          expect(errorLog).toHaveBeenCalledWith('Pre-broadcast transaction recovery could not be committed', {
+            name: 'Error'
+          })
+        } finally {
+          errorLog.mockRestore()
+        }
+      })
+
       it('responds to a successful transaction request with the transaction hash result', (done) => {
         provider.handlers[request.handlerId] = (response) => {
           try {
@@ -5770,21 +5864,50 @@ describe('#signAndSend', () => {
 
       it('durably records the validated hash before settling the responder and callback', () => {
         const events = []
-        accounts.setTxSent.mockImplementationOnce(() => {
-          events.push('durable')
+        accounts.admitTxBroadcast.mockImplementationOnce(() => {
+          events.push('reserved')
           return true
         })
-        commitMainState.mockImplementationOnce(() => events.push('persisted'))
+        accounts.startTxBroadcastMonitoring.mockImplementationOnce(() => {
+          events.push('monitoring')
+          return true
+        })
+        accounts.setTxSent.mockImplementationOnce(() => {
+          events.push('acknowledged')
+          return true
+        })
+        commitMainState
+          .mockImplementationOnce(() => events.push('reserved-persisted'))
+          .mockImplementationOnce(() => events.push('acknowledged-persisted'))
+        connection.send.mockImplementationOnce((_payload, cb) => {
+          events.push('broadcast')
+          cb({ result: txHash })
+        })
         const handler = jest.fn(() => events.push('responder'))
         const callback = jest.fn(() => events.push('callback'))
         provider.handlers[request.handlerId] = handler
 
         signAndSend(callback)
 
-        expect(events).toEqual(['durable', 'persisted', 'responder', 'callback'])
+        expect(events).toEqual([
+          'reserved',
+          'reserved-persisted',
+          'broadcast',
+          'monitoring',
+          'acknowledged',
+          'acknowledged-persisted',
+          'responder',
+          'callback'
+        ])
+        expect(accounts.startTxBroadcastMonitoring).toHaveBeenCalledTimes(1)
         expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
-        expect(accounts.setTxSent).toHaveBeenCalledWith(request.handlerId, txHash, address)
-        expect(commitMainState).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledWith(
+          request.handlerId,
+          txHash,
+          address,
+          expect.objectContaining({ handlerId: request.handlerId, account: address })
+        )
+        expect(commitMainState).toHaveBeenCalledTimes(2)
         expect(commitMainState).toHaveBeenCalledWith(store('main'))
         expect(handler).toHaveBeenCalledTimes(1)
         expect(callback).toHaveBeenCalledTimes(1)
@@ -5794,9 +5917,11 @@ describe('#signAndSend', () => {
       it('preserves the broadcast hash response when the local restart-recovery commit fails', () => {
         const commitError = new Error('profile write failed')
         const errorLog = jest.spyOn(log, 'error').mockImplementation()
-        commitMainState.mockImplementationOnce(() => {
-          throw commitError
-        })
+        commitMainState
+          .mockImplementationOnce(() => {})
+          .mockImplementationOnce(() => {
+            throw commitError
+          })
         const handler = jest.fn()
         const callback = jest.fn()
         provider.handlers[request.handlerId] = handler
@@ -5805,7 +5930,7 @@ describe('#signAndSend', () => {
           signAndSend(callback)
 
           expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
-          expect(commitMainState).toHaveBeenCalledTimes(1)
+          expect(commitMainState).toHaveBeenCalledTimes(2)
           expect(handler).toHaveBeenCalledTimes(1)
           expect(handler).toHaveBeenCalledWith(expect.objectContaining({ result: txHash }))
           expect(callback).toHaveBeenCalledTimes(1)
@@ -5814,6 +5939,34 @@ describe('#signAndSend', () => {
           expect(errorLog).toHaveBeenCalledWith(
             'Submitted transaction restart recovery could not be committed',
             { name: 'Error' }
+          )
+        } finally {
+          errorLog.mockRestore()
+        }
+      })
+
+      it('retains the pre-admitted lifecycle when acknowledgement projection fails', () => {
+        const errorLog = jest.spyOn(log, 'error').mockImplementation()
+        accounts.setTxSent.mockReturnValueOnce(false)
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        try {
+          signAndSend(callback)
+
+          expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledTimes(1)
+          expect(commitMainState).toHaveBeenCalledTimes(2)
+          expect(handler).toHaveBeenCalledTimes(1)
+          expect(handler).toHaveBeenCalledWith(expect.objectContaining({ result: txHash }))
+          expect(callback).toHaveBeenCalledTimes(1)
+          expect(callback).toHaveBeenCalledWith(null, txHash)
+          expect(errorLog).toHaveBeenCalledWith(
+            'Transaction lifecycle could not be admitted after broadcast',
+            {
+              handlerId: request.handlerId
+            }
           )
         } finally {
           errorLog.mockRestore()
@@ -5839,13 +5992,49 @@ describe('#signAndSend', () => {
 
         jest.advanceTimersByTime(5_000)
         expect(connection.send).toHaveBeenCalledTimes(1)
+        expect(accounts.startTxBroadcastMonitoring).toHaveBeenCalledTimes(1)
         broadcastCallback({ result: txHash })
+        expect(accounts.startTxBroadcastMonitoring).toHaveBeenCalledTimes(1)
+      })
+
+      it('settles the approved identity when the live request mutates after broadcast', () => {
+        const approvedHandlerId = request.handlerId
+        let broadcastCallback
+        connection.send.mockImplementation((_payload, callback) => {
+          broadcastCallback = callback
+        })
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[approvedHandlerId] = handler
+
+        signAndSend(callback)
+        request.handlerId = 'mutated-handler'
+        request.account = `0x${'f'.repeat(40)}`
+        request.data.chainId = '0x5'
+        broadcastCallback({ result: txHash })
+
+        expect(accounts.setTxSent).toHaveBeenCalledWith(
+          approvedHandlerId,
+          txHash,
+          address,
+          expect.objectContaining({ handlerId: approvedHandlerId, account: address, chainId: 1 })
+        )
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ result: txHash }))
+        expect(callback).toHaveBeenCalledWith(null, txHash)
       })
 
       it('starts reconciliation and settles once when the callback never arrives', () => {
         connection.send.mockImplementation(() => {})
-        const callback = jest.fn()
-        const handler = jest.fn()
+        const events = []
+        accounts.setTxSubmissionUnclear.mockImplementationOnce(() => {
+          events.push('admitted')
+          return true
+        })
+        commitMainState
+          .mockImplementationOnce(() => events.push('reserved-persisted'))
+          .mockImplementationOnce(() => events.push('unconfirmed-persisted'))
+        const callback = jest.fn(() => events.push('callback'))
+        const handler = jest.fn(() => events.push('responder'))
         provider.handlers[request.handlerId] = handler
 
         signAndSend(callback)
@@ -5853,7 +6042,20 @@ describe('#signAndSend', () => {
 
         expect(connection.send).toHaveBeenCalledTimes(1)
         expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledTimes(1)
-        expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
+        expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(
+          request.handlerId,
+          txHash,
+          address,
+          expect.objectContaining({ handlerId: request.handlerId, account: address })
+        )
+        expect(commitMainState).toHaveBeenCalledTimes(2)
+        expect(events).toEqual([
+          'reserved-persisted',
+          'admitted',
+          'unconfirmed-persisted',
+          'responder',
+          'callback'
+        ])
         expect(callback).toHaveBeenCalledTimes(1)
         expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
         expect(handler).toHaveBeenCalledWith(
@@ -5878,7 +6080,7 @@ describe('#signAndSend', () => {
         signAndSend(callback)
         jest.advanceTimersByTime(15_000)
         expect(accounts.setTxSent).not.toHaveBeenCalled()
-        expect(commitMainState).not.toHaveBeenCalled()
+        expect(commitMainState).toHaveBeenCalledTimes(2)
         expect(callback).toHaveBeenCalledTimes(1)
         expect(handler).toHaveBeenCalledTimes(1)
         broadcastCallback({ result: txHash })
@@ -5886,8 +6088,13 @@ describe('#signAndSend', () => {
         expect(callback).toHaveBeenCalledTimes(1)
         expect(handler).toHaveBeenCalledTimes(1)
         expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
-        expect(accounts.setTxSent).toHaveBeenCalledWith(request.handlerId, txHash, address)
-        expect(commitMainState).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledWith(
+          request.handlerId,
+          txHash,
+          address,
+          expect.objectContaining({ handlerId: request.handlerId, account: address })
+        )
+        expect(commitMainState).toHaveBeenCalledTimes(3)
       })
 
       it('ignores a late duplicate broadcast callback', () => {
@@ -5905,7 +6112,8 @@ describe('#signAndSend', () => {
         expect(callback).toHaveBeenCalledWith(null, txHash)
         expect(handler).toHaveBeenCalledTimes(1)
         expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
-        expect(commitMainState).toHaveBeenCalledTimes(1)
+        expect(accounts.startTxBroadcastMonitoring).toHaveBeenCalledTimes(1)
+        expect(commitMainState).toHaveBeenCalledTimes(2)
         expect(accounts.setTxSubmissionUnclear).not.toHaveBeenCalled()
       })
     })
@@ -5921,9 +6129,97 @@ describe('#signAndSend', () => {
         signAndSend((err) => {
           expect(err.message).toBe(errorMessage)
           expect(connection.send).toHaveBeenCalledTimes(1)
-          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(
+            request.handlerId,
+            txHash,
+            address,
+            expect.objectContaining({ handlerId: request.handlerId, account: address })
+          )
+          expect(commitMainState).toHaveBeenCalledTimes(2)
           done()
         })
+      })
+
+      it('persists an RPC-error lifecycle before settling either consumer', () => {
+        const events = []
+        accounts.setTxSubmissionUnclear.mockImplementationOnce(() => {
+          events.push('admitted')
+          return true
+        })
+        commitMainState
+          .mockImplementationOnce(() => events.push('reserved-persisted'))
+          .mockImplementationOnce(() => events.push('unconfirmed-persisted'))
+        const handler = jest.fn(() => events.push('responder'))
+        const callback = jest.fn(() => events.push('callback'))
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+
+        expect(events).toEqual([
+          'reserved-persisted',
+          'admitted',
+          'unconfirmed-persisted',
+          'responder',
+          'callback'
+        ])
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(callback).toHaveBeenCalledTimes(1)
+      })
+
+      it('preserves an ambiguous response when its synchronous disk commit fails', () => {
+        const commitError = new Error('profile write failed')
+        const errorLog = jest.spyOn(log, 'error').mockImplementation()
+        commitMainState
+          .mockImplementationOnce(() => {})
+          .mockImplementationOnce(() => {
+            throw commitError
+          })
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        try {
+          signAndSend(callback)
+
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledTimes(1)
+          expect(handler).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(Object) }))
+          expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
+          expect(errorLog).toHaveBeenCalledWith(
+            'Unconfirmed transaction restart recovery could not be committed',
+            { name: 'Error' }
+          )
+        } finally {
+          errorLog.mockRestore()
+        }
+      })
+
+      it('persists a synchronous transport-throw lifecycle before settling either consumer', () => {
+        const events = []
+        connection.send.mockImplementationOnce(() => {
+          throw new Error('transport threw')
+        })
+        accounts.setTxSubmissionUnclear.mockImplementationOnce(() => {
+          events.push('admitted')
+          return true
+        })
+        commitMainState
+          .mockImplementationOnce(() => events.push('reserved-persisted'))
+          .mockImplementationOnce(() => events.push('unconfirmed-persisted'))
+        const handler = jest.fn(() => events.push('responder'))
+        const callback = jest.fn(() => events.push('callback'))
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+
+        expect(events).toEqual([
+          'reserved-persisted',
+          'admitted',
+          'unconfirmed-persisted',
+          'responder',
+          'callback'
+        ])
+        expect(accounts.startTxBroadcastMonitoring).toHaveBeenCalledTimes(1)
+        expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
       })
 
       it('returns a signing-time account-code recheck failure without broadcasting', (done) => {
@@ -6256,9 +6552,65 @@ describe('#signAndSend', () => {
               error: expect.objectContaining({ message: 'Invalid transaction hash response' })
             })
           )
-          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(request.handlerId, txHash, address)
+          expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(
+            request.handlerId,
+            txHash,
+            address,
+            expect.objectContaining({ handlerId: request.handlerId, account: address })
+          )
+          expect(commitMainState).toHaveBeenCalledTimes(2)
           done()
         })
+      })
+
+      it('persists an invalid-hash lifecycle before settling either consumer', () => {
+        const events = []
+        connection.send.mockImplementation((_payload, cb) => cb({ result: '0x01' }))
+        accounts.setTxSubmissionUnclear.mockImplementationOnce(() => {
+          events.push('admitted')
+          return true
+        })
+        commitMainState
+          .mockImplementationOnce(() => events.push('reserved-persisted'))
+          .mockImplementationOnce(() => events.push('unconfirmed-persisted'))
+        const handler = jest.fn(() => events.push('responder'))
+        const callback = jest.fn(() => events.push('callback'))
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+
+        expect(events).toEqual([
+          'reserved-persisted',
+          'admitted',
+          'unconfirmed-persisted',
+          'responder',
+          'callback'
+        ])
+        expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
+      })
+
+      it('persists a mismatched-hash lifecycle under the locally signed hash', () => {
+        const mismatchedHash = `0x${'f'.repeat(64)}`
+        connection.send.mockImplementation((_payload, cb) => cb({ result: mismatchedHash }))
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+
+        expect(accounts.setTxSubmissionUnclear).toHaveBeenCalledWith(
+          request.handlerId,
+          txHash,
+          address,
+          expect.objectContaining({ handlerId: request.handlerId, account: address })
+        )
+        expect(commitMainState).toHaveBeenCalledTimes(2)
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: expect.objectContaining({ message: 'Invalid transaction hash response' })
+          })
+        )
+        expect(callback.mock.calls[0][0]).toMatchObject({ code: 'submission-unconfirmed' })
       })
     })
   })

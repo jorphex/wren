@@ -74,6 +74,7 @@ export class Contracts extends React.Component {
           <section aria-label='Deploy contract' className='contractsPanel' hidden={verify}>
             <Deployment
               embedded
+              active={!verify}
               accounts={this.props.accounts}
               signers={this.props.signers}
               currentAccount={this.props.currentAccount}
@@ -87,6 +88,7 @@ export class Contracts extends React.Component {
             <ContractVerification
               key={verificationContextKey(this.props)}
               embedded
+              active={verify}
               data={this.props.data}
               networks={this.props.networks}
             />

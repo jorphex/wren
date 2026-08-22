@@ -106,6 +106,7 @@ export interface ContractVerificationOperationLedger {
 
 export interface ContractVerificationServiceDependencies {
   readonly artifactIntake: ContractVerificationArtifactIntake
+  readonly commitState: () => void
   readonly credentialStore: EtherscanApiKeyStore
   readonly etherscan: ContractVerificationEtherscanClient
   readonly getNetwork: (chainId: number) => ContractVerificationNetworkContext | undefined
@@ -405,6 +406,85 @@ const forwardedDestination = (
 
 const jobStatusAfterDirect = (job: ContractVerificationJobRecord) => job.status
 
+const sourcifyPublicationHash = (target: ContractVerificationTarget, submissionHash: string) =>
+  crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify([
+        'sourcify-v2',
+        target.chainId,
+        target.address,
+        target.runtimeCodeHash,
+        target.creationEvidence?.transactionHash || '',
+        submissionHash
+      ])
+    )
+    .digest('hex')
+
+const hasSourcifyPublicationFence = (job: ContractVerificationJobRecord, publicationHash: string) => {
+  const sourcify = job.destinations.find(({ destination: name }) => name === 'sourcify')
+  return Boolean(
+    sourcify && sourcify.status !== 'not-submitted' && sourcify.publicationHash === publicationHash
+  )
+}
+
+const legacyEtherscanPublicationFenceKey = (job: ContractVerificationJobRecord) =>
+  `etherscan-direct:${job.target.chainId}:${job.target.address}:${job.submissionHash}`
+
+const etherscanPublicationHash = (job: ContractVerificationJobRecord, constructorArguments: string) =>
+  crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify([
+        'etherscan-direct-v2',
+        job.target.chainId,
+        job.target.address,
+        job.target.runtimeCodeHash,
+        job.submissionHash,
+        constructorArguments.toLowerCase()
+      ])
+    )
+    .digest('hex')
+
+const etherscanPublicationHashV1 = (job: ContractVerificationJobRecord, constructorArguments: string) =>
+  crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify([
+        'etherscan-direct-v1',
+        job.target.chainId,
+        job.target.address,
+        job.target.runtimeCodeHash,
+        job.target.creationEvidence?.transactionHash || '',
+        job.target.creationEvidence?.blockHash || '',
+        job.target.creationEvidence?.blockNumber || '',
+        job.submissionHash,
+        constructorArguments.toLowerCase()
+      ])
+    )
+    .digest('hex')
+
+const hasEtherscanPublicationFence = (
+  job: ContractVerificationJobRecord,
+  publicationHash: string,
+  legacyFenceKey: string,
+  constructorArguments: string
+) => {
+  const direct = job.destinations.find(({ destination: name }) => name === 'etherscan-direct')
+  if (
+    !direct ||
+    direct.status === 'not-submitted' ||
+    direct.status === 'unavailable' ||
+    (direct.status === 'needs-api-key' && !direct.remoteId)
+  ) {
+    return false
+  }
+  return direct.publicationHash
+    ? direct.publicationHash === publicationHash ||
+        direct.publicationHash === etherscanPublicationHashV1(job, constructorArguments)
+    : legacyEtherscanPublicationFenceKey(job) === legacyFenceKey
+}
+
 function etherscanInput(
   job: ContractVerificationJobRecord,
   submission: ContractVerificationSubmission,
@@ -487,6 +567,8 @@ export function createContractVerificationService(
   const prepared = new Map<string, PreparedPublicationSession>()
   const cached = new Map<string, CachedSubmission>()
   const busyJobs = new Set<string>()
+  const busySourcifyPublications = new Set<string>()
+  const busyEtherscanPublications = new Set<string>()
 
   const clearPrepared = (session: PreparedPublicationSession) => {
     session.submission = undefined
@@ -786,6 +868,9 @@ export function createContractVerificationService(
     readonly confirmation: unknown
   }): Promise<ContractVerificationServiceResult<{ readonly job: ContractVerificationJobRecord }>> => {
     let session: PreparedPublicationSession | undefined
+    let job: ContractVerificationJobRecord | undefined
+    let publicationFenceKey: string | undefined
+    let acquiredPublicationFence = false
     try {
       if (!strictRequest(input, ['acknowledgementToken', 'confirmation'])) return fail('invalid-request')
       const timestamp = now()
@@ -799,6 +884,17 @@ export function createContractVerificationService(
       const submission = session.submission
       session.submission = undefined
       await revalidateTarget(session.target, Boolean(session.target.creationEvidence))
+
+      const publicationHash = sourcifyPublicationHash(session.target, submission.submissionHash)
+      publicationFenceKey = publicationHash
+      if (
+        busySourcifyPublications.has(publicationHash) ||
+        dependencies.jobs.list().some((candidate) => hasSourcifyPublicationFence(candidate, publicationHash))
+      ) {
+        return fail('already-submitted')
+      }
+      busySourcifyPublications.add(publicationHash)
+      acquiredPublicationFence = true
 
       const id = nextId((candidate) => Boolean(dependencies.jobs.get(candidate)))
       const intent: ContractVerificationJobRecord = {
@@ -814,7 +910,18 @@ export function createContractVerificationService(
         createdAt: timestamp,
         updatedAt: timestamp
       }
-      let job = dependencies.jobs.put(intent)
+      job = dependencies.jobs.put(intent)
+      job = updateJob(job, {
+        status: 'publishing',
+        destinations: replaceDestination(
+          job.destinations,
+          destination('sourcify', 'unknown', {
+            publicationHash,
+            reasonCode: 'status-unavailable'
+          })
+        )
+      })
+      dependencies.commitState()
       let result: SourcifySubmitResult
       try {
         result = await dependencies.sourcify.submit({
@@ -836,13 +943,19 @@ export function createContractVerificationService(
           status: 'publishing',
           destinations: replaceDestination(
             job.destinations,
-            destination('sourcify', 'checking', { remoteId: result.verificationId })
+            destination('sourcify', 'checking', {
+              publicationHash,
+              remoteId: result.verificationId
+            })
           )
         })
       } else if (result.status === 'already_verified') {
         job = updateJob(job, {
           status: 'published',
-          destinations: replaceDestination(job.destinations, destination('sourcify', 'already-published'))
+          destinations: replaceDestination(
+            job.destinations,
+            destination('sourcify', 'already-published', { publicationHash })
+          )
         })
       } else {
         const status = ['service_unavailable', 'timeout', 'rate_limited', 'invalid_response'].includes(
@@ -854,14 +967,22 @@ export function createContractVerificationService(
           status: status === 'rejected' ? 'rejected' : 'unknown',
           destinations: replaceDestination(
             job.destinations,
-            destination('sourcify', status, { reasonCode: reasonForSourcifyError(result.reason) })
+            destination('sourcify', status, {
+              publicationHash,
+              reasonCode: reasonForSourcifyError(result.reason)
+            })
           )
         })
       }
+      dependencies.commitState()
       return success({ job })
     } catch (error) {
       if (session) clearPrepared(session)
-      return failure(error instanceof ServiceFailure ? error.code : 'job-unavailable')
+      return failure(error instanceof ServiceFailure ? error.code : 'job-unavailable', job)
+    } finally {
+      if (acquiredPublicationFence && publicationFenceKey) {
+        busySourcifyPublications.delete(publicationFenceKey)
+      }
     }
   }
 
@@ -869,15 +990,13 @@ export function createContractVerificationService(
     if (result.status === 'pending') return job
     if (result.status === 'succeeded') {
       const external = result.externalVerifications
+      const sourcify = job.destinations.find(({ destination: name }) => name === 'sourcify')
       return updateJob(job, {
         status: 'published',
         destinations: Object.freeze([
           destination('sourcify', 'published', {
-            ...(job.destinations.find(({ destination: name }) => name === 'sourcify')?.remoteId
-              ? {
-                  remoteId: job.destinations.find(({ destination: name }) => name === 'sourcify')!.remoteId!
-                }
-              : {})
+            ...(sourcify?.publicationHash ? { publicationHash: sourcify.publicationHash } : {}),
+            ...(sourcify?.remoteId ? { remoteId: sourcify.remoteId } : {})
           }),
           forwardedDestination('etherscan-forwarded', external.etherscan),
           forwardedDestination('blockscout-forwarded', external.blockscout),
@@ -888,26 +1007,28 @@ export function createContractVerificationService(
       })
     }
     if (result.status === 'failed') {
-      const remoteId = job.destinations.find(({ destination: name }) => name === 'sourcify')?.remoteId
+      const sourcify = job.destinations.find(({ destination: name }) => name === 'sourcify')
       return updateJob(job, {
         status: 'rejected',
         destinations: replaceDestination(
           job.destinations,
           destination('sourcify', 'rejected', {
-            ...(remoteId ? { remoteId } : {}),
+            ...(sourcify?.publicationHash ? { publicationHash: sourcify.publicationHash } : {}),
+            ...(sourcify?.remoteId ? { remoteId: sourcify.remoteId } : {}),
             reasonCode: 'publication-rejected'
           })
         )
       })
     }
     if (result.status === 'unknown') {
-      const remoteId = job.destinations.find(({ destination: name }) => name === 'sourcify')?.remoteId
+      const sourcify = job.destinations.find(({ destination: name }) => name === 'sourcify')
       return updateJob(job, {
         status: 'unknown',
         destinations: replaceDestination(
           job.destinations,
           destination('sourcify', 'unknown', {
-            ...(remoteId ? { remoteId } : {}),
+            ...(sourcify?.publicationHash ? { publicationHash: sourcify.publicationHash } : {}),
+            ...(sourcify?.remoteId ? { remoteId: sourcify.remoteId } : {}),
             reasonCode: 'status-unavailable'
           })
         )
@@ -967,7 +1088,10 @@ export function createContractVerificationService(
             status: jobStatusAfterDirect(job),
             destinations: replaceDestination(
               job.destinations,
-              destination('etherscan-direct', 'checking', { remoteId: direct.remoteId })
+              destination('etherscan-direct', 'checking', {
+                ...(direct.publicationHash ? { publicationHash: direct.publicationHash } : {}),
+                remoteId: direct.remoteId
+              })
             )
           })
         } else if (polled.status === 'verified' || polled.status === 'rejected') {
@@ -976,6 +1100,7 @@ export function createContractVerificationService(
             destinations: replaceDestination(
               job.destinations,
               destination('etherscan-direct', polled.status, {
+                ...(direct.publicationHash ? { publicationHash: direct.publicationHash } : {}),
                 remoteId: direct.remoteId,
                 ...(polled.status === 'rejected' ? { reasonCode: 'destination-rejected' as const } : {})
               })
@@ -989,6 +1114,7 @@ export function createContractVerificationService(
             destinations: replaceDestination(
               job.destinations,
               destination('etherscan-direct', 'needs-api-key', {
+                ...(direct.publicationHash ? { publicationHash: direct.publicationHash } : {}),
                 remoteId: direct.remoteId,
                 reasonCode: 'api-key-required'
               })
@@ -1043,6 +1169,8 @@ export function createContractVerificationService(
   }): Promise<ContractVerificationServiceResult<{ readonly job: ContractVerificationJobRecord }>> => {
     let job: ContractVerificationJobRecord | undefined
     let acquired = false
+    let publicationFenceKey: string | undefined
+    let acquiredPublicationFence = false
     try {
       if (
         !strictRequest(input, ['jobId', 'confirmation', 'constructorArguments', 'noConstructorArguments'])
@@ -1087,9 +1215,27 @@ export function createContractVerificationService(
       ) {
         return fail('already-submitted')
       }
-      if (!['not-submitted', 'unavailable', 'unknown', 'needs-api-key'].includes(direct.status)) {
+      if (!['not-submitted', 'unavailable', 'needs-api-key'].includes(direct.status)) {
         return fail('already-submitted')
       }
+      const fenceJob = job
+      const publicationHash = etherscanPublicationHash(fenceJob, constructorArguments)
+      publicationFenceKey = publicationHash
+      const legacyFenceKey = legacyEtherscanPublicationFenceKey(fenceJob)
+      if (
+        busyEtherscanPublications.has(publicationHash) ||
+        dependencies.jobs
+          .list()
+          .some(
+            (candidate) =>
+              candidate.id !== fenceJob.id &&
+              hasEtherscanPublicationFence(candidate, publicationHash, legacyFenceKey, constructorArguments)
+          )
+      ) {
+        return fail('already-submitted')
+      }
+      busyEtherscanPublications.add(publicationHash)
+      acquiredPublicationFence = true
       prune()
       const source = cached.get(jobId)
       if (
@@ -1113,14 +1259,18 @@ export function createContractVerificationService(
         status: job.status,
         destinations: replaceCompleteDestination(
           job.destinations,
-          destination('etherscan-direct', 'unknown', { reasonCode: 'status-unavailable' })
+          destination('etherscan-direct', 'unknown', {
+            publicationHash,
+            reasonCode: 'status-unavailable'
+          })
         )
       })
+      dependencies.commitState()
       let result: EtherscanSubmitResult
       try {
         result = await dependencies.etherscan.submit(request, apiKey)
       } catch {
-        result = { status: 'unavailable' }
+        result = { status: 'unknown' }
       } finally {
         apiKey = undefined
       }
@@ -1129,7 +1279,10 @@ export function createContractVerificationService(
           status: job.status,
           destinations: replaceDestination(
             job.destinations,
-            destination('etherscan-direct', 'checking', { remoteId: result.guid })
+            destination('etherscan-direct', 'checking', {
+              publicationHash,
+              remoteId: result.guid
+            })
           )
         })
       } else if (result.status === 'already_verified') {
@@ -1137,7 +1290,9 @@ export function createContractVerificationService(
           status: job.status,
           destinations: replaceDestination(
             job.destinations,
-            destination('etherscan-direct', 'already-verified')
+            destination('etherscan-direct', 'already-verified', {
+              publicationHash
+            })
           )
         })
       } else {
@@ -1147,20 +1302,27 @@ export function createContractVerificationService(
           destinations: replaceDestination(
             job.destinations,
             destination('etherscan-direct', status, {
+              ...(['rejected', 'unknown'].includes(status) ? { publicationHash } : {}),
               reasonCode:
                 status === 'rejected'
                   ? 'destination-rejected'
                   : status === 'needs-api-key'
                     ? 'api-key-required'
-                    : 'destination-unavailable'
+                    : status === 'unknown'
+                      ? 'transport-failure'
+                      : 'destination-unavailable'
             })
           )
         })
       }
+      dependencies.commitState()
       return success({ job })
     } catch (error) {
       return failure(error instanceof ServiceFailure ? error.code : 'job-unavailable', job)
     } finally {
+      if (acquiredPublicationFence && publicationFenceKey) {
+        busyEtherscanPublications.delete(publicationFenceKey)
+      }
       if (acquired) busyJobs.delete(job?.id || (input.jobId as string))
     }
   }
@@ -1223,6 +1385,8 @@ export function createContractVerificationService(
     prepared.clear()
     cached.clear()
     busyJobs.clear()
+    busySourcifyPublications.clear()
+    busyEtherscanPublications.clear()
   }
 
   return Object.freeze({

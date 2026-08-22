@@ -34,6 +34,7 @@ export type EtherscanSubmitResult =
   | Readonly<{ status: 'already_verified' }>
   | Readonly<{ status: 'invalid_api_key' }>
   | Readonly<{ status: 'rejected' }>
+  | Readonly<{ status: 'unknown' }>
   | Readonly<{ status: 'unavailable' }>
 
 export type EtherscanVerificationStatus =
@@ -402,7 +403,9 @@ export const createEtherscanV2Client = (fetchImpl: FetchLike = fetch) => {
       },
       fetchImpl
     )
-    if (!response) return { status: 'unavailable' }
+    // A POST can reach Etherscan even when its response cannot be authenticated or read.
+    // Treat that outcome as settled-but-unknown so callers never repeat a possibly accepted publish.
+    if (!response) return { status: 'unknown' }
     if (isInvalidApiKey(response)) return { status: 'invalid_api_key' }
     if (isAlreadyVerified(response.result)) return { status: 'already_verified' }
     if (

@@ -103,11 +103,12 @@ class GeneratedWalletSessions {
     let timer
     try {
       id = this.newSessionId()
+      const stagingExpiresAt = this.now() + this.stagingTtlMs
       timer = this.setTimeout(() => {
         if (this.sessions.get(id)?.timer === timer) this.discard(id, () => {})
       }, this.stagingTtlMs)
       timer.unref?.()
-      this.sessions.set(id, { id, state: 'reserved', timer })
+      this.sessions.set(id, { id, stagingExpiresAt, state: 'reserved', timer })
     } catch (error) {
       if (timer) {
         try {
@@ -152,6 +153,12 @@ class GeneratedWalletSessions {
   begin(id, kind, password, cb) {
     const session = this.sessions.get(id)
     if (!session || session.state !== 'reserved') return cb(new Error(SESSION_UNAVAILABLE_ERROR))
+    if (this.now() >= session.stagingExpiresAt) {
+      return this.discard(id, (error) => {
+        if (error) this.report(error)
+        cb(new Error(SESSION_UNAVAILABLE_ERROR))
+      })
+    }
     if (kind !== 'phrase' && kind !== 'private-key') return cb(new Error('Unknown generated wallet type'))
     try {
       hot.validatePassword(password)
@@ -182,6 +189,11 @@ class GeneratedWalletSessions {
       if (this.sessions.get(id) !== session || session.state !== 'staging') {
         if (signer && (!session.stageCancelled || !session.stageOwnsCleanup)) this.cleanupSigner(signer)
         return
+      }
+      if (this.now() >= session.stagingExpiresAt) {
+        this.finish(id)
+        if (signer) this.cleanupSigner(signer)
+        return this.settleBegin(session, new Error(SESSION_UNAVAILABLE_ERROR))
       }
       if (error) {
         this.finish(id)
@@ -321,6 +333,12 @@ class GeneratedWalletSessions {
   complete(id, proof, cb) {
     const session = this.sessions.get(id)
     if (!session || session.state !== 'active') return cb(new Error(SESSION_UNAVAILABLE_ERROR))
+    if (this.now() >= session.expiresAt) {
+      return this.discard(id, (error) => {
+        if (error) this.report(error)
+        cb(new Error(SESSION_UNAVAILABLE_ERROR))
+      })
+    }
     if (!this.verify(session, proof)) return cb(new Error(BACKUP_MISMATCH_ERROR))
     if (this.signers.exists?.(session.signer.id)) {
       return this.discard(id, () => cb(new Error('This account already exists')))

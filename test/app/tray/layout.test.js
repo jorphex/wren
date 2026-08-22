@@ -42,6 +42,12 @@ test('keeps tray loaders subordinate to the shared reduced-motion override', () 
   expect(balancesStyle).not.toMatch(/animation[^\n]*!important/)
 })
 
+test('keeps prepared deployment copy identities at a full control height', () => {
+  expect(signingStyle).toMatch(
+    /button\.transactionReviewDeploymentCopy[\s\S]*?display flex[\s\S]*?align-items center[\s\S]*?min-height 44px/
+  )
+})
+
 test('squares the canvas and panel corners only along an open workspace seam', () => {
   expect(trayStyle).toMatch(
     /\.workspace-open\.workspace-edge-right\n[\s\S]*?border-top-left-radius 0[\s\S]*?border-bottom-left-radius 0/

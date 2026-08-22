@@ -41,6 +41,7 @@ export const requestEventChannels = new Set([
 ])
 
 export const requestInvokeChannels = new Set([
+  'activity:clear',
   'addressBook:export',
   'addressBook:import',
   'addressBook:remove',
@@ -64,6 +65,7 @@ export const requestInvokeChannels = new Set([
   'profile:export',
   'profile:inspectBackup',
   'profile:stageRestore',
+  'settings:clearRecentRecipients',
   'signers:protectionStatus',
   'signers:enableProtection',
   'signers:disableProtection',
@@ -78,6 +80,7 @@ export const requestInvokeChannels = new Set([
   'tray:continueContractVerification',
   'tray:refreshWalletCallsStatus',
   'tray:getTokenDetails',
+  'tray:revokeAccess',
   'tray:writeClipboard',
   'yearn:getCatalog',
   'yearn:getPositions',

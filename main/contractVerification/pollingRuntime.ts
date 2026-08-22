@@ -10,12 +10,22 @@ export interface ContractVerificationPollingService {
   refresh(jobId: string): Promise<unknown>
 }
 
-const shouldRefresh = (job: ContractVerificationJobRecord) =>
+export const contractVerificationNeedsPolling = (job: ContractVerificationJobRecord) =>
   job.destinations.some(({ status }) => status === 'checking') ||
   (job.status === 'publishing' &&
     job.destinations.some(
       ({ destination, status }) => destination === 'sourcify' && status === 'not-submitted'
     ))
+
+export const wakeContractVerificationPollingForActiveResult = <
+  Result extends Readonly<{ success: boolean; job?: ContractVerificationJobRecord }>
+>(
+  runtime: Readonly<{ wake(): void }>,
+  result: Result
+): Result => {
+  if (result.success && result.job && contractVerificationNeedsPolling(result.job)) runtime.wake()
+  return result
+}
 
 export class ContractVerificationPollingRuntime {
   private running = false
@@ -48,7 +58,7 @@ export class ContractVerificationPollingRuntime {
   private schedule() {
     if (!this.running || this.timer) return
     const listed = this.service.list()
-    if (!listed.success || !listed.jobs.some(shouldRefresh)) return
+    if (!listed.success || !listed.jobs.some(contractVerificationNeedsPolling)) return
     this.timer = setTimeout(() => {
       this.timer = undefined
       this.wake()
@@ -61,7 +71,7 @@ export class ContractVerificationPollingRuntime {
     try {
       const listed = this.service.list()
       if (!listed.success) return
-      for (const job of listed.jobs.filter(shouldRefresh)) {
+      for (const job of listed.jobs.filter(contractVerificationNeedsPolling)) {
         if (!this.running) return
         try {
           await this.service.refresh(job.id)

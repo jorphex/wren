@@ -434,6 +434,20 @@ it('keeps signing disabled while simulation is pending after decline becomes ava
   command.componentWillUnmount()
 })
 
+it('uses neutral hierarchy for the safe Decline exit after simulation failure', () => {
+  const command = new RequestCommand({
+    req: transaction({ simulation: { status: 'failed' } }),
+    signingDelay: 0
+  })
+  command.store = commandStore()
+  command.state.allowInput = true
+  renderCommandResult(command, 'signOrDecline')
+
+  const decline = screen.getByRole('button', { name: 'Decline' })
+  expect(decline.querySelector('.requestDeclineButton').classList.contains('_txButtonBad')).toBe(false)
+  command.componentWillUnmount()
+})
+
 it('shows successful core execution while keeping signing disabled for required additional checks', () => {
   const req = transaction({
     simulation: {

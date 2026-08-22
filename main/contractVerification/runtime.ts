@@ -3,6 +3,7 @@ import path from 'path'
 
 import provider from '../provider'
 import store from '../store'
+import { commitMainState } from '../store/persist'
 import operationLifecycleLedger from '../operationLifecycle'
 import { operationLifecycleRpc } from '../operationLifecycle/rpc'
 import { createContractVerificationArtifactIntake } from './artifactIntake'
@@ -49,6 +50,7 @@ export const contractVerificationCredentialStore = createEtherscanApiKeyStore(us
 
 export const contractVerification = createContractVerificationService({
   artifactIntake: contractVerificationArtifactIntake,
+  commitState: () => commitMainState(store('main')),
   credentialStore: contractVerificationCredentialStore,
   etherscan: createEtherscanV2Client(),
   getNetwork: networkContext,

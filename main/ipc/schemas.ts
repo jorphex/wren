@@ -676,9 +676,6 @@ const actionSchemas = {
   addEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema]),
   activateNetwork: z.tuple([NetworkTypeSchema, ChainKeySchema, z.boolean()]),
   backDash: z.tuple([z.number().int().min(1).max(32).optional()]),
-  clearPermissions: z.tuple([AddressSchema]),
-  clearActivity: noArgs,
-  clearRecentRecipients: noArgs,
   closeDash: noArgs,
   muteBetaDisclosure: noArgs,
   muteWelcomeWarning: noArgs,
@@ -693,7 +690,7 @@ const actionSchemas = {
   setAccountFilter: z.tuple([z.string().max(256)]),
   setAutohide: z.tuple([z.boolean()]),
   setTransactionNotifications: z.tuple([z.boolean()]),
-  setRememberRecentRecipients: z.tuple([z.boolean()]),
+  setRememberRecentRecipients: z.tuple([z.literal(true)]),
   setDash: z.tuple([z.object({ showing: z.boolean() }).strict()]),
   setFooterHeight: z.tuple([z.literal('panel'), z.number().finite().min(0).max(4096)]),
   setGlideSide: z.tuple([z.enum(['left', 'right'])]),
@@ -711,7 +708,6 @@ const actionSchemas = {
   setShortcut: z.tuple([z.literal('summon'), ShortcutSchema]),
   setTrezorDerivation: z.tuple([z.enum(['standard', 'legacy', 'testnet'])]),
   switchOriginChain: z.tuple([HandlerIdSchema, ChainNumberSchema, NetworkTypeSchema]),
-  toggleAccess: z.tuple([AddressSchema, HandlerIdSchema, z.boolean()]),
   toggleEndpoint: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema, z.boolean().optional()]),
   moveEndpoint: z.tuple([
     NetworkTypeSchema,
@@ -806,10 +802,12 @@ const eventSchemas: Record<string, z.ZodType> = {
 }
 
 const invokeSchemas = {
+  'activity:clear': z.tuple([]),
   'addressBook:export': z.tuple([]),
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
   'addressBook:save': z.tuple([AddressBookSaveRequestSchema]),
+  'settings:clearRecentRecipients': z.tuple([z.enum(['disable', 'clear'])]),
   'contractVerification:credentialStatus': z.tuple([]),
   'contractVerification:get': z.tuple([z.uuid()]),
   'contractVerification:inspectArtifact': z.tuple([]),
@@ -914,10 +912,24 @@ const invokeSchemas = {
   'tray:getTokenDetails': z.tuple([AddressSchema, ChainNumberSchema]),
   'tray:adjustWalletCalls': z.tuple([WalletCallsAdjustmentSchema]),
   'tray:refreshWalletCallsStatus': z.tuple([WalletCallsStatusRefreshSchema]),
+  'tray:revokeAccess': z.tuple([AddressSchema, HandlerIdSchema.optional()]),
   'tray:writeClipboard': z.tuple([z.object({ secret: z.boolean(), value: BoundedStringSchema }).strict()])
 } satisfies Record<string, z.ZodType>
 
+const PrivacyClearResultSchema = z.union([
+  z.object({ success: z.literal(true), durable: z.literal(true) }).strict(),
+  z
+    .object({
+      success: z.literal(false),
+      durable: z.literal(false),
+      sessionOnly: z.literal(true),
+      error: z.enum(['metadata-removal-failed', 'persistence-failed'])
+    })
+    .strict()
+])
+
 const invokeResultSchemas = {
+  'activity:clear': PrivacyClearResultSchema,
   'addressBook:export': z.union([
     z.object({ success: z.literal(true), exported: z.number().int().nonnegative() }).strict(),
     z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),
@@ -942,6 +954,7 @@ const invokeResultSchemas = {
     z.object({ success: z.literal(true), entry: AddressBookEntrySchema }).strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
+  'settings:clearRecentRecipients': PrivacyClearResultSchema,
   'contractVerification:credentialStatus': z.union([
     z.object({ success: z.literal(true), credential: ContractVerificationCredentialSchema }).strict(),
     ContractVerificationServiceFailureSchema
@@ -1150,6 +1163,25 @@ const invokeResultSchemas = {
   ]),
   'tray:refreshWalletCallsStatus': z.union([
     z.object({ success: z.literal(true) }).strict(),
+    z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
+  ]),
+  'tray:revokeAccess': z.union([
+    z.object({ success: z.literal(true) }).strict(),
+    z
+      .object({
+        success: z.literal(false),
+        uncertain: z.literal(true),
+        sessionOnly: z.literal(true),
+        error: z.literal('persistence-failed')
+      })
+      .strict(),
+    z
+      .object({
+        success: z.literal(false),
+        uncertain: z.literal(true),
+        error: z.string().min(1).max(240)
+      })
+      .strict(),
     z.object({ success: z.literal(false), error: z.string().min(1).max(240) }).strict()
   ]),
   'tray:writeClipboard': z.object({ success: z.literal(true) }).strict()

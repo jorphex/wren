@@ -29,18 +29,18 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Current status
 
-This table describes the `0.1.2` release boundary. The
+This table describes the `0.1.3` release boundary. The
 [Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
 evidence and limitations.
 
-Wren `0.1.2` and Wren Companion `0.1.1` are the compatible protocol-3 release pair. Browser store publication is a separate process. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
+Wren `0.1.3` and Wren Companion `0.1.2` are the compatible protocol-3 release pair. Browser store publication is a separate process. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
 | Linux x64 AppImage and deb   | Published; Wren-branded qualification complete                                            |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
-| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.2`              |
+| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.3`              |
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                       |
 | Chrome and Firefox companion | GitHub packages published; Chrome and Firefox store review pending                        |
@@ -90,7 +90,7 @@ The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPAT
 
 ## Install a published release
 
-Download `Wren-0.1.2.AppImage` or `wren_0.1.2_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
+Download `Wren-0.1.3.AppImage` or `wren_0.1.3_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -99,14 +99,14 @@ sha256sum --check SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.2.AppImage
-./Wren-0.1.2.AppImage
+chmod +x Wren-0.1.3.AppImage
+./Wren-0.1.3.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.2_amd64.deb
+sudo apt install ./wren_0.1.3_amd64.deb
 ```
 
 Linux packages are currently unsigned. Verify checksums and GitHub artifact attestations before installing.
@@ -116,7 +116,7 @@ Linux packages are currently unsigned. Verify checksums and GitHub artifact atte
 Wren does not read or share Frame's live profile by default. To make a one-time private copy, close both apps, back up `~/.config/frame`, and run the import before Wren creates `~/.config/wren`:
 
 ```bash
-./Wren-0.1.2.AppImage --import-frame-profile
+./Wren-0.1.3.AppImage --import-frame-profile
 ```
 
 For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validates and copies only `config.json` and encrypted signer files through a private staging directory, then atomically installs the profile. It rejects an active Frame profile, links, malformed or oversized data, and an existing Wren profile. Frame remains unchanged; verify the import before deleting either profile.
@@ -198,6 +198,6 @@ Report vulnerabilities privately through [Security Policy](SECURITY.md), not a p
 
 ## Roadmap and license
 
-Wren `0.1.2` includes local contacts and the first curated Earn milestone. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
+Wren `0.1.3` includes local contacts, curated Earn, secure local wallet creation, prepared contract deployment, and source verification. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
 
 Wren is a community-maintained continuation of the GPL-licensed [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is distributed under the [GNU GPL v3.0](LICENSE).

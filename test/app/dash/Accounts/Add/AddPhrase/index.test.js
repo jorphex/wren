@@ -84,6 +84,17 @@ describe('entering seed phrase', () => {
       expect.objectContaining({ data: expect.not.objectContaining({ accountData: expect.anything() }) })
     )
   })
+
+  it('preserves modified and composing Enter for multiline phrase entry', async () => {
+    const view = setupComponent()
+    const input = screen.getByRole('textbox', { name: 'Recovery phrase' })
+
+    await enterPhrase(view.user)
+    await view.user.keyboard('{Shift>}{Enter}{/Shift}')
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+
+    expect(link.send).not.toHaveBeenCalled()
+  })
 })
 
 describe('entering password', () => {

@@ -172,8 +172,10 @@
   display flex
   flex-direction column
   width 100%
-  min-height calc(100vh - 64px)
+  height calc(100vh - 64px)
+  min-height 0
   box-sizing border-box
+  overflow hidden
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -183,6 +185,7 @@
 .localSettings:has(.networkEditor) > .localSettingsWrap
   padding-top 0
   padding-bottom 0
+  overflow-y hidden
 
 .networkEditorHeader
   flex none
@@ -207,7 +210,7 @@
     margin-top 2px
     overflow hidden
     color var(--wren-text-muted)
-    font-family var(--wren-font-utility)
+    font-family var(--wren-font-ui)
     font-size 12px
     text-overflow ellipsis
     white-space nowrap
@@ -217,6 +220,9 @@
   flex 1 1 auto
   min-height 0
   padding 34px var(--wren-page-gutter) 26px
+  overflow-x hidden
+  overflow-y auto
+  scrollbar-gutter stable
 
 .networkEditorGrid
   display grid
@@ -243,7 +249,7 @@
 .networkEditorFieldStatus
   overflow hidden
   color var(--wren-success)
-  font-family var(--wren-font-mono)
+  font-family var(--wren-font-ui)
   font-size 12px
   font-weight 400
   text-overflow ellipsis
@@ -298,7 +304,7 @@ input.networkEditorInputTechnical
 
 .rpcEndpointRow
   display grid
-  min-height 56px
+  min-height 70px
   box-sizing border-box
   border 0
   align-items center
@@ -328,9 +334,11 @@ input.networkEditorInputTechnical
 .rpcEndpointState-connected
   color var(--wren-success)
 
-.rpcEndpointState-checking,
-.rpcEndpointState-standby
+.rpcEndpointState-checking
   color var(--wren-warning)
+
+.rpcEndpointState-standby
+  color var(--wren-text-muted)
 
 .rpcEndpointState-checking svg
   animation rpcEndpointChecking var(--wren-motion-slow) linear infinite
@@ -347,7 +355,10 @@ input.networkEditorInputTechnical
     animation none
 
 .rpcEndpointInputWrap
+  display grid
   min-width 0
+  gap 2px
+  padding 4px 0
 
 input.rpcEndpointInput
   width 100%
@@ -359,6 +370,25 @@ input.rpcEndpointInput
   font-family var(--wren-font-mono)
   font-size 12px
   text-align left
+
+.rpcEndpointStatus
+  min-height 17px
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-ui)
+  font-size 12px
+  line-height 17px
+  text-overflow ellipsis
+  white-space nowrap
+
+.rpcEndpointStatus-connected
+  color var(--wren-success)
+
+.rpcEndpointStatus-checking
+  color var(--wren-warning)
+
+.rpcEndpointStatus-error
+  color var(--wren-danger)
 
 .rpcEndpointMove
   display grid
@@ -416,6 +446,9 @@ input.rpcEndpointInput
 .rpcEndpointRemoveSpacer
   width 44px
 
+.rpcEndpointRowNoToggle
+  grid-template-columns 18px 18px minmax(0, 1fr) 88px 44px
+
 .rpcEndpointAddRow
   display flex
   min-height 46px
@@ -429,7 +462,7 @@ input.rpcEndpointInput
   > span
     margin-left auto
     color var(--wren-text-muted)
-    font-family var(--wren-font-utility)
+    font-family var(--wren-font-ui)
     font-size 12px
 
   button
@@ -481,7 +514,7 @@ input.rpcEndpointInput
 .networkEditorMessage
   margin-top var(--wren-space-3)
   color var(--wren-danger)
-  font-family var(--wren-font-utility)
+  font-family var(--wren-font-ui)
   font-size 12px
 
 .networkEditorFooter
@@ -493,6 +526,8 @@ input.rpcEndpointInput
   align-items center
   justify-content space-between
   gap var(--wren-space-3)
+  border-top 1px solid var(--wren-border-subtle)
+  background var(--wren-surface-overlay)
 
 .networkEditorFooterActions
   display flex
@@ -517,10 +552,11 @@ button.networkEditorCancel
   min-height 48px
   transform translateY(-1px)
 
-button.networkEditorRemove
+button.networkEditorRemove.wrenControl
+  height 44px
   min-height 44px
 
-// The dash header leaves a 680px editor viewport in the supported 760 × 744 shell.
+// The dash header leaves a 680px editor viewport in the supported 620 × 744 shell.
 // Keep the actions anchored while the complete form remains scrollable there.
 @media (max-height: 760px) and (min-width: 561px)
   .networkEditorHeader

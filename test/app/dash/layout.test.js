@@ -187,6 +187,15 @@ test('aligns Send picker search content with the shared contact search inset', (
   )
 })
 
+test('wraps resolved Send recipient addresses without clipping or ellipsis', () => {
+  expect(sendStyle).toMatch(
+    /\.sendRecipientFeedback[\s\S]*?overflow visible[\s\S]*?text-overflow clip[\s\S]*?white-space normal/
+  )
+  expect(sendStyle).toMatch(
+    /\.sendRecipientResolved[\s\S]*?code[\s\S]*?overflow-wrap anywhere[\s\S]*?word-break break-all/
+  )
+})
+
 test('matches update dialogs to the account QR surface tokens', () => {
   for (const style of [accountStyle, badgeStyle]) {
     expect(style).toMatch(/border-radius var\(--wren-radius-md\)/)
@@ -323,6 +332,7 @@ test('keeps the remaining review surfaces on established flat primitives', () =>
 })
 
 test('keeps contract deployment on the flat wallet canvas and shared control primitives', () => {
+  const deploymentCanvasStyle = deploymentStyle.split('.deploymentAbandonDialog')[0]
   expect(deploymentStyle).toMatch(
     /\.deploymentForm[\s\S]*?display flex[\s\S]*?\.deploymentEvidence[\s\S]*?dl[\s\S]*?border 0/
   )
@@ -331,14 +341,15 @@ test('keeps contract deployment on the flat wallet canvas and shared control pri
     /\.deploymentActionShelf[\s\S]*?position sticky[\s\S]*?bottom 0[\s\S]*?justify-content flex-end/
   )
   expect(deploymentStyle).toMatch(
-    /\.deploymentActionShelf[\s\S]*?background transparent[\s\S]*?pointer-events none[\s\S]*?button[\s\S]*?pointer-events auto/
+    /\.deploymentActionShelf[\s\S]*?background var\(--wren-bg-canvas\)[\s\S]*?pointer-events none[\s\S]*?button[\s\S]*?pointer-events auto/
   )
+  expect(deploymentStyle).not.toMatch(/\.deploymentActionShelf[\s\S]{0,360}?background transparent/)
   expect(deploymentStyle).not.toMatch(
     /\.deploymentActionShelf[\s\S]{0,420}?background linear-gradient\(180deg, transparent, var\(--wren-bg-wallet-canvas\)/
   )
   expect(deploymentStyle).toMatch(/@media \(max-width: 540px\)[\s\S]*?grid-template-columns 1fr/)
   expect(deploymentStyle).toMatch(/\.deploymentFieldError[\s\S]*?&:empty[\s\S]*?display none/)
-  expect(deploymentStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
+  expect(deploymentCanvasStyle).not.toMatch(/border-left|border-right|border-radius|box-shadow/)
 })
 
 test('uses one flat Contracts workspace with the established Send-style peer switch', () => {
@@ -356,6 +367,9 @@ test('uses one flat Contracts workspace with the established Send-style peer swi
 test('keeps direct verification disclosure distinct from constructor helper copy', () => {
   expect(contractVerificationStyle).toMatch(
     /\.contractVerificationDirect p\.contractVerificationNotice[\s\S]*?margin-top var\(--wren-space-3\)[\s\S]*?color var\(--wren-text-secondary\)[\s\S]*?font-size var\(--wren-type-small\)[\s\S]*?line-height 19px/
+  )
+  expect(contractVerificationStyle).toMatch(
+    /\.contractVerificationResultActions button\.wrenControl[\s\S]*?min-height 44px/
   )
 })
 

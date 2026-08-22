@@ -1,7 +1,7 @@
 import { isManagedOriginName } from '../../resources/domain/origin'
 import type { Permission } from '../store/state'
 
-import { applyPermissionAction } from './permissionEvents'
+import { applyPermissionAction, notifyPermissionAction } from './permissionEvents'
 
 type PermissionAction = 'toggleAccess' | 'clearPermissions'
 
@@ -20,6 +20,8 @@ interface PermissionActionDependencies {
   getPermissions(address: string): Record<string, Permission>
   mutate(address: string, ...args: unknown[]): void
   removeGuardrails(address: string, originIds: readonly string[]): void
+  commit?: () => void
+  onNotificationError?: (error: unknown) => void
 }
 
 export function applyAccountPermissionRendererAction(
@@ -52,6 +54,7 @@ export function applyAccountPermissionRendererAction(
   const affectedOriginIds = permission ? [permission.handlerId] : undefined
 
   let mutated = false
+  let commitFailed = false
   try {
     applyPermissionAction(
       address,
@@ -62,11 +65,26 @@ export function applyAccountPermissionRendererAction(
           address,
           revokedPermissions.map(({ handlerId }) => handlerId)
         )
+        try {
+          dependencies.commit?.()
+        } catch (error) {
+          commitFailed = true
+          throw error
+        }
       },
       dependencies.accounts,
       dependencies.provider,
       affectedOriginIds
     )
+  } catch (error) {
+    if (commitFailed) {
+      try {
+        notifyPermissionAction(address, dependencies.accounts, dependencies.provider, affectedOriginIds)
+      } catch (notificationError) {
+        dependencies.onNotificationError?.(notificationError)
+      }
+    }
+    throw error
   } finally {
     if (mutated) {
       dependencies.accounts.rejectUnapprovedRequestsForOrigins(

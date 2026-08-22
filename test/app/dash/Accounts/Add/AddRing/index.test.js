@@ -1,6 +1,6 @@
 import Restore from 'react-restore'
 
-import { render, screen } from '../../../../../componentSetup'
+import { fireEvent, render, screen } from '../../../../../componentSetup'
 import store from '../../../../../../main/store'
 import link from '../../../../../../resources/link'
 import AddRingAccountComponent from '../../../../../../app/dash/Accounts/Add/AddRing'
@@ -80,6 +80,29 @@ describe('entering private key', () => {
       'dash',
       expect.objectContaining({ data: expect.not.objectContaining({ accountData: expect.anything() }) })
     )
+  })
+
+  it.each(['Shift', 'Alt', 'Control', 'Meta'])(
+    'preserves a valid private key on %s+Enter',
+    async (modifier) => {
+      const view = setupComponent()
+      const input = screen.getByRole('textbox', { name: 'Private key' })
+
+      await view.user.type(input, privateKey)
+      await view.user.keyboard(`{${modifier}>}{Enter}{/${modifier}}`)
+
+      expect(link.send).not.toHaveBeenCalled()
+    }
+  )
+
+  it('does not submit a valid private key while text composition is active', async () => {
+    const view = setupComponent()
+    const input = screen.getByRole('textbox', { name: 'Private key' })
+
+    await view.user.type(input, privateKey)
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+
+    expect(link.send).not.toHaveBeenCalled()
   })
 
   it('clears the private key when the setup is cancelled', async () => {

@@ -51,9 +51,62 @@ test('strictly validates acknowledged clipboard writes and results', () => {
   expect(parseRendererInvokeResult('tray:writeClipboard', { success: false }).success).toBe(false)
 })
 
-test('allows only an argument-free activity clear action', () => {
-  expect(parse('event', 'tray:action', ['clearActivity'])).toEqual(['clearActivity'])
-  expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity', true]).success).toBe(false)
+test('strictly validates acknowledged permission revocation', () => {
+  expect(parse('invoke', 'tray:revokeAccess', [address, handlerId])).toEqual([address, handlerId])
+  expect(parse('invoke', 'tray:revokeAccess', [address])).toEqual([address])
+  expect(parseRendererIpcArgs('invoke', 'tray:revokeAccess', [address, handlerId, false]).success).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'tray:revokeAccess', ['0x1', handlerId]).success).toBe(false)
+  expect(parseRendererInvokeResult('tray:revokeAccess', { success: true }).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('tray:revokeAccess', { success: false, error: 'Permission unavailable' })
+      .success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('tray:revokeAccess', {
+      success: false,
+      uncertain: true,
+      error: 'Revocation confirmation is unavailable'
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('tray:revokeAccess', {
+      success: false,
+      uncertain: true,
+      sessionOnly: true,
+      error: 'persistence-failed'
+    }).success
+  ).toBe(true)
+  expect(
+    parseRendererInvokeResult('tray:revokeAccess', {
+      success: false,
+      sessionOnly: true,
+      error: 'persistence-failed'
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('tray:revokeAccess', {
+      success: false,
+      uncertain: true,
+      sessionOnly: true,
+      error: 'Permission unavailable'
+    }).success
+  ).toBe(false)
+  expect(parseRendererInvokeResult('tray:revokeAccess', { success: false }).success).toBe(false)
+})
+
+test('allows only an argument-free acknowledged activity clear', () => {
+  expect(parse('invoke', 'activity:clear', [])).toEqual([])
+  expect(parseRendererIpcArgs('invoke', 'activity:clear', [true]).success).toBe(false)
+  expect(parseRendererIpcArgs('event', 'tray:action', ['clearActivity']).success).toBe(false)
+  expect(parseRendererInvokeResult('activity:clear', { success: true, durable: true }).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('activity:clear', {
+      success: false,
+      durable: false,
+      sessionOnly: true,
+      error: 'persistence-failed'
+    }).success
+  ).toBe(true)
 })
 
 test('strictly validates recent-recipient renderer actions', () => {
@@ -61,11 +114,13 @@ test('strictly validates recent-recipient renderer actions', () => {
     'setRememberRecentRecipients',
     true
   ])
-  expect(parse('event', 'tray:action', ['clearRecentRecipients'])).toEqual(['clearRecentRecipients'])
+  expect(parseRendererIpcArgs('event', 'tray:action', ['clearRecentRecipients']).success).toBe(false)
+  expect(parseRendererIpcArgs('event', 'tray:action', ['setRememberRecentRecipients', false]).success).toBe(
+    false
+  )
   expect(parseRendererIpcArgs('event', 'tray:action', ['setRememberRecentRecipients', 'true']).success).toBe(
     false
   )
-  expect(parseRendererIpcArgs('event', 'tray:action', ['clearRecentRecipients', true]).success).toBe(false)
   expect(parseRendererIpcArgs('event', 'tray:action', ['recordRecentRecipientUse', {}]).success).toBe(false)
 })
 
@@ -809,15 +864,10 @@ test('dispatches only recognized store actions with validated arguments', () => 
   expect(parseRendererIpcArgs('event', 'tray:action', ['setGlideSide', 'top']).success).toBe(false)
   expect(parse('event', 'tray:action', ['setInterfaceScale', 1.25])).toEqual(['setInterfaceScale', 1.25])
   expect(parseRendererIpcArgs('event', 'tray:action', ['setInterfaceScale', 2]).success).toBe(false)
-  expect(parse('event', 'tray:action', ['toggleAccess', address, handlerId, true])).toEqual([
-    'toggleAccess',
-    address,
-    handlerId,
-    true
-  ])
-  expect(parseRendererIpcArgs('event', 'tray:action', ['toggleAccess', address, handlerId]).success).toBe(
-    false
-  )
+  expect(parseRendererIpcArgs('event', 'tray:action', ['clearPermissions', address]).success).toBe(false)
+  expect(
+    parseRendererIpcArgs('event', 'tray:action', ['toggleAccess', address, handlerId, false]).success
+  ).toBe(false)
 })
 
 test('validates native currency decimals in network updates', () => {

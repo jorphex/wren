@@ -3,9 +3,11 @@ import zxcvbn from 'zxcvbn'
 import Icon from '../Icon'
 import useFocusableRef from '../../Hooks/useFocusableRef'
 
-import { debounce } from '../../utils'
+import { debounce, isUnmodifiedEnter } from '../../utils'
 
 const NO_PASSWORD_ENTERED = 'Enter password'
+
+export { isUnmodifiedEnter }
 
 export const PasswordInput = ({
   getError: getInputError,
@@ -106,13 +108,17 @@ export const PasswordInput = ({
           ref={inputRef}
           onChange={validateInput}
           onKeyDown={(e) => {
-            if (!error && e.key === 'Enter' && !disabled && !submitting.current) handleSubmit()
+            if (!error && isUnmodifiedEnter(e) && !disabled && !submitting.current) {
+              e.preventDefault()
+              handleSubmit()
+            }
           }}
         />
         <button
           type='button'
           className='addAccountItemOptionPasswordReveal wrenControl wrenControlSecondary wrenControlIcon'
           aria-label={revealed ? 'Hide password' : 'Show password'}
+          aria-pressed={revealed}
           onClick={() => setRevealed((value) => !value)}
         >
           <Icon name='eye' size={18} />

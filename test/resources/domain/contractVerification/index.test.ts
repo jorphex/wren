@@ -666,12 +666,52 @@ describe('exact target and privacy-minimal job ledger', () => {
     )
   })
 
+  it('accepts only fixed-size publication identity hashes on attempted owned records', () => {
+    const publicationHash = '77'.repeat(32)
+    const destinations = [
+      { destination: 'sourcify', status: 'published', publicationHash },
+      { destination: 'etherscan-direct', status: 'unknown', publicationHash }
+    ]
+    expect(validateContractVerificationJobLedger([{ ...job, destinations }])[0]!.destinations).toEqual(
+      destinations
+    )
+
+    for (const direct of [
+      { destination: 'sourcify', status: 'not-submitted', publicationHash },
+      { destination: 'sourcify', status: 'unknown', publicationHash: 'short' },
+      { destination: 'etherscan-direct', status: 'unknown', publicationHash: 'short' },
+      { destination: 'etherscan-direct', status: 'unavailable', publicationHash },
+      { destination: 'etherscan-direct', status: 'needs-api-key', publicationHash },
+      { destination: 'etherscan-forwarded', status: 'unknown', publicationHash }
+    ]) {
+      expectCode(
+        () =>
+          validateContractVerificationJobLedger([
+            {
+              ...job,
+              destinations: [{ destination: 'sourcify', status: 'published' }, direct]
+            }
+          ]),
+        'invalid-job-ledger'
+      )
+    }
+    expect(
+      validateContractVerificationJobLedger([
+        {
+          ...job,
+          destinations: [{ destination: 'sourcify', status: 'unavailable', publicationHash }]
+        }
+      ])[0]!.destinations
+    ).toEqual([{ destination: 'sourcify', status: 'unavailable', publicationHash }])
+  })
+
   it('persists only bounded opaque polling IDs on meaningful direct jobs', () => {
     for (const destination of [
       { destination: 'sourcify', status: 'checking', remoteId: 'sourcify-job_1:poll' },
       { destination: 'sourcify', status: 'published', remoteId: 'sourcify-job_1:poll' },
       { destination: 'sourcify', status: 'rejected', remoteId: 'sourcify-job_1:poll' },
       { destination: 'etherscan-direct', status: 'checking', remoteId: 'GUID.123-abc:def' },
+      { destination: 'etherscan-direct', status: 'rejected', remoteId: 'GUID.123-abc:def' },
       { destination: 'etherscan-direct', status: 'needs-api-key', remoteId: 'GUID.123-abc:def' },
       { destination: 'etherscan-direct', status: 'already-verified', remoteId: 'GUID.123-abc:def' }
     ]) {
@@ -701,10 +741,6 @@ describe('exact target and privacy-minimal job ledger', () => {
       [
         { destination: 'sourcify', status: 'published' },
         { destination: 'etherscan-forwarded', status: 'verified', remoteId: 'not-owned-by-wren' }
-      ],
-      [
-        { destination: 'sourcify', status: 'published' },
-        { destination: 'etherscan-direct', status: 'rejected', remoteId: 'terminal-but-not-pollable' }
       ],
       [{ destination: 'sourcify', status: 'published', remoteId: 'valid', opaqueId: 'extra' }]
     ]) {

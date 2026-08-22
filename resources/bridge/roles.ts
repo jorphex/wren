@@ -33,6 +33,7 @@ const limitedCapabilities: Record<LimitedRendererRole, LimitedCapabilities> = {
 } as const
 
 const dashboardOnlyInvokeChannels = new Set([
+  'settings:clearRecentRecipients',
   'contractVerification:credentialStatus',
   'contractVerification:get',
   'contractVerification:inspectArtifact',
@@ -49,6 +50,7 @@ const dashboardOnlyInvokeChannels = new Set([
 ])
 
 const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'])
+const trayOnlyInvokeChannels = new Set(['activity:clear'])
 
 const dashboardOnlyRpcMethods = new Set([
   'reserveGeneratedWallet',
@@ -78,6 +80,7 @@ export const hasRendererCapability = (
       return rendererRole === 'dash'
     }
     if (dashboardOnlyInvokeChannels.has(channel)) return rendererRole === 'dash'
+    if (trayOnlyInvokeChannels.has(channel)) return rendererRole === 'tray'
     if (trustedWindowInvokeChannels.has(channel)) {
       return rendererRole === 'dash' || rendererRole === 'tray'
     }

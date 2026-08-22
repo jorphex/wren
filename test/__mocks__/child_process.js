@@ -1,18 +1,21 @@
 const EventEmitter = require('events')
 
-const forkedChildProcess = new EventEmitter()
-forkedChildProcess.kill = jest.fn()
-forkedChildProcess.send = jest.fn()
+const createForkedChildProcess = () => {
+  const childProcess = new EventEmitter()
+  childProcess.kill = jest.fn()
+  childProcess.send = jest.fn()
+  return childProcess
+}
 
 module.exports = {
-  _forkedChildProcess: forkedChildProcess,
   fork: jest.fn((path, args, opts) => {
+    const childProcess = createForkedChildProcess()
     if (opts.signal) {
       opts.signal.onabort = () => {
-        forkedChildProcess.kill('SIGABRT')
+        childProcess.kill('SIGABRT')
       }
     }
 
-    return forkedChildProcess
+    return childProcess
   })
 }

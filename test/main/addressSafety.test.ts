@@ -1,5 +1,7 @@
 import {
   assessOutboundAddresses,
+  fingerprintOutboundAddresses,
+  recordOutboundAddressFingerprints,
   recordOutboundAddresses,
   transactionOutboundTargets,
   walletCallsOutboundTargets
@@ -36,6 +38,15 @@ it('persists only a profile-bound digest, address ends, and the latest submitted
   expect(memory[digest]).toEqual({ digest, prefix: '1234', suffix: 'abcd', lastSubmittedAt: 1_000 })
   expect(JSON.stringify(memory)).not.toContain(prior.slice(6, -4))
   expect(recordOutboundAddresses(memory, profile, [prior], 2_000)[digest].lastSubmittedAt).toBe(2_000)
+})
+
+it('merges a restart-safe fingerprint without needing the raw destination again', () => {
+  const fingerprints = fingerprintOutboundAddresses(profile, [prior])
+  const memory = recordOutboundAddressFingerprints({}, fingerprints, 1_000)
+  const [digest] = Object.keys(memory)
+
+  expect(memory[digest]).toEqual({ ...fingerprints[0], lastSubmittedAt: 1_000 })
+  expect(JSON.stringify(fingerprints)).not.toContain(prior.slice(6, -4))
 })
 
 it('drops expired entries and deterministically caps the most recent distinct destinations', () => {
