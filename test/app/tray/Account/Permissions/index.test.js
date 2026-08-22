@@ -130,6 +130,19 @@ it('requires confirmation and revokes a permission once', async () => {
   expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
 })
 
+it('hosts confirmation inside the wallet panel instead of the wider workspace shell', async () => {
+  const { user } = render(
+    <div id='panel'>
+      <RevokeAccess account={account} permissionId='first' origin='alpha.example' />
+    </div>
+  )
+
+  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+
+  expect(document.querySelector('#panel > .revokeAccessDialog')).toBeTruthy()
+  expect(document.body.querySelector(':scope > .revokeAccessDialog')).toBeNull()
+})
+
 it('cancels safely, retries a dropped revoke, and clears its timer', async () => {
   const ref = { current: null }
   const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')

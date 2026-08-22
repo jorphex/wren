@@ -799,6 +799,21 @@ it('qualifies account-scoped guardrails across shell geometry, scale, provenance
   })
 })
 
+it('qualifies revoke confirmation inside both edges of the production-width workspace shell', () => {
+  const scenarios = scenarioMatrix({ includeReview: true }).filter(({ id }) =>
+    id.startsWith('tray-account-access-revoke-workspace-')
+  )
+
+  expect(scenarios.map(({ id }) => id)).toEqual([
+    'tray-account-access-revoke-workspace-left-1',
+    'tray-account-access-revoke-workspace-right-1'
+  ])
+  expect(scenarios.every(({ logicalWidth, workspaceOpen }) => logicalWidth === 1240 && workspaceOpen)).toBe(
+    true
+  )
+  expect(scenarios.every(({ layoutExpectations }) => layoutExpectations[0].container === '#panel')).toBe(true)
+})
+
 it('qualifies source verification entry, evidence, results, credentials, and confirmed handoff', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
   const forms = scenarios.filter(({ id }) => id.startsWith('dash-contract-verification-form-'))

@@ -775,6 +775,24 @@ const reviewScenarios = () => [
       'Its guardrails will be removed, and it must request access again.'
     ]
   })),
+  ...['left', 'right'].map((glideSide) => ({
+    id: `tray-account-access-revoke-workspace-${glideSide}-1`,
+    renderer: 'tray',
+    state: 'account-permissions',
+    glideSide,
+    workspaceOpen: true,
+    scale: 1,
+    logicalWidth: 1240,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Revoke access' },
+    ready: '.revokeAccessDialog',
+    expectedInitialFocus: 'Cancel',
+    requiredControls: ['Cancel', 'Confirm revoke'],
+    requiredText: ['Revoke access for https://treasury.workshop.example?'],
+    layoutExpectations: [
+      { kind: 'edge-clearance', selector: '.revokeAccessPanel', container: '#panel', inset: 16 }
+    ]
+  })),
   {
     id: 'tray-account-guardrail-native-source-full-1',
     renderer: 'tray',

@@ -36,6 +36,7 @@ export class RevokeAccess extends React.Component {
 
   renderDialog() {
     if (!this.state.confirming) return null
+    const host = this.triggerRef.current?.closest('#panel') || document.body
 
     return createPortal(
       <DialogSurface
@@ -75,7 +76,7 @@ export class RevokeAccess extends React.Component {
           </div>
         </div>
       </DialogSurface>,
-      document.body
+      host
     )
   }
 
