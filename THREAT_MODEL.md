@@ -436,11 +436,13 @@ client: uncaught main errors stay local and are not sent to upstream Sentry.
 #### Supply-chain boundaries
 
 Dependencies are locked and install scripts allowlisted; CI actions are pinned.
-Linux release evidence is checksums, SBOM, a reviewed draft workflow, and GitHub
-provenance—not signatures. Two-build evidence covers identical application
-payloads, native modules, SBOM, and deb bytes, but not AppImage container bytes.
-Companion archives are separately source-bound/deterministic with checksums,
-compatibility metadata, and a production SBOM. macOS/Windows signing is absent.
+Linux and Windows release evidence is checksums, SBOM, a reviewed draft workflow,
+and GitHub provenance—not platform signatures. The Windows preview is explicitly
+verified and named as unsigned; these controls do not create publisher trust.
+Two-build evidence covers identical Linux application payloads, native modules,
+SBOM, and deb bytes, but not AppImage container bytes. Companion archives are
+separately source-bound/deterministic with checksums, compatibility metadata, and
+a production SBOM. macOS signing is absent.
 The updater uses package metadata's repository and needs user action to
 download/install. Release credentials, GitHub administration, CI, npm packages,
 and maintainer workstations are supply-chain boundaries; see

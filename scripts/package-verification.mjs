@@ -72,7 +72,7 @@ export const packageTargets = Object.freeze({
       {
         name: 'x64 NSIS installer',
         kind: 'nsis',
-        fileName: ({ version }) => `Wren Setup ${version}.exe`
+        fileName: ({ version }) => `Wren-Setup-${version}-unsigned-x64.exe`
       }
     ]
   }

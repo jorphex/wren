@@ -1,4 +1,4 @@
-name: Build a draft Linux release
+name: Build a draft Linux and Windows release
 
 on:
   push:
@@ -11,29 +11,26 @@ on:
         required: false
         type: string
 
-permissions:
-  artifact-metadata: write
-  attestations: write
-  contents: write
-  id-token: write
+permissions: {}
 
 concurrency:
-  group: linux-release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  metadata:
+    name: Resolve release metadata
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-      - run: npm install --global npm@11.12.0
-      - name: Resolve release metadata
+      - name: Validate version, tag, and release notes
         id: release
         env:
           REQUESTED_TAG: ${{ inputs.tag }}
@@ -49,6 +46,22 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           test -f "release-notes/v${version}.md"
+
+  quality:
+    name: Run the exact-commit release gate
+    needs: metadata
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm install --global npm@11.12.0
       - name: Install Linux build prerequisites
         run: |
           sudo apt-get update
@@ -61,35 +74,149 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - run: npm run test:usbAdapters
+
+  package-linux:
+    name: Build Linux x64 release packages
+    needs: [metadata, quality]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm install --global npm@11.12.0
+      - name: Install Linux build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libudev-dev
+      - run: npm run setup:ci
+      - run: npm run compile
       - run: npm run bundle
       - run: npm run package:linux:x64
       - run: npm run package:verify:linux
-      - name: Generate CycloneDX SBOM
-        run: npm run sbom:linux
-      - name: Verify production SBOM
-        run: npm run sbom:verify:linux
-      - name: Finalize and verify release checksums
+      - name: Generate and verify production SBOM
+        run: |
+          npm run sbom:release
+          npm run sbom:verify:release
+      - name: Verify Linux-only checksum boundary
         run: |
           npm run checksums:linux
           npm run release:verify:linux
-      - name: Attest build provenance
+      - name: Attest Linux build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             dist/*.AppImage
             dist/*_amd64.deb
-      - name: Attest package SBOM
+      - name: Attest Linux package SBOM
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             dist/*.AppImage
             dist/*_amd64.deb
           sbom-path: dist/wren.cdx.json
-      - name: Create or update draft release
+      - name: Stage Linux release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-linux-x64-${{ github.sha }}
+          path: |
+            dist/*.AppImage
+            dist/*_amd64.deb
+            dist/wren.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+  package-windows:
+    name: Build unsigned Windows x64 preview
+    needs: [metadata, quality]
+    runs-on: windows-2022
+    timeout-minutes: 35
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm install --global npm@11.12.0
+      - run: npm run setup:ci
+      - run: npm run compile
+      - run: npm run bundle
+      - name: Build the explicitly unsigned installer
+        run: npm run package:windows:unsigned:x64
+      - name: Verify runtime, archive payload, and unsigned state
+        run: npm run package:verify:windows:x64
+      - name: Generate and verify production SBOM
+        run: |
+          npm run sbom:release
+          npm run sbom:verify:release
+          Copy-Item -LiteralPath dist/wren.cdx.json -Destination dist/wren-windows.cdx.json
+      - name: Attest Windows build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/Wren-Setup-*-unsigned-x64.exe
+      - name: Attest Windows package SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/Wren-Setup-*-unsigned-x64.exe
+          sbom-path: dist/wren.cdx.json
+      - name: Stage the unsigned Windows preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-windows-x64-${{ github.sha }}
+          path: |
+            dist/Wren-Setup-*-unsigned-x64.exe
+            dist/wren-windows.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    name: Assemble the exact-commit draft
+    needs: [metadata, package-linux, package-windows]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Download Linux release files
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: release-linux-x64-${{ github.sha }}
+          path: dist
+      - name: Download the unsigned Windows preview
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: release-windows-x64-${{ github.sha }}
+          path: dist
+      - name: Create and verify the combined checksum manifest
+        run: |
+          cmp dist/wren.cdx.json dist/wren-windows.cdx.json
+          rm dist/wren-windows.cdx.json
+          npm run checksums:release
+          npm run release:verify
+      - name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.metadata.outputs.version }}
         run: |
           remote_tag=$(git ls-remote --tags origin "refs/tags/$RELEASE_TAG" "refs/tags/$RELEASE_TAG^{}")
           tag_commit=$(printf '%s\n' "$remote_tag" | awk '/\^\{\}$/ { print $1; found=1 } END { if (!found && NR == 1) print first } NR == 1 { first=$1 }')
@@ -101,4 +228,13 @@ jobs:
             echo "Refusing to modify existing release $RELEASE_TAG; delete a failed draft or use a new version" >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/*.AppImage dist/*_amd64.deb dist/SHA256SUMS dist/wren.cdx.json --target "$GITHUB_SHA" --draft --title "$RELEASE_VERSION" --notes-file "release-notes/v${RELEASE_VERSION}.md"
+          gh release create "$RELEASE_TAG" \
+            dist/*.AppImage \
+            dist/*_amd64.deb \
+            dist/Wren-Setup-*-unsigned-x64.exe \
+            dist/SHA256SUMS \
+            dist/wren.cdx.json \
+            --target "$GITHUB_SHA" \
+            --draft \
+            --title "$RELEASE_VERSION" \
+            --notes-file "release-notes/v${RELEASE_VERSION}.md"

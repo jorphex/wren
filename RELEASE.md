@@ -1,29 +1,27 @@
-# Linux release procedure
+# Linux and Windows release procedure
 
-Use this how-to to prepare, verify, review, and publish a Linux x64 candidate. It
-does not replace the [qualification checklist](QUALIFICATION.md) or the
-[signer and platform support reference](HARDWARE_SUPPORT.md). For product
-orientation and installation, see the [README](README.md).
+Use this how-to to prepare, verify, review, and publish Linux x64 packages and an
+unsigned Windows x64 preview. It does not replace the
+[qualification checklist](QUALIFICATION.md), the
+[Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md), or the
+[signer and platform support reference](HARDWARE_SUPPORT.md).
 
 ## 1. Confirm the release boundary
 
-Linux x64 AppImage and deb packages are Wren's current release target. The GitHub workflow
-creates a **new draft** only; it does not update or publish a release. Packages
-are unsigned, macOS notarization and Windows signing are not configured, and
-Linux x64 remains the only release target. Secret-free CI builds and verifies real
-unsigned Linux arm64, macOS x64/arm64, and Windows x64 smoke packages on matching
-native runners; these artifacts are neither published nor platform-qualified.
-Glide is qualified on X11 only; on native Wayland use the tray or summon shortcut.
+Linux x64 AppImage and deb packages remain Wren's qualified release target.
+Windows x64 is published only as a clearly named unsigned preview. The GitHub
+workflow creates a **new draft**; it does not publish or modify an existing
+release. macOS and Linux arm64 remain unpublished native smoke targets. Glide is
+qualified on X11 only; on native Wayland use the tray or summon shortcut.
 
-The native verifier checks clean source/application identity, packaged resources,
-runtime architecture, native hardware modules, sandbox policy, and matching
-unpacked/archive payload behavior. Its fail-closed signer-protection probe checks
-that Windows selects the DPAPI policy without invoking Linux-only backend
-discovery, but it does not decrypt real DPAPI data. The verifier does not exercise
-installers, the graphical desktop, hardware, signing, notarization, or native
-operating-system credential persistence. Use the
-[Windows signer-protection checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md)
-for that separate evidence.
+The native verifier checks source/application identity, packaged resources,
+runtime architecture, native modules, sandbox policy, and matching archive
+payloads. On Windows it also requires `NotSigned` for both `Wren.exe` and the
+installer and checks DPAPI policy selection without reading real DPAPI data. It
+does not exercise the graphical desktop, physical hardware, SmartScreen, or
+native credential persistence. Use the [Windows preview
+checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
+[signer-protection checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md).
 
 ## 2. Prepare a candidate
 
@@ -36,7 +34,7 @@ for that separate evidence.
    changes, update the Companion `compatibility.json` minimum desktop commit and
    build both from their exact paired commits. The current protocol is version 3;
    do not direct a protocol-3 client to an older store extension.
-3. Run the release gate:
+3. Run the Linux release gate:
 
    ```bash
    nvm install
@@ -53,18 +51,34 @@ for that separate evidence.
    npm run bundle
    npm run package:linux:x64
    npm run package:verify:linux
-   npm run sbom:linux
-   npm run sbom:verify:linux
+   npm run sbom:release
+   npm run sbom:verify:release
    npm run checksums:linux
    npm run release:verify:linux
    npm run repro:linux -- --output reproducibility-report.json
    ```
 
-4. Review the diff, dependency graph, test output, package names,
-   `dist/SHA256SUMS`, and `dist/wren.cdx.json`. The manifest must cover exactly
-   the AppImage, amd64 deb, and source-bound SBOM; package verification must
-   report the embedded identity of the clean compiled source. Do not waive an
-   unexplained signing, migration, native-module, or packaging failure.
+4. On native Windows x64, check out the same clean commit and run:
+
+   ```powershell
+   npm install --global npm@11.12.0
+   npm run setup:ci
+   npm run compile
+   npm run bundle
+   npm run package:windows:unsigned:x64
+   npm run package:verify:windows:x64
+   npm run sbom:release
+   npm run sbom:verify:release
+   ```
+
+   The verifier must report the exact unsigned installer name, matching archive
+   payloads, and `NotSigned` for the installer and packaged executable.
+
+5. Review the diff, dependency graph, test output, package names, local Linux
+   `dist/SHA256SUMS`, and `dist/wren.cdx.json`. The final workflow creates a
+   combined manifest covering the AppImage, deb, unsigned Windows installer, and
+   source-bound SBOM. Do not waive an unexplained identity, signature-state,
+   migration, native-module, or packaging failure.
 
 ## 3. Review reproducibility evidence
 
@@ -82,24 +96,25 @@ report with private release evidence.
 ## 4. Create and review the draft
 
 Push `v<package version>` on that commit, or manually dispatch **Build a draft
-Linux release** for it. The requested tag must exactly match the package version.
-The workflow runs the gate, verifies native hardware modules, generates and
-verifies the CycloneDX SBOM and SHA-256 manifest, creates build/SBOM
-attestations, and attaches the four files to a draft targeted at the exact
-workflow SHA. It rejects a tag pointing elsewhere and refuses to modify an
-existing release. Pull-request jobs cannot publish; CodeQL runs on `main` pushes
-and weekly.
+Linux and Windows release**. The requested tag must exactly match the package
+version. Shared quality, Linux packaging, and native Windows packaging must all
+pass for the same workflow SHA. The final job downloads only those staged files,
+creates and verifies one SHA-256 manifest, and attaches five files to a draft:
+AppImage, deb, unsigned Windows installer, SBOM, and `SHA256SUMS`. Linux and
+Windows packages receive build and SBOM attestations. The workflow rejects a tag
+pointing elsewhere and refuses to modify an existing release.
 
-Before publishing, confirm the intended commit and passing jobs; verify
-`sha256sum --check SHA256SUMS` on a separate test system; inspect attestations,
-SBOM, filenames, application version, and notes; and test both packages,
+Before publishing, confirm the intended commit and passing jobs; verify the
+applicable entries in `SHA256SUMS` on separate Linux and Windows systems; inspect
+attestations, SBOM, filenames, application version, and notes; and test both Linux packages,
 single-instance/port-conflict behavior, tray/dash, provider startup, updater,
 and explicit import from a backed-up disposable Frame profile. Complete the
 applicable signer and paired Chrome/Firefox Companion regression in
 [`QUALIFICATION.md`](QUALIFICATION.md): archive checksums and compatibility,
 initial-code comparison, reconnect, reset, revocation, origin isolation, and
-EIP-6963 discovery. Keep unsigned artifacts and unqualified platforms/signers
-prominent in the notes.
+EIP-6963 discovery. Complete the Windows preview checklist on the exact staged
+installer. Keep the unsigned Windows state and unqualified platforms/signers
+clear in the notes.
 
 ## 5. Publish or reject
 

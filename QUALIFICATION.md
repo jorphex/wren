@@ -1,4 +1,4 @@
-# Linux desktop and Companion release qualification checklist
+# Desktop and Companion release qualification checklist
 
 This is the manual gate for a paired Wren desktop and Wren Companion candidate.
 It supplements automated tests and is not an audit. Use disposable accounts and Ethereum
@@ -7,9 +7,10 @@ minimal live-fund flows. Never publish seeds, keys, PINs, passphrases, pairing
 responses, full addresses, signatures, transaction hashes, device IDs, or profile
 contents. Use the [release procedure](RELEASE.md) for packaging and publication;
 use the [signer and platform support reference](HARDWARE_SUPPORT.md) for current
-device and platform boundaries. Windows DPAPI signer protection has a separate
-[native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md); completing it
-does not by itself qualify the unsigned Windows package for release.
+device and platform boundaries. The unsigned Windows preview has a separate
+[release checklist](WINDOWS_RELEASE_QUALIFICATION.md). Windows DPAPI signer
+protection has an additional
+[native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md).
 
 ## Checklist navigation
 
@@ -24,7 +25,8 @@ does not by itself qualify the unsigned Windows package for release.
 ## 1. Record the candidate and automated evidence
 
 Record desktop and Companion version/commit, Companion minimum desktop commit,
-AppImage/deb/Chrome ZIP/Firefox ZIP SHA-256, and OS/kernel/browser versions.
+AppImage/deb/unsigned Windows installer/Chrome ZIP/Firefox ZIP SHA-256, and
+OS/kernel/browser versions.
 Verify both artifact-directory `SHA256SUMS` files; Companion compatibility must
 name the candidate branch and an ancestor desktop commit. Record exact workflow
 URLs (or equivalent local evidence) for desktop and Companion quality/package,
@@ -40,8 +42,10 @@ The native smoke matrix builds real unsigned Linux arm64, macOS x64/arm64, and
 Windows x64 packages on matching runners, then compares packaged runtime evidence
 from the unpacked application and each extracted archive. These jobs verify source
 identity, runtime architecture, resources, native modules, and existing runtime
-invariants; their retained `unsigned-unqualified` artifacts are not release,
-installer, GUI, hardware, signing, or platform-qualification evidence.
+invariants. Its retained `unsigned-unqualified` artifacts are not release,
+installer, GUI, hardware, signing, or platform-qualification evidence. The
+separate draft workflow repeats the Windows package checks, verifies that the
+installer and executable are `NotSigned`, and stages the clearly named preview.
 `npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display
 and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
 delegation entry, revocation review, ambiguous monitoring, safe focus,
@@ -260,9 +264,10 @@ printing them, remove accounts/signers in Wren, confirm signer files are gone,
 then remove test profiles only after recording the result. Public address metadata
 is non-secret and does not prove the scan passed.
 
-A pass requires an explicit result for every applicable cell, both browser flows,
-AppImage/deb/profile checks, no secret in logs, and each anomaly fixed/retested or
-documented as intentionally unsupported. Crashes, cross-tab data, wrong device
+A Linux pass requires an explicit result for every applicable cell, both browser
+flows, AppImage/deb/profile checks, no secret in logs, and each anomaly fixed/retested or
+documented as intentionally unsupported. The Windows preview additionally requires
+its separate checklist. Crashes, cross-tab data, wrong device
 display, unexplained signer reload, stale approval, blind signing, profile loss,
 wrong updater target, wrong target/amount, cross-chain request, stale deposit,
 duplicate broadcast, unrecoverable workflow, or unrevokable approval block a

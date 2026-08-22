@@ -5,6 +5,10 @@ const signingMode = readSigningMode('WREN_WINDOWS_SIGNING')
 
 module.exports = {
   ...baseConfig,
+  artifactName:
+    signingMode === 'required'
+      ? 'Wren-Setup-${version}-x64.${ext}'
+      : 'Wren-Setup-${version}-unsigned-x64.${ext}',
   forceCodeSigning: signingMode === 'required',
   win: {
     signAndEditExecutable: true,

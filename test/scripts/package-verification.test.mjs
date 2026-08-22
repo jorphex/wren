@@ -67,8 +67,8 @@ test('selects native macOS, Windows, and Linux arm64 artifacts', () => {
     ['Wren-0.1.0-arm64.dmg', 'Wren-0.1.0-arm64-mac.zip']
   )
   assert.deepEqual(
-    selectPackageArtifacts(['Wren Setup 0.1.0.exe'], getPackageTarget('windows-x64'), '0.1.0'),
-    ['Wren Setup 0.1.0.exe']
+    selectPackageArtifacts(['Wren-Setup-0.1.0-unsigned-x64.exe'], getPackageTarget('windows-x64'), '0.1.0'),
+    ['Wren-Setup-0.1.0-unsigned-x64.exe']
   )
 })
 

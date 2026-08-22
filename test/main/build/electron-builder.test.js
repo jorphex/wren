@@ -67,11 +67,13 @@ describe('electron-builder platform boundaries', () => {
     })
     expect(unsigned.forceCodeSigning).toBe(false)
     expect(unsigned.win.signExecutable).toBe(false)
+    expect(unsigned.artifactName).toBe('Wren-Setup-${version}-unsigned-x64.${ext}')
 
-    const release = load('../../../build/electron-builder-windows.js', {
+    const signed = load('../../../build/electron-builder-windows.js', {
       WREN_WINDOWS_SIGNING: 'required'
     })
-    expect(release.forceCodeSigning).toBe(true)
-    expect(release.win.signExecutable).toBe(true)
+    expect(signed.forceCodeSigning).toBe(true)
+    expect(signed.win.signExecutable).toBe(true)
+    expect(signed.artifactName).toBe('Wren-Setup-${version}-x64.${ext}')
   })
 })

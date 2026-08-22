@@ -15,7 +15,7 @@
 </p>
 
 > [!NOTE]
-> Wren has not had an independent security audit. Linux x64 is the current release target. Keep a backup, verify release checksums, and start with a test account or small amount.
+> Wren has not had an independent security audit. Linux x64 is the qualified release target; Windows x64 is an unsigned preview. Keep a backup, verify release checksums, and start with a test account or small amount.
 
 Wren provides one approval and signing interface to browser dapps and native applications. Dapps connect through the paired browser companion or Wren's local EIP-1193/JSON-RPC provider. Each origin has its own account permission and chain route; there is no shared global network selection.
 
@@ -41,13 +41,14 @@ Browser store publication is a separate process. Release operators should use th
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
 | Linux x64 AppImage and deb   | Release candidate qualified; publication pending                                          |
+| Windows x64                  | Unsigned preview; native package checks pass and final VM qualification is required       |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
 | Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.3`              |
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                       |
 | Chrome and Firefox companion | Companion 0.1.2 pairing target; archive and browser-store publication pending             |
-| macOS, Windows, Linux arm64  | Unsigned native CI smoke packages; not released or qualified                              |
+| macOS and Linux arm64        | Unsigned native CI smoke packages; not released or qualified                              |
 | Trezor Safe 7 Bluetooth      | Unsupported                                                                               |
 
 See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitations. Trezor Suite is not needed for the qualified Safe 7 USB flow.
@@ -100,13 +101,15 @@ The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPAT
 
 ## Install Wren 0.1.3
 
-After 0.1.3 is published, download `Wren-0.1.3.AppImage` or
-`wren_0.1.3_amd64.deb` and `SHA256SUMS` from the
-[desktop releases page](https://github.com/jorphex/wren/releases). From the
-download directory:
+Download the package for your system and `SHA256SUMS` from the
+[desktop releases page](https://github.com/jorphex/wren/releases).
+
+### Linux x64
+
+For `Wren-0.1.3.AppImage` or `wren_0.1.3_amd64.deb`, run:
 
 ```bash
-sha256sum --check SHA256SUMS
+sha256sum --check --ignore-missing SHA256SUMS
 ```
 
 Run the AppImage:
@@ -122,7 +125,29 @@ Or install the deb:
 sudo apt install ./wren_0.1.3_amd64.deb
 ```
 
-Linux packages are currently unsigned. Verify checksums and GitHub artifact attestations before installing.
+Linux packages are unsigned. Verify the checksum and GitHub artifact attestation
+before installing.
+
+### Windows x64 preview
+
+`Wren-Setup-0.1.3-unsigned-x64.exe` is an unsigned preview. Windows will report
+its publisher as unknown and may show SmartScreen. Download it only from Wren's
+GitHub release, then verify it in PowerShell:
+
+```powershell
+$Installer = Get-Item '.\Wren-Setup-0.1.3-unsigned-x64.exe'
+$Expected = (Get-Content '.\SHA256SUMS' | Where-Object { $_ -like "*  $($Installer.Name)" }).Split()[0]
+$Actual = (Get-FileHash -Algorithm SHA256 $Installer).Hash.ToLowerInvariant()
+if ($Actual -ne $Expected) { throw 'Checksum does not match' }
+(Get-AuthenticodeSignature $Installer).Status # Expected: NotSigned
+```
+
+The installer is intentionally one-click: it installs for the current user and
+opens Wren without a setup wizard. A warning may not appear on every Windows
+system. Checksums and GitHub attestations confirm release-file integrity, but
+they do not create a trusted Windows publisher. See the
+[Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md) for the tested
+boundary.
 
 ### Import a Frame profile
 

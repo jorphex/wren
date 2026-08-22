@@ -1,9 +1,11 @@
 # Windows DPAPI software-signer qualification checklist
 
 This checklist qualifies only Wren's optional Windows DPAPI software-signer
-protection. It does not qualify the unsigned Windows package, installer, updater,
-hardware signers, or Windows as a release target. Complete it on Windows x64 with
-the exact candidate after automated Windows package verification passes.
+protection. It does not qualify the installer, updater, hardware signers, or the
+overall Windows preview. Complete the separate
+[Windows release checklist](WINDOWS_RELEASE_QUALIFICATION.md), then run this on
+Windows x64 with the same exact candidate before describing DPAPI as natively
+qualified.
 
 Use only disposable software signers and passwords. Never use an account that has
 held real value. Do not publish seeds, private keys, keystore contents, passwords,
