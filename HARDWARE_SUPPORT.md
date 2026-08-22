@@ -27,7 +27,7 @@ transport; it does not upgrade the evidence label.
 | Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                  |
 | Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified. |
 | Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                            |
-| Windows x64                     | Electron/NSIS package         | Unsigned preview with native archive/runtime and unsigned-state checks; final VM checklist required and no trusted publisher is claimed.         |
+| Windows x64                     | Electron/NSIS package         | Unsigned preview with native archive/runtime and unsigned-state checks; not platform-qualified, and no trusted publisher is claimed.             |
 | macOS x64/arm64                 | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not signed, released, installed, or platform-qualified.                |
 | Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                    |
 | Linux snap                      | Electron package              | Legacy configuration only; not produced by current CI.                                                                                           |

@@ -29,7 +29,7 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Current status
 
-This table describes the `0.1.3` release candidate. The
+This table describes the `0.1.3` release. The
 [Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
 evidence and limitations.
 
@@ -40,8 +40,8 @@ Browser store publication is a separate process. Release operators should use th
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Linux x64 AppImage and deb   | Release candidate qualified; publication pending                                          |
-| Windows x64                  | Unsigned preview; native package checks pass and final VM qualification is required       |
+| Linux x64 AppImage and deb   | Qualified release packages                                                                |
+| Windows x64                  | Unsigned preview; native package checks pass, but Windows is not a qualified platform     |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
 | Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.3`              |
