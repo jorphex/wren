@@ -85,7 +85,7 @@ export class RevokeAccess extends React.Component {
         <button
           ref={this.triggerRef}
           type='button'
-          className='revokeAccessButton wrenControl wrenControlDanger'
+          className='revokeAccessButton wrenControl wrenControlSecondary'
           disabled={this.state.pending}
           onClick={() => this.open()}
         >

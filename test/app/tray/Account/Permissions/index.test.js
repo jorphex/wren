@@ -111,14 +111,19 @@ it('requires confirmation and revokes a permission once', async () => {
     />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
+  const trigger = screen.getByRole('button', { name: 'Revoke access' })
+  expect(trigger.classList.contains('wrenControlSecondary')).toBe(true)
+  expect(trigger.classList.contains('wrenControlDanger')).toBe(false)
+  await user.click(trigger)
   const dialog = screen.getByRole('alertdialog', { name: 'Revoke access for alpha.example?' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
   expect(screen.getByText(/guardrails will be removed/u)).toBeTruthy()
   expect(link.send).not.toHaveBeenCalled()
 
-  await user.dblClick(screen.getByRole('button', { name: 'Confirm revoke' }))
+  const confirm = screen.getByRole('button', { name: 'Confirm revoke' })
+  expect(confirm.classList.contains('wrenControlDanger')).toBe(true)
+  await user.dblClick(confirm)
 
   expect(link.send.mock.calls).toEqual([['tray:action', 'toggleAccess', account, 'first', false]])
   expect(onRevokeRequested).toHaveBeenCalledWith('first', 'alpha.example')
