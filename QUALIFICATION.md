@@ -122,9 +122,14 @@ archive and active-desktop checks below.
    calldata, and fees. Safe 7 pairing must reconnect without a reload loop;
    Model One must explicitly report unsupported display types rather than blind
    sign. For software signers test wrong password, unlock, relock, restart, and
-   removal. Production logs must not contain any secret, request payload, or
-   pairing response. The transfer action must remain unavailable unless the
-   expected testnet and disposable-account confirmation are active; check its
+   removal. Generate one 12-word wallet and one private-key wallet. Confirm each
+   secret is shown only for backup, its backup check is required, and it is not
+   shown again. Confirm the eight-character minimum and that an easy-to-guess
+   password keeps Continue disabled until its consent box is checked. Remove each
+   signer and confirm accounts that depend only on it disappear while accounts
+   shared with another signer remain. Production logs must not contain any secret,
+   request payload, or pairing response. The transfer action must remain unavailable
+   unless the expected testnet and disposable-account confirmation are active; check its
    hash privately on the matching explorer.
 
 ## 3. Qualify EIP-5792 and EIP-7702 boundaries

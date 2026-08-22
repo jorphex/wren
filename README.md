@@ -40,7 +40,7 @@ Browser store publication is a separate process. Release operators should use th
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Linux x64 AppImage and deb   | Release candidate prepared; publication and final manual qualification pending            |
+| Linux x64 AppImage and deb   | Release candidate qualified; publication pending                                          |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
 | Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.3`              |
@@ -138,7 +138,7 @@ For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validate
 
 The companion injects Wren's EIP-1193 provider and announces it through EIP-6963. Download the Chrome or Firefox archive from its [releases page](https://github.com/jorphex/wren-companion/releases), verify its checksum, extract it, then follow the [companion installation instructions](https://github.com/jorphex/wren-companion#install).
 
-Compare the six-digit pairing code shown in Wren and the extension before approving. Older store extensions do not implement this desktop release's authenticated protocol.
+Compare the six-digit pairing code shown in Wren and the extension before approving. Use Companion 0.1.2; older versions lack fixes qualified with this release.
 
 ## Run from source
 

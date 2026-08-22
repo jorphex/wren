@@ -48,6 +48,7 @@ for that separate evidence.
    npm run lint
    npm run compile
    npm test
+   npm run test:e2e
    npm run test:usbAdapters
    npm run bundle
    npm run package:linux:x64
