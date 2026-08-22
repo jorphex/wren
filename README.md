@@ -4,7 +4,7 @@
 
 <h1 align="center">Wren</h1>
 
-<p align="center">A desktop EVM wallet and signing firewall for browsers and native apps.</p>
+<p align="center">A desktop EVM wallet for reviewing and signing requests from browsers and native apps.</p>
 
 <p align="center">
   <a href="https://github.com/jorphex/wren/releases">Desktop releases</a> ·
@@ -14,14 +14,14 @@
   <a href="RPC_COMPATIBILITY.md">RPC compatibility</a>
 </p>
 
-> [!WARNING]
-> Wren has no independent security audit. Its current release target is Linux x64. Back up your profile, verify release checksums, and use test accounts before trusting a release with valuable assets. Use at your own risk.
+> [!NOTE]
+> Wren has not had an independent security audit. Linux x64 is the current release target. Keep a backup, verify release checksums, and start with a test account or small amount.
 
 Wren provides one approval and signing interface to browser dapps and native applications. Dapps connect through the paired browser companion or Wren's local EIP-1193/JSON-RPC provider. Each origin has its own account permission and chain route; there is no shared global network selection.
 
 ## Choose a path
 
-- New users: start with [Install a published release](#install-a-published-release) or [Run from source](#run-from-source).
+- New users: start with [Install Wren 0.1.3](#install-wren-013) or [Run from source](#run-from-source).
 - Developers: read [RPC Compatibility](RPC_COMPATIBILITY.md) for the local provider and authenticated protocol.
 - Release operators: follow the [Release Procedure](RELEASE.md), then the [qualification checklist](QUALIFICATION.md).
 - Hardware users: check the [Signer and Platform Support reference](HARDWARE_SUPPORT.md) before testing a device.
@@ -29,21 +29,24 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Current status
 
-This table describes the `0.1.3` release boundary. The
+This table describes the `0.1.3` release candidate. The
 [Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
 evidence and limitations.
 
-Wren `0.1.3` and Wren Companion `0.1.2` are the compatible protocol-3 release pair. Browser store publication is a separate process. Release operators should use the [Release Procedure](RELEASE.md); the manual gate is in the [qualification checklist](QUALIFICATION.md).
+Wren `0.1.3` is designed to pair with Wren Companion `0.1.2` over protocol 3.
+Browser store publication is a separate process. Release operators should use the
+[Release Procedure](RELEASE.md); the manual gate is in the
+[qualification checklist](QUALIFICATION.md).
 
 | Area                         | Current boundary                                                                          |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
-| Linux x64 AppImage and deb   | Published; Wren-branded qualification complete                                            |
+| Linux x64 AppImage and deb   | Release candidate prepared; publication and final manual qualification pending            |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
 | Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.3`              |
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                       |
-| Chrome and Firefox companion | GitHub packages published; Chrome and Firefox store review pending                        |
+| Chrome and Firefox companion | Companion 0.1.2 pairing target; archive and browser-store publication pending             |
 | macOS, Windows, Linux arm64  | Unsigned native CI smoke packages; not released or qualified                              |
 | Trezor Safe 7 Bluetooth      | Unsupported                                                                               |
 
@@ -52,6 +55,10 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 ## What Wren does
 
 - Hosts browser-compatible HTTP and WebSocket JSON-RPC on localhost and authenticated protocol-3 routes for originless native clients. See [RPC Compatibility](RPC_COMPATIBILITY.md) for the exact protocol boundary.
+- Creates encrypted local accounts with either a new 12-word recovery phrase or
+  a new Ethereum private key. Wren uses the operating system's secure random
+  generator, shows the secret once for backup, and requires password and backup
+  confirmation.
 - Keeps hardware, software, and watch-only accounts behind signer and permission checks.
 - Reviews transactions and signatures: calldata, approvals, configured-RPC simulation, selected trace evidence, EIP-712, permits, Permit2, SIWE, and dangerous `eth_sign` consent. Simulation is evidence, not a guarantee.
 - Includes a dashboard-only read-only inspector for bounded unsigned transactions,
@@ -62,16 +69,19 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
   EVM deployment data—creation bytecode with encoded constructor arguments—and an optional
   native value. Preparation sends the selected account context, deployment data, and
   value only to the configured RPC for gas, simulation, and pending-nonce evidence;
-  queueing then enters Wren's ordinary native review, signer, and one-shot broadcast
+  queueing then enters Wren's ordinary native review, signer, and single-broadcast
   lifecycle. Wren does not compile Solidity or Vyper in the deployment tool.
 - Verifies source for a confirmed Wren deployment or an existing contract from
   Control Center Tools. Wren reads bounded Solidity/Vyper standard JSON or
   Foundry/Hardhat build-info locally, binds it to the exact chain, address, and
-  deployed runtime code, and publishes only after explicit permanent-public
-  consent. Sourcify is the keyless primary destination; direct Etherscan V2 is a
+  deployed runtime code, and publishes only after clear confirmation that the
+  source will become public. Wren cannot withdraw published source. Sourcify is
+  the keyless primary destination; direct Etherscan V2 is a
   manual supported-chain fallback using an OS-protected user API key and an
   explicit encoded-constructor-arguments value (or confirmation that there are none).
-- Provides finite account/method/chain-scoped permissions, per-invoker chain routing, add/switch-chain flows, and non-atomic EIP-5792 wallet calls.
+- Provides finite account-, method-, and chain-scoped permissions; a separate
+  network route for each app; add/switch-chain flows; and sequential EIP-5792
+  wallet calls that are not all-or-nothing.
 - Lets users add optional local per-dapp, per-account, per-chain guardrails for
   destinations, approval spenders, native/token amounts, and expiry. Guardrails block
   or require an extra warning acknowledgement; normal request review still applies.
@@ -88,9 +98,12 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 
 The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPATIBILITY.md), [Supported Ethereum Standards](SUPPORTED_EIPS.md), and [Advanced Execution](EXECUTION_BOUNDARIES.md).
 
-## Install a published release
+## Install Wren 0.1.3
 
-Download `Wren-0.1.3.AppImage` or `wren_0.1.3_amd64.deb` and `SHA256SUMS` from the [desktop releases page](https://github.com/jorphex/wren/releases). From the download directory:
+After 0.1.3 is published, download `Wren-0.1.3.AppImage` or
+`wren_0.1.3_amd64.deb` and `SHA256SUMS` from the
+[desktop releases page](https://github.com/jorphex/wren/releases). From the
+download directory:
 
 ```bash
 sha256sum --check SHA256SUMS

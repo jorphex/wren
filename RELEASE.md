@@ -34,8 +34,8 @@ for that separate evidence.
    current physical-device evidence in
    [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md). When desktop/Companion integration
    changes, update the Companion `compatibility.json` minimum desktop commit and
-   build both from their exact paired commits; protocol 2 must not be directed at
-   an older store extension.
+   build both from their exact paired commits. The current protocol is version 3;
+   do not direct a protocol-3 client to an older store extension.
 3. Run the release gate:
 
    ```bash

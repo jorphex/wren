@@ -18,8 +18,8 @@ economics.
 Earn is a focused, allowlisted integration, not a general DeFi marketplace.
 Wren owns the catalog and the transaction boundary. Yearn Kong provides current
 metadata. Kong cannot add an address, choose a target, or change calldata. Earn
-is in the Wren `0.1.0` release. The published Frame-derived `0.7.0` release
-did not include Earn.
+was introduced in Wren `0.1.0` and remains an allowlisted Wren feature. The older
+Frame-derived `0.7.0` release did not include it.
 
 Wren sends the same fixed vault-list request to Kong for every user. The
 request does not include account addresses, balances, or transaction details.
