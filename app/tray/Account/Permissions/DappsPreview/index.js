@@ -224,7 +224,13 @@ export class DappsPermissionsPreview extends React.Component {
 
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
-        <div className='moduleHeader permissionsModuleHeader' ref={this.moduleHeaderRef} tabIndex={-1}>
+        <div
+          className='permissionsModuleFocusFallback'
+          ref={this.moduleHeaderRef}
+          tabIndex={-1}
+          aria-label='Apps with access section'
+        />
+        <div className='moduleHeader permissionsModuleHeader' role='heading' aria-level='2'>
           <span>
             <Icon name='apps' size={14} />
           </span>

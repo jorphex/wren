@@ -127,10 +127,23 @@ button.wrenControl.revokeAccessButton
   font-size var(--wren-type-small)
   line-height 20px
 
-.permissionsModuleHeader:focus,
 .permissionsLedgerView:focus
   outline 2px solid var(--wren-focus)
   outline-offset -2px
+
+.permissionsModuleFocusFallback
+  position absolute
+  width 1px
+  height 1px
+  margin -1px
+  overflow hidden
+  clip rect(0 0 0 0)
+  white-space nowrap
+  pointer-events none
+
+  &:focus,
+  &:focus-visible
+    outline none
 
 .moduleMainPermissions
   overflow auto

@@ -83,6 +83,15 @@ it('sorts permission rows by their displayed origin', () => {
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
 
+it('keeps the preview header semantic and non-interactive', async () => {
+  const { user } = renderWithStore(DappsPermissionsPreview)
+  const header = screen.getByRole('heading', { name: 'Apps with access' })
+
+  expect(header.getAttribute('tabindex')).toBeNull()
+  await user.click(header)
+  expect(document.activeElement).not.toBe(header)
+})
+
 it.each([
   ['preview', DappsPermissionsPreview, {}],
   ['expanded', DappsPermissionsExpanded, { expanded: true }]
@@ -104,7 +113,7 @@ it.each([
 })
 
 it.each([
-  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleHeader'],
+  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleFocusFallback'],
   ['expanded', DappsPermissionsExpanded, { expanded: true }, 'permissionsLedgerView']
 ])(
   'moves %s dialog focus to a visible fallback when its last permission expires',
@@ -459,7 +468,7 @@ it.each([
 })
 
 it.each([
-  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleHeader'],
+  ['preview', DappsPermissionsPreview, {}, 'permissionsModuleFocusFallback'],
   ['expanded', DappsPermissionsExpanded, { expanded: true }, 'permissionsLedgerView']
 ])(
   'keeps %s revoke focus on the next row, then the previous row, then a visible fallback',
