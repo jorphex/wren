@@ -4,20 +4,34 @@ import { Signers } from '../../../main/signers'
 import { installCloseToTray } from '../../../main/windows/closeToTray'
 
 let mockCloseLock = false
+let mockPendingSignerRemovals = {}
+let mockSignerSummaries = {}
 const mockNewSignerAction = jest.fn()
 const mockRemoveSignerAction = jest.fn()
+const mockUpdateSignerAction = jest.fn()
+const mockCommitMainState = jest.fn()
 const mockStoreActions = {
   newSigner: mockNewSignerAction,
-  removeSigner: mockRemoveSignerAction
+  removeSigner: mockRemoveSignerAction,
+  updateSigner: mockUpdateSignerAction
 }
 
 jest.mock('../../../main/store', () => ({
   __esModule: true,
-  default: jest.fn((path) => (path === 'main.accountCloseLock' ? mockCloseLock : undefined))
+  default: jest.fn((path) => {
+    if (path === 'main.accountCloseLock') return mockCloseLock
+    if (path === 'main.pendingSignerRemovals') return mockPendingSignerRemovals
+    const signerAddressMatch = path?.match(/^main\.signers\.([^.]+)\.addresses$/u)
+    if (signerAddressMatch) return mockSignerSummaries[signerAddressMatch[1]]?.addresses
+    const signerSummaryMatch = path?.match(/^main\.signers\.([^.]+)$/u)
+    if (signerSummaryMatch) return mockSignerSummaries[signerSummaryMatch[1]]
+    if (path === 'main') return { pendingSignerRemovals: mockPendingSignerRemovals }
+  })
 }))
 jest.mock('../../../main/store/action', () => ({
   requireStoreAction: (name) => mockStoreActions[name] || jest.fn()
 }))
+jest.mock('../../../main/store/persist', () => ({ commitMainState: mockCommitMainState }))
 
 jest.mock('../../../main/signers/hot/adapter', () => {
   const { EventEmitter: MockEventEmitter } = require('events')
@@ -96,6 +110,114 @@ describe('signer manager lifecycle', () => {
 
   afterEach(() => {
     mockCloseLock = false
+    mockPendingSignerRemovals = {}
+    mockSignerSummaries = {}
+  })
+
+  it('lists addresses owned by signers other than the one being removed', async () => {
+    const manager = new Signers([])
+    const removed = { ...hotSigner('removed'), addresses: ['0x1', '0x2'] }
+    const retained = { ...hotSigner('retained'), addresses: ['0x2', '0x3'] }
+    manager.add(removed)
+    manager.add(retained)
+
+    expect(manager.addressesExcept('removed')).toEqual(['0x2', '0x3'])
+
+    await manager.close()
+  })
+
+  it('durably records replacement ownership without narrowing a removal journal', async () => {
+    const manager = new Signers([])
+    const sharedAddress = '0x0000000000000000000000000000000000000001'
+    const signer = { ...hotSigner('replacement'), addresses: [] }
+    signer.summary = () => ({ id: signer.id, addresses: [...signer.addresses] })
+    manager.add(signer)
+    mockSignerSummaries = { replacement: { id: signer.id, addresses: [] } }
+    mockPendingSignerRemovals = {
+      removed: { addresses: [sharedAddress], kind: 'hardware' }
+    }
+
+    signer.addresses = [sharedAddress]
+    manager.update(signer)
+
+    expect(mockCommitMainState).toHaveBeenCalledTimes(1)
+    expect(mockUpdateSignerAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'replacement', addresses: [sharedAddress] })
+    )
+
+    await manager.close()
+  })
+
+  it('keeps a late-derived address fenced when preserving it cannot be committed', async () => {
+    const manager = new Signers([])
+    const pendingAddress = '0x0000000000000000000000000000000000000001'
+    const signer = { ...hotSigner('replacement'), addresses: [] }
+    signer.summary = () => ({ id: signer.id, addresses: [...signer.addresses] })
+    manager.add(signer)
+    mockSignerSummaries = { replacement: { id: signer.id, addresses: [] } }
+    mockPendingSignerRemovals = {
+      removed: { addresses: [pendingAddress], kind: 'hardware' }
+    }
+    mockCommitMainState.mockImplementationOnce(() => {
+      throw new Error('storage unavailable')
+    })
+
+    signer.addresses = [pendingAddress]
+    manager.update(signer)
+
+    expect(signer.addresses).toEqual([])
+    expect(mockUpdateSignerAction).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'replacement', addresses: [] })
+    )
+
+    await manager.close()
+  })
+
+  it('keeps a late-derived address fenced when the store update itself fails', async () => {
+    const manager = new Signers([])
+    const pendingAddress = '0x0000000000000000000000000000000000000001'
+    const signer = { ...hotSigner('replacement'), addresses: [] }
+    signer.summary = () => ({ id: signer.id, addresses: [...signer.addresses] })
+    manager.add(signer)
+    mockSignerSummaries = { replacement: { id: signer.id, addresses: [] } }
+    mockPendingSignerRemovals = {
+      removed: { addresses: [pendingAddress], kind: 'hardware' }
+    }
+    mockUpdateSignerAction.mockImplementationOnce(() => {
+      throw new Error('store update failed')
+    })
+
+    signer.addresses = [pendingAddress]
+    manager.update(signer)
+
+    expect(mockCommitMainState).not.toHaveBeenCalled()
+    expect(signer.addresses).toEqual([])
+    expect(mockUpdateSignerAction).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'replacement', addresses: [] })
+    )
+
+    await manager.close()
+  })
+
+  it('freezes every address update from a signer already pending removal', async () => {
+    const manager = new Signers([])
+    const originalAddress = '0x0000000000000000000000000000000000000001'
+    const lateAddress = '0x0000000000000000000000000000000000000002'
+    const signer = { ...hotSigner('pending'), addresses: [originalAddress] }
+    signer.summary = () => ({ id: signer.id, addresses: [...signer.addresses] })
+    manager.add(signer)
+    mockSignerSummaries = { pending: { addresses: [originalAddress] } }
+    mockPendingSignerRemovals = {
+      pending: { addresses: [originalAddress], kind: 'hardware' }
+    }
+
+    signer.addresses = [originalAddress, lateAddress]
+    manager.update(signer)
+
+    expect(signer.addresses).toEqual([originalAddress])
+    expect(mockUpdateSignerAction).not.toHaveBeenCalled()
+
+    await manager.close()
   })
 
   it('closes hot signers and every adapter registered with the manager', async () => {
@@ -148,6 +270,55 @@ describe('signer manager lifecycle', () => {
 
     await manager.close()
     expect(signer.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a signer admitted when its adapter cannot remove it', async () => {
+    const adapter = new TestAdapter('hot')
+    const manager = new Signers([adapter])
+    const signer = hotSigner('remove-failure')
+    adapter.remove.mockImplementationOnce(() => {
+      throw new Error('signer storage unavailable')
+    })
+    manager.add(signer)
+
+    expect(() => manager.remove(signer.id)).toThrow('signer storage unavailable')
+    expect(manager.get(signer.id)).toBe(signer)
+    expect(mockRemoveSignerAction).not.toHaveBeenCalledWith(signer.id)
+
+    await manager.close()
+  })
+
+  it('removes signer storage before clearing its live and store summaries', async () => {
+    const order = []
+    const adapter = new TestAdapter('hot')
+    const manager = new Signers([adapter])
+    const signer = hotSigner('removed')
+    adapter.remove.mockImplementationOnce(() => order.push('adapter'))
+    mockRemoveSignerAction.mockImplementationOnce(() => order.push('store'))
+    manager.add(signer)
+
+    manager.remove(signer.id)
+
+    expect(order).toEqual(['adapter', 'store'])
+    expect(manager.get(signer.id)).toBeUndefined()
+
+    await manager.close()
+  })
+
+  it('force-detaches a rejected admission without invoking storage erasure', async () => {
+    const adapter = new TestAdapter('hot')
+    const manager = new Signers([adapter])
+    const signer = hotSigner('rejected')
+    manager.add(signer)
+
+    manager.rollbackAdmission(signer)
+
+    expect(manager.get(signer.id)).toBeUndefined()
+    expect(adapter.remove).not.toHaveBeenCalled()
+    expect(signer.close).toHaveBeenCalledTimes(1)
+    expect(mockRemoveSignerAction).toHaveBeenCalledWith(signer.id)
+
+    await manager.close()
   })
 
   it('locks an unlocked hot signer when a normal close is configured to lock', async () => {

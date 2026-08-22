@@ -104,22 +104,58 @@ test('accepts only an explicit wallet-call simulation acknowledgement', () => {
 })
 
 test('validates sensitive signer methods without coercion', () => {
+  const passwordOptions = { allowWeakPassword: false }
   expect(
-    parseRendererRpcRequest(wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, 'password')).success
+    parseRendererRpcRequest(
+      wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, 'password', passwordOptions)
+    ).success
   ).toBe(true)
-  expect(parseRendererRpcRequest(wire(1, 'createFromPrivateKey', 'not-a-key', 'password')).success).toBe(
-    false
-  )
+  expect(
+    parseRendererRpcRequest(wire(1, 'createFromPrivateKey', 'not-a-key', 'password', passwordOptions)).success
+  ).toBe(false)
   expect(parseRendererRpcRequest(wire(1, 'trezorPairing', 'trezor-id', { tag: 123 })).success).toBe(false)
 
   const phrase = '  abandon abandon abandon  '
-  expect(parseRendererRpcRequest(wire(1, 'createFromPhrase', phrase, 'password'))).toMatchObject({
+  expect(
+    parseRendererRpcRequest(wire(1, 'createFromPhrase', phrase, 'password', passwordOptions))
+  ).toMatchObject({
     success: true,
-    data: { args: [phrase, 'password'] }
+    data: { args: [phrase, 'password', passwordOptions] }
   })
   expect(
     parseRendererRpcRequest(wire(1, 'createAccount', address, 'Account', { type: 'unknown' })).success
   ).toBe(false)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, '1234567', passwordOptions)
+    ).success
+  ).toBe(false)
+  expect(
+    parseRendererRpcRequest(wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, 'password')).success
+  ).toBe(false)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'createFromPrivateKey', `0x${'a'.repeat(64)}`, 'password', {
+        allowWeakPassword: 'yes'
+      })
+    ).success
+  ).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, 'unlockSigner', 'seed-id', 'short')).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'createLattice', 'GRID-123', 'GridPlus')).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'createLattice', 'GRID 123', 'GridPlus')).success).toBe(false)
+
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'createFromKeystore', { version: 3 }, 'password', 'short', passwordOptions)
+    ).success
+  ).toBe(true)
+  expect(
+    parseRendererRpcRequest(
+      wire(1, 'createFromKeystore', { version: 3 }, 'short', 'password', passwordOptions)
+    ).success
+  ).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, 'removeSigner', 'seed-id')).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'removeSigner', '')).success).toBe(false)
 })
 
 test('bounds generated-wallet creation and its one-time presentation payload', () => {
@@ -127,19 +163,25 @@ test('bounds generated-wallet creation and its one-time presentation payload', (
   const phrase = 'test test test test test test test test test test test junk'
   const privateKey = `0x${'1'.padStart(64, '0')}`
   const expiresAt = Date.now() + 60_000
+  const passwordOptions = { allowWeakPassword: false }
 
   expect(parseRendererRpcRequest(wire(1, 'reserveGeneratedWallet'))).toMatchObject({
     success: true,
     data: { args: [] }
   })
   expect(
-    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'phrase', 'password'))
+    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'phrase', 'password', passwordOptions))
   ).toMatchObject({
     success: true,
-    data: { args: [sessionId, 'phrase', 'password'] }
+    data: { args: [sessionId, 'phrase', 'password', passwordOptions] }
   })
   expect(
-    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'seed', 'password')).success
+    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'phrase', '1234567', passwordOptions))
+      .success
+  ).toBe(false)
+  expect(
+    parseRendererRpcRequest(wire(1, 'beginGeneratedWallet', sessionId, 'seed', 'password', passwordOptions))
+      .success
   ).toBe(false)
   expect(
     parseRendererRpcRequest(

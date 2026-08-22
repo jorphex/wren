@@ -13,6 +13,7 @@ import { normalizeInterfaceScale } from '../../windows/uiScale'
 import { createDesktopAuthIdentity, DesktopAuthIdentitySchema } from '../../api/desktopAuthIdentity'
 import { pruneOutboundAddressMemory } from './types/outboundAddressMemory'
 import { pruneRecentRecipientUses } from '../../../resources/domain/recentRecipients'
+import { applyPendingRemovalJournals } from './pendingRemovals'
 
 export type { ChainId, Chain, ChainMetadata } from './types/chain'
 export type { Connection } from './types/connection'
@@ -126,6 +127,15 @@ const desktopAuthIdentity = persistedDesktopAuthIdentity.success
   ? persistedDesktopAuthIdentity.data
   : createDesktopAuthIdentity(generateUuid())
 const persistedMigrationVersion = Number(main('_version', 49))
+const pendingRemovalState = applyPendingRemovalJournals({
+  accounts: main('accounts', {}),
+  dappGuardrails: main('dappGuardrails', {}),
+  lattice: main('lattice', {}),
+  pendingAccountRemovals: main('pendingAccountRemovals', []),
+  pendingSignerRemovals: main('pendingSignerRemovals', {}),
+  permissions: main('permissions', {}),
+  signers: main('signers', {})
+})
 
 const mainState = {
   _version: persistedMigrationVersion,
@@ -175,7 +185,7 @@ const mainState = {
   accountCloseLock: main('accountCloseLock', false),
   hardwareDerivation: main('hardwareDerivation', 'mainnet'),
   menubarGasPrice: main('menubarGasPrice', false),
-  lattice: main('lattice', {}),
+  lattice: pendingRemovalState.lattice,
   latticeSettings: {
     accountLimit: main('latticeSettings.accountLimit', 5),
     derivation: main('latticeSettings.derivation', 'standard'),
@@ -203,7 +213,9 @@ const mainState = {
     ? { currentNetwork: get('currentNetwork') }
     : {}),
   ...(persistedMigrationVersion < 19 && get('clients') !== undefined ? { clients: get('clients') } : {}),
-  accounts: main('accounts', {}),
+  accounts: pendingRemovalState.accounts,
+  pendingAccountRemovals: pendingRemovalState.pendingAccountRemovals,
+  pendingSignerRemovals: pendingRemovalState.pendingSignerRemovals,
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
   operationLifecycles: main('operationLifecycles', {}),
@@ -212,8 +224,8 @@ const mainState = {
   recentRecipientUses: pruneRecentRecipientUses(main('recentRecipientUses', [])),
   addressBook: main('addressBook', {}),
   ...(persistedMigrationVersion < 7 && get('addresses') !== undefined ? { addresses: get('addresses') } : {}),
-  permissions: main('permissions', {}),
-  dappGuardrails: main('dappGuardrails', {}),
+  permissions: pendingRemovalState.permissions,
+  dappGuardrails: pendingRemovalState.dappGuardrails,
   balances: {},
   tokens: main('tokens', { custom: [], known: {} }),
   rates: {}, // main('rates', {}),

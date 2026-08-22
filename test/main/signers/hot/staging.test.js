@@ -6,6 +6,7 @@ import log from 'electron-log'
 const PASSWORD = 'correct horse battery staple'
 const PHRASE = 'test test test test test test test test test test test junk'
 const PRIVATE_KEY = `0x${'1'.padStart(64, '0')}`
+const PASSWORD_OPTIONS = { allowWeakPassword: false }
 const SIGNER_PATH = path.resolve(__dirname, '../.userData/signers')
 
 jest.mock('electron')
@@ -50,7 +51,7 @@ describe('staged hot signers', () => {
   test('encrypts and locks a phrase without persisting before commit', async () => {
     let staged
     const signer = await waitForCallback((cb) => {
-      staged = hot.stageFromPhrase(signers, PHRASE, PASSWORD, cb)
+      staged = hot.stageFromPhrase(signers, PHRASE, PASSWORD, PASSWORD_OPTIONS, cb)
     })
     const signerFile = path.join(SIGNER_PATH, `${signer.id}.json`)
 
@@ -70,7 +71,7 @@ describe('staged hot signers', () => {
   test('destroys an abandoned private-key signer without creating a file', async () => {
     let staged
     const signer = await waitForCallback((cb) => {
-      staged = hot.stageFromPrivateKey(signers, PRIVATE_KEY, PASSWORD, cb)
+      staged = hot.stageFromPrivateKey(signers, PRIVATE_KEY, PASSWORD, PASSWORD_OPTIONS, cb)
     })
     const signerFile = path.join(SIGNER_PATH, `${signer.id}.json`)
 
@@ -83,10 +84,63 @@ describe('staged hot signers', () => {
     expect(fs.existsSync(signerFile)).toBe(false)
   }, 10_000)
 
+  test('does not persist a direct import rejected by the signer-removal fence', async () => {
+    let rejectedSigner
+    const rejectingSigners = {
+      add: (signer) => {
+        rejectedSigner = signer
+        throw new Error('Signer removal is still being completed')
+      },
+      exists: () => false,
+      trackHotSigner: () => true,
+      untrackHotSigner: jest.fn()
+    }
+
+    await expect(
+      waitForCallback((cb) =>
+        hot.createFromPrivateKey(rejectingSigners, PRIVATE_KEY, PASSWORD, PASSWORD_OPTIONS, cb)
+      )
+    ).rejects.toThrow('Signer removal is still being completed')
+
+    expect(rejectedSigner).toBeDefined()
+    expect(fs.existsSync(path.join(SIGNER_PATH, `${rejectedSigner.id}.json`))).toBe(false)
+    expect(rejectingSigners.untrackHotSigner).toHaveBeenCalledWith(rejectedSigner)
+  }, 10_000)
+
+  test('detaches an admitted import when protected storage cannot be committed', async () => {
+    let rejectedSigner
+    const rollbackAdmission = jest.fn((signer) => signer.close())
+    const failingSigners = {
+      add: (signer) => {
+        rejectedSigner = signer
+        signer.commitStaged = () => {
+          throw new Error('protected storage unavailable')
+        }
+        return true
+      },
+      exists: () => false,
+      rollbackAdmission,
+      trackHotSigner: () => true,
+      untrackHotSigner: jest.fn()
+    }
+
+    await expect(
+      waitForCallback((cb) =>
+        hot.createFromPrivateKey(failingSigners, PRIVATE_KEY, PASSWORD, PASSWORD_OPTIONS, cb)
+      )
+    ).rejects.toThrow('protected storage unavailable')
+
+    expect(rollbackAdmission).toHaveBeenCalledWith(rejectedSigner)
+    expect(rejectedSigner._closed).toBe(true)
+    expect(fs.existsSync(path.join(SIGNER_PATH, `${rejectedSigner.id}.json`))).toBe(false)
+  }, 10_000)
+
   test('completes a real generated-wallet session into encrypted persisted storage', async () => {
     const sessions = new GeneratedWalletSessions(signers)
     const { sessionId } = await waitForCallback((cb) => sessions.reserve(cb))
-    const presentation = await waitForCallback((cb) => sessions.begin(sessionId, 'phrase', PASSWORD, cb))
+    const presentation = await waitForCallback((cb) =>
+      sessions.begin(sessionId, 'phrase', PASSWORD, PASSWORD_OPTIONS, cb)
+    )
     const words = presentation.secret.split(' ')
     const completed = await waitForCallback((cb) =>
       sessions.complete(

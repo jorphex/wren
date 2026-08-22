@@ -15,6 +15,7 @@ import {
   isWrenOwnedOriginName,
   originIdForInvoker
 } from '../resources/domain/origin'
+import { MINIMUM_PASSWORD_LENGTH } from '../resources/domain/password'
 
 const FORMAT = 'wren-profile-backup'
 const VERSION = 1
@@ -161,8 +162,8 @@ const canonicalBase64 = (value: string, maximumBytes: number) => {
 }
 
 const validatePassword = (password: string) => {
-  if (typeof password !== 'string' || password.length < 12 || password.length > 1024) {
-    throw new Error('Backup password must be between 12 and 1024 characters')
+  if (typeof password !== 'string' || password.length < MINIMUM_PASSWORD_LENGTH || password.length > 1024) {
+    throw new Error(`Backup password must be between ${MINIMUM_PASSWORD_LENGTH} and 1024 characters`)
   }
 }
 

@@ -1,22 +1,23 @@
 const PASSWORD = 'correct horse battery staple'
 const PHRASE = 'test test test test test test test test test test test junk'
 const MOCK_PRIVATE_KEY = `0x${'1'.padStart(64, '0')}`
+const PASSWORD_OPTIONS = { allowWeakPassword: false }
 
 const mockStagedSigners = []
 const mockCallOrder = []
 
 jest.mock('../../../main/signers/hot', () => ({
   validatePassword: jest.fn(() => mockCallOrder.push('password')),
-  stageFromPhrase: jest.fn((signers, secret, password, cb) => {
+  stageFromPhrase: jest.fn((signers, secret, password, passwordOptions, cb) => {
     mockCallOrder.push('stage')
     const signer = mockMakeSigner('phrase')
-    mockStagedSigners.push({ password, secret, signer })
+    mockStagedSigners.push({ password, passwordOptions, secret, signer })
     cb(null, signer)
   }),
-  stageFromPrivateKey: jest.fn((signers, secret, password, cb) => {
+  stageFromPrivateKey: jest.fn((signers, secret, password, passwordOptions, cb) => {
     mockCallOrder.push('stage')
     const signer = mockMakeSigner('private-key')
-    mockStagedSigners.push({ password, secret, signer })
+    mockStagedSigners.push({ password, passwordOptions, secret, signer })
     cb(null, signer)
   })
 }))
@@ -72,7 +73,9 @@ const reserve = (sessions) =>
 
 const beginReserved = (sessions, id, kind) =>
   new Promise((resolve, reject) =>
-    sessions.begin(id, kind, PASSWORD, (error, result) => (error ? reject(error) : resolve(result)))
+    sessions.begin(id, kind, PASSWORD, PASSWORD_OPTIONS, (error, result) =>
+      error ? reject(error) : resolve(result)
+    )
   )
 
 const begin = async (sessions, kind) => {
@@ -109,7 +112,11 @@ describe('generated wallet sessions', () => {
     expect(presentation.challenge.every((position) => position >= 1 && position <= 12)).toBe(true)
     expect(randomBytes).toHaveBeenCalledWith(1)
     expect(presentation.sessionId).toMatch(/^[0-9a-f]{32}$/)
-    expect(mockStagedSigners[0]).toMatchObject({ password: PASSWORD, secret: PHRASE })
+    expect(mockStagedSigners[0]).toMatchObject({
+      password: PASSWORD,
+      passwordOptions: PASSWORD_OPTIONS,
+      secret: PHRASE
+    })
     sessions.close()
   })
 
@@ -138,7 +145,7 @@ describe('generated wallet sessions', () => {
       expect(error).toBeNull()
       id = result.sessionId
     })
-    expect(() => sessions.begin(id, 'phrase', PASSWORD, callback)).not.toThrow()
+    expect(() => sessions.begin(id, 'phrase', PASSWORD, PASSWORD_OPTIONS, callback)).not.toThrow()
     expect(callback).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledWith(callbackError)
     expect(sessions.sessions.size).toBe(0)
@@ -149,7 +156,7 @@ describe('generated wallet sessions', () => {
   test('contains an asynchronous presentation delivery failure and discards the staged signer', async () => {
     const callbacks = []
     let stagedSigner
-    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => {
+    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, passwordOptions, cb) => {
       stagedSigner = mockMakeSigner('phrase')
       callbacks.push(() => cb(null, stagedSigner))
       return { cancel: jest.fn(), signer: stagedSigner }
@@ -162,7 +169,7 @@ describe('generated wallet sessions', () => {
       throw callbackError
     })
 
-    sessions.begin(sessionId, 'phrase', PASSWORD, callback)
+    sessions.begin(sessionId, 'phrase', PASSWORD, PASSWORD_OPTIONS, callback)
     expect(() => callbacks[0]()).not.toThrow()
 
     expect(callback).toHaveBeenCalledTimes(1)
@@ -177,7 +184,7 @@ describe('generated wallet sessions', () => {
     const { sessionId } = await reserve(sessions)
     const callback = jest.fn(() => false)
 
-    sessions.begin(sessionId, 'private-key', PASSWORD, callback)
+    sessions.begin(sessionId, 'private-key', PASSWORD, PASSWORD_OPTIONS, callback)
 
     expect(callback).toHaveBeenCalledTimes(1)
     expect(sessions.sessions.size).toBe(0)
@@ -294,11 +301,13 @@ describe('generated wallet sessions', () => {
     const { sessions, signers } = setup()
     const signer = mockMakeSigner('private-key')
     signer.addresses = ['0x0000000000000000000000000000000000000002']
-    hot.stageFromPrivateKey.mockImplementationOnce((manager, secret, password, cb) => cb(null, signer))
+    hot.stageFromPrivateKey.mockImplementationOnce((manager, secret, password, passwordOptions, cb) =>
+      cb(null, signer)
+    )
 
     const { sessionId } = await reserve(sessions)
     const result = await new Promise((resolve) =>
-      sessions.begin(sessionId, 'private-key', PASSWORD, (error, presentation) =>
+      sessions.begin(sessionId, 'private-key', PASSWORD, PASSWORD_OPTIONS, (error, presentation) =>
         resolve({ error, presentation })
       )
     )
@@ -350,7 +359,9 @@ describe('generated wallet sessions', () => {
   test('bounds reservations and releases capacity when staging settles', () => {
     const callbacks = []
     for (let index = 0; index < MAX_SESSIONS; index += 1) {
-      hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => callbacks.push(cb))
+      hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, passwordOptions, cb) =>
+        callbacks.push(cb)
+      )
     }
     const { sessions } = setup()
     const ids = []
@@ -364,7 +375,7 @@ describe('generated wallet sessions', () => {
     const limit = jest.fn()
     sessions.reserve(limit)
 
-    ids.forEach((id) => sessions.begin(id, 'phrase', PASSWORD, () => {}))
+    ids.forEach((id) => sessions.begin(id, 'phrase', PASSWORD, PASSWORD_OPTIONS, () => {}))
     expect(callbacks).toHaveLength(MAX_SESSIONS)
     expect(limit.mock.calls[0][0].message).toBe('Too many wallet creation sessions are active')
 
@@ -439,7 +450,7 @@ describe('generated wallet sessions', () => {
     const callbacks = []
     const stagedSigner = mockMakeSigner('phrase')
     const cancel = jest.fn()
-    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => {
+    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, passwordOptions, cb) => {
       callbacks.push(cb)
       cancel.mockImplementation(() => {
         stagedSigner.close()
@@ -451,7 +462,7 @@ describe('generated wallet sessions', () => {
     const { sessionId } = await reserve(sessions)
     const presented = jest.fn()
 
-    sessions.begin(sessionId, 'phrase', PASSWORD, presented)
+    sessions.begin(sessionId, 'phrase', PASSWORD, PASSWORD_OPTIONS, presented)
     sessions.discard(sessionId, () => {})
     callbacks[0](null, stagedSigner)
 
@@ -469,7 +480,7 @@ describe('generated wallet sessions', () => {
     const callbacks = []
     const stagedSigner = mockMakeSigner('phrase')
     const cancel = jest.fn()
-    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => {
+    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, passwordOptions, cb) => {
       callbacks.push(cb)
       cancel.mockImplementation(() => {
         stagedSigner.close()
@@ -481,7 +492,7 @@ describe('generated wallet sessions', () => {
     const { sessionId } = await reserve(sessions)
     const presented = jest.fn()
 
-    sessions.begin(sessionId, 'phrase', PASSWORD, presented)
+    sessions.begin(sessionId, 'phrase', PASSWORD, PASSWORD_OPTIONS, presented)
     jest.advanceTimersByTime(100)
     callbacks[0](null, stagedSigner)
 
@@ -497,7 +508,7 @@ describe('generated wallet sessions', () => {
     let timestamp = 1_000
     let stageCallback
     const stagedSigner = mockMakeSigner('phrase')
-    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, cb) => {
+    hot.stageFromPhrase.mockImplementationOnce((signers, secret, password, passwordOptions, cb) => {
       stageCallback = cb
       return { cancel: jest.fn(), signer: stagedSigner }
     })
@@ -513,7 +524,7 @@ describe('generated wallet sessions', () => {
     const { sessionId } = await reserve(sessions)
     const presented = jest.fn()
 
-    sessions.begin(sessionId, 'phrase', PASSWORD, presented)
+    sessions.begin(sessionId, 'phrase', PASSWORD, PASSWORD_OPTIONS, presented)
     timestamp = 1_100
     stageCallback(null, stagedSigner)
 
@@ -550,7 +561,7 @@ describe('generated wallet sessions', () => {
     signers.exists.mockReturnValue(true)
     const { sessionId } = await reserve(sessions)
     const result = await new Promise((resolve) =>
-      sessions.begin(sessionId, 'private-key', PASSWORD, (error, presentation) =>
+      sessions.begin(sessionId, 'private-key', PASSWORD, PASSWORD_OPTIONS, (error, presentation) =>
         resolve({ error, presentation })
       )
     )

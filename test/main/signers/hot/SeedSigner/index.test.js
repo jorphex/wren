@@ -6,7 +6,8 @@ import { mnemonicToSeedSync } from 'bip39'
 import { SignTypedDataVersion } from '@metamask/eth-sig-util'
 import log from 'electron-log'
 
-const PASSWORD = 'fr@///3_password'
+const PASSWORD = 'correct horse battery staple'
+const PASSWORD_OPTIONS = { allowWeakPassword: false }
 const PHRASE = 'test test test test test test test test test test test junk'
 const SIGNER_PATH = path.resolve(__dirname, '../.userData/signers')
 const ADDRESS_HASH = 'a7e66a7d4449b33d6cee47576c58733426bc35f39a0884865e0c8f873a5281cb'
@@ -43,7 +44,7 @@ jest.mock('electron')
 jest.mock('../../../../../main/store/persist')
 
 // Stubs
-const signers = { add: () => {} }
+const signers = { add: (signer) => store.updateSigner(signer.summary()) }
 // Util
 const clean = () => remove(SIGNER_PATH)
 
@@ -74,11 +75,25 @@ describe('Seed signer', () => {
     log.transports.console.level = 'debug'
   })
 
+  test('requires explicit consent for a weak password and never overrides the length minimum', () => {
+    expect(() => hot.validatePassword('aaaaaaaa')).toThrow('Hot account password is too weak')
+    expect(() => hot.validatePassword('aaaaaaaa', { allowWeakPassword: true })).not.toThrow()
+    expect(() => hot.validatePassword('aaaaaaaa', { allowWeakPassword: 'yes' })).toThrow(
+      'Hot account password is too weak'
+    )
+    expect(() => hot.validatePassword('aaaaaaaa', null)).toThrow('Hot account password is too weak')
+    expect(() => hot.validatePassword('qZ7$kP2!')).toThrow('Hot account password is too weak')
+    expect(() => hot.validatePassword('qZ7$kP2!', { allowWeakPassword: true })).not.toThrow()
+    expect(() => hot.validatePassword('aaaaaaa', { allowWeakPassword: true })).toThrow(
+      'Hot account password is too short'
+    )
+  })
+
   test('Create from invalid phrase', (done) => {
     const mnemonic = 'invalid mnemonic'
 
     try {
-      hot.createFromPhrase(signers, mnemonic, PASSWORD, (err) => {
+      hot.createFromPhrase(signers, mnemonic, PASSWORD, PASSWORD_OPTIONS, (err) => {
         expect(err).toBeTruthy()
         expect(store('main.signers')).toEqual({})
         done()
@@ -92,7 +107,7 @@ describe('Seed signer', () => {
     try {
       const mnemonic = PHRASE
       seed = mnemonicToSeedSync(mnemonic).toString('hex')
-      hot.createFromPhrase(signers, mnemonic, PASSWORD, (err, result) => {
+      hot.createFromPhrase(signers, mnemonic, PASSWORD, PASSWORD_OPTIONS, (err, result) => {
         signer = result
         expect(err).toBe(null)
         expect(signer.status).toBe('ok')

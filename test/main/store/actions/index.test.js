@@ -255,13 +255,22 @@ describe('dapp guardrail actions', () => {
       }
     }
     let nextGuardrails
+    let nextPermissions
     storeActions.removeAccount((path, reducer) => {
       if (path === 'main.dappGuardrails') nextGuardrails = reducer(guardrails)
-      else reducer({ [account]: {} })
+      else if (path === 'main.permissions') {
+        nextPermissions = reducer({
+          [account]: { external: { origin: 'app.example', provider: true } },
+          '0x2222222222222222222222222222222222222222': { retained: { provider: true } }
+        })
+      } else reducer({ [account]: {} })
     }, account.toUpperCase())
 
     expect(nextGuardrails).toEqual({
       '0x2222222222222222222222222222222222222222': guardrails['0x2222222222222222222222222222222222222222']
+    })
+    expect(nextPermissions).toEqual({
+      '0x2222222222222222222222222222222222222222': { retained: { provider: true } }
     })
   })
 })
@@ -269,6 +278,28 @@ describe('dapp guardrail actions', () => {
 it('does not expose the retired Pylon migration actions', () => {
   expect(storeActions).not.toHaveProperty('mutePylonMigrationNotice')
   expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
+})
+
+it('records and finishes durable account and signer removal journals', () => {
+  const reduce = (action, initial, ...args) => {
+    let result
+    action(
+      (_path, reducer) => {
+        result = reducer(initial)
+      },
+      ...args
+    )
+    return result
+  }
+  const address = '0x1111111111111111111111111111111111111111'
+
+  expect(reduce(storeActions.beginAccountRemoval, [], address)).toEqual([address])
+  expect(reduce(storeActions.finishAccountRemoval, [address], address)).toEqual([])
+  const removal = { addresses: [address], kind: 'hot' }
+  expect(reduce(storeActions.beginSignerRemoval, {}, 'signer', removal)).toEqual({
+    signer: removal
+  })
+  expect(reduce(storeActions.finishSignerRemoval, { signer: removal }, 'signer')).toEqual({})
 })
 
 it('retries only a failed installed dapp from a clean attempt budget', () => {

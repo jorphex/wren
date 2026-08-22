@@ -147,4 +147,45 @@ describe('HotSigner worker lifecycle', () => {
     expect(worker.disconnect).toHaveBeenCalledTimes(1)
     expect(() => worker.emit('error', new Error('late disconnect error'))).not.toThrow()
   })
+
+  it('keeps the live signer open when protected-file erasure fails', () => {
+    const { signer } = createSigner()
+    signer.delete = jest.fn(() => {
+      throw new Error('synthetic erase failure')
+    })
+    signer.close = jest.fn()
+
+    expect(() => signer.remove()).toThrow('synthetic erase failure')
+    expect(signer.close).not.toHaveBeenCalled()
+  })
+
+  it('erases before closing without issuing a second persistence mutation', () => {
+    const { signer } = createSigner()
+    const order = []
+    signer.delete = jest.fn(() => order.push('delete'))
+    signer.close = jest.fn(function () {
+      order.push(this._deferPersistence ? 'deferred-close' : 'close')
+    })
+
+    signer.remove()
+
+    expect(order).toEqual(['delete', 'deferred-close'])
+    expect(signer._deferPersistence).toBe(false)
+  })
+
+  it('contains one failing callback while settling every pending call on close', () => {
+    const { signer } = createSigner()
+    const first = jest.fn(() => {
+      throw new Error('synthetic callback failure')
+    })
+    const second = jest.fn()
+
+    signer._callWorker({ method: 'first' }, first)
+    signer._callWorker({ method: 'second' }, second)
+
+    expect(() => signer.close()).not.toThrow()
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(second.mock.calls[0][0].message).toBe('Hot signer closed')
+  })
 })

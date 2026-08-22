@@ -39,6 +39,7 @@ import {
   MAX_CONTRACT_VERIFICATION_URL_CHARS,
   validateContractVerificationJobLedger
 } from '../../resources/domain/contractVerification'
+import { MINIMUM_PASSWORD_LENGTH } from '../../resources/domain/password'
 
 const MAX_TEXT = 4096
 const MAX_URL = 8192
@@ -54,7 +55,7 @@ const ChainNumberSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGE
 const ChainKeySchema = z.union([ChainNumberSchema, z.string().regex(/^[1-9][0-9]{0,15}$/)])
 const NetworkTypeSchema = z.literal('ethereum')
 const BoundedStringSchema = z.string().max(MAX_TEXT)
-const BackupPasswordSchema = z.string().min(12).max(1024)
+const BackupPasswordSchema = z.string().min(MINIMUM_PASSWORD_LENGTH).max(1024)
 const SignerProtectionStatusSchema = z
   .object({
     available: z.boolean(),
@@ -764,7 +765,6 @@ const eventSchemas: Record<string, z.ZodType> = {
   '*:contextmenu': z.tuple([z.number().finite(), z.number().finite()]),
   'dash:dismissHardwarePrompt': z.tuple([IdSchema]),
   'dash:reloadSigner': z.tuple([IdSchema]),
-  'dash:removeSigner': z.tuple([IdSchema]),
   'frame:close': noArgs,
   'frame:max': noArgs,
   'frame:min': noArgs,

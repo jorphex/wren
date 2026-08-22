@@ -25,6 +25,31 @@ const { default: TrezorBridge } = require('../../main/signers/trezor/bridge')
 const { onRendererRpc } = require('../ipc/renderer')
 const { encodeRendererRpcValues, parseRendererRpcResponse } = require('../ipc/rpcSchemas')
 const { completeGeneratedWalletAccount } = require('./generatedWallet')
+const {
+  performDurableRemoval,
+  performDurableRemovalRetry,
+  prepareSignerRemoval,
+  removeSignerAndAccounts,
+  removeWalletAccount
+} = require('../applicationMutations')
+const { commitMainState } = require('../store/persist')
+const { requireStoreAction } = require('../store/action')
+
+const scheduleDurableRemovalRetry = (label, isPending, attempt, delay = 1000) => {
+  const retry = () => {
+    const timer = setTimeout(() => {
+      if (!isPending()) return
+      try {
+        attempt()
+      } catch (error) {
+        log.warn(`Could not finish ${label}; retrying`, error)
+        retry()
+      }
+    }, delay)
+    timer.unref?.()
+  }
+  retry()
+}
 
 const callbackWhenDone = (fn, cb) => {
   try {
@@ -346,20 +371,155 @@ const rpc = {
   },
   createFromAddress(address, name, cb) {
     if (!isAddress(address)) return cb(new Error('Invalid Address'))
-    accounts.add(address, name, { type: 'address' })
-    cb()
+    accounts.add(address, name, { type: 'address' }, (error) => cb(error || null))
   },
   createAccount(address, name, options, cb) {
     if (!isAddress(address)) return cb(new Error('Invalid Address'))
-    accounts.add(address, name, options)
-    cb()
+    accounts.add(address, name, options, (error) => cb(error || null))
   },
   removeAccount(address, _options, cb) {
-    accounts.remove(address)
-    cb()
+    try {
+      if (
+        (store('main.pendingAccountRemovals') || []).some(
+          (candidate) => candidate.toLowerCase() === address.toLowerCase()
+        )
+      ) {
+        throw new Error('Account removal is already in progress')
+      }
+      let deferred = false
+      let retryScheduled = false
+      const retryRemoval = (error) => {
+        deferred = true
+        log.warn('Account removal was accepted and will retry automatically', error)
+        if (retryScheduled) return
+        retryScheduled = true
+        scheduleDurableRemovalRetry(
+          'account removal',
+          () =>
+            (store('main.pendingAccountRemovals') || []).some(
+              (candidate) => candidate.toLowerCase() === address.toLowerCase()
+            ),
+          () => {
+            performDurableRemovalRetry({
+              remove: () => removeWalletAccount(address, { accounts }),
+              notify: (retryResult) => {
+                if (!retryResult.selectionChanged) return
+                try {
+                  provider.accountsChanged(retryResult.currentAddresses)
+                } catch (notificationError) {
+                  log.warn('Could not notify providers while retrying account removal', notificationError)
+                }
+              },
+              finish: () => requireStoreAction('finishAccountRemoval')(address),
+              commit: () => commitMainState(store('main')),
+              restoreFence: () => requireStoreAction('beginAccountRemoval')(address)
+            })
+          }
+        )
+      }
+      const result = performDurableRemoval({
+        begin: () => requireStoreAction('beginAccountRemoval')(address),
+        rollbackPreparation: () => requireStoreAction('finishAccountRemoval')(address),
+        remove: () => removeWalletAccount(address, { accounts }),
+        onDeferredRemoval: (error) => {
+          retryRemoval(error)
+          return {
+            currentAddresses: accounts.getSelectedAddresses(),
+            removedAddresses: [],
+            selectionChanged: false
+          }
+        },
+        finish: () => requireStoreAction('finishAccountRemoval')(address),
+        commit: () => commitMainState(store('main')),
+        restoreFence: () => requireStoreAction('beginAccountRemoval')(address),
+        onDeferredCommit: (error) => retryRemoval(error)
+      })
+      if (result.selectionChanged) {
+        try {
+          provider.accountsChanged(result.currentAddresses)
+        } catch (error) {
+          log.warn('Could not notify providers after removing an account', error)
+        }
+      }
+      cb(null, { status: deferred ? 'deferred' : 'complete' })
+    } catch (error) {
+      log.warn('Could not durably prepare account removal', error)
+      cb(error)
+    }
   },
-  createFromPhrase(phrase, password, cb) {
-    signers.createFromPhrase(phrase, password, cb)
+  removeSigner(id, cb) {
+    try {
+      if (Object.prototype.hasOwnProperty.call(store('main.pendingSignerRemovals') || {}, id)) {
+        throw new Error('Signer removal is already in progress')
+      }
+      const plan = prepareSignerRemoval(id, { accounts, signers })
+      const previousAddresses = accounts.getSelectedAddresses()
+      let deferred = false
+      let retryScheduled = false
+      const retryRemoval = (error) => {
+        deferred = true
+        log.warn('Signer removal was accepted and protected cleanup will retry', error)
+        if (retryScheduled) return
+        retryScheduled = true
+        scheduleDurableRemovalRetry(
+          'signer removal',
+          () => Object.prototype.hasOwnProperty.call(store('main.pendingSignerRemovals') || {}, id),
+          () => {
+            const removal = (store('main.pendingSignerRemovals') || {})[id]
+            if (!removal) return
+            const retryPlan = { ...plan, accountAddresses: [...removal.addresses], journal: removal }
+            performDurableRemovalRetry({
+              remove: () => removeSignerAndAccounts(id, { accounts, signers }, retryPlan),
+              notify: (retryResult) => {
+                if (!retryResult.selectionChanged) return
+                try {
+                  provider.accountsChanged(retryResult.currentAddresses)
+                } catch (notificationError) {
+                  log.warn('Could not notify providers while retrying signer removal', notificationError)
+                }
+              },
+              finish: () => requireStoreAction('finishSignerRemoval')(id),
+              commit: () => commitMainState(store('main')),
+              restoreFence: () => requireStoreAction('beginSignerRemoval')(id, removal)
+            })
+          }
+        )
+      }
+      const result = performDurableRemoval({
+        begin: () => requireStoreAction('beginSignerRemoval')(id, plan.journal),
+        rollbackPreparation: () => requireStoreAction('finishSignerRemoval')(id),
+        remove: () => removeSignerAndAccounts(id, { accounts, signers }, plan),
+        onDeferredRemoval: (error) => {
+          const currentAddresses = accounts.getSelectedAddresses()
+          retryRemoval(error)
+          return {
+            currentAddresses,
+            removedAddresses: plan.accountAddresses,
+            selectionChanged:
+              previousAddresses.length !== currentAddresses.length ||
+              previousAddresses.some((address, index) => address !== currentAddresses[index])
+          }
+        },
+        finish: () => requireStoreAction('finishSignerRemoval')(id),
+        commit: () => commitMainState(store('main')),
+        restoreFence: () => requireStoreAction('beginSignerRemoval')(id, plan.journal),
+        onDeferredCommit: (error) => retryRemoval(error)
+      })
+      if (result.selectionChanged) {
+        try {
+          provider.accountsChanged(result.currentAddresses)
+        } catch (error) {
+          log.warn('Could not notify providers after removing a signer', error)
+        }
+      }
+      cb(null, { status: deferred ? 'deferred' : 'complete' })
+    } catch (error) {
+      log.warn('Could not durably prepare signer removal', error)
+      cb(error)
+    }
+  },
+  createFromPhrase(phrase, password, passwordOptions, cb) {
+    signers.createFromPhrase(phrase, password, passwordOptions, cb)
   },
   async locateKeystore(cb) {
     try {
@@ -384,17 +544,17 @@ const rpc = {
       cb(e)
     }
   },
-  createFromKeystore(keystore, password, keystorePassword, cb) {
-    signers.createFromKeystore(keystore, keystorePassword, password, cb)
+  createFromKeystore(keystore, password, keystorePassword, passwordOptions, cb) {
+    signers.createFromKeystore(keystore, keystorePassword, password, passwordOptions, cb)
   },
-  createFromPrivateKey(privateKey, password, cb) {
-    signers.createFromPrivateKey(privateKey, password, cb)
+  createFromPrivateKey(privateKey, password, passwordOptions, cb) {
+    signers.createFromPrivateKey(privateKey, password, passwordOptions, cb)
   },
   reserveGeneratedWallet(cb) {
     signers.reserveGeneratedWallet(cb)
   },
-  beginGeneratedWallet(id, kind, password, cb) {
-    signers.beginGeneratedWallet(id, kind, password, cb)
+  beginGeneratedWallet(id, kind, password, passwordOptions, cb) {
+    signers.beginGeneratedWallet(id, kind, password, passwordOptions, cb)
   },
   completeGeneratedWallet(id, proof, cb) {
     completeGeneratedWalletAccount({ accounts, log, provider, signers }, id, proof, cb)

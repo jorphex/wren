@@ -135,6 +135,24 @@ it('waits for the active generated-wallet frame instead of hidden adjacent conte
   }
 })
 
+it('qualifies weak-password consent at short height and maximum scale', () => {
+  const scenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'dash-account-weak-password-short-1.5'
+  )
+
+  expect(scenario).toMatchObject({
+    state: 'account-create-weak-password',
+    scale: 1.5,
+    logicalHeight: 744,
+    ready: '.addAccountItemOptionPasswordConsent',
+    requiredControls: ['Continue']
+  })
+  expect(scenario.layoutExpectations).toContainEqual({
+    kind: 'scroll-fits',
+    selector: '.addAccountItemOptionSetupFrame[aria-hidden="false"]'
+  })
+})
+
 it('seats every RPC warning shelf at the viewport bottom with its exact reserved height', () => {
   const warnings = scenarioMatrix({ includeReview: true }).filter(
     ({ state, action }) => state === 'transaction-rpc-warning' && !action

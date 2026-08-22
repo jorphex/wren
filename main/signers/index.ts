@@ -1,7 +1,7 @@
 import EventEmitter from 'events'
 import log from 'electron-log'
 
-import Signer from './Signer'
+import Signer, { type SignerSummary } from './Signer'
 import { SignerAdapter } from './adapters'
 
 import LedgerAdapter from './ledger/adapter'
@@ -10,6 +10,7 @@ import LatticeAdapter from './lattice/adapter'
 import HotSignerAdapter from './hot/adapter'
 
 import hot from './hot'
+import type { NewPasswordOptions } from '../../resources/domain/password'
 import RingSigner from './hot/RingSigner'
 
 import store from '../store'
@@ -149,6 +150,20 @@ export class Signers extends EventEmitter {
     }
 
     const id = signer.id
+    const pendingSignerRemovals = store('main.pendingSignerRemovals') || {}
+    if (Object.prototype.hasOwnProperty.call(pendingSignerRemovals, id)) {
+      throw new Error('Signer removal is still being completed')
+    }
+    const pendingAddresses = new Set(
+      Object.values(pendingSignerRemovals).flatMap((removal) =>
+        Array.isArray(removal?.addresses)
+          ? removal.addresses.map((address: string) => address.toLowerCase())
+          : []
+      )
+    )
+    if ((signer.addresses || []).some((address) => pendingAddresses.has(address.toLowerCase()))) {
+      throw new Error('An account for this signer is still being removed')
+    }
 
     if (!(id in this.signers)) {
       const addToStore = requireStoreAction('newSigner')
@@ -193,10 +208,6 @@ export class Signers extends EventEmitter {
     const signer = this.signers[id]
 
     if (signer) {
-      delete this.signers[id]
-      requireStoreAction('removeSigner')(id)
-      requireStoreAction('navClearSigner')(id)
-
       const type = signer.type === 'ring' || signer.type === 'seed' ? 'hot' : signer.type
 
       const adapter = this.adapters[type]?.adapter
@@ -204,9 +215,45 @@ export class Signers extends EventEmitter {
         adapter.remove(signer)
       } else {
         // backwards compatibility
-        signer.close()
         signer.delete()
+        signer.close()
       }
+
+      delete this.signers[id]
+
+      try {
+        requireStoreAction('removeSigner')(id)
+      } catch (error) {
+        log.error('Signer was removed, but its store summary could not be cleared', error)
+      }
+
+      try {
+        requireStoreAction('navClearSigner')(id)
+      } catch (error) {
+        log.error('Signer was removed, but its open navigation state could not be cleared', error)
+      }
+    }
+  }
+
+  rollbackAdmission(signer: Signer) {
+    const id = signer.id
+    if (this.signers[id] === signer) delete this.signers[id]
+    this.pendingHotSigners.delete(signer)
+
+    try {
+      signer.close()
+    } catch (error) {
+      log.warn('Could not close a rejected signer admission', error)
+    }
+    try {
+      requireStoreAction('removeSigner')(id)
+    } catch (error) {
+      log.warn('Could not clear a rejected signer summary', error)
+    }
+    try {
+      requireStoreAction('navClearSigner')(id)
+    } catch (error) {
+      log.warn('Could not clear rejected signer navigation', error)
     }
   }
 
@@ -214,6 +261,56 @@ export class Signers extends EventEmitter {
     const id = signer.id
 
     if (id in this.signers) {
+      const pendingSignerRemovals = store('main.pendingSignerRemovals') || {}
+      if (Object.prototype.hasOwnProperty.call(pendingSignerRemovals, id)) {
+        const storedAddresses = store(`main.signers.${id}.addresses`)
+        signer.addresses = Array.isArray(storedAddresses)
+          ? [...storedAddresses]
+          : [...(pendingSignerRemovals[id]?.addresses || [])]
+        return
+      }
+      const pendingAddresses = new Set(
+        Object.values(pendingSignerRemovals).flatMap((removal) =>
+          Array.isArray(removal?.addresses)
+            ? removal.addresses.map((address: string) => address.toLowerCase())
+            : []
+        )
+      )
+      const intersectingAddresses = (signer.addresses || []).filter((address) =>
+        pendingAddresses.has(address.toLowerCase())
+      )
+
+      if (intersectingAddresses.length) {
+        const storedSummary = store(`main.signers.${id}`) as SignerSummary | undefined
+        const previousSummary = storedSummary
+          ? {
+              ...storedSummary,
+              addresses: Array.isArray(storedSummary.addresses) ? [...storedSummary.addresses] : []
+            }
+          : undefined
+        // Persist the replacement ownership without narrowing the removal
+        // journal. A later retry can then decide from current signer state.
+        try {
+          requireStoreAction('updateSigner')(signer.summary())
+          const { commitMainState } = require('../store/persist')
+          commitMainState(store('main'))
+          this.signers[id] = signer
+          return
+        } catch (error) {
+          // The durable journal still owns these addresses. Restore the last
+          // persisted summary so neither live nor queued state exposes them.
+          signer.addresses = previousSummary
+            ? [...previousSummary.addresses]
+            : signer.addresses.filter((address) => !pendingAddresses.has(address.toLowerCase()))
+          try {
+            requireStoreAction('updateSigner')(previousSummary || signer.summary())
+          } catch (restoreError) {
+            log.warn('Could not restore the previous signer summary', restoreError)
+          }
+          log.warn('Could not durably preserve a newly shared signer address', error)
+        }
+      }
+
       this.signers[id] = signer
 
       requireStoreAction('updateSigner')(signer.summary())
@@ -272,20 +369,42 @@ export class Signers extends EventEmitter {
     return this.signers[id]
   }
 
-  createFromPhrase(mnemonic: string, password: string, cb: Callback<Signer>) {
-    hot.createFromPhrase(this, mnemonic, password, cb)
+  addressesExcept(id: string) {
+    return Object.entries(this.signers)
+      .filter(([signerId]) => signerId !== id)
+      .flatMap(([, signer]) => signer.addresses || [])
   }
 
-  createFromPrivateKey(privateKey: string, password: string, cb: Callback<Signer>) {
-    hot.createFromPrivateKey(this, privateKey, password, cb)
+  createFromPhrase(
+    mnemonic: string,
+    password: string,
+    passwordOptions: NewPasswordOptions,
+    cb: Callback<Signer>
+  ) {
+    hot.createFromPhrase(this, mnemonic, password, passwordOptions, cb)
+  }
+
+  createFromPrivateKey(
+    privateKey: string,
+    password: string,
+    passwordOptions: NewPasswordOptions,
+    cb: Callback<Signer>
+  ) {
+    hot.createFromPrivateKey(this, privateKey, password, passwordOptions, cb)
   }
 
   reserveGeneratedWallet(cb: Callback<{ sessionId: string }>) {
     this.generatedWallets.reserve(cb)
   }
 
-  beginGeneratedWallet(id: string, kind: 'phrase' | 'private-key', password: string, cb: Callback<unknown>) {
-    this.generatedWallets.begin(id, kind, password, cb)
+  beginGeneratedWallet(
+    id: string,
+    kind: 'phrase' | 'private-key',
+    password: string,
+    passwordOptions: NewPasswordOptions,
+    cb: Callback<unknown>
+  ) {
+    this.generatedWallets.begin(id, kind, password, passwordOptions, cb)
   }
 
   completeGeneratedWallet(id: string, proof: unknown, cb: Callback<{ id: string }>) {
@@ -296,8 +415,14 @@ export class Signers extends EventEmitter {
     this.generatedWallets.discard(id, cb)
   }
 
-  createFromKeystore(keystore: Keystore, keystorePassword: string, password: string, cb: Callback<Signer>) {
-    hot.createFromKeystore(this, keystore, keystorePassword, password, cb)
+  createFromKeystore(
+    keystore: Keystore,
+    keystorePassword: string,
+    password: string,
+    passwordOptions: NewPasswordOptions,
+    cb: Callback<Signer>
+  ) {
+    hot.createFromKeystore(this, keystore, keystorePassword, password, passwordOptions, cb)
   }
 
   addPrivateKey(id: string, privateKey: string, password: string, cb: Callback<Signer>) {

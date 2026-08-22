@@ -291,6 +291,33 @@ it('names available signer account actions with their current add or remove beha
   expect(removeAccount.title).toBe(checkSummedAddress)
 })
 
+it('prevents duplicate account removal and reports a retryable failure', async () => {
+  let completeRemoval
+  link.rpc.mockImplementation((...args) => {
+    completeRemoval = args.at(-1)
+  })
+  const address = '0x00000000000000000000000000000000000000aa'
+  const checkSummedAddress = getAddress(address)
+  const view = renderSigner({
+    type: 'ledger',
+    status: 'ready',
+    addresses: [address],
+    addedAccounts: { [address]: { address } }
+  })
+  const removeAccount = screen.getByRole('button', {
+    name: `Remove ${checkSummedAddress} from accounts`
+  })
+
+  await view.user.dblClick(removeAccount)
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(link.rpc).toHaveBeenCalledWith('removeAccount', address, {}, expect.any(Function))
+  expect(removeAccount.disabled).toBe(true)
+
+  act(() => completeRemoval(new Error('storage unavailable')))
+  expect(screen.getByRole('alert').textContent).toBe('Couldn\u2019t remove account. Try again.')
+  expect(removeAccount.disabled).toBe(false)
+})
+
 it.each(['seed', 'ring'])('hides populated %s signer addresses and controls while locked', (type) => {
   const address = '0x00000000000000000000000000000000000000aa'
   renderSigner({
@@ -336,6 +363,10 @@ it('reveals hot signer address management only after the signer becomes ready', 
 })
 
 it('arms signer removal, returns focus safely, and confirms once', async () => {
+  let completeRemoval
+  link.rpc.mockImplementation((...args) => {
+    completeRemoval = args.at(-1)
+  })
   const view = renderSigner({ type: 'ledger', status: 'ready', addresses: [] })
   const trigger = screen.getByRole('button', { name: 'Remove signer' })
 
@@ -345,7 +376,7 @@ it('arms signer removal, returns focus safely, and confirms once', async () => {
   expect(dialog.getAttribute('aria-describedby')).toBe('signer-removal-description-device-1')
   expect(screen.getByRole('heading', { name: 'Remove signer?' })).toBeTruthy()
   expect(
-    screen.getByText('This removes Test signer from Wren. Accounts using it become watch-only.')
+    screen.getByText('This removes Test signer and any accounts that no other signer can use.')
   ).toBeTruthy()
   const cancel = screen.getByRole('button', { name: 'Cancel' })
   expect(document.activeElement).toBe(cancel)
@@ -355,9 +386,30 @@ it('arms signer removal, returns focus safely, and confirms once', async () => {
   await view.user.click(screen.getByRole('button', { name: 'Remove signer' }))
   await view.user.dblClick(screen.getByRole('button', { name: 'Remove signer' }))
 
-  expect(link.send).toHaveBeenCalledTimes(2)
-  expect(link.send).toHaveBeenNthCalledWith(1, 'dash:removeSigner', 'device-1')
-  expect(link.send).toHaveBeenNthCalledWith(2, 'tray:action', 'backDash')
+  expect(link.rpc).toHaveBeenCalledTimes(1)
+  expect(link.rpc).toHaveBeenCalledWith('removeSigner', 'device-1', expect.any(Function))
+  expect(screen.getByRole('button', { name: 'Removing signer\u2026' }).disabled).toBe(true)
+  expect(link.send).not.toHaveBeenCalled()
+
+  act(() => completeRemoval(null))
+  expect(link.send).toHaveBeenCalledTimes(1)
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'backDash')
+})
+
+it('keeps signer removal open with a retryable error when removal fails', async () => {
+  let completeRemoval
+  link.rpc.mockImplementation((...args) => {
+    completeRemoval = args.at(-1)
+  })
+  const view = renderSigner({ type: 'ledger', status: 'ready', addresses: [] })
+
+  await view.user.click(screen.getByRole('button', { name: 'Remove signer' }))
+  await view.user.click(screen.getByRole('button', { name: 'Remove signer' }))
+  act(() => completeRemoval(new Error('storage unavailable')))
+
+  expect(screen.getByRole('alert').textContent).toBe('Couldn\u2019t remove signer. Try again.')
+  expect(screen.getByRole('button', { name: 'Remove signer' }).disabled).toBe(false)
+  expect(link.send).not.toHaveBeenCalled()
 })
 
 it('keeps the signer overview compact while showing its account count', () => {

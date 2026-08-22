@@ -150,7 +150,7 @@ class GeneratedWalletSessions {
     }
   }
 
-  begin(id, kind, password, cb) {
+  begin(id, kind, password, passwordOptions, cb) {
     const session = this.sessions.get(id)
     if (!session || session.state !== 'reserved') return cb(new Error(SESSION_UNAVAILABLE_ERROR))
     if (this.now() >= session.stagingExpiresAt) {
@@ -161,7 +161,7 @@ class GeneratedWalletSessions {
     }
     if (kind !== 'phrase' && kind !== 'private-key') return cb(new Error('Unknown generated wallet type'))
     try {
-      hot.validatePassword(password)
+      hot.validatePassword(password, passwordOptions)
     } catch (error) {
       return cb(error)
     }
@@ -297,7 +297,7 @@ class GeneratedWalletSessions {
     }
 
     try {
-      const staged = stage(this.signers, secret, password, handleStage)
+      const staged = stage(this.signers, secret, password, passwordOptions, handleStage)
       if (this.sessions.get(id) === session && session.state === 'staging' && staged?.signer) {
         session.cancelStage = staged.cancel
         session.stagedSigner = staged.signer

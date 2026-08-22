@@ -1,9 +1,10 @@
-jest.mock('electron-log', () => ({ info: console.log, error: jest.fn() }))
+jest.mock('electron-log', () => ({ info: console.log, warn: jest.fn(), error: jest.fn() }))
 jest.mock('electron', () => ({ app: { on: jest.fn(), getPath: jest.fn() } }))
 jest.mock('fs')
 
 let mockLatestVersion = 0
 let mockInterfaceScale = 2
+let mockPendingRemovals = false
 const firstInstanceId = '11111111-1111-4111-8111-111111111111'
 const currentInstanceId = '22222222-2222-4222-8222-222222222222'
 
@@ -41,8 +42,22 @@ jest.mock('../../../../main/store/persist', () => {
                   name: 'Legacy account',
                   legacyMarker: 'preserved',
                   balances: { lastUpdated: 123 }
-                }
-              }
+                },
+                '0x000000000000000000000000000000000000beef': { name: 'Pending signer account' },
+                '0x000000000000000000000000000000000000cafe': { name: 'Retained account' }
+              },
+              ...(mockPendingRemovals
+                ? {
+                    pendingAccountRemovals: ['0x000000000000000000000000000000000000dead'],
+                    pendingSignerRemovals: {
+                      signer: {
+                        addresses: ['0x000000000000000000000000000000000000beef'],
+                        kind: 'hot'
+                      }
+                    },
+                    signers: {}
+                  }
+                : {})
             }
           }
         }
@@ -54,6 +69,7 @@ jest.mock('../../../../main/store/persist', () => {
 
 afterEach(() => {
   mockInterfaceScale = 2
+  mockPendingRemovals = false
   // ensure modules are reloaded before each test
   jest.resetModules()
 })
@@ -131,6 +147,41 @@ it('preserves legacy account fields while clearing session balance timestamps', 
 
   expect(account).toMatchObject({ name: 'Legacy account', legacyMarker: 'preserved' })
   expect(account.balances).toEqual({ lastUpdated: undefined })
+})
+
+it('finishes durable account and signer removals while restoring persisted state', async () => {
+  mockLatestVersion = 2
+  mockPendingRemovals = true
+
+  const { default: state } = await import('../../../../main/store/state')
+  const main = state().main
+
+  expect(Object.keys(main.accounts)).toEqual(['0x000000000000000000000000000000000000cafe'])
+  expect(main.permissions).toEqual({})
+  expect(main.dappGuardrails).toEqual({})
+  expect(main.pendingAccountRemovals).toEqual([])
+  expect(main.pendingSignerRemovals).toEqual({
+    signer: { addresses: ['0x000000000000000000000000000000000000beef'], kind: 'hot' }
+  })
+})
+
+it('preserves a pending signer account that a different persisted signer now owns', async () => {
+  mockLatestVersion = 2
+  mockPendingRemovals = true
+  const persist = require('../../../../main/store/persist')
+  const originalGet = persist.get
+  persist.get = (path) => {
+    const value = originalGet(path)
+    if (path !== 'main') return value
+    value.__['2'].main.signers = {
+      replacement: { addresses: ['0x000000000000000000000000000000000000beef'] }
+    }
+    return value
+  }
+
+  const { default: state } = await import('../../../../main/store/state')
+
+  expect(state().main.accounts).toHaveProperty('0x000000000000000000000000000000000000beef')
 })
 
 it('preserves an older version of the state after creating a newer state entry', async () => {

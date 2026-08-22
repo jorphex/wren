@@ -103,6 +103,7 @@ beforeEach(() => {
   eventTypes.forEach((eventType) => (provider.subscriptions[eventType] = []))
 
   accountRequests = []
+  accounts.markRequestResponseSettled = jest.fn(() => true)
   accounts.addRequest = jest.fn((req, res) => {
     store.set('main.accounts', req.account, 'requests', { [req.handlerId]: req })
     accountRequests.push(req)
@@ -1378,6 +1379,8 @@ describe('#wallet-call provider boundary', () => {
   it('declines against the captured account and durably closes the batch', () => {
     const respond = jest.fn()
     const admitted = provider.sendWalletCalls(payload(), respond)
+    const request = accounts.getRequestForAccount(address, admitted.handlerId)
+    request.responsePending = true
     currentAccount = { id: '0x3333333333333333333333333333333333333333' }
 
     expect(provider.declineWalletCallsRequest(address, admitted.handlerId)).toBe(true)
@@ -1393,6 +1396,7 @@ describe('#wallet-call provider boundary', () => {
       jsonrpc: '2.0',
       error: { code: 4001, message: 'User rejected the wallet-call request' }
     })
+    expect(request.responsePending).toBe(false)
     expect(walletCallBatchLedger.getStatus(originId, address, admitted.id).status).toBe(400)
     expect(executeWalletCallRuntime).not.toHaveBeenCalled()
     expect(walletCallEvidenceRuntime.wake).not.toHaveBeenCalled()

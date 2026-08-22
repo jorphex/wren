@@ -423,6 +423,7 @@ export default function CreateGenerated({ kind }) {
   const createdNoun = isPhrase ? 'wallet' : 'account'
   const [step, setStep] = useState(0)
   const [password, setPassword] = useState('')
+  const [passwordOptions, setPasswordOptions] = useState(null)
   const [presentation, setPresentation] = useState(null)
   const [verification, setVerification] = useState(null)
   const [error, setError] = useState('')
@@ -462,6 +463,7 @@ export default function CreateGenerated({ kind }) {
           sessionId.current = null
           if (id) link.rpc('discardGeneratedWallet', id, () => {})
           setPassword('')
+          setPasswordOptions(null)
           setStep(0)
           return true
         }
@@ -544,7 +546,9 @@ export default function CreateGenerated({ kind }) {
     beginning.current = true
     const request = ++beginRequest.current
     const creationPassword = password
+    const creationPasswordOptions = passwordOptions
     setPassword('')
+    setPasswordOptions(null)
     clearTimeout(generationTimer.current)
     generationTimer.current = setTimeout(() => {
       if (!mounted.current || request !== beginRequest.current) return
@@ -576,36 +580,43 @@ export default function CreateGenerated({ kind }) {
       }
 
       sessionId.current = reservedId
-      link.rpc('beginGeneratedWallet', reservedId, kind, creationPassword, (creationError, result) => {
-        if (request !== beginRequest.current || !mounted.current) {
-          if (sessionId.current === reservedId) sessionId.current = null
-          link.rpc('discardGeneratedWallet', reservedId, () => {})
-          return
+      link.rpc(
+        'beginGeneratedWallet',
+        reservedId,
+        kind,
+        creationPassword,
+        creationPasswordOptions,
+        (creationError, result) => {
+          if (request !== beginRequest.current || !mounted.current) {
+            if (sessionId.current === reservedId) sessionId.current = null
+            link.rpc('discardGeneratedWallet', reservedId, () => {})
+            return
+          }
+          clearTimeout(generationTimer.current)
+          generationTimer.current = null
+          beginning.current = false
+          if (creationError || result?.sessionId !== reservedId) {
+            sessionId.current = null
+            link.rpc('discardGeneratedWallet', reservedId, () => {})
+            setError(`Wren could not create this ${createdNoun} safely.`)
+            setErrorAction('restart')
+            setErrorDetail('No account was added.')
+            setStep(4)
+            return
+          }
+          if (Number.isFinite(result.expiresAt) && result.expiresAt <= Date.now()) {
+            failTerminally(`This ${createdNoun} setup expired.`)
+            return
+          }
+          setPresentation(result)
+          setVerification({
+            challenge: result.challenge,
+            expiresAt: result.expiresAt,
+            kind: result.kind
+          })
+          setStep(2)
         }
-        clearTimeout(generationTimer.current)
-        generationTimer.current = null
-        beginning.current = false
-        if (creationError || result?.sessionId !== reservedId) {
-          sessionId.current = null
-          link.rpc('discardGeneratedWallet', reservedId, () => {})
-          setError(`Wren could not create this ${createdNoun} safely.`)
-          setErrorAction('restart')
-          setErrorDetail('No account was added.')
-          setStep(4)
-          return
-        }
-        if (Number.isFinite(result.expiresAt) && result.expiresAt <= Date.now()) {
-          failTerminally(`This ${createdNoun} setup expired.`)
-          return
-        }
-        setPresentation(result)
-        setVerification({
-          challenge: result.challenge,
-          expiresAt: result.expiresAt,
-          kind: result.kind
-        })
-        setStep(2)
-      })
+      )
     })
   }
 
@@ -663,6 +674,7 @@ export default function CreateGenerated({ kind }) {
     setErrorAction('restart')
     setErrorDetail('No account was added.')
     setPassword('')
+    setPasswordOptions(null)
     setPresentation(null)
     setVerification(null)
     setSubmitting(false)
@@ -684,8 +696,9 @@ export default function CreateGenerated({ kind }) {
   const frames = [
     <CreatePassword
       key='password'
-      onCreate={(value) => {
+      onCreate={(value, options) => {
         setPassword(value)
+        setPasswordOptions(options)
         setStep(1)
       }}
       autofocus={step === 0}

@@ -2,6 +2,7 @@ import { fireEvent, screen, render } from '../../../componentSetup'
 import { CreatePassword, ConfirmPassword, isUnmodifiedEnter } from '../../../../resources/Components/Password'
 
 const validPassword = 'thisisagoodpassword123'
+const minimumPassword = 'qZ7$kP2!'
 
 it('rejects both synthetic and native composition Enter events', () => {
   expect(isUnmodifiedEnter({ key: 'Enter', isComposing: true, nativeEvent: {} })).toBe(false)
@@ -46,15 +47,53 @@ describe('creating password', () => {
 
     await enterPassword('INVALID')
 
-    expect(screen.getByRole('alert').textContent).toBe('Password must be at least 12 characters')
+    expect(screen.getByRole('alert').textContent).toBe('Password must be at least 8 characters')
   })
 
   it('should show the warning when the password is too weak', async () => {
-    const { enterPassword } = setupComponent()
+    const { enterPassword, getSubmitButton } = setupComponent()
 
     await enterPassword('aaaaaaaaaaaa')
 
     expect(screen.getByRole('alert').textContent).toBe('Repeats like "aaa" are easy to guess')
+    expect(
+      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' }).checked
+    ).toBe(false)
+    expect(getSubmitButton().disabled).toBe(true)
+  })
+
+  it('allows a weak password only after explicit consent', async () => {
+    const onCreate = jest.fn()
+    const { user, enterPassword, getSubmitButton } = setupComponent({ onCreate })
+
+    await enterPassword('aaaaaaaa')
+    await user.keyboard('{Enter}')
+    expect(onCreate).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
+    )
+    expect(getSubmitButton().disabled).toBe(false)
+    await user.click(getSubmitButton())
+
+    expect(onCreate).toHaveBeenCalledWith('aaaaaaaa', { allowWeakPassword: true })
+  })
+
+  it('clears weak-password consent when the password changes', async () => {
+    const { user, enterPassword, getSubmitButton } = setupComponent()
+
+    await enterPassword('aaaaaaaa')
+    const consent = screen.getByRole('checkbox', {
+      name: 'I understand this password may be easy to guess.'
+    })
+    await user.click(consent)
+    expect(getSubmitButton().disabled).toBe(false)
+    await user.type(screen.getByRole('textbox', { name: 'Create password' }), 'a')
+
+    expect(
+      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' }).checked
+    ).toBe(false)
+    expect(getSubmitButton().disabled).toBe(true)
   })
 
   it('should show the continue button when a valid password is entered', async () => {
@@ -65,6 +104,19 @@ describe('creating password', () => {
     expect(getSubmitButton().textContent).toBe('Continue')
   })
 
+  it('accepts an eight-character password after consent when its estimate is low', async () => {
+    const { user, enterPassword, getSubmitButton } = setupComponent()
+
+    await enterPassword(minimumPassword)
+    expect(getSubmitButton().disabled).toBe(true)
+    await user.click(
+      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
+    )
+
+    expect(getSubmitButton().textContent).toBe('Continue')
+    expect(getSubmitButton().disabled).toBe(false)
+  })
+
   it('should call the onCreate function when a password is submitted', async () => {
     const onCreate = jest.fn()
     const { user, enterPassword, getSubmitButton } = setupComponent({ onCreate })
@@ -72,7 +124,7 @@ describe('creating password', () => {
     await enterPassword(validPassword)
     await user.click(getSubmitButton())
 
-    expect(onCreate).toHaveBeenCalledWith(validPassword)
+    expect(onCreate).toHaveBeenCalledWith(validPassword, { allowWeakPassword: false })
   })
 })
 

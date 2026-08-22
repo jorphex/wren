@@ -718,6 +718,19 @@ export class Accounts extends EventEmitter {
   async add(address: Address, name = '', options = {}, cb: Callback<FrameAccount> = () => {}) {
     if (!address) return cb(new Error('No address, will not add account'))
     address = address.toLowerCase()
+    const pendingAccountRemovals = store('main.pendingAccountRemovals') || []
+    const pendingSignerRemovals = store('main.pendingSignerRemovals') || {}
+    const pendingAddresses = new Set([
+      ...pendingAccountRemovals.map((candidate: string) => candidate.toLowerCase()),
+      ...Object.values(pendingSignerRemovals).flatMap((removal) =>
+        Array.isArray(removal?.addresses)
+          ? removal.addresses.map((candidate: string) => candidate.toLowerCase())
+          : []
+      )
+    ])
+    if (pendingAddresses.has(address)) {
+      return cb(new Error('Account removal is still being completed'))
+    }
 
     let account = this.accounts[address]
     if (!account) {
@@ -2128,6 +2141,7 @@ export class Accounts extends EventEmitter {
     if (account.getRequest(handlerId) !== request) {
       throw new Error('Wallet-call request changed during approval')
     }
+    request.responsePending = false
     delete request.res
     account.releaseRequestReview(handlerId)
 
@@ -2561,6 +2575,14 @@ export class Accounts extends EventEmitter {
         this.removeRequest(account, handlerId)
       }
     })
+  }
+
+  markRequestResponseSettled(handlerId: string) {
+    const account = Object.values(this.accounts).find((candidate) => candidate.requests[handlerId])
+    const request = account?.requests[handlerId]
+    if (!request) return false
+    request.responsePending = false
+    return true
   }
 
   removeRequest(account: FrameAccount, handlerId: string) {
@@ -3189,28 +3211,79 @@ export class Accounts extends EventEmitter {
   }
 
   remove(address = '') {
-    address = address.toLowerCase()
+    return this.removeMany([address])
+  }
 
-    const currentAccount = this.current()
-    if (currentAccount && currentAccount.address === address) {
-      requireStoreAction('unsetAccount')()
+  removeMany(addresses: readonly string[]) {
+    const normalizedAddresses = [
+      ...new Set(addresses.map((address) => address.toLowerCase()).filter(Boolean))
+    ]
+    const removedAddresses = normalizedAddresses.filter((address) => this.accounts[address])
+    const removalSet = new Set(normalizedAddresses)
+    const selectedAddress = this._current?.toLowerCase()
+    const removesSelected = Boolean(selectedAddress && removalSet.has(selectedAddress))
+    const replacement = removesSelected
+      ? Object.values(this.accounts).find((account) => !removalSet.has(account.address))
+      : undefined
 
-      const defaultAccount = (Object.values(this.accounts).filter((a) => a.address !== address) || [])[0]
-      if (defaultAccount) {
-        this._current = defaultAccount.id
-        defaultAccount.active = true
-        defaultAccount.update()
+    normalizedAddresses.forEach((address) => {
+      const account = this.accounts[address]
+      if (account) {
+        try {
+          account.clearRequests()
+        } catch (error) {
+          log.warn('Could not notify every request before removing an account', error)
+        }
+      }
+
+      requireStoreAction('removeAccount')(address)
+
+      if (account) {
+        this.clearPendingNonceAdjustmentsForAccount(account)
+        account.close()
+      }
+      delete this.accounts[address]
+    })
+
+    if (removesSelected) {
+      if (replacement) {
+        replacement.active = true
+        replacement.update()
+        requireStoreAction('setAccount')(replacement.summary())
+        this._current = replacement.id
+        replacement.presentActiveRequest()
+      } else {
+        requireStoreAction('removeSelectedAccount')()
+        this._current = ''
       }
     }
 
-    const account = this.accounts[address]
-    if (account) {
-      this.clearPendingNonceAdjustmentsForAccount(account)
-      account.close()
-    }
+    return removedAddresses
+  }
 
-    requireStoreAction('removeAccount')(address)
-    delete this.accounts[address]
+  removeAccountsForSigner(
+    signerId: string,
+    signerAddresses: readonly string[] = [],
+    retainedSignerAddresses: readonly string[] = []
+  ) {
+    return this.removeMany(this.accountsForSignerRemoval(signerId, signerAddresses, retainedSignerAddresses))
+  }
+
+  accountsForSignerRemoval(
+    signerId: string,
+    signerAddresses: readonly string[] = [],
+    retainedSignerAddresses: readonly string[] = []
+  ) {
+    const signerAccountIds = new Set(signerAddresses.map((address) => address.toLowerCase()))
+    const retainedAccountIds = new Set(retainedSignerAddresses.map((address) => address.toLowerCase()))
+    return Object.values(this.accounts)
+      .filter((account) => {
+        const address = account.address.toLowerCase()
+        return (
+          !retainedAccountIds.has(address) && (account.signer === signerId || signerAccountIds.has(address))
+        )
+      })
+      .map((account) => account.address)
   }
 
   private requiredQuantity(value: unknown, field: string) {

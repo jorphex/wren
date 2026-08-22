@@ -35,6 +35,14 @@ const RemovalError = styled.div`
   line-height: 18px;
 `
 
+const RemovalStatus = styled.div`
+  margin-top: 8px;
+  color: var(--wren-text-secondary);
+  font-family: var(--wren-font-ui);
+  font-size: var(--wren-type-small);
+  line-height: 18px;
+`
+
 const RemovalActions = styled.div`
   display: flex;
   gap: var(--wren-space-2);
@@ -64,7 +72,8 @@ export class SettingsPreview extends React.Component {
     this.state = {
       removeConfirm: false,
       removing: false,
-      removeError: ''
+      removeError: '',
+      removeStatus: ''
     }
   }
 
@@ -81,7 +90,7 @@ export class SettingsPreview extends React.Component {
   resetRemoveConfirmation(restoreFocus = true) {
     if (this.state.removing || this.removePending) return
     if (!restoreFocus) this.removeTriggerRef.current = null
-    this.setState({ removeConfirm: false, removeError: '' }, () => {
+    this.setState({ removeConfirm: false, removeError: '', removeStatus: '' }, () => {
       if (restoreFocus) this.removeTriggerRef.current?.focus()
     })
   }
@@ -92,23 +101,28 @@ export class SettingsPreview extends React.Component {
     if (event?.detail > 1) return
 
     this.removePending = true
-    this.setState({ removing: true, removeError: '' })
-    link.rpc('removeAccount', this.props.account, {}, (err) => {
+    this.setState({ removing: true, removeError: '', removeStatus: '' })
+    link.rpc('removeAccount', this.props.account, {}, (err, result) => {
       if (err) {
         this.removePending = false
         if (this.mounted) {
           this.setState({
             removing: false,
-            removeError: 'Couldn\u2019t remove account. Try again.'
+            removeError: 'Couldn\u2019t remove account. Try again.',
+            removeStatus: ''
           })
         }
+      } else if (result?.status === 'deferred' && this.mounted) {
+        this.setState({
+          removeStatus: 'Removal is in progress. Wren will finish automatically.'
+        })
       }
     })
   }
 
   armAccountRemoval() {
     if (this.state.removing || this.removePending) return
-    this.setState({ removeConfirm: true, removeError: '' })
+    this.setState({ removeConfirm: true, removeError: '', removeStatus: '' })
   }
 
   render() {
@@ -139,6 +153,9 @@ export class SettingsPreview extends React.Component {
                 </RemovalBody>
                 {this.state.removeError ? (
                   <RemovalError role='alert'>{this.state.removeError}</RemovalError>
+                ) : null}
+                {this.state.removeStatus ? (
+                  <RemovalStatus role='status'>{this.state.removeStatus}</RemovalStatus>
                 ) : null}
                 <RemovalActions>
                   <button

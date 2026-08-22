@@ -10,7 +10,6 @@ export const requestEventChannels = new Set([
   '*:contextmenu',
   'dash:dismissHardwarePrompt',
   'dash:reloadSigner',
-  'dash:removeSigner',
   'frame:close',
   'frame:max',
   'frame:min',

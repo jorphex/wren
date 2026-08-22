@@ -41,14 +41,29 @@ describe('HotSignerAdapter', () => {
     adapter.close()
   })
 
-  it('closes and deletes a signer only when it is removed', () => {
+  it('uses a signer-owned rollback-safe removal when available', () => {
     hot.createScanner.mockReturnValue(mockScanner())
     const adapter = new HotSignerAdapter(() => false)
-    const signer = { close: jest.fn(), delete: jest.fn() }
+    const signer = { close: jest.fn(), delete: jest.fn(), remove: jest.fn() }
 
     adapter.remove(signer)
 
-    expect(signer.close).toHaveBeenCalledTimes(1)
-    expect(signer.delete).toHaveBeenCalledTimes(1)
+    expect(signer.remove).toHaveBeenCalledTimes(1)
+    expect(signer.close).not.toHaveBeenCalled()
+    expect(signer.delete).not.toHaveBeenCalled()
+  })
+
+  it('erases before closing a backwards-compatible signer', () => {
+    hot.createScanner.mockReturnValue(mockScanner())
+    const adapter = new HotSignerAdapter(() => false)
+    const order = []
+    const signer = {
+      close: jest.fn(() => order.push('close')),
+      delete: jest.fn(() => order.push('delete'))
+    }
+
+    adapter.remove(signer)
+
+    expect(order).toEqual(['delete', 'close'])
   })
 })

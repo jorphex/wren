@@ -140,7 +140,11 @@ jest.mock('../../../main/chains', () => ({
   syncDataEmit: jest.fn()
 }))
 jest.mock('../../../main/provider', () => ({ on: jest.fn(), send: jest.fn() }))
-jest.mock('../../../main/accounts', () => ({ current: jest.fn(), getSelectedAddresses: jest.fn(() => []) }))
+jest.mock('../../../main/accounts', () => ({
+  current: jest.fn(),
+  getSelectedAddresses: jest.fn(() => []),
+  markRequestResponseSettled: jest.fn(() => true)
+}))
 jest.mock('../../../main/windows', () => {})
 
 beforeEach(async () => {

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { MINIMUM_PASSWORD_LENGTH } from '../../resources/domain/password'
+
 const MAX_WIRE_VALUE = 16 * 1024 * 1024
 const MAX_SECRET = 4096
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/)
@@ -9,6 +11,8 @@ const ErrorSchema = z.string().min(1).max(1024)
 const OptionalErrorSchema = z.union([ErrorSchema, z.null(), z.undefined()])
 const NullishSchema = z.union([z.null(), z.undefined()])
 const PasswordSchema = z.string().max(MAX_SECRET)
+const NewPasswordSchema = z.string().min(MINIMUM_PASSWORD_LENGTH).max(MAX_SECRET)
+const NewPasswordOptionsSchema = z.object({ allowWeakPassword: z.boolean() }).strict()
 const QuantitySchema = z
   .string()
   .regex(/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/)
@@ -111,6 +115,7 @@ const result = <T extends z.ZodType>(schema: T) =>
   z
     .union([z.tuple([ErrorSchema, z.unknown().optional()]), z.tuple([NullishSchema, schema])])
     .transform((args) => (typeof args[0] === 'string' ? [args[0]] : args))
+const RemovalStatusSchema = z.object({ status: z.enum(['complete', 'deferred']) }).strict()
 
 const SignerIdSchema = z.object({ id: IdSchema }).transform(({ id }) => ({ id }))
 const GeneratedWalletSessionIdSchema = z.string().regex(/^[0-9a-f]{32}$/)
@@ -225,7 +230,7 @@ const rpcSchemas = {
     response: actionResult
   },
   createFromKeystore: {
-    request: z.tuple([JsonRecordSchema, PasswordSchema, PasswordSchema]),
+    request: z.tuple([JsonRecordSchema, NewPasswordSchema, PasswordSchema, NewPasswordOptionsSchema]),
     response: result(SignerIdSchema)
   },
   createFromPhrase: {
@@ -235,12 +240,17 @@ const rpcSchemas = {
         .min(1)
         .max(MAX_SECRET)
         .refine((value) => value.trim().length > 0),
-      PasswordSchema
+      NewPasswordSchema,
+      NewPasswordOptionsSchema
     ]),
     response: result(SignerIdSchema)
   },
   createFromPrivateKey: {
-    request: z.tuple([z.string().regex(/^(?:0x)?[0-9a-fA-F]{64}$/), PasswordSchema]),
+    request: z.tuple([
+      z.string().regex(/^(?:0x)?[0-9a-fA-F]{64}$/),
+      NewPasswordSchema,
+      NewPasswordOptionsSchema
+    ]),
     response: result(SignerIdSchema)
   },
   reserveGeneratedWallet: {
@@ -248,7 +258,12 @@ const rpcSchemas = {
     response: result(GeneratedWalletReservationSchema)
   },
   beginGeneratedWallet: {
-    request: z.tuple([GeneratedWalletSessionIdSchema, z.enum(['phrase', 'private-key']), PasswordSchema]),
+    request: z.tuple([
+      GeneratedWalletSessionIdSchema,
+      z.enum(['phrase', 'private-key']),
+      NewPasswordSchema,
+      NewPasswordOptionsSchema
+    ]),
     response: result(GeneratedWalletPresentationSchema)
   },
   completeGeneratedWallet: {
@@ -266,7 +281,14 @@ const rpcSchemas = {
     response: actionResult
   },
   createLattice: {
-    request: z.tuple([z.string().min(1).max(64), z.string().max(14)]),
+    request: z.tuple([
+      z
+        .string()
+        .min(1)
+        .max(64)
+        .regex(/^[A-Za-z0-9_-]+$/u),
+      z.string().max(14)
+    ]),
     response: result(SignerIdSchema)
   },
   declineRequest: { request: z.tuple([ActionRequestReferenceSchema]), response: actionResult },
@@ -287,7 +309,11 @@ const rpcSchemas = {
   locateKeystore: { request: noArgs, response: result(JsonRecordSchema) },
   removeAccount: {
     request: z.tuple([AddressSchema, z.object({}).strict()]),
-    response: actionResult
+    response: result(RemovalStatusSchema)
+  },
+  removeSigner: {
+    request: z.tuple([IdSchema]),
+    response: result(RemovalStatusSchema)
   },
   requestEip7702Revocation: {
     request: z.tuple([AddressSchema, ChainIdSchema]),

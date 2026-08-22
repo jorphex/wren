@@ -34,13 +34,13 @@ it('explains the encrypted backup scope and opens one inline workflow at a time'
   expect(screen.queryByRole('alertdialog')).toBeNull()
 })
 
-it('requires a new matching password with at least 12 characters before export', () => {
+it('requires a new matching password with at least 8 characters before export', () => {
   render(<Recovery />)
   startExport()
 
   fillExportPasswords('short', 'short')
   fireEvent.submit(screen.getByRole('dialog', { name: 'Export encrypted backup' }))
-  expect(screen.getByRole('alert').textContent).toBe('Use at least 12 characters.')
+  expect(screen.getByRole('alert').textContent).toBe('Use at least 8 characters.')
   expect(link.invoke).not.toHaveBeenCalled()
 
   fillExportPasswords(password, `${password}-different`)

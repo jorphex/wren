@@ -85,6 +85,7 @@ export interface AccountRequest<T extends RequestType = RequestType> extends Req
   created?: number
   activityId?: string
   queueIndex?: number
+  responsePending?: boolean
   res?: RPCRequestCallback
   guardrail?: Readonly<{
     fingerprint: string

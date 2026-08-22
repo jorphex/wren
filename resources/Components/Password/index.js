@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import zxcvbn from 'zxcvbn'
 import Icon from '../Icon'
 import useFocusableRef from '../../Hooks/useFocusableRef'
+import { MINIMUM_NEW_PASSWORD_SCORE, MINIMUM_PASSWORD_LENGTH } from '../../domain/password'
 
 import { debounce, isUnmodifiedEnter } from '../../utils'
 
@@ -18,9 +19,12 @@ export const PasswordInput = ({
   active = true,
   autoComplete = 'off',
   emptyError = NO_PASSWORD_ENTERED,
-  lastStep = false
+  lastStep = false,
+  overrideError
 }) => {
   const [error, setError] = useState(emptyError)
+  const [overrideAccepted, setOverrideAccepted] = useState(false)
+  const [overrideAvailable, setOverrideAvailable] = useState(false)
   const messageId = useId()
   const [revealed, setRevealed] = useState(false)
   const inputRef = useFocusableRef(autofocus)
@@ -32,7 +36,11 @@ export const PasswordInput = ({
 
   useEffect(() => () => clearTimeout(resetTimer.current), [])
 
-  const resetError = useCallback(() => setError(emptyError), [emptyError])
+  const resetError = useCallback(() => {
+    setError(emptyError)
+    setOverrideAccepted(false)
+    setOverrideAvailable(false)
+  }, [emptyError])
 
   const clear = useCallback(() => {
     inputRef.current && (inputRef.current.value = '')
@@ -53,9 +61,20 @@ export const PasswordInput = ({
 
   const handleSubmit = () => {
     if (disabled || submitting.current) return
+    const validation = getValidation()
+    const accepted = validation.overrideAvailable && overrideAccepted
+    if (validation.error && !accepted) {
+      setError(validation.error)
+      setOverrideAvailable(validation.overrideAvailable)
+      return
+    }
     submitting.current = true
     if (lastStep) setProcessing(true)
-    next(inputRef.current.value)
+    if (overrideError) {
+      next(inputRef.current.value, { allowWeakPassword: accepted })
+    } else {
+      next(inputRef.current.value)
+    }
     if (lastStep) {
       clear()
     } else {
@@ -67,22 +86,35 @@ export const PasswordInput = ({
     }
   }
 
-  const getError = () => {
+  const getValidation = () => {
     const value = inputRef.current?.value || ''
-    return value ? getInputError(value) || '' : emptyError
+    const validationError = value ? getInputError(value) || '' : emptyError
+    return {
+      error: validationError,
+      overrideAvailable: Boolean(
+        validationError && validationError !== emptyError && overrideError?.(value, validationError)
+      )
+    }
   }
 
   const validateInput = () => {
-    const err = getError()
-    if (err) {
+    setOverrideAccepted(false)
+    setOverrideAvailable(false)
+    const validation = getValidation()
+    if (validation.error) {
       setDisabled(true)
       return debounce(() => {
         setDisabled(false)
-        setError(getError())
+        const nextValidation = getValidation()
+        setError(nextValidation.error)
+        setOverrideAvailable(nextValidation.overrideAvailable)
       }, 300)()
     }
-    return setError(err)
+    setError('')
   }
+
+  const canSubmit = !error || (overrideAvailable && overrideAccepted)
+  const hasBlockingError = Boolean(error && error !== emptyError && !overrideAvailable)
 
   return (
     <div className='addAccountItemOptionSetupFrame' aria-hidden={!active} inert={!active}>
@@ -91,16 +123,17 @@ export const PasswordInput = ({
       </div>
       <div
         className={
-          error && error !== emptyError
+          hasBlockingError
             ? 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup wrenInputGroupError'
             : 'addAccountItemOptionInput addAccountItemOptionInputPassword wrenInputGroup'
         }
       >
         <input
-          className={error && error !== emptyError ? 'wrenInput wrenInputError' : 'wrenInput'}
+          className={hasBlockingError ? 'wrenInput wrenInputError' : 'wrenInput'}
           role='textbox'
           type={revealed ? 'text' : 'password'}
           aria-label={title}
+          aria-invalid={hasBlockingError ? 'true' : 'false'}
           aria-describedby={error ? messageId : undefined}
           autoCapitalize='none'
           autoComplete={autoComplete}
@@ -108,7 +141,7 @@ export const PasswordInput = ({
           ref={inputRef}
           onChange={validateInput}
           onKeyDown={(e) => {
-            if (!error && isUnmodifiedEnter(e) && !disabled && !submitting.current) {
+            if (canSubmit && isUnmodifiedEnter(e) && !disabled && !submitting.current) {
               e.preventDefault()
               handleSubmit()
             }
@@ -133,32 +166,46 @@ export const PasswordInput = ({
         >
           {error}
         </div>
-      ) : processing ? (
+      ) : null}
+      {overrideAvailable ? (
+        <label className='addAccountItemOptionPasswordConsent'>
+          <input
+            type='checkbox'
+            checked={overrideAccepted}
+            aria-describedby={messageId}
+            onChange={(event) => setOverrideAccepted(event.target.checked)}
+          />
+          <span>I understand this password may be easy to guess.</span>
+        </label>
+      ) : null}
+      {processing ? (
         <div role='status' className='addAccountItemOptionProcessing'>
           Processing…
         </div>
-      ) : (
+      ) : !error || overrideAvailable ? (
         <button
           type='button'
           className='addAccountItemOptionSubmit wrenControl wrenControlPrimary'
-          disabled={disabled || processing}
+          disabled={disabled || processing || !canSubmit}
           onClick={handleSubmit}
         >
           {buttonText}
         </button>
-      )}
+      ) : null}
     </div>
   )
 }
 
 export const CreatePassword = ({ onCreate, autofocus, active }) => {
   const getError = (password) => {
-    if (password.length < 12) return 'Password must be at least 12 characters'
+    if (password.length < MINIMUM_PASSWORD_LENGTH) {
+      return `Password must be at least ${MINIMUM_PASSWORD_LENGTH} characters`
+    }
     const {
       feedback: { warning },
       score
     } = zxcvbn(password)
-    if (score > 2) return
+    if (score >= MINIMUM_NEW_PASSWORD_SCORE) return
 
     return warning || 'Choose a stronger password'
   }
@@ -172,6 +219,7 @@ export const CreatePassword = ({ onCreate, autofocus, active }) => {
       autofocus={autofocus}
       active={active}
       autoComplete='new-password'
+      overrideError={(password) => password.length >= MINIMUM_PASSWORD_LENGTH}
     />
   )
 }

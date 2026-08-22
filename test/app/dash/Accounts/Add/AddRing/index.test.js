@@ -143,11 +143,19 @@ describe('confirming password', () => {
     await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), password)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
-    expect(link.rpc).toHaveBeenCalledWith('createFromPrivateKey', privateKey, password, expect.any(Function))
+    expect(link.rpc).toHaveBeenCalledWith(
+      'createFromPrivateKey',
+      privateKey,
+      password,
+      { allowWeakPassword: false },
+      expect.any(Function)
+    )
   })
 
   it('removes the previous account-setup screens and opens the signer on success', async () => {
-    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb(null, { id: '1234' }))
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, passwordOptions, cb) =>
+      cb(null, { id: '1234' })
+    )
     const view = setupComponent()
     await advanceToConfirmation(view)
 

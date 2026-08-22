@@ -36,7 +36,9 @@ const advancePassword = async (view, presentation) => {
   act(() => jest.advanceTimersByTime(300))
   link.rpc
     .mockImplementationOnce((method, cb) => cb(null, { sessionId: presentation.sessionId }))
-    .mockImplementationOnce((method, id, kind, enteredPassword, cb) => cb(null, presentation))
+    .mockImplementationOnce((method, id, kind, enteredPassword, passwordOptions, cb) =>
+      cb(null, presentation)
+    )
   await view.user.click(screen.getByRole('button', { name: 'Create' }))
 }
 
@@ -62,6 +64,7 @@ describe('generated recovery-phrase wallet', () => {
       phrasePresentation.sessionId,
       'phrase',
       password,
+      { allowWeakPassword: false },
       expect.any(Function)
     )
     const heading = screen.getByRole('heading', { name: 'Your recovery phrase' })
@@ -93,7 +96,9 @@ describe('generated recovery-phrase wallet', () => {
     act(() => jest.advanceTimersByTime(300))
     link.rpc
       .mockImplementationOnce((method, cb) => cb(null, { sessionId: phrasePresentation.sessionId }))
-      .mockImplementationOnce((method, id, kind, enteredPassword, cb) => cb('rng unavailable'))
+      .mockImplementationOnce((method, id, kind, enteredPassword, passwordOptions, cb) =>
+        cb('rng unavailable')
+      )
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(screen.getByRole('alert').textContent).toBe('Wren could not create this wallet safely.')
@@ -278,7 +283,7 @@ describe('generated recovery-phrase wallet', () => {
     let finishBegin
     link.rpc
       .mockImplementationOnce((method, cb) => cb(null, { sessionId: phrasePresentation.sessionId }))
-      .mockImplementationOnce((method, id, kind, enteredPassword, cb) => {
+      .mockImplementationOnce((method, id, kind, enteredPassword, passwordOptions, cb) => {
         finishBegin = cb
       })
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
@@ -310,7 +315,7 @@ describe('generated recovery-phrase wallet', () => {
     let finishBegin
     link.rpc
       .mockImplementationOnce((method, cb) => cb(null, { sessionId: phrasePresentation.sessionId }))
-      .mockImplementationOnce((method, id, kind, enteredPassword, cb) => {
+      .mockImplementationOnce((method, id, kind, enteredPassword, passwordOptions, cb) => {
         finishBegin = cb
       })
     await view.user.click(screen.getByRole('button', { name: 'Create' }))

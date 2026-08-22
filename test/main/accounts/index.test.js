@@ -18,6 +18,7 @@ import nav from '../../../main/windows/nav'
 import { computeAddress, getCreateAddress, keccak256, SigningKey, Transaction } from 'ethers'
 import { signEip7702RevokeRequest } from '../../../main/transaction/eip7702'
 import { createAccountPermission } from '../../../main/provider/permissions'
+import { RequestStatus } from '../../../main/accounts/types'
 import operationLifecycleLedger from '../../../main/operationLifecycle'
 import operationLifecycleRuntime from '../../../main/operationLifecycle/runtime'
 import { observeOperationLifecycles } from '../../../main/operationLifecycle/events'
@@ -150,6 +151,103 @@ afterEach(() => {
 
 it('sets the account signer', () => {
   expect(Accounts.current().address).toBe('0x22dd63c3619818fdbc262c78baee43cb61e9cccf')
+})
+
+it('removes exclusive signer accounts, rejects their requests, and preserves shared and unrelated accounts', () => {
+  const signerId = 'signer-to-remove'
+  const derivedAddress = '0x4444444444444444444444444444444444444444'
+  const unrelatedAddress = '0x3333333333333333333333333333333333333333'
+  const pendingResponse = jest.fn()
+
+  Accounts.add(derivedAddress, 'Derived account', { type: 'seed' })
+  Accounts.add(unrelatedAddress, 'Unrelated account', { type: 'ring' })
+  Accounts.accounts[account.id].signer = signerId
+  Accounts.accounts[derivedAddress].signer = 'another-signer'
+  Accounts.accounts[unrelatedAddress].signer = 'another-signer'
+  Accounts.addRequest(request, pendingResponse)
+
+  const removed = Accounts.removeAccountsForSigner(
+    signerId,
+    [account.address, derivedAddress],
+    [derivedAddress]
+  )
+
+  expect(removed).toEqual([account.address])
+  expect(Accounts.accounts[account.id]).toBeUndefined()
+  expect(Accounts.accounts[derivedAddress]).toBeTruthy()
+  expect(Accounts.accounts[unrelatedAddress]).toBeTruthy()
+  expect(Accounts.current().address).toBe(account2.address)
+  expect(pendingResponse).toHaveBeenCalledWith(
+    expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+  )
+
+  Accounts.remove(derivedAddress)
+  Accounts.remove(unrelatedAddress)
+})
+
+it('clears the selected account when removing the final account', () => {
+  Accounts.remove(account2.address)
+  Accounts.remove(account.address)
+
+  expect(Accounts.current()).toBeNull()
+  expect(store('selected.current')).toBe('')
+})
+
+it('repairs a stale selected account when retrying a partial multi-account removal', () => {
+  const secondAddress = '0x4444444444444444444444444444444444444444'
+  Accounts.add(secondAddress, 'Second removed account', { type: 'seed' })
+  const originalRemoveAccount = store.removeAccount.bind(store)
+  const removeAccount = jest.spyOn(store, 'removeAccount')
+  let restored = false
+  let calls = 0
+  removeAccount.mockImplementation((...args) => {
+    calls += 1
+    if (calls === 2) throw new Error('profile update failed')
+    return originalRemoveAccount(...args)
+  })
+
+  try {
+    expect(() => Accounts.removeMany([account.address, secondAddress])).toThrow('profile update failed')
+    removeAccount.mockRestore()
+    restored = true
+
+    Accounts.removeMany([account.address, secondAddress])
+
+    expect(Accounts.current().address).toBe(account2.address)
+    expect(store('selected.current')).toBe(account2.address)
+  } finally {
+    if (!restored) removeAccount.mockRestore()
+    if (Accounts.accounts[secondAddress]) Accounts.remove(secondAddress)
+  }
+})
+
+it('retries fallback selection when its store update fails', () => {
+  const setAccount = jest.spyOn(store, 'setAccount').mockImplementationOnce(() => {
+    throw new Error('selection update failed')
+  })
+
+  expect(() => Accounts.remove(account.address)).toThrow('selection update failed')
+  setAccount.mockRestore()
+
+  Accounts.remove(account.address)
+
+  expect(Accounts.current().address).toBe(account2.address)
+  expect(store('selected.current')).toBe(account2.address)
+})
+
+it('retries clearing selection when its store update fails', () => {
+  Accounts.remove(account2.address)
+  const removeSelectedAccount = jest.spyOn(store, 'removeSelectedAccount').mockImplementationOnce(() => {
+    throw new Error('selection clearing failed')
+  })
+
+  expect(() => Accounts.remove(account.address)).toThrow('selection clearing failed')
+  removeSelectedAccount.mockRestore()
+
+  Accounts.remove(account.address)
+
+  expect(Accounts.current()).toBeNull()
+  expect(store('selected.current')).toBe('')
 })
 
 it('rejects renaming an unknown account', () => {
@@ -2735,6 +2833,7 @@ describe('#clearRequests', () => {
       status: 'error',
       recoverableError: { code: WALLET_CALL_FUNDING_ERROR, message: 'More funds needed.' }
     })
+    expect(Accounts.markRequestResponseSettled('2')).toBe(true)
 
     Accounts.clearRequests(account.id)
 
@@ -2746,6 +2845,56 @@ describe('#clearRequests', () => {
       expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
     )
     expect(monitorResponse).not.toHaveBeenCalled()
+  })
+
+  it('clears every request even when one responder throws', () => {
+    const throwingResponse = jest.fn(() => {
+      throw new Error('renderer unavailable')
+    })
+    const remainingResponse = jest.fn()
+    Accounts.addRequest(request, throwingResponse)
+    Accounts.addRequest({ ...request, handlerId: 'remaining', origin: 'other-origin' }, remainingResponse)
+
+    expect(() => Accounts.clearRequests(account.id)).toThrow('renderer unavailable')
+
+    expect(Object.keys(Accounts.accounts[account.id].requests)).toHaveLength(0)
+    expect(remainingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+    )
+  })
+
+  it('rejects an approved request whose provider response is still pending', () => {
+    const pendingResponse = jest.fn()
+    Accounts.addRequest(request, pendingResponse)
+    Accounts.accounts[account.id].requests[request.handlerId].status = RequestStatus.Pending
+
+    Accounts.clearRequests(account.id)
+
+    expect(pendingResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ error: { code: 4001, message: 'User rejected the request' } })
+    )
+    expect(Accounts.accounts[account.id].requests[request.handlerId]).toBeUndefined()
+  })
+
+  it('does not answer a retained wallet-call decline again when its account is removed', () => {
+    const response = jest.fn()
+    const walletCalls = {
+      ...request,
+      type: 'walletCalls',
+      chainId: '0x1',
+      calls: [{ data: '0x', value: '0x0' }],
+      preparation: { status: 'pending' },
+      simulation: { status: 'pending', calls: [] }
+    }
+    Accounts.addRequest(walletCalls, response)
+    Object.assign(Accounts.accounts[account.id].requests[request.handlerId], {
+      status: 'declined',
+      responsePending: false
+    })
+
+    Accounts.remove(account.id)
+
+    expect(response).not.toHaveBeenCalled()
   })
 })
 

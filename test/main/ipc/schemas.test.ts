@@ -290,7 +290,8 @@ test('validates address-book mutations and bounded results', () => {
 test('keeps profile backup passwords and inspection metadata strictly bounded', () => {
   const password = 'correct horse battery staple'
   expect(parse('invoke', 'profile:export', [password])).toEqual([password])
-  expect(parseRendererIpcArgs('invoke', 'profile:export', ['too short']).success).toBe(false)
+  expect(parse('invoke', 'profile:export', ['12345678'])).toEqual(['12345678'])
+  expect(parseRendererIpcArgs('invoke', 'profile:export', ['1234567']).success).toBe(false)
   expect(parseRendererIpcArgs('invoke', 'profile:inspectBackup', [password, 'extra']).success).toBe(false)
   expect(
     parse('invoke', 'profile:stageRestore', [handlerId, password, 'REPLACE_PROFILE_ON_RESTART'])

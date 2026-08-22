@@ -345,6 +345,7 @@ class FrameAccount {
     if (knownRequest) {
       const payload = knownRequest.payload
       const responder = knownRequest.res
+      knownRequest.responsePending = false
       try {
         this.clearRequest(knownRequest.handlerId, 'completed')
       } finally {
@@ -362,6 +363,7 @@ class FrameAccount {
     if (knownRequest) {
       const payload = knownRequest.payload
       const responder = knownRequest.res
+      knownRequest.responsePending = false
       try {
         this.clearRequest(knownRequest.handlerId, outcome ?? (error.code === 4001 ? 'declined' : 'failed'))
       } finally {
@@ -427,22 +429,30 @@ class FrameAccount {
   }
 
   clearRequests() {
+    let firstError: unknown
     this.deferRequestPresentation(() => {
       Object.values(this.requests).forEach((req) => {
-        const retainedWalletCalls = req.type === 'walletCalls' && Boolean(req.recoverableError) && !req.locked
-        if (req.status === undefined || retainedWalletCalls) {
-          if (retainedWalletCalls) {
-            delete req.status
-            delete req.notice
-            delete req.recoverableError
+        try {
+          const retainedWalletCalls =
+            req.type === 'walletCalls' && Boolean(req.recoverableError) && !req.locked
+          if (req.responsePending !== false || retainedWalletCalls) {
+            if (retainedWalletCalls) {
+              delete req.status
+              delete req.notice
+              delete req.recoverableError
+            }
+            const err = { code: 4001, message: 'User rejected the request' }
+            this.rejectRequest(req, err)
+          } else {
+            this.clearRequest(req.handlerId)
           }
-          const err = { code: 4001, message: 'User rejected the request' }
-          this.rejectRequest(req, err)
-        } else {
-          this.clearRequest(req.handlerId)
+        } catch (error) {
+          firstError = firstError || error
+          log.warn('Could not finish notifying a cleared account request', error)
         }
       })
     })
+    if (firstError) throw firstError
   }
 
   rejectUnapprovedRequestsForOriginChain(origin: string, chainId: number, exceptHandlerId?: string) {
@@ -1662,6 +1672,7 @@ class FrameAccount {
     req.created = Date.now()
     req.activityId = req.activityId || randomUUID()
     req.queueIndex = this.nextRequestQueueIndex++
+    req.responsePending = true
     req.res = res
     this.requests[req.handlerId] = req
 

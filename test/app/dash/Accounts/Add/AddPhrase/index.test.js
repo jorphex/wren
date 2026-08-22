@@ -118,6 +118,29 @@ describe('entering password', () => {
 })
 
 describe('confirming password', () => {
+  it('carries explicit weak-password consent to signer creation', async () => {
+    const weakPassword = 'aaaaaaaa'
+    const view = setupComponent()
+    await advanceToPassword(view)
+
+    await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), weakPassword)
+    await view.user.click(
+      screen.getByRole('checkbox', { name: 'I understand this password may be easy to guess.' })
+    )
+    await view.user.click(screen.getByRole('button', { name: 'Continue' }))
+    view.rerender(<AddPhrase accountSetupStep='confirm' />)
+    await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), weakPassword)
+    await view.user.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(link.rpc).toHaveBeenCalledWith(
+      'createFromPhrase',
+      phrase,
+      weakPassword,
+      { allowWeakPassword: true },
+      expect.any(Function)
+    )
+  })
+
   it('sends the recovery phrase and password only to the signer-creation IPC', async () => {
     const view = setupComponent()
     await advanceToConfirmation(view)
@@ -125,11 +148,19 @@ describe('confirming password', () => {
     await view.user.type(screen.getByRole('textbox', { name: 'Confirm password' }), password)
     await view.user.click(screen.getByRole('button', { name: 'Create' }))
 
-    expect(link.rpc).toHaveBeenCalledWith('createFromPhrase', phrase, password, expect.any(Function))
+    expect(link.rpc).toHaveBeenCalledWith(
+      'createFromPhrase',
+      phrase,
+      password,
+      { allowWeakPassword: false },
+      expect.any(Function)
+    )
   })
 
   it('clears the draft before displaying an error', async () => {
-    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb('ERROR HERE'))
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, passwordOptions, cb) =>
+      cb('ERROR HERE')
+    )
     const view = setupComponent()
     await advanceToConfirmation(view)
 
@@ -145,7 +176,9 @@ describe('confirming password', () => {
   })
 
   it('removes the previous account-setup screens and opens the signer on success', async () => {
-    link.rpc.mockImplementationOnce((action, secret, enteredPassword, cb) => cb(null, { id: '1234' }))
+    link.rpc.mockImplementationOnce((action, secret, enteredPassword, passwordOptions, cb) =>
+      cb(null, { id: '1234' })
+    )
     const view = setupComponent()
     await advanceToConfirmation(view)
 

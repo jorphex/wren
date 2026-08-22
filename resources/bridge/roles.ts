@@ -53,6 +53,10 @@ const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'
 const trayOnlyInvokeChannels = new Set(['activity:clear'])
 
 const dashboardOnlyRpcMethods = new Set([
+  'createFromKeystore',
+  'createFromPhrase',
+  'createFromPrivateKey',
+  'removeSigner',
   'reserveGeneratedWallet',
   'beginGeneratedWallet',
   'completeGeneratedWallet',

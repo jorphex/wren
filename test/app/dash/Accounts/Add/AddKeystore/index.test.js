@@ -101,6 +101,7 @@ describe('entering passwords', () => {
       keystore,
       signerPassword,
       keystorePassword,
+      { allowWeakPassword: false },
       expect.any(Function)
     )
   })

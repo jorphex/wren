@@ -1502,6 +1502,30 @@ const reviewScenarios = () => [
     ready: '.addAccountsChooser',
     requiredText: ['Create new', 'Import existing', 'Watch-only']
   },
+  {
+    id: 'dash-account-weak-password-short-1.5',
+    renderer: 'dash',
+    state: 'account-create-weak-password',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      steps: [
+        { type: 'inputLabel', label: 'Create password', value: 'aaaaaaaa', delayMs: 650 },
+        { type: 'clickCheckboxText', text: 'I understand this password may be easy to guess.' }
+      ]
+    },
+    ready: '.addAccountItemOptionPasswordConsent',
+    requiredControls: ['Continue'],
+    requiredText: [
+      'Repeats like "aaa" are easy to guess',
+      'I understand this password may be easy to guess.'
+    ],
+    layoutExpectations: [
+      { kind: 'scroll-fits', selector: '.addAccountItemOptionSetupFrame[aria-hidden="false"]' }
+    ]
+  },
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],

@@ -384,11 +384,42 @@ module.exports = {
       delete next[account]
       return next
     })
+    u('main.permissions', (permissions = {}) => {
+      const account = typeof id === 'string' ? id.toLowerCase() : ''
+      if (!account || !Object.prototype.hasOwnProperty.call(permissions, account)) return permissions
+      const next = { ...permissions }
+      delete next[account]
+      return next
+    })
   },
   removeSigner: (u, id) => {
     u('main.signers', (signers) => {
       delete signers[id]
       return signers
+    })
+  },
+  beginAccountRemoval: (u, address) => {
+    u('main.pendingAccountRemovals', (pending = []) => [...new Set([...pending, address.toLowerCase()])])
+  },
+  finishAccountRemoval: (u, address) => {
+    u('main.pendingAccountRemovals', (pending = []) =>
+      pending.filter((candidate) => candidate !== address.toLowerCase())
+    )
+  },
+  beginSignerRemoval: (u, id, removal) => {
+    u('main.pendingSignerRemovals', (pending = {}) => ({
+      ...pending,
+      [id]: {
+        ...removal,
+        addresses: removal.addresses.map((address) => address.toLowerCase())
+      }
+    }))
+  },
+  finishSignerRemoval: (u, id) => {
+    u('main.pendingSignerRemovals', (pending = {}) => {
+      const next = { ...pending }
+      delete next[id]
+      return next
     })
   },
   updateSigner: (u, signer) => {
@@ -1214,6 +1245,20 @@ module.exports = {
         return signer
       })
     }, 320)
+  },
+  removeSelectedAccount: (u) => {
+    u('selected.open', () => false)
+    u('selected.minimized', () => true)
+    u('selected.view', () => 'default')
+    u('selected.showAccounts', () => false)
+    u('windows.panel.nav', () => [])
+    u('selected', (selected) => {
+      selected.last = selected.current
+      selected.current = ''
+      selected.requests = {}
+      selected.view = 'default'
+      return selected
+    })
   },
   setAccountFilter: (u, value) => {
     u('panel.accountFilter', () => value)

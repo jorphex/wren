@@ -1,6 +1,5 @@
 const path = require('path')
 const fs = require('fs')
-const { removeSync } = require('fs-extra')
 const { fork } = require('child_process')
 const log = require('electron-log')
 const { v4: uuid } = require('uuid')
@@ -9,29 +8,72 @@ const Signer = require('../../Signer').default
 const store = require('../../../store').default
 const { signerWorkerEnvironment } = require('../../../worker/environment')
 const { osSignerStorage } = require('../runtimeStorage')
+const { isSafeSignerId } = require('../../../../resources/domain/signerId')
 const SIGNERS_PATH = osSignerStorage.signerRoot
 const DEFAULT_RPC_TIMEOUT_MS = 30_000
 
 const eraseFile = (filePath) => {
-  const size = fs.statSync(filePath).size
-  const descriptor = fs.openSync(filePath, 'r+')
-  const buffer = Buffer.alloc(Math.min(Math.max(size, 1), 64 * 1024))
+  const initial = fs.lstatSync(filePath)
+  if (initial.isSymbolicLink()) {
+    fs.unlinkSync(filePath)
+    return
+  }
+  if (!initial.isFile()) throw new Error('Signer storage entry is not a regular file')
+  if (initial.nlink !== 1) throw new Error('Signer storage entry has unexpected hard links')
+
+  const flags = fs.constants.O_RDWR | (fs.constants.O_NOFOLLOW || 0)
+  const descriptor = fs.openSync(filePath, flags)
+  let buffer
   try {
+    const opened = fs.fstatSync(descriptor)
+    const current = fs.lstatSync(filePath)
+    if (
+      !current.isFile() ||
+      opened.dev !== current.dev ||
+      opened.ino !== current.ino ||
+      opened.nlink !== 1 ||
+      current.nlink !== 1
+    ) {
+      throw new Error('Signer storage entry changed while opening')
+    }
+
+    const size = opened.size
+    buffer = Buffer.alloc(Math.min(Math.max(size, 1), 64 * 1024))
     for (let offset = 0; offset < size; offset += buffer.length) {
       fs.writeSync(descriptor, buffer, 0, Math.min(buffer.length, size - offset), offset)
     }
     fs.fsyncSync(descriptor)
   } finally {
-    buffer.fill(0)
+    buffer?.fill(0)
     fs.closeSync(descriptor)
   }
-  removeSync(filePath)
+  fs.unlinkSync(filePath)
 }
 
 const workerFailure = (reason) => {
   if (reason instanceof Error && reason.message) return reason
   if (typeof reason === 'string' && reason) return new Error(reason)
   return new Error('Hot signer worker stopped')
+}
+
+const eraseSignerFiles = (id) => {
+  if (!isSafeSignerId(id)) throw new Error('Invalid signer identifier')
+  const signerRoot = path.resolve(SIGNERS_PATH)
+  const signerPaths = [
+    path.resolve(signerRoot, `${id}.legacy-v1.bak`),
+    path.resolve(signerRoot, `${id}.json`)
+  ]
+  if (signerPaths.some((signerPath) => path.dirname(signerPath) !== signerRoot)) {
+    throw new Error('Signer path is outside protected storage')
+  }
+
+  signerPaths.forEach((signerPath) => {
+    try {
+      eraseFile(signerPath)
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error
+    }
+  })
 }
 
 class HotSigner extends Signer {
@@ -80,15 +122,24 @@ class HotSigner extends Signer {
   }
 
   delete() {
-    const signerPaths = [
-      path.resolve(SIGNERS_PATH, `${this.id}.json`),
-      path.resolve(SIGNERS_PATH, `${this.id}.legacy-v1.bak`)
-    ]
-
-    signerPaths.filter(fs.existsSync).forEach(eraseFile)
+    eraseSignerFiles(this.id)
 
     // Log
     log.info('Signer erased from disk')
+  }
+
+  remove() {
+    // Erase the protected material before changing the live signer state. If
+    // erasure fails, the signer remains available and the caller can retry.
+    this.delete()
+
+    const deferPersistence = this._deferPersistence
+    this._deferPersistence = true
+    try {
+      this.close()
+    } finally {
+      this._deferPersistence = deferPersistence
+    }
   }
 
   lock(cb) {
@@ -301,7 +352,11 @@ class HotSigner extends Signer {
 
   _failPending(error) {
     for (const id of [...this._pending.keys()]) {
-      this._settlePending(id, error)
+      try {
+        this._settlePending(id, error)
+      } catch (callbackError) {
+        log.warn('Hot signer callback failed while the signer was closing', callbackError)
+      }
     }
   }
 
@@ -351,3 +406,4 @@ class HotSigner extends Signer {
 }
 
 module.exports = HotSigner
+module.exports.eraseSignerFiles = eraseSignerFiles

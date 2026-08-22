@@ -5,6 +5,7 @@ const hot = require('./index') as {
   createScanner: (signers: {
     add: (signer: Signer) => void
     exists: (id: string) => boolean
+    finishRemoval?: (id: string) => void
     unload: (reason: string) => void
   }) => {
     close: () => void
@@ -32,6 +33,7 @@ export default class HotSignerAdapter extends SignerAdapter {
     this.scanner = hot.createScanner({
       add: (signer) => this.emit('add', signer),
       exists: this.signerExists,
+      finishRemoval: (id) => this.emit('remove', id),
       unload: this.unloadSigners
     })
   }
@@ -46,8 +48,12 @@ export default class HotSignerAdapter extends SignerAdapter {
   }
 
   override remove(signer: Signer) {
-    signer.close()
-    signer.delete()
+    const removable = signer as Signer & { remove?: () => void }
+    if (removable.remove) removable.remove()
+    else {
+      signer.delete()
+      signer.close()
+    }
   }
 
   override reload(signer: Signer) {

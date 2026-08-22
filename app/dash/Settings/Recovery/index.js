@@ -1,9 +1,8 @@
 import { Component, createRef } from 'react'
 
 import DialogSurface from '../../../../resources/Components/DialogSurface'
+import { MINIMUM_PASSWORD_LENGTH } from '../../../../resources/domain/password'
 import { exportProfileBackup, inspectProfileBackup, stageProfileRestore } from './api'
-
-const MINIMUM_PASSWORD_LENGTH = 12
 
 const formatBytes = (bytes) => {
   if (bytes < 1024) return `${bytes} bytes`
@@ -80,7 +79,7 @@ export class Recovery extends Component {
     event.preventDefault()
     if (this.state.exportPending) return
     if (this.state.exportPassword.length < MINIMUM_PASSWORD_LENGTH) {
-      this.setState({ exportError: 'Use at least 12 characters.' })
+      this.setState({ exportError: `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.` })
       return
     }
     if (this.state.exportPassword !== this.state.exportConfirmation) {
@@ -117,7 +116,9 @@ export class Recovery extends Component {
     event.preventDefault()
     if (this.state.restorePending) return
     if (this.state.restorePassword.length < MINIMUM_PASSWORD_LENGTH) {
-      this.setState({ restoreError: 'Enter the backup password (at least 12 characters).' })
+      this.setState({
+        restoreError: `Enter the backup password (at least ${MINIMUM_PASSWORD_LENGTH} characters).`
+      })
       return
     }
 

@@ -198,6 +198,15 @@ const restoreFixture = () => {
   return { ...source, target, backup }
 }
 
+it('accepts an eight-character backup password and rejects seven characters', () => {
+  const { profile } = fixture()
+
+  expect(createEncryptedProfileBackup(profile, '12345678')).toBeInstanceOf(Buffer)
+  expect(() => createEncryptedProfileBackup(profile, '1234567')).toThrow(
+    'Backup password must be between 8 and 1024 characters'
+  )
+})
+
 const pendingIntent = (target: string) => {
   const parent = path.dirname(target)
   const name = fs.readdirSync(parent).find((entry) => entry.endsWith('-intent.json'))

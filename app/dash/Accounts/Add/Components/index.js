@@ -206,13 +206,13 @@ export function AddHotAccount({
     navForward(newAccountType, step)
   }
 
-  const onCreate = (password) => {
-    advance('confirm', { password })
+  const onCreate = (password, passwordOptions) => {
+    advance('confirm', { password, passwordOptions })
   }
 
   const onConfirm = () => {
-    const { secret, password, creationArgs = [] } = draft
-    link.rpc(createSignerMethod, secret, password, ...creationArgs, (err, signer) => {
+    const { secret, password, passwordOptions, creationArgs = [] } = draft
+    link.rpc(createSignerMethod, secret, password, ...creationArgs, passwordOptions, (err, signer) => {
       if (err) {
         clearDraft()
         return navForward(newAccountType, 'error', err)

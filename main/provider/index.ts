@@ -486,6 +486,7 @@ export class Provider extends EventEmitter {
   }
 
   private respondToRequest(handlerId: string, response: RPCResponsePayload) {
+    accounts.markRequestResponseSettled(handlerId)
     const handler = this.handlers[handlerId]
     this.handlerAbortCleanup.get(handlerId)?.()
     this.handlerAbortCleanup.delete(handlerId)
@@ -1637,6 +1638,7 @@ export class Provider extends EventEmitter {
     }
     if (!accounts.declineRequest(handlerId, accountId)) return false
 
+    request.responsePending = false
     request.res({
       id: request.payload.id,
       jsonrpc: request.payload.jsonrpc,

@@ -43,9 +43,15 @@ export class Signer extends React.Component {
       tPairingPending: false,
       promptDismissalPending: false,
       removalArmed: false,
-      removalPending: false
+      removalPending: false,
+      removalError: '',
+      removalStatus: '',
+      accountRemovalPending: '',
+      accountRemovalError: '',
+      accountRemovalStatus: ''
     }
     this.pending = { latticePair: false, pin: false, phrase: false, pairing: false }
+    this.removePending = false
     this.mounted = true
     this.updateAddressLimit = this.updateAddressLimit.bind(this)
     this.signerRemovalTrigger = React.createRef()
@@ -63,19 +69,56 @@ export class Signer extends React.Component {
 
   armRemoval() {
     if (this.state.removalPending || this.state.removalArmed) return
-    this.setState({ removalArmed: true })
+    this.setState({ removalArmed: true, removalError: '', removalStatus: '' })
   }
 
   cancelRemoval() {
     if (!this.state.removalArmed || this.state.removalPending) return
-    this.setState({ removalArmed: false })
+    this.setState({ removalArmed: false, removalError: '', removalStatus: '' })
   }
 
   confirmRemoval() {
-    if (this.state.removalPending) return
-    this.setState({ removalPending: true }, () => {
-      link.send('dash:removeSigner', this.props.id)
-      link.send('tray:action', 'backDash')
+    if (this.removePending) return
+    this.removePending = true
+    this.setState({ removalPending: true, removalError: '', removalStatus: '' }, () => {
+      link.rpc('removeSigner', this.props.id, (error, result) => {
+        if (!error) {
+          if (result?.status === 'deferred') {
+            if (this.mounted) {
+              this.setState({
+                removalStatus: 'Removal is in progress. Wren will finish automatically.'
+              })
+            }
+            return
+          }
+          link.send('tray:action', 'backDash')
+          return
+        }
+
+        this.removePending = false
+        if (this.mounted) {
+          this.setState({
+            removalPending: false,
+            removalError: 'Couldn\u2019t remove signer. Try again.'
+          })
+        }
+      })
+    })
+  }
+
+  removeAccount(address) {
+    if (this.state.accountRemovalPending) return
+    this.setState({ accountRemovalPending: address, accountRemovalError: '', accountRemovalStatus: '' })
+    link.rpc('removeAccount', address, {}, (error, result) => {
+      if (!this.mounted) return
+      this.setState({
+        accountRemovalPending: result?.status === 'deferred' ? address : '',
+        accountRemovalError: error ? 'Couldn\u2019t remove account. Try again.' : '',
+        accountRemovalStatus:
+          !error && result?.status === 'deferred'
+            ? 'Account removal is in progress. Wren will finish automatically.'
+            : ''
+      })
     })
   }
 
@@ -537,9 +580,10 @@ export class Signer extends React.Component {
                     }
                     title={checkSummedAddress}
                     className={!added ? 'signerAccount' : 'signerAccount signerAccountAdded'}
+                    disabled={Boolean(this.state.accountRemovalPending)}
                     onClick={() => {
                       if (this.store('main.accounts', address.toLowerCase())) {
-                        link.rpc('removeAccount', address, {}, () => {})
+                        this.removeAccount(address)
                       } else {
                         const type = getSignerDisplayType(signer)
                         link.rpc(
@@ -561,6 +605,16 @@ export class Signer extends React.Component {
                 )
               })}
             </div>
+            {this.state.accountRemovalError ? (
+              <div className='signerAccountActionError' role='alert'>
+                {this.state.accountRemovalError}
+              </div>
+            ) : null}
+            {this.state.accountRemovalStatus ? (
+              <div className='signerAccountActionStatus' role='status'>
+                {this.state.accountRemovalStatus}
+              </div>
+            ) : null}
             {signer.addresses.length > addressLimit ? (
               <div className='signerBottom'>
                 <button
@@ -629,8 +683,18 @@ export class Signer extends React.Component {
                 Remove signer?
               </div>
               <div id={`signer-removal-description-${id}`} className='signerRemovalConfirmDescription'>
-                {`This removes ${this.props.name || 'this signer'} from Wren. Accounts using it become watch-only.`}
+                {`This removes ${this.props.name || 'this signer'} and any accounts that no other signer can use.`}
               </div>
+              {this.state.removalError ? (
+                <div className='signerRemovalConfirmError' role='alert'>
+                  {this.state.removalError}
+                </div>
+              ) : null}
+              {this.state.removalStatus ? (
+                <div className='signerRemovalConfirmStatus' role='status'>
+                  {this.state.removalStatus}
+                </div>
+              ) : null}
               <div className='signerRemovalConfirmActions'>
                 <button
                   ref={this.signerRemovalCancel}
@@ -647,7 +711,7 @@ export class Signer extends React.Component {
                   disabled={this.state.removalPending}
                   onClick={() => this.confirmRemoval()}
                 >
-                  Remove signer
+                  {this.state.removalPending ? 'Removing signer\u2026' : 'Remove signer'}
                 </button>
               </div>
             </DialogSurface>

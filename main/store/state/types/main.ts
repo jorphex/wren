@@ -20,6 +20,7 @@ import { PermissionSchema } from './permission'
 import { ShortcutSchema } from './shortcuts'
 import { WalletCallBatchesSchema } from './walletCallBatch'
 import { YearnStateSchema } from './yearn'
+import { SIGNER_ID_PATTERN } from '../../../../resources/domain/signerId'
 
 const ShortcutsSchema = z.object({
   summon: ShortcutSchema
@@ -28,6 +29,22 @@ const ShortcutsSchema = z.object({
 const UpdaterPreferencesSchema = z.object({
   dontRemind: z.array(z.string())
 })
+
+const PendingSignerRemovalSchema = z.object({
+  addresses: z.array(z.string().regex(/^0x[0-9a-fA-F]{40}$/u)).max(1000),
+  deviceId: z.string().min(1).max(256).optional(),
+  kind: z.enum(['hardware', 'hot', 'lattice'])
+})
+
+const PendingSignerRemovalsSchema = z
+  .record(z.string().min(1).max(256), PendingSignerRemovalSchema)
+  .superRefine((removals, context) => {
+    Object.entries(removals).forEach(([id, removal]) => {
+      if (removal.kind === 'hot' && !SIGNER_ID_PATTERN.test(id)) {
+        context.addIssue({ code: 'custom', message: 'Invalid hot signer identifier', path: [id] })
+      }
+    })
+  })
 
 // these are individual keys on the main state object
 const PreferencesSchema = {
@@ -88,6 +105,8 @@ export const MainSchema = z.object({
     z.record(z.string().describe('Origin Id'), PermissionSchema)
   ),
   accounts: z.record(z.string(), AccountSchema),
+  pendingAccountRemovals: z.array(z.string().regex(/^0x[0-9a-fA-F]{40}$/u)).default([]),
+  pendingSignerRemovals: PendingSignerRemovalsSchema.default({}),
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
   operationLifecycles: OperationLifecyclesSchema,

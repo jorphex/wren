@@ -142,6 +142,19 @@ it('guards account removal while pending and recovers in place after failure', (
   expect(link.rpc).toHaveBeenCalledTimes(2)
 })
 
+it('explains when durable account removal is finishing in the background', () => {
+  renderWithStore(SettingsPreview)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm removal' }))
+
+  act(() => link.rpc.mock.calls[0][3](null, { status: 'deferred' }))
+
+  expect(screen.getByRole('status').textContent).toBe(
+    'Removal is in progress. Wren will finish automatically.'
+  )
+  expect(screen.getByRole('button', { name: 'Removing account\u2026' }).disabled).toBe(true)
+})
+
 it('keeps the compact account action row focused on safe removal', () => {
   renderWithStore(SettingsPreview)
 

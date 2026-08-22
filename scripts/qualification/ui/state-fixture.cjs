@@ -1078,6 +1078,7 @@ const fixtureFor = (scenario) => {
     'account-add-watch': 'nonsigning',
     'account-add-seed': 'seed',
     'account-add-trezor': 'trezor',
+    'account-create-weak-password': 'create-seed',
     'account-create-phrase': 'create-seed',
     'account-create-private-key': 'create-keyring'
   }

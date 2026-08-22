@@ -310,10 +310,6 @@ onRenderer('tray:renameAccount', (e, id, name) => {
   accounts.rename(id, name)
 })
 
-onRenderer('dash:removeSigner', (e, id) => {
-  signers.remove(id)
-})
-
 onRenderer('dash:reloadSigner', (e, id) => {
   signers.reload(id)
 })

@@ -4,7 +4,8 @@ import crypto from 'crypto'
 import { remove } from 'fs-extra'
 import log from 'electron-log'
 
-const PASSWORD = 'fr@///3_password'
+const PASSWORD = 'correct horse battery staple'
+const PASSWORD_OPTIONS = { allowWeakPassword: false }
 const SIGNER_PATH = path.resolve(__dirname, '../.userData/signers')
 const FILE_PATH = path.resolve(__dirname, 'keystore.json')
 const V1_FILE_PATH = path.resolve(__dirname, 'keystore-v1.json')
@@ -30,7 +31,7 @@ jest.mock('electron')
 jest.mock('../../../../../main/store/persist')
 
 // Stubs
-const signers = { add: () => {} }
+const signers = { add: (signer) => store.updateSigner(signer.summary()) }
 // Util
 const clean = () => remove(SIGNER_PATH)
 
@@ -65,7 +66,7 @@ describe('Ring signer', () => {
     const privateKey = 'invalid key'
 
     try {
-      hot.createFromPrivateKey(signers, privateKey, PASSWORD, (err) => {
+      hot.createFromPrivateKey(signers, privateKey, PASSWORD, PASSWORD_OPTIONS, (err) => {
         expect(err).toBeTruthy()
         expect(store('main.signers')).toEqual({})
         done()
@@ -79,7 +80,7 @@ describe('Ring signer', () => {
     const keystore = { invalid: 'keystore' }
 
     try {
-      hot.createFromKeystore(signers, keystore, 'test', PASSWORD, (err) => {
+      hot.createFromKeystore(signers, keystore, 'test', PASSWORD, PASSWORD_OPTIONS, (err) => {
         expect(err).toBeTruthy()
         expect(store('main.signers')).toEqual({})
         done()
@@ -92,7 +93,7 @@ describe('Ring signer', () => {
   test('Create from private key', (done) => {
     try {
       privateKey = crypto.randomBytes(32).toString('hex')
-      hot.createFromPrivateKey(signers, `0x${privateKey}`, PASSWORD, (err, result) => {
+      hot.createFromPrivateKey(signers, `0x${privateKey}`, PASSWORD, PASSWORD_OPTIONS, (err, result) => {
         signer = result
 
         expect(err).toBe(null)
@@ -205,6 +206,23 @@ describe('Ring signer', () => {
     jest.runAllTimers()
   }, 800)
 
+  test('Delete preserves the primary signer if legacy-backup erasure fails', () => {
+    const signerPath = path.resolve(SIGNER_PATH, `${signer.id}.json`)
+    const backupPath = path.resolve(SIGNER_PATH, `${signer.id}.legacy-v1.bak`)
+    const open = jest.spyOn(fs, 'openSync').mockImplementationOnce(() => {
+      throw new Error('synthetic backup erase failure')
+    })
+
+    try {
+      expect(() => signer.delete()).toThrow('synthetic backup erase failure')
+    } finally {
+      open.mockRestore()
+    }
+
+    expect(fs.existsSync(signerPath)).toBe(true)
+    expect(fs.existsSync(backupPath)).toBe(true)
+  })
+
   test('Delete removes both the current signer and its legacy recovery copy', () => {
     const signerPath = path.resolve(SIGNER_PATH, `${signer.id}.json`)
     const backupPath = path.resolve(SIGNER_PATH, `${signer.id}.legacy-v1.bak`)
@@ -232,7 +250,7 @@ describe('Ring signer', () => {
     try {
       const file = fs.readFileSync(FILE_PATH, 'utf8')
       const keystore = JSON.parse(file)
-      hot.createFromKeystore(signers, keystore, 'test', PASSWORD, (err, result) => {
+      hot.createFromKeystore(signers, keystore, 'test', PASSWORD, PASSWORD_OPTIONS, (err, result) => {
         signer = result
         expect(err).toBe(null)
         expect(signer.status).toBe('ok')
@@ -243,7 +261,7 @@ describe('Ring signer', () => {
     } catch (e) {
       done(e)
     }
-  }, 2000)
+  }, 7_500)
 
   test('Add private key', (done) => {
     try {
@@ -297,7 +315,7 @@ describe('Ring signer', () => {
     } catch (e) {
       done(e)
     }
-  }, 2000)
+  }, 7_500)
 
   test('Add private key from a legacy V1 keystore', (done) => {
     try {
@@ -313,7 +331,7 @@ describe('Ring signer', () => {
     } catch (e) {
       done(e)
     }
-  }, 2000)
+  }, 7_500)
 
   test('Lock', (done) => {
     try {

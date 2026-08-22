@@ -495,9 +495,14 @@ const runScenario = async (scenario) => {
           if (!setup) return null
           const viewport = setup.querySelector('.addAccountItemOption')
           const frames = [...setup.querySelectorAll('.generatedWalletFrame')]
+          if (frames.length === 0) return null
+          const activeFrames = frames.filter((frame) => frame.getAttribute('aria-hidden') === 'false')
+          // Password setup precedes secret generation, so every secret frame is
+          // intentionally inactive in that state.
+          if (activeFrames.length === 0) return null
           return {
             scrollLeft: viewport?.scrollLeft ?? -1,
-            active: frames.filter((frame) => frame.getAttribute('aria-hidden') === 'false').length,
+            active: activeFrames.length,
             renderedInactive: frames.filter(
               (frame) => frame.getAttribute('aria-hidden') === 'true' && frame.getClientRects().length > 0
             ).length
