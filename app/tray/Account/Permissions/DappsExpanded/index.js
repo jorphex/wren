@@ -19,7 +19,6 @@ export class DappsPermissionsExpanded extends React.Component {
     this.clearButtonRef = React.createRef()
     this.cancelClearRef = React.createRef()
     this.clearStatusRef = React.createRef()
-    this.revokeStatusRef = React.createRef()
     this.guardrailButtonRefs = new Map()
     this.state = {
       clearConfirm: false,
@@ -43,18 +42,30 @@ export class DappsPermissionsExpanded extends React.Component {
     }
     const revoked = this.state.revokeRequested
     if (revoked && !getPermissionIds(permissions).includes(revoked.id)) {
+      clearTimeout(this.revokeStatusTimer)
       this.setState(
         {
           revokeRequested: null,
           revokeStatus: `Access revoked for ${revoked.origin}. The app must request access again.`
         },
-        () => this.revokeStatusRef.current?.focus()
+        () => {
+          const nextAction = this.moduleRef.current?.querySelector('.revokeAccessButton')
+          const fallback = document.querySelector('.accountViewBack') || this.moduleRef.current
+          ;(nextAction || fallback)?.focus()
+          this.revokeStatusTimer = setTimeout(() => this.setState({ revokeStatus: false }), 4000)
+        }
       )
     }
   }
 
   componentWillUnmount() {
     clearTimeout(this.clearTimer)
+    clearTimeout(this.revokeStatusTimer)
+  }
+
+  requestRevoke(id, origin) {
+    clearTimeout(this.revokeStatusTimer)
+    this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
   }
 
   beginClear() {
@@ -120,7 +131,7 @@ export class DappsPermissionsExpanded extends React.Component {
     if (!this.props.expanded) permissionList = permissionList.slice(0, 3)
 
     return (
-      <div className='accountViewScroll accountLedgerView'>
+      <div className='accountViewScroll accountLedgerView' ref={this.moduleRef} tabIndex={-1}>
         {permissionList.length === 0 ? (
           allPermissionIds.length ? (
             <div className='wrenEmptyFilter'>No matching app permissions</div>
@@ -156,9 +167,7 @@ export class DappsPermissionsExpanded extends React.Component {
                               account={this.props.account}
                               permissionId={o}
                               origin={permission.origin}
-                              onRevokeRequested={(id, origin) =>
-                                this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
-                              }
+                              onRevokeRequested={(id, origin) => this.requestRevoke(id, origin)}
                             />
                           </div>
                           <div className='dappGuardrailChainActions'>
@@ -233,7 +242,7 @@ export class DappsPermissionsExpanded extends React.Component {
           </div>
         ) : null}
         {this.state.revokeStatus ? (
-          <div className='revokeAccessStatus' role='status' tabIndex={-1} ref={this.revokeStatusRef}>
+          <div className='revokeAccessStatus' role='status' aria-live='polite' aria-atomic='true'>
             {this.state.revokeStatus}
           </div>
         ) : null}

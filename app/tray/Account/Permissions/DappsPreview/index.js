@@ -15,7 +15,7 @@ export class DappsPermissionsPreview extends React.Component {
   constructor(...args) {
     super(...args)
     this.moduleRef = React.createRef()
-    this.revokeStatusRef = React.createRef()
+    this.moduleHeaderRef = React.createRef()
     this.state = { navigating: false }
     if (!this.props.expanded) {
       this.resizeObserver = new ResizeObserver(() => {
@@ -34,6 +34,7 @@ export class DappsPermissionsPreview extends React.Component {
 
   componentWillUnmount() {
     if (this.resizeObserver) this.resizeObserver.disconnect()
+    clearTimeout(this.revokeStatusTimer)
   }
 
   componentDidUpdate() {
@@ -42,13 +43,23 @@ export class DappsPermissionsPreview extends React.Component {
     const permissions = this.store('main.permissions', this.props.account) || {}
     if (getPermissionIds(permissions).includes(revoked.id)) return
 
+    clearTimeout(this.revokeStatusTimer)
     this.setState(
       {
         revokeRequested: null,
         revokeStatus: `Access revoked for ${revoked.origin}. The app must request access again.`
       },
-      () => this.revokeStatusRef.current?.focus()
+      () => {
+        const nextAction = this.moduleRef.current?.querySelector('.revokeAccessButton')
+        ;(nextAction || this.moduleHeaderRef.current)?.focus()
+        this.revokeStatusTimer = setTimeout(() => this.setState({ revokeStatus: false }), 4000)
+      }
     )
+  }
+
+  requestRevoke(id, origin) {
+    clearTimeout(this.revokeStatusTimer)
+    this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
   }
 
   openExpanded() {
@@ -73,7 +84,7 @@ export class DappsPermissionsPreview extends React.Component {
 
     return (
       <div className='balancesBlock' ref={this.moduleRef}>
-        <div className='moduleHeader'>
+        <div className='moduleHeader' ref={this.moduleHeaderRef} tabIndex={-1}>
           <span>
             <Icon name='apps' size={14} />
           </span>
@@ -103,9 +114,7 @@ export class DappsPermissionsPreview extends React.Component {
                           account={this.props.account}
                           permissionId={o}
                           origin={permissions[o].origin}
-                          onRevokeRequested={(id, origin) =>
-                            this.setState({ revokeRequested: { id, origin }, revokeStatus: false })
-                          }
+                          onRevokeRequested={(id, origin) => this.requestRevoke(id, origin)}
                         />
                       </div>
                     </div>
@@ -127,7 +136,7 @@ export class DappsPermissionsPreview extends React.Component {
           </button>
         ) : null}
         {this.state.revokeStatus ? (
-          <div className='revokeAccessStatus' role='status' tabIndex={-1} ref={this.revokeStatusRef}>
+          <div className='revokeAccessStatus' role='status' aria-live='polite' aria-atomic='true'>
             {this.state.revokeStatus}
           </div>
         ) : null}

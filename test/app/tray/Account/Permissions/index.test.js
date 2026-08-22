@@ -75,7 +75,7 @@ it('sorts permission rows by their displayed origin', () => {
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
 
-it('announces a store-confirmed revoke and moves focus to the result', async () => {
+it('announces a store-confirmed revoke, advances focus, and dismisses the inline status', async () => {
   class TestPreview extends DappsPermissionsPreview {
     store(...path) {
       if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
@@ -97,7 +97,40 @@ it('announces a store-confirmed revoke and moves focus to the result', async () 
 
   const status = screen.getByRole('status')
   expect(status.textContent).toBe('Access revoked for alpha.example. The app must request access again.')
-  expect(document.activeElement).toBe(status)
+  expect(status.getAttribute('aria-live')).toBe('polite')
+  expect(status.classList.contains('revokeAccessStatus')).toBe(true)
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke access' }))
+
+  act(() => jest.advanceTimersByTime(3999))
+  expect(screen.getByRole('status')).toBeTruthy()
+  act(() => jest.advanceTimersByTime(1))
+  expect(screen.queryByRole('status')).toBeNull()
+})
+
+it('uses the same transient revoke status lifecycle in expanded account access', async () => {
+  class TestExpanded extends DappsPermissionsExpanded {
+    store(...path) {
+      if (path.join('.') === `main.permissions.${account}`) return this.props.permissions
+      if (path.join('.') === 'main.networks.ethereum.1.name') return 'Ethereum'
+      if (path.join('.') === 'main.networksMeta.ethereum.1.nativeCurrency.decimals') return 18
+    }
+  }
+  const { rerender, user } = render(<TestExpanded account={account} expanded permissions={permissions} />)
+
+  await user.click(screen.getAllByRole('button', { name: 'Revoke access' })[0])
+  await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
+  rerender(
+    <TestExpanded
+      account={account}
+      expanded
+      permissions={{ managed: permissions.managed, second: permissions.second }}
+    />
+  )
+
+  expect(screen.getByRole('status').textContent).toContain('Access revoked for alpha.example')
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke access' }))
+  act(() => jest.advanceTimersByTime(4000))
+  expect(screen.queryByRole('status')).toBeNull()
 })
 
 it('requires confirmation and revokes a permission once', async () => {
