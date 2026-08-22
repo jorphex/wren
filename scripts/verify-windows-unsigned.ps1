@@ -5,6 +5,13 @@ if (-not [Environment]::Is64BitOperatingSystem) {
   throw 'Windows package verification requires a 64-bit operating system'
 }
 
+# GitHub's pwsh runner can pass its PowerShell 7 module path to this Windows
+# PowerShell process. Load the in-box security module from this process's own
+# installation so Get-AuthenticodeSignature cannot resolve to that incompatible
+# inherited module.
+$securityModule = Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1'
+Import-Module -Name $securityModule -Force
+
 $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
 $files = @(
   'dist\win-unpacked\Wren.exe',

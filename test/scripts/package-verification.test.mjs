@@ -12,6 +12,10 @@ import {
 } from '../../scripts/package-verification.mjs'
 
 const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+const windowsUnsignedVerifier = readFileSync(
+  new URL('../../scripts/verify-windows-unsigned.ps1', import.meta.url),
+  'utf8'
+)
 
 test('cleans and source-binds local package output before invoking electron-builder', () => {
   assert.match(packageJson.scripts.build, /node scripts\/prepare-package\.mjs/)
@@ -97,6 +101,12 @@ test('requires a matching native host before executing the package', () => {
   assert.doesNotThrow(() => assertNativeHost(target, { platform: 'darwin', arch: 'arm64' }))
   assert.throws(() => assertNativeHost(target, { platform: 'linux', arch: 'arm64' }), /requires macOS/)
   assert.throws(() => assertNativeHost(target, { platform: 'darwin', arch: 'x64' }), /requires arm64/)
+})
+
+test('loads the signature verifier from the active Windows PowerShell installation', () => {
+  assert.match(windowsUnsignedVerifier, /Join-Path \$PSHOME 'Modules\\Microsoft\.PowerShell\.Security/)
+  assert.match(windowsUnsignedVerifier, /Import-Module -Name \$securityModule -Force/)
+  assert.match(windowsUnsignedVerifier, /SignatureStatus\]::NotSigned/)
 })
 
 test('rejects archive entries that could escape their disposable extraction root', () => {
