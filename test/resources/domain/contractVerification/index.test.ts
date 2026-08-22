@@ -670,6 +670,7 @@ describe('exact target and privacy-minimal job ledger', () => {
     for (const destination of [
       { destination: 'sourcify', status: 'checking', remoteId: 'sourcify-job_1:poll' },
       { destination: 'sourcify', status: 'published', remoteId: 'sourcify-job_1:poll' },
+      { destination: 'sourcify', status: 'rejected', remoteId: 'sourcify-job_1:poll' },
       { destination: 'etherscan-direct', status: 'checking', remoteId: 'GUID.123-abc:def' },
       { destination: 'etherscan-direct', status: 'needs-api-key', remoteId: 'GUID.123-abc:def' },
       { destination: 'etherscan-direct', status: 'already-verified', remoteId: 'GUID.123-abc:def' }
@@ -701,7 +702,10 @@ describe('exact target and privacy-minimal job ledger', () => {
         { destination: 'sourcify', status: 'published' },
         { destination: 'etherscan-forwarded', status: 'verified', remoteId: 'not-owned-by-wren' }
       ],
-      [{ destination: 'sourcify', status: 'rejected', remoteId: 'terminal-but-not-pollable' }],
+      [
+        { destination: 'sourcify', status: 'published' },
+        { destination: 'etherscan-direct', status: 'rejected', remoteId: 'terminal-but-not-pollable' }
+      ],
       [{ destination: 'sourcify', status: 'published', remoteId: 'valid', opaqueId: 'extra' }]
     ]) {
       expectCode(

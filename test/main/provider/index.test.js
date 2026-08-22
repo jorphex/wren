@@ -8,6 +8,7 @@ import provider from '../../../main/provider'
 import accounts from '../../../main/accounts'
 import connection from '../../../main/chains'
 import store from '../../../main/store'
+import { commitMainState } from '../../../main/store/persist'
 import chainConfig from '../../../main/chains/config'
 import { hasSubscriptionPermission } from '../../../main/provider/subscriptions'
 import { toRpcQuantity } from '../../../resources/domain/transaction/quantity'
@@ -44,6 +45,11 @@ let accountRequests = []
 let currentAccount
 
 jest.mock('../../../main/store')
+jest.mock('../../../main/store/persist', () => ({
+  __esModule: true,
+  commitMainState: jest.fn(),
+  default: { pruneTransientState: jest.fn(), queue: jest.fn(), set: jest.fn() }
+}))
 jest.mock('../../../main/chains', () => ({ send: jest.fn(), syncDataEmit: jest.fn(), on: jest.fn() }))
 jest.mock('../../../main/accounts', () => ({}))
 jest.mock('../../../main/reveal', () => ({
@@ -80,6 +86,7 @@ afterAll(() => {
 })
 
 beforeEach(() => {
+  commitMainState.mockReset()
   store.set('main.colorway', 'light')
   store.set('main.accounts', {})
   store.set('main.origins', {})
@@ -5761,6 +5768,58 @@ describe('#signAndSend', () => {
         signAndSend()
       })
 
+      it('durably records the validated hash before settling the responder and callback', () => {
+        const events = []
+        accounts.setTxSent.mockImplementationOnce(() => {
+          events.push('durable')
+          return true
+        })
+        commitMainState.mockImplementationOnce(() => events.push('persisted'))
+        const handler = jest.fn(() => events.push('responder'))
+        const callback = jest.fn(() => events.push('callback'))
+        provider.handlers[request.handlerId] = handler
+
+        signAndSend(callback)
+
+        expect(events).toEqual(['durable', 'persisted', 'responder', 'callback'])
+        expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledWith(request.handlerId, txHash, address)
+        expect(commitMainState).toHaveBeenCalledTimes(1)
+        expect(commitMainState).toHaveBeenCalledWith(store('main'))
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(callback).toHaveBeenCalledWith(null, txHash)
+      })
+
+      it('preserves the broadcast hash response when the local restart-recovery commit fails', () => {
+        const commitError = new Error('profile write failed')
+        const errorLog = jest.spyOn(log, 'error').mockImplementation()
+        commitMainState.mockImplementationOnce(() => {
+          throw commitError
+        })
+        const handler = jest.fn()
+        const callback = jest.fn()
+        provider.handlers[request.handlerId] = handler
+
+        try {
+          signAndSend(callback)
+
+          expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
+          expect(commitMainState).toHaveBeenCalledTimes(1)
+          expect(handler).toHaveBeenCalledTimes(1)
+          expect(handler).toHaveBeenCalledWith(expect.objectContaining({ result: txHash }))
+          expect(callback).toHaveBeenCalledTimes(1)
+          expect(callback).toHaveBeenCalledWith(null, txHash)
+          expect(accounts.setTxSubmissionUnclear).not.toHaveBeenCalled()
+          expect(errorLog).toHaveBeenCalledWith(
+            'Submitted transaction restart recovery could not be committed',
+            { name: 'Error' }
+          )
+        } finally {
+          errorLog.mockRestore()
+        }
+      })
+
       it('broadcasts once and accepts a delayed success callback', (done) => {
         let broadcastCallback
         connection.send.mockImplementation((_payload, callback) => {
@@ -5813,31 +5872,41 @@ describe('#signAndSend', () => {
           broadcastCallback = callback
         })
         const callback = jest.fn()
+        const handler = jest.fn()
+        provider.handlers[request.handlerId] = handler
 
         signAndSend(callback)
         jest.advanceTimersByTime(15_000)
+        expect(accounts.setTxSent).not.toHaveBeenCalled()
+        expect(commitMainState).not.toHaveBeenCalled()
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(handler).toHaveBeenCalledTimes(1)
         broadcastCallback({ result: txHash })
 
         expect(callback).toHaveBeenCalledTimes(1)
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
         expect(accounts.setTxSent).toHaveBeenCalledWith(request.handlerId, txHash, address)
+        expect(commitMainState).toHaveBeenCalledTimes(1)
       })
 
-      it('ignores a late duplicate broadcast callback', (done) => {
+      it('ignores a late duplicate broadcast callback', () => {
         connection.send.mockImplementation((_payload, callback) => {
           callback({ result: txHash })
           callback({ error: { code: -32000, message: 'late duplicate' } })
         })
+        const callback = jest.fn()
+        const handler = jest.fn()
+        provider.handlers[request.handlerId] = handler
 
-        signAndSend((error, result) => {
-          try {
-            expect(error).toBe(null)
-            expect(result).toBe(txHash)
-            expect(accounts.setTxSubmissionUnclear).not.toHaveBeenCalled()
-            done()
-          } catch (assertionError) {
-            done(assertionError)
-          }
-        })
+        signAndSend(callback)
+
+        expect(callback).toHaveBeenCalledTimes(1)
+        expect(callback).toHaveBeenCalledWith(null, txHash)
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSent).toHaveBeenCalledTimes(1)
+        expect(commitMainState).toHaveBeenCalledTimes(1)
+        expect(accounts.setTxSubmissionUnclear).not.toHaveBeenCalled()
       })
     })
 

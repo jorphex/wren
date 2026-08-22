@@ -1105,7 +1105,7 @@ function validateDestinationRecord(value: unknown): ContractVerificationDestinat
     const remoteId = ownValue(value, 'remoteId')
     const allowed =
       (result.destination === 'sourcify' &&
-        ['checking', 'published', 'already-published', 'unknown'].includes(result.status)) ||
+        ['checking', 'published', 'already-published', 'rejected', 'unknown'].includes(result.status)) ||
       (result.destination === 'etherscan-direct' &&
         ['checking', 'verified', 'already-verified', 'needs-api-key', 'unknown'].includes(result.status))
     if (

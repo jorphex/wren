@@ -70,8 +70,20 @@ describe('ContractVerificationPollingRuntime', () => {
   })
 
   it('does not poll terminal destination states', async () => {
+    const forwardedUnknown = {
+      ...job('published'),
+      status: 'published',
+      destinations: [
+        { destination: 'sourcify', status: 'published' },
+        {
+          destination: 'etherscan-forwarded',
+          status: 'unknown',
+          reasonCode: 'status-unavailable'
+        }
+      ]
+    } as ContractVerificationJobRecord
     const service = {
-      list: jest.fn(() => ({ success: true as const, jobs: [job('published')] })),
+      list: jest.fn(() => ({ success: true as const, jobs: [forwardedUnknown] })),
       refresh: jest.fn()
     }
     const runtime = new ContractVerificationPollingRuntime(service)

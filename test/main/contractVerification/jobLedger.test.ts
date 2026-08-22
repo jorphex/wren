@@ -159,6 +159,32 @@ test('preserves accepted polling IDs and URLs and rejects duplicate or removed d
   expect(() => ledger.update(original.id, { ...original, destinations: [], updatedAt: 2 })).toThrow()
 })
 
+test.each([
+  ['publishing', 'checking'],
+  ['unknown', 'unknown']
+] as const)('preserves accepted Sourcify evidence when %s becomes rejected', (jobStatus, status) => {
+  const original = job(1, {
+    status: jobStatus,
+    destinations: [{ destination: 'sourcify', status, remoteId: 'poll-1' }]
+  })
+  const { ledger } = fixture([original])
+  const rejected = {
+    ...original,
+    status: 'rejected' as const,
+    destinations: [
+      {
+        destination: 'sourcify' as const,
+        status: 'rejected' as const,
+        remoteId: 'poll-1',
+        reasonCode: 'publication-rejected' as const
+      }
+    ],
+    updatedAt: 2
+  }
+
+  expect(ledger.update(original.id, rejected)).toEqual(rejected)
+})
+
 test('records pre-submit failures and pauses accepted explorer polling for a replacement key', () => {
   const intent = job(1, {
     status: 'publishing',

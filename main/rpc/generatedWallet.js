@@ -40,9 +40,15 @@ const callbackAfterReturn = (invoke) =>
     }, reject)
   })
 
-const rollbackGeneratedWallet = (
+const commitCurrentProfile = () => {
+  const store = require('../store').default
+  const { commitMainState } = require('../store/persist')
+  commitMainState(store('main'))
+}
+
+const rollbackGeneratedWallet = async (
   { accounts, log, signers },
-  { accountExisted, address, previousId, signerId }
+  { accountExisted, address, commitState, previousId, signerId }
 ) => {
   let complete = true
 
@@ -62,21 +68,32 @@ const rollbackGeneratedWallet = (
     log.warn('Could not roll back generated signer', error)
   }
 
-  if (previousId && accounts.get(previousId)) {
+  if (previousId) {
     try {
-      accounts.setSigner(previousId, (error) => {
-        if (error) log.warn('Could not restore the previously selected account', error)
-      })
+      if (!accounts.get(previousId)) throw new Error('Previously selected account is unavailable')
+      await callbackAfterReturn((selectionCb) => accounts.setSigner(previousId, selectionCb))
     } catch (error) {
       complete = false
       log.warn('Could not restore the previously selected account', error)
     }
   }
 
+  try {
+    await Promise.resolve().then(commitState)
+  } catch (error) {
+    complete = false
+    log.warn('Could not persist generated wallet rollback', error)
+  }
+
   return complete
 }
 
-const completeGeneratedWalletAccount = ({ accounts, log, provider, signers }, id, proof, cb) => {
+const completeGeneratedWalletAccount = (
+  { accounts, commitState = commitCurrentProfile, log, provider, signers },
+  id,
+  proof,
+  cb
+) => {
   signers.completeGeneratedWallet(id, proof, (completionError, signer) => {
     if (completionError) return report(log, cb, completionError)
 
@@ -97,6 +114,7 @@ const completeGeneratedWalletAccount = ({ accounts, log, provider, signers }, id
         )
         if (!account?.id) throw new Error('Generated account admission returned invalid data')
         await callbackAfterReturn((selectionCb) => accounts.setSigner(account.id, selectionCb))
+        await Promise.resolve().then(commitState)
 
         const currentAddresses = accounts.getSelectedAddresses()
         if (JSON.stringify(previousAddresses) !== JSON.stringify(currentAddresses)) {
@@ -114,9 +132,9 @@ const completeGeneratedWalletAccount = ({ accounts, log, provider, signers }, id
           type
         })
       } catch (error) {
-        const rolledBack = rollbackGeneratedWallet(
+        const rolledBack = await rollbackGeneratedWallet(
           { accounts, log, signers },
-          { accountExisted, address: normalizedAddress, previousId, signerId }
+          { accountExisted, address: normalizedAddress, commitState, previousId, signerId }
         )
         report(
           log,

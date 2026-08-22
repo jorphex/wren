@@ -505,7 +505,7 @@ test('persists accepted, already-published, and fixed rejected/unavailable outco
   })
 })
 
-test('polls accepted Sourcify IDs without POST and projects independent external outcomes', async () => {
+test('polls accepted Sourcify IDs without POST and treats external metadata as non-terminal', async () => {
   const subject = harness()
   const published = await subject.prepareAndPublish()
   if (!published.success) throw new Error('expected job')
@@ -514,9 +514,12 @@ test('polls accepted Sourcify IDs without POST and projects independent external
     creationMatch: null,
     runtimeMatch: 'exact_match',
     externalVerifications: {
-      etherscan: { error: 'unavailable' },
+      etherscan: { verificationId: 'external-ticket' },
       blockscout: { explorerUrl: `https://eth.blockscout.com/address/${ADDRESS}` },
-      routescan: { error: 'rejected' }
+      routescan: {
+        statusUrl: 'https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api',
+        error: 'rejected'
+      }
     }
   })
   const refreshed = await subject.service.refresh(published.job.id)
@@ -528,17 +531,19 @@ test('polls accepted Sourcify IDs without POST and projects independent external
         { destination: 'sourcify', status: 'published', remoteId: REMOTE_ID },
         {
           destination: 'etherscan-forwarded',
-          status: 'unavailable',
-          reasonCode: 'destination-unavailable'
+          status: 'unknown',
+          reasonCode: 'status-unavailable'
         },
         {
           destination: 'blockscout-forwarded',
-          status: 'verified',
-          explorerUrl: `https://eth.blockscout.com/address/${ADDRESS}`
+          status: 'unknown',
+          explorerUrl: `https://eth.blockscout.com/address/${ADDRESS}`,
+          reasonCode: 'status-unavailable'
         },
         {
           destination: 'routescan-forwarded',
           status: 'rejected',
+          statusUrl: 'https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api',
           reasonCode: 'destination-rejected'
         },
         { destination: 'etherscan-direct', status: 'not-submitted' }
@@ -546,6 +551,30 @@ test('polls accepted Sourcify IDs without POST and projects independent external
     })
   })
   expect(subject.sourcify.status).toHaveBeenCalledWith(REMOTE_ID, { chainId: 1, address: ADDRESS })
+  expect(subject.sourcify.submit).toHaveBeenCalledTimes(1)
+})
+
+test('projects an accepted Sourcify rejection while preserving its remote evidence', async () => {
+  const subject = harness()
+  const publication = await subject.prepareAndPublish()
+  if (!publication.success) throw new Error('expected job')
+  subject.sourcify.status.mockResolvedValueOnce({ status: 'failed', reason: 'no_match' })
+
+  await expect(subject.service.refresh(publication.job.id)).resolves.toEqual({
+    success: true,
+    job: expect.objectContaining({
+      status: 'rejected',
+      destinations: expect.arrayContaining([
+        {
+          destination: 'sourcify',
+          status: 'rejected',
+          remoteId: REMOTE_ID,
+          reasonCode: 'publication-rejected'
+        }
+      ])
+    })
+  })
+  expect(subject.sourcify.status).toHaveBeenCalledTimes(1)
   expect(subject.sourcify.submit).toHaveBeenCalledTimes(1)
 })
 
@@ -582,7 +611,7 @@ test('marks crash-uncertain persisted publication intent unknown without resubmi
   expect(subject.sourcify.submit).not.toHaveBeenCalled()
 })
 
-test('persists a missing accepted Sourcify job as unknown and never resubmits it', async () => {
+test('manually recovers a missing accepted Sourcify job without resubmitting it', async () => {
   const subject = harness()
   const publication = await subject.prepareAndPublish()
   if (!publication.success) throw new Error('expected job')
@@ -601,8 +630,64 @@ test('persists a missing accepted Sourcify job as unknown and never resubmits it
       ])
     })
   })
+  subject.sourcify.status.mockResolvedValueOnce({
+    status: 'succeeded',
+    creationMatch: null,
+    runtimeMatch: 'exact_match',
+    externalVerifications: {}
+  })
+  await expect(subject.service.refresh(publication.job.id)).resolves.toEqual({
+    success: true,
+    job: expect.objectContaining({
+      status: 'published',
+      destinations: expect.arrayContaining([
+        { destination: 'sourcify', status: 'published', remoteId: REMOTE_ID }
+      ])
+    })
+  })
+  expect(subject.sourcify.status).toHaveBeenCalledTimes(2)
+  expect(subject.sourcify.submit).toHaveBeenCalledTimes(1)
+})
+
+test('manually follows a missing accepted Sourcify job through pending to rejected', async () => {
+  const subject = harness()
+  const publication = await subject.prepareAndPublish()
+  if (!publication.success) throw new Error('expected job')
+  subject.sourcify.status.mockResolvedValueOnce({ status: 'unknown', reason: 'not_found' })
   await subject.service.refresh(publication.job.id)
-  expect(subject.sourcify.status).toHaveBeenCalledTimes(1)
+
+  subject.sourcify.status.mockResolvedValueOnce({ status: 'pending' })
+  await expect(subject.service.refresh(publication.job.id)).resolves.toEqual({
+    success: true,
+    job: expect.objectContaining({
+      status: 'unknown',
+      destinations: expect.arrayContaining([
+        {
+          destination: 'sourcify',
+          status: 'unknown',
+          remoteId: REMOTE_ID,
+          reasonCode: 'status-unavailable'
+        }
+      ])
+    })
+  })
+
+  subject.sourcify.status.mockResolvedValueOnce({ status: 'failed', reason: 'no_match' })
+  await expect(subject.service.refresh(publication.job.id)).resolves.toEqual({
+    success: true,
+    job: expect.objectContaining({
+      status: 'rejected',
+      destinations: expect.arrayContaining([
+        {
+          destination: 'sourcify',
+          status: 'rejected',
+          remoteId: REMOTE_ID,
+          reasonCode: 'publication-rejected'
+        }
+      ])
+    })
+  })
+  expect(subject.sourcify.status).toHaveBeenCalledTimes(3)
   expect(subject.sourcify.submit).toHaveBeenCalledTimes(1)
 })
 

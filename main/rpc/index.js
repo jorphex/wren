@@ -237,9 +237,8 @@ const rpc = {
       return cb(error)
     }
     if (req.type === 'transaction') {
-      provider.approveTransactionRequest(req, (err, res) => {
+      provider.approveTransactionRequest(req, (err) => {
         if (err) return accounts.setRequestError(req.handlerId, err, req.account)
-        setTimeout(() => accounts.setTxSent(req.handlerId, res, req.account), 1800)
       })
     } else if (req.type === 'sign') {
       provider.approveSign(req, (err) => {

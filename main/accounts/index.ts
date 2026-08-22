@@ -2936,6 +2936,7 @@ export class Accounts extends EventEmitter {
     })
     request.tx = { hash: hash.toLowerCase(), confirmations: 0 }
     currentAccount.update()
+    currentAccount.releaseRequestReviewIfQueued(handlerId)
 
     void Promise.resolve(this.txMonitor(currentAccount, handlerId, hash, false)).catch((error) => {
       const failedRequest = currentAccount.getRequest<TransactionRequest>(handlerId)

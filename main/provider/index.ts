@@ -8,6 +8,7 @@ import { addHexPrefix, intToHex } from '@ethereumjs/util'
 
 import store from '../store'
 import { requireStoreAction } from '../store/action'
+import { commitMainState } from '../store/persist'
 import packageFile from '../../package.json'
 
 import proxyConnection from './proxy'
@@ -764,12 +765,16 @@ export class Provider extends EventEmitter {
                           resError(error.message, payload, res)
                           return settleCallback(error)
                         }
-                        res(response)
-                        if (callbackSettled) {
-                          accounts.setTxSent(req.handlerId, response.result, req.account)
-                        } else {
-                          settleCallback(null, response.result)
+                        accounts.setTxSent(req.handlerId, response.result, req.account)
+                        try {
+                          commitMainState(store('main'))
+                        } catch (error) {
+                          log.error('Submitted transaction restart recovery could not be committed', {
+                            ...summarizeRpcError(error)
+                          })
                         }
+                        res(response)
+                        settleCallback(null, response.result)
                       }
                     },
                     {

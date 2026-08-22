@@ -38,14 +38,17 @@ const operation = (overrides: Partial<OperationLifecycle> = {}): OperationLifecy
   ...overrides
 })
 
-const fixture = (initial: OperationLifecycle) => {
+const fixture = (initial: OperationLifecycle, isReferenced = (_id: string) => false) => {
   let persisted: OperationLifecycles = { [initial.id]: initial }
-  const ledger = new OperationLifecycleLedger({
-    load: () => persisted,
-    save: (value) => {
-      persisted = value
-    }
-  })
+  const ledger = new OperationLifecycleLedger(
+    {
+      load: () => persisted,
+      save: (value) => {
+        persisted = value
+      }
+    },
+    { isReferenced }
+  )
   return { ledger, projection: new OperationLifecycleProjection(ledger), persisted: () => persisted }
 }
 
@@ -158,6 +161,25 @@ test('records stopped expiry without notifying and removes handled expired metad
 
   expect(mocks.recordActivity).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'stopped' }))
   expect(mocks.notify).not.toHaveBeenCalled()
+  expect(ledger.listStored()).toEqual([])
+})
+
+test('retains expired verification evidence until its referencing job is gone', () => {
+  let retainedByVerification = true
+  const current = operation({
+    state: 'confirmed',
+    createdAt: 0,
+    updatedAt: 20,
+    expiresAt: 20,
+    notification: { terminalHandledAt: 20 }
+  })
+  const { ledger, projection } = fixture(current, (id) => retainedByVerification && id === current.id)
+
+  projection.project(current.id, 21)
+  expect(ledger.list(21)).toEqual([current])
+
+  retainedByVerification = false
+  projection.project(current.id, 22)
   expect(ledger.listStored()).toEqual([])
 })
 

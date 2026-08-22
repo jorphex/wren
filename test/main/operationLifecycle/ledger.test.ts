@@ -325,6 +325,39 @@ test('capacity eviction removes only the oldest handled terminal row', () => {
   expect(ledger.evictOldestHandledTerminal(10)).toBe(false)
 })
 
+test('capacity eviction retains verification-referenced rows until their job is gone', () => {
+  const referenced = {
+    ...operation(),
+    state: 'confirmed' as const,
+    notification: { terminalHandledAt: 10 }
+  }
+  const unreferenced = {
+    ...operation(11),
+    id: '00000000-0000-4000-8000-000000000002',
+    state: 'failed' as const,
+    notification: { terminalHandledAt: 11 }
+  }
+  let retainedByVerification = true
+  let persisted = { [referenced.id]: referenced, [unreferenced.id]: unreferenced }
+  const ledger = new OperationLifecycleLedger(
+    {
+      load: () => persisted,
+      save: (value) => {
+        persisted = value
+      }
+    },
+    { isReferenced: (id) => retainedByVerification && id === referenced.id }
+  )
+
+  expect(ledger.evictOldestHandledTerminal(12)).toBe(true)
+  expect(ledger.listStored().map(({ id }) => id)).toEqual([referenced.id])
+  expect(ledger.evictOldestHandledTerminal(12)).toBe(false)
+
+  retainedByVerification = false
+  expect(ledger.evictOldestHandledTerminal(12)).toBe(true)
+  expect(ledger.listStored()).toEqual([])
+})
+
 test.each([
   ['ordinary replacement', 'app.example', undefined],
   ['managed speed-up', originIdForName(WREN_DEPLOY_ORIGIN), 'deployment'],

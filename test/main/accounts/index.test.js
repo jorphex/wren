@@ -1957,6 +1957,32 @@ describe('account-bound request transitions', () => {
     }
   })
 
+  it('advances the FIFO as soon as an ambiguous submission enters monitoring', () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('ambiguous-transaction-handoff')
+    const next = targetRequest('request-after-ambiguous-transaction', 'sign')
+    const hash = `0x${'a'.repeat(64)}`
+    const monitor = jest.spyOn(Accounts, 'txMonitor').mockImplementation()
+    targetAccount.addRequest(explicit)
+    targetAccount.addRequest(next)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    targetAccount.requests[explicit.handlerId].status = 'sending'
+
+    try {
+      expect(Accounts.setTxSubmissionUnclear(explicit.handlerId, hash, account2.address)).toBe(true)
+      expect(targetAccount.requests[explicit.handlerId]).toMatchObject({
+        status: 'verifying',
+        mode: 'monitor',
+        submission: { status: 'unconfirmed' }
+      })
+      expect(targetAccount.getActiveReviewRequest(next.handlerId)).toBe(next)
+      expect(targetAccount.summary().activeRequestId).toBe(next.handlerId)
+    } finally {
+      monitor.mockRestore()
+    }
+  })
+
   it('keeps a submitted transaction review open when no request is waiting behind it', () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('submitted-transaction-review')

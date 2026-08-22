@@ -396,9 +396,10 @@ const forwardedDestination = (
       reasonCode: reasonForExternalError(result.error)
     })
   }
-  return destination(name, 'verified', {
+  return destination(name, 'unknown', {
     ...(result.statusUrl ? { statusUrl: result.statusUrl } : {}),
-    ...(result.explorerUrl ? { explorerUrl: result.explorerUrl } : {})
+    ...(result.explorerUrl ? { explorerUrl: result.explorerUrl } : {}),
+    reasonCode: 'status-unavailable'
   })
 }
 
@@ -887,11 +888,15 @@ export function createContractVerificationService(
       })
     }
     if (result.status === 'failed') {
+      const remoteId = job.destinations.find(({ destination: name }) => name === 'sourcify')?.remoteId
       return updateJob(job, {
         status: 'rejected',
         destinations: replaceDestination(
           job.destinations,
-          destination('sourcify', 'rejected', { reasonCode: 'publication-rejected' })
+          destination('sourcify', 'rejected', {
+            ...(remoteId ? { remoteId } : {}),
+            reasonCode: 'publication-rejected'
+          })
         )
       })
     }
@@ -934,7 +939,7 @@ export function createContractVerificationService(
             destination('sourcify', 'unknown', { reasonCode: 'status-unavailable' })
           )
         })
-      } else if (sourcify.status === 'checking' && sourcify.remoteId) {
+      } else if (['checking', 'unknown'].includes(sourcify.status) && sourcify.remoteId) {
         const polled = await dependencies.sourcify.status(sourcify.remoteId, {
           chainId: job.target.chainId,
           address: job.target.address

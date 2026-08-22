@@ -1,19 +1,22 @@
 const { accountNameForSigner, completeGeneratedWalletAccount } = require('../../../main/rpc/generatedWallet')
 
 const ADDRESS = '0x0000000000000000000000000000000000000001'
+const PREVIOUS_ADDRESS = '0x0000000000000000000000000000000000000002'
 const flush = async () => {
-  for (let index = 0; index < 8; index += 1) await Promise.resolve()
+  for (let index = 0; index < 24; index += 1) await Promise.resolve()
 }
 
-const setup = () => {
+const setup = ({ previousAccount } = {}) => {
   const admittedAccounts = new Map()
+  if (previousAccount) admittedAccounts.set(previousAccount.id, previousAccount)
+  const commitState = jest.fn()
   const accounts = {
     add: jest.fn((address, name, options, cb) => {
       const account = { id: address.toLowerCase() }
       admittedAccounts.set(account.id, account)
       return cb(null, account)
     }),
-    current: jest.fn(() => undefined),
+    current: jest.fn(() => previousAccount),
     get: jest.fn((id) => admittedAccounts.get(id)),
     getSelectedAddresses: jest.fn().mockReturnValueOnce([]).mockReturnValue([ADDRESS]),
     remove: jest.fn((id) => admittedAccounts.delete(id)),
@@ -27,7 +30,7 @@ const setup = () => {
     ),
     remove: jest.fn()
   }
-  return { accounts, log, provider, signers }
+  return { accounts, commitState, log, provider, signers }
 }
 
 test('creates and selects the generated signer account before reporting success', async () => {
@@ -45,6 +48,11 @@ test('creates and selects the generated signer account before reporting success'
   )
   expect(dependencies.accounts.setSigner).toHaveBeenCalledWith(ADDRESS.toLowerCase(), expect.any(Function))
   expect(dependencies.provider.accountsChanged).toHaveBeenCalledWith([ADDRESS])
+  expect(dependencies.commitState).toHaveBeenCalledTimes(1)
+  expect(dependencies.commitState.mock.invocationCallOrder[0]).toBeLessThan(
+    dependencies.provider.accountsChanged.mock.invocationCallOrder[0]
+  )
+  expect(dependencies.commitState.mock.invocationCallOrder[0]).toBeLessThan(cb.mock.invocationCallOrder[0])
   expect(cb).toHaveBeenCalledWith(null, {
     accountId: ADDRESS.toLowerCase(),
     address: ADDRESS,
@@ -82,6 +90,7 @@ test('reports account admission failure without attempting selection', async () 
   expect(cb).toHaveBeenCalledWith(expect.objectContaining({ message: 'account admission failed' }))
   expect(dependencies.accounts.setSigner).not.toHaveBeenCalled()
   expect(dependencies.signers.remove).toHaveBeenCalledWith('generated-signer')
+  expect(dependencies.commitState).toHaveBeenCalledTimes(1)
 })
 
 test('waits for account persistence before selecting and reporting success', async () => {
@@ -103,6 +112,7 @@ test('waits for account persistence before selecting and reporting success', asy
 
   expect(dependencies.accounts.setSigner).not.toHaveBeenCalled()
   expect(dependencies.signers.remove).toHaveBeenCalledWith('generated-signer')
+  expect(dependencies.commitState).toHaveBeenCalledTimes(1)
   expect(cb).toHaveBeenCalledWith(expect.objectContaining({ message: 'account persistence failed' }))
 })
 
@@ -121,6 +131,46 @@ test('does not report success when selection throws after invoking its callback'
   expect(cb).toHaveBeenCalledWith(expect.objectContaining({ message: 'selection persistence failed' }))
   expect(dependencies.accounts.remove).toHaveBeenCalledWith(ADDRESS.toLowerCase())
   expect(dependencies.signers.remove).toHaveBeenCalledWith('generated-signer')
+  expect(dependencies.commitState).toHaveBeenCalledTimes(1)
+})
+
+test('rolls back and durably commits the rollback when the success snapshot cannot be persisted', async () => {
+  const previousAccount = { id: PREVIOUS_ADDRESS }
+  const dependencies = setup({ previousAccount })
+  dependencies.commitState.mockRejectedValueOnce(new Error('profile commit failed')).mockResolvedValueOnce()
+  const cb = jest.fn()
+
+  completeGeneratedWalletAccount(dependencies, 'session', {}, cb)
+  await flush()
+
+  expect(dependencies.accounts.remove).toHaveBeenCalledWith(ADDRESS.toLowerCase())
+  expect(dependencies.signers.remove).toHaveBeenCalledWith('generated-signer')
+  expect(dependencies.accounts.setSigner).toHaveBeenLastCalledWith(PREVIOUS_ADDRESS, expect.any(Function))
+  expect(dependencies.commitState).toHaveBeenCalledTimes(2)
+  expect(dependencies.provider.accountsChanged).not.toHaveBeenCalled()
+  expect(cb).toHaveBeenCalledWith(expect.objectContaining({ message: 'profile commit failed' }))
+})
+
+test('reports partial rollback when the rollback snapshot cannot be persisted', async () => {
+  const dependencies = setup()
+  dependencies.commitState.mockRejectedValueOnce(new Error('profile commit failed'))
+  dependencies.commitState.mockRejectedValueOnce(new Error('rollback commit failed'))
+  const cb = jest.fn()
+
+  completeGeneratedWalletAccount(dependencies, 'session', {}, cb)
+  await flush()
+
+  expect(dependencies.accounts.remove).toHaveBeenCalledWith(ADDRESS.toLowerCase())
+  expect(dependencies.signers.remove).toHaveBeenCalledWith('generated-signer')
+  expect(cb).toHaveBeenCalledWith(
+    expect.objectContaining({
+      message: 'Wallet creation could not be rolled back completely. Check Accounts before trying again.'
+    })
+  )
+  expect(dependencies.log.warn).toHaveBeenCalledWith(
+    'Could not persist generated wallet rollback',
+    expect.objectContaining({ message: 'rollback commit failed' })
+  )
 })
 
 test('reports partial rollback honestly when a generated signer cannot be removed', async () => {

@@ -4,6 +4,11 @@ import path from 'path'
 
 import migrations from '../../../../main/store/migrate'
 import { assertSafeMigrationFixture } from './fixtureValidation'
+import {
+  FRAME_SEND_ORIGIN,
+  WREN_EXTENSION_ORIGIN,
+  originIdForName
+} from '../../../../resources/domain/origin'
 
 let mockPersistedMain
 
@@ -337,6 +342,87 @@ it('migrates version 52 Pylon presets through application state initialization',
   expect(migrated.main.mute.migrateToPylon).toBe(false)
   expect(JSON.stringify(migrated)).not.toContain('pylon.link')
   expect(reloaded.main).toEqual(migrated.main)
+})
+
+it('migrates the published version 68 release boundary through migrations 69 to 73', async () => {
+  const fixture = loadFixture('v68-release-boundary-state.json')
+  const source = clone(fixture.state)
+  const accountId = '0x000000000000000000000000000000000000dead'
+  const sendId = originIdForName(FRAME_SEND_ORIGIN)
+  const extensionId = originIdForName(WREN_EXTENSION_ORIGIN)
+
+  const after69 = migrations.apply(clone(source), 69)
+  expect(after69.main._version).toBe(69)
+  expect(after69.main.networks.ethereum[1].name).toBe('Ethereum')
+  expect(after69.main.networksMeta).toEqual(source.main.networksMeta)
+  expect(after69.main.accounts).toEqual(source.main.accounts)
+  expect(after69.main.addressBook).toEqual(source.main.addressBook)
+
+  const after70 = migrations.apply(clone(after69), 70)
+  expect(after70.main._version).toBe(70)
+  expect(after70.main.networksMeta.ethereum[1].nativeCurrency.usd).toEqual({
+    price: 2345.67,
+    change24hr: -1.25
+  })
+
+  const after71 = migrations.apply(clone(after70), 71)
+  expect(after71.main._version).toBe(71)
+  expect(after71.main.networksMeta.ethereum[1]).toMatchObject({
+    blockHeight: 12345678,
+    primaryColor: 'accent1',
+    nativeCurrency: {
+      symbol: 'ETH',
+      name: 'Ether',
+      decimals: 18,
+      usd: { price: 2345.67, change24hr: -1.25 }
+    }
+  })
+
+  const after72 = migrations.apply(clone(after71), 72)
+  expect(after72.main._version).toBe(72)
+  expect(after72.main.origins[sendId]).toBeUndefined()
+  expect(after72.main.origins[extensionId]).toMatchObject({ provenance: 'legacy' })
+  expect(after72.main.origins['fixture-direct-origin']).toEqual(source.main.origins['fixture-direct-origin'])
+
+  const rawMigrated = migrations.apply(clone(after72), 73)
+  expect(rawMigrated.main).toMatchObject({
+    _version: migrations.latest,
+    accounts: { [accountId]: source.main.accounts[accountId] },
+    addressBook: source.main.addressBook,
+    networks: { ethereum: { 1: { name: 'Ethereum' } } },
+    networksMeta: {
+      ethereum: {
+        1: {
+          blockHeight: 12345678,
+          nativeCurrency: { usd: { price: 2345.67, change24hr: -1.25 } }
+        }
+      }
+    },
+    origins: {
+      [extensionId]: expect.objectContaining({ name: WREN_EXTENSION_ORIGIN, provenance: 'internal' }),
+      'fixture-direct-origin': source.main.origins['fixture-direct-origin']
+    }
+  })
+  expect(rawMigrated.main.origins[sendId]).toBeUndefined()
+  expect(migrations.apply(clone(rawMigrated))).toEqual(rawMigrated)
+
+  const { migrated, mode, reloaded, secondReload } = await migrateTemporaryProfile(fixture)
+  expect(migrated.main._version).toBe(migrations.latest)
+  expect(migrated.main.networks.ethereum[1].name).toBe('Ethereum')
+  expect(migrated.main.networksMeta.ethereum[1]).toMatchObject({
+    blockHeight: 12345678,
+    nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18, usd: { price: 0, change24hr: 0 } }
+  })
+  expect(migrated.main.accounts[accountId]).toMatchObject(source.main.accounts[accountId])
+  expect(migrated.main.addressBook).toEqual(source.main.addressBook)
+  expect(migrated.main.origins[sendId]).toBeUndefined()
+  expect(migrated.main.origins[extensionId]).toMatchObject({ provenance: 'internal' })
+  expect(migrated.main.origins['fixture-direct-origin']).toMatchObject(
+    source.main.origins['fixture-direct-origin']
+  )
+  expect(mode).toBe(0o600)
+  expect(reloaded.main).toEqual(migrated.main)
+  expect(secondReload.main).toEqual(reloaded.main)
 })
 
 it('migrates a previous safe profile and keeps it reload-stable', async () => {

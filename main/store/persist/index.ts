@@ -8,7 +8,7 @@ import { pruneTransientPersistedState, sanitizePersistedStateUpdate } from './st
 type PersistedConfig = Record<string, unknown>
 type PersistOpts<T extends PersistedConfig> = Options<T>
 
-class PersistStore extends Conf<PersistedConfig> {
+export class PersistStore extends Conf<PersistedConfig> {
   private blockUpdates = false
   private updates: PersistedConfig | null = {}
 
@@ -64,4 +64,11 @@ class PersistStore extends Conf<PersistedConfig> {
   }
 }
 
-export default new PersistStore()
+const persist = new PersistStore()
+
+type MainStateCommitTarget = Pick<PersistStore, 'set'>
+
+export const commitMainState = (mainState: unknown, target: MainStateCommitTarget = persist) =>
+  target.set('main', mainState)
+
+export default persist

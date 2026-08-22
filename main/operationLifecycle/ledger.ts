@@ -14,6 +14,10 @@ export interface OperationLifecycleStorage {
   save(operations: OperationLifecycles): void
 }
 
+export interface OperationLifecycleRetention {
+  isReferenced(operationId: string): boolean
+}
+
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const deployOriginId = originIdForName(WREN_DEPLOY_ORIGIN)
 const internalOriginId = originIdForName(WREN_INTERNAL_ORIGIN)
@@ -58,7 +62,10 @@ const hasValidReplacementLineage = (operation: OperationLifecycle, operations: O
 export class OperationLifecycleLedger {
   private readonly admissions = new Set<string>()
 
-  constructor(private readonly storage: OperationLifecycleStorage) {}
+  constructor(
+    private readonly storage: OperationLifecycleStorage,
+    private readonly retention: OperationLifecycleRetention = { isReferenced: () => false }
+  ) {}
 
   private read(now = Date.now()) {
     const loaded = this.storage.load()
@@ -86,7 +93,12 @@ export class OperationLifecycleLedger {
 
     const retained = new Set(
       Object.values(operations)
-        .filter((operation) => operation.expiresAt > now || operation.state === 'stopped')
+        .filter(
+          (operation) =>
+            operation.expiresAt > now ||
+            operation.state === 'stopped' ||
+            this.retention.isReferenced(operation.id)
+        )
         .map(({ id }) => id)
     )
     for (const id of [...retained]) {
@@ -204,6 +216,7 @@ export class OperationLifecycleLedger {
   remove(id: string, now = Date.now()) {
     const operations = this.read(now)
     if (!operations[id]) return false
+    if (this.retention.isReferenced(id)) return false
     if (Object.values(operations).some(({ transaction }) => transaction?.replacementOf === id)) {
       return false
     }
@@ -230,6 +243,7 @@ export class OperationLifecycleLedger {
           ].includes(operation.state) &&
           operation.notification.terminalHandledAt !== undefined &&
           operation.settlement?.status !== 'monitoring' &&
+          !this.retention.isReferenced(operation.id) &&
           !referenced.has(operation.id)
       )
       .sort((left, right) => left.updatedAt - right.updatedAt || left.id.localeCompare(right.id))[0]
