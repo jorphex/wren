@@ -189,7 +189,7 @@
     "jest": "30.4.2",
     "jest-environment-jsdom": "30.4.1",
     "lint-staged": "13.1.2",
-    "nock": "13.3.0",
+    "nock": "14.0.17",
     "node-abi": "3.33.0",
     "node-watch": "0.7.4",
     "parcel": "2.16.4",
