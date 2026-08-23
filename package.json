@@ -162,7 +162,7 @@
     "@parcel/transformer-typescript-tsc": "2.16.4",
     "@testing-library/dom": "10.4.1",
     "@testing-library/react": "16.3.2",
-    "@testing-library/user-event": "14.6.4",
+    "@testing-library/user-event": "14.6.5",
     "@types/deep-equal": "1.0.4",
     "@types/jest": "30.0.0",
     "@types/node": "24.13.3",
