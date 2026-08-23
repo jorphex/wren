@@ -119,18 +119,6 @@
 .requestItemDetailsNeutral
   color var(--wren-text-tertiary)
 
-.requestItemDetailsIndicatorStill .requestItemDetailsIndicatorMarker
-  animation none
-
-.requestItemDetailsGood .requestItemDetailsIndicatorMarker
-  background var(--wren-success)
-
-.requestItemDetailsBad .requestItemDetailsIndicatorMarker
-  background var(--wren-danger)
-
-.requestItemDetailsNeutral .requestItemDetailsIndicatorMarker
-  background var(--wren-text-tertiary)
-
 .requestItemDetailsView
   display flex
   align-items center
@@ -383,6 +371,27 @@
     border-radius 50%
     background var(--wren-warning)
     animation lit 1s ease-in-out infinite alternate
+
+.requestItemDetailsSlideGood
+  color var(--wren-success)
+
+  .requestItemDetailsIndicatorMarker
+    background var(--wren-success)
+
+.requestItemDetailsSlideBad
+  color var(--wren-danger)
+
+  .requestItemDetailsIndicatorMarker
+    background var(--wren-danger)
+
+.requestItemDetailsSlideNeutral
+  color var(--wren-text-tertiary)
+
+  .requestItemDetailsIndicatorMarker
+    background var(--wren-text-tertiary)
+
+.requestItemDetailsIndicatorStill .requestItemDetailsIndicatorMarker
+  animation none
 
 .requestItemWave,
 .requestItemWaveDisabled

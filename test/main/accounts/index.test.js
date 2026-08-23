@@ -2713,6 +2713,114 @@ describe('ordinary transaction lifecycle outcomes', () => {
     }
   })
 
+  it('repairs a confirming transaction handoff so the next review is available', () => {
+    const targetAccount = Accounts.current()
+    const hash = `0x${'a'.repeat(64)}`
+    Accounts.addRequest(request)
+    const target = targetAccount.getRequest(request.handlerId)
+    const next = { ...request, handlerId: 'request-after-confirming-transaction', type: 'sign' }
+    targetAccount.addRequest(next)
+    target.status = 'verifying'
+    target.tx = { hash, confirmations: 0 }
+    const now = Date.now()
+    const confirming = {
+      id: target.activityId,
+      kind: 'transaction',
+      account: target.account,
+      origin: target.origin,
+      chainId: 1,
+      state: 'confirming',
+      createdAt: now,
+      updatedAt: now + 1,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: { hash, nonce: target.data.nonce }
+    }
+
+    try {
+      operationLifecycleLedger.put(confirming, now + 1)
+      Accounts.observeOperationLifecycle(confirming, 1)
+
+      expect(target).toMatchObject({ status: 'confirming', mode: 'monitor' })
+      expect(targetAccount.getActiveReviewRequest(next.handlerId)).toBe(next)
+    } finally {
+      operationLifecycleLedger.remove(target.activityId, -1)
+    }
+  })
+
+  it('retires a confirmed transaction on the original terminal schedule after repeated observations', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.current()
+    const hash = `0x${'a'.repeat(64)}`
+    const blockHash = `0x${'b'.repeat(64)}`
+    Accounts.addRequest(request)
+    const target = targetAccount.getRequest(request.handlerId)
+    const next = { ...request, handlerId: 'request-after-confirmed-transaction', type: 'sign' }
+    targetAccount.addRequest(next)
+    target.status = 'verifying'
+    target.tx = { hash, confirmations: 0 }
+    const now = Date.now()
+    const operation = {
+      id: target.activityId,
+      kind: 'transaction',
+      account: target.account,
+      origin: target.origin,
+      chainId: 1,
+      state: 'confirmed',
+      createdAt: now,
+      updatedAt: now + 1,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: { hash, nonce: target.data.nonce },
+      receipt: {
+        transactionHash: hash,
+        blockHash,
+        blockNumber: '0x5',
+        status: '0x1'
+      },
+      settlement: { status: 'monitoring' }
+    }
+    const receipt = {
+      transactionHash: hash,
+      blockHash,
+      blockNumber: '0x5',
+      gasUsed: '0x5208',
+      status: '0x1'
+    }
+
+    try {
+      store.clearActivity()
+      operationLifecycleLedger.put(operation, now + 1)
+      Accounts.observeOperationLifecycle(operation, 1, receipt)
+      const completed = target.completed
+      const activityCompletedAt = store('main.activity').find(
+        ({ id }) => id === target.activityId
+      )?.completedAt
+      expect(activityCompletedAt).toBeDefined()
+
+      jest.advanceTimersByTime(4000)
+      expect(targetAccount.getActiveReviewRequest(next.handlerId)).toBe(next)
+
+      jest.advanceTimersByTime(26_000)
+      const repeated = { ...operation, updatedAt: now + 30_001 }
+      operationLifecycleLedger.put(repeated, now + 30_001)
+      Accounts.observeOperationLifecycle(repeated, 2, receipt)
+      expect(target.completed).toBe(completed)
+      expect(store('main.activity').find(({ id }) => id === target.activityId)?.completedAt).toBe(
+        activityCompletedAt
+      )
+
+      jest.advanceTimersByTime(30_001)
+      expect(targetAccount.getRequest(target.handlerId)).toBeUndefined()
+    } finally {
+      operationLifecycleLedger.remove(target.activityId, -1)
+      store.clearActivity()
+      jest.useRealTimers()
+    }
+  })
+
   it('keeps a confirmed managed deployment review available for verification for thirty seconds', () => {
     jest.useFakeTimers()
     const targetAccount = Accounts.current()

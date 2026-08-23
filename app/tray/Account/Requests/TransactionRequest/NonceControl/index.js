@@ -11,8 +11,8 @@ export const displayTransactionNonce = (nonce) => {
   return parsed === undefined ? 'Pending' : parsed.toString()
 }
 
-const NonceControl = ({ req, nonce = req.data.nonce, displayValue, hint }) => {
-  const mutable = !req.locked && req.status === undefined
+const NonceControl = ({ req, nonce = req.data.nonce, displayValue, hint, readOnly = false }) => {
+  const mutable = !readOnly && !req.locked && req.status === undefined
   const displayed = displayValue ?? displayTransactionNonce(nonce)
   const requestReference = { account: req.account, handlerId: req.handlerId }
 

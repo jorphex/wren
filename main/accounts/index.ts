@@ -573,9 +573,11 @@ export class Accounts extends EventEmitter {
       if (request.type === 'transaction') {
         this.cancelTransactionTerminalTimers(account.id, request.handlerId)
       }
+      delete request.completed
       delete request.tx.receipt
       request.tx.confirmations = 0
       request.status = RequestStatus.Verifying
+      if (request.type === 'transaction') request.mode = RequestMode.Monitor
       request.notice =
         operation.state === 'reorged'
           ? 'Rechecking after chain reorganization'
@@ -584,12 +586,14 @@ export class Accounts extends EventEmitter {
             : 'Verifying'
     } else if (operation.state === 'confirming') {
       request.status = RequestStatus.Confirming
+      if (request.type === 'transaction') request.mode = RequestMode.Monitor
       request.notice = request.type === 'eip7702Revoke' ? 'Included; confirming' : 'Confirming'
     } else if (operation.state === 'confirmed') {
+      const firstConfirmation = request.status !== RequestStatus.Confirmed || !request.completed
       request.status = RequestStatus.Confirmed
       request.notice = 'Confirmed'
-      request.completed = operation.updatedAt
-      recordRequestActivity(request, 'confirmed')
+      if (firstConfirmation) request.completed = operation.updatedAt
+      if (firstConfirmation) recordRequestActivity(request, 'confirmed')
       if (request.type === 'transaction') {
         request.mode = RequestMode.Monitor
         this.scheduleConfirmedTransactionHandoff(account, request)
@@ -630,6 +634,13 @@ export class Accounts extends EventEmitter {
       recordRequestActivity(request, 'clearance-unverified')
     }
     account.update()
+    if (
+      request.type === 'transaction' &&
+      request.mode === RequestMode.Monitor &&
+      ['submitted', 'reorged', 'confirming'].includes(operation.state)
+    ) {
+      account.releaseRequestReviewIfQueued(request.handlerId)
+    }
   }
 
   private transactionTerminalTimerKey(accountId: string, handlerId: string) {

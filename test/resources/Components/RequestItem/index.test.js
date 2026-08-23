@@ -86,6 +86,28 @@ it('keeps queued requests visible but unavailable until they become current', as
   expect(link.send).not.toHaveBeenCalled()
 })
 
+it('opens an explicitly inspectable queued transaction without making it current', async () => {
+  const { user } = render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      inspectableQueued
+      queued
+      req={{ created: Date.now(), handlerId, status: 'pending', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  const requestButton = screen.getByRole('button', { name: 'Base Sepolia Transaction. Waiting' })
+  expect(requestButton.disabled).toBe(false)
+
+  await user.click(requestButton)
+  expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
+    view: 'requestView',
+    data: { step: 'confirm', accountId: account, requestId: handlerId }
+  })
+})
+
 it('marks the current request without replacing its lifecycle status', () => {
   render(
     <RequestItem
@@ -153,6 +175,34 @@ it('presents a declined request as neutral and inactive rather than failed', () 
   expect(details.classList.contains('requestItemDetailsNeutral')).toBe(true)
   expect(details.classList.contains('requestItemDetailsBad')).toBe(false)
   expect(details.querySelector('[data-icon="close"]')).toBeTruthy()
+  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
+})
+
+it('presents a confirmed request as solid success while confirming remains pending', () => {
+  const { rerender } = render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      req={{ created: Date.now(), handlerId, status: 'confirming', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  let status = screen.getByText('confirming')
+  expect(status.parentElement.classList.contains('requestItemDetailsSlideGood')).toBe(false)
+  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(false)
+
+  rerender(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      req={{ created: Date.now(), handlerId, status: 'confirmed', type: 'transaction' }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  status = screen.getByText('confirmed')
+  expect(status.parentElement.classList.contains('requestItemDetailsSlideGood')).toBe(true)
   expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
 })
 

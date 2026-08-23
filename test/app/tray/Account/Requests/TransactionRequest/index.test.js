@@ -65,10 +65,12 @@ const TxRecipient = Restore.connect(TxRecipientComponent, store)
 
 const account = '0xDAFEA492D9c6733ae3d56b7Ed1ADB60692c98Bc5'
 
-function addRequest(req) {
+function addRequest(req, activeRequestId) {
+  const currentRequestId = arguments.length > 1 ? activeRequestId : req.handlerId
   store.updateAccount({
     id: account,
     name: 'Test Account',
+    activeRequestId: currentRequestId,
     requests: {
       [req.handlerId]: req
     }
@@ -370,6 +372,7 @@ describe('confirm', () => {
 
   it('shows exact FIFO context while reviewing one of several pending signatures', () => {
     const req = {
+      account,
       handlerId: 'queued-review',
       type: 'transaction',
       data: { chainId: '0x89' },
@@ -385,6 +388,57 @@ describe('confirm', () => {
       '3 pending signaturesCurrent request 1 of 3 · oldest pending'
     )
   })
+
+  it('labels a queued transaction read-only and blocks its mutation routes', () => {
+    const req = {
+      account,
+      handlerId: 'queued-review',
+      type: 'transaction',
+      data: { chainId: '0x89' },
+      classification: TxClassification.NATIVE_TRANSFER
+    }
+
+    addRequest(req, 'earlier-request')
+    const { rerender } = render(
+      <TxRequest req={req} step='confirm' queueContext={{ position: 2, total: 3, pendingSignatures: 3 }} />
+    )
+
+    expect(document.querySelector('.transactionReviewQueueContext').textContent).toBe(
+      '3 pending signaturesQueued request 2 of 3 · waiting for earlier requests'
+    )
+    expect(screen.getByRole('button', { name: 'Adjust' }).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
+
+    rerender(
+      <TxRequest
+        req={req}
+        step='adjustApproval'
+        queueContext={{ position: 2, total: 3, pendingSignatures: 3 }}
+      />
+    )
+    expect(document.querySelector('.transactionReviewQueueContext')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Edit .* approval/i })).toBeNull()
+  })
+
+  it.each([undefined, null])(
+    'keeps a transaction read-only when the active request id is %s',
+    (activeRequestId) => {
+      const req = {
+        account,
+        handlerId: 'unclaimed-review',
+        type: 'transaction',
+        data: { chainId: '0x89' },
+        classification: TxClassification.NATIVE_TRANSFER
+      }
+
+      addRequest(req, activeRequestId)
+      render(<TxRequest req={req} step='confirm' />)
+
+      expect(screen.getByText('Read-only')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Adjust' }).disabled).toBe(true)
+      expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
+    }
+  )
 
   it('keeps a declined transaction document visible and inert without error styling', () => {
     const req = {
@@ -523,6 +577,21 @@ describe('approval editing', () => {
 
   it('keeps a submitted approval value non-interactive', () => {
     renderApprovalAction('signed')
+
+    expect(screen.queryByRole('button', { name: 'Edit USDC approval' })).toBeNull()
+    expect(screen.getByText('Granting Approval To Spend')).toBeTruthy()
+  })
+
+  it('keeps a queued approval value non-interactive while preserving inspection', () => {
+    render(
+      <TxActionHarness
+        action={approvalAction}
+        chain={{ id: 1, type: 'ethereum' }}
+        i={0}
+        readOnly
+        req={{ data: { chainId: '0x1', to: '0x2222222222222222222222222222222222222222' } }}
+      />
+    )
 
     expect(screen.queryByRole('button', { name: 'Edit USDC approval' })).toBeNull()
     expect(screen.getByText('Granting Approval To Spend')).toBeTruthy()
@@ -1561,6 +1630,14 @@ describe('transaction nonce presentation', () => {
 
     expect(screen.getByText('5')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /nonce/i })).toBeNull()
+  })
+
+  it('keeps a queued transaction nonce read-only', () => {
+    render(<NonceControl req={nonceRequest()} readOnly />)
+
+    expect(screen.getByText('5')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Increase nonce' })).toBeNull()
   })
 
   it('decodes large transaction quantities without losing display precision', () => {

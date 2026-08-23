@@ -472,6 +472,28 @@ export class Footer extends React.Component {
     if (method === 'approveRequest') link.rpc('approveRequest', reference, onResult)
     else link.rpc('declineRequest', reference, onResult)
   }
+  renderQueuedTransactionFooter() {
+    return (
+      <div className='requestApprove requestApproveLightweight'>
+        <div className='requestActionContext' role='status' aria-live='polite'>
+          <span className='requestActionContextIcon'>
+            <Icon name='pending' size={19} />
+          </span>
+          <span className='requestActionContextCopy'>
+            <strong>Waiting in request queue</strong>
+            <span>You can inspect this transaction now. Signing remains available only in queue order.</span>
+          </span>
+        </div>
+        <div className='requestActionButtons'>
+          <button type='button' className='requestSign' onClick={() => link.send('nav:back', 'panel')}>
+            <span className='requestSignButton _txButton'>
+              <span>Close</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    )
+  }
   renderFooter() {
     const crumb = this.store('windows.panel.nav')[0] || {}
 
@@ -490,6 +512,8 @@ export class Footer extends React.Component {
         if (req.type === 'eip7702Revoke' && crumb.data.step === 'confirm') {
           return this.renderEip7702RevocationFooter(req, account)
         } else if (req.type === 'transaction' && crumb.data.step === 'confirm') {
+          const active = req.mode === 'monitor' || account.activeRequestId === req.handlerId
+          if (!active) return this.renderQueuedTransactionFooter()
           return (
             <RequestCommand
               key={req.handlerId}

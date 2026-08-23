@@ -466,6 +466,7 @@ export class Requests extends React.Component {
                   handlerId={req.handlerId}
                   i={this.requestIndexes.get(req.handlerId)}
                   actionRef={(element) => this.setRequestRef(req.handlerId, element)}
+                  inspectableQueued
                   title={`${chainName} transaction`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}

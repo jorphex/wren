@@ -149,6 +149,51 @@ it('keeps a waiting delegation revocation non-actionable', () => {
   expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
 })
 
+it('shows only a close action while inspecting a queued transaction', async () => {
+  const req = {
+    type: 'transaction',
+    handlerId: 'queued-transaction',
+    account: '0x0000000000000000000000000000000000000001',
+    data: { chainId: '0x1' }
+  }
+  const accountId = req.account
+  const store = Restore.create(
+    {
+      main: {
+        accounts: {
+          [accountId]: {
+            lastSignerType: 'ring',
+            activeRequestId: 'earlier-request',
+            requests: { [req.handlerId]: req }
+          }
+        }
+      },
+      windows: {
+        panel: {
+          footer: { height: 80 },
+          nav: [
+            {
+              view: 'requestView',
+              data: { accountId, requestId: req.handlerId, step: 'confirm' }
+            }
+          ]
+        }
+      }
+    },
+    {}
+  )
+  const ConnectedFooter = Restore.connect(Footer, store)
+  const { user } = render(<ConnectedFooter />)
+
+  expect(screen.getByText('Waiting in request queue')).toBeTruthy()
+  expect(screen.getByText(/inspect this transaction/i)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /sign transaction/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: /decline/i })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: 'Close' }))
+  expect(link.send).toHaveBeenCalledWith('nav:back', 'panel')
+})
+
 it('confirms stopping ambiguous-submission monitoring and restores focus on Escape', async () => {
   const req = {
     type: 'eip7702Revoke',

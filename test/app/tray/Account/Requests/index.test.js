@@ -7,6 +7,7 @@ import {
 import RequestItem from '../../../../../resources/Components/RequestItem'
 import link from '../../../../../resources/link'
 
+jest.mock('../../../../../resources/Components/RingIcon', () => () => null)
 jest.mock('../../../../../resources/link', () => ({
   send: jest.fn()
 }))
@@ -261,6 +262,38 @@ it('keeps monitor evidence inspectable while gating only the review queue', () =
   expect(screen.getByRole('button', { name: 'Review Account access. Current · 1 of 2' }).disabled).toBe(false)
   expect(screen.getByRole('button', { name: 'Account access. Queued · 2 of 2' }).disabled).toBe(true)
   expect(screen.getAllByText('Current · 1 of 2')).toHaveLength(1)
+})
+
+it('keeps a queued transaction inspectable while non-transaction reviews remain gated', async () => {
+  const current = createRequest('current', 1, 'https://example.test', 1)
+  const transaction = {
+    ...createRequest('transaction', 2, 'https://example.test', 2),
+    type: 'transaction',
+    data: { chainId: '0x1', to: '0x1111111111111111111111111111111111111111', value: '0x0' },
+    classification: 'NATIVE_TRANSFER'
+  }
+  const waiting = createRequest('waiting', 3, 'https://example.test', 3)
+  const { user } = render(
+    <ExpandedRequestsHarness
+      expanded
+      account='0xabc'
+      activeRequestId='current'
+      moduleId='requests'
+      requests={{ current, transaction, waiting }}
+    />
+  )
+
+  const transactionButton = screen.getByRole('button', {
+    name: /transaction\. Queued · 2 of 3/i
+  })
+  expect(transactionButton.disabled).toBe(false)
+  expect(screen.getByRole('button', { name: 'Account access. Queued · 3 of 3' }).disabled).toBe(true)
+
+  await user.click(transactionButton)
+  expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
+    view: 'requestView',
+    data: { step: 'confirm', accountId: '0xabc', requestId: 'transaction' }
+  })
 })
 
 it('does not infer a current request when the account has not exposed one', () => {

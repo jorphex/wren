@@ -328,7 +328,7 @@ export class TxSending extends React.Component {
         const displayAmount = isUnlimited(this.state.amount)
           ? 'unlimited'
           : formatDisplayDecimal(amount, decimals)
-        const isSubmitted = req.status !== undefined
+        const isSubmitted = req.status !== undefined || this.props.readOnly
 
         return (
           <ClusterBox title={'Token Approval'} animationSlot={this.props.i}>

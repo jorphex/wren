@@ -15,6 +15,12 @@ import link from '../../../../../resources/link'
 import { erc20Interface } from '../../../../../resources/contracts'
 
 export class TransactionRequest extends React.Component {
+  isReadOnly(req) {
+    if (req.mode === 'monitor') return false
+    const activeRequestId = this.store('main.accounts', req.account, 'activeRequestId')
+    return activeRequestId !== req.handlerId
+  }
+
   decodeRequested(req) {
     const calldata = req.payload.params[0].data
     const [spender, amount] = erc20Interface.decodeFunctionData('approve', calldata)
@@ -54,6 +60,7 @@ export class TransactionRequest extends React.Component {
   renderTx(feeInitiallyExpanded = false) {
     const { queueContext, req } = this.props
     if (!req) return null
+    const readOnly = this.isReadOnly(req)
 
     let requestClass = 'signerRequest cardShow'
     const success = req.status === 'confirming' || req.status === 'confirmed'
@@ -86,24 +93,40 @@ export class TransactionRequest extends React.Component {
                 <span>{`${queueContext.pendingSignatures} pending ${
                   queueContext.pendingSignatures === 1 ? 'signature' : 'signatures'
                 }`}</span>
-                <strong>{`Current request ${queueContext.position} of ${queueContext.total} · ${
-                  queueContext.position === 1
-                    ? 'oldest pending'
-                    : queueContext.position === queueContext.total
-                      ? 'newest pending'
-                      : 'FIFO order'
+                <strong>{`${readOnly ? 'Queued' : 'Current'} request ${queueContext.position} of ${
+                  queueContext.total
+                } · ${
+                  readOnly
+                    ? 'waiting for earlier requests'
+                    : queueContext.position === 1
+                      ? 'oldest pending'
+                      : queueContext.position === queueContext.total
+                        ? 'newest pending'
+                        : 'FIFO order'
                 }`}</strong>
+              </div>
+            ) : null}
+            {readOnly && !queueContext ? (
+              <div className='transactionReviewQueueContext' role='status'>
+                <span>Read-only</span>
+                <strong>Waiting for earlier requests</strong>
               </div>
             ) : null}
             <div className='approveTransactionPayload'>
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
                 <TxRecipient i={1} {...this.props} req={req} />
-                <TxFee i={2} {...this.props} req={req} initiallyExpanded={feeInitiallyExpanded} />
+                <TxFee
+                  i={2}
+                  {...this.props}
+                  req={req}
+                  readOnly={readOnly}
+                  initiallyExpanded={feeInitiallyExpanded}
+                />
                 <div className='_txMain transactionReviewNonce'>
                   <div className='transactionReviewNonceRow'>
                     <span className='transactionReviewMetaLabel'>Nonce</span>
-                    <NonceControl req={req} hint='Transaction sequence' />
+                    <NonceControl req={req} hint='Transaction sequence' readOnly={readOnly} />
                   </div>
                 </div>
                 {!isNativeTransfer && <TxValue i={3} {...this.props} req={req} chain={chain} />}
@@ -114,6 +137,7 @@ export class TransactionRequest extends React.Component {
                       i={4 + i}
                       {...this.props}
                       req={req}
+                      readOnly={readOnly}
                       chain={chain}
                       action={action}
                     />
@@ -129,12 +153,13 @@ export class TransactionRequest extends React.Component {
     )
   }
   render() {
-    const { step } = this.props
+    const { req, step } = this.props
+    const readOnly = req ? this.isReadOnly(req) : false
     switch (step) {
       case 'adjustFee':
-        return this.renderTx(true)
+        return this.renderTx(!readOnly)
       case 'adjustApproval':
-        return this.renderTokenSpend()
+        return readOnly ? this.renderTx() : this.renderTokenSpend()
       case 'viewData':
         return this.renderViewData()
       case 'confirm':

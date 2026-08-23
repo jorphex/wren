@@ -84,6 +84,7 @@ class _RequestItem extends React.Component {
       actionRef,
       active,
       queued,
+      inspectableQueued,
       queuePosition,
       queueSize
     } = this.props
@@ -112,6 +113,14 @@ class _RequestItem extends React.Component {
     const inactive = ['error', 'declined', 'confirmed'].includes(req.status)
     const waiting = Boolean(queued) && !inactive
     const displayedStatus = waiting ? 'waiting' : status
+    const statusToneClass =
+      req.status === 'confirmed'
+        ? ' requestItemDetailsSlideGood'
+        : req.status === 'error'
+          ? ' requestItemDetailsSlideBad'
+          : req.status === 'declined'
+            ? ' requestItemDetailsSlideNeutral'
+            : ''
     const queuePositionLabel = queuePosition && queueSize ? `${queuePosition} of ${queueSize}` : undefined
     const queueStateLabel = active
       ? `Current${queuePositionLabel ? ` · ${queuePositionLabel}` : ''}`
@@ -139,7 +148,7 @@ class _RequestItem extends React.Component {
               : undefined
           }
           actionRef={actionRef}
-          disabled={!headerMode && (this.state.opening || Boolean(queued))}
+          disabled={!headerMode && (this.state.opening || (Boolean(queued) && !inspectableQueued))}
           onClick={!headerMode ? () => this.openRequest(account, req) : null}
         >
           <div
@@ -172,7 +181,7 @@ class _RequestItem extends React.Component {
                       <span className='requestItemQueueState'>{queueStateLabel}</span>
                     ) : null}
                   </div>
-                  <div className='requestItemDetailsSlide'>
+                  <div className={`requestItemDetailsSlide${statusToneClass}`}>
                     <div
                       className={
                         inactive

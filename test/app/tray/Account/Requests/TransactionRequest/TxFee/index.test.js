@@ -132,3 +132,13 @@ it.each([
   await user.click(adjust)
   expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
 })
+
+it('keeps fee adjustment inert in a queued read-only review', async () => {
+  const { user } = render(<TxFee req={req} readOnly initiallyExpanded />)
+  const adjust = screen.getByRole('button', { name: 'Adjust' })
+
+  expect(adjust.disabled).toBe(true)
+  expect(adjust.getAttribute('aria-expanded')).toBe('false')
+  await user.click(adjust)
+  expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
+})

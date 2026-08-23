@@ -60,12 +60,13 @@ export class TxFee extends React.Component {
   constructor(props, context) {
     super(props, context)
     this.state = {
-      expanded: Boolean(props.initiallyExpanded) && !isRequestInteractionLocked(props.req)
+      expanded: Boolean(props.initiallyExpanded) && !props.readOnly && !isRequestInteractionLocked(props.req)
     }
   }
 
   componentDidUpdate(previousProps) {
     if (
+      !this.props.readOnly &&
       !isRequestInteractionLocked(this.props.req) &&
       !previousProps.initiallyExpanded &&
       this.props.initiallyExpanded &&
@@ -87,7 +88,7 @@ export class TxFee extends React.Component {
 
   render() {
     const req = this.props.req
-    const adjustmentLocked = isRequestInteractionLocked(req)
+    const adjustmentLocked = this.props.readOnly || isRequestInteractionLocked(req)
     const chain = {
       type: 'ethereum',
       id: parseInt(req.data.chainId, 16)
