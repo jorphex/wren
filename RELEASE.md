@@ -14,6 +14,10 @@ workflow creates a **new draft**; it does not publish or modify an existing
 release. macOS and Linux arm64 remain unpublished native smoke targets. Glide is
 qualified on X11 only; on native Wayland use the tray or summon shortcut.
 
+Keep macOS jobs credential-free and outside draft assembly, release checksums,
+and attestations. Adding signed or public Mac packages requires a new explicit
+publisher-identity and privacy decision.
+
 The native verifier checks source/application identity, packaged resources,
 runtime architecture, native modules, sandbox policy, and matching archive
 payloads. On Windows it also requires `NotSigned` for both `Wren.exe` and the
