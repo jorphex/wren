@@ -44,8 +44,16 @@ export const packageTargets = Object.freeze({
     unpackedDirectory: 'mac',
     executable: ['Wren.app', 'Contents', 'MacOS', 'Wren'],
     artifacts: [
-      { name: 'x64 DMG', kind: 'dmg', fileName: ({ version }) => `Wren-${version}.dmg` },
-      { name: 'x64 ZIP', kind: 'zip', fileName: ({ version }) => `Wren-${version}-mac.zip` }
+      {
+        name: 'x64 unnotarized DMG',
+        kind: 'dmg',
+        fileName: ({ version }) => `Wren-${version}-macos-x64-unnotarized.dmg`
+      },
+      {
+        name: 'x64 unnotarized ZIP',
+        kind: 'zip',
+        fileName: ({ version }) => `Wren-${version}-macos-x64-unnotarized.zip`
+      }
     ]
   },
   'mac-arm64': {
@@ -54,11 +62,15 @@ export const packageTargets = Object.freeze({
     unpackedDirectory: 'mac-arm64',
     executable: ['Wren.app', 'Contents', 'MacOS', 'Wren'],
     artifacts: [
-      { name: 'arm64 DMG', kind: 'dmg', fileName: ({ version }) => `Wren-${version}-arm64.dmg` },
       {
-        name: 'arm64 ZIP',
+        name: 'arm64 unnotarized DMG',
+        kind: 'dmg',
+        fileName: ({ version }) => `Wren-${version}-macos-arm64-unnotarized.dmg`
+      },
+      {
+        name: 'arm64 unnotarized ZIP',
         kind: 'zip',
-        fileName: ({ version }) => `Wren-${version}-arm64-mac.zip`
+        fileName: ({ version }) => `Wren-${version}-macos-arm64-unnotarized.zip`
       }
     ]
   },
@@ -171,7 +183,7 @@ async function findPackagedExecutable(root, target) {
   return valid[0]
 }
 
-async function probeArtifact(artifact, kind, target, root, temporaryRoot) {
+async function probeArtifact(artifact, kind, target, root, temporaryRoot, verifyExecutable) {
   const extraction = path.join(temporaryRoot, kind)
   await mkdir(extraction)
   let mounted = false
@@ -218,7 +230,9 @@ async function probeArtifact(artifact, kind, target, root, temporaryRoot) {
     } else {
       assert.fail(`Unsupported package artifact kind: ${kind}`)
     }
-    return runPackagedProbe(await findPackagedExecutable(extraction, target), root)
+    const executable = await findPackagedExecutable(extraction, target)
+    if (verifyExecutable) await verifyExecutable(executable)
+    return runPackagedProbe(executable, root)
   } finally {
     if (mounted) execFileSync('hdiutil', ['detach', extraction], { stdio: 'ignore' })
   }
@@ -247,6 +261,7 @@ export async function verifyNativePackage(targetName, options = {}) {
   const executable = path.join(dist, target.unpackedDirectory, ...target.executable)
   const executableStats = await lstat(executable)
   assert.ok(executableStats.isFile() && !executableStats.isSymbolicLink(), 'Invalid packaged executable')
+  if (options.verifyExecutable) await options.verifyExecutable(executable)
 
   const result = runPackagedProbe(executable, root)
 
@@ -308,7 +323,8 @@ export async function verifyNativePackage(targetName, options = {}) {
         target.artifacts[index].kind,
         target,
         root,
-        temporaryRoot
+        temporaryRoot,
+        options.verifyExecutable
       )
       assert.deepEqual(artifactResult, result, `${artifact} payload differs from unpacked package output`)
     }

@@ -4,9 +4,15 @@ import { createReadStream } from 'node:fs'
 import { lstat, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-export function releaseArtifactNames(version, { includeWindows = false } = {}) {
+export function releaseArtifactNames(version, { includeMacos = false, includeWindows = false } = {}) {
   const artifacts = [`Wren-${version}.AppImage`, `wren_${version}_amd64.deb`]
   if (includeWindows) artifacts.push(`Wren-Setup-${version}-unsigned-x64.exe`)
+  if (includeMacos) {
+    artifacts.push(
+      `Wren-${version}-macos-x64-unnotarized.dmg`,
+      `Wren-${version}-macos-arm64-unnotarized.dmg`
+    )
+  }
   artifacts.push('wren.cdx.json')
   return artifacts.sort()
 }
@@ -23,8 +29,13 @@ async function assertReleaseFile(file) {
   assert.ok(stats.size > 0, `Empty release artifact: ${path.basename(file)}`)
 }
 
-export async function writeReleaseChecksums({ dist, version, includeWindows = false }) {
-  const artifacts = releaseArtifactNames(version, { includeWindows })
+export async function writeReleaseChecksums({
+  dist,
+  version,
+  includeMacos = false,
+  includeWindows = false
+}) {
+  const artifacts = releaseArtifactNames(version, { includeMacos, includeWindows })
   const lines = []
   for (const artifact of artifacts) {
     const artifactPath = path.join(dist, artifact)
@@ -35,8 +46,13 @@ export async function writeReleaseChecksums({ dist, version, includeWindows = fa
   return artifacts
 }
 
-export async function verifyReleaseChecksums({ dist, version, includeWindows = false }) {
-  const expected = new Set(releaseArtifactNames(version, { includeWindows }))
+export async function verifyReleaseChecksums({
+  dist,
+  version,
+  includeMacos = false,
+  includeWindows = false
+}) {
+  const expected = new Set(releaseArtifactNames(version, { includeMacos, includeWindows }))
   const manifest = await readFile(path.join(dist, 'SHA256SUMS'), 'utf8')
   assert.ok(manifest.endsWith('\n'), 'Checksum manifest must end with a newline')
   const lines = manifest.trim().split('\n')

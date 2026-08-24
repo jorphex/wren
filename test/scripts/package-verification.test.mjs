@@ -10,6 +10,7 @@ import {
   removeTemporaryPackageRoot,
   selectPackageArtifacts
 } from '../../scripts/package-verification.mjs'
+import { assertAdHocSignatureDetails } from '../../scripts/verify-macos-preview.mjs'
 
 const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
 const windowsUnsignedVerifier = readFileSync(
@@ -59,21 +60,38 @@ test('selects native macOS, Windows, and Linux arm64 artifacts', () => {
     ['Wren-0.1.0-arm64.AppImage', 'wren-0.1.0-arm64.tar.gz']
   )
   assert.deepEqual(
-    selectPackageArtifacts(['Wren-0.1.0.dmg', 'Wren-0.1.0-mac.zip'], getPackageTarget('mac-x64'), '0.1.0'),
-    ['Wren-0.1.0.dmg', 'Wren-0.1.0-mac.zip']
+    selectPackageArtifacts(
+      ['Wren-0.1.0-macos-x64-unnotarized.dmg', 'Wren-0.1.0-macos-x64-unnotarized.zip'],
+      getPackageTarget('mac-x64'),
+      '0.1.0'
+    ),
+    ['Wren-0.1.0-macos-x64-unnotarized.dmg', 'Wren-0.1.0-macos-x64-unnotarized.zip']
   )
   assert.deepEqual(
     selectPackageArtifacts(
-      ['Wren-0.1.0-arm64.dmg', 'Wren-0.1.0-arm64-mac.zip'],
+      ['Wren-0.1.0-macos-arm64-unnotarized.dmg', 'Wren-0.1.0-macos-arm64-unnotarized.zip'],
       getPackageTarget('mac-arm64'),
       '0.1.0'
     ),
-    ['Wren-0.1.0-arm64.dmg', 'Wren-0.1.0-arm64-mac.zip']
+    ['Wren-0.1.0-macos-arm64-unnotarized.dmg', 'Wren-0.1.0-macos-arm64-unnotarized.zip']
   )
   assert.deepEqual(
     selectPackageArtifacts(['Wren-Setup-0.1.0-unsigned-x64.exe'], getPackageTarget('windows-x64'), '0.1.0'),
     ['Wren-Setup-0.1.0-unsigned-x64.exe']
   )
+})
+
+test('accepts only an ad-hoc macOS application identity without an Apple authority', () => {
+  const details = [
+    'Executable=/Volumes/Wren/Wren.app/Contents/MacOS/Wren',
+    'Identifier=io.github.jorphex.wren',
+    'Signature=adhoc',
+    'TeamIdentifier=not set'
+  ].join('\n')
+  assert.doesNotThrow(() => assertAdHocSignatureDetails(details))
+  assert.throws(() => assertAdHocSignatureDetails(details.replace('Signature=adhoc', 'Signature=Developer ID')))
+  assert.throws(() => assertAdHocSignatureDetails(`${details}\nAuthority=Developer ID Application: Example`))
+  assert.throws(() => assertAdHocSignatureDetails(details.replace('TeamIdentifier=not set', 'TeamIdentifier=TEAM')))
 })
 
 test('rejects missing, duplicate, stale, and unknown package outputs', () => {

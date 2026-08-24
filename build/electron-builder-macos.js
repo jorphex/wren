@@ -1,20 +1,25 @@
 const baseConfig = require('./electron-builder-base.js')
-const { readSigningMode } = require('./signing-mode.js')
+const { readMacSigningMode, readSigningMode } = require('./signing-mode.js')
 
-const signingMode = readSigningMode('WREN_MAC_SIGNING')
+const signingMode = readMacSigningMode('WREN_MAC_SIGNING')
 const notarizationMode = readSigningMode('WREN_MAC_NOTARIZATION')
 
-if (signingMode !== notarizationMode) {
-  throw new Error('macOS signing and notarization modes must match')
+if ((signingMode === 'required') !== (notarizationMode === 'required')) {
+  throw new Error('macOS Developer ID signing and notarization must both be required or both be skipped')
 }
+
+const preview = signingMode !== 'required'
 
 module.exports = {
   ...baseConfig,
+  artifactName: preview
+    ? 'Wren-${version}-macos-${arch}-unnotarized.${ext}'
+    : 'Wren-${version}-macos-${arch}.${ext}',
   afterSign: './build/notarize.js',
-  forceCodeSigning: signingMode === 'required',
+  forceCodeSigning: signingMode !== 'skip',
   mac: {
     target: { target: 'default', arch: [process.arch] },
-    identity: signingMode === 'skip' ? null : undefined,
+    identity: signingMode === 'skip' ? null : signingMode === 'adhoc' ? '-' : undefined,
     notarize: false,
     hardenedRuntime: true,
     gatekeeperAssess: false,

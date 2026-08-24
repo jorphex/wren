@@ -6,6 +6,7 @@ const packageJson = JSON.parse(await readFile(new URL('../package.json', import.
 const artifacts = await verifyReleaseChecksums({
   dist: path.resolve('dist'),
   version: packageJson.version,
+  includeMacos: true,
   includeWindows: true
 })
 console.log(`Verified release checksums for ${artifacts.join(', ')}`)

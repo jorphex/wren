@@ -155,6 +155,14 @@ they do not create a trusted Windows publisher. See the
 [Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md) for the tested
 boundary.
 
+### Future macOS x64 and arm64 previews
+
+The published `v0.1.3` release has no macOS download. Wren's next-release path
+can publish separate Intel and Apple Silicon DMGs that are ad-hoc signed but have
+no Apple Developer ID or notarization ticket. macOS will not show a trusted
+publisher and requires an explicit **Open Anyway** exception. See the
+[macOS preview guide](MACOS_PREVIEW.md) before downloading one.
+
 ### Import a Frame profile
 
 Wren does not read or share Frame's live profile by default. To make a one-time private copy, close both apps, back up `~/.config/frame`, and run the import before Wren creates `~/.config/wren`:

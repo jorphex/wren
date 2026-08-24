@@ -5,5 +5,5 @@ if (!target) throw new Error('Usage: node scripts/verify-native-package.mjs <tar
 
 const verified = await verifyNativePackage(target)
 console.log(
-  `Verified native ${target} package runtime and ${verified.artifacts.join(', ')} as unsigned smoke artifacts`
+  `Verified native ${target} package runtime and archive payloads for ${verified.artifacts.join(', ')}`
 )

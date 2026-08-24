@@ -83,7 +83,7 @@ jobs:
           retention-days: 7
 
   package-native-smoke:
-    name: Unsigned ${{ matrix.name }} package smoke
+    name: ${{ matrix.name }} package smoke
     needs: quality
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
@@ -99,17 +99,17 @@ jobs:
             artifact-path: |
               dist/*.AppImage
               dist/*.tar.gz
-          - name: macOS x64
+          - name: macOS x64 ad-hoc preview
             runner: macos-15-intel
-            package-command: npm run package:mac:unsigned:x64
+            package-command: npm run package:mac:preview:x64
             verify-command: npm run package:verify:mac:x64
             artifact-name: wren-macos-x64
             artifact-path: |
               dist/*.dmg
               dist/*.zip
-          - name: macOS arm64
+          - name: macOS arm64 ad-hoc preview
             runner: macos-15
-            package-command: npm run package:mac:unsigned:arm64
+            package-command: npm run package:mac:preview:arm64
             verify-command: npm run package:verify:mac:arm64
             artifact-name: wren-macos-arm64
             artifact-path: |
@@ -137,14 +137,14 @@ jobs:
       - run: npm run setup:ci
       - run: npm run compile
       - run: npm run bundle
-      - name: Build unsigned native smoke package
+      - name: Build native smoke package
         run: ${{ matrix.package-command }}
       - name: Verify native package and archive payloads
         run: ${{ matrix.verify-command }}
-      - name: Upload unsigned, unqualified smoke artifacts
+      - name: Upload unqualified smoke artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.artifact-name }}-${{ github.sha }}-unsigned-unqualified
+          name: ${{ matrix.artifact-name }}-${{ github.sha }}-unqualified
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
           retention-days: 7

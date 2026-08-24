@@ -1,12 +1,16 @@
 const signingModes = new Set(['skip', 'required'])
+const macSigningModes = new Set(['skip', 'adhoc', 'required'])
 
-const readSigningMode = (name, env = process.env) => {
+const readMode = (name, modes, description, env) => {
   const mode = env[name]
-  if (!signingModes.has(mode)) {
-    throw new Error(`${name} must be explicitly set to "skip" or "required"`)
-  }
+  if (!modes.has(mode)) throw new Error(`${name} must be explicitly set to ${description}`)
   return mode
 }
+
+const readSigningMode = (name, env = process.env) => readMode(name, signingModes, '"skip" or "required"', env)
+
+const readMacSigningMode = (name, env = process.env) =>
+  readMode(name, macSigningModes, '"skip", "adhoc", or "required"', env)
 
 const requireEnvironment = (names, env = process.env) => {
   const missing = names.filter((name) => !env[name])
@@ -15,4 +19,4 @@ const requireEnvironment = (names, env = process.env) => {
   }
 }
 
-module.exports = { readSigningMode, requireEnvironment }
+module.exports = { readMacSigningMode, readSigningMode, requireEnvironment }

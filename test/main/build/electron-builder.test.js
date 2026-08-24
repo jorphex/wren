@@ -42,6 +42,16 @@ describe('electron-builder platform boundaries', () => {
     expect(config.mac.requirements).toBeUndefined()
   })
 
+  test('makes the privacy-preserving macOS preview explicitly ad-hoc and unnotarized', () => {
+    const config = load('../../../build/electron-builder-macos.js', {
+      WREN_MAC_SIGNING: 'adhoc',
+      WREN_MAC_NOTARIZATION: 'skip'
+    })
+    expect(config.forceCodeSigning).toBe(true)
+    expect(config.mac.identity).toBe('-')
+    expect(config.artifactName).toBe('Wren-${version}-macos-${arch}-unnotarized.${ext}')
+  })
+
   test('makes macOS release signing fail closed', () => {
     const config = load('../../../build/electron-builder-macos.js', {
       WREN_MAC_SIGNING: 'required',
@@ -58,7 +68,13 @@ describe('electron-builder platform boundaries', () => {
         WREN_MAC_SIGNING: 'required',
         WREN_MAC_NOTARIZATION: 'skip'
       })
-    ).toThrow('macOS signing and notarization modes must match')
+    ).toThrow('macOS Developer ID signing and notarization must both be required or both be skipped')
+    expect(() =>
+      load('../../../build/electron-builder-macos.js', {
+        WREN_MAC_SIGNING: 'adhoc',
+        WREN_MAC_NOTARIZATION: 'required'
+      })
+    ).toThrow('macOS Developer ID signing and notarization must both be required or both be skipped')
   })
 
   test('distinguishes unsigned and fail-closed Windows output', () => {

@@ -1,4 +1,4 @@
-name: Build a draft Linux and Windows release
+name: Build a draft Linux, Windows, and macOS release
 
 on:
   push:
@@ -183,9 +183,72 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  package-macos:
+    name: Build ${{ matrix.name }} unnotarized preview
+    needs: [metadata, quality]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS x64
+            arch: x64
+            runner: macos-15-intel
+            package-command: npm run package:mac:preview:x64
+            verify-command: npm run package:verify:mac:x64
+          - name: macOS arm64
+            arch: arm64
+            runner: macos-15
+            package-command: npm run package:mac:preview:arm64
+            verify-command: npm run package:verify:mac:arm64
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm install --global npm@11.12.0
+      - run: npm run setup:ci
+      - run: npm run compile
+      - run: npm run bundle
+      - name: Build the ad-hoc-signed, unnotarized preview
+        run: ${{ matrix.package-command }}
+      - name: Verify runtime, archives, code seals, and Gatekeeper rejection
+        run: ${{ matrix.verify-command }}
+      - name: Generate and verify production SBOM
+        run: |
+          npm run sbom:release
+          npm run sbom:verify:release
+          cp dist/wren.cdx.json "dist/wren-macos-${{ matrix.arch }}.cdx.json"
+      - name: Attest macOS build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/Wren-*-macos-${{ matrix.arch }}-unnotarized.dmg
+      - name: Attest macOS package SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/Wren-*-macos-${{ matrix.arch }}-unnotarized.dmg
+          sbom-path: dist/wren.cdx.json
+      - name: Stage macOS release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-macos-${{ matrix.arch }}-${{ github.sha }}
+          path: |
+            dist/Wren-*-macos-${{ matrix.arch }}-unnotarized.dmg
+            dist/wren-macos-${{ matrix.arch }}.cdx.json
+          if-no-files-found: error
+          retention-days: 7
+
   draft-release:
     name: Assemble the exact-commit draft
-    needs: [metadata, package-linux, package-windows]
+    needs: [metadata, package-linux, package-windows, package-macos]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     permissions:
@@ -206,10 +269,22 @@ jobs:
         with:
           name: release-windows-x64-${{ github.sha }}
           path: dist
+      - name: Download the macOS x64 preview
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: release-macos-x64-${{ github.sha }}
+          path: dist
+      - name: Download the macOS arm64 preview
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: release-macos-arm64-${{ github.sha }}
+          path: dist
       - name: Create and verify the combined checksum manifest
         run: |
           cmp dist/wren.cdx.json dist/wren-windows.cdx.json
-          rm dist/wren-windows.cdx.json
+          cmp dist/wren.cdx.json dist/wren-macos-x64.cdx.json
+          cmp dist/wren.cdx.json dist/wren-macos-arm64.cdx.json
+          rm dist/wren-windows.cdx.json dist/wren-macos-x64.cdx.json dist/wren-macos-arm64.cdx.json
           npm run checksums:release
           npm run release:verify
       - name: Create the draft release
@@ -232,6 +307,8 @@ jobs:
             dist/*.AppImage \
             dist/*_amd64.deb \
             dist/Wren-Setup-*-unsigned-x64.exe \
+            dist/Wren-*-macos-x64-unnotarized.dmg \
+            dist/Wren-*-macos-arm64-unnotarized.dmg \
             dist/SHA256SUMS \
             dist/wren.cdx.json \
             --target "$GITHUB_SHA" \

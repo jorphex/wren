@@ -10,7 +10,9 @@ use the [signer and platform support reference](HARDWARE_SUPPORT.md) for current
 device and platform boundaries. The unsigned Windows preview has a separate
 [release checklist](WINDOWS_RELEASE_QUALIFICATION.md). Windows DPAPI signer
 protection has an additional
-[native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md).
+[native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md). Ad-hoc-signed,
+unnotarized macOS previews have a separate
+[architecture-specific checklist](MACOS_PREVIEW_QUALIFICATION.md).
 
 ## Checklist navigation
 
@@ -25,8 +27,8 @@ protection has an additional
 ## 1. Record the candidate and automated evidence
 
 Record desktop and Companion version/commit, Companion minimum desktop commit,
-AppImage/deb/unsigned Windows installer/Chrome ZIP/Firefox ZIP SHA-256, and
-OS/kernel/browser versions.
+AppImage/deb/unsigned Windows installer/unnotarized macOS DMG/Chrome ZIP/Firefox
+ZIP SHA-256, and OS/kernel/browser versions.
 Verify both artifact-directory `SHA256SUMS` files; Companion compatibility must
 name the candidate branch and an ancestor desktop commit. Record exact workflow
 URLs (or equivalent local evidence) for desktop and Companion quality/package,
@@ -38,14 +40,15 @@ checksums, compatibility metadata, and source-bound SBOM.
 The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
-The native smoke matrix builds real unsigned Linux arm64, macOS x64/arm64, and
-Windows x64 packages on matching runners, then compares packaged runtime evidence
+The native smoke matrix builds real unsigned Linux arm64 and Windows x64 packages
+plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares packaged runtime evidence
 from the unpacked application and each extracted archive. These jobs verify source
 identity, runtime architecture, resources, native modules, and existing runtime
-invariants. Its retained `unsigned-unqualified` artifacts are not release,
-installer, GUI, hardware, signing, or platform-qualification evidence. The
-separate draft workflow repeats the Windows package checks, verifies that the
-installer and executable are `NotSigned`, and stages the clearly named preview.
+invariants. macOS additionally requires valid ad-hoc code seals, no Apple
+authority or Team ID, and Gatekeeper rejection. Retained smoke artifacts are not
+installer, GUI, hardware, or platform-qualification evidence. The separate draft
+workflow repeats the Windows and macOS package checks, verifies their exact
+signature states, and stages the clearly named previews.
 `npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display
 and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
 delegation entry, revocation review, ambiguous monitoring, safe focus,
