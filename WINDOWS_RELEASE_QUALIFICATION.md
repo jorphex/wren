@@ -1,6 +1,6 @@
 # Windows x64 preview qualification checklist
 
-Use this checklist for the unsigned Windows installer published with Wren 0.1.3.
+Use this checklist for the unsigned Windows installer published with Wren 0.1.4.
 Linux x64 remains the qualified platform. Passing this checklist makes the
 Windows file suitable for a clearly labeled preview; it does not create a trusted
 publisher or qualify untested hardware.
@@ -15,7 +15,7 @@ Record the Wren version, source commit, Windows edition/build, VM software, and
 exact release-workflow URL. Download these files from the draft release through
 the browser:
 
-- `Wren-Setup-0.1.3-unsigned-x64.exe`
+- `Wren-Setup-0.1.4-unsigned-x64.exe`
 - `SHA256SUMS`
 - `wren.cdx.json`
 
@@ -23,7 +23,7 @@ Verify the installer's SHA-256 against `SHA256SUMS` and verify its GitHub build
 and SBOM attestations. Then run:
 
 ```powershell
-Get-AuthenticodeSignature '.\Wren-Setup-0.1.3-unsigned-x64.exe' |
+Get-AuthenticodeSignature '.\Wren-Setup-0.1.4-unsigned-x64.exe' |
   Format-List Status,StatusMessage
 ```
 
@@ -79,6 +79,11 @@ the network list loads. On a test dapp or explorer:
 
 No request may remain stuck after approval or rejection. Scan retained output for
 secrets before keeping any evidence.
+
+On Base and Base Sepolia, also retry a native and ERC-20 Send after a retained
+funding-check failure. Recheck must refresh the gas limit, OP Stack L1 data fee,
+and balance using canonical quantities; it must never sign or send while any
+funding evidence remains unavailable.
 
 ## 5. Check update and removal behavior
 

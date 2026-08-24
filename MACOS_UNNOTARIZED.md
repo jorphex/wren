@@ -1,7 +1,7 @@
 # macOS unnotarized release
 
-Wren releases after `v0.1.3` may include separate Intel (`x64`) and Apple Silicon
-(`arm64`) macOS artifacts. They remain clearly labeled unqualified previews until
+Wren 0.1.4 and later releases may include separate Intel (`x64`) and Apple
+Silicon (`arm64`) macOS artifacts. They remain clearly labeled unqualified previews until
 their architecture-specific physical checks pass.
 
 These previews are ad-hoc signed so macOS can validate their executable code
