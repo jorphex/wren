@@ -374,6 +374,15 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
   )
 })
 
+test('keeps recoverable request feedback from shifting its icon and actions', () => {
+  expect(signingStyle).toMatch(
+    /\.requestApproveRecoverable[\s\S]*?height auto[\s\S]*?\.requestActionContext[\s\S]*?align-items flex-start[\s\S]*?\.requestActionContextIcon[\s\S]*?margin-top 2px/
+  )
+  expect(signingStyle).toMatch(
+    /\.requestApproveRecoverable[\s\S]*?\.requestActionError[\s\S]*?min-height 16px/
+  )
+})
+
 test('keeps delegation revocation readable and operable at scaled narrow widths', () => {
   expect(revokeStyle).toMatch(
     /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/

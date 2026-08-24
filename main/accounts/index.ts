@@ -79,7 +79,8 @@ import { fingerprintOutboundAddresses, transactionOutboundTargets } from '../add
 import type { OutboundAddressFingerprint } from '../store/state/types/outboundAddressMemory'
 import {
   isTransactionFundingError,
-  type TransactionFundingError,
+  TransactionFundingError,
+  TRANSACTION_FUNDING_UNAVAILABLE,
   type WalletCallFundingError
 } from '../../resources/domain/transaction/funding'
 import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../resources/domain/origin'
@@ -2892,6 +2893,30 @@ export class Accounts extends EventEmitter {
     const fundingRecovery = request.recoverableError.code.startsWith('transaction-funding-')
     if (fundingRecovery) {
       delete request.locked
+      const failedGasEstimate =
+        (request.approvals || []).some((approval) => approval.type === ApprovalType.GasLimitApproval) &&
+        (parseRpcQuantity(request.data.gasLimit) ?? 0n) === 0n
+      if (failedGasEstimate) {
+        try {
+          request.data.gasLimit = await provider.estimateGas(request.data)
+          request.approvals = request.approvals.filter(
+            (approval) => approval.type !== ApprovalType.GasLimitApproval
+          )
+        } catch {
+          const error = new TransactionFundingError(
+            TRANSACTION_FUNDING_UNAVAILABLE,
+            'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+          )
+          request.locked = true
+          request.notice = error.message
+          request.recoverableError = {
+            code: error.code,
+            message: error.message
+          }
+          currentAccount.update()
+          throw error
+        }
+      }
       await this.updatePendingFees(Number(parseRpcQuantity(request.data.chainId)))
       request.locked = true
       try {

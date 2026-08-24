@@ -376,6 +376,34 @@ it('shows exact funding recovery amounts with copy, receive QR, and recheck acti
   view.unmount()
 })
 
+it('shows the exact unavailable funding evidence in a layout-stable retry slot', async () => {
+  const req = transaction({
+    status: 'error',
+    notice: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.',
+    recoverableError: {
+      code: 'transaction-funding-unavailable',
+      message: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+    },
+    retainedPreBroadcastError: { responderPending: true }
+  })
+  link.rpc.mockImplementation((_method, _request, callback) => callback('still unavailable'))
+  const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
+
+  expect(screen.getByText('Funding check unavailable')).toBeTruthy()
+  expect(
+    screen.getByText('The transaction gas limit could not be re-estimated. Nothing was signed or sent.')
+  ).toBeTruthy()
+  const feedback = document.querySelector('.requestActionError')
+  expect(feedback).toBeTruthy()
+  expect(feedback.textContent).toBe('\u00a0')
+
+  await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
+
+  expect(feedback.textContent).toBe('Wren could not update this request. It is still pending.')
+  expect(document.querySelector('.requestActionContextIconAlert')).toBeTruthy()
+  view.unmount()
+})
+
 it('closes a retained pre-sign failure only through the explicit close action', async () => {
   const req = transaction({
     status: 'error',

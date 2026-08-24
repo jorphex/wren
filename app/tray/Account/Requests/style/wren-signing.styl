@@ -1192,12 +1192,22 @@
   background var(--wren-danger)
 
 .requestApproveRecoverable
+  height auto
   min-height 114px
   padding-top 14px
   padding-bottom 14px
 
+  .requestActionContext
+    align-items flex-start
+
+  .requestActionContextIcon
+    margin-top 2px
+
   .requestActionContextCopy span
     max-width 390px
+
+  .requestActionError
+    min-height 16px
 
 .walletCallsFundingRecovery
   height auto

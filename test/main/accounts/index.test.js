@@ -49,6 +49,7 @@ jest.mock('electron', () => ({
 jest.mock('../../../main/provider', () => ({
   send: jest.fn(),
   sendTransaction: jest.fn(),
+  estimateGas: jest.fn(),
   assertTransactionFunding: jest.fn(),
   getL1GasCost: jest.fn(),
   emit: jest.fn(),
@@ -1761,6 +1762,73 @@ describe('account-bound request transitions', () => {
     expect(simulationRefresh).toHaveBeenCalledWith(explicit, true, false)
     feeRefresh.mockRestore()
     simulationRefresh.mockRestore()
+  })
+
+  it('re-estimates a failed gas limit before repeating the funding check', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-invalid-gas-limit')
+    explicit.data.gasLimit = '0x00'
+    explicit.approvals = [{ type: ApprovalType.GasLimitApproval, approved: true }]
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(
+        'transaction-funding-unavailable',
+        'The transaction funding requirement could not be verified. Nothing was signed or sent.'
+      ),
+      account2.address
+    )
+    provider.estimateGas.mockImplementationOnce(async (transaction) => {
+      expect(transaction.gasLimit).toBe('0x00')
+      return '0x7b0c'
+    })
+    provider.assertTransactionFunding.mockResolvedValueOnce({ missing: '0x0' })
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
+
+    expect(provider.estimateGas).toHaveBeenCalledTimes(1)
+    expect(explicit.data.gasLimit).toBe('0x7b0c')
+    expect(explicit.approvals).toEqual([])
+    expect(provider.assertTransactionFunding).toHaveBeenCalledWith(explicit)
+  })
+
+  it('keeps failed gas re-estimation recoverable without exposing RPC details', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-gas-still-unavailable')
+    explicit.data.gasLimit = '0x00'
+    explicit.approvals = [{ type: ApprovalType.GasLimitApproval, approved: true }]
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(
+        'transaction-funding-unavailable',
+        'The transaction funding requirement could not be verified. Nothing was signed or sent.'
+      ),
+      account2.address
+    )
+    provider.estimateGas.mockRejectedValueOnce(new Error('private configured RPC response'))
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).rejects.toThrow(
+      'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+    )
+
+    expect(explicit).toMatchObject({
+      status: 'error',
+      locked: true,
+      notice: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.',
+      recoverableError: {
+        code: 'transaction-funding-unavailable',
+        message: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+      }
+    })
+    expect(explicit.notice).not.toContain('private configured RPC response')
+    expect(provider.assertTransactionFunding).not.toHaveBeenCalled()
   })
 
   it('rechecks fresh simulation evidence before a recoverable request can be signed again', async () => {

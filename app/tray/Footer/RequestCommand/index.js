@@ -736,7 +736,7 @@ export class RequestCommand extends React.Component {
       ? funding
         ? 'More funds needed'
         : fundingUnavailable
-          ? 'Balance check unavailable'
+          ? 'Funding check unavailable'
           : changed
             ? 'Transaction state changed'
             : 'Safety check unavailable'
@@ -746,7 +746,8 @@ export class RequestCommand extends React.Component {
       ? funding
         ? 'The account cannot cover the value and maximum network fee. Nothing was signed or sent.'
         : fundingUnavailable
-          ? 'The balance or fee requirement could not be verified. Nothing was signed or sent.'
+          ? req.recoverableError?.message ||
+            'The balance or fee requirement could not be verified. Nothing was signed or sent.'
           : changed
             ? 'Account code changed during the final safety check. Nothing was signed or sent.'
             : 'The safety check could not be repeated. Nothing was signed or sent.'
@@ -798,11 +799,14 @@ export class RequestCommand extends React.Component {
                 value={req.account}
               />
             ) : null}
-            {this.state.requestActionError ? (
-              <span className='requestActionError' role='alert'>
-                {this.state.requestActionError}
-              </span>
-            ) : null}
+            <span
+              aria-atomic='true'
+              aria-hidden={this.state.requestActionError ? undefined : 'true'}
+              aria-live='polite'
+              className='requestActionError'
+            >
+              {this.state.requestActionError || '\u00a0'}
+            </span>
           </span>
         </div>
         <div className='requestActionButtons'>
