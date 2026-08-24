@@ -10,6 +10,7 @@
   <a href="https://github.com/jorphex/wren/releases">Desktop releases</a> ·
   <a href="https://github.com/jorphex/wren-companion/releases">Browser companion</a> ·
   <a href="SECURITY.md">Security</a> ·
+  <a href="CODE_SIGNING_POLICY.md">Code signing</a> ·
   <a href="SUPPORTED_EIPS.md">Standards</a> ·
   <a href="RPC_COMPATIBILITY.md">RPC compatibility</a>
 </p>
@@ -103,6 +104,11 @@ The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPAT
 
 Download the package for your system and `SHA256SUMS` from the
 [desktop releases page](https://github.com/jorphex/wren/releases).
+
+Future signed Windows releases follow Wren's [code signing
+policy](CODE_SIGNING_POLICY.md). Free code signing is provided by SignPath.io,
+certificate by SignPath Foundation. Wren 0.1.3 remains unsigned; always follow
+the signature state and verification steps in the matching release notes.
 
 ### Linux x64
 
