@@ -93,6 +93,7 @@ jobs:
         include:
           - name: Linux arm64
             runner: ubuntu-22.04-arm
+            csc_for_pull_request: false
             package-command: npm run package:linux:arm64
             verify-command: npm run package:verify:linux:arm64
             artifact-name: wren-linux-arm64
@@ -101,6 +102,7 @@ jobs:
               dist/*.tar.gz
           - name: macOS x64 ad-hoc preview
             runner: macos-15-intel
+            csc_for_pull_request: true
             package-command: npm run package:mac:preview:x64
             verify-command: npm run package:verify:mac:x64
             artifact-name: wren-macos-x64
@@ -109,6 +111,7 @@ jobs:
               dist/*.zip
           - name: macOS arm64 ad-hoc preview
             runner: macos-15
+            csc_for_pull_request: true
             package-command: npm run package:mac:preview:arm64
             verify-command: npm run package:verify:mac:arm64
             artifact-name: wren-macos-arm64
@@ -117,6 +120,7 @@ jobs:
               dist/*.zip
           - name: Windows x64
             runner: windows-2022
+            csc_for_pull_request: false
             package-command: npm run package:windows:unsigned:x64
             verify-command: npm run package:verify:windows:x64
             artifact-name: wren-windows-x64
@@ -138,6 +142,8 @@ jobs:
       - run: npm run compile
       - run: npm run bundle
       - name: Build native smoke package
+        env:
+          CSC_FOR_PULL_REQUEST: ${{ matrix.csc_for_pull_request }}
         run: ${{ matrix.package-command }}
       - name: Verify native package and archive payloads
         run: ${{ matrix.verify-command }}

@@ -17,6 +17,10 @@ const windowsUnsignedVerifier = readFileSync(
   new URL('../../scripts/verify-windows-unsigned.ps1', import.meta.url),
   'utf8'
 )
+const pullRequestWorkflow = readFileSync(
+  new URL('../../.github/workflows/compile-and-test.yml', import.meta.url),
+  'utf8'
+)
 
 test('cleans and source-binds local package output before invoking electron-builder', () => {
   assert.match(packageJson.scripts.build, /node scripts\/prepare-package\.mjs/)
@@ -89,9 +93,27 @@ test('accepts only an ad-hoc macOS application identity without an Apple authori
     'TeamIdentifier=not set'
   ].join('\n')
   assert.doesNotThrow(() => assertAdHocSignatureDetails(details))
-  assert.throws(() => assertAdHocSignatureDetails(details.replace('Signature=adhoc', 'Signature=Developer ID')))
+  assert.throws(() =>
+    assertAdHocSignatureDetails(details.replace('Signature=adhoc', 'Signature=Developer ID'))
+  )
   assert.throws(() => assertAdHocSignatureDetails(`${details}\nAuthority=Developer ID Application: Example`))
-  assert.throws(() => assertAdHocSignatureDetails(details.replace('TeamIdentifier=not set', 'TeamIdentifier=TEAM')))
+  assert.throws(() =>
+    assertAdHocSignatureDetails(details.replace('TeamIdentifier=not set', 'TeamIdentifier=TEAM'))
+  )
+})
+
+test('permits pull-request code signing only for credential-free ad-hoc macOS smokes', () => {
+  assert.equal(pullRequestWorkflow.match(/csc_for_pull_request: true/g)?.length, 2)
+  assert.equal(pullRequestWorkflow.match(/csc_for_pull_request: false/g)?.length, 2)
+  assert.match(
+    pullRequestWorkflow,
+    /- name: macOS x64 ad-hoc preview\n(?: {12,}[^\n]*\n)*? {12}csc_for_pull_request: true/m
+  )
+  assert.match(
+    pullRequestWorkflow,
+    /- name: macOS arm64 ad-hoc preview\n(?: {12,}[^\n]*\n)*? {12}csc_for_pull_request: true/m
+  )
+  assert.match(pullRequestWorkflow, /CSC_FOR_PULL_REQUEST: \$\{\{ matrix\.csc_for_pull_request \}\}/)
 })
 
 test('rejects missing, duplicate, stale, and unknown package outputs', () => {
