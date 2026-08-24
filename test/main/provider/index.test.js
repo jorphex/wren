@@ -241,6 +241,7 @@ beforeEach(() => {
   )
   accounts.releaseOperationLifecycleAdmission = jest.fn()
   accounts.lockRequest = jest.fn()
+  accounts.updatePendingFees = jest.fn().mockResolvedValue(undefined)
   accounts.recheckReplacementRequest = jest.fn().mockResolvedValue(true)
   provider.assertTransactionFunding = jest.fn().mockResolvedValue({ missing: '0x0' })
   provider.nativeMaxRevalidator = undefined
@@ -562,6 +563,42 @@ describe('#approveTransactionRequest', () => {
     expect(callback).toHaveBeenCalledWith(fundingError)
     expect(signAndSend).not.toHaveBeenCalled()
     expect(accounts.signTransactionForAccount).not.toHaveBeenCalled()
+    signAndSend.mockRestore()
+  })
+
+  it('awaits fresh chain fees before the initial funding check and signing', async () => {
+    const request = replacementRequest()
+    delete request.replacement
+    request.data.chainId = '0x2105'
+    accountRequests.push(request)
+    const events = []
+    let finishFeeRefresh
+    accounts.updatePendingFees.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishFeeRefresh = () => {
+            events.push('fees')
+            resolve()
+          }
+        })
+    )
+    provider.assertTransactionFunding.mockImplementationOnce(async () => events.push('funding'))
+    const signAndSend = jest.spyOn(provider, 'signAndSend').mockImplementation(() => {
+      events.push('sign')
+    })
+
+    provider.approveTransactionRequest(request, jest.fn())
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(accounts.updatePendingFees).toHaveBeenCalledWith(8453)
+    expect(provider.assertTransactionFunding).not.toHaveBeenCalled()
+    expect(signAndSend).not.toHaveBeenCalled()
+
+    finishFeeRefresh()
+    for (let i = 0; i < 4; i += 1) await Promise.resolve()
+
+    expect(events).toEqual(['fees', 'funding', 'sign'])
     signAndSend.mockRestore()
   })
 

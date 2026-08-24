@@ -968,7 +968,12 @@ export class Provider extends EventEmitter {
         handlerId: requestToSign.handlerId,
         type: requestToSign.type
       })
-      void this.assertTransactionFunding(requestToSign).then(
+      const chainId = Number(parseRpcQuantity(requestToSign.data.chainId))
+      const fundingCheck =
+        Number.isSafeInteger(chainId) && chainId > 0 && chainUsesOptimismFees(chainId)
+          ? accounts.updatePendingFees(chainId).then(() => this.assertTransactionFunding(requestToSign))
+          : this.assertTransactionFunding(requestToSign)
+      void fundingCheck.then(
         async () => {
           if (requestToSign.nativeMax) {
             try {
