@@ -401,10 +401,13 @@ resubmitted.
 
 The exact `eth_getCode` EIP-7702 indicator triggers extra approval for ordinary
 transactions and blocks sequential wallet-call batches. Type-4 envelopes and
-authorization lists are rejected; Wren creates/signs no authorizations. State can
-change after review and RPC can lie. Input transactions have only supported fields
-and types; access lists are bounded, exact-width, order/duplicate preserving, and
-fully shown. Signers must preserve bytes; unsupported hardware types fail.
+authorization lists supplied by external clients are rejected. Wren authors only
+one constrained authorization: a selected unlocked Ring or Seed account can sign a
+chain-specific zero-address authorization to revoke its own existing delegation.
+State can change after review and RPC can lie. Input transactions have only
+supported fields and types; access lists are bounded, exact-width,
+order/duplicate preserving, and fully shown. Signers must preserve bytes;
+unsupported hardware types fail.
 
 Speed Up and Cancel are ordinary reviewed same-nonce transactions. The main process
 uses the greater of current configured-RPC fees and the exact replacement minimum,
