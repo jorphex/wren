@@ -196,6 +196,13 @@ test('wraps resolved Send recipient addresses without clipping or ellipsis', () 
   )
 })
 
+test('keeps the Send composer and sticky action shelf on one canvas', () => {
+  expect(sendStyle).toMatch(/\.sendComposer,[\s\S]*?background transparent/)
+  expect(sendStyle).toMatch(/\.sendActionShelf[\s\S]{0,360}?background transparent/)
+  expect(sendStyle).not.toMatch(/\.sendActionShelf[\s\S]{0,360}?background (?:rgba\(|var\()/)
+  expect(sendStyle).not.toMatch(/\.sendActionShelf[\s\S]{0,400}?backdrop-filter/)
+})
+
 test('matches update dialogs to the account QR surface tokens', () => {
   for (const style of [accountStyle, badgeStyle]) {
     expect(style).toMatch(/border-radius var\(--wren-radius-md\)/)
