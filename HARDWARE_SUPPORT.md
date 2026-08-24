@@ -28,7 +28,7 @@ transport; it does not upgrade the evidence label.
 | Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified.             |
 | Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                        |
 | Windows x64                     | Electron/NSIS package         | Unsigned preview with native archive/runtime and unsigned-state checks; not platform-qualified, and no trusted publisher is claimed.                         |
-| macOS x64/arm64                 | Electron DMG                  | Ad-hoc preview pipeline verifies native runtime, code seals, no Apple identity, and Gatekeeper rejection; public release and physical qualification pending. |
+| macOS x64/arm64                 | Electron DMG                  | Ad-hoc release pipeline verifies native runtime, code seals, no Apple identity, and Gatekeeper rejection; every artifact still needs physical qualification. |
 | Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                                |
 | Linux snap                      | Electron package              | Legacy configuration only; not produced by current CI.                                                                                                       |
 

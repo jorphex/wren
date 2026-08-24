@@ -1,12 +1,15 @@
-# macOS unnotarized preview
+# macOS unnotarized release
 
-Future Wren releases may include separate Intel (`x64`) and Apple Silicon
-(`arm64`) macOS previews. The published `v0.1.3` release has no macOS download.
+Wren releases after `v0.1.3` may include separate Intel (`x64`) and Apple Silicon
+(`arm64`) macOS artifacts. They remain clearly labeled unqualified previews until
+their architecture-specific physical checks pass.
 
 These previews are ad-hoc signed so macOS can validate their executable code
 seals, but they have no Apple Developer ID, Apple Team ID, trusted publisher, or
 notarization ticket. Apple has not checked them for malicious software. macOS
 therefore blocks the first launch until the user explicitly creates an exception.
+Wren does not plan to enroll an Apple publisher identity; this ad-hoc,
+unnotarized boundary is the project's continuing macOS release posture.
 
 ## Choose and verify the download
 

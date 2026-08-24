@@ -5,7 +5,7 @@ unsigned Windows x64 preview, and ad-hoc-signed unnotarized macOS x64/arm64
 previews. It does not replace the
 [qualification checklist](QUALIFICATION.md), the
 [Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md), or the
-[macOS preview checklist](MACOS_PREVIEW_QUALIFICATION.md). See the
+[macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md). See the
 [signer and platform support reference](HARDWARE_SUPPORT.md) for the exact
 qualification boundary.
 
@@ -23,9 +23,10 @@ Keep macOS jobs credential-free. The preview has valid ad-hoc code seals but no
 Apple Developer ID, Team ID, trusted publisher, notarization ticket, or Apple
 malware review. Gatekeeper must reject it until the user explicitly chooses
 **Open Anyway**. Publish only each architecture's DMG; keep its matching ZIP and
-all macOS updater metadata outside the release. A future Developer ID-signed and
-notarized Mac release requires a new explicit publisher-identity and privacy
-decision.
+all macOS updater metadata outside the release. Do not add Developer ID signing
+or notarization to this release path. Keep macOS releases credential-free,
+ad-hoc signed, explicitly unnotarized, and independently verifiable through
+checksums and GitHub attestations.
 
 The native verifier checks source/application identity, packaged resources,
 runtime architecture, native modules, sandbox policy, and matching archive
@@ -147,7 +148,7 @@ applicable signer and paired Chrome/Firefox Companion regression in
 [`QUALIFICATION.md`](QUALIFICATION.md): archive checksums and compatibility,
 initial-code comparison, reconnect, reset, revocation, origin isolation, and
 EIP-6963 discovery. Complete the Windows preview checklist on the exact staged
-installer. Apply the [macOS preview checklist](MACOS_PREVIEW_QUALIFICATION.md)
+installer. Apply the [macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md)
 to each architecture with available physical evidence. An architecture without
 that evidence may remain a public preview only when release notes say it was not
 physically installed or qualified. Keep the unsigned Windows state, unnotarized

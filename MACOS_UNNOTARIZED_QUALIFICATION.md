@@ -1,4 +1,4 @@
-# macOS unnotarized preview qualification checklist
+# macOS unnotarized qualification checklist
 
 Use this checklist for Wren's ad-hoc-signed Intel and Apple Silicon DMGs. It does
 not create an Apple Developer ID, notarization ticket, trusted publisher, or

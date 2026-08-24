@@ -155,13 +155,15 @@ they do not create a trusted Windows publisher. See the
 [Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md) for the tested
 boundary.
 
-### Future macOS x64 and arm64 previews
+### macOS x64 and arm64 unnotarized releases
 
-The published `v0.1.3` release has no macOS download. Wren's next-release path
-can publish separate Intel and Apple Silicon DMGs that are ad-hoc signed but have
-no Apple Developer ID or notarization ticket. macOS will not show a trusted
-publisher and requires an explicit **Open Anyway** exception. See the
-[macOS preview guide](MACOS_PREVIEW.md) before downloading one.
+The published `v0.1.3` release has no macOS download. Later Wren releases can
+publish separate Intel and Apple Silicon DMGs that are ad-hoc signed but have no
+Apple Developer ID or notarization ticket. This is Wren's continuing macOS
+release posture: the project does not plan to enroll an Apple publisher identity.
+macOS will not show a trusted publisher and requires an explicit **Open Anyway**
+exception. See the [macOS unnotarized release guide](MACOS_UNNOTARIZED.md) before
+downloading one.
 
 ### Import a Frame profile
 
@@ -250,6 +252,6 @@ Report vulnerabilities privately through [Security Policy](SECURITY.md), not a p
 
 ## Roadmap and license
 
-Wren `0.1.3` includes local contacts, curated Earn, secure local wallet creation, prepared contract deployment, and source verification. [Smart accounts](SMART_ACCOUNTS.md), mobile, and WalletConnect are future direction, not support claims.
+Wren `0.1.3` includes local contacts, curated Earn, secure local wallet creation, prepared contract deployment, and source verification. [Smart accounts](SMART_ACCOUNTS.md) and WalletConnect are future direction, not support claims.
 
 Wren is a community-maintained continuation of the GPL-licensed [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is distributed under the [GNU GPL v3.0](LICENSE).

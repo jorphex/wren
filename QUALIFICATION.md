@@ -11,8 +11,8 @@ device and platform boundaries. The unsigned Windows preview has a separate
 [release checklist](WINDOWS_RELEASE_QUALIFICATION.md). Windows DPAPI signer
 protection has an additional
 [native VM checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md). Ad-hoc-signed,
-unnotarized macOS previews have a separate
-[architecture-specific checklist](MACOS_PREVIEW_QUALIFICATION.md).
+unnotarized macOS releases have a separate
+[architecture-specific checklist](MACOS_UNNOTARIZED_QUALIFICATION.md).
 
 ## Checklist navigation
 
