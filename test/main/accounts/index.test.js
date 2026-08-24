@@ -338,19 +338,22 @@ describe('#updatePendingFees', () => {
     refresh.mockRestore()
   })
 
-  it('awaits a fresh Optimism L1 data-fee estimate for the updated L2 chain', async () => {
+  it.each([
+    ['an odd-digit fee', 1000n, '0x3e8'],
+    ['a zero fee', 0n, '0x0']
+  ])('stores %s as a canonical RPC quantity', async (_label, estimatedFee, expectedFee) => {
     request.data.chainId = '0xa'
     store.setGasFees('ethereum', 10, {
       maxBaseFeePerGas: gweiToHex(9),
       maxPriorityFeePerGas: gweiToHex(2)
     })
-    provider.getL1GasCost.mockResolvedValueOnce(123n)
+    provider.getL1GasCost.mockResolvedValueOnce(estimatedFee)
     Accounts.addRequest(request)
 
     await Accounts.updatePendingFees(10)
 
     expect(provider.getL1GasCost).toHaveBeenCalledWith(request.data)
-    expect(request.chainData).toEqual({ optimism: { l1Fees: '0x7b' } })
+    expect(request.chainData).toEqual({ optimism: { l1Fees: expectedFee } })
   })
 })
 

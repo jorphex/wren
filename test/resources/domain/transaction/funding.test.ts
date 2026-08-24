@@ -43,12 +43,17 @@ it('calculates a legacy transaction shortfall without rounding', () => {
 })
 
 it.each([
-  ['missing gas limit', transaction({ gasLimit: undefined })],
-  ['malformed balance', transaction()],
-  ['priority above maximum', transaction({ maxFeePerGas: '0x1', maxPriorityFeePerGas: '0x2' })]
-])('fails closed for %s', (_label, tx) => {
-  const balance = _label === 'malformed balance' ? '12' : '0x100'
-  expect(() => assertTransactionFunding(tx, balance)).toThrow(
+  ['missing gas limit', transaction({ gasLimit: undefined }), '0x100', '0x0'],
+  ['malformed balance', transaction(), '12', '0x0'],
+  [
+    'priority above maximum',
+    transaction({ maxFeePerGas: '0x1', maxPriorityFeePerGas: '0x2' }),
+    '0x100',
+    '0x0'
+  ],
+  ['byte-padded L1 fee', transaction(), '0x100', '0x03e8']
+])('fails closed for %s', (_label, tx, balance, l1Fee) => {
+  expect(() => assertTransactionFunding(tx, balance, l1Fee)).toThrow(
     expect.objectContaining({ code: TRANSACTION_FUNDING_UNAVAILABLE })
   )
 })
