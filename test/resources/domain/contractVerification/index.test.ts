@@ -4,6 +4,7 @@ import {
   ContractVerificationDomainError,
   hashContractVerificationSources,
   hashContractVerificationSubmission,
+  isContractVerificationCompilerVersion,
   matchContractVerificationRuntimeCode,
   MAX_CONTRACT_VERIFICATION_CANDIDATES,
   MAX_CONTRACT_VERIFICATION_JOBS,
@@ -97,6 +98,32 @@ const job = {
 function expectCode(run: () => unknown, code: string) {
   expect(run).toThrow(expect.objectContaining({ name: 'ContractVerificationDomainError', code }))
 }
+
+describe('compiler version validation', () => {
+  it.each([
+    '0.8.28',
+    'v0.8.28',
+    '0.8.28+commit.7893614a',
+    'v0.8.28-nightly.2026.8.24+commit.7893614a',
+    '0.4.0-rc.1+commit.example'
+  ])('accepts bounded semantic compiler version %s without normalizing it', (version) => {
+    expect(isContractVerificationCompilerVersion(version)).toBe(true)
+  })
+
+  it('rejects adversarial separator ambiguity through artifact and ledger validation', () => {
+    const version = `0.0.0+${'-'.repeat(120)}!`
+    expect(version.length).toBeLessThanOrEqual(128)
+    expect(isContractVerificationCompilerVersion(version)).toBe(false)
+    expectCode(
+      () => parseContractVerificationArtifacts([{ ...hardhat2(), solcLongVersion: version }]),
+      'invalid-compiler-version'
+    )
+    expectCode(
+      () => validateContractVerificationJobLedger([{ ...job, compilerVersion: version }]),
+      'invalid-job-ledger'
+    )
+  })
+})
 
 describe('artifact format detection and renderer summary', () => {
   it('detects raw Solidity and Vyper standard JSON by shape and keeps source out of its summary', () => {

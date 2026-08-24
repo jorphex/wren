@@ -33,7 +33,9 @@ import {
 import { CONTRACT_VERIFICATION_SERVICE_ERROR_CODES } from '../contractVerification/service'
 import {
   CONTRACT_VERIFICATION_DESTINATIONS,
+  isContractVerificationCompilerVersion,
   MAX_CONTRACT_VERIFICATION_CANDIDATES,
+  MAX_CONTRACT_VERIFICATION_COMPILER_VERSION_CHARS,
   MAX_CONTRACT_VERIFICATION_JOBS,
   MAX_CONTRACT_VERIFICATION_REMOTE_ID_CHARS,
   MAX_CONTRACT_VERIFICATION_URL_CHARS,
@@ -413,8 +415,8 @@ const ContractVerificationSha256Schema = z.string().regex(/^[0-9a-f]{64}$/)
 const ContractVerificationCompilerVersionSchema = z
   .string()
   .min(1)
-  .max(128)
-  .regex(/^(?:v)?[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)*$/)
+  .max(MAX_CONTRACT_VERIFICATION_COMPILER_VERSION_CHARS)
+  .refine(isContractVerificationCompilerVersion)
 const ContractVerificationIdentifierSchema = z.string().min(1).max(1024)
 const ContractVerificationQuantitySchema = z
   .string()

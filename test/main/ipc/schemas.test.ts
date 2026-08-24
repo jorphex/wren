@@ -1126,6 +1126,22 @@ describe('contract verification renderer IPC', () => {
     }
   })
 
+  test('rejects adversarial compiler-version separator ambiguity in requests and results', () => {
+    const compilerVersion = `0.0.0+${'-'.repeat(120)}!`
+    expect(compilerVersion.length).toBeLessThanOrEqual(128)
+    expect(
+      parseRendererIpcArgs('invoke', 'contractVerification:prepare', [
+        { artifactToken, chainId: 1, address, compilerVersion }
+      ]).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('contractVerification:get', {
+        success: true,
+        job: { ...job, compilerVersion }
+      }).success
+    ).toBe(false)
+  })
+
   test('projects only bounded artifact summaries and explicit cancellation', () => {
     expect(
       parseRendererInvokeResult('contractVerification:inspectArtifact', {

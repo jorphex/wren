@@ -1,4 +1,5 @@
 import { getAddress, sha256, toUtf8Bytes } from 'ethers'
+import semver from 'semver'
 
 export const MAX_CONTRACT_VERIFICATION_ARTIFACTS = 2
 export const MAX_CONTRACT_VERIFICATION_JSON_DEPTH = 64
@@ -14,6 +15,7 @@ export const MAX_CONTRACT_VERIFICATION_CONTRACT_NAME_CHARS = 256
 export const MAX_CONTRACT_VERIFICATION_JOBS = 128
 export const MAX_CONTRACT_VERIFICATION_URL_CHARS = 2_048
 export const MAX_CONTRACT_VERIFICATION_REMOTE_ID_CHARS = 512
+export const MAX_CONTRACT_VERIFICATION_COMPILER_VERSION_CHARS = 128
 
 export const CONTRACT_VERIFICATION_DESTINATIONS = Object.freeze([
   'sourcify',
@@ -282,7 +284,6 @@ const DESTINATION_OPTIONAL_KEYS = [
   'explorerUrl',
   'reasonCode'
 ] as const
-const COMPILER_VERSION = /^(?:v)?[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)*$/u
 const CANONICAL_QUANTITY = /^0x(?:0|[1-9a-f][0-9a-f]*)$/u
 const HASH_32 = /^0x[0-9a-f]{64}$/u
 const HASH_32_ANY_CASE = /^0x[0-9a-fA-F]{64}$/u
@@ -302,6 +303,15 @@ const destinationStatuses = new Set<ContractVerificationDestinationStatus>([
   'needs-api-key',
   'unknown'
 ])
+
+export function isContractVerificationCompilerVersion(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_CONTRACT_VERIFICATION_COMPILER_VERSION_CHARS &&
+    semver.valid(value) !== null
+  )
+}
 const jobStatuses = new Set<ContractVerificationJobStatus>([
   'preparing',
   'publishing',
@@ -607,7 +617,7 @@ function parseStandardJson(value: unknown): {
 }
 
 function parseCompilerVersion(value: unknown): string {
-  if (typeof value !== 'string' || value.length > 128 || !COMPILER_VERSION.test(value)) {
+  if (!isContractVerificationCompilerVersion(value)) {
     fail('invalid-compiler-version')
   }
   return value
@@ -1182,9 +1192,7 @@ function validateJobRecord(value: unknown): ContractVerificationJobRecord {
     typeof id !== 'string' ||
     !UUID.test(id) ||
     (language !== 'Solidity' && language !== 'Vyper') ||
-    typeof compilerVersion !== 'string' ||
-    compilerVersion.length > 128 ||
-    !COMPILER_VERSION.test(compilerVersion) ||
+    !isContractVerificationCompilerVersion(compilerVersion) ||
     typeof selectedContractIdentifier !== 'string' ||
     selectedContractIdentifier.length === 0 ||
     selectedContractIdentifier.length > 1_024 ||
