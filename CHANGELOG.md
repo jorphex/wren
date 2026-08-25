@@ -14,6 +14,9 @@ Detailed release notes and platform boundaries live in
 - Made initial approval await fresh OP Stack fee evidence and made retained
   funding failures genuinely recoverable. Recheck refreshes failed gas estimates
   and current network fees before repeating the final fail-closed funding check.
+- Kept FIFO transaction review moving after submission. Queued transactions are
+  inspectable but read-only while Wren monitors earlier transactions for
+  confirmation or reorganization without duplicating completion activity.
 - Kept retry feedback from moving the warning and action controls, and restored a
   continuous Wren background across the Send panel and Review Send action.
 - Bounded compiler-version validation so malformed source-verification input
