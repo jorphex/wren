@@ -367,30 +367,32 @@ button.dashModule.wrenControl
   grid-template-columns 28px minmax(0, 1fr) 16px
   column-gap var(--wren-space-2)
   width 100%
-  min-height 72px
+  min-height 76px
   height auto
   margin 0
-  padding var(--wren-space-2)
+  padding var(--wren-space-2) var(--wren-space-3)
   align-items center
-  border 0
-  border-radius 4px
+  border 1px solid var(--wren-border-instrument)
+  border-radius var(--wren-radius-md)
   color var(--wren-text-primary)
-  background transparent
-  box-shadow none
+  background-color var(--wren-surface-instrument)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-instrument)
   font-family var(--wren-font-ui)
   text-align left
-  transition background var(--wren-motion-fast) var(--wren-ease)
+  transition background-color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), transform var(--wren-motion-fast) var(--wren-ease)
 
   &:hover
-    z-index auto
-    transform none
-    background var(--wren-surface-hover)
-    box-shadow none
+    z-index 1
+    transform translateY(-1px)
+    border-color var(--wren-border-default)
+    background-color var(--wren-bg-elevated)
+    box-shadow var(--wren-shadow-inset), 0 4px 9px rgba(0, 0, 0, .22)
 
   &:active
-    transform none
-    background var(--wren-surface-active)
-    box-shadow none
+    transform translateY(1px)
+    background-color var(--wren-surface-active)
+    box-shadow var(--wren-shadow-inset), 0 1px 2px rgba(0, 0, 0, .2)
 
   &:focus-visible
     z-index 1
@@ -399,33 +401,37 @@ button.dashModule.wrenControl
     box-shadow none
 
 button.dashModule.wrenControl.wrenControlGhost
-  border-color transparent
-  background-color transparent
-  background-image none
-  box-shadow none
+  border-color var(--wren-border-instrument)
+  background-color var(--wren-surface-instrument)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-instrument)
 
   &:hover:not(:disabled)
-    border-color transparent
-    background-color var(--wren-surface-hover)
-    background-image none
-    box-shadow none
+    border-color var(--wren-border-default)
+    background-color var(--wren-bg-elevated)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-shadow-inset), 0 4px 9px rgba(0, 0, 0, .22)
 
   &:active:not(:disabled)
-    transform none
+    transform translateY(1px)
     background-color var(--wren-surface-active)
-    box-shadow none
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-shadow-inset), 0 1px 2px rgba(0, 0, 0, .2)
 
   .dashModuleIcon
     position static
     display flex
     flex none
-    width 24px
-    height 24px
+    width 28px
+    height 28px
     margin 0
     align-items center
     justify-content center
     color var(--wren-accent-primary-hover)
-    background transparent
+    border 1px solid var(--wren-border-instrument)
+    border-radius var(--wren-radius-sm)
+    background var(--wren-surface-inset)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .44)
 
   .dashModuleCopy
     position static

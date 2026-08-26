@@ -92,7 +92,12 @@
 
 .sliceOriginList
   margin 0 0 var(--wren-space-3)
-  border-top 1px solid var(--wren-ledger-rule)
+  overflow hidden
+  border 1px solid var(--wren-border-instrument)
+  border-radius var(--wren-radius-md)
+  background-color var(--wren-surface-instrument)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-instrument-quiet)
 
   .sliceOrigin:last-child
     border-bottom 0

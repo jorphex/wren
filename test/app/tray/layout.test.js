@@ -123,13 +123,22 @@ test('keeps the account body geometry independent from the dashboard dock edge',
 
 test('keeps the home-to-requests gap compact without shifting the selector rail', () => {
   expect(accountStyle).toMatch(
-    /\.accountHomeHeader[\s\S]*?padding 0 var\(--wren-space-5\) var\(--wren-space-3\)/
+    /\.accountHomeHeader[\s\S]*?margin 0 var\(--wren-space-5\) var\(--wren-space-4\)[\s\S]*?border 1px solid var\(--wren-border-instrument\)/
   )
   expect(accountSelectorStyle).toMatch(
     /\.accountSelectorScrollWrap[\s\S]*?padding 24px var\(--wren-space-5\) 48px/
   )
   expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
   expect(accountStyle).toMatch(/\.accountHomeQrTrigger[\s\S]*?min-height 44px/)
+})
+
+test('groups real account capabilities in restrained instrument surfaces', () => {
+  expect(accountStyle).toMatch(
+    /\.accountModuleCard[\s\S]*?border 1px solid var\(--wren-border-instrument\)[\s\S]*?background-color var\(--wren-surface-instrument\)[\s\S]*?box-shadow var\(--wren-shadow-instrument-quiet\)/
+  )
+  expect(accountStyle).toMatch(
+    /\.accountMainSlide \.moduleHeader[\s\S]*?border-bottom 1px solid var\(--wren-border-instrument-divider\)/
+  )
 })
 
 test('keeps the QR disclosure opaque and gives it restrained material depth', () => {
@@ -154,8 +163,8 @@ test('keeps expanded balances as a plain ledger with crisp circular progress mar
   )
 })
 
-test('keeps account modules free of decorative seams', () => {
-  expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
+test('keeps account module spacing explicit without pseudo-element seams', () => {
+  expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border 1px solid var\(--wren-border-instrument\)/)
   expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
   expect(accountSource).toMatch(/const ACCOUNT_MODULE_ATTACHED_GAP = 4/)
   expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 16/)

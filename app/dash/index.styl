@@ -599,7 +599,12 @@ button,
     text-transform none
 
   .accountTypeList
-    border 0
+    overflow hidden
+    border 1px solid var(--wren-border-instrument)
+    border-radius var(--wren-radius-md)
+    background-color var(--wren-surface-instrument)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-shadow-instrument-quiet)
 
   .accountTypeSelect
     width 100%
@@ -673,6 +678,12 @@ button,
 
 .watchAccounts
   width 100%
+  overflow hidden
+  border 1px solid var(--wren-border-instrument)
+  border-radius var(--wren-radius-md)
+  background-color var(--wren-surface-instrument)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-instrument-quiet)
 
 .watchAccount
   appearance none

@@ -2,10 +2,11 @@
   position relative
   margin 0 var(--wren-space-2)
   overflow hidden
-  border 0
-  border-radius 0
-  background transparent
-  box-shadow none
+  border 1px solid var(--wren-border-instrument)
+  border-radius var(--wren-radius-md)
+  background-color var(--wren-surface-instrument)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-shadow-instrument-quiet)
 
   .signerTop
     min-height 66px
@@ -108,7 +109,7 @@
       background var(--wren-surface-active)
 
 .network + .network
-  margin-top var(--wren-space-2)
+  margin-top var(--wren-space-3)
 
 .phaseNetworkLine
   position relative

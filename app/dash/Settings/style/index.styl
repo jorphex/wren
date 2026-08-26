@@ -5,14 +5,22 @@
   .wrenSettingsSection
     margin 0
     padding 0
+    overflow hidden
+    border 1px solid var(--wren-border-instrument)
+    border-radius var(--wren-radius-md)
+    background-color var(--wren-surface-instrument)
+    background-image var(--wren-control-texture-dark)
+    box-shadow var(--wren-shadow-instrument-quiet)
 
   .wrenSettingsSection + .wrenSettingsSection
     margin-top var(--wren-space-5)
 
   .wrenSettingsSectionTitle
     margin 0
-    padding var(--wren-space-4) var(--wren-space-2) var(--wren-space-2)
+    padding var(--wren-space-3) var(--wren-space-4)
+    border-bottom 1px solid var(--wren-border-instrument-divider)
     color var(--wren-text-secondary)
+    background rgba(7, 10, 8, .24)
     font-family var(--wren-font-ui)
     font-size var(--wren-type-small)
     font-weight 500
@@ -23,7 +31,7 @@
   .localSetting
     min-height 56px
     margin 0
-    padding 12px var(--wren-space-2)
+    padding 12px var(--wren-space-4)
     box-sizing border-box
     border 0
     border-radius 0
