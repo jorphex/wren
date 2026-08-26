@@ -40,6 +40,10 @@ excluded text, logos, crypto imagery, UI panels, and fantasy effects.
   scene retained as the clean pre-Apple source.
 - `source/wren-linux-0.1.0-launch-v13-apple-ledge.png` — selected final
   three-platform composition with the Apple mark on the upper ledge.
+- `source/wren-linux-apple-potting-shed-v1.png` — approved 1344 × 768 mature
+  pixel-art scene with Tux, a bitten silver apple, and the focal wren in a
+  rainy potting shed. The overhead lantern uses a compact radial contact
+  shadow beneath Tux, with cool window light as a secondary source.
 
 Intermediate Apple-placement, cleanup, and lighting attempts are review
 artifacts rather than production sources and do not belong in this directory.
