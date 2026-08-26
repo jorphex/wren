@@ -33,3 +33,13 @@ specified a native 3:1 nocturnal garden panorama with an open gate and
 secondary lantern on the left, a winding path and distant lantern in the
 middle, and one detailed wren beside the main lantern on the right. It
 excluded text, logos, crypto imagery, UI panels, and fantasy effects.
+
+## Desktop launch-scene sources
+
+- `source/wren-linux-0.1.0-launch-v6.png` — original Linux and Windows launch
+  scene retained as the clean pre-Apple source.
+- `source/wren-linux-0.1.0-launch-v13-apple-ledge.png` — selected final
+  three-platform composition with the Apple mark on the upper ledge.
+
+Intermediate Apple-placement, cleanup, and lighting attempts are review
+artifacts rather than production sources and do not belong in this directory.
