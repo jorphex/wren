@@ -608,3 +608,131 @@ button.dashSupportWrenButton.wrenControl
   .dashModules
     grid-template-columns minmax(0, 1fr)
     gap var(--wren-space-4)
+
+// Control landing: compact real destinations rendered as explicit push rows.
+.localSettings
+  .localSettingsWrap
+    padding var(--wren-space-3) var(--wren-space-5) var(--wren-space-6)
+
+.dashHomeHeader
+  display block
+  padding var(--wren-space-2) 2px var(--wren-space-3)
+
+  h1
+    margin 0
+    font-size 20px
+    font-weight 620
+    line-height 26px
+
+  p
+    margin-top 2px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+.dashHomeWren
+  display none
+
+.dashModules
+  display flex
+  margin-bottom var(--wren-space-4)
+  gap var(--wren-space-3)
+  flex-direction column
+
+.dashModuleSection
+  h2
+    margin 0 2px var(--wren-space-2)
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-weight 600
+    letter-spacing 1.25px
+    text-transform uppercase
+
+.dashModuleList
+  gap var(--wren-space-2)
+
+button.dashModule.wrenControl,
+button.dashModule.wrenControl.wrenControlGhost
+  grid-template-columns 34px minmax(0, 1fr) 18px
+  min-height 54px
+  padding 7px var(--wren-space-3)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-lg)
+  background-color rgba(14, 19, 16, .68)
+  background-image linear-gradient(172deg, rgba(255, 255, 255, .018), transparent 46%)
+  box-shadow 0 6px 14px rgba(0, 0, 0, .28), inset 1px 1px 0 rgba(150, 182, 150, .035)
+
+  &:hover:not(:disabled)
+    border-color var(--wren-border-strong)
+    background-color var(--wren-surface-hover)
+    background-image linear-gradient(172deg, rgba(255, 255, 255, .026), transparent 46%)
+    box-shadow 0 8px 18px rgba(0, 0, 0, .3)
+
+  &:active:not(:disabled)
+    transform translateY(1px)
+    background-color var(--wren-surface-active)
+    box-shadow 0 2px 6px rgba(0, 0, 0, .28), inset 0 1px 2px rgba(0, 0, 0, .32)
+
+  .dashModuleIcon
+    width 32px
+    height 32px
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-md)
+    color var(--wren-text-secondary)
+    background var(--wren-bg-elevated)
+
+  .dashModuleTitle
+    font-size 14px
+    line-height 18px
+
+  .dashModuleDescription
+    overflow hidden
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+    line-height 15px
+    text-overflow ellipsis
+    white-space nowrap
+
+.dashCompanion
+  min-height 86px
+  margin-bottom var(--wren-space-3)
+  padding var(--wren-space-3) var(--wren-space-4)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-lg)
+  background-color rgba(14, 19, 16, .68)
+  background-image linear-gradient(172deg, rgba(255, 255, 255, .018), transparent 46%)
+  box-shadow 0 8px 18px rgba(0, 0, 0, .28)
+
+  h2
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-weight 600
+    letter-spacing 1.2px
+    text-transform uppercase
+
+.dashSupportActions
+  display grid
+  margin 0
+  padding var(--wren-space-2)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-lg)
+  background rgba(14, 19, 16, .68)
+  grid-template-columns repeat(2, minmax(0, 1fr))
+
+  button.requestFeatureButton.wrenControl
+    width 100%
+    justify-content flex-start
+
+@media (max-height: 760px)
+  .localSettings .localSettingsWrap
+    padding-top var(--wren-space-2)
+
+  button.dashModule.wrenControl,
+  button.dashModule.wrenControl.wrenControlGhost
+    min-height 50px
+
+  .dashCompanion
+    min-height 70px

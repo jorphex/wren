@@ -51,7 +51,7 @@ export class Command extends React.Component {
       deployment: 'Contracts',
       earn: 'Earn',
       notify: 'Notice',
-      default: 'Wren',
+      default: 'Control',
       settings: 'Settings',
       send: 'Send',
       tokens: 'Tokens'

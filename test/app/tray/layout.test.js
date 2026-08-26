@@ -6,6 +6,7 @@ const accountGrain = fs.readFileSync('resources/svg/wren-grain.svg', 'utf8')
 const accountSource = fs.readFileSync('app/tray/Account/Account.js', 'utf8')
 const accountSelectorStyle = fs.readFileSync('app/tray/AccountSelector/style/index.styl', 'utf8')
 const balancesStyle = fs.readFileSync('app/tray/Account/Balances/style/index.styl', 'utf8')
+const balancesSource = fs.readFileSync('app/tray/Account/Balances/BalancesPreview/index.js', 'utf8')
 const balanceSource = fs.readFileSync('app/tray/Account/Balances/Balance/index.js', 'utf8')
 const balancesExpandedSource = fs.readFileSync('app/tray/Account/Balances/BalancesExpanded/index.js', 'utf8')
 const inventoryStyle = fs.readFileSync('app/tray/Account/Inventory/style/index.styl', 'utf8')
@@ -115,21 +116,23 @@ test('lets the selected-account chooser share the wallet canvas', () => {
 })
 
 test('keeps the account body geometry independent from the dashboard dock edge', () => {
-  expect(accountStyle).toMatch(/\/\/ Wren account surface\n\.accountMain\n {2}top 88px/)
-  expect(accountSelectorStyle).toMatch(/\.accountSelector\.accountSelectorOpen\n {2}top 6px/)
+  expect(accountStyle).toMatch(/\/\/ Perch 2 production mapping:[\s\S]*?\.accountMain\n {2}top 70px/)
+  expect(accountSelectorStyle).toMatch(
+    /\/\/ Selected-account chrome follows[\s\S]*?\.accountSelector\.accountSelectorOpen\n {2}top 0/
+  )
   const edgeOverride = accountStyle.split('.workspace-edge-left #panel')[1].split('.accountHomeHeader')[0]
   expect(edgeOverride).not.toMatch(/\n {2}\.account(?:Main|Selector)/)
 })
 
-test('keeps the home-to-requests gap compact without shifting the selector rail', () => {
+test('keeps account identity and the fixed Send shelf inside the compact shell', () => {
   expect(accountStyle).toMatch(
-    /\.accountHomeHeader[\s\S]*?padding 0 var\(--wren-space-5\) var\(--wren-space-3\)/
+    /\/\/ Perch 2 production mapping:[\s\S]*?\.accountHomeHeader[\s\S]*?margin 0 var\(--wren-space-5\) var\(--wren-space-3\)[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-4\)/
   )
-  expect(accountSelectorStyle).toMatch(
-    /\.accountSelectorScrollWrap[\s\S]*?padding 24px var\(--wren-space-5\) 48px/
+  expect(accountStyle).toMatch(
+    /\.accountHomeShelf[\s\S]*?position absolute[\s\S]*?bottom 0[\s\S]*?height 76px[\s\S]*?button\.wrenControl\.wrenHeroPrimary[\s\S]*?width 100%/
   )
-  expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
-  expect(accountStyle).toMatch(/\.accountHomeQrTrigger[\s\S]*?min-height 44px/)
+  expect(accountStyle).toMatch(/\.accountMainScroll[\s\S]*?bottom 76px/)
+  expect(accountSource).toMatch(/<div className='accountHomeShelf' aria-label='Account actions'>/)
 })
 
 test('keeps the QR disclosure opaque and gives it restrained material depth', () => {
@@ -154,18 +157,20 @@ test('keeps expanded balances as a plain ledger with crisp circular progress mar
   )
 })
 
-test('keeps account modules free of decorative seams', () => {
-  expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
-  expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
-  expect(accountSource).toMatch(/const ACCOUNT_MODULE_ATTACHED_GAP = 4/)
-  expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 16/)
-  expect(accountSource).toMatch(
-    /previousId === 'requests' && id === 'chains' \? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP/
+test('gives real account modules a consistent quiet-card rhythm', () => {
+  expect(accountStyle).toMatch(
+    /\/\/ Perch 2 production mapping:[\s\S]*?\.accountModuleInner[\s\S]*?\.accountModuleCard[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?border-radius var\(--wren-radius-lg\)/
   )
+  expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
+  expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 12/)
+  expect(accountSource).toMatch(/const getAccountModuleGap = \(\) => ACCOUNT_MODULE_SECTION_GAP/)
   expect(accountSource).toMatch(
     /const gap = height > 0 && previousVisibleModuleId \? getAccountModuleGap\(previousVisibleModuleId, id\) : 0/
   )
   expect(accountSource).toMatch(/if \(height > 0\) previousVisibleModuleId = id/)
+  expect(balancesSource).toMatch(/height: this\.moduleRef\.current\.scrollHeight/)
+  expect(balancesSource).toMatch(/className='balancesBlock balancesPreview'/)
+  expect(accountStyle).toMatch(/\.accountModule:has\(\.balancesPreview\)/)
   expect(accountStyle).toMatch(/\.requestsPreview\n {2}height 48px\n {2}border 0\n {2}border-radius 0/)
   expect(signerStyle).toMatch(
     /\.signerPreviewSummary[\s\S]*?display flex[\s\S]*?justify-content space-between/

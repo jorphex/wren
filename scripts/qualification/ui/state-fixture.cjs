@@ -1524,7 +1524,7 @@ const fixtureFor = (scenario) => {
     state.panel.account.modules = {
       requests: { height: 48 },
       chains: { height: scenario.logicalWidth <= 540 ? 108 : 56 },
-      balances: { height: scenario.balanceArtwork ? 396 : 318 },
+      balances: { height: scenario.balanceArtwork ? 530 : 452 },
       activity: { height: 332 },
       permissions: { height: 92 },
       signer: { height: 52 },

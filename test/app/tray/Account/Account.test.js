@@ -36,7 +36,12 @@ it('renders the approved account-home identity without duplicating the balances 
 
 it('keeps Send and copy address actions connected to their existing tray behavior', async () => {
   const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
+  const { user } = render(
+    <>
+      {main.renderHomeHeader()}
+      {main.renderHomeShelf()}
+    </>
+  )
 
   const addressCopyTarget = screen.getByRole('button', { name: 'Copy address' })
   expect(addressCopyTarget.textContent).toContain(address)

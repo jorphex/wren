@@ -234,10 +234,8 @@ class _AccountModule extends React.Component {
 }
 
 const AccountModule = Restore.connect(_AccountModule)
-const ACCOUNT_MODULE_ATTACHED_GAP = 4
-const ACCOUNT_MODULE_SECTION_GAP = 16
-const getAccountModuleGap = (previousId, id) =>
-  previousId === 'requests' && id === 'chains' ? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP
+const ACCOUNT_MODULE_SECTION_GAP = 12
+const getAccountModuleGap = () => ACCOUNT_MODULE_SECTION_GAP
 
 // account module is position absolute and with a translateX
 class _AccountMain extends React.Component {
@@ -293,19 +291,24 @@ class _AccountMain extends React.Component {
           <AccountNameEditor account={this.props.id} name={name} />
           <AccountAddressActions key={address} address={address} name={name} />
         </div>
-        <div className='accountHomeActions' aria-label='Account actions'>
-          <button
-            type='button'
-            className='wrenControl wrenControlPrimary wrenControlLarge'
-            onClick={() => {
-              link.send('tray:action', 'navDash', { view: 'send', data: {} })
-            }}
-          >
-            <Icon name='send' size={14} />
-            <span>Send</span>
-          </button>
-        </div>
       </header>
+    )
+  }
+
+  renderHomeShelf() {
+    return (
+      <div className='accountHomeShelf' aria-label='Account actions'>
+        <button
+          type='button'
+          className='wrenControl wrenControlPrimary wrenControlLarge wrenHeroPrimary'
+          onClick={() => {
+            link.send('tray:action', 'navDash', { view: 'send', data: {} })
+          }}
+        >
+          <Icon name='send' size={15} />
+          <span>Send</span>
+        </button>
+      </div>
     )
   }
 
@@ -342,6 +345,7 @@ class _AccountMain extends React.Component {
             {modules}
           </div>
         </div>
+        {this.renderHomeShelf()}
       </div>
     )
   }

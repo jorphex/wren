@@ -124,11 +124,15 @@ test('contains long expanded-signer names inside the dashboard chrome', () => {
   )
 })
 
-test('keeps dashboard destination descriptions readable in two balanced columns', () => {
+test('presents dashboard destinations as one compact column of push rows', () => {
   expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns minmax\(0, 1fr\)/)
-  expect(mainStyle).toMatch(/\.dashModules[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/)
-  expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 72px[\s\S]*?height auto/)
-  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?gap var\(--wren-space-2\)/)
+  expect(mainStyle).toMatch(
+    /\/\/ Control landing: compact real destinations[\s\S]*?\.dashModules[\s\S]*?flex-direction column/
+  )
+  expect(mainStyle).toMatch(
+    /button\.dashModule\.wrenControl,[\s\S]*?button\.dashModule\.wrenControl\.wrenControlGhost[\s\S]*?min-height 54px/
+  )
+  expect(mainStyle).toMatch(/\.dashModuleList\n {2}gap var\(--wren-space-2\)/)
   expect(mainStyle).not.toMatch(/wren-(?:seam|rule)/)
 })
 
@@ -196,10 +200,14 @@ test('wraps resolved Send recipient addresses without clipping or ellipsis', () 
   )
 })
 
-test('keeps the Send composer and sticky action shelf on one canvas', () => {
+test('keeps the Send composer on the shared canvas with a fixed material action shelf', () => {
   expect(sendStyle).toMatch(/\.sendComposer,[\s\S]*?background transparent/)
-  expect(sendStyle).toMatch(/\.sendActionShelf[\s\S]{0,360}?background transparent/)
-  expect(sendStyle).not.toMatch(/\.sendActionShelf[\s\S]{0,360}?background (?:rgba\(|var\()/)
+  expect(sendStyle).toMatch(
+    /\/\/ Perch 2 production mapping:[\s\S]*?\.sendLedgerRow[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background-color rgba\(14, 19, 16, \.74\)/
+  )
+  expect(sendStyle).toMatch(
+    /\/\/ Perch 2 production mapping:[\s\S]*?\.sendActionShelf[\s\S]*?background rgba\(7, 9, 7, \.9\)/
+  )
   expect(sendStyle).not.toMatch(/\.sendActionShelf[\s\S]{0,400}?backdrop-filter/)
 })
 
@@ -221,13 +229,11 @@ test('keeps account chooser and setup routes on the shared dashboard canvas', ()
   )
 })
 
-test('keeps the Control Center Wren decorative, fixed beside the title, and absent at the narrow fallback', () => {
+test('keeps the Control landing text-led without a decorative bird slot', () => {
   expect(mainStyle).toMatch(
-    /\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\) 96px[\s\S]*?align-items center[\s\S]*?\.dashHomeWren[\s\S]*?width 96px[\s\S]*?height 96px[\s\S]*?justify-self end[\s\S]*?pointer-events none/
+    /\/\/ Control landing: compact real destinations[\s\S]*?\.dashHomeHeader[\s\S]*?display block/
   )
-  expect(mainStyle).toMatch(
-    /@media \(max-width: 560px\)[\s\S]*?\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.dashHomeWren[\s\S]*?display none/
-  )
+  expect(mainStyle).toMatch(/\.dashHomeWren\n {2}display none/)
 })
 
 test('uses separator-free Earn lists, spacing-led detail regions, and the shared focus treatment', () => {

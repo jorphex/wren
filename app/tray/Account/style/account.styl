@@ -1597,3 +1597,137 @@ button.accountHomeRename.wrenControl
 
 .accountContinuationRow.connectedAppsContinuation
   padding-left var(--wren-space-5)
+
+// Perch 2 production mapping: real wallet modules use one quiet card language,
+// while the fixed Send shelf remains independent from the scroll owner.
+.accountMain
+  top 70px
+
+  .accountMainScroll
+    bottom 76px
+    padding-top var(--wren-space-3)
+
+  .accountMainSlide
+    padding-top 0
+    padding-right 0
+    padding-left 0
+
+.accountHomeHeader
+  display block
+  margin 0 var(--wren-space-5) var(--wren-space-3)
+  padding var(--wren-space-3) var(--wren-space-4)
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-lg)
+  background-color rgba(14, 19, 16, .74)
+  background-image linear-gradient(172deg, rgba(255, 255, 255, .022), transparent 46%)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .34), inset 1px 1px 0 rgba(150, 182, 150, .04)
+
+.accountHomeTitle
+  font-size 18px
+  font-weight 620
+  line-height 24px
+
+.accountHomeNameRow
+  min-height 30px
+
+button.accountHomeRename.wrenControl
+  min-height 44px
+  padding 0
+
+.accountHomeAddressActions
+  min-height 44px
+  margin-top 0
+
+.accountHomeAddress
+  min-height 44px
+  padding 0
+
+.accountHomeQrDisclosure,
+.accountHomeQrTrigger
+  width 44px !important
+  min-width 44px !important
+  height 44px !important
+  min-height 44px !important
+
+.accountModule
+  right var(--wren-space-5)
+  left var(--wren-space-5)
+
+.accountModuleInner
+  border-radius var(--wren-radius-lg)
+
+  .accountModuleCard
+    height 100%
+    box-sizing border-box
+    overflow hidden
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-lg)
+    background-color rgba(14, 19, 16, .74)
+    background-image linear-gradient(172deg, rgba(255, 255, 255, .022), transparent 46%)
+    box-shadow 0 10px 26px rgba(0, 0, 0, .34), inset 1px 1px 0 rgba(150, 182, 150, .04)
+
+    .cluster
+      margin 0 var(--wren-space-3) var(--wren-space-2)
+
+    .clusterRow + .clusterRow
+      margin-top 0
+
+    .clusterValue
+      border-radius var(--wren-radius-sm)
+
+.accountMainSlide .moduleHeader
+  height 46px
+  padding 15px var(--wren-space-4) 11px
+  color var(--wren-text-muted)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-caption)
+  font-weight 600
+  letter-spacing 1.25px
+  text-transform uppercase
+
+  > span:first-child
+    display none
+
+.accountModule:has(.balancesPreview)
+  .accountModuleInner .accountModuleCard
+    overflow visible
+    border 0
+    background transparent
+    box-shadow none
+
+.accountHomeShelf
+  position absolute
+  right 0
+  bottom 0
+  left 0
+  z-index 20000000
+  display flex
+  height 76px
+  padding 12px var(--wren-space-5)
+  box-sizing border-box
+  align-items center
+  border-top 1px solid var(--wren-border-subtle)
+  background rgba(7, 9, 7, .88)
+  box-shadow 0 -12px 30px rgba(0, 0, 0, .28)
+
+  button.wrenControl.wrenHeroPrimary
+    width 100%
+    max-width none
+    height 52px
+    min-height 52px
+    border-radius var(--wren-radius-lg)
+    font-size 14px
+
+@media (max-height: 760px)
+  .accountMain
+    .accountMainScroll
+      bottom 68px
+
+  .accountHomeShelf
+    height 68px
+    padding-top 8px
+    padding-bottom 8px
+
+    button.wrenControl.wrenHeroPrimary
+      height 50px
+      min-height 50px
