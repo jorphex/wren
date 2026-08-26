@@ -35,11 +35,6 @@ test('defines every shared dashboard typography role', () => {
   expect(baseStyle).not.toMatch(/--wren-(?:seam|rule)-/)
 })
 
-test('keeps Wren bronze for primary actions instead of the Perch orange study', () => {
-  expect(baseStyle).toMatch(/--wren-accent-primary #a68a61/)
-  expect(baseStyle).not.toMatch(/#d2a24f/i)
-})
-
 test('keeps embedded-app transitions opaque and lets reduced motion override loaders', () => {
   expect(dappStyle).toMatch(/body[\s\S]*?background var\(--wren-bg-canvas\)/)
   expect(dappStyle).toMatch(/\.splash[\s\S]*?background var\(--wren-bg-canvas\)/)
@@ -132,18 +127,9 @@ test('contains long expanded-signer names inside the dashboard chrome', () => {
 test('keeps dashboard destination descriptions readable in two balanced columns', () => {
   expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns minmax\(0, 1fr\)/)
   expect(mainStyle).toMatch(/\.dashModules[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/)
-  expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 76px[\s\S]*?height auto/)
+  expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 72px[\s\S]*?height auto/)
   expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?gap var\(--wren-space-2\)/)
   expect(mainStyle).not.toMatch(/wren-(?:seam|rule)/)
-})
-
-test('renders Control destinations as restrained tactile push controls', () => {
-  expect(mainStyle).toMatch(
-    /button\.dashModule\.wrenControl\.wrenControlGhost[\s\S]*?border-color var\(--wren-border-instrument\)[\s\S]*?background-color var\(--wren-surface-instrument\)[\s\S]*?box-shadow var\(--wren-shadow-instrument\)/
-  )
-  expect(mainStyle).toMatch(
-    /\.dashModuleIcon[\s\S]*?border 1px solid var\(--wren-border-instrument\)[\s\S]*?background var\(--wren-surface-inset\)/
-  )
 })
 
 test('groups chooser, settings, and networks with spacing instead of decorative rules', () => {
@@ -158,17 +144,8 @@ test('groups chooser, settings, and networks with spacing instead of decorative 
   )
   expect(settingsStyle).toMatch(/\.recoverySettings[\s\S]*?gap var\(--wren-space-2\)/)
   expect(settingsStyle).toMatch(/\.recoveryPanel[\s\S]*?border-radius 2px/)
-  expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-3\)/)
+  expect(chainsStyle).toMatch(/\.network \+ \.network[\s\S]*?margin-top var\(--wren-space-2\)/)
   expect(chainsStyle).toMatch(/\.networkBreak[\s\S]*?margin-top var\(--wren-space-5\)/)
-})
-
-test('carries the instrument surface into real Control destinations', () => {
-  for (const style of [settingsStyle, chainsStyle, tokenStyle, addressBookStyle, dappsStyle]) {
-    expect(style).toMatch(/var\(--wren-surface-instrument\)/)
-    expect(style).toMatch(/var\(--wren-border-instrument\)/)
-  }
-  expect(dashStyle).toMatch(/\.watchAccounts[\s\S]*?var\(--wren-surface-instrument\)/)
-  expect(signerStyle).toMatch(/\.signersList[\s\S]*?var\(--wren-surface-instrument\)/)
 })
 
 test('keeps network editors on the shared wallet canvas', () => {

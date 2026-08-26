@@ -927,19 +927,17 @@
   bottom 0
   left 0
   padding 0
-  border-radius var(--wren-radius-md)
+  border-radius var(--wren-radius-sm)
 
   .accountModuleCard
     overflow hidden
-    box-sizing border-box
-    border 1px solid var(--wren-border-instrument)
-    border-radius var(--wren-radius-md)
-    background-color var(--wren-surface-instrument)
-    background-image var(--wren-control-texture-dark)
-    box-shadow var(--wren-shadow-instrument-quiet)
+    border 0
+    border-top 0
+    border-radius 0
+    background transparent
+    box-shadow none
 
-    // Keep the ledger inside each instrument surface quiet. Rows carry state;
-    // the surrounding frame only groups one real account capability.
+    // Preview modules use spacing and whole-row feedback instead of card outlines.
     .cluster
       margin 0
       padding 0
@@ -1140,9 +1138,7 @@
 .accountMainSlide .moduleHeader
   height 40px
   padding 13px 76px 10px var(--wren-space-4)
-  border-bottom 1px solid var(--wren-border-instrument-divider)
   color var(--wren-text-tertiary)
-  background rgba(7, 10, 8, .26)
   font-family var(--wren-font-ui)
   font-size var(--wren-type-small)
   font-variation-settings var(--wren-font-heading-settings)
@@ -1337,17 +1333,11 @@
 
 .accountHomeHeader
   display grid
-  margin 0 var(--wren-space-5) var(--wren-space-4)
-  padding var(--wren-space-3) var(--wren-space-3) var(--wren-space-3) var(--wren-space-4)
-  box-sizing border-box
+  padding 0 var(--wren-space-5) var(--wren-space-3)
+  margin-bottom var(--wren-space-2)
   grid-template-columns minmax(0, 1fr) auto
-  column-gap var(--wren-space-3)
-  align-items center
-  border 1px solid var(--wren-border-instrument)
-  border-radius var(--wren-radius-md)
-  background-color var(--wren-surface-instrument-strong)
-  background-image var(--wren-control-texture-dark)
-  box-shadow var(--wren-shadow-instrument)
+  column-gap var(--wren-space-5)
+  align-items start
 
 .accountHomeIdentity
   min-width 0
@@ -1359,16 +1349,16 @@
   overflow hidden
   color var(--wren-text-primary)
   font-family var(--wren-font-ui)
-  font-size 19px
-  font-weight 650
-  line-height 1.15
+  font-size 25px
+  font-weight 660
+  line-height 1.08
   text-overflow ellipsis
   white-space nowrap
 
 .accountHomeNameRow
   display flex
   min-width 0
-  min-height 30px
+  min-height 32px
   margin-top 0
   align-items center
   gap var(--wren-space-2)
@@ -1407,7 +1397,7 @@ button.accountHomeRename.wrenControl
   min-height 32px
   padding 0 var(--wren-space-3)
   box-sizing border-box
-  font-size 16px
+  font-size 18px
   font-weight 620
 
 .accountHomeAddressActions
@@ -1415,7 +1405,7 @@ button.accountHomeRename.wrenControl
   display flex
   max-width 100%
   min-height 44px
-  margin-top 1px
+  margin-top 3px
   align-items center
   gap var(--wren-space-1)
 
@@ -1547,7 +1537,7 @@ button.accountHomeRename.wrenControl
 
 .accountHomeActions
   display flex
-  padding-top 0
+  padding-top var(--wren-space-3)
   align-items center
   justify-content flex-end
   gap var(--wren-space-2)
