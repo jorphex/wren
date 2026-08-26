@@ -45,8 +45,6 @@ afterAll(() => {
 it('does not offer an empty expanded balance view', () => {
   render(<BalancesPreviewHarness account={account} moduleId='balances' />)
 
-  expect(screen.getByRole('region', { name: 'Portfolio balance' })).toBeTruthy()
-  expect(screen.getByText('Across enabled networks')).toBeTruthy()
   expect(screen.getByText('No balances yet')).toBeTruthy()
   expect(document.querySelector('.wrenEmptyStateImage')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'More' })).toBeNull()

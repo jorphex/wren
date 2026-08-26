@@ -10,6 +10,7 @@ import {
   WREN_SUPPORT_URL
 } from '../../../resources/constants'
 import { getAddress } from '../../../resources/utils'
+import controlCenterWren from 'url:../../../asset/ui/wren-control-center-v1.png'
 
 const supportAddress = getAddress(WREN_SUPPORT_ADDRESS)
 
@@ -116,8 +117,15 @@ export class Main extends React.Component {
           <header className='dashHomeHeader'>
             <div className='dashHomeIntro'>
               <h1>Control center</h1>
-              <p>Wallet settings and destinations.</p>
+              <p>Manage accounts, networks, permissions, and desktop behavior.</p>
             </div>
+            <img
+              className='dashHomeWren'
+              src={controlCenterWren}
+              alt=''
+              aria-hidden='true'
+              data-testid='control-center-wren'
+            />
           </header>
           <nav className='dashModules' aria-label='Wallet management'>
             {dashboardSections.map((section) => (

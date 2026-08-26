@@ -207,7 +207,10 @@ const joinedCanvasScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.dashModules',
-        layoutExpectations: geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : []
+        layoutExpectations: [
+          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
+          ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
+        ]
       },
       {
         id: `tray-account-home-${geometry}-left-${scale}`,
@@ -1688,7 +1691,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.wrenSettings',
-    requiredText: ['DESKTOP BEHAVIOR', 'ACCOUNTS AND SIGNING']
+    requiredText: ['Desktop behavior', 'Accounts and signing']
   },
   {
     id: 'dash-settings-local-connections-full-1',
@@ -2030,10 +2033,10 @@ const reviewScenarios = () => [
     ready: '.settingsPreviewActions',
     requiredText: [
       'Ethereum',
-      'BALANCES',
+      'Balances',
       'Yearn WETH',
-      'ACTIVITY',
-      'APPS WITH ACCESS',
+      'Activity',
+      'Apps with access',
       'Signer',
       'Remove account'
     ]
@@ -2302,7 +2305,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredControls: ['View all activity'],
-    requiredText: ['APPS WITH ACCESS', 'Signer', 'Remove account'],
+    requiredText: ['Apps with access', 'Signer', 'Remove account'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
   },
@@ -2315,7 +2318,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum', 'BALANCES', 'APPS WITH ACCESS']
+    requiredText: ['Ethereum', 'Balances', 'Apps with access']
   },
   {
     id: 'tray-account-removal-confirm-full-1',
@@ -2361,7 +2364,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.dashModules',
-        layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }]
+        layoutExpectations: [
+          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
+          { kind: 'scroll-fits', selector: '.dashMainScroll' }
+        ]
       },
       {
         id: `dash-control-center-short-${scale}`,
@@ -2371,7 +2377,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.dashModules',
-        layoutExpectations: []
+        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
       },
       {
         id: `tray-account-home-full-${scale}`,
@@ -2751,7 +2757,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalWidth: 530,
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.dashModules',
-      layoutExpectations: []
+      layoutExpectations: [{ kind: 'hidden', selector: '.dashHomeWren' }]
     },
     {
       id: 'dash-delegation-capped-1.5',

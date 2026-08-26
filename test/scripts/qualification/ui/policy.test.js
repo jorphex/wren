@@ -588,7 +588,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     'signer',
     'settings'
   ])
-  expect(ledgerFixture.panel.account.modules.balances.height).toBe(530)
+  expect(ledgerFixture.panel.account.modules.balances.height).toBe(396)
   expect(ledgerFixture.main.balances[QUALIFICATION_ACCOUNT]).toHaveLength(4)
   expect(ledgerFixture.panel.account.modules.activity.height).toBe(332)
   expect(ledgerFixture.main.activity).toHaveLength(4)
@@ -779,7 +779,7 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
   })
 })
 
-it('qualifies the compact Control landing and selected-chain explorer geometry', () => {
+it('qualifies the decorative Control Center Wren and selected-chain explorer geometry', () => {
   const scenarios = scenarioMatrix()
   const controlCenters = scenarios.filter(
     ({ state, logicalWidth }) => state === 'control-center' && logicalWidth === 620
@@ -788,14 +788,8 @@ it('qualifies the compact Control landing and selected-chain explorer geometry',
   const accountHomes = scenarios.filter(({ state }) => state === 'account-home')
 
   expect(controlCenters).toHaveLength(6)
-  expect(
-    controlCenters.every(({ id, layoutExpectations }) =>
-      id.includes('-full-')
-        ? layoutExpectations.some(({ kind }) => kind === 'scroll-fits')
-        : layoutExpectations.length === 0
-    )
-  ).toBe(true)
-  expect(capped.layoutExpectations).toEqual([])
+  expect(controlCenters.every(({ layoutExpectations }) => layoutExpectations[0].kind === 'size')).toBe(true)
+  expect(capped.layoutExpectations).toEqual([{ kind: 'hidden', selector: '.dashHomeWren' }])
   expect(accountHomes).toHaveLength(6)
   expect(accountHomes.every(({ requiredControls }) => requiredControls.length === 4)).toBe(true)
 

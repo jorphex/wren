@@ -62,11 +62,14 @@ it('opens the cross-account app-activity view without exposing internal instance
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 
-it('keeps the Control landing compact and free of decorative identity art', () => {
+it('keeps one non-interactive Wren beside the Control Center title', () => {
   renderMain()
+  const bird = screen.getByTestId('control-center-wren')
 
-  expect(screen.getByRole('heading', { name: 'Control center' })).toBeTruthy()
-  expect(screen.queryByTestId('control-center-wren')).toBeNull()
+  expect(bird).toBeTruthy()
+  expect(bird.getAttribute('alt')).toBe('')
+  expect(bird.getAttribute('aria-hidden')).toBe('true')
+  expect(screen.getAllByTestId('control-center-wren')).toHaveLength(1)
   expect(screen.queryByText('Desktop EVM wallet')).toBeNull()
 })
 
