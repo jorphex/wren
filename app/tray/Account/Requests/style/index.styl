@@ -206,13 +206,19 @@
 
 .requestViewScroll
   background transparent
-  padding 0 0 var(--wren-space-5)
+  padding 20px var(--wren-page-gutter) var(--wren-space-5)
+  box-sizing border-box
 
 .requestGroupBlock
-  border-top 0
+  margin-bottom var(--wren-space-3)
+  overflow hidden
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
   & + .requestGroupBlock
-    border-top 1px solid var(--wren-ledger-rule)
+    border-top 1px solid var(--wren-border-default)
 
 .requestGroup
   min-height 44px
@@ -228,7 +234,44 @@
     text-transform uppercase
 
 .requestGroupBlock .requestLedger
-  margin 0 0 var(--wren-space-2)
+  margin 0 var(--wren-space-3) var(--wren-space-2)
+  border-top 1px solid var(--wren-ledger-rule)
+
+.requestViewScroll .requestLedger
+  .clusterRow
+    gap 0
+
+  .clusterRow + .clusterRow
+    margin-top 0
+
+  .clusterValue
+    border 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+  .clusterRow:last-child .clusterValue
+    border-bottom 0
+
+  .clusterValueClickable:not(.clusterValueDisabled):hover
+    border-color var(--wren-ledger-rule)
+    background var(--wren-ledger-hover)
+
+  .requestItem,
+  .requestItem:hover,
+  .requestItem:active
+    margin-top 0
+    border-radius 0
+    background transparent
+
+.requestViewScroll .requestQueueStatus
+  margin-bottom var(--wren-space-3)
+  overflow hidden
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
 .requestQueueStatus
   position relative

@@ -367,25 +367,6 @@ export class Dash extends React.Component {
               <p className='dashAccountsEmptyCopy'>No signing accounts yet.</p>
             )}
           </section>
-          <section className='dashHomeCard dashAccountsAddCard' aria-labelledby='dash-add-account-title'>
-            <div className='dashAccountsCardHeader'>
-              <h2 id='dash-add-account-title'>Add account</h2>
-            </div>
-            <div className='dashAccountsActions'>
-              <button type='button' onClick={() => this.openAccountChooser('create')}>
-                <Icon name='lock' size={19} />
-                <span>Derive new</span>
-              </button>
-              <button type='button' onClick={this.watchAccount}>
-                <Icon name='eye' size={19} />
-                <span>Watch</span>
-              </button>
-              <button type='button' onClick={() => this.openAccountChooser('import')}>
-                <Icon name='file' size={19} />
-                <span>Import</span>
-              </button>
-            </div>
-          </section>
           <section className='dashHomeCard dashAccountsWatchCard' aria-labelledby='dash-watch-accounts-title'>
             <div className='dashAccountsCardHeader'>
               <h2 id='dash-watch-accounts-title'>Watch accounts</h2>
@@ -422,6 +403,25 @@ export class Dash extends React.Component {
                 Track addresses without holding keys. No signing capability.
               </p>
             )}
+          </section>
+          <section className='dashHomeCard dashAccountsAddCard' aria-labelledby='dash-add-account-title'>
+            <div className='dashAccountsCardHeader'>
+              <h2 id='dash-add-account-title'>Add account</h2>
+            </div>
+            <div className='dashAccountsActions'>
+              <button type='button' onClick={() => this.openAccountChooser('create')}>
+                <Icon name='lock' size={19} />
+                <span>Derive new</span>
+              </button>
+              <button type='button' onClick={this.watchAccount}>
+                <Icon name='eye' size={19} />
+                <span>Watch</span>
+              </button>
+              <button type='button' onClick={() => this.openAccountChooser('import')}>
+                <Icon name='file' size={19} />
+                <span>Import</span>
+              </button>
+            </div>
           </section>
           {accountCount ? (
             <DelegationRevocation

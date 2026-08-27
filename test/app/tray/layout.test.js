@@ -187,7 +187,7 @@ test('keeps account modules free of decorative seams', () => {
   )
 })
 
-test('keeps activity on a flat ruled ledger and exposes its expanded module', () => {
+test('keeps activity on a ruled Perch ledger and exposes its expanded module', () => {
   expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
   expect(accountSource).toMatch(/activity: Activity/)
   expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
@@ -198,13 +198,25 @@ test('keeps activity on a flat ruled ledger and exposes its expanded module', ()
   expect(activityStyle).toMatch(
     /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
   )
+  expect(activityStyle).toMatch(
+    /\.activityModuleExpanded[\s\S]*?\.activityList[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+  )
+  expect(requestsStyle).toMatch(
+    /\.requestGroupBlock[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+  )
+  expect(accountStyle).toMatch(
+    /#panel:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?#panel:has\(\.activityModuleExpanded\),[\s\S]*?#panel:has\(\.requestViewScroll\)/
+  )
   expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
 
-test('keeps reserved tray bands clean and the startup account ledger flat', () => {
+test('keeps reserved tray bands clean and gives startup one aligned account ledger', () => {
   expect(accountStyle).not.toMatch(/footerWrapActive|wren-(?:seam|rule)/)
   expect(accountSelectorStyle).toMatch(
-    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorScroll[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorScroll[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)[\s\S]*?\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+  )
+  expect(accountSelectorStyle).toMatch(
+    /\.accountDrawerItem[\s\S]*?grid-template-columns 32px minmax\(0, 1fr\) 24px[\s\S]*?column-gap var\(--wren-space-2\)[\s\S]*?\.accountDrawerItemIcon[\s\S]*?justify-self center/
   )
   expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
   expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,100}?border-top/)

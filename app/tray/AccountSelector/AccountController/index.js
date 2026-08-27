@@ -48,7 +48,7 @@ export class Account extends React.Component {
         onClick={() => (drawer ? this.selectFromDrawer() : this.selectFromChooser())}
       >
         <span className='accountDrawerItemIcon'>
-          <AccountTypeMark type={lastSignerType} />
+          <AccountTypeMark type={lastSignerType} size={18} />
         </span>
         <span className='accountDrawerItemIdentity'>
           <span className='accountDrawerItemName'>{displayName}</span>

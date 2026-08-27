@@ -241,17 +241,18 @@
   .accountSelectorScroll
     height auto
     align-self start
-    border 0
-    border-radius 0
-    background transparent
-    box-shadow none
+    overflow hidden
+    border 1px solid var(--wren-border-default)
+    border-radius 10px
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
     .accountSelectorScrollWrap
       padding 0
 
   .accountDrawerItem
     height 58px
-    padding 0 var(--wren-space-2)
+    padding 0 var(--wren-space-3)
     border-bottom 1px solid var(--wren-ledger-rule)
 
     &:last-child
@@ -261,8 +262,9 @@
       border-radius 0
 
   .accountDrawerItemIcon
-    width 30px
-    height 30px
+    width 32px
+    height 32px
+    box-sizing border-box
     border 1px solid var(--wren-border-subtle)
     border-radius 8px
     background var(--wren-surface-inset)
@@ -591,8 +593,9 @@
   border-radius 0
   color var(--wren-text-primary)
   background transparent
-  grid-template-columns 28px minmax(0, 1fr) 24px
+  grid-template-columns 32px minmax(0, 1fr) 24px
   align-items center
+  column-gap var(--wren-space-2)
   text-align left
   cursor pointer
 
@@ -613,6 +616,7 @@
 
 .accountDrawerItemIcon
   display flex
+  justify-self center
   align-items center
   justify-content center
   color var(--wren-accent-primary-hover)

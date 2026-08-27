@@ -1264,8 +1264,11 @@
 
 // Populated-wallet fidelity checkpoint. This is a structural composition for
 // the real modules, scoped away from request review and other wallet states.
+#panel:has(.accountSelector:not(.accountSelectorOpen)),
 #panel:has(.accountMainPerch),
-#panel:has(.balancesExpandedView)
+#panel:has(.balancesExpandedView),
+#panel:has(.activityModuleExpanded),
+#panel:has(.requestViewScroll)
   --wren-bg-canvas #070907
   --wren-bg-wallet-canvas #070907
   --wren-bg-elevated #121813

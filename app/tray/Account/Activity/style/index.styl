@@ -197,16 +197,28 @@
 .activityModuleExpanded
   position absolute
   inset 0
-  padding-bottom var(--wren-space-5)
+  padding 20px var(--wren-page-gutter) var(--wren-space-5)
+  box-sizing border-box
   overflow-y auto
+
+  .activityFilters
+    margin-bottom var(--wren-space-3)
 
   .activityList
     padding 0
+    overflow hidden
+    border 1px solid var(--wren-border-default)
+    border-radius 10px
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
   .activityRow
-    min-height 64px
+    min-height 58px
     padding-right var(--wren-space-3)
     padding-left var(--wren-space-3)
+
+  .activityClear
+    padding-top var(--wren-space-3)
 
 @media (max-width: 560px)
   .activityFilters

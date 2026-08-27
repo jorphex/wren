@@ -150,6 +150,17 @@ it('keeps watch-only accounts visible and opens them directly', () => {
   expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
 })
 
+it('keeps signing and watch accounts together before account creation actions', () => {
+  render(<AccountsHarness data={{}} />)
+
+  expect(
+    screen
+      .getAllByRole('heading', { level: 2 })
+      .slice(0, 3)
+      .map((heading) => heading.textContent)
+  ).toEqual(['Signing accounts', 'Watch accounts', 'Add account'])
+})
+
 it('lists signing accounts from persisted state and opens them directly', () => {
   render(<SignerAccountsHarness data={{}} />)
 

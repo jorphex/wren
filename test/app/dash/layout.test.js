@@ -420,6 +420,21 @@ test('keeps local interaction states stronger than the later shared ghost-contro
   )
 })
 
+test('keeps the corrected Control ledgers compact, hoverable, and aligned', () => {
+  expect(chainsStyle).toMatch(
+    /\.network \.signerTop:has\(\.networkDetailsTrigger:hover\)[\s\S]*?background var\(--wren-ledger-hover\)/
+  )
+  expect(dappsStyle).toMatch(
+    /\.dash \.dashMain \.connectedAppsPerch[\s\S]*?\.originTitle[\s\S]*?min-height 44px[\s\S]*?margin 0[\s\S]*?\.sliceOrigin[\s\S]*?min-height 52px/
+  )
+  expect(settingsStyle).toMatch(
+    /\.contractVerificationCredentialIdentity[\s\S]*?justify-content space-between[\s\S]*?\.contractVerificationCredentialControls[\s\S]*?flex-direction column[\s\S]*?\.contractVerificationCredentialActions[\s\S]*?width 100%/
+  )
+  expect(settingsStyle).toMatch(
+    /\.appInfo[\s\S]*?display grid[\s\S]*?min-height 44px[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto auto auto/
+  )
+})
+
 test('keeps delegation recovery spacing-led and responsive', () => {
   expect(dashStyle).toMatch(
     /\.delegationRevocation[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-2\)[\s\S]*?background transparent/

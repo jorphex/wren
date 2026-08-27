@@ -1746,7 +1746,8 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashAccountsPerch',
     requiredControls: ['Derive new', 'Watch', 'Import'],
-    requiredText: ['Accounts', 'Ledger vault', 'connect device', 'Watch account', 'ADD ACCOUNT']
+    requiredText: ['Accounts', 'Ledger vault', 'connect device', 'Watch account', 'ADD ACCOUNT'],
+    layoutExpectations: [{ kind: 'stacked', selector: '.dashAccountsPerch .dashHomeCard' }]
   },
   {
     id: 'dash-trezor-pin-full-1',
@@ -1877,6 +1878,27 @@ const reviewScenarios = () => [
     captureScrollSelector: '#wren-settings-contract-verification'
   },
   {
+    id: 'dash-settings-about-full-1',
+    renderer: 'dash',
+    state: 'settings',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.appInfo',
+    requiredControls: ['View License', 'Reset Wren'],
+    requiredText: ['ABOUT'],
+    captureScroll: 'target',
+    captureScrollSelector: '#wren-settings-about',
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.appInfo',
+        property: 'display',
+        value: 'grid'
+      }
+    ]
+  },
+  {
     id: 'dash-settings-recovery-export-full-1',
     renderer: 'dash',
     state: 'settings',
@@ -1946,6 +1968,25 @@ const reviewScenarios = () => [
     ],
     requiredText: ['Connected', 'Ethereum', 'Optimism Mainnet', 'Workshop Chain']
   },
+  {
+    id: 'dash-networks-hover-full-1',
+    renderer: 'dash',
+    state: 'networks',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'hoverText', text: 'Ethereum, Chain ID 1' },
+    ready: '.dashNetworksCard',
+    requiredText: ['Connected', 'Ethereum'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.dashNetworksLedger .network:first-child .signerTop',
+        property: 'backgroundColor',
+        value: 'rgb(26, 33, 28)'
+      }
+    ]
+  },
   ...[
     ['full', FULL_SHELL_HEIGHT],
     ['short', SHORT_SHELL_HEIGHT]
@@ -1959,6 +2000,18 @@ const reviewScenarios = () => [
     ready: '.connectedApps .sliceOrigin',
     layoutExpectations: [
       { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 20 },
+      {
+        kind: 'computed-style',
+        selector: '.connectedAppsPerch .originTitle',
+        property: 'height',
+        value: '44px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.connectedAppsPerch .sliceOrigin',
+        property: 'height',
+        value: '52px'
+      },
       { kind: 'scroll-fits', selector: '.dashMainScroll' }
     ],
     requiredControls: ['Open workshop.example app details, active · no account access'],
@@ -2127,6 +2180,26 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.accountSelectorWelcome',
     requiredControls: ['Open dashboard'],
+    requiredText: ['Choose an account', 'Trezor Account'],
+    layoutExpectations: [
+      { kind: 'size', selector: '.accountDrawerItemIcon', width: 32, height: 32 },
+      {
+        kind: 'computed-style',
+        selector: '.accountSelector:not(.accountSelectorOpen) .accountSelectorScroll',
+        property: 'backgroundColor',
+        value: 'rgba(13, 18, 16, 0.66)'
+      }
+    ]
+  },
+  {
+    id: 'tray-account-startup-short-1.5',
+    renderer: 'tray',
+    state: 'account-startup',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.accountSelectorWelcome',
+    requiredControls: ['Open dashboard'],
     requiredText: ['Choose an account', 'Trezor Account']
   },
   {
@@ -2205,6 +2278,20 @@ const reviewScenarios = () => [
     ready: '.requestClearAll',
     requiredControls: ['Back', 'Clear all requests'],
     requiredText: ['Requests', '3 requests', 'Clear all', 'WORKSHOP.EXAMPLE', 'GARDEN.EXAMPLE'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+  },
+  {
+    id: 'tray-account-requests-list-short-1.5',
+    renderer: 'tray',
+    state: 'account-requests-list',
+    glideSide: 'left',
+    workspaceOpen: true,
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.requestClearAll',
+    requiredControls: ['Back', 'Clear all requests'],
+    requiredText: ['Requests', '3 requests', 'WORKSHOP.EXAMPLE', 'GARDEN.EXAMPLE'],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
@@ -2377,6 +2464,20 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityModuleExpanded',
+    requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
+    requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+  },
+  {
+    id: 'tray-account-activity-short-1.5',
+    renderer: 'tray',
+    state: 'account-activity',
+    glideSide: 'left',
+    workspaceOpen: true,
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.activityModuleExpanded',
     requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
     requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],

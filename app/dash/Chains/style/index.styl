@@ -700,6 +700,10 @@ button.dashNetworksAdd.wrenControl
   .network .signerTop
     min-height 62px
     padding 0
+    transition background var(--wren-motion-fast) var(--wren-ease)
+
+  .network .signerTop:has(.networkDetailsTrigger:hover)
+    background var(--wren-ledger-hover)
 
   .networkDetailsTrigger
     min-height 62px

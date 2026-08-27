@@ -138,8 +138,18 @@
     height auto
 
   .contractVerificationCredentialIdentity
-    min-width 150px
-    flex 1
+    display flex
+    width 100%
+    min-width 0
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-3)
+
+  .contractVerificationCredentialControls
+    width 100%
+    align-items stretch
+    flex-direction column
+    gap var(--wren-space-2)
 
   .contractVerificationCredentialStatus,
   .contractVerificationCredentialHint,
@@ -152,8 +162,9 @@
 
   .contractVerificationCredentialActions
     display flex
+    width 100%
     align-items center
-    justify-content flex-end
+    justify-content flex-start
     gap var(--wren-space-2)
 
     button
@@ -161,13 +172,17 @@
       flex none
 
   .contractVerificationCredentialInput
-    width 180px
+    width auto
     height 44px
     box-sizing border-box
+    flex 1 1 auto
 
   .contractVerificationCredentialMessage
-    min-height 18px
+    min-height 0
     color var(--wren-success)
+
+    &:empty
+      display none
 
   .contractVerificationCredentialHint
     margin-top var(--wren-space-1)
@@ -411,9 +426,11 @@
       font-size var(--wren-type-small)
 
   .appInfo
-    display flex
-    padding var(--wren-space-4) var(--wren-space-2)
-    flex-direction column
+    display grid
+    min-height 44px
+    padding 0 var(--wren-space-2)
+    grid-template-columns minmax(0, 1fr) auto auto auto
+    column-gap var(--wren-space-3)
     align-items center
     border-top 0
     color var(--wren-text-muted)
@@ -441,7 +458,8 @@
     .appInfoLineInstanceId
       width 100%
       max-width 100%
-      margin 0 0 var(--wren-space-3)
+      margin 0
+      justify-content flex-start
       overflow hidden
       color var(--wren-text-muted)
       font-family var(--wren-font-mono)
@@ -467,7 +485,7 @@
       font-size var(--wren-type-caption)
 
     .appInfoViewLicense
-      margin-top var(--wren-space-3)
+      margin 0
       color var(--wren-text-tertiary)
       font-size var(--wren-type-caption)
 
@@ -475,11 +493,15 @@
         color var(--wren-text-primary)
 
     .appInfoLineReset
-      width 100%
-      margin var(--wren-space-2) 0 0
+      width auto
+      margin 0
       color var(--wren-text-tertiary)
       font-size var(--wren-type-caption)
       line-height 24px
+
+      &:has(.appInfoLineResetConfirm)
+        width 100%
+        grid-column 1 / -1
 
     .appInfoLineResetConfirm
       display flex
@@ -649,7 +671,7 @@
     padding 0
 
   .appInfo
-    padding 12px 0 8px
+    padding 0
 
 @media (max-height: 760px)
   .wrenSettings
@@ -694,12 +716,18 @@
     .recoveryMetadata
       grid-template-columns 1fr
 
-    .contractVerificationCredentialControls,
-    .contractVerificationCredentialActions
+    .contractVerificationCredentialControls
       width 100%
       align-items stretch
       flex-direction column
 
-    .contractVerificationCredentialInput,
-    .contractVerificationCredentialActions button
+    .contractVerificationCredentialActions
       width 100%
+      align-items center
+      flex-direction row
+
+    .contractVerificationCredentialInput
+      width auto
+
+    .contractVerificationCredentialActions button
+      width auto
