@@ -236,6 +236,9 @@ export class Footer extends React.Component {
     const decisionAvailable = active && !req.status && !req.locked
     const canCancel = decisionAvailable && !actionPending
     const canDecide = decisionAvailable && !actionPending && feeDraftSafe
+    const actionError =
+      this.state.eip7702ActionError?.handlerId === req.handlerId ? this.state.eip7702ActionError.message : ''
+    const showContext = presentation.kind !== 'review' || !feeDraftSafe || Boolean(actionError)
     const canStopMonitoring =
       active &&
       req.mode === 'monitor' &&
@@ -250,31 +253,35 @@ export class Footer extends React.Component {
     }
 
     return (
-      <div className='requestApprove requestApproveLightweight eip7702RevokeActions'>
-        <div className='requestActionContext' role='status' aria-live='polite'>
-          <span className='requestActionContextIcon'>
-            <Icon
-              name={
-                presentation.kind === 'verified'
-                  ? 'check'
-                  : presentation.kind === 'waiting'
-                    ? 'pending'
-                    : 'permissions'
-              }
-              size={19}
-            />
-          </span>
-          <span className='requestActionContextCopy'>
-            <strong>{presentation.title}</strong>
-            <span>{presentation.detail}</span>
-            {!feeDraftSafe && !req.status ? (
-              <span role='alert'>Finish or correct the fee before signing.</span>
-            ) : null}
-            {this.state.eip7702ActionError?.handlerId === req.handlerId ? (
-              <span role='alert'>{this.state.eip7702ActionError.message}</span>
-            ) : null}
-          </span>
-        </div>
+      <div
+        className={`requestApprove requestApproveLightweight eip7702RevokeActions${
+          showContext ? '' : ' eip7702RevokeActionsReview'
+        }`}
+      >
+        {showContext ? (
+          <div className='requestActionContext' role='status' aria-live='polite'>
+            <span className='requestActionContextIcon'>
+              <Icon
+                name={
+                  presentation.kind === 'verified'
+                    ? 'check'
+                    : presentation.kind === 'waiting'
+                      ? 'pending'
+                      : 'permissions'
+                }
+                size={19}
+              />
+            </span>
+            <span className='requestActionContextCopy'>
+              {presentation.title ? <strong>{presentation.title}</strong> : null}
+              {presentation.detail ? <span>{presentation.detail}</span> : null}
+              {!feeDraftSafe && !req.status ? (
+                <span role='alert'>Finish or correct the fee before signing.</span>
+              ) : null}
+              {actionError ? <span role='alert'>{actionError}</span> : null}
+            </span>
+          </div>
+        ) : null}
         <div className='requestActionButtons'>
           {decisionAvailable ? (
             <>
@@ -524,7 +531,6 @@ export class Footer extends React.Component {
         } else if (req.type === 'walletCalls' && crumb.data.step === 'confirm') {
           const actionPending = this.state.walletCallsActionId === req.handlerId
           const watchOnly = isWatchOnlyAccountType(account.lastSignerType)
-          const callCount = Array.isArray(req.calls) ? req.calls.length : 0
           const simulationWarning = walletCallsSimulationWarning(req.simulation)
           const acknowledgement = this.state.walletCallsAcknowledgement
           const acknowledgementActive =
@@ -805,17 +811,6 @@ export class Footer extends React.Component {
           )
           return (
             <div className='requestApprove requestApproveLightweight walletCallsReviewActions'>
-              <div className='requestActionContext'>
-                <span className='requestActionContextIcon'>
-                  <Icon name='details' size={19} />
-                </span>
-                <span className='requestActionContextCopy'>
-                  <strong>
-                    {callCount} separate {callCount === 1 ? 'transaction' : 'transactions'}
-                  </strong>
-                  <span>Submitted in order, one by one</span>
-                </span>
-              </div>
               <div className='requestActionButtons'>
                 <button
                   type='button'
@@ -870,7 +865,6 @@ export class Footer extends React.Component {
                 </span>
                 <span className='requestActionContextCopy'>
                   <strong>Fresh checks required</strong>
-                  <span>Changes rerun preparation and simulation</span>
                 </span>
               </div>
               <div className='requestActionButtons'>

@@ -1,5 +1,18 @@
 .expandedModule
-  padding-top var(--wren-space-4)
+  padding var(--wren-space-5)
+
+.accountSettingsIntro
+  max-width 560px
+  margin 0 auto
+  padding 0 0 var(--wren-space-4)
+
+  h2
+    margin 0
+    font-family var(--wren-font-heading)
+    font-size 22px
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 620
+    line-height 1.2
 
 .previewButton
   padding var(--wren-space-2)
@@ -8,111 +21,60 @@
   background var(--wren-surface-card)
 
 .panelBlock
-  margin 0 var(--wren-space-1) var(--wren-space-5)
-  padding var(--wren-space-2)
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-md)
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  max-width 560px
+  margin 0 auto
 
   input
     z-index 200
     width 100%
-    padding var(--wren-space-3)
-    border 1px solid var(--wren-border-default)
-    border-radius var(--wren-radius-sm)
-    box-sizing border-box
-    color var(--wren-text-primary)
-    background var(--wren-surface-inset)
+    height 44px
+    padding 0 var(--wren-space-3)
     font-family var(--wren-font-ui)
     font-size var(--wren-type-body)
     font-weight 400
-    text-align center
-    outline none
+    text-align left
     user-select auto
-    transition background var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
-
-    &:hover
-      background var(--wren-surface-hover)
-
-    &:focus
-      border-color var(--wren-focus)
-      box-shadow 0 0 0 2px var(--wren-focus)
 
 .panelBlockTitle
-  padding 2px 0 var(--wren-space-2) var(--wren-space-2)
-  color var(--wren-text-tertiary)
+  display block
+  padding var(--wren-space-4) 0 var(--wren-space-2)
+  color var(--wren-text-secondary)
   font-family var(--wren-font-ui)
   font-size var(--wren-type-caption)
-  font-weight 500
+  font-weight 560
+
+.accountSettingsEditor
+  padding var(--wren-space-4)
+  box-sizing border-box
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm)
+
+.accountSettingsAddress
+  min-width 0
+  padding 0 0 var(--wren-space-4)
+  border-bottom 1px solid var(--wren-ledger-rule)
+
+  span,
+  code
+    display block
+
+  span
+    margin-bottom var(--wren-space-1)
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+  code
+    overflow hidden
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    text-overflow ellipsis
+    white-space nowrap
 
 .panelBlockItem:not(:first-child)
   margin-top var(--wren-space-1)
-
-.panelBlockValues
-  padding var(--wren-space-1)
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
-  background var(--wren-surface-inset)
-  font-family var(--wren-font-ui)
-  -webkit-app-region no-drag
-  pointer-events auto
-
-  .panelBlockValue,
-  .panelBlockButton
-    display flex
-    align-items center
-    justify-content center
-    padding var(--wren-space-3) var(--wren-space-4)
-    border-radius var(--wren-radius-sm)
-    font-size var(--wren-type-small)
-    font-weight 500
-    -webkit-app-region no-drag
-    pointer-events auto
-
-  .panelBlockValue
-    color var(--wren-text-primary)
-    background var(--wren-surface-card)
-
-    svg
-      padding 0 3px 0 4px
-
-  .panelBlockButton
-    border 1px solid transparent
-    color var(--wren-text-secondary)
-    background var(--wren-surface-card)
-    cursor pointer
-    transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease), border-color var(--wren-motion-fast) var(--wren-ease)
-
-    &:hover
-      border-color var(--wren-border-subtle)
-      color var(--wren-text-primary)
-      background var(--wren-surface-hover)
-
-    &:active
-      background var(--wren-surface-active)
-
-    &:focus-visible
-      outline 2px solid var(--wren-focus)
-      outline-offset 2px
-
-    &:disabled
-      color var(--wren-text-disabled)
-      cursor default
-      opacity .6
-
-  .panelBlockTag
-    position relative
-    z-index 100001
-    overflow hidden
-    margin-top var(--wren-space-1)
-    padding 5px 0
-    border-radius var(--wren-radius-sm)
-    color var(--wren-text-tertiary)
-    background var(--wren-surface-card)
-    font-size var(--wren-type-caption)
-    font-weight 500
-    text-align center
 
 .settingsRowInset
   margin-top var(--wren-space-2)

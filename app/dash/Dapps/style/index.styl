@@ -8,9 +8,6 @@
 .connectedAppsPerch
   padding 0
 
-  .connectedAppsScope
-    margin 0 2px 12px
-
   .sliceOriginGroup
     margin-bottom 12px
     overflow hidden
@@ -41,12 +38,6 @@
   .sliceOriginList
     margin 0 20px 8px
     border-top 0
-
-.connectedAppsScope
-  margin 0 0 var(--wren-space-4)
-  color var(--wren-text-secondary)
-  font-size var(--wren-type-small)
-  line-height 20px
 
 .sliceTileUsage
   display flex
@@ -133,6 +124,11 @@
 
   .sliceOrigin:last-child
     border-bottom 0
+
+@media (max-width: 560px)
+  .connectedAppsPerch .sliceOriginList
+    margin-right 12px
+    margin-left 12px
 
 .sliceOrigin:disabled
   color var(--wren-text-disabled)
@@ -294,6 +290,10 @@
   text-align center
 
 @media (max-width: 540px)
-  .connectedApps
+  .connectedApps.connectedAppsPerch
+    padding-right 0
+    padding-left 0
+
+  .connectedApps:not(.connectedAppsPerch)
     padding-right var(--wren-space-3)
     padding-left var(--wren-space-3)

@@ -587,10 +587,28 @@
       font-weight 500
 
     .signerPermissionDetails
+      position absolute
+      width 1px
+      height 1px
+      margin -1px
+      padding 0
+      overflow hidden
+      clip rect(0 0 0 0)
+      clip-path inset(50%)
+      white-space nowrap
+
+    .dropdownWrap
+      height 44px
+
+  .localSettingShortcut,
+  .localSettingExplained
+    min-height 72px
+
+    .signerPermissionDetails
       position static
       width auto
       height auto
-      margin -8px 60px 0 0
+      margin 3px 60px 0 0
       padding 0
       overflow visible
       clip auto
@@ -601,17 +619,12 @@
       line-height 18px
       white-space normal
 
-    .dropdownWrap
-      height 44px
-
-  .localSettingShortcut,
-  .localSettingExplained
-    min-height 72px
-
   .interfaceScaleSetting
     min-height 104px
 
-  .interfaceScaleDescription,
+  .interfaceScaleDescription
+    display none
+
   .interfaceScaleStatus
     color #97917f
 
@@ -628,8 +641,9 @@
     &[aria-pressed='true']:active:not(:disabled),
     &[aria-pressed='true']:focus-visible
       color var(--wren-text-primary)
-      background var(--wren-surface-active)
-      border-color var(--wren-border-default)
+      background var(--wren-bg-elevated)
+      border-color transparent
+      box-shadow var(--wren-shadow-sm)
 
   .recoverySettings
     padding 0

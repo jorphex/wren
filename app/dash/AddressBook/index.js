@@ -153,11 +153,6 @@ export class AddressBookEditor extends React.Component {
             </div>
             <div>
               <h2>{editing ? 'Edit contact' : 'New contact'}</h2>
-              <p>
-                {editing
-                  ? 'Update this local label or note.'
-                  : 'Save an address you can recognize during review.'}
-              </p>
             </div>
           </header>
 

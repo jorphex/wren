@@ -412,6 +412,9 @@ test('keeps local interaction states stronger than the later shared ghost-contro
   expect(settingsStyle).toMatch(
     /\.interfaceScaleOption[\s\S]*?&\.wrenControlGhost:hover:not\(:disabled\)[\s\S]*?background-color var\(--wren-surface-active\)[\s\S]*?box-shadow inset/
   )
+  expect(settingsStyle).toMatch(
+    /\.interfaceScaleOptions[\s\S]*?background rgba\(8, 12, 10, \.34\)[\s\S]*?\.interfaceScaleOption[\s\S]*?&\[aria-pressed='true'\],[\s\S]*?background var\(--wren-bg-elevated\)[\s\S]*?box-shadow var\(--wren-shadow-sm\)/
+  )
   expect(addressBookStyle).toMatch(
     /button\.addressBookRemove\.wrenControl\.wrenControlGhost[\s\S]*?&:hover:not\(:disabled\)[\s\S]*?background var\(--wren-danger-soft\)[\s\S]*?color var\(--wren-danger\)/
   )

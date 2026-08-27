@@ -85,5 +85,5 @@ export const accountViewTitles: Record<RequestType, string> = {
   switchChain: 'Review Network Change',
   addToken: 'Review Token Request',
   walletCalls: 'Review Call Batch',
-  eip7702Revoke: 'Review delegation revocation'
+  eip7702Revoke: 'Review request'
 }

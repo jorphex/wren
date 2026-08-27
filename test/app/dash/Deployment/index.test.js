@@ -374,7 +374,7 @@ it('explains when a deployment is already awaiting review on another network', a
   )
 })
 
-it('connects every field to helper text and exposes polite busy status', async () => {
+it('keeps only format-sensitive field guidance and exposes polite busy status', async () => {
   let resolvePreparation
   prepareDeployment.mockReturnValue(new Promise((resolve) => (resolvePreparation = resolve)))
   render(<Deployment {...props()} />)
@@ -384,7 +384,11 @@ it('connects every field to helper text and exposes polite busy status', async (
   expect(screen.getByLabelText('Deployment data').getAttribute('aria-describedby')).toContain(
     'deployment-initcode-helper'
   )
-  expect(screen.getByLabelText('Account').getAttribute('aria-describedby')).toBe('deployment-account-helper')
+  expect(screen.getByLabelText('Account').hasAttribute('aria-describedby')).toBe(false)
+  expect(screen.getByLabelText('Network').hasAttribute('aria-describedby')).toBe(false)
+  expect(screen.getByLabelText('Optional native value').getAttribute('aria-describedby')).toBe(
+    'deployment-value-error'
+  )
   expect(screen.getByRole('status').textContent).toBe('Checking…')
   expect(screen.getByLabelText('Deployment data').disabled).toBe(true)
 

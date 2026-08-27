@@ -46,6 +46,11 @@ it('keeps the expanded account name editor in the keyboard sequence', async () =
   const { user } = renderWithStore(SettingsExpanded, { expanded: true })
   const input = screen.getByRole('textbox', { name: 'Account name' })
 
+  expect(input.classList.contains('wrenInput')).toBe(true)
+  expect(input.classList.contains('panelBlockItem')).toBe(true)
+  expect(input.parentElement.classList.contains('panelBlock')).toBe(true)
+  expect(input.closest('.panelBlockValues')).toBeNull()
+
   await user.tab()
   expect(document.activeElement).toBe(input)
   await user.clear(input)

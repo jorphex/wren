@@ -13,6 +13,7 @@ const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
 const requestsStyle = fs.readFileSync('app/tray/Account/Requests/style/index.styl', 'utf8')
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
+const tokenSpendStyle = fs.readFileSync('resources/Components/EditTokenSpend/style/index.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const transactionEvidenceStyle = fs.readFileSync(
   'app/tray/Account/Requests/TransactionRequest/ViewData/style/index.styl',
@@ -40,6 +41,16 @@ test('keeps tray loaders subordinate to the shared reduced-motion override', () 
   )
   expect(requestsStyle).not.toMatch(/animation[^\n]*!important/)
   expect(balancesStyle).not.toMatch(/animation[^\n]*!important/)
+})
+
+test('keeps approval units clear of the amount action and Wallet Calls nonce in its summary', () => {
+  expect(tokenSpendStyle).toMatch(
+    /input\.wrenInput[\s\S]*?padding 0 156px 0 var\(--wren-space-3\)[\s\S]*?\.wrenTokenApprovalAmountSymbol[\s\S]*?right 100px[\s\S]*?\.wrenTokenApprovalAmountAction,[\s\S]*?width 68px/
+  )
+  expect(walletCallsStyle).toMatch(
+    /\.walletCallsAdjustSummary[\s\S]*?grid-template-columns minmax\(0, 1fr\) 96px auto[\s\S]*?\.walletCallsAdjustNonce[\s\S]*?\.walletCallsNonceInput\.wrenInput[\s\S]*?height 44px/
+  )
+  expect(walletCallsStyle).not.toContain('.walletCallsNonceSection')
 })
 
 test('keeps prepared deployment copy identities at a full control height', () => {
@@ -81,7 +92,7 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
 test('keeps account collection spacing-led and balances on a flat ruled ledger', () => {
   expect(accountStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
   expect(balancesStyle).toMatch(
-    /\.balancesExpandedScroll > \.cluster,[\s\S]*?border 0[\s\S]*?\.clusterValue[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+    /\.balancesExpandedLedger > \.cluster,[\s\S]*?border 0[\s\S]*?\.clusterValue[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
   )
   expect(accountStyle).toMatch(/\.clusterRow \+ \.clusterRow[\s\S]*?margin-top var\(--wren-space-2\)/)
 })
@@ -203,6 +214,10 @@ test('keeps warnings and balance siblings attached through spacing', () => {
   expect(balancesStyle).not.toMatch(/\.signerBalanceWarning[\s\S]{0,220}?border-top/)
   expect(balancesStyle).not.toMatch(/& \+ \.signerBalance[\s\S]{0,100}?border-top/)
   expect(balancesStyle).toMatch(/\.balanceFilter[\s\S]{0,120}?margin-bottom var\(--wren-space-2\)/)
+  expect(balancesStyle).toMatch(
+    /\.balancesExpandedLedger[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background linear-gradient/
+  )
+  expect(balancesStyle).toMatch(/\.signerBalanceButton[\s\S]*?height 44px[\s\S]*?min-height 44px/)
 })
 
 test('keeps gas evidence and network controls in one compact row', () => {
@@ -389,7 +404,7 @@ test('keeps delegation revocation readable and operable at scaled narrow widths'
     /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?min-height 44px/
   )
   expect(revokeStyle).toMatch(
-    /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/
+    /@media \(max-width: 600px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/
   )
 })
 

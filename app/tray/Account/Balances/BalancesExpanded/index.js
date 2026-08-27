@@ -131,68 +131,70 @@ export class BalancesExpanded extends React.Component {
       <div className='accountViewScroll accountLedgerView balancesExpandedView'>
         {this.renderAccountFilter()}
         <div className='balancesExpandedScroll'>
-          {scanning ? (
-            <div className='signerBalancesLoading'>
-              <div className='loader' />
-            </div>
-          ) : null}
-          {!scanning && balances.length === 0 ? (
-            this.state.balanceFilter ? (
-              <div className='wrenEmptyFilter'>No matching balances</div>
+          <section className='balancesExpandedLedger' aria-label='Balances'>
+            {scanning ? (
+              <div className='signerBalancesLoading'>
+                <div className='loader' />
+              </div>
+            ) : null}
+            {!scanning && balances.length === 0 ? (
+              this.state.balanceFilter ? (
+                <div className='wrenEmptyFilter'>No matching balances</div>
+              ) : (
+                <WrenEmptyState
+                  image={emptyBalances}
+                  transparentImage={true}
+                  title='No balances yet'
+                  copy='Assets appear here after Wren checks your enabled networks.'
+                  expanded
+                />
+              )
             ) : (
-              <WrenEmptyState
-                image={emptyBalances}
-                transparentImage={true}
-                title='No balances yet'
-                copy='Assets appear here after Wren checks your enabled networks.'
-                expanded
-              />
-            )
-          ) : (
-            <Cluster>
-              {balances.map(({ chainId, symbol, ...balance }, i) => {
-                return (
-                  <ClusterRow key={chainId + symbol}>
-                    <ClusterValue>
-                      <Balance
-                        chainId={chainId}
-                        symbol={symbol}
-                        balance={balance}
-                        i={i}
-                        scanning={scanning}
-                      />
-                    </ClusterValue>
-                  </ClusterRow>
-                )
-              })}
-            </Cluster>
-          )}
-          <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
-            <div className='signerBalanceButtons'>
-              <button
-                type='button'
-                className='signerBalanceButton signerBalanceAddToken wrenControl wrenControlSecondary wrenControlCompact'
-                onClick={() => {
-                  link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
-                }}
-              >
-                <span>Add token</span>
-              </button>
-            </div>
-            <div className='signerBalanceTotalText'>
-              <div className='signerBalanceTotalLabel'>{'Total'}</div>
-              <div className='signerBalanceTotalValue'>
-                {hideBalances ? (
-                  <span aria-label='Total balance hidden'>$••••</span>
-                ) : (
-                  <>
-                    <span aria-hidden='true'>$</span>
-                    {balances.length > 0 ? totalDisplayValue : '---.--'}
-                  </>
-                )}
+              <Cluster>
+                {balances.map(({ chainId, symbol, ...balance }, i) => {
+                  return (
+                    <ClusterRow key={chainId + symbol}>
+                      <ClusterValue>
+                        <Balance
+                          chainId={chainId}
+                          symbol={symbol}
+                          balance={balance}
+                          i={i}
+                          scanning={scanning}
+                        />
+                      </ClusterValue>
+                    </ClusterRow>
+                  )
+                })}
+              </Cluster>
+            )}
+            <div className='signerBalanceTotal' style={{ opacity: !scanning ? 1 : 0 }}>
+              <div className='signerBalanceButtons'>
+                <button
+                  type='button'
+                  className='signerBalanceButton signerBalanceAddToken wrenControl wrenControlSecondary'
+                  onClick={() => {
+                    link.send('tray:action', 'navDash', { view: 'tokens', data: { notify: 'addToken' } })
+                  }}
+                >
+                  <span>Add token</span>
+                </button>
+              </div>
+              <div className='signerBalanceTotalText'>
+                <div className='signerBalanceTotalLabel'>{'Total'}</div>
+                <div className='signerBalanceTotalValue'>
+                  {hideBalances ? (
+                    <span aria-label='Total balance hidden'>$••••</span>
+                  ) : (
+                    <>
+                      <span aria-hidden='true'>$</span>
+                      {balances.length > 0 ? totalDisplayValue : '---.--'}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </section>
           {!hideBalances && totalValue.toNumber() > 10000 && hotSigner ? (
             <button
               type='button'

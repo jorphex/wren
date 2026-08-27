@@ -275,6 +275,16 @@ it('shows requested and effective interface scale and routes scale changes', () 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'setInterfaceScale', 1.25)
 })
 
+it('does not restate interface scale when the requested scale fits', () => {
+  renderSettings((value) => {
+    value.main.interfaceScale = 1.25
+    return value
+  })
+
+  const scaleSetting = setting('Interface scale')
+  expect(within(scaleSetting).queryByText(/requested · using/)).toBeNull()
+})
+
 it('keeps app identity, license, and reset actions in About', async () => {
   const { user } = renderSettings()
   const about = screen.getByRole('region', { name: 'About' })

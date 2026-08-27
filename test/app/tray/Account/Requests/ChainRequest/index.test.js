@@ -63,8 +63,7 @@ it('shows the requesting site and both networks without implying account access'
   expect(screen.getByText('Ethereum')).toBeTruthy()
   expect(screen.getByText('Base')).toBeTruthy()
   expect(screen.getByText('8453')).toBeTruthy()
-  expect(screen.getByText(/does not share your account/i)).toBeTruthy()
-  expect(screen.getByText(/must still ask before Wren shares your address/i)).toBeTruthy()
+  expect(screen.getByText('Account access is unchanged.')).toBeTruthy()
 })
 
 it('uses neutral network fallbacks instead of rendering undefined identifiers', () => {

@@ -494,7 +494,6 @@ export class Deployment extends React.Component {
           <header className='deploymentHeader'>
             <span className='deploymentEyebrow'>Contract deployment</span>
             <h1>Check deployment data</h1>
-            <p>Review bytecode and constructor arguments before native review.</p>
           </header>
         ) : null}
 
@@ -507,7 +506,6 @@ export class Deployment extends React.Component {
                 aria-label='Account'
                 value={this.state.account}
                 disabled={busy || !accounts.length}
-                aria-describedby='deployment-account-helper'
                 onChange={(event) => this.selectAccount(event.target.value)}
               >
                 {!this.state.account ? <option value=''>Choose a signer account</option> : null}
@@ -517,7 +515,6 @@ export class Deployment extends React.Component {
                   </option>
                 ))}
               </select>
-              <small id='deployment-account-helper'>Select the active signer.</small>
             </label>
             <label>
               <span>Network</span>
@@ -526,7 +523,6 @@ export class Deployment extends React.Component {
                 aria-label='Network'
                 value={this.state.chainId}
                 disabled={busy || !networks.length}
-                aria-describedby='deployment-network-helper'
                 onChange={(event) => this.invalidate({ chainId: Number(event.target.value) })}
               >
                 {!networks.length ? <option value=''>No connected networks</option> : null}
@@ -536,7 +532,6 @@ export class Deployment extends React.Component {
                   </option>
                 ))}
               </select>
-              <small id='deployment-network-helper'>Select a connected, configured network.</small>
             </label>
           </div>
 
@@ -590,28 +585,20 @@ export class Deployment extends React.Component {
               spellCheck='false'
               disabled={busy}
               aria-invalid={this.state.errors.value ? 'true' : 'false'}
-              aria-describedby='deployment-value-helper deployment-value-error'
+              aria-describedby='deployment-value-error'
               onChange={(event) => this.updateField('value', event.target.value)}
             />
-            <small id='deployment-value-helper'>
-              Native value sent with creation. Blank or 0 means none.
-            </small>
             <small id='deployment-value-error' className='deploymentFieldError'>
               {this.state.errors.value || ''}
             </small>
           </label>
 
           <p className='deploymentRpcDisclosure'>
-            Checking sends deployment data, value, and account context only to your configured RPC for gas
-            estimates, simulation, and pending nonce. It does not sign or broadcast.
+            Checking sends deployment data, value, and account to your configured RPC. It does not sign,
+            broadcast, verify source, or guarantee deployment safety.
           </p>
 
           {hasEvidence ? this.renderEvidence(this.state.inspection, selectedNetwork) : null}
-
-          <p className='deploymentBoundary'>
-            Wren does not compile Solidity, parse artifacts or ABIs, decode constructor arguments, verify
-            source, compiler, bytecode, or safety, or guarantee deployment.
-          </p>
 
           {statusMessage ? (
             <p

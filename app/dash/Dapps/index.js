@@ -158,9 +158,6 @@ export class Dapps extends React.Component {
         <div className='connectedApps connectedAppsPerch'>
           {chainGroups.length ? (
             <>
-              <p className='connectedAppsScope'>
-                Recent activity, account access, and default networks across all accounts.
-              </p>
               {chainGroups.map(({ chain, connected, disconnected, meta: { primaryColor, icon } }) => (
                 <ChainOrigins
                   key={chain.id}

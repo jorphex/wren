@@ -1,0 +1,339 @@
+.wrenTokenApprovalEditor
+  max-width 560px
+  margin 0 auto
+  padding var(--wren-space-5)
+  box-sizing border-box
+  color var(--wren-text-primary)
+  font-family var(--wren-font-ui)
+
+.wrenTokenApprovalIntro
+  padding 0 0 var(--wren-space-4)
+
+  h2
+    margin 0
+    font-family var(--wren-font-heading)
+    font-size 22px
+    font-variation-settings var(--wren-font-heading-settings)
+    font-weight 620
+    line-height 1.2
+
+.wrenTokenApprovalContext
+  display grid
+  overflow hidden
+  border-top 1px solid var(--wren-ledger-rule)
+  border-bottom 1px solid var(--wren-ledger-rule)
+  grid-template-columns repeat(2, minmax(0, 1fr))
+
+  > div
+    min-width 0
+    padding var(--wren-space-3) 0
+
+  > div:nth-child(even)
+    padding-left var(--wren-space-4)
+
+  > div:nth-child(2)
+    border-left 1px solid var(--wren-ledger-rule)
+
+.wrenTokenApprovalContextLabel
+  display block
+  margin-bottom var(--wren-space-1)
+  color var(--wren-text-muted)
+  font-size var(--wren-type-caption)
+
+.wrenTokenApprovalContext > div:nth-child(2) .wrenTokenApprovalAddress
+  width 100%
+  padding-left 0
+  align-items flex-start
+
+.wrenTokenApprovalIdentity
+  display flex
+  min-width 0
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-2)
+
+  > span
+    min-width 0
+
+  strong,
+  small
+    display block
+
+  strong
+    overflow hidden
+    font-size var(--wren-type-small)
+    font-weight 620
+    text-overflow ellipsis
+    white-space nowrap
+
+  small
+    margin-top 2px
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+.wrenTokenApprovalAddress
+  appearance none
+  display flex
+  min-width 0
+  min-height 44px
+  padding 4px var(--wren-space-2)
+  justify-content center
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background transparent
+  flex-direction column
+  cursor pointer
+  text-align left
+
+  strong,
+  span
+    display block
+    overflow hidden
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    text-overflow ellipsis
+    white-space nowrap
+
+  span
+    margin-top 2px
+    color var(--wren-text-muted)
+    font-size 12px
+
+  &:hover
+    border-color var(--wren-border-subtle)
+    color var(--wren-text-primary)
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.wrenTokenApprovalExpiry
+  grid-column 1 / -1
+  display flex
+  padding var(--wren-space-2) 0 !important
+  border-top 1px solid var(--wren-ledger-rule)
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+
+  .wrenTokenApprovalContextLabel
+    margin 0
+
+  strong
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 560
+
+.wrenTokenApprovalDecision
+  padding var(--wren-space-4) 0 0
+
+.wrenTokenApprovalDecisionHeading
+  display flex
+  min-height 44px
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-3)
+
+  > div > span
+    display block
+    font-size var(--wren-type-small)
+    font-weight 620
+
+.wrenTokenApprovalCurrent
+  appearance none
+  display flex
+  min-height 44px
+  padding 0 var(--wren-space-2)
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-primary)
+  background transparent
+  align-items baseline
+  gap 5px
+  cursor pointer
+
+  strong
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
+    font-weight 600
+
+  span
+    color var(--wren-text-muted)
+    font-size var(--wren-type-caption)
+
+  &:hover
+    border-color var(--wren-border-subtle)
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.wrenTokenApprovalCurrentValue
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-small)
+
+.wrenTokenApprovalModes
+  display grid
+  margin-top var(--wren-space-3)
+  overflow hidden
+  border 1px solid var(--wren-border-default)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+  box-shadow inset 0 1px 2px rgba(0, 0, 0, .38)
+  grid-template-columns repeat(3, minmax(0, 1fr))
+
+.wrenTokenApprovalMode
+  appearance none
+  min-width 0
+  min-height 44px
+  padding 0 var(--wren-space-2)
+  border 0
+  border-left 1px solid var(--wren-border-subtle)
+  color var(--wren-text-secondary)
+  background transparent
+  cursor pointer
+
+  &:first-child
+    border-left 0
+
+  span
+    display block
+    font-size var(--wren-type-small)
+    font-weight 560
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+    background var(--wren-ledger-hover)
+
+  &[aria-pressed='true']
+    color var(--wren-text-primary)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm)
+
+  &[aria-pressed='true']:hover:not(:disabled)
+    color var(--wren-text-primary)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm)
+
+  &:focus-visible
+    position relative
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    color var(--wren-text-disabled)
+    cursor default
+
+.wrenTokenApprovalAmountEditor
+  margin-top var(--wren-space-3)
+
+  > label
+    display block
+    margin-bottom var(--wren-space-1)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-caption)
+
+.approveTokenSpendAmount.wrenInputGroup
+  position relative
+  display flex
+  width 100%
+  height 46px
+  align-items center
+
+  input.wrenInput
+    min-width 0
+    width 100%
+    height 100%
+    padding 0 156px 0 var(--wren-space-3)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-body)
+    text-align left
+
+.wrenTokenApprovalAmountSymbol
+  position absolute
+  top 50%
+  right 100px
+  max-width 64px
+  overflow hidden
+  color var(--wren-text-muted)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  transform translateY(-50%)
+  text-overflow ellipsis
+  white-space nowrap
+  pointer-events none
+
+.wrenTokenApprovalAmountAction,
+.wrenTokenApprovalAmountStatus
+  appearance none
+  position absolute
+  top 0
+  right 0
+  bottom 0
+  display flex
+  width 68px
+  padding 0 var(--wren-space-2)
+  align-items center
+  justify-content center
+  border 0
+  border-left 1px solid var(--wren-border-subtle)
+  color var(--wren-accent-primary-hover)
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  font-weight 650
+
+.wrenTokenApprovalAmountAction
+  cursor pointer
+
+  &:hover:not(:disabled)
+    color var(--wren-text-primary)
+    background var(--wren-ledger-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.wrenTokenApprovalStatusSuccess
+  color var(--wren-success)
+
+.wrenTokenApprovalStatusDanger
+  width 112px
+  color var(--wren-danger)
+
+.wrenTokenApprovalDecisionCopy,
+.wrenTokenApprovalUnavailable
+  margin var(--wren-space-2) 0 0
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-caption)
+  line-height 1.5
+
+.wrenTokenApprovalDecisionCopyWarning
+  padding-left var(--wren-space-2)
+  border-left 2px solid var(--wren-warning)
+  color var(--wren-warning)
+
+.wrenTokenApprovalRevoke
+  margin-top var(--wren-space-3)
+  color var(--wren-danger) !important
+
+.wrenTokenApprovalUnavailable
+  color var(--wren-warning)
+
+@media (max-width: 520px)
+  .wrenTokenApprovalContext
+    grid-template-columns 1fr
+
+    > div:nth-child(even)
+      padding-left 0
+
+    > div:nth-child(2)
+      border-top 1px solid var(--wren-ledger-rule)
+      border-left 0

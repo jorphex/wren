@@ -128,7 +128,6 @@ export class AccountSelector extends React.Component {
     return (
       <header className='accountSelectorWelcome'>
         <h1>Choose an account</h1>
-        <p>Choose an account to open your wallet.</p>
       </header>
     )
   }

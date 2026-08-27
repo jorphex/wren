@@ -55,6 +55,16 @@
   background transparent
   box-shadow none
 
+.balancesExpandedLedger
+  display flow-root
+  width 100%
+  box-sizing border-box
+  overflow hidden
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background linear-gradient(172deg, rgba(255, 255, 255, .022), transparent 46%), rgba(13, 18, 16, .66)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .5), inset 1px 1px 0 rgba(150, 182, 150, .05), inset 0 1px 0 rgba(255, 255, 255, .05)
+
 .signerBalanceWarning
   appearance none
   position relative
@@ -90,7 +100,7 @@
   position relative
   z-index 999
 
-.balancesExpandedScroll > .cluster,
+.balancesExpandedLedger > .cluster,
 .balancesPreview > .cluster
   margin 0
   padding 0
@@ -148,8 +158,9 @@
   position relative
   z-index 200000
   width 100%
-  height 52px
-  margin-bottom var(--wren-space-2)
+  height 60px
+  margin 0
+  border-top 1px solid var(--wren-border-subtle)
   font-size var(--wren-type-small)
 
   .signerBalanceButtons
@@ -159,7 +170,8 @@
 
   .signerBalanceButton
     z-index 4000
-    height 32px
+    height 44px
+    min-height 44px
     margin-left var(--wren-space-3)
 
   .signerBalanceTotalText

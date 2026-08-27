@@ -82,8 +82,8 @@ test('renders application activity instead of the empty state', () => {
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Active · No account access')).toBeTruthy()
   expect(
-    screen.getByText('Recent activity, account access, and default networks across all accounts.')
-  ).toBeTruthy()
+    screen.queryByText('Recent activity, account access, and default networks across all accounts.')
+  ).toBeNull()
   expect(screen.queryByText('avg reqs/min')).toBeNull()
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
   expect(screen.queryByText('No app activity')).toBeNull()

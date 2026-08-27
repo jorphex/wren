@@ -23,8 +23,8 @@ export const revokeLifecyclePresentation = (req, active = true) => {
   if (!req?.status) {
     return {
       kind: 'review',
-      title: 'Review details',
-      detail: 'Check everything above before revoking.'
+      title: '',
+      detail: ''
     }
   }
 
@@ -177,6 +177,11 @@ export class RevocationFee extends React.Component {
 const ConnectedRevocationFee = Restore.connect(RevocationFee)
 
 export class Eip7702RevokeRequest extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { evidenceExpanded: false }
+  }
+
   renderIdentity(title, address, identity) {
     const checksummed = getAddress(address)
     return (
@@ -204,7 +209,7 @@ export class Eip7702RevokeRequest extends React.Component {
     const presentation = revokeLifecyclePresentation(req, active)
     const accountAddress = getAddress(req.account)
     const delegateAddress = getAddress(req.evidence.delegate)
-    const accountIdentity = { label: accountName, source: 'Wren account' }
+    const accountIdentity = { label: accountName }
     const resolvedDelegateIdentity = resolveLocalAddressIdentity(addressBook, accounts, delegateAddress)
     const delegateIdentity = resolvedDelegateIdentity
       ? {
@@ -219,9 +224,8 @@ export class Eip7702RevokeRequest extends React.Component {
       <article className={`eip7702RevokeRequest eip7702RevokeRequest-${presentation.kind}`}>
         <div className='eip7702RevokeDocument'>
           <header className='eip7702RevokeSummary'>
-            <span className='eip7702RevokeEyebrow'>EIP-7702 delegation revocation</span>
-            <h1>Review delegation revocation</h1>
-            <p>After confirmation, this account will no longer delegate execution to {delegateAddress}.</p>
+            <h1>Revoke delegation</h1>
+            <p>Stops delegation to {delegateAddress}.</p>
           </header>
 
           <section className='eip7702RevokeSection' aria-labelledby='revoke-identities-title'>
@@ -236,28 +240,44 @@ export class Eip7702RevokeRequest extends React.Component {
             </dl>
           </section>
 
-          <section className='eip7702RevokeSection' aria-labelledby='revoke-evidence-title'>
-            <h2 id='revoke-evidence-title'>Current delegation evidence</h2>
-            <dl className='eip7702RevokeFacts eip7702RevokeEvidence'>
-              <div>
-                <dt>Source</dt>
-                <dd>Configured RPC · eth_getCode</dd>
-              </div>
-              <div>
-                <dt>Code hash</dt>
-                <dd className='eip7702RevokeMono'>
-                  <CopyableRequestValue
-                    copyLabel='Copy delegation code hash'
-                    displayValue={req.evidence.codeHash}
-                    value={req.evidence.codeHash}
-                  />
-                </dd>
-              </div>
-              <div>
-                <dt>Transaction nonce</dt>
-                <dd>{displayQuantity(req.evidence.latestNonce)}</dd>
-              </div>
-            </dl>
+          <section
+            className={`eip7702RevokeEvidenceDisclosure ${
+              this.state.evidenceExpanded ? 'eip7702RevokeEvidenceDisclosure-open' : ''
+            }`}
+          >
+            <button
+              type='button'
+              className='eip7702RevokeEvidenceSummary'
+              aria-expanded={this.state.evidenceExpanded}
+              onClick={() => this.setState((state) => ({ evidenceExpanded: !state.evidenceExpanded }))}
+            >
+              <span>
+                <strong>Delegation evidence</strong>
+              </span>
+              <span>Details</span>
+            </button>
+            {this.state.evidenceExpanded ? (
+              <dl className='eip7702RevokeFacts eip7702RevokeEvidence'>
+                <div>
+                  <dt>Source</dt>
+                  <dd>Configured RPC · eth_getCode</dd>
+                </div>
+                <div>
+                  <dt>Code hash</dt>
+                  <dd className='eip7702RevokeMono'>
+                    <CopyableRequestValue
+                      copyLabel='Copy delegation code hash'
+                      displayValue={req.evidence.codeHash}
+                      value={req.evidence.codeHash}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt>Transaction nonce</dt>
+                  <dd>{displayQuantity(req.evidence.latestNonce)}</dd>
+                </div>
+              </dl>
+            ) : null}
           </section>
 
           <section className='eip7702RevokeSection eip7702RevokeFee' aria-labelledby='revoke-fee-title'>

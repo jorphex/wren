@@ -1564,7 +1564,20 @@ const fixtureFor = (scenario) => {
     state.panel.account.modules.signer.height = 56
   }
 
-  if (scenario.state === 'signature-permit-review') {
+  if (scenario.state === 'account-settings-expanded') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'settings', account: QUALIFICATION_ACCOUNT, title: 'Settings' }
+      }
+    ]
+  }
+
+  if (scenario.state === 'signature-permit-review' || scenario.state === 'signature-permit-amount-editor') {
     const request = permitReviewRequest()
     prepareSelectedAccount(state, request)
     state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'ledger'
@@ -1575,7 +1588,11 @@ const fixtureFor = (scenario) => {
     state.windows.panel.nav = [
       {
         view: 'requestView',
-        data: { accountId: QUALIFICATION_ACCOUNT, requestId: request.handlerId, step: 'confirm' }
+        data: {
+          accountId: QUALIFICATION_ACCOUNT,
+          requestId: request.handlerId,
+          step: scenario.state === 'signature-permit-amount-editor' ? 'adjustPermit' : 'confirm'
+        }
       }
     ]
     state.windows.panel.footer.height = 114
@@ -2115,8 +2132,19 @@ const fixtureFor = (scenario) => {
     state.windows.panel.footer.height = 250
   }
 
-  if (scenario.state === 'wallet-calls-funding') {
+  if (
+    scenario.state === 'wallet-calls-funding' ||
+    scenario.state === 'wallet-calls-review' ||
+    scenario.state === 'wallet-calls-adjustment'
+  ) {
     const request = walletCallsFundingRequest()
+    const adjustment = scenario.state === 'wallet-calls-adjustment'
+    const review = scenario.state === 'wallet-calls-review'
+    if (adjustment || review) {
+      delete request.status
+      delete request.notice
+      delete request.recoverableError
+    }
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -2126,13 +2154,28 @@ const fixtureFor = (scenario) => {
       {
         view: 'requestView',
         data: {
-          step: 'confirm',
+          step: adjustment ? 'adjustWalletCalls' : 'confirm',
           accountId: QUALIFICATION_ACCOUNT,
-          requestId: request.handlerId
+          requestId: request.handlerId,
+          ...(adjustment
+            ? {
+                walletCallsDraft: {
+                  startingNonce: '7',
+                  calls: [
+                    {
+                      mode: 'eip1559',
+                      gasLimit: '21000',
+                      maxFeePerGas: '2',
+                      maxPriorityFeePerGas: '1'
+                    }
+                  ]
+                }
+              }
+            : {})
         }
       }
     ]
-    state.windows.panel.footer.height = scenario.id.includes('-qr-') ? 430 : 270
+    state.windows.panel.footer.height = adjustment ? 114 : scenario.id.includes('-qr-') ? 430 : 270
   }
 
   if (

@@ -84,6 +84,8 @@ const FeeOverlayInput = ({
   draftKey,
   initialValue,
   labelText,
+  unitText,
+  visualLabel,
   limiter,
   onDraftSafetyChange,
   onReceiveValue,
@@ -163,12 +165,12 @@ const FeeOverlayInput = ({
 
   return (
     <>
-      <div className='txFeeOverlayInput'>
+      <div className='txFeeOverlayField'>
         <input
           tabIndex={tabIndex}
           value={value}
           className='txFeeOverlayInput wrenInput'
-          aria-labelledby={labelId}
+          aria-label={labelText}
           onChange={(e) => {
             const parsedInput = (decimals ? /[0-9.]*/ : /[0-9]*/).exec(e.target.value)
             const enteredValue = parsedInput[0] || ''
@@ -222,9 +224,10 @@ const FeeOverlayInput = ({
             }
           }}
         />
+        {unitText ? <span className='txFeeOverlayUnit'>{unitText}</span> : null}
       </div>
-      <div id={labelId} className='txFeeOverlayLabel'>
-        {labelText}
+      <div id={labelId} className='txFeeOverlayLabel' aria-hidden='true'>
+        <span>{visualLabel || labelText}</span>
       </div>
     </>
   )
@@ -238,6 +241,7 @@ const GasLimitInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabI
       onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Gas Limit (UNITS)'
+      visualLabel='Gas limit'
       tabIndex={tabIndex}
       decimals={false}
       limiter={limiter}
@@ -253,6 +257,8 @@ const GasPriceInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabI
       onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Gas Price (GWEI)'
+      visualLabel='Gas price'
+      unitText='Gwei'
       tabIndex={tabIndex}
       decimals={true}
       limiter={limiter}
@@ -268,6 +274,8 @@ const BaseFeeInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, tabIn
       onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Base Fee (GWEI)'
+      visualLabel='Base fee'
+      unitText='Gwei'
       tabIndex={tabIndex}
       decimals={true}
       limiter={limiter}
@@ -283,6 +291,8 @@ const PriorityFeeInput = ({ initialValue, onDraftSafetyChange, onReceiveValue, t
       onDraftSafetyChange={onDraftSafetyChange}
       onReceiveValue={onReceiveValue}
       labelText='Max Priority Fee (GWEI)'
+      visualLabel='Priority fee'
+      unitText='Gwei'
       tabIndex={tabIndex}
       decimals={true}
       limiter={limiter}
@@ -395,6 +405,11 @@ class TxFeeOverlay extends Component {
         className={`txAdjustFee${this.props.inline ? ' txAdjustFeeInline' : ' cardShow'}`}
         ref={this.moduleRef}
       >
+        {this.props.inline ? (
+          <div className='txAdjustFeeIntro'>
+            <strong>Advanced fee limits</strong>
+          </div>
+        ) : null}
         {usesBaseFee(data) ? (
           <>
             <BaseFeeInput

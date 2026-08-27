@@ -1,72 +1,23 @@
 .txAdjustFee
-  padding-top 64px
-  
-  input
-    outline 0
-    border 0
-    background var(--ghostC)
-    color var(--outerspace)
-    text-align center
-    width 200px
-    font-size 21px
-    margin 5px 25px
-    height 30px
-    border-radius 12px
-    font-family 'FiraCode'
-    transition var(--standardFast)
-    box-shadow 0px 0px 0px var(--ghostA)
-
-  input:focus
-    transform scale(1.2) translateY(-2px)
-    box-shadow 0px 10px 20px var(--ghostA)
-
-  // input:focus::selection
-  //   background var(--moonHighlight)
-
-  .txFeeOverlayInset
-    max-height 100%
-    width 100%
-    overflow-x hidden
-    overflow-y scroll
-
-  .txFeeOverlayType
-    width 100%
-    display none
-
-  .txFeeOverlayEstimate
-    width 100%
-    disaply none
-
-  .txFeeOverlayBaseFee
-    width 100%
-
-  .txFeeOverlayPriorityFee
-    width 100%
-
-  .txFeeOverlayLimit
-    width 100%
-
-  .txFeeOverlayInput
-    display flex
-    justify-content center
-
+  .txFeeOverlayField,
   .txFeeOverlayLabel
-    font-size var(--wren-type-small)
-    padding 0px 5px 25px 5px 
     display flex
-    justify-content center
-    text-transform uppercase
-    font-weight 300
 
 .txAdjustFeeInline
   display grid
-  padding var(--wren-space-4) 0 var(--wren-space-3) 136px
+  padding var(--wren-space-3) 0 var(--wren-space-1)
   border-top 1px solid var(--wren-ledger-rule)
-  grid-template-columns repeat(2, minmax(0, 1fr))
+  grid-template-columns repeat(3, minmax(0, 1fr))
   gap var(--wren-space-3)
 
-  > div:last-child:nth-child(odd)
+  .txAdjustFeeIntro
     grid-column 1 / -1
+    padding 0 0 var(--wren-space-1)
+
+    strong
+      flex none
+      font-size var(--wren-type-small)
+      font-weight 620
 
   .txFeeOverlayBaseFee,
   .txFeeOverlayPriorityFee,
@@ -74,176 +25,44 @@
   .txFeeOverlayLimit
     width auto
     min-width 0
+    display flex
+    flex-direction column
 
-  .txFeeOverlayInput
+  .txFeeOverlayField
+    position relative
     width 100%
+    align-items center
 
   input.txFeeOverlayInput
     width 100%
-    height 39px
+    height 44px
     box-sizing border-box
     margin 0
-    border 2px solid #050705
-    border-radius 0
-    color var(--wren-text-primary)
-    background-color var(--wren-surface-inset)
-    background-image linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
-    box-shadow inset 0 0 0 1px var(--wren-border-subtle), inset 1px 1px 2px rgba(0, 0, 0, .6), 0 0 0 1px var(--wren-border-strong)
+    padding 0 58px 0 var(--wren-space-3)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-body)
     text-align left
-    padding 0 var(--wren-space-3)
     transform none
 
   input.txFeeOverlayInput:focus
-    border-color var(--wren-accent-primary)
-    box-shadow inset 0 0 0 1px #6f5b3e, inset 1px 1px 2px rgba(0, 0, 0, .56), 0 0 0 1px var(--wren-accent-primary-hover), 0 0 0 2px rgba(166, 138, 97, .12)
     transform none
 
-  .txFeeOverlayLabel
-    justify-content flex-start
-    padding var(--wren-space-1) 0 0
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-ui)
-    font-size var(--wren-type-caption)
-    font-weight 450
-    text-transform none
-
-// .txModuleDataBodyCopied
-//   position absolute
-//   top 0
-//   left 0
-//   right 0
-//   bottom 0
-//   display flex
-//   justify-content center
-//   align-items center
-//   font-size 16px
-//   letter-spacing 0px
-
-//   svg
-//     margin -3px 0px 0px 10px
-
-// .decodedDataContract
-//   padding 32px 11px 11px 11px
-//   position relative
-//   border-radius 8px
-//   background var(--ghostC)
-
-.dataUnverified
-  position absolute
-  color var(--bad)
-  top 9px
-  right 15px
-  font-size var(--wren-type-caption)
-  font-weight 400
-  font-family 'MainFont'
-  text-transform uppercase
-
-.dataSource
-  position absolute
-  top 9px
-  left 15px
-  font-size var(--wren-type-caption)
-  font-weight 400
-  font-family 'MainFont'
-  text-transform uppercase
-
-.decodedDataContractTarget
-  position relative
-  height 70px
-  padding 0px
-  box-sizing border-box
-  display flex
-  flex-direction column
-  align-items center
-  justify-content center
-
-  .decodedDataSync
+  .txFeeOverlayUnit
     position absolute
-    svg 
-      transform rotate(90deg)
+    right var(--wren-space-3)
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size 12px
+    pointer-events none
 
-  .decodedDataSyncLeft
-    left 14px
-    top 28px
-    width 8px
-    overflow hidden
-    transform rotate(-10deg)
-    svg 
-      transform rotate(90deg) scaleX(-1)
+  .txFeeOverlayLabel
+    order -1
+    justify-content flex-start
+    margin-bottom var(--wren-space-1)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-caption)
+    font-weight 520
 
-  .decodedDataSyncRight
-    right 14px
-    top 28px
-    width 8px
-    overflow hidden
-    transform rotate(190deg)
-    svg 
-      transform rotate(90deg)
-
-  .decodedDataContractName
-    text-align center
-    font-size 17px
-    font-family 'MainFont'
-    font-weight 300
-
-  .decodedDataContractMethod
-    text-align center
-    font-family 'MainFont'
-    font-weight 300
-    font-size 16px
-    color var(--moon)
-
-.decodedDataContractArgHeader
-  font-size var(--wren-type-small)
-  font-family 'MainFont'
-  text-transform uppercase
-  letter-spacing 2px
-  font-weight 400
-  text-align center
-  height 30px
-  display flex
-  align-items center
-  justify-content center
-  color var(--outerspace)
-  background var(--ghostD)
-  border-radius 8px
-
-.decodedDataContractArg
-  position relative
-  text-align center
-  padding 10px 10px 25px 10px
-  font-size 17px
-
-.decodedDataSubtitle
-  position absolute
-  left 0
-  bottom 0
-  right 0
-  height 30px
-  font-size var(--wren-type-small)
-  font-weight 400
-  font-family 'MainFont'
-  display flex
-  align-items center
-  justify-content center
-
-.overflowBox
-  width 100%
-  height auto
-  overflow-x scroll
-  overflow-y hidden
-  word-wrap normal
-  margin-bottom -15px
-
-.rawDataHeader
-  font-family 'MainFont'
-  text-align center
-  font-size 16px
-  margin-top 20px
-  margin-bottom 5px
-
-.txDataOverlayRaw
-  margin-top 30px
-  
+@media (max-width: 520px)
+  .txAdjustFeeInline
+    grid-template-columns 1fr

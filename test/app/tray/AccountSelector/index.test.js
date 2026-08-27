@@ -164,7 +164,7 @@ it('uses a direct account choice prompt before the startup account list', () => 
   const list = screen.getByTestId('startup-account-list')
   const children = [...heading.closest('.accountSelector').children]
 
-  expect(screen.getByText('Choose an account to open your wallet.')).toBeTruthy()
+  expect(screen.queryByText('Choose an account to open your wallet.')).toBeNull()
   expect(children[0].contains(heading)).toBe(true)
   expect(children[1].contains(filter)).toBe(true)
   expect(children[2]).toBe(list)

@@ -12,6 +12,42 @@ jest.mock('../../../../resources/link', () => ({
 const maxIntStr = max.toString(10)
 
 describe('changing approval amounts', () => {
+  it.each([4_102_444_800, 4_102_444_800_000])(
+    'shows a stable calendar date for a %s permit deadline',
+    (deadline) => {
+      const requestedAmount = BigNumber('1')
+      const approval = {
+        data: {
+          spender: {
+            address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4',
+            ens: '',
+            type: 'external'
+          },
+          amount: '1',
+          decimals: 0,
+          name: 'TST',
+          symbol: 'TST',
+          contract: {
+            address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698',
+            ens: '',
+            type: 'contract'
+          }
+        }
+      }
+
+      render(
+        <EditTokenSpend
+          data={approval.data}
+          deadline={deadline}
+          requestedAmount={requestedAmount}
+          updateRequest={() => {}}
+        />
+      )
+
+      expect(screen.getByText('Jan 1, 2100')).toBeTruthy()
+    }
+  )
+
   it('allows the user to set the token approval to a custom amount', async () => {
     const onUpdate = jest.fn()
     const requestedAmount = BigNumber('0x011170')
@@ -40,10 +76,14 @@ describe('changing approval amounts', () => {
     )
 
     const custom = screen.queryByRole('button', { name: 'Custom' })
+    expect(custom.closest('.wrenTokenApprovalEditor')).toBeTruthy()
+    expect(custom.classList.contains('wrenTokenApprovalMode')).toBe(true)
     await user.click(custom)
     expect(custom.getAttribute('aria-pressed')).toBe('true')
 
     const enterAmount = screen.queryByRole('textbox', { name: 'Custom amount' })
+    expect(enterAmount.classList.contains('wrenInput')).toBe(true)
+    expect(enterAmount.parentElement.classList.contains('wrenInputGroup')).toBe(true)
     await user.type(enterAmount, '50')
 
     const updateCustom = screen.getByRole('button', { name: 'Update' })
@@ -123,6 +163,9 @@ describe('changing approval amounts', () => {
     await user.type(enterAmount, '50.00001')
 
     expect(screen.getByText('Invalid amount')).toBeTruthy()
+    expect(
+      enterAmount.closest('.approveTokenSpendAmount').querySelector('.wrenTokenApprovalAmountSymbol')
+    ).toBeNull()
     expect(screen.queryByText('Update')).toBeNull()
     expect(onUpdate).not.toHaveBeenCalled()
   })
@@ -341,6 +384,9 @@ describe('changing approval amounts', () => {
 
     expect(input.value).toBe('1e2')
     expect(screen.getByText('Invalid amount')).toBeTruthy()
+    expect(
+      input.closest('.approveTokenSpendAmount').querySelector('.wrenTokenApprovalAmountSymbol')
+    ).toBeNull()
     expect(onUpdate).not.toHaveBeenCalled()
   })
 

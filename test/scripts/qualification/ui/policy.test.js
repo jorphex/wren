@@ -91,6 +91,39 @@ it('qualifies unavailable explorer credential status without secure-storage clai
   })
 })
 
+it('qualifies the hidden editors that must retain the shared Perch field treatment', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const ids = [
+    'tray-revocation-fee-editor-full-1',
+    'tray-permit-amount-editor-full-1',
+    'tray-wallet-calls-adjustment-full-1',
+    'tray-account-settings-expanded-full-1'
+  ]
+  const hiddenEditors = ids.map((id) => scenarios.find((scenario) => scenario.id === id))
+
+  expect(hiddenEditors.every(Boolean)).toBe(true)
+  expect(hiddenEditors[0]).toMatchObject({
+    state: 'revocation-review',
+    action: { type: 'clickText', text: 'Adjust' },
+    ready: '.txAdjustFeeInline input.txFeeOverlayInput'
+  })
+  expect(hiddenEditors[1]).toMatchObject({
+    state: 'signature-permit-amount-editor',
+    action: { type: 'clickText', text: 'Edit approval amount, current 2412' },
+    ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]'
+  })
+  expect(hiddenEditors[2]).toMatchObject({
+    state: 'wallet-calls-adjustment',
+    ready: '.walletCallsAdjust input[aria-label="Starting nonce"]'
+  })
+  expect(fixtureFor(hiddenEditors[3]).windows.panel.nav).toEqual([
+    {
+      view: 'expandedModule',
+      data: { id: 'settings', account: QUALIFICATION_ACCOUNT, title: 'Settings' }
+    }
+  ])
+})
+
 it('qualifies network consent separately from account access at the real tray width', () => {
   const scenarios = scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')
 
@@ -925,7 +958,7 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
 
   expect(review.requiredControls).toEqual(['Cancel', 'Revoke delegation', 'Adjust'])
   expect(review.requiredText).toEqual(
-    expect.arrayContaining(['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce'])
+    expect.arrayContaining(['Delegation evidence', 'Maximum execution fee'])
   )
   expect(monitor).toMatchObject({
     action: { type: 'clickText', text: 'Stop monitoring' },

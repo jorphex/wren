@@ -512,9 +512,11 @@ export class Settings extends Component {
                   ))}
                 </div>
               </div>
-              <div className='interfaceScaleStatus' aria-hidden='true'>
-                {`${requestedInterfaceScalePercent}% requested · using ${effectiveInterfaceScalePercent}% to fit this display`}
-              </div>
+              {requestedInterfaceScalePercent !== effectiveInterfaceScalePercent ? (
+                <div className='interfaceScaleStatus' aria-hidden='true'>
+                  {`${requestedInterfaceScalePercent}% requested · using ${effectiveInterfaceScalePercent}% to fit this display`}
+                </div>
+              ) : null}
               <div className='interfaceScaleAnnouncement' role='status' aria-live='polite' aria-atomic='true'>
                 {interfaceScaleAnnouncement}
               </div>

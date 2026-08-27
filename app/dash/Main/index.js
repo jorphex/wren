@@ -125,10 +125,6 @@ export class Main extends React.Component {
           <section className='dashHomeCard dashCompanion' aria-labelledby='dash-companion-title'>
             <div className='dashCompanionCopy'>
               <h2 id='dash-companion-title'>Browser companion</h2>
-              <p>
-                Connect browser dapps through the Wren companion using this wallet&apos;s active account and
-                signing context.
-              </p>
             </div>
             <div className='dashCompanionBrowserActions'>
               <button
@@ -161,7 +157,7 @@ export class Main extends React.Component {
                 type='button'
                 className='dashSupportWrenButton requestFeatureButton wrenControl wrenControlGhost'
                 aria-controls='dash-support-wren-preview'
-                aria-describedby='dash-support-wren-description dash-support-wren-status'
+                aria-describedby='dash-support-wren-status'
                 aria-expanded={supportPreviewOpen}
                 onBlur={() => this.setState({ supportPreviewFocused: false })}
                 onClick={this.copySupportAddress}
@@ -179,9 +175,6 @@ export class Main extends React.Component {
                     value={supportAddress}
                   />
                   <div className='dashSupportWrenAddress'>{supportAddress}</div>
-                  <p id='dash-support-wren-description' className='dashSupportWrenPreviewNote'>
-                    Support is optional.
-                  </p>
                 </div>
               ) : null}
               <span

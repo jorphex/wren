@@ -224,7 +224,6 @@ const EarnCatalogLoading = () => (
         <img src={yearnLogo} alt='Yearn' />
       </div>
       <h1>Earn</h1>
-      <p>A selected set of vaults, grouped by network.</p>
     </header>
     <div className='earnTabs earnTabsSkeleton' aria-hidden='true'>
       {CHAINS.map(({ id }) => (
@@ -1655,7 +1654,6 @@ export class Earn extends React.Component {
             <img src={yearnLogo} alt='Yearn' />
           </div>
           <h1>Earn</h1>
-          <p>A selected set of vaults, grouped by network.</p>
           <button
             type='button'
             className='earnRefresh wrenControl wrenControlSecondary wrenControlCompact'

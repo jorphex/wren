@@ -46,28 +46,36 @@ export class SettingsExpanded extends React.Component {
     return (
       <div className='accountViewScroll'>
         <div className='expandedModule'>
-          <div className='panelBlock'>
-            <div className='panelBlockTitle'>Name</div>
-            <div className='panelBlockValues panelBlockItem'>
-              <input
-                className='wrenInput'
-                type='text'
-                aria-label='Account name'
-                value={this.state.name}
-                onChange={(e) => {
-                  this.setState({ name: e.target.value })
-                }}
-                onBlur={() => this.saveName()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') e.currentTarget.blur()
-                  if (e.key === 'Escape') {
-                    const name = this.store('main.accounts', this.props.account, 'name') || ''
-                    this.setState({ name })
-                  }
-                }}
-              />
+          <header className='accountSettingsIntro'>
+            <h2>Account</h2>
+          </header>
+          <section className='panelBlock accountSettingsEditor'>
+            <div className='accountSettingsAddress'>
+              <span>Address</span>
+              <code>{this.props.account}</code>
             </div>
-          </div>
+            <label className='panelBlockTitle' htmlFor='wren-account-name'>
+              Account name
+            </label>
+            <input
+              id='wren-account-name'
+              className='wrenInput panelBlockItem'
+              type='text'
+              aria-label='Account name'
+              value={this.state.name}
+              onChange={(e) => {
+                this.setState({ name: e.target.value })
+              }}
+              onBlur={() => this.saveName()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') {
+                  const name = this.store('main.accounts', this.props.account, 'name') || ''
+                  this.setState({ name })
+                }
+              }}
+            />
+          </section>
         </div>
       </div>
     )

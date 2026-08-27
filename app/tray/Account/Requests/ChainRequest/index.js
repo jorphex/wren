@@ -1,12 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
-import {
-  LightweightRequest,
-  RequestFact,
-  RequestFactGrid,
-  RequestNote,
-  RequestSection
-} from '../LightweightRequest'
+import { LightweightRequest, RequestFact, RequestFactGrid, RequestSection } from '../LightweightRequest'
 
 const networkName = (name, chainId) => name || (chainId == null ? 'Unknown network' : `Chain ${chainId}`)
 const chainIdValue = (chainId) => (chainId == null ? 'Not supplied' : String(chainId))
@@ -25,7 +19,7 @@ export class ChainRequest extends React.Component {
           icon='network'
           eyebrow='Network change'
           title={`Switch to ${destinationName}?`}
-          help={`This changes the network used by ${originName}. It does not share your account.`}
+          help='Account access is unchanged.'
         >
           <RequestSection title='Request details'>
             <RequestFactGrid>
@@ -35,9 +29,6 @@ export class ChainRequest extends React.Component {
               <RequestFact label='Chain ID' value={chainIdValue(chain.id)} technical={true} />
             </RequestFactGrid>
           </RequestSection>
-          <RequestNote>
-            Account access remains separate. The site must still ask before Wren shares your address.
-          </RequestNote>
         </LightweightRequest>
       )
     }
@@ -51,7 +42,6 @@ export class ChainRequest extends React.Component {
         icon='network'
         eyebrow='Network proposal'
         title={`Add ${networkName(chain.name, chain.id)} to Wren?`}
-        help='Inspect the network identity and endpoints before continuing to Wren’s network editor.'
       >
         <RequestSection title='Network details'>
           <RequestFactGrid>
@@ -76,10 +66,6 @@ export class ChainRequest extends React.Component {
               technical={true}
             />
           </RequestFactGrid>
-          <RequestNote>
-            Nothing is added yet. <strong>Review network</strong> opens Wren’s editor so you can verify and
-            save these settings.
-          </RequestNote>
         </RequestSection>
       </LightweightRequest>
     )

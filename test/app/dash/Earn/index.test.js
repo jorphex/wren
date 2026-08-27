@@ -375,7 +375,7 @@ it('shows account positions in a distinct section before the chain-separated vau
 
   const ethereumHeading = await screen.findByRole('heading', { name: 'Ethereum' })
   expect(screen.getByRole('img', { name: 'Yearn' })).toBeTruthy()
-  expect(screen.getByText('A selected set of vaults, grouped by network.')).toBeTruthy()
+  expect(screen.queryByText('A selected set of vaults, grouped by network.')).toBeNull()
   expect(screen.getByRole('heading', { name: 'Base' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Katana' })).toBeTruthy()
   const positionHeading = screen.getByRole('heading', { name: 'Your positions' })

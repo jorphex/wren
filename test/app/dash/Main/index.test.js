@@ -162,7 +162,6 @@ it('reveals a local QR preview with the exact support address on hover', () => {
   const qr = screen.getByRole('img', { name: 'QR code for the support address' })
   expect(qr.getAttribute('data-qr-payload')).toBe(WREN_SUPPORT_ADDRESS)
   expect(screen.getByText(WREN_SUPPORT_ADDRESS)).toBeTruthy()
-  expect(screen.getByText('Support is optional.')).toBeTruthy()
 
   fireEvent.mouseLeave(button.closest('.dashSupportWrenDisclosure'))
   expect(screen.queryByRole('img', { name: 'QR code for the support address' })).toBeNull()
@@ -176,7 +175,7 @@ it('reveals the support QR preview on keyboard focus', () => {
 
   expect(button.getAttribute('aria-expanded')).toBe('true')
   expect(screen.getByRole('img', { name: 'QR code for the support address' })).toBeTruthy()
-  expect(button.getAttribute('aria-describedby')).toContain('dash-support-wren-description')
+  expect(button.getAttribute('aria-describedby')).toBe('dash-support-wren-status')
 
   fireEvent.mouseLeave(button.closest('.dashSupportWrenDisclosure'))
   expect(button.getAttribute('aria-expanded')).toBe('true')

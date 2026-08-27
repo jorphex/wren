@@ -9,8 +9,6 @@ import {
   parseTokenDecimalAmount
 } from '../../domain/token/amount'
 import Icon from '../Icon'
-import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../Cluster'
-import Countdown from '../Countdown'
 
 import useCopiedMessage from '../../Hooks/useCopiedMessage'
 
@@ -21,53 +19,31 @@ const getMode = (requestedAmount, amount) => {
   return isMax(amount) ? 'unlimited' : 'custom'
 }
 
-const Details = ({ address, name, copyLabel }) => {
+const shortAddress = (address) => `${address.slice(0, 8)}…${address.slice(-6)}`
+
+const formatExpiry = (deadline) => {
+  const timestamp = Number(deadline)
+  const date = new Date(timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000)
+  if (Number.isNaN(date.getTime())) return 'Unknown'
+
+  return new Intl.DateTimeFormat('en', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+    year: 'numeric'
+  }).format(date)
+}
+
+const ApprovalAddress = ({ address, name, copyLabel }) => {
   const [showCopiedMessage, copyAddress] = useCopiedMessage(address)
 
   return (
-    <ClusterRow>
-      <ClusterValue pointerEvents={'auto'}>
-        <button
-          type='button'
-          aria-label={copyLabel}
-          className='clusterAddress clusterAddressButton'
-          onClick={copyAddress}
-        >
-          <span className='clusterAddressRecipient'>
-            {name ? (
-              <span className='clusterAddressRecipient' style={{ fontFamily: 'MainFont', fontWeight: '400' }}>
-                {name}
-              </span>
-            ) : (
-              <>
-                {address.substring(0, 8)}
-                <Icon name='ellipsis' size={15} />
-                {address.substring(address.length - 6)}
-              </>
-            )}
-          </span>
-          <div className='clusterAddressRecipientFull'>
-            {showCopiedMessage ? (
-              <span>{'Address copied'}</span>
-            ) : (
-              <span className='clusterFira'>{address}</span>
-            )}
-          </div>
-        </button>
-      </ClusterValue>
-    </ClusterRow>
+    <button type='button' aria-label={copyLabel} className='wrenTokenApprovalAddress' onClick={copyAddress}>
+      <strong>{name || shortAddress(address)}</strong>
+      <span>{showCopiedMessage ? 'Copied' : name ? shortAddress(address) : 'Copy address'}</span>
+    </button>
   )
 }
-
-const Description = ({ isRevoke }) => (
-  <ClusterRow>
-    <ClusterValue>
-      <div className='clusterTag' style={{ color: 'var(--moon)' }}>
-        {isRevoke ? <span>{'Revoke approval to spend'}</span> : <span>{'Grant approval to spend'}</span>}
-      </div>
-    </ClusterValue>
-  </ClusterRow>
-)
 
 const EditTokenSpend = ({
   data,
@@ -84,7 +60,6 @@ const EditTokenSpend = ({
   const hasInvalidAmount = parsedAmount === undefined || parsedRequestedAmount === undefined
   const decimalAmount =
     parsedAmount === undefined ? undefined : formatTokenBaseUnitAmount(amountValue.toString(10), decimals)
-
   const [mode, setMode] = useState(hasInvalidAmount ? 'invalid' : getMode(requestedValue, amountValue))
   const [custom, setCustom] = useState(decimalAmount || amountValue.toString(10))
   const [approvalSubmitting, setApprovalSubmitting] = useState(false)
@@ -127,15 +102,11 @@ const EditTokenSpend = ({
     submitApprovalAmount(requested, 'requested', formatTokenBaseUnitAmount(requested, decimals) || requested)
   }
 
-  const setToMax = () => {
-    submitApprovalAmount(MAX_UINT256.toString(10), 'unlimited')
-  }
-
-  const setToRevoke = () => {
-    submitApprovalAmount('0', 'revoke', '0')
-  }
+  const setToMax = () => submitApprovalAmount(MAX_UINT256.toString(10), 'unlimited')
+  const setToRevoke = () => submitApprovalAmount('0', 'revoke', '0')
 
   const customAmount = parseTokenDecimalAmount(custom, decimals)
+  const invalidCustomAmount = custom !== '' && customAmount === undefined
   const submitCustomAmount = () => {
     const nextAmount = custom === '' ? requestedValue : customAmount
     if (nextAmount === undefined) {
@@ -146,16 +117,14 @@ const EditTokenSpend = ({
     submitApprovalAmount(nextAmount.toString(10), 'custom')
   }
 
-  const isRevoke = canRevoke && parsedAmount === 0n
+  const isRevoke = canRevoke && (mode === 'revoke' || parsedAmount === 0n)
   const isCustom = mode === 'custom'
-
   const displayAmount =
     parsedAmount === undefined
       ? 'unknown'
       : isMax(amountValue)
         ? 'unlimited'
         : decimalAmount || amountValue.toString(10)
-
   const inputLock =
     hasInvalidAmount ||
     !data.symbol ||
@@ -163,200 +132,192 @@ const EditTokenSpend = ({
     !Number.isInteger(decimals) ||
     decimals < 0 ||
     decimals > MAX_TOKEN_DECIMALS
+  const unlimitedWarning =
+    mode === 'unlimited' ? `This contract can keep using ${symbol} until you revoke access.` : ''
 
   return (
-    <div className='updateTokenApproval'>
-      <ClusterBox title={'Token approval details'} style={{ marginTop: '64px' }}>
-        <Cluster>
-          <Details
-            {...{
-              address: spender.address,
-              name: spender.ens,
-              copyLabel: 'Copy spender address'
-            }}
-          />
-          <Description
-            {...{
-              isRevoke,
-              mode,
-              custom
-            }}
-          />
-          <Details
-            {...{
-              address: contract.address,
-              name,
-              copyLabel: 'Copy token contract address'
-            }}
-          />
-          {deadline && (
-            <ClusterRow>
-              <ClusterValue>
-                <Countdown
-                  end={deadline}
-                  title={'Permission expires in'}
-                  innerClass='clusterFocusHighlight'
-                  titleClass='clusterFocus'
-                />
-              </ClusterValue>
-            </ClusterRow>
-          )}
-        </Cluster>
+    <div className='updateTokenApproval wrenTokenApprovalEditor'>
+      <header className='wrenTokenApprovalIntro'>
+        <h2>{isRevoke ? 'Remove token access' : 'Token approval'}</h2>
+      </header>
 
-        <Cluster style={{ marginTop: '16px' }}>
-          <ClusterRow>
-            <ClusterValue>
-              <div className='approveTokenSpendAmountLabel'>{symbol}</div>
-            </ClusterValue>
-          </ClusterRow>
-          <ClusterRow>
-            <ClusterValue transparent={true} pointerEvents={'auto'}>
-              <div className='approveTokenSpendAmount'>
-                {isCustom && custom !== '' && customAmount === undefined ? (
-                  <div
-                    role='alert'
-                    className='approveTokenSpendAmountSubmit approveTokenSpendAmountStatus'
-                    style={{ color: 'var(--bad)' }}
-                  >
-                    {'Invalid amount'}
-                  </div>
-                ) : isCustom && customAmount !== undefined && amountValue !== customAmount ? (
-                  <button
-                    type='button'
-                    className='approveTokenSpendAmountSubmit'
-                    disabled={approvalSubmitting}
-                    onClick={(event) => activateOnce(event, submitCustomAmount)}
-                  >
-                    {'Update'}
-                  </button>
-                ) : (
-                  <div
-                    key={mode + amount}
-                    className='approveTokenSpendAmountSubmit approveTokenSpendAmountStatus'
-                    role='status'
-                    aria-label='Approval amount applied'
-                    style={{ color: 'var(--good)' }}
-                  >
-                    <Icon name='check' size={20} />
-                  </div>
-                )}
-                {mode === 'custom' ? (
-                  <input
-                    autoFocus
-                    type='text'
-                    maxLength={MAX_TOKEN_AMOUNT_INPUT_LENGTH}
-                    aria-label='Custom amount'
-                    value={custom}
-                    disabled={approvalSubmitting}
-                    onChange={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      updateCustomAmount(e.target.value)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        e.target.blur()
-                        submitCustomAmount()
-                      }
-                    }}
-                  />
-                ) : inputLock ? (
-                  <div className='approveTokenSpendAmountNoInput' style={{ cursor: 'default' }}>
-                    {displayAmount}
-                  </div>
-                ) : (
-                  <button
-                    type='button'
-                    aria-label={`Edit approval amount, current ${displayAmount}`}
-                    className='approveTokenSpendAmountNoInput'
-                    disabled={approvalSubmitting}
-                    onClick={() => {
-                      setCustom('')
-                      setMode('custom')
-                    }}
-                  >
-                    {displayAmount}
-                  </button>
-                )}
-              </div>
-            </ClusterValue>
-          </ClusterRow>
-          <ClusterRow>
-            <ClusterValue transparent={true}>
-              <div className='approveTokenSpendAmountSubtitle'>Token approval spending limit</div>
-            </ClusterValue>
-          </ClusterRow>
-          {!hasInvalidAmount && (
-            <>
-              {canRevoke && (
-                <ClusterRow>
-                  <ClusterValue pointerEvents={'auto'}>
-                    <button
-                      type='button'
-                      className='clusterTag clusterTagButton'
-                      disabled={approvalSubmitting}
-                      style={mode === 'revoke' ? { color: 'var(--good)' } : {}}
-                      aria-pressed={mode === 'revoke'}
-                      onClick={(event) => activateOnce(event, setToRevoke)}
-                    >
-                      {'Revoke'}
-                    </button>
-                  </ClusterValue>
-                </ClusterRow>
+      <section className='wrenTokenApprovalContext' aria-label='Approval details'>
+        <div>
+          <span className='wrenTokenApprovalContextLabel'>Token</span>
+          <div className='wrenTokenApprovalIdentity'>
+            <span>
+              <strong>{name}</strong>
+              <small>{symbol}</small>
+            </span>
+            <ApprovalAddress
+              address={contract.address}
+              name={contract.ens}
+              copyLabel='Copy token contract address'
+            />
+          </div>
+        </div>
+        <div>
+          <span className='wrenTokenApprovalContextLabel'>Can be used by</span>
+          <ApprovalAddress
+            address={spender.address}
+            name={spender.ens || 'Contract'}
+            copyLabel='Copy spender address'
+          />
+        </div>
+        {deadline ? (
+          <div className='wrenTokenApprovalExpiry'>
+            <span className='wrenTokenApprovalContextLabel'>Expires</span>
+            <strong>{formatExpiry(deadline)}</strong>
+          </div>
+        ) : null}
+      </section>
+
+      <section className='wrenTokenApprovalDecision' aria-labelledby='token-approval-limit-title'>
+        <div className='wrenTokenApprovalDecisionHeading'>
+          <div>
+            <span id='token-approval-limit-title'>Spending limit</span>
+          </div>
+          {!isCustom && !inputLock ? (
+            <button
+              type='button'
+              aria-label={`Edit approval amount, current ${displayAmount}`}
+              className='wrenTokenApprovalCurrent'
+              disabled={approvalSubmitting}
+              onClick={() => {
+                setCustom('')
+                setMode('custom')
+              }}
+            >
+              <strong>{displayAmount}</strong>
+              <span>{displayAmount === 'unlimited' ? '' : symbol}</span>
+            </button>
+          ) : !isCustom ? (
+            <strong className='wrenTokenApprovalCurrentValue'>{displayAmount}</strong>
+          ) : null}
+        </div>
+
+        {!hasInvalidAmount ? (
+          <div className='wrenTokenApprovalModes' aria-label='Spending limit options'>
+            <button
+              type='button'
+              aria-label='Requested'
+              className='wrenTokenApprovalMode'
+              disabled={approvalSubmitting}
+              aria-pressed={mode === 'requested'}
+              onClick={(event) => activateOnce(event, resetToRequestAmount)}
+            >
+              <span>Requested</span>
+            </button>
+            <button
+              type='button'
+              aria-label='Unlimited'
+              className='wrenTokenApprovalMode'
+              disabled={approvalSubmitting}
+              aria-pressed={mode === 'unlimited'}
+              onClick={(event) => activateOnce(event, setToMax)}
+            >
+              <span>Unlimited</span>
+            </button>
+            {!inputLock ? (
+              <button
+                type='button'
+                aria-label='Custom'
+                className='wrenTokenApprovalMode'
+                disabled={approvalSubmitting}
+                aria-pressed={isCustom}
+                onClick={() => {
+                  releaseApprovalSubmission()
+                  setMode('custom')
+                  setCustom('')
+                }}
+              >
+                <span>Custom</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {isCustom ? (
+          <div className='wrenTokenApprovalAmountEditor'>
+            <label htmlFor='wren-token-approval-custom'>Custom limit</label>
+            <div
+              className={`approveTokenSpendAmount wrenInputGroup ${
+                invalidCustomAmount ? 'wrenInputGroupError' : ''
+              }`}
+            >
+              <input
+                id='wren-token-approval-custom'
+                autoFocus
+                className='wrenInput'
+                type='text'
+                maxLength={MAX_TOKEN_AMOUNT_INPUT_LENGTH}
+                aria-label='Custom amount'
+                aria-invalid={invalidCustomAmount}
+                placeholder='Enter amount'
+                value={custom}
+                disabled={approvalSubmitting}
+                onChange={(event) => updateCustomAmount(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    event.target.blur()
+                    submitCustomAmount()
+                  }
+                }}
+              />
+              {!invalidCustomAmount ? <span className='wrenTokenApprovalAmountSymbol'>{symbol}</span> : null}
+              {invalidCustomAmount ? (
+                <span role='alert' className='wrenTokenApprovalAmountStatus wrenTokenApprovalStatusDanger'>
+                  Invalid amount
+                </span>
+              ) : customAmount !== undefined && amountValue !== customAmount ? (
+                <button
+                  type='button'
+                  className='wrenTokenApprovalAmountAction'
+                  disabled={approvalSubmitting}
+                  onClick={(event) => activateOnce(event, submitCustomAmount)}
+                >
+                  Update
+                </button>
+              ) : (
+                <span
+                  key={mode + amount}
+                  className='wrenTokenApprovalAmountStatus wrenTokenApprovalStatusSuccess'
+                  role='status'
+                  aria-label='Approval amount applied'
+                >
+                  <Icon name='check' size={18} />
+                </span>
               )}
-              <ClusterRow>
-                <ClusterValue pointerEvents={'auto'}>
-                  <button
-                    type='button'
-                    className='clusterTag clusterTagButton'
-                    disabled={approvalSubmitting}
-                    style={mode === 'requested' ? { color: 'var(--good)' } : {}}
-                    aria-pressed={mode === 'requested'}
-                    onClick={(event) => activateOnce(event, resetToRequestAmount)}
-                  >
-                    {'Requested'}
-                  </button>
-                </ClusterValue>
-              </ClusterRow>
-              <ClusterRow>
-                <ClusterValue pointerEvents={'auto'}>
-                  <button
-                    type='button'
-                    className='clusterTag clusterTagButton'
-                    disabled={approvalSubmitting}
-                    style={mode === 'unlimited' ? { color: 'var(--good)' } : {}}
-                    aria-pressed={mode === 'unlimited'}
-                    onClick={(event) => activateOnce(event, setToMax)}
-                  >
-                    {'Unlimited'}
-                  </button>
-                </ClusterValue>
-              </ClusterRow>
-              {!inputLock && (
-                <ClusterRow>
-                  <ClusterValue pointerEvents={'auto'}>
-                    <button
-                      type='button'
-                      className='clusterTag clusterTagButton'
-                      disabled={approvalSubmitting}
-                      style={isCustom ? { color: 'var(--good)' } : {}}
-                      aria-pressed={isCustom}
-                      onClick={() => {
-                        releaseApprovalSubmission()
-                        setMode('custom')
-                        setCustom('')
-                      }}
-                    >
-                      Custom
-                    </button>
-                  </ClusterValue>
-                </ClusterRow>
-              )}
-            </>
-          )}
-        </Cluster>
-      </ClusterBox>
+            </div>
+          </div>
+        ) : null}
+
+        {unlimitedWarning ? (
+          <p className='wrenTokenApprovalDecisionCopy wrenTokenApprovalDecisionCopyWarning'>
+            {unlimitedWarning}
+          </p>
+        ) : null}
+
+        {canRevoke && !hasInvalidAmount ? (
+          <button
+            type='button'
+            className='wrenTokenApprovalRevoke wrenControl wrenControlGhost'
+            disabled={approvalSubmitting}
+            aria-pressed={mode === 'revoke'}
+            onClick={(event) => activateOnce(event, setToRevoke)}
+          >
+            Revoke
+          </button>
+        ) : null}
+
+        {inputLock ? (
+          <p className='wrenTokenApprovalUnavailable'>
+            Wren can show this request, but the token details are incomplete so the limit cannot be edited
+            safely.
+          </p>
+        ) : null}
+      </section>
     </div>
   )
 }

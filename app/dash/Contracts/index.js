@@ -49,16 +49,11 @@ export class Contracts extends React.Component {
 
   render() {
     const verify = this.state.mode === VERIFY_MODE
-    const description = verify
-      ? 'Match source to deployed bytecode and publish a public record.'
-      : 'Check prepared creation data, then queue it for native review.'
 
     return (
       <main className='contracts cardShow'>
         <header className='contractsHeader'>
-          <span>Contract tools</span>
           <h1>Contracts</h1>
-          <p>{description}</p>
         </header>
 
         <div aria-label='Contract tool' className='sendModeSwitch contractsModeSwitch' role='group'>

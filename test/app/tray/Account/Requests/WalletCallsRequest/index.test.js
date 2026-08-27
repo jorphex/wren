@@ -70,6 +70,7 @@ it('shows the approved hierarchy, ordered call identities, values, and disclosed
   )
 
   expect(screen.getByRole('heading', { name: 'Submit 2 transactions?' })).toBeTruthy()
+  expect(screen.queryByText(/Wren will submit these calls in order/)).toBeNull()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Ethereum')).toBeTruthy()
   expect(screen.getByText('Main account')).toBeTruthy()
@@ -284,7 +285,7 @@ it('keeps compact reverting-call evidence and qualified token effects', () => {
   expect(screen.getByText('ERC-20 Send')).toBeTruthy()
 })
 
-it('edits contiguous nonce and per-transaction EIP-1559 fields only in the draft', async () => {
+it('edits the batch nonce and transaction fee fields only in the draft', async () => {
   const req = preparedRequest()
   const draft = createWalletCallsDraft(req)
   const { user } = render(
@@ -297,11 +298,28 @@ it('edits contiguous nonce and per-transaction EIP-1559 fields only in the draft
     />
   )
 
-  expect(screen.getByText('Nonce 5')).toBeTruthy()
-  expect(screen.getByText('Nonce 6')).toBeTruthy()
-  expect(screen.getAllByText('EIP-1559')).toHaveLength(1)
-  await user.clear(screen.getByLabelText('Starting nonce'))
-  await user.type(screen.getByLabelText('Starting nonce'), '9')
+  expect(screen.queryByText('Nonce 5')).toBeNull()
+  expect(screen.queryByText('Nonce 6')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Decrease starting nonce' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Increase starting nonce' })).toBeNull()
+  expect(screen.getAllByText('Gas limit')).toHaveLength(2)
+  expect(screen.getAllByText('Max fee')).toHaveLength(2)
+  expect(screen.getAllByText('Priority fee')).toHaveLength(2)
+  expect(screen.queryByText('EIP-1559')).toBeNull()
+  const startingNonce = screen.getByLabelText('Starting nonce')
+  const gasLimit = screen.getAllByLabelText(/gas limit$/i)[0]
+  const maxFee = screen.getAllByLabelText(/maximum fee per gas$/i)[0]
+  const priorityFee = screen.getAllByLabelText(/priority fee$/i)[0]
+
+  expect(startingNonce.classList.contains('wrenInput')).toBe(true)
+  expect(gasLimit.classList.contains('wrenInput')).toBe(true)
+  expect(maxFee.classList.contains('wrenInput')).toBe(true)
+  expect(maxFee.parentElement.classList.contains('wrenInputGroup')).toBe(true)
+  expect(priorityFee.classList.contains('wrenInput')).toBe(true)
+  expect(priorityFee.parentElement.classList.contains('wrenInputGroup')).toBe(true)
+
+  await user.clear(startingNonce)
+  await user.type(startingNonce, '9')
 
   expect(req.preparation.calls[0].transaction.nonce).toBe('0x5')
   expect(link.send).toHaveBeenLastCalledWith(

@@ -357,7 +357,6 @@ class _AccountMain extends React.Component {
         <div className='accountPortfolioGlow' aria-hidden='true' />
         <div className='accountPortfolioHeader'>
           <span>Portfolio balance</span>
-          <span>{count === 1 ? '1 asset' : `${count} assets`}</span>
         </div>
         <div className='accountPortfolioValue'>
           {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : `$${total}`}
@@ -612,7 +611,7 @@ class _AccountBody extends React.Component {
         : undefined
       const accountViewTitle =
         req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
-          ? 'Adjust Batch Settings'
+          ? 'Wallet calls'
           : (req && this.getAccountViewTitle(req)) || ''
 
       return (
@@ -625,7 +624,7 @@ class _AccountBody extends React.Component {
           accountViewTitle={accountViewTitle}
           accountViewMeta={
             req && isPendingSigningRequest(req)
-              ? 'Signature'
+              ? ''
               : chainData.chainName || chainData.requestChainName || transactionChainName
           }
         >

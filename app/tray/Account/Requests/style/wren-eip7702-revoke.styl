@@ -12,7 +12,7 @@
   padding 0 0 var(--wren-space-4)
 
   h1
-    margin var(--wren-space-1) 0 var(--wren-space-2)
+    margin 0 0 var(--wren-space-2)
     font-family var(--wren-font-heading)
     font-size 20px
     font-variation-settings var(--wren-font-heading-settings)
@@ -25,12 +25,6 @@
     font-size 13px
     line-height 1.55
     overflow-wrap anywhere
-
-.eip7702RevokeEyebrow
-  color var(--wren-accent-primary-hover)
-  font-size 12px
-  font-weight 600
-  letter-spacing .02em
 
 .eip7702RevokeSection
   padding var(--wren-space-4) 0
@@ -124,6 +118,55 @@
     text-overflow ellipsis
     white-space nowrap
 
+.eip7702RevokeEvidenceDisclosure
+  box-shadow inset 0 1px var(--wren-ledger-rule), inset 0 -1px var(--wren-ledger-rule)
+
+  .eip7702RevokeEvidenceSummary
+    appearance none
+    display flex
+    width 100%
+    min-height 58px
+    padding var(--wren-space-2) 0
+    box-sizing border-box
+    border 0
+    color var(--wren-text-primary)
+    background transparent
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-3)
+    cursor pointer
+    text-align left
+
+    > span:first-child
+      min-width 0
+
+    strong
+      display block
+      font-size 12px
+      font-weight 600
+
+    > span:last-child
+      flex none
+      color var(--wren-text-secondary)
+      font-size 12px
+
+      &::after
+        content ' +'
+        color var(--wren-accent-primary-hover)
+
+    &:hover > span:last-child
+      color var(--wren-text-primary)
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset 2px
+
+  &.eip7702RevokeEvidenceDisclosure-open
+    padding-bottom var(--wren-space-2)
+
+    .eip7702RevokeEvidenceSummary > span:last-child::after
+      content ' −'
+
 .eip7702RevokeFee
   padding-bottom var(--wren-space-3)
 
@@ -163,6 +206,9 @@
 
 .eip7702RevokeFeeBody .txFeeOverlay
   margin-top var(--wren-space-2)
+
+.eip7702RevokeFeeBody .txAdjustFeeInline
+  padding-left 0
 
 .eip7702RevokeOutcome
   display flex
@@ -225,7 +271,15 @@
     min-width 252px
     max-width 252px
 
-@media (max-width: 620px)
+.eip7702RevokeActionsReview
+  min-height 86px
+  height 86px
+  grid-template-columns 1fr
+
+  .requestActionButtons
+    justify-self end
+
+@media (max-width: 600px)
   .eip7702RevokeFacts > div
     grid-template-columns 1fr
     gap var(--wren-space-1)

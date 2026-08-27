@@ -96,8 +96,8 @@ it('submits an active delegation revocation with the reduced request reference',
   }
   const { user } = renderRequestFooter(req, 'ring')
 
-  expect(screen.getByText('Review details')).toBeTruthy()
-  expect(screen.getByText('Check everything above before revoking.')).toBeTruthy()
+  expect(screen.queryByText('Review details')).toBeNull()
+  expect(screen.queryByText('Check everything above before revoking.')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Revoke delegation' }))
 
   expect(link.rpc).toHaveBeenCalledWith(

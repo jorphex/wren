@@ -32,6 +32,7 @@ beforeEach(() => {
 it('renders the base fee input', () => {
   const { getBaseFeeInput } = setupComponent(req)
   expect(getBaseFeeInput().value).toBe('4')
+  expect(getBaseFeeInput().classList.contains('wrenInput')).toBe(true)
 })
 
 it('renders the priority fee input', () => {

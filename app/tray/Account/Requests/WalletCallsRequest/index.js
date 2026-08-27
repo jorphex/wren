@@ -188,73 +188,40 @@ export class WalletCallsRequest extends React.Component {
       <div className='walletCallsSurface walletCallsAdjust'>
         <section className='walletCallsAdjustSummary'>
           <div>
-            <div className='walletCallsEyebrow'>Batch settings</div>
-            <h2>Adjust gas and nonce</h2>
-            <p>Each transaction keeps its own gas limit and fee ceiling.</p>
+            <h2>Batch settings</h2>
           </div>
-          <div className='walletCallsAdjustTotal'>
-            <span>Total maximum</span>
-            <strong>{formatNativeMaximum(total, decimals, symbol)}</strong>
-          </div>
-        </section>
-
-        <section className='walletCallsSection walletCallsNonceSection'>
-          <div>
-            <strong>Starting nonce</strong>
-            <span>Transactions use contiguous nonces beginning at {draft?.startingNonce || '?'}.</span>
-          </div>
-          <div className='walletCallsNonceControl'>
-            <button
-              type='button'
-              aria-label='Decrease starting nonce'
-              onClick={() =>
-                this.updateDraft((next) => {
-                  const current = /^\d+$/.test(next.startingNonce) ? BigInt(next.startingNonce) : 0n
-                  next.startingNonce = (current > 0n ? current - 1n : 0n).toString()
-                })
-              }
-            >
-              −
-            </button>
+          <label className='walletCallsAdjustNonce' htmlFor='wallet-calls-starting-nonce'>
+            <span>Nonce</span>
             <input
+              id='wallet-calls-starting-nonce'
+              className='walletCallsNonceInput wrenInput'
               aria-label='Starting nonce'
               inputMode='numeric'
               value={draft?.startingNonce || ''}
               onChange={(event) => this.updateDraft((next) => (next.startingNonce = event.target.value))}
             />
-            <button
-              type='button'
-              aria-label='Increase starting nonce'
-              onClick={() =>
-                this.updateDraft((next) => {
-                  const current = /^\d+$/.test(next.startingNonce) ? BigInt(next.startingNonce) : 0n
-                  next.startingNonce = (current + 1n).toString()
-                })
-              }
-            >
-              +
-            </button>
+          </label>
+          <div className='walletCallsAdjustTotal'>
+            <span>Max batch fee</span>
+            <strong>{formatNativeMaximum(total, decimals, symbol)}</strong>
           </div>
         </section>
 
         <section className='walletCallsSection'>
           <div className='walletCallsSectionHeading'>
-            <h3>Transaction settings</h3>
-            <span>{draft?.calls?.every((call) => call.mode === 'eip1559') ? 'EIP-1559' : 'Legacy'}</span>
+            <h3>Transactions</h3>
           </div>
           <div className='walletCallsAdjustList'>
             {(draft?.calls || []).map((call, index) => {
               const identity = destination(req, index, this.props.addressBook, this.props.accounts)
-              const nonce = /^\d+$/.test(draft.startingNonce)
-                ? (BigInt(draft.startingNonce) + BigInt(index)).toString()
-                : '?'
               return (
                 <div className='walletCallsAdjustCall' key={index}>
-                  <span className='walletCallsCallNumber'>{String(index + 1).padStart(2, '0')}</span>
+                  <span className='walletCallsCallNumber'>{index + 1}</span>
                   <div>
                     <div className='walletCallsAdjustCallHeader'>
-                      <strong>{identity.label}</strong>
-                      <span>Nonce {nonce}</span>
+                      <div>
+                        <strong>{identity.label}</strong>
+                      </div>
                     </div>
                     {req.calls[index]?.to && (
                       <div className='walletCallsDestinationAddress'>{req.calls[index].to}</div>
@@ -263,6 +230,7 @@ export class WalletCallsRequest extends React.Component {
                       <label>
                         <span>Gas limit</span>
                         <input
+                          className='wrenInput'
                           aria-label={`${identity.label} gas limit`}
                           inputMode='numeric'
                           value={call.gasLimit}
@@ -275,8 +243,9 @@ export class WalletCallsRequest extends React.Component {
                         <>
                           <label>
                             <span>Max fee</span>
-                            <span className='walletCallsUnitInput'>
+                            <span className='walletCallsUnitInput wrenInputGroup'>
                               <input
+                                className='wrenInput'
                                 aria-label={`${identity.label} maximum fee per gas`}
                                 inputMode='decimal'
                                 value={call.maxFeePerGas}
@@ -291,8 +260,9 @@ export class WalletCallsRequest extends React.Component {
                           </label>
                           <label>
                             <span>Priority fee</span>
-                            <span className='walletCallsUnitInput'>
+                            <span className='walletCallsUnitInput wrenInputGroup'>
                               <input
+                                className='wrenInput'
                                 aria-label={`${identity.label} priority fee`}
                                 inputMode='decimal'
                                 value={call.maxPriorityFeePerGas}
@@ -309,8 +279,9 @@ export class WalletCallsRequest extends React.Component {
                       ) : (
                         <label>
                           <span>Gas price</span>
-                          <span className='walletCallsUnitInput'>
+                          <span className='walletCallsUnitInput wrenInputGroup'>
                             <input
+                              className='wrenInput'
                               aria-label={`${identity.label} gas price`}
                               inputMode='decimal'
                               value={call.gasPrice}
@@ -322,10 +293,6 @@ export class WalletCallsRequest extends React.Component {
                           </span>
                         </label>
                       )}
-                      <div className='walletCallsAdjustCost'>
-                        <span>Maximum cost</span>
-                        <strong>{formatNativeMaximum(maximums[index], decimals, symbol)}</strong>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -356,9 +323,10 @@ export class WalletCallsRequest extends React.Component {
       <div className='walletCallsSurface walletCallsReview'>
         <section className='walletCallsSummary'>
           <div>
-            <div className='walletCallsEyebrow'>{req.calls.length} ordered calls</div>
+            <div className='walletCallsEyebrow'>
+              {req.calls.length} ordered {req.calls.length === 1 ? 'call' : 'calls'}
+            </div>
             <h2>Submit {req.calls.length === 1 ? 'one transaction' : `${req.calls.length} transactions`}?</h2>
-            <p>Wren will submit these calls in order from {accountName || 'this account'}.</p>
           </div>
           <div className='walletCallsAtomicWarning'>
             <strong>

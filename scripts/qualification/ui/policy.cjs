@@ -289,7 +289,7 @@ const switchChainReviewScenarios = () =>
       'https://basescan.org',
       'Ethereum',
       'Base',
-      'Account access remains separate.'
+      'Account access is unchanged.'
     ],
     layoutExpectations: [
       { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
@@ -504,6 +504,89 @@ const reviewScenarios = () => [
   ...updateDialogScenarios(),
   ...sendComposerScenarios().filter(({ state }) => state !== 'send-asset-picker'),
   ...sendLifecycleScenarios(),
+  {
+    id: 'tray-revocation-fee-editor-full-1',
+    renderer: 'tray',
+    state: 'revocation-review',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Adjust' },
+    ready: '.txAdjustFeeInline input.txFeeOverlayInput',
+    requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
+    requiredText: ['Advanced fee limits', 'Base fee', 'Priority fee', 'Gas limit']
+  },
+  {
+    id: 'tray-permit-amount-editor-full-1',
+    renderer: 'tray',
+    state: 'signature-permit-amount-editor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: { type: 'clickText', text: 'Edit approval amount, current 2412' },
+    ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]',
+    requiredControls: ['Requested', 'Unlimited', 'Custom'],
+    requiredText: ['Token approval', 'Spending limit', 'Custom limit']
+  },
+  {
+    id: 'tray-permit-amount-invalid-full-1',
+    renderer: 'tray',
+    state: 'signature-permit-amount-editor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      delayMs: 250,
+      steps: [
+        { type: 'clickText', text: 'Edit approval amount, current 2412' },
+        { type: 'inputLabel', label: 'Custom amount', value: 'invalid' }
+      ]
+    },
+    ready: '.wrenTokenApprovalStatusDanger',
+    requiredText: ['Token approval', 'Custom limit', 'Invalid amount']
+  },
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `tray-wallet-calls-review-${geometry}-1`,
+    renderer: 'tray',
+    state: 'wallet-calls-review',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ready: '.walletCallsReview',
+    requiredControls: ['Adjust', 'Decline', 'Submit batch'],
+    requiredText: [
+      '1 ORDERED CALL',
+      'Submit one transaction?',
+      'Partial execution possible',
+      'Batch context',
+      'Total maximum network fees'
+    ]
+  })),
+  {
+    id: 'tray-wallet-calls-adjustment-full-1',
+    renderer: 'tray',
+    state: 'wallet-calls-adjustment',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.walletCallsAdjust input[aria-label="Starting nonce"]',
+    requiredControls: ['Cancel', 'Apply changes'],
+    requiredText: ['Batch settings', 'Nonce', 'Gas limit', 'Max fee', 'Priority fee']
+  },
+  {
+    id: 'tray-account-settings-expanded-full-1',
+    renderer: 'tray',
+    state: 'account-settings-expanded',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.expandedModule input[aria-label="Account name"]',
+    requiredText: ['Settings', 'Account', 'Account name', 'Address']
+  },
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
       ['full', FULL_SHELL_HEIGHT],
@@ -650,7 +733,6 @@ const reviewScenarios = () => [
       requiredText: [
         'Contracts',
         'Verify source',
-        'Match source to deployed bytecode and publish a public record.',
         'Solidity or Vyper standard JSON',
         'Foundry or Hardhat build-info'
       ]
@@ -828,11 +910,10 @@ const reviewScenarios = () => [
       requiredText: [
         'Contracts',
         'Deploy contract',
-        'Check prepared creation data, then queue it for native review.',
         'Workshop Software Account With A Long Name',
         'Optimism',
         'configured RPC',
-        'does not compile Solidity'
+        'does not sign'
       ]
     }))
   ),
@@ -876,7 +957,7 @@ const reviewScenarios = () => [
         'Keccak-256',
         'Simulation is evidence only',
         'Provisional CREATE address',
-        'does not compile Solidity'
+        'does not sign'
       ]
     }))
   ),
@@ -1653,7 +1734,8 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.watchAccountIcon',
-    requiredText: ['Watch account', 'Ledger', 'Trezor', 'GridPlus', 'Seed phrase', 'Imported keys']
+    requiredControls: ['Derive new', 'Watch', 'Import'],
+    requiredText: ['Accounts', 'No signing accounts yet.', 'Watch account', 'ADD ACCOUNT']
   },
   {
     id: 'dash-accounts-perch-full-1',
@@ -1882,7 +1964,6 @@ const reviewScenarios = () => [
     requiredControls: ['Open workshop.example app details, active · no account access'],
     requiredText: [
       'App activity',
-      'Recent activity, account access, and default networks across all accounts.',
       'workshop.example',
       'Active · No account access',
       'treasury.example',
@@ -2046,7 +2127,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.accountSelectorWelcome',
     requiredControls: ['Open dashboard'],
-    requiredText: ['Choose an account', 'Choose an account to open your wallet.', 'Trezor Account']
+    requiredText: ['Choose an account', 'Trezor Account']
   },
   {
     id: 'tray-account-ledger-full-1',
@@ -2124,6 +2205,31 @@ const reviewScenarios = () => [
     ready: '.requestClearAll',
     requiredControls: ['Back', 'Clear all requests'],
     requiredText: ['Requests', '3 requests', 'Clear all', 'WORKSHOP.EXAMPLE', 'GARDEN.EXAMPLE'],
+    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+  },
+  {
+    id: 'tray-account-permissions-full-1',
+    renderer: 'tray',
+    state: 'account-permissions',
+    glideSide: 'left',
+    workspaceOpen: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.permissionsLedgerView .revokeAccessButton',
+    requiredControls: [
+      'Back',
+      'Revoke access',
+      'Edit guardrail · Ethereum (0x1)',
+      'Add guardrail · Ethereum (0x1)',
+      'Revoke all app access'
+    ],
+    requiredText: [
+      'Apps with access',
+      'https://treasury.workshop.example',
+      'Local treasury app',
+      'App connection ID'
+    ],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   ...[
@@ -2391,7 +2497,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.signerPreviewRow',
         requiredControls: ['Send', 'Open signer details'],
-        requiredText: ['PORTFOLIO BALANCE', '0 assets', '$0.00', 'No assets on this account yet', 'Signer']
+        requiredText: ['Portfolio balance', '$0.00', 'No assets on this account yet', 'Signer']
       },
       ...(scale === 1
         ? [
@@ -2411,16 +2517,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Decline',
                 'Sign message'
               ],
-              requiredText: [
-                'Review request',
-                'Signature',
-                'Uniswap',
-                'ACTION',
-                'DETAILS',
-                'USDC',
-                '2412',
-                'EIP-712'
-              ]
+              requiredText: ['Review request', 'Uniswap', 'ACTION', 'DETAILS', 'USDC', '2412', 'EIP-712']
             },
             {
               id: 'dash-split-control-right-1',
@@ -2446,7 +2543,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.accountPortfolioCard',
-              requiredText: ['PORTFOLIO BALANCE', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer']
+              requiredText: ['Portfolio balance', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer']
             }
           ]
         : []),
@@ -2523,6 +2620,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           { kind: 'hidden', selector: '.balancesExpandedScroll > ._txMain' },
           { kind: 'size', selector: '.balancesAssetMark .assetMarkChain', width: 12, height: 12 },
           { kind: 'size', selector: '.balanceFilter .panelFilterIcon > svg', width: 15, height: 15 },
+          { kind: 'size', selector: '.signerBalanceAddToken', height: 44 },
           {
             kind: 'computed-style',
             selector: '.balancesAssetMark .assetMarkGlyph',
@@ -2669,7 +2767,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+        requiredText: ['Delegation evidence', 'Maximum execution fee']
       },
       {
         id: `tray-revocation-review-short-${scale}`,
@@ -2680,7 +2778,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce']
+        requiredText: ['Delegation evidence', 'Maximum execution fee']
       },
       {
         id: `tray-revocation-monitor-full-${scale}`,
@@ -2884,7 +2982,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.eip7702RevokeRequest-review',
       requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-      requiredText: ['Current delegation evidence', 'Maximum execution fee', 'Transaction nonce'],
+      requiredText: ['Delegation evidence', 'Maximum execution fee'],
       layoutExpectations: [
         {
           kind: 'full-width',

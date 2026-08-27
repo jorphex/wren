@@ -59,8 +59,8 @@ const connectedReview = (req, props = {}) => {
 it('presents review, queue, and signer states without overstating execution', () => {
   expect(revokeLifecyclePresentation(request(), true)).toEqual({
     kind: 'review',
-    title: 'Review details',
-    detail: 'Check everything above before revoking.'
+    title: '',
+    detail: ''
   })
   expect(revokeLifecyclePresentation(request(), false)).toMatchObject({ kind: 'waiting' })
   expect(revokeLifecyclePresentation(request({ status: 'pending' }), true)).toEqual({
@@ -236,12 +236,15 @@ it('renders directly copyable evidence without authorization or signature materi
     }
   })
 
-  expect(screen.getByRole('heading', { name: 'Review delegation revocation' })).toBeTruthy()
-  expect(
-    screen.getAllByText(`After confirmation, this account will no longer delegate execution to ${delegate}.`)
-  ).toHaveLength(1)
+  expect(screen.getByRole('heading', { name: 'Revoke delegation' })).toBeTruthy()
+  expect(screen.getByText(`Stops delegation to ${delegate}.`)).toBeTruthy()
   expect(screen.getByText('Delegate contract')).toBeTruthy()
   expect(screen.getByText('Address book · Saved contact')).toBeTruthy()
+  const evidenceDisclosure = screen.getByRole('button', { name: /Delegation evidence/ })
+  expect(evidenceDisclosure.getAttribute('aria-expanded')).toBe('false')
+  expect(screen.queryByRole('button', { name: 'Copy delegation code hash' })).toBeNull()
+  await user.click(evidenceDisclosure)
+  expect(evidenceDisclosure.getAttribute('aria-expanded')).toBe('true')
   expect(screen.getByText('Configured RPC · eth_getCode')).toBeTruthy()
   expect(screen.getByText('Transaction nonce').nextElementSibling.textContent).toBe('3')
   const accountCopy = screen.getByRole('button', { name: 'Copy account address' })

@@ -1483,7 +1483,7 @@ export class Send extends React.Component {
     const assertive = failed
 
     return (
-      <section className={`sendRequestState cardShow ${confirmed ? 'sendRequestStateSuccess' : ''}`}>
+      <section className={`sendRequestState ${confirmed ? 'sendRequestStateSuccess' : ''}`}>
         <div className='sendRequestGlyph'>
           <Icon name={confirmed ? 'check' : failed ? 'alert' : declined ? 'close' : 'pending'} size={28} />
         </div>
