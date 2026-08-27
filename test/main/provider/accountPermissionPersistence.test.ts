@@ -6,6 +6,7 @@ jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on:
 
 import { FRAME_SEND_ORIGIN, originIdForInvoker } from '../../../resources/domain/origin'
 import { applyAccountPermissionRendererAction } from '../../../main/provider/accountPermissionActions'
+import migrations from '../../../main/store/migrate'
 import { commitMainState, PersistStore } from '../../../main/store/persist'
 
 const account = '0x0000000000000000000000000000000000000001'
@@ -21,7 +22,7 @@ test('clearing external access survives restart while preserving managed access'
   try {
     const persisted = new PersistStore({ configName: 'config', cwd: directory })
     const main = {
-      _version: 73,
+      _version: migrations.latest,
       permissions: {
         [account]: {
           managed: {
@@ -92,7 +93,7 @@ test('clearing external access survives restart while preserving managed access'
     const envelope = restartedBeforeQueueFlush.get('main') as {
       __: Record<string, { main: typeof main }>
     }
-    const restored = envelope.__['73'].main
+    const restored = envelope.__[String(migrations.latest)].main
     expect(restored.permissions[account]).toEqual({ managed: main.permissions[account].managed })
     expect(restored.dappGuardrails[account]).toEqual({})
     expect(restored.unrelatedQueuedState).toBe('preserved')
@@ -102,7 +103,7 @@ test('clearing external access survives restart while preserving managed access'
     const flushedEnvelope = restartedAfterQueueFlush.get('main') as {
       __: Record<string, { main: typeof main }>
     }
-    expect(flushedEnvelope.__['73'].main).toEqual(restored)
+    expect(flushedEnvelope.__[String(migrations.latest)].main).toEqual(restored)
   } finally {
     jest.clearAllTimers()
     jest.useRealTimers()

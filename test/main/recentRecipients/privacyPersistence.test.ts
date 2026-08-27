@@ -3,6 +3,7 @@ import os from 'os'
 import path from 'path'
 
 import { applyRecentRecipientPrivacyAction } from '../../../main/recentRecipients/runtime'
+import migrations from '../../../main/store/migrate'
 
 jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on: jest.fn() } }))
 jest.mock('../../../main/store', () => jest.fn())
@@ -30,7 +31,7 @@ test('a failed synchronous commit reports session-only clearing and restart rest
     const { PersistStore, commitMainState } = jest.requireActual('../../../main/store/persist')
     const persisted = new PersistStore({ configName: 'config', cwd: directory })
     const baseline = {
-      _version: 73,
+      _version: migrations.latest,
       rememberRecentRecipients: true,
       recentRecipientUses: [recentUse]
     }
@@ -93,7 +94,7 @@ test('a failed Activity commit restores history and address memories after resta
     const { PersistStore, commitMainState } = jest.requireActual('../../../main/store/persist')
     const persisted = new PersistStore({ configName: 'config', cwd: directory })
     const baseline = {
-      _version: 73,
+      _version: migrations.latest,
       activity: [activity],
       outboundAddressMemory: {
         [digest]: { digest, prefix: '1234', suffix: 'abcd', lastSubmittedAt: 10 }

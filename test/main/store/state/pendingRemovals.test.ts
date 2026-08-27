@@ -5,6 +5,7 @@ import path from 'path'
 jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on: jest.fn() } }))
 
 import { commitMainState, PersistStore } from '../../../../main/store/persist'
+import migrations from '../../../../main/store/migrate'
 import { applyPendingRemovalJournals } from '../../../../main/store/state/pendingRemovals'
 
 const removedAccount = '0x0000000000000000000000000000000000000001'
@@ -19,7 +20,7 @@ test('a persisted removal journal suppresses removed accounts and access on rest
     const persisted = new PersistStore({ configName: 'config', cwd: directory })
     commitMainState(
       {
-        _version: 73,
+        _version: migrations.latest,
         accounts: {
           [removedAccount]: { name: 'Removed account' },
           [removedSignerAccount]: { name: 'Removed signer account' },
@@ -45,7 +46,7 @@ test('a persisted removal journal suppresses removed accounts and access on rest
     const envelope = restarted.get('main') as {
       __: Record<string, { main: Record<string, unknown> }>
     }
-    const projected = applyPendingRemovalJournals(envelope.__['73'].main)
+    const projected = applyPendingRemovalJournals(envelope.__[String(migrations.latest)].main)
 
     expect(Object.keys(projected.accounts)).toEqual([retainedAccount])
     expect(projected.permissions).toEqual({ [retainedAccount]: { permission: true } })

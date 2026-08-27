@@ -344,7 +344,7 @@ it('migrates version 52 Pylon presets through application state initialization',
   expect(reloaded.main).toEqual(migrated.main)
 })
 
-it('migrates the published version 68 release boundary through migrations 69 to 73', async () => {
+it('migrates the published version 68 release boundary through the latest migration', async () => {
   const fixture = loadFixture('v68-release-boundary-state.json')
   const source = clone(fixture.state)
   const accountId = '0x000000000000000000000000000000000000dead'
@@ -384,7 +384,7 @@ it('migrates the published version 68 release boundary through migrations 69 to 
   expect(after72.main.origins[extensionId]).toMatchObject({ provenance: 'legacy' })
   expect(after72.main.origins['fixture-direct-origin']).toEqual(source.main.origins['fixture-direct-origin'])
 
-  const rawMigrated = migrations.apply(clone(after72), 73)
+  const rawMigrated = migrations.apply(clone(after72), migrations.latest)
   expect(rawMigrated.main).toMatchObject({
     _version: migrations.latest,
     accounts: { [accountId]: source.main.accounts[accountId] },

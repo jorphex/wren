@@ -35,7 +35,7 @@ test('upgrades only the deterministic legacy Companion control origin to interna
 
   const migrated = migrations.apply(state) as MigratableTestState
 
-  expect(migrated.main._version).toBe(73)
+  expect(migrated.main._version).toBe(migrations.latest)
   expect(migrated.main.origins[extensionOriginId]).toEqual({
     ...legacyExtensionOrigin,
     provenance: 'internal'

@@ -7,6 +7,7 @@ jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on:
 jest.mock('electron-log', () => ({ error: jest.fn(), info: jest.fn() }))
 
 import { completeGeneratedWalletAccount } from '../../../main/rpc/generatedWallet'
+import migrations from '../../../main/store/migrate'
 import { commitMainState, PersistStore } from '../../../main/store/persist'
 
 const ADDRESS = '0x0000000000000000000000000000000000000001'
@@ -23,7 +24,7 @@ test('durably commits a sanitized generated account before the periodic queue fl
   try {
     const persisted = new PersistStore({ configName: 'config', cwd: directory })
     const main = {
-      _version: 73,
+      _version: migrations.latest,
       accounts: {},
       signers: {},
       unrelatedQueuedState: 'preserved'
@@ -91,7 +92,7 @@ test('durably commits a sanitized generated account before the periodic queue fl
     const envelope = restarted.get('main') as {
       __: Record<string, { main: typeof main }>
     }
-    const restored = envelope.__['73'].main
+    const restored = envelope.__[String(migrations.latest)].main
     expect(restored.unrelatedQueuedState).toBe('preserved')
     expect(restored.signers[SIGNER_ID]).toMatchObject({ addresses: [ADDRESS], type: 'seed' })
     expect(restored.accounts[ADDRESS]).toMatchObject({ active: true, id: ADDRESS })
@@ -102,7 +103,7 @@ test('durably commits a sanitized generated account before the periodic queue fl
     const flushedEnvelope = restartedAfterQueueFlush.get('main') as {
       __: Record<string, { main: typeof main }>
     }
-    expect(flushedEnvelope.__['73'].main).toEqual(restored)
+    expect(flushedEnvelope.__[String(migrations.latest)].main).toEqual(restored)
   } finally {
     jest.clearAllTimers()
     jest.useRealTimers()
@@ -122,7 +123,9 @@ test('preserves unrelated queued updates when an immediate profile commit throws
       throw new Error('profile commit failed')
     })
 
-    expect(() => commitMainState({ _version: 73, accounts: {} }, persisted)).toThrow('profile commit failed')
+    expect(() => commitMainState({ _version: migrations.latest, accounts: {} }, persisted)).toThrow(
+      'profile commit failed'
+    )
 
     baseSet.mockRestore()
     persisted.writeUpdates()
@@ -130,7 +133,7 @@ test('preserves unrelated queued updates when an immediate profile commit throws
     const envelope = restarted.get('main') as {
       __: Record<string, { main: { unrelatedQueuedState: string } }>
     }
-    expect(envelope.__['73'].main.unrelatedQueuedState).toBe('preserved')
+    expect(envelope.__[String(migrations.latest)].main.unrelatedQueuedState).toBe('preserved')
   } finally {
     baseSet.mockRestore()
     jest.clearAllTimers()

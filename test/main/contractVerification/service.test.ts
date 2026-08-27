@@ -17,6 +17,7 @@ import type {
   ContractVerificationJobRecord
 } from '../../../resources/domain/contractVerification'
 import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../resources/domain/origin'
+import migrations from '../../../main/store/migrate'
 import type { OperationLifecycle } from '../../../main/store/state/types/operationLifecycle'
 
 const ADDRESS = `0x${'12'.repeat(20)}`
@@ -638,7 +639,8 @@ test('commits the Sourcify fence before POST and its accepted polling ID before 
   try {
     const disk = new PersistStore({ configName: 'config', cwd: directory })
     const subject = harness({
-      commitState: (jobs) => commitMainState({ _version: 73, contractVerificationJobs: jobs }, disk)
+      commitState: (jobs) =>
+        commitMainState({ _version: migrations.latest, contractVerificationJobs: jobs }, disk)
     })
     const prepared = await subject.prepare()
     if (!prepared.success) throw new Error('expected prepared result')
@@ -1227,7 +1229,8 @@ test('commits the direct publication fence before POST and restores it while the
   try {
     const disk = new PersistStore({ configName: 'config', cwd: directory })
     const subject = harness({
-      commitState: (jobs) => commitMainState({ _version: 73, contractVerificationJobs: jobs }, disk)
+      commitState: (jobs) =>
+        commitMainState({ _version: migrations.latest, contractVerificationJobs: jobs }, disk)
     })
     subject.sourcify.submit.mockResolvedValueOnce({ status: 'already_verified' })
     const publication = await subject.prepareAndPublish()

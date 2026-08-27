@@ -4,6 +4,7 @@ import path from 'path'
 
 import {
   importFrameProfile,
+  migratePersistedConfiguration,
   rollbackImportedProfile,
   runRequestedProfileMigration
 } from '../../main/profileMigration'
@@ -117,6 +118,31 @@ test('validates and preserves a version 3 profile for first-start migration', ()
 
   expect(importFrameProfile(source, target)).toMatchObject({ status: 'imported' })
   expect(JSON.parse(fs.readFileSync(path.join(target, 'config.json'), 'utf8'))).toEqual(configuration)
+})
+
+test('accepts legacy primary colors while preserving imported wallet state', () => {
+  const { source, target } = fixture()
+  const configPath = path.join(source, 'config.json')
+  const configuration = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+  const sourceMain = configuration.main.__['41'].main
+  const accounts = structuredClone(sourceMain.accounts)
+  const signers = structuredClone(sourceMain.signers)
+  sourceMain.colorwayPrimary = {
+    dark: { background: 'rgb(18, 22, 20)', text: 'rgb(230, 237, 231)' },
+    light: { background: 'rgb(250, 250, 250)', text: 'rgb(20, 20, 20)' }
+  }
+  fs.writeFileSync(configPath, `${JSON.stringify(configuration)}\n`)
+
+  expect(importFrameProfile(source, target)).toMatchObject({ status: 'imported' })
+
+  const migrated = migratePersistedConfiguration(configuration)
+  expect(migrated.main.colorwayPrimary).toEqual({
+    dark: { background: 'rgb(17, 21, 19)', text: 'rgb(231, 238, 232)' },
+    light: { background: 'rgb(17, 21, 19)', text: 'rgb(231, 238, 232)' }
+  })
+  expect(Object.keys(migrated.main.accounts)).toEqual(Object.keys(accounts))
+  expect(migrated.main.accounts).toMatchObject(accounts)
+  expect(migrated.main.signers).toEqual(signers)
 })
 
 test('rolls back only a profile created by the import flow', () => {
