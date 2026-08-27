@@ -10,14 +10,14 @@ it('owns the stable Control destination order and replaces top-level routes', ()
   render(<ControlNavigation current='chains' replace />)
 
   expect(primaryDashboardItems.map((item) => item.title)).toEqual([
-    'Overview',
+    'Home',
     'Accounts',
     'Networks',
     'App activity',
     'Settings'
   ])
 
-  fireEvent.click(screen.getByRole('button', { name: 'Overview Control center home.' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Home Control center home.' }))
   fireEvent.click(screen.getByRole('button', { name: 'Accounts Manage signing and watch-only accounts.' }))
 
   expect(link.send.mock.calls).toEqual([

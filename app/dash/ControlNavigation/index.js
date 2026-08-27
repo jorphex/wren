@@ -5,7 +5,7 @@ import link from '../../../resources/link'
 
 export const primaryDashboardItems = [
   {
-    title: 'Overview',
+    title: 'Home',
     description: 'Control center home.',
     icon: 'overview'
   },

@@ -43,15 +43,35 @@
 // Perch chain header and rows on the same compact ledger rhythm.
 .dash .dashMain .connectedAppsPerch
   .originTitle
+    display flex
+    align-items center
+    height 44px
     min-height 44px
     margin 0
     padding 0 16px
+    box-sizing border-box
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 600
+    letter-spacing .1px
+    line-height 20px
+    text-transform none
 
     .originTitleIcon
-      margin 0 12px 0 0
+      display flex
+      flex 0 0 24px
+      height 44px
+      margin 0 10px 0 0
+      align-items center
+      justify-content center
 
     .originTitleText
+      display flex
+      min-height 44px
       margin 0
+      align-items center
+      line-height 20px
 
   .sliceOrigin
     min-height 52px

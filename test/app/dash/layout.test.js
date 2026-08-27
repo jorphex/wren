@@ -425,7 +425,7 @@ test('keeps the corrected Control ledgers compact, hoverable, and aligned', () =
     /\.network \.signerTop:has\(\.networkDetailsTrigger:hover\)[\s\S]*?background var\(--wren-ledger-hover\)/
   )
   expect(dappsStyle).toMatch(
-    /\.dash \.dashMain \.connectedAppsPerch[\s\S]*?\.originTitle[\s\S]*?min-height 44px[\s\S]*?margin 0[\s\S]*?\.sliceOrigin[\s\S]*?min-height 52px/
+    /\.dash \.dashMain \.connectedAppsPerch[\s\S]*?\.originTitle[\s\S]*?align-items center[\s\S]*?min-height 44px[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?text-transform none[\s\S]*?\.originTitleIcon[\s\S]*?height 44px[\s\S]*?align-items center[\s\S]*?\.sliceOrigin[\s\S]*?min-height 52px/
   )
   expect(settingsStyle).toMatch(
     /\.contractVerificationCredentialIdentity[\s\S]*?justify-content space-between[\s\S]*?\.contractVerificationCredentialControls[\s\S]*?flex-direction column[\s\S]*?\.contractVerificationCredentialActions[\s\S]*?width 100%/

@@ -201,6 +201,9 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
   expect(activityStyle).toMatch(
     /\.activityModuleExpanded[\s\S]*?\.activityList[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
   )
+  expect(activityStyle).toMatch(
+    /\.activityModuleExpanded[\s\S]*?padding 0 var\(--wren-space-3\) var\(--wren-space-5\)/
+  )
   expect(requestsStyle).toMatch(
     /\.requestGroupBlock[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
   )

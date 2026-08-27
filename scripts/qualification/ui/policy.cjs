@@ -1957,7 +1957,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashNetworksCard',
     requiredControls: [
-      'Overview',
+      'Home',
       'Accounts',
       'Networks',
       'App activity',
@@ -2006,6 +2006,13 @@ const reviewScenarios = () => [
         property: 'height',
         value: '44px'
       },
+      {
+        kind: 'computed-style',
+        selector: '.connectedAppsPerch .originTitle',
+        property: 'textTransform',
+        value: 'none'
+      },
+      { kind: 'size', selector: '.connectedAppsPerch .originTitleIcon', width: 24, height: 44 },
       {
         kind: 'computed-style',
         selector: '.connectedAppsPerch .sliceOrigin',
@@ -2467,7 +2474,11 @@ const reviewScenarios = () => [
     ready: '.activityModuleExpanded',
     requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
     requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
-    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'full-width', selector: '.activityFilters', container: '.accountViewMain', inset: 12 },
+      { kind: 'full-width', selector: '.activityList', container: '.accountViewMain', inset: 12 }
+    ]
   },
   {
     id: 'tray-account-activity-short-1.5',
@@ -2630,7 +2641,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.dashModules',
-              requiredText: ['Control', 'Overview', 'MORE TOOLS', 'BROWSER COMPANION', 'Support'],
+              requiredText: ['Control', 'Home', 'MORE TOOLS', 'BROWSER COMPANION', 'Support'],
               layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
             },
             {
@@ -2718,6 +2729,13 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
         layoutExpectations: [
           { kind: 'hidden', selector: '.accountSelectorOpen' },
+          { kind: 'edge-clearance', selector: '.balanceFilter', container: '.accountViewMain', inset: 12 },
+          {
+            kind: 'edge-clearance',
+            selector: '.balancesExpandedLedger',
+            container: '.accountViewMain',
+            inset: 12
+          },
           { kind: 'hidden', selector: '.balancesExpandedScroll > ._txMain' },
           { kind: 'size', selector: '.balancesAssetMark .assetMarkChain', width: 12, height: 12 },
           { kind: 'size', selector: '.balanceFilter .panelFilterIcon > svg', width: 15, height: 15 },
