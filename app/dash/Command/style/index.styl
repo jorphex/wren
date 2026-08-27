@@ -75,20 +75,24 @@
 
 // Wren dashboard chrome
 .command
-  top 8px
-  left 12px
-  right 12px
-  height 56px
+  top 0
+  left 0
+  right 0
+  height 64px
+  box-sizing border-box
+  border-bottom 1px solid rgba(150, 182, 150, .10)
+  -webkit-app-region drag
 
   .commandTitle
-    left 58px
-    right 58px
+    left 76px
+    right 76px
     top 0
     min-width 0
     overflow hidden
-    color var(--wren-text-secondary)
-    font-size var(--wren-type-small)
-    font-weight 500
+    justify-content flex-start
+    color var(--wren-text-primary)
+    font-size 14px
+    font-weight 600
     letter-spacing .2px
     text-transform none
 
@@ -110,12 +114,13 @@
   .commandItem
     width 40px
     height 40px
-    top 8px
+    top 12px
     padding 0
-    border 1px solid var(--wren-border-subtle)
+    border 0
     border-radius 6px
     color var(--wren-text-secondary)
-    background var(--wren-bg-elevated)
+    background transparent
+    -webkit-app-region no-drag
     transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
     &:hover
@@ -129,7 +134,54 @@
       box-shadow none
 
   .commandItemBack
-    left 0
+    left 18px
 
   .commandItemClose
-    right 0
+    right 18px
+
+.command.commandHome
+  top 0
+  left 0
+  right 0
+  height 64px
+  display flex
+  align-items center
+  gap 11px
+  padding 0 16px 0 20px
+  border-bottom 1px solid rgba(150, 182, 150, .10)
+  box-sizing border-box
+  -webkit-app-region drag
+
+.commandHomeMark
+  width 26px
+  height 26px
+  flex none
+  opacity .92
+
+.commandHomeIdentity
+  display flex
+  height 26px
+  min-width 0
+  align-items center
+
+  strong
+    color #f2efe8
+    font-size 14px
+    font-weight 600
+    letter-spacing .2px
+    line-height 18px
+
+.commandHomeSpacer
+  flex 1
+
+.commandHomeClose
+  display flex
+  width 40px
+  height 40px
+  flex none
+  min-width 40px
+  min-height 40px
+  padding 0
+  align-items center
+  justify-content center
+  -webkit-app-region no-drag

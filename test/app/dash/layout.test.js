@@ -124,11 +124,12 @@ test('contains long expanded-signer names inside the dashboard chrome', () => {
   )
 })
 
-test('keeps dashboard destination descriptions readable in two balanced columns', () => {
-  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?grid-template-columns minmax\(0, 1fr\)/)
-  expect(mainStyle).toMatch(/\.dashModules[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/)
-  expect(mainStyle).toMatch(/button\.dashModule\.wrenControl[\s\S]*?min-height 72px[\s\S]*?height auto/)
-  expect(mainStyle).toMatch(/\.dashModuleList[\s\S]*?gap var\(--wren-space-2\)/)
+test('uses the reference single-column push-button navigation geometry', () => {
+  expect(mainStyle).toMatch(/\.dashModules[\s\S]*?flex-direction column[\s\S]*?gap 8px/)
+  expect(mainStyle).toMatch(
+    /button\.dashModule\.wrenControl[\s\S]*?grid-template-columns 30px minmax\(0, 1fr\) auto[\s\S]*?height 50px[\s\S]*?padding 0 15px[\s\S]*?border-radius 10px/
+  )
+  expect(mainStyle).toMatch(/\.dashModuleDescription[\s\S]*?width 1px[\s\S]*?clip rect\(0 0 0 0\)/)
   expect(mainStyle).not.toMatch(/wren-(?:seam|rule)/)
 })
 
@@ -221,13 +222,18 @@ test('keeps account chooser and setup routes on the shared dashboard canvas', ()
   )
 })
 
-test('keeps the Control Center Wren decorative, fixed beside the title, and absent at the narrow fallback', () => {
-  expect(mainStyle).toMatch(
-    /\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\) 96px[\s\S]*?align-items center[\s\S]*?\.dashHomeWren[\s\S]*?width 96px[\s\S]*?height 96px[\s\S]*?justify-self end[\s\S]*?pointer-events none/
+test('matches the compact Control identity chrome and omits the superseded large bird header', () => {
+  expect(commandStyle).toMatch(
+    /\.command\.commandHome[\s\S]*?height 64px[\s\S]*?gap 11px[\s\S]*?border-bottom 1px solid rgba\(150, 182, 150, \.10\)/
   )
-  expect(mainStyle).toMatch(
-    /@media \(max-width: 560px\)[\s\S]*?\.dashHomeHeader[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.dashHomeWren[\s\S]*?display none/
+  expect(commandStyle).toMatch(/\.commandHomeMark[\s\S]*?width 26px[\s\S]*?height 26px/)
+  expect(commandStyle).toMatch(
+    /\.commandHomeIdentity[\s\S]*?height 26px[\s\S]*?align-items center[\s\S]*?strong[\s\S]*?line-height 18px/
   )
+  expect(commandStyle).toMatch(
+    /\.commandHomeClose[\s\S]*?width 40px[\s\S]*?height 40px[\s\S]*?min-width 40px[\s\S]*?min-height 40px/
+  )
+  expect(mainStyle).not.toMatch(/\.dashHomeHeader|\.dashHomeWren/)
 })
 
 test('uses separator-free Earn lists, spacing-led detail regions, and the shared focus treatment', () => {
@@ -294,7 +300,7 @@ test('keeps watch and signer identities on the same account-list axis', () => {
 
 test('keeps utility alignment, support disclosure, and transaction facts inside established axes', () => {
   expect(mainStyle).toMatch(
-    /\.dashCompanion[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-2\) var\(--wren-space-3\) calc\(var\(--wren-space-2\) \+ 28px \+ var\(--wren-space-2\)\)/
+    /\.dashHomeCard[\s\S]*?padding 16px[\s\S]*?border-radius 10px[\s\S]*?\.dashCompanionBrowserActions[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/
   )
   expect(mainStyle).toMatch(/\.dashSupportWrenPreview[\s\S]*?left 0[\s\S]*?&::after[\s\S]*?left 28px/)
   expect(sendStyle).toMatch(/\.sendSweepChain[\s\S]*?\.dropdown\.wrenInput/)
@@ -326,7 +332,7 @@ test('leaves signer unlock action visuals to the shared Wren control', () => {
 
 test('keeps the remaining review surfaces on established flat primitives', () => {
   expect(mainStyle).toMatch(
-    /\.dashSupportActions\n {2}display flex\n {2}flex-direction row\n {2}align-items center\n {2}justify-content space-evenly/
+    /\.dashSupportActions\n {2}display grid\n {2}grid-template-columns repeat\(4, minmax\(0, 1fr\)\)[\s\S]*?button\.requestFeatureButton\.wrenControl[\s\S]*?height 48px[\s\S]*?border-radius 9px/
   )
   expect(txApprovalStyle).toMatch(
     /\.approveTransactionWarningBody[\s\S]*?display grid[\s\S]*?grid-template-rows auto minmax\(0, 1fr\) 44px/

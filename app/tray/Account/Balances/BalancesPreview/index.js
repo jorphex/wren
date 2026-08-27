@@ -9,7 +9,6 @@ import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import { isNetworkConnected } from '../../../../../resources/utils/chains'
 import {
-  formatUsdRate,
   createBalance,
   sortByTotalValue as byTotalValue,
   isNativeCurrency
@@ -31,7 +30,7 @@ export class BalancesPreview extends React.Component {
         this.resizeTimer = setTimeout(() => {
           if (this.moduleRef && this.moduleRef.current) {
             link.send('tray:action', 'updateAccountModule', this.props.moduleId, {
-              height: this.moduleRef.current.clientHeight
+              height: this.moduleRef.current.scrollHeight
             })
           }
         }, 100)
@@ -105,7 +104,6 @@ export class BalancesPreview extends React.Component {
     })
 
     const totalValue = filteredBalances.reduce((a, b) => a.plus(b.totalValue), BigNumber(0))
-    const totalDisplayValue = formatUsdRate(totalValue, 0)
     const lastBalanceUpdate = this.store('main.accounts', address, 'balances.lastUpdated')
 
     const balances = filteredBalances.slice(0, 4)
@@ -116,7 +114,7 @@ export class BalancesPreview extends React.Component {
     const hideBalances = this.store('selected.hideBalances')
 
     return (
-      <div ref={this.moduleRef} className='balancesBlock'>
+      <div ref={this.moduleRef} className='balancesBlock balancesPreview'>
         <div className={'moduleHeader'}>
           <span>
             <Icon name='tokens' size={16} />
@@ -187,19 +185,6 @@ export class BalancesPreview extends React.Component {
                 </button>
               </div>
             )}
-            <div className='signerBalanceTotalText'>
-              <div className='signerBalanceTotalLabel'>{'Total'}</div>
-              <div className='signerBalanceTotalValue'>
-                {hideBalances ? (
-                  <span aria-label='Total balance hidden'>$••••</span>
-                ) : (
-                  <>
-                    <span aria-hidden='true'>$</span>
-                    {balances.length > 0 ? totalDisplayValue : '---.--'}
-                  </>
-                )}
-              </div>
-            </div>
           </div>
         ) : null}
         {!hideBalances && totalValue.toNumber() > 10000 && hotSigner ? (

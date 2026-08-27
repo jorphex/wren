@@ -6,16 +6,7 @@ import {
 } from '../../../../../resources/domain/token/amount'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import {
-  ClusterBox,
-  Cluster,
-  ClusterRow,
-  ClusterStatus,
-  ClusterValue
-} from '../../../../../resources/Components/Cluster'
 import Countdown from '../../../../../resources/Components/Countdown'
-import RequestHeader from '../../../../../resources/Components/RequestHeader'
-import RequestItem from '../../../../../resources/Components/RequestItem'
 import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
 import {
   SimpleTypedData as TypedSignatureOverview,
@@ -28,12 +19,22 @@ import useCopiedMessage from '../../../../../resources/Hooks/useCopiedMessage'
 import AddressIdentity from '../../../../../resources/Components/AddressIdentity'
 import { resolveLocalAddressIdentity } from '../../../../../resources/domain/addressBook/identity'
 
-const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook, accounts }) => {
-  const { chainColor, chainName, icon } = chainData
+const compactAddress = (address = '') =>
+  address.length > 13 ? `${address.slice(0, 7)}…${address.slice(-4)}` : address
+
+const PermitOverview = ({
+  req,
+  chainData,
+  deviceWarning,
+  originName,
+  addressBook,
+  accounts,
+  accountName
+}) => {
+  const { chainName } = chainData
   const {
     permit: { spender, value, deadline },
-    tokenData,
-    handlerId
+    tokenData
   } = req
   const localIdentity = resolveLocalAddressIdentity(addressBook, accounts, spender.address)
 
@@ -57,114 +58,110 @@ const PermitOverview = ({ req, chainData, deviceWarning, originName, addressBook
   const amountSuffix = tokenData.symbol || 'UNKNOWN TOKEN'
 
   return (
-    <div className='approveTransaction approvePermit'>
-      <div className='approveTransactionPayload'>
-        <div className='_txBody'>
-          <ClusterBox animationSlot={1}>
-            <RequestItem
-              key={`signErc20Permit:${handlerId}`}
-              req={req}
-              i={0}
-              title={`${chainName} Token Permit`}
-              color={chainColor ? `var(--${chainColor})` : ''}
-              img={icon}
-              headerMode={true}
-            >
-              <Cluster>
-                <ClusterRow>
-                  <ClusterValue
-                    ariaLabel='View raw permit data'
-                    onClick={() => {
-                      link.send('nav:update', 'panel', {
-                        data: { step: 'viewRaw' }
-                      })
-                    }}
-                  >
-                    <div className='_txDescription'>
-                      <RequestHeader chain={chainName} chainColor={chainColor}>
-                        <div className='requestItemTitleSub'>
-                          <div className='requestItemTitleSubIcon'>
-                            <Icon name='apps' size={10} />
-                          </div>
-                          <div className='requestItemTitleSubText'>{originName}</div>
-                        </div>
-                        <div className='_txDescriptionSummaryMain'>{`Permit to Spend ${
-                          tokenData.symbol || 'Unknown Token'
-                        }`}</div>
-                      </RequestHeader>
-                    </div>
-                  </ClusterValue>
-                </ClusterRow>
-              </Cluster>
-            </RequestItem>
-          </ClusterBox>
-          <TypedDataWarnings context={req.context} />
-          <TypedDataDeviceWarning warning={deviceWarning} />
-          <ClusterBox title={'Token Permit'} animationSlot={2}>
-            <Cluster className='permitReviewLedger'>
-              {tokenData && (
-                <>
-                  <ClusterRow>
-                    <ClusterValue
-                      ariaLabel='Copy permit spender address'
-                      pointerEvents={true}
-                      onClick={() => copySpender()}
-                    >
-                      <div className='permitReviewRow'>
-                        <span className='permitReviewLabel'>Permit spender</span>
-                        <div className='clusterAddress'>
-                          <AddressIdentity
-                            address={spender.address}
-                            copied={showCopiedMessage}
-                            label={localIdentity?.label || spender.ens}
-                            revealOnHover={false}
-                            source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
-                          />
-                        </div>
-                      </div>
-                    </ClusterValue>
-                    <ClusterStatus>{showCopiedMessage ? 'Permit spender address copied' : ''}</ClusterStatus>
-                  </ClusterRow>
-                  <ClusterRow>
-                    <ClusterValue
-                      ariaLabel={canEditAmount ? 'Edit permit amount' : undefined}
-                      onClick={
-                        canEditAmount &&
-                        (() => {
-                          link.send('nav:update', 'panel', {
-                            data: {
-                              step: 'adjustPermit',
-                              tokenData
-                            }
-                          })
-                        })
-                      }
-                    >
-                      <div className='permitReviewRow'>
-                        <span className='permitReviewLabel'>is requesting permission to spend</span>
-                        <span className='permitReviewValue'>{`${amountDisplay} ${amountSuffix}`}</span>
-                      </div>
-                    </ClusterValue>
-                  </ClusterRow>
+    <div className='approveTransaction approvePermit approvePermitPerch'>
+      <section className='permitOriginCard' aria-label='Request origin'>
+        <span className='permitOriginMark' aria-hidden='true'>
+          <Icon name='apps' size={19} />
+        </span>
+        <span className='permitOriginIdentity'>
+          <strong>{originName || 'Unknown app'}</strong>
+          <span>{chainName} · signature</span>
+        </span>
+        <span className='permitOriginKind'>signature</span>
+      </section>
 
-                  <ClusterRow>
-                    <ClusterValue>
-                      <div className='permitReviewRow'>
-                        <span className='permitReviewLabel'>Permit expires in</span>
-                        <Countdown
-                          end={deadline * 1000}
-                          innerClass='permitReviewValue'
-                          titleClass='permitReviewCountdown'
-                        />
-                      </div>
-                    </ClusterValue>
-                  </ClusterRow>
-                </>
-              )}
-            </Cluster>
-          </ClusterBox>
-        </div>
-      </div>
+      <section className='permitActionCard'>
+        <h2>Action</h2>
+        <strong>
+          Permit {localIdentity?.label || compactAddress(spender.address)} to spend up to {amountDisplay}{' '}
+          {amountSuffix}.
+        </strong>
+        <button
+          aria-label='View raw permit data'
+          className='permitRawAction'
+          onClick={() => {
+            link.send('nav:update', 'panel', { data: { step: 'viewRaw' } })
+          }}
+          type='button'
+        >
+          <span>Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)</span>
+          <code>spender: {compactAddress(spender.address)}</code>
+        </button>
+      </section>
+
+      <section className='permitDetailsCard'>
+        <h2>Details</h2>
+        <dl>
+          <div>
+            <dt>From</dt>
+            <dd>
+              {accountName || 'Account'} · {compactAddress(req.account)}
+            </dd>
+          </div>
+          <div>
+            <dt>Token</dt>
+            <dd>{amountSuffix}</dd>
+          </div>
+          <div>
+            <dt>Amount</dt>
+            <dd>
+              <button
+                aria-label={canEditAmount ? 'Edit permit amount' : undefined}
+                className='permitEditAmount'
+                disabled={!canEditAmount}
+                onClick={() => {
+                  link.send('nav:update', 'panel', { data: { step: 'adjustPermit', tokenData } })
+                }}
+                type='button'
+              >
+                {`${amountDisplay} ${amountSuffix}`}
+              </button>
+            </dd>
+          </div>
+          <div>
+            <dt>Network</dt>
+            <dd>{chainName}</dd>
+          </div>
+          <div>
+            <dt>Spender</dt>
+            <dd>
+              <button
+                aria-label='Copy permit spender address'
+                className='permitCopySpender'
+                onClick={() => copySpender()}
+                type='button'
+              >
+                <AddressIdentity
+                  address={spender.address}
+                  copied={showCopiedMessage}
+                  label={localIdentity?.label || spender.ens}
+                  revealOnHover={false}
+                  source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
+                />
+              </button>
+            </dd>
+          </div>
+          <div>
+            <dt>Expires</dt>
+            <dd>
+              <Countdown
+                end={deadline * 1000}
+                innerClass='permitReviewValue'
+                titleClass='permitReviewCountdown'
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>Type</dt>
+            <dd>EIP-712</dd>
+          </div>
+        </dl>
+        <span className='permitCopyStatus' role='status'>
+          {showCopiedMessage ? 'Permit spender address copied' : ''}
+        </span>
+      </section>
+      <TypedDataWarnings context={req.context} />
+      <TypedDataDeviceWarning warning={deviceWarning} />
     </div>
   )
 }
@@ -200,7 +197,16 @@ const EditPermit = ({ req }) => {
   )
 }
 
-const PermitRequest = ({ req, originName, signer, step, chainData, addressBook = {}, accounts = {} }) => {
+const PermitRequest = ({
+  req,
+  originName,
+  signer,
+  step,
+  chainData,
+  addressBook = {},
+  accounts = {},
+  accountName
+}) => {
   const requestClass = getSignatureRequestClass(req)
   const deviceWarning = getTypedDataDeviceWarning(signer)
 
@@ -226,6 +232,7 @@ const PermitRequest = ({ req, originName, signer, step, chainData, addressBook =
             deviceWarning={deviceWarning}
             addressBook={addressBook}
             accounts={accounts}
+            accountName={accountName}
           />
         )
     }

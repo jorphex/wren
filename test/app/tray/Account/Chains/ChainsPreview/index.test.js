@@ -109,35 +109,33 @@ it('groups network navigation and explorer controls on the right of the identity
   renderMonitor()
   const controls = screen.getByRole('group', { name: 'Displayed network controls' })
 
-  expect(screen.getByTestId('ethereum-mark').closest('.ringIcon').classList.contains('ringIconNoRing')).toBe(
-    true
-  )
-  expect(screen.getByTestId('ethereum-mark').closest('.ringIconInner').style.color).toBe(
-    'var(--wren-chain-ethereum)'
-  )
-
   expect(controls.previousElementSibling.textContent).toContain('Mainnet')
+  expect(
+    screen.getByLabelText('Current gas price 2 gwei').querySelector('.sliceTileGasPriceIcon').style.color
+  ).toBe('var(--wren-chain-ethereum)')
   expect(
     Array.from(controls.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))
   ).toEqual([
     'Previous network from Mainnet',
     'Next network from Mainnet',
-    'View Mainnet account on block explorer'
+    'View Mainnet account on block explorer',
+    'Show gas details for Mainnet'
   ])
 })
 
-it('composes gas evidence with the selected network without a redundant label', () => {
+it('composes gas evidence and network controls in one compact row', () => {
   renderMonitor()
   const gasEvidence = screen.getByLabelText('Current gas price 2 gwei')
   const disclosure = screen.getByRole('button', { name: 'Show gas details for Mainnet' })
-  const gasGroup = gasEvidence.closest('.chainMonitorGasEvidence')
-  const divider = gasGroup.previousElementSibling
-  const row = disclosure.parentElement
+  const row = gasEvidence.closest('.chainMonitorCompactRow')
+  const summary = gasEvidence.closest('.chainMonitorSummary')
+  const controls = disclosure.closest('.chainMonitorControls')
 
-  expect(row.children).toHaveLength(5)
-  expect(divider.nextElementSibling.contains(gasEvidence)).toBe(true)
-  expect(gasGroup.nextElementSibling).toBe(disclosure)
-  expect(screen.queryByText('Gas')).toBeNull()
+  expect(row.children).toHaveLength(3)
+  expect(row.firstElementChild.textContent).toBe('Gas')
+  expect(summary.textContent).toContain('Mainnet2gwei')
+  expect(summary.contains(gasEvidence)).toBe(true)
+  expect(row.lastElementChild).toBe(controls)
 })
 
 it('keeps explorer placement stable and disabled when the displayed network has none', async () => {

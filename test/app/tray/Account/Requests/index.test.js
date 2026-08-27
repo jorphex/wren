@@ -56,7 +56,7 @@ it('keeps a confirmed transaction out of the home-row count while it remains ins
   render(requests.renderPreview())
 
   expect(screen.getByRole('button', { name: 'Requests. 2 active. 1 pending. 1 confirming.' })).toBeTruthy()
-  expect(screen.getByText('Requests (2)')).toBeTruthy()
+  expect(screen.getByText('Requests')).toBeTruthy()
   expect(screen.getByText('1 pending · 1 confirming')).toBeTruthy()
 })
 

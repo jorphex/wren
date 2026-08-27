@@ -34,6 +34,11 @@ it('hides Back at the dashboard root while retaining Close', () => {
 
   expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(screen.queryByText('Wren settings & destinations')).toBeNull()
+  expect(screen.getAllByText('Control')).toHaveLength(1)
+  expect(document.querySelector('.commandHomeMark').getAttribute('aria-hidden')).toBe('true')
+  expect(document.querySelector('.commandHomeClose')).toBeTruthy()
+  expect(document.querySelector('.commandHomeClose svg')).toBeTruthy()
 })
 
 it('uses the active crumb title for a nested dashboard surface', () => {
@@ -44,6 +49,42 @@ it('uses the active crumb title for a nested dashboard surface', () => {
 
   expect(screen.getByText('Choose an asset')).toBeTruthy()
   expect(screen.getAllByRole('button', { name: 'Back' })).toHaveLength(1)
+})
+
+it('uses the simple shared chrome for the Networks landing', () => {
+  renderCommand([{ view: 'chains', data: {} }])
+
+  expect(screen.getByText('Networks')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
+})
+
+it('uses the simple shared chrome for the Accounts landing', () => {
+  renderCommand([{ view: 'accounts', data: {} }])
+
+  expect(screen.getByText('Accounts')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
+})
+
+it('uses the simple shared chrome for the Settings landing', () => {
+  renderCommand([{ view: 'settings', data: {} }])
+
+  expect(screen.getByText('Settings')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
+})
+
+it('uses the simple shared chrome for the Send composer', () => {
+  renderCommand([{ view: 'send', data: {} }])
+
+  expect(screen.getByText('Send')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
 })
 
 it('uses an authored title for the generic notice surface', () => {

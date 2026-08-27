@@ -222,7 +222,7 @@ it('honors the global balance privacy setting in the composer and asset picker',
 it('keeps the asset label inert and opens the picker from the asset control only', () => {
   const { store } = renderSend()
 
-  fireEvent.click(screen.getByText('Asset'))
+  fireEvent.click(screen.getByText('From'))
   expect(screen.queryByRole('button', { name: 'Select ETH on Ethereum' })).toBeNull()
 
   fireEvent.click(screen.getByRole('button', { name: 'Choose an asset' }))

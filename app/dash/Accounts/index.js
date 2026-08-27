@@ -3,13 +3,11 @@ import Restore from 'react-restore'
 
 import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
-import WrenEmptyState from '../../../resources/Components/WrenEmptyState'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
-import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
 
-import Signer from '../Signer'
+import ControlNavigation from '../ControlNavigation'
 
 import AddHardware from './Add/AddHardware'
 import AddHardwareLattice from './Add/AddHardwareLattice'
@@ -102,133 +100,153 @@ export class AddAccounts extends React.Component {
     })
   }
   renderDefault() {
+    const { accountChooserMode } = this.props.data
+    const showHardware = !accountChooserMode
+    const showCreate = !accountChooserMode || accountChooserMode === 'create'
+    const showImport = !accountChooserMode || accountChooserMode === 'import'
+    const showWatch = !accountChooserMode
+    const title =
+      accountChooserMode === 'create'
+        ? 'Create an account'
+        : accountChooserMode === 'import'
+          ? 'Import an account'
+          : 'Choose an account type'
+
     return (
       <div className='addAccounts addAccountsChooser cardShow'>
         <div className='addAccountsHeader'>
-          <div className='addAccountsHeaderTitle'>Choose an account type</div>
+          <div className='addAccountsHeaderTitle'>{title}</div>
         </div>
-        <section className='accountTypeGroup' aria-labelledby='account-type-hardware'>
-          <h2 id='account-type-hardware' className='accountTypeGroupTitle'>
-            Hardware devices
-          </h2>
-          <div className='accountTypeList'>
-            <button
-              type='button'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('lattice')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <AccountTypeMark type='lattice' size={20} />
-              </div>
-              <div>{'GridPlus Lattice1'}</div>
-            </button>
-            <button
-              type='button'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('ledger')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <AccountTypeMark type='ledger' size={20} />
-              </div>
-              <div>{'Ledger device'}</div>
-            </button>
-            <button
-              type='button'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('trezor')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <AccountTypeMark type='trezor' size={20} />
-              </div>
-              <div>{'Trezor device'}</div>
-            </button>
-          </div>
-        </section>
-        <section className='accountTypeGroup' aria-labelledby='account-type-create'>
-          <h2 id='account-type-create' className='accountTypeGroupTitle'>
-            Create new
-          </h2>
-          <div className='accountTypeList'>
-            <button
-              type='button'
-              aria-label='Create recovery phrase'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('create-seed')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <AccountTypeMark type='seed' size={20} />
-              </div>
-              <div>{'Recovery phrase'}</div>
-            </button>
-            <button
-              type='button'
-              aria-label='Create private key'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('create-keyring')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <Icon name='key' size={20} />
-              </div>
-              <div>{'Private key'}</div>
-            </button>
-          </div>
-        </section>
-        <section className='accountTypeGroup' aria-labelledby='account-type-import'>
-          <h2 id='account-type-import' className='accountTypeGroupTitle'>
-            Import existing
-          </h2>
-          <div className='accountTypeList'>
-            <button
-              type='button'
-              aria-label='Import recovery phrase'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('seed')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <AccountTypeMark type='seed' size={20} />
-              </div>
-              <div>{'Recovery phrase'}</div>
-            </button>
-            <button
-              type='button'
-              aria-label='Import private key'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('keyring')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <Icon name='key' size={20} />
-              </div>
-              <div>{'Private key'}</div>
-            </button>
-            <button
-              type='button'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('keystore')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <Icon name='file' size={20} />
-              </div>
-              <div>{'Keystore file (JSON)'}</div>
-            </button>
-          </div>
-        </section>
-        <section className='accountTypeGroup' aria-labelledby='account-type-watch'>
-          <h2 id='account-type-watch' className='accountTypeGroupTitle'>
-            Watch-only
-          </h2>
-          <div className='accountTypeList'>
-            <button
-              type='button'
-              className='accountTypeSelect'
-              onClick={() => this.createNewAccount('nonsigning')}
-            >
-              <div className='accountTypeSelectIcon'>
-                <Icon name='watch' size={20} />
-              </div>
-              <div>{'Watch account'}</div>
-            </button>
-          </div>
-        </section>
+        {showHardware ? (
+          <section className='accountTypeGroup' aria-labelledby='account-type-hardware'>
+            <h2 id='account-type-hardware' className='accountTypeGroupTitle'>
+              Hardware devices
+            </h2>
+            <div className='accountTypeList'>
+              <button
+                type='button'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('lattice')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <AccountTypeMark type='lattice' size={20} />
+                </div>
+                <div>{'GridPlus Lattice1'}</div>
+              </button>
+              <button
+                type='button'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('ledger')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <AccountTypeMark type='ledger' size={20} />
+                </div>
+                <div>{'Ledger device'}</div>
+              </button>
+              <button
+                type='button'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('trezor')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <AccountTypeMark type='trezor' size={20} />
+                </div>
+                <div>{'Trezor device'}</div>
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {showCreate ? (
+          <section className='accountTypeGroup' aria-labelledby='account-type-create'>
+            <h2 id='account-type-create' className='accountTypeGroupTitle'>
+              Create new
+            </h2>
+            <div className='accountTypeList'>
+              <button
+                type='button'
+                aria-label='Create recovery phrase'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('create-seed')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <AccountTypeMark type='seed' size={20} />
+                </div>
+                <div>{'Recovery phrase'}</div>
+              </button>
+              <button
+                type='button'
+                aria-label='Create private key'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('create-keyring')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <Icon name='key' size={20} />
+                </div>
+                <div>{'Private key'}</div>
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {showImport ? (
+          <section className='accountTypeGroup' aria-labelledby='account-type-import'>
+            <h2 id='account-type-import' className='accountTypeGroupTitle'>
+              Import existing
+            </h2>
+            <div className='accountTypeList'>
+              <button
+                type='button'
+                aria-label='Import recovery phrase'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('seed')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <AccountTypeMark type='seed' size={20} />
+                </div>
+                <div>{'Recovery phrase'}</div>
+              </button>
+              <button
+                type='button'
+                aria-label='Import private key'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('keyring')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <Icon name='key' size={20} />
+                </div>
+                <div>{'Private key'}</div>
+              </button>
+              <button
+                type='button'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('keystore')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <Icon name='file' size={20} />
+                </div>
+                <div>{'Keystore file (JSON)'}</div>
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {showWatch ? (
+          <section className='accountTypeGroup' aria-labelledby='account-type-watch'>
+            <h2 id='account-type-watch' className='accountTypeGroupTitle'>
+              Watch-only
+            </h2>
+            <div className='accountTypeList'>
+              <button
+                type='button'
+                className='accountTypeSelect'
+                onClick={() => this.createNewAccount('nonsigning')}
+              >
+                <div className='accountTypeSelectIcon'>
+                  <Icon name='watch' size={20} />
+                </div>
+                <div>{'Watch account'}</div>
+              </button>
+            </div>
+          </section>
+        ) : null}
       </div>
     )
   }
@@ -267,6 +285,57 @@ export class Dash extends React.Component {
       showAddAccounts: false
     }
   }
+  openAccountChooser = (accountChooserMode) => {
+    link.send('tray:action', 'navDash', {
+      view: 'accounts',
+      data: { showAddAccounts: true, accountChooserMode }
+    })
+  }
+
+  watchAccount = () => {
+    link.send('tray:action', 'navDash', {
+      view: 'accounts',
+      data: { showAddAccounts: true, newAccountType: 'nonsigning' }
+    })
+  }
+
+  manageSigner = (signer) => {
+    link.send('tray:action', 'navDash', {
+      view: 'expandedSigner',
+      data: { signer: signer.id }
+    })
+  }
+
+  renderSignerRow = (signer, accounts) => {
+    const activeAddresses = (signer.addresses || []).filter((address) => accounts[address.toLowerCase()])
+    const primaryAddress = activeAddresses[0] ? getAddress(activeAddresses[0]) : ''
+    const signerKind = ['ledger', 'trezor', 'lattice'].includes(signer.type)
+      ? `${signer.type} signer`
+      : 'local signer'
+    const identity = primaryAddress
+      ? `${compactAccountAddress(primaryAddress)} · ${signerKind}`
+      : `No active accounts · ${signerKind}`
+
+    return (
+      <button
+        type='button'
+        className='dashAccountSigner'
+        key={signer.id}
+        aria-label={`Manage accounts for ${signer.name || 'signer'}`}
+        onClick={() => this.manageSigner(signer)}
+      >
+        <span className='dashAccountSignerIcon'>
+          <AccountTypeMark type={signer.type} size={20} />
+        </span>
+        <span className='dashAccountSignerIdentity'>
+          <strong>{signer.name || 'Signer'}</strong>
+          <span>{identity}</span>
+        </span>
+        <span className='dashAccountSignerRole'>signer</span>
+      </button>
+    )
+  }
+
   render() {
     const signers = this.store('main.signers') || {}
     const accounts = this.store('main.accounts') || {}
@@ -294,7 +363,18 @@ export class Dash extends React.Component {
       .map((id) => ({ id, ...accounts[id] }))
       .filter((account) => isWatchOnlyAccountType(account.lastSignerType))
     const accountCount = Object.keys(accounts).length
-    const empty = accountCount === 0 && hardwareSigners.length === 0 && hotSigners.length === 0
+    const orderedSigners = [
+      ...hardwareSigners.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+      ...hotSigners
+    ]
+    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
+      Object.values(networks)
+    )
+    const counts = {
+      accounts: accountCount,
+      networks: allNetworks.filter((network) => network.on).length,
+      dapps: Object.keys(this.store('main.origins') || {}).length
+    }
 
     const { showAddAccounts } = this.props.data
     return showAddAccounts ? (
@@ -305,9 +385,44 @@ export class Dash extends React.Component {
         {...this.props}
       />
     ) : (
-      <div className='cardShow'>
-        <div className='signers'>
-          <div className='signersMid'>
+      <div className='localSettings dashAccountsPerch cardShow'>
+        <div className='localSettingsWrap'>
+          <ControlNavigation counts={counts} current='accounts' replace />
+          <section className='dashHomeCard dashAccountsSignerCard' aria-labelledby='dash-signers-title'>
+            <div className='dashAccountsCardHeader'>
+              <h2 id='dash-signers-title'>{orderedSigners.length === 1 ? 'Signer' : 'Signers'}</h2>
+            </div>
+            {orderedSigners.length ? (
+              <div className='dashAccountSignerLedger'>
+                {orderedSigners.map((signer) => this.renderSignerRow(signer, accounts))}
+              </div>
+            ) : (
+              <p className='dashAccountsEmptyCopy'>No signing accounts yet.</p>
+            )}
+          </section>
+          <section className='dashHomeCard dashAccountsAddCard' aria-labelledby='dash-add-account-title'>
+            <div className='dashAccountsCardHeader'>
+              <h2 id='dash-add-account-title'>Add account</h2>
+            </div>
+            <div className='dashAccountsActions'>
+              <button type='button' onClick={() => this.openAccountChooser('create')}>
+                <Icon name='lock' size={19} />
+                <span>Derive new</span>
+              </button>
+              <button type='button' onClick={this.watchAccount}>
+                <Icon name='eye' size={19} />
+                <span>Watch</span>
+              </button>
+              <button type='button' onClick={() => this.openAccountChooser('import')}>
+                <Icon name='file' size={19} />
+                <span>Import</span>
+              </button>
+            </div>
+          </section>
+          <section className='dashHomeCard dashAccountsWatchCard' aria-labelledby='dash-watch-accounts-title'>
+            <div className='dashAccountsCardHeader'>
+              <h2 id='dash-watch-accounts-title'>Watch accounts</h2>
+            </div>
             {watchAccounts.length ? (
               <div className='watchAccounts'>
                 {watchAccounts.map((account) => {
@@ -335,44 +450,20 @@ export class Dash extends React.Component {
                   )
                 })}
               </div>
-            ) : null}
-            {/* <div className='signersHeader'>
-                Your Hardware Signers
-              </div> */}
-            <div className='signersList'>
-              {hardwareSigners.length
-                ? hardwareSigners
-                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-                    .map((signer, index) => <Signer index={index} key={signer.id} {...signer} />)
-                : null}
-            </div>
-            {/* <div className='signersHeader'>
-                Your Hot Signers
-              </div> */}
-            <div className='signersList'>
-              {hotSigners.length
-                ? hotSigners.map((signer, index) => <Signer index={index} key={signer.id} {...signer} />)
-                : null}
-            </div>
-            {!empty ? (
-              <DelegationRevocation
-                accounts={accounts}
-                currentAccount={this.store('selected.current')}
-                networks={this.store('main.networks.ethereum') || {}}
-                signers={signers}
-              />
-            ) : null}
-            {empty ? (
-              <div className='accountsEmpty'>
-                <WrenEmptyState
-                  expanded
-                  image={emptyAccounts}
-                  title='No accounts yet'
-                  copy='Add an account to connect, review, or sign.'
-                />
-              </div>
-            ) : null}
-          </div>
+            ) : (
+              <p className='dashAccountsEmptyCopy'>
+                Track addresses without holding keys. No signing capability.
+              </p>
+            )}
+          </section>
+          {accountCount ? (
+            <DelegationRevocation
+              accounts={accounts}
+              currentAccount={this.store('selected.current')}
+              networks={this.store('main.networks.ethereum') || {}}
+              signers={signers}
+            />
+          ) : null}
         </div>
       </div>
     )

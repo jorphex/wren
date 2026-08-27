@@ -151,6 +151,11 @@ const wrenGlyphs = Object.freeze({
       <path d='M9 20h6' />
     </>
   ),
+  overview: createWrenGlyph(
+    <>
+      <path d='M4 5h7v6H4V5ZM13 5h7v6h-7V5ZM4 13h7v6H4v-6ZM13 13h7v6h-7v-6Z' />
+    </>
+  ),
   blocked: createWrenGlyph(
     <>
       <circle cx='12' cy='12' r='8' />
@@ -323,6 +328,13 @@ const wrenGlyphs = Object.freeze({
       <path d='M10 4v16M14 9l3 3-3 3' />
     </>
   ),
+  panelSingle: createWrenGlyph(<rect x='4' y='5' width='16' height='14' rx='1.5' />),
+  panelSplit: createWrenGlyph(
+    <>
+      <rect x='3' y='5' width='8' height='14' rx='1.5' />
+      <rect x='13' y='5' width='8' height='14' rx='1.5' />
+    </>
+  ),
   workspace: createWrenGlyph(
     <>
       <rect x='3.5' y='5' width='9' height='14' rx='1' />
@@ -372,6 +384,7 @@ const icons = Object.freeze({
   globe: wrenGlyphs.globe,
   network: wrenGlyphs.network,
   next: wrenGlyphs.next,
+  overview: wrenGlyphs.overview,
   pending: pixelGlyphs.pending,
   pencil: wrenGlyphs.pencil,
   permissions: wrenGlyphs.shield,
@@ -388,6 +401,8 @@ const icons = Object.freeze({
   settings: wrenGlyphs.settings,
   sign: wrenGlyphs.pencil,
   sidebar: wrenGlyphs.sidebar,
+  panelSingle: wrenGlyphs.panelSingle,
+  panelSplit: wrenGlyphs.panelSplit,
   workspace: wrenGlyphs.workspace,
   support: wrenGlyphs.support,
   sync: wrenGlyphs.sync,

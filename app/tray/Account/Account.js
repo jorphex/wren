@@ -1,12 +1,14 @@
 import React from 'react'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 import Restore from 'react-restore'
+import BigNumber from 'bignumber.js'
 
 import Icon from '../../../resources/Components/Icon'
 import QrCode from '../../../resources/Components/QrCode'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
-import { getAddress } from '../../../resources/utils'
+import { isNetworkConnected } from '../../../resources/utils/chains'
+import { createBalance, formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
 
 import Default from './Default'
 
@@ -58,6 +60,31 @@ const modules = {
   activity: Activity,
   signer: Signer,
   settings: Settings
+}
+
+const portfolioSummary = (store, accountId) => {
+  const account = store('main.accounts', accountId) || {}
+  const address = account.address || accountId
+  const networks = store('main.networks.ethereum') || {}
+  const networksMeta = store('main.networksMeta.ethereum') || {}
+  const rates = store('main.rates') || {}
+  const balances = (store('main.balances', address) || [])
+    .filter((balance) => isNetworkConnected(networks[balance.chainId]))
+    .map((balance) => {
+      const native = isNativeCurrency(balance.address)
+      const nativeCurrency = safeNetworkMetadata(
+        networksMeta[balance.chainId],
+        networks[balance.chainId]
+      ).nativeCurrency
+      const quote = native ? nativeCurrency.usd : rates[balance.address || balance.symbol]?.usd
+      const decimals = native ? nativeCurrency.decimals || 18 : balance.decimals
+      return createBalance(
+        { ...balance, decimals },
+        networks[balance.chainId]?.isTestnet ? { price: 0 } : quote
+      )
+    })
+  const total = balances.reduce((sum, balance) => sum.plus(balance.totalValue), BigNumber(0))
+  return { count: balances.length, total: total.isZero() ? '0.00' : formatUsdRate(total, 0) }
 }
 
 export const AccountAddressActions = ({ address, name }) => {
@@ -198,12 +225,22 @@ class _AccountModule extends React.Component {
   }
 
   render() {
-    const { id, module, top, index, expanded, expandedData, account, filter } = this.props
+    const {
+      id,
+      module,
+      top,
+      height = module.height,
+      index,
+      expanded,
+      expandedData,
+      account,
+      filter
+    } = this.props
     let hidden = false
     let style = {
       transform: `translateY(${top}px)`,
       zIndex: 9999 - index,
-      height: module.height,
+      height,
       opacity: 1
     }
 
@@ -221,7 +258,7 @@ class _AccountModule extends React.Component {
       return this.getModule(id, account, expanded, expandedData, filter)
     } else {
       return (
-        <div className={'accountModule'} ref={this.moduleRef} style={style}>
+        <div className={`accountModule accountModule-${id}`} ref={this.moduleRef} style={style}>
           <div className='accountModuleInner cardShow'>
             <div className='accountModuleCard'>
               {this.getModule(id, account, expanded, expandedData, filter)}
@@ -234,18 +271,48 @@ class _AccountModule extends React.Component {
 }
 
 const AccountModule = Restore.connect(_AccountModule)
-const ACCOUNT_MODULE_ATTACHED_GAP = 4
-const ACCOUNT_MODULE_SECTION_GAP = 16
-const getAccountModuleGap = (previousId, id) =>
-  previousId === 'requests' && id === 'chains' ? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP
+const ACCOUNT_MODULE_SECTION_GAP = 12
+const PERCH_MODULE_MIN_HEIGHT = {
+  requests: 135,
+  chains: 66,
+  activity: 340,
+  permissions: 100
+}
+const getAccountModuleGap = () => ACCOUNT_MODULE_SECTION_GAP
 
 // account module is position absolute and with a translateX
 class _AccountMain extends React.Component {
   constructor(...args) {
     super(...args)
     this.state = {
-      expandedModule: ''
+      expandedModule: '',
+      contentContinues: false
     }
+    this.accountScrollRef = React.createRef()
+    this.scrollFrame = 0
+  }
+
+  componentDidMount() {
+    this.scheduleScrollAffordanceUpdate()
+  }
+
+  componentDidUpdate() {
+    this.scheduleScrollAffordanceUpdate()
+  }
+
+  componentWillUnmount() {
+    if (this.scrollFrame) window.cancelAnimationFrame(this.scrollFrame)
+  }
+
+  scheduleScrollAffordanceUpdate() {
+    if (this.scrollFrame) return
+    this.scrollFrame = window.requestAnimationFrame(() => {
+      this.scrollFrame = 0
+      const scroll = this.accountScrollRef.current
+      if (!scroll) return
+      const contentContinues = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight > 2
+      if (contentContinues !== this.state.contentContinues) this.setState({ contentContinues })
+    })
   }
   renderAccountFilter() {
     return (
@@ -282,30 +349,31 @@ class _AccountMain extends React.Component {
     )
   }
 
-  renderHomeHeader() {
-    const account = this.store('main.accounts', this.props.id) || {}
-    const address = getAddress(account.address || this.props.id)
-    const name = account.ensName || account.name || 'Account'
-
+  renderPortfolioSummary() {
+    const { count, total } = portfolioSummary(this.store, this.props.id)
+    const hideBalances = this.store('selected.hideBalances')
     return (
-      <header className='accountHomeHeader'>
-        <div className='accountHomeIdentity'>
-          <AccountNameEditor account={this.props.id} name={name} />
-          <AccountAddressActions key={address} address={address} name={name} />
+      <section className='accountPortfolioCard' aria-label='Portfolio balance'>
+        <div className='accountPortfolioGlow' aria-hidden='true' />
+        <div className='accountPortfolioHeader'>
+          <span>Portfolio balance</span>
+          <span>{count === 1 ? '1 asset' : `${count} assets`}</span>
         </div>
-        <div className='accountHomeActions' aria-label='Account actions'>
-          <button
-            type='button'
-            className='wrenControl wrenControlPrimary wrenControlLarge'
-            onClick={() => {
-              link.send('tray:action', 'navDash', { view: 'send', data: {} })
-            }}
-          >
-            <Icon name='send' size={14} />
-            <span>Send</span>
-          </button>
+        <div className='accountPortfolioValue'>
+          {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : `$${total}`}
         </div>
-      </header>
+        <div className='accountPortfolioMeta'>
+          {count ? 'Across enabled networks' : 'No assets on this account yet'}
+        </div>
+        <button
+          type='button'
+          className='accountPortfolioSend wrenControl wrenControlPrimary wrenControlLarge'
+          onClick={() => link.send('tray:action', 'navDash', { view: 'send', data: {} })}
+        >
+          <Icon name='send' size={15} />
+          <span>Send</span>
+        </button>
+      </section>
     )
   }
 
@@ -316,7 +384,8 @@ class _AccountMain extends React.Component {
     let previousVisibleModuleId
     const modules = accountModuleOrder.map((id, i) => {
       const module = accountModules[id] || { height: 0 }
-      const height = module.height || 0
+      const measuredHeight = module.height || 0
+      const height = measuredHeight > 0 ? Math.max(measuredHeight, PERCH_MODULE_MIN_HEIGHT[id] || 0) : 0
       const gap = height > 0 && previousVisibleModuleId ? getAccountModuleGap(previousVisibleModuleId, id) : 0
       const top = slideHeight + gap
       slideHeight = top + height
@@ -328,20 +397,30 @@ class _AccountMain extends React.Component {
           account={this.props.id}
           module={module}
           top={top}
+          height={height}
           index={i}
           filter={this.state.accountModuleFilter}
         />
       )
     })
-    const footerHeight = this.store('windows.panel.footer.height')
     return (
-      <div className='accountMain' style={{ bottom: footerHeight + 'px' }}>
-        <div className='accountMainScroll'>
-          {this.renderHomeHeader()}
+      <div className='accountMain accountMainPerch'>
+        <div
+          className='accountMainScroll'
+          ref={this.accountScrollRef}
+          onScroll={() => this.scheduleScrollAffordanceUpdate()}
+        >
+          {this.renderPortfolioSummary()}
           <div className='accountMainSlide' style={{ height: slideHeight + 'px' }}>
             {modules}
           </div>
         </div>
+        <div
+          className={
+            this.state.contentContinues ? 'accountScrollFade accountScrollFadeVisible' : 'accountScrollFade'
+          }
+          aria-hidden='true'
+        />
       </div>
     )
   }
@@ -544,7 +623,11 @@ class _AccountBody extends React.Component {
           {...this.props}
           requestMode={true}
           accountViewTitle={accountViewTitle}
-          accountViewMeta={chainData.chainName || chainData.requestChainName || transactionChainName}
+          accountViewMeta={
+            req && isPendingSigningRequest(req)
+              ? 'Signature'
+              : chainData.chainName || chainData.requestChainName || transactionChainName
+          }
         >
           {req && this.renderRequest(req, crumb.data)}
         </AccountView>

@@ -2,6 +2,7 @@ import Restore from 'react-restore'
 
 import { Main } from '../../../../app/dash/Main'
 import {
+  WREN_COMPANION_CHROME_WEB_STORE_URL,
   WREN_COMPANION_RELEASES_URL,
   WREN_SUPPORT_ADDRESS,
   WREN_SUPPORT_URL
@@ -62,14 +63,10 @@ it('opens the cross-account app-activity view without exposing internal instance
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 
-it('keeps one non-interactive Wren beside the Control Center title', () => {
+it('leaves dashboard identity to the shared Control chrome', () => {
   renderMain()
-  const bird = screen.getByTestId('control-center-wren')
 
-  expect(bird).toBeTruthy()
-  expect(bird.getAttribute('alt')).toBe('')
-  expect(bird.getAttribute('aria-hidden')).toBe('true')
-  expect(screen.getAllByTestId('control-center-wren')).toHaveLength(1)
+  expect(screen.queryByTestId('control-center-wren')).toBeNull()
   expect(screen.queryByText('Desktop EVM wallet')).toBeNull()
 })
 
@@ -83,18 +80,20 @@ it('includes each destination description in its accessible name', () => {
   ).toBeTruthy()
 })
 
-it('orders wallet destinations and places the concise inspector in Tools', () => {
+it('matches the Control push-navigation order and retains additional tools below it', () => {
   renderMain()
 
-  const walletItems = [...document.querySelectorAll('.dashModuleSection:first-child .dashModuleTitle')].map(
+  const primaryItems = [...document.querySelectorAll('.dashModules .dashModuleTitle')].map(
     (item) => item.textContent
   )
-  const toolItems = [...document.querySelectorAll('.dashModuleSection:nth-child(2) .dashModuleTitle')].map(
+  const toolItems = [...document.querySelectorAll('.dashToolList .dashModuleTitle')].map(
     (item) => item.textContent
   )
-  expect(walletItems).toEqual(['Accounts', 'Earn', 'Contacts', 'App activity'])
-  expect(screen.getByText('Tools')).toBeTruthy()
-  expect(toolItems).toEqual(['Networks', 'Tokens', 'Read-only inspector', 'Contracts', 'Settings'])
+  expect(primaryItems).toEqual(['Overview', 'Accounts', 'Networks', 'App activity', 'Settings'])
+  expect(screen.queryByText('home')).toBeNull()
+  expect(screen.queryByText('app')).toBeNull()
+  expect(screen.getByText('More tools')).toBeTruthy()
+  expect(toolItems).toEqual(['Earn', 'Contacts', 'Tokens', 'Read-only inspector', 'Contracts'])
   expect(
     screen.getByRole('button', { name: 'Read-only inspector Inspect requests without signing.' })
   ).toBeTruthy()
@@ -105,23 +104,45 @@ it('orders wallet destinations and places the concise inspector in Tools', () =>
   ).toBeTruthy()
 })
 
-it.each(['Download Chrome companion', 'Download Firefox companion'])(
-  'routes %s to community companion releases',
-  (label) => {
-    renderMain()
+it('orders the lower Control surfaces by utility and keeps Support cardless', () => {
+  renderMain()
 
-    fireEvent.click(screen.getByRole('button', { name: label }))
+  const sections = [...document.querySelector('.localSettingsWrap').children].map((element) =>
+    ['dashModules', 'dashToolsCard', 'dashCompanion', 'dashSupportActions'].find((name) =>
+      element.classList.contains(name)
+    )
+  )
 
-    expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_RELEASES_URL)
-  }
-)
+  expect(sections).toEqual(['dashModules', 'dashToolsCard', 'dashCompanion', 'dashSupportActions'])
+  expect(document.querySelector('.dashSupportCard')).toBeNull()
+  expect(document.querySelectorAll('.dashSupportActions > *')).toHaveLength(4)
+})
+
+it('routes Chrome to its Web Store listing', () => {
+  renderMain()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Download Chrome companion' }))
+
+  expect(WREN_COMPANION_CHROME_WEB_STORE_URL).toBe(
+    'https://chromewebstore.google.com/detail/wren-companion/ifimccfajfbgligbhcgfapdagpnfkbhn'
+  )
+  expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_CHROME_WEB_STORE_URL)
+})
+
+it('keeps Firefox on companion releases while store approval is pending', () => {
+  renderMain()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Download Firefox companion' }))
+
+  expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_RELEASES_URL)
+})
 
 it('routes support, tutorial, and quit actions', () => {
   renderMain()
 
   fireEvent.click(screen.getByRole('button', { name: 'Report an issue' }))
   fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Quit' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Quit Wren' }))
 
   expect(link.send.mock.calls).toEqual([
     ['tray:openExternal', WREN_SUPPORT_URL],

@@ -1,9 +1,10 @@
 import React from 'react'
 import Restore from 'react-restore'
 
-import AccountController, { AccountTypeMark } from './AccountController'
+import AccountController from './AccountController'
 
 import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
+import wrenMark from 'url:../../../asset/brand/exports/mark/wren-mark-color-32.png'
 import Icon from '../../../resources/Components/Icon'
 import DialogSurface from '../../../resources/Components/DialogSurface'
 import { accountSort as byCreation } from '../../../resources/domain/account'
@@ -162,7 +163,6 @@ export class AccountSelector extends React.Component {
     const address = getAddress(currentAccount.address || currentAccount.id)
     const displayName = currentAccount.ensName || currentAccount.name || 'Account'
     const shortAddress = `${address.substring(0, 6)}…${address.slice(-4)}`
-
     return (
       <div className='accountSwitcherBar'>
         <button
@@ -173,22 +173,14 @@ export class AccountSelector extends React.Component {
           aria-controls='account-switcher-panel'
           onClick={() => this.store.toggleShowAccounts()}
         >
-          <span className='accountSwitcherIcon'>
-            <AccountTypeMark type={currentAccount.lastSignerType} size={18} />
-          </span>
+          <img alt='' aria-hidden='true' className='accountSwitcherBrand' src={wrenMark} />
           <span className='accountSwitcherIdentity'>
             <span className='accountSwitcherName'>{displayName}</span>
             <span className='accountSwitcherAddress'>{shortAddress}</span>
           </span>
-          <span className='accountSwitcherChevron'>
-            <Icon name={this.store('selected.showAccounts') ? 'chevron-up' : 'chevron-down'} size={14} />
-          </span>
         </button>
         <div className='accountSwitcherControls'>
           <div className='accountSwitcherPrivacy'>
-            <span className='accountSwitcherPrivacyLabel'>
-              {hideBalances ? 'Balances hidden' : 'Balances visible'}
-            </span>
             <button
               type='button'
               className={
@@ -205,12 +197,20 @@ export class AccountSelector extends React.Component {
           </div>
           <button
             type='button'
+            className='accountCopyAddress wrenControl wrenControlGhost wrenControlIcon'
+            aria-label='Copy account address'
+            onClick={() => link.send('tray:clipboardData', address)}
+          >
+            <Icon name='copy' size={17} />
+          </button>
+          <button
+            type='button'
             className='accountWorkspaceToggle wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
             aria-label={workspaceOpen ? 'Close dashboard' : 'Open dashboard'}
             aria-pressed={workspaceOpen}
             onClick={() => link.send('tray:action', 'setDash', { showing: !workspaceOpen })}
           >
-            <Icon name='workspace' size={19} />
+            <Icon name={workspaceOpen ? 'panelSplit' : 'panelSingle'} size={19} />
           </button>
         </div>
       </div>

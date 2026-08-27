@@ -89,7 +89,7 @@ test('keeps the account atmosphere static across startup and ordinary browsing o
   expect(accountStyle).toMatch(
     /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-color var\(--wren-bg-wallet-canvas\)[\s\S]*?background-image url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
   )
-  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(2)
+  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(3)
   expect(accountStyle).toMatch(
     /\.workspace-edge-left #panel[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at -2% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 88% 104%/
   )
@@ -117,7 +117,9 @@ test('lets the selected-account chooser share the wallet canvas', () => {
 test('keeps the account body geometry independent from the dashboard dock edge', () => {
   expect(accountStyle).toMatch(/\/\/ Wren account surface\n\.accountMain\n {2}top 88px/)
   expect(accountSelectorStyle).toMatch(/\.accountSelector\.accountSelectorOpen\n {2}top 6px/)
-  const edgeOverride = accountStyle.split('.workspace-edge-left #panel')[1].split('.accountHomeHeader')[0]
+  const edgeOverride = accountStyle
+    .split('.workspace-edge-left #panel')[1]
+    .split('#panel:has(.accountMainPerch)')[0]
   expect(edgeOverride).not.toMatch(/\n {2}\.account(?:Main|Selector)/)
 })
 
@@ -157,11 +159,8 @@ test('keeps expanded balances as a plain ledger with crisp circular progress mar
 test('keeps account modules free of decorative seams', () => {
   expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
   expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
-  expect(accountSource).toMatch(/const ACCOUNT_MODULE_ATTACHED_GAP = 4/)
-  expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 16/)
-  expect(accountSource).toMatch(
-    /previousId === 'requests' && id === 'chains' \? ACCOUNT_MODULE_ATTACHED_GAP : ACCOUNT_MODULE_SECTION_GAP/
-  )
+  expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 12/)
+  expect(accountSource).toMatch(/const getAccountModuleGap = \(\) => ACCOUNT_MODULE_SECTION_GAP/)
   expect(accountSource).toMatch(
     /const gap = height > 0 && previousVisibleModuleId \? getAccountModuleGap\(previousVisibleModuleId, id\) : 0/
   )
@@ -200,26 +199,19 @@ test('keeps warnings and balance siblings attached through spacing', () => {
   expect(balancesStyle).toMatch(/\.balanceFilter[\s\S]{0,120}?margin-bottom var\(--wren-space-2\)/)
 })
 
-test('keeps network switching, chain explorer, and gas evidence as distinct controls', () => {
+test('keeps gas evidence and network controls in one compact row', () => {
   expect(accountSource).not.toMatch(/accountHomeExplorer/)
   expect(accountStyle).toMatch(
-    /\.chainMonitorRow[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto 1px auto auto/
+    /\.chainMonitorCompactRow[\s\S]*?min-height 44px[\s\S]*?grid-template-columns auto minmax\(0, 1fr\) auto/
   )
+  expect(accountStyle).toMatch(/\.chainMonitorSummary[\s\S]*?display flex[\s\S]*?\.sliceTileGasPrice/)
+  expect(accountStyle).toMatch(/\.chainMonitorControls[\s\S]*?display flex[\s\S]*?gap 2px/)
   expect(accountStyle).toMatch(
-    /\.chainMonitorSwitchButton,[\s\S]*?\.chainMonitorExplorer[\s\S]*?min-height 44px/
-  )
-  expect(accountStyle).toMatch(/\.chainMonitorControls[\s\S]*?display flex[\s\S]*?gap var\(--wren-space-1\)/)
-  expect(accountStyle).toMatch(
-    /\.chainMonitorGasEvidence[\s\S]*?justify-content flex-end[\s\S]*?\.chainMonitorDisclosure[\s\S]*?min-height 44px/
+    /button\.wrenControl[\s\S]*?width 44px[\s\S]*?height 44px[\s\S]*?button\.chainMonitorDisclosure[\s\S]*?width auto/
   )
   expect(accountStyle).toMatch(/\.accountHomeAddress[\s\S]*?min-height 44px/)
   expect(accountSource).toMatch(/wrenControlPrimary wrenControlLarge/)
-  expect(accountStyle).toMatch(
-    /\.chainMonitorIdentity[\s\S]*?padding-left var\(--wren-space-3\)[\s\S]*?\.chainMonitorMark[\s\S]*?width 24px[\s\S]*?height 24px/
-  )
-  expect(accountStyle).toMatch(
-    /\.chainMonitorDivider[\s\S]*?height 24px[\s\S]*?@media \(max-width: 540px\)[\s\S]*?grid-template-columns minmax\(0, 1fr\) auto[\s\S]*?\.chainMonitorDivider[\s\S]*?display none/
-  )
+  expect(accountStyle).not.toMatch(/\.chainMonitorGasEvidence|\.chainMonitorDivider/)
 })
 
 test('aligns balance artwork and copy with the account ledger rhythm', () => {

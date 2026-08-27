@@ -38,7 +38,21 @@ export const requestPreviewSummary = (requests = []) => {
   return { total: unfinished.length, pending: unfinished.length - confirming, confirming }
 }
 
-const requestSummaryCopy = ({ pending, confirming }) => `${pending} pending · ${confirming} confirming`
+const requestPreviewTitle = (request) => {
+  const titles = {
+    access: 'Account access',
+    addChain: 'Add network',
+    addToken: 'Add token',
+    eip7702Revoke: 'Revoke delegation',
+    sign: 'Message signature',
+    signErc20Permit: 'Approve token permit',
+    signTypedData: 'Typed-data signature',
+    switchChain: 'Switch network',
+    transaction: 'Review transaction',
+    walletCalls: 'Wallet calls batch'
+  }
+  return titles[request?.type] || 'Review request'
+}
 
 export const isReviewQueueRequest = (request) =>
   request?.mode !== 'monitor' && !terminalRequestStatuses.has(request?.status)
@@ -78,7 +92,7 @@ export class Requests extends React.Component {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
           link.send('tray:action', 'updateAccountModule', this.props.moduleId, {
-            height: this.moduleRef.current.clientHeight
+            height: this.moduleRef.current.scrollHeight
           })
         }
       })
@@ -160,8 +174,18 @@ export class Requests extends React.Component {
   renderPreview() {
     const requests = Object.values(this.store('main.accounts', this.props.account, 'requests') || {})
     const summary = requestPreviewSummary(requests)
-    const summaryCopy = requestSummaryCopy(summary)
-    const title = summary.total ? `Requests (${summary.total})` : 'Requests'
+    const summaryLabel =
+      summary.pending && summary.confirming
+        ? `${summary.pending} pending · ${summary.confirming} confirming`
+        : summary.confirming
+          ? `${summary.confirming} confirming`
+          : summary.pending
+            ? `${summary.pending} pending`
+            : 'None pending'
+    const current = requests.filter(isReviewQueueRequest).sort(byRequestQueueOrder)[0]
+    const origin = current
+      ? getOriginDisplayName(this.store('main.origins', current.origin, 'name') || current.origin)
+      : ''
     return (
       <div ref={this.moduleRef} className='balancesBlock'>
         <button
@@ -185,21 +209,25 @@ export class Requests extends React.Component {
             link.send('nav:forward', 'panel', crumb)
           }}
         >
-          <div className={'requestPreviewContent'}>
-            <div className={'requestPreviewContentTitle'}>
-              <span style={summary.total ? { color: 'var(--good)' } : {}}>
-                <Icon name='requests' size={13} />
-              </span>
-              <span>{title}</span>
+          <div className='requestPreviewContent'>
+            <div className='requestPreviewHeading'>
+              <span>Requests</span>
+              <span>{summaryLabel}</span>
             </div>
-            <div className='requestPreviewContentEnd'>
-              {summary.total ? <span className='requestPreviewContentMeta'>{summaryCopy}</span> : null}
-              <div
-                className={'requestPreviewContentArrow'}
-                style={summary.total ? { color: 'var(--good)' } : {}}
-              >
-                <Icon name='next' size={14} />
+            {current ? (
+              <div className='requestPreviewItem'>
+                <span className='requestPreviewOriginMark'>{origin.slice(0, 1).toUpperCase()}</span>
+                <span className='requestPreviewIdentity'>
+                  <strong>{requestPreviewTitle(current)}</strong>
+                  <span>{`${origin} · ${current.type}`}</span>
+                </span>
+                <span className='requestPreviewReview'>Review →</span>
               </div>
+            ) : (
+              <div className='requestPreviewEmpty'>Requests from connected apps appear here.</div>
+            )}
+            <div className='requestPreviewContentEnd' aria-hidden='true'>
+              <Icon name='next' size={14} />
             </div>
           </div>
         </button>

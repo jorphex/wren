@@ -129,8 +129,7 @@ export class Dash extends React.Component {
     const promptSigner = hardwarePrompt?.signerId
       ? this.store('main.signers', hardwarePrompt.signerId)
       : undefined
-    const showAddButton =
-      ['chains', 'accounts', 'tokens'].includes(view) && (!data || Object.keys(data).length === 0)
+    const showAddButton = view === 'tokens' && (!data || Object.keys(data).length === 0)
 
     return (
       <div className='dash'>

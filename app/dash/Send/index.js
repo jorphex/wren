@@ -27,7 +27,7 @@ const COPY = Object.freeze({
   amount: 'Amount',
   amountExceedsBalance: 'Amount exceeds available balance',
   amountInvalid: 'Enter a valid amount',
-  asset: 'Asset',
+  asset: 'From',
   assetUnavailable: 'This asset is no longer available to send on this network. Choose another asset.',
   close: 'Close',
   chooseAsset: 'Choose an asset',
@@ -63,7 +63,7 @@ const COPY = Object.freeze({
   quotingMax: 'Calculating safe maximum…',
   queuedBody: 'Your transaction is waiting to be submitted.',
   queuedHeading: 'Transaction queued',
-  recipient: 'Recipient',
+  recipient: 'To',
   recipientInvalid: 'Enter a valid address',
   recipientLookupUnavailable:
     'Recipient lookup is unavailable. Enter or verify the full address to continue.',
@@ -1690,8 +1690,14 @@ export class Send extends React.Component {
                 <span className='sendAssetIdentityCluster'>
                   <AssetMark appearance='plain' asset={selected} />
                   <span>
-                    <strong>{selected.symbol}</strong>
-                    <small>{selected.chainName}</small>
+                    <strong>{account.ensName || account.name || COPY.currentAccount}</strong>
+                    <small>
+                      {selected.symbol} ·{' '}
+                      {this.store('selected.hideBalances')
+                        ? 'Balance hidden'
+                        : `${selected.displayBalance} ${selected.symbol}`}{' '}
+                      · {selected.chainName}
+                    </small>
                   </span>
                 </span>
                 <Icon name='next' size={17} />

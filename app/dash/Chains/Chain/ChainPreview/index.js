@@ -3,9 +3,13 @@ import Connection from '../Connection'
 import { Cluster } from '../../../../../resources/Components/Cluster'
 
 const ChainPreview = (props) => {
-  const { type, id, icon, name, isTestnet, on, primaryColor } = props
+  const { type, id, icon, name, isTestnet, on, primaryColor, compact, connection } = props
+  const connected = connection?.endpoints?.some(
+    (endpoint) => endpoint?.connected || endpoint?.status === 'connected'
+  )
+  const status = !on ? 'Off' : connected ? 'Connected' : 'Unavailable'
   return (
-    <div className='network'>
+    <div className={compact ? 'network networkCompact' : 'network'}>
       <ChainHeader
         type={type}
         id={id}
@@ -16,8 +20,10 @@ const ChainPreview = (props) => {
         primaryColor={primaryColor}
         showExpand={true}
         showToggle={true}
+        compact={compact}
+        status={compact ? status : undefined}
       />
-      {on && (
+      {on && !compact && (
         <div className='chainModules'>
           <Cluster>
             <Connection {...props} />

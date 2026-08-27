@@ -78,7 +78,7 @@ export const isPendingSigningRequest = (request: AccountRequest): boolean =>
 export const accountViewTitles: Record<RequestType, string> = {
   sign: 'Sign Message',
   signTypedData: 'Sign Data',
-  signErc20Permit: 'Sign Token Permit',
+  signErc20Permit: 'Review request',
   transaction: 'Review transaction',
   access: 'Review Account Access',
   addChain: 'Review Network Request',

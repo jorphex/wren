@@ -239,6 +239,51 @@ const accountAccessRequest = () => ({
   payload: { id: 70, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
 })
 
+const permitReviewRequest = () => ({
+  account: QUALIFICATION_ACCOUNT,
+  type: 'signErc20Permit',
+  status: 'pending',
+  handlerId: 'qualification-permit-review',
+  origin: 'uniswap',
+  context: { requestChainId: 1, domainChainId: '1', risks: [] },
+  typedMessage: {
+    version: 'V4',
+    data: {
+      types: {
+        EIP712Domain: [{ name: 'chainId', type: 'uint256' }],
+        Permit: [
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' },
+          { name: 'value', type: 'uint256' },
+          { name: 'nonce', type: 'uint256' },
+          { name: 'deadline', type: 'uint256' }
+        ]
+      },
+      primaryType: 'Permit',
+      domain: { chainId: 1, name: 'USD Coin', version: '2' },
+      message: {
+        owner: QUALIFICATION_ACCOUNT,
+        spender: QUALIFICATION_DELEGATE,
+        value: '2412000000',
+        nonce: '128',
+        deadline: '4102444800'
+      }
+    }
+  },
+  permit: {
+    spender: { address: QUALIFICATION_DELEGATE, ens: '', type: 'contract' },
+    verifyingContract: {
+      address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      ens: '',
+      type: 'contract'
+    },
+    value: '2412000000',
+    deadline: 4_102_444_800
+  },
+  payload: { params: [QUALIFICATION_ACCOUNT, { message: { value: '2412000000' } }] },
+  tokenData: { name: 'USD Coin', symbol: 'USDC', decimals: 6 }
+})
+
 const switchChainRequest = () => ({
   handlerId: 'qualification-switch-chain',
   type: 'switchChain',
@@ -1137,6 +1182,31 @@ const fixtureFor = (scenario) => {
     }
   }
 
+  if (scenario.state === 'accounts-perch') {
+    state.windows.dash = {
+      ...state.windows.dash,
+      showing: true,
+      nav: [{ view: 'accounts', data: {} }]
+    }
+    const signerId = 'qualification-personal'
+    state.main.signers = {
+      [signerId]: {
+        id: signerId,
+        name: 'Personal',
+        type: 'ring',
+        status: 'ready',
+        addresses: [QUALIFICATION_ACCOUNT],
+        createdAt: 1
+      }
+    }
+    state.main.accounts = {
+      [QUALIFICATION_ACCOUNT.toLowerCase()]: {
+        ...qualificationAccount(),
+        signer: signerId
+      }
+    }
+  }
+
   if (scenario.state === 'trezor-pin') {
     const signerId = 'qualification-trezor-pin'
     state.windows.dash = {
@@ -1467,8 +1537,36 @@ const fixtureFor = (scenario) => {
     state.panel.account.modules.chains.height = scenario.logicalWidth <= 540 ? 108 : 56
   }
 
-  if (scenario.state === 'account-ledger' || scenario.state === 'account-balances') {
+  if (scenario.state === 'account-empty-perch') {
     prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.balances[QUALIFICATION_ACCOUNT] = []
+    state.panel.account.moduleOrder = ['chains', 'signer']
+    state.panel.account.modules.chains.height = 56
+    state.panel.account.modules.signer.height = 56
+  }
+
+  if (scenario.state === 'signature-permit-review') {
+    const request = permitReviewRequest()
+    prepareSelectedAccount(state, request)
+    state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'ledger'
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { uniswap: { name: 'Uniswap' } }
+    state.windows.panel.nav = [
+      {
+        view: 'requestView',
+        data: { accountId: QUALIFICATION_ACCOUNT, requestId: request.handlerId, step: 'confirm' }
+      }
+    ]
+    state.windows.panel.footer.height = 114
+  }
+
+  if (scenario.state === 'account-ledger' || scenario.state === 'account-balances') {
+    prepareSelectedAccount(state, scenario.requestsAbsent ? undefined : accountAccessRequest())
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
@@ -1522,8 +1620,8 @@ const fixtureFor = (scenario) => {
       state.panel.account.moduleOrder = state.panel.account.moduleOrder.filter((id) => id !== 'requests')
     }
     state.panel.account.modules = {
-      requests: { height: 48 },
-      chains: { height: scenario.logicalWidth <= 540 ? 108 : 56 },
+      requests: { height: 135 },
+      chains: { height: 66 },
       balances: { height: scenario.balanceArtwork ? 396 : 318 },
       activity: { height: 332 },
       permissions: { height: 92 },

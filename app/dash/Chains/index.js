@@ -2,8 +2,9 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import Chain from './Chain'
+import ControlNavigation from '../ControlNavigation'
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
-import { WREN_SUPPORT_URL } from '../../../resources/constants'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 
 export class Settings extends React.Component {
@@ -25,21 +26,13 @@ export class Settings extends React.Component {
       expandNetwork: false,
       findFocus: false,
       findHover: false,
-      findInput: ''
+      findInput: '',
+      scope: 'active'
     }
   }
 
-  discord() {
-    return (
-      <button
-        type='button'
-        className='discordInvite'
-        onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
-      >
-        <span>Need help?</span>
-        <span className='discordLink'>Open GitHub issues</span>
-      </button>
-    )
+  addNetwork = () => {
+    link.send('tray:action', 'navDash', { view: 'chains', data: { newChain: {} } })
   }
 
   renderConnections(testnetsOnly = false) {
@@ -55,6 +48,7 @@ export class Settings extends React.Component {
             .map((id) => parseInt(id))
             .sort((a, b) => a - b)
             .filter((id) => networks[type][id].isTestnet === testnetsOnly)
+            .filter((id) => this.state.scope === 'all' || networks[type][id].on)
             .sort((a, b) => {
               const aOn = networks[type][a].on
               const bOn = networks[type][b].on
@@ -81,7 +75,7 @@ export class Settings extends React.Component {
                 nativeCurrencyIcon,
                 icon
               }
-              return <Chain key={key} {...chain} view={'preview'} />
+              return <Chain key={key} {...chain} compact view={'preview'} />
             })}
         </div>
       )
@@ -91,22 +85,61 @@ export class Settings extends React.Component {
 
   renderChains() {
     const networks = this.store('main.networks')
-    const networkOptions = []
-    Object.keys(networks).forEach((type) => {
-      Object.keys(networks[type]).forEach((id) => {
-        networkOptions.push({ text: networks[type][id].name, value: type + ':' + id })
-      })
-    })
+    const allNetworks = Object.values(networks).flatMap((typeNetworks) => Object.values(typeNetworks))
+    const visibleNetworks = allNetworks.filter((network) => this.state.scope === 'all' || network.on)
+    const visibleTestnets = visibleNetworks.some((network) => network.isTestnet)
+    const counts = {
+      accounts: Object.keys(this.store('main.accounts') || {}).length,
+      networks: allNetworks.filter((network) => network.on).length,
+      dapps: Object.keys(this.store('main.origins') || {}).length
+    }
 
     return (
-      <div key={'chainList'} className={'localSettings cardShow'}>
+      <div key={'chainList'} className='localSettings dashNetworksPerch cardShow'>
         <div className='localSettingsWrap'>
-          {this.renderConnections()}
-          <div className='networkBreak'>
-            <div className='networkBreakLayer'>Testnets</div>
-          </div>
-          {this.renderConnections(true)}
-          {this.discord()}
+          <ControlNavigation counts={counts} current='chains' replace />
+          <section className='dashHomeCard dashNetworksCard' aria-labelledby='dash-networks-title'>
+            <div className='dashNetworksCardHeader'>
+              <h2 id='dash-networks-title'>{this.state.scope === 'active' ? 'Connected' : 'Networks'}</h2>
+              <div className='dashNetworkScopeControls' role='group' aria-label='Network scope'>
+                {[
+                  ['all', 'All'],
+                  ['active', 'Active']
+                ].map(([scope, label]) => (
+                  <button
+                    type='button'
+                    aria-pressed={this.state.scope === scope}
+                    className={
+                      this.state.scope === scope
+                        ? 'dashNetworkScopeButton dashNetworkScopeButtonSelected'
+                        : 'dashNetworkScopeButton'
+                    }
+                    key={scope}
+                    onClick={() => this.setState({ scope })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type='button'
+                className='dashNetworksAdd wrenControl wrenControlGhost'
+                onClick={this.addNetwork}
+              >
+                <Icon name='add' size={15} />
+                <span>Add</span>
+              </button>
+            </div>
+            <div className='dashNetworksLedger'>
+              {this.renderConnections()}
+              {visibleTestnets ? (
+                <div className='networkBreak'>
+                  <div className='networkBreakLayer'>Testnets</div>
+                </div>
+              ) : null}
+              {visibleTestnets ? this.renderConnections(true) : null}
+            </div>
+          </section>
         </div>
       </div>
     )

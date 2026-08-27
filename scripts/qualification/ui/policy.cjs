@@ -207,10 +207,7 @@ const joinedCanvasScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.dashModules',
-        layoutExpectations: [
-          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
-          ...(geometry === 'full' ? [{ kind: 'scroll-fits', selector: '.dashMainScroll' }] : [])
-        ]
+        layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
         id: `tray-account-home-${geometry}-left-${scale}`,
@@ -347,8 +344,16 @@ const sendComposerScenarios = () =>
         scale,
         logicalWidth: 620,
         logicalHeight,
+        action: {
+          type: 'sequence',
+          delayMs: 300,
+          steps: [
+            { type: 'inputLabel', label: 'To', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'inputLabel', label: 'Amount', value: '0.25' }
+          ]
+        },
         ready: '.sendComposer',
-        requiredControls: ['Send one', 'Sweep assets', 'Choose an asset', 'Choose recipient'],
+        requiredControls: ['Send one', 'Sweep assets', 'Choose an asset', 'Choose recipient', 'Review send'],
         requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH']
       },
       {
@@ -1202,7 +1207,7 @@ const reviewScenarios = () => [
           'ACTIVE ACCOUNTS',
           'SAVED CONTACTS',
           'RECENT RECIPIENTS',
-          'Previously sent from this device · verify the full address',
+          'Previously used on this device · verify the full address',
           '0x5555555555555555555555555555555555555555'
         ]
       },
@@ -1216,7 +1221,7 @@ const reviewScenarios = () => [
         ready: '#wren-settings-privacy',
         requiredControls: ['Save recent recipients', 'Clear'],
         requiredText: [
-          'Privacy',
+          'PRIVACY',
           'Recent recipients',
           'Store canonical destinations from Wren Send and managed Sweep only after successful network confirmation.',
           'Recent recipients are not included in backups.'
@@ -1235,7 +1240,7 @@ const reviewScenarios = () => [
           type: 'sequence',
           delayMs: 450,
           steps: [
-            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'inputLabel', label: 'To', value: '0x2222222222222222222222222222222222222222' },
             { type: 'inputLabel', label: 'Amount', value: '0.25' },
             { type: 'clickText', text: 'Review send' },
             {
@@ -1261,7 +1266,7 @@ const reviewScenarios = () => [
           type: 'sequence',
           delayMs: 300,
           steps: [
-            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'inputLabel', label: 'To', value: '0x2222222222222222222222222222222222222222' },
             { type: 'clickText', text: 'Use Max' },
             { type: 'clickText', text: 'Review Max send' }
           ]
@@ -1288,7 +1293,7 @@ const reviewScenarios = () => [
           delayMs: 300,
           steps: [
             { type: 'clickText', text: 'Sweep assets' },
-            { type: 'inputLabel', label: 'Recipient', value: '0x2222222222222222222222222222222222222222' },
+            { type: 'inputLabel', label: 'To', value: '0x2222222222222222222222222222222222222222' },
             { type: 'selectLabel', label: 'Network', value: '10' },
             { type: 'clickCheckboxText', text: 'USDC' },
             { type: 'clickText', text: 'Review 1 transfer' }
@@ -1651,6 +1656,17 @@ const reviewScenarios = () => [
     requiredText: ['Watch account', 'Ledger', 'Trezor', 'GridPlus', 'Seed Phrase', 'Imported Keys']
   },
   {
+    id: 'dash-accounts-perch-full-1',
+    renderer: 'dash',
+    state: 'accounts-perch',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.dashAccountsPerch',
+    requiredControls: ['Derive new', 'Watch', 'Import'],
+    requiredText: ['Accounts', 'Personal', 'ADD ACCOUNT', 'WATCH ACCOUNTS']
+  },
+  {
     id: 'dash-trezor-pin-full-1',
     renderer: 'dash',
     state: 'trezor-pin',
@@ -1691,7 +1707,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.wrenSettings',
-    requiredText: ['Desktop behavior', 'Accounts and signing']
+    requiredText: ['DESKTOP BEHAVIOR', 'ACCOUNTS AND SIGNING']
   },
   {
     id: 'dash-settings-local-connections-full-1',
@@ -1705,7 +1721,7 @@ const reviewScenarios = () => [
     requiredText: [
       'Wallet activity notifications',
       'Show private updates while Wren is hidden.',
-      'Local connections',
+      'LOCAL CONNECTIONS',
       'Authenticated software on this computer.'
     ],
     captureScroll: 'target',
@@ -1737,7 +1753,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.recoverySettings',
     requiredControls: ['Export backup', 'Restore backup'],
-    requiredText: ['Recovery', 'Live balances, rates, and pending requests are left out'],
+    requiredText: ['RECOVERY', 'Live balances, rates, and pending requests are left out'],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-recovery'
   },
@@ -1751,7 +1767,7 @@ const reviewScenarios = () => [
     ready: '.contractVerificationCredential',
     requiredControls: ['Etherscan API key', 'Save'],
     requiredText: [
-      'Contract verification',
+      'CONTRACT VERIFICATION',
       'Not configured',
       'OS credential protection',
       'Use 16–128 letters, numbers, underscores, or hyphens.',
@@ -1770,7 +1786,7 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.contractVerificationCredentialError',
     requiredText: [
-      'Contract verification',
+      'CONTRACT VERIFICATION',
       'Storage status unavailable',
       'Wren could not confirm OS credential protection, so it will not accept a key.',
       'Credential status unavailable.'
@@ -1835,8 +1851,18 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.networkBreak',
-    requiredText: ['Ethereum', 'Optimism Mainnet', 'Workshop Chain', 'Sepolia', 'Testnets']
+    ready: '.dashNetworksCard',
+    requiredControls: [
+      'Overview',
+      'Accounts',
+      'Networks',
+      'App activity',
+      'Settings',
+      'Add',
+      'All',
+      'Active'
+    ],
+    requiredText: ['Connected', 'Ethereum', 'Optimism Mainnet', 'Workshop Chain']
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -2033,10 +2059,10 @@ const reviewScenarios = () => [
     ready: '.settingsPreviewActions',
     requiredText: [
       'Ethereum',
-      'Balances',
+      'BALANCES',
       'Yearn WETH',
-      'Activity',
-      'Apps with access',
+      'ACTIVITY',
+      'APPS WITH ACCESS',
       'Signer',
       'Remove account'
     ]
@@ -2357,6 +2383,74 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.accountSelectorEmpty'
       },
       {
+        id: `tray-account-empty-perch-full-${scale}`,
+        renderer: 'tray',
+        state: 'account-empty-perch',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.signerPreviewRow',
+        requiredControls: ['Send', 'Open signer details'],
+        requiredText: ['PORTFOLIO BALANCE', '0 assets', '$0.00', 'No assets on this account yet', 'Signer']
+      },
+      ...(scale === 1
+        ? [
+            {
+              id: 'tray-signature-permit-review-full-1',
+              renderer: 'tray',
+              state: 'signature-permit-review',
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.approvePermitPerch',
+              requiredControls: [
+                'Back',
+                'View raw permit data',
+                'Edit permit amount',
+                'Copy permit spender address',
+                'Decline',
+                'Sign message'
+              ],
+              requiredText: [
+                'Review request',
+                'Signature',
+                'Uniswap',
+                'ACTION',
+                'DETAILS',
+                'USDC',
+                '2412',
+                'EIP-712'
+              ]
+            },
+            {
+              id: 'dash-split-control-right-1',
+              renderer: 'dash',
+              state: 'control-center',
+              glideSide: 'right',
+              workspaceOpen: true,
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.dashModules',
+              requiredText: ['Control', 'Overview', 'MORE TOOLS', 'BROWSER COMPANION', 'Support'],
+              layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
+            },
+            {
+              id: 'tray-split-wallet-right-1',
+              renderer: 'tray',
+              state: 'account-ledger',
+              glideSide: 'right',
+              workspaceOpen: true,
+              balanceArtwork: true,
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.accountPortfolioCard',
+              requiredText: ['PORTFOLIO BALANCE', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer']
+            }
+          ]
+        : []),
+      {
         id: `dash-control-center-full-${scale}`,
         renderer: 'dash',
         state: 'control-center',
@@ -2364,10 +2458,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.dashModules',
-        layoutExpectations: [
-          { kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 },
-          { kind: 'scroll-fits', selector: '.dashMainScroll' }
-        ]
+        layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
         id: `dash-control-center-short-${scale}`,
@@ -2377,7 +2468,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.dashModules',
-        layoutExpectations: [{ kind: 'size', selector: '.dashHomeWren', width: 96, height: 96 }]
+        layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
         id: `tray-account-home-full-${scale}`,
@@ -2757,7 +2848,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalWidth: 530,
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.dashModules',
-      layoutExpectations: [{ kind: 'hidden', selector: '.dashHomeWren' }]
+      layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
     },
     {
       id: 'dash-delegation-capped-1.5',

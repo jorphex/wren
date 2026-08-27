@@ -4,9 +4,7 @@ import { safeNetworkMetadata } from '../../../../../resources/domain/networkMeta
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
 import Monitor from '../../../../../resources/Components/Monitor'
-import ChainIdentityMark, {
-  resolveChainIdentityColor
-} from '../../../../../resources/Components/ChainIdentityMark'
+import { resolveChainIdentityColor } from '../../../../../resources/Components/ChainIdentityMark'
 
 export class ChainsPreview extends React.Component {
   constructor(...args) {
@@ -16,7 +14,7 @@ export class ChainsPreview extends React.Component {
       this.resizeObserver = new ResizeObserver(() => {
         if (this.moduleRef && this.moduleRef.current) {
           link.send('tray:action', 'updateAccountModule', this.props.moduleId, {
-            height: this.moduleRef.current.clientHeight
+            height: this.moduleRef.current.scrollHeight
           })
         }
       })
@@ -62,27 +60,20 @@ export class ChainsPreview extends React.Component {
       currentChain
     )
     const { name } = currentChain
-    const { icon, primaryColor } = currentChainMeta
+    const { primaryColor } = currentChainMeta
     const chainIdentity = resolveChainIdentityColor(currentChainId, currentChain.isTestnet, primaryColor)
     const chain = { type: 'ethereum', id: currentChain.id ?? Number(currentChainId) }
     const explorerAvailable =
       typeof currentChain.explorer === 'string' && currentChain.explorer.trim().length > 0
     return (
       <div className='balancesBlock chainMonitorPreview' ref={this.moduleRef}>
-        <div className='chainMonitorRow'>
-          <span className='chainMonitorIdentity'>
-            <span className='chainMonitorMark'>
-              <ChainIdentityMark
-                chainId={currentChainId}
-                icon={icon}
-                isTestnet={currentChain.isTestnet}
-                primaryColor={primaryColor}
-                small
-              />
-            </span>
+        <div className='chainMonitorCompactRow'>
+          <span className='chainMonitorLabel'>Gas</span>
+          <span className='chainMonitorSummary'>
             <strong>{name}</strong>
+            <Monitor inline chainId={chain.id} color={chainIdentity.color} />
           </span>
-          <div className='chainMonitorControls' role='group' aria-label='Displayed network controls'>
+          <span className='chainMonitorControls' role='group' aria-label='Displayed network controls'>
             {existingChains.length > 1 ? (
               <button
                 type='button'
@@ -90,7 +81,7 @@ export class ChainsPreview extends React.Component {
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index - 1)}
               >
-                <Icon name='chevron-left' size={18} />
+                <Icon name='chevron-left' size={17} />
               </button>
             ) : null}
             {existingChains.length > 1 ? (
@@ -100,7 +91,7 @@ export class ChainsPreview extends React.Component {
                 className='chainMonitorSwitchButton wrenControl wrenControlGhost wrenControlIcon wrenControlCompact'
                 onClick={() => this.setIndex(this.state.index + 1)}
               >
-                <Icon name='chevron-right' size={18} />
+                <Icon name='chevron-right' size={17} />
               </button>
             ) : null}
             <button
@@ -116,21 +107,17 @@ export class ChainsPreview extends React.Component {
             >
               <Icon name='external' size={15} />
             </button>
-          </div>
-          <span className='chainMonitorDivider' aria-hidden='true' />
-          <span className='chainMonitorGasEvidence'>
-            <Monitor inline chainId={chain.id} color={chainIdentity.color} />
+            <button
+              aria-expanded={this.state.expanded}
+              aria-label={`${this.state.expanded ? 'Hide' : 'Show'} gas details for ${name}`}
+              className='chainMonitorDisclosure wrenControl wrenControlGhost'
+              onClick={() => this.setState(({ expanded }) => ({ expanded: !expanded }))}
+              type='button'
+            >
+              <span>Details</span>
+              <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={16} />
+            </button>
           </span>
-          <button
-            aria-expanded={this.state.expanded}
-            aria-label={`${this.state.expanded ? 'Hide' : 'Show'} gas details for ${name}`}
-            className='chainMonitorDisclosure wrenControl wrenControlGhost'
-            onClick={() => this.setState(({ expanded }) => ({ expanded: !expanded }))}
-            type='button'
-          >
-            <span>Details</span>
-            <Icon name={this.state.expanded ? 'chevron-up' : 'chevron-down'} size={17} />
-          </button>
         </div>
         {this.state.expanded ? <Monitor details chainId={chain.id} color={chainIdentity.color} /> : null}
       </div>

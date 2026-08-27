@@ -301,194 +301,185 @@ button.requestFeatureButton:focus-visible
   .localSetting:last-of-type
     margin-bottom 0
 
-.dashHomeHeader
-  display grid
-  padding var(--wren-space-2) var(--wren-space-2) var(--wren-space-5)
-  grid-template-columns minmax(0, 1fr) 96px
-  align-items center
-  column-gap var(--wren-space-4)
+.dashHomePerch
+  color #d6d2c8
 
-  h1
-    margin 0 0 var(--wren-space-2)
-    color var(--wren-text-primary)
-    font-size 28px
-    font-weight 500
-    letter-spacing -.6px
-    line-height 34px
-
-  p
-    max-width 480px
-    margin 0
-    color var(--wren-text-secondary)
-    font-size 14px
-    line-height 20px
-
-.dashHomeIntro
-  min-width 0
-
-.dashHomeWren
-  display block
-  width 96px
-  height 96px
-  flex none
-  justify-self end
-  object-fit contain
-  pointer-events none
-  user-select none
-
-.dashModuleSection
-  min-width 0
-  margin 0
-
-  h2
-    margin 0 var(--wren-space-2) var(--wren-space-2)
-    color var(--wren-text-secondary)
-    font-family var(--wren-font-ui)
-    font-size var(--wren-type-small)
-    font-weight 500
-    letter-spacing 0
-    line-height 18px
-    text-transform none
-
-.dashModuleList
-  display grid
-  grid-template-columns minmax(0, 1fr)
-  gap var(--wren-space-2)
+  .localSettingsWrap
+    width 100%
+    padding 2px 18px 16px
+    box-sizing border-box
 
 .dashModules
-  display grid
-  grid-template-columns repeat(2, minmax(0, 1fr))
-  gap var(--wren-space-5)
-  margin-bottom var(--wren-space-5)
+  display flex
+  flex-direction column
+  gap 8px
+  margin-bottom 12px
 
 button.dashModule.wrenControl
   position relative
   display grid
-  grid-template-columns 28px minmax(0, 1fr) 16px
-  column-gap var(--wren-space-2)
+  grid-template-columns 30px minmax(0, 1fr) auto
+  gap 12px
   width 100%
-  min-height 72px
-  height auto
+  height 50px
+  min-height 50px
   margin 0
-  padding var(--wren-space-2)
+  padding 0 15px
   align-items center
-  border 0
-  border-radius 4px
-  color var(--wren-text-primary)
-  background transparent
-  box-shadow none
+  border 1px solid rgba(150, 182, 150, .16)
+  border-radius 10px
+  color #d6d2c8
+  background rgba(13, 18, 16, .55)
+  box-shadow 0 6px 14px rgba(0, 0, 0, .3)
   font-family var(--wren-font-ui)
   text-align left
-  transition background var(--wren-motion-fast) var(--wren-ease)
-
-  &:hover
-    z-index auto
-    transform none
-    background var(--wren-surface-hover)
-    box-shadow none
-
-  &:active
-    transform none
-    background var(--wren-surface-active)
-    box-shadow none
-
-  &:focus-visible
-    z-index 1
-    outline 2px solid var(--wren-focus)
-    outline-offset -2px
-    box-shadow none
-
-button.dashModule.wrenControl.wrenControlGhost
-  border-color transparent
-  background-color transparent
-  background-image none
-  box-shadow none
+  transform none
 
   &:hover:not(:disabled)
-    border-color transparent
-    background-color var(--wren-surface-hover)
-    background-image none
-    box-shadow none
+    z-index auto
+    border-color rgba(150, 182, 150, .22)
+    background rgba(20, 26, 22, .6)
+    box-shadow 0 6px 14px rgba(0, 0, 0, .3)
+    transform none
 
   &:active:not(:disabled)
-    transform none
-    background-color var(--wren-surface-active)
-    box-shadow none
+    background rgba(10, 14, 12, .72)
+    transform translateY(1px)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+    box-shadow 0 6px 14px rgba(0, 0, 0, .3)
 
   .dashModuleIcon
     position static
     display flex
-    flex none
-    width 24px
-    height 24px
+    width 30px
+    height 30px
     margin 0
     align-items center
     justify-content center
-    color var(--wren-accent-primary-hover)
-    background transparent
+    border 1px solid rgba(150, 182, 150, .22)
+    border-radius 8px
+    color #d6d2c8
+    background #121813
+    box-sizing border-box
 
   .dashModuleCopy
     position static
-    display flex
+    display block
     min-width 0
-    flex none
-    flex-direction column
-    gap 3px
 
   .dashModuleTitle
+    display block
+    color inherit
     font-size 14px
     font-weight 500
     line-height 18px
 
   .dashModuleDescription
-    color var(--wren-text-tertiary)
-    font-size var(--wren-type-small)
-    font-weight 300
-    line-height 16px
-    white-space normal
+    position absolute
+    width 1px
+    height 1px
+    overflow hidden
+    clip rect(0 0 0 0)
+    white-space nowrap
+
+  .dashModuleMeta
+    color #6d7568
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 400
 
   .dashModuleArrow
-    position static
     display flex
-    justify-self end
-    margin 0
-    color var(--wren-text-muted)
-    transition transform var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
+    color #6d7568
 
-  &:hover .dashModuleArrow
-    color var(--wren-text-secondary)
-    transform translateX(2px)
+button.dashModule.wrenControl.wrenControlGhost
+  border-color rgba(150, 182, 150, .16)
+  background-color rgba(13, 18, 16, .55)
+  background-image none
+  box-shadow 0 6px 14px rgba(0, 0, 0, .3)
 
-.dashCompanion
-  display flex
-  min-height 72px
-  margin-bottom var(--wren-space-3)
-  padding var(--wren-space-3) var(--wren-space-2) var(--wren-space-3) calc(var(--wren-space-2) + 28px + var(--wren-space-2))
-  align-items center
-  gap var(--wren-space-3)
-  border 0
-  background transparent
+  &:hover:not(:disabled)
+    border-color rgba(150, 182, 150, .22)
+    background-color rgba(20, 26, 22, .6)
+    background-image none
+    box-shadow 0 6px 14px rgba(0, 0, 0, .3)
+
+button.dashModuleCurrent.wrenControl
+  border-color rgba(168, 116, 63, .13)
+  background linear-gradient(180deg, rgba(168, 116, 63, .10), rgba(13, 18, 16, .55))
+  box-shadow inset 0 0 0 1px rgba(168, 116, 63, .34), 0 6px 14px rgba(0, 0, 0, .3)
+
+  .dashModuleTitle
+    color #f2efe8
+
+  .dashModuleIcon
+    border-color rgba(168, 116, 63, .13)
+    color #c08d54
+
+.dashHomeCard
+  position relative
+  margin-bottom 12px
+  padding 16px
+  border 1px solid rgba(150, 182, 150, .16)
+  border-radius 10px
+  background linear-gradient(172deg, rgba(255, 255, 255, .022), rgba(255, 255, 255, 0) 46%), rgba(13, 18, 16, .66)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .5)
   box-sizing border-box
 
-.dashCompanionCopy
-  min-width 0
-  flex 1
+  &::before
+    position absolute
+    inset 0
+    border-radius inherit
+    box-shadow inset 1px 1px 0 rgba(150, 182, 150, .05), inset 0 1px 0 rgba(255, 255, 255, .05)
+    content ''
+    pointer-events none
 
   h2
-    margin 0 0 var(--wren-space-1)
-    font-size 14px
-    font-weight 500
+    margin 0 0 12px
+    color #97917f
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 600
+    letter-spacing 1.4px
+    line-height 16px
+    text-transform uppercase
 
+.dashCompanionCopy
   p
     margin 0
-    color var(--wren-text-tertiary)
-    font-size var(--wren-type-small)
-    line-height 17px
+    padding 2px
+    color #97917f
+    font-size 12.5px
+    line-height 1.5
 
 .dashCompanionBrowserActions
-  display flex
-  flex none
-  gap var(--wren-space-2)
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap 9px
+  margin-top 12px
+
+  button.wrenControl.wrenControlGhost
+    width 100%
+    height 40px
+    min-height 40px
+    border 1px solid rgba(135, 168, 128, .22)
+    border-radius 10px
+    color #d6d2c8
+    background linear-gradient(178deg, rgba(255, 255, 255, .03), rgba(15, 20, 17, .6))
+    box-shadow inset 0 -1px 0 rgba(0, 0, 0, .4)
+    font-size 12.5px
+
+    &:hover:not(:disabled)
+      border-color rgba(135, 168, 128, .3)
+      background-color transparent
+      background linear-gradient(178deg, rgba(255, 255, 255, .05), rgba(20, 26, 22, .6))
+      box-shadow inset 0 -1px 0 rgba(0, 0, 0, .4)
+
+    span
+      font-size 12.5px
 
 .dashSupportWrenDisclosure
   position relative
@@ -560,51 +551,83 @@ button.dashSupportWrenButton.wrenControl
   white-space nowrap
 
 .dashSupportActions
-  display flex
-  flex-direction row
-  align-items center
-  justify-content space-evenly
-  padding-top var(--wren-space-3)
-  margin-bottom var(--wren-space-6)
+  display grid
+  grid-template-columns repeat(4, minmax(0, 1fr))
+  gap 8px
+  margin-bottom 0
 
   button.requestFeatureButton.wrenControl
-    min-height 44px
-    padding 0 var(--wren-space-2)
-    gap var(--wren-space-1)
-    font-size var(--wren-type-caption)
+    justify-content center
+    width 100%
+    height 48px
+    min-height 48px
+    padding 0 10px
+    gap 7px
+    border 1px solid rgba(150, 182, 150, .16)
+    border-radius 9px
+    color #d6d2c8
+    background linear-gradient(178deg, rgba(255, 255, 255, .025), rgba(13, 18, 16, .62))
+    box-shadow 0 5px 12px rgba(0, 0, 0, .28), inset 0 -1px 0 rgba(0, 0, 0, .35)
+    font-size 12px
+    font-weight 500
     white-space nowrap
 
+    &:hover:not(:disabled)
+      color #f2efe8
+      border-color rgba(150, 182, 150, .24)
+      background linear-gradient(178deg, rgba(255, 255, 255, .045), rgba(20, 26, 22, .64))
+      box-shadow 0 6px 14px rgba(0, 0, 0, .32), inset 0 -1px 0 rgba(0, 0, 0, .35)
+
+  .dashSupportWrenDisclosure
+    min-width 0
+
+    button.requestFeatureButton.wrenControl
+      padding 0 8px
+
+  .requestFeatureDanger
+    color #df8377 !important
+    border-color rgba(223, 131, 119, .18) !important
+    background linear-gradient(178deg, rgba(223, 131, 119, .055), rgba(18, 12, 11, .5)) !important
+
+.dashToolsCard
+  margin-bottom 12px
+
+.dashToolList
+  display flex
+  flex-direction column
+
+  button.dashModuleCompact.wrenControl
+    height 44px
+    min-height 44px
+    padding 0
+    grid-template-columns 30px minmax(0, 1fr) auto
+    border 0
+    border-bottom 1px solid rgba(150, 182, 150, .10)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:last-child
+      border-bottom 0
+
+    &:hover:not(:disabled)
+      padding-left 6px
+      border-color rgba(150, 182, 150, .10)
+      background transparent
+      box-shadow none
+
+    .dashModuleIcon
+      border 0
+      color #97917f
+      background transparent
+
 @media (max-height: 760px)
-  .localSettings .localSettingsWrap
-    padding-top var(--wren-space-3)
-    padding-bottom var(--wren-space-3)
-
-  .dashHomeHeader
-    padding-bottom var(--wren-space-3)
-
-  .dashModules
-    margin-bottom var(--wren-space-3)
-
-  button.dashModule
-    min-height 68px
-
-  .dashCompanion
-    min-height 58px
-    margin-bottom var(--wren-space-1)
-    padding-top var(--wren-space-2)
-    padding-bottom var(--wren-space-2)
-
-  .dashSupportActions
-    margin-bottom var(--wren-space-2)
+  .dashHomePerch .localSettingsWrap
+    padding-bottom 12px
 
 @media (max-width: 560px)
-  .dashHomeHeader
+  .dashCompanionBrowserActions
     grid-template-columns minmax(0, 1fr)
-    column-gap 0
 
-  .dashHomeWren
-    display none
-
-  .dashModules
-    grid-template-columns minmax(0, 1fr)
-    gap var(--wren-space-4)
+  .dashSupportActions
+    grid-template-columns repeat(2, minmax(0, 1fr))

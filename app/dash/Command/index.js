@@ -1,11 +1,34 @@
 import React from 'react'
 import Restore from 'react-restore'
+import wrenMark from 'url:../../../asset/brand/exports/mark/wren-mark-color-32.png'
 import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { requestDashNavigation } from '../navigationGuard'
 
 export class Command extends React.Component {
+  renderSectionChrome(title) {
+    return (
+      <div className='command commandHome'>
+        <img className='commandHomeMark' src={wrenMark} alt='' aria-hidden='true' />
+        <span className='commandHomeIdentity'>
+          <strong>{title}</strong>
+        </span>
+        <span className='commandHomeSpacer' />
+        <button
+          type='button'
+          aria-label='Close'
+          className='commandHomeClose wrenControl wrenControlGhost wrenControlIcon wrenShellNav'
+          onClick={() => {
+            requestDashNavigation('close', () => link.send('tray:action', 'closeDash'))
+          }}
+        >
+          <Icon name='close' size={18} />
+        </button>
+      </div>
+    )
+  }
+
   renderSignerIcon(type) {
     if (['ledger', 'trezor', 'lattice'].includes(type)) {
       return (
@@ -40,7 +63,8 @@ export class Command extends React.Component {
     )
   }
   render() {
-    const { data = {}, view } = this.store('windows.dash.nav')[0] || { view: '', data: {} }
+    const nav = this.store('windows.dash.nav') || []
+    const { data = {}, view } = nav[0] || { view: '', data: {} }
     const titles = {
       accounts: 'Accounts',
       addressBook: 'Contacts',
@@ -57,9 +81,14 @@ export class Command extends React.Component {
       tokens: 'Tokens'
     }
     const title = data.title || titles[view || 'default'] || view
+    if (!nav.length) return this.renderSectionChrome('Control')
+    if (view === 'accounts' && Object.keys(data).length === 0) return this.renderSectionChrome('Accounts')
+    if (view === 'chains' && Object.keys(data).length === 0) return this.renderSectionChrome('Networks')
+    if (view === 'settings' && Object.keys(data).length === 0) return this.renderSectionChrome('Settings')
+    if (view === 'send' && Object.keys(data).length === 0) return this.renderSectionChrome('Send')
     return (
       <div className='command'>
-        {this.store('windows.dash.nav').length ? (
+        {nav.length ? (
           <button
             type='button'
             aria-label='Back'

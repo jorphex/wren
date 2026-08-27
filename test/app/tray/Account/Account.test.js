@@ -1,6 +1,11 @@
 import Restore from 'react-restore'
 import { fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
-import { AccountBody, AccountMain } from '../../../../app/tray/Account/Account'
+import {
+  AccountAddressActions,
+  AccountBody,
+  AccountMain,
+  AccountNameEditor
+} from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
 jest.mock('../../../../resources/link', () => ({
@@ -24,34 +29,25 @@ function accountMain({ hideBalances = false } = {}) {
   return main
 }
 
-it('renders the approved account-home identity without duplicating the balances total', () => {
+it('renders the portfolio balance once and honors balance privacy', () => {
   const main = accountMain({ hideBalances: true })
-  render(main.renderHomeHeader())
+  render(main.renderPortfolioSummary())
 
-  expect(screen.queryByText('Selected account')).toBeNull()
-  expect(screen.getByRole('heading', { name: 'Workshop' })).toBeTruthy()
+  expect(screen.getByRole('region', { name: 'Portfolio balance' })).toBeTruthy()
+  expect(screen.getByLabelText('Portfolio balance hidden')).toBeTruthy()
   expect(screen.queryByText('Total balance')).toBeNull()
-  expect(screen.queryByLabelText('Total balance hidden')).toBeNull()
 })
 
-it('keeps Send and copy address actions connected to their existing tray behavior', async () => {
+it('keeps the portfolio Send action connected to the native flow', async () => {
   const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
-
-  const addressCopyTarget = screen.getByRole('button', { name: 'Copy address' })
-  expect(addressCopyTarget.textContent).toContain(address)
-  expect(screen.queryByRole('button', { name: /block explorer/i })).toBeNull()
-
-  await user.click(addressCopyTarget)
-  expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: address })
+  const { user } = render(main.renderPortfolioSummary())
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })
 
 it('shows the selected account address QR on hover without a click action', () => {
-  const main = accountMain()
-  render(main.renderHomeHeader())
+  render(<AccountAddressActions address={address} name='Workshop' />)
   const qrTrigger = screen.getByRole('button', { name: 'Account address QR code' })
   const disclosure = qrTrigger.closest('.accountHomeQrDisclosure')
 
@@ -73,8 +69,7 @@ it('shows the selected account address QR on hover without a click action', () =
 })
 
 it('keeps the account address QR available to keyboard focus', () => {
-  const main = accountMain()
-  render(main.renderHomeHeader())
+  render(<AccountAddressActions address={address} name='Workshop' />)
   const qrTrigger = screen.getByRole('button', { name: 'Account address QR code' })
 
   fireEvent.focus(qrTrigger)
@@ -87,8 +82,7 @@ it('keeps the account address QR available to keyboard focus', () => {
 })
 
 it('edits the account name from the header and returns focus after saving', async () => {
-  const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
+  const { user } = render(<AccountNameEditor account={address} name='Workshop' />)
 
   const renameTarget = screen.getByRole('button', { name: 'Update account name' })
   expect(renameTarget.textContent).toContain('Workshop')
@@ -103,8 +97,7 @@ it('edits the account name from the header and returns focus after saving', asyn
 })
 
 it('cancels header name editing without changing the account', async () => {
-  const main = accountMain()
-  const { user } = render(main.renderHomeHeader())
+  const { user } = render(<AccountNameEditor account={address} name='Workshop' />)
 
   await user.click(screen.getByRole('button', { name: 'Update account name' }))
   const input = screen.getByRole('textbox', { name: 'Account name' })

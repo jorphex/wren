@@ -747,6 +747,226 @@
       justify-content flex-end
       text-align right
 
+.approvePermitPerch
+  display flex
+  gap 12px
+  padding 10px 24px 24px
+  flex-direction column
+  background transparent
+
+  .typedDataWarnings
+    margin 0
+
+.permitOriginCard,
+.permitActionCard,
+.permitDetailsCard
+  flex none
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background linear-gradient(172deg, rgba(255, 255, 255, .022), transparent 46%), rgba(13, 18, 16, .72)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .035)
+
+.permitOriginCard
+  display grid
+  min-height 84px
+  padding 14px 20px
+  grid-template-columns 50px minmax(0, 1fr) auto
+  align-items center
+  gap 16px
+
+.permitOriginMark
+  display grid
+  width 50px
+  height 50px
+  place-items center
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  color var(--wren-text-primary)
+  background rgba(51, 111, 62, .84)
+
+.permitOriginIdentity
+  min-width 0
+
+  strong,
+  span
+    display block
+    overflow hidden
+    text-overflow ellipsis
+    white-space nowrap
+
+  strong
+    color var(--wren-text-primary)
+    font-size 16px
+    font-weight 650
+
+  span
+    margin-top 4px
+    color var(--wren-text-secondary)
+    font-size 14px
+
+.permitOriginKind
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size 13px
+
+.permitActionCard,
+.permitDetailsCard
+  padding 16px 20px
+
+  h2
+    margin 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 600
+    letter-spacing 1.4px
+    text-transform uppercase
+
+.permitActionCard
+  > strong
+    display block
+    margin-top 16px
+    color var(--wren-text-primary)
+    font-size 15px
+    font-weight 620
+    line-height 22px
+
+.permitRawAction
+  appearance none
+  display flex
+  width 100%
+  min-height 66px
+  margin-top 12px
+  padding 12px 14px
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius 9px
+  color var(--wren-text-secondary)
+  background rgba(18, 24, 19, .82)
+  font-family var(--wren-font-mono)
+  font-size 12px
+  line-height 19px
+  text-align left
+  cursor pointer
+  flex-direction column
+
+  code
+    color var(--wren-text-tertiary)
+    font inherit
+
+  &:hover
+    border-color var(--wren-border-strong)
+    background var(--wren-surface-hover)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.permitDetailsCard
+  dl
+    margin 16px 0 0
+
+    > div
+      display grid
+      min-height 44px
+      padding 0
+      grid-template-columns 150px minmax(0, 1fr)
+      align-items center
+      border-bottom 1px solid rgba(43, 53, 45, .68)
+
+      &:last-child
+        border-bottom 0
+
+  dt
+    color var(--wren-text-tertiary)
+    font-size 13px
+
+  dd
+    min-width 0
+    margin 0
+    overflow hidden
+    color var(--wren-text-primary)
+    font-family var(--wren-font-mono)
+    font-size 13px
+    text-align right
+    text-overflow ellipsis
+    white-space nowrap
+
+.permitEditAmount,
+.permitCopySpender
+  appearance none
+  min-height 44px
+  padding 0
+  border 0
+  color inherit
+  background transparent
+  font inherit
+  cursor pointer
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+.permitEditAmount:disabled
+  cursor default
+
+.permitCopyStatus
+  display block
+  min-height 18px
+  margin-top 4px
+  color var(--wren-text-tertiary)
+  font-size 12px
+  text-align right
+
+  &:empty
+    display none
+
+.permitCopySpender
+  width 100%
+
+  .clusterAddressRecipient,
+  .clusterAddressRecipientLabeled
+    justify-content flex-end
+    text-align right
+
+#panel:has(.approvePermitPerch)
+  background-color #070907
+  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .10), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .24), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .24), transparent 56%)
+  background-repeat repeat, no-repeat, no-repeat, no-repeat
+  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
+  background-blend-mode overlay, normal, normal, normal
+  box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
+
+  .requestApproveSignature
+    height 114px
+    padding 16px 24px
+    grid-template-columns 1fr
+
+    .requestActionContext
+      display none
+
+    .requestActionButtons
+      display grid
+      width 100%
+      grid-template-columns 1fr 1.45fr
+      gap 16px
+
+    .requestDecline,
+    .requestSign
+      width 100%
+      min-width 0
+      max-width none
+
+    .requestDeclineButton
+      border-color transparent
+      color var(--wren-text-secondary)
+      background transparent
+      box-shadow none
+
+    .requestSignButton
+      color #11130f
+
 .requestNoticeTransactionReview
   height 114px
   background var(--wren-bg-subtle)

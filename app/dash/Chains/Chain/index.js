@@ -81,7 +81,7 @@ class ChainWrapper extends React.Component {
   }
 
   renderPreview() {
-    const { id, name, type, symbol, filter, isTestnet, on, explorer, icon } = this.props
+    const { id, name, type, symbol, filter, isTestnet, on, explorer, icon, compact, connection } = this.props
     const { primaryColor } = safeNetworkMetadata(this.store('main.networksMeta.ethereum', id), this.props)
     const price = this.store('main.networksMeta.ethereum', id, 'nativeCurrency.usd.price') || '?'
 
@@ -107,6 +107,8 @@ class ChainWrapper extends React.Component {
         on={on}
         symbol={symbol}
         price={price}
+        compact={compact}
+        connection={connection}
       />
     )
   }

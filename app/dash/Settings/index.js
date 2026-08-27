@@ -10,6 +10,7 @@ import DialogSurface from '../../../resources/Components/DialogSurface'
 import Recovery from './Recovery'
 import SignerProtection from './SignerProtection'
 import ContractVerificationCredential from './ContractVerificationCredential'
+import ControlNavigation from '../ControlNavigation'
 
 import styled from 'styled-components'
 
@@ -424,10 +425,19 @@ export class Settings extends Component {
     const nativeCredentials = Object.values(this.store('main.nativePeerCredentials') || {}).sort(
       (left, right) => right.pairedAt - left.pairedAt
     )
+    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
+      Object.values(networks)
+    )
+    const counts = {
+      accounts: Object.keys(this.store('main.accounts') || {}).length,
+      networks: allNetworks.filter((network) => network.on).length,
+      dapps: Object.keys(this.store('main.origins') || {}).length
+    }
 
     return (
-      <div className='localSettings cardShow wrenSettings'>
+      <div className='localSettings cardShow wrenSettings wrenSettingsPerch'>
         <div className='localSettingsWrap'>
+          <ControlNavigation counts={counts} current='settings' replace />
           <section className='wrenSettingsSection' aria-labelledby='wren-settings-desktop'>
             <h2 id='wren-settings-desktop' className='wrenSettingsSectionTitle'>
               Desktop behavior

@@ -629,3 +629,84 @@
   gap 7px
   font-size var(--wren-type-caption)
   font-weight 610
+
+// Perch fidelity checkpoint: the selected account owns the screen-edge chrome.
+.accountSelector.accountSelectorOpen
+  top 0
+  bottom 0
+
+.accountSwitcherBar
+  top 0
+  right 0
+  left 0
+  height 64px
+  padding 0 20px
+  box-sizing border-box
+  gap 12px
+  border-bottom 1px solid var(--wren-border-subtle)
+  background transparent
+  box-shadow none
+
+.accountSwitcherTrigger
+  min-width 0
+  max-width 310px
+  height 48px
+  min-height 48px
+  padding 0
+  grid-template-columns 27px minmax(0, 1fr)
+  column-gap 11px
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
+
+  &:hover:not(:disabled),
+  &[aria-expanded='true']
+    border 0
+    background transparent
+    box-shadow none
+
+.accountSwitcherBrand
+  display block
+  width 26px
+  height 26px
+  object-fit contain
+
+.accountSwitcherName
+  color #f2efe8
+  font-size 14px
+  font-weight 620
+  line-height 16px
+  letter-spacing .2px
+
+.accountSwitcherAddress
+  margin-top 3px
+  color #97917f
+  font-family var(--wren-font-mono)
+  font-size 12px
+  font-weight 400
+  line-height 13px
+  letter-spacing .3px
+
+.accountSwitcherControls
+  gap 6px
+
+.accountSwitcherPrivacyLabel
+  display none
+
+.accountPrivacyToggle,
+.accountCopyAddress,
+.accountWorkspaceToggle
+  width 38px !important
+  min-width 38px !important
+  height 38px !important
+  min-height 38px !important
+  padding 0 !important
+  border-color transparent !important
+  border-radius 8px !important
+  background transparent !important
+  box-shadow none !important
+
+.accountWorkspaceToggle
+  width 48px !important
+  min-width 48px !important

@@ -519,6 +519,116 @@
       &:hover
         color var(--wren-danger)
 
+// Perch Settings landing: shared Control navigation and stacked real settings cards.
+.wrenSettings.wrenSettingsPerch
+  color #d6d2c8
+  justify-content flex-start
+
+  .localSettingsWrap
+    width 100%
+    padding 20px 18px 24px
+    box-sizing border-box
+
+  .wrenSettingsSection
+    position relative
+    margin 0 0 12px
+    padding 14px 20px 8px
+    box-sizing border-box
+    border 1px solid rgba(150, 182, 150, .16)
+    border-radius 10px
+    background linear-gradient(172deg, rgba(255, 255, 255, .022), rgba(255, 255, 255, 0) 46%), rgba(13, 18, 16, .66)
+    box-shadow 0 10px 26px rgba(0, 0, 0, .5)
+
+    &::before
+      position absolute
+      inset 0
+      border-radius inherit
+      box-shadow inset 1px 1px 0 rgba(150, 182, 150, .05), inset 0 1px 0 rgba(255, 255, 255, .05)
+      content ''
+      pointer-events none
+
+  .wrenSettingsSection + .wrenSettingsSection
+    margin-top 0
+
+  .wrenSettingsSectionTitle
+    margin 0
+    padding 0 0 6px
+    color #97917f
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 600
+    letter-spacing 1.4px
+    line-height 18px
+    text-transform uppercase
+
+  .localSetting
+    min-height 64px
+    margin 0
+    padding 10px 0
+    border 0
+    border-bottom 1px solid rgba(150, 182, 150, .10)
+    border-radius 0
+    background transparent
+    box-shadow none
+
+    &:last-child
+      border-bottom 0
+
+    &:hover
+      background transparent
+
+    .signerPermissionControls
+      min-height 44px
+      gap 16px
+
+    .signerPermissionSetting
+      color #f2efe8
+      font-size 14px
+      font-weight 500
+
+    .signerPermissionDetails
+      position static
+      width auto
+      height auto
+      margin -8px 60px 0 0
+      padding 0
+      overflow visible
+      clip auto
+      clip-path none
+      color #97917f
+      font-family var(--wren-font-ui)
+      font-size 12px
+      line-height 18px
+      white-space normal
+
+    .dropdownWrap
+      height 44px
+
+  .localSettingShortcut,
+  .localSettingExplained
+    min-height 72px
+
+  .interfaceScaleSetting
+    min-height 104px
+
+  .interfaceScaleDescription,
+  .interfaceScaleStatus
+    color #97917f
+
+  .interfaceScaleOptions
+    border-color rgba(150, 182, 150, .16)
+    border-radius 7px
+    background rgba(8, 12, 10, .34)
+
+  .interfaceScaleOption
+    color #97917f
+
+  .recoverySettings
+    padding 0
+
+  .appInfo
+    padding 12px 0 8px
+
 @media (max-height: 760px)
   .wrenSettings
     .localSettingsWrap

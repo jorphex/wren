@@ -18,7 +18,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(98)
+  expect(scenarios).toHaveLength(104)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -29,6 +29,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `dash-control-center-short-${scale}`,
         `tray-account-home-full-${scale}`,
         `tray-account-home-short-${scale}`,
+        `tray-account-empty-perch-full-${scale}`,
         `tray-account-balances-full-${scale}`,
         `tray-account-balances-short-${scale}`,
         `tray-transaction-confirming-full-${scale}`,
@@ -65,7 +66,10 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
       'tray-account-access-review-full-1',
       'tray-account-access-review-short-1',
       'tray-switch-chain-review-full-1',
-      'tray-switch-chain-review-short-1'
+      'tray-switch-chain-review-short-1',
+      'tray-signature-permit-review-full-1',
+      'dash-split-control-right-1',
+      'tray-split-wallet-right-1'
     ])
   )
 })
@@ -787,9 +791,11 @@ it('qualifies the decorative Control Center Wren and selected-chain explorer geo
   const capped = scenarios.find(({ id }) => id === 'dash-control-center-capped-1.5')
   const accountHomes = scenarios.filter(({ state }) => state === 'account-home')
 
-  expect(controlCenters).toHaveLength(6)
+  expect(controlCenters).toHaveLength(7)
   expect(controlCenters.every(({ layoutExpectations }) => layoutExpectations[0].kind === 'size')).toBe(true)
-  expect(capped.layoutExpectations).toEqual([{ kind: 'hidden', selector: '.dashHomeWren' }])
+  expect(capped.layoutExpectations).toEqual([
+    { kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }
+  ])
   expect(accountHomes).toHaveLength(6)
   expect(accountHomes.every(({ requiredControls }) => requiredControls.length === 4)).toBe(true)
 
