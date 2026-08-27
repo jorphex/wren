@@ -8,6 +8,7 @@ jest.mock('../../../../resources/link', () => ({ send: jest.fn(), rpc: jest.fn()
 jest.mock('../../../../resources/Components/AccountTypeMark', () => jest.fn(() => <svg aria-hidden='true' />))
 
 const account = '0x0000000000000000000000000000000000000001'
+const hardwareAccount = '0x0000000000000000000000000000000000000002'
 
 class AccountsHarness extends Dash {
   store(...path) {
@@ -35,7 +36,14 @@ class SignerAccountsHarness extends Dash {
       }
     }
     if (key === 'main.accounts') {
-      return { [account]: { address: account, name: 'Personal', lastSignerType: 'ring' } }
+      return {
+        [account]: { address: account, name: 'Personal', lastSignerType: 'ring' },
+        [hardwareAccount]: {
+          address: hardwareAccount,
+          name: 'Ledger vault',
+          lastSignerType: 'ledger'
+        }
+      }
     }
     if (key === 'main.networks') return { ethereum: {} }
     if (key === 'main.origins') return {}
@@ -142,14 +150,13 @@ it('keeps watch-only accounts visible and opens them directly', () => {
   expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
 })
 
-it('shows a real signer identity and opens its existing detail route', () => {
+it('lists signing accounts from persisted state and opens them directly', () => {
   render(<SignerAccountsHarness data={{}} />)
 
-  expect(screen.getByText('0x0000…0001 · local signer')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'Manage accounts for Personal' }))
+  expect(screen.getByRole('heading', { name: 'Signing accounts' })).toBeTruthy()
+  expect(screen.getByText('0x0000…0001')).toBeTruthy()
+  expect(screen.getByText('0x0000…0002 · connect device')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: `Open Ledger vault ${getAddress(hardwareAccount)}` }))
 
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
-    view: 'expandedSigner',
-    data: { signer: 'personal' }
-  })
+  expect(link.rpc).toHaveBeenCalledWith('setSigner', hardwareAccount, expect.any(Function))
 })

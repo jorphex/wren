@@ -1199,10 +1199,26 @@ const fixtureFor = (scenario) => {
         createdAt: 1
       }
     }
+    const hardwareAccount = `0x${'8'.repeat(40)}`
+    const watchAccount = `0x${'7'.repeat(40)}`
     state.main.accounts = {
       [QUALIFICATION_ACCOUNT.toLowerCase()]: {
         ...qualificationAccount(),
         signer: signerId
+      },
+      [hardwareAccount]: {
+        ...qualificationAccount(),
+        id: hardwareAccount,
+        address: hardwareAccount,
+        name: 'Ledger vault',
+        lastSignerType: 'ledger'
+      },
+      [watchAccount]: {
+        ...qualificationAccount(),
+        id: watchAccount,
+        address: watchAccount,
+        name: 'Watch account',
+        lastSignerType: 'address'
       }
     }
   }

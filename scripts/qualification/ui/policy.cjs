@@ -1664,7 +1664,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashAccountsPerch',
     requiredControls: ['Derive new', 'Watch', 'Import'],
-    requiredText: ['Accounts', 'Personal', 'ADD ACCOUNT', 'WATCH ACCOUNTS']
+    requiredText: ['Accounts', 'Ledger vault', 'connect device', 'Watch account', 'ADD ACCOUNT']
   },
   {
     id: 'dash-trezor-pin-full-1',
@@ -2123,7 +2123,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestClearAll',
     requiredControls: ['Back', 'Clear all requests'],
-    requiredText: ['Requests', '3 requests', 'Clear all', 'workshop.example', 'garden.example'],
+    requiredText: ['Requests', '3 requests', 'Clear all', 'WORKSHOP.EXAMPLE', 'GARDEN.EXAMPLE'],
     layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   ...[

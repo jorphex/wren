@@ -206,6 +206,29 @@
 
 .requestViewScroll
   background transparent
+  padding 0 0 var(--wren-space-5)
+
+.requestGroupBlock
+  border-top 0
+
+  & + .requestGroupBlock
+    border-top 1px solid var(--wren-ledger-rule)
+
+.requestGroup
+  min-height 44px
+  padding 0 var(--wren-space-3)
+  align-items center
+  color var(--wren-text-tertiary)
+
+  .requestGroupName
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 600
+    letter-spacing .055em
+    text-transform uppercase
+
+.requestGroupBlock .requestLedger
+  margin 0 0 var(--wren-space-2)
 
 .requestQueueStatus
   position relative
@@ -216,7 +239,7 @@
   gap var(--wren-space-3)
   padding var(--wren-space-2) var(--wren-space-4)
   box-sizing border-box
-  border-bottom 0
+  border-bottom 1px solid var(--wren-ledger-rule)
   color var(--wren-text-secondary)
   background transparent
   font-size 12px

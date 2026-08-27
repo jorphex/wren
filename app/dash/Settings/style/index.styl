@@ -623,6 +623,14 @@
   .interfaceScaleOption
     color #97917f
 
+    &[aria-pressed='true'],
+    &[aria-pressed='true']:hover:not(:disabled),
+    &[aria-pressed='true']:active:not(:disabled),
+    &[aria-pressed='true']:focus-visible
+      color var(--wren-text-primary)
+      background var(--wren-surface-active)
+      border-color var(--wren-border-default)
+
   .recoverySettings
     padding 0
 

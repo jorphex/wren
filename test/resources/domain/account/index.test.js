@@ -50,6 +50,13 @@ describe('#hasAddress', () => {
 })
 
 describe('#accountSort', () => {
+  it('keeps imported accounts without creation metadata sortable', () => {
+    const imported = [{ id: addresses[0] }, { id: addresses[1] }]
+
+    expect(() => imported.sort(byCreation)).not.toThrow()
+    expect(imported).toHaveLength(2)
+  })
+
   it('should correctly sort a set of accounts in descending order by creation time according to timestamp', () => {
     const acc1 = makeMockAccount(addresses[0])
     const acc2 = makeMockAccount(addresses[1], now + 500)

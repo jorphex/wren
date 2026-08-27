@@ -384,6 +384,10 @@ button,
       overflow-y auto
       scrollbar-gutter stable
 
+    &:has(.sendComposer) .dashMainScroll
+      overflow-y hidden
+      scrollbar-gutter auto
+
       > .cardShow
         animation none
 
@@ -403,10 +407,15 @@ button,
       box-sizing border-box
 
       > .dashModules
+        width 100%
         margin 0 0 16px
+        box-sizing border-box
 
     .dashControlContent
       min-width 0
+
+      .cardShow
+        animation none
 
       > .localSettings,
       > .connectedApps

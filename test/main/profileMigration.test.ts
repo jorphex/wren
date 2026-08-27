@@ -142,6 +142,9 @@ test('accepts legacy primary colors while preserving imported wallet state', () 
   })
   expect(Object.keys(migrated.main.accounts)).toEqual(Object.keys(accounts))
   expect(migrated.main.accounts).toMatchObject(accounts)
+  for (const [address, account] of Object.entries(migrated.main.accounts)) {
+    expect(account).toMatchObject({ id: address, address })
+  }
   expect(migrated.main.signers).toEqual(signers)
 })
 

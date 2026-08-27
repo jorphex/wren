@@ -5,6 +5,7 @@ import AccountTypeMark from '../../../resources/Components/AccountTypeMark'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
+import { accountSort as byCreation } from '../../../resources/domain/account'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 
 import AddHardware from './Add/AddHardware'
@@ -297,39 +298,34 @@ export class Dash extends React.Component {
     })
   }
 
-  manageSigner = (signer) => {
-    link.send('tray:action', 'navDash', {
-      view: 'expandedSigner',
-      data: { signer: signer.id }
-    })
-  }
-
-  renderSignerRow = (signer, accounts) => {
-    const activeAddresses = (signer.addresses || []).filter((address) => accounts[address.toLowerCase()])
-    const primaryAddress = activeAddresses[0] ? getAddress(activeAddresses[0]) : ''
-    const signerKind = ['ledger', 'trezor', 'lattice'].includes(signer.type)
-      ? `${signer.type} signer`
-      : 'local signer'
-    const identity = primaryAddress
-      ? `${compactAccountAddress(primaryAddress)} · ${signerKind}`
-      : `No active accounts · ${signerKind}`
-
+  renderAccountRow = (account, liveAddresses) => {
+    const address = getAddress(account.address || account.id)
+    const name = account.ensName || account.name || address
+    const type = account.lastSignerType || 'address'
+    const hardware = ['ledger', 'trezor', 'lattice'].includes(type)
+    const available = liveAddresses.has(address.toLowerCase())
+    const detail =
+      hardware && !available
+        ? `${compactAccountAddress(address)} · connect device`
+        : compactAccountAddress(address)
     return (
       <button
         type='button'
         className='dashAccountSigner'
-        key={signer.id}
-        aria-label={`Manage accounts for ${signer.name || 'signer'}`}
-        onClick={() => this.manageSigner(signer)}
+        key={account.id}
+        aria-label={`Open ${name} ${address}`}
+        title={address}
+        onClick={() => link.rpc('setSigner', account.id, () => {})}
       >
         <span className='dashAccountSignerIcon'>
-          <AccountTypeMark type={signer.type} size={20} />
+          <AccountTypeMark type={type} size={20} />
         </span>
         <span className='dashAccountSignerIdentity'>
-          <strong>{signer.name || 'Signer'}</strong>
-          <span>{identity}</span>
+          <strong>{name}</strong>
+          <span>{detail}</span>
         </span>
-        <span className='dashAccountSignerRole'>signer</span>
+        <span className='dashAccountSignerRole'>{hardware ? type : 'local'}</span>
+        <Icon name='next' size={14} />
       </button>
     )
   }
@@ -337,34 +333,17 @@ export class Dash extends React.Component {
   render() {
     const signers = this.store('main.signers') || {}
     const accounts = this.store('main.accounts') || {}
-    const hardwareSigners = Object.keys(signers)
-      .map((s) => {
-        const signer = signers[s]
-        if (signer.type === 'ledger' || signer.type === 'trezor' || signer.type === 'lattice') {
-          return signer
-        } else {
-          return false
-        }
-      })
-      .filter((s) => s)
-    const hotSigners = Object.keys(signers)
-      .map((s) => {
-        const signer = signers[s]
-        if (signer.type === 'seed' || signer.type === 'ring') {
-          return signer
-        } else {
-          return false
-        }
-      })
-      .filter((s) => s)
-    const watchAccounts = Object.keys(accounts)
+    const allAccounts = Object.keys(accounts)
       .map((id) => ({ id, ...accounts[id] }))
-      .filter((account) => isWatchOnlyAccountType(account.lastSignerType))
+      .sort(byCreation)
+    const signingAccounts = allAccounts.filter((account) => !isWatchOnlyAccountType(account.lastSignerType))
+    const watchAccounts = allAccounts.filter((account) => isWatchOnlyAccountType(account.lastSignerType))
+    const liveAddresses = new Set(
+      Object.values(signers)
+        .flatMap((signer) => signer.addresses || [])
+        .map((address) => address.toLowerCase())
+    )
     const accountCount = Object.keys(accounts).length
-    const orderedSigners = [
-      ...hardwareSigners.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-      ...hotSigners
-    ]
     const { showAddAccounts } = this.props.data
     return showAddAccounts ? (
       <AddAccounts
@@ -378,11 +357,11 @@ export class Dash extends React.Component {
         <div className='localSettingsWrap'>
           <section className='dashHomeCard dashAccountsSignerCard' aria-labelledby='dash-signers-title'>
             <div className='dashAccountsCardHeader'>
-              <h2 id='dash-signers-title'>{orderedSigners.length === 1 ? 'Signer' : 'Signers'}</h2>
+              <h2 id='dash-signers-title'>Signing accounts</h2>
             </div>
-            {orderedSigners.length ? (
+            {signingAccounts.length ? (
               <div className='dashAccountSignerLedger'>
-                {orderedSigners.map((signer) => this.renderSignerRow(signer, accounts))}
+                {signingAccounts.map((account) => this.renderAccountRow(account, liveAddresses))}
               </div>
             ) : (
               <p className='dashAccountsEmptyCopy'>No signing accounts yet.</p>

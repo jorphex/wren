@@ -48,12 +48,12 @@
   width 100%
   overflow-x hidden
   overflow-y auto
-  padding 0 var(--wren-space-3) 60px
+  padding 0 0 60px
   box-sizing border-box
-  border 1px solid var(--wren-border-default)
-  border-radius 10px
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
 
 .signerBalanceWarning
   appearance none
@@ -83,12 +83,35 @@
   padding 0 var(--wren-space-3)
   box-sizing border-box
   overflow auto
-  border 1px solid var(--wren-border-default)
-  border-radius 10px
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
   position relative
   z-index 999
+
+.balancesExpandedScroll > .cluster,
+.balancesPreview > .cluster
+  margin 0
+  padding 0
+  border 0
+  border-radius 0
+  background transparent
+
+  .clusterRow
+    gap 0
+
+  .clusterRow + .clusterRow
+    margin-top 0
+
+  .clusterValue
+    border 0
+    border-bottom 1px solid var(--wren-ledger-rule)
+    border-radius 0
+    background transparent
+
+  .clusterRow:last-child .clusterValue
+    border-bottom 0
 
 .balancesEmpty
   display flex

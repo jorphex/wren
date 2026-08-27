@@ -16,7 +16,9 @@
 
 .sendComposer
   display flex
-  min-height calc(100vh - 64px)
+  height 100%
+  min-height 0
+  overflow hidden
   flex-direction column
 
 .sendModeSwitch
@@ -1056,6 +1058,7 @@ button.sendSweepSelectAll.wrenControl
 .sendComposer
   .sendModeSwitch
     position relative
+    flex none
     height 44px
     min-height 44px
     gap 0
@@ -1071,6 +1074,16 @@ button.sendSweepSelectAll.wrenControl
       border-radius var(--wren-radius-sm)
       background rgba(9, 12, 10, .52)
       box-shadow var(--wren-shadow-inset)
+      content ''
+
+    &::after
+      position absolute
+      z-index 0
+      top 10px
+      bottom 10px
+      left 50%
+      width 1px
+      background var(--wren-border-subtle)
       content ''
 
     button
@@ -1102,6 +1115,10 @@ button.sendSweepSelectAll.wrenControl
     gap 10px
     padding 8px 24px 0
     flex-direction column
+    min-height 0
+    overflow-y auto
+    overscroll-behavior contain
+    scrollbar-gutter stable
 
   .sendLedgerRow
     flex none
@@ -1154,7 +1171,7 @@ button.sendSweepSelectAll.wrenControl
 
     .sendFeeValue
       grid-column 2
-      grid-row 1
+      grid-row 1 / 3
       align-self center
       text-align right
 
@@ -1179,9 +1196,10 @@ button.sendSweepSelectAll.wrenControl
   .sendLedger
     flex none
     padding-bottom 0
+    overflow visible
 
   .sendSweepSelect
-    flex 1
+    flex none
     min-height 0
     margin 10px 24px 0
     padding 0
@@ -1203,7 +1221,12 @@ button.sendSweepSelectAll.wrenControl
     box-sizing border-box
 
   .sendSweepAssets
+    min-height 0
+    flex none
+    max-height 248px
     overflow-y auto
+    overscroll-behavior contain
+    scrollbar-gutter stable
     border-top 1px solid var(--wren-ledger-rule)
     border-bottom 1px solid var(--wren-ledger-rule)
 
@@ -1248,6 +1271,9 @@ button.sendSweepSelectAll.wrenControl
 
   .sendComposer .sendAmountRow
     min-height 136px
+
+  .sendComposerSweep .sendSweepAssets
+    max-height 184px
 
   .sendComposer .sendInputRow:not(.sendAmountRow)
     min-height 126px

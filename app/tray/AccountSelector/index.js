@@ -96,7 +96,7 @@ export class AccountSelector extends React.Component {
         <div className='panelFilterInput'>
           <input
             aria-label='Filter accounts'
-            className='wrenInput'
+            className='wrenInput wrenInputQuiet'
             data-dialog-initial-focus
             spellCheck='false'
             onChange={(e) => {

@@ -78,9 +78,11 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   )
 })
 
-test('keeps account collection and balance interiors spacing-led', () => {
+test('keeps account collection spacing-led and balances on a flat ruled ledger', () => {
   expect(accountStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
-  expect(balancesStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(balancesStyle).toMatch(
+    /\.balancesExpandedScroll > \.cluster,[\s\S]*?border 0[\s\S]*?\.clusterValue[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+  )
   expect(accountStyle).toMatch(/\.clusterRow \+ \.clusterRow[\s\S]*?margin-top var\(--wren-space-2\)/)
 })
 
@@ -174,26 +176,24 @@ test('keeps account modules free of decorative seams', () => {
   )
 })
 
-test('keeps activity in a contained ruled ledger and exposes its expanded module', () => {
+test('keeps activity on a flat ruled ledger and exposes its expanded module', () => {
   expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
   expect(accountSource).toMatch(/activity: Activity/)
   expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
   expect(accountSource).toMatch(
     /compactTop=\{\s*crumb\.data\.id === 'requests' \|\| crumb\.data\.id === 'activity' \|\| crumb\.data\.id === 'balances'\s*\}/
   )
-  expect(activityStyle).toMatch(
-    /\.activityList[\s\S]*?gap 0[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
-  )
+  expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap 0[\s\S]*?border 0[\s\S]*?background transparent/)
   expect(activityStyle).toMatch(
     /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
   )
   expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
 
-test('keeps reserved tray bands clean while containing the startup account ledger', () => {
+test('keeps reserved tray bands clean and the startup account ledger flat', () => {
   expect(accountStyle).not.toMatch(/footerWrapActive|wren-(?:seam|rule)/)
   expect(accountSelectorStyle).toMatch(
-    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorScroll[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorScroll[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
   )
   expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
   expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,100}?border-top/)
@@ -261,11 +261,13 @@ test('keeps ordinary account subviews below the shell header', () => {
   expect(accountStyle).toMatch(/&:has\(\.requestViewScroll\)[\s\S]*?\.accountViewMain[\s\S]*?top 64px/)
 })
 
-test('separates request groups without ruling the inbox toolbar', () => {
+test('separates request groups and the inbox toolbar with faint ledger rules', () => {
   expect(requestsStyle).toMatch(
     /\.requestGroupBlock\n {2}border-top 0[\s\S]*?& \+ \.requestGroupBlock\n {4}border-top 1px solid var\(--wren-ledger-rule\)/
   )
-  expect(requestsStyle).toMatch(/\.requestQueueStatus[\s\S]*?border-bottom 0/)
+  expect(requestsStyle).toMatch(
+    /\.requestQueueStatus[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+  )
 })
 
 test('keeps transaction review on one flat details ledger', () => {
