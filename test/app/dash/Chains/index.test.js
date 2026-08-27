@@ -59,15 +59,13 @@ test('keeps the compact default to active networks while All reveals disabled te
   expect(screen.getByText('Testnets')).toBeTruthy()
 })
 
-test('moves Add into the network card and replaces primary Control destinations', () => {
+test('moves Add into the network card', () => {
   renderChains()
 
   fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Overview Control center home.' }))
 
   expect(link.send.mock.calls).toEqual([
-    ['tray:action', 'navDash', { view: 'chains', data: { newChain: {} } }],
-    ['tray:action', 'navReplace', 'dash', []]
+    ['tray:action', 'navDash', { view: 'chains', data: { newChain: {} } }]
   ])
 })
 

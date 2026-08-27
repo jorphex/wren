@@ -155,7 +155,7 @@ export class Dapps extends React.Component {
       return <DappDetails originId={dappDetails} />
     } else {
       return (
-        <div className='connectedApps cardShow'>
+        <div className='connectedApps connectedAppsPerch'>
           {chainGroups.length ? (
             <>
               <p className='connectedAppsScope'>

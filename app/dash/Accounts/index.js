@@ -7,8 +7,6 @@ import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
 import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
 
-import ControlNavigation from '../ControlNavigation'
-
 import AddHardware from './Add/AddHardware'
 import AddHardwareLattice from './Add/AddHardwareLattice'
 import AddPhrase from './Add/AddPhrase'
@@ -367,15 +365,6 @@ export class Dash extends React.Component {
       ...hardwareSigners.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
       ...hotSigners
     ]
-    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
-      Object.values(networks)
-    )
-    const counts = {
-      accounts: accountCount,
-      networks: allNetworks.filter((network) => network.on).length,
-      dapps: Object.keys(this.store('main.origins') || {}).length
-    }
-
     const { showAddAccounts } = this.props.data
     return showAddAccounts ? (
       <AddAccounts
@@ -385,9 +374,8 @@ export class Dash extends React.Component {
         {...this.props}
       />
     ) : (
-      <div className='localSettings dashAccountsPerch cardShow'>
+      <div className='localSettings dashAccountsPerch'>
         <div className='localSettingsWrap'>
-          <ControlNavigation counts={counts} current='accounts' replace />
           <section className='dashHomeCard dashAccountsSignerCard' aria-labelledby='dash-signers-title'>
             <div className='dashAccountsCardHeader'>
               <h2 id='dash-signers-title'>{orderedSigners.length === 1 ? 'Signer' : 'Signers'}</h2>

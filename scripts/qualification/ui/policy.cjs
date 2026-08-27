@@ -1186,7 +1186,7 @@ const reviewScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.addressBookEditor',
-        requiredControls: ['Save Contact'],
+        requiredControls: ['Save contact'],
         requiredText: ['Address check', 'Checked outside Wren', 'Wren does not verify it.']
       },
       {
@@ -1268,7 +1268,7 @@ const reviewScenarios = () => [
           steps: [
             { type: 'inputLabel', label: 'To', value: '0x2222222222222222222222222222222222222222' },
             { type: 'clickText', text: 'Use Max' },
-            { type: 'clickText', text: 'Review Max send' }
+            { type: 'clickText', text: 'Review maximum send' }
           ]
         },
         ready: '.sendQuotePanelReview',
@@ -1308,7 +1308,7 @@ const reviewScenarios = () => [
           'Queue 1 transfer'
         ],
         requiredText: [
-          'Sequential, not atomic',
+          'Sequential execution — not atomic',
           'No bridge or batch contract is used.',
           '0x3333333333333333333333333333333333333333',
           '100000000',
@@ -1361,7 +1361,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.originSwapChainList',
-    requiredControls: ['Ethereum', 'Optimism Mainnet — Community RPC', 'Workshop Chain', 'Open Networks'],
+    requiredControls: ['Ethereum', 'Optimism Mainnet — Community RPC', 'Workshop Chain', 'Open networks'],
     requiredText: ['Select a network']
   },
   {
@@ -1505,7 +1505,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredText: ['Create new', 'Import existing', 'Watch-only']
+    requiredText: ['CREATE NEW', 'IMPORT EXISTING', 'WATCH-ONLY']
   },
   {
     id: 'dash-account-weak-password-short-1.5',
@@ -1623,7 +1623,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountItemSmart .addAccountItemOptionInput.address',
-    requiredText: ['Watch Account', 'Follow balances and activity without adding signing access.']
+    requiredText: ['Watch account', 'Follow balances and activity without adding signing access.']
   },
   {
     id: 'dash-account-add-seed-full-1',
@@ -1653,7 +1653,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.watchAccountIcon',
-    requiredText: ['Watch account', 'Ledger', 'Trezor', 'GridPlus', 'Seed Phrase', 'Imported Keys']
+    requiredText: ['Watch account', 'Ledger', 'Trezor', 'GridPlus', 'Seed phrase', 'Imported keys']
   },
   {
     id: 'dash-accounts-perch-full-1',
@@ -2108,9 +2108,9 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.requestPreviewContentMeta',
+    ready: '.requestPreviewItem',
     requiredControls: ['Requests. 3 active. 1 pending. 2 confirming.'],
-    requiredText: ['Requests (3)', '1 pending · 2 confirming']
+    requiredText: ['REQUESTS', '1 pending · 2 confirming', 'Review request']
   },
   {
     id: 'tray-account-requests-list-full-1',
@@ -2331,7 +2331,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
     requiredControls: ['View all activity'],
-    requiredText: ['Apps with access', 'Signer', 'Remove account'],
+    requiredText: ['APPS WITH ACCESS', 'Signer', 'Remove account'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
   },
@@ -2344,7 +2344,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredText: ['Ethereum', 'Balances', 'Apps with access']
+    requiredText: ['Ethereum', 'BALANCES', 'APPS WITH ACCESS']
   },
   {
     id: 'tray-account-removal-confirm-full-1',

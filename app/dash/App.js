@@ -15,6 +15,7 @@ import AddressBook from './AddressBook'
 import Dapps from './Dapps'
 import Inspector from './Inspector'
 import Contracts from './Contracts'
+import ControlNavigation from './ControlNavigation'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
@@ -130,13 +131,36 @@ export class Dash extends React.Component {
       ? this.store('main.signers', hardwarePrompt.signerId)
       : undefined
     const showAddButton = view === 'tokens' && (!data || Object.keys(data).length === 0)
+    const topLevelControlView =
+      !view ||
+      view === 'default' ||
+      (['accounts', 'chains', 'dapps', 'settings'].includes(view) &&
+        (!data || Object.keys(data).length === 0))
+    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
+      Object.values(networks)
+    )
+    const controlCounts = {
+      accounts: Object.keys(this.store('main.accounts') || {}).length,
+      networks: allNetworks.filter((network) => network?.on).length,
+      dapps: Object.keys(this.store('main.origins') || {}).length
+    }
+    const controlCurrent = view === 'default' || !view ? 'overview' : view
 
     return (
       <div className='dash'>
         <Command />
         <div className='dashMain' style={showAddButton ? { bottom: '78px' } : undefined}>
           <div className='dashMainOverlay' />
-          <div className='dashMainScroll'>{this.renderPanel(view, data, hardwarePrompt)}</div>
+          <div className='dashMainScroll'>
+            {topLevelControlView ? (
+              <div className='dashControlShell'>
+                <ControlNavigation counts={controlCounts} current={controlCurrent} replace />
+                <div className='dashControlContent'>{this.renderPanel(view, data, hardwarePrompt)}</div>
+              </div>
+            ) : (
+              this.renderPanel(view, data, hardwarePrompt)
+            )}
+          </div>
         </div>
         {promptSigner ? (
           <Signer

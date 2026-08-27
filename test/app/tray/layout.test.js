@@ -174,21 +174,27 @@ test('keeps account modules free of decorative seams', () => {
   )
 })
 
-test('keeps activity grouped by spacing and exposes its expanded module', () => {
+test('keeps activity in a contained ruled ledger and exposes its expanded module', () => {
   expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
   expect(accountSource).toMatch(/activity: Activity/)
   expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
   expect(accountSource).toMatch(
     /compactTop=\{\s*crumb\.data\.id === 'requests' \|\| crumb\.data\.id === 'activity' \|\| crumb\.data\.id === 'balances'\s*\}/
   )
-  expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap var\(--wren-space-1\)/)
-  expect(activityStyle).not.toMatch(/border-(?:top|bottom)|wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(activityStyle).toMatch(
+    /\.activityList[\s\S]*?gap 0[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+  )
+  expect(activityStyle).toMatch(
+    /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
+  )
   expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
 
-test('keeps reserved tray bands and revocation evidence free of decorative horizontal rules', () => {
+test('keeps reserved tray bands clean while containing the startup account ledger', () => {
   expect(accountStyle).not.toMatch(/footerWrapActive|wren-(?:seam|rule)/)
-  expect(accountSelectorStyle).not.toMatch(/wren-(?:seam|rule)|wren-ledger-rule/)
+  expect(accountSelectorStyle).toMatch(
+    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorScroll[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+  )
   expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
   expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,100}?border-top/)
 })
@@ -250,11 +256,9 @@ test('keeps ordered wallet calls on a flat ruled ledger', () => {
 
 test('keeps ordinary account subviews below the shell header', () => {
   expect(accountStyle).toMatch(
-    /\.accountView[\s\S]*?\.accountViewMain[\s\S]*?top calc\(52px \+ var\(--wren-space-3\) \+ var\(--wren-space-5\)\)/
+    /\.accountView[\s\S]*?\.accountViewMenu[\s\S]*?height 64px[\s\S]*?\.accountViewMain[\s\S]*?top calc\(64px \+ var\(--wren-space-5\)\)/
   )
-  expect(accountStyle).toMatch(
-    /&:has\(\.requestViewScroll\)[\s\S]*?\.accountViewMain[\s\S]*?top calc\(52px \+ var\(--wren-space-3\)\)/
-  )
+  expect(accountStyle).toMatch(/&:has\(\.requestViewScroll\)[\s\S]*?\.accountViewMain[\s\S]*?top 64px/)
 })
 
 test('separates request groups without ruling the inbox toolbar', () => {
@@ -269,7 +273,7 @@ test('keeps transaction review on one flat details ledger', () => {
   expect(accountSource).not.toMatch(/top: requestMode \|\| compactTop/)
   expect(accountSource).toMatch(/requestMode=\{true\}/)
   expect(accountStyle).toMatch(
-    /\.accountView[\s\S]*?&:has\(\.signerRequest\)[\s\S]*?\.accountViewMain[\s\S]*?top 52px/
+    /\.accountView[\s\S]*?&:has\(\.signerRequest\)[\s\S]*?\.accountViewMain[\s\S]*?top 64px/
   )
   expect(accountStyle).toMatch(
     /\.accountViewMeta[\s\S]*?display block[\s\S]*?color var\(--wren-text-tertiary\)[\s\S]*?text-align right[\s\S]*?text-overflow ellipsis/

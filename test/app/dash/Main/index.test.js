@@ -35,15 +35,11 @@ const renderMain = () => {
 }
 
 it.each([
-  ['Accounts', 'accounts'],
   ['Earn', 'earn'],
   ['Contacts', 'addressBook'],
-  ['App activity', 'dapps'],
   ['Read-only inspector', 'inspector'],
   ['Contracts', 'contracts'],
-  ['Networks', 'chains'],
-  ['Tokens', 'tokens'],
-  ['Settings', 'settings']
+  ['Tokens', 'tokens']
 ])('opens %s from the dashboard', (label, view) => {
   renderMain()
 
@@ -52,14 +48,9 @@ it.each([
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
 })
 
-it('opens the cross-account app-activity view without exposing internal instance controls', () => {
+it('does not expose internal instance controls', () => {
   renderMain()
 
-  expect(
-    screen.getByRole('button', {
-      name: 'App activity Review recent activity, account access, and default networks.'
-    })
-  ).toBeTruthy()
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 
@@ -70,26 +61,22 @@ it('leaves dashboard identity to the shared Control chrome', () => {
   expect(screen.queryByText('Desktop EVM wallet')).toBeNull()
 })
 
-it('includes each destination description in its accessible name', () => {
+it('includes each tool description in its accessible name', () => {
   renderMain()
 
   expect(
     screen.getByRole('button', {
-      name: 'Accounts Manage signing and watch-only accounts.'
+      name: 'Contacts Save labels for addresses. Compare the full address before signing.'
     })
   ).toBeTruthy()
 })
 
-it('matches the Control push-navigation order and retains additional tools below it', () => {
+it('retains the additional tools owned by the Overview content', () => {
   renderMain()
 
-  const primaryItems = [...document.querySelectorAll('.dashModules .dashModuleTitle')].map(
-    (item) => item.textContent
-  )
   const toolItems = [...document.querySelectorAll('.dashToolList .dashModuleTitle')].map(
     (item) => item.textContent
   )
-  expect(primaryItems).toEqual(['Overview', 'Accounts', 'Networks', 'App activity', 'Settings'])
   expect(screen.queryByText('home')).toBeNull()
   expect(screen.queryByText('app')).toBeNull()
   expect(screen.getByText('More tools')).toBeTruthy()
@@ -113,7 +100,7 @@ it('orders the lower Control surfaces by utility and keeps Support cardless', ()
     )
   )
 
-  expect(sections).toEqual(['dashModules', 'dashToolsCard', 'dashCompanion', 'dashSupportActions'])
+  expect(sections).toEqual(['dashToolsCard', 'dashCompanion', 'dashSupportActions'])
   expect(document.querySelector('.dashSupportCard')).toBeNull()
   expect(document.querySelectorAll('.dashSupportActions > *')).toHaveLength(4)
 })

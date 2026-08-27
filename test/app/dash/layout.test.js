@@ -99,9 +99,8 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
 })
 
 test('keeps route-entry motion out of dashboard scroll geometry', () => {
-  expect(dashStyle).toMatch(
-    /@keyframes dashPageShow[\s\S]*?opacity 0[\s\S]*?opacity 1[\s\S]*?\.dashMainScroll[\s\S]*?\.cardShow[\s\S]*?animation-name dashPageShow/
-  )
+  expect(dashStyle).toMatch(/\.dashMainScroll[\s\S]*?> \.cardShow[\s\S]*?animation none/)
+  expect(dashStyle).not.toMatch(/dashPageShow|animation-name dashPageShow/)
   expect(dappsStyle).toMatch(/\.connectedApps\n {2}display flow-root/)
 })
 
@@ -133,10 +132,13 @@ test('uses the reference single-column push-button navigation geometry', () => {
   expect(mainStyle).not.toMatch(/wren-(?:seam|rule)/)
 })
 
-test('groups chooser, settings, and networks with spacing instead of decorative rules', () => {
-  for (const style of [dashStyle, settingsStyle, chainsStyle]) {
+test('uses contained account ledgers while keeping settings and networks spacing-led', () => {
+  for (const style of [settingsStyle, chainsStyle]) {
     expect(style).not.toMatch(/wren-(?:seam|rule)|border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
   }
+  expect(dashStyle).toMatch(
+    /\.accountTypeGroup[\s\S]*?border 1px solid rgba\(150, 182, 150, \.16\)[\s\S]*?\.accountTypeGroupTitle[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)/
+  )
   expect(dashStyle).toMatch(
     /\.accountTypeGroup \+ \.accountTypeGroup[\s\S]*?margin-top var\(--wren-space-5\)/
   )
@@ -388,10 +390,10 @@ test('keeps direct verification disclosure distinct from constructor helper copy
 
 test('keeps hardware prompts opaque while giving their scrim and surface restrained depth', () => {
   expect(signerStyle).toMatch(
-    /\.hardwareSignerPromptOverlay[\s\S]*?background rgba\(7, 10, 14, 0\.76\)[\s\S]*?backdrop-filter blur\(5px\)/
+    /\.hardwareSignerPromptOverlay[\s\S]*?background rgba\(4, 6, 4, \.78\)[\s\S]*?backdrop-filter blur\(5px\)/
   )
   expect(signerStyle).toMatch(
-    /\.hardwareSignerPromptSurface\.expandedSigner[\s\S]*?background-color var\(--wren-bg-elevated\)[\s\S]*?background-image var\(--wren-control-texture-dark\)[\s\S]*?box-shadow var\(--wren-shadow-lg\), var\(--wren-shadow-inset\)[\s\S]*?animation cardShow/
+    /\.hardwareSignerPromptSurface\.expandedSigner[\s\S]*?background-color rgba\(13, 18, 16, \.94\)[\s\S]*?background-image var\(--wren-control-texture-dark\), radial-gradient[\s\S]*?box-shadow var\(--wren-shadow-lg\), var\(--wren-shadow-inset\)[\s\S]*?animation cardShow/
   )
 })
 

@@ -78,13 +78,13 @@ it('uses the simple shared chrome for the Settings landing', () => {
   expect(document.querySelector('.commandHomeMark')).toBeTruthy()
 })
 
-it('uses the simple shared chrome for the Send composer', () => {
+it('uses back-enabled shared chrome for the Send composer', () => {
   renderCommand([{ view: 'send', data: {} }])
 
   expect(screen.getByText('Send')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
-  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
+  expect(document.querySelector('.commandItemBack')).toBeTruthy()
 })
 
 it('uses an authored title for the generic notice surface', () => {

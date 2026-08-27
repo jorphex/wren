@@ -231,6 +231,42 @@
   .accountDrawerItem
     pointer-events auto
 
+  .accountSelectorWelcome
+    padding 16px 4px 18px
+
+  .accountDrawerFilter
+    height 48px
+    margin 0 0 12px
+
+  .accountSelectorScroll
+    height auto
+    align-self start
+    border 1px solid var(--wren-border-default)
+    border-radius 10px
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+    .accountSelectorScrollWrap
+      padding 4px 10px
+
+  .accountDrawerItem
+    height 62px
+    padding 0 8px
+    border-bottom 1px solid var(--wren-ledger-rule)
+
+    &:last-child
+      border-bottom 0
+
+    &:hover
+      border-radius var(--wren-radius-sm)
+
+  .accountDrawerItemIcon
+    width 30px
+    height 30px
+    border 1px solid var(--wren-border-subtle)
+    border-radius 8px
+    background var(--wren-surface-inset)
+
 .accountSelectorEmpty
   width calc(100% - 32px)
   max-width 440px
@@ -318,6 +354,18 @@
   flex none
   align-items center
   gap var(--wren-space-2)
+
+.accountSwitcherQr
+  pointer-events auto
+
+  .accountAddressQrPopover
+    right -48px
+    left auto
+    margin-left 0
+
+    &::before
+      right 64px
+      left auto
 
 .accountWorkspaceToggle
   width 40px

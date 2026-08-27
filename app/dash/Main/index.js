@@ -2,7 +2,6 @@ import React from 'react'
 import Restore from 'react-restore'
 import Icon from '../../../resources/Components/Icon'
 import QrCode from '../../../resources/Components/QrCode'
-import ControlNavigation from '../ControlNavigation'
 import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import {
@@ -114,18 +113,9 @@ export class Main extends React.Component {
 
   render() {
     const supportPreviewOpen = this.state.supportPreviewFocused || this.state.supportPreviewHovered
-    const accounts = this.store('main.accounts') || {}
-    const networks = this.store('main.networks.ethereum') || {}
-    const origins = this.store('main.origins') || {}
-    const counts = {
-      accounts: Object.keys(accounts).length,
-      networks: Object.values(networks).filter((network) => network?.on).length,
-      dapps: Object.keys(origins).length
-    }
     return (
-      <div className='localSettings dashHomePerch cardShow'>
+      <div className='localSettings dashHomePerch'>
         <div className='localSettingsWrap'>
-          <ControlNavigation counts={counts} />
           <section className='dashHomeCard dashToolsCard' aria-labelledby='dash-tools-title'>
             <h2 id='dash-tools-title'>More tools</h2>
             <nav className='dashToolList' aria-label='Additional tools'>

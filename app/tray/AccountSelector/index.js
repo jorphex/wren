@@ -6,6 +6,7 @@ import AccountController from './AccountController'
 import emptyAccounts from 'url:../../../asset/ui/empty-accounts-v2.png'
 import wrenMark from 'url:../../../asset/brand/exports/mark/wren-mark-color-32.png'
 import Icon from '../../../resources/Components/Icon'
+import QrCode from '../../../resources/Components/QrCode'
 import DialogSurface from '../../../resources/Components/DialogSurface'
 import { accountSort as byCreation } from '../../../resources/domain/account'
 import { getAddress, matchFilter } from '../../../resources/utils'
@@ -13,6 +14,49 @@ import { getAddress, matchFilter } from '../../../resources/utils'
 import link from '../../../resources/link'
 
 let firstScroll = true
+
+const AccountQrAction = ({ address, name }) => {
+  const [focused, setFocused] = React.useState(false)
+  const [hovered, setHovered] = React.useState(false)
+  const previewId = React.useId()
+  const titleId = `${previewId}-title`
+  const open = focused || hovered
+
+  return (
+    <div
+      className='accountHomeQrDisclosure accountSwitcherQr'
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button
+        type='button'
+        aria-controls={previewId}
+        aria-expanded={open}
+        aria-label='Account address QR code'
+        className='accountHomeQrTrigger wrenControl wrenControlGhost wrenControlIcon'
+        title='Hover or focus to show the account address QR code'
+        onBlur={() => setFocused(false)}
+        onFocus={() => setFocused(true)}
+      >
+        <Icon name='qr' size={16} />
+      </button>
+      {open ? (
+        <div id={previewId} className='accountAddressQrPopover' aria-labelledby={titleId}>
+          <div className='accountAddressQrHeader'>
+            <div>
+              <h2 id={titleId} className='accountAddressQrTitle'>
+                Account address
+              </h2>
+              <div className='accountAddressQrAccount'>{name}</div>
+            </div>
+          </div>
+          <QrCode className='accountAddressQrCode' label='QR code for account address' value={address} />
+          <div className='accountAddressQrValue'>{address}</div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 export class AccountSelector extends React.Component {
   constructor(props, context) {
@@ -84,7 +128,7 @@ export class AccountSelector extends React.Component {
     return (
       <header className='accountSelectorWelcome'>
         <h1>Choose an account</h1>
-        <p>Open your wallet with an account.</p>
+        <p>Choose an account to open your wallet.</p>
       </header>
     )
   }
@@ -203,6 +247,7 @@ export class AccountSelector extends React.Component {
           >
             <Icon name='copy' size={17} />
           </button>
+          <AccountQrAction address={address} name={displayName} />
           <button
             type='button'
             className='accountWorkspaceToggle wrenControl wrenControlGhost wrenControlIcon wrenShellNav'

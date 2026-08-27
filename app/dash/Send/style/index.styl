@@ -11,7 +11,7 @@
   box-sizing border-box
   min-height 100%
   color var(--wren-text-primary)
-  background var(--wren-bg-canvas)
+  background transparent
   font-family var(--wren-font-ui)
 
 .sendComposer
@@ -385,7 +385,7 @@
   flex-direction column
 
 .sendSweepReview
-  background var(--wren-bg-canvas)
+  background transparent
 
 .sendSweepChain
   display grid
@@ -680,18 +680,32 @@ button.sendSweepSelectAll.wrenControl
 .sendAssetList
   display flex
   flex-direction column
+  overflow hidden
+  margin-top 12px
+  border 1px solid rgba(150, 182, 150, .16)
+  border-radius 10px
+  background rgba(13, 18, 16, .66)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .38), inset 1px 1px 0 rgba(150, 182, 150, .04)
 
 .sendContactList
   display flex
   flex-direction column
+  gap 12px
+  margin-top 12px
 
 .sendPickerSection
   display flex
   flex-direction column
+  overflow hidden
+  border 1px solid rgba(150, 182, 150, .16)
+  border-radius 10px
+  background rgba(13, 18, 16, .66)
+  box-shadow 0 10px 26px rgba(0, 0, 0, .34), inset 1px 1px 0 rgba(150, 182, 150, .04)
 
   h3
     margin 0
-    padding 18px 2px 8px
+    padding 12px 14px 10px
+    border-bottom 1px solid var(--wren-ledger-rule)
     color var(--wren-text-tertiary)
     font-size var(--wren-type-caption)
     font-weight 620
@@ -700,7 +714,8 @@ button.sendSweepSelectAll.wrenControl
 
 .sendPickerSectionTitle
   margin 0
-  padding 22px 2px 8px
+  padding 12px 14px 10px
+  border-bottom 1px solid var(--wren-ledger-rule)
   color var(--wren-text-tertiary)
   font-size var(--wren-type-caption)
   font-weight 620
@@ -713,9 +728,10 @@ button.sendSweepSelectAll.wrenControl
   grid-template-columns 36px minmax(0, 1fr) auto
   align-items center
   gap 10px
-  padding 8px 2px
+  padding 8px 12px
   border 0
-  border-radius var(--wren-radius-sm)
+  border-radius 0
+  border-bottom 1px solid var(--wren-ledger-rule)
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -728,6 +744,9 @@ button.sendSweepSelectAll.wrenControl
   &:focus-visible
     outline 2px solid var(--wren-focus)
     outline-offset -2px
+
+  &:last-child
+    border-bottom 0
 
 .sendContactIcon
   display flex
@@ -801,10 +820,10 @@ button.sendSweepSelectAll.wrenControl
   grid-template-columns 42px minmax(90px, 1fr) minmax(100px, auto) 22px
   align-items center
   gap 10px
-  padding 8px 2px
+  padding 8px 12px
   border 0
-  border 1px solid transparent
-  border-radius var(--wren-radius-sm)
+  border-bottom 1px solid var(--wren-ledger-rule)
+  border-radius 0
   color var(--wren-text-primary)
   background transparent
   font-family var(--wren-font-ui)
@@ -812,7 +831,6 @@ button.sendSweepSelectAll.wrenControl
   cursor pointer
 
   &:hover
-    border-color var(--wren-border-subtle)
     background var(--wren-ledger-hover)
 
   &:focus-visible
@@ -821,13 +839,15 @@ button.sendSweepSelectAll.wrenControl
 
   &[aria-pressed='true'],
   &.sendAssetOptionSelected
-    border-color var(--wren-border-default)
+    border-color var(--wren-ledger-rule)
     background var(--wren-ledger-selected)
     box-shadow var(--wren-shadow-inset)
 
     &:hover
-      border-color var(--wren-border-strong)
       background var(--wren-surface-active)
+
+  &:last-child
+    border-bottom 0
 
 .sendAssetSelection
   display flex
@@ -1033,7 +1053,7 @@ button.sendSweepSelectAll.wrenControl
 
 // Perch composer: keep Wren's real send/sweep behavior while matching the
 // reference's compact card rhythm and full-width review action.
-.sendComposer:not(.sendComposerSweep)
+.sendComposer
   .sendModeSwitch
     position relative
     height 44px
@@ -1120,8 +1140,27 @@ button.sendSweepSelectAll.wrenControl
     box-shadow none
 
   .sendFeeRow
-    min-height 82px
-    padding 10px 18px 9px
+    display grid
+    min-height 74px
+    padding 12px 18px 10px
+    grid-template-columns minmax(0, 1fr) auto
+    grid-template-rows auto auto
+    align-content center
+    gap 5px var(--wren-space-3)
+
+    .sendRowLabel
+      grid-column 1
+      grid-row 1
+
+    .sendFeeValue
+      grid-column 2
+      grid-row 1
+      align-self center
+      text-align right
+
+    .sendRowHint
+      grid-column 1 / -1
+      grid-row 2
 
   .sendActionShelf
     min-height 72px
@@ -1133,29 +1172,90 @@ button.sendSweepSelectAll.wrenControl
       width 100%
       min-width 0
 
+// Sweep uses the same selector and field geometry as Send one. Its variable
+// asset ledger is contained as a second card instead of falling back to the
+// older flat form treatment.
+.sendComposerSweep
+  .sendLedger
+    flex none
+    padding-bottom 0
+
+  .sendSweepSelect
+    flex 1
+    min-height 0
+    margin 10px 24px 0
+    padding 0
+    overflow hidden
+    border 1px solid rgba(77, 88, 78, .72)
+    border-radius 10px
+    background rgba(15, 19, 16, .76)
+    box-shadow inset 0 1px rgba(255, 255, 255, .022), 0 12px 32px rgba(0, 0, 0, .13)
+
+  .sendSweepChain
+    min-height 64px
+    padding 10px 16px
+    box-sizing border-box
+    border-bottom 1px solid var(--wren-ledger-rule)
+
+  .sendSweepHeader
+    min-height 62px
+    padding 10px 16px
+    box-sizing border-box
+
+  .sendSweepAssets
+    overflow-y auto
+    border-top 1px solid var(--wren-ledger-rule)
+    border-bottom 1px solid var(--wren-ledger-rule)
+
+    > label
+      padding 0 16px
+      border-bottom 1px solid var(--wren-ledger-rule)
+
+      &:last-child
+        border-bottom 0
+
+      &.sendSweepAssetSelected
+        background var(--wren-ledger-selected)
+        box-shadow inset 3px 0 var(--wren-accent-primary)
+
+  .sendSweepWarningCompact
+    margin 12px 16px
+    border 1px solid rgba(196, 151, 82, .15)
+    background rgba(113, 75, 28, .18)
+
+  .sendActionShelf.sendSweepShelf
+    width auto
+    min-height 68px
+    margin 0
+    padding 10px 16px 12px
+
+    button
+      width 100%
+      min-width 0
+
 @media (max-height: 760px)
-  .sendComposer:not(.sendComposerSweep) .sendLedger
+  .sendComposer .sendLedger
     padding-top 6px
 
-  .sendComposer:not(.sendComposerSweep) .sendLedgerRow
+  .sendComposer .sendLedgerRow
     min-height 66px
 
-  .sendComposer:not(.sendComposerSweep) .sendAssetRow
+  .sendComposer .sendAssetRow
     min-height 112px
 
-  .sendComposer:not(.sendComposerSweep) .sendInputRow
+  .sendComposer .sendInputRow
     padding-top 10px
 
-  .sendComposer:not(.sendComposerSweep) .sendAmountRow
+  .sendComposer .sendAmountRow
     min-height 136px
 
-  .sendComposer:not(.sendComposerSweep) .sendInputRow:not(.sendAmountRow)
+  .sendComposer .sendInputRow:not(.sendAmountRow)
     min-height 126px
 
-  .sendComposer:not(.sendComposerSweep) .sendFeeRow
+  .sendComposer .sendFeeRow
     min-height 112px
 
-  .sendComposer:not(.sendComposerSweep) .sendActionShelf
+  .sendComposer .sendActionShelf
     min-height 78px
     padding-top 12px
     padding-bottom 12px

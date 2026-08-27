@@ -1126,10 +1126,13 @@
   border-radius 0
 
   .accountViewMenu
-    right var(--wren-space-5)
-    left var(--wren-space-5)
-    height 52px
+    right 0
+    left 0
+    height 64px
+    padding 0 var(--wren-space-5)
+    box-sizing border-box
     border 0
+    border-bottom 1px solid var(--wren-border-subtle)
     border-radius 0
     background transparent
     box-shadow none
@@ -1143,7 +1146,7 @@
       text-transform none
 
   .accountViewMain
-    top calc(52px + var(--wren-space-3) + var(--wren-space-5))
+    top calc(64px + var(--wren-space-5))
     right var(--wren-space-5)
     left var(--wren-space-5)
     padding-top 0
@@ -1153,11 +1156,11 @@
 
   &:has(.requestViewScroll)
     .accountViewMain
-      top calc(52px + var(--wren-space-3))
+      top 64px
 
   &:has(.signerRequest)
     .accountViewMain
-      top 52px
+      top 64px
 
   &.accountViewCompact
     .accountViewMenu
@@ -1166,8 +1169,8 @@
   &.accountViewRequest
     .accountViewMenu
       top 0
-      right var(--wren-space-5)
-      left var(--wren-space-5)
+      right 0
+      left 0
 
       .accountViewTitle
         right 176px
@@ -1202,9 +1205,29 @@
         white-space nowrap
 
     .accountViewMain
-      top 52px
+      top 64px
       right 0
       left 0
+
+  .cardShow
+    animation none
+
+.moduleExpanded
+  padding-bottom var(--wren-space-5)
+
+  .accountModuleInner
+    padding 0
+
+  .accountModuleCard
+    overflow hidden
+    border 1px solid var(--wren-border-default)
+    border-radius 10px
+    background var(--wren-surface-card)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  .accountLedgerView
+    padding-right var(--wren-space-3)
+    padding-left var(--wren-space-3)
 
 // Account home follows the approved controls study: the selected-account switcher
 // owns the header, so the startup dashboard control stays out of the selected state.

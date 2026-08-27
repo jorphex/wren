@@ -1063,9 +1063,10 @@ export class Send extends React.Component {
               })}
             </div>
           ) : null}
-          {contacts.length ? <h3 className='sendPickerSectionTitle'>{COPY.savedContacts}</h3> : null}
-          {contacts.length
-            ? contacts.map((contact) => (
+          {contacts.length ? (
+            <div className='sendPickerSection'>
+              <h3 className='sendPickerSectionTitle'>{COPY.savedContacts}</h3>
+              {contacts.map((contact) => (
                 <button
                   className='sendContactOption'
                   key={contact.address.toLowerCase()}
@@ -1087,8 +1088,9 @@ export class Send extends React.Component {
                     {contact.provenance.status === 'verified-out-of-band' ? 'Checked outside Wren' : 'Saved'}
                   </span>
                 </button>
-              ))
-            : null}
+              ))}
+            </div>
+          ) : null}
           {recentRecipients.length ? (
             <div className='sendPickerSection sendRecentRecipients' aria-labelledby='send-recent-title'>
               <h3 id='send-recent-title'>{COPY.recentRecipients}</h3>
@@ -1714,6 +1716,7 @@ export class Send extends React.Component {
             >
               <input
                 autoComplete='off'
+                aria-label='Recipient'
                 aria-describedby='sendRecipientFeedback'
                 aria-invalid={this.state.recipientError ? 'true' : undefined}
                 className='sendRecipientInput wrenInput'

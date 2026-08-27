@@ -85,7 +85,6 @@ export class Command extends React.Component {
     if (view === 'accounts' && Object.keys(data).length === 0) return this.renderSectionChrome('Accounts')
     if (view === 'chains' && Object.keys(data).length === 0) return this.renderSectionChrome('Networks')
     if (view === 'settings' && Object.keys(data).length === 0) return this.renderSectionChrome('Settings')
-    if (view === 'send' && Object.keys(data).length === 0) return this.renderSectionChrome('Send')
     return (
       <div className='command'>
         {nav.length ? (

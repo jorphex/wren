@@ -2,7 +2,6 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import Chain from './Chain'
-import ControlNavigation from '../ControlNavigation'
 import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
@@ -88,16 +87,9 @@ export class Settings extends React.Component {
     const allNetworks = Object.values(networks).flatMap((typeNetworks) => Object.values(typeNetworks))
     const visibleNetworks = allNetworks.filter((network) => this.state.scope === 'all' || network.on)
     const visibleTestnets = visibleNetworks.some((network) => network.isTestnet)
-    const counts = {
-      accounts: Object.keys(this.store('main.accounts') || {}).length,
-      networks: allNetworks.filter((network) => network.on).length,
-      dapps: Object.keys(this.store('main.origins') || {}).length
-    }
-
     return (
-      <div key={'chainList'} className='localSettings dashNetworksPerch cardShow'>
+      <div key={'chainList'} className='localSettings dashNetworksPerch'>
         <div className='localSettingsWrap'>
-          <ControlNavigation counts={counts} current='chains' replace />
           <section className='dashHomeCard dashNetworksCard' aria-labelledby='dash-networks-title'>
             <div className='dashNetworksCardHeader'>
               <h2 id='dash-networks-title'>{this.state.scope === 'active' ? 'Connected' : 'Networks'}</h2>
