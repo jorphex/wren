@@ -232,7 +232,7 @@
     pointer-events auto
 
   .accountSelectorWelcome
-    padding 16px 4px 18px
+    padding 16px 0 18px
 
   .accountDrawerFilter
     height 48px
@@ -242,32 +242,12 @@
     height auto
     align-self start
     overflow hidden
-    border 1px solid var(--wren-border-default)
-    border-radius 10px
-    background var(--wren-surface-card)
-    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
     .accountSelectorScrollWrap
       padding 0
 
   .accountDrawerItem
-    height 58px
-    padding 0 var(--wren-space-3)
-    border-bottom 1px solid var(--wren-ledger-rule)
-
-    &:last-child
-      border-bottom 0
-
-    &:hover
-      border-radius 0
-
-  .accountDrawerItemIcon
-    width 32px
-    height 32px
-    box-sizing border-box
-    border 1px solid var(--wren-border-subtle)
-    border-radius 8px
-    background var(--wren-surface-inset)
+    height 54px
 
 .accountSelectorEmpty
   width calc(100% - 32px)
@@ -562,24 +542,30 @@
     left 0
 
     input, input:hover, input:focus
-      padding-right 42px
+      padding 0 42px 0 50px
 
   .panelFilterIcon
-    left 0
+    left 10px
 
   .panelFilterClear
     right 0
 
 .accountSelector .accountDrawerScroll
   width 100%
+  height auto
   max-height none
-  border-radius 0
+  align-self start
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
   overflow-y auto
+  overflow-x hidden
 
   .accountSelectorScrollWrap
     display grid
     width 100%
-    padding 10px 0 18px
+    padding 0
     gap 0
     pointer-events auto
 
@@ -590,6 +576,7 @@
   height 54px
   padding 0 9px
   border 0
+  border-bottom 1px solid var(--wren-ledger-rule)
   border-radius 0
   color var(--wren-text-primary)
   background transparent
@@ -598,6 +585,9 @@
   column-gap var(--wren-space-2)
   text-align left
   cursor pointer
+
+  &:last-child
+    border-bottom 0
 
   &:hover
     background var(--wren-ledger-hover)
@@ -616,10 +606,16 @@
 
 .accountDrawerItemIcon
   display flex
+  width 32px
+  height 32px
+  box-sizing border-box
+  border 1px solid var(--wren-border-subtle)
+  border-radius 8px
   justify-self center
   align-items center
   justify-content center
   color var(--wren-accent-primary-hover)
+  background var(--wren-surface-inset)
 
 .accountDrawerItemSelected .accountDrawerItemEnd
   color var(--wren-accent-primary-hover)
@@ -699,29 +695,35 @@
   background transparent
   box-shadow none
 
-.accountSwitcherTrigger
+button.accountSwitcherTrigger.wrenControl.wrenControlGhost
   min-width 0
   max-width 310px
-  height 48px
-  min-height 48px
-  padding 0
-  grid-template-columns 27px minmax(0, 1fr)
-  column-gap 11px
-  border 0
-  border-radius 0
-  background transparent
-  box-shadow none
+  height 44px
+  min-height 44px
+  padding 0 9px
+  grid-template-columns 32px minmax(0, 1fr)
+  column-gap var(--wren-space-2)
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
-  &:hover:not(:disabled),
+  &:hover:not(:disabled)
+    border-color var(--wren-border-strong)
+    background var(--wren-surface-hover)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
   &[aria-expanded='true']
-    border 0
-    background transparent
-    box-shadow none
+    border-color var(--wren-border-strong)
+    color var(--wren-text-primary)
+    background var(--wren-surface-active)
+    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
 .accountSwitcherBrand
   display block
   width 26px
   height 26px
+  justify-self center
   object-fit contain
 
 .accountSwitcherName

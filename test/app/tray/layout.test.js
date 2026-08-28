@@ -111,11 +111,16 @@ test('keeps the account atmosphere static across startup and ordinary browsing o
   )
 })
 
-test('lets the selected-account chooser share the wallet canvas', () => {
+test('uses one bounded flat-row account list across startup and wallet switching', () => {
   expect(accountSelectorStyle).toMatch(
     /\.accountChooserPanel[\s\S]*?background transparent[\s\S]*?pointer-events auto/
   )
-  expect(accountSelectorStyle).toMatch(/\.accountDrawerItem[\s\S]*?background transparent/)
+  expect(accountSelectorStyle).toMatch(
+    /\.accountSelector \.accountDrawerScroll[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?border-radius 10px[\s\S]*?background var\(--wren-surface-card\)/
+  )
+  expect(accountSelectorStyle).toMatch(
+    /\.accountDrawerItem[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?background transparent[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
+  )
   expect(accountSelectorStyle).toMatch(
     /&\.accountDrawerItemSelected[\s\S]*?background var\(--wren-ledger-selected\)/
   )
@@ -158,7 +163,18 @@ test('centers shared filter icons in the 44px field and anchors the startup cont
     /\.panelFilterIcon[\s\S]*?top 2px[\s\S]*?bottom 2px[\s\S]*?align-items center/
   )
   expect(accountSelectorStyle).toMatch(/\.panelFilterInput[\s\S]*?top 2px[\s\S]*?bottom 2px/)
-  expect(trayShellStyle).toMatch(/\.panelMenuItemOpen[\s\S]*?right var\(--wren-space-2\)[\s\S]*?left auto/)
+  expect(accountSelectorStyle).toMatch(
+    /\.accountSelector:not\(\.accountSelectorOpen\)[\s\S]*?\.accountSelectorWelcome[\s\S]*?padding 16px 0 18px/
+  )
+  expect(accountSelectorStyle).toMatch(
+    /\.panelFilterMain\.accountDrawerFilter[\s\S]*?input, input:hover, input:focus[\s\S]*?padding 0 42px 0 50px[\s\S]*?\.panelFilterIcon[\s\S]*?left 10px/
+  )
+  expect(trayShellStyle).toMatch(
+    /\.panelMenu[\s\S]*?left 0[\s\S]*?right 0[\s\S]*?top 0[\s\S]*?height 64px[\s\S]*?\.panelMenuItemOpen[\s\S]*?right var\(--wren-space-5\)[\s\S]*?left auto/
+  )
+  expect(trayShellStyle).toMatch(
+    /button\.panelWorkspaceToggle\.wrenControl\.wrenShellNav[\s\S]*?top 13px[\s\S]*?width 38px[\s\S]*?height 38px[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+  )
 })
 
 test('keeps expanded balances as a plain ledger with crisp circular progress markers', () => {
@@ -262,7 +278,10 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
 })
 
 test('keeps the account selector and privacy control on one optical axis', () => {
-  expect(accountSelectorStyle).toMatch(/\.accountSwitcherTrigger[\s\S]*?height 40px/)
+  expect(accountSelectorStyle).toMatch(
+    /button\.accountSwitcherTrigger\.wrenControl\.wrenControlGhost[\s\S]*?height 44px[\s\S]*?padding 0 9px[\s\S]*?grid-template-columns 32px minmax\(0, 1fr\)[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+  )
+  expect(accountSelectorStyle).toMatch(/\.accountSwitcherBrand[\s\S]*?justify-self center/)
   expect(accountSelectorStyle).toMatch(/\.accountPrivacyToggle[\s\S]*?width 40px[\s\S]*?height 40px/)
 })
 

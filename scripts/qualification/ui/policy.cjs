@@ -185,7 +185,17 @@ const joinedCanvasScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.accountChooserPanel',
-        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
+        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.accountSwitcherTrigger', height: 44 },
+          {
+            kind: 'computed-style',
+            selector: '.accountChooserPanel .accountDrawerScroll',
+            property: 'backgroundColor',
+            value: 'rgba(13, 18, 16, 0.66)'
+          },
+          { kind: 'size', selector: '.accountChooserPanel .accountDrawerItem', height: 54 }
+        ]
       },
       {
         id: `tray-account-drawer-${geometry}-left-${scale}`,
@@ -196,7 +206,17 @@ const joinedCanvasScenarios = () => [
         logicalWidth: 620,
         logicalHeight,
         ready: '.accountChooserPanel',
-        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account']
+        requiredText: ['Primary account', 'Hardware account', 'Watch account', 'Add account'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.accountSwitcherTrigger', height: 44 },
+          {
+            kind: 'computed-style',
+            selector: '.accountChooserPanel .accountDrawerScroll',
+            property: 'backgroundColor',
+            value: 'rgba(13, 18, 16, 0.66)'
+          },
+          { kind: 'size', selector: '.accountChooserPanel .accountDrawerItem', height: 54 }
+        ]
       },
       {
         id: `dash-control-center-${geometry}-left-${scale}`,
@@ -1956,16 +1976,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashNetworksCard',
-    requiredControls: [
-      'Home',
-      'Accounts',
-      'Networks',
-      'App activity',
-      'Settings',
-      'Add',
-      'All',
-      'Active'
-    ],
+    requiredControls: ['Home', 'Accounts', 'Networks', 'App activity', 'Settings', 'Add', 'All', 'Active'],
     requiredText: ['Connected', 'Ethereum', 'Optimism Mainnet', 'Workshop Chain']
   },
   {
@@ -2189,7 +2200,9 @@ const reviewScenarios = () => [
     requiredControls: ['Open dashboard'],
     requiredText: ['Choose an account', 'Trezor Account'],
     layoutExpectations: [
+      { kind: 'size', selector: '.panelWorkspaceToggle', width: 38, height: 38 },
       { kind: 'size', selector: '.accountDrawerItemIcon', width: 32, height: 32 },
+      { kind: 'size', selector: '.accountDrawerItem', height: 54 },
       {
         kind: 'computed-style',
         selector: '.accountSelector:not(.accountSelectorOpen) .accountSelectorScroll',
@@ -2207,7 +2220,8 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.accountSelectorWelcome',
     requiredControls: ['Open dashboard'],
-    requiredText: ['Choose an account', 'Trezor Account']
+    requiredText: ['Choose an account', 'Trezor Account'],
+    layoutExpectations: [{ kind: 'size', selector: '.panelWorkspaceToggle', width: 38, height: 38 }]
   },
   {
     id: 'tray-account-ledger-full-1',
