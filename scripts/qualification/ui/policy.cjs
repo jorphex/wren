@@ -2967,7 +2967,15 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.accountPortfolioCard',
-              requiredText: ['Portfolio balance', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer']
+              requiredText: ['Portfolio balance', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer'],
+              layoutExpectations: [
+                {
+                  kind: 'computed-style',
+                  selector: '.accountPortfolioValue',
+                  property: 'fontWeight',
+                  value: '400'
+                }
+              ]
             }
           ]
         : []),

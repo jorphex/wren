@@ -289,6 +289,7 @@ test('keeps the account selector and privacy control on one optical axis', () =>
 })
 
 test('keeps wallet summary and continuation actions clear of card edges', () => {
+  expect(accountStyle).toMatch(/\.accountPortfolioValue[\s\S]*?font-weight 400/)
   expect(accountStyle).toMatch(
     /\.accountPortfolioSend[\s\S]*?right 16px[\s\S]*?bottom 24px[\s\S]*?width 136px/
   )
