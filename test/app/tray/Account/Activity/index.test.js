@@ -46,6 +46,11 @@ class ActivityHarness extends Activity {
     if (key === 'main.activity') return this.props.entries || entries
     if (key === 'main.origins.origin-1.name') return 'garden.example'
     if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
+    if (key === 'main.networks.ethereum.1') {
+      return { id: 1, name: 'Ethereum', explorer: 'https://etherscan.io' }
+    }
+    if (key === 'main.walletCallBatches') return this.props.batches || {}
+    if (path[0] === 'main.operationLifecycles') return this.props.operations?.[path[1]]
   }
 }
 
@@ -73,12 +78,14 @@ it('classifies network changes as connection activity', () => {
   })
 })
 
-it('keeps non-interactive activity rows visually inert', () => {
+it('gives interactive activity rows quiet hover and focus treatment', () => {
   const styles = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
   const rowRule = styles.match(/\.activityRow\n([\s\S]*?)\n\.activityMark/)[1]
 
-  expect(rowRule).not.toContain('&:hover')
-  expect(styles).toContain("&:not([aria-pressed='true']):hover:not(:disabled)")
+  expect(rowRule).toContain('&:hover')
+  expect(rowRule).toContain('background var(--wren-surface-hover)')
+  expect(rowRule).toContain('&:focus-visible')
+  expect(styles).toContain('.activityRowChevron')
 })
 
 it('uses the quiet selected treatment shared with Earn filters', () => {
@@ -107,6 +114,47 @@ it('shows four privacy-safe recent entries and opens the complete activity view'
   })
 })
 
+it('opens a privacy-safe detail route from a preview row', () => {
+  render(<ActivityHarness account={account} moduleId='activity' />)
+
+  const first = entries[0]
+  fireEvent.click(screen.getByRole('button', { name: 'View Transaction details from garden.example' }))
+  expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
+    view: 'expandedModule',
+    data: {
+      id: 'activity',
+      account,
+      title: 'Activity detail',
+      detailActivityId: first.id
+    }
+  })
+})
+
+it('preserves the selected row before opening detail from complete history', () => {
+  render(<ActivityHarness account={account} moduleId='activity' expanded expandedData={{}} />)
+
+  const selected = entries[1]
+  fireEvent.click(
+    screen.getByRole('button', { name: 'View Typed-data signature details from garden.example' })
+  )
+  expect(link.send).toHaveBeenNthCalledWith(
+    1,
+    'nav:update',
+    'panel',
+    { data: { activityId: selected.id } },
+    false
+  )
+  expect(link.send).toHaveBeenNthCalledWith(2, 'nav:forward', 'panel', {
+    view: 'expandedModule',
+    data: {
+      id: 'activity',
+      account,
+      title: 'Activity detail',
+      detailActivityId: selected.id
+    }
+  })
+})
+
 it('filters the complete history by authored activity families', () => {
   render(<ActivityHarness account={account} moduleId='activity' expanded />)
 
@@ -124,10 +172,144 @@ it('filters the complete history by authored activity families', () => {
   expect(screen.getAllByRole('listitem')).toHaveLength(2)
 })
 
-it('never exposes a legacy transaction hash or an explorer action from private history', () => {
+it('never exposes a legacy transaction hash or an explorer action from private history alone', () => {
   render(<ActivityHarness account={account} moduleId='activity' expanded />)
   expect(document.body.textContent).not.toContain(transactionHash)
   expect(screen.queryByRole('button', { name: /block explorer/ })).toBeNull()
+})
+
+it('shows recent public transaction evidence without persisting it in Activity history', () => {
+  const selected = entries[0]
+  const operation = {
+    id: selected.id,
+    kind: 'transaction',
+    account,
+    origin: selected.origin,
+    chainId: 1,
+    state: 'confirmed',
+    transaction: { hash: transactionHash, nonce: '0x7' },
+    receipt: {
+      transactionHash,
+      blockHash: `0x${'b'.repeat(64)}`,
+      blockNumber: '0x10',
+      status: '0x1'
+    }
+  }
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+      operations={{ [selected.id]: operation }}
+    />
+  )
+
+  expect(screen.getByRole('region', { name: 'Transaction details' })).toBeTruthy()
+  expect(screen.getByText('On-chain')).toBeTruthy()
+  expect(screen.getByText('7')).toBeTruthy()
+  expect(screen.getByText('16')).toBeTruthy()
+  expect(screen.getByText('Succeeded')).toBeTruthy()
+  expect(document.body.textContent).not.toMatch(/payload|calldata|recipient|amount/i)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Copy hash' }))
+  expect(link.send).toHaveBeenCalledWith('tray:copyTxHash', transactionHash)
+  fireEvent.click(screen.getByRole('button', { name: 'View on explorer' }))
+  expect(link.send).toHaveBeenCalledWith('tray:openExplorer', { type: 'ethereum', id: 1 }, transactionHash)
+})
+
+it('shows an honest fallback when recent on-chain evidence has expired', () => {
+  const selected = entries[0]
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+    />
+  )
+
+  expect(screen.getByText('On-chain evidence unavailable.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Copy hash' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'View on explorer' })).toBeNull()
+  expect(document.body.textContent).not.toContain(transactionHash)
+})
+
+it('keeps non-transaction detail concise and does not manufacture an evidence warning', () => {
+  const selected = entries[1]
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+    />
+  )
+
+  expect(screen.getByRole('region', { name: 'Typed-data signature details' })).toBeTruthy()
+  expect(screen.getByText('App')).toBeTruthy()
+  expect(screen.getByText('Network')).toBeTruthy()
+  expect(screen.queryByText('On-chain evidence unavailable.')).toBeNull()
+})
+
+it('summarizes recent Wallet Calls receipts without exposing call contents', () => {
+  const selected = entry({ type: 'walletCalls', outcome: 'confirmed', transactionHash: undefined })
+  const batchOperationId = crypto.randomUUID()
+  const batchHash = `0x${'d'.repeat(64)}`
+  const batch = {
+    operationId: batchOperationId,
+    callCount: 2,
+    transactions: [
+      {
+        hash: batchHash,
+        state: 'submitted',
+        receipt: { status: '0x1', blockNumber: '0x20', transactionHash: batchHash }
+      },
+      { hash: `0x${'e'.repeat(64)}`, state: 'signed' }
+    ]
+  }
+  render(
+    <ActivityHarness
+      account={account}
+      batches={{ [batchHash]: batch }}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+      operations={{
+        [selected.id]: {
+          id: selected.id,
+          kind: 'walletCalls',
+          walletCalls: { batchOperationId }
+        }
+      }}
+    />
+  )
+
+  expect(screen.getByText('Batch')).toBeTruthy()
+  expect(screen.getByText('Calls')).toBeTruthy()
+  expect(screen.getByText('Submitted')).toBeTruthy()
+  expect(screen.getAllByText('Confirmed')).toHaveLength(2)
+  expect(screen.getByText('Confirmed · block 32')).toBeTruthy()
+  expect(screen.getByText('Transaction 1')).toBeTruthy()
+  expect(screen.getByText('Transaction 2')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'View transaction 2 on explorer' })).toBeNull()
+  expect(document.body.textContent).not.toMatch(/calldata|recipient|amount/i)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Copy transaction 1 hash' }))
+  expect(link.send).toHaveBeenCalledWith('tray:copyTxHash', batchHash)
+})
+
+it('reports a detail route whose activity was cleared', () => {
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[]}
+      expanded
+      expandedData={{ detailActivityId: crypto.randomUUID() }}
+    />
+  )
+
+  expect(screen.getByRole('status').textContent).toBe('This activity is no longer in history.')
 })
 
 it('focuses the exact activity row requested by native notification navigation', () => {
@@ -141,7 +323,9 @@ it('focuses the exact activity row requested by native notification navigation',
     />
   )
 
-  expect(document.activeElement).toBe(screen.getAllByRole('listitem')[2])
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'View Account access details from garden.example' })
+  )
   expect(document.activeElement.classList.contains('activityRowSelected')).toBe(true)
 })
 

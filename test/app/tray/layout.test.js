@@ -213,8 +213,10 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
   )
   expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap 0[\s\S]*?border 0[\s\S]*?background transparent/)
   expect(activityStyle).toMatch(
-    /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-border-subtle\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
+    /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-border-subtle\)[\s\S]*?\.activityItem:last-child \.activityRow[\s\S]*?border-bottom 0/
   )
+  expect(activityStyle).toMatch(/\.activityRow[\s\S]*?&:hover[\s\S]*?background var\(--wren-surface-hover\)/)
+  expect(activityStyle).toMatch(/\.activityDetailSection[\s\S]*?background var\(--wren-surface-card\)/)
   expect(activityStyle).toMatch(
     /\.activityModuleExpanded[\s\S]*?\.activityList[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
   )

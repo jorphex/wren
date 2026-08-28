@@ -17,22 +17,40 @@
   box-shadow none
   list-style none
 
+.activityItem
+  margin 0
+  padding 0
+
 .activityRow
   position relative
   display grid
+  width 100%
   min-height 58px
   padding var(--wren-space-2)
-  grid-template-columns 32px minmax(0, 1fr) auto
+  grid-template-columns 32px minmax(0, 1fr) auto 18px
   align-items center
   gap var(--wren-space-2)
   box-sizing border-box
   border 0
   border-bottom 1px solid var(--wren-border-subtle)
   border-radius 0
+  color inherit
   background transparent
+  font inherit
+  text-align left
+  cursor pointer
+  transition background var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
-  &:last-child
-    border-bottom 0
+  &:hover
+    background var(--wren-surface-hover)
+
+  &:focus-visible
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+.activityItem:last-child .activityRow
+  border-bottom 0
 
 
 .activityMark
@@ -53,8 +71,18 @@
   flex-direction column
 
 .activityRowSelected
-  outline 2px solid var(--wren-focus)
-  outline-offset 2px
+  background var(--wren-surface-active)
+
+.activityRowChevron
+  display flex
+  align-items center
+  justify-content center
+  color var(--wren-text-muted)
+  transition color var(--wren-motion-fast) var(--wren-ease)
+
+.activityRow:hover .activityRowChevron,
+.activityRow:focus-visible .activityRowChevron
+  color var(--wren-text-secondary)
 
 .activityTitle
   overflow hidden
@@ -194,6 +222,218 @@
     outline 2px solid var(--wren-focus)
     outline-offset 2px
 
+.activityDetail
+  display flex
+  width 100%
+  min-width 0
+  padding-bottom var(--wren-space-5)
+  flex-direction column
+  gap var(--wren-space-3)
+  box-sizing border-box
+
+.activityDetailHeader,
+.activityDetailOutcomeCopy,
+.activityDetailUnavailable,
+.activityDetailSection
+  width 100%
+  min-width 0
+  box-sizing border-box
+
+.activityDetailHeader
+  display grid
+  min-height 68px
+  padding var(--wren-space-3)
+  grid-template-columns 36px minmax(0, 1fr) auto
+  align-items center
+  gap var(--wren-space-3)
+  box-sizing border-box
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+.activityDetailMark
+  display flex
+  width 34px
+  height 34px
+  align-items center
+  justify-content center
+  border 1px solid var(--wren-border-subtle)
+  border-radius 3px
+  color var(--wren-text-secondary)
+  background var(--wren-surface-inset)
+
+.activityDetailIdentity
+  display flex
+  min-width 0
+  flex-direction column
+
+.activityDetailTitle
+  overflow hidden
+  color var(--wren-text-primary)
+  font-size var(--wren-type-body)
+  font-weight 600
+  text-overflow ellipsis
+  white-space nowrap
+
+.activityDetailContext
+  overflow hidden
+  margin-top 2px
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  text-overflow ellipsis
+  white-space nowrap
+
+.activityDetailOutcome
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  font-weight 550
+
+.activityDetailOutcomeCopy,
+.activityDetailUnavailable
+  padding var(--wren-space-3)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-secondary)
+  background var(--wren-surface-inset)
+  font-size var(--wren-type-small)
+  line-height 1.45
+
+.activityDetailSection
+  overflow hidden
+  border 1px solid var(--wren-border-default)
+  border-radius 10px
+  background var(--wren-surface-card)
+  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+
+  > h2
+    margin 0
+    padding var(--wren-space-3)
+    border-bottom 1px solid var(--wren-border-subtle)
+    color var(--wren-text-secondary)
+    font-size var(--wren-type-small)
+    font-weight 600
+
+.activityDetailGrid
+  display grid
+  margin 0
+  padding 0
+  grid-template-columns repeat(2, minmax(0, 1fr))
+
+.activityDetailSummary
+  margin 0
+  padding 0
+
+.activityDetailSummaryRow
+  display grid
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  border-bottom 1px solid var(--wren-border-subtle)
+
+  &:last-child
+    border-bottom 0
+
+  > .activityDetailValue
+    border-right 0
+    border-bottom 0
+
+    &:not(:last-child)
+      border-right 1px solid var(--wren-border-subtle)
+
+    &:only-child
+      grid-column 1 / -1
+
+.activityDetailValue
+  min-width 0
+  padding var(--wren-space-3)
+  border-bottom 1px solid var(--wren-border-subtle)
+
+  &:nth-child(odd)
+    border-right 1px solid var(--wren-border-subtle)
+
+  &:nth-last-child(-n + 2)
+    border-bottom 0
+
+  &:last-child:nth-child(odd)
+    grid-column 1 / -1
+    border-right 0
+
+  dt
+    margin 0 0 3px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  dd
+    overflow hidden
+    margin 0
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    font-weight 400
+    line-height 1.35
+    text-overflow ellipsis
+    white-space nowrap
+
+.activityDetailActions
+  display grid
+  padding var(--wren-space-3)
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap var(--wren-space-2)
+  border-top 1px solid var(--wren-border-subtle)
+
+  button
+    gap var(--wren-space-2)
+
+.activityDetailTransactions
+  margin 0
+  padding 0
+  border-top 1px solid var(--wren-border-subtle)
+  list-style none
+
+  > li
+    display grid
+    min-height 58px
+    padding var(--wren-space-2) var(--wren-space-3)
+    grid-template-columns minmax(0, 1fr) auto auto
+    align-items center
+    gap var(--wren-space-3)
+    box-sizing border-box
+    border-bottom 1px solid var(--wren-border-subtle)
+
+    &:last-child
+      border-bottom 0
+
+.activityDetailTransactionIdentity
+  display flex
+  min-width 0
+  flex-direction column
+
+  strong
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+    font-weight 560
+
+  span
+    overflow hidden
+    margin-top 2px
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    text-overflow ellipsis
+    white-space nowrap
+
+.activityDetailTransactionResult
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  white-space nowrap
+
+.activityDetailTransactionActions
+  display flex
+  gap var(--wren-space-1)
+
 .activityModuleExpanded
   position absolute
   inset 0
@@ -220,19 +460,69 @@
   .activityClear
     padding-top var(--wren-space-3)
 
+  .activityDetail
+    padding-top 0
+
 @media (max-width: 560px)
   .activityFilters
     grid-template-columns repeat(2, minmax(0, 1fr))
 
   .activityRow
-    grid-template-columns 28px minmax(0, 1fr)
+    grid-template-columns 28px minmax(0, 1fr) 18px
 
   .activityResult
     grid-column 2
     align-items flex-start
 
+  .activityRowChevron
+    grid-column 3
+    grid-row 1 / span 2
+
   .activityOutcomeDetail
     text-align left
 
   .activityMark
+    grid-row 1 / span 2
+
+  .activityDetailHeader
+    grid-template-columns 36px minmax(0, 1fr)
+
+  .activityDetailOutcome
+    grid-column 2
+
+  .activityDetailGrid
+    grid-template-columns 1fr
+
+  .activityDetailSummaryRow
+    grid-template-columns 1fr
+
+    > .activityDetailValue
+      grid-column auto
+      border-right 0
+      border-bottom 1px solid var(--wren-border-subtle)
+
+      &:last-child
+        border-bottom 0
+
+  .activityDetailValue,
+  .activityDetailValue:nth-child(odd),
+  .activityDetailValue:nth-last-child(-n + 2)
+    grid-column auto
+    border-right 0
+    border-bottom 1px solid var(--wren-border-subtle)
+
+  .activityDetailValue:last-child
+    border-bottom 0
+
+  .activityDetailActions
+    grid-template-columns 1fr
+
+  .activityDetailTransactions > li
+    grid-template-columns minmax(0, 1fr) auto
+
+  .activityDetailTransactionResult
+    grid-column 1
+
+  .activityDetailTransactionActions
+    grid-column 2
     grid-row 1 / span 2

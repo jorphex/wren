@@ -127,6 +127,8 @@ const baseState = () => ({
     accounts: {},
     balances: {},
     activity: [],
+    operationLifecycles: {},
+    walletCallBatches: {},
     rememberRecentRecipients: false,
     recentRecipientUses: [],
     signers: {},
@@ -605,8 +607,7 @@ const qualificationActivity = () => [
     outcome: 'confirmed',
     createdAt: Date.UTC(2026, 7, 12, 13, 58),
     completedAt: Date.UTC(2026, 7, 12, 14, 0),
-    chainId: 1,
-    transactionHash: QUALIFICATION_TX_HASH
+    chainId: 1
   },
   {
     id: '22222222-2222-4222-8222-222222222222',
@@ -639,6 +640,84 @@ const qualificationActivity = () => [
     chainId: 1
   }
 ]
+
+const qualificationOperationLifecycles = () => ({
+  '11111111-1111-4111-8111-111111111111': {
+    id: '11111111-1111-4111-8111-111111111111',
+    kind: 'transaction',
+    account: QUALIFICATION_ACCOUNT.toLowerCase(),
+    origin: 'workshop',
+    chainId: 1,
+    state: 'confirmed',
+    createdAt: Date.UTC(2026, 7, 12, 13, 58),
+    updatedAt: Date.UTC(2026, 7, 12, 14, 0),
+    expiresAt: Date.UTC(2026, 8, 11, 13, 58),
+    visibleInActivity: true,
+    notification: { terminalHandledAt: Date.UTC(2026, 7, 12, 14, 0) },
+    transaction: { hash: QUALIFICATION_TX_HASH, nonce: '0x7' },
+    receipt: {
+      transactionHash: QUALIFICATION_TX_HASH,
+      blockHash: `0x${'ab'.repeat(32)}`,
+      blockNumber: '0x1493e00',
+      status: '0x1'
+    },
+    settlement: { status: 'complete', basis: 'confirmations' }
+  }
+})
+
+const qualificationWalletCallEvidence = () => {
+  const activityId = '44444444-4444-4444-8444-444444444444'
+  const batchOperationId = '88888888-8888-4888-8888-888888888888'
+  const hashes = [`0x${'12'.repeat(32)}`, `0x${'34'.repeat(32)}`, `0x${'56'.repeat(32)}`]
+  const createdAt = Date.UTC(2026, 7, 10, 9, 14)
+  const updatedAt = Date.UTC(2026, 7, 10, 9, 15)
+  const receipt = (transactionHash, status, blockNumber) => ({
+    logs: [],
+    status,
+    blockHash: `0x${'78'.repeat(32)}`,
+    blockNumber,
+    gasUsed: '0x5208',
+    effectiveGasPrice: '0x3b9aca00',
+    transactionHash
+  })
+  return {
+    activityId,
+    operation: {
+      id: activityId,
+      kind: 'walletCalls',
+      account: QUALIFICATION_ACCOUNT.toLowerCase(),
+      origin: 'garden',
+      chainId: 1,
+      state: 'failed',
+      createdAt,
+      updatedAt,
+      expiresAt: Date.UTC(2026, 8, 9, 9, 14),
+      visibleInActivity: true,
+      notification: { terminalHandledAt: updatedAt },
+      walletCalls: { batchOperationId }
+    },
+    batches: {
+      [hashes[0]]: {
+        id: hashes[0],
+        operationId: batchOperationId,
+        origin: 'garden',
+        account: QUALIFICATION_ACCOUNT.toLowerCase(),
+        chainId: '0x1',
+        atomic: false,
+        callCount: 3,
+        execution: 'failed',
+        transactions: [
+          { hash: hashes[0], state: 'submitted', receipt: receipt(hashes[0], '0x1', '0x1493dfe') },
+          { hash: hashes[1], state: 'submitted', receipt: receipt(hashes[1], '0x0', '0x1493dff') },
+          { hash: hashes[2], state: 'signed' }
+        ],
+        createdAt,
+        updatedAt,
+        expiresAt: createdAt + 24 * 60 * 60 * 1000
+      }
+    }
+  }
+}
 
 const lifecycleActivity = () =>
   [
@@ -1821,21 +1900,56 @@ const fixtureFor = (scenario) => {
     state.windows.panel.footer.height = scenario.state === 'transaction-signing-queue-review' ? 113 : 132
   }
 
-  if (scenario.state === 'account-activity' || scenario.state === 'account-activity-lifecycle') {
+  if (
+    [
+      'account-activity',
+      'account-activity-lifecycle',
+      'account-activity-detail',
+      'account-activity-detail-fallback',
+      'account-activity-detail-signature',
+      'account-activity-detail-wallet-calls'
+    ].includes(scenario.state)
+  ) {
     prepareSelectedAccount(state)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.main.activity =
       scenario.state === 'account-activity-lifecycle' ? lifecycleActivity() : qualificationActivity()
+    if (scenario.state === 'account-activity-detail') {
+      state.main.operationLifecycles = qualificationOperationLifecycles()
+    }
+    const walletCallEvidence =
+      scenario.state === 'account-activity-detail-wallet-calls'
+        ? qualificationWalletCallEvidence()
+        : undefined
+    if (walletCallEvidence) {
+      state.main.operationLifecycles = {
+        [walletCallEvidence.activityId]: walletCallEvidence.operation
+      }
+      state.main.walletCallBatches = walletCallEvidence.batches
+    }
     state.main.origins = {
       workshop: { name: 'workshop.example' },
       garden: { name: 'garden.example' }
     }
+    const detailActivityId =
+      scenario.state === 'account-activity-detail' || scenario.state === 'account-activity-detail-fallback'
+        ? '11111111-1111-4111-8111-111111111111'
+        : scenario.state === 'account-activity-detail-signature'
+          ? '22222222-2222-4222-8222-222222222222'
+          : walletCallEvidence
+            ? walletCallEvidence.activityId
+            : undefined
     state.windows.panel.nav = [
       {
         view: 'expandedModule',
-        data: { id: 'activity', account: QUALIFICATION_ACCOUNT, title: 'Activity' }
+        data: {
+          id: 'activity',
+          account: QUALIFICATION_ACCOUNT,
+          title: detailActivityId ? 'Activity detail' : 'Activity',
+          ...(detailActivityId ? { detailActivityId } : {})
+        }
       }
     ]
   }

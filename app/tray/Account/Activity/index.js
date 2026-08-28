@@ -119,32 +119,248 @@ const formatTime = (timestamp) =>
     minute: '2-digit'
   }).format(new Date(timestamp))
 
-const ActivityRow = ({ entry, networkName, originName, selected }) => {
+const formatExactTime = (timestamp) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'medium'
+  }).format(new Date(timestamp))
+
+const formatQuantity = (value) => {
+  try {
+    return BigInt(value).toLocaleString()
+  } catch {
+    return 'Unavailable'
+  }
+}
+
+const shortValue = (value, start = 10, end = 8) =>
+  typeof value === 'string' && value.length > start + end + 1
+    ? `${value.slice(0, start)}…${value.slice(-end)}`
+    : value
+
+const transactionHashFor = (operation) => operation?.transaction?.hash || operation?.eip7702Revoke?.hash
+
+const ActivityRow = ({ entry, networkName, onOpen, originName, selected }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
   const outcome = outcomePresentation(entry)
   return (
-    <li
-      className={`activityRow${selected ? ' activityRowSelected' : ''}`}
-      data-activity-id={entry.id}
-      tabIndex={selected ? -1 : undefined}
-    >
-      <span className='activityMark' aria-hidden='true'>
-        <Icon name={meta.icon} size={15} />
-      </span>
-      <span className='activityIdentity'>
-        <span className='activityTitle'>{meta.label}</span>
-        <span className='activityContext'>
-          {origin}
-          {networkName ? ` · ${networkName}` : ''}
+    <li className='activityItem'>
+      <button
+        type='button'
+        aria-label={`View ${meta.label} details from ${origin}`}
+        className={`activityRow${selected ? ' activityRowSelected' : ''}`}
+        data-activity-id={entry.id}
+        onClick={() => onOpen(entry.id)}
+      >
+        <span className='activityMark' aria-hidden='true'>
+          <Icon name={meta.icon} size={15} />
         </span>
-      </span>
-      <span className='activityResult' title={outcome.detail}>
-        <span className={`activityOutcome activityOutcome-${entry.outcome}`}>{outcome.label}</span>
-        {outcome.detail ? <span className='activityOutcomeDetail'>{outcome.detail}</span> : null}
-        <time dateTime={new Date(entry.completedAt).toISOString()}>{formatTime(entry.completedAt)}</time>
-      </span>
+        <span className='activityIdentity'>
+          <span className='activityTitle'>{meta.label}</span>
+          <span className='activityContext'>
+            {origin}
+            {networkName ? ` · ${networkName}` : ''}
+          </span>
+        </span>
+        <span className='activityResult' title={outcome.detail}>
+          <span className={`activityOutcome activityOutcome-${entry.outcome}`}>{outcome.label}</span>
+          {outcome.detail ? <span className='activityOutcomeDetail'>{outcome.detail}</span> : null}
+          <time dateTime={new Date(entry.completedAt).toISOString()}>{formatTime(entry.completedAt)}</time>
+        </span>
+        <span className='activityRowChevron' aria-hidden='true'>
+          <Icon name='chevron-right' size={16} />
+        </span>
+      </button>
     </li>
+  )
+}
+
+const DetailValue = ({ children, label, title }) => (
+  <div className='activityDetailValue'>
+    <dt>{label}</dt>
+    <dd title={title}>{children}</dd>
+  </div>
+)
+
+const DetailRow = ({ children }) => <div className='activityDetailSummaryRow'>{children}</div>
+
+const ActivityDetail = ({
+  account,
+  batch,
+  entry,
+  explorerAvailable,
+  networkName,
+  onCopyHash,
+  onOpenExplorer,
+  operation,
+  originName
+}) => {
+  const meta = activityTypeMeta(entry.type)
+  const origin = activityOriginLabel(entry.origin, originName)
+  const outcome = outcomePresentation(entry)
+  const transactionHash = transactionHashFor(operation)
+  const receipt = operation?.receipt
+  const transactionEvidence = operation?.transaction
+  const batchTransactions = Array.isArray(batch?.transactions) ? batch.transactions : []
+  const submittedBatchTransactions = batchTransactions.filter(({ state }) => state === 'submitted')
+  const confirmedBatchTransactions = submittedBatchTransactions.filter(
+    ({ receipt: batchReceipt }) => batchReceipt?.status === '0x1'
+  )
+  const revertedBatchTransactions = submittedBatchTransactions.filter(
+    ({ receipt: batchReceipt }) => batchReceipt?.status === '0x0'
+  )
+  const hasOnchainEvidence = Boolean(transactionHash || batch)
+
+  return (
+    <section className='activityDetail' aria-label={`${meta.label} details`}>
+      <header className='activityDetailHeader'>
+        <span className='activityDetailMark' aria-hidden='true'>
+          <Icon name={meta.icon} size={18} />
+        </span>
+        <span className='activityDetailIdentity'>
+          <span className='activityDetailTitle'>{meta.label}</span>
+          <span className='activityDetailContext'>
+            {origin}
+            {networkName ? ` · ${networkName}` : ''}
+          </span>
+        </span>
+        <span className={`activityDetailOutcome activityOutcome-${entry.outcome}`}>{outcome.label}</span>
+      </header>
+
+      {outcome.detail ? <div className='activityDetailOutcomeCopy'>{outcome.detail}</div> : null}
+
+      <section className='activityDetailSection'>
+        <h2>Details</h2>
+        <dl className='activityDetailSummary'>
+          <DetailRow>
+            <DetailValue label='App'>{origin}</DetailValue>
+            {networkName ? <DetailValue label='Network'>{networkName}</DetailValue> : null}
+          </DetailRow>
+          <DetailRow>
+            <DetailValue label='Account' title={account}>
+              {shortValue(account)}
+            </DetailValue>
+          </DetailRow>
+          <DetailRow>
+            <DetailValue label='Started'>{formatExactTime(entry.createdAt)}</DetailValue>
+            <DetailValue label={entry.createdAt === entry.completedAt ? 'Recorded' : 'Updated'}>
+              {formatExactTime(entry.completedAt)}
+            </DetailValue>
+          </DetailRow>
+        </dl>
+      </section>
+
+      {transactionHash ? (
+        <section className='activityDetailSection activityDetailOnchain'>
+          <h2>On-chain</h2>
+          <dl className='activityDetailGrid'>
+            <DetailValue label='Transaction hash' title={transactionHash}>
+              {shortValue(transactionHash, 12, 10)}
+            </DetailValue>
+            {transactionEvidence ? (
+              <DetailValue label='Nonce'>{formatQuantity(transactionEvidence.nonce)}</DetailValue>
+            ) : null}
+            {receipt ? <DetailValue label='Block'>{formatQuantity(receipt.blockNumber)}</DetailValue> : null}
+            {receipt ? (
+              <DetailValue label='Result'>{receipt.status === '0x1' ? 'Succeeded' : 'Reverted'}</DetailValue>
+            ) : null}
+            {receipt?.contractAddress ? (
+              <DetailValue label='Contract' title={receipt.contractAddress}>
+                {shortValue(receipt.contractAddress)}
+              </DetailValue>
+            ) : null}
+            {operation?.replacement ? <DetailValue label='Replacement'>Replaced</DetailValue> : null}
+            {transactionEvidence?.replacementOf ? (
+              <DetailValue label='Replacement'>Replaces earlier activity</DetailValue>
+            ) : null}
+          </dl>
+          <div className='activityDetailActions'>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary wrenControlLarge'
+              onClick={() => onCopyHash(transactionHash)}
+            >
+              <Icon name='copy' size={15} />
+              <span>Copy hash</span>
+            </button>
+            {explorerAvailable ? (
+              <button
+                type='button'
+                className='wrenControl wrenControlSecondary wrenControlLarge'
+                onClick={() => onOpenExplorer(transactionHash)}
+              >
+                <Icon name='external' size={15} />
+                <span>View on explorer</span>
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {batch ? (
+        <section className='activityDetailSection activityDetailOnchain'>
+          <h2>Batch</h2>
+          <dl className='activityDetailGrid'>
+            <DetailValue label='Calls'>{batch.callCount}</DetailValue>
+            <DetailValue label='Submitted'>{submittedBatchTransactions.length}</DetailValue>
+            <DetailValue label='Confirmed'>{confirmedBatchTransactions.length}</DetailValue>
+            {revertedBatchTransactions.length ? (
+              <DetailValue label='Reverted'>{revertedBatchTransactions.length}</DetailValue>
+            ) : null}
+          </dl>
+          {batchTransactions.length ? (
+            <ol className='activityDetailTransactions'>
+              {batchTransactions.map((transaction, index) => {
+                const batchReceipt = transaction.receipt
+                return (
+                  <li key={`${index}:${transaction.hash}`}>
+                    <span className='activityDetailTransactionIdentity'>
+                      <strong>Transaction {index + 1}</strong>
+                      <span title={transaction.hash}>{shortValue(transaction.hash, 12, 10)}</span>
+                    </span>
+                    <span className='activityDetailTransactionResult'>
+                      {batchReceipt
+                        ? batchReceipt.status === '0x1'
+                          ? 'Confirmed'
+                          : 'Reverted'
+                        : transaction.state === 'submitted'
+                          ? 'Submitted'
+                          : 'Signed'}
+                      {batchReceipt ? ` · block ${formatQuantity(batchReceipt.blockNumber)}` : ''}
+                    </span>
+                    <span className='activityDetailTransactionActions'>
+                      <button
+                        type='button'
+                        aria-label={`Copy transaction ${index + 1} hash`}
+                        className='wrenControl wrenControlGhost wrenControlIcon'
+                        onClick={() => onCopyHash(transaction.hash)}
+                      >
+                        <Icon name='copy' size={14} />
+                      </button>
+                      {explorerAvailable && transaction.state === 'submitted' ? (
+                        <button
+                          type='button'
+                          aria-label={`View transaction ${index + 1} on explorer`}
+                          className='wrenControl wrenControlGhost wrenControlIcon'
+                          onClick={() => onOpenExplorer(transaction.hash)}
+                        >
+                          <Icon name='external' size={14} />
+                        </button>
+                      ) : null}
+                    </span>
+                  </li>
+                )
+              })}
+            </ol>
+          ) : null}
+        </section>
+      ) : null}
+
+      {!hasOnchainEvidence && ['transaction', 'walletCalls', 'eip7702Revoke'].includes(entry.type) ? (
+        <div className='activityDetailUnavailable'>On-chain evidence unavailable.</div>
+      ) : null}
+    </section>
   )
 }
 
@@ -227,6 +443,41 @@ export class Activity extends React.Component {
     })
   }
 
+  openDetail(activityId) {
+    if (this.state.navigating) return
+    this.setState({ navigating: true })
+    if (this.props.expanded) {
+      link.send(
+        'nav:update',
+        'panel',
+        {
+          data: {
+            ...this.props.expandedData,
+            activityId
+          }
+        },
+        false
+      )
+    }
+    link.send('nav:forward', 'panel', {
+      view: 'expandedModule',
+      data: {
+        id: this.props.moduleId,
+        account: this.props.account,
+        title: 'Activity detail',
+        detailActivityId: activityId
+      }
+    })
+  }
+
+  copyHash(hash) {
+    link.send('tray:copyTxHash', hash)
+  }
+
+  openExplorer(chainId, hash) {
+    link.send('tray:openExplorer', { type: 'ethereum', id: chainId }, hash)
+  }
+
   beginClear() {
     if (this.state.clearConfirm || this.state.clearing) return
     this.setState({ clearConfirm: true, clearStatus: '' }, () => this.cancelClearRef.current?.focus())
@@ -265,6 +516,49 @@ export class Activity extends React.Component {
     const allEntries = (this.store('main.activity') || []).filter(
       ({ account }) => account === this.props.account.toLowerCase()
     )
+    const detailActivityId = this.props.expandedData?.detailActivityId
+    if (this.props.expanded && detailActivityId) {
+      const detailEntry = allEntries.find(({ id }) => id === detailActivityId)
+      if (!detailEntry) {
+        return (
+          <section className='activityModule activityModuleExpanded'>
+            <div className='activityDetailUnavailable' role='status'>
+              This activity is no longer in history.
+            </div>
+          </section>
+        )
+      }
+
+      const operation = this.store('main.operationLifecycles', detailEntry.id)
+      const batches = this.store('main.walletCallBatches') || {}
+      const batchOperationId = operation?.walletCalls?.batchOperationId
+      const batch = batchOperationId
+        ? Object.values(batches).find(({ operationId }) => operationId === batchOperationId)
+        : undefined
+      const network = detailEntry.chainId
+        ? this.store('main.networks.ethereum', detailEntry.chainId)
+        : undefined
+      const networkName = detailEntry.chainId ? network?.name || `Network ${detailEntry.chainId}` : ''
+      const originName = this.store('main.origins', detailEntry.origin, 'name')
+      const explorerAvailable = typeof network?.explorer === 'string' && network.explorer.trim().length > 0
+
+      return (
+        <section className='activityModule activityModuleExpanded'>
+          <ActivityDetail
+            account={this.props.account}
+            batch={batch}
+            entry={detailEntry}
+            explorerAvailable={explorerAvailable}
+            networkName={networkName}
+            onCopyHash={(hash) => this.copyHash(hash)}
+            onOpenExplorer={(hash) => this.openExplorer(detailEntry.chainId, hash)}
+            operation={operation}
+            originName={originName}
+          />
+        </section>
+      )
+    }
+
     const filtered = filterActivity(allEntries, this.state.category, this.props.filter)
     const entries = this.props.expanded ? filtered : filtered.slice(0, ACTIVITY_PREVIEW_LIMIT)
 
@@ -309,6 +603,7 @@ export class Activity extends React.Component {
                   entry={entry}
                   key={entry.id}
                   networkName={networkName}
+                  onOpen={(activityId) => this.openDetail(activityId)}
                   originName={originName}
                   selected={this.props.expandedData?.activityId === entry.id}
                 />

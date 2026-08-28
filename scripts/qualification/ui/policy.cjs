@@ -9,6 +9,10 @@ const GENERATED_EXPIRY_COLOR = Object.freeze({
   property: 'color',
   value: 'rgb(208, 214, 206)'
 })
+const ACTIVITY_DETAIL_CARD_ALIGNMENT = Object.freeze([
+  { kind: 'full-width', selector: '.activityDetailHeader', container: '.activityDetail' },
+  { kind: 'full-width', selector: '.activityDetailSection', container: '.activityDetail' }
+])
 
 const RPC_WARNING_SCENARIOS = Object.freeze([
   {
@@ -2705,6 +2709,118 @@ const reviewScenarios = () => [
       'Clearance not verified',
       'Delegation removed'
     ]
+  },
+  {
+    id: 'tray-account-activity-detail-full-1',
+    renderer: 'tray',
+    state: 'account-activity-detail',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityDetail',
+    requiredControls: ['Back', 'Copy hash', 'View on explorer'],
+    requiredText: [
+      'Activity detail',
+      'Transaction',
+      'Confirmed',
+      'workshop.example',
+      'Ethereum',
+      'Details',
+      'On-chain',
+      'Nonce',
+      'Block',
+      'Succeeded'
+    ],
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'full-width', selector: '.activityDetail', container: '.accountViewMain', inset: 12 },
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+    ]
+  },
+  {
+    id: 'tray-account-activity-detail-short-1.5',
+    renderer: 'tray',
+    state: 'account-activity-detail',
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.activityDetail',
+    requiredControls: ['Back', 'Copy hash', 'View on explorer'],
+    requiredText: ['Activity detail', 'Transaction', 'Details', 'On-chain', 'Succeeded'],
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+    ]
+  },
+  {
+    id: 'tray-account-activity-detail-fallback-full-1',
+    renderer: 'tray',
+    state: 'account-activity-detail-fallback',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityDetailUnavailable',
+    requiredControls: ['Back'],
+    requiredText: ['Activity detail', 'Transaction', 'Details', 'On-chain evidence unavailable.'],
+    layoutExpectations: [
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT,
+      {
+        kind: 'full-width',
+        selector: '.activityDetailUnavailable',
+        container: '.activityDetail'
+      }
+    ]
+  },
+  {
+    id: 'tray-account-activity-detail-signature-full-1',
+    renderer: 'tray',
+    state: 'account-activity-detail-signature',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityDetail',
+    requiredControls: ['Back'],
+    requiredText: [
+      'Activity detail',
+      'Typed-data signature',
+      'Completed',
+      'garden.example',
+      'Ethereum',
+      'Details'
+    ],
+    layoutExpectations: ACTIVITY_DETAIL_CARD_ALIGNMENT
+  },
+  {
+    id: 'tray-account-activity-detail-wallet-calls-full-1',
+    renderer: 'tray',
+    state: 'account-activity-detail-wallet-calls',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityDetailTransactions',
+    requiredControls: [
+      'Back',
+      'Copy transaction 1 hash',
+      'View transaction 1 on explorer',
+      'Copy transaction 2 hash',
+      'View transaction 2 on explorer',
+      'Copy transaction 3 hash'
+    ],
+    requiredText: [
+      'Activity detail',
+      'Wallet Calls batch',
+      'Failed',
+      'Details',
+      'Batch',
+      'Calls',
+      'Submitted',
+      'Confirmed',
+      'Reverted',
+      'Transaction 1',
+      'Transaction 2',
+      'Transaction 3'
+    ],
+    layoutExpectations: ACTIVITY_DETAIL_CARD_ALIGNMENT
   },
   {
     id: 'tray-native-pairing-full-1',

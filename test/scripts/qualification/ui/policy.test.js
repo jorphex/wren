@@ -246,6 +246,22 @@ it('qualifies BalancesExpanded at full and short height for every supported scal
   ).toBe(true)
 })
 
+it('keeps every Activity detail card on one horizontal grid', () => {
+  const details = scenarioMatrix({ includeReview: true }).filter(({ state }) =>
+    state.startsWith('account-activity-detail')
+  )
+
+  expect(details).toHaveLength(5)
+  for (const scenario of details) {
+    expect(scenario.layoutExpectations).toEqual(
+      expect.arrayContaining([
+        { kind: 'full-width', selector: '.activityDetailHeader', container: '.activityDetail' },
+        { kind: 'full-width', selector: '.activityDetailSection', container: '.activityDetail' }
+      ])
+    )
+  }
+})
+
 it('qualifies dashboard Notify separately from the tray-native pairing notification', () => {
   const scenarios = scenarioMatrix({ includeReview: true })
   const dashboard = scenarios.find(({ id }) => id === 'dash-notify-remove-network-short-1')
