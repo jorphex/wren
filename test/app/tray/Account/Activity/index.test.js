@@ -161,7 +161,7 @@ it('announces when notification navigation targets cleared history', () => {
 
 it.each([
   ['canceled', 'Canceled', 'The network changed before signing'],
-  ['submitted', 'Submitted', 'Broadcast status is not yet confirmed; Wren is checking the network.'],
+  ['submitted', 'Submitted', 'Not yet confirmed'],
   ['confirming', 'Confirming', 'Included; waiting for final confirmation'],
   ['replaced', 'Replaced', 'A submitted wallet activity was replaced'],
   ['reorged', 'Reorg detected', 'A prior confirmation changed; Wren is checking again'],

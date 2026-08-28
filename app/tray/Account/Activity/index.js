@@ -50,7 +50,7 @@ const OUTCOME_LABELS = Object.freeze({
 
 const OUTCOME_DETAILS = Object.freeze({
   canceled: 'The network changed before signing',
-  submitted: 'Broadcast status is not yet confirmed; Wren is checking the network.',
+  submitted: 'Not yet confirmed',
   confirming: 'Included; waiting for final confirmation',
   replaced: 'A submitted wallet activity was replaced',
   reorged: 'A prior confirmation changed; Wren is checking again',

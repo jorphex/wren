@@ -1377,7 +1377,7 @@ export class Send extends React.Component {
           </div>
         </div>
         <div className='sendSweepHeader'>
-          <div>
+          <div className='sendSweepHeaderCopy'>
             <strong>Select positive balances</strong>
             <span>
               {selectedCount} selected · {MAX_SWEEP_ASSETS} per sweep · one network
@@ -1416,11 +1416,13 @@ export class Send extends React.Component {
                   {checked ? <Icon name='check' size={14} /> : null}
                 </span>
                 <AssetMark appearance='plain' asset={asset} />
-                <span>
+                <span className='sendSweepAssetIdentity'>
                   <strong>{asset.symbol}</strong>
                   <code>{asset.address}</code>
                 </span>
-                <span>{this.store('selected.hideBalances') ? '••••' : asset.displayBalance}</span>
+                <span className='sendSweepAssetBalance'>
+                  {this.store('selected.hideBalances') ? '••••' : asset.displayBalance}
+                </span>
               </label>
             )
           })}
@@ -1436,11 +1438,13 @@ export class Send extends React.Component {
                 {this.state.sweepIncludeNative ? <Icon name='check' size={14} /> : null}
               </span>
               <AssetMark appearance='plain' asset={native} />
-              <span>
+              <span className='sendSweepAssetIdentity'>
                 <strong>Include {native.symbol}</strong>
                 <code>Native currency · sent last</code>
               </span>
-              <span>{this.store('selected.hideBalances') ? '••••' : native.displayBalance}</span>
+              <span className='sendSweepAssetBalance'>
+                {this.store('selected.hideBalances') ? '••••' : native.displayBalance}
+              </span>
             </label>
           ) : null}
           {!tokens.length && !native ? <p>No positive balances on this network.</p> : null}

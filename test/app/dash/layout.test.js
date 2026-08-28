@@ -379,6 +379,39 @@ test('uses one flat Contracts workspace with the established Send-style peer swi
   expect(contractsStyle).not.toMatch(/border-left|border-right|box-shadow|linear-gradient/)
 })
 
+test('keeps Send modes quietly segmented and every editable value visible at rest', () => {
+  const perchComposerStyle = sendStyle.slice(sendStyle.indexOf('// Perch composer:'))
+
+  expect(perchComposerStyle).toMatch(
+    /\.sendModeSwitch[\s\S]*?gap 4px[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-inset\)/
+  )
+  expect(perchComposerStyle).not.toMatch(/\.sendModeSwitch[\s\S]{0,900}?&::after/)
+  expect(perchComposerStyle).toMatch(
+    /\.sendInputWrap[\s\S]*?padding 0 6px 0 12px[\s\S]*?border-color var\(--wren-border-default\)[\s\S]*?background-color var\(--wren-surface-inset\)/
+  )
+  expect(perchComposerStyle).toMatch(
+    /&\.wrenInputGroupError[\s\S]*?border-color var\(--wren-danger\)[\s\S]*?background-color var\(--wren-danger-soft\)/
+  )
+  expect(perchComposerStyle).toMatch(
+    /&\.sendSweepAssetSelected[\s\S]*?background var\(--wren-ledger-selected\)[\s\S]*?box-shadow none/
+  )
+  expect(sendStyle).toMatch(/\.sendRecipientInput[\s\S]*?font-weight 200 !important/)
+  expect(sendStyle).toMatch(/\.sendAmountInput[\s\S]*?font-weight 200 !important/)
+  expect(sendStyle).toMatch(
+    /\.sendSweepAssets[\s\S]*?grid-template-columns 20px 32px minmax\(0, 1fr\) minmax\(72px, auto\)[\s\S]*?grid-template-rows 18px 16px[\s\S]*?align-content center[\s\S]*?column-gap 12px[\s\S]*?row-gap 2px/
+  )
+  expect(sendStyle).toMatch(
+    /\.sendSweepHeader[\s\S]*?display flex[\s\S]*?align-items center[\s\S]*?justify-content space-between/
+  )
+  expect(sendStyle).toMatch(
+    /button\.sendSweepSelectAll\.wrenControl[\s\S]*?font-weight 430[\s\S]*?line-height 18px/
+  )
+  expect(sendStyle).toMatch(/\.sendComposerSweep[\s\S]*?\.sendSweepHeader[\s\S]*?padding 10px 16px/)
+  expect(sendStyle).toMatch(
+    /\.sendSweepAssetBalance[\s\S]*?align-self baseline[\s\S]*?justify-self end[\s\S]*?font-weight 200[\s\S]*?text-align right/
+  )
+})
+
 test('keeps direct verification disclosure distinct from constructor helper copy', () => {
   expect(contractVerificationStyle).toMatch(
     /\.contractVerificationDirect p\.contractVerificationNotice[\s\S]*?margin-top var\(--wren-space-3\)[\s\S]*?color var\(--wren-text-secondary\)[\s\S]*?font-size var\(--wren-type-small\)[\s\S]*?line-height 19px/

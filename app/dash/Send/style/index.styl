@@ -181,6 +181,7 @@
 .sendRecipientInput
   font-family var(--wren-font-mono) !important
   font-size 15px !important
+  font-weight 200 !important
 
 .sendRowHint
   overflow hidden
@@ -242,7 +243,7 @@
 .sendAmountInput
   font-family var(--wren-font-mono) !important
   font-size 30px !important
-  font-weight 580 !important
+  font-weight 200 !important
   letter-spacing -.035em
 
   &::placeholder
@@ -417,32 +418,40 @@
 
 .sendSweepHeader
   display flex
-  align-items flex-end
+  align-items center
   justify-content space-between
   gap var(--wren-space-3)
   padding var(--wren-space-3) 0 var(--wren-space-2)
 
-  > div
-    display flex
-    flex-direction column
-    gap 3px
+.sendSweepHeaderCopy
+  display flex
+  min-width 0
+  flex-direction column
+  align-items flex-start
+  gap 2px
 
   strong
     font-size var(--wren-type-body)
+    font-weight 500
+    line-height 18px
 
   span
     color var(--wren-text-muted)
     font-size var(--wren-type-caption)
+    font-weight 400
+    line-height 16px
 
 .sendSweepHeaderActions
   display flex
   flex none
-  align-items flex-end
+  align-items center
   gap var(--wren-space-2)
 
 button.sendSweepSelectAll.wrenControl
   min-width max-content
   color var(--wren-text-secondary)
+  font-weight 430
+  line-height 18px
 
 .sendSweepAssets
   display flex
@@ -453,9 +462,11 @@ button.sendSweepSelectAll.wrenControl
     position relative
     display grid
     min-height 62px
-    grid-template-columns 24px 34px minmax(0, 1fr) auto
-    align-items center
-    gap 10px
+    grid-template-columns 20px 32px minmax(0, 1fr) minmax(72px, auto)
+    grid-template-rows 18px 16px
+    align-content center
+    column-gap 12px
+    row-gap 2px
     padding 0 10px
     border 0
     border-radius 0
@@ -474,25 +485,11 @@ button.sendSweepSelectAll.wrenControl
       background var(--wren-ledger-selected)
       box-shadow none
 
-    > span
-      min-width 0
-
-      &:last-child
-        font-family var(--wren-font-mono)
-        font-size var(--wren-type-small)
-
-      strong,
-      code
-        display block
-        overflow hidden
-        text-overflow ellipsis
-        white-space nowrap
-
-      code
-        margin-top 3px
-        color var(--wren-text-muted)
-        font-family var(--wren-font-mono)
-        font-size var(--wren-type-caption)
+    > .assetMark,
+    .sendSweepCheckbox
+      grid-row 1 / -1
+      align-self center
+      justify-self center
 
     input
       position absolute
@@ -526,6 +523,48 @@ button.sendSweepSelectAll.wrenControl
 
     &:has(input:disabled) .sendSweepCheckbox
       opacity .55
+
+.sendSweepAssetIdentity
+  display contents
+
+  strong,
+  code
+    display block
+    overflow hidden
+    min-width 0
+    max-width 100%
+    grid-column 3
+    text-overflow ellipsis
+    white-space nowrap
+
+  strong
+    grid-row 1
+    align-self baseline
+    font-weight 400
+    line-height 18px
+
+  code
+    grid-row 2
+    align-self baseline
+    color var(--wren-text-muted)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    font-weight 200
+    line-height 16px
+
+.sendSweepAssetBalance
+  min-width 72px
+  grid-column 4
+  grid-row 1
+  align-self baseline
+  justify-self end
+  color var(--wren-text-primary)
+  font-family var(--wren-font-mono)
+  font-size var(--wren-type-small)
+  font-variant-numeric tabular-nums
+  font-weight 200
+  line-height 18px
+  text-align right
 
 .sendSweepWarning
   display flex
@@ -1061,57 +1100,29 @@ button.sendSweepSelectAll.wrenControl
 // reference's compact card rhythm and full-width review action.
 .sendComposer
   .sendModeSwitch
-    position relative
     flex none
-    height 44px
-    min-height 44px
-    gap 0
-    margin 8px 24px 0
-    padding 0
-    border 0
-    background transparent
-
-    &::before
-      position absolute
-      inset 6px 0
-      border 1px solid var(--wren-border-subtle)
-      border-radius var(--wren-radius-sm)
-      background rgba(9, 12, 10, .52)
-      box-shadow var(--wren-shadow-inset)
-      content ''
-
-    &::after
-      position absolute
-      z-index 0
-      top 10px
-      bottom 10px
-      left 50%
-      width 1px
-      background var(--wren-border-subtle)
-      content ''
+    min-height 52px
+    gap 4px
+    margin 10px 24px 0
+    padding 4px
+    border 1px solid var(--wren-border-default)
+    border-radius 10px
+    background var(--wren-surface-inset)
+    box-shadow var(--wren-shadow-inset)
 
     button
-      position relative
-      z-index 1
       min-height 44px
-      border-radius 0
+      border-radius 7px
       background transparent
       box-shadow none
 
-      &::before
-        position absolute
-        z-index -1
-        inset 6px 2px
-        border-radius 4px
-        content ''
+      &:hover:not(:disabled):not([aria-pressed='true'])
+        color var(--wren-text-primary)
+        background var(--wren-surface-hover)
 
       &[aria-pressed='true']
-        background transparent
-        box-shadow none
-
-        &::before
-          background var(--wren-bg-elevated)
-          box-shadow var(--wren-shadow-sm)
+        background var(--wren-surface-active)
+        box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
 
   .sendLedger
     display flex
@@ -1155,10 +1166,23 @@ button.sendSweepSelectAll.wrenControl
     padding 12px 18px 10px
 
   .sendInputWrap
-    padding 0
-    border-color transparent
-    background transparent
-    box-shadow none
+    padding 0 6px 0 12px
+    border-color var(--wren-border-default)
+    background-color var(--wren-surface-inset)
+    background-image linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 48%)
+    box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), inset 0 -1px rgba(255, 255, 255, .018)
+
+    &:hover:not(:focus-within)
+      border-color var(--wren-border-strong)
+
+    &:focus-within
+      border-color var(--wren-accent-primary-hover)
+      box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), 0 0 0 1px rgba(166, 138, 97, .2)
+
+    &.wrenInputGroupError
+      border-color var(--wren-danger)
+      background-color var(--wren-danger-soft)
+      box-shadow inset 0 1px 2px rgba(0, 0, 0, .46), 0 0 0 1px rgba(225, 154, 145, .32)
 
   .sendFeeRow
     display grid
@@ -1243,7 +1267,7 @@ button.sendSweepSelectAll.wrenControl
 
       &.sendSweepAssetSelected
         background var(--wren-ledger-selected)
-        box-shadow inset 3px 0 var(--wren-accent-primary)
+        box-shadow none
 
   .sendSweepWarningCompact
     margin 12px 16px

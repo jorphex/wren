@@ -374,7 +374,45 @@ const sendComposerScenarios = () =>
         },
         ready: '.sendComposer',
         requiredControls: ['Send one', 'Sweep assets', 'Choose an asset', 'Choose recipient', 'Review send'],
-        requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH']
+        requiredText: ['NETWORK FEE', 'Calculated during review', 'Available: 1.25 ETH'],
+        layoutExpectations: [
+          {
+            kind: 'computed-style',
+            selector: '.sendModeSwitch',
+            property: 'borderTopWidth',
+            value: '1px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendModeSwitch',
+            property: 'columnGap',
+            value: '4px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendInputWrap',
+            property: 'borderTopWidth',
+            value: '1px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendInputWrap',
+            property: 'paddingLeft',
+            value: '12px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendRecipientInput',
+            property: 'fontWeight',
+            value: '200'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendAmountInput',
+            property: 'fontWeight',
+            value: '200'
+          }
+        ]
       },
       {
         id: `dash-send-asset-picker-${geometry}-${scale}`,
@@ -425,6 +463,116 @@ const sendComposerScenarios = () =>
           'Select positive balances',
           '1 selected · 16 per sweep',
           'Sweep is sequential and non-atomic.'
+        ],
+        layoutExpectations: [
+          {
+            kind: 'computed-style',
+            selector: '.sendModeSwitch',
+            property: 'columnGap',
+            value: '4px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendInputWrap',
+            property: 'borderTopWidth',
+            value: '1px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendInputWrap',
+            property: 'paddingLeft',
+            value: '12px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetSelected',
+            property: 'boxShadow',
+            value: 'none'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeader',
+            property: 'display',
+            value: 'flex'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeader',
+            property: 'alignItems',
+            value: 'center'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeader',
+            property: 'paddingTop',
+            value: '10px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeader',
+            property: 'paddingBottom',
+            value: '10px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeaderActions',
+            property: 'alignItems',
+            value: 'center'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepSelectAll',
+            property: 'alignItems',
+            value: 'center'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepHeaderCopy strong',
+            property: 'fontWeight',
+            value: '500'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepSelectAll',
+            property: 'fontWeight',
+            value: '430'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepSelectAll',
+            property: 'lineHeight',
+            value: '18px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetIdentity strong',
+            property: 'fontWeight',
+            value: '400'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetIdentity code',
+            property: 'fontWeight',
+            value: '200'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetBalance',
+            property: 'fontWeight',
+            value: '200'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetBalance',
+            property: 'alignSelf',
+            value: 'baseline'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.sendSweepAssetBalance',
+            property: 'textAlign',
+            value: 'right'
+          }
         ]
       }
     ])
@@ -2288,6 +2436,25 @@ const reviewScenarios = () => [
     requiredText: ['REQUESTS', '1 pending · 2 confirming', 'Review request']
   },
   {
+    id: 'tray-account-requests-empty-summary-full-1',
+    renderer: 'tray',
+    state: 'account-requests-empty-summary',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.requestPreviewEmpty',
+    requiredControls: ['Requests'],
+    requiredText: ['REQUESTS', 'None pending', 'Requests from connected apps appear here.'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.accountModule-requests',
+        property: 'height',
+        value: '106px'
+      }
+    ]
+  },
+  {
     id: 'tray-account-requests-list-full-1',
     renderer: 'tray',
     state: 'account-requests-list',
@@ -2530,6 +2697,7 @@ const reviewScenarios = () => [
     ready: '.activityModuleExpanded',
     requiredText: [
       'Submitted',
+      'Not yet confirmed',
       'Confirming',
       'Reorg detected',
       'Replaced',
@@ -2565,7 +2733,21 @@ const reviewScenarios = () => [
     requiredControls: ['View all activity'],
     requiredText: ['APPS WITH ACCESS', 'Signer', 'Remove account'],
     captureScroll: 'bottom',
-    captureScrollSelector: '.accountMainScroll'
+    captureScrollSelector: '.accountMainScroll',
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.accountMainPerch .balancesPreview .signerBalanceTotal',
+        property: 'paddingTop',
+        value: '8px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.activityContinuation',
+        property: 'marginBottom',
+        value: '8px'
+      }
+    ]
   },
   {
     id: 'tray-account-ledger-no-requests-full-1',
@@ -2707,7 +2889,22 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           'View Ethereum account on block explorer',
           'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details'],
+        layoutExpectations: [
+          {
+            kind: 'computed-style',
+            selector: '.accountSwitcherTrigger',
+            property: 'borderTopWidth',
+            value: '0px'
+          },
+          {
+            kind: 'computed-style',
+            selector: '.accountSwitcherTrigger',
+            property: 'backgroundColor',
+            value: 'rgba(0, 0, 0, 0)'
+          },
+          { kind: 'size', selector: '.accountPortfolioSend', width: 136, height: 44 }
+        ]
       },
       {
         id: `tray-account-home-short-${scale}`,
@@ -2723,7 +2920,16 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           'View Ethereum account on block explorer',
           'Show gas details for Ethereum'
         ],
-        requiredText: ['Ethereum', '2', 'gwei', 'Details']
+        requiredText: ['Ethereum', '2', 'gwei', 'Details'],
+        layoutExpectations: [
+          {
+            kind: 'computed-style',
+            selector: '.accountSwitcherTrigger',
+            property: 'borderTopWidth',
+            value: '0px'
+          },
+          { kind: 'size', selector: '.accountPortfolioSend', width: 136, height: 44 }
+        ]
       },
       ...[
         ['full', FULL_SHELL_HEIGHT],

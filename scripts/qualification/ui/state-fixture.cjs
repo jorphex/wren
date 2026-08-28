@@ -1727,16 +1727,19 @@ const fixtureFor = (scenario) => {
     ]
   }
 
-  if (scenario.state === 'account-requests-summary') {
+  if (scenario.state === 'account-requests-summary' || scenario.state === 'account-requests-empty-summary') {
     prepareSelectedAccount(state)
-    state.main.accounts[QUALIFICATION_ACCOUNT].requests = {
-      review: { handlerId: 'review', status: 'pending' },
-      submitted: { handlerId: 'submitted', status: 'verifying' },
-      included: { handlerId: 'included', status: 'confirming' },
-      receipt: { handlerId: 'receipt', status: 'confirmed' }
-    }
+    state.main.accounts[QUALIFICATION_ACCOUNT].requests =
+      scenario.state === 'account-requests-summary'
+        ? {
+            review: { handlerId: 'review', status: 'pending' },
+            submitted: { handlerId: 'submitted', status: 'verifying' },
+            included: { handlerId: 'included', status: 'confirming' },
+            receipt: { handlerId: 'receipt', status: 'confirmed' }
+          }
+        : {}
     state.panel.account.moduleOrder = ['requests']
-    state.panel.account.modules.requests.height = 48
+    state.panel.account.modules.requests.height = scenario.state === 'account-requests-summary' ? 48 : 106
   }
 
   if (scenario.state === 'account-requests-list') {

@@ -189,6 +189,7 @@ test('keeps account modules free of decorative seams', () => {
   expect(accountStyle).toMatch(/\.accountModuleCard[\s\S]*?border-top 0/)
   expect(accountStyle).not.toMatch(/\.accountModule:not\(:first-child\)::before/)
   expect(accountSource).toMatch(/const ACCOUNT_MODULE_SECTION_GAP = 12/)
+  expect(accountSource).toMatch(/requests: 106/)
   expect(accountSource).toMatch(/const getAccountModuleGap = \(\) => ACCOUNT_MODULE_SECTION_GAP/)
   expect(accountSource).toMatch(
     /const gap = height > 0 && previousVisibleModuleId \? getAccountModuleGap\(previousVisibleModuleId, id\) : 0/
@@ -212,7 +213,7 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
   )
   expect(activityStyle).toMatch(/\.activityList[\s\S]*?gap 0[\s\S]*?border 0[\s\S]*?background transparent/)
   expect(activityStyle).toMatch(
-    /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-ledger-rule\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
+    /\.activityRow[\s\S]*?border-bottom 1px solid var\(--wren-border-subtle\)[\s\S]*?&:last-child[\s\S]*?border-bottom 0/
   )
   expect(activityStyle).toMatch(
     /\.activityModuleExpanded[\s\S]*?\.activityList[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
@@ -279,10 +280,22 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
 
 test('keeps the account selector and privacy control on one optical axis', () => {
   expect(accountSelectorStyle).toMatch(
-    /button\.accountSwitcherTrigger\.wrenControl\.wrenControlGhost[\s\S]*?height 44px[\s\S]*?padding 0 9px[\s\S]*?grid-template-columns 32px minmax\(0, 1fr\)[\s\S]*?border 1px solid var\(--wren-border-default\)[\s\S]*?background var\(--wren-surface-card\)/
+    /button\.accountSwitcherTrigger\.wrenControl\.wrenControlGhost[\s\S]*?height 44px[\s\S]*?padding 0[\s\S]*?grid-template-columns 32px minmax\(0, 1fr\)[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
   expect(accountSelectorStyle).toMatch(/\.accountSwitcherBrand[\s\S]*?justify-self center/)
   expect(accountSelectorStyle).toMatch(/\.accountPrivacyToggle[\s\S]*?width 40px[\s\S]*?height 40px/)
+})
+
+test('keeps wallet summary and continuation actions clear of card edges', () => {
+  expect(accountStyle).toMatch(
+    /\.accountPortfolioSend[\s\S]*?right 16px[\s\S]*?bottom 24px[\s\S]*?width 136px/
+  )
+  expect(accountStyle).toMatch(
+    /\.accountMainPerch \.balancesPreview[\s\S]*?\.signerBalanceTotal[\s\S]*?height 60px[\s\S]*?margin 0 8px 8px[\s\S]*?padding 8px 0/
+  )
+  expect(accountStyle).toMatch(
+    /\.accountContinuationRow\.activityContinuation[\s\S]*?margin-top var\(--wren-space-2\)[\s\S]*?margin-bottom var\(--wren-space-2\)[\s\S]*?padding-left var\(--wren-space-5\)/
+  )
 })
 
 test('lets transparent account artwork merge with the ruled ledger canvas', () => {

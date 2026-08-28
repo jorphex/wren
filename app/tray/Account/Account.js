@@ -273,7 +273,7 @@ class _AccountModule extends React.Component {
 const AccountModule = Restore.connect(_AccountModule)
 const ACCOUNT_MODULE_SECTION_GAP = 12
 const PERCH_MODULE_MIN_HEIGHT = {
-  requests: 135,
+  requests: 106,
   chains: 66,
   activity: 340,
   permissions: 100
@@ -361,9 +361,7 @@ class _AccountMain extends React.Component {
         <div className='accountPortfolioValue'>
           {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : `$${total}`}
         </div>
-        <div className='accountPortfolioMeta'>
-          {count ? 'Across enabled networks' : 'No assets on this account yet'}
-        </div>
+        {!count ? <div className='accountPortfolioMeta'>No assets on this account yet</div> : null}
         <button
           type='button'
           className='accountPortfolioSend wrenControl wrenControlPrimary wrenControlLarge'

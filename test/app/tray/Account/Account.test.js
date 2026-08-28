@@ -15,15 +15,15 @@ jest.mock('../../../../resources/link', () => ({
 
 const address = '0x0000000000000000000000000000000000000001'
 
-function accountMain({ hideBalances = false } = {}) {
+function accountMain({ hideBalances = false, balances = [], networks = {}, networksMeta = {} } = {}) {
   const main = new AccountMain({ id: address })
   main.store = (...path) => {
     const key = path.join('.')
     if (key === `main.accounts.${address}`) return { address, name: 'Workshop' }
-    if (key === 'main.networks.ethereum') return {}
-    if (key === 'main.networksMeta.ethereum') return {}
+    if (key === 'main.networks.ethereum') return networks
+    if (key === 'main.networksMeta.ethereum') return networksMeta
     if (key === 'main.rates') return {}
-    if (key === `main.balances.${address}`) return []
+    if (key === `main.balances.${address}`) return balances
     if (key === 'selected.hideBalances') return hideBalances
   }
   return main
@@ -44,6 +44,31 @@ it('keeps the portfolio Send action connected to the native flow', async () => {
 
   await user.click(screen.getByRole('button', { name: 'Send' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
+})
+
+it('keeps populated portfolio balance copy concise', () => {
+  const main = accountMain({
+    balances: [
+      {
+        address: '0x0000000000000000000000000000000000000000',
+        balance: '1000000000000000000',
+        chainId: 1,
+        decimals: 18,
+        symbol: 'ETH'
+      }
+    ],
+    networks: {
+      1: { id: 1, isTestnet: false, connection: { endpoints: [{ connected: true }] } }
+    },
+    networksMeta: {
+      1: { nativeCurrency: { decimals: 18, symbol: 'ETH', usd: { price: 1 } } }
+    }
+  })
+
+  render(main.renderPortfolioSummary())
+
+  expect(screen.queryByText('Across enabled networks')).toBeNull()
+  expect(screen.queryByText('No assets on this account yet')).toBeNull()
 })
 
 it('shows the selected account address QR on hover without a click action', () => {

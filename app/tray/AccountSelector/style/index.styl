@@ -700,24 +700,22 @@ button.accountSwitcherTrigger.wrenControl.wrenControlGhost
   max-width 310px
   height 44px
   min-height 44px
-  padding 0 9px
+  padding 0
   grid-template-columns 32px minmax(0, 1fr)
   column-gap var(--wren-space-2)
-  border 1px solid var(--wren-border-default)
-  border-radius 10px
-  background var(--wren-surface-card)
-  box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+  border 0
+  border-radius 8px
+  background transparent
+  box-shadow none
 
   &:hover:not(:disabled)
-    border-color var(--wren-border-strong)
     background var(--wren-surface-hover)
-    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+    box-shadow none
 
   &[aria-expanded='true']
-    border-color var(--wren-border-strong)
     color var(--wren-text-primary)
     background var(--wren-surface-active)
-    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)
+    box-shadow none
 
 .accountSwitcherBrand
   display block
