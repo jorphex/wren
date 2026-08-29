@@ -138,6 +138,30 @@ archive and active-desktop checks below.
    request payload, or pairing response. The transfer action must remain unavailable
    unless the expected testnet and disposable-account confirmation are active; check its
    hash privately on the matching explorer.
+6. Exercise Activity from both the four-entry wallet preview and complete history.
+   Require every row to open with pointer and keyboard input, expose a clear
+   hover/focus state, and identify its activity type and app accessibly. Open a
+   transaction, Wallet Calls batch, signature, and connection entry. Confirm the
+   detail route shows only the applicable type, outcome, app, network, account,
+   and exact timestamps; Back must restore the history without losing the selected
+   row, and a detail route for cleared history must report that the activity is no
+   longer available.
+
+   For a recent transaction whose operation evidence is still retained, compare
+   every displayed hash, nonce, block, result, contract, and replacement field with
+   the independently recorded transaction. Copy must return the exact hash, and an
+   explorer action may appear only when the matching network has an explorer. For
+   Wallet Calls, compare the call, submitted, confirmed, and reverted counts plus
+   each transaction state; only submitted transactions may open in an explorer.
+   After retained operation evidence expires, a transaction-like entry must say
+   **On-chain evidence unavailable.** and provide no invented hash or explorer
+   action. Signature and connection entries must not show that warning.
+
+   Scan Activity history, details, copied values, logs, state, and backup without
+   printing the fixtures. They must not disclose request payloads, calldata,
+   recipients, amounts, signed messages, contract source, local paths, API keys,
+   credentials, or credential-bearing URLs. Activity history must not persist
+   transaction evidence solely to keep detail actions available.
 
 ## 3. Qualify EIP-5792 and EIP-7702 boundaries
 
@@ -181,8 +205,10 @@ EIP-5792, create or replace delegation, or qualify EIP-7702 hardware signing.
 Use a disposable testnet contract and source that may be published permanently.
 Never use private or embargoed source. Confirm an exact managed deployment shows
 **Verify source** alongside Close for thirty seconds while an ordinary confirmed
-transaction retains its four-second handoff. Activity must remain non-clickable
-and gain no verification action or details.
+transaction retains its four-second handoff. Confirm its Activity entry opens only
+the standard privacy-safe Activity detail route: it must gain no **Verify source**
+action and expose no source, compiler input, local path, API key, credential, or
+credential-bearing URL.
 
 From both the confirmed-deployment continuation and Control Center Tools, inspect
 Solidity and Vyper standard JSON plus applicable Foundry/Hardhat build-info. Test
