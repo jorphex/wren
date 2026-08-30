@@ -105,7 +105,7 @@
     "@ledgerhq/hw-transport-node-hid-noevents": "6.36.0",
     "@metamask/eth-sig-util": "8.2.0",
     "@primer/octicons-react": "19.32.0",
-    "@scure/bip32": "1.7.0",
+    "@scure/bip32": "2.3.0",
     "@trezor/connect": "9.7.3",
     "auto-launch": "5.0.6",
     "bip39": "3.1.0",
