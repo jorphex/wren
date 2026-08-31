@@ -23,7 +23,7 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Choose a path
 
-- New users: start with [Install Wren 0.1.4](#install-wren-014) or [Run from source](#run-from-source).
+- New users: start with [Install Wren 0.1.5](#install-wren-015) or [Run from source](#run-from-source).
 - Developers: read [RPC Compatibility](RPC_COMPATIBILITY.md) for the local provider and authenticated protocol.
 - Release operators: follow the [Release Procedure](RELEASE.md), then the [qualification checklist](QUALIFICATION.md).
 - Hardware users: check the [Signer and Platform Support reference](HARDWARE_SUPPORT.md) before testing a device.
@@ -31,11 +31,11 @@ Wren provides one approval and signing interface to browser dapps and native app
 
 ## Current status
 
-This table describes the `0.1.4` release. The
+This table describes the `0.1.5` release. The
 [Signer and Platform Support reference](HARDWARE_SUPPORT.md) owns detailed
 evidence and limitations.
 
-Wren `0.1.4` is designed to pair with Wren Companion `0.1.2` over protocol 3.
+Wren `0.1.5` is designed to pair with Wren Companion `0.1.2` over protocol 3.
 Browser store publication is a separate process. Release operators should use the
 [Release Procedure](RELEASE.md); the manual gate is in the
 [qualification checklist](QUALIFICATION.md).
@@ -46,7 +46,7 @@ Browser store publication is a separate process. Release operators should use th
 | Windows x64                  | Unsigned preview; native package checks pass, but Windows is not a qualified platform      |
 | Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                   |
 | Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                 |
-| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.4`               |
+| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.5`               |
 | Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested  |
 | Watch-only accounts          | Monitoring only; signing is blocked                                                        |
 | Chrome and Firefox companion | Companion 0.1.2 pairing target; archive and browser-store publication pending              |
@@ -102,20 +102,20 @@ See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitati
 
 The precise method and standard boundaries are in [RPC Compatibility](RPC_COMPATIBILITY.md), [Supported Ethereum Standards](SUPPORTED_EIPS.md), and [Advanced Execution](EXECUTION_BOUNDARIES.md).
 
-## Install Wren 0.1.4
+## Install Wren 0.1.5
 
 Download the package for your system and `SHA256SUMS` from the
 [desktop releases page](https://github.com/jorphex/wren/releases).
 
 Future signed Windows releases follow Wren's [code signing
 policy](CODE_SIGNING_POLICY.md). Free code signing is provided by SignPath.io,
-certificate by SignPath Foundation. Wren 0.1.4 remains unsigned while that
+certificate by SignPath Foundation. Wren 0.1.5 remains unsigned while that
 service is being provisioned; always follow
 the signature state and verification steps in the matching release notes.
 
 ### Linux x64
 
-For `Wren-0.1.4.AppImage` or `wren_0.1.4_amd64.deb`, run:
+For `Wren-0.1.5.AppImage` or `wren_0.1.5_amd64.deb`, run:
 
 ```bash
 sha256sum --check --ignore-missing SHA256SUMS
@@ -124,14 +124,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.4.AppImage
-./Wren-0.1.4.AppImage
+chmod +x Wren-0.1.5.AppImage
+./Wren-0.1.5.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.4_amd64.deb
+sudo apt install ./wren_0.1.5_amd64.deb
 ```
 
 Linux packages are unsigned. Verify the checksum and GitHub artifact attestation
@@ -139,12 +139,12 @@ before installing.
 
 ### Windows x64 preview
 
-`Wren-Setup-0.1.4-unsigned-x64.exe` is an unsigned preview. Windows will report
+`Wren-Setup-0.1.5-unsigned-x64.exe` is an unsigned preview. Windows will report
 its publisher as unknown and may show SmartScreen. Download it only from Wren's
 GitHub release, then verify it in PowerShell:
 
 ```powershell
-$Installer = Get-Item '.\Wren-Setup-0.1.4-unsigned-x64.exe'
+$Installer = Get-Item '.\Wren-Setup-0.1.5-unsigned-x64.exe'
 $Expected = (Get-Content '.\SHA256SUMS' | Where-Object { $_ -like "*  $($Installer.Name)" }).Split()[0]
 $Actual = (Get-FileHash -Algorithm SHA256 $Installer).Hash.ToLowerInvariant()
 if ($Actual -ne $Expected) { throw 'Checksum does not match' }
@@ -160,7 +160,7 @@ boundary.
 
 ### macOS x64 and arm64 unnotarized releases
 
-Wren 0.1.4 publishes separate Intel and Apple Silicon DMGs that are ad-hoc
+Wren 0.1.5 publishes separate Intel and Apple Silicon DMGs that are ad-hoc
 signed but have no Apple Developer ID or notarization ticket. This is Wren's
 continuing macOS release posture: the project does not plan to enroll an Apple publisher identity.
 macOS will not show a trusted publisher and requires an explicit **Open Anyway**
@@ -172,7 +172,7 @@ downloading one.
 Wren does not read or share Frame's live profile by default. To make a one-time private copy, close both apps, back up `~/.config/frame`, and run the import before Wren creates `~/.config/wren`:
 
 ```bash
-./Wren-0.1.4.AppImage --import-frame-profile
+./Wren-0.1.5.AppImage --import-frame-profile
 ```
 
 For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validates and copies only `config.json` and encrypted signer files through a private staging directory, then atomically installs the profile. It rejects an active Frame profile, links, malformed or oversized data, and an existing Wren profile. Frame remains unchanged; verify the import before deleting either profile.
@@ -254,6 +254,6 @@ Report vulnerabilities privately through [Security Policy](SECURITY.md), not a p
 
 ## Roadmap and license
 
-Wren `0.1.4` includes local contacts, curated Earn, secure local wallet creation, prepared contract deployment, and source verification. [Smart accounts](SMART_ACCOUNTS.md) and WalletConnect are future direction, not support claims.
+Wren `0.1.5` includes local contacts, curated Earn, secure local wallet creation, prepared contract deployment, and source verification. [Smart accounts](SMART_ACCOUNTS.md) and WalletConnect are future direction, not support claims.
 
 Wren is a community-maintained continuation of the GPL-licensed [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is distributed under the [GNU GPL v3.0](LICENSE).

@@ -4,6 +4,35 @@ Detailed release notes and platform boundaries live in
 [`release-notes`](release-notes) and on the
 [GitHub releases page](https://github.com/jorphex/wren/releases).
 
+## 0.1.5 - 2026-08-31
+
+### Added
+
+- Made Activity rows open detailed, keyboard-accessible views with exact timing,
+  transaction hashes, explorer actions, native amounts, recipients, bounded
+  contract-call context, and truthful partial Wallet Calls evidence.
+- Kept on-demand transaction action details available for the full 90-day
+  Activity window through a private, bounded main-process reference ledger.
+
+### Fixed
+
+- Reworked the desktop and wallet interface around one consistent Perch hierarchy,
+  including account selectors, Send and Sweep fields, request reviews, balances,
+  Activity, navigation, empty states, spacing, and control alignment.
+- Restored legacy Frame color palettes during profile migration and normalized
+  mixed-case account keys without losing canonical account records.
+- Kept Activity transaction references out of renderer state and profile backups;
+  clearing Activity removes them with the visible history.
+
+### Distribution
+
+- Kept Linux x64 as the qualified release target, Windows x64 explicitly unsigned,
+  and macOS x64/arm64 explicitly ad-hoc-signed, unnotarized, and unqualified.
+- Retained Wren Companion 0.1.2 and authenticated protocol 3 as the paired browser
+  boundary while browser-store review remains independent.
+
+See [the complete 0.1.5 release notes](release-notes/v0.1.5.md).
+
 ## 0.1.4 - 2026-08-24
 
 ### Fixed

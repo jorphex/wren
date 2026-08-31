@@ -1,6 +1,6 @@
 # Windows x64 preview qualification checklist
 
-Use this checklist for the unsigned Windows installer published with Wren 0.1.4.
+Use this checklist for the unsigned Windows installer published with Wren 0.1.5.
 Linux x64 remains the qualified platform. Passing this checklist makes the
 Windows file suitable for a clearly labeled preview; it does not create a trusted
 publisher or qualify untested hardware.
@@ -15,7 +15,7 @@ Record the Wren version, source commit, Windows edition/build, VM software, and
 exact release-workflow URL. Download these files from the draft release through
 the browser:
 
-- `Wren-Setup-0.1.4-unsigned-x64.exe`
+- `Wren-Setup-0.1.5-unsigned-x64.exe`
 - `SHA256SUMS`
 - `wren.cdx.json`
 
@@ -23,7 +23,7 @@ Verify the installer's SHA-256 against `SHA256SUMS` and verify its GitHub build
 and SBOM attestations. Then run:
 
 ```powershell
-Get-AuthenticodeSignature '.\Wren-Setup-0.1.4-unsigned-x64.exe' |
+Get-AuthenticodeSignature '.\Wren-Setup-0.1.5-unsigned-x64.exe' |
   Format-List Status,StatusMessage
 ```
 
@@ -51,7 +51,7 @@ wallet panel, tray, Control Center, clean close, restart persistence, and
 single-instance behavior. Confirm a second launch does not take over Wren's
 local ports or create a second profile writer.
 
-## 3. Exercise the changed account flows
+## 3. Exercise the changed account and Activity flows
 
 With disposable data only:
 
@@ -64,6 +64,10 @@ With disposable data only:
    wallet panel after restart. Do not perform a second manual account removal.
 4. Confirm account-access revocation stays within the wallet panel, returns focus,
    and its success notice dismisses automatically.
+5. Open transaction and Wallet Calls Activity rows with pointer and keyboard input.
+   Compare the displayed amount, recipient or contract, method, transaction hash,
+   and explorer target with independent testnet evidence. Clear Activity, restart,
+   and confirm the visible history and retained transaction references stay cleared.
 
 ## 4. Exercise Companion and requests
 
@@ -88,9 +92,11 @@ funding evidence remains unavailable.
 ## 5. Check update and removal behavior
 
 Install the candidate over a disposable earlier Wren installation and confirm its
-profile still opens. Uninstall and confirm the app is removed. Application data
-may remain for recovery; do not interpret that as an uninstall failure. Reinstall
-the exact candidate and confirm it starts normally.
+profile still opens. Include a migrated Frame-style palette and mixed-case account
+record; require the canonical Wren palette and one lowercase account identity after
+upgrade without metadata loss. Uninstall and confirm the app is removed. Application
+data may remain for recovery; do not interpret that as an uninstall failure.
+Reinstall the exact candidate and confirm it starts normally.
 
 The optional Windows DPAPI layer has a deeper, separate
 [signer-protection checklist](WINDOWS_SIGNER_PROTECTION_QUALIFICATION.md). Until

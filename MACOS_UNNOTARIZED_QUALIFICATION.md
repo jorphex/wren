@@ -70,8 +70,10 @@ ID identity, Team ID, or unexpected notarization state blocks this preview postu
    password unlock, signing, lock, restart, backup export, and backup restore.
    Settings must not claim macOS OS-backed signer protection.
 5. Pair the exact compatible Companion archive in Chrome or Firefox, compare the
-   six-digit code, and approve and reject disposable requests. Reconnect after a
-   Wren and browser restart.
+   six-digit code, and approve and reject disposable requests. Open the resulting
+   transaction Activity detail and compare its amount, destination, hash, and
+   explorer route with independent testnet evidence. Reconnect after a Wren and
+   browser restart.
 6. Confirm no macOS automatic-update metadata was published or consumed. Install
    a later candidate only by downloading and verifying it independently.
 
