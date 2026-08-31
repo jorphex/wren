@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { AccountMetadataSchema, AccountSchema } from './account'
 import { ActivitySchema } from './activity'
+import { ActivityTransactionReferencesSchema } from './activityTransactionReference'
 import { AddressBookSchema } from './addressBook'
 import { BalanceSchema } from './balance'
 import { ChainMetadataSchema, ChainSchema } from './chain'
@@ -109,6 +110,7 @@ export const MainSchema = z.object({
   pendingSignerRemovals: PendingSignerRemovalsSchema.default({}),
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
+  activityTransactionReferences: ActivityTransactionReferencesSchema,
   operationLifecycles: OperationLifecyclesSchema,
   contractVerificationJobs: ContractVerificationJobsSchema.default([]).catch([]),
   outboundAddressMemory: OutboundAddressMemorySchema,

@@ -153,7 +153,8 @@ function deriveStatus(batch: WalletCallBatch): WalletCallsStatus {
 export class WalletCallBatchLedger {
   constructor(
     private storage: WalletCallBatchStorage,
-    private operationLifecycles?: WalletCallOperationLifecycleLedger
+    private operationLifecycles?: WalletCallOperationLifecycleLedger,
+    private onBatchUpdated: (batch: WalletCallBatch) => void = () => {}
   ) {}
 
   private read(now: number) {
@@ -256,6 +257,7 @@ export class WalletCallBatchLedger {
       throw new Error('Wallet call ledger exceeds persistence limit')
     }
     this.write(updated)
+    this.onBatchUpdated(Object.freeze(clone(parsed.data)))
   }
 
   private find(batches: WalletCallBatches, origin: string, account: string, id: string) {

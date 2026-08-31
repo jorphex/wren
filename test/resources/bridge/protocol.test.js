@@ -33,6 +33,14 @@ describe('renderer bridge protocol', () => {
 
     expect(
       decodeBridgeMessage(
+        encode({ source: LINK_SOURCE, method: 'invoke', id, args: ['activity:details', id] }),
+        LINK_SOURCE,
+        'tray'
+      )
+    ).toEqual({ source: LINK_SOURCE, method: 'invoke', id, args: ['activity:details', id] })
+
+    expect(
+      decodeBridgeMessage(
         encode({ source: LINK_SOURCE, method: 'event', args: ['tray:ready'] }),
         LINK_SOURCE,
         'tray'

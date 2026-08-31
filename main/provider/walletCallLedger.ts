@@ -3,6 +3,7 @@ import { requireStoreAction } from '../store/action'
 import type { WalletCallBatches } from '../store/state/types/walletCallBatch'
 import operationLifecycleLedger from '../operationLifecycle'
 import { WalletCallBatchLedger } from './walletCallBatches'
+import { recordActivityReferenceForBatch } from '../activity/referenceRuntime'
 
 export const walletCallBatchLedger = new WalletCallBatchLedger(
   {
@@ -11,7 +12,8 @@ export const walletCallBatchLedger = new WalletCallBatchLedger(
       requireStoreAction('setWalletCallBatches')(batches)
     }
   },
-  operationLifecycleLedger
+  operationLifecycleLedger,
+  recordActivityReferenceForBatch
 )
 
 export default walletCallBatchLedger

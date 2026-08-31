@@ -41,6 +41,7 @@ export const requestEventChannels = new Set([
 
 export const requestInvokeChannels = new Set([
   'activity:clear',
+  'activity:details',
   'addressBook:export',
   'addressBook:import',
   'addressBook:remove',

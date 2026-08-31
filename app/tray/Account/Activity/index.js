@@ -1,5 +1,6 @@
 import React from 'react'
 import Restore from 'react-restore'
+import { formatUnits } from 'ethers'
 
 import Icon from '../../../../resources/Components/Icon'
 import DialogSurface from '../../../../resources/Components/DialogSurface'
@@ -140,6 +141,159 @@ const shortValue = (value, start = 10, end = 8) =>
 
 const transactionHashFor = (operation) => operation?.transaction?.hash || operation?.eip7702Revoke?.hash
 
+const ACTION_KIND_LABELS = Object.freeze({
+  'native-value-transfer': 'Native value transfer',
+  'contract-call': 'Contract call',
+  'contract-deployment': 'Contract deployment',
+  transaction: 'Transaction'
+})
+
+const ACTION_ARGUMENT_LABELS = Object.freeze({
+  amount: 'Amount',
+  approved: 'Approved',
+  deadline: 'Deadline',
+  from: 'Sender',
+  operator: 'Operator',
+  owner: 'Owner',
+  spender: 'Spender',
+  to: 'Recipient',
+  tokenId: 'Token ID',
+  value: 'Amount'
+})
+
+const compactAssetAmount = (value, decimals, symbol) => {
+  try {
+    const exact = formatUnits(value, decimals)
+    const [whole, fraction = ''] = exact.split('.')
+    const visibleFraction = fraction.slice(0, 8).replace(/0+$/u, '')
+    const truncated = fraction.slice(8).replace(/0+$/u, '').length > 0
+    const display = `${whole}${visibleFraction ? `.${visibleFraction}` : ''}${truncated ? '…' : ''}`
+    return { display: `${display} ${symbol}`, exact: `${exact} ${symbol}` }
+  } catch {
+    const display = `${formatQuantity(value)} base units`
+    return { display, exact: display }
+  }
+}
+
+const sentenceLabel = (name) =>
+  ACTION_ARGUMENT_LABELS[name] ||
+  name.replace(/([a-z])([A-Z])/gu, '$1 $2').replace(/^./u, (character) => character.toUpperCase())
+
+const actionFields = (action, nativeCurrency, token) => {
+  const nativeDecimals = Number.isInteger(nativeCurrency?.decimals) ? nativeCurrency.decimals : 18
+  const nativeSymbol = nativeCurrency?.symbol || '?'
+  const nativeValue = compactAssetAmount(action.value, nativeDecimals, nativeSymbol)
+  const fields = [
+    { label: 'Type', value: ACTION_KIND_LABELS[action.kind] },
+    ...(action.to
+      ? [
+          {
+            label: action.kind === 'contract-call' ? 'Contract' : 'Recipient',
+            value: shortValue(action.to),
+            title: action.to
+          }
+        ]
+      : []),
+    ...(action.kind === 'contract-deployment'
+      ? [{ label: 'Init code', value: `${action.inputBytes.toLocaleString()} bytes` }]
+      : []),
+    ...(action.value !== '0'
+      ? [
+          {
+            label: action.kind === 'native-value-transfer' ? 'Amount' : 'Native value',
+            value: nativeValue.display,
+            title: nativeValue.exact
+          }
+        ]
+      : []),
+    ...(action.signature
+      ? [{ label: 'Method', value: action.signature, title: action.signature }]
+      : action.selector
+        ? [{ label: 'Method', value: `${action.selector} · unknown`, title: action.selector }]
+        : []),
+    ...(action.kind === 'contract-call' && !action.selector
+      ? [{ label: 'Call data', value: `${action.inputBytes.toLocaleString()} bytes` }]
+      : []),
+    ...action.arguments.map((argument) => {
+      if (argument.type === 'address') {
+        return {
+          label: sentenceLabel(argument.name),
+          value: shortValue(argument.value),
+          title: argument.value
+        }
+      }
+      if (/^uint/u.test(argument.type) && ['amount', 'value'].includes(argument.name)) {
+        const formatted = token
+          ? compactAssetAmount(argument.value, token.decimals, token.symbol)
+          : {
+              display: `${formatQuantity(argument.value)} base units`,
+              exact: `${formatQuantity(argument.value)} base units`
+            }
+        return { label: sentenceLabel(argument.name), value: formatted.display, title: formatted.exact }
+      }
+      return {
+        label: sentenceLabel(argument.name),
+        value:
+          argument.type === 'bool'
+            ? argument.value === 'true'
+              ? 'Yes'
+              : 'No'
+            : formatQuantity(argument.value)
+      }
+    })
+  ]
+  return fields
+}
+
+const ActivityActionDetails = ({ evidence, grouped, loading, nativeCurrency, tokenFor }) => {
+  if (loading) {
+    return (
+      <div className='activityDetailUnavailable activityDetailActionStatus' role='status'>
+        Loading action details from the connected network…
+      </div>
+    )
+  }
+  if (!evidence?.success) {
+    return (
+      <div className='activityDetailUnavailable activityDetailActionStatus' role='status'>
+        {evidence?.error === 'evidence-unavailable'
+          ? 'On-chain evidence unavailable.'
+          : 'Action details unavailable from the connected network.'}
+      </div>
+    )
+  }
+
+  const multiple = grouped || evidence.actions.length > 1
+  return (
+    <section className='activityDetailSection activityDetailActionsEvidence'>
+      <h2>{multiple ? 'Actions' : 'Action'}</h2>
+      {evidence.actions.map((action, index) => {
+        const token = action.to ? tokenFor(action.to) : undefined
+        return (
+          <div className='activityDetailAction' key={action.transactionHash}>
+            {multiple ? <h3>{`Transaction ${index + 1}`}</h3> : null}
+            <dl className='activityDetailGrid'>
+              {actionFields(action, nativeCurrency, token).map(({ label, value, title }, fieldIndex) => (
+                <DetailValue label={label} title={title} key={`${label}:${fieldIndex}`}>
+                  {value}
+                </DetailValue>
+              ))}
+            </dl>
+            {action.argumentsTruncated ? (
+              <div className='activityDetailActionNote'>Some opaque call arguments are omitted.</div>
+            ) : null}
+          </div>
+        )
+      })}
+      {evidence.partial ? (
+        <div className='activityDetailActionPartial' role='status'>
+          Some transaction actions are unavailable from the connected network.
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 const ActivityRow = ({ entry, networkName, onOpen, originName, selected }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
@@ -187,6 +341,8 @@ const DetailRow = ({ children }) => <div className='activityDetailSummaryRow'>{c
 
 const ActivityDetail = ({
   account,
+  actionEvidence,
+  actionLoading,
   batch,
   entry,
   explorerAvailable,
@@ -194,12 +350,17 @@ const ActivityDetail = ({
   onCopyHash,
   onOpenExplorer,
   operation,
-  originName
+  originName,
+  nativeCurrency,
+  tokenFor
 }) => {
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
   const outcome = outcomePresentation(entry)
-  const transactionHash = transactionHashFor(operation)
+  const resolvedActions = actionEvidence?.success ? actionEvidence.actions : []
+  const transactionHash =
+    transactionHashFor(operation) ||
+    (entry.type !== 'walletCalls' ? resolvedActions[0]?.transactionHash : undefined)
   const receipt = operation?.receipt
   const transactionEvidence = operation?.transaction
   const batchTransactions = Array.isArray(batch?.transactions) ? batch.transactions : []
@@ -210,7 +371,7 @@ const ActivityDetail = ({
   const revertedBatchTransactions = submittedBatchTransactions.filter(
     ({ receipt: batchReceipt }) => batchReceipt?.status === '0x0'
   )
-  const hasOnchainEvidence = Boolean(transactionHash || batch)
+  const onchainDetail = ['transaction', 'walletCalls', 'eip7702Revoke'].includes(entry.type)
 
   return (
     <section className='activityDetail' aria-label={`${meta.label} details`}>
@@ -250,6 +411,16 @@ const ActivityDetail = ({
           </DetailRow>
         </dl>
       </section>
+
+      {onchainDetail ? (
+        <ActivityActionDetails
+          evidence={actionEvidence}
+          grouped={Boolean(batch) || entry.type === 'walletCalls'}
+          loading={actionLoading}
+          nativeCurrency={nativeCurrency}
+          tokenFor={tokenFor}
+        />
+      ) : null}
 
       {transactionHash ? (
         <section className='activityDetailSection activityDetailOnchain'>
@@ -356,10 +527,6 @@ const ActivityDetail = ({
           ) : null}
         </section>
       ) : null}
-
-      {!hasOnchainEvidence && ['transaction', 'walletCalls', 'eip7702Revoke'].includes(entry.type) ? (
-        <div className='activityDetailUnavailable'>On-chain evidence unavailable.</div>
-      ) : null}
     </section>
   )
 }
@@ -377,7 +544,10 @@ export class Activity extends React.Component {
       clearConfirm: false,
       clearing: false,
       clearStatus: '',
-      missingSelected: false
+      missingSelected: false,
+      actionDetailsId: '',
+      actionDetailsLoading: false,
+      actionEvidence: undefined
     }
 
     if (!this.props.expanded) {
@@ -395,16 +565,51 @@ export class Activity extends React.Component {
     this.resizeObserver?.observe(this.moduleRef.current)
     this.focusSelectedEntry()
     this.announceMissingSelectedEntry()
+    this.loadActionDetails()
   }
 
   componentDidUpdate() {
     this.focusSelectedEntry()
     this.announceMissingSelectedEntry()
+    this.loadActionDetails()
   }
 
   componentWillUnmount() {
     this.mounted = false
+    this.actionDetailsRequest = (this.actionDetailsRequest || 0) + 1
     this.resizeObserver?.disconnect()
+  }
+
+  loadActionDetails() {
+    const activityId = this.props.expandedData?.detailActivityId
+    if (!this.props.expanded || !activityId || this.loadedActionDetailsId === activityId) return
+    const entry = (this.store('main.activity') || []).find(({ id }) => id === activityId)
+    if (!entry || !['transaction', 'walletCalls', 'eip7702Revoke'].includes(entry.type)) {
+      this.loadedActionDetailsId = activityId
+      return
+    }
+
+    this.loadedActionDetailsId = activityId
+    const request = (this.actionDetailsRequest || 0) + 1
+    this.actionDetailsRequest = request
+    this.setState({
+      actionDetailsId: activityId,
+      actionDetailsLoading: true,
+      actionEvidence: undefined
+    })
+    void link
+      .invoke('activity:details', activityId)
+      .then((result) => {
+        if (!this.mounted || this.actionDetailsRequest !== request) return
+        this.setState({ actionDetailsLoading: false, actionEvidence: result })
+      })
+      .catch(() => {
+        if (!this.mounted || this.actionDetailsRequest !== request) return
+        this.setState({
+          actionDetailsLoading: false,
+          actionEvidence: { success: false, error: 'lookup-failed' }
+        })
+      })
   }
 
   focusSelectedEntry() {
@@ -541,11 +746,24 @@ export class Activity extends React.Component {
       const networkName = detailEntry.chainId ? network?.name || `Network ${detailEntry.chainId}` : ''
       const originName = this.store('main.origins', detailEntry.origin, 'name')
       const explorerAvailable = typeof network?.explorer === 'string' && network.explorer.trim().length > 0
+      const nativeCurrency =
+        this.store('main.networksMeta.ethereum', detailEntry.chainId, 'nativeCurrency') || {}
+      const balances = this.store('main.balances', this.props.account) || []
+      const tokenFor = (address) =>
+        balances.find(
+          (balance) =>
+            balance.chainId === detailEntry.chainId &&
+            typeof balance.address === 'string' &&
+            balance.address.toLowerCase() === address.toLowerCase()
+        )
+      const actionDetailsCurrent = this.state.actionDetailsId === detailEntry.id
 
       return (
         <section className='activityModule activityModuleExpanded'>
           <ActivityDetail
             account={this.props.account}
+            actionEvidence={actionDetailsCurrent ? this.state.actionEvidence : undefined}
+            actionLoading={actionDetailsCurrent && this.state.actionDetailsLoading}
             batch={batch}
             entry={detailEntry}
             explorerAvailable={explorerAvailable}
@@ -554,6 +772,8 @@ export class Activity extends React.Component {
             onOpenExplorer={(hash) => this.openExplorer(detailEntry.chainId, hash)}
             operation={operation}
             originName={originName}
+            nativeCurrency={nativeCurrency}
+            tokenFor={tokenFor}
           />
         </section>
       )

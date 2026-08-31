@@ -50,6 +50,10 @@ class ActivityHarness extends Activity {
       return { id: 1, name: 'Ethereum', explorer: 'https://etherscan.io' }
     }
     if (key === 'main.walletCallBatches') return this.props.batches || {}
+    if (key === 'main.networksMeta.ethereum.1.nativeCurrency') {
+      return this.props.nativeCurrency || { symbol: 'ETH', decimals: 18 }
+    }
+    if (key === `main.balances.${account}`) return this.props.balances || []
     if (path[0] === 'main.operationLifecycles') return this.props.operations?.[path[1]]
   }
 }
@@ -66,7 +70,13 @@ afterAll(() => {
 })
 
 beforeEach(() => {
-  link.invoke.mockReset().mockResolvedValue({ success: true, durable: true })
+  link.invoke
+    .mockReset()
+    .mockImplementation((channel) =>
+      channel === 'activity:details'
+        ? new Promise(() => {})
+        : Promise.resolve({ success: true, durable: true })
+    )
   link.send.mockReset()
 })
 
@@ -218,8 +228,23 @@ it('shows recent public transaction evidence without persisting it in Activity h
   expect(link.send).toHaveBeenCalledWith('tray:openExplorer', { type: 'ethereum', id: 1 }, transactionHash)
 })
 
-it('shows an honest fallback when recent on-chain evidence has expired', () => {
+it('loads a retained native transfer after its operation lifecycle has expired', async () => {
   const selected = entries[0]
+  link.invoke.mockResolvedValueOnce({
+    success: true,
+    partial: false,
+    actions: [
+      {
+        transactionHash,
+        kind: 'native-value-transfer',
+        from: account,
+        to: '0x2222222222222222222222222222222222222222',
+        value: '1000000000000000000',
+        inputBytes: 0,
+        arguments: []
+      }
+    ]
+  })
   render(
     <ActivityHarness
       account={account}
@@ -229,7 +254,90 @@ it('shows an honest fallback when recent on-chain evidence has expired', () => {
     />
   )
 
-  expect(screen.getByText('On-chain evidence unavailable.')).toBeTruthy()
+  expect(await screen.findByText('Native value transfer')).toBeTruthy()
+  expect(screen.getByText('1 ETH')).toBeTruthy()
+  expect(screen.getByTitle('0x2222222222222222222222222222222222222222')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Copy hash' })).toBeTruthy()
+  expect(link.invoke).toHaveBeenCalledWith('activity:details', selected.id)
+})
+
+it('shows a decoded token transfer method, recipient, and formatted amount', async () => {
+  const selected = entries[0]
+  const token = '0x3333333333333333333333333333333333333333'
+  const recipient = '0x4444444444444444444444444444444444444444'
+  link.invoke.mockResolvedValueOnce({
+    success: true,
+    partial: false,
+    actions: [
+      {
+        transactionHash,
+        kind: 'contract-call',
+        from: account,
+        to: token,
+        value: '0',
+        inputBytes: 68,
+        selector: '0xa9059cbb',
+        method: 'transfer',
+        signature: 'transfer(address,uint256)',
+        arguments: [
+          { name: 'to', type: 'address', value: recipient },
+          { name: 'amount', type: 'uint256', value: '42000000' }
+        ]
+      }
+    ]
+  })
+  render(
+    <ActivityHarness
+      account={account}
+      balances={[{ chainId: 1, address: token, decimals: 6, symbol: 'USDC' }]}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+      operations={{
+        [selected.id]: {
+          id: selected.id,
+          kind: 'transaction',
+          account,
+          chainId: 1,
+          transaction: { hash: transactionHash, nonce: '0x7' }
+        }
+      }}
+    />
+  )
+
+  expect(await screen.findByText('Contract call')).toBeTruthy()
+  expect(screen.getByText('transfer(address,uint256)')).toBeTruthy()
+  expect(screen.getByText('42 USDC')).toBeTruthy()
+  expect(screen.getByTitle(recipient)).toBeTruthy()
+})
+
+it('does not request on-chain action details for signature history', () => {
+  const selected = entries[1]
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+    />
+  )
+
+  expect(link.invoke).not.toHaveBeenCalledWith('activity:details', expect.anything())
+})
+
+it('shows an honest fallback when all retained on-chain evidence has expired', async () => {
+  const selected = entries[0]
+  link.invoke.mockResolvedValueOnce({ success: false, error: 'evidence-unavailable' })
+  render(
+    <ActivityHarness
+      account={account}
+      entries={[selected]}
+      expanded
+      expandedData={{ detailActivityId: selected.id }}
+    />
+  )
+
+  expect(await screen.findByText('On-chain evidence unavailable.')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Copy hash' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'View on explorer' })).toBeNull()
   expect(document.body.textContent).not.toContain(transactionHash)
@@ -252,7 +360,7 @@ it('keeps non-transaction detail concise and does not manufacture an evidence wa
   expect(screen.queryByText('On-chain evidence unavailable.')).toBeNull()
 })
 
-it('summarizes recent Wallet Calls receipts without exposing call contents', () => {
+it('summarizes recent Wallet Calls receipts and transiently resolves available call actions', async () => {
   const selected = entry({ type: 'walletCalls', outcome: 'confirmed', transactionHash: undefined })
   const batchOperationId = crypto.randomUUID()
   const batchHash = `0x${'d'.repeat(64)}`
@@ -268,6 +376,27 @@ it('summarizes recent Wallet Calls receipts without exposing call contents', () 
       { hash: `0x${'e'.repeat(64)}`, state: 'signed' }
     ]
   }
+  link.invoke.mockResolvedValueOnce({
+    success: true,
+    partial: true,
+    actions: [
+      {
+        transactionHash: batchHash,
+        kind: 'contract-call',
+        from: account,
+        to: '0x3333333333333333333333333333333333333333',
+        value: '0',
+        inputBytes: 68,
+        selector: '0xa9059cbb',
+        method: 'transfer',
+        signature: 'transfer(address,uint256)',
+        arguments: [
+          { name: 'to', type: 'address', value: '0x4444444444444444444444444444444444444444' },
+          { name: 'amount', type: 'uint256', value: '42' }
+        ]
+      }
+    ]
+  })
   render(
     <ActivityHarness
       account={account}
@@ -293,7 +422,12 @@ it('summarizes recent Wallet Calls receipts without exposing call contents', () 
   expect(screen.getByText('Transaction 1')).toBeTruthy()
   expect(screen.getByText('Transaction 2')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'View transaction 2 on explorer' })).toBeNull()
-  expect(document.body.textContent).not.toMatch(/calldata|recipient|amount/i)
+  expect(await screen.findByText('transfer(address,uint256)')).toBeTruthy()
+  expect(screen.getByText('42 base units')).toBeTruthy()
+  expect(
+    screen.getByText('Some transaction actions are unavailable from the connected network.')
+  ).toBeTruthy()
+  expect(document.body.textContent).not.toMatch(/calldata/i)
 
   fireEvent.click(screen.getByRole('button', { name: 'Copy transaction 1 hash' }))
   expect(link.send).toHaveBeenCalledWith('tray:copyTxHash', batchHash)

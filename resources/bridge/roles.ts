@@ -50,7 +50,7 @@ const dashboardOnlyInvokeChannels = new Set([
 ])
 
 const trustedWindowInvokeChannels = new Set(['tray:continueContractVerification'])
-const trayOnlyInvokeChannels = new Set(['activity:clear'])
+const trayOnlyInvokeChannels = new Set(['activity:clear', 'activity:details'])
 
 const dashboardOnlyRpcMethods = new Set([
   'createFromKeystore',

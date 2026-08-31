@@ -19,6 +19,7 @@ const QUALIFICATION_VERIFICATION_JOB = '66666666-6666-4666-8666-666666666666'
 const QUALIFICATION_VERIFICATION_TOKEN = '77777777-7777-4777-8777-777777777777'
 const QUALIFICATION_VERIFICATION_RUNTIME_HASH = `0x${'67'.repeat(32)}`
 const QUALIFICATION_INVOKE_CHANNELS = Object.freeze([
+  'activity:details',
   'signers:protectionStatus',
   'tray:revokeAccess',
   'send:resolveRecipient',
@@ -1905,6 +1906,7 @@ const fixtureFor = (scenario) => {
       'account-activity',
       'account-activity-lifecycle',
       'account-activity-detail',
+      'account-activity-detail-retained',
       'account-activity-detail-fallback',
       'account-activity-detail-signature',
       'account-activity-detail-wallet-calls'
@@ -1914,6 +1916,16 @@ const fixtureFor = (scenario) => {
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
+    state.main.balances[QUALIFICATION_ACCOUNT] = [
+      {
+        chainId: 1,
+        address: '0x3333333333333333333333333333333333333333',
+        balance: '100000000',
+        decimals: 6,
+        name: 'USD Coin',
+        symbol: 'USDC'
+      }
+    ]
     state.main.activity =
       scenario.state === 'account-activity-lifecycle' ? lifecycleActivity() : qualificationActivity()
     if (scenario.state === 'account-activity-detail') {
@@ -1934,7 +1946,9 @@ const fixtureFor = (scenario) => {
       garden: { name: 'garden.example' }
     }
     const detailActivityId =
-      scenario.state === 'account-activity-detail' || scenario.state === 'account-activity-detail-fallback'
+      scenario.state === 'account-activity-detail' ||
+      scenario.state === 'account-activity-detail-retained' ||
+      scenario.state === 'account-activity-detail-fallback'
         ? '11111111-1111-4111-8111-111111111111'
         : scenario.state === 'account-activity-detail-signature'
           ? '22222222-2222-4222-8222-222222222222'
@@ -2395,6 +2409,67 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method, args = []) => {
+  if (
+    method === 'activity:details' &&
+    ['account-activity-detail', 'account-activity-detail-retained'].includes(scenario.state)
+  ) {
+    return {
+      success: true,
+      partial: false,
+      actions: [
+        {
+          transactionHash: QUALIFICATION_TX_HASH,
+          kind: 'native-value-transfer',
+          from: QUALIFICATION_ACCOUNT.toLowerCase(),
+          to: QUALIFICATION_RECIPIENT,
+          value: '1000000000000000000',
+          inputBytes: 0,
+          arguments: []
+        }
+      ]
+    }
+  }
+  if (method === 'activity:details' && scenario.state === 'account-activity-detail-fallback') {
+    return { success: false, error: 'evidence-unavailable' }
+  }
+  if (method === 'activity:details' && scenario.state === 'account-activity-detail-wallet-calls') {
+    return {
+      success: true,
+      partial: true,
+      actions: [
+        {
+          transactionHash: `0x${'12'.repeat(32)}`,
+          kind: 'contract-call',
+          from: QUALIFICATION_ACCOUNT.toLowerCase(),
+          to: '0x3333333333333333333333333333333333333333',
+          value: '0',
+          inputBytes: 68,
+          selector: '0xa9059cbb',
+          method: 'transfer',
+          signature: 'transfer(address,uint256)',
+          arguments: [
+            { name: 'to', type: 'address', value: QUALIFICATION_RECIPIENT },
+            { name: 'amount', type: 'uint256', value: '42000000' }
+          ]
+        },
+        {
+          transactionHash: `0x${'34'.repeat(32)}`,
+          kind: 'contract-call',
+          from: QUALIFICATION_ACCOUNT.toLowerCase(),
+          to: '0x3333333333333333333333333333333333333333',
+          value: '0',
+          inputBytes: 68,
+          selector: '0x095ea7b3',
+          method: 'approve',
+          signature: 'approve(address,uint256)',
+          arguments: [
+            { name: 'spender', type: 'address', value: '0x5555555555555555555555555555555555555555' },
+            { name: 'amount', type: 'uint256', value: '1000000' }
+          ]
+        }
+      ]
+    }
+  }
   if (method === 'tray:revokeAccess') {
     if (scenario.id === 'tray-account-access-revoke-failed-short-1') {
       return {

@@ -31,7 +31,7 @@ test('canonicalizes legacy primary colors without changing wallet state', () => 
 
   const migrated = migrations.apply(state) as PaletteState
 
-  expect(migrated.main._version).toBe(75)
+  expect(migrated.main._version).toBe(migrations.latest)
   expect(migrated.main.colorwayPrimary).toEqual(canonicalColorwayPrimary)
   expect(migrated.main.accounts).toEqual({ account: { name: 'Preserved account' } })
   expect(migrated.main.signers).toEqual({ signer: { type: 'seed' } })

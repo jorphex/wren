@@ -359,6 +359,9 @@
     grid-column 1 / -1
     border-right 0
 
+  &:last-child:nth-child(odd):not(:only-child)
+    border-top 1px solid var(--wren-border-subtle)
+
   dt
     margin 0 0 3px
     color var(--wren-text-muted)
@@ -385,6 +388,35 @@
 
   button
     gap var(--wren-space-2)
+
+.activityDetailAction
+  min-width 0
+
+  + .activityDetailAction
+    border-top 1px solid var(--wren-border-subtle)
+
+  > h3
+    margin 0
+    padding var(--wren-space-2) var(--wren-space-3)
+    border-bottom 1px solid var(--wren-border-subtle)
+    color var(--wren-text-tertiary)
+    background var(--wren-surface-inset)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    font-weight 550
+
+.activityDetailActionNote,
+.activityDetailActionPartial
+  padding var(--wren-space-3)
+  border-top 1px solid var(--wren-border-subtle)
+  color var(--wren-text-tertiary)
+  background var(--wren-surface-inset)
+  font-size var(--wren-type-caption)
+  line-height 1.45
+
+.activityDetailActionNote
+  padding-top var(--wren-space-2)
+  padding-bottom var(--wren-space-2)
 
 .activityDetailTransactions
   margin 0

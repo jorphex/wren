@@ -12,6 +12,7 @@ import { clearSessionOnlyOrigins } from './session'
 import { normalizeInterfaceScale } from '../../windows/uiScale'
 import { createDesktopAuthIdentity, DesktopAuthIdentitySchema } from '../../api/desktopAuthIdentity'
 import { pruneOutboundAddressMemory } from './types/outboundAddressMemory'
+import { pruneActivityTransactionReferences } from './types/activityTransactionReference'
 import { pruneRecentRecipientUses } from '../../../resources/domain/recentRecipients'
 import { applyPendingRemovalJournals } from './pendingRemovals'
 
@@ -21,6 +22,10 @@ export type { Origin } from './types/origin'
 export type { Permission } from './types/permission'
 export type { Account, AccountMetadata } from './types/account'
 export type { ActivityEntry } from './types/activity'
+export type {
+  ActivityTransactionReference,
+  ActivityTransactionReferences
+} from './types/activityTransactionReference'
 export type { OperationLifecycle, OperationLifecycles } from './types/operationLifecycle'
 export type { ContractVerificationJobs } from './types/contractVerification'
 export type { AddressBook, AddressBookEntry } from './types/addressBook'
@@ -218,6 +223,9 @@ const mainState = {
   pendingSignerRemovals: pendingRemovalState.pendingSignerRemovals,
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
+  activityTransactionReferences: pruneActivityTransactionReferences(
+    main('activityTransactionReferences', {})
+  ),
   operationLifecycles: main('operationLifecycles', {}),
   contractVerificationJobs: main('contractVerificationJobs', []),
   outboundAddressMemory: pruneOutboundAddressMemory(main('outboundAddressMemory', {})),

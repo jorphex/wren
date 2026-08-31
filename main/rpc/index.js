@@ -34,6 +34,7 @@ const {
 } = require('../applicationMutations')
 const { commitMainState } = require('../store/persist')
 const { requireStoreAction } = require('../store/action')
+const { rendererVisibleState } = require('../store/rendererPrivacy')
 
 const scheduleDurableRemovalRetry = (label, isPending, attempt, delay = 1000) => {
   const retry = () => {
@@ -66,7 +67,7 @@ const revokeNativeAccess = (fingerprint) => {
 
 const rpc = {
   getState: (cb) => {
-    cb(null, store())
+    cb(null, rendererVisibleState(store()))
   },
   getAccountExecutionState(account, chainId, cb) {
     accounts.getAccountExecutionState(account, chainId).then(

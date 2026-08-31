@@ -38,7 +38,11 @@ const operation = (overrides: Partial<OperationLifecycle> = {}): OperationLifecy
   ...overrides
 })
 
-const fixture = (initial: OperationLifecycle, isReferenced = (_id: string) => false) => {
+const fixture = (
+  initial: OperationLifecycle,
+  isReferenced = (_id: string) => false,
+  recordReference: (operation: OperationLifecycle) => void = () => {}
+) => {
   let persisted: OperationLifecycles = { [initial.id]: initial }
   const ledger = new OperationLifecycleLedger(
     {
@@ -49,7 +53,11 @@ const fixture = (initial: OperationLifecycle, isReferenced = (_id: string) => fa
     },
     { isReferenced }
   )
-  return { ledger, projection: new OperationLifecycleProjection(ledger), persisted: () => persisted }
+  return {
+    ledger,
+    projection: new OperationLifecycleProjection(ledger, recordReference),
+    persisted: () => persisted
+  }
 }
 
 beforeEach(() => {
@@ -73,6 +81,17 @@ test('projects one stable privacy-only row for every lifecycle state', () => {
   })
   expect(JSON.stringify(mocks.recordActivity.mock.calls)).not.toMatch(/hash|nonce|value|calldata/i)
   expect(mocks.notify).not.toHaveBeenCalled()
+})
+
+test('projects the authoritative lifecycle into the private Activity reference hook', () => {
+  const current = operation({ state: 'confirmed', updatedAt: 20 })
+  const recordReference = jest.fn()
+  const { projection } = fixture(current, undefined, recordReference)
+
+  projection.project(current.id, 20)
+
+  expect(recordReference).toHaveBeenCalledTimes(1)
+  expect(recordReference).toHaveBeenCalledWith(current)
 })
 
 test('restores a truthful activity row for a pre-invocation broadcast reservation', () => {

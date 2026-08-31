@@ -77,6 +77,7 @@ const fixture = () => {
   ]
   fixtureMain.walletCallBatches = { execution: 'private-call-history' }
   fixtureMain.operationLifecycles = { pending: { evidence: 'private-operation-lifecycle' } }
+  fixtureMain.activityTransactionReferences = { pending: { hash: 'private-activity-reference' } }
   fixtureMain.contractVerificationJobs = [
     {
       id: '00000000-0000-4000-8000-000000000009',
@@ -266,6 +267,7 @@ it('packages sanitized configuration and encrypted signers in an authenticated e
   expect(recoveryMain).not.toHaveProperty('activity')
   expect(recoveryMain).not.toHaveProperty('walletCallBatches')
   expect(recoveryMain).not.toHaveProperty('operationLifecycles')
+  expect(recoveryMain).not.toHaveProperty('activityTransactionReferences')
   expect(recoveryMain).not.toHaveProperty('contractVerificationJobs')
   expect(recoveryMain).not.toHaveProperty('outboundAddressMemory')
   expect(recoveryMain).not.toHaveProperty('rememberRecentRecipients')

@@ -251,7 +251,7 @@ it('keeps every Activity detail card on one horizontal grid', () => {
     state.startsWith('account-activity-detail')
   )
 
-  expect(details).toHaveLength(5)
+  expect(details).toHaveLength(6)
   for (const scenario of details) {
     expect(scenario.layoutExpectations).toEqual(
       expect.arrayContaining([

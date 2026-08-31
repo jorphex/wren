@@ -41,10 +41,16 @@ const terminalNotification = (
 export class OperationLifecycleProjection {
   private readonly pendingEvidence = new Set<string>()
 
-  constructor(private readonly ledger: OperationLifecycleLedger) {}
+  constructor(
+    private readonly ledger: OperationLifecycleLedger,
+    private readonly recordReference: (operation: OperationLifecycle) => void = () => {}
+  ) {}
 
   private record(operation: OperationLifecycle) {
-    if (operation.visibleInActivity) requireStoreAction('recordActivity')(activityEntry(operation))
+    if (operation.visibleInActivity) {
+      requireStoreAction('recordActivity')(activityEntry(operation))
+      this.recordReference(operation)
+    }
   }
 
   project(

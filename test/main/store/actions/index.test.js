@@ -58,6 +58,7 @@ describe('#clearActivity', () => {
 
     expect(updates).toEqual([
       ['main.activity', []],
+      ['main.activityTransactionReferences', {}],
       ['main.outboundAddressMemory', {}],
       ['main.recentRecipientUses', []]
     ])

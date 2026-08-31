@@ -92,6 +92,19 @@ it('revokes admission rollback on commit or any persisted batch transition', () 
   expect(changed.storage.value()[changedBatch.key].transactions).toHaveLength(1)
 })
 
+it('projects each persisted transaction transition through the private batch update hook', () => {
+  const storage = memoryStorage()
+  const onBatchUpdated = jest.fn()
+  const ledger = new WalletCallBatchLedger(storage, undefined, onBatchUpdated)
+  ledger.create(batch(), 1000).commit()
+
+  ledger.recordTransaction(origin, account, 'app-id', hash('1'), 1001)
+
+  expect(onBatchUpdated).toHaveBeenCalledTimes(2)
+  expect(onBatchUpdated.mock.calls[0][0].transactions).toEqual([{ hash: hash('1'), state: 'signed' }])
+  expect(onBatchUpdated.mock.calls[1][0].transactions).toEqual([{ hash: hash('1'), state: 'submitted' }])
+})
+
 it('fails abandoned zero-transaction admissions on restart without touching submitted work', () => {
   const { ledger, storage } = createLedger()
   const abandoned = ledger.create(batch({ id: 'abandoned' }), 1000)

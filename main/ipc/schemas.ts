@@ -21,6 +21,7 @@ import {
 } from '../provider/dappGuardrailActions'
 import { InspectorInputSchema } from '../../resources/domain/inspector'
 import { InspectorInvokeResultSchema } from '../inspector/schema'
+import { ActivityDetailsResultSchema } from '../activity/detailsSchema'
 import {
   MAX_DEPLOYMENT_INITCODE_HEX_LENGTH,
   MAX_DEPLOYMENT_INITCODE_BYTES
@@ -805,6 +806,7 @@ const eventSchemas: Record<string, z.ZodType> = {
 
 const invokeSchemas = {
   'activity:clear': z.tuple([]),
+  'activity:details': z.tuple([z.uuid()]),
   'addressBook:export': z.tuple([]),
   'addressBook:import': z.tuple([]),
   'addressBook:remove': z.tuple([AddressBookAddressInputSchema]),
@@ -932,6 +934,7 @@ const PrivacyClearResultSchema = z.union([
 
 const invokeResultSchemas = {
   'activity:clear': PrivacyClearResultSchema,
+  'activity:details': ActivityDetailsResultSchema,
   'addressBook:export': z.union([
     z.object({ success: z.literal(true), exported: z.number().int().nonnegative() }).strict(),
     z.object({ success: z.literal(false), canceled: z.literal(true) }).strict(),

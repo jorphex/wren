@@ -17,6 +17,7 @@ import { requireStoreAction } from '../store/action'
 import FrameManager from './frames'
 import { installCloseToTray } from './closeToTray'
 import { createRendererView, createWindow, restoreWindow } from './window'
+import { rendererVisibleActions } from '../store/rendererPrivacy'
 import { EmbeddedWorkspace } from './embeddedWorkspace'
 import { EmbeddedDapp } from './embeddedDapp'
 import type { DappViewDescriptor } from './dappView'
@@ -842,7 +843,7 @@ const broadcast = (channel: string, ...args: string[]) => {
 }
 
 store.api.feed((_state, actions) => {
-  broadcast('main:action', 'stateSync', JSON.stringify(actions))
+  broadcast('main:action', 'stateSync', JSON.stringify(rendererVisibleActions(actions)))
 })
 
 export default {

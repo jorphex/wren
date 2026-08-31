@@ -11,6 +11,7 @@ import {
 const panelActions = require('../../../resources/store/actions.panel')
 const { isManagedPermission } = require('../../../resources/domain/permissions')
 const { pruneActivity } = require('../state/types/activity')
+const { recordActivityTransactionReference } = require('../state/types/activityTransactionReference')
 const { recordOutboundAddresses, recordOutboundAddressFingerprints } = require('../../addressSafety')
 const {
   addRecentRecipientUse,
@@ -267,6 +268,11 @@ module.exports = {
   setOperationLifecycles: (u, operations) => {
     u('main.operationLifecycles', () => operations)
   },
+  recordActivityTransactionReference: (u, reference) => {
+    u('main.activityTransactionReferences', (references = {}) =>
+      recordActivityTransactionReference(references, reference)
+    )
+  },
   setContractVerificationJobs: (u, jobs) => {
     u('main.contractVerificationJobs', () => jobs)
   },
@@ -302,6 +308,7 @@ module.exports = {
   },
   clearActivity: (u) => {
     u('main.activity', () => [])
+    u('main.activityTransactionReferences', () => ({}))
     u('main.outboundAddressMemory', () => ({}))
     u('main.recentRecipientUses', () => [])
   },

@@ -69,6 +69,7 @@ import contractVerification, {
 import { ContractVerificationArtifactIntakeError } from './contractVerification/artifactIntake'
 import { wakeContractVerificationPollingForActiveResult } from './contractVerification/pollingRuntime'
 import { createSecretClipboard } from './security/secretClipboard'
+import activityDetails from './activity/detailsRuntime'
 
 const isDev = process.env.NODE_ENV === 'development'
 assertSandboxEnabled(app.commandLine)
@@ -249,6 +250,8 @@ handleRenderer('activity:clear', async () => {
   }
   return result
 })
+
+handleRenderer('activity:details', async (e, activityId) => activityDetails.get(activityId))
 
 handleRenderer('tray:revokeAccess', async (e, account, permissionId) => {
   let revokedInMemory = false

@@ -2717,7 +2717,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.activityDetail',
+    ready: '.activityDetailActionsEvidence',
     requiredControls: ['Back', 'Copy hash', 'View on explorer'],
     requiredText: [
       'Activity detail',
@@ -2726,6 +2726,9 @@ const reviewScenarios = () => [
       'workshop.example',
       'Ethereum',
       'Details',
+      'Action',
+      'Native value transfer',
+      '1 ETH',
       'On-chain',
       'Nonce',
       'Block',
@@ -2744,11 +2747,45 @@ const reviewScenarios = () => [
     scale: 1.5,
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
-    ready: '.activityDetail',
+    ready: '.activityDetailActionsEvidence',
     requiredControls: ['Back', 'Copy hash', 'View on explorer'],
-    requiredText: ['Activity detail', 'Transaction', 'Details', 'On-chain', 'Succeeded'],
+    requiredText: [
+      'Activity detail',
+      'Transaction',
+      'Details',
+      'Action',
+      'Native value transfer',
+      'On-chain',
+      'Succeeded'
+    ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
+      ...ACTIVITY_DETAIL_CARD_ALIGNMENT
+    ]
+  },
+  {
+    id: 'tray-account-activity-detail-retained-full-1',
+    renderer: 'tray',
+    state: 'account-activity-detail-retained',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityDetailActionsEvidence',
+    requiredControls: ['Back', 'Copy hash', 'View on explorer'],
+    requiredText: [
+      'Activity detail',
+      'Transaction',
+      'Confirmed',
+      'Details',
+      'Action',
+      'Native value transfer',
+      '1 ETH',
+      'On-chain',
+      'Transaction hash'
+    ],
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'full-width', selector: '.activityDetail', container: '.accountViewMain', inset: 12 },
       ...ACTIVITY_DETAIL_CARD_ALIGNMENT
     ]
   },
@@ -2797,7 +2834,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '.activityDetailTransactions',
+    ready: '.activityDetailActionsEvidence',
     requiredControls: [
       'Back',
       'Copy transaction 1 hash',
@@ -2811,6 +2848,11 @@ const reviewScenarios = () => [
       'Wallet Calls batch',
       'Failed',
       'Details',
+      'Actions',
+      'Contract call',
+      'transfer(address,uint256)',
+      '42 USDC',
+      'Some transaction actions are unavailable',
       'Batch',
       'Calls',
       'Submitted',

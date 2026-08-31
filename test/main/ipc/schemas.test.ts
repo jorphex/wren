@@ -109,6 +109,47 @@ test('allows only an argument-free acknowledged activity clear', () => {
   ).toBe(true)
 })
 
+test('strictly bounds transient Activity action-detail requests and results', () => {
+  expect(parse('invoke', 'activity:details', [handlerId])).toEqual([handlerId])
+  expect(parseRendererIpcArgs('invoke', 'activity:details', ['not-a-uuid']).success).toBe(false)
+  expect(parseRendererIpcArgs('invoke', 'activity:details', [handlerId, address]).success).toBe(false)
+
+  const result = {
+    success: true,
+    partial: false,
+    actions: [
+      {
+        transactionHash: `0x${'a'.repeat(64)}`,
+        kind: 'contract-call',
+        from: address,
+        to: `0x${'2'.repeat(40)}`,
+        value: '0',
+        inputBytes: 68,
+        selector: '0xa9059cbb',
+        method: 'transfer',
+        signature: 'transfer(address,uint256)',
+        arguments: [
+          { name: 'to', type: 'address', value: `0x${'3'.repeat(40)}` },
+          { name: 'amount', type: 'uint256', value: '42' }
+        ]
+      }
+    ]
+  }
+  expect(parseRendererInvokeResult('activity:details', result).success).toBe(true)
+  expect(
+    parseRendererInvokeResult('activity:details', {
+      ...result,
+      actions: [{ ...result.actions[0], input: '0xdeadbeef' }]
+    }).success
+  ).toBe(false)
+  expect(
+    parseRendererInvokeResult('activity:details', {
+      success: false,
+      error: 'lookup-failed'
+    }).success
+  ).toBe(true)
+})
+
 test('strictly validates recent-recipient renderer actions', () => {
   expect(parse('event', 'tray:action', ['setRememberRecentRecipients', true])).toEqual([
     'setRememberRecentRecipients',

@@ -142,26 +142,46 @@ archive and active-desktop checks below.
    Require every row to open with pointer and keyboard input, expose a clear
    hover/focus state, and identify its activity type and app accessibly. Open a
    transaction, Wallet Calls batch, signature, and connection entry. Confirm the
-   detail route shows only the applicable type, outcome, app, network, account,
-   and exact timestamps; Back must restore the history without losing the selected
+   detail route shows the applicable type, outcome, app, network, account, and
+   exact timestamps; Back must restore the history without losing the selected
    row, and a detail route for cleared history must report that the activity is no
-   longer available.
+   longer available. Signature and connection details must not request on-chain
+   action evidence.
 
-   For a recent transaction whose operation evidence is still retained, compare
-   every displayed hash, nonce, block, result, contract, and replacement field with
-   the independently recorded transaction. Copy must return the exact hash, and an
-   explorer action may appear only when the matching network has an explorer. For
-   Wallet Calls, compare the call, submitted, confirmed, and reverted counts plus
-   each transaction state; only submitted transactions may open in an explorer.
-   After retained operation evidence expires, a transaction-like entry must say
+   For a transaction whose 90-day Activity row is still retained, compare every
+   displayed hash, nonce, block, result, contract, and replacement field that its
+   currently retained evidence supports with the independently recorded transaction.
+   Opening the detail may make one explicit configured-RPC transaction lookup for
+   each retained hash. Require Wren to derive those hashes, the account, chain, and
+   optional canonical block from its authoritative main-process ledgers; reject a
+   mismatched hash, sender, or retained canonical block. Compare the displayed
+   native value, recipient or contract, method or unknown selector, and bounded
+   standard-ABI address/integer/boolean arguments with the independently decoded
+   transaction. Raw calldata and opaque byte arguments must not cross the Activity
+   detail boundary. Copy must return the exact hash, and an explorer action may
+   appear only when the matching network has an explorer. For Wallet Calls, compare
+   the call, submitted, confirmed, and reverted counts plus each transaction state
+   and every recoverable action; only submitted transactions may open in an explorer.
+   If only part of a batch can be recovered, the view must identify the result as
+   partial rather than filling the missing calls.
+   Repeat after the 30-day operation lifecycle expires and, for Wallet Calls, after
+   the 24-hour execution batch expires while the Activity row remains. The semantic
+   action, exact hash, Copy, and eligible explorer action must remain available from
+   the compact 90-day reference; lifecycle-only nonce, block, result, and batch state
+   may disappear. If that compact reference is absent, invalid, expired, or cannot
+   be recovered from the configured RPC, a transaction-like entry must say
    **On-chain evidence unavailable.** and provide no invented hash or explorer
    action. Signature and connection entries must not show that warning.
 
-   Scan Activity history, details, copied values, logs, state, and backup without
+   Scan Activity history, renderer bootstrap/state updates, logs, and backup without
    printing the fixtures. They must not disclose request payloads, calldata,
    recipients, amounts, signed messages, contract source, local paths, API keys,
-   credentials, or credential-bearing URLs. Activity history must not persist
-   transaction evidence solely to keep detail actions available.
+   credentials, or credential-bearing URLs. Main-process state may retain only the
+   bounded Activity identity, account, origin, chain, submitted hash, and optional
+   canonical block reference for 90 days; Clear Activity must remove that ledger and
+   profile backup must exclude it. The explicitly opened detail may transiently show
+   its validated semantic recipient, amount, and call fields, but must not log or
+   store the fetched transaction body.
 
 ## 3. Qualify EIP-5792 and EIP-7702 boundaries
 

@@ -1,13 +1,17 @@
 import operationLifecycleLedger from './index'
 import operationLifecycleRuntime from './runtime'
 import { OperationLifecycleProjection } from './projection'
+import { recordActivityReferenceForOperation } from '../activity/referenceRuntime'
 
 const PROJECTION_INTERVAL_MS = 15_000
 
 class OperationLifecycleProjectionRuntime {
   private timer: ReturnType<typeof setInterval> | undefined
   private removeObserver: (() => void) | undefined
-  private readonly projection = new OperationLifecycleProjection(operationLifecycleLedger)
+  private readonly projection = new OperationLifecycleProjection(
+    operationLifecycleLedger,
+    recordActivityReferenceForOperation
+  )
 
   start() {
     if (this.timer) return
