@@ -13,6 +13,19 @@ Detailed release notes and platform boundaries live in
   contract-call context, and truthful partial Wallet Calls evidence.
 - Kept on-demand transaction action details available for the full 90-day
   Activity window through a private, bounded main-process reference ledger.
+- Added persistent Control Center navigation, clearer signing and watch-only
+  account management, and direct create, import, watch, and network actions.
+- Added a wallet portfolio summary, direct Send, address Copy and QR actions, and
+  direct Chrome Web Store routing for Companion.
+- Made the request summary identify the next review, its app, and pending or
+  confirming state.
+
+### Changed
+
+- Made permit reviews state the account, token, amount, network, spender, expiry,
+  signature type, and raw-data path more directly.
+- Clarified token approval limits and warnings, Wallet Calls nonce and fee
+  controls, and on-demand EIP-7702 revocation evidence.
 
 ### Fixed
 
