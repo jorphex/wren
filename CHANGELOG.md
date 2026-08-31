@@ -16,7 +16,7 @@ Detailed release notes and platform boundaries live in
 
 ### Fixed
 
-- Reworked the desktop and wallet interface around one consistent Perch hierarchy,
+- Reworked the desktop and wallet interface around one consistent visual hierarchy,
   including account selectors, Send and Sweep fields, request reviews, balances,
   Activity, navigation, empty states, spacing, and control alignment.
 - Restored legacy Frame color palettes during profile migration and normalized
