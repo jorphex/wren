@@ -40,19 +40,19 @@ Browser store publication is a separate process. Release operators should use th
 [Release Procedure](RELEASE.md); the manual gate is in the
 [qualification checklist](QUALIFICATION.md).
 
-| Area                         | Current boundary                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------ |
-| Linux x64 AppImage and deb   | Qualified release packages                                                                 |
-| Windows x64                  | Unsigned preview; native package checks pass, but Windows is not a qualified platform      |
-| Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                   |
-| Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                 |
-| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.5`               |
-| Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested  |
-| Watch-only accounts          | Monitoring only; signing is blocked                                                        |
-| Chrome and Firefox companion | Companion 0.1.2 pairing target; archive and browser-store publication pending              |
-| macOS x64 and arm64          | Unnotarized previews; automated package checks pass, but physical qualification is pending |
-| Linux arm64                  | Unsigned native CI smoke packages; not released or qualified                               |
-| Trezor Safe 7 Bluetooth      | Unsupported                                                                                |
+| Area                         | Current boundary                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Linux x64 AppImage and deb   | Qualified release packages                                                                |
+| Windows x64                  | Unsigned preview; exact release checks are required, and Windows remains unqualified      |
+| Trezor Safe 7 over USB       | Physically tested for address display, signing, broadcast, and reconnect                  |
+| Trezor Model One over USB    | Physically tested, with typed-data and testnet limitations                                |
+| Ledger and GridPlus Lattice1 | Implemented and automatically tested; not physically requalified for `0.1.5`              |
+| Software signers             | Encrypted local seed, private-key, and keystore workers; disposable seed/key flows tested |
+| Watch-only accounts          | Monitoring only; signing is blocked                                                       |
+| Chrome and Firefox companion | Companion 0.1.2 archives released; Chrome store live; Firefox store review pending        |
+| macOS x64 and arm64          | Unnotarized previews; exact release and physical checks are required                      |
+| Linux arm64                  | Unsigned native CI smoke packages; not released or qualified                              |
+| Trezor Safe 7 Bluetooth      | Unsupported                                                                               |
 
 See [Signer and Platform Support](HARDWARE_SUPPORT.md) for evidence and limitations. Trezor Suite is not needed for the qualified Safe 7 USB flow.
 
@@ -160,9 +160,9 @@ boundary.
 
 ### macOS x64 and arm64 unnotarized releases
 
-Wren 0.1.5 publishes separate Intel and Apple Silicon DMGs that are ad-hoc
-signed but have no Apple Developer ID or notarization ticket. This is Wren's
-continuing macOS release posture: the project does not plan to enroll an Apple publisher identity.
+Wren 0.1.5 provides separate Intel and Apple Silicon DMGs that are ad-hoc signed
+but have no Apple Developer ID or notarization ticket. Wren does not plan to
+enroll an Apple publisher identity.
 macOS will not show a trusted publisher and requires an explicit **Open Anyway**
 exception. See the [macOS unnotarized release guide](MACOS_UNNOTARIZED.md) before
 downloading one.
@@ -179,7 +179,13 @@ For an installed deb, run `/opt/Wren/wren --import-frame-profile`. Wren validate
 
 ### Browser companion
 
-The companion injects Wren's EIP-1193 provider and announces it through EIP-6963. Download the Chrome or Firefox archive from its [releases page](https://github.com/jorphex/wren-companion/releases), verify its checksum, extract it, then follow the [companion installation instructions](https://github.com/jorphex/wren-companion#install).
+The companion injects Wren's EIP-1193 provider and announces it through EIP-6963.
+Chrome and Brave users can install it from the
+[Chrome Web Store](https://chromewebstore.google.com/detail/wren-companion/ifimccfajfbgligbhcgfapdagpnfkbhn).
+Firefox store review is pending. For local installation, download the matching
+Chrome or Firefox archive from the [Companion releases
+page](https://github.com/jorphex/wren-companion/releases), verify its checksum,
+and follow the [installation instructions](https://github.com/jorphex/wren-companion#install).
 
 Compare the six-digit pairing code shown in Wren and the extension before approving. Use Companion 0.1.2; older versions lack fixes qualified with this release.
 

@@ -26,8 +26,7 @@ listed there.
 
 ## Current release boundary
 
-Wren 0.1.5 is published as an explicitly unsigned Windows preview while the
-SignPath Foundation service is being provisioned. Release notes and package
-names state whether a particular Windows package is signed; no package may claim
-a trusted publisher before the protected signing workflow is approved and
-qualified.
+The Wren 0.1.5 Windows preview is explicitly unsigned while the SignPath
+Foundation service is being provisioned. Release notes and filenames state the
+signature status. Wren will not claim a trusted publisher until the protected
+signing workflow is approved and qualified.

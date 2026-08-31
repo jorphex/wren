@@ -1,6 +1,6 @@
 # Windows x64 preview qualification checklist
 
-Use this checklist for the unsigned Windows installer published with Wren 0.1.5.
+Use this checklist for the unsigned Windows installer planned for Wren 0.1.5.
 Linux x64 remains the qualified platform. Passing this checklist makes the
 Windows file suitable for a clearly labeled preview; it does not create a trusted
 publisher or qualify untested hardware.
@@ -67,7 +67,8 @@ With disposable data only:
 5. Open transaction and Wallet Calls Activity rows with pointer and keyboard input.
    Compare the displayed amount, recipient or contract, method, transaction hash,
    and explorer target with independent testnet evidence. Clear Activity, restart,
-   and confirm the visible history and retained transaction references stay cleared.
+   and wait through one lifecycle refresh. Unchanged replacement or terminal evidence
+   must not restore the cleared history.
 
 ## 4. Exercise Companion and requests
 
