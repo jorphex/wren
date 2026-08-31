@@ -23,6 +23,9 @@ Detailed release notes and platform boundaries live in
   mixed-case account keys without losing canonical account records.
 - Kept Activity transaction references out of renderer state and profile backups;
   clearing Activity removes them with the visible history.
+- Prevented unchanged retained transaction lifecycle evidence, including replacement
+  observations, from recreating rows after Activity is cleared. A genuinely newer
+  pending or terminal update may still appear.
 
 ### Distribution
 

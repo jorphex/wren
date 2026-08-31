@@ -2,6 +2,7 @@ import operationLifecycleLedger from './index'
 import operationLifecycleRuntime from './runtime'
 import { OperationLifecycleProjection } from './projection'
 import { recordActivityReferenceForOperation } from '../activity/referenceRuntime'
+import store from '../store'
 
 const PROJECTION_INTERVAL_MS = 15_000
 
@@ -10,7 +11,8 @@ class OperationLifecycleProjectionRuntime {
   private removeObserver: (() => void) | undefined
   private readonly projection = new OperationLifecycleProjection(
     operationLifecycleLedger,
-    recordActivityReferenceForOperation
+    recordActivityReferenceForOperation,
+    () => store('main.activityClearedAt') || 0
   )
 
   start() {

@@ -223,6 +223,7 @@ const mainState = {
   pendingSignerRemovals: pendingRemovalState.pendingSignerRemovals,
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
+  activityClearedAt: main('activityClearedAt', 0),
   activityTransactionReferences: pruneActivityTransactionReferences(
     main('activityTransactionReferences', {})
   ),

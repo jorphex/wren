@@ -1,10 +1,11 @@
 import { rendererVisibleActions, rendererVisibleState } from '../../../main/store/rendererPrivacy'
 
-it('removes retained Activity transaction references from the renderer bootstrap state', () => {
+it('removes private Activity lifecycle state from the renderer bootstrap state', () => {
   expect(
     rendererVisibleState({
       main: {
         activity: [{ id: 'visible-summary' }],
+        activityClearedAt: 1234,
         activityTransactionReferences: { private: { hash: '0xprivate' } }
       },
       selected: { open: true }
@@ -15,12 +16,13 @@ it('removes retained Activity transaction references from the renderer bootstrap
   })
 })
 
-it('drops private reference updates while preserving unrelated renderer state updates', () => {
+it('drops private Activity updates while preserving unrelated renderer state updates', () => {
   expect(
     rendererVisibleActions([
       {
         name: 'recordActivityTransactionReference',
         updates: [
+          { path: 'main.activityClearedAt', value: 1234 },
           { path: 'main.activityTransactionReferences', value: { private: true } },
           { path: 'main.activity', value: [{ id: 'visible-summary' }] }
         ]
@@ -32,6 +34,7 @@ it('drops private reference updates while preserving unrelated renderer state up
             path: 'main',
             value: {
               activity: [],
+              activityClearedAt: 1234,
               activityTransactionReferences: { private: true },
               accounts: {}
             }

@@ -555,6 +555,16 @@ export class Accounts extends EventEmitter {
     const hash = operation.transaction?.hash ?? operation.eip7702Revoke?.hash
     if (!hash) return
     const liveReceipt = receipt && isTransactionReceipt(receipt) ? receipt : request.tx?.receipt
+    const activityClearedAt = store('main.activityClearedAt') || 0
+    const recordObservedActivity = (outcome: Parameters<typeof recordRequestActivity>[1]) => {
+      if (
+        activityClearedAt <= 0 ||
+        operation.createdAt >= activityClearedAt ||
+        operation.updatedAt > activityClearedAt
+      ) {
+        recordRequestActivity(request, outcome)
+      }
+    }
     request.tx = {
       hash,
       confirmations,
@@ -593,7 +603,7 @@ export class Accounts extends EventEmitter {
       request.status = RequestStatus.Confirmed
       request.notice = 'Confirmed'
       if (firstConfirmation) request.completed = operation.updatedAt
-      if (firstConfirmation) recordRequestActivity(request, 'confirmed')
+      if (firstConfirmation) recordObservedActivity('confirmed')
       if (request.type === 'transaction') {
         request.mode = RequestMode.Monitor
         this.scheduleConfirmedTransactionHandoff(account, request)
@@ -607,17 +617,17 @@ export class Accounts extends EventEmitter {
         revocationStatus: 'cleared',
         reason: 'code-cleared'
       })
-      recordRequestActivity(request, 'verified-clearance')
+      recordObservedActivity('verified-clearance')
     } else if (operation.state === 'failed') {
       request.status = RequestStatus.Error
       request.notice = request.type === 'eip7702Revoke' ? 'Delegation remains' : 'Failed'
       request.completed = operation.updatedAt
-      recordRequestActivity(request, 'failed')
+      recordObservedActivity('failed')
     } else if (operation.state === 'replaced' && request.type === 'transaction') {
       request.status = RequestStatus.Error
       request.notice = 'Dropped'
       request.completed = operation.updatedAt
-      recordRequestActivity(request, 'replaced')
+      recordObservedActivity('replaced')
     } else if (operation.state === 'stopped') {
       request.status = RequestStatus.Error
       request.notice = 'Monitoring stopped'
@@ -631,7 +641,7 @@ export class Accounts extends EventEmitter {
         revocationStatus: 'unavailable',
         reason: 'code-unavailable'
       })
-      recordRequestActivity(request, 'clearance-unverified')
+      recordObservedActivity('clearance-unverified')
     }
     account.update()
     if (

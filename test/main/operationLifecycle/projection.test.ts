@@ -41,7 +41,8 @@ const operation = (overrides: Partial<OperationLifecycle> = {}): OperationLifecy
 const fixture = (
   initial: OperationLifecycle,
   isReferenced = (_id: string) => false,
-  recordReference: (operation: OperationLifecycle) => void = () => {}
+  recordReference: (operation: OperationLifecycle) => void = () => {},
+  activityClearedAt: () => number = () => 0
 ) => {
   let persisted: OperationLifecycles = { [initial.id]: initial }
   const ledger = new OperationLifecycleLedger(
@@ -55,7 +56,7 @@ const fixture = (
   )
   return {
     ledger,
-    projection: new OperationLifecycleProjection(ledger, recordReference),
+    projection: new OperationLifecycleProjection(ledger, recordReference, activityClearedAt),
     persisted: () => persisted
   }
 }
@@ -271,4 +272,33 @@ test('periodic projection does not recreate cleared handled or unchanged pending
 
   pending.projection.project(operation().id, 21)
   expect(mocks.recordActivity).toHaveBeenCalledWith(expect.objectContaining({ id: operation().id }))
+})
+
+test('does not recreate lifecycle history observed before the latest explicit clear', () => {
+  const current = operation({ state: 'replaced', updatedAt: 20 })
+  const { ledger, projection } = fixture(current, undefined, undefined, () => 21)
+
+  projection.project(current.id, 22)
+
+  expect(mocks.recordActivity).not.toHaveBeenCalled()
+  expect(mocks.notify).not.toHaveBeenCalled()
+  expect(ledger.listStored()[0]?.notification.terminalHandledAt).toBe(22)
+})
+
+test('projects a lifecycle created or meaningfully updated after the latest explicit clear', () => {
+  const existing = operation({ updatedAt: 20 })
+  const existingFixture = fixture(existing, undefined, undefined, () => 21)
+  existingFixture.projection.project(existing.id, 21)
+  expect(mocks.recordActivity).not.toHaveBeenCalled()
+
+  existingFixture.ledger.put({ ...existing, state: 'confirming', updatedAt: 22 }, 22)
+  existingFixture.projection.project(existing.id, 22)
+  expect(mocks.recordActivity).toHaveBeenCalledWith(
+    expect.objectContaining({ id: existing.id, outcome: 'confirming' })
+  )
+
+  mocks.recordActivity.mockReset()
+  const created = operation({ createdAt: 21, updatedAt: 21 })
+  fixture(created, undefined, undefined, () => 21).projection.project(created.id, 21)
+  expect(mocks.recordActivity).toHaveBeenCalledWith(expect.objectContaining({ id: created.id }))
 })

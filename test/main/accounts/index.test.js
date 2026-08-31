@@ -2677,6 +2677,46 @@ describe('#removeRequest', () => {
 })
 
 describe('ordinary transaction lifecycle outcomes', () => {
+  it('does not recreate a cleared replaced transaction from the same lifecycle observation', () => {
+    jest.useFakeTimers()
+    const targetAccount = Accounts.current()
+    const hash = `0x${'a'.repeat(64)}`
+    Accounts.addRequest(request)
+    const target = targetAccount.getRequest(request.handlerId)
+    const now = Date.now()
+    const replaced = {
+      id: target.activityId,
+      kind: 'transaction',
+      account: target.account,
+      origin: target.origin,
+      chainId: 1,
+      state: 'replaced',
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + MAX_OPERATION_LIFECYCLE_AGE_MS,
+      visibleInActivity: true,
+      notification: {},
+      transaction: { hash, nonce: target.data.nonce }
+    }
+
+    try {
+      Accounts.observeOperationLifecycle(replaced)
+      expect(store('main.activity')).toContainEqual(
+        expect.objectContaining({ id: target.activityId, outcome: 'replaced' })
+      )
+
+      jest.setSystemTime(now + 1)
+      store.clearActivity()
+      Accounts.observeOperationLifecycle(replaced)
+
+      expect(store('main.activity')).toEqual([])
+    } finally {
+      store.clearActivity()
+      targetAccount.clearRequest(target.handlerId)
+      jest.useRealTimers()
+    }
+  })
+
   it('registers Wren Send recipient metadata only after its broadcast lifecycle is persisted', () => {
     jest.useFakeTimers()
     const targetAccount = Accounts.current()

@@ -183,6 +183,13 @@ archive and active-desktop checks below.
    its validated semantic recipient, amount, and call fields, but must not log or
    store the fetched transaction body.
 
+   Clear Activity while a retained transaction is pending, then replay its unchanged
+   submitted, confirming, replacement, and terminal lifecycle observations across at
+   least one projection interval. None may recreate the cleared row or notification.
+   Apply a later authoritative lifecycle update and confirm that only this newer
+   evidence may create a fresh row. Restart Wren after both cases and confirm the
+   clear boundary persists without entering renderer state or profile backup.
+
 ## 3. Qualify EIP-5792 and EIP-7702 boundaries
 
 Use a new isolated `0700` desktop profile, disposable testnet accounts, a controlled

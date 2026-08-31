@@ -307,6 +307,7 @@ module.exports = {
     u('main.recentRecipientUses', () => [])
   },
   clearActivity: (u) => {
+    u('main.activityClearedAt', (clearedAt = 0) => Math.max(clearedAt, Date.now()))
     u('main.activity', () => [])
     u('main.activityTransactionReferences', () => ({}))
     u('main.outboundAddressMemory', () => ({}))

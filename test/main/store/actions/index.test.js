@@ -52,11 +52,13 @@ const owner = '0xa8be0f701d0f37088600164e71bffc0ad652c251'
 describe('#clearActivity', () => {
   it('clears displayed history and both outbound-address memories together', () => {
     const updates = []
-    const update = (path, reducer) => updates.push([path, reducer({ retained: true })])
+    const update = (path, reducer) =>
+      updates.push([path, reducer(path === 'main.activityClearedAt' ? 0 : { retained: true })])
 
     storeActions.clearActivity(update)
 
     expect(updates).toEqual([
+      ['main.activityClearedAt', expect.any(Number)],
       ['main.activity', []],
       ['main.activityTransactionReferences', {}],
       ['main.outboundAddressMemory', {}],

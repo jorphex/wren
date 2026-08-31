@@ -35,6 +35,7 @@ jest.mock('../../../../main/store/persist', () => {
             main: {
               _version: 2,
               instanceId: currentInstanceId,
+              activityClearedAt: 1234,
               interfaceScale: mockInterfaceScale,
               privacy: { errorReporting: true },
               accounts: {
@@ -89,6 +90,7 @@ it('loads values from the current version of the state', async () => {
   const { default: state } = await import('../../../../main/store/state')
 
   expect(state().main.instanceId).toBe(currentInstanceId)
+  expect(state().main.activityClearedAt).toBe(1234)
   expect(state().main.interfaceScale).toBe(1)
   expect(state().view.interfaceScaleEffective).toBe(1)
   expect(state().main.desktopAuthIdentity.installationId).not.toBe(currentInstanceId)

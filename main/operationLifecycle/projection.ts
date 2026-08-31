@@ -43,11 +43,20 @@ export class OperationLifecycleProjection {
 
   constructor(
     private readonly ledger: OperationLifecycleLedger,
-    private readonly recordReference: (operation: OperationLifecycle) => void = () => {}
+    private readonly recordReference: (operation: OperationLifecycle) => void = () => {},
+    private readonly activityClearedAt: () => number = () => 0
   ) {}
 
+  private visibleAfterClear(operation: OperationLifecycle) {
+    const clearedAt = this.activityClearedAt()
+    return (
+      operation.visibleInActivity &&
+      (clearedAt <= 0 || operation.createdAt >= clearedAt || operation.updatedAt > clearedAt)
+    )
+  }
+
   private record(operation: OperationLifecycle) {
-    if (operation.visibleInActivity) {
+    if (this.visibleAfterClear(operation)) {
       requireStoreAction('recordActivity')(activityEntry(operation))
       this.recordReference(operation)
     }
@@ -78,7 +87,7 @@ export class OperationLifecycleProjection {
     const unhandledTerminal =
       terminalStates.has(operation.state) && notification.terminalHandledAt === undefined
     const pendingDue =
-      operation.visibleInActivity &&
+      this.visibleAfterClear(operation) &&
       ['submitted', 'confirming', 'reorged'].includes(operation.state) &&
       this.pendingEvidence.has(operation.id) &&
       notification.longPendingShownAt === undefined &&
@@ -94,7 +103,7 @@ export class OperationLifecycleProjection {
     }
 
     if (terminalStates.has(operation.state) && notification.terminalHandledAt === undefined) {
-      const outcome = operation.visibleInActivity ? terminalNotification(operation.state) : undefined
+      const outcome = this.visibleAfterClear(operation) ? terminalNotification(operation.state) : undefined
       if (outcome) notifyWalletActivity(operation.id, operation.account, outcome)
       notification.terminalHandledAt = Math.min(now, operation.expiresAt)
     }

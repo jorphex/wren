@@ -110,6 +110,7 @@ export const MainSchema = z.object({
   pendingSignerRemovals: PendingSignerRemovalsSchema.default({}),
   accountsMeta: z.record(z.string(), AccountMetadataSchema),
   activity: ActivitySchema,
+  activityClearedAt: z.number().int().nonnegative().default(0),
   activityTransactionReferences: ActivityTransactionReferencesSchema,
   operationLifecycles: OperationLifecyclesSchema,
   contractVerificationJobs: ContractVerificationJobsSchema.default([]).catch([]),
