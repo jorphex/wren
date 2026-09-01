@@ -69,6 +69,7 @@ updates:
           - 13.3.0
       - dependency-name: node-hid
         update-types:
+          - version-update:semver-minor
           - version-update:semver-major
       - dependency-name: query-string
         update-types:
