@@ -23,10 +23,9 @@ Keep macOS jobs credential-free. The preview has valid ad-hoc code seals but no
 Apple Developer ID, Team ID, trusted publisher, notarization ticket, or Apple
 malware review. Gatekeeper must reject it until the user explicitly chooses
 **Open Anyway**. Publish only each architecture's DMG; keep its matching ZIP and
-all macOS updater metadata outside the release. Do not add Developer ID signing
-or notarization to this release path. Keep macOS releases credential-free,
-ad-hoc signed, explicitly unnotarized, and independently verifiable through
-checksums and GitHub attestations.
+all macOS updater metadata outside the release. Verify each DMG through checksums
+and GitHub attestations; do not add Developer ID signing or notarization to this
+release path.
 
 The native verifier checks source/application identity, packaged resources,
 runtime architecture, native modules, sandbox policy, and matching archive
@@ -157,12 +156,12 @@ platforms/signers clear in the notes.
 
 ## 5. Publish or reject
 
-Publish only after the applicable preview review passes. Leave a failed draft unpublished or delete
-it in GitHub; fix the source and make a new version/tag rather than replacing a
-published artifact. Afterwards, check public downloads, checksums, notes, and
-updater behavior from a clean machine; macOS must not receive update metadata.
-Retain the source commit, lockfile, SBOM, checksums, and attestations for the
-release lifetime.
+Publish only after the applicable preview review passes. Leave a failed draft
+unpublished or delete it in GitHub. Fix the source and make a new version and tag
+rather than replacing a published artifact. Afterwards, check public downloads,
+checksums, notes, and updater behavior from a clean machine; macOS must not
+receive update metadata. Retain the source commit, lockfile, SBOM, checksums, and
+attestations for the release lifetime.
 
 For an unsafe release, remove it from normal discovery, issue a security notice,
 and release a fix. Never rewrite the compromised tag.

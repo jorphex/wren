@@ -44,8 +44,8 @@ before copying or inspecting a profile.
 As user A, create at least two disposable software signers, lock them, and export
 a password-encrypted Wren profile backup. In **Settings → Software signers**:
 
-1. confirm the status names **Windows DPAPI** and still says the signer password
-   is required;
+1. confirm the status shows **Windows DPAPI** and says the signer password is
+   still required;
 2. enable device protection and confirm the warning binds files to the current
    Windows account;
 3. unlock both signers, sign a disposable offline message, relock, and quit;

@@ -375,6 +375,7 @@ That historical run did not assess reproducibility; its evidence is embedded
 clean-source identity, SHA-256, SBOM, and GitHub provenance. It qualifies Linux
 x64 only—not macOS, Windows, Linux arm64, native-Wayland Glide, Bluetooth,
 unlisted hardware, or unexercised Yearn product/signer combinations.
-The current release audit reports 19 low-severity transitive findings, no high or
-critical finding, and no compatible upstream fix for the remaining `elliptic`
-path in this release line.
+The current release audit reports 19 low- and 2 moderate-severity transitive
+findings, with no high or critical finding. The moderate
+`decode-uri-component` remediation requires a breaking `query-string` upgrade;
+the remaining `elliptic` path has no upstream fix in this release line.

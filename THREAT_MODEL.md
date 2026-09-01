@@ -157,6 +157,7 @@ encryption remains password-only. The outer layer is at-rest protection, not
 continuous authorization: a signer already loaded into a running Wren process is
 governed by the normal password and process-lock lifecycle. It is never
 hardware-bound.
+
 Live-profile metadata, addresses,
 permissions, and networks are unencrypted; unlocked secrets exist in memory; and
 overwrite-before-delete is not secure erasure on modern filesystems or SSDs.
