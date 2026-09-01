@@ -10,6 +10,10 @@ jest.mock('../../../../resources/Components/AccountTypeMark', () => jest.fn(() =
 const account = '0x0000000000000000000000000000000000000001'
 const hardwareAccount = '0x0000000000000000000000000000000000000002'
 
+beforeEach(() => {
+  jest.clearAllMocks()
+})
+
 class AccountsHarness extends Dash {
   store(...path) {
     const key = path.join('.')
@@ -31,7 +35,15 @@ class SignerAccountsHarness extends Dash {
           id: 'personal',
           name: 'Personal',
           type: 'ring',
+          status: this.props.signerStatus || 'ok',
           addresses: [account]
+        },
+        ledger: {
+          id: 'ledger',
+          name: 'Ledger',
+          type: 'ledger',
+          status: 'disconnected',
+          addresses: [hardwareAccount]
         }
       }
     }
@@ -161,13 +173,55 @@ it('keeps signing and watch accounts together before account creation actions', 
   ).toEqual(['Signing accounts', 'Watch accounts', 'Add account'])
 })
 
-it('lists signing accounts from persisted state and opens them directly', () => {
+it('keeps ready signing accounts as direct account selection', () => {
   render(<SignerAccountsHarness data={{}} />)
+  link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
 
   expect(screen.getByRole('heading', { name: 'Signing accounts' })).toBeTruthy()
-  expect(screen.getByText('0x0000…0001')).toBeTruthy()
-  expect(screen.getByText('0x0000…0002 · connect device')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: `Open Ledger vault ${getAddress(hardwareAccount)}` }))
+  expect(screen.getByText('0x0000…0001 · signer ready')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: `Select Personal ${getAddress(account)}` }))
+
+  expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
+  expect(link.send).not.toHaveBeenCalledWith(
+    'tray:action',
+    'navDash',
+    expect.objectContaining({ view: 'expandedSigner' })
+  )
+})
+
+it('opens and reconnects a hardware signer when its account needs unlocking', () => {
+  render(<SignerAccountsHarness data={{}} />)
+  link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
+
+  expect(screen.getByText('0x0000…0002 · device disconnected')).toBeTruthy()
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: `Select and unlock Ledger vault ${getAddress(hardwareAccount)}`
+    })
+  )
 
   expect(link.rpc).toHaveBeenCalledWith('setSigner', hardwareAccount, expect.any(Function))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'expandedSigner',
+    data: { signer: 'ledger' }
+  })
+  expect(link.send).toHaveBeenCalledWith('dash:reloadSigner', 'ledger')
+})
+
+it('opens the password form for a locked software signer after selecting its account', () => {
+  render(<SignerAccountsHarness data={{}} signerStatus='locked' />)
+  link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: `Select and unlock Personal ${getAddress(account)}`
+    })
+  )
+
+  expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'expandedSigner',
+    data: { signer: 'personal' }
+  })
+  expect(link.send).not.toHaveBeenCalledWith('dash:reloadSigner', expect.anything())
 })

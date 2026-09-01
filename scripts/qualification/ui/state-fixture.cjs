@@ -1269,6 +1269,8 @@ const fixtureFor = (scenario) => {
       nav: [{ view: 'accounts', data: {} }]
     }
     const signerId = 'qualification-personal'
+    const hardwareAccount = `0x${'8'.repeat(40)}`
+    const hardwareSignerId = 'qualification-ledger'
     state.main.signers = {
       [signerId]: {
         id: signerId,
@@ -1277,9 +1279,16 @@ const fixtureFor = (scenario) => {
         status: 'ready',
         addresses: [QUALIFICATION_ACCOUNT],
         createdAt: 1
+      },
+      [hardwareSignerId]: {
+        id: hardwareSignerId,
+        name: 'Ledger',
+        type: 'ledger',
+        status: 'disconnected',
+        addresses: [hardwareAccount],
+        createdAt: 2
       }
     }
-    const hardwareAccount = `0x${'8'.repeat(40)}`
     const watchAccount = `0x${'7'.repeat(40)}`
     state.main.accounts = {
       [QUALIFICATION_ACCOUNT.toLowerCase()]: {
@@ -1291,7 +1300,8 @@ const fixtureFor = (scenario) => {
         id: hardwareAccount,
         address: hardwareAccount,
         name: 'Ledger vault',
-        lastSignerType: 'ledger'
+        lastSignerType: 'ledger',
+        signer: hardwareSignerId
       },
       [watchAccount]: {
         ...qualificationAccount(),

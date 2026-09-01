@@ -6,7 +6,12 @@ import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import { getAddress } from '../../../resources/utils'
 import { accountSort as byCreation } from '../../../resources/domain/account'
-import { isWatchOnlyAccountType } from '../../../resources/domain/signer'
+import {
+  getSignerStatusMeta,
+  isHardwareSigner,
+  isWatchOnlyAccountType
+} from '../../../resources/domain/signer'
+import { signerPanelCrumb } from '../../../resources/domain/nav'
 
 import AddHardware from './Add/AddHardware'
 import AddHardwareLattice from './Add/AddHardwareLattice'
@@ -298,24 +303,50 @@ export class Dash extends React.Component {
     })
   }
 
-  renderAccountRow = (account, liveAddresses) => {
+  signerForAccount = (account, signers) => {
+    if (account.signer && signers[account.signer]) return signers[account.signer]
+
+    const address = getAddress(account.address || account.id).toLowerCase()
+    const matches = Object.values(signers).filter((signer) =>
+      (signer.addresses || []).some((candidate) => candidate.toLowerCase() === address)
+    )
+    const sameType = matches.filter((signer) => signer.type === account.lastSignerType)
+    if (sameType.length === 1) return sameType[0]
+    if (matches.length === 1) return matches[0]
+  }
+
+  selectSigningAccount = (account, signer) => {
+    link.rpc('setSigner', account.id, (error) => {
+      if (error || !signer) return
+      const status = getSignerStatusMeta(signer)
+      if (status.ready) return
+
+      link.send('tray:action', 'navDash', signerPanelCrumb(signer))
+      if (isHardwareSigner(signer) && status.reloadable && !status.busy && !status.input) {
+        link.send('dash:reloadSigner', signer.id)
+      }
+    })
+  }
+
+  renderAccountRow = (account, signers) => {
     const address = getAddress(account.address || account.id)
     const name = account.ensName || account.name || address
     const type = account.lastSignerType || 'address'
     const hardware = ['ledger', 'trezor', 'lattice'].includes(type)
-    const available = liveAddresses.has(address.toLowerCase())
-    const detail =
-      hardware && !available
-        ? `${compactAccountAddress(address)} · connect device`
-        : compactAccountAddress(address)
+    const signer = this.signerForAccount(account, signers)
+    const signerStatus = signer ? getSignerStatusMeta(signer) : undefined
+    const needsUnlock = Boolean(signerStatus && !signerStatus.ready)
+    const detail = `${compactAccountAddress(address)}${
+      signerStatus ? ` · ${signerStatus.label.toLowerCase()}` : hardware ? ' · connect device' : ''
+    }`
     return (
       <button
         type='button'
         className='dashAccountSigner'
         key={account.id}
-        aria-label={`Open ${name} ${address}`}
+        aria-label={`${needsUnlock ? 'Select and unlock' : 'Select'} ${name} ${address}`}
         title={address}
-        onClick={() => link.rpc('setSigner', account.id, () => {})}
+        onClick={() => this.selectSigningAccount(account, signer)}
       >
         <span className='dashAccountSignerIcon'>
           <AccountTypeMark type={type} size={20} />
@@ -338,11 +369,6 @@ export class Dash extends React.Component {
       .sort(byCreation)
     const signingAccounts = allAccounts.filter((account) => !isWatchOnlyAccountType(account.lastSignerType))
     const watchAccounts = allAccounts.filter((account) => isWatchOnlyAccountType(account.lastSignerType))
-    const liveAddresses = new Set(
-      Object.values(signers)
-        .flatMap((signer) => signer.addresses || [])
-        .map((address) => address.toLowerCase())
-    )
     const accountCount = Object.keys(accounts).length
     const { showAddAccounts } = this.props.data
     return showAddAccounts ? (
@@ -361,7 +387,7 @@ export class Dash extends React.Component {
             </div>
             {signingAccounts.length ? (
               <div className='dashAccountSignerLedger'>
-                {signingAccounts.map((account) => this.renderAccountRow(account, liveAddresses))}
+                {signingAccounts.map((account) => this.renderAccountRow(account, signers))}
               </div>
             ) : (
               <p className='dashAccountsEmptyCopy'>No signing accounts yet.</p>
