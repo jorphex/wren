@@ -255,7 +255,9 @@ export class DappsPermissionsPreview extends React.Component {
                   <ClusterValue pointerEvents={true}>
                     <div className='signerPermission'>
                       <div className='signerPermissionControls'>
-                        <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
+                        <div className='signerPermissionIdentity'>
+                          <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
+                        </div>
                         <RevokeAccess
                           account={this.props.account}
                           permissionId={o}

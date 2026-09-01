@@ -525,9 +525,7 @@ it('uses an explicit privacy-preserving empty state', () => {
 
   expect(document.querySelector('.activityModuleEmpty')).toBeTruthy()
   expect(screen.getByText('No activity yet')).toBeTruthy()
-  expect(
-    screen.getByText('Completed wallet requests will appear here without their private contents.')
-  ).toBeTruthy()
+  expect(screen.getByText('Completed wallet requests will appear here.')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'View all activity' })).toBeNull()
 })
 

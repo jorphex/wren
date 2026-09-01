@@ -52,10 +52,16 @@ button.wrenControl.clearPermissionsAction
 
 .revokeAccessButton
   flex none
-  padding 0 var(--wren-space-3)
+  padding 0 var(--wren-space-2)
 
 button.wrenControl.revokeAccessButton
   min-height 44px
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
+  font-weight 500
+
+  &:hover:not(:disabled)
+    color var(--wren-danger)
 
 .revokeAccessDialog
   position absolute
@@ -153,12 +159,12 @@ button.wrenControl.revokeAccessButton
 
 .signerPermissionOrigin
   width 250px
-  margin-top 2px
   overflow hidden
   color var(--wren-text-primary)
-  direction rtl
+  direction ltr
   font-family var(--wren-font-mono)
   font-size var(--wren-type-caption)
+  line-height 18px
   text-align left
   text-overflow ellipsis
   white-space nowrap
@@ -217,16 +223,19 @@ button.wrenControl.revokeAccessButton
   .signerPermissionIdentity
     min-width 0
     flex 1
+    display grid
+    align-content center
+    gap 2px
 
   .revokeAccessButton
     flex none
 
 .signerPermissionPrincipal
-  padding-top var(--wren-space-1)
   overflow-wrap anywhere
   color var(--wren-text-tertiary)
   font-family var(--wren-font-mono)
   font-size var(--wren-type-caption)
+  line-height 18px
 
 .dappGuardrailChainActions
   display grid

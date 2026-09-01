@@ -838,7 +838,7 @@ export class Activity extends React.Component {
             <span>
               {allEntries.length
                 ? 'Choose another activity filter.'
-                : 'Completed wallet requests will appear here without their private contents.'}
+                : 'Completed wallet requests will appear here.'}
             </span>
           </div>
         )}

@@ -12,8 +12,8 @@ Detailed release notes and platform boundaries live in
 
 - Restored account renaming in Account settings, including stable drafts during
   background refreshes and local-name display alongside ENS.
-- Placed Rename and Remove in a balanced action row and sized Activity previews
-  to their visible content.
+- Placed Rename and Remove in a balanced action row, sized Activity previews to
+  their visible content, and quieted per-app access controls.
 - Renamed the global app view to Connected apps and matched its badge to the apps visible there.
 - Aligned wallet subview headers and separators to one 64px boundary.
 - Made Accounts open the appropriate password, device PIN, passphrase, or

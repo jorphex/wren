@@ -2925,6 +2925,19 @@ const reviewScenarios = () => [
         selector: '.activityContinuation',
         property: 'marginBottom',
         value: '8px'
+      },
+      { kind: 'size', selector: '.connectedAppsList .revokeAccessButton', height: 44 },
+      {
+        kind: 'computed-style',
+        selector: '.connectedAppsList .revokeAccessButton',
+        property: 'boxShadow',
+        value: 'none'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.connectedAppsList .signerPermissionIdentity',
+        property: 'alignContent',
+        value: 'center'
       }
     ]
   },
@@ -2953,6 +2966,13 @@ const reviewScenarios = () => [
     requiredText: ['ACTIVITY', 'No activity yet', 'Completed wallet requests will appear here'],
     layoutExpectations: [
       { kind: 'size', selector: '.accountModule-activity', height: 140 },
+      { kind: 'computed-style', selector: '.activityEmpty', property: 'gap', value: '2px' },
+      {
+        kind: 'computed-style',
+        selector: '.activityEmpty span',
+        property: 'lineHeight',
+        value: '18px'
+      },
       { kind: 'computed-style', selector: '.settingsPreviewActions', property: 'display', value: 'grid' },
       {
         kind: 'computed-style',
