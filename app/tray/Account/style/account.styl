@@ -1296,6 +1296,11 @@
   box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
 
 .accountMain.accountMainPerch
+  --wren-account-ledger-inset var(--wren-space-4)
+  --wren-account-ledger-mark-column 32px
+  --wren-account-ledger-column-gap var(--wren-space-2)
+  --wren-account-ledger-text-offset calc(var(--wren-account-ledger-mark-column) + var(--wren-account-ledger-column-gap))
+  --wren-account-ledger-text-inset calc(var(--wren-account-ledger-inset) + var(--wren-account-ledger-text-offset))
   top 64px
   right 0
   bottom 0 !important
@@ -1440,7 +1445,7 @@
 .accountMainPerch .moduleHeader
   display flex
   height 48px
-  padding 15px 16px 11px
+  padding 15px var(--wren-account-ledger-inset) 11px
   box-sizing border-box
   align-items center
   color var(--wren-text-tertiary)
@@ -1682,14 +1687,14 @@
   .signerBalanceCurrency
     top 12px
     right 48%
-    left 46px
+    left var(--wren-account-ledger-text-offset)
     height 18px
     font-size 14px
     font-weight 500
 
   .signerBalanceChain
     top 34px
-    left 46px
+    left var(--wren-account-ledger-text-offset)
     height 14px
     color var(--wren-text-tertiary) !important
     font-family var(--wren-font-mono)
@@ -1713,6 +1718,19 @@
 
   .signerBalanceOk
     display none
+
+.accountMainPerch .accountModule-permissions .connectedAppsList
+  .signerPermission
+    padding-left var(--wren-account-ledger-inset)
+
+  .signerPermissionControls
+    display grid
+    grid-template-columns var(--wren-account-ledger-mark-column) minmax(0, 1fr) auto
+    column-gap var(--wren-account-ledger-column-gap)
+
+  .signerPermissionIdentity
+    width auto
+    min-width 0
 
 .accountMainPerch .accountModule-activity,
 .accountMainPerch .accountModule-permissions,

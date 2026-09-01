@@ -133,6 +133,25 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'aligned-left') {
+      const reference = Array.from(document.querySelectorAll(expectation.with)).find(visible)
+      if (!reference) {
+        violations.push({
+          kind: 'required-layout',
+          detail: `missing visible alignment reference ${expectation.with}`
+        })
+        continue
+      }
+      const referenceLeft = reference.getBoundingClientRect().left
+      for (const element of elements) {
+        const elementLeft = element.getBoundingClientRect().left
+        if (Math.abs(elementLeft - referenceLeft) > (expectation.tolerance ?? 1)) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} starts at ${Math.round(elementLeft)}px; ${expectation.with} starts at ${Math.round(referenceLeft)}px`
+          })
+        }
+      }
     } else if (expectation.kind === 'edge-clearance') {
       for (const element of elements) {
         const container = element.closest(expectation.container)

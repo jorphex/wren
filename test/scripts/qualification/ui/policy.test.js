@@ -652,7 +652,19 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll',
-    requiredControls: expect.arrayContaining(['Rename account', 'Remove account'])
+    requiredControls: expect.arrayContaining(['Rename account', 'Remove account']),
+    layoutExpectations: expect.arrayContaining([
+      {
+        kind: 'aligned-left',
+        selector: '.accountModule-permissions .connectedAppMark',
+        with: '.accountModule-activity .activityMark'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.accountModule-permissions .signerPermissionIdentity',
+        with: '.accountModule-activity .activityIdentity'
+      }
+    ])
   })
   expect(fixtureFor(ledgerBottom).panel.account.modules.settings.height).toBe(104)
   expect(fixtureFor(ledgerNoRequests).panel.account.moduleOrder).not.toContain('requests')
@@ -666,6 +678,16 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
       { kind: 'size', selector: '.accountModule-activity', height: 100 },
       { kind: 'size', selector: '.activityModuleEmpty .moduleHeader', height: 36 },
       { kind: 'size', selector: '.activityEmpty', height: 64 },
+      {
+        kind: 'aligned-left',
+        selector: '.activityEmpty strong',
+        with: '.balancesPreview .signerBalanceCurrency'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.activityEmpty span',
+        with: '.balancesPreview .signerBalanceCurrency'
+      },
       {
         kind: 'computed-style',
         selector: '.accountModule-settings .accountModuleCard',

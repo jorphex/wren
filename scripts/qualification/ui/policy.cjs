@@ -2990,6 +2990,16 @@ const reviewScenarios = () => [
         property: 'alignContent',
         value: 'center'
       },
+      {
+        kind: 'aligned-left',
+        selector: '.accountModule-permissions .connectedAppMark',
+        with: '.accountModule-activity .activityMark'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.accountModule-permissions .signerPermissionIdentity',
+        with: '.accountModule-activity .activityIdentity'
+      },
       { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
       { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
@@ -3022,6 +3032,16 @@ const reviewScenarios = () => [
       { kind: 'size', selector: '.activityModuleEmpty .moduleHeader', height: 36 },
       { kind: 'size', selector: '.activityEmpty', height: 64 },
       { kind: 'computed-style', selector: '.activityEmpty', property: 'gap', value: '1px' },
+      {
+        kind: 'aligned-left',
+        selector: '.activityEmpty strong',
+        with: '.balancesPreview .signerBalanceCurrency'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.activityEmpty span',
+        with: '.balancesPreview .signerBalanceCurrency'
+      },
       {
         kind: 'computed-style',
         selector: '.activityEmpty span',
