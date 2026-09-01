@@ -10,15 +10,19 @@ Detailed release notes and platform boundaries live in
 
 ### Fixed
 
-- Restored account renaming in Account settings, including stable drafts during background refreshes and local-name display alongside ENS.
-- Placed Rename and Remove in a balanced action row and reduced empty Activity to its actual content height.
+- Restored account renaming in Account settings, including stable drafts during
+  background refreshes and local-name display alongside ENS.
+- Placed Rename and Remove in a balanced action row and reduced empty Activity to
+  its actual content height.
 - Renamed the global app view to Connected apps and matched its badge to the apps visible there.
 - Aligned wallet subview headers and separators to one 64px boundary.
-- Made Accounts open the appropriate password, device PIN, passphrase, or reconnect flow when a selected signer is locked or unavailable.
+- Made Accounts open the appropriate password, device PIN, passphrase, or
+  reconnect flow when a selected signer is locked or unavailable.
 
 ### Maintenance
 
-- Included the qualified dependency updates already merged after 0.1.5.
+- Updated reviewed production and development dependencies; coordinated major
+  upgrades remain deferred.
 
 See [the complete 0.1.6 release notes](release-notes/v0.1.6.md).
 

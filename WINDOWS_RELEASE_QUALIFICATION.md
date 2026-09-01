@@ -1,6 +1,6 @@
 # Windows x64 preview qualification checklist
 
-Use this checklist for the unsigned Windows installer planned for Wren 0.1.5.
+Use this checklist for the unsigned Windows installer planned for Wren 0.1.6.
 Linux x64 remains the qualified platform. Passing this checklist makes the
 Windows file suitable for a clearly labeled preview; it does not create a trusted
 publisher or qualify untested hardware.
@@ -15,7 +15,7 @@ Record the Wren version, source commit, Windows edition/build, VM software, and
 exact release-workflow URL. Download these files from the draft release through
 the browser:
 
-- `Wren-Setup-0.1.5-unsigned-x64.exe`
+- `Wren-Setup-0.1.6-unsigned-x64.exe`
 - `SHA256SUMS`
 - `wren.cdx.json`
 
@@ -23,7 +23,7 @@ Verify the installer's SHA-256 against `SHA256SUMS` and verify its GitHub build
 and SBOM attestations. Then run:
 
 ```powershell
-Get-AuthenticodeSignature '.\Wren-Setup-0.1.5-unsigned-x64.exe' |
+Get-AuthenticodeSignature '.\Wren-Setup-0.1.6-unsigned-x64.exe' |
   Format-List Status,StatusMessage
 ```
 
@@ -60,11 +60,19 @@ With disposable data only:
    checkbox before Continue becomes available.
 2. Confirm each generated secret remains visible until you choose Continue, then
    complete its backup check. Lock, unlock, restart, and remove it.
-3. Remove a signer that owns accounts and confirm those accounts also leave the
+3. Rename named and unnamed accounts. Confirm drafts survive background refresh,
+   local and ENS names remain distinct, and Rename and Remove share one action row.
+4. From Accounts, select a locked software signer and a disconnected hardware
+   signer. Confirm Wren opens the password or device reconnect flow. Ready and
+   watch-only accounts must still switch directly.
+5. Remove a signer that owns accounts and confirm those accounts also leave the
    wallet panel after restart. Do not perform a second manual account removal.
-4. Confirm account-access revocation stays within the wallet panel, returns focus,
-   and its success notice dismisses automatically.
-5. Open transaction and Wallet Calls Activity rows with pointer and keyboard input.
+6. Confirm account-access revocation stays within the wallet panel, returns focus,
+   and dismisses its success notice automatically. Connected apps must show the
+   same eligible apps as its badge.
+7. Confirm wallet subview separators align and empty Activity uses only its content
+   height.
+8. Open transaction and Wallet Calls Activity rows with pointer and keyboard input.
    Compare the displayed amount, recipient or contract, method, transaction hash,
    and explorer target with independent testnet evidence. Clear Activity, restart,
    and wait through one lifecycle refresh. Unchanged replacement or terminal evidence
