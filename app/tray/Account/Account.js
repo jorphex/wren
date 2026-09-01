@@ -454,7 +454,7 @@ class _AccountView extends React.Component {
       <div
         className={className}
         style={{
-          top: '10px',
+          top: '0px',
           bottom: footerHeight + 'px'
         }}
       >

@@ -144,7 +144,7 @@ it('cancels header name editing without changing the account', async () => {
   await waitFor(() => expect(document.activeElement).toBe(rename))
 })
 
-it('uses the compact frame and explicit title for expanded balances', () => {
+it('uses the shared 64px wallet header and explicit title for expanded balances', () => {
   const store = Restore.create(
     {
       selected: { open: false },
@@ -170,6 +170,6 @@ it('uses the compact frame and explicit title for expanded balances', () => {
 
   const view = document.querySelector('.accountView')
   expect(view.classList.contains('accountViewCompact')).toBe(true)
-  expect(view.style.top).toBe('10px')
+  expect(view.style.top).toBe('0px')
   expect(screen.getByText('Balances')).toBeTruthy()
 })

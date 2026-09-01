@@ -336,9 +336,10 @@ test('separates request groups and the inbox toolbar with faint ledger rules', (
 })
 
 test('keeps transaction review on one flat details ledger', () => {
-  expect(accountSource).toMatch(/style=\{\{[\s\S]*?top: '10px'/)
+  expect(accountSource).toMatch(/style=\{\{[\s\S]*?top: '0px'/)
   expect(accountSource).not.toMatch(/top: requestMode \|\| compactTop/)
   expect(accountSource).toMatch(/requestMode=\{true\}/)
+  expect(accountStyle).toMatch(/\.accountView\n[\s\S]*?\.accountViewMenu\n {4}top 0/)
   expect(accountStyle).toMatch(
     /\.accountView[\s\S]*?&:has\(\.signerRequest\)[\s\S]*?\.accountViewMain[\s\S]*?top 64px/
   )
