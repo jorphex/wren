@@ -94,10 +94,10 @@ it('uses an authored title for the generic notice surface', () => {
   expect(screen.queryByText('notify')).toBeNull()
 })
 
-it('uses the authored App activity title', () => {
+it('uses the authored Connected apps title', () => {
   renderCommand([{ view: 'dapps', data: {} }])
 
-  expect(screen.getByText('App activity')).toBeTruthy()
+  expect(screen.getByText('Connected apps')).toBeTruthy()
   expect(screen.queryByText('dapps')).toBeNull()
 })
 

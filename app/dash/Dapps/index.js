@@ -2,12 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 import emptyConnections from 'url:../../../asset/ui/empty-connections-v15.png'
 import link from '../../../resources/link'
-import {
-  MAX_TIMER_DELAY,
-  nextActiveExternalPermissionExpiry,
-  nextTransientConnectedAppExpiry,
-  selectConnectedAppGroups
-} from '../../../resources/domain/connectedApps'
+import { MAX_TIMER_DELAY, selectConnectedAppSummary } from '../../../resources/domain/connectedApps'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 
 import ChainIdentityMark from '../../../resources/Components/ChainIdentityMark'
@@ -113,22 +108,22 @@ export class Dapps extends React.Component {
   }
 
   getGroups(now = Date.now()) {
-    return selectConnectedAppGroups({
+    return selectConnectedAppSummary({
+      networks: this.store('main.networks.ethereum') || {},
+      origins: this.store('main.origins') || {},
+      permissions: this.store('main.permissions') || {},
+      now
+    }).groups
+  }
+
+  scheduleOriginExpiry() {
+    const now = Date.now()
+    const { nextExpiry } = selectConnectedAppSummary({
       networks: this.store('main.networks.ethereum') || {},
       origins: this.store('main.origins') || {},
       permissions: this.store('main.permissions') || {},
       now
     })
-  }
-
-  scheduleOriginExpiry() {
-    const now = Date.now()
-    const permissions = this.store('main.permissions') || {}
-    const expiries = [
-      nextTransientConnectedAppExpiry(this.getGroups(now)),
-      nextActiveExternalPermissionExpiry(permissions, now)
-    ].filter((expiry) => expiry !== undefined)
-    const nextExpiry = expiries.length ? Math.min(...expiries) : undefined
 
     if (nextExpiry === this.originExpiryDeadline) return
 
@@ -172,7 +167,7 @@ export class Dapps extends React.Component {
           ) : (
             <div className='connectedAppsEmpty'>
               <img alt='' aria-hidden='true' className='connectedAppsEmptyArtwork' src={emptyConnections} />
-              <strong>No app activity</strong>
+              <strong>No connected apps</strong>
               <span>Open a dapp with the Wren Companion to see it here.</span>
             </div>
           )}

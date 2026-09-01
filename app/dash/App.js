@@ -19,6 +19,7 @@ import ControlNavigation from './ControlNavigation'
 import Icon from '../../resources/Components/Icon'
 import link from '../../resources/link'
 import { capitalize } from '../../resources/utils'
+import { MAX_TIMER_DELAY, selectConnectedAppSummary } from '../../resources/domain/connectedApps'
 import { requestDashNavigation } from './navigationGuard'
 
 function itemName(view) {
@@ -61,10 +62,54 @@ export class Dash extends React.Component {
 
   componentDidMount() {
     document.addEventListener('keydown', this.onKeyDown)
+    this.scheduleControlCountExpiry()
+  }
+
+  componentDidUpdate() {
+    this.scheduleControlCountExpiry()
   }
 
   componentWillUnmount() {
     document.removeEventListener('keydown', this.onKeyDown)
+    clearTimeout(this.controlCountExpiryTimer)
+    this.controlCountExpiryDeadline = undefined
+  }
+
+  connectedAppSummary(now = Date.now()) {
+    return selectConnectedAppSummary({
+      networks: this.store('main.networks.ethereum') || {},
+      origins: this.store('main.origins') || {},
+      permissions: this.store('main.permissions') || {},
+      now
+    })
+  }
+
+  scheduleControlCountExpiry() {
+    const now = Date.now()
+    const { nextExpiry } = this.connectedAppSummary(now)
+    if (nextExpiry === this.controlCountExpiryDeadline) return
+
+    clearTimeout(this.controlCountExpiryTimer)
+    this.controlCountExpiryDeadline = nextExpiry
+    if (nextExpiry !== undefined) {
+      const delay = Math.max(1, Math.min(nextExpiry - now, MAX_TIMER_DELAY))
+      this.controlCountExpiryTimer = setTimeout(() => {
+        this.controlCountExpiryDeadline = undefined
+        this.setState((state) => ({ controlCountTick: (state?.controlCountTick || 0) + 1 }))
+      }, delay)
+    }
+  }
+
+  controlCounts(now = Date.now()) {
+    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
+      Object.values(networks)
+    )
+
+    return {
+      accounts: Object.keys(this.store('main.accounts') || {}).length,
+      networks: allNetworks.filter((network) => network?.on).length,
+      dapps: this.connectedAppSummary(now).count
+    }
   }
 
   onKeyDown(event) {
@@ -136,14 +181,7 @@ export class Dash extends React.Component {
       view === 'default' ||
       (['accounts', 'chains', 'dapps', 'settings'].includes(view) &&
         (!data || Object.keys(data).length === 0))
-    const allNetworks = Object.values(this.store('main.networks') || {}).flatMap((networks) =>
-      Object.values(networks)
-    )
-    const controlCounts = {
-      accounts: Object.keys(this.store('main.accounts') || {}).length,
-      networks: allNetworks.filter((network) => network?.on).length,
-      dapps: Object.keys(this.store('main.origins') || {}).length
-    }
+    const controlCounts = this.controlCounts()
     const controlCurrent = view === 'default' || !view ? 'overview' : view
 
     return (

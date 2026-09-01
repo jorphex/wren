@@ -97,3 +97,21 @@ export function nextTransientConnectedAppExpiry(groups) {
   )
   return expiries.length > 0 ? Math.min(...expiries) : undefined
 }
+
+export function selectConnectedAppSummary(options = {}) {
+  const now = options.now ?? Date.now()
+  const groups = selectConnectedAppGroups({ ...options, now })
+  const expiries = [
+    nextTransientConnectedAppExpiry(groups),
+    nextActiveExternalPermissionExpiry(options.permissions, now)
+  ].filter((expiry) => expiry !== undefined)
+
+  return {
+    groups,
+    count: groups.reduce(
+      (total, { connected, disconnected }) => total + connected.length + disconnected.length,
+      0
+    ),
+    nextExpiry: expiries.length ? Math.min(...expiries) : undefined
+  }
+}

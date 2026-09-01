@@ -3,6 +3,7 @@ import Dapps from '../../../app/dash/Dapps'
 import Inspector from '../../../app/dash/Inspector'
 import Contracts from '../../../app/dash/Contracts'
 import link from '../../../resources/link'
+import { RECENT_ORIGIN_TTL } from '../../../resources/domain/connectedApps'
 
 jest.mock('../../../resources/link', () => ({ send: jest.fn() }))
 jest.mock('../../../app/dash/Notify', () => () => null)
@@ -18,6 +19,97 @@ it('renders the connected-app destination instead of falling through to the cont
 
   expect(view.type).toBe(Dapps)
   expect(view.props.data).toBe(data)
+})
+
+it('counts only apps visible in Connected apps', () => {
+  const now = 1_800_000
+  const expiredAt = now - RECENT_ORIGIN_TTL - 1
+  const origins = Object.fromEntries(
+    Array.from({ length: 73 }, (_, index) => [
+      `expired-${index}`,
+      {
+        name: `expired-${index}.example`,
+        chain: { id: 1, type: 'ethereum' },
+        session: {
+          requests: 1,
+          startedAt: expiredAt - 1,
+          lastUpdatedAt: expiredAt,
+          endedAt: expiredAt
+        }
+      }
+    ])
+  )
+  const values = {
+    'main.accounts': {},
+    'main.networks': {
+      ethereum: {
+        1: {
+          id: 1,
+          name: 'Ethereum',
+          on: true,
+          connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
+        }
+      }
+    },
+    'main.networks.ethereum': {
+      1: {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        connection: { endpoints: [{ id: 'rpc-1', connected: true }] }
+      }
+    },
+    'main.origins': origins,
+    'main.permissions': {}
+  }
+  const dash = new Dash({})
+  dash.store = jest.fn((path) => values[path])
+
+  expect(Object.keys(origins)).toHaveLength(73)
+  expect(dash.controlCounts(now).dapps).toBe(0)
+})
+
+it('refreshes the Connected apps count at the visibility expiry boundary', () => {
+  jest.useFakeTimers()
+  const now = 1_800_000
+  jest.setSystemTime(now)
+  const lastUpdatedAt = now - RECENT_ORIGIN_TTL + 1_000
+  const values = {
+    'main.networks.ethereum': {
+      1: {
+        id: 1,
+        name: 'Ethereum',
+        on: true,
+        connection: { endpoints: [{ id: 'rpc-1', connected: false }] }
+      }
+    },
+    'main.origins': {
+      recent: {
+        name: 'recent.example',
+        chain: { id: 1, type: 'ethereum' },
+        session: {
+          requests: 1,
+          startedAt: lastUpdatedAt - 1,
+          lastUpdatedAt,
+          endedAt: lastUpdatedAt
+        }
+      }
+    },
+    'main.permissions': {}
+  }
+  const dash = new Dash({})
+  dash.store = jest.fn((path) => values[path])
+  dash.setState = jest.fn()
+
+  dash.scheduleControlCountExpiry()
+  expect(dash.controlCountExpiryDeadline).toBe(now + 1_000)
+
+  jest.advanceTimersByTime(1_000)
+  expect(dash.setState).toHaveBeenCalledTimes(1)
+  expect(dash.setState.mock.calls[0][0]({})).toEqual({ controlCountTick: 1 })
+
+  clearTimeout(dash.controlCountExpiryTimer)
+  jest.useRealTimers()
 })
 
 it('renders the read-only inspector as an explicit dashboard destination', () => {

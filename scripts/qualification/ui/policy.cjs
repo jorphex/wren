@@ -2128,7 +2128,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashNetworksCard',
-    requiredControls: ['Home', 'Accounts', 'Networks', 'App activity', 'Settings', 'Add', 'All', 'Active'],
+    requiredControls: ['Home', 'Accounts', 'Networks', 'Connected apps', 'Settings', 'Add', 'All', 'Active'],
     requiredText: ['Connected', 'Ethereum', 'Optimism Mainnet', 'Workshop Chain']
   },
   {
@@ -2186,7 +2186,7 @@ const reviewScenarios = () => [
     ],
     requiredControls: ['Open workshop.example app details, active · no account access'],
     requiredText: [
-      'App activity',
+      'Connected apps',
       'workshop.example',
       'Active · No account access',
       'treasury.example',
@@ -2205,7 +2205,7 @@ const reviewScenarios = () => [
       { kind: 'full-width', selector: '.sliceOriginList', container: '.connectedApps', inset: 12 }
     ],
     requiredControls: ['Open workshop.example app details, active · no account access'],
-    requiredText: ['App activity', 'workshop.example', 'Active · No account access']
+    requiredText: ['Connected apps', 'workshop.example', 'Active · No account access']
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],

@@ -8,7 +8,8 @@ import {
   RECENT_ORIGIN_TTL,
   nextActiveExternalPermissionExpiry,
   nextTransientConnectedAppExpiry,
-  selectConnectedAppGroups
+  selectConnectedAppGroups,
+  selectConnectedAppSummary
 } from '../../../../resources/domain/connectedApps'
 
 const now = 1_800_000
@@ -124,6 +125,29 @@ it('keeps recent transient activity until its exact expiry and exposes the next 
       now: lastUpdatedAt + RECENT_ORIGIN_TTL
     })
   ).toEqual([])
+})
+
+it('summarizes only the app rows the control center can display', () => {
+  const expiredAt = now - RECENT_ORIGIN_TTL - 1
+  const expiredOrigins = Object.fromEntries(
+    Array.from({ length: 73 }, (_, index) => [
+      `expired-${index}`,
+      origin(`expired-${index}.example`, 1, {
+        startedAt: expiredAt - 1,
+        lastUpdatedAt: expiredAt,
+        endedAt: expiredAt
+      })
+    ])
+  )
+
+  expect(
+    selectConnectedAppSummary({
+      networks: { 1: chain(1) },
+      origins: expiredOrigins,
+      permissions: {},
+      now
+    })
+  ).toEqual({ groups: [], count: 0, nextExpiry: undefined })
 })
 
 it('treats an explicit disabled permission as transient activity rather than a durable grant', () => {

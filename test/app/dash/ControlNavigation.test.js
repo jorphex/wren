@@ -13,7 +13,7 @@ it('owns the stable Control destination order and replaces top-level routes', ()
     'Home',
     'Accounts',
     'Networks',
-    'App activity',
+    'Connected apps',
     'Settings'
   ])
 

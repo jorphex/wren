@@ -62,10 +62,10 @@ function renderDapps(
   return render(<ConnectedDapps data={{}} />)
 }
 
-test('shows one global empty state when there is no app activity', () => {
+test('shows one global empty state when there are no connected apps', () => {
   renderDapps({})
 
-  expect(screen.getByText('No app activity')).toBeTruthy()
+  expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(screen.getByText('Open a dapp with the Wren Companion to see it here.')).toBeTruthy()
   expect(screen.getAllByAltText('')).toHaveLength(1)
 })
@@ -86,7 +86,7 @@ test('renders application activity instead of the empty state', () => {
   ).toBeNull()
   expect(screen.queryByText('avg reqs/min')).toBeNull()
   expect(document.querySelector('[data-chain-mark="1"]')).toBeTruthy()
-  expect(screen.queryByText('No app activity')).toBeNull()
+  expect(screen.queryByText('No connected apps')).toBeNull()
 })
 
 test('renders application activity while metadata is unavailable', () => {
@@ -216,7 +216,7 @@ test('expires the last recently disconnected app without a store update', () => 
 
   act(() => jest.advanceTimersByTime(1_002))
 
-  expect(screen.getByText('No app activity')).toBeTruthy()
+  expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(screen.queryByText('recent.test')).toBeNull()
 })
 
@@ -266,7 +266,7 @@ test('reschedules long permission deadlines and removes an app at the exact boun
   act(() => jest.advanceTimersByTime(999))
   expect(screen.getByText('expiring.test')).toBeTruthy()
   act(() => jest.advanceTimersByTime(1))
-  expect(screen.getByText('No app activity')).toBeTruthy()
+  expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(screen.queryByText('expiring.test')).toBeNull()
   jest.setSystemTime(now)
 })
@@ -287,6 +287,6 @@ test('does not expose managed Wren Send activity as a connected app', () => {
     }
   )
 
-  expect(screen.getByText('No app activity')).toBeTruthy()
+  expect(screen.getByText('No connected apps')).toBeTruthy()
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
