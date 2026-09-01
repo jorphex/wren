@@ -246,6 +246,57 @@ it('qualifies BalancesExpanded at full and short height for every supported scal
   ).toBe(true)
 })
 
+it('keeps wallet subviews on the shared 64px header boundary', () => {
+  const scenarios = scenarioMatrix({ includeReview: true })
+  const ids = [
+    'tray-account-balances-full-1',
+    'tray-account-activity-full-1',
+    'tray-account-requests-list-full-1',
+    'tray-account-rename-expanded-full-1',
+    'tray-signature-permit-review-full-1'
+  ]
+
+  for (const id of ids) {
+    const { layoutExpectations } = scenarios.find((scenario) => scenario.id === id)
+    expect(layoutExpectations).toEqual(
+      expect.arrayContaining([
+        {
+          kind: 'computed-style',
+          selector: '.accountView',
+          property: 'top',
+          value: '0px'
+        },
+        {
+          kind: 'computed-style',
+          selector: '.accountViewMenu',
+          property: 'top',
+          value: '0px'
+        },
+        {
+          kind: 'computed-style',
+          selector: '.accountViewMenu',
+          property: 'height',
+          value: '64px'
+        }
+      ])
+    )
+  }
+})
+
+it('qualifies the Accounts surface with ready and unlockable signers', () => {
+  const scenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'dash-accounts-perch-full-1'
+  )
+  const fixture = fixtureFor(scenario)
+
+  expect(scenario.requiredText).toContain('device disconnected')
+  expect(fixture.main.accounts[`0x${'8'.repeat(40)}`].signer).toBe('qualification-ledger')
+  expect(fixture.main.signers['qualification-ledger']).toMatchObject({
+    type: 'ledger',
+    status: 'disconnected'
+  })
+})
+
 it('keeps every Activity detail card on one horizontal grid', () => {
   const details = scenarioMatrix({ includeReview: true }).filter(({ state }) =>
     state.startsWith('account-activity-detail')

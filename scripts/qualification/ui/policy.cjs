@@ -13,6 +13,26 @@ const ACTIVITY_DETAIL_CARD_ALIGNMENT = Object.freeze([
   { kind: 'full-width', selector: '.activityDetailHeader', container: '.activityDetail' },
   { kind: 'full-width', selector: '.activityDetailSection', container: '.activityDetail' }
 ])
+const WALLET_VIEW_CHROME = Object.freeze([
+  {
+    kind: 'computed-style',
+    selector: '.accountView',
+    property: 'top',
+    value: '0px'
+  },
+  {
+    kind: 'computed-style',
+    selector: '.accountViewMenu',
+    property: 'top',
+    value: '0px'
+  },
+  {
+    kind: 'computed-style',
+    selector: '.accountViewMenu',
+    property: 'height',
+    value: '64px'
+  }
+])
 
 const RPC_WARNING_SCENARIOS = Object.freeze([
   {
@@ -1918,7 +1938,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashAccountsPerch',
     requiredControls: ['Derive new', 'Watch', 'Import'],
-    requiredText: ['Accounts', 'Ledger vault', 'connect device', 'Watch account', 'ADD ACCOUNT'],
+    requiredText: ['Accounts', 'Ledger vault', 'device disconnected', 'Watch account', 'ADD ACCOUNT'],
     layoutExpectations: [{ kind: 'stacked', selector: '.dashAccountsPerch .dashHomeCard' }]
   },
   {
@@ -2470,7 +2490,7 @@ const reviewScenarios = () => [
     ready: '.requestClearAll',
     requiredControls: ['Back', 'Clear all requests'],
     requiredText: ['Requests', '3 requests', 'Clear all', 'WORKSHOP.EXAMPLE', 'GARDEN.EXAMPLE'],
-    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    layoutExpectations: [...WALLET_VIEW_CHROME, { kind: 'hidden', selector: '.accountSelectorOpen' }]
   },
   {
     id: 'tray-account-requests-list-short-1.5',
@@ -2660,6 +2680,7 @@ const reviewScenarios = () => [
     requiredControls: ['Back', 'All', 'Transactions', 'Signatures', 'Connections', 'Clear activity'],
     requiredText: ['Transaction', 'Typed-data signature', 'Account access', 'Ethereum'],
     layoutExpectations: [
+      ...WALLET_VIEW_CHROME,
       { kind: 'hidden', selector: '.accountSelectorOpen' },
       { kind: 'full-width', selector: '.activityFilters', container: '.accountViewMain', inset: 12 },
       { kind: 'full-width', selector: '.activityList', container: '.accountViewMain', inset: 12 }
@@ -2975,6 +2996,7 @@ const reviewScenarios = () => [
     requiredControls: ['Back', 'Account name'],
     requiredText: ['Account settings', 'Account', 'Address'],
     layoutExpectations: [
+      ...WALLET_VIEW_CHROME,
       {
         kind: 'computed-style',
         selector: '#panel',
@@ -3064,7 +3086,8 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Decline',
                 'Sign message'
               ],
-              requiredText: ['Review request', 'Uniswap', 'ACTION', 'DETAILS', 'USDC', '2412', 'EIP-712']
+              requiredText: ['Review request', 'Uniswap', 'ACTION', 'DETAILS', 'USDC', '2412', 'EIP-712'],
+              layoutExpectations: [...WALLET_VIEW_CHROME]
             },
             {
               id: 'dash-split-control-right-1',
@@ -3195,6 +3218,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredControls: ['Back', 'Filter balances', 'Add token'],
         requiredText: ['Balances', 'Ether', 'Workshop token', 'Yearn WETH', 'Total'],
         layoutExpectations: [
+          ...WALLET_VIEW_CHROME,
           { kind: 'hidden', selector: '.accountSelectorOpen' },
           { kind: 'edge-clearance', selector: '.balanceFilter', container: '.accountViewMain', inset: 12 },
           {
