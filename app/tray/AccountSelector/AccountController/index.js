@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 
 import AccountTypeMark, { accountTypeIcon } from '../../../../resources/Components/AccountTypeMark'
 import Icon from '../../../../resources/Components/Icon'
+import { accountDisplayIdentity } from '../../../../resources/domain/account'
 import link from '../../../../resources/link'
 import { getAddress } from '../../../../resources/utils'
 
@@ -34,7 +35,10 @@ export class Account extends React.Component {
     const { id, name, status, lastSignerType } = this.props
     const account = this.store('main.accounts', id) || this.props
     const address = getAddress(account.address || id)
-    const displayName = account.ensName || name || 'Account'
+    const identity = accountDisplayIdentity(
+      { ...account, name: account.name || name },
+      Boolean(this.store('main.showLocalNameWithENS'))
+    )
     const current = this.store('selected.current') === id
     let requests = account.requests || {}
     requests = Object.keys(requests).filter((requestId) => requests[requestId].mode === 'normal')
@@ -51,9 +55,9 @@ export class Account extends React.Component {
           <AccountTypeMark type={lastSignerType} size={18} />
         </span>
         <span className='accountDrawerItemIdentity'>
-          <span className='accountDrawerItemName'>{displayName}</span>
+          <span className='accountDrawerItemName'>{identity.primary}</span>
           <span className='accountDrawerItemAddress'>
-            {address.substring(0, 8)}…{address.slice(-6)}
+            {identity.secondary || `${address.substring(0, 8)}…${address.slice(-6)}`}
           </span>
         </span>
         <span className='accountDrawerItemEnd'>

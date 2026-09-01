@@ -3,6 +3,7 @@ import Restore from 'react-restore'
 import styled from 'styled-components'
 import link from '../../../../../resources/link'
 import DialogSurface from '../../../../../resources/Components/DialogSurface'
+import { accountDisplayIdentity } from '../../../../../resources/domain/account'
 
 import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
 
@@ -125,9 +126,23 @@ export class SettingsPreview extends React.Component {
     this.setState({ removeConfirm: true, removeError: '', removeStatus: '' })
   }
 
+  openNameEditor() {
+    link.send('nav:forward', 'panel', {
+      view: 'expandedModule',
+      data: {
+        id: this.props.moduleId,
+        account: this.props.account,
+        title: 'Account settings'
+      }
+    })
+  }
+
   render() {
     const account = this.store('main.accounts', this.props.account) || {}
-    const accountDisplayName = account.ensName || account.name || 'Account'
+    const accountDisplayName = accountDisplayIdentity(
+      account,
+      Boolean(this.store('main.showLocalNameWithENS'))
+    ).primary
     const accountAddress = account.address || this.props.account
     const dialogSuffix = String(accountAddress).replace(/[^a-zA-Z0-9_-]/g, '')
     const titleId = `remove-account-title-${dialogSuffix}`
@@ -178,16 +193,23 @@ export class SettingsPreview extends React.Component {
                 </RemovalActions>
               </RemovalDialog>
             ) : (
-              <ClusterRow className='settingsPreviewActions accountLedgerRow'>
-                <ClusterValue
-                  actionRef={this.removeTriggerRef}
-                  ariaLabel='Remove account'
-                  disabled={this.state.removing}
-                  onClick={() => this.armAccountRemoval()}
-                >
-                  <div className='moduleItem cardShow'>Remove account</div>
-                </ClusterValue>
-              </ClusterRow>
+              <>
+                <ClusterRow className='settingsPreviewActions accountLedgerRow'>
+                  <ClusterValue ariaLabel='Rename account' onClick={() => this.openNameEditor()}>
+                    <div className='moduleItem cardShow'>Rename account</div>
+                  </ClusterValue>
+                </ClusterRow>
+                <ClusterRow className='settingsPreviewActions accountLedgerRow'>
+                  <ClusterValue
+                    actionRef={this.removeTriggerRef}
+                    ariaLabel='Remove account'
+                    disabled={this.state.removing}
+                    onClick={() => this.armAccountRemoval()}
+                  >
+                    <div className='moduleItem cardShow'>Remove account</div>
+                  </ClusterValue>
+                </ClusterRow>
+              </>
             )}
           </Cluster>
         </div>

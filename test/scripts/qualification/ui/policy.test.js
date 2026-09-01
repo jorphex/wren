@@ -457,6 +457,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const ledgerBottom = scenarios.find(({ id }) => id === 'tray-account-ledger-bottom-full-1')
   const ledgerNoRequests = scenarios.find(({ id }) => id === 'tray-account-ledger-no-requests-full-1')
   const removalConfirm = scenarios.find(({ id }) => id === 'tray-account-removal-confirm-full-1')
+  const renameExpanded = scenarios.find(({ id }) => id === 'tray-account-rename-expanded-full-1')
+  const localNameWithENS = scenarios.find(({ id }) => id === 'tray-account-local-name-with-ens-full-1')
   const drawers = scenarios.filter(({ state }) => state === 'account-drawer')
   const drawer = drawers.find(({ id }) => id === 'tray-account-drawer-full-right-1')
   const leftDashCanvases = scenarios.filter(
@@ -577,13 +579,38 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   }
   expect(ledgerBottom).toMatchObject({
     captureScroll: 'bottom',
-    captureScrollSelector: '.accountMainScroll'
+    captureScrollSelector: '.accountMainScroll',
+    requiredControls: expect.arrayContaining(['Rename account', 'Remove account'])
   })
+  expect(fixtureFor(ledgerBottom).panel.account.modules.settings.height).toBe(104)
   expect(fixtureFor(ledgerNoRequests).panel.account.moduleOrder).not.toContain('requests')
   expect(removalConfirm).toMatchObject({
     action: { type: 'clickText', text: 'Remove account' },
     ready: '[role="alertdialog"]',
-    captureScroll: 'bottom'
+    captureScroll: 'bottom',
+    requiredControls: ['Cancel', 'Confirm removal']
+  })
+  expect(fixtureFor(removalConfirm).panel.account.modules.settings.height).toBe(192)
+  expect(renameExpanded).toMatchObject({
+    ready: '#wren-account-name',
+    expectedInitialFocus: 'Account name',
+    requiredControls: ['Back', 'Account name']
+  })
+  expect(fixtureFor(renameExpanded).windows.panel.nav).toEqual([
+    {
+      view: 'expandedModule',
+      data: {
+        id: 'settings',
+        account: expect.any(String),
+        title: 'Account settings'
+      }
+    }
+  ])
+  expect(fixtureFor(localNameWithENS).main).toMatchObject({
+    showLocalNameWithENS: true,
+    accounts: {
+      [QUALIFICATION_ACCOUNT]: expect.objectContaining({ ensName: 'workshop.eth' })
+    }
   })
   expect([drawer.logicalWidth, drawer.scale]).toEqual([620, 1])
   expect(drawers).toHaveLength(12)

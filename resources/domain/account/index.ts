@@ -12,6 +12,20 @@ export const isDefaultAccountName = ({ name, lastSignerType }: Account) =>
 
 export const getDefaultAccountName = (type: string) => `${getSignerDisplayType(type)} account`
 
+export const accountDisplayIdentity = (
+  account: { name?: string; ensName?: string } = {},
+  showLocalNameWithENS = false
+) => {
+  const localName = account.name?.trim()
+  const ensName = account.ensName?.trim()
+
+  if (showLocalNameWithENS && localName && ensName) {
+    return { primary: localName, secondary: ensName }
+  }
+
+  return { primary: ensName || localName || 'Account', secondary: '' }
+}
+
 export function accountSort(a: Account, b: Account) {
   try {
     const [aBlockStr = '', aLocalStr = ''] = String(a.created || '').split(':')

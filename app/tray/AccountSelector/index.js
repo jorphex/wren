@@ -8,7 +8,7 @@ import wrenMark from 'url:../../../asset/brand/exports/mark/wren-mark-color-32.p
 import Icon from '../../../resources/Components/Icon'
 import QrCode from '../../../resources/Components/QrCode'
 import DialogSurface from '../../../resources/Components/DialogSurface'
-import { accountSort as byCreation } from '../../../resources/domain/account'
+import { accountDisplayIdentity, accountSort as byCreation } from '../../../resources/domain/account'
 import { getAddress, matchFilter } from '../../../resources/utils'
 
 import link from '../../../resources/link'
@@ -203,8 +203,10 @@ export class AccountSelector extends React.Component {
   renderCurrentAccount(currentAccount) {
     const hideBalances = this.store('selected.hideBalances')
     const workspaceOpen = Boolean(this.store('windows.dash.showing'))
+    const showLocalNameWithENS = Boolean(this.store('main.showLocalNameWithENS'))
     const address = getAddress(currentAccount.address || currentAccount.id)
-    const displayName = currentAccount.ensName || currentAccount.name || 'Account'
+    const identity = accountDisplayIdentity(currentAccount, showLocalNameWithENS)
+    const displayName = identity.primary
     const shortAddress = `${address.substring(0, 6)}…${address.slice(-4)}`
     return (
       <div className='accountSwitcherBar'>
@@ -219,7 +221,7 @@ export class AccountSelector extends React.Component {
           <img alt='' aria-hidden='true' className='accountSwitcherBrand' src={wrenMark} />
           <span className='accountSwitcherIdentity'>
             <span className='accountSwitcherName'>{displayName}</span>
-            <span className='accountSwitcherAddress'>{shortAddress}</span>
+            <span className='accountSwitcherAddress'>{identity.secondary || shortAddress}</span>
           </span>
         </button>
         <div className='accountSwitcherControls'>

@@ -1,4 +1,8 @@
-import { accountSort as byCreation, hasAddress } from '../../../../resources/domain/account'
+import {
+  accountDisplayIdentity,
+  accountSort as byCreation,
+  hasAddress
+} from '../../../../resources/domain/account'
 
 const makeMockAccount = (address, timestamp = Date.now(), block = 0, name = address) => ({
   address,
@@ -19,6 +23,26 @@ let now = 0
 
 beforeEach(() => {
   now = Date.now()
+})
+
+describe('#accountDisplayIdentity', () => {
+  it('shows ENS by default', () => {
+    expect(accountDisplayIdentity({ name: 'Treasury', ensName: 'treasury.eth' })).toEqual({
+      primary: 'treasury.eth',
+      secondary: ''
+    })
+  })
+
+  it('shows the local name with ENS when requested', () => {
+    expect(accountDisplayIdentity({ name: 'Treasury', ensName: 'treasury.eth' }, true)).toEqual({
+      primary: 'Treasury',
+      secondary: 'treasury.eth'
+    })
+  })
+
+  it('keeps incomplete legacy identity safe', () => {
+    expect(accountDisplayIdentity()).toEqual({ primary: 'Account', secondary: '' })
+  })
 })
 
 describe('#hasAddress', () => {

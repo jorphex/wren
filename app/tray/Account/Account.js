@@ -276,7 +276,8 @@ const PERCH_MODULE_MIN_HEIGHT = {
   requests: 106,
   chains: 66,
   activity: 340,
-  permissions: 100
+  permissions: 100,
+  settings: 104
 }
 const getAccountModuleGap = () => ACCOUNT_MODULE_SECTION_GAP
 

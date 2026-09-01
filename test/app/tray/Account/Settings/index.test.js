@@ -20,8 +20,8 @@ afterAll(() => {
   delete global.ResizeObserver
 })
 
-const renderWithStore = (Component, props = {}) => {
-  const store = Restore.create({ main: { accounts: { [account]: { name: 'Primary' } } } }, {})
+const renderWithStore = (Component, props = {}, accountState = { name: 'Primary' }, mainState = {}) => {
+  const store = Restore.create({ main: { ...mainState, accounts: { [account]: accountState } } }, {})
   class TestComponent extends Component {
     constructor(componentProps) {
       super(componentProps, { store })
@@ -42,7 +42,7 @@ it('restores the persisted name instead of submitting an empty name', () => {
   expect(screen.getByDisplayValue('Primary')).toBeTruthy()
 })
 
-it('keeps the expanded account name editor in the keyboard sequence', async () => {
+it('focuses the expanded account name editor and saves with Enter', async () => {
   const { user } = renderWithStore(SettingsExpanded, { expanded: true })
   const input = screen.getByRole('textbox', { name: 'Account name' })
 
@@ -51,12 +51,44 @@ it('keeps the expanded account name editor in the keyboard sequence', async () =
   expect(input.parentElement.classList.contains('panelBlock')).toBe(true)
   expect(input.closest('.panelBlockValues')).toBeNull()
 
-  await user.tab()
   expect(document.activeElement).toBe(input)
+  expect(input.maxLength).toBe(128)
   await user.clear(input)
   await user.type(input, 'Treasury{Enter}')
 
   expect(link.send).toHaveBeenCalledWith('tray:renameAccount', account, 'Treasury')
+})
+
+it('keeps unnamed legacy accounts safe', () => {
+  renderWithStore(SettingsExpanded, { expanded: true }, {})
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+
+  expect(input.value).toBe('')
+  expect(() => fireEvent.blur(input)).not.toThrow()
+  expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', account, expect.anything())
+})
+
+it('cancels an account name edit with Escape', () => {
+  renderWithStore(SettingsExpanded, { expanded: true })
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+
+  fireEvent.change(input, { target: { value: 'Temporary name' } })
+  fireEvent.keyDown(input, { key: 'Escape' })
+  fireEvent.blur(input)
+
+  expect(screen.getByDisplayValue('Primary')).toBeTruthy()
+  expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', account, 'Temporary name')
+})
+
+it('opens account settings from the visible rename action', () => {
+  renderWithStore(SettingsPreview)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rename account' }))
+
+  expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
+    view: 'expandedModule',
+    data: { id: 'settings', account, title: 'Account settings' }
+  })
 })
 
 it('requires a separately armed second action before removing an account', () => {
@@ -113,6 +145,19 @@ it('names the account and consequence in a separate removal confirmation', () =>
   )
 })
 
+it('uses the local account name with ENS when the preference is enabled', () => {
+  renderWithStore(
+    SettingsPreview,
+    {},
+    { name: 'Treasury', ensName: 'treasury.eth' },
+    { showLocalNameWithENS: true }
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove account' }))
+
+  expect(screen.getByRole('alertdialog', { name: 'Remove Treasury?' })).toBeTruthy()
+})
+
 it('cancels account removal with Escape and restores trigger focus', () => {
   renderWithStore(SettingsPreview)
   const remove = screen.getByRole('button', { name: 'Remove account' })
@@ -160,9 +205,9 @@ it('explains when durable account removal is finishing in the background', () =>
   expect(screen.getByRole('button', { name: 'Removing account\u2026' }).disabled).toBe(true)
 })
 
-it('keeps the compact account action row focused on safe removal', () => {
+it('keeps rename and removal available as separate account actions', () => {
   renderWithStore(SettingsPreview)
 
-  expect(screen.queryByRole('button', { name: 'Update account name' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Rename account' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
 })

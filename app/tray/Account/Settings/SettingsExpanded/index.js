@@ -24,7 +24,7 @@ export class SettingsExpanded extends React.Component {
   componentDidMount() {
     if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
     this.nameObs = this.store.observer(() => {
-      const name = this.store('main.accounts', this.props.account, 'name')
+      const name = this.store('main.accounts', this.props.account, 'name') || ''
       if (name !== this.state.name) this.setState({ name })
     })
   }
@@ -36,7 +36,7 @@ export class SettingsExpanded extends React.Component {
 
   saveName() {
     const currentName = this.store('main.accounts', this.props.account, 'name') || ''
-    const name = this.state.name.trim()
+    const name = String(this.state.name || '').trim()
 
     if (name && name !== currentName) link.send('tray:renameAccount', this.props.account, name)
     this.setState({ name: name || currentName })
@@ -62,6 +62,8 @@ export class SettingsExpanded extends React.Component {
               className='wrenInput panelBlockItem'
               type='text'
               aria-label='Account name'
+              autoFocus
+              maxLength={128}
               value={this.state.name}
               onChange={(e) => {
                 this.setState({ name: e.target.value })
@@ -70,6 +72,7 @@ export class SettingsExpanded extends React.Component {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur()
                 if (e.key === 'Escape') {
+                  e.preventDefault()
                   const name = this.store('main.accounts', this.props.account, 'name') || ''
                   this.setState({ name })
                 }

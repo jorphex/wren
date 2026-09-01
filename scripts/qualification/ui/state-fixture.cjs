@@ -1680,6 +1680,10 @@ const fixtureFor = (scenario) => {
 
   if (scenario.state === 'account-ledger' || scenario.state === 'account-balances') {
     prepareSelectedAccount(state, scenario.requestsAbsent ? undefined : accountAccessRequest())
+    if (scenario.localNameWithENS) {
+      state.main.showLocalNameWithENS = true
+      state.main.accounts[QUALIFICATION_ACCOUNT].ensName = 'workshop.eth'
+    }
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
@@ -1739,7 +1743,7 @@ const fixtureFor = (scenario) => {
       activity: { height: 332 },
       permissions: { height: 92 },
       signer: { height: 52 },
-      settings: { height: 52 }
+      settings: { height: scenario.settingsHeight || 104 }
     }
     if (scenario.state === 'account-balances') {
       state.windows.panel.nav = [
@@ -2354,6 +2358,15 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height = 132
+  }
+
+  if (scenario.expandedAccountSettings) {
+    state.windows.panel.nav = [
+      {
+        view: 'expandedModule',
+        data: { id: 'settings', account: QUALIFICATION_ACCOUNT, title: 'Account settings' }
+      }
+    ]
   }
 
   return state

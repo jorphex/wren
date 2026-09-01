@@ -4,6 +4,12 @@ Detailed release notes and platform boundaries live in
 [`release-notes`](release-notes) and on the
 [GitHub releases page](https://github.com/jorphex/wren/releases).
 
+## Unreleased
+
+### Fixed
+
+- Restored account renaming in Account settings, including local-name display alongside ENS.
+
 ## 0.1.5 - 2026-08-31
 
 ### Added

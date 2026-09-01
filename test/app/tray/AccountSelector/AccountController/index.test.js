@@ -66,6 +66,24 @@ test('shows pending work in a chooser row without restoring the legacy card', ()
   expect(screen.queryByText('Show account activity')).toBeNull()
 })
 
+test('shows the local account name with ENS in chooser rows when requested', () => {
+  const id = '0x0000000000000000000000000000000000000002'
+  const account = new Account({ id, name: 'Treasury', status: 'ok', lastSignerType: 'seed' })
+  account.store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.showLocalNameWithENS') return true
+    if (key === `main.accounts.${id}`) {
+      return { address: id, name: 'Treasury', ensName: 'treasury.eth', requests: {} }
+    }
+    return ''
+  }
+
+  render(account.render())
+
+  expect(screen.getByText('Treasury')).toBeTruthy()
+  expect(screen.getByText('treasury.eth')).toBeTruthy()
+})
+
 test('counts only actionable requests in the account chooser badge', () => {
   const id = '0x0000000000000000000000000000000000000002'
   const account = new Account({ id, name: 'Garden', status: 'ok', lastSignerType: 'seed' })

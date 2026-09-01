@@ -107,6 +107,32 @@ it('keeps account identity and copy in the top bar without a redundant network l
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', '0x000000000000000000000000000000000000dEaD')
 })
 
+it('shows the local account name with ENS when the preference is enabled', () => {
+  const store = (...path) => {
+    const key = path.join('.')
+    if (key === 'main.showLocalNameWithENS') return true
+    if (key === 'selected.hideBalances') return false
+    if (key === 'selected.showAccounts') return false
+    if (key === 'windows.dash.showing') return false
+  }
+  store.toggleHideBalances = jest.fn()
+  store.toggleShowAccounts = jest.fn()
+  const selector = new AccountSelector({}, { store })
+  selector.store = store
+
+  render(
+    selector.renderCurrentAccount({
+      id: '0x000000000000000000000000000000000000dead',
+      address: '0x000000000000000000000000000000000000dead',
+      name: 'Treasury',
+      ensName: 'treasury.eth'
+    })
+  )
+
+  expect(screen.getByText('Treasury')).toBeTruthy()
+  expect(screen.getByText('treasury.eth')).toBeTruthy()
+})
+
 it('toggles the dashboard from the selected-account header', async () => {
   const store = (...path) => {
     const key = path.join('.')

@@ -2888,8 +2888,8 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.settingsPreviewActions',
-    requiredControls: ['View all activity'],
-    requiredText: ['APPS WITH ACCESS', 'Signer', 'Remove account'],
+    requiredControls: ['View all activity', 'Rename account', 'Remove account'],
+    requiredText: ['APPS WITH ACCESS', 'Signer', 'Rename account', 'Remove account'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll',
     layoutExpectations: [
@@ -2922,14 +2922,40 @@ const reviewScenarios = () => [
     id: 'tray-account-removal-confirm-full-1',
     renderer: 'tray',
     state: 'account-ledger',
+    settingsHeight: 192,
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     action: { type: 'clickText', text: 'Remove account' },
     ready: '[role="alertdialog"]',
+    requiredControls: ['Cancel', 'Confirm removal'],
     requiredText: ['Remove Workshop Software Account With A Long Name?', 'Cancel', 'Confirm removal'],
     captureScroll: 'bottom',
     captureScrollSelector: '.accountMainScroll'
+  },
+  {
+    id: 'tray-account-rename-expanded-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    expandedAccountSettings: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '#wren-account-name',
+    expectedInitialFocus: 'Account name',
+    requiredControls: ['Back', 'Account name'],
+    requiredText: ['Account settings', 'Account', 'Address']
+  },
+  {
+    id: 'tray-account-local-name-with-ens-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    localNameWithENS: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.accountSwitcherBar',
+    requiredText: ['Workshop Software Account With A Long Name', 'workshop.eth']
   }
 ]
 
