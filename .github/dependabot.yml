@@ -22,9 +22,32 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
+      - dependency-name: '@ethereumjs/common'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@ethereumjs/tx'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@metamask/eth-sig-util'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@scure/bip32'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: conf
+        update-types:
+          - version-update:semver-major
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
       - dependency-name: query-string
         update-types:
           - version-update:semver-major
+      # tar-stream 3.2.1 exposes StreamX types that are incompatible with the
+      # Node stream bridge used by the bounded dapp archive extractor.
+      - dependency-name: tar-stream
+        versions:
+          - 3.2.1
       - dependency-name: typescript
         update-types:
           - version-update:semver-major
