@@ -1,8 +1,31 @@
 .clearPermissionsButton
-  padding var(--wren-space-2)
+  display grid
+  min-height 60px
+  padding var(--wren-space-2) var(--wren-space-3)
+  align-items center
+  gap var(--wren-space-3)
+  grid-template-columns minmax(0, 1fr) auto
+  border-top 1px solid var(--wren-border-subtle)
+
+.clearPermissionsSummary
+  min-width 0
+  display grid
+  gap 2px
+
+  strong
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+    font-weight 550
+    line-height 18px
+
+  span
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    line-height 18px
 
 .clearPermissionsConfirm
   display flex
+  grid-column 1 / -1
   flex-direction column
   gap var(--wren-space-2)
 
@@ -27,10 +50,17 @@
   gap var(--wren-space-2)
 
 .clearPermissionsAction
-  width 100%
+  width auto
 
 button.wrenControl.clearPermissionsAction
   min-height 44px
+
+.clearPermissionsButton > button.wrenControl.clearPermissionsAction
+  min-width 88px
+  color var(--wren-text-tertiary)
+
+  &:hover:not(:disabled)
+    color var(--wren-danger)
 
 .clearPermissionsActions .clearPermissionsAction
   flex 1
@@ -52,16 +82,39 @@ button.wrenControl.clearPermissionsAction
 
 .revokeAccessButton
   flex none
-  padding 0 var(--wren-space-2)
+  padding 0
 
 button.wrenControl.revokeAccessButton
+  min-width 68px
   min-height 44px
+  padding 0
   color var(--wren-text-tertiary)
   font-size var(--wren-type-caption)
   font-weight 500
 
   &:hover:not(:disabled)
     color var(--wren-danger)
+
+  &:hover:not(:disabled),
+  &:active:not(:disabled)
+    border-color transparent
+    background transparent
+
+  &:hover:not(:disabled) .revokeAccessLabel
+    border-color rgba(213, 116, 104, .32)
+    color var(--wren-danger)
+    background var(--wren-danger-soft)
+
+.revokeAccessLabel
+  display inline-flex
+  min-height 28px
+  padding 0 var(--wren-space-2)
+  align-items center
+  justify-content center
+  box-sizing border-box
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background rgba(255, 255, 255, .015)
 
 .revokeAccessDialog
   position absolute
@@ -205,14 +258,14 @@ button.wrenControl.revokeAccessButton
 
 .connectedAppsList
   .signerPermission
-    min-height 52px
-    padding var(--wren-space-1) var(--wren-space-2)
+    min-height 60px
+    padding var(--wren-space-1) var(--wren-space-2) var(--wren-space-1) var(--wren-space-3)
     border-bottom 0
 
   .signerPermissionControls
-    min-height 44px
+    min-height 52px
     align-items center
-    gap var(--wren-space-3)
+    gap var(--wren-space-2)
 
   .signerPermissionOrigin
     width auto
@@ -230,6 +283,25 @@ button.wrenControl.revokeAccessButton
   .revokeAccessButton
     flex none
 
+.connectedAppMark
+  width 30px
+  height 30px
+  display inline-flex
+  flex none
+  align-items center
+  justify-content center
+  box-sizing border-box
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  color var(--wren-text-tertiary)
+  background var(--wren-surface-inset)
+
+.connectedAppKind
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  line-height 18px
+
 .signerPermissionPrincipal
   overflow-wrap anywhere
   color var(--wren-text-tertiary)
@@ -239,18 +311,136 @@ button.wrenControl.revokeAccessButton
 
 .dappGuardrailChainActions
   display grid
-  gap var(--wren-space-1)
-  padding var(--wren-space-1) 0 var(--wren-space-2)
+  gap 0
+  padding 0
+  border-top 1px solid var(--wren-border-subtle)
 
 .dappGuardrailManage
   width 100%
   height auto
-  padding var(--wren-space-2)
+  padding var(--wren-space-2) 0
   overflow-wrap anywhere
   white-space normal
 
 button.wrenControl.dappGuardrailManage
-  min-height 44px
+  min-height 52px
+  justify-content space-between
+  border 0
+  border-radius 0
+  text-align left
+
+button.wrenControl.dappGuardrailManage.wrenControlCompact
+  min-height 52px
+
+.dappGuardrailIdentity
+  min-width 0
+  display grid
+  gap 1px
+
+  strong
+    overflow hidden
+    color var(--wren-text-primary)
+    font-size var(--wren-type-small)
+    font-weight 550
+    line-height 18px
+    text-overflow ellipsis
+    white-space nowrap
+
+  > span
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    font-weight 400
+    line-height 18px
+
+.dappGuardrailAction
+  flex none
+  color var(--wren-text-secondary)
+  font-size var(--wren-type-caption)
+  font-weight 550
+
+.connectedAppDetails
+  border-top 1px solid var(--wren-border-subtle)
+
+  summary
+    min-height 44px
+    display flex
+    align-items center
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+    font-weight 500
+    cursor pointer
+    list-style none
+
+    &:after
+      content '+'
+      margin-left auto
+      color var(--wren-text-tertiary)
+      font-family var(--wren-font-mono)
+      font-size 14px
+
+    &:focus-visible
+      outline 2px solid var(--wren-focus)
+      outline-offset -2px
+
+  &[open] summary:after
+    content '−'
+
+.connectedAppConnection
+  display grid
+  gap var(--wren-space-1)
+  padding 0 0 var(--wren-space-3)
+
+  span
+    color var(--wren-text-tertiary)
+    font-size var(--wren-type-caption)
+
+  code
+    overflow-wrap anywhere
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-mono)
+    font-size var(--wren-type-caption)
+    line-height 18px
+
+.permissionsLedgerView
+  .connectedAppsList
+    margin 0
+    padding 0
+    border 0
+    background transparent
+
+    .moduleMainPermissions
+      display grid
+      overflow visible
+      gap var(--wren-space-3)
+      border 0
+      background transparent
+
+    .clusterRow + .clusterRow
+      margin-top 0
+
+    .clusterValue
+      overflow visible
+      border-radius var(--wren-radius-md)
+      background var(--wren-surface-card)
+
+    .signerPermission
+      min-height 0
+      padding var(--wren-space-3)
+
+    .signerPermissionControls
+      min-height 44px
+
+    .signerPermissionOrigin
+      font-family var(--wren-font-ui)
+      font-size var(--wren-type-small)
+      font-weight 600
+
+    .connectedAppMark
+      width 34px
+      height 34px
+
+    .revokeAccessButton
+      margin-left var(--wren-space-1)
 
 .dappGuardrailNoChains
   color var(--wren-text-tertiary)

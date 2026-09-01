@@ -16,7 +16,7 @@ import {
 import link from '../../../../../resources/link'
 import { MAX_TIMER_DELAY } from '../../../../../resources/domain/connectedApps'
 import { FRAME_SEND_ORIGIN } from '../../../../../resources/domain/origin'
-import { act, render, screen } from '../../../../componentSetup'
+import { act, render, screen, within } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({
   send: jest.fn(),
@@ -89,6 +89,8 @@ it('keeps revoke quiet without reducing its accessible name', () => {
   const revoke = screen.getByRole('button', { name: 'Revoke access' })
   expect(revoke.textContent).toBe('Revoke')
   expect(revoke.classList.contains('wrenControlGhost')).toBe(true)
+  expect(revoke.querySelector('.revokeAccessLabel')).toBeTruthy()
+  expect(document.querySelector('.connectedAppMark')).toBeTruthy()
   expect(screen.getByText('alpha.example').closest('.signerPermissionIdentity')).toBeTruthy()
 })
 
@@ -654,9 +656,10 @@ it('opens account-scoped management with the app connection ID and granted chain
 
   await user.click(screen.getAllByRole('button', { name: 'Add guardrail · Chain 0x1 (0x1)' })[0])
 
-  expect(screen.getByText('App connection ID first')).toBeTruthy()
-  expect(screen.getByText(account)).toBeTruthy()
-  expect(screen.getByText('first')).toBeTruthy()
+  const editor = screen.getByRole('region', { name: 'Guardrail for alpha.example' })
+  expect(within(editor).getByText('App connection ID')).toBeTruthy()
+  expect(within(editor).getByText(account)).toBeTruthy()
+  expect(within(editor).getByText('first')).toBeTruthy()
   expect(screen.getByText('Chain 0x1 · 0x1')).toBeTruthy()
   expect(document.activeElement).toBe(
     screen.getByRole('combobox', { name: 'When a request exceeds a restriction' })
@@ -669,7 +672,10 @@ it('revokes the stored permission key while retaining its app connection ID', as
   }
   const { user } = renderWithStore(DappsPermissionsExpanded, { expanded: true }, storedPermissions)
 
-  expect(screen.getByText('App connection ID principal')).toBeTruthy()
+  const app = screen.getByRole('group', { name: 'alpha.example app access' })
+  await user.click(within(app).getByText('Connection details'))
+  expect(within(app).getByText('App connection ID')).toBeTruthy()
+  expect(within(app).getByText('principal')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Revoke access' }))
   await user.click(screen.getByRole('button', { name: 'Confirm revoke' }))
 
@@ -721,7 +727,7 @@ it('requires safe confirmation and keeps a delayed clear pending without a false
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   const trigger = screen.getByRole('button', { name: 'Revoke all app access' })
   expect(document.activeElement).toBe(trigger)
-  expect(trigger.classList.contains('wrenControlSecondary')).toBe(true)
+  expect(trigger.classList.contains('wrenControlGhost')).toBe(true)
   expect(trigger.classList.contains('wrenControlDanger')).toBe(false)
 
   await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))

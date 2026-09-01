@@ -255,6 +255,9 @@ export class DappsPermissionsPreview extends React.Component {
                   <ClusterValue pointerEvents={true}>
                     <div className='signerPermission'>
                       <div className='signerPermissionControls'>
+                        <span className='connectedAppMark' aria-hidden='true'>
+                          <Icon name='apps' size={16} />
+                        </span>
                         <div className='signerPermissionIdentity'>
                           <div className='signerPermissionOrigin'>{permissions[o].origin}</div>
                         </div>

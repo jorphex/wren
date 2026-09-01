@@ -20,6 +20,7 @@ import RevokeAccess, {
 import DappGuardrailEditor, { canonicalChainId } from '../DappGuardrailEditor'
 
 import { ClusterBox, Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import Icon from '../../../../../resources/Components/Icon'
 import WrenEmptyState from '../../../../../resources/Components/WrenEmptyState'
 import DialogSurface from '../../../../../resources/Components/DialogSurface'
 
@@ -437,14 +438,28 @@ export class DappsPermissionsExpanded extends React.Component {
                   const chains = (permission.caveats?.[0]?.value?.chains || [])
                     .map(canonicalChainId)
                     .filter(Boolean)
+                  const origin = this.store('main.origins', originId) || {}
+                  const connectionKind =
+                    origin.provenance === 'native'
+                      ? 'Native app'
+                      : origin.provenance === 'companion'
+                        ? 'Browser app'
+                        : 'Website'
                   return (
                     <ClusterRow key={o}>
                       <ClusterValue pointerEvents={true}>
-                        <div className='signerPermission'>
+                        <div
+                          className='signerPermission'
+                          role='group'
+                          aria-label={`${permission.origin} app access`}
+                        >
                           <div className='signerPermissionControls'>
+                            <span className='connectedAppMark' aria-hidden='true'>
+                              <Icon name='apps' size={16} />
+                            </span>
                             <div className='signerPermissionIdentity'>
                               <div className='signerPermissionOrigin'>{permission.origin}</div>
-                              <div className='signerPermissionPrincipal'>App connection ID {originId}</div>
+                              <div className='connectedAppKind'>{connectionKind}</div>
                             </div>
                             <RevokeAccess
                               account={this.props.account}
@@ -458,6 +473,13 @@ export class DappsPermissionsExpanded extends React.Component {
                               onRevokeSettled={(id, result) => this.revokeSettled(id, result)}
                             />
                           </div>
+                          <details className='connectedAppDetails'>
+                            <summary>Connection details</summary>
+                            <div className='connectedAppConnection'>
+                              <span>App connection ID</span>
+                              <code>{originId}</code>
+                            </div>
+                          </details>
                           <div className='dappGuardrailChainActions'>
                             {chains.length ? (
                               chains.map((chainId) => {
@@ -471,7 +493,7 @@ export class DappsPermissionsExpanded extends React.Component {
                                 return (
                                   <button
                                     type='button'
-                                    className='dappGuardrailManage wrenControl wrenControlSecondary'
+                                    className='dappGuardrailManage wrenControl wrenControlGhost wrenControlCompact'
                                     key={chainId}
                                     ref={this.guardrailButtonRef(originId, chainId)}
                                     aria-expanded={
@@ -479,8 +501,13 @@ export class DappsPermissionsExpanded extends React.Component {
                                       this.state.guardrailEditor?.chainId === chainId
                                     }
                                     onClick={() => this.openGuardrail(originId, chainId)}
+                                    aria-label={`${guardrail ? 'Edit' : 'Add'} guardrail · ${chainName} (${chainId})`}
                                   >
-                                    {guardrail ? 'Edit' : 'Add'} guardrail · {chainName} ({chainId})
+                                    <span className='dappGuardrailIdentity'>
+                                      <strong>{chainName}</strong>
+                                      <span>{guardrail ? 'Guardrail active' : 'No guardrail'}</span>
+                                    </span>
+                                    <span className='dappGuardrailAction'>{guardrail ? 'Edit' : 'Add'}</span>
                                   </button>
                                 )
                               })
@@ -596,14 +623,21 @@ export class DappsPermissionsExpanded extends React.Component {
                 </div>
               </DialogSurface>
             ) : (
-              <button
-                type='button'
-                className='clearPermissionsAction wrenControl wrenControlSecondary'
-                onClick={() => this.beginClear()}
-                ref={this.clearButtonRef}
-              >
-                Revoke all app access
-              </button>
+              <>
+                <div className='clearPermissionsSummary'>
+                  <strong>All app access</strong>
+                  <span>Disconnect every app from this account.</span>
+                </div>
+                <button
+                  type='button'
+                  className='clearPermissionsAction wrenControl wrenControlGhost wrenControlCompact'
+                  aria-label='Revoke all app access'
+                  onClick={() => this.beginClear()}
+                  ref={this.clearButtonRef}
+                >
+                  Revoke all
+                </button>
+              </>
             )}
           </div>
         )}

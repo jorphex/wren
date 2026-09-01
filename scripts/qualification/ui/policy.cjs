@@ -2527,9 +2527,48 @@ const reviewScenarios = () => [
       'Apps with access',
       'https://treasury.workshop.example',
       'Local treasury app',
-      'App connection ID'
+      'Website',
+      'Native app',
+      'Guardrail active',
+      'No guardrail'
     ],
-    layoutExpectations: [{ kind: 'hidden', selector: '.accountSelectorOpen' }]
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
+      { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
+      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
+    ]
+  },
+  {
+    id: 'tray-account-permissions-short-1.5',
+    renderer: 'tray',
+    state: 'account-permissions',
+    glideSide: 'left',
+    workspaceOpen: true,
+    scale: 1.5,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.permissionsLedgerView .revokeAccessButton',
+    requiredControls: [
+      'Back',
+      'Revoke access',
+      'Edit guardrail · Ethereum (0x1)',
+      'Add guardrail · Ethereum (0x1)',
+      'Revoke all app access'
+    ],
+    requiredText: [
+      'Apps with access',
+      'https://treasury.workshop.example',
+      'Local treasury app',
+      'Website',
+      'Native app'
+    ],
+    layoutExpectations: [
+      { kind: 'hidden', selector: '.accountSelectorOpen' },
+      { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
+      { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
+      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
+    ]
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -2965,8 +3004,9 @@ const reviewScenarios = () => [
     captureScrollSelector: '.accountModule-activity',
     requiredText: ['ACTIVITY', 'No activity yet', 'Completed wallet requests will appear here'],
     layoutExpectations: [
-      { kind: 'size', selector: '.accountModule-activity', height: 140 },
-      { kind: 'computed-style', selector: '.activityEmpty', property: 'gap', value: '2px' },
+      { kind: 'size', selector: '.accountModule-activity', height: 116 },
+      { kind: 'size', selector: '.activityEmpty', height: 68 },
+      { kind: 'computed-style', selector: '.activityEmpty', property: 'gap', value: '1px' },
       {
         kind: 'computed-style',
         selector: '.activityEmpty span',

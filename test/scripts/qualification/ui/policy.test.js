@@ -74,6 +74,27 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   )
 })
 
+it('qualifies account app access at full and short responsive geometry', () => {
+  const scenarios = scenarioMatrix({ includeReview: true }).filter(({ id }) =>
+    id.startsWith('tray-account-permissions-')
+  )
+
+  expect(scenarios.map(({ id }) => id)).toEqual([
+    'tray-account-permissions-full-1',
+    'tray-account-permissions-short-1.5'
+  ])
+  for (const scenario of scenarios) {
+    expect(scenario.requiredControls).toEqual(
+      expect.arrayContaining([
+        'Revoke access',
+        'Edit guardrail · Ethereum (0x1)',
+        'Add guardrail · Ethereum (0x1)',
+        'Revoke all app access'
+      ])
+    )
+  }
+})
+
 it('qualifies unavailable explorer credential status without secure-storage claims', () => {
   const scenario = scenarioMatrix({ includeReview: true }).find(
     ({ id }) => id === 'dash-settings-contract-verification-unavailable-short-1.5'
@@ -642,7 +663,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     captureScrollSelector: '.accountModule-activity',
     ready: '.activityModuleEmpty',
     layoutExpectations: expect.arrayContaining([
-      { kind: 'size', selector: '.accountModule-activity', height: 140 },
+      { kind: 'size', selector: '.accountModule-activity', height: 116 },
+      { kind: 'size', selector: '.activityEmpty', height: 68 },
       {
         kind: 'computed-style',
         selector: '.accountModule-settings .accountModuleCard',

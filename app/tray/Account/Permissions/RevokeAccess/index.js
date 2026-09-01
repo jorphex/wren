@@ -192,7 +192,7 @@ export class RevokeAccess extends React.Component {
           disabled={this.state.pending}
           onClick={() => this.open()}
         >
-          Revoke
+          <span className='revokeAccessLabel'>Revoke</span>
         </button>
         {this.renderDialog()}
       </>
