@@ -2992,6 +2992,12 @@ const reviewScenarios = () => [
         selector: '.accountViewBack',
         property: 'left',
         value: '12px'
+      },
+      {
+        kind: 'full-width',
+        selector: '.accountSettingsEditor',
+        container: '.accountSettingsExpandedView',
+        inset: 20
       }
     ]
   },

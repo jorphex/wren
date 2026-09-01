@@ -624,6 +624,12 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
         selector: '.accountViewBack',
         property: 'top',
         value: '12px'
+      },
+      {
+        kind: 'full-width',
+        selector: '.accountSettingsEditor',
+        container: '.accountSettingsExpandedView',
+        inset: 20
       }
     ])
   })
