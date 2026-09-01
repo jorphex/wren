@@ -118,7 +118,7 @@
     "eth-ens-namehash": "2.0.8",
     "eth-provider": "0.13.7",
     "ethers": "6.17.0",
-    "fs-extra": "11.1.0",
+    "fs-extra": "11.4.0",
     "getos": "3.2.1",
     "gridplus-sdk": "4.0.0",
     "hotkeys-js": "3.10.1",
