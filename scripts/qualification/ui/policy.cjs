@@ -2948,6 +2948,8 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.activityModuleEmpty',
+    captureScroll: 'target',
+    captureScrollSelector: '.accountModule-activity',
     requiredText: ['ACTIVITY', 'No activity yet', 'Completed wallet requests will appear here'],
     layoutExpectations: [
       { kind: 'size', selector: '.accountModule-activity', height: 140 },
@@ -2968,6 +2970,20 @@ const reviewScenarios = () => [
       { kind: 'size', selector: '.settingsPreviewRemove', height: 44 }
     ]
   },
+  ...[166, 224, 282, 340].map((height, index) => ({
+    id: `tray-account-ledger-${index + 1}-activity-full-1`,
+    renderer: 'tray',
+    state: 'account-ledger',
+    activityCount: index + 1,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityContinuation',
+    captureScroll: 'target',
+    captureScrollSelector: '.accountModule-activity',
+    requiredControls: ['View all activity'],
+    layoutExpectations: [{ kind: 'size', selector: '.accountModule-activity', height }]
+  })),
   {
     id: 'tray-account-removal-confirm-full-1',
     renderer: 'tray',

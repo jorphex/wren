@@ -1738,7 +1738,10 @@ const fixtureFor = (scenario) => {
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
       workshop: activePermission('workshop', 'workshop.example')
     }
-    state.main.activity = scenario.activityEmpty ? [] : qualificationActivity()
+    const activity = qualificationActivity()
+    state.main.activity = scenario.activityEmpty
+      ? []
+      : activity.slice(0, scenario.activityCount || activity.length)
     state.main.origins = {
       workshop: { name: 'workshop.example' },
       garden: { name: 'garden.example' }
@@ -1750,7 +1753,7 @@ const fixtureFor = (scenario) => {
       requests: { height: 135 },
       chains: { height: 66 },
       balances: { height: scenario.balanceArtwork ? 396 : 318 },
-      activity: { height: 332 },
+      activity: { height: 100 + (scenario.activityCount || 4) * 58 },
       permissions: { height: 92 },
       signer: { height: 52 },
       settings: { height: scenario.settingsHeight || 104 }

@@ -6,7 +6,8 @@ import {
   AccountMain,
   AccountNameEditor,
   EMPTY_ACTIVITY_MODULE_HEIGHT,
-  accountModuleHeight
+  accountModuleHeight,
+  activityModuleMinHeight
 } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
@@ -17,11 +18,20 @@ jest.mock('../../../../resources/link', () => ({
 
 const address = '0x0000000000000000000000000000000000000001'
 
-it('uses compact height only when the selected account has no Activity entries', () => {
+it('sizes Activity to its visible rows and caps the preview at four', () => {
   expect(accountModuleHeight('activity', 332, address, [])).toBe(EMPTY_ACTIVITY_MODULE_HEIGHT)
-  expect(
-    accountModuleHeight('activity', 332, address.toUpperCase(), [{ account: address, id: 'activity-entry' }])
-  ).toBe(340)
+  expect(activityModuleMinHeight(1)).toBe(166)
+  expect(activityModuleMinHeight(2)).toBe(224)
+  expect(activityModuleMinHeight(3)).toBe(282)
+  expect(activityModuleMinHeight(4)).toBe(340)
+  expect(activityModuleMinHeight(5)).toBe(340)
+  expect(accountModuleHeight('activity', 158, address.toUpperCase(), [{ account: address }])).toBe(166)
+  expect(accountModuleHeight('activity', 236, address, [{ account: address }, { account: address }])).toBe(
+    236
+  )
+  expect(accountModuleHeight('activity', 158, address, [{ account: '0x2' }])).toBe(
+    EMPTY_ACTIVITY_MODULE_HEIGHT
+  )
   expect(accountModuleHeight('settings', 72, address, [])).toBe(104)
 })
 

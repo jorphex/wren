@@ -638,6 +638,8 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const emptyActivity = scenarios.find(({ id }) => id === 'tray-account-ledger-empty-activity-full-1')
   expect(emptyActivity).toMatchObject({
     activityEmpty: true,
+    captureScroll: 'target',
+    captureScrollSelector: '.accountModule-activity',
     ready: '.activityModuleEmpty',
     layoutExpectations: expect.arrayContaining([
       { kind: 'size', selector: '.accountModule-activity', height: 140 },
@@ -652,6 +654,21 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     ])
   })
   expect(fixtureFor(emptyActivity).main.activity).toEqual([])
+  const activityPreviewHeights = [166, 224, 282, 340]
+  activityPreviewHeights.forEach((height, index) => {
+    const activityCount = index + 1
+    const preview = scenarios.find(({ id }) => id === `tray-account-ledger-${activityCount}-activity-full-1`)
+    expect(preview).toMatchObject({
+      activityCount,
+      captureScroll: 'target',
+      captureScrollSelector: '.accountModule-activity',
+      ready: '.activityContinuation',
+      layoutExpectations: [{ kind: 'size', selector: '.accountModule-activity', height }]
+    })
+    const previewFixture = fixtureFor(preview)
+    expect(previewFixture.main.activity).toHaveLength(activityCount)
+    expect(previewFixture.panel.account.modules.activity.height).toBe(height - 8)
+  })
   expect(removalConfirm).toMatchObject({
     action: { type: 'clickText', text: 'Remove account' },
     ready: '[role="alertdialog"]',

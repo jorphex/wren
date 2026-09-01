@@ -14,7 +14,7 @@ import Default from './Default'
 
 import Chains from './Chains'
 import Balances from './Balances'
-import Activity from './Activity'
+import Activity, { ACTIVITY_PREVIEW_LIMIT } from './Activity'
 import Gas from '../../../resources/Components/Monitor'
 import Inventory from './Inventory'
 import Permissions from './Permissions'
@@ -275,17 +275,26 @@ const ACCOUNT_MODULE_SECTION_GAP = 12
 const PERCH_MODULE_MIN_HEIGHT = {
   requests: 106,
   chains: 66,
-  activity: 340,
   permissions: 100,
   settings: 104
 }
 export const EMPTY_ACTIVITY_MODULE_HEIGHT = 140
+const ACTIVITY_MODULE_CHROME_HEIGHT = 108
+const ACTIVITY_ROW_MIN_HEIGHT = 58
+
+export const activityModuleMinHeight = (entryCount) =>
+  entryCount > 0
+    ? ACTIVITY_MODULE_CHROME_HEIGHT + Math.min(entryCount, ACTIVITY_PREVIEW_LIMIT) * ACTIVITY_ROW_MIN_HEIGHT
+    : EMPTY_ACTIVITY_MODULE_HEIGHT
 
 export const accountModuleHeight = (id, measuredHeight, account, activity = []) => {
   if (id === 'activity') {
     const normalizedAccount = String(account).toLowerCase()
-    const hasActivity = activity.some((entry) => entry.account === normalizedAccount)
-    if (!hasActivity) return EMPTY_ACTIVITY_MODULE_HEIGHT
+    const entryCount = activity.filter(
+      (entry) => String(entry.account).toLowerCase() === normalizedAccount
+    ).length
+    if (!entryCount) return EMPTY_ACTIVITY_MODULE_HEIGHT
+    return measuredHeight > 0 ? Math.max(measuredHeight, activityModuleMinHeight(entryCount)) : 0
   }
 
   return measuredHeight > 0 ? Math.max(measuredHeight, PERCH_MODULE_MIN_HEIGHT[id] || 0) : 0

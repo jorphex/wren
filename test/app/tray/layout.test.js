@@ -205,7 +205,7 @@ test('keeps account modules free of decorative seams', () => {
 })
 
 test('keeps activity on a ruled Perch ledger and exposes its expanded module', () => {
-  expect(accountSource).toMatch(/import Activity from '\.\/Activity'/)
+  expect(accountSource).toMatch(/import Activity(?:, \{[^}]+\})? from '\.\/Activity'/)
   expect(accountSource).toMatch(/activity: Activity/)
   expect(accountSource).toMatch(/crumb\.data\.title \|\|/)
   expect(accountSource).toMatch(
