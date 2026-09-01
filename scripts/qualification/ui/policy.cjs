@@ -2931,6 +2931,18 @@ const reviewScenarios = () => [
     layoutExpectations: [
       { kind: 'size', selector: '.accountModule-activity', height: 140 },
       { kind: 'computed-style', selector: '.settingsPreviewActions', property: 'display', value: 'grid' },
+      {
+        kind: 'computed-style',
+        selector: '.accountModule-settings .accountModuleCard',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountModule-settings .accountModuleCard',
+        property: 'boxShadow',
+        value: 'none'
+      },
       { kind: 'size', selector: '.settingsPreviewRename', height: 44 },
       { kind: 'size', selector: '.settingsPreviewRemove', height: 44 }
     ]

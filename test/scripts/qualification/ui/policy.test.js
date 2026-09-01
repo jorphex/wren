@@ -590,6 +590,12 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     ready: '.activityModuleEmpty',
     layoutExpectations: expect.arrayContaining([
       { kind: 'size', selector: '.accountModule-activity', height: 140 },
+      {
+        kind: 'computed-style',
+        selector: '.accountModule-settings .accountModuleCard',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
       { kind: 'size', selector: '.settingsPreviewRename', height: 44 },
       { kind: 'size', selector: '.settingsPreviewRemove', height: 44 }
     ])
