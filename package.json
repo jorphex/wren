@@ -121,7 +121,7 @@
     "fs-extra": "11.1.0",
     "getos": "3.2.1",
     "gridplus-sdk": "4.0.0",
-    "hotkeys-js": "3.10.1",
+    "hotkeys-js": "4.0.7",
     "ipfs-unixfs-importer": "17.0.1",
     "isutf8": "4.0.1",
     "kubo-rpc-client": "7.1.0",
