@@ -44,8 +44,9 @@ Detailed release notes and platform boundaries live in
 
 - Kept Linux x64 as the qualified release target, Windows x64 explicitly unsigned,
   and macOS x64/arm64 explicitly ad-hoc-signed, unnotarized, and unqualified.
-- Retained Wren Companion 0.1.2 and authenticated protocol 3 as the paired browser
-  boundary. Chrome store distribution is available; Firefox store review is pending.
+- Retained [Wren Companion 0.1.2](https://chromewebstore.google.com/detail/wren-companion/ifimccfajfbgligbhcgfapdagpnfkbhn)
+  and authenticated protocol 3 as the paired browser boundary. Chrome store
+  distribution is available; Firefox store review is pending.
 
 See [the complete 0.1.5 release notes](release-notes/v0.1.5.md).
 
