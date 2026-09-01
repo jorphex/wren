@@ -6,10 +6,18 @@ Detailed release notes and platform boundaries live in
 
 ## Unreleased
 
+## 0.1.6 - 2026-09-01
+
 ### Fixed
 
 - Restored account renaming in Account settings, including local-name display alongside ENS.
 - Renamed the global app view to Connected apps and matched its badge to the apps visible there.
+
+### Maintenance
+
+- Included the qualified dependency updates already merged after 0.1.5.
+
+See [the complete 0.1.6 release notes](release-notes/v0.1.6.md).
 
 ## 0.1.5 - 2026-08-31
 
