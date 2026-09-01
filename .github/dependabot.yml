@@ -13,10 +13,16 @@ updates:
     ignore:
       # These upgrades require coordinated toolchain/runtime migrations rather
       # than isolated package bumps.
+      - dependency-name: '@babel/core'
+        update-types:
+          - version-update:semver-major
       - dependency-name: '@babel/preset-env'
         update-types:
           - version-update:semver-major
       - dependency-name: '@babel/preset-react'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@babel/preset-typescript'
         update-types:
           - version-update:semver-major
       - dependency-name: '@types/node'
@@ -28,6 +34,9 @@ updates:
       - dependency-name: '@ethereumjs/tx'
         update-types:
           - version-update:semver-major
+      - dependency-name: '@eslint/js'
+        update-types:
+          - version-update:semver-major
       - dependency-name: '@metamask/eth-sig-util'
         update-types:
           - version-update:semver-major
@@ -37,7 +46,13 @@ updates:
       - dependency-name: conf
         update-types:
           - version-update:semver-major
+      - dependency-name: electron
+        update-types:
+          - version-update:semver-major
       - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
+      - dependency-name: lint-staged
         update-types:
           - version-update:semver-major
       - dependency-name: query-string
