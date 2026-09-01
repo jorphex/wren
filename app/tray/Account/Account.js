@@ -275,10 +275,10 @@ const ACCOUNT_MODULE_SECTION_GAP = 12
 const PERCH_MODULE_MIN_HEIGHT = {
   requests: 106,
   chains: 66,
-  permissions: 100,
+  permissions: 80,
   settings: 104
 }
-export const EMPTY_ACTIVITY_MODULE_HEIGHT = 116
+export const EMPTY_ACTIVITY_MODULE_HEIGHT = 100
 const ACTIVITY_MODULE_CHROME_HEIGHT = 108
 const ACTIVITY_ROW_MIN_HEIGHT = 58
 

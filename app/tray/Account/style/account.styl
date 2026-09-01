@@ -1273,6 +1273,7 @@
 #panel:has(.accountMainPerch),
 #panel:has(.balancesExpandedView),
 #panel:has(.activityModuleExpanded),
+#panel:has(.permissionsLedgerView),
 #panel:has(.accountSettingsExpandedView),
 #panel:has(.requestViewScroll)
   --wren-bg-canvas #070907
@@ -1454,6 +1455,10 @@
 
   > span:first-child
     display none
+
+.accountMainPerch .activityModuleEmpty .moduleHeader,
+.accountMainPerch .permissionsModuleHeader
+  height 36px
 
 .accountMainPerch .requestsPreview
   height auto

@@ -2534,6 +2534,12 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
+      {
+        kind: 'computed-style',
+        selector: '#panel',
+        property: 'backgroundBlendMode',
+        value: 'overlay, normal, normal, normal'
+      },
       { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
       { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
       { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
@@ -2565,6 +2571,12 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
+      {
+        kind: 'computed-style',
+        selector: '#panel',
+        property: 'backgroundBlendMode',
+        value: 'overlay, normal, normal, normal'
+      },
       { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
       { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
       { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
@@ -2977,7 +2989,9 @@ const reviewScenarios = () => [
         selector: '.connectedAppsList .signerPermissionIdentity',
         property: 'alignContent',
         value: 'center'
-      }
+      },
+      { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
+      { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
   },
   {
@@ -3004,8 +3018,9 @@ const reviewScenarios = () => [
     captureScrollSelector: '.accountModule-activity',
     requiredText: ['ACTIVITY', 'No activity yet', 'Completed wallet requests will appear here'],
     layoutExpectations: [
-      { kind: 'size', selector: '.accountModule-activity', height: 116 },
-      { kind: 'size', selector: '.activityEmpty', height: 68 },
+      { kind: 'size', selector: '.accountModule-activity', height: 100 },
+      { kind: 'size', selector: '.activityModuleEmpty .moduleHeader', height: 36 },
+      { kind: 'size', selector: '.activityEmpty', height: 64 },
       { kind: 'computed-style', selector: '.activityEmpty', property: 'gap', value: '1px' },
       {
         kind: 'computed-style',
