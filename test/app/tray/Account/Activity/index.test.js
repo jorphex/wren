@@ -523,6 +523,7 @@ it.each([
 it('uses an explicit privacy-preserving empty state', () => {
   render(<ActivityHarness account={account} entries={[]} moduleId='activity' />)
 
+  expect(document.querySelector('.activityModuleEmpty')).toBeTruthy()
   expect(screen.getByText('No activity yet')).toBeTruthy()
   expect(
     screen.getByText('Completed wallet requests will appear here without their private contents.')

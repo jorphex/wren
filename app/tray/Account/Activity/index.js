@@ -785,7 +785,9 @@ export class Activity extends React.Component {
     return (
       <section
         ref={this.moduleRef}
-        className={`activityModule${this.props.expanded ? ' activityModuleExpanded' : ''}`}
+        className={`activityModule${this.props.expanded ? ' activityModuleExpanded' : ''}${
+          entries.length ? '' : ' activityModuleEmpty'
+        }`}
         aria-label={this.props.expanded ? 'Account activity' : undefined}
       >
         {!this.props.expanded ? (

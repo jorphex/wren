@@ -584,6 +584,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   })
   expect(fixtureFor(ledgerBottom).panel.account.modules.settings.height).toBe(104)
   expect(fixtureFor(ledgerNoRequests).panel.account.moduleOrder).not.toContain('requests')
+  const emptyActivity = scenarios.find(({ id }) => id === 'tray-account-ledger-empty-activity-full-1')
+  expect(emptyActivity).toMatchObject({
+    activityEmpty: true,
+    ready: '.activityModuleEmpty',
+    layoutExpectations: expect.arrayContaining([
+      { kind: 'size', selector: '.accountModule-activity', height: 140 },
+      { kind: 'size', selector: '.settingsPreviewRename', height: 44 },
+      { kind: 'size', selector: '.settingsPreviewRemove', height: 44 }
+    ])
+  })
+  expect(fixtureFor(emptyActivity).main.activity).toEqual([])
   expect(removalConfirm).toMatchObject({
     action: { type: 'clickText', text: 'Remove account' },
     ready: '[role="alertdialog"]',

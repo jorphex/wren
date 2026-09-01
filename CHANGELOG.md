@@ -11,6 +11,7 @@ Detailed release notes and platform boundaries live in
 ### Fixed
 
 - Restored account renaming in Account settings, including local-name display alongside ENS.
+- Placed Rename and Remove in a balanced action row and reduced empty Activity to its actual content height.
 - Renamed the global app view to Connected apps and matched its badge to the apps visible there.
 
 ### Maintenance

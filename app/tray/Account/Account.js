@@ -279,6 +279,17 @@ const PERCH_MODULE_MIN_HEIGHT = {
   permissions: 100,
   settings: 104
 }
+export const EMPTY_ACTIVITY_MODULE_HEIGHT = 140
+
+export const accountModuleHeight = (id, measuredHeight, account, activity = []) => {
+  if (id === 'activity') {
+    const normalizedAccount = String(account).toLowerCase()
+    const hasActivity = activity.some((entry) => entry.account === normalizedAccount)
+    if (!hasActivity) return EMPTY_ACTIVITY_MODULE_HEIGHT
+  }
+
+  return measuredHeight > 0 ? Math.max(measuredHeight, PERCH_MODULE_MIN_HEIGHT[id] || 0) : 0
+}
 const getAccountModuleGap = () => ACCOUNT_MODULE_SECTION_GAP
 
 // account module is position absolute and with a translateX
@@ -378,12 +389,13 @@ class _AccountMain extends React.Component {
   render() {
     const accountModules = this.store('panel.account.modules')
     const accountModuleOrder = this.store('panel.account.moduleOrder')
+    const activity = this.store('main.activity') || []
     let slideHeight = 0
     let previousVisibleModuleId
     const modules = accountModuleOrder.map((id, i) => {
       const module = accountModules[id] || { height: 0 }
       const measuredHeight = module.height || 0
-      const height = measuredHeight > 0 ? Math.max(measuredHeight, PERCH_MODULE_MIN_HEIGHT[id] || 0) : 0
+      const height = accountModuleHeight(id, measuredHeight, this.props.id, activity)
       const gap = height > 0 && previousVisibleModuleId ? getAccountModuleGap(previousVisibleModuleId, id) : 0
       const top = slideHeight + gap
       slideHeight = top + height

@@ -2919,6 +2919,23 @@ const reviewScenarios = () => [
     requiredText: ['Ethereum', 'BALANCES', 'APPS WITH ACCESS']
   },
   {
+    id: 'tray-account-ledger-empty-activity-full-1',
+    renderer: 'tray',
+    state: 'account-ledger',
+    activityEmpty: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.activityModuleEmpty',
+    requiredText: ['ACTIVITY', 'No activity yet', 'Completed wallet requests will appear here'],
+    layoutExpectations: [
+      { kind: 'size', selector: '.accountModule-activity', height: 140 },
+      { kind: 'computed-style', selector: '.settingsPreviewActions', property: 'display', value: 'grid' },
+      { kind: 'size', selector: '.settingsPreviewRename', height: 44 },
+      { kind: 'size', selector: '.settingsPreviewRemove', height: 44 }
+    ]
+  },
+  {
     id: 'tray-account-removal-confirm-full-1',
     renderer: 'tray',
     state: 'account-ledger',

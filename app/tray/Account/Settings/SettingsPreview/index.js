@@ -5,7 +5,23 @@ import link from '../../../../../resources/link'
 import DialogSurface from '../../../../../resources/Components/DialogSurface'
 import { accountDisplayIdentity } from '../../../../../resources/domain/account'
 
-import { Cluster, ClusterRow, ClusterValue } from '../../../../../resources/Components/Cluster'
+import { Cluster } from '../../../../../resources/Components/Cluster'
+
+const AccountActions = styled.div`
+  display: grid;
+  min-height: 104px;
+  padding: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--wren-space-2);
+  box-sizing: border-box;
+
+  button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+`
 
 const RemovalDialog = styled(DialogSurface)`
   padding: 14px 16px 16px;
@@ -193,23 +209,24 @@ export class SettingsPreview extends React.Component {
                 </RemovalActions>
               </RemovalDialog>
             ) : (
-              <>
-                <ClusterRow className='settingsPreviewActions accountLedgerRow'>
-                  <ClusterValue ariaLabel='Rename account' onClick={() => this.openNameEditor()}>
-                    <div className='moduleItem cardShow'>Rename account</div>
-                  </ClusterValue>
-                </ClusterRow>
-                <ClusterRow className='settingsPreviewActions accountLedgerRow'>
-                  <ClusterValue
-                    actionRef={this.removeTriggerRef}
-                    ariaLabel='Remove account'
-                    disabled={this.state.removing}
-                    onClick={() => this.armAccountRemoval()}
-                  >
-                    <div className='moduleItem cardShow'>Remove account</div>
-                  </ClusterValue>
-                </ClusterRow>
-              </>
+              <AccountActions className='settingsPreviewActions'>
+                <button
+                  type='button'
+                  className='settingsPreviewRename wrenControl wrenControlSecondary wrenControlLarge'
+                  onClick={() => this.openNameEditor()}
+                >
+                  Rename account
+                </button>
+                <button
+                  type='button'
+                  ref={this.removeTriggerRef}
+                  className='settingsPreviewRemove wrenControl wrenControlDanger wrenControlLarge'
+                  disabled={this.state.removing}
+                  onClick={() => this.armAccountRemoval()}
+                >
+                  Remove account
+                </button>
+              </AccountActions>
             )}
           </Cluster>
         </div>

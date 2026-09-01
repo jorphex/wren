@@ -95,7 +95,6 @@ it('requires a separately armed second action before removing an account', () =>
   renderWithStore(SettingsPreview)
 
   const remove = screen.getByRole('button', { name: 'Remove account' })
-  expect(remove.closest('.clusterValue').getAttribute('style')).not.toMatch(/color/)
   fireEvent.click(remove, { detail: 1 })
   expect(link.rpc).not.toHaveBeenCalled()
   const confirm = screen.getByRole('button', { name: 'Confirm removal' })
@@ -208,6 +207,11 @@ it('explains when durable account removal is finishing in the background', () =>
 it('keeps rename and removal available as separate account actions', () => {
   renderWithStore(SettingsPreview)
 
-  expect(screen.getByRole('button', { name: 'Rename account' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Remove account' })).toBeTruthy()
+  const rename = screen.getByRole('button', { name: 'Rename account' })
+  const remove = screen.getByRole('button', { name: 'Remove account' })
+
+  expect(rename.parentElement).toBe(remove.parentElement)
+  expect(rename.parentElement.classList.contains('settingsPreviewActions')).toBe(true)
+  expect(rename.classList.contains('wrenControlSecondary')).toBe(true)
+  expect(remove.classList.contains('wrenControlDanger')).toBe(true)
 })

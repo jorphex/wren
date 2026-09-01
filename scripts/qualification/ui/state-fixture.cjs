@@ -1728,7 +1728,7 @@ const fixtureFor = (scenario) => {
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
       workshop: activePermission('workshop', 'workshop.example')
     }
-    state.main.activity = qualificationActivity()
+    state.main.activity = scenario.activityEmpty ? [] : qualificationActivity()
     state.main.origins = {
       workshop: { name: 'workshop.example' },
       garden: { name: 'garden.example' }

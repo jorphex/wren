@@ -4,7 +4,9 @@ import {
   AccountAddressActions,
   AccountBody,
   AccountMain,
-  AccountNameEditor
+  AccountNameEditor,
+  EMPTY_ACTIVITY_MODULE_HEIGHT,
+  accountModuleHeight
 } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
@@ -14,6 +16,14 @@ jest.mock('../../../../resources/link', () => ({
 }))
 
 const address = '0x0000000000000000000000000000000000000001'
+
+it('uses compact height only when the selected account has no Activity entries', () => {
+  expect(accountModuleHeight('activity', 332, address, [])).toBe(EMPTY_ACTIVITY_MODULE_HEIGHT)
+  expect(
+    accountModuleHeight('activity', 332, address.toUpperCase(), [{ account: address, id: 'activity-entry' }])
+  ).toBe(340)
+  expect(accountModuleHeight('settings', 72, address, [])).toBe(104)
+})
 
 function accountMain({ hideBalances = false, balances = [], networks = {}, networksMeta = {} } = {}) {
   const main = new AccountMain({ id: address })
