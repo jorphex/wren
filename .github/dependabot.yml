@@ -28,10 +28,16 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
+      - dependency-name: '@types/node-hid'
+        update-types:
+          - version-update:semver-major
       - dependency-name: '@ethereumjs/common'
         update-types:
           - version-update:semver-major
       - dependency-name: '@ethereumjs/tx'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@ethereumjs/util'
         update-types:
           - version-update:semver-major
       - dependency-name: '@eslint/js'
@@ -52,7 +58,16 @@ updates:
       - dependency-name: eslint
         update-types:
           - version-update:semver-major
+      - dependency-name: hotkeys-js
+        update-types:
+          - version-update:semver-major
       - dependency-name: lint-staged
+        update-types:
+          - version-update:semver-major
+        # 13.3.0 accidentally shipped v14 code and a vulnerable micromatch.
+        versions:
+          - 13.3.0
+      - dependency-name: node-hid
         update-types:
           - version-update:semver-major
       - dependency-name: query-string
@@ -64,6 +79,9 @@ updates:
         versions:
           - 3.2.1
       - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      - dependency-name: uuid
         update-types:
           - version-update:semver-major
     groups:
