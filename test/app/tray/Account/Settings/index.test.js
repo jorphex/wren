@@ -28,7 +28,7 @@ const renderWithStore = (Component, props = {}, accountState = { name: 'Primary'
       this.store = store
     }
   }
-  return render(<TestComponent account={account} moduleId='settings' {...props} />)
+  return { ...render(<TestComponent account={account} moduleId='settings' {...props} />), store }
 }
 
 it('restores the persisted name instead of submitting an empty name', () => {
@@ -57,6 +57,60 @@ it('focuses the expanded account name editor and saves with Enter', async () => 
   await user.type(input, 'Treasury{Enter}')
 
   expect(link.send).toHaveBeenCalledWith('tray:renameAccount', account, 'Treasury')
+})
+
+it('keeps an in-progress account name through unrelated store refreshes', () => {
+  const { store } = renderWithStore(SettingsExpanded, { expanded: true })
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+
+  fireEvent.change(input, { target: { value: 'Carefully typed name' } })
+  act(() => {
+    store.api.replaceState({
+      ...store(),
+      main: { ...store('main'), unrelatedRefresh: Date.now() }
+    })
+  })
+
+  expect(input.value).toBe('Carefully typed name')
+  expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', account, expect.anything())
+})
+
+it('keeps a submitted name while the persisted account update catches up', () => {
+  const { store } = renderWithStore(SettingsExpanded, { expanded: true })
+  const input = screen.getByRole('textbox', { name: 'Account name' })
+
+  fireEvent.change(input, { target: { value: 'Patiently saved name' } })
+  fireEvent.blur(input)
+  act(() => {
+    store.api.replaceState({
+      ...store(),
+      main: { ...store('main'), unrelatedRefresh: Date.now() }
+    })
+  })
+
+  expect(input.value).toBe('Patiently saved name')
+  expect(link.send).toHaveBeenCalledWith('tray:renameAccount', account, 'Patiently saved name')
+
+  act(() => {
+    store.api.replaceState({
+      ...store(),
+      main: {
+        ...store('main'),
+        accounts: { [account]: { name: 'Patiently saved name' } }
+      }
+    })
+  })
+  act(() => {
+    store.api.replaceState({
+      ...store(),
+      main: {
+        ...store('main'),
+        accounts: { [account]: { name: 'Later persisted name' } }
+      }
+    })
+  })
+
+  expect(input.value).toBe('Later persisted name')
 })
 
 it('keeps unnamed legacy accounts safe', () => {

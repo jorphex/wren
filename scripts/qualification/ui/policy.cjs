@@ -2970,10 +2970,30 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    ready: '#wren-account-name',
+    ready: '.accountSettingsExpandedView #wren-account-name',
     expectedInitialFocus: 'Account name',
     requiredControls: ['Back', 'Account name'],
-    requiredText: ['Account settings', 'Account', 'Address']
+    requiredText: ['Account settings', 'Account', 'Address'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '#panel',
+        property: 'backgroundBlendMode',
+        value: 'overlay, normal, normal, normal'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountViewBack',
+        property: 'top',
+        value: '12px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountViewBack',
+        property: 'left',
+        value: '12px'
+      }
+    ]
   },
   {
     id: 'tray-account-local-name-with-ens-full-1',

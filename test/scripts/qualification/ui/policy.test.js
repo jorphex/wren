@@ -609,9 +609,23 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   })
   expect(fixtureFor(removalConfirm).panel.account.modules.settings.height).toBe(192)
   expect(renameExpanded).toMatchObject({
-    ready: '#wren-account-name',
+    ready: '.accountSettingsExpandedView #wren-account-name',
     expectedInitialFocus: 'Account name',
-    requiredControls: ['Back', 'Account name']
+    requiredControls: ['Back', 'Account name'],
+    layoutExpectations: expect.arrayContaining([
+      {
+        kind: 'computed-style',
+        selector: '#panel',
+        property: 'backgroundBlendMode',
+        value: 'overlay, normal, normal, normal'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountViewBack',
+        property: 'top',
+        value: '12px'
+      }
+    ])
   })
   expect(fixtureFor(renameExpanded).windows.panel.nav).toEqual([
     {

@@ -19,12 +19,19 @@ export class SettingsExpanded extends React.Component {
       expand: false,
       name: ''
     }
+    this.nameDirty = false
+    this.pendingName = ''
   }
 
   componentDidMount() {
     if (this.resizeObserver) this.resizeObserver.observe(this.moduleRef.current)
     this.nameObs = this.store.observer(() => {
       const name = this.store('main.accounts', this.props.account, 'name') || ''
+      if (this.nameDirty) return
+      if (this.pendingName) {
+        if (name !== this.pendingName) return
+        this.pendingName = ''
+      }
       if (name !== this.state.name) this.setState({ name })
     })
   }
@@ -38,13 +45,17 @@ export class SettingsExpanded extends React.Component {
     const currentName = this.store('main.accounts', this.props.account, 'name') || ''
     const name = String(this.state.name || '').trim()
 
-    if (name && name !== currentName) link.send('tray:renameAccount', this.props.account, name)
+    if (name && name !== currentName) {
+      this.pendingName = name
+      link.send('tray:renameAccount', this.props.account, name)
+    }
+    this.nameDirty = false
     this.setState({ name: name || currentName })
   }
 
   render() {
     return (
-      <div className='accountViewScroll'>
+      <div className='accountViewScroll accountSettingsExpandedView'>
         <div className='expandedModule'>
           <header className='accountSettingsIntro'>
             <h2>Account</h2>
@@ -66,6 +77,7 @@ export class SettingsExpanded extends React.Component {
               maxLength={128}
               value={this.state.name}
               onChange={(e) => {
+                this.nameDirty = true
                 this.setState({ name: e.target.value })
               }}
               onBlur={() => this.saveName()}
@@ -74,6 +86,8 @@ export class SettingsExpanded extends React.Component {
                 if (e.key === 'Escape') {
                   e.preventDefault()
                   const name = this.store('main.accounts', this.props.account, 'name') || ''
+                  this.nameDirty = false
+                  this.pendingName = ''
                   this.setState({ name })
                 }
               }}
