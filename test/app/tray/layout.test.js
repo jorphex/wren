@@ -13,6 +13,10 @@ const notifyStyle = fs.readFileSync('app/tray/Notify/style/index.styl', 'utf8')
 const signerStyle = fs.readFileSync('app/tray/Account/Signer/style/index.styl', 'utf8')
 const requestsStyle = fs.readFileSync('app/tray/Account/Requests/style/index.styl', 'utf8')
 const walletCallsStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-wallet-calls.styl', 'utf8')
+const lightweightRequestStyle = fs.readFileSync(
+  'app/tray/Account/Requests/style/wren-lightweight-requests.styl',
+  'utf8'
+)
 const tokenSpendStyle = fs.readFileSync('resources/Components/EditTokenSpend/style/index.styl', 'utf8')
 const signingStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-signing.styl', 'utf8')
 const transactionEvidenceStyle = fs.readFileSync(
@@ -24,6 +28,7 @@ const transactionStyle = fs.readFileSync(
   'utf8'
 )
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
+const walletCallsStatusStyle = fs.readFileSync('app/tray/Account/WalletCallsStatus/style/index.styl', 'utf8')
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
 const trayShellStyle = fs.readFileSync('app/tray/style/index.styl', 'utf8')
@@ -97,15 +102,16 @@ test('keeps account collection spacing-led and balances on a flat ruled ledger',
   expect(accountStyle).toMatch(/\.clusterRow \+ \.clusterRow[\s\S]*?margin-top var\(--wren-space-2\)/)
 })
 
-test('keeps the account atmosphere static across startup and ordinary browsing only', () => {
-  expect(baseStyle).toMatch(/--wren-bg-wallet-canvas #070907/)
-  expect(accountStyle).toMatch(
-    /#panel[\s\S]*?&:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?&:has\(\.accountMain\),[\s\S]*?&:has\(\.accountView:not\(\.accountViewRequest\)\):not\(:has\(\.signerRequest\)\)[\s\S]*?background-color var\(--wren-bg-wallet-canvas\)[\s\S]*?background-image url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?background-repeat repeat, no-repeat, no-repeat, no-repeat[\s\S]*?background-size 144px 144px/
+test('keeps wallet atmosphere in shared shell tokens instead of screen-owned recipes', () => {
+  expect(baseStyle).toMatch(/--wren-window-canvas var\(--wren-bg-wallet-canvas\)/)
+  expect(baseStyle).toMatch(
+    /--wren-window-atmosphere-wallet url\('\.\/svg\/wren-grain\.svg'\)[\s\S]*?--wren-window-atmosphere-workspace-right url\('\.\/svg\/wren-grain\.svg'\)[\s\S]*?--wren-window-atmosphere-workspace-left url\('\.\/svg\/wren-grain\.svg'\)/
   )
-  expect(accountStyle.match(/wren-grain\.svg/g)).toHaveLength(3)
-  expect(accountStyle).toMatch(
-    /\.workspace-edge-left #panel[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at -2% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 88% 104%/
+  expect(trayStyle).toMatch(
+    /#panel[\s\S]*?--wren-window-mode-image var\(--wren-window-atmosphere-wallet\)[\s\S]*?--wren-window-mode-shadow var\(--wren-window-atmosphere-wallet-shadow\)[\s\S]*?background-color var\(--wren-window-mode-canvas\)[\s\S]*?background-image var\(--wren-window-mode-image\)[\s\S]*?box-shadow var\(--wren-window-mode-shadow\)/
   )
+  expect(accountStyle).not.toMatch(/wren-grain\.svg/)
+  expect(accountStyle).not.toMatch(/--wren-bg-(?:canvas|wallet-canvas)/)
   expect(accountGrain).toMatch(
     /<feTurbulence type="fractalNoise"[\s\S]*?stitchTiles="stitch"[\s\S]*?<feColorMatrix type="saturate" values="0"[\s\S]*?<feComponentTransfer>[\s\S]*?<rect width="144" height="144" opacity="0\.11"/
   )
@@ -135,10 +141,7 @@ test('uses one bounded flat-row account list across startup and wallet switching
 test('keeps the account body geometry independent from the dashboard dock edge', () => {
   expect(accountStyle).toMatch(/\/\/ Wren account surface\n\.accountMain\n {2}top 88px/)
   expect(accountSelectorStyle).toMatch(/\.accountSelector\.accountSelectorOpen\n {2}top 6px/)
-  const edgeOverride = accountStyle
-    .split('.workspace-edge-left #panel')[1]
-    .split('#panel:has(.accountMainPerch)')[0]
-  expect(edgeOverride).not.toMatch(/\n {2}\.account(?:Main|Selector)/)
+  expect(accountStyle).not.toMatch(/\.workspace-edge-left #panel/)
 })
 
 test('keeps the home-to-requests gap compact without shifting the selector rail', () => {
@@ -230,9 +233,14 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
     /#panel:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?#panel:has\(\.activityModuleExpanded\),[\s\S]*?#panel:has\(\.requestViewScroll\)/
   )
   expect(accountStyle).toMatch(
-    /#panel:has\(\.accountViewRequest\)\n[\s\S]{0,140}?background-color var\(--wren-bg-canvas\)[\s\S]{0,120}?background-image none[\s\S]{0,80}?box-shadow none/
+    /#panel:has\(\.accountViewRequest\),\n#panel:has\(\.walletCallsStatus\)\n[\s\S]{0,320}?--wren-window-mode-image var\(--wren-window-atmosphere-focus\)[\s\S]{0,260}?--wren-window-mode-shadow var\(--wren-window-atmosphere-focus-shadow\)/
   )
-  expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
+  expect(accountStyle).toMatch(/\.accountViewMenu[\s\S]{0,260}?background transparent/)
+  for (const style of [signingStyle, lightweightRequestStyle, walletCallsStyle, revokeStyle]) {
+    expect(style).toMatch(/background transparent/)
+  }
+  expect(walletCallsStatusStyle).toMatch(/\.walletCallsStatus[\s\S]*?background transparent/)
+  expect(signingStyle).not.toMatch(/#panel:has\(\.approvePermitPerch\)[\s\S]{0,260}?background-/)
 })
 
 test('keeps reserved tray bands clean and gives startup one aligned account ledger', () => {
@@ -460,7 +468,7 @@ test('keeps compact transfer summaries inline and revocation review on one focus
   expect(transactionStyle).toMatch(
     /\.txDescriptionSummaryStandalone[\s\S]*?\._txDescriptionTransfer[\s\S]*?display flex[\s\S]*?align-items baseline[\s\S]*?gap var\(--wren-space-2\)/
   )
-  expect(revokeStyle).toMatch(/\.eip7702RevokeRequest[\s\S]*?background var\(--wren-bg-canvas\)/)
+  expect(revokeStyle).toMatch(/\.eip7702RevokeRequest[\s\S]*?background transparent/)
   expect(revokeStyle).not.toMatch(
     /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeDocument[\s\S]*?padding-(?:right|left) var\(--wren-space-3\)/
   )

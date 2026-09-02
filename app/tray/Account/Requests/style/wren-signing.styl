@@ -5,7 +5,7 @@
   --transaction-review-section-height 34px
   padding 0 var(--wren-space-5)
   border-radius 0
-  background var(--wren-bg-canvas)
+  background transparent
 
   .transactionReviewQueueContext
     display flex
@@ -1069,13 +1069,6 @@
     text-align right
 
 #panel:has(.approvePermitPerch)
-  background-color #070907
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .10), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .24), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .24), transparent 56%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
-  background-blend-mode overlay, normal, normal, normal
-  box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
-
   .requestApproveSignature
     height 114px
     padding 16px 24px

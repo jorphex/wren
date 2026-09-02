@@ -33,6 +33,26 @@ const WALLET_VIEW_CHROME = Object.freeze([
     value: '64px'
   }
 ])
+const FOCUSED_WINDOW_SURFACE = Object.freeze([
+  {
+    kind: 'computed-style',
+    selector: '#panel',
+    property: 'backgroundColor',
+    value: 'rgb(7, 9, 7)'
+  },
+  {
+    kind: 'computed-style',
+    selector: '#panel',
+    property: 'backgroundImage',
+    value: 'none'
+  },
+  {
+    kind: 'computed-style',
+    selector: '.accountViewMenu',
+    property: 'backgroundColor',
+    value: 'rgba(0, 0, 0, 0)'
+  }
+])
 
 const RPC_WARNING_SCENARIOS = Object.freeze([
   {
@@ -756,7 +776,8 @@ const reviewScenarios = () => [
       'Partial execution possible',
       'Batch context',
       'Total maximum network fees'
-    ]
+    ],
+    layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
   })),
   {
     id: 'tray-wallet-calls-adjustment-full-1',
@@ -1690,6 +1711,8 @@ const reviewScenarios = () => [
       'Preview only — actual token changes may differ.'
     ],
     layoutExpectations: [
+      ...WALLET_VIEW_CHROME,
+      ...FOCUSED_WINDOW_SURFACE,
       {
         kind: 'full-width',
         selector: '.transactionReviewAssetChanges',
@@ -3391,7 +3414,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Sign message'
               ],
               requiredText: ['Review request', 'Uniswap', 'ACTION', 'DETAILS', 'USDC', '2412', 'EIP-712'],
-              layoutExpectations: [...WALLET_VIEW_CHROME]
+              layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
             },
             {
               id: 'dash-split-control-right-1',

@@ -64,13 +64,23 @@ test('supplies dark native-menu hints and Wren selection roles to both select fa
 })
 
 test('continues the joined wallet canvas according to its dock edge', () => {
-  expect(dashStyle).toMatch(
-    /\.dash[\s\S]*?background-color var\(--wren-bg-wallet-canvas\)[\s\S]*?url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)[\s\S]*?radial-gradient\(ellipse 94% 58% at 98% -8%[\s\S]*?background-size 144px 144px/
+  expect(baseStyle).toMatch(
+    /--wren-window-atmosphere-wallet url\('\.\/svg\/wren-grain\.svg'\)[\s\S]*?--wren-window-atmosphere-workspace-right url\('\.\/svg\/wren-grain\.svg'\)[\s\S]*?--wren-window-atmosphere-workspace-left url\('\.\/svg\/wren-grain\.svg'\)/
   )
   expect(dashStyle).toMatch(
-    /\.dash[\s\S]*?\.dashMain[\s\S]*?background transparent[\s\S]*?\.workspace-edge-left \.dash,[\s\S]*?\.workspace-overlay \.dash[\s\S]*?radial-gradient\(ellipse 94% 58% at 2% -8%[\s\S]*?radial-gradient\(ellipse 82% 54% at 102% 54%[\s\S]*?radial-gradient\(ellipse 72% 42% at 12% 104%/
+    /\.dash[\s\S]*?--wren-window-mode-image var\(--wren-window-atmosphere-workspace-right\)[\s\S]*?--wren-window-mode-size var\(--wren-window-atmosphere-workspace-size\)[\s\S]*?background-color var\(--wren-window-mode-canvas\)[\s\S]*?background-image var\(--wren-window-mode-image\)/
   )
+  expect(dashStyle).toMatch(
+    /\.dash[\s\S]*?\.dashMain[\s\S]*?background transparent[\s\S]*?\.workspace-edge-left \.dash,[\s\S]*?\.workspace-overlay \.dash[\s\S]*?--wren-window-mode-image var\(--wren-window-atmosphere-workspace-left\)/
+  )
+  expect(dashStyle).toMatch(
+    /\.dash:has\(\.dashHomePerch\),[\s\S]*?\.dash:has\(\.sendComposer\)[\s\S]*?--wren-window-mode-image var\(--wren-window-atmosphere-wallet\)[\s\S]*?--wren-window-mode-shadow var\(--wren-window-atmosphere-wallet-shadow\)/
+  )
+  expect(dashStyle).not.toMatch(/url\('\.\.\/\.\.\/resources\/svg\/wren-grain\.svg'\)/)
   expect(dashStyle).toMatch(/\.dashMain[\s\S]*?\.localSettings[\s\S]*?background transparent/)
+  expect(inspectorStyle).toMatch(
+    /\.inspectorHeader[\s\S]*?border-bottom 1px solid var\(--wren-border-subtle\)[\s\S]*?background transparent/
+  )
   expect(dashStyle).toMatch(
     /\.workspace-edge-right \.dash[\s\S]*?border-top-right-radius 0[\s\S]*?border-bottom-right-radius 0/
   )

@@ -35,11 +35,6 @@ button,
   height 100%
   overflow-y scroll
   overflow-x hidden
-  background-color #070907
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .075), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .16), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .16), transparent 56%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
-  background-blend-mode overlay, normal, normal, normal
   position relative
   box-sizing border-box
   border 0
@@ -347,10 +342,18 @@ button,
   display none
 
 .dash
-  background-color var(--wren-bg-wallet-canvas)
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 98% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at -2% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 88% 104%, rgba(111, 91, 126, .045), transparent 74%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 144px 144px, 100% 100%, 100% 100%, 100% 100%
+  --wren-window-mode-canvas var(--wren-window-canvas)
+  --wren-window-mode-image var(--wren-window-atmosphere-workspace-right)
+  --wren-window-mode-repeat var(--wren-window-atmosphere-repeat)
+  --wren-window-mode-size var(--wren-window-atmosphere-workspace-size)
+  --wren-window-mode-blend var(--wren-window-atmosphere-blend)
+  --wren-window-mode-shadow var(--wren-window-atmosphere-workspace-shadow)
+  background-color var(--wren-window-mode-canvas)
+  background-image var(--wren-window-mode-image)
+  background-repeat var(--wren-window-mode-repeat)
+  background-size var(--wren-window-mode-size)
+  background-blend-mode var(--wren-window-mode-blend)
+  box-shadow var(--wren-window-mode-shadow)
   overflow hidden
   cursor default
   user-select none
@@ -547,7 +550,7 @@ button,
 
 .workspace-edge-left .dash,
 .workspace-overlay .dash
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 2% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at 102% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 12% 104%, rgba(111, 91, 126, .045), transparent 74%)
+  --wren-window-mode-image var(--wren-window-atmosphere-workspace-left)
 
 .dash:has(.dashHomePerch),
 .dash:has(.dashNetworksPerch),
@@ -555,12 +558,9 @@ button,
 .dash:has(.wrenSettingsPerch),
 .dash:has(.connectedAppsPerch),
 .dash:has(.sendComposer)
-  background-color #070907
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .10), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .24), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .24), transparent 56%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
-  background-blend-mode overlay, normal, normal, normal
-  box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
+  --wren-window-mode-image var(--wren-window-atmosphere-wallet)
+  --wren-window-mode-size var(--wren-window-atmosphere-wallet-size)
+  --wren-window-mode-shadow var(--wren-window-atmosphere-wallet-shadow)
 
 .workspace-edge-right .dash
   border-top-left-radius var(--wren-radius-xl)

@@ -160,6 +160,12 @@ div
 
 // Wren wallet shell
 #panel
+  --wren-window-mode-canvas var(--wren-window-canvas)
+  --wren-window-mode-image var(--wren-window-atmosphere-wallet)
+  --wren-window-mode-repeat var(--wren-window-atmosphere-repeat)
+  --wren-window-mode-size var(--wren-window-atmosphere-wallet-size)
+  --wren-window-mode-blend var(--wren-window-atmosphere-blend)
+  --wren-window-mode-shadow var(--wren-window-atmosphere-wallet-shadow)
   width 620px
   max-width 100vw
   left auto
@@ -167,11 +173,12 @@ div
   border 0
   border-radius var(--wren-radius-xl)
   color var(--wren-text-primary)
-  background-color var(--wren-bg-wallet-canvas)
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .10), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .24), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .24), transparent 56%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
-  box-shadow none
+  background-color var(--wren-window-mode-canvas)
+  background-image var(--wren-window-mode-image)
+  background-repeat var(--wren-window-mode-repeat)
+  background-size var(--wren-window-mode-size)
+  background-blend-mode var(--wren-window-mode-blend)
+  box-shadow var(--wren-window-mode-shadow)
 
 .workspace-edge-left #panel
   left 0

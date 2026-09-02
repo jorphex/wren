@@ -1283,25 +1283,8 @@
   &:has(.accountSelectorOpen[aria-modal='true']) .accountMain
     display none
 
-  // Keep the account shell continuous from startup through ordinary account
-  // browsing. Request review and signer-request states deliberately do not
-  // match: their decision canvas remains opaque and quiet.
-  &:has(.accountSelector:not(.accountSelectorOpen)),
-  &:has(.accountMain),
-  &:has(.accountView:not(.accountViewRequest)):not(:has(.signerRequest))
-    background-color var(--wren-bg-wallet-canvas)
-    background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 2% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at 102% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 12% 104%, rgba(111, 91, 126, .045), transparent 74%)
-    background-repeat repeat, no-repeat, no-repeat, no-repeat
-    background-size 144px 144px, 100% 100%, 100% 100%, 100% 100%
-
-.workspace-edge-left #panel
-  &:has(.accountSelector:not(.accountSelectorOpen)),
-  &:has(.accountMain),
-  &:has(.accountView:not(.accountViewRequest)):not(:has(.signerRequest))
-    background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(ellipse 94% 58% at 98% -8%, rgba(126, 155, 115, .085), transparent 70%), radial-gradient(ellipse 82% 54% at -2% 54%, rgba(166, 138, 97, .065), transparent 72%), radial-gradient(ellipse 72% 42% at 88% 104%, rgba(111, 91, 126, .045), transparent 74%)
-
-// Populated-wallet fidelity checkpoint. This is a structural composition for
-// the real modules, scoped away from request review and other wallet states.
+// Populated wallet views share one restrained palette. The tray shell owns the
+// wallet atmosphere; these views only refine content roles.
 #panel:has(.accountSelector:not(.accountSelectorOpen)),
 #panel:has(.accountMainPerch),
 #panel:has(.balancesExpandedView),
@@ -1309,8 +1292,6 @@
 #panel:has(.permissionsLedgerView),
 #panel:has(.accountSettingsExpandedView),
 #panel:has(.requestViewScroll)
-  --wren-bg-canvas #070907
-  --wren-bg-wallet-canvas #070907
   --wren-bg-elevated #121813
   --wren-surface-card rgba(13, 18, 16, .66)
   --wren-border-subtle rgba(150, 182, 150, .10)
@@ -1321,19 +1302,15 @@
   --wren-text-tertiary #97917f
   --wren-text-muted #97917f
   --wren-text-disabled #6d7568
-  background-color #070907
-  background-image url('../../resources/svg/wren-grain.svg'), radial-gradient(90% 46% at 50% -8%, rgba(201, 181, 148, .10), transparent 62%), radial-gradient(120% 82% at 80% -4%, rgba(92, 54, 92, .24), transparent 54%), radial-gradient(120% 82% at 14% 106%, rgba(46, 88, 68, .24), transparent 56%)
-  background-repeat repeat, no-repeat, no-repeat, no-repeat
-  background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
-  background-blend-mode overlay, normal, normal, normal
-  box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
-
 // Focused signing uses one opaque canvas through the review bar and body,
 // without carrying the ordinary wallet's atmospheric color fields into it.
-#panel:has(.accountViewRequest)
-  background-color var(--wren-bg-canvas)
-  background-image none
-  box-shadow none
+#panel:has(.accountViewRequest),
+#panel:has(.walletCallsStatus)
+  --wren-window-mode-image var(--wren-window-atmosphere-focus)
+  --wren-window-mode-repeat var(--wren-window-atmosphere-focus-repeat)
+  --wren-window-mode-size var(--wren-window-atmosphere-focus-size)
+  --wren-window-mode-blend var(--wren-window-atmosphere-focus-blend)
+  --wren-window-mode-shadow var(--wren-window-atmosphere-focus-shadow)
 
 @media (max-width: 560px)
   #panel:has(.requestNoticeTransactionReview)
