@@ -230,7 +230,7 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
     /#panel:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?#panel:has\(\.activityModuleExpanded\),[\s\S]*?#panel:has\(\.requestViewScroll\)/
   )
   expect(accountStyle).toMatch(
-    /#panel:has\(\.accountViewRequest\)\n[\s\S]{0,120}?background-color #070907[\s\S]{0,120}?background-image none/
+    /#panel:has\(\.accountViewRequest\)\n[\s\S]{0,140}?background-color var\(--wren-bg-canvas\)[\s\S]{0,120}?background-image none[\s\S]{0,80}?box-shadow none/
   )
   expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
