@@ -1,6 +1,8 @@
 // Signing-critical surfaces use one continuous review canvas. Preserve the existing request and
 // signer flow while removing the inherited card stack, animated split pill, and decorative chrome.
 .approveTransaction
+  --transaction-review-row-height 48px
+  --transaction-review-section-height 34px
   padding 0 var(--wren-space-5)
   border-radius 0
   background var(--wren-bg-canvas)
@@ -183,8 +185,9 @@
       padding var(--wren-space-1) var(--wren-space-2)
 
   .transactionReviewSectionTitle
-    min-height 34px
-    padding var(--wren-space-3) 0 var(--wren-space-1)
+    min-height var(--transaction-review-section-height)
+    box-sizing border-box
+    padding var(--wren-space-2) 0 var(--wren-space-1)
     color var(--wren-text-primary)
     font-size var(--wren-type-body)
     font-variation-settings var(--wren-font-heading-settings)
@@ -206,21 +209,21 @@
     .clusterRow:first-child .clusterValue
       position relative
       display grid
-      min-height 48px
+      min-height var(--transaction-review-row-height)
       padding 0
       grid-template-columns 96px minmax(0, 1fr)
-      align-items start
+      align-items center
       justify-content stretch
       column-gap var(--wren-space-4)
 
     .transactionReviewRecipientLabel
-      align-self start
-      padding-top var(--wren-space-2)
+      align-self center
+      padding-top 0
       text-align left
 
     .clusterAddress
       min-width 0
-      padding var(--wren-space-2) 0
+      padding var(--wren-space-1) 0
 
     .clusterAddressRecipient,
     .clusterAddressRecipientLabeled
@@ -239,9 +242,9 @@
   .transactionReviewNonceRow
     display grid
     width 100%
-    min-height 54px
+    min-height var(--transaction-review-row-height)
     box-sizing border-box
-    padding var(--wren-space-3) 0
+    padding var(--wren-space-1) 0
     grid-template-columns 96px minmax(0, 1fr) auto
     align-items center
     column-gap var(--wren-space-4)
@@ -334,7 +337,7 @@
     justify-self end
 
   .transactionReviewNonce
-    padding-bottom var(--wren-space-3)
+    padding-bottom 0
 
   .transactionReviewMeta,
   .transactionReviewRecipient,
@@ -345,8 +348,9 @@
     box-shadow none
 
   ._txLabel
-    min-height 38px
-    padding var(--wren-space-4) 0 var(--wren-space-2)
+    min-height var(--transaction-review-section-height)
+    box-sizing border-box
+    padding var(--wren-space-2) 0 var(--wren-space-1)
     color var(--wren-text-primary)
     font-family var(--wren-font-ui)
     font-size var(--wren-type-body)
@@ -374,7 +378,7 @@
       margin-top 0
 
     .clusterValue
-      min-height 48px
+      min-height var(--transaction-review-row-height)
       justify-content flex-start
       border 0
       border-radius 0
@@ -589,12 +593,8 @@
     color var(--wren-warning)
 
   .transactionReviewTokenApproval
-    ._txLabel
-      min-height 28px
-      padding var(--wren-space-2) 0 var(--wren-space-1)
-
     .clusterValue
-      min-height 44px
+      min-height var(--transaction-review-row-height)
 
     .clusterValueContent
       width 100%
@@ -603,7 +603,7 @@
   .transactionReviewApprovalSpender
     display grid
     width 100%
-    min-height 44px
+    min-height var(--transaction-review-row-height)
     box-sizing border-box
     grid-template-columns 96px minmax(0, 1fr)
     align-items center
@@ -618,7 +618,7 @@
   .transactionReviewApprovalSpender
     .clusterAddress
       min-width 0
-      padding var(--wren-space-2) 0
+      padding var(--wren-space-1) 0
 
       .clusterAddressRecipient,
       .clusterAddressRecipientLabeled
@@ -661,7 +661,7 @@
     position relative
     display grid
     width 100%
-    min-height 48px
+    min-height var(--transaction-review-row-height)
     box-sizing border-box
     padding 0
     border 0
@@ -690,11 +690,14 @@
   .transactionReviewAddressValue
     position relative
     min-width 0
-    padding var(--wren-space-2) 0
+    padding 2px 0
 
     .clusterAddressRecipient,
     .clusterAddressRecipientLabeled
       align-items flex-start
+
+    .clusterAddressRecipientLabeled
+      gap 2px
 
     .clusterAddressEvidence
       color var(--wren-accent-primary-hover)

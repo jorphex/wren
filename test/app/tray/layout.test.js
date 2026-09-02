@@ -354,7 +354,9 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   const requestMetaStyle = accountStyle.split('.accountViewMeta')[1].split('.accountViewMain')[0]
   expect(requestMetaStyle).not.toMatch(/(?:^|\n)\s+(?:border|border-radius|background|padding) /)
-  expect(signingStyle).toMatch(/\.approveTransaction\n {2}padding 0 var\(--wren-space-5\)/)
+  expect(signingStyle).toMatch(
+    /\.approveTransaction[\s\S]*?--transaction-review-row-height 48px[\s\S]*?padding 0 var\(--wren-space-5\)/
+  )
   expect(signingStyle).toMatch(
     /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
   )
@@ -370,9 +372,14 @@ test('keeps transaction review on one flat details ledger', () => {
     /#panel[\s\S]*?&:has\(\.requestNoticeApproval\) \.accountViewRequest,[\s\S]*?&:has\(\.requestNoticeTransactionReview\) \.accountViewRequest[\s\S]*?transition none/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewSectionTitle[\s\S]*?min-height 34px[\s\S]*?padding var\(--wren-space-3\) 0 var\(--wren-space-1\)/
+    /\.transactionReviewSectionTitle[\s\S]*?min-height var\(--transaction-review-section-height\)[\s\S]*?box-sizing border-box[\s\S]*?padding var\(--wren-space-2\) 0 var\(--wren-space-1\)/
   )
-  expect(signingStyle).toMatch(/\._txLabel[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-2\)/)
+  expect(signingStyle).toMatch(
+    /\.approveTransaction[\s\S]*?--transaction-review-row-height 48px[\s\S]*?--transaction-review-section-height 34px/
+  )
+  expect(signingStyle).toMatch(
+    /\._txLabel[\s\S]*?min-height var\(--transaction-review-section-height\)[\s\S]*?box-sizing border-box[\s\S]*?padding var\(--wren-space-2\) 0 var\(--wren-space-1\)/
+  )
   expect(signingStyle).toMatch(/\._txMainTag[\s\S]*?padding var\(--wren-space-3\) 0/)
   expect(signingStyle).toMatch(
     /\.requestItem,[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?\.transactionReviewSectionTitle/
@@ -381,7 +388,7 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewRecipient,[\s\S]*?\.transactionReviewFee,[\s\S]*?\.transactionReviewNonce[\s\S]*?margin 0/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\) auto/
+    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?min-height var\(--transaction-review-row-height\)[\s\S]*?padding var\(--wren-space-1\) 0[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\) auto/
   )
   expect(signingStyle).toMatch(
     /\.transactionReviewRecipient[\s\S]*?\.clusterRow:first-child \.clusterValue[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/

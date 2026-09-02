@@ -1735,6 +1735,18 @@ const reviewScenarios = () => [
         selector: '.transactionReviewApprovalSpender .clusterAddressRecipient',
         property: 'justifyContent',
         value: 'flex-start'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewApprovalLimit',
+        property: 'minHeight',
+        value: '48px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewApprovalSpender',
+        property: 'minHeight',
+        value: '48px'
       }
     ]
   },
