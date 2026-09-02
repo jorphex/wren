@@ -1,6 +1,10 @@
 import { Interface } from 'ethers'
 
-import { createActivityDetailsService, projectActivityTransaction } from '../../../main/activity/details'
+import {
+  createActivityDetailsService,
+  projectActivityReceiptEffects,
+  projectActivityTransaction
+} from '../../../main/activity/details'
 import type { ActivityEntry } from '../../../main/store/state/types/activity'
 import type { OperationLifecycle } from '../../../main/store/state/types/operationLifecycle'
 import type { WalletCallBatch } from '../../../main/store/state/types/walletCallBatch'
@@ -118,6 +122,69 @@ it('shows an unknown contract selector without returning calldata', () => {
     arguments: []
   })
   expect(action).not.toHaveProperty('input')
+})
+
+it('projects bounded account-relevant token changes from the canonical receipt', () => {
+  const iface = new Interface(['event Transfer(address indexed from,address indexed to,uint256 value)'])
+  const zero = `0x${'0'.repeat(40)}`
+  const burned = iface.encodeEventLog(iface.getEvent('Transfer')!, [account, zero, 7n])
+  const received = iface.encodeEventLog(iface.getEvent('Transfer')!, [recipient, account, 5n])
+  const unrelated = iface.encodeEventLog(iface.getEvent('Transfer')!, [recipient, token, 3n])
+
+  expect(
+    projectActivityReceiptEffects(
+      {
+        transactionHash: hash('a'),
+        blockHash,
+        blockNumber: '0x10',
+        logs: [
+          { address: token, topics: burned.topics, data: burned.data },
+          { address: recipient, topics: received.topics, data: received.data },
+          { address: token, topics: unrelated.topics, data: unrelated.data }
+        ]
+      },
+      { hash: hash('a'), account, receipt: { blockHash, blockNumber: '0x10' } }
+    )
+  ).toMatchObject({
+    assetChanges: [
+      { type: 'transfer', standard: 'erc20', token, from: account, to: zero, amount: '7' },
+      { type: 'transfer', standard: 'erc20', token: recipient, from: recipient, to: account, amount: '5' }
+    ]
+  })
+})
+
+it('attaches receipt-derived asset changes to confirmed Activity actions', async () => {
+  const iface = new Interface(['event Transfer(address indexed from,address indexed to,uint256 value)'])
+  const encoded = iface.encodeEventLog(iface.getEvent('Transfer')!, [recipient, account, 5n])
+  const rpc = jest.fn(async (_chainId, method) =>
+    method === 'eth_getTransactionByHash'
+      ? rpcTransaction({ value: '0x0', input: '0x12345678' })
+      : {
+          transactionHash: hash('a'),
+          blockHash,
+          blockNumber: '0x10',
+          logs: [{ address: token, topics: encoded.topics, data: encoded.data }]
+        }
+  )
+  const service = createActivityDetailsService({
+    activity: () => [entry()],
+    references: () => ({}),
+    operations: () => ({ [activityId]: operation() }),
+    batches: () => ({}),
+    rpc
+  })
+
+  await expect(service.get(activityId)).resolves.toMatchObject({
+    success: true,
+    actions: [
+      {
+        assetChanges: [
+          { type: 'transfer', standard: 'erc20', token, from: recipient, to: account, amount: '5' }
+        ]
+      }
+    ]
+  })
+  expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash('a')])
 })
 
 it.each([

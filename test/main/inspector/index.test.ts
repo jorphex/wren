@@ -240,6 +240,24 @@ test('uses only bundled ABI data and bounds decoded dynamic values', () => {
   })
 })
 
+test('decodes standard ERC-4626 vault methods without a network ABI lookup', () => {
+  const vault = new Interface([
+    'function withdraw(uint256 assets,address receiver,address owner) returns (uint256 shares)'
+  ])
+  const calldata = vault.encodeFunctionData('withdraw', [7n, recipient, sender])
+
+  expect(decodeLocalCalldata(calldata)).toMatchObject({
+    status: 'decoded',
+    method: 'withdraw',
+    signature: 'withdraw(uint256,address,address)',
+    arguments: [
+      { name: 'assets', type: 'uint256', value: '7' },
+      { name: 'receiver', type: 'address', value: recipient },
+      { name: 'owner', type: 'address', value: sender }
+    ]
+  })
+})
+
 test('projects full production simulation evidence into the exact bounded result schema', () => {
   const simulation = projectInspectorSimulation({
     status: 'succeeded',

@@ -1470,8 +1470,10 @@ describe('#addRequest', () => {
 
     account.addRequest(request)
     jest.advanceTimersByTime(1)
+    expect(request.calldataDecodeStatus).toBe('pending')
     await flushPromises()
     expect(request.decodedData).toMatchObject({ method: 'execute', retained: false })
+    expect(request.calldataDecodeStatus).toBe('complete')
 
     account.refreshTransactionSimulation(request)
     expect(request.decodedData).toMatchObject({ method: 'execute', retained: true })
@@ -1484,6 +1486,7 @@ describe('#addRequest', () => {
     jest.advanceTimersByTime(1)
     await flushPromises()
     expect(request.decodedData).toBeUndefined()
+    expect(request.calldataDecodeStatus).toBe('pending')
 
     request.data.data = '0x87654321'
     account.refreshTransactionSimulation(request)

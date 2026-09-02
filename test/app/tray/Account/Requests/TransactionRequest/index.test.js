@@ -20,11 +20,13 @@ import {
   getAccessListPresentation,
   getCallTracePresentation,
   getDelegationPresentation,
+  getExpectedAssetChanges,
   getNativeBalanceChangesPresentation,
   getProxyImplementationChangesPresentation,
   getReviewStatusPresentation,
   getSimulationEffectsPresentation,
   getSimulationPresentation,
+  ApproveOverview,
   ReplacementAssessment,
   ReplacementNotice,
   TransactionDataRow,
@@ -40,7 +42,8 @@ import {
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData/effects'
 import {
   SimpleTxJSON,
-  ViewData
+  ViewData,
+  projectRawTransaction
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/ViewData'
 import NonceControl, {
   displayTransactionNonce
@@ -139,6 +142,24 @@ describe('confirm', () => {
 
     expect(screen.getByText('Recipient Account')).toBeTruthy()
     expect(screen.getByLabelText(recipient).classList.contains('clusterAddressRecipientComplete')).toBe(true)
+  })
+
+  it('does not present an in-flight contract method lookup as a decode failure', () => {
+    const recipient = '0x1111111111111111111111111111111111111111'
+
+    render(
+      <TxRecipient
+        i={0}
+        req={{
+          calldataDecodeStatus: 'pending',
+          data: { to: recipient, value: '0x0' },
+          recipientType: 'contract'
+        }}
+      />
+    )
+
+    expect(screen.getByText('Identifying contract method…')).toBeTruthy()
+    expect(screen.queryByText('Contract method not decoded')).toBeNull()
   })
 
   it('keeps a native-transfer recipient in the shared transaction details ledger', () => {
@@ -991,6 +1012,7 @@ describe('simulation review', () => {
       broadApproval: true,
       label: '2 RPC-reported token effects (truncated)'
     })
+    expect(getExpectedAssetChanges(simulation, account)).toEqual([simulation.effects[0]])
 
     render(<SimulationEffects account={account} simulation={simulation} />)
 
@@ -1000,6 +1022,14 @@ describe('simulation review', () => {
     expect(screen.getByText('ERC-20 Unlimited Approval')).toBeTruthy()
     expect(screen.getAllByText(token)).toHaveLength(2)
     expect(screen.getByRole('alert').textContent).toMatch(/preview truncated/i)
+  })
+
+  it('keeps a normal token approval on one concise headline', () => {
+    render(<ApproveOverview amount='890000000' decimals={6} symbol='USDC' />)
+
+    expect(screen.getByText('Approve')).toBeTruthy()
+    expect(screen.getByTestId('display-value').textContent).toBe('890USDC')
+    expect(document.querySelector('.transactionReviewApprovalSummary').textContent).toBe('Approve890USDC')
   })
 
   it('does not claim effects for an eth_call fallback', () => {
@@ -1435,6 +1465,22 @@ describe('simulation review', () => {
     expect(screen.queryByText('Inputs')).toBeNull()
   })
 
+  it('labels an in-flight contract method lookup in raw-data review', () => {
+    render(
+      <ViewData
+        req={{
+          account,
+          calldataDecodeStatus: 'pending',
+          data: { chainId: '0x1', to: account, data: '0x12345678' },
+          simulation: { status: 'succeeded' }
+        }}
+      />
+    )
+
+    expect(screen.getByText('Identifying contract method…')).toBeTruthy()
+    expect(screen.queryByText('Contract method not identified')).toBeNull()
+  })
+
   it('distinguishes verified and retained method details', () => {
     render(
       <ViewData
@@ -1630,6 +1676,20 @@ describe('transaction nonce presentation', () => {
 
     expect(screen.getByText('5')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /nonce/i })).toBeNull()
+  })
+
+  it('projects only signable transaction fields into raw data', () => {
+    expect(
+      projectRawTransaction({
+        chainId: '0x1',
+        to: account,
+        data: '0x1234',
+        gas: '0x5208',
+        gasFeesSource: 'Frame',
+        feesUpdated: true,
+        recipientType: 'contract'
+      })
+    ).toEqual({ nonce: 'TBD', chainId: '0x1', to: account, data: '0x1234', gas: '0x5208' })
   })
 
   it('keeps a queued transaction nonce read-only', () => {

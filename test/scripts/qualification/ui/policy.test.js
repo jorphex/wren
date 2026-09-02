@@ -688,17 +688,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
       },
       {
         kind: 'size',
-        selector: '.signerPreviewRow > .clusterValue:last-child',
-        width: 52,
-        height: 52
+        selector: '.signerPreviewVerify',
+        width: 44,
+        height: 44
       },
       {
         kind: 'size',
-        selector:
-          '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg, .signerPreviewRow > .clusterValue:last-child svg',
-        width: 18,
-        height: 18
-      }
+        selector: '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg',
+        width: 16,
+        height: 16
+      },
+      { kind: 'size', selector: '.signerPreviewVerify svg', width: 20, height: 20 }
     ])
   })
   expect(ledgerFull).toMatchObject({
@@ -1377,12 +1377,12 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   const artifact = invokeReplyFor(forms[0], 'contractVerification:inspectArtifact')
   expect(artifact).toMatchObject({ success: true, artifact: { summary: { localRuntimeMatch: true } } })
   expect(JSON.stringify(artifact)).not.toMatch(/filePath|stdJsonInput|sourceContent|apiKey/u)
-  expect(confirmations[0].requiredControls).toEqual(['View details', 'Verify source', 'Close'])
+  expect(confirmations[0].requiredControls).toEqual(['Copy hash', 'Open explorer', 'Verify source', 'Close'])
   expect(confirmations[0].layoutExpectations).toContainEqual({
     kind: 'viewport-bottom',
     selector: '.requestNoticeTransactionDeploymentStatus'
   })
-  expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(250)
+  expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(160)
 })
 
 it('qualifies deployment identity controls and an opaque short-geometry action shelf', () => {

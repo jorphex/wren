@@ -132,6 +132,7 @@ export interface TransactionRequest extends AccountRequest<'transaction'> {
   data: TransactionData
   decodedData?: DecodedCallData
   suggestedData?: SuggestedCallData
+  calldataDecodeStatus?: 'pending' | 'complete'
   chainData?: {
     optimism?: {
       l1Fees: string

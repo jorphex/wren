@@ -21,11 +21,21 @@ const txFieldPriority = [
   'to',
   'from',
   'gasLimit',
+  'gas',
   'gasPrice',
   'maxFeePerGas',
   'maxPriorityFeePerGas',
-  'accessList'
+  'accessList',
+  'authorizationList',
+  'type'
 ]
+
+const reviewableTransactionFields = new Set(txFieldPriority)
+
+export const projectRawTransaction = (data = {}) =>
+  Object.fromEntries(
+    Object.entries({ nonce: 'TBD', ...data }).filter(([key]) => reviewableTransactionFields.has(key))
+  )
 
 const TextValue = ({ value }) =>
   typeof value === 'object' ? (
@@ -123,6 +133,14 @@ export class ViewData extends React.Component {
       )
     }
 
+    if (req.calldataDecodeStatus === 'pending') {
+      return (
+        <div className='decodedDataContract'>
+          <div className='decodedDataConfidence'>Identifying contract method…</div>
+        </div>
+      )
+    }
+
     const selector = typeof req.data?.data === 'string' ? req.data.data.slice(0, 10) : ''
     return (
       <div className='decodedDataContract'>
@@ -162,7 +180,7 @@ export class ViewData extends React.Component {
   render() {
     const { req } = this.props
     const { data } = req
-    const tx = { nonce: 'TBD', ...data }
+    const tx = projectRawTransaction(data)
     const { simulation = {} } = req
     const accountCodeEvidence = simulation.accountCodeEvidence
     const accountCodeNeedsAttention = [

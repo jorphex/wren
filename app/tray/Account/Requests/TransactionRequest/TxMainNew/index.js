@@ -114,6 +114,14 @@ export class TxMain extends React.Component {
     const currentSymbol = nativeCurrency.symbol || '?'
     const isTestnet = this.store('main.networks.ethereum', chainId, 'isTestnet')
     const requestAccount = this.props.accountId || req.account
+    const balances = this.store('main.balances', requestAccount) || []
+    const tokenFor = (address) =>
+      balances.find(
+        (balance) =>
+          balance.chainId === chainId &&
+          typeof balance.address === 'string' &&
+          balance.address.toLowerCase() === address.toLowerCase()
+      )
     const reqs = this.store('main.accounts', requestAccount, 'requests')
     const replacementStatus = this.getReplacementStatus(req, reqs)
 
@@ -148,6 +156,7 @@ export class TxMain extends React.Component {
               originName={originName}
               currencyRate={nativeCurrency.usd}
               isTestnet={isTestnet}
+              tokenFor={tokenFor}
             />
           </RequestItem>
           <div className='transactionReviewMeta'>

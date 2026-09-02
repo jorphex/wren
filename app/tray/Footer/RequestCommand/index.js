@@ -5,7 +5,6 @@ import BigNumber from 'bignumber.js'
 
 import TxBar, { isUnconfirmedSubmission } from './TxBar'
 import TxApproval from './TxApproval'
-import Time from '../Time'
 
 import Icon from '../../../../resources/Components/Icon'
 import QrCode from '../../../../resources/Components/QrCode'
@@ -356,7 +355,6 @@ export class RequestCommand extends React.Component {
             )}
           </dl>
         )}
-        {receipt && req.completed && <Time time={req.completed} />}
         <div className='txLifecycleActions'>
           {replaceable && (
             <button
@@ -373,11 +371,33 @@ export class RequestCommand extends React.Component {
           {hash && (
             <button
               type='button'
-              className='txLifecycleAction'
-              aria-expanded={Boolean(this.state.showHashDetails)}
-              onClick={() => this.setState({ showHashDetails: !this.state.showHashDetails })}
+              aria-label='Copy hash'
+              title='Copy transaction hash'
+              className='txLifecycleAction txLifecycleActionIcon'
+              onClick={() => {
+                link.send('tray:copyTxHash', hash)
+                this.setState({ txHashCopied: true })
+                this.scheduleTimer('txHashCopiedTimer', () => this.setState({ txHashCopied: false }), 3000)
+              }}
             >
-              View details
+              <Icon name='copy' size={15} />
+            </button>
+          )}
+          {hash && explorer && (
+            <button
+              type='button'
+              aria-label='Open explorer'
+              title='View transaction on explorer'
+              className='txLifecycleAction txLifecycleActionIcon'
+              onClick={() => {
+                if (this.store('main.mute.explorerWarning')) {
+                  link.send('tray:openExplorer', chain, hash)
+                } else {
+                  this.store.notify('openExplorer', { hash, chain })
+                }
+              }}
+            >
+              <Icon name='external' size={15} />
             </button>
           )}
           {replaceable && (
@@ -417,44 +437,13 @@ export class RequestCommand extends React.Component {
             {this.state.requestActionError}
           </div>
         ) : null}
-        {this.state.showHashDetails && hash && (
-          <div className='txLifecycleDetails'>
-            <span>{hash}</span>
-            <div>
-              {explorer && (
-                <button
-                  type='button'
-                  onClick={() => {
-                    if (this.store('main.mute.explorerWarning')) {
-                      link.send('tray:openExplorer', chain, hash)
-                    } else {
-                      this.store.notify('openExplorer', { hash, chain })
-                    }
-                  }}
-                >
-                  Open explorer
-                </button>
-              )}
-              <button
-                type='button'
-                onClick={() => {
-                  link.send('tray:copyTxHash', hash)
-                  this.setState({ txHashCopied: true })
-                  this.scheduleTimer('txHashCopiedTimer', () => this.setState({ txHashCopied: false }), 3000)
-                }}
-              >
-                Copy hash
-              </button>
-              <span className='txLifecycleCopyStatus' role='status' aria-live='polite'>
-                {this.state.txHashCopied
-                  ? unconfirmedSubmission
-                    ? 'Expected transaction hash copied'
-                    : 'Transaction hash copied'
-                  : ''}
-              </span>
-            </div>
-          </div>
-        )}
+        <span className='txLifecycleCopyStatus' role='status' aria-live='polite'>
+          {this.state.txHashCopied
+            ? unconfirmedSubmission
+              ? 'Expected transaction hash copied'
+              : 'Transaction hash copied'
+            : ''}
+        </span>
         {isCancelableRequest(status) && (
           <button type='button' className='txLifecycleCancelRequest' onClick={() => this.decline(req)}>
             Cancel

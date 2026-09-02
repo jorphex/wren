@@ -19,15 +19,87 @@ const SimpleContractCallOverview = ({ method }) => {
   return <div className='_txDescriptionSummaryLine'>{body}</div>
 }
 
-const ApproveOverview = ({ amount, decimals, symbol }) => {
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
+export const getExpectedAssetChanges = (simulation, account) => {
+  if (simulation?.status !== 'succeeded' || simulation.source !== 'eth_simulateV1') return []
+  const selected = account?.toLowerCase()
+  if (!selected) return []
+  return (simulation.effects || []).filter(
+    (effect) => effect.type === 'transfer' && (effect.from === selected || effect.to === selected)
+  )
+}
+
+const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
+  const changes = getExpectedAssetChanges(simulation, account)
+  if (!changes.length) return null
+
+  return (
+    <ClusterRow className='transactionReviewAssetChanges'>
+      <ClusterValue>
+        <div className='transactionReviewAssetChangesInner'>
+          <div className='transactionReviewAssetChangesHeader'>
+            <strong>Expected asset changes</strong>
+            <span>RPC simulation</span>
+          </div>
+          {changes.map((change, index) => {
+            const token = tokenFor?.(change.token)
+            const direction =
+              change.from === ZERO_ADDRESS
+                ? 'Mint'
+                : change.to === ZERO_ADDRESS
+                  ? 'Burn'
+                  : change.from === account.toLowerCase()
+                    ? 'Send'
+                    : 'Receive'
+            const amount = change.amount ?? change.tokenId
+            return (
+              <div className='transactionReviewAssetChange' key={`${change.token}:${index}`}>
+                <span className='transactionReviewAssetChangeIdentity'>
+                  {token ? <AssetMark asset={token} showChain={false} /> : null}
+                  <span>
+                    <strong>{direction}</strong>
+                    <span title={change.token}>{token?.symbol || `${change.token.slice(0, 8)}…`}</span>
+                  </span>
+                </span>
+                <span className='transactionReviewAssetChangeAmount'>
+                  {amount !== undefined && token ? (
+                    <DisplayValue
+                      type='ether'
+                      value={amount}
+                      valueDataParams={{ decimals: token.decimals }}
+                      currencySymbol={token.symbol}
+                      currencySymbolPosition='last'
+                    />
+                  ) : amount !== undefined ? (
+                    `${amount} base units`
+                  ) : (
+                    'Token transfer'
+                  )}
+                </span>
+              </div>
+            )
+          })}
+          {simulation.effectsTruncated ? (
+            <div className='transactionReviewAssetChangesNote'>
+              Additional RPC-reported effects are omitted.
+            </div>
+          ) : null}
+        </div>
+      </ClusterValue>
+    </ClusterRow>
+  )
+}
+
+export const ApproveOverview = ({ amount, decimals, symbol }) => {
   const isRevoke = BigNumber(amount).isZero()
   return (
-    <div>
+    <div className='transactionReviewApprovalSummary'>
       {isRevoke ? (
         <span>{`Revoke Approval for ${symbol}`}</span>
       ) : (
         <>
-          <span>{'Approve Spending'}</span>
+          <span>{'Approve'}</span>
           <DisplayValue
             type='ether'
             value={amount}
@@ -432,7 +504,8 @@ const TxOverview = ({
   simple,
   valueColor,
   currencyRate,
-  isTestnet
+  isTestnet,
+  tokenFor
 }) => {
   const { data: tx = {}, classification } = req
   const { data: calldata } = tx
@@ -519,6 +592,7 @@ const TxOverview = ({
         )}
         <ReplacementNotice replacement={req.replacement} />
         <ReplacementAssessment status={replacementStatus} />
+        <ExpectedAssetChanges account={req.account} simulation={req.simulation} tokenFor={tokenFor} />
         {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )

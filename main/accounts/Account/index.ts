@@ -602,6 +602,8 @@ class FrameAccount {
       } else {
         delete req.suggestedData
       }
+      req.calldataDecodeStatus = 'pending'
+      this.update()
       try {
         // Decode calldata
         const decodedData = await reveal.decode(
@@ -624,17 +626,28 @@ class FrameAccount {
         ) {
           knownTxRequest.decodedData = { ...decodedData, retained: false }
           delete knownTxRequest.suggestedData
+          knownTxRequest.calldataDecodeStatus = 'complete'
           this.calldataDecodeBindings[req.handlerId] = binding
           this.update()
         } else if (knownTxRequest === req && knownCodeSnapshot?.fingerprint === codeSnapshot.fingerprint) {
+          knownTxRequest.calldataDecodeStatus = 'complete'
           this.update()
         }
       } catch (e) {
+        const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
+        const knownCodeSnapshot = knownTxRequest
+          ? accountCodeSnapshot(knownTxRequest.simulation, to, 0)
+          : undefined
+        if (knownTxRequest === req && knownCodeSnapshot?.fingerprint === codeSnapshot.fingerprint) {
+          knownTxRequest.calldataDecodeStatus = 'complete'
+          this.update()
+        }
         log.warn(e)
       }
     } else {
       delete req.suggestedData
       delete req.decodedData
+      delete req.calldataDecodeStatus
       delete this.calldataDecodeBindings[req.handlerId]
     }
   }
@@ -656,6 +669,7 @@ class FrameAccount {
 
     delete req.decodedData
     delete req.suggestedData
+    delete req.calldataDecodeStatus
     delete this.calldataDecodeBindings[req.handlerId]
   }
 

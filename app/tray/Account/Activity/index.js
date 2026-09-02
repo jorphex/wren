@@ -245,7 +245,34 @@ const actionFields = (action, nativeCurrency, token) => {
   return fields
 }
 
-const ActivityActionDetails = ({ evidence, grouped, loading, nativeCurrency, tokenFor }) => {
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
+const assetChangePresentation = (change, account, token) => {
+  const selected = account.toLowerCase()
+  const direction =
+    change.from === ZERO_ADDRESS
+      ? 'Minted'
+      : change.to === ZERO_ADDRESS
+        ? 'Burned'
+        : change.from === selected && change.to === selected
+          ? 'Self transfer'
+          : change.from === selected
+            ? 'Sent'
+            : 'Received'
+  const rawAmount = change.amount ?? change.tokenId
+  const amount =
+    rawAmount === undefined
+      ? { display: token?.symbol || 'Token transfer', exact: token?.symbol || 'Token transfer' }
+      : token
+        ? compactAssetAmount(rawAmount, token.decimals, token.symbol)
+        : {
+            display: `${formatQuantity(rawAmount)} base units`,
+            exact: `${formatQuantity(rawAmount)} base units`
+          }
+  return { direction, amount }
+}
+
+const ActivityActionDetails = ({ account, evidence, grouped, loading, nativeCurrency, tokenFor }) => {
   if (loading) {
     return (
       <div className='activityDetailUnavailable activityDetailActionStatus' role='status'>
@@ -279,6 +306,29 @@ const ActivityActionDetails = ({ evidence, grouped, loading, nativeCurrency, tok
                 </DetailValue>
               ))}
             </dl>
+            {action.assetChanges?.length ? (
+              <div className='activityDetailAssetChanges'>
+                <h4>Asset changes</h4>
+                <dl className='activityDetailGrid'>
+                  {action.assetChanges.map((change, changeIndex) => {
+                    const asset = tokenFor(change.token)
+                    const presentation = assetChangePresentation(change, account, asset)
+                    return (
+                      <DetailValue
+                        label={presentation.direction}
+                        title={`${presentation.amount.exact} · ${change.token}`}
+                        key={`${change.token}:${changeIndex}`}
+                      >
+                        {presentation.amount.display}
+                      </DetailValue>
+                    )
+                  })}
+                </dl>
+                {action.assetChangesTruncated ? (
+                  <div className='activityDetailActionNote'>Additional token changes are omitted.</div>
+                ) : null}
+              </div>
+            ) : null}
             {action.argumentsTruncated ? (
               <div className='activityDetailActionNote'>Some opaque call arguments are omitted.</div>
             ) : null}
@@ -414,6 +464,7 @@ const ActivityDetail = ({
 
       {onchainDetail ? (
         <ActivityActionDetails
+          account={account}
           evidence={actionEvidence}
           grouped={Boolean(batch) || entry.type === 'walletCalls'}
           loading={actionLoading}

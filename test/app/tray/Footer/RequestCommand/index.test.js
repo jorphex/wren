@@ -629,9 +629,9 @@ it('omits explorer access without a configured explorer while preserving hash co
   })
   const view = renderMountedCommand(req, 'sentStatus', commandStore({ explorer: '' }))
 
-  await view.user.click(screen.getByRole('button', { name: 'View details' }))
   expect(screen.queryByRole('button', { name: 'Open explorer' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Copy hash' }).disabled).toBe(false)
+  expect(screen.queryByRole('button', { name: 'View details' })).toBeNull()
   view.unmount()
 })
 
@@ -680,7 +680,6 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Speed up' })).toBeTruthy()
 
-  await view.user.click(screen.getByRole('button', { name: 'View details' }))
   expect(screen.getByRole('button', { name: 'Open explorer' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy hash' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
@@ -719,7 +718,6 @@ it('shows truthful unconfirmed-submission evidence without replacement actions',
     expect.any(Function)
   )
 
-  await view.user.click(screen.getByRole('button', { name: 'View details' }))
   expect(screen.getByRole('button', { name: 'Open explorer' })).toBeTruthy()
   await view.user.click(screen.getByRole('button', { name: 'Copy hash' }))
   expect(screen.getByText('Expected transaction hash copied')).toBeTruthy()

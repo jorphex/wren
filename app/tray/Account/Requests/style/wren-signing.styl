@@ -68,7 +68,7 @@
       min-height 116px
       padding var(--wren-space-3) 0
       box-sizing border-box
-      grid-template-columns minmax(0, 1fr) minmax(176px, 224px)
+      grid-template-columns minmax(0, 1fr)
       align-items center
       gap var(--wren-space-6)
 
@@ -91,6 +91,9 @@
 
       .displayValue
         font-size inherit
+
+      .transactionReviewApprovalSummary
+        flex-wrap nowrap
 
       ._txDescriptionTransfer
         display grid
@@ -499,6 +502,84 @@
 
     span:last-child
       color var(--wren-accent-primary-hover)
+
+  .transactionReviewAssetChanges
+    margin 0
+    border-top 1px solid var(--wren-ledger-rule)
+
+    .clusterValue
+      padding 0
+
+  .transactionReviewAssetChangesInner
+    width 100%
+    padding var(--wren-space-3) 0
+
+  .transactionReviewAssetChangesHeader
+    display flex
+    min-height 28px
+    align-items baseline
+    justify-content space-between
+    gap var(--wren-space-3)
+
+    strong
+      color var(--wren-text-primary)
+      font-size var(--wren-type-small)
+      font-weight 620
+
+    span
+      color var(--wren-text-muted)
+      font-family var(--wren-font-utility)
+      font-size var(--wren-type-caption)
+
+  .transactionReviewAssetChange
+    display flex
+    min-height 44px
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-4)
+    border-top 1px solid var(--wren-ledger-rule)
+
+  .transactionReviewAssetChangeIdentity
+    display flex
+    min-width 0
+    align-items center
+    gap var(--wren-space-3)
+
+    > .assetMark
+      flex 0 0 28px
+      width 28px
+      height 28px
+
+    > span
+      display grid
+      min-width 0
+      gap 1px
+
+      strong
+        color var(--wren-text-primary)
+        font-size var(--wren-type-small)
+        font-weight 560
+
+      span
+        overflow hidden
+        color var(--wren-text-muted)
+        font-family var(--wren-font-utility)
+        font-size var(--wren-type-caption)
+        text-overflow ellipsis
+        white-space nowrap
+
+  .transactionReviewAssetChangeAmount
+    flex none
+    color var(--wren-text-secondary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    text-align right
+
+  .transactionReviewAssetChangesNote
+    padding-top var(--wren-space-2)
+    color var(--wren-warning)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
 
   .clusterTag,
   ._txFeeValueDefault
@@ -1279,21 +1360,21 @@
 
 .requestNoticeTransactionStatus
   height auto
-  min-height 200px
+  min-height 132px
 
   .requestNoticeInner
     display block
-    padding 17px 24px 18px
+    padding 12px 20px
     box-sizing border-box
 
 .requestNoticeTransactionDeploymentStatus
-  min-height 248px
+  min-height 160px
 
 .txLifecycle
   display grid
   grid-template-columns minmax(0, 1fr) minmax(330px, .85fr)
   align-items center
-  gap 26px
+  gap 18px
 
 .txLifecycleSummary
   display flex
@@ -1303,9 +1384,9 @@
 
 .txLifecycleMark
   display grid
-  flex 0 0 40px
-  width 40px
-  height 40px
+  flex 0 0 36px
+  width 36px
+  height 36px
   border 1px solid var(--wren-border-default)
   border-radius var(--wren-radius-md)
   color var(--wren-accent-primary-hover)
@@ -1339,11 +1420,11 @@
     font-weight 650
 
   span
-    margin-top 3px
+    margin-top 1px
     color var(--wren-text-muted)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
-    line-height 16px
+    line-height 15px
 
 .txLifecycleSteps
   display grid
@@ -1507,14 +1588,18 @@
 
 .txLifecycleEvidence
   position relative
-  margin-top 16px
-  padding-top 14px
+  display grid
+  margin-top 8px
+  padding-top 8px
   border-top 1px solid var(--wren-ledger-rule)
+  grid-template-columns minmax(0, 1fr) auto
+  align-items end
+  gap 10px 16px
 
 .txLifecycleFacts
   display grid
   margin 0
-  padding 0 0 13px
+  padding 0
   grid-template-columns repeat(4, minmax(0, 1fr))
   gap 16px
 
@@ -1535,22 +1620,8 @@
     color var(--wren-text-muted)
 
   dd
-    margin-top 4px
+    margin-top 1px
     color var(--wren-text-secondary)
-
-.txLifecycleEvidence > .txProgressSuccessItemRight
-  position static
-  display flex
-  margin 0 0 10px
-  color var(--wren-text-muted)
-  font-family var(--wren-font-utility)
-  font-size var(--wren-type-caption)
-  justify-content flex-end
-  gap 4px
-
-  .txProgressSuccessItemLabel,
-  .txProgressSuccessItemValue
-    font-size inherit
 
 .txLifecycleActions
   display flex
@@ -1558,7 +1629,6 @@
   gap 8px
 
 .txLifecycleAction,
-.txLifecycleDetails button,
 .txLifecycleCancelRequest
   min-height 44px
   height 44px
@@ -1592,32 +1662,26 @@
   color var(--wren-text-primary)
   border-color var(--wren-border-strong)
 
-.txLifecycleDetails
-  margin-top 12px
-  padding 11px 12px
-  border 1px solid var(--wren-border-subtle)
-  border-radius var(--wren-radius-sm)
-  background var(--wren-surface-inset)
+.txLifecycleActionIcon
+  display grid
+  width 44px
+  min-width 44px
+  padding 0
+  place-items center
 
-  > span
+  > svg
     display block
-    overflow-wrap anywhere
-    color var(--wren-text-secondary)
-    font-family var(--wren-font-mono)
-    font-size var(--wren-type-caption)
-    line-height 17px
-
-  > div
-    display flex
-    margin-top 9px
-    align-items center
-    gap 8px
 
 .txLifecycleCopyStatus
-  min-height 16px
-  color var(--wren-success)
-  font-family var(--wren-font-utility)
-  font-size var(--wren-type-caption)
+  position absolute
+  width 1px
+  height 1px
+  margin -1px
+  padding 0
+  overflow hidden
+  clip rect(0, 0, 0, 0)
+  white-space nowrap
+  border 0
 
 .txLifecycleCancelRequest
   display block
@@ -1630,6 +1694,9 @@
 
   .txLifecycleFacts
     grid-template-columns repeat(2, minmax(0, 1fr))
+
+  .txLifecycleEvidence
+    grid-template-columns 1fr
 
   .txLifecycleActions
     justify-content stretch

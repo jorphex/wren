@@ -1,4 +1,5 @@
 import { decodeLocalCalldata } from '../inspector/localDecode'
+import { parseSimulationEffects } from '../transaction/effects'
 import { parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
 import type { ActivityEntry } from '../store/state/types/activity'
 import type { ActivityTransactionReference } from '../store/state/types/activityTransactionReference'
@@ -141,6 +142,31 @@ export const projectActivityTransaction = (
   })
 }
 
+export const projectActivityReceiptEffects = (value: unknown, expected: ExpectedTransaction) => {
+  if (!isRecord(value)) return undefined
+  const transactionHash = normalizeHash(value['transactionHash'])
+  const blockHash = normalizeHash(value['blockHash'])
+  const blockNumber = normalizeQuantity(value['blockNumber'])?.hex
+  if (
+    transactionHash !== expected.hash.toLowerCase() ||
+    (expected.receipt &&
+      (blockHash !== expected.receipt.blockHash.toLowerCase() ||
+        blockNumber !== expected.receipt.blockNumber.toLowerCase()))
+  ) {
+    return undefined
+  }
+
+  const account = expected.account.toLowerCase()
+  const parsed = parseSimulationEffects(value['logs'])
+  const assetChanges = parsed.effects.filter(
+    (effect) => effect.type === 'transfer' && (effect.from === account || effect.to === account)
+  )
+  return {
+    assetChanges,
+    ...(parsed.truncated ? { assetChangesTruncated: true as const } : {})
+  }
+}
+
 const operationTargets = (
   operation: OperationLifecycle,
   batches: Record<string, WalletCallBatch>
@@ -242,10 +268,19 @@ export const createActivityDetailsService = (dependencies: ActivityDetailsDepend
     const outcomes = await Promise.all(
       targets.map(async (target) => {
         try {
-          const transaction = await dependencies.rpc(chainId, 'eth_getTransactionByHash', [target.hash])
-          return transaction === null || transaction === undefined
-            ? { status: 'missing' as const }
-            : { status: 'found' as const, action: projectActivityTransaction(transaction, target) }
+          const [transaction, receipt] = await Promise.all([
+            dependencies.rpc(chainId, 'eth_getTransactionByHash', [target.hash]),
+            target.receipt
+              ? dependencies.rpc(chainId, 'eth_getTransactionReceipt', [target.hash]).catch(() => undefined)
+              : Promise.resolve(undefined)
+          ])
+          if (transaction === null || transaction === undefined) return { status: 'missing' as const }
+          const action = projectActivityTransaction(transaction, target)
+          const receiptEffects = projectActivityReceiptEffects(receipt, target)
+          return {
+            status: 'found' as const,
+            action: ActivityTransactionActionSchema.parse({ ...action, ...receiptEffects })
+          }
         } catch {
           return { status: 'error' as const }
         }

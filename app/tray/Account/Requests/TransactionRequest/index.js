@@ -116,8 +116,21 @@ export class TransactionRequest extends React.Component {
               <div className='_txBody'>
                 <TxMain i={0} {...this.props} req={req} chain={chain} />
                 <TxRecipient i={1} {...this.props} req={req} />
+                {recognizedActions.map((action, i) => {
+                  return (
+                    <TxAction
+                      key={'action' + action.type + i}
+                      i={2 + i}
+                      {...this.props}
+                      req={req}
+                      readOnly={readOnly}
+                      chain={chain}
+                      action={action}
+                    />
+                  )
+                })}
                 <TxFee
-                  i={2}
+                  i={2 + recognizedActions.length}
                   {...this.props}
                   req={req}
                   readOnly={readOnly}
@@ -129,20 +142,9 @@ export class TransactionRequest extends React.Component {
                     <NonceControl req={req} hint='Transaction sequence' readOnly={readOnly} />
                   </div>
                 </div>
-                {!isNativeTransfer && <TxValue i={3} {...this.props} req={req} chain={chain} />}
-                {recognizedActions.map((action, i) => {
-                  return (
-                    <TxAction
-                      key={'action' + action.type + i}
-                      i={4 + i}
-                      {...this.props}
-                      req={req}
-                      readOnly={readOnly}
-                      chain={chain}
-                      action={action}
-                    />
-                  )
-                })}
+                {!isNativeTransfer && (
+                  <TxValue i={3 + recognizedActions.length} {...this.props} req={req} chain={chain} />
+                )}
               </div>
             </div>
           </div>

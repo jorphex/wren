@@ -117,7 +117,11 @@ class TxRecipient extends React.Component {
           ) : req.recipientType === 'contract' ? (
             <ClusterRow>
               <ClusterValue>
-                <div className='clusterTag'>Contract method not decoded</div>
+                <div className='clusterTag'>
+                  {req.calldataDecodeStatus === 'pending'
+                    ? 'Identifying contract method…'
+                    : 'Contract method not decoded'}
+                </div>
               </ClusterValue>
             </ClusterRow>
           ) : null}

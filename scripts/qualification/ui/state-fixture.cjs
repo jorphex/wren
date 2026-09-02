@@ -582,6 +582,53 @@ const responsiveTransactionRequest = (variant) => {
       signature: 'transfer(address,uint256)',
       source: 'bundled-selector-directory'
     }
+  } else if (variant === 'asset-changes') {
+    const token = '0x3333333333333333333333333333333333333333'
+    request.data.to = token
+    request.decodedData = {
+      contractAddress: token,
+      contractName: 'Workshop Vault',
+      source: 'Bundled standard ABI',
+      confidence: 'standard-abi',
+      method: 'withdraw',
+      args: []
+    }
+    request.simulation.effects = [
+      {
+        type: 'transfer',
+        standard: 'erc20',
+        token,
+        from: QUALIFICATION_RECIPIENT,
+        to: QUALIFICATION_ACCOUNT.toLowerCase(),
+        amount: '5000000'
+      }
+    ]
+  } else if (variant === 'approval') {
+    request.data.value = '0x0'
+    request.data.data =
+      '0x095ea7b30000000000000000000000006f96e6fdaa7492965ab0f9c92e978de80774790100000000000000000000000000000000000000000000000000000000350c5280'
+    request.payload.params = [request.data]
+    request.recognizedActions = [
+      {
+        id: 'erc20:approve',
+        data: {
+          amount: '890000000',
+          decimals: 6,
+          name: 'USD Coin',
+          symbol: 'USDC',
+          contract: {
+            address: request.data.to,
+            ens: '',
+            type: 'contract'
+          },
+          spender: {
+            address: QUALIFICATION_RECIPIENT,
+            ens: '',
+            type: 'contract'
+          }
+        }
+      }
+    ]
   }
 
   if (variant.startsWith('trezor-')) {
@@ -2277,7 +2324,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = 250
+    state.windows.panel.footer.height = 160
   }
 
   if (
@@ -2350,7 +2397,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 230
+    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 132
   }
 
   if (scenario.state === 'transaction-responsive') {
@@ -2360,6 +2407,18 @@ const fixtureFor = (scenario) => {
     state.main.networks.ethereum = networks
     state.main.networksMeta.ethereum = metadata
     state.main.origins = { workshop: { name: 'workshop.example' } }
+    if (scenario.variant === 'asset-changes') {
+      state.main.balances[QUALIFICATION_ACCOUNT] = [
+        {
+          chainId: 1,
+          address: '0x3333333333333333333333333333333333333333',
+          balance: '100000000',
+          decimals: 6,
+          name: 'USD Coin',
+          symbol: 'USDC'
+        }
+      ]
+    }
     state.windows.panel.nav = [
       {
         view: 'requestView',
@@ -2435,9 +2494,43 @@ const rpcReplyFor = (scenario, method) => {
 }
 
 const invokeReplyFor = (scenario, method, args = []) => {
+  if (method === 'activity:details' && scenario.state === 'account-activity-detail-retained') {
+    return {
+      success: true,
+      partial: false,
+      actions: [
+        {
+          transactionHash: QUALIFICATION_TX_HASH,
+          kind: 'contract-call',
+          from: QUALIFICATION_ACCOUNT.toLowerCase(),
+          to: '0x3333333333333333333333333333333333333333',
+          value: '0',
+          inputBytes: 100,
+          selector: '0xb460af94',
+          method: 'withdraw',
+          signature: 'withdraw(uint256,address,address)',
+          arguments: [
+            { name: 'assets', type: 'uint256', value: '5000000' },
+            { name: 'receiver', type: 'address', value: QUALIFICATION_ACCOUNT.toLowerCase() },
+            { name: 'owner', type: 'address', value: QUALIFICATION_ACCOUNT.toLowerCase() }
+          ],
+          assetChanges: [
+            {
+              type: 'transfer',
+              standard: 'erc20',
+              token: '0x3333333333333333333333333333333333333333',
+              from: QUALIFICATION_RECIPIENT,
+              to: QUALIFICATION_ACCOUNT.toLowerCase(),
+              amount: '5000000'
+            }
+          ]
+        }
+      ]
+    }
+  }
   if (
     method === 'activity:details' &&
-    ['account-activity-detail', 'account-activity-detail-retained'].includes(scenario.state)
+    scenario.state === 'account-activity-detail'
   ) {
     return {
       success: true,

@@ -794,7 +794,7 @@ const reviewScenarios = () => [
       layoutExpectations: [
         { kind: 'viewport-bottom', selector: '.requestNoticeTransactionDeploymentStatus' }
       ],
-      requiredControls: ['View details', 'Verify source', 'Close'],
+      requiredControls: ['Copy hash', 'Open explorer', 'Verify source', 'Close'],
       requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
     }))
   ),
@@ -1671,6 +1671,39 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionEvidenceGroupDisclosure',
     requiredText: ['Execution', 'Raw data']
+  },
+  {
+    id: 'tray-transaction-asset-changes-full-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'asset-changes',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.transactionReviewAssetChanges',
+    requiredText: ['Expected asset changes', 'RPC simulation', 'Receive', '5 USDC'],
+    layoutExpectations: [
+      { kind: 'full-width', selector: '.transactionReviewAssetChanges', container: '.transactionReviewOverview' }
+    ]
+  },
+  {
+    id: 'tray-transaction-approval-full-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'approval',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.transactionReviewMain',
+    requiredText: ['Approve', '890', 'USDC'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewApprovalSummary',
+        property: 'flexWrap',
+        value: 'nowrap'
+      }
+    ]
   },
   ...[
     ['trezor-waiting', 'Waiting for Trezor', 'Review and approve the transaction on your Trezor.'],
@@ -2844,8 +2877,11 @@ const reviewScenarios = () => [
       'Ethereum',
       'Details',
       'Action',
-      'Native value transfer',
-      '1 ETH',
+      'Contract call',
+      'withdraw(uint256,address,address)',
+      'Asset changes',
+      'Received',
+      '5 USDC',
       'On-chain',
       'Nonce',
       'Block',
@@ -2895,14 +2931,16 @@ const reviewScenarios = () => [
       'Confirmed',
       'Details',
       'Action',
-      'Native value transfer',
-      '1 ETH',
+      'Contract call',
+      'withdraw(uint256,address,address)',
+      'Asset changes',
+      'Received',
+      '5 USDC',
       'On-chain',
       'Transaction hash'
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
-      { kind: 'full-width', selector: '.activityDetail', container: '.accountViewMain', inset: 12 },
       ...ACTIVITY_DETAIL_CARD_ALIGNMENT
     ]
   },
@@ -3076,17 +3114,17 @@ const reviewScenarios = () => [
       { kind: 'size', selector: '.signerPreviewRow .moduleItemIcon', height: 18 },
       {
         kind: 'size',
-        selector: '.signerPreviewRow > .clusterValue:last-child',
-        width: 52,
-        height: 52
+        selector: '.signerPreviewVerify',
+        width: 44,
+        height: 44
       },
       {
         kind: 'size',
-        selector:
-          '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg, .signerPreviewRow > .clusterValue:last-child svg',
-        width: 18,
-        height: 18
+        selector: '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg',
+        width: 16,
+        height: 16
       },
+      { kind: 'size', selector: '.signerPreviewVerify svg', width: 20, height: 20 },
       { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
       { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
@@ -3452,7 +3490,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
-        requiredControls: ['View details'],
+        requiredControls: ['Copy hash', 'Open explorer'],
         requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
         layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
       },
@@ -3464,7 +3502,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle-success',
-        requiredControls: ['View details', 'Close'],
+        requiredControls: ['Copy hash', 'Open explorer', 'Close'],
         requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
         layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
       },

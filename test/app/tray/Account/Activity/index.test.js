@@ -282,6 +282,16 @@ it('shows a decoded token transfer method, recipient, and formatted amount', asy
         arguments: [
           { name: 'to', type: 'address', value: recipient },
           { name: 'amount', type: 'uint256', value: '42000000' }
+        ],
+        assetChanges: [
+          {
+            type: 'transfer',
+            standard: 'erc20',
+            token,
+            from: recipient,
+            to: account,
+            amount: '5000000'
+          }
         ]
       }
     ]
@@ -308,6 +318,9 @@ it('shows a decoded token transfer method, recipient, and formatted amount', asy
   expect(await screen.findByText('Contract call')).toBeTruthy()
   expect(screen.getByText('transfer(address,uint256)')).toBeTruthy()
   expect(screen.getByText('42 USDC')).toBeTruthy()
+  expect(screen.getByText('Asset changes')).toBeTruthy()
+  expect(screen.getByText('Received')).toBeTruthy()
+  expect(screen.getByText('5 USDC')).toBeTruthy()
   expect(screen.getByTitle(recipient)).toBeTruthy()
 })
 

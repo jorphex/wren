@@ -14,6 +14,18 @@ const ActivityActionArgumentSchema = z
   })
   .strict()
 
+const ActivityAssetChangeSchema = z
+  .object({
+    type: z.literal('transfer'),
+    standard: z.enum(['erc20', 'erc721', 'erc1155']),
+    token: AddressSchema,
+    from: AddressSchema,
+    to: AddressSchema,
+    amount: DecimalQuantitySchema.optional(),
+    tokenId: DecimalQuantitySchema.optional()
+  })
+  .strict()
+
 export const ActivityTransactionActionSchema = z
   .object({
     transactionHash: HashSchema,
@@ -29,7 +41,9 @@ export const ActivityTransactionActionSchema = z
     method: z.string().min(1).max(128).optional(),
     signature: z.string().min(1).max(256).optional(),
     arguments: z.array(ActivityActionArgumentSchema).max(MAX_SAFE_ARGUMENTS),
-    argumentsTruncated: z.boolean().optional()
+    argumentsTruncated: z.boolean().optional(),
+    assetChanges: z.array(ActivityAssetChangeSchema).max(100).optional(),
+    assetChangesTruncated: z.boolean().optional()
   })
   .strict()
 
