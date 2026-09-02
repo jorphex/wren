@@ -485,6 +485,15 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
   expect(signingStyle).toMatch(
     /\.requestSign:disabled \.requestSignButton,[\s\S]*?\.requestSign:disabled \.requestSignButton:hover[\s\S]*?color var\(--wren-text-inverse\)[\s\S]*?background var\(--wren-control-texture-light\), var\(--wren-accent-primary\)/
   )
+  expect(signingStyle).toMatch(
+    /\.txLifecycleFacts[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)[\s\S]*?div[\s\S]*?display flex[\s\S]*?dt[\s\S]*?flex none/
+  )
+  expect(signingStyle).toMatch(
+    /\.permitRawAction[\s\S]*?\.permitRawActionHeader[\s\S]*?justify-content space-between[\s\S]*?> span[\s\S]*?color var\(--wren-accent-primary-hover\)/
+  )
+  expect(lightweightRequestStyle).not.toMatch(
+    /\.lightweightRequestFact \+ \.lightweightRequestFact[\s\S]*?border-top/
+  )
 })
 
 test('keeps recoverable request feedback from shifting its icon and actions', () => {

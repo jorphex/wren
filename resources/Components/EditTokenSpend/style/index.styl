@@ -102,11 +102,11 @@
 
 .wrenTokenApprovalExpiry
   grid-column 1 / -1
-  display flex
+  display grid
   padding var(--wren-space-2) 0 !important
   border-top 1px solid var(--wren-ledger-rule)
+  grid-template-columns 112px minmax(0, 1fr)
   align-items center
-  justify-content space-between
   gap var(--wren-space-3)
 
   .wrenTokenApprovalContextLabel
@@ -121,10 +121,10 @@
   padding var(--wren-space-4) 0 0
 
 .wrenTokenApprovalDecisionHeading
-  display flex
+  display grid
   min-height 44px
+  grid-template-columns 112px minmax(0, 1fr)
   align-items center
-  justify-content space-between
   gap var(--wren-space-3)
 
   > div > span
@@ -144,6 +144,7 @@
   align-items baseline
   gap 5px
   cursor pointer
+  justify-self start
 
   strong
     font-family var(--wren-font-utility)
@@ -176,9 +177,6 @@
   background var(--wren-surface-inset)
   box-shadow inset 0 1px 2px rgba(0, 0, 0, .38)
   grid-template-columns repeat(3, minmax(0, 1fr))
-
-.wrenTokenApprovalModesWithRevoke
-  grid-template-columns repeat(4, minmax(0, 1fr))
 
 .wrenTokenApprovalMode
   appearance none
@@ -223,12 +221,36 @@
     color var(--wren-text-disabled)
     cursor default
 
-.wrenTokenApprovalModeRevoke
+.wrenTokenApprovalRevoke
+  appearance none
+  display block
+  min-height 44px
+  margin var(--wren-space-2) 0 0 auto
+  padding 0 var(--wren-space-2)
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
   color var(--wren-danger)
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  font-weight 600
+  cursor pointer
 
-  &[aria-pressed='true'],
-  &[aria-pressed='true']:hover:not(:disabled)
-    color var(--wren-danger)
+  &:hover:not(:disabled)
+    border-color var(--wren-border-subtle)
+    background var(--wren-ledger-hover)
+
+  &[aria-pressed='true']
+    border-color var(--wren-border-default)
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px
+
+  &:disabled
+    color var(--wren-text-disabled)
+    cursor default
 
 .wrenTokenApprovalAmountEditor
   margin-top var(--wren-space-3)

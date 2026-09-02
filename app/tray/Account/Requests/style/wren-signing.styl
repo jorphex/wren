@@ -1021,6 +1021,28 @@
   cursor pointer
   flex-direction column
 
+  .permitRawActionHeader
+    display flex
+    width 100%
+    align-items center
+    justify-content space-between
+    gap var(--wren-space-3)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+
+    strong
+      font-size var(--wren-type-small)
+      font-weight 650
+
+    > span
+      flex none
+      color var(--wren-accent-primary-hover)
+      font-size var(--wren-type-caption)
+      font-weight 600
+
+  .permitRawActionSignature
+    margin-top var(--wren-space-1)
+
   code
     color var(--wren-text-tertiary)
     font inherit
@@ -1038,14 +1060,10 @@
 
     > div
       display grid
-      min-height 44px
+      min-height 42px
       padding 0
       grid-template-columns 112px minmax(0, 1fr)
       align-items center
-      border-bottom 1px solid var(--wren-ledger-rule)
-
-      &:last-child
-        border-bottom 0
 
   dt
     color var(--wren-text-tertiary)
@@ -1065,13 +1083,24 @@
 .permitEditAmount,
 .permitCopySpender
   appearance none
+  display flex
+  width calc(100% + 8px)
   min-height 44px
-  padding 0
-  border 0
+  margin-left -8px
+  padding 0 var(--wren-space-2)
+  align-items center
+  justify-content space-between
+  gap var(--wren-space-2)
+  border 1px solid transparent
+  border-radius var(--wren-radius-sm)
   color inherit
   background transparent
   font inherit
   cursor pointer
+
+  &:hover:not(:disabled)
+    border-color var(--wren-border-subtle)
+    background var(--wren-ledger-hover)
 
   &:focus-visible
     outline 2px solid var(--wren-focus)
@@ -1093,6 +1122,13 @@
 
 .permitCopySpender
   width 100%
+
+.permitInlineAction
+  flex none
+  color var(--wren-accent-primary-hover)
+  font-family var(--wren-font-ui)
+  font-size var(--wren-type-caption)
+  font-weight 600
 
 .approvePermitPerch .permitCopySpender
   .clusterAddressRecipient,
@@ -1669,30 +1705,34 @@
   margin 0
   padding 0
   grid-template-columns repeat(2, minmax(0, 1fr))
-  gap 16px
+  gap 6px 16px
 
   &:has(> div:nth-child(3))
-    grid-template-columns repeat(4, minmax(0, 1fr))
+    grid-template-columns repeat(2, minmax(0, 1fr))
 
   div
+    display flex
     min-width 0
+    align-items baseline
+    gap 6px
 
   dt,
   dd
     display block
     margin 0
-    overflow hidden
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
-    text-overflow ellipsis
     white-space nowrap
 
   dt
+    flex none
     color var(--wren-text-muted)
 
   dd
-    margin-top 1px
+    min-width 0
+    overflow hidden
     color var(--wren-text-secondary)
+    text-overflow ellipsis
 
 .txLifecycleActions
   display flex

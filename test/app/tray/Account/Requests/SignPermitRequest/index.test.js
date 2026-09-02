@@ -120,6 +120,10 @@ it('labels the raw permit view with the resolved request chain', () => {
 it('preserves raw-data navigation and spender copying on named controls', async () => {
   const { user } = render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} />)
 
+  expect(screen.getByText('Review ›')).toBeTruthy()
+  expect(screen.getByText('Adjust')).toBeTruthy()
+  expect(screen.getByText('Copy')).toBeTruthy()
+
   await user.click(screen.getByRole('button', { name: 'View raw permit data' }))
   await user.click(screen.getByRole('button', { name: 'Copy permit spender address' }))
 

@@ -192,10 +192,7 @@ const EditTokenSpend = ({
         </div>
 
         {!hasInvalidAmount ? (
-          <div
-            className={`wrenTokenApprovalModes${canRevoke ? ' wrenTokenApprovalModesWithRevoke' : ''}`}
-            aria-label='Spending limit options'
-          >
+          <div className='wrenTokenApprovalModes' aria-label='Spending limit options'>
             <button
               type='button'
               aria-label='Requested'
@@ -232,19 +229,20 @@ const EditTokenSpend = ({
                 <span>Custom</span>
               </button>
             ) : null}
-            {canRevoke ? (
-              <button
-                type='button'
-                aria-label='Revoke'
-                className='wrenTokenApprovalMode wrenTokenApprovalModeRevoke'
-                disabled={approvalSubmitting}
-                aria-pressed={mode === 'revoke'}
-                onClick={(event) => activateOnce(event, setToRevoke)}
-              >
-                <span>Revoke</span>
-              </button>
-            ) : null}
           </div>
+        ) : null}
+
+        {canRevoke && !hasInvalidAmount ? (
+          <button
+            type='button'
+            aria-label='Revoke'
+            className='wrenTokenApprovalRevoke'
+            disabled={approvalSubmitting}
+            aria-pressed={mode === 'revoke'}
+            onClick={(event) => activateOnce(event, setToRevoke)}
+          >
+            Revoke allowance
+          </button>
         ) : null}
 
         {isCustom ? (

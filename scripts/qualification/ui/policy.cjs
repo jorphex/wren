@@ -330,6 +330,12 @@ const accountAccessReviewScenarios = () =>
     layoutExpectations: [
       { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
       { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
+      {
+        kind: 'computed-style',
+        selector: '.lightweightRequestFact',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
       { kind: 'viewport-bottom', selector: '.requestApproveCompact' }
     ]
   }))
@@ -358,6 +364,12 @@ const switchChainReviewScenarios = () =>
     layoutExpectations: [
       { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
       { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
+      {
+        kind: 'computed-style',
+        selector: '.lightweightRequestFact',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
       { kind: 'viewport-bottom', selector: '.requestApproveCompact' }
     ]
   }))
@@ -1808,7 +1820,15 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.wrenTokenApprovalEditor',
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke'],
-    requiredText: ['Token approval', 'Spending limit', '890', 'USDC']
+    requiredText: ['Token approval', 'Spending limit', '890', 'USDC'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalRevoke',
+        property: 'minHeight',
+        value: '44px'
+      }
+    ]
   },
   ...[
     ['trezor-waiting', 'Waiting for Trezor', 'Review and approve the transaction on your Trezor.'],
@@ -3427,7 +3447,19 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Decline',
                 'Sign message'
               ],
-              requiredText: ['Token approval', 'Uniswap', 'Approval', 'Details', 'USDC', '2412', 'EIP-712'],
+              requiredText: [
+                'Token approval',
+                'Uniswap',
+                'Approval',
+                'Permit data',
+                'Review ›',
+                'Adjust',
+                'Copy',
+                'Details',
+                'USDC',
+                '2412',
+                'EIP-712'
+              ],
               layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
             },
             {
@@ -3599,6 +3631,12 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredText: ['Submitted', 'Transaction hash', 'Confirmations', '0'],
         layoutExpectations: [
           { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleFacts > div',
+            property: 'display',
+            value: 'flex'
+          },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
         ]
       },
@@ -3612,7 +3650,15 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle',
         requiredControls: ['Copy hash', 'Open explorer'],
         requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
-        layoutExpectations: [{ kind: 'hidden', selector: '.txLifecycleSteps' }]
+        layoutExpectations: [
+          { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleFacts > div',
+            property: 'display',
+            value: 'flex'
+          }
+        ]
       },
       {
         id: `tray-transaction-confirmed-full-${scale}`,
@@ -3624,7 +3670,15 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle-success',
         requiredControls: ['Copy hash', 'Open explorer', 'Close'],
         requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
-        layoutExpectations: [{ kind: 'hidden', selector: '.txLifecycleSteps' }]
+        layoutExpectations: [
+          { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleFacts > div',
+            property: 'display',
+            value: 'flex'
+          }
+        ]
       },
       {
         id: `dash-delegation-full-${scale}`,

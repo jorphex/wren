@@ -84,7 +84,13 @@ const PermitOverview = ({
           }}
           type='button'
         >
-          <span>Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)</span>
+          <span className='permitRawActionHeader'>
+            <strong>Permit data</strong>
+            <span>Review ›</span>
+          </span>
+          <span className='permitRawActionSignature'>
+            Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)
+          </span>
           <code>spender: {compactAddress(spender.address)}</code>
         </button>
       </section>
@@ -114,7 +120,8 @@ const PermitOverview = ({
                 }}
                 type='button'
               >
-                {`${amountDisplay} ${amountSuffix}`}
+                <span>{`${amountDisplay} ${amountSuffix}`}</span>
+                {canEditAmount ? <span className='permitInlineAction'>Adjust</span> : null}
               </button>
             </dd>
           </div>
@@ -138,6 +145,7 @@ const PermitOverview = ({
                   revealOnHover={false}
                   source={localIdentity?.source || (spender.ens ? 'ENS' : '')}
                 />
+                <span className='permitInlineAction'>Copy</span>
               </button>
             </dd>
           </div>

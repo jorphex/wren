@@ -117,6 +117,11 @@ describe('changing approval amounts', () => {
     )
 
     const revoke = screen.getByRole('button', { name: 'Revoke' })
+    const amountModes = screen.getByLabelText('Spending limit options')
+
+    expect(amountModes.querySelectorAll('.wrenTokenApprovalMode')).toHaveLength(3)
+    expect(amountModes.contains(revoke)).toBe(false)
+    expect(revoke.classList.contains('wrenTokenApprovalRevoke')).toBe(true)
     await user.click(revoke)
 
     expect(onUpdate).toHaveBeenCalledWith('0', expect.any(Function))
