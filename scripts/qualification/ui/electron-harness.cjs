@@ -570,9 +570,11 @@ const runScenario = async (scenario) => {
           )
         }
         await new Promise((resolve) => setTimeout(resolve, 50))
+        window.webContents.invalidate()
+        await new Promise((resolve) => setTimeout(resolve, 50))
       }
       screenshot = path.join(screenshotRoot, `${scenario.id}.png`)
-      const image = await window.webContents.capturePage()
+      const image = await window.capturePage(undefined, { stayAwake: true })
       fs.writeFileSync(screenshot, image.toPNG(), { mode: 0o600 })
     }
     return { ...scenario, audit, screenshot }

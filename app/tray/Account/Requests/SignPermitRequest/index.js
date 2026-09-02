@@ -6,8 +6,7 @@ import {
 } from '../../../../../resources/domain/token/amount'
 import Icon from '../../../../../resources/Components/Icon'
 import link from '../../../../../resources/link'
-import Countdown from '../../../../../resources/Components/Countdown'
-import EditTokenSpend from '../../../../../resources/Components/EditTokenSpend'
+import EditTokenSpend, { formatApprovalExpiry } from '../../../../../resources/Components/EditTokenSpend'
 import {
   SimpleTypedData as TypedSignatureOverview,
   getTypedDataDeviceWarning,
@@ -101,7 +100,10 @@ const PermitOverview = ({
           <div>
             <dt>From</dt>
             <dd>
-              {accountName || 'Account'} · {compactAddress(req.account)}
+              <span className='permitAccountIdentity'>
+                <strong>{accountName || 'Account'}</strong>
+                <span className='permitAccountAddress'>{compactAddress(req.account)}</span>
+              </span>
             </dd>
           </div>
           <div>
@@ -151,13 +153,7 @@ const PermitOverview = ({
           </div>
           <div>
             <dt>Expires</dt>
-            <dd>
-              <Countdown
-                end={deadline * 1000}
-                innerClass='permitReviewValue'
-                titleClass='permitReviewCountdown'
-              />
-            </dd>
+            <dd>{formatApprovalExpiry(deadline)}</dd>
           </div>
           <div>
             <dt>Type</dt>

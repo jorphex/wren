@@ -64,9 +64,19 @@ const chainData = {
 }
 
 it('shows domain mismatch warnings in the specialized permit overview', () => {
-  render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} />)
+  render(
+    <SignPermitRequest
+      accountName='Workshop Software Account With A Long Name'
+      chainData={chainData}
+      originName='example.test'
+      req={req}
+    />
+  )
 
   expect(screen.getByRole('alert').textContent).toBe('Domain chain 1 does not match request chain 5.')
+  expect(screen.getByText('Workshop Software Account With A Long Name')).toBeTruthy()
+  expect(screen.getByText('0x00000…0001').classList.contains('permitAccountAddress')).toBe(true)
+  expect(screen.getByText('May 18, 2033')).toBeTruthy()
 })
 
 it('shows a live local label without hiding the permit spender address', () => {

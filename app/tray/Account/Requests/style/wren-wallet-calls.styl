@@ -357,12 +357,18 @@
   color var(--wren-danger)
 
 .walletCallsAdjustSummary
-  display grid
-  min-height 88px
-  padding 5px 0 18px
-  grid-template-columns minmax(0, 1fr) 96px auto
-  gap 18px
-  align-items end
+  min-height 108px
+  padding 14px 0 18px
+
+  h2
+    margin 0
+
+  .walletCallsAdjustControls
+    display grid
+    margin-top 12px
+    grid-template-columns 112px minmax(0, 1fr)
+    align-items end
+    gap 18px
 
   p
     max-width 400px
@@ -372,7 +378,10 @@
     line-height 1.5
 
 .walletCallsAdjustTotal
-  text-align right
+  display grid
+  grid-template-rows auto 44px
+  row-gap 5px
+  text-align left
 
   span,
   strong
@@ -384,7 +393,8 @@
     font-size 12px
 
   strong
-    margin-top 5px
+    display flex
+    align-items center
     font-family var(--wren-font-utility)
     font-size 14px
 

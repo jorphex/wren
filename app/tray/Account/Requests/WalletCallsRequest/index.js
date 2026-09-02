@@ -185,23 +185,23 @@ export class WalletCallsRequest extends React.Component {
     return (
       <div className='walletCallsSurface walletCallsAdjust'>
         <section className='walletCallsAdjustSummary'>
-          <div>
-            <h2>Batch settings</h2>
-          </div>
-          <label className='walletCallsAdjustNonce' htmlFor='wallet-calls-starting-nonce'>
-            <span>Nonce</span>
-            <input
-              id='wallet-calls-starting-nonce'
-              className='walletCallsNonceInput wrenInput'
-              aria-label='Starting nonce'
-              inputMode='numeric'
-              value={draft?.startingNonce || ''}
-              onChange={(event) => this.updateDraft((next) => (next.startingNonce = event.target.value))}
-            />
-          </label>
-          <div className='walletCallsAdjustTotal'>
-            <span>Max batch fee</span>
-            <strong>{formatNativeMaximum(total, decimals, symbol)}</strong>
+          <h2>Batch settings</h2>
+          <div className='walletCallsAdjustControls'>
+            <label className='walletCallsAdjustNonce' htmlFor='wallet-calls-starting-nonce'>
+              <span>Nonce</span>
+              <input
+                id='wallet-calls-starting-nonce'
+                className='walletCallsNonceInput wrenInput'
+                aria-label='Starting nonce'
+                inputMode='numeric'
+                value={draft?.startingNonce || ''}
+                onChange={(event) => this.updateDraft((next) => (next.startingNonce = event.target.value))}
+              />
+            </label>
+            <div className='walletCallsAdjustTotal'>
+              <span>Max batch fee</span>
+              <strong>{formatNativeMaximum(total, decimals, symbol)}</strong>
+            </div>
           </div>
         </section>
 

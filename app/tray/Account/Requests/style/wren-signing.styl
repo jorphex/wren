@@ -1008,12 +1008,12 @@
   width 100%
   min-height 58px
   margin-top 10px
-  padding 10px 12px
+  padding 10px 0
   box-sizing border-box
   border 0
-  border-radius 9px
+  border-radius 0
   color var(--wren-text-secondary)
-  background var(--wren-surface-inset)
+  background transparent
   font-family var(--wren-font-mono)
   font-size 12px
   line-height 19px
@@ -1048,7 +1048,7 @@
     font inherit
 
   &:hover
-    background var(--wren-surface-hover)
+    color var(--wren-text-primary)
 
   &:focus-visible
     outline 2px solid var(--wren-focus)
@@ -1078,6 +1078,30 @@
     font-size 13px
     text-align left
     text-overflow ellipsis
+    white-space nowrap
+
+.permitAccountIdentity
+  display grid
+  min-width 0
+  gap 2px
+
+  strong,
+  span
+    display block
+    min-width 0
+
+  strong
+    overflow hidden
+    color var(--wren-text-primary)
+    font: inherit
+    font-weight 500
+    text-overflow ellipsis
+    white-space nowrap
+
+  .permitAccountAddress
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-mono)
+    font-size 12px
     white-space nowrap
 
 .permitEditAmount,
@@ -1154,10 +1178,16 @@
   background var(--wren-bg-subtle)
 
   .requestNoticeInner
-    display block
+    position relative
+    display grid
     height 100%
     padding 10px 20px
     box-sizing border-box
+    grid-template-columns minmax(0, 1fr) auto
+    grid-template-rows 36px 31px
+    align-content center
+    align-items center
+    gap 8px 16px
 
 .requestNoticeDeclined
   height 114px
@@ -1478,6 +1508,8 @@
 
 .txLifecycle
   display grid
+  grid-column 1
+  grid-row 1
   grid-template-columns minmax(0, 1fr)
   align-items center
   gap 0
@@ -1691,30 +1723,22 @@
   border 6px solid #fff
 
 .txLifecycleEvidence
-  position relative
-  display grid
-  margin-top 8px
-  padding-top 0
-  border-top 0
-  grid-template-columns minmax(0, 1fr) auto
-  align-items end
-  gap 10px 16px
+  display contents
 
 .txLifecycleFacts
   display grid
+  grid-column 1 / -1
+  grid-row 2
   margin 0
   padding 0
-  grid-template-columns repeat(2, minmax(0, 1fr))
-  gap 6px 16px
-
-  &:has(> div:nth-child(3))
-    grid-template-columns repeat(2, minmax(0, 1fr))
+  grid-template-columns minmax(150px, 1fr) repeat(3, max-content)
+  gap 16px
 
   div
-    display flex
+    display grid
     min-width 0
-    align-items baseline
-    gap 6px
+    align-items start
+    gap 1px
 
   dt,
   dd
@@ -1722,10 +1746,10 @@
     margin 0
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
+    line-height 15px
     white-space nowrap
 
   dt
-    flex none
     color var(--wren-text-muted)
 
   dd
@@ -1736,6 +1760,8 @@
 
 .txLifecycleActions
   display flex
+  grid-column 2
+  grid-row 1
   justify-content flex-end
   gap 8px
 
@@ -1796,7 +1822,9 @@
 
 .txLifecycleCancelRequest
   display block
-  margin 12px 0 0 auto
+  grid-column 2
+  grid-row 1
+  margin 0
 
 @media (max-width: 610px)
   .txLifecycle

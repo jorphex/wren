@@ -21,7 +21,7 @@ const getMode = (requestedAmount, amount) => {
 
 const shortAddress = (address) => `${address.slice(0, 8)}…${address.slice(-6)}`
 
-const formatExpiry = (deadline) => {
+export const formatApprovalExpiry = (deadline) => {
   const timestamp = Number(deadline)
   const date = new Date(timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000)
   if (Number.isNaN(date.getTime())) return 'Unknown'
@@ -162,7 +162,7 @@ const EditTokenSpend = ({
         {deadline ? (
           <div className='wrenTokenApprovalExpiry'>
             <span className='wrenTokenApprovalContextLabel'>Expires</span>
-            <strong>{formatExpiry(deadline)}</strong>
+            <strong>{formatApprovalExpiry(deadline)}</strong>
           </div>
         ) : null}
       </section>

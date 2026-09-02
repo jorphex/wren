@@ -801,7 +801,14 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.walletCallsAdjust input[aria-label="Starting nonce"]',
     requiredControls: ['Cancel', 'Apply changes'],
-    requiredText: ['Batch settings', 'Nonce', 'Gas limit', 'Max fee', 'Priority fee']
+    requiredText: ['Call batch', 'Batch settings', 'Nonce', 'Gas limit', 'Max fee', 'Priority fee'],
+    layoutExpectations: [
+      {
+        kind: 'aligned-top',
+        selector: '.walletCallsAdjustNonce > span',
+        with: '.walletCallsAdjustTotal > span'
+      }
+    ]
   },
   {
     id: 'tray-account-settings-expanded-full-1',
@@ -3458,9 +3465,14 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Details',
                 'USDC',
                 '2412',
+                'Jan 1, 2100',
                 'EIP-712'
               ],
-              layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
+              layoutExpectations: [
+                ...WALLET_VIEW_CHROME,
+                ...FOCUSED_WINDOW_SURFACE,
+                { kind: 'text-unclipped', selector: '.permitAccountAddress' }
+              ]
             },
             {
               id: 'dash-split-control-right-1',
@@ -3628,15 +3640,16 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
         requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
-        requiredText: ['Submitted', 'Transaction hash', 'Confirmations', '0'],
+        requiredText: ['Review transaction', 'Submitted', 'Transaction hash', 'Confirmations', '0'],
         layoutExpectations: [
           { kind: 'hidden', selector: '.txLifecycleSteps' },
           {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'flex'
+            value: 'grid'
           },
+          { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
         ]
       },
@@ -3656,8 +3669,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'flex'
-          }
+            value: 'grid'
+          },
+          { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
+          { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
         ]
       },
       {
@@ -3676,8 +3691,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'flex'
-          }
+            value: 'grid'
+          },
+          { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
+          { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
         ]
       },
       {

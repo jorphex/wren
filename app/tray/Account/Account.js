@@ -633,7 +633,7 @@ class _AccountBody extends React.Component {
         req?.type === 'transaction' && crumb.data.step === 'adjustApproval'
           ? 'Token approval'
           : req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
-            ? 'Wallet calls'
+            ? 'Call batch'
             : (req && this.getAccountViewTitle(req)) || ''
 
       return (

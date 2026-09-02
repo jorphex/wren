@@ -53,7 +53,7 @@ test('keeps approval units clear of the amount action and Wallet Calls nonce in 
     /input\.wrenInput[\s\S]*?padding 0 156px 0 var\(--wren-space-3\)[\s\S]*?\.wrenTokenApprovalAmountSymbol[\s\S]*?right 100px[\s\S]*?\.wrenTokenApprovalAmountAction,[\s\S]*?width 68px/
   )
   expect(walletCallsStyle).toMatch(
-    /\.walletCallsAdjustSummary[\s\S]*?grid-template-columns minmax\(0, 1fr\) 96px auto[\s\S]*?\.walletCallsAdjustNonce[\s\S]*?\.walletCallsNonceInput\.wrenInput[\s\S]*?height 44px/
+    /\.walletCallsAdjustSummary[\s\S]*?\.walletCallsAdjustControls[\s\S]*?grid-template-columns 112px minmax\(0, 1fr\)[\s\S]*?\.walletCallsAdjustTotal[\s\S]*?grid-template-rows auto 44px[\s\S]*?row-gap 5px[\s\S]*?\.walletCallsNonceInput\.wrenInput[\s\S]*?height 44px/
   )
   expect(walletCallsStyle).not.toContain('.walletCallsNonceSection')
 })
@@ -486,7 +486,10 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
     /\.requestSign:disabled \.requestSignButton,[\s\S]*?\.requestSign:disabled \.requestSignButton:hover[\s\S]*?color var\(--wren-text-inverse\)[\s\S]*?background var\(--wren-control-texture-light\), var\(--wren-accent-primary\)/
   )
   expect(signingStyle).toMatch(
-    /\.txLifecycleFacts[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)[\s\S]*?div[\s\S]*?display flex[\s\S]*?dt[\s\S]*?flex none/
+    /\.requestNoticeTransactionStatus[\s\S]*?\.requestNoticeInner[\s\S]*?display grid[\s\S]*?grid-template-rows 36px 31px[\s\S]*?\.txLifecycleEvidence[\s\S]*?display contents[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-template-columns minmax\(150px, 1fr\) repeat\(3, max-content\)[\s\S]*?div[\s\S]*?display grid[\s\S]*?dt,[\s\S]*?dd[\s\S]*?line-height 15px/
+  )
+  expect(signingStyle).toMatch(
+    /\.permitAccountIdentity[\s\S]*?display grid[\s\S]*?\.permitAccountAddress[\s\S]*?white-space nowrap/
   )
   expect(signingStyle).toMatch(
     /\.permitRawAction[\s\S]*?\.permitRawActionHeader[\s\S]*?justify-content space-between[\s\S]*?> span[\s\S]*?color var\(--wren-accent-primary-hover\)/

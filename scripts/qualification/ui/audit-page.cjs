@@ -152,6 +152,37 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'aligned-top') {
+      const reference = Array.from(document.querySelectorAll(expectation.with)).find(visible)
+      if (!reference) {
+        violations.push({
+          kind: 'required-layout',
+          detail: `missing visible alignment reference ${expectation.with}`
+        })
+        continue
+      }
+      const referenceTop = reference.getBoundingClientRect().top
+      for (const element of elements) {
+        const elementTop = element.getBoundingClientRect().top
+        if (Math.abs(elementTop - referenceTop) > (expectation.tolerance ?? 1)) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} starts at ${Math.round(elementTop)}px; ${expectation.with} starts at ${Math.round(referenceTop)}px`
+          })
+        }
+      }
+    } else if (expectation.kind === 'text-unclipped') {
+      for (const element of elements) {
+        if (
+          element.scrollWidth > element.clientWidth + 1 ||
+          element.scrollHeight > element.clientHeight + 1
+        ) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} clips ${describe(element)}`
+          })
+        }
+      }
     } else if (expectation.kind === 'edge-clearance') {
       for (const element of elements) {
         const container = element.closest(expectation.container)

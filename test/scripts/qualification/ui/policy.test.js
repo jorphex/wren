@@ -136,7 +136,15 @@ it('qualifies the hidden editors that must retain the shared Perch field treatme
   })
   expect(hiddenEditors[2]).toMatchObject({
     state: 'wallet-calls-adjustment',
-    ready: '.walletCallsAdjust input[aria-label="Starting nonce"]'
+    ready: '.walletCallsAdjust input[aria-label="Starting nonce"]',
+    requiredText: expect.arrayContaining(['Call batch']),
+    layoutExpectations: expect.arrayContaining([
+      {
+        kind: 'aligned-top',
+        selector: '.walletCallsAdjustNonce > span',
+        with: '.walletCallsAdjustTotal > span'
+      }
+    ])
   })
   expect(fixtureFor(hiddenEditors[3]).windows.panel.nav).toEqual([
     {
@@ -1079,6 +1087,18 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
     tx: { confirmations: 0, hash: expect.stringMatching(/^0x/u) }
   })
   expect(Object.values(submitted.main.accounts[QUALIFICATION_ACCOUNT].requests)[0].tx.receipt).toBeUndefined()
+  for (const lifecycleId of [
+    'tray-transaction-submitted-full-1',
+    'tray-transaction-confirming-full-1',
+    'tray-transaction-confirmed-full-1'
+  ]) {
+    expect(byId(lifecycleId).layoutExpectations).toEqual(
+      expect.arrayContaining([
+        { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
+        { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
+      ])
+    )
+  }
 
   const trezor = fixtureFor(byId('dash-trezor-pin-full-1'))
   expect(trezor.windows.dash.nav[0]).toEqual({
