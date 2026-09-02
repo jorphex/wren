@@ -674,6 +674,17 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
         kind: 'aligned-left',
         selector: '.accountLedgerLabel > span:last-child',
         with: '.accountModule-activity .activityIdentity'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountLedgerLabel, .signerPreviewRow .moduleItemSignerType, .signerPreviewStatus',
+        property: 'lineHeight',
+        value: '18px'
+      },
+      {
+        kind: 'size',
+        selector: '.signerPreviewRow .moduleItemIcon',
+        height: 18
       }
     ])
   })

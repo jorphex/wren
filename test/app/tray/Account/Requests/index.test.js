@@ -58,6 +58,7 @@ it('keeps a confirmed transaction out of the home-row count while it remains ins
   expect(screen.getByRole('button', { name: 'Requests. 2 active. 1 pending. 1 confirming.' })).toBeTruthy()
   expect(screen.getByText('Requests')).toBeTruthy()
   expect(screen.getByText('1 pending · 1 confirming')).toBeTruthy()
+  expect(document.querySelector('.requestPreviewOriginMark')).toBeNull()
 })
 
 const createRequest = (handlerId, created, origin = 'https://example.test', queueIndex) => ({

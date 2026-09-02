@@ -216,7 +216,6 @@ export class Requests extends React.Component {
             </div>
             {current ? (
               <div className='requestPreviewItem'>
-                <span className='requestPreviewOriginMark'>{origin.slice(0, 1).toUpperCase()}</span>
                 <span className='requestPreviewIdentity'>
                   <strong>{requestPreviewTitle(current)}</strong>
                   <span>{`${origin} · ${current.type}`}</span>

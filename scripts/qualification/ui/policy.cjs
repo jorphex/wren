@@ -3042,6 +3042,19 @@ const reviewScenarios = () => [
         property: 'display',
         value: 'grid'
       },
+      {
+        kind: 'computed-style',
+        selector: '.accountLedgerLabel, .signerPreviewRow .moduleItemSignerType, .signerPreviewStatus',
+        property: 'lineHeight',
+        value: '18px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.signerPreviewRow .moduleItemIcon',
+        property: 'display',
+        value: 'flex'
+      },
+      { kind: 'size', selector: '.signerPreviewRow .moduleItemIcon', height: 18 },
       { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
       { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
