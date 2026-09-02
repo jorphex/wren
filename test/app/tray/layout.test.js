@@ -397,10 +397,13 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewMain[\s\S]*?> \.clusterRow:first-child \.clusterValue[\s\S]*?min-height 116px/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewSummaryStatus[\s\S]*?justify-self end[\s\S]*?text-align right/
+    /\.transactionReviewSummaryStatus[\s\S]*?justify-self stretch[\s\S]*?text-align left/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewSummaryStatus[\s\S]*?min-height 54px[\s\S]*?align-items center/
+    /\.transactionReviewSummaryStatus[\s\S]*?min-height 42px[\s\S]*?align-content center/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewMainApproval[\s\S]*?\._txDescription[\s\S]*?min-height 72px/
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
   expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)

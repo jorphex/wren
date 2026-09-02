@@ -1681,9 +1681,13 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewAssetChanges',
-    requiredText: ['Expected asset changes', 'RPC simulation', 'Receive', '5 USDC'],
+    requiredText: ['Expected balance changes', 'Estimated by RPC simulation', 'Received USD Coin', '5 USDC'],
     layoutExpectations: [
-      { kind: 'full-width', selector: '.transactionReviewAssetChanges', container: '.transactionReviewOverview' }
+      {
+        kind: 'full-width',
+        selector: '.transactionReviewAssetChanges',
+        container: '.transactionReviewOverview'
+      }
     ]
   },
   {
@@ -1695,13 +1699,19 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewMain',
-    requiredText: ['Approve', '890', 'USDC'],
+    requiredText: ['Approve', '890', 'USDC', 'Token approval', 'Spend limit', 'Spender'],
     layoutExpectations: [
       {
         kind: 'computed-style',
         selector: '.transactionReviewApprovalSummary',
         property: 'flexWrap',
         value: 'nowrap'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewMainApproval ._txDescription',
+        property: 'minHeight',
+        value: '72px'
       }
     ]
   },
@@ -3482,6 +3492,21 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           ...(geometry === 'short' ? [{ kind: 'scroll-fits', selector: '.balancesExpandedScroll' }] : [])
         ]
       })),
+      {
+        id: `tray-transaction-submitted-full-${scale}`,
+        renderer: 'tray',
+        state: 'transaction-submitted',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.txLifecycle',
+        requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
+        requiredText: ['Submitted', 'Transaction hash', 'Confirmations', '0'],
+        layoutExpectations: [
+          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 },
+          { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
+        ]
+      },
       {
         id: `tray-transaction-confirming-full-${scale}`,
         renderer: 'tray',

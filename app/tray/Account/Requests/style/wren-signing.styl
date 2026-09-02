@@ -133,12 +133,13 @@
     .transactionReviewSummaryStatus
       width 100%
       max-width none
-      min-height 54px
+      min-height 42px
       box-sizing border-box
       padding var(--wren-space-2)
       display grid
       align-content center
-      grid-template-rows repeat(2, minmax(18px, auto))
+      grid-template-rows auto
+      gap 2px
       justify-self stretch
       font-family var(--wren-font-ui)
       font-size var(--wren-type-small)
@@ -152,7 +153,7 @@
         min-width 0
 
         &:empty
-          visibility hidden
+          display none
 
       ._txMainTagQuiet
         color var(--wren-text-muted)
@@ -165,6 +166,21 @@
 
     ._txDescriptionSummaryTag
       display none
+
+  .transactionReviewMainApproval
+    .transactionReviewOverview > .clusterRow:first-child .clusterValue,
+    ._txDescription
+      min-height 72px
+
+    ._txDescription
+      padding var(--wren-space-1) 0
+
+    ._txDescriptionSummaryMain
+      padding-top 0
+
+    .transactionReviewSummaryStatus
+      min-height 36px
+      padding var(--wren-space-1) var(--wren-space-2)
 
   .transactionReviewSectionTitle
     min-height 38px
@@ -515,11 +531,10 @@
     padding var(--wren-space-3) 0
 
   .transactionReviewAssetChangesHeader
-    display flex
-    min-height 28px
-    align-items baseline
-    justify-content space-between
-    gap var(--wren-space-3)
+    display grid
+    min-height 32px
+    align-content start
+    gap 2px
 
     strong
       color var(--wren-text-primary)
@@ -532,48 +547,75 @@
       font-size var(--wren-type-caption)
 
   .transactionReviewAssetChange
-    display flex
-    min-height 44px
+    display grid
+    min-height 48px
+    padding var(--wren-space-2) 0
+    box-sizing border-box
     align-items center
-    justify-content space-between
-    gap var(--wren-space-4)
+    grid-template-columns minmax(0, 1fr) auto
+    column-gap var(--wren-space-4)
     border-top 1px solid var(--wren-ledger-rule)
 
   .transactionReviewAssetChangeIdentity
-    display flex
+    display block
     min-width 0
-    align-items center
-    gap var(--wren-space-3)
 
-    > .assetMark
-      flex 0 0 28px
-      width 28px
-      height 28px
-
-    > span
-      display grid
-      min-width 0
-      gap 1px
-
-      strong
-        color var(--wren-text-primary)
-        font-size var(--wren-type-small)
-        font-weight 560
-
-      span
-        overflow hidden
-        color var(--wren-text-muted)
-        font-family var(--wren-font-utility)
-        font-size var(--wren-type-caption)
-        text-overflow ellipsis
-        white-space nowrap
+    strong
+      display block
+      overflow hidden
+      color var(--wren-text-primary)
+      font-size var(--wren-type-small)
+      font-weight 600
+      text-overflow ellipsis
+      white-space nowrap
 
   .transactionReviewAssetChangeAmount
-    flex none
-    color var(--wren-text-secondary)
+    display flex
+    align-items baseline
+    gap var(--wren-space-1)
+    color var(--wren-text-primary)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-small)
+    font-weight 620
     text-align right
+
+  .transactionReviewAssetChangeIncoming .transactionReviewAssetChangeAmount
+    color var(--wren-success)
+
+  .transactionReviewAssetChangeOutgoing .transactionReviewAssetChangeAmount
+    color var(--wren-warning)
+
+  .transactionReviewTokenApproval
+    ._txLabel
+      min-height 32px
+      padding var(--wren-space-3) 0 var(--wren-space-1)
+
+    .clusterValue
+      min-height 44px
+
+    .clusterValueContent
+      width 100%
+
+  .transactionReviewApprovalLimit,
+  .transactionReviewApprovalSpender
+    display grid
+    width 100%
+    min-height 44px
+    box-sizing border-box
+    grid-template-columns 96px minmax(0, 1fr)
+    align-items center
+    column-gap var(--wren-space-4)
+
+  .transactionReviewApprovalLimit strong
+    color var(--wren-text-primary)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    font-weight 620
+
+  .transactionReviewApprovalSpender
+    .clusterAddress
+      min-width 0
+      padding var(--wren-space-2) 0
 
   .transactionReviewAssetChangesNote
     padding-top var(--wren-space-2)
@@ -1364,7 +1406,7 @@
 
   .requestNoticeInner
     display block
-    padding 12px 20px
+    padding 8px 20px
     box-sizing border-box
 
 .requestNoticeTransactionDeploymentStatus
@@ -1372,9 +1414,9 @@
 
 .txLifecycle
   display grid
-  grid-template-columns minmax(0, 1fr) minmax(330px, .85fr)
+  grid-template-columns minmax(0, 1fr) minmax(310px, .82fr)
   align-items center
-  gap 18px
+  gap 14px
 
 .txLifecycleSummary
   display flex
@@ -1589,8 +1631,8 @@
 .txLifecycleEvidence
   position relative
   display grid
-  margin-top 8px
-  padding-top 8px
+  margin-top 6px
+  padding-top 6px
   border-top 1px solid var(--wren-ledger-rule)
   grid-template-columns minmax(0, 1fr) auto
   align-items end
@@ -1600,8 +1642,11 @@
   display grid
   margin 0
   padding 0
-  grid-template-columns repeat(4, minmax(0, 1fr))
+  grid-template-columns repeat(2, minmax(0, 1fr))
   gap 16px
+
+  &:has(> div:nth-child(3))
+    grid-template-columns repeat(4, minmax(0, 1fr))
 
   div
     min-width 0

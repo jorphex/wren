@@ -474,20 +474,25 @@ const walletCallsFundingRequest = () => ({
 
 const monitoredTransactionRequest = (status) => {
   const request = addressLookalikeRequest()
+  const included = status === 'confirming' || status === 'confirmed'
   request.handlerId = `qualification-transaction-${status}`
   request.status = status
   request.mode = 'monitor'
-  request.notice = status === 'confirmed' ? 'Confirmed' : 'Confirming'
+  request.notice = status === 'confirmed' ? 'Confirmed' : included ? 'Confirming' : 'Submitted'
   request.tx = {
     hash: QUALIFICATION_TX_HASH,
-    confirmations: status === 'confirmed' ? 13 : 4,
-    receipt: {
-      status: '0x1',
-      blockNumber: '0x123456',
-      blockHash: `0x${'ef'.repeat(32)}`,
-      gasUsed: '0x5208',
-      effectiveGasPrice: '0x3b9aca00'
-    }
+    confirmations: status === 'confirmed' ? 13 : included ? 4 : 0,
+    ...(included
+      ? {
+          receipt: {
+            status: '0x1',
+            blockNumber: '0x123456',
+            blockHash: `0x${'ef'.repeat(32)}`,
+            gasUsed: '0x5208',
+            effectiveGasPrice: '0x3b9aca00'
+          }
+        }
+      : {})
   }
   request.completed = status === 'confirmed' ? Date.UTC(2026, 7, 12, 14, 0) : undefined
   delete request.addressSafety
@@ -2375,13 +2380,20 @@ const fixtureFor = (scenario) => {
 
   if (
     scenario.state === 'transaction-safety-unavailable' ||
+    scenario.state === 'transaction-submitted' ||
     scenario.state === 'transaction-confirming' ||
     scenario.state === 'transaction-confirmed'
   ) {
     const request =
       scenario.state === 'transaction-safety-unavailable'
         ? safetyUnavailableRequest()
-        : monitoredTransactionRequest(scenario.state === 'transaction-confirmed' ? 'confirmed' : 'confirming')
+        : monitoredTransactionRequest(
+            scenario.state === 'transaction-confirmed'
+              ? 'confirmed'
+              : scenario.state === 'transaction-submitted'
+                ? 'verifying'
+                : 'confirming'
+          )
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -2528,10 +2540,7 @@ const invokeReplyFor = (scenario, method, args = []) => {
       ]
     }
   }
-  if (
-    method === 'activity:details' &&
-    scenario.state === 'account-activity-detail'
-  ) {
+  if (method === 'activity:details' && scenario.state === 'account-activity-detail') {
     return {
       success: true,
       partial: false,

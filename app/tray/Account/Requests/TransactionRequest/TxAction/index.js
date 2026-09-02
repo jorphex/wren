@@ -15,7 +15,7 @@ import AddressSafetyStatus, {
   addressSafetyTarget
 } from '../../../../../../resources/Components/AddressSafetyStatus'
 import { resolveLocalAddressIdentity } from '../../../../../../resources/domain/addressBook/identity'
-import { formatDisplayDecimal, isUnlimited } from '../../../../../../resources/utils/numbers'
+import { isUnlimited } from '../../../../../../resources/utils/numbers'
 import { DisplayValue, DisplayCoinBalance } from '../../../../../../resources/Components/DisplayValue'
 import { getAddress } from '../../../../../../resources/utils'
 
@@ -325,65 +325,40 @@ export class TxSending extends React.Component {
         )
         const value = new BigNumber(amount)
         const revoke = value.eq(0)
-        const displayAmount = isUnlimited(this.state.amount)
-          ? 'unlimited'
-          : formatDisplayDecimal(amount, decimals)
+        const displayAmount = isUnlimited(amount) ? 'Unlimited' : formatYearnAmount(amount, decimals)
         const isSubmitted = req.status !== undefined || this.props.readOnly
 
         return (
-          <ClusterBox title={'Token Approval'} animationSlot={this.props.i}>
+          <ClusterBox
+            title={'Token approval'}
+            className='transactionReviewTokenApproval'
+            animationSlot={this.props.i}
+          >
             <Cluster>
-              {revoke ? (
-                <ClusterRow>
-                  <ClusterValue
-                    ariaLabel={!isSubmitted ? `Edit ${symbol} approval` : undefined}
-                    onClick={
-                      !isSubmitted
-                        ? () => {
-                            link.send('nav:update', 'panel', {
-                              data: {
-                                step: 'adjustApproval',
-                                actionId: action.id,
-                                requestedAmountHex: amount
-                              }
-                            })
-                          }
-                        : undefined
-                    }
-                    style={isSubmitted ? { cursor: 'auto' } : {}}
-                  >
-                    <div className='clusterFocus'>
-                      <div>{`Revoking Approval To Spend `}</div>
-                      <div className='clusterFocusHighlight'>{`${symbol}`}</div>
-                    </div>
-                  </ClusterValue>
-                </ClusterRow>
-              ) : (
-                <ClusterRow>
-                  <ClusterValue
-                    ariaLabel={!isSubmitted ? `Edit ${symbol} approval` : undefined}
-                    onClick={
-                      !isSubmitted
-                        ? () => {
-                            link.send('nav:update', 'panel', {
-                              data: {
-                                step: 'adjustApproval',
-                                actionId: action.id,
-                                requestedAmountHex: amount
-                              }
-                            })
-                          }
-                        : undefined
-                    }
-                    style={isSubmitted ? { cursor: 'auto' } : {}}
-                  >
-                    <div className='clusterFocus'>
-                      <div>{`Granting Approval To Spend`}</div>
-                      <div className='clusterFocusHighlight'>{`${displayAmount} ${symbol}`}</div>
-                    </div>
-                  </ClusterValue>
-                </ClusterRow>
-              )}
+              <ClusterRow>
+                <ClusterValue
+                  ariaLabel={!isSubmitted ? `Edit ${symbol} approval` : undefined}
+                  onClick={
+                    !isSubmitted
+                      ? () => {
+                          link.send('nav:update', 'panel', {
+                            data: {
+                              step: 'adjustApproval',
+                              actionId: action.id,
+                              requestedAmountHex: amount
+                            }
+                          })
+                        }
+                      : undefined
+                  }
+                  style={isSubmitted ? { cursor: 'auto' } : {}}
+                >
+                  <div className='transactionReviewApprovalLimit'>
+                    <span className='transactionReviewMetaLabel'>Spend limit</span>
+                    <strong>{revoke ? `Revoke ${symbol}` : `${displayAmount} ${symbol}`}</strong>
+                  </div>
+                </ClusterValue>
+              </ClusterRow>
               {address && (
                 <ClusterRow>
                   <ClusterValue
@@ -393,19 +368,24 @@ export class TxSending extends React.Component {
                       this.copyAddress(address)
                     }}
                   >
-                    <div className='clusterAddress'>
-                      <AddressIdentity
-                        address={address}
-                        complete={true}
-                        copied={this.state.copied}
-                        emphasizeEnds={addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'}
-                        label={localIdentity?.label || spenderEns}
-                        revealOnHover={false}
-                        source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
-                      />
-                      {distinctSafetyTarget ? (
-                        <AddressSafetyStatus address={address} assessment={req.addressSafety} />
-                      ) : null}
+                    <div className='transactionReviewApprovalSpender'>
+                      <span className='transactionReviewMetaLabel'>Spender</span>
+                      <div className='clusterAddress'>
+                        <AddressIdentity
+                          address={address}
+                          complete={true}
+                          copied={this.state.copied}
+                          emphasizeEnds={
+                            addressSafetyTarget(req.addressSafety, address)?.state === 'lookalike'
+                          }
+                          label={localIdentity?.label || spenderEns}
+                          revealOnHover={false}
+                          source={localIdentity?.source || (spenderEns ? 'ENS' : '')}
+                        />
+                        {distinctSafetyTarget ? (
+                          <AddressSafetyStatus address={address} assessment={req.addressSafety} />
+                        ) : null}
+                      </div>
                     </div>
                   </ClusterValue>
                   <ClusterStatus>{this.state.copied ? 'Approval spender address copied' : ''}</ClusterStatus>

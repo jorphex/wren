@@ -39,30 +39,36 @@ const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
       <ClusterValue>
         <div className='transactionReviewAssetChangesInner'>
           <div className='transactionReviewAssetChangesHeader'>
-            <strong>Expected asset changes</strong>
-            <span>RPC simulation</span>
+            <strong>Expected balance changes</strong>
+            <span>Estimated by RPC simulation</span>
           </div>
           {changes.map((change, index) => {
             const token = tokenFor?.(change.token)
+            const accountAddress = account.toLowerCase()
+            const from = change.from?.toLowerCase()
+            const to = change.to?.toLowerCase()
             const direction =
-              change.from === ZERO_ADDRESS
-                ? 'Mint'
-                : change.to === ZERO_ADDRESS
-                  ? 'Burn'
-                  : change.from === account.toLowerCase()
-                    ? 'Send'
-                    : 'Receive'
+              from === ZERO_ADDRESS
+                ? 'Minted'
+                : to === ZERO_ADDRESS
+                  ? 'Burned'
+                  : from === accountAddress
+                    ? 'Sent'
+                    : 'Received'
+            const incoming = direction === 'Minted' || direction === 'Received'
             const amount = change.amount ?? change.tokenId
             return (
-              <div className='transactionReviewAssetChange' key={`${change.token}:${index}`}>
+              <div
+                className={`transactionReviewAssetChange transactionReviewAssetChange${incoming ? 'Incoming' : 'Outgoing'}`}
+                key={`${change.token}:${index}`}
+              >
                 <span className='transactionReviewAssetChangeIdentity'>
-                  {token ? <AssetMark asset={token} showChain={false} /> : null}
-                  <span>
-                    <strong>{direction}</strong>
-                    <span title={change.token}>{token?.symbol || `${change.token.slice(0, 8)}…`}</span>
-                  </span>
+                  <strong title={change.token}>
+                    {`${direction} ${token?.name || token?.symbol || `${change.token.slice(0, 8)}…`}`}
+                  </strong>
                 </span>
                 <span className='transactionReviewAssetChangeAmount'>
+                  {amount !== undefined ? <span aria-hidden='true'>{incoming ? '+' : '−'}</span> : null}
                   {amount !== undefined && token ? (
                     <DisplayValue
                       type='ether'
@@ -72,9 +78,9 @@ const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
                       currencySymbolPosition='last'
                     />
                   ) : amount !== undefined ? (
-                    `${amount} base units`
+                    <span>{`${amount} base units`}</span>
                   ) : (
-                    'Token transfer'
+                    <span>Token transfer</span>
                   )}
                 </span>
               </div>

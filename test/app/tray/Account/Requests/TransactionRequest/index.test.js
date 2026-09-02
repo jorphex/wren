@@ -545,7 +545,7 @@ describe('approval editing', () => {
   const approvalAction = {
     id: 'erc20:approve',
     data: {
-      amount: '1',
+      amount: '1000000',
       decimals: 6,
       spender: { address: '0x1111111111111111111111111111111111111111', ens: '' },
       symbol: 'USDC'
@@ -592,7 +592,7 @@ describe('approval editing', () => {
     await user.keyboard('{Enter}')
 
     expect(link.send).toHaveBeenCalledWith('nav:update', 'panel', {
-      data: { step: 'adjustApproval', actionId: 'erc20:approve', requestedAmountHex: '1' }
+      data: { step: 'adjustApproval', actionId: 'erc20:approve', requestedAmountHex: '1000000' }
     })
   })
 
@@ -600,7 +600,9 @@ describe('approval editing', () => {
     renderApprovalAction('signed')
 
     expect(screen.queryByRole('button', { name: 'Edit USDC approval' })).toBeNull()
-    expect(screen.getByText('Granting Approval To Spend')).toBeTruthy()
+    expect(screen.getByText('Spend limit')).toBeTruthy()
+    expect(screen.getByText('1 USDC')).toBeTruthy()
+    expect(screen.getByText('Spender')).toBeTruthy()
   })
 
   it('keeps a queued approval value non-interactive while preserving inspection', () => {
@@ -615,7 +617,9 @@ describe('approval editing', () => {
     )
 
     expect(screen.queryByRole('button', { name: 'Edit USDC approval' })).toBeNull()
-    expect(screen.getByText('Granting Approval To Spend')).toBeTruthy()
+    expect(screen.getByText('Spend limit')).toBeTruthy()
+    expect(screen.getByText('1 USDC')).toBeTruthy()
+    expect(screen.getByText('Spender')).toBeTruthy()
   })
 
   it('announces a copied approval spender without replacing its visible identity', async () => {

@@ -124,6 +124,7 @@ export class TxMain extends React.Component {
       )
     const reqs = this.store('main.accounts', requestAccount, 'requests')
     const replacementStatus = this.getReplacementStatus(req, reqs)
+    const approvalReview = (req.recognizedActions || []).some((action) => action.id === 'erc20:approve')
 
     const originName = getOriginDisplayName(this.store('main.origins', req.origin, 'name'))
     const fromSource = req.data.from || requestAccount
@@ -132,7 +133,10 @@ export class TxMain extends React.Component {
       ? resolveLocalAddressIdentity(this.store('main.addressBook'), this.store('main.accounts'), fromAddress)
       : undefined
     return (
-      <div className='_txMain transactionReviewMain' style={{ animationDelay: 0.1 * this.props.i + 's' }}>
+      <div
+        className={`_txMain transactionReviewMain${approvalReview ? ' transactionReviewMainApproval' : ''}`}
+        style={{ animationDelay: 0.1 * this.props.i + 's' }}
+      >
         <div className='_txMainInner'>
           <div
             className='_txMainBackground'

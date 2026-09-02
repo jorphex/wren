@@ -637,7 +637,7 @@ it('omits explorer access without a configured explorer while preserving hash co
 
 it.each([
   ['sending', 'Sending', 'Wren is sending the transaction to the network.'],
-  ['verifying', 'Submitted', 'Wren sent the transaction to the network.'],
+  ['verifying', 'Submitted', 'Sent to the network.'],
   ['confirming', 'Confirming', 'The transaction was sent. Wren is waiting for network confirmation.'],
   ['confirmed', 'Confirmed', 'The transaction is confirmed on Ethereum.'],
   ['error', 'Transaction failed', 'The network did not confirm this transaction.']
@@ -673,7 +673,7 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
 
   expect(screen.getAllByText('Submitted')).toHaveLength(2)
   expect(document.querySelector('.txLifecycleMark svg').getAttribute('width')).toBe('20')
-  expect(screen.getByText('Wren sent the transaction to the network.')).toBeTruthy()
+  expect(screen.getByText('Sent to the network.')).toBeTruthy()
   expect(screen.getByRole('list', { name: 'Transaction progress' })).toBeTruthy()
   expect(screen.getByText('Confirmations')).toBeTruthy()
   expect(screen.getByText('2')).toBeTruthy()

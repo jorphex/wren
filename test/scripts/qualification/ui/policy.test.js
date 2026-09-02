@@ -18,7 +18,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(104)
+  expect(scenarios).toHaveLength(107)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -32,6 +32,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `tray-account-empty-perch-full-${scale}`,
         `tray-account-balances-full-${scale}`,
         `tray-account-balances-short-${scale}`,
+        `tray-transaction-submitted-full-${scale}`,
         `tray-transaction-confirming-full-${scale}`,
         `tray-transaction-confirmed-full-${scale}`,
         `dash-delegation-full-${scale}`,
@@ -1054,6 +1055,14 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
     status: 'confirming',
     tx: { confirmations: 4 }
   })
+
+  const submitted = fixtureFor(byId('tray-transaction-submitted-full-1'))
+  expect(Object.values(submitted.main.accounts[QUALIFICATION_ACCOUNT].requests)[0]).toMatchObject({
+    status: 'verifying',
+    notice: 'Submitted',
+    tx: { confirmations: 0, hash: expect.stringMatching(/^0x/u) }
+  })
+  expect(Object.values(submitted.main.accounts[QUALIFICATION_ACCOUNT].requests)[0].tx.receipt).toBeUndefined()
 
   const trezor = fixtureFor(byId('dash-trezor-pin-full-1'))
   expect(trezor.windows.dash.nav[0]).toEqual({

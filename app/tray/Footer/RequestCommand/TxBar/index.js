@@ -40,7 +40,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
     case 'verified':
     case 'sent':
       return {
-        detail: 'Wren sent the transaction to the network.',
+        detail: 'Sent to the network.',
         icon: 'send',
         position: 1,
         title: 'Submitted',
