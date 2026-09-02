@@ -9,8 +9,10 @@ const standardInterface = new Interface([
   'function approve(address spender,uint256 amount)',
   'function allowance(address owner,address spender) view returns (uint256)',
   'function balanceOf(address account) view returns (uint256)',
+  'function deposit() payable',
   'function deposit(uint256 assets,address receiver) returns (uint256 shares)',
   'function mint(uint256 shares,address receiver) returns (uint256 assets)',
+  'function withdraw(uint256 amount)',
   'function withdraw(uint256 assets,address receiver,address owner) returns (uint256 shares)',
   'function redeem(uint256 shares,address receiver,address owner) returns (uint256 assets)',
   'function setApprovalForAll(address operator,bool approved)',
@@ -18,7 +20,15 @@ const standardInterface = new Interface([
   'function safeTransferFrom(address from,address to,uint256 tokenId,bytes data)',
   'function safeTransferFrom(address from,address to,uint256 id,uint256 amount,bytes data)',
   'function safeBatchTransferFrom(address from,address to,uint256[] ids,uint256[] amounts,bytes data)',
-  'function permit(address owner,address spender,uint256 value,uint256 deadline,uint8 v,bytes32 r,bytes32 s)'
+  'function permit(address owner,address spender,uint256 value,uint256 deadline,uint8 v,bytes32 r,bytes32 s)',
+  'function multicall(bytes[] data) returns (bytes[] results)',
+  'function execute(address target,uint256 value,bytes data)',
+  'function upgradeToAndCall(address newImplementation,bytes data)',
+  'function changeAdmin(address newAdmin)',
+  'function grantRole(bytes32 role,address account)',
+  'function revokeRole(bytes32 role,address account)',
+  'function renounceOwnership()',
+  'function transferOwnership(address newOwner)'
 ])
 
 export type LocalCalldataDecode =

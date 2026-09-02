@@ -316,25 +316,33 @@ export class Dash extends React.Component {
   }
 
   selectSigningAccount = (account, signer) => {
+    const hardware = isHardwareSigner(account.lastSignerType)
+    if (hardware) {
+      link.send(
+        'tray:action',
+        'navDash',
+        signer
+          ? signerPanelCrumb(signer)
+          : {
+              view: 'accounts',
+              data: { showAddAccounts: true, newAccountType: account.lastSignerType }
+            }
+      )
+    }
+
     link.rpc('setSigner', account.id, (error) => {
       if (error) return
-      const hardware = isHardwareSigner(account.lastSignerType)
-      if (!signer) {
-        if (hardware) {
-          link.send('tray:action', 'navDash', {
-            view: 'accounts',
-            data: { showAddAccounts: true, newAccountType: account.lastSignerType }
-          })
+      if (!signer) return
+      const status = getSignerStatusMeta(signer)
+      if (hardware) {
+        if (status.reloadable && !status.busy && !status.input) {
+          link.send('dash:reloadSigner', signer.id)
         }
         return
       }
-      const status = getSignerStatusMeta(signer)
-      if (status.ready && !hardware) return
+      if (status.ready) return
 
       link.send('tray:action', 'navDash', signerPanelCrumb(signer))
-      if (hardware && status.reloadable && !status.busy && !status.input) {
-        link.send('dash:reloadSigner', signer.id)
-      }
     })
   }
 

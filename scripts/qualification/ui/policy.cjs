@@ -1707,9 +1707,9 @@ const reviewScenarios = () => [
       'Balance changes',
       'ETH',
       '1 ETH',
-      'USD Coin',
-      '5 USDC',
-      'Preview only — actual token changes may differ.'
+      'Wrapped Ether',
+      '1 WETH',
+      'Preview only — actual balance changes may differ.'
     ],
     layoutExpectations: [
       ...WALLET_VIEW_CHROME,

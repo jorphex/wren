@@ -30,14 +30,46 @@ export const getExpectedAssetChanges = (simulation, account) => {
   )
 }
 
+export const getExpectedNativeBalanceChange = (simulation, account) => {
+  if (simulation?.nativeBalanceChanges?.status !== 'succeeded') return null
+  const selected = account?.toLowerCase()
+  const changes = simulation.nativeBalanceChanges.changes
+  if (!selected || !Array.isArray(changes)) return null
+  return (
+    changes.find(
+      (change) => change.account?.toLowerCase() === selected && !BigNumber(change.change).isZero()
+    ) || null
+  )
+}
+
 export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) => {
+  const accountAddress = account?.toLowerCase() || ''
   const changes = getExpectedAssetChanges(simulation, account)
+    .map((change) => {
+      const from = change.from?.toLowerCase()
+      const to = change.to?.toLowerCase()
+      const direction =
+        from === ZERO_ADDRESS
+          ? 'Minted'
+          : to === ZERO_ADDRESS
+            ? 'Burned'
+            : from === accountAddress
+              ? 'Sent'
+              : 'Received'
+      return { change, direction, incoming: direction === 'Minted' || direction === 'Received' }
+    })
+    .sort((left, right) => Number(left.incoming) - Number(right.incoming))
+  const tracedNativeChange = getExpectedNativeBalanceChange(simulation, account)
+  const nativeIncoming = Boolean(tracedNativeChange && !String(tracedNativeChange.change).startsWith('-'))
   const parsedNativeValue = BigNumber(req.data.value || '0')
-  const nativeValue =
-    req.classification !== 'NATIVE_TRANSFER' && !parsedNativeValue.isNaN() && !parsedNativeValue.isZero()
+  const sentNativeValue =
+    !tracedNativeChange &&
+    req.classification !== 'NATIVE_TRANSFER' &&
+    !parsedNativeValue.isNaN() &&
+    !parsedNativeValue.isZero()
       ? req.data.value
       : null
-  if (!nativeValue && !changes.length) return null
+  if (!tracedNativeChange && !sentNativeValue && !changes.length) return null
 
   return (
     <ClusterRow className='transactionReviewAssetChanges'>
@@ -46,7 +78,7 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
           <div className='transactionReviewAssetChangesHeader'>
             <strong>Balance changes</strong>
           </div>
-          {nativeValue ? (
+          {(tracedNativeChange || sentNativeValue) && !nativeIncoming ? (
             <div className='transactionReviewAssetChange transactionReviewAssetChangeOutgoing'>
               <span className='transactionReviewAssetChangeIdentity'>
                 <strong>
@@ -58,7 +90,9 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
                 <span aria-hidden='true'>−</span>
                 <DisplayValue
                   type='ether'
-                  value={nativeValue}
+                  value={
+                    tracedNativeChange ? String(tracedNativeChange.change).replace(/^-/, '') : sentNativeValue
+                  }
                   valueDataParams={{ decimals: 18 }}
                   currencySymbol={symbol}
                   currencySymbolPosition='last'
@@ -66,20 +100,8 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
               </span>
             </div>
           ) : null}
-          {changes.map((change, index) => {
+          {changes.map(({ change, direction, incoming }, index) => {
             const token = tokenFor?.(change.token)
-            const accountAddress = account.toLowerCase()
-            const from = change.from?.toLowerCase()
-            const to = change.to?.toLowerCase()
-            const direction =
-              from === ZERO_ADDRESS
-                ? 'Minted'
-                : to === ZERO_ADDRESS
-                  ? 'Burned'
-                  : from === accountAddress
-                    ? 'Sent'
-                    : 'Received'
-            const incoming = direction === 'Minted' || direction === 'Received'
             const action =
               direction === 'Minted'
                 ? 'You mint'
@@ -119,16 +141,40 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
               </div>
             )
           })}
-          {changes.length ? (
+          {tracedNativeChange && nativeIncoming ? (
+            <div className='transactionReviewAssetChange transactionReviewAssetChangeIncoming'>
+              <span className='transactionReviewAssetChangeIdentity'>
+                <strong>
+                  <span className='transactionReviewScreenReaderOnly'>You receive </span>
+                  {symbol}
+                </strong>
+              </span>
+              <span className='transactionReviewAssetChangeAmount'>
+                <span aria-hidden='true'>+</span>
+                <DisplayValue
+                  type='ether'
+                  value={String(tracedNativeChange.change)}
+                  valueDataParams={{ decimals: 18 }}
+                  currencySymbol={symbol}
+                  currencySymbolPosition='last'
+                />
+              </span>
+            </div>
+          ) : null}
+          {tracedNativeChange || changes.length ? (
             <div
               className={`transactionReviewAssetChangesDisclaimer${
-                simulation.effectsTruncated ? ' transactionReviewAssetChangesDisclaimerWarning' : ''
+                simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated
+                  ? ' transactionReviewAssetChangesDisclaimerWarning'
+                  : ''
               }`}
-              role={simulation.effectsTruncated ? 'alert' : 'note'}
+              role={
+                simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated ? 'alert' : 'note'
+              }
             >
-              {simulation.effectsTruncated
+              {simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated
                 ? 'Preview incomplete — other effects may not be shown.'
-                : 'Preview only — actual token changes may differ.'}
+                : 'Preview only — actual balance changes may differ.'}
             </div>
           ) : null}
         </div>
@@ -374,6 +420,7 @@ export function getNativeBalanceChangesPresentation(simulation, options = {}) {
           : 'Native balance-change preview unavailable'
     }
   }
+  if (options.suppressSucceeded) return null
 
   const count = evidence.changes.length
   return {
@@ -557,7 +604,8 @@ const TxOverview = ({
   const advancedChecks = getAdvancedChecksPresentation(req.simulation)
   const simulationEffects = getSimulationEffectsPresentation(req.simulation, req.account)
   const nativeBalanceChanges = getNativeBalanceChangesPresentation(req.simulation, {
-    suppressUnavailable: true
+    suppressUnavailable: true,
+    suppressSucceeded: true
   })
   const callTrace = getCallTracePresentation(req.simulation)
   const proxyImplementationChanges = getProxyImplementationChangesPresentation(req.simulation, {

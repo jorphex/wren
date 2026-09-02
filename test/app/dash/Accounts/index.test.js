@@ -208,6 +208,23 @@ it('opens and reconnects a hardware signer when its account needs unlocking', ()
   expect(link.send).toHaveBeenCalledWith('dash:reloadSigner', 'ledger')
 })
 
+it('opens hardware signer management without waiting for account selection to return', () => {
+  render(<SignerAccountsHarness data={{}} />)
+  link.rpc.mockImplementationOnce(() => {})
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: `Select and unlock Ledger vault ${getAddress(hardwareAccount)}`
+    })
+  )
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'expandedSigner',
+    data: { signer: 'ledger' }
+  })
+  expect(link.send).not.toHaveBeenCalledWith('dash:reloadSigner', expect.anything())
+})
+
 it('opens hardware signer management even when the device is already ready', () => {
   class ReadyHardwareHarness extends SignerAccountsHarness {
     store(...path) {

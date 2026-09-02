@@ -21,6 +21,7 @@ import {
   getCallTracePresentation,
   getDelegationPresentation,
   getExpectedAssetChanges,
+  getExpectedNativeBalanceChange,
   getNativeBalanceChangesPresentation,
   getProxyImplementationChangesPresentation,
   getReviewStatusPresentation,
@@ -765,11 +766,60 @@ describe('simulation review', () => {
     expect(outgoingDirection.className).toBe('transactionReviewScreenReaderOnly')
     expect(incomingDirection.className).toBe('transactionReviewScreenReaderOnly')
     expect(screen.queryByText('$3,200.00')).toBeNull()
-    expect(screen.getByRole('note').textContent).toBe('Preview only — actual token changes may differ.')
+    expect(screen.getByRole('note').textContent).toBe('Preview only — actual balance changes may differ.')
     expect(screen.queryByText(/RPC simulation/i)).toBeNull()
     const outgoing = outgoingDirection.closest('.transactionReviewAssetChangeOutgoing')
     const incoming = incomingDirection.closest('.transactionReviewAssetChangeIncoming')
     expect(outgoing.compareDocumentPosition(incoming) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('places the selected account native trace alongside token balance changes', () => {
+    const otherAccount = '0x2222222222222222222222222222222222222222'
+    const token = '0x3333333333333333333333333333333333333333'
+    const simulation = {
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      effects: [
+        {
+          type: 'transfer',
+          standard: 'erc20',
+          token,
+          from: account.toLowerCase(),
+          to: '0x0000000000000000000000000000000000000000',
+          amount: '7'
+        }
+      ],
+      nativeBalanceChanges: {
+        status: 'succeeded',
+        source: 'debug_traceCall',
+        changes: [
+          { account: otherAccount, before: '0', after: '1', change: '1' },
+          { account: account.toLowerCase(), before: '1', after: '8', change: '7' }
+        ]
+      }
+    }
+
+    expect(getExpectedNativeBalanceChange(simulation, account)).toEqual(
+      simulation.nativeBalanceChanges.changes[1]
+    )
+    render(
+      <BalanceChanges
+        account={account}
+        req={{ classification: 'CONTRACT_CALL', data: { value: '0x0' } }}
+        simulation={simulation}
+        symbol='ETH'
+        tokenFor={() => ({ decimals: 0, name: 'Wrapped Ether', symbol: 'WETH' })}
+      />
+    )
+
+    const outgoing = screen.getByText('You burn').closest('.transactionReviewAssetChangeOutgoing')
+    const incoming = screen.getByText('You receive').closest('.transactionReviewAssetChangeIncoming')
+    expect(outgoing.compareDocumentPosition(incoming) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByTestId('display-value').map(({ textContent }) => textContent)).toEqual([
+      '7WETH',
+      '<0.000001ETH'
+    ])
+    expect(screen.getByRole('note').textContent).toBe('Preview only — actual balance changes may differ.')
   })
 
   it('exposes contract data as a named disclosure in the main review', async () => {

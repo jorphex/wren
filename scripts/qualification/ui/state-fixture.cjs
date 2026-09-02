@@ -590,24 +590,39 @@ const responsiveTransactionRequest = (variant) => {
   } else if (variant === 'asset-changes') {
     const token = '0x3333333333333333333333333333333333333333'
     request.data.to = token
+    request.data.value = '0x0'
+    request.data.data = `0x2e1a7d4d${BigInt('1000000000000000000').toString(16).padStart(64, '0')}`
+    request.payload.params = [request.data]
     request.decodedData = {
       contractAddress: token,
-      contractName: 'Workshop Vault',
+      contractName: 'Wrapped Ether',
       source: 'Bundled standard ABI',
       confidence: 'standard-abi',
       method: 'withdraw',
-      args: []
+      args: [{ name: 'amount', type: 'uint256', value: '1000000000000000000' }]
     }
     request.simulation.effects = [
       {
         type: 'transfer',
         standard: 'erc20',
         token,
-        from: QUALIFICATION_RECIPIENT,
-        to: QUALIFICATION_ACCOUNT.toLowerCase(),
-        amount: '5000000'
+        from: QUALIFICATION_ACCOUNT.toLowerCase(),
+        to: '0x0000000000000000000000000000000000000000',
+        amount: '1000000000000000000'
       }
     ]
+    request.simulation.nativeBalanceChanges = {
+      status: 'succeeded',
+      source: 'debug_traceCall',
+      changes: [
+        {
+          account: QUALIFICATION_ACCOUNT.toLowerCase(),
+          before: '1000000000000000000',
+          after: '2000000000000000000',
+          change: '1000000000000000000'
+        }
+      ]
+    }
   } else if (variant === 'approval') {
     request.data.value = '0x0'
     request.data.data =
@@ -2424,10 +2439,10 @@ const fixtureFor = (scenario) => {
         {
           chainId: 1,
           address: '0x3333333333333333333333333333333333333333',
-          balance: '100000000',
-          decimals: 6,
-          name: 'USD Coin',
-          symbol: 'USDC'
+          balance: '1000000000000000000',
+          decimals: 18,
+          name: 'Wrapped Ether',
+          symbol: 'WETH'
         }
       ]
     }

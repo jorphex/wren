@@ -258,6 +258,23 @@ test('decodes standard ERC-4626 vault methods without a network ABI lookup', () 
   })
 })
 
+test('decodes wrapped-native deposit and withdrawal methods without a network ABI lookup', () => {
+  const wrappedNative = new Interface(['function deposit() payable', 'function withdraw(uint256 amount)'])
+
+  expect(decodeLocalCalldata(wrappedNative.encodeFunctionData('deposit'))).toMatchObject({
+    status: 'decoded',
+    method: 'deposit',
+    signature: 'deposit()',
+    arguments: []
+  })
+  expect(decodeLocalCalldata(wrappedNative.encodeFunctionData('withdraw', [7n]))).toMatchObject({
+    status: 'decoded',
+    method: 'withdraw',
+    signature: 'withdraw(uint256)',
+    arguments: [{ name: 'amount', type: 'uint256', value: '7' }]
+  })
+})
+
 test('projects full production simulation evidence into the exact bounded result schema', () => {
   const simulation = projectInspectorSimulation({
     status: 'succeeded',

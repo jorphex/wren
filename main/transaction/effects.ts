@@ -3,6 +3,9 @@ const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200a
 const APPROVAL_FOR_ALL_TOPIC = '0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31'
 const TRANSFER_SINGLE_TOPIC = '0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62'
 const TRANSFER_BATCH_TOPIC = '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb'
+const WRAPPED_NATIVE_DEPOSIT_TOPIC = '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c'
+const WRAPPED_NATIVE_WITHDRAWAL_TOPIC = '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65'
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 const MAX_INSPECTED_LOGS = 256
 const MAX_EFFECTS = 100
@@ -160,6 +163,28 @@ function parseApprovalForAll(token: string, topics: string[], words: string[]): 
   }
 }
 
+function parseWrappedNativeTransfer(
+  token: string,
+  topics: string[],
+  words: string[],
+  withdrawal: boolean
+): SimulationEffect | undefined {
+  if (topics.length !== 2 || words.length !== 1) return
+
+  const account = parseTopicAddress(topics[1])
+  const amount = parseWord(words[0])
+  if (!account || amount === undefined) return
+
+  return {
+    type: 'transfer',
+    standard: 'erc20',
+    token,
+    from: withdrawal ? account : ZERO_ADDRESS,
+    to: withdrawal ? ZERO_ADDRESS : account,
+    amount
+  }
+}
+
 function parseTransferSingle(token: string, topics: string[], words: string[]): SimulationEffect | undefined {
   if (topics.length !== 4 || words.length !== 2 || !parseTopicAddress(topics[1])) return
 
@@ -238,7 +263,11 @@ function parseLog(value: unknown): { effects: SimulationEffect[]; truncated: boo
           ? parseApprovalForAll(token, topics, words)
           : topic === TRANSFER_SINGLE_TOPIC
             ? parseTransferSingle(token, topics, words)
-            : undefined
+            : topic === WRAPPED_NATIVE_DEPOSIT_TOPIC
+              ? parseWrappedNativeTransfer(token, topics, words, false)
+              : topic === WRAPPED_NATIVE_WITHDRAWAL_TOPIC
+                ? parseWrappedNativeTransfer(token, topics, words, true)
+                : undefined
 
   if (effect) return { effects: [effect], truncated: false }
   if (topic === TRANSFER_BATCH_TOPIC) return parseTransferBatch(token, topics, words)

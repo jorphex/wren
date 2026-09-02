@@ -5,7 +5,9 @@ const topics = {
   approval: '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925',
   approvalForAll: '0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31',
   transferSingle: '0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62',
-  transferBatch: '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb'
+  transferBatch: '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb',
+  deposit: '0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c',
+  withdrawal: '0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65'
 }
 const token = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const owner = '0x1111111111111111111111111111111111111111'
@@ -88,6 +90,35 @@ it('decodes canonical operator and ERC-1155 transfer events', () => {
         to: recipient,
         tokenId: '10',
         amount: '12'
+      }
+    ]
+  })
+})
+
+it('projects canonical wrapped-native deposits and withdrawals as token balance changes', () => {
+  expect(
+    parseSimulationEffects([
+      log([topics.deposit, topicAddress(owner)], [word(10)]),
+      log([topics.withdrawal, topicAddress(owner)], [word(7)])
+    ])
+  ).toEqual({
+    truncated: false,
+    effects: [
+      {
+        type: 'transfer',
+        standard: 'erc20',
+        token,
+        from: '0x0000000000000000000000000000000000000000',
+        to: owner,
+        amount: '10'
+      },
+      {
+        type: 'transfer',
+        standard: 'erc20',
+        token,
+        from: owner,
+        to: '0x0000000000000000000000000000000000000000',
+        amount: '7'
       }
     ]
   })

@@ -187,6 +187,53 @@ it('attaches receipt-derived asset changes to confirmed Activity actions', async
   expect(rpc).toHaveBeenCalledWith(1, 'eth_getTransactionReceipt', [hash('a')])
 })
 
+it('decodes a wrapped-native withdrawal and its burned token balance from canonical evidence', async () => {
+  const iface = new Interface([
+    'function withdraw(uint256 amount)',
+    'event Withdrawal(address indexed account,uint256 amount)'
+  ])
+  const input = iface.encodeFunctionData('withdraw', [7n])
+  const withdrawal = iface.encodeEventLog(iface.getEvent('Withdrawal')!, [account, 7n])
+  const rpc = jest.fn(async (_chainId, method) =>
+    method === 'eth_getTransactionByHash'
+      ? rpcTransaction({ value: '0x0', input })
+      : {
+          transactionHash: hash('a'),
+          blockHash,
+          blockNumber: '0x10',
+          logs: [{ address: token, topics: withdrawal.topics, data: withdrawal.data }]
+        }
+  )
+  const service = createActivityDetailsService({
+    activity: () => [entry()],
+    references: () => ({}),
+    operations: () => ({ [activityId]: operation() }),
+    batches: () => ({}),
+    rpc
+  })
+
+  await expect(service.get(activityId)).resolves.toMatchObject({
+    success: true,
+    actions: [
+      {
+        method: 'withdraw',
+        signature: 'withdraw(uint256)',
+        arguments: [{ name: 'amount', type: 'uint256', value: '7' }],
+        assetChanges: [
+          {
+            type: 'transfer',
+            standard: 'erc20',
+            token,
+            from: account,
+            to: '0x0000000000000000000000000000000000000000',
+            amount: '7'
+          }
+        ]
+      }
+    ]
+  })
+})
+
 it.each([
   ['hash', { hash: hash('f') }],
   ['account', { from: recipient }],
