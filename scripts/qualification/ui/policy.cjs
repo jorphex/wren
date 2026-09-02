@@ -1687,6 +1687,18 @@ const reviewScenarios = () => [
         kind: 'full-width',
         selector: '.transactionReviewAssetChanges',
         container: '.transactionReviewOverview'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewAssetChangesHeader',
+        property: 'display',
+        value: 'flex'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewAssetChange',
+        property: 'minHeight',
+        value: '40px'
       }
     ]
   },
@@ -1712,6 +1724,17 @@ const reviewScenarios = () => [
         selector: '.transactionReviewMainApproval ._txDescription',
         property: 'minHeight',
         value: '72px'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.transactionReviewApprovalSpender .clusterAddressRecipient',
+        with: '.transactionReviewApprovalLimit strong'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewApprovalSpender .clusterAddressRecipient',
+        property: 'justifyContent',
+        value: 'flex-start'
       }
     ]
   },

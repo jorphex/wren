@@ -183,8 +183,8 @@
       padding var(--wren-space-1) var(--wren-space-2)
 
   .transactionReviewSectionTitle
-    min-height 38px
-    padding var(--wren-space-4) 0 var(--wren-space-1)
+    min-height 34px
+    padding var(--wren-space-3) 0 var(--wren-space-1)
     color var(--wren-text-primary)
     font-size var(--wren-type-body)
     font-variation-settings var(--wren-font-heading-settings)
@@ -206,7 +206,7 @@
     .clusterRow:first-child .clusterValue
       position relative
       display grid
-      min-height 56px
+      min-height 48px
       padding 0
       grid-template-columns 96px minmax(0, 1fr)
       align-items start
@@ -239,7 +239,7 @@
   .transactionReviewNonceRow
     display grid
     width 100%
-    min-height 62px
+    min-height 54px
     box-sizing border-box
     padding var(--wren-space-3) 0
     grid-template-columns 96px minmax(0, 1fr) auto
@@ -528,13 +528,15 @@
 
   .transactionReviewAssetChangesInner
     width 100%
-    padding var(--wren-space-3) 0
+    padding var(--wren-space-2) 0 0
 
   .transactionReviewAssetChangesHeader
-    display grid
-    min-height 32px
-    align-content start
-    gap 2px
+    display flex
+    min-height 24px
+    align-items baseline
+    justify-content space-between
+    gap var(--wren-space-3)
+    padding-bottom var(--wren-space-1)
 
     strong
       color var(--wren-text-primary)
@@ -545,11 +547,12 @@
       color var(--wren-text-muted)
       font-family var(--wren-font-utility)
       font-size var(--wren-type-caption)
+      text-align right
 
   .transactionReviewAssetChange
     display grid
-    min-height 48px
-    padding var(--wren-space-2) 0
+    min-height 40px
+    padding var(--wren-space-1) 0
     box-sizing border-box
     align-items center
     grid-template-columns minmax(0, 1fr) auto
@@ -587,8 +590,8 @@
 
   .transactionReviewTokenApproval
     ._txLabel
-      min-height 32px
-      padding var(--wren-space-3) 0 var(--wren-space-1)
+      min-height 28px
+      padding var(--wren-space-2) 0 var(--wren-space-1)
 
     .clusterValue
       min-height 44px
@@ -616,6 +619,13 @@
     .clusterAddress
       min-width 0
       padding var(--wren-space-2) 0
+
+      .clusterAddressRecipient,
+      .clusterAddressRecipientLabeled
+        width 100%
+        align-items flex-start
+        justify-content flex-start
+        text-align left
 
   .transactionReviewAssetChangesNote
     padding-top var(--wren-space-2)
@@ -651,7 +661,7 @@
     position relative
     display grid
     width 100%
-    min-height 56px
+    min-height 48px
     box-sizing border-box
     padding 0
     border 0

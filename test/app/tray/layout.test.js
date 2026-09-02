@@ -370,7 +370,7 @@ test('keeps transaction review on one flat details ledger', () => {
     /#panel[\s\S]*?&:has\(\.requestNoticeApproval\) \.accountViewRequest,[\s\S]*?&:has\(\.requestNoticeTransactionReview\) \.accountViewRequest[\s\S]*?transition none/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewSectionTitle[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-1\)/
+    /\.transactionReviewSectionTitle[\s\S]*?min-height 34px[\s\S]*?padding var\(--wren-space-3\) 0 var\(--wren-space-1\)/
   )
   expect(signingStyle).toMatch(/\._txLabel[\s\S]*?padding var\(--wren-space-4\) 0 var\(--wren-space-2\)/)
   expect(signingStyle).toMatch(/\._txMainTag[\s\S]*?padding var\(--wren-space-3\) 0/)
@@ -404,6 +404,15 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   expect(signingStyle).toMatch(
     /\.transactionReviewMainApproval[\s\S]*?\._txDescription[\s\S]*?min-height 72px/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewAssetChangesHeader[\s\S]*?display flex[\s\S]*?min-height 24px[\s\S]*?justify-content space-between/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewAssetChange\n[\s\S]*?min-height 40px[\s\S]*?padding var\(--wren-space-1\) 0/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewApprovalSpender[\s\S]*?\.clusterAddressRecipient,[\s\S]*?width 100%[\s\S]*?justify-content flex-start[\s\S]*?text-align left/
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
   expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)
