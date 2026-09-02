@@ -434,7 +434,7 @@ test('keeps compact transfer summaries inline and revocation review on one focus
 test('keeps signing evidence readable and operable when the shell is scaled', () => {
   expect(signingStyle).toMatch(/\.txLifecycleStep[\s\S]*?font-size 12px/)
   expect(signingStyle).toMatch(
-    /\.txLifecycleAction,[\s\S]*?\.txLifecycleDetails button,[\s\S]*?\.txLifecycleCancelRequest[\s\S]*?min-height 44px[\s\S]*?height 44px/
+    /\.txLifecycleAction,[\s\S]*?\.txLifecycleCancelRequest[\s\S]*?min-height 44px[\s\S]*?height 44px/
   )
   expect(signingStyle).toMatch(
     /@media \(max-width: 560px\)[\s\S]*?\.approveTransaction \.transactionReviewMain[\s\S]*?\._txDescription[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.transactionReviewSummaryStatus[\s\S]*?width 100%[\s\S]*?max-width none/

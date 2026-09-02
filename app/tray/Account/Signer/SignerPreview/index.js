@@ -134,7 +134,7 @@ export class Signer extends React.Component {
       return (
         <div className='moduleItemSignerType'>
           <div className='moduleItemIcon'>
-            <Icon name='hot' size={18} />
+            <AccountTypeMark type={type} size={16} />
           </div>
           <div>{'Hot'}</div>
         </div>
@@ -192,37 +192,52 @@ export class Signer extends React.Component {
       <div className='balancesBlock accountLedgerModule' ref={this.moduleRef}>
         <Cluster>
           <ClusterRow className='signerPreviewRow accountLedgerRow'>
-            <div className='accountLedgerLabel'>
-              <span>
-                <Icon name='sign' size={18} />
-              </span>
-              <span>{'Signer'}</span>
+            <div className={`signerPreviewControl${watchOnly ? ' signerPreviewControlStatic' : ''}`}>
+              {watchOnly ? (
+                <div className='signerPreviewDetails signerPreviewDetailsStatic'>
+                  <div className='accountLedgerLabel'>
+                    <span>
+                      <Icon name='sign' size={16} />
+                    </span>
+                    <span>{'Signer'}</span>
+                  </div>
+                  <div className='signerPreviewSummary'>
+                    {this.renderSignerType(activeAccount.lastSignerType)}
+                    {this.getCurrentStatus(activeSigner, hardwareSigner)}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type='button'
+                  aria-label='Open signer details'
+                  className='signerPreviewDetails'
+                  disabled={this.state.openingDetails}
+                  onClick={() => this.openSignerDetails(activeAccount, activeSigner)}
+                >
+                  <div className='accountLedgerLabel'>
+                    <span>
+                      <Icon name='sign' size={16} />
+                    </span>
+                    <span>{'Signer'}</span>
+                  </div>
+                  <div className='signerPreviewSummary'>
+                    {this.renderSignerType(activeAccount.lastSignerType)}
+                    {this.getCurrentStatus(activeSigner, hardwareSigner)}
+                  </div>
+                </button>
+              )}
+              {!watchOnly && (
+                <button
+                  type='button'
+                  aria-label='Verify account address on signer'
+                  className='signerPreviewVerify'
+                  disabled={this.state.verifying}
+                  onClick={() => this.verifyAddress(hardwareSigner)}
+                >
+                  <Icon name='verify' size={20} />
+                </button>
+              )}
             </div>
-            <ClusterValue
-              {...(!watchOnly
-                ? {
-                    ariaLabel: 'Open signer details',
-                    disabled: this.state.openingDetails,
-                    onClick: () => this.openSignerDetails(activeAccount, activeSigner)
-                  }
-                : {})}
-            >
-              <div className='signerPreviewSummary'>
-                {this.renderSignerType(activeAccount.lastSignerType)}
-                {this.getCurrentStatus(activeSigner, hardwareSigner)}
-              </div>
-            </ClusterValue>
-            {!watchOnly && (
-              <ClusterValue
-                ariaLabel='Verify account address on signer'
-                disabled={this.state.verifying}
-                grow={0}
-                onClick={() => this.verifyAddress(hardwareSigner)}
-                style={{ flexBasis: '52px' }}
-              >
-                <Icon name='verify' size={18} />
-              </ClusterValue>
-            )}
           </ClusterRow>
           {this.state.notifyText && (
             <ClusterRow>

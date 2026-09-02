@@ -35,6 +35,82 @@
   .moduleItemSignerType
     justify-content flex-start
 
+.signerPreviewControl
+  display grid
+  width 100%
+  min-height 52px
+  grid-template-columns minmax(0, 1fr) 44px
+  align-items stretch
+
+.signerPreviewControlStatic
+  grid-template-columns minmax(0, 1fr)
+
+.signerPreviewDetails
+  display grid
+  min-width 0
+  min-height 52px
+  padding 0
+  border 0
+  color inherit
+  background transparent
+  font inherit
+  text-align left
+  grid-template-columns 112px minmax(0, 1fr)
+  align-items center
+  cursor pointer
+
+  &:hover
+    background var(--wren-ledger-hover)
+
+  &:active
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    z-index 1
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    color var(--wren-text-disabled)
+    cursor default
+    opacity .7
+
+.signerPreviewDetailsStatic
+  cursor default
+
+.signerPreviewVerify
+  display grid
+  width 44px
+  min-width 44px
+  min-height 44px
+  margin 4px 0
+  padding 0
+  border 0
+  border-left 1px solid var(--wren-ledger-rule)
+  color var(--wren-text-secondary)
+  background transparent
+  place-items center
+  cursor pointer
+
+  > svg
+    display block
+
+  &:hover
+    color var(--wren-text-primary)
+    background var(--wren-ledger-hover)
+
+  &:active
+    background var(--wren-surface-active)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    color var(--wren-text-disabled)
+    cursor default
+    opacity .7
+
 .signerPreviewStatus
   color var(--wren-text-tertiary)
   font-family var(--wren-font-utility)
