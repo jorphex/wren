@@ -1265,6 +1265,15 @@
   &:has(.requestNoticeTransactionReview) .accountViewRequest
     transition none
 
+  &:has(.requestNoticeTransactionReview)
+    --wren-request-review-shelf-height 88px
+
+    .accountViewRequest
+      bottom var(--wren-request-review-shelf-height) !important
+
+    .footerModule
+      height var(--wren-request-review-shelf-height) !important
+
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
 
@@ -1318,6 +1327,17 @@
   background-size 150px 150px, 100% 100%, 100% 100%, 100% 100%
   background-blend-mode overlay, normal, normal, normal
   box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
+
+// Focused signing stays on the current charcoal foundation without carrying
+// the ordinary wallet's atmospheric color fields into the review bar.
+#panel:has(.accountViewRequest)
+  background-color #070907
+  background-image none
+  box-shadow inset 0 0 150px 22px rgba(0, 0, 0, .55)
+
+@media (max-width: 560px)
+  #panel:has(.requestNoticeTransactionReview)
+    --wren-request-review-shelf-height 132px
 
 .accountMain.accountMainPerch
   --wren-account-ledger-inset var(--wren-space-4)

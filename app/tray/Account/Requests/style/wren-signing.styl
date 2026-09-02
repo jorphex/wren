@@ -1106,8 +1106,9 @@
       color #11130f
 
 .requestNoticeTransactionReview
-  height 114px
-  background var(--wren-bg-subtle)
+  height var(--wren-request-review-shelf-height, 88px)
+  background linear-gradient(180deg, rgba(14, 18, 16, .72), var(--wren-bg-subtle) 30px)
+  box-shadow 0 -14px 28px rgba(0, 0, 0, .16)
   animation none
 
   .requestNoticeInner
@@ -1165,7 +1166,16 @@
   animation 0.24s fadeUp ease-out
 
 .requestApproveTransaction
+  height var(--wren-request-review-shelf-height, 88px)
+  padding var(--wren-space-3) var(--wren-space-5)
+  gap var(--wren-space-4)
   animation none
+
+  .requestDecline
+    flex-basis 132px
+    width 132px
+    min-width 132px
+    max-width 132px
 
 .requestApproveTransaction,
 .requestApproveSignature,

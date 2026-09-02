@@ -229,6 +229,9 @@ test('keeps activity on a ruled Perch ledger and exposes its expanded module', (
   expect(accountStyle).toMatch(
     /#panel:has\(\.accountSelector:not\(\.accountSelectorOpen\)\),[\s\S]*?#panel:has\(\.activityModuleExpanded\),[\s\S]*?#panel:has\(\.requestViewScroll\)/
   )
+  expect(accountStyle).toMatch(
+    /#panel:has\(\.accountViewRequest\)\n[\s\S]{0,120}?background-color #070907[\s\S]{0,120}?background-image none/
+  )
   expect(accountStyle).not.toMatch(/radial-gradient\(circle at/)
 })
 
@@ -241,7 +244,16 @@ test('keeps reserved tray bands clean and gives startup one aligned account ledg
     /\.accountDrawerItem[\s\S]*?grid-template-columns 32px minmax\(0, 1fr\) 24px[\s\S]*?column-gap var\(--wren-space-2\)[\s\S]*?\.accountDrawerItemIcon[\s\S]*?justify-self center/
   )
   expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
-  expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,100}?border-top/)
+  expect(signingStyle).toMatch(
+    /\.requestNoticeTransactionReview\n[\s\S]{0,220}?height var\(--wren-request-review-shelf-height, 88px\)[\s\S]{0,180}?background linear-gradient\(180deg[\s\S]{0,180}?box-shadow 0 -14px 28px/
+  )
+  expect(accountStyle).toMatch(
+    /&:has\(\.requestNoticeTransactionReview\)\n[\s\S]{0,220}?--wren-request-review-shelf-height 88px[\s\S]{0,220}?\.accountViewRequest\n[\s\S]{0,100}?bottom var\(--wren-request-review-shelf-height\) !important[\s\S]{0,220}?\.footerModule\n[\s\S]{0,100}?height var\(--wren-request-review-shelf-height\) !important/
+  )
+  expect(accountStyle).toMatch(
+    /@media \(max-width: 560px\)\n[\s\S]{0,120}?#panel:has\(\.requestNoticeTransactionReview\)\n[\s\S]{0,80}?--wren-request-review-shelf-height 132px/
+  )
+  expect(signingStyle).not.toMatch(/\.requestNoticeTransactionReview\n[\s\S]{0,220}?border-top/)
 })
 
 test('keeps warnings and balance siblings attached through spacing', () => {
@@ -361,7 +373,9 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
   )
   expect(signingStyle).toMatch(/\.requestNoticeTransactionReview\n[\s\S]*?animation none/)
-  expect(signingStyle).toMatch(/\.requestApproveTransaction\n\s{2}animation none/)
+  expect(signingStyle).toMatch(
+    /\.requestApproveTransaction\n[\s\S]{0,260}?height var\(--wren-request-review-shelf-height, 88px\)[\s\S]{0,220}?padding var\(--wren-space-3\) var\(--wren-space-5\)[\s\S]{0,220}?animation none/
+  )
   expect(signingStyle).toMatch(
     /\._txActionButtonGood[\s\S]*?&:hover[\s\S]*?var\(--wren-accent-primary-hover\)/
   )
