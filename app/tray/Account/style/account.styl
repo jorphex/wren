@@ -1669,15 +1669,22 @@
   height 62px
 
   .signerBalanceIcon
-    top 14px
+    top 15px
     left 0
-    width 34px
-    height 34px
-    overflow hidden
+    width var(--wren-account-ledger-mark-column)
+    height var(--wren-account-ledger-mark-column)
+    overflow visible
     box-sizing border-box
     border 1px solid var(--wren-border-strong)
-    border-radius 9px
+    border-radius 8px
     background var(--wren-bg-elevated)
+
+    .balancesAssetMark
+      --asset-mark-vector-size 20px
+
+      .ringIconFallback
+        font-size 13px
+        transform translate(calc(-50% + 3px), -50%)
 
   .signerBalanceCurrency
     top 12px

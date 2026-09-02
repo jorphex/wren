@@ -278,6 +278,12 @@ test('aligns balance artwork and copy with the account ledger rhythm', () => {
   )
   expect(balanceSource).toMatch(/<AssetMark[\s\S]*?appearance='plain'[\s\S]*?className='balancesAssetMark'/)
   expect(balancesStyle).not.toMatch(/\.balancesAssetMark \.assetMarkGlyph/)
+  expect(accountStyle).toMatch(
+    /\.accountMainPerch \.signerBalance[\s\S]*?\.signerBalanceIcon[\s\S]*?width var\(--wren-account-ledger-mark-column\)[\s\S]*?height var\(--wren-account-ledger-mark-column\)[\s\S]*?overflow visible/
+  )
+  expect(accountStyle).toMatch(
+    /\.balancesAssetMark[\s\S]*?--asset-mark-vector-size 20px[\s\S]*?\.ringIconFallback[\s\S]*?transform translate\(calc\(-50% \+ 3px\), -50%\)/
+  )
 })
 
 test('keeps the account selector and privacy control on one optical axis', () => {

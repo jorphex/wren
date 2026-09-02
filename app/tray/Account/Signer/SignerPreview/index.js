@@ -107,7 +107,7 @@ export class Signer extends React.Component {
       return (
         <div className='moduleItemSignerType'>
           <div className='moduleItemIcon'>
-            <AccountTypeMark type={type} size={17} />
+            <AccountTypeMark type={type} size={18} />
           </div>
           <div>{'GridPlus'}</div>
         </div>
@@ -116,7 +116,7 @@ export class Signer extends React.Component {
       return (
         <div className='moduleItemSignerType'>
           <div className='moduleItemIcon'>
-            <AccountTypeMark type={type} size={17} />
+            <AccountTypeMark type={type} size={18} />
           </div>
           <div>{'Ledger'}</div>
         </div>
@@ -125,7 +125,7 @@ export class Signer extends React.Component {
       return (
         <div className='moduleItemSignerType'>
           <div className='moduleItemIcon'>
-            <AccountTypeMark type={type} size={17} />
+            <AccountTypeMark type={type} size={18} />
           </div>
           <div>{'Trezor'}</div>
         </div>
@@ -134,7 +134,7 @@ export class Signer extends React.Component {
       return (
         <div className='moduleItemSignerType'>
           <div className='moduleItemIcon'>
-            <Icon name='hot' size={16} />
+            <Icon name='hot' size={18} />
           </div>
           <div>{'Hot'}</div>
         </div>
@@ -218,9 +218,9 @@ export class Signer extends React.Component {
                 disabled={this.state.verifying}
                 grow={0}
                 onClick={() => this.verifyAddress(hardwareSigner)}
-                style={{ flexBasis: '72px' }}
+                style={{ flexBasis: '52px' }}
               >
-                <Icon name='verify' size={20} />
+                <Icon name='verify' size={18} />
               </ClusterValue>
             )}
           </ClusterRow>

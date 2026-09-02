@@ -685,6 +685,19 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
         kind: 'size',
         selector: '.signerPreviewRow .moduleItemIcon',
         height: 18
+      },
+      {
+        kind: 'size',
+        selector: '.signerPreviewRow > .clusterValue:last-child',
+        width: 52,
+        height: 52
+      },
+      {
+        kind: 'size',
+        selector:
+          '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg, .signerPreviewRow > .clusterValue:last-child svg',
+        width: 18,
+        height: 18
       }
     ])
   })
@@ -701,6 +714,18 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
         selector: '.accountPortfolioHeader, .requestPreviewHeading, .accountMainPerch .moduleHeader',
         property: 'textTransform',
         value: 'uppercase'
+      },
+      {
+        kind: 'size',
+        selector: '.balancesPreview .signerBalanceIcon',
+        width: 32,
+        height: 32
+      },
+      {
+        kind: 'size',
+        selector: '.balancesPreview .balancesAssetMark .assetMarkGlyphVector > div',
+        width: 20,
+        height: 20
       }
     ])
   })

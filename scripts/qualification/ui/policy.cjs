@@ -2437,6 +2437,25 @@ const reviewScenarios = () => [
         selector: '.accountPortfolioCard, .requestPreviewContent, .accountMainPerch .moduleHeader',
         property: 'paddingTop',
         value: '15px'
+      },
+      { kind: 'size', selector: '.balancesPreview .signerBalanceIcon', width: 32, height: 32 },
+      {
+        kind: 'computed-style',
+        selector: '.balancesPreview .signerBalanceIcon',
+        property: 'top',
+        value: '15px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.balancesPreview .signerBalanceIcon',
+        property: 'overflow',
+        value: 'visible'
+      },
+      {
+        kind: 'size',
+        selector: '.balancesPreview .balancesAssetMark .assetMarkGlyphVector > div',
+        width: 20,
+        height: 20
       }
     ]
   },
@@ -3055,6 +3074,19 @@ const reviewScenarios = () => [
         value: 'flex'
       },
       { kind: 'size', selector: '.signerPreviewRow .moduleItemIcon', height: 18 },
+      {
+        kind: 'size',
+        selector: '.signerPreviewRow > .clusterValue:last-child',
+        width: 52,
+        height: 52
+      },
+      {
+        kind: 'size',
+        selector:
+          '.accountLedgerLabel svg, .signerPreviewRow .moduleItemIcon svg, .signerPreviewRow > .clusterValue:last-child svg',
+        width: 18,
+        height: 18
+      },
       { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
       { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
