@@ -30,7 +30,7 @@ export const getExpectedAssetChanges = (simulation, account) => {
   )
 }
 
-export const BalanceChanges = ({ account, currencyRate, isTestnet, req, simulation, symbol, tokenFor }) => {
+export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) => {
   const changes = getExpectedAssetChanges(simulation, account)
   const parsedNativeValue = BigNumber(req.data.value || '0')
   const nativeValue =
@@ -49,30 +49,20 @@ export const BalanceChanges = ({ account, currencyRate, isTestnet, req, simulati
           {nativeValue ? (
             <div className='transactionReviewAssetChange transactionReviewAssetChangeOutgoing'>
               <span className='transactionReviewAssetChangeIdentity'>
-                <strong>{`You send ${symbol}`}</strong>
+                <strong>
+                  <span className='transactionReviewScreenReaderOnly'>You send </span>
+                  {symbol}
+                </strong>
               </span>
-              <span className='transactionReviewAssetChangeValues'>
-                <span className='transactionReviewAssetChangeAmount'>
-                  <span aria-hidden='true'>−</span>
-                  <DisplayValue
-                    type='ether'
-                    value={nativeValue}
-                    valueDataParams={{ decimals: 18 }}
-                    currencySymbol={symbol}
-                    currencySymbolPosition='last'
-                  />
-                </span>
-                {currencyRate ? (
-                  <span className='transactionReviewAssetChangeFiat'>
-                    <span aria-hidden='true'>{isTestnet ? '=' : '≈'}</span>
-                    <DisplayValue
-                      type='fiat'
-                      value={nativeValue}
-                      valueDataParams={{ currencyRate, decimals: 18, isTestnet }}
-                      currencySymbol='$'
-                    />
-                  </span>
-                ) : null}
+              <span className='transactionReviewAssetChangeAmount'>
+                <span aria-hidden='true'>−</span>
+                <DisplayValue
+                  type='ether'
+                  value={nativeValue}
+                  valueDataParams={{ decimals: 18 }}
+                  currencySymbol={symbol}
+                  currencySymbolPosition='last'
+                />
               </span>
             </div>
           ) : null}
@@ -106,7 +96,8 @@ export const BalanceChanges = ({ account, currencyRate, isTestnet, req, simulati
               >
                 <span className='transactionReviewAssetChangeIdentity'>
                   <strong title={change.token}>
-                    {`${action} ${token?.name || token?.symbol || `${change.token.slice(0, 8)}…`}`}
+                    <span className='transactionReviewScreenReaderOnly'>{`${action} `}</span>
+                    {token?.name || token?.symbol || `${change.token.slice(0, 8)}…`}
                   </strong>
                 </span>
                 <span className='transactionReviewAssetChangeAmount'>
@@ -649,8 +640,6 @@ const TxOverview = ({
         <ReplacementAssessment status={replacementStatus} />
         <BalanceChanges
           account={req.account}
-          currencyRate={currencyRate}
-          isTestnet={isTestnet}
           req={req}
           simulation={req.simulation}
           symbol={symbol}

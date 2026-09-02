@@ -547,7 +547,7 @@
 
   .transactionReviewAssetChange
     display grid
-    min-height 36px
+    min-height 32px
     padding 2px 0
     box-sizing border-box
     align-items center
@@ -578,22 +578,12 @@
     font-weight 620
     text-align right
 
-  .transactionReviewAssetChangeValues
-    display flex
-    min-width 0
-    flex-direction row
-    align-items baseline
-    justify-content flex-end
-    gap var(--wren-space-2)
-
-  .transactionReviewAssetChangeFiat
-    display flex
-    align-items baseline
-    gap var(--wren-space-1)
-    color var(--wren-text-muted)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
-    text-align right
+  .transactionReviewScreenReaderOnly
+    position absolute
+    width 1px
+    height 1px
+    overflow hidden
+    clip-path inset(50%)
 
   .transactionReviewAssetChangeIncoming .transactionReviewAssetChangeAmount
     color var(--wren-success)

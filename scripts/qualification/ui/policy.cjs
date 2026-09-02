@@ -1683,9 +1683,9 @@ const reviewScenarios = () => [
     ready: '.transactionReviewAssetChanges',
     requiredText: [
       'Balance changes',
-      'You send ETH',
+      'ETH',
       '1 ETH',
-      'You receive USD Coin',
+      'USD Coin',
       '5 USDC',
       'Preview only — actual token changes may differ.'
     ],
@@ -1705,13 +1705,7 @@ const reviewScenarios = () => [
         kind: 'computed-style',
         selector: '.transactionReviewAssetChange',
         property: 'minHeight',
-        value: '36px'
-      },
-      {
-        kind: 'computed-style',
-        selector: '.transactionReviewAssetChangeValues',
-        property: 'flexDirection',
-        value: 'row'
+        value: '32px'
       },
       {
         kind: 'computed-style',
