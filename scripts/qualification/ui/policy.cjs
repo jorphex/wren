@@ -3035,12 +3035,12 @@ const reviewScenarios = () => [
       {
         kind: 'aligned-left',
         selector: '.activityEmpty strong',
-        with: '.balancesPreview .signerBalanceCurrency'
+        with: '.activityModuleEmpty .moduleHeader > span:last-child'
       },
       {
         kind: 'aligned-left',
         selector: '.activityEmpty span',
-        with: '.balancesPreview .signerBalanceCurrency'
+        with: '.activityModuleEmpty .moduleHeader > span:last-child'
       },
       {
         kind: 'computed-style',
