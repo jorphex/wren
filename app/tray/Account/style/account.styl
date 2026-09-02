@@ -1016,17 +1016,23 @@
         transform translateY(1px)
 
       .accountLedgerLabel
-        display flex
+        display grid
         flex 0 0 112px
         min-width 112px
-        padding 0 var(--wren-space-4)
+        padding 0 0 0 var(--wren-account-ledger-inset)
         box-sizing border-box
         align-items center
-        gap var(--wren-space-2)
+        grid-template-columns var(--wren-account-ledger-mark-column) minmax(0, 1fr)
+        column-gap var(--wren-account-ledger-column-gap)
         color var(--wren-text-tertiary)
         font-family var(--wren-font-ui)
         font-size var(--wren-type-small)
         font-weight 560
+
+        > span:first-child
+          display flex
+          align-items center
+          justify-content flex-start
 
         svg
           color var(--wren-text-secondary)
@@ -1351,7 +1357,7 @@
 .accountPortfolioCard
   position relative
   height 144px
-  padding 18px
+  padding 15px var(--wren-account-ledger-inset) 18px
   box-sizing border-box
   overflow hidden
   border 1px solid var(--wren-border-default)
@@ -1375,18 +1381,17 @@
   display flex
   align-items center
   justify-content space-between
+
+.accountMainPerch .accountPortfolioHeader,
+.accountMainPerch .requestPreviewHeading,
+.accountMainPerch .moduleHeader
   color var(--wren-text-tertiary)
   font-family var(--wren-font-mono)
   font-size 12px
   font-weight 600
+  line-height 18px
   letter-spacing 1.4px
   text-transform uppercase
-
-  span:last-child
-    color #6d7568
-    font-weight 400
-    letter-spacing 0
-    text-transform none
 
 .accountPortfolioValue
   position relative
@@ -1444,15 +1449,9 @@
 .accountMainPerch .moduleHeader
   display flex
   height 48px
-  padding 15px var(--wren-account-ledger-inset) 11px
+  padding 15px var(--wren-account-ledger-inset)
   box-sizing border-box
   align-items center
-  color var(--wren-text-tertiary)
-  font-family var(--wren-font-mono)
-  font-size 12px
-  font-weight 600
-  letter-spacing 1.4px
-  text-transform uppercase
 
   &:before
     display none
@@ -1463,6 +1462,7 @@
 .accountMainPerch .activityModuleEmpty .moduleHeader,
 .accountMainPerch .permissionsModuleHeader
   height 36px
+  padding-bottom 3px
 
 .accountMainPerch .requestsPreview
   height auto
@@ -1491,12 +1491,6 @@
     display flex
     align-items center
     justify-content space-between
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-mono)
-    font-size 12px
-    font-weight 600
-    letter-spacing 1.4px
-    text-transform uppercase
 
     span
       margin 0

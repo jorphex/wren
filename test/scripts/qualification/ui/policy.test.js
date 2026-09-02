@@ -434,6 +434,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
   const editor = scenarios.find(({ state }) => state === 'network-editor')
   const overflowingNetworkEditor = scenarios.find(({ id }) => id === 'dash-network-add-overflow-short-1')
   const ledger = scenarios.find(({ state }) => state === 'account-ledger')
+  const ledgerFull = scenarios.find(({ id }) => id === 'tray-account-ledger-full-1')
   const startup = scenarios.find(({ state }) => state === 'account-startup')
   const balances = scenarios.find(({ state }) => state === 'account-balances')
   const switchedGas = scenarios.find(({ id }) => id === 'tray-account-gas-expanded-switched-full-1')
@@ -663,6 +664,32 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
         kind: 'aligned-left',
         selector: '.accountModule-permissions .signerPermissionIdentity',
         with: '.accountModule-activity .activityIdentity'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.accountLedgerLabel > span:first-child',
+        with: '.accountModule-activity .activityMark'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.accountLedgerLabel > span:last-child',
+        with: '.accountModule-activity .activityIdentity'
+      }
+    ])
+  })
+  expect(ledgerFull).toMatchObject({
+    layoutExpectations: expect.arrayContaining([
+      {
+        kind: 'aligned-left',
+        selector:
+          '.requestPreviewHeading > span:first-child, .balancesPreview > .moduleHeader > span:last-child, .activityModule > .moduleHeader > span:last-child, .permissionsModuleHeader > span:last-child',
+        with: '.accountPortfolioHeader > span:first-child'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountPortfolioHeader, .requestPreviewHeading, .accountMainPerch .moduleHeader',
+        property: 'textTransform',
+        value: 'uppercase'
       }
     ])
   })

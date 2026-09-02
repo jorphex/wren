@@ -2412,6 +2412,32 @@ const reviewScenarios = () => [
       'APPS WITH ACCESS',
       'Signer',
       'Remove account'
+    ],
+    layoutExpectations: [
+      {
+        kind: 'aligned-left',
+        selector:
+          '.requestPreviewHeading > span:first-child, .balancesPreview > .moduleHeader > span:last-child, .activityModule > .moduleHeader > span:last-child, .permissionsModuleHeader > span:last-child',
+        with: '.accountPortfolioHeader > span:first-child'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountPortfolioHeader, .requestPreviewHeading, .accountMainPerch .moduleHeader',
+        property: 'lineHeight',
+        value: '18px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountPortfolioHeader, .requestPreviewHeading, .accountMainPerch .moduleHeader',
+        property: 'textTransform',
+        value: 'uppercase'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountPortfolioCard, .requestPreviewContent, .accountMainPerch .moduleHeader',
+        property: 'paddingTop',
+        value: '15px'
+      }
     ]
   },
   {
@@ -3000,6 +3026,22 @@ const reviewScenarios = () => [
         selector: '.accountModule-permissions .signerPermissionIdentity',
         with: '.accountModule-activity .activityIdentity'
       },
+      {
+        kind: 'aligned-left',
+        selector: '.accountLedgerLabel > span:first-child',
+        with: '.accountModule-activity .activityMark'
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.accountLedgerLabel > span:last-child',
+        with: '.accountModule-activity .activityIdentity'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.accountLedgerLabel',
+        property: 'display',
+        value: 'grid'
+      },
       { kind: 'size', selector: '.permissionsModuleHeader', height: 36 },
       { kind: 'size', selector: '.connectedAppsList .signerPermission', height: 44 }
     ]
@@ -3177,7 +3219,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.signerPreviewRow',
         requiredControls: ['Send', 'Open signer details'],
-        requiredText: ['Portfolio balance', '$0.00', 'No assets on this account yet', 'Signer']
+        requiredText: ['PORTFOLIO BALANCE', '$0.00', 'No assets on this account yet', 'Signer']
       },
       ...(scale === 1
         ? [
@@ -3224,7 +3266,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.accountPortfolioCard',
-              requiredText: ['Portfolio balance', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer'],
+              requiredText: ['PORTFOLIO BALANCE', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer'],
               layoutExpectations: [
                 {
                   kind: 'computed-style',
