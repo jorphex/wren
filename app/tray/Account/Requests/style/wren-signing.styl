@@ -405,7 +405,7 @@
       background var(--wren-surface-active)
 
   .transactionReviewOverview
-    > .clusterRow:first-child + .clusterRow,
+    > .clusterRow:first-child + .clusterRow:not(.transactionReviewAssetChanges),
     > .transactionReviewDataRow
       border-top 1px solid rgba(43, 53, 45, .68)
 
@@ -525,7 +525,7 @@
 
   .transactionReviewAssetChanges
     margin 0
-    border-top 1px solid var(--wren-ledger-rule)
+    border-top 0
 
     .clusterValue
       padding 0
@@ -553,7 +553,7 @@
     align-items center
     grid-template-columns minmax(0, 1fr) auto
     column-gap var(--wren-space-4)
-    border-top 1px solid var(--wren-ledger-rule)
+    border-top 0
 
   .transactionReviewAssetChangeIdentity
     display block

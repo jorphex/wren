@@ -1708,6 +1708,18 @@ const reviewScenarios = () => [
         value: '44px'
       },
       {
+        kind: 'computed-style',
+        selector: '.transactionReviewAssetChanges',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewAssetChange',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
+      {
         kind: 'hidden',
         selector: '.txSendingValue'
       }
