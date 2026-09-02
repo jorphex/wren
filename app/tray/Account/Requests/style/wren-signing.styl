@@ -1,7 +1,7 @@
 // Signing-critical surfaces use one continuous review canvas. Preserve the existing request and
 // signer flow while removing the inherited card stack, animated split pill, and decorative chrome.
 .approveTransaction
-  --transaction-review-row-height 48px
+  --transaction-review-row-height var(--wren-review-row-height)
   --transaction-review-section-height 34px
   padding 0 var(--wren-space-5)
   border-radius 0
@@ -217,7 +217,7 @@
       display grid
       min-height var(--transaction-review-row-height)
       padding 0
-      grid-template-columns 96px minmax(0, 1fr)
+      grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
       align-items center
       justify-content stretch
       column-gap var(--wren-space-4)
@@ -251,12 +251,12 @@
     min-height var(--transaction-review-row-height)
     box-sizing border-box
     padding var(--wren-space-1) 0
-    grid-template-columns 96px minmax(0, 1fr) auto
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr) auto
     align-items center
     column-gap var(--wren-space-4)
 
   .transactionReviewNonceRow
-    grid-template-columns 96px minmax(0, 1fr) auto
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr) auto
 
   .transactionReviewFeeValue,
   .transactionNonceDetails
@@ -307,7 +307,7 @@
 
   .transactionReviewFeeNotice
     min-height 34px
-    padding 8px 0 8px 112px
+    padding 8px 0 8px calc(var(--wren-review-label-column) + var(--wren-space-4))
     border-top 1px solid var(--wren-ledger-rule)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
@@ -619,12 +619,12 @@
     width 100%
     min-height var(--transaction-review-row-height)
     box-sizing border-box
-    grid-template-columns 96px minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items center
     column-gap var(--wren-space-4)
 
   .transactionReviewApprovalLimit
-    grid-template-columns 96px minmax(0, 1fr) auto
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr) auto
 
   .transactionReviewApprovalAdjust
     display grid
@@ -644,8 +644,8 @@
   .transactionReviewApprovalLimit strong
     color var(--wren-text-primary)
     font-family var(--wren-font-utility)
-    font-size var(--wren-type-small)
-    font-weight 620
+    font-size var(--wren-type-body)
+    font-weight 550
 
   .transactionReviewApprovalSpender
     .clusterAddress
@@ -694,7 +694,7 @@
     border-bottom 0
     color var(--wren-text-primary)
     background transparent
-    grid-template-columns 96px minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items center
     column-gap var(--wren-space-4)
     text-align left
@@ -764,7 +764,7 @@
   .transactionReviewDeploymentRow
     display grid
     min-height 56px
-    grid-template-columns 96px minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items center
     column-gap var(--wren-space-4)
 
@@ -876,7 +876,7 @@
     min-height 58px
     box-sizing border-box
     padding var(--wren-space-2)
-    grid-template-columns 210px minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items center
     gap var(--wren-space-4)
 
@@ -1062,7 +1062,7 @@
       display grid
       min-height 42px
       padding 0
-      grid-template-columns 112px minmax(0, 1fr)
+      grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
       align-items center
 
   dt
@@ -1868,7 +1868,7 @@
 
   .txViewData
     margin 0
-    padding var(--wren-space-5) 0
+    padding var(--wren-space-4) 0
     border 0
     border-top 1px solid var(--wren-ledger-rule)
     border-radius 0
@@ -1879,7 +1879,7 @@
       border-top 0
 
   .txViewDataHeader
-    margin 0 0 var(--wren-space-4)
+    margin 0 0 var(--wren-space-2)
     padding 0
     color var(--wren-text-primary)
     font-family var(--wren-font-ui)
@@ -1894,7 +1894,7 @@
   .simulationEffectsNotice,
   .simulationEffectsEmpty,
   .simulationEffectsTruncated
-    margin 0 0 var(--wren-space-4)
+    margin 0 0 var(--wren-space-2)
     color var(--wren-text-secondary)
     font-family var(--wren-font-ui)
     font-size var(--wren-type-caption)
@@ -1927,9 +1927,9 @@
     display grid
     width 100%
     margin 0
-    padding var(--wren-space-3) 0
+    padding var(--wren-space-2) 0
     box-sizing border-box
-    grid-template-columns 136px minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items start
     column-gap var(--wren-space-5)
 

@@ -1,6 +1,6 @@
 .wrenTokenApprovalEditor
-  max-width 560px
-  margin 0 auto
+  width 100%
+  margin 0
   padding var(--wren-space-5)
   box-sizing border-box
   color var(--wren-text-primary)
@@ -11,35 +11,34 @@
   overflow hidden
   border-top 1px solid var(--wren-ledger-rule)
   border-bottom 1px solid var(--wren-ledger-rule)
-  grid-template-columns repeat(2, minmax(0, 1fr))
+  grid-template-columns minmax(0, 1fr)
 
   > div
+    display grid
     min-width 0
-    padding var(--wren-space-3) 0
+    min-height 52px
+    padding var(--wren-space-1) 0
+    box-sizing border-box
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
+    align-items center
+    gap var(--wren-space-4)
 
-  > div:nth-child(even)
-    padding-left var(--wren-space-4)
+  > div + div
+    border-top 1px solid var(--wren-ledger-rule)
 
   > div:nth-child(2)
-    border-left 1px solid var(--wren-ledger-rule)
+    border-left 0
 
 .wrenTokenApprovalContextLabel
   display block
-  margin-bottom var(--wren-space-1)
+  margin 0
   color var(--wren-text-muted)
   font-size var(--wren-type-caption)
-
-.wrenTokenApprovalContext > div:nth-child(2) .wrenTokenApprovalAddress
-  width 100%
-  padding-left 0
-  align-items flex-start
 
 .wrenTokenApprovalIdentity
   display flex
   min-width 0
   align-items center
-  justify-content space-between
-  gap var(--wren-space-2)
 
   > span
     min-width 0
@@ -66,7 +65,7 @@
   display flex
   min-width 0
   min-height 44px
-  padding 4px var(--wren-space-2)
+  padding 4px 0
   justify-content center
   border 1px solid transparent
   border-radius var(--wren-radius-sm)
@@ -100,17 +99,9 @@
     outline 2px solid var(--wren-focus)
     outline-offset 2px
 
-.wrenTokenApprovalExpiry
+.wrenTokenApprovalContext > .wrenTokenApprovalExpiry
   grid-column 1 / -1
-  display grid
-  padding var(--wren-space-2) 0 !important
-  border-top 1px solid var(--wren-ledger-rule)
-  grid-template-columns 112px minmax(0, 1fr)
-  align-items center
-  gap var(--wren-space-3)
-
-  .wrenTokenApprovalContextLabel
-    margin 0
+  padding var(--wren-space-2) 0
 
   strong
     font-family var(--wren-font-utility)
@@ -123,28 +114,23 @@
 .wrenTokenApprovalDecisionHeading
   display grid
   min-height 44px
-  grid-template-columns 112px minmax(0, 1fr)
+  grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
   align-items center
-  gap var(--wren-space-3)
+  gap var(--wren-space-4)
 
   > div > span
     display block
     font-size var(--wren-type-small)
     font-weight 620
 
-.wrenTokenApprovalCurrent
-  appearance none
+.wrenTokenApprovalCurrentValue
   display flex
+  min-width 0
   min-height 44px
-  padding 0 var(--wren-space-2)
-  border 1px solid transparent
-  border-radius var(--wren-radius-sm)
+  padding 0
   color var(--wren-text-primary)
-  background transparent
-  align-items baseline
+  align-items center
   gap 5px
-  cursor pointer
-  justify-self start
 
   strong
     font-family var(--wren-font-utility)
@@ -154,19 +140,6 @@
   span
     color var(--wren-text-muted)
     font-size var(--wren-type-caption)
-
-  &:hover
-    border-color var(--wren-border-subtle)
-    background var(--wren-ledger-hover)
-
-  &:focus-visible
-    outline 2px solid var(--wren-focus)
-    outline-offset 2px
-
-.wrenTokenApprovalCurrentValue
-  color var(--wren-text-secondary)
-  font-family var(--wren-font-utility)
-  font-size var(--wren-type-small)
 
 .wrenTokenApprovalModes
   display grid
@@ -225,8 +198,9 @@
   appearance none
   display block
   min-height 44px
-  margin var(--wren-space-2) 0 0 auto
-  padding 0 var(--wren-space-2)
+  width 100%
+  margin var(--wren-space-2) 0 0
+  padding 0
   border 1px solid transparent
   border-radius var(--wren-radius-sm)
   color var(--wren-danger)
@@ -235,6 +209,7 @@
   font-size var(--wren-type-caption)
   font-weight 600
   cursor pointer
+  text-align left
 
   &:hover:not(:disabled)
     border-color var(--wren-border-subtle)
@@ -253,7 +228,7 @@
     cursor default
 
 .wrenTokenApprovalAmountEditor
-  margin-top var(--wren-space-3)
+  margin-top var(--wren-space-2)
 
   > label
     display block
@@ -272,7 +247,7 @@
     min-width 0
     width 100%
     height 100%
-    padding 0 156px 0 var(--wren-space-3)
+    padding 0 calc(164px + var(--wren-space-2)) 0 var(--wren-space-3)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-body)
     text-align left
@@ -343,14 +318,3 @@
 
 .wrenTokenApprovalUnavailable
   color var(--wren-warning)
-
-@media (max-width: 520px)
-  .wrenTokenApprovalContext
-    grid-template-columns 1fr
-
-    > div:nth-child(even)
-      padding-left 0
-
-    > div:nth-child(2)
-      border-top 1px solid var(--wren-ledger-rule)
-      border-left 0

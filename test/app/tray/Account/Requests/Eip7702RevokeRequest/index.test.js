@@ -163,7 +163,7 @@ it('labels the bounded execution fee without inventing an Optimism L1 fee', () =
   }
   render(fee.render())
 
-  expect(screen.getByText('Maximum execution fee')).toBeTruthy()
+  expect(screen.getByText('Maximum fee')).toBeTruthy()
   expect(screen.getByText('Network-added L1 data fees are not included.')).toBeTruthy()
   expect(document.body.textContent).not.toContain('NaN')
 })

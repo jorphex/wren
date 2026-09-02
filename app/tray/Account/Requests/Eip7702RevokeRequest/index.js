@@ -139,7 +139,7 @@ export class RevocationFee extends React.Component {
       <div className='eip7702RevokeFeeBody'>
         <div className='eip7702RevokeFeeRow'>
           <span>
-            <strong>Maximum execution fee</strong>
+            <strong>Maximum fee</strong>
             <small>
               {chainUsesOptimismFees(chainId)
                 ? 'Network-added L1 data fees are not included.'

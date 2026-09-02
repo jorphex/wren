@@ -41,7 +41,7 @@
 
   > div
     display grid
-    grid-template-columns minmax(112px, .45fr) minmax(0, 1fr)
+    grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     gap var(--wren-space-3)
     align-items start
     min-height 40px
@@ -119,7 +119,7 @@
     white-space nowrap
 
 .eip7702RevokeEvidenceDisclosure
-  box-shadow inset 0 -1px var(--wren-ledger-rule)
+  box-shadow none
 
   .eip7702RevokeEvidenceSummary
     appearance none
@@ -172,33 +172,42 @@
 
 .eip7702RevokeFeeRow
   display grid
-  grid-template-columns minmax(0, 1fr) auto auto
+  grid-template-columns var(--wren-review-label-column) minmax(0, 1fr) auto
+  grid-template-rows auto auto
   align-items center
-  gap var(--wren-space-3)
-  min-height 46px
-  padding var(--wren-space-1) 0
+  gap 2px var(--wren-space-3)
+  min-height 52px
+  padding var(--wren-space-1) 0 var(--wren-space-2)
 
   > span:first-child
-    display flex
-    min-width 0
-    flex-direction column
-    gap 3px
+    display contents
 
     strong
-      font-size 13px
-      font-weight 560
+      grid-column 1
+      grid-row 1
+      color var(--wren-text-tertiary)
+      font-size var(--wren-type-caption)
+      font-weight 400
 
     small
+      grid-column 2
+      grid-row 2
       color var(--wren-text-secondary)
-      font-size 12px
+      font-size var(--wren-type-caption)
       line-height 1.4
 
   > button
+    grid-column 3
+    grid-row 1 / 3
     min-height 44px
 
 .eip7702RevokeFeeAmount
+  grid-column 2
+  grid-row 1
   color var(--wren-text-primary)
-  font-size 13px
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-body)
+  font-weight 550
 
 .eip7702RevokeFeeUpdated
   color var(--wren-success)
@@ -306,8 +315,20 @@
   .eip7702RevokeFeeRow
     grid-template-columns 1fr auto
 
+    > span:first-child
+      strong
+        grid-column 1
+
+      small
+        grid-column 1 / -1
+        grid-row 2
+
+    .eip7702RevokeFeeAmount
+      grid-column 2
+
     > button
       grid-column 1 / -1
+      grid-row 3
       width 100%
 
 @media (max-width: 560px)

@@ -144,12 +144,15 @@ const EditTokenSpend = ({
               <strong>{name}</strong>
               <small>{symbol}</small>
             </span>
-            <ApprovalAddress
-              address={contract.address}
-              name={contract.ens}
-              copyLabel='Copy token contract address'
-            />
           </div>
+        </div>
+        <div>
+          <span className='wrenTokenApprovalContextLabel'>Token contract</span>
+          <ApprovalAddress
+            address={contract.address}
+            name={contract.ens}
+            copyLabel='Copy token contract address'
+          />
         </div>
         <div>
           <span className='wrenTokenApprovalContextLabel'>Can be used by</span>
@@ -172,22 +175,11 @@ const EditTokenSpend = ({
           <div>
             <span id='token-approval-limit-title'>Spending limit</span>
           </div>
-          {!isCustom && !inputLock ? (
-            <button
-              type='button'
-              aria-label={`Edit approval amount, current ${displayAmount}`}
-              className='wrenTokenApprovalCurrent'
-              disabled={approvalSubmitting}
-              onClick={() => {
-                setCustom('')
-                setMode('custom')
-              }}
-            >
+          {!isCustom ? (
+            <span className='wrenTokenApprovalCurrentValue'>
               <strong>{displayAmount}</strong>
-              <span>{displayAmount === 'unlimited' ? '' : symbol}</span>
-            </button>
-          ) : !isCustom ? (
-            <strong className='wrenTokenApprovalCurrentValue'>{displayAmount}</strong>
+              {displayAmount === 'unlimited' ? null : <span>{symbol}</span>}
+            </span>
           ) : null}
         </div>
 

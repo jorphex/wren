@@ -131,7 +131,7 @@ it('qualifies the hidden editors that must retain the shared Perch field treatme
   })
   expect(hiddenEditors[1]).toMatchObject({
     state: 'signature-permit-amount-editor',
-    action: { type: 'clickText', text: 'Edit approval amount, current 2412' },
+    action: { type: 'clickText', text: 'Custom' },
     ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]'
   })
   expect(hiddenEditors[2]).toMatchObject({
@@ -1258,9 +1258,7 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
   const monitor = scenarioMatrix().find(({ state, scale }) => state === 'revocation-monitor' && scale === 1)
 
   expect(review.requiredControls).toEqual(['Cancel', 'Revoke delegation', 'Adjust'])
-  expect(review.requiredText).toEqual(
-    expect.arrayContaining(['Delegation evidence', 'Maximum execution fee'])
-  )
+  expect(review.requiredText).toEqual(expect.arrayContaining(['Delegation evidence', 'Maximum fee']))
   expect(monitor).toMatchObject({
     action: { type: 'clickText', text: 'Stop monitoring' },
     expectedInitialFocus: 'Keep monitoring',

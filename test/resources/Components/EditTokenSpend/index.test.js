@@ -12,6 +12,34 @@ jest.mock('../../../../resources/link', () => ({
 const maxIntStr = max.toString(10)
 
 describe('changing approval amounts', () => {
+  it('presents token and spender addresses as peer approval-detail rows', () => {
+    const data = {
+      spender: {
+        address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4',
+        ens: '',
+        type: 'external'
+      },
+      amount: '100',
+      decimals: 0,
+      name: 'TST',
+      symbol: 'TST',
+      contract: {
+        address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698',
+        ens: '',
+        type: 'contract'
+      }
+    }
+
+    render(<EditTokenSpend data={data} requestedAmount={BigNumber(100)} updateRequest={() => {}} />)
+
+    const details = screen.getByRole('region', { name: 'Approval details' })
+    expect(details.querySelectorAll(':scope > div')).toHaveLength(3)
+    expect(screen.getByText('Token contract')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy token contract address' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Copy spender address' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Edit approval amount/u })).toBeNull()
+  })
+
   it.each([4_102_444_800, 4_102_444_800_000])(
     'shows a stable calendar date for a %s permit deadline',
     (deadline) => {
@@ -363,7 +391,7 @@ describe('changing approval amounts', () => {
     )
 
     expect(screen.getByText('1')).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Edit approval amount, current 1' }))
+    await user.click(screen.getByRole('button', { name: 'Custom' }))
     expect(screen.getByRole('textbox', { name: 'Custom amount' })).toBeTruthy()
   })
 

@@ -747,7 +747,7 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    action: { type: 'clickText', text: 'Edit approval amount, current 2412' },
+    action: { type: 'clickText', text: 'Custom' },
     ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]',
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom'],
     requiredText: ['Token approval', 'Spending limit', 'Custom limit']
@@ -763,7 +763,7 @@ const reviewScenarios = () => [
       type: 'sequence',
       delayMs: 250,
       steps: [
-        { type: 'clickText', text: 'Edit approval amount, current 2412' },
+        { type: 'clickText', text: 'Custom' },
         { type: 'inputLabel', label: 'Custom amount', value: 'invalid' }
       ]
     },
@@ -3804,7 +3804,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum execution fee', 'Ready to revoke']
+        requiredText: ['Delegation evidence', 'Maximum fee', 'Ready to revoke']
       },
       {
         id: `tray-revocation-review-short-${scale}`,
@@ -3815,7 +3815,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum execution fee', 'Ready to revoke']
+        requiredText: ['Delegation evidence', 'Maximum fee', 'Ready to revoke']
       },
       {
         id: `tray-revocation-monitor-full-${scale}`,
@@ -4019,7 +4019,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.eip7702RevokeRequest-review',
       requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-      requiredText: ['Delegation evidence', 'Maximum execution fee'],
+      requiredText: ['Delegation evidence', 'Maximum fee'],
       layoutExpectations: [
         {
           kind: 'full-width',

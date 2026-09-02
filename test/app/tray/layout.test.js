@@ -50,12 +50,24 @@ test('keeps tray loaders subordinate to the shared reduced-motion override', () 
 
 test('keeps approval units clear of the amount action and Wallet Calls nonce in its summary', () => {
   expect(tokenSpendStyle).toMatch(
-    /input\.wrenInput[\s\S]*?padding 0 156px 0 var\(--wren-space-3\)[\s\S]*?\.wrenTokenApprovalAmountSymbol[\s\S]*?right 100px[\s\S]*?\.wrenTokenApprovalAmountAction,[\s\S]*?width 68px/
+    /input\.wrenInput[\s\S]*?padding 0 calc\(164px \+ var\(--wren-space-2\)\) 0 var\(--wren-space-3\)[\s\S]*?\.wrenTokenApprovalAmountSymbol[\s\S]*?right 100px[\s\S]*?\.wrenTokenApprovalAmountAction,[\s\S]*?width 68px/
   )
   expect(walletCallsStyle).toMatch(
-    /\.walletCallsAdjustSummary[\s\S]*?\.walletCallsAdjustControls[\s\S]*?grid-template-columns 112px minmax\(0, 1fr\)[\s\S]*?\.walletCallsAdjustTotal[\s\S]*?grid-template-rows auto 44px[\s\S]*?row-gap 5px[\s\S]*?\.walletCallsNonceInput\.wrenInput[\s\S]*?height 44px/
+    /\.walletCallsAdjustSummary[\s\S]*?\.walletCallsAdjustControls[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\)[\s\S]*?\.walletCallsAdjustTotal[\s\S]*?grid-template-rows auto 44px[\s\S]*?row-gap 5px[\s\S]*?\.walletCallsNonceInput\.wrenInput[\s\S]*?height 44px/
   )
   expect(walletCallsStyle).not.toContain('.walletCallsNonceSection')
+})
+
+test('keeps review ledgers and the approval editor on one shared value anchor', () => {
+  expect(baseStyle).toMatch(/--wren-review-label-column 112px[\s\S]*?--wren-review-row-height 48px/)
+  expect(tokenSpendStyle).toMatch(
+    /\.wrenTokenApprovalEditor[\s\S]*?width 100%[\s\S]*?margin 0[\s\S]*?padding var\(--wren-space-5\)/
+  )
+  expect(tokenSpendStyle).toMatch(
+    /\.wrenTokenApprovalContext[\s\S]*?> div[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\)[\s\S]*?gap var\(--wren-space-4\)/
+  )
+  expect(tokenSpendStyle).toMatch(/\.wrenTokenApprovalAddress[\s\S]*?min-height 44px[\s\S]*?padding 4px 0/)
+  expect(tokenSpendStyle).not.toContain('.wrenTokenApprovalCurrentAction')
 })
 
 test('keeps prepared deployment copy identities at a full control height', () => {
@@ -375,7 +387,7 @@ test('keeps transaction review on one flat details ledger', () => {
   const requestMetaStyle = accountStyle.split('.accountViewMeta')[1].split('.accountViewMain')[0]
   expect(requestMetaStyle).not.toMatch(/(?:^|\n)\s+(?:border|border-radius|background|padding) /)
   expect(signingStyle).toMatch(
-    /\.approveTransaction[\s\S]*?--transaction-review-row-height 48px[\s\S]*?padding 0 var\(--wren-space-5\)/
+    /\.approveTransaction[\s\S]*?--transaction-review-row-height var\(--wren-review-row-height\)[\s\S]*?padding 0 var\(--wren-space-5\)/
   )
   expect(signingStyle).toMatch(
     /\.requestApproveTransaction,[\s\S]*?\.requestApproveLightweight\n[\s\S]*?padding var\(--wren-space-4\) var\(--wren-space-5\)/
@@ -397,7 +409,7 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewSectionTitle[\s\S]*?min-height var\(--transaction-review-section-height\)[\s\S]*?box-sizing border-box[\s\S]*?padding var\(--wren-space-2\) 0 var\(--wren-space-1\)/
   )
   expect(signingStyle).toMatch(
-    /\.approveTransaction[\s\S]*?--transaction-review-row-height 48px[\s\S]*?--transaction-review-section-height 34px/
+    /\.approveTransaction[\s\S]*?--transaction-review-row-height var\(--wren-review-row-height\)[\s\S]*?--transaction-review-section-height 34px/
   )
   expect(signingStyle).toMatch(
     /\._txLabel[\s\S]*?min-height var\(--transaction-review-section-height\)[\s\S]*?box-sizing border-box[\s\S]*?padding var\(--wren-space-2\) 0 var\(--wren-space-1\)/
@@ -410,13 +422,13 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewRecipient,[\s\S]*?\.transactionReviewFee,[\s\S]*?\.transactionReviewNonce[\s\S]*?margin 0/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?min-height var\(--transaction-review-row-height\)[\s\S]*?padding var\(--wren-space-1\) 0[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\) auto/
+    /\.transactionReviewFeeRow,[\s\S]*?\.transactionReviewNonceRow[\s\S]*?min-height var\(--transaction-review-row-height\)[\s\S]*?padding var\(--wren-space-1\) 0[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\) auto/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewRecipient[\s\S]*?\.clusterRow:first-child \.clusterValue[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/
+    /\.transactionReviewRecipient[\s\S]*?\.clusterRow:first-child \.clusterValue[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\)/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewAddress[\s\S]*?grid-template-columns 96px minmax\(0, 1fr\)/
+    /\.transactionReviewAddress[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\)/
   )
   expect(signingStyle).toMatch(/\.transactionReviewCopyFeedback[\s\S]*?position absolute[\s\S]*?right 0/)
   expect(signingStyle).toMatch(
@@ -513,7 +525,7 @@ test('keeps delegation revocation readable and operable at scaled narrow widths'
     /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/
   )
   expect(revokeStyle).toMatch(
-    /\.eip7702RevokeFeeRow[\s\S]*?min-height 46px[\s\S]*?> button[\s\S]*?min-height 44px/
+    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?min-height 44px/
   )
   expect(revokeStyle).toMatch(
     /@media \(max-width: 600px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/
