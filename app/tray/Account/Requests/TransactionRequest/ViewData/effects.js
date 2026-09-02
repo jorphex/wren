@@ -79,10 +79,9 @@ export const SimulationEffects = ({ account, simulation }) => {
   const effects = simulation.effects || []
   return (
     <div className='txViewData'>
-      <div className='txViewDataHeader'>RPC-Reported Effects</div>
+      <div className='txViewDataHeader'>Token effects</div>
       <div className='simulationEffectsNotice' role='note'>
-        Derived from standard event logs returned by your configured RPC. This is not a verified or complete
-        balance diff.
+        Reported by your RPC simulation. The preview may be incomplete.
       </div>
       {effects.length ? (
         effects.map((effect, index) => {

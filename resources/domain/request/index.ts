@@ -76,14 +76,14 @@ export const isPendingSigningRequest = (request: AccountRequest): boolean =>
   request.status !== 'sending' && isSigningRequest(request)
 
 export const accountViewTitles: Record<RequestType, string> = {
-  sign: 'Sign Message',
-  signTypedData: 'Sign Data',
-  signErc20Permit: 'Review request',
+  sign: 'Sign message',
+  signTypedData: 'Sign data',
+  signErc20Permit: 'Token approval',
   transaction: 'Review transaction',
-  access: 'Review Account Access',
-  addChain: 'Review Network Request',
-  switchChain: 'Review Network Change',
-  addToken: 'Review Token Request',
-  walletCalls: 'Review Call Batch',
-  eip7702Revoke: 'Review request'
+  access: 'Account access',
+  addChain: 'Add network',
+  switchChain: 'Switch network',
+  addToken: 'Add token',
+  walletCalls: 'Call batch',
+  eip7702Revoke: 'Revoke delegation'
 }

@@ -21,7 +21,7 @@ export class ProviderRequest extends React.Component {
         req={req}
         icon='apps'
         eyebrow='Connection request'
-        title={`Share ${accountName} with this site?`}
+        title={`Share this account with ${originName}?`}
         help='This connects one account. Wren will still ask before every signature or transaction.'
       >
         <RequestSection title='Account being shared'>

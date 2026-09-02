@@ -501,7 +501,7 @@ test('keeps delegation revocation readable and operable at scaled narrow widths'
     /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/
   )
   expect(revokeStyle).toMatch(
-    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?min-height 44px/
+    /\.eip7702RevokeFeeRow[\s\S]*?min-height 46px[\s\S]*?> button[\s\S]*?min-height 44px/
   )
   expect(revokeStyle).toMatch(
     /@media \(max-width: 600px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/

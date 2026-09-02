@@ -108,9 +108,7 @@ const destination = (req, index, addressBook, accounts) => {
   const detail = req.callDetails?.[index]
   if (detail?.label) return { label: detail.label, source: detail.source, method: detail.method }
   const local = resolveLocalAddressIdentity(addressBook, accounts, call.to)
-  return local
-    ? { label: local.label, source: local.source }
-    : { label: shortAddress(call.to), source: 'Address' }
+  return local ? { label: local.label, source: local.source } : { label: 'Contract', source: 'Address' }
 }
 
 const targetAccountCodeEvidence = (req, call, index) =>
@@ -344,12 +342,12 @@ export class WalletCallsRequest extends React.Component {
               <strong>{originName}</strong>
             </div>
             <div>
-              <span>Account</span>
-              <strong>{accountName || shortAddress(req.account)}</strong>
-            </div>
-            <div>
               <span>Network</span>
               <strong>{chainData?.chainName || req.chainId}</strong>
+            </div>
+            <div className='walletCallsContextAccount'>
+              <span>Account</span>
+              <strong>{accountName || shortAddress(req.account)}</strong>
             </div>
           </div>
         </section>
@@ -408,8 +406,7 @@ export class WalletCallsRequest extends React.Component {
                       onClick={() => this.copyCallAddress(index, call.to)}
                     >
                       <strong>{identity.label}</strong>
-                      <span>{this.state.copiedCall === index ? 'Address copied' : identity.source}</span>
-                      {call.to ? (
+                      {call.to && this.state.copiedCall !== index ? (
                         <div className='walletCallsDestinationAddress'>
                           <AddressIdentity
                             address={call.to}
@@ -420,7 +417,9 @@ export class WalletCallsRequest extends React.Component {
                             revealOnHover={false}
                           />
                         </div>
-                      ) : null}
+                      ) : (
+                        <span>{this.state.copiedCall === index ? 'Address copied' : identity.source}</span>
+                      )}
                     </button>
                     {call.to ? (
                       <AddressSafetyStatus address={call.to} assessment={req.addressSafety} />

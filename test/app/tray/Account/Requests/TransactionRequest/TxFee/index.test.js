@@ -121,24 +121,16 @@ it.each([
   ['locked', { locked: true }],
   ['terminal', { status: 'declined' }],
   ['monitoring', { mode: 'monitor' }]
-])('keeps fee adjustment inert for a %s request', async (_label, requestState) => {
-  const { user } = render(<TxFee req={{ ...req, ...requestState }} initiallyExpanded={true} />)
-  const adjust = screen.getByRole('button', { name: 'Adjust' })
+])('keeps fee adjustment inert for a %s request', (_label, requestState) => {
+  render(<TxFee req={{ ...req, ...requestState }} initiallyExpanded={true} />)
 
-  expect(adjust.disabled).toBe(true)
-  expect(adjust.getAttribute('aria-expanded')).toBe('false')
-  expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
-
-  await user.click(adjust)
+  expect(screen.queryByRole('button', { name: 'Adjust' })).toBeNull()
   expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
 })
 
-it('keeps fee adjustment inert in a queued read-only review', async () => {
-  const { user } = render(<TxFee req={req} readOnly initiallyExpanded />)
-  const adjust = screen.getByRole('button', { name: 'Adjust' })
+it('keeps fee adjustment inert in a queued read-only review', () => {
+  render(<TxFee req={req} readOnly initiallyExpanded />)
 
-  expect(adjust.disabled).toBe(true)
-  expect(adjust.getAttribute('aria-expanded')).toBe('false')
-  await user.click(adjust)
+  expect(screen.queryByRole('button', { name: 'Adjust' })).toBeNull()
   expect(screen.queryByLabelText('Base Fee (GWEI)')).toBeNull()
 })

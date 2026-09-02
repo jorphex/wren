@@ -630,9 +630,11 @@ class _AccountBody extends React.Component {
         ? this.store('main.networks.ethereum', transactionChainId, 'name')
         : undefined
       const accountViewTitle =
-        req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
-          ? 'Wallet calls'
-          : (req && this.getAccountViewTitle(req)) || ''
+        req?.type === 'transaction' && crumb.data.step === 'adjustApproval'
+          ? 'Token approval'
+          : req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
+            ? 'Wallet calls'
+            : (req && this.getAccountViewTitle(req)) || ''
 
       return (
         <AccountView

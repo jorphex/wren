@@ -59,8 +59,8 @@ const connectedReview = (req, props = {}) => {
 it('presents review, queue, and signer states without overstating execution', () => {
   expect(revokeLifecyclePresentation(request(), true)).toEqual({
     kind: 'review',
-    title: '',
-    detail: ''
+    title: 'Ready to revoke',
+    detail: 'Confirm this revocation with your signer.'
   })
   expect(revokeLifecyclePresentation(request(), false)).toMatchObject({ kind: 'waiting' })
   expect(revokeLifecyclePresentation(request({ status: 'pending' }), true)).toEqual({
@@ -236,8 +236,8 @@ it('renders directly copyable evidence without authorization or signature materi
     }
   })
 
-  expect(screen.getByRole('heading', { name: 'Revoke delegation' })).toBeTruthy()
-  expect(screen.getByText(`Stops delegation to ${delegate}.`)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Remove delegated access?' })).toBeTruthy()
+  expect(screen.getByText('This account will stop using the current delegate.')).toBeTruthy()
   expect(screen.getByText('Delegate contract')).toBeTruthy()
   expect(screen.getByText('Address book · Saved contact')).toBeTruthy()
   const evidenceDisclosure = screen.getByRole('button', { name: /Delegation evidence/ })

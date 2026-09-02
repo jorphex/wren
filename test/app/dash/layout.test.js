@@ -347,7 +347,7 @@ test('keeps the remaining review surfaces on established flat primitives', () =>
     /\.dashSupportActions\n {2}display grid\n {2}grid-template-columns repeat\(4, minmax\(0, 1fr\)\)[\s\S]*?button\.requestFeatureButton\.wrenControl[\s\S]*?height 48px[\s\S]*?border-radius 9px/
   )
   expect(txApprovalStyle).toMatch(
-    /\.approveTransactionWarningBody[\s\S]*?display grid[\s\S]*?grid-template-rows auto minmax\(0, 1fr\) 44px/
+    /\.approveTransactionWarningBody[\s\S]*?display grid[\s\S]*?grid-template-rows auto auto 44px/
   )
   expect(inspectorStyle).toMatch(
     /\.inspectorInputPanel,[\s\S]*?border 0[\s\S]*?background transparent[\s\S]*?box-shadow none/

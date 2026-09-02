@@ -63,27 +63,27 @@ const RPC_WARNING_SCENARIOS = Object.freeze([
   },
   {
     variant: 'revert',
-    title: 'RPC Reports Revert',
+    title: 'RPC reports a revert',
     message: 'Your configured RPC reports that this transaction will revert.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   {
     variant: 'execution-failed',
     title: 'Execution Check Failed',
     message: 'Wren could not determine whether this transaction will execute successfully.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   {
     variant: 'execution-unavailable',
     title: 'Execution Check Unavailable',
     message: 'Your configured RPC does not provide a usable transaction execution check.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   {
     variant: 'broad-token-approval',
     title: 'Broad Token Approval',
     message: 'Your configured RPC reports broad ERC-20 spending authority.',
-    confirmLabel: 'Approve Anyway'
+    confirmLabel: 'Approve anyway'
   },
   {
     variant: 'existing-token-allowance',
@@ -737,7 +737,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     action: { type: 'clickText', text: 'Edit approval amount, current 2412' },
     ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]',
-    requiredControls: ['Requested', 'Unlimited', 'Custom'],
+    requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom'],
     requiredText: ['Token approval', 'Spending limit', 'Custom limit']
   },
   {
@@ -775,7 +775,8 @@ const reviewScenarios = () => [
       'Submit one transaction?',
       'Partial execution possible',
       'Batch context',
-      'Total maximum network fees'
+      'Total maximum network fees',
+      'Ready to submit'
     ],
     layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
   })),
@@ -1796,6 +1797,19 @@ const reviewScenarios = () => [
       }
     ]
   },
+  {
+    id: 'tray-transaction-approval-editor-full-1',
+    renderer: 'tray',
+    state: 'transaction-responsive',
+    variant: 'approval',
+    adjustApproval: true,
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    ready: '.wrenTokenApprovalEditor',
+    requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke'],
+    requiredText: ['Token approval', 'Spending limit', '890', 'USDC']
+  },
   ...[
     ['trezor-waiting', 'Waiting for Trezor', 'Review and approve the transaction on your Trezor.'],
     ['trezor-slow', 'Still waiting for Trezor', 'Check your Trezor and approve the transaction.'],
@@ -2814,9 +2828,9 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.approveTransactionWarning',
-    action: { type: 'hoverText', text: 'Sign Anyway' },
-    requiredControls: ['Decline', 'Sign Anyway'],
-    requiredText: ['RPC Reports Revert', 'Your configured RPC reports that this transaction will revert.'],
+    action: { type: 'hoverText', text: 'Sign anyway' },
+    requiredControls: ['Decline', 'Sign anyway'],
+    requiredText: ['RPC reports a revert', 'Your configured RPC reports that this transaction will revert.'],
     layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestNoticeApproval' }]
   },
   {
@@ -2830,7 +2844,7 @@ const reviewScenarios = () => [
     ready: '.requestApproveTransaction',
     action: {
       type: 'confirmRequestWarning',
-      text: 'Sign Anyway',
+      text: 'Sign anyway',
       requestId: 'qualification-rpc-warning-revert'
     },
     requiredText: [
@@ -3413,7 +3427,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Decline',
                 'Sign message'
               ],
-              requiredText: ['Review request', 'Uniswap', 'ACTION', 'DETAILS', 'USDC', '2412', 'EIP-712'],
+              requiredText: ['Token approval', 'Uniswap', 'Approval', 'Details', 'USDC', '2412', 'EIP-712'],
               layoutExpectations: [...WALLET_VIEW_CHROME, ...FOCUSED_WINDOW_SURFACE]
             },
             {
@@ -3584,7 +3598,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
         requiredText: ['Submitted', 'Transaction hash', 'Confirmations', '0'],
         layoutExpectations: [
-          { kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 },
+          { kind: 'hidden', selector: '.txLifecycleSteps' },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
         ]
       },
@@ -3598,7 +3612,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle',
         requiredControls: ['Copy hash', 'Open explorer'],
         requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
-        layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
+        layoutExpectations: [{ kind: 'hidden', selector: '.txLifecycleSteps' }]
       },
       {
         id: `tray-transaction-confirmed-full-${scale}`,
@@ -3610,7 +3624,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle-success',
         requiredControls: ['Copy hash', 'Open explorer', 'Close'],
         requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
-        layoutExpectations: [{ kind: 'size', selector: '.txLifecycleStepMarker', width: 8, height: 8 }]
+        layoutExpectations: [{ kind: 'hidden', selector: '.txLifecycleSteps' }]
       },
       {
         id: `dash-delegation-full-${scale}`,
@@ -3719,7 +3733,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum execution fee']
+        requiredText: ['Delegation evidence', 'Maximum execution fee', 'Ready to revoke']
       },
       {
         id: `tray-revocation-review-short-${scale}`,
@@ -3730,7 +3744,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum execution fee']
+        requiredText: ['Delegation evidence', 'Maximum execution fee', 'Ready to revoke']
       },
       {
         id: `tray-revocation-monitor-full-${scale}`,

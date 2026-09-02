@@ -117,7 +117,6 @@ const EditTokenSpend = ({
     submitApprovalAmount(nextAmount.toString(10), 'custom')
   }
 
-  const isRevoke = canRevoke && (mode === 'revoke' || parsedAmount === 0n)
   const isCustom = mode === 'custom'
   const displayAmount =
     parsedAmount === undefined
@@ -137,10 +136,6 @@ const EditTokenSpend = ({
 
   return (
     <div className='updateTokenApproval wrenTokenApprovalEditor'>
-      <header className='wrenTokenApprovalIntro'>
-        <h2>{isRevoke ? 'Remove token access' : 'Token approval'}</h2>
-      </header>
-
       <section className='wrenTokenApprovalContext' aria-label='Approval details'>
         <div>
           <span className='wrenTokenApprovalContextLabel'>Token</span>
@@ -197,7 +192,10 @@ const EditTokenSpend = ({
         </div>
 
         {!hasInvalidAmount ? (
-          <div className='wrenTokenApprovalModes' aria-label='Spending limit options'>
+          <div
+            className={`wrenTokenApprovalModes${canRevoke ? ' wrenTokenApprovalModesWithRevoke' : ''}`}
+            aria-label='Spending limit options'
+          >
             <button
               type='button'
               aria-label='Requested'
@@ -232,6 +230,18 @@ const EditTokenSpend = ({
                 }}
               >
                 <span>Custom</span>
+              </button>
+            ) : null}
+            {canRevoke ? (
+              <button
+                type='button'
+                aria-label='Revoke'
+                className='wrenTokenApprovalMode wrenTokenApprovalModeRevoke'
+                disabled={approvalSubmitting}
+                aria-pressed={mode === 'revoke'}
+                onClick={(event) => activateOnce(event, setToRevoke)}
+              >
+                <span>Revoke</span>
               </button>
             ) : null}
           </div>
@@ -297,18 +307,8 @@ const EditTokenSpend = ({
           <p className='wrenTokenApprovalDecisionCopy wrenTokenApprovalDecisionCopyWarning'>
             {unlimitedWarning}
           </p>
-        ) : null}
-
-        {canRevoke && !hasInvalidAmount ? (
-          <button
-            type='button'
-            className='wrenTokenApprovalRevoke wrenControl wrenControlGhost'
-            disabled={approvalSubmitting}
-            aria-pressed={mode === 'revoke'}
-            onClick={(event) => activateOnce(event, setToRevoke)}
-          >
-            Revoke
-          </button>
+        ) : !inputLock ? (
+          <p className='wrenTokenApprovalDecisionCopy'>Changes apply to this transaction immediately.</p>
         ) : null}
 
         {inputLock ? (

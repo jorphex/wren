@@ -146,6 +146,22 @@ it('qualifies the hidden editors that must retain the shared Perch field treatme
   ])
 })
 
+it('qualifies the transaction approval editor as a navigable adjustable allowance screen', () => {
+  const scenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'tray-transaction-approval-editor-full-1'
+  )
+
+  expect(scenario).toMatchObject({
+    adjustApproval: true,
+    ready: '.wrenTokenApprovalEditor',
+    requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke']
+  })
+  expect(fixtureFor(scenario).windows.panel.nav[0].data).toMatchObject({
+    step: 'adjustApproval',
+    actionId: 'erc20:approve'
+  })
+})
+
 it('qualifies network consent separately from account access at the real tray width', () => {
   const scenarios = scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')
 
@@ -225,7 +241,7 @@ it('seats every RPC warning shelf at the viewport bottom with its exact reserved
       kind: 'viewport-bottom',
       selector: '.requestNoticeApproval'
     })
-    expect(fixtureFor(warning).windows.panel.footer.height).toBe(200)
+    expect(fixtureFor(warning).windows.panel.footer.height).toBe(154)
   }
 })
 
@@ -366,7 +382,7 @@ it('visually qualifies the primary RPC warning hover state', () => {
   expect(warning).toMatchObject({
     state: 'transaction-rpc-warning',
     variant: 'revert',
-    action: { type: 'hoverText', text: 'Sign Anyway' }
+    action: { type: 'hoverText', text: 'Sign anyway' }
   })
 })
 
@@ -378,7 +394,7 @@ it('qualifies the warning-to-sign transition without empty-frame animations', ()
     ready: '.requestApproveTransaction',
     action: {
       type: 'confirmRequestWarning',
-      text: 'Sign Anyway',
+      text: 'Sign anyway',
       requestId: 'qualification-rpc-warning-revert'
     },
     requiredText: expect.arrayContaining(['Decline', 'Sign transaction'])

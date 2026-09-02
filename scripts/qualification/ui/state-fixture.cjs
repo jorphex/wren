@@ -351,28 +351,28 @@ const RPC_WARNING_FIXTURES = Object.freeze({
   },
   revert: {
     type: 'approveSimulationOverride',
-    title: 'RPC Reports Revert',
+    title: 'RPC reports a revert',
     message: 'Your configured RPC reports that this transaction will revert.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   'execution-failed': {
     type: 'approveSimulationOverride',
     title: 'Execution Check Failed',
     message: 'Wren could not determine whether this transaction will execute successfully.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   'execution-unavailable': {
     type: 'approveSimulationOverride',
     title: 'Execution Check Unavailable',
     message: 'Your configured RPC does not provide a usable transaction execution check.',
-    confirmLabel: 'Sign Anyway'
+    confirmLabel: 'Sign anyway'
   },
   'broad-token-approval': {
     type: 'approveBroadTokenAuthority',
     title: 'Broad Token Approval',
     message:
       'Your configured RPC reports broad ERC-20 spending authority. This may grant maximum token spending. Review RPC-reported effects before proceeding.',
-    confirmLabel: 'Approve Anyway'
+    confirmLabel: 'Approve anyway'
   },
   'existing-token-allowance': {
     type: 'approveExistingTokenAllowanceChange',
@@ -2277,7 +2277,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = 200
+    state.windows.panel.footer.height = 154
   }
 
   if (scenario.state === 'transaction-deployment-confirmed') {
@@ -2375,7 +2375,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = adjustment ? 114 : scenario.id.includes('-qr-') ? 430 : 270
+    state.windows.panel.footer.height = scenario.id.includes('-qr-') ? 430 : 114
   }
 
   if (
@@ -2409,7 +2409,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 132
+    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 118
   }
 
   if (scenario.state === 'transaction-responsive') {
@@ -2435,9 +2435,10 @@ const fixtureFor = (scenario) => {
       {
         view: 'requestView',
         data: {
-          step: scenario.viewData ? 'viewData' : 'confirm',
+          step: scenario.adjustApproval ? 'adjustApproval' : scenario.viewData ? 'viewData' : 'confirm',
           accountId: QUALIFICATION_ACCOUNT,
-          requestId: request.handlerId
+          requestId: request.handlerId,
+          ...(scenario.adjustApproval ? { actionId: 'erc20:approve' } : {})
         }
       }
     ]

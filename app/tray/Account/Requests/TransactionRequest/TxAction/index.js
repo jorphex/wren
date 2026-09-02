@@ -356,6 +356,11 @@ export class TxSending extends React.Component {
                   <div className='transactionReviewApprovalLimit'>
                     <span className='transactionReviewMetaLabel'>Spend limit</span>
                     <strong>{revoke ? `Revoke ${symbol}` : `${displayAmount} ${symbol}`}</strong>
+                    {!isSubmitted ? (
+                      <span className='transactionReviewApprovalAdjust' aria-hidden='true'>
+                        Adjust
+                      </span>
+                    ) : null}
                   </div>
                 </ClusterValue>
               </ClusterRow>

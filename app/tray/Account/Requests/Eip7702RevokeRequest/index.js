@@ -23,8 +23,8 @@ export const revokeLifecyclePresentation = (req, active = true) => {
   if (!req?.status) {
     return {
       kind: 'review',
-      title: '',
-      detail: ''
+      title: 'Ready to revoke',
+      detail: 'Confirm this revocation with your signer.'
     }
   }
 
@@ -188,7 +188,7 @@ export class Eip7702RevokeRequest extends React.Component {
       <div className='eip7702RevokeIdentity'>
         <dt>{title}</dt>
         <dd>
-          <span className='eip7702RevokeIdentityName'>{identity?.label || 'Ethereum address'}</span>
+          {identity?.label ? <span className='eip7702RevokeIdentityName'>{identity.label}</span> : null}
           {identity?.source ? <small>{identity.source}</small> : null}
           <CopyableRequestValue
             copyLabel={`Copy ${title.toLowerCase()} address`}
@@ -224,8 +224,8 @@ export class Eip7702RevokeRequest extends React.Component {
       <article className={`eip7702RevokeRequest eip7702RevokeRequest-${presentation.kind}`}>
         <div className='eip7702RevokeDocument'>
           <header className='eip7702RevokeSummary'>
-            <h1>Revoke delegation</h1>
-            <p>Stops delegation to {delegateAddress}.</p>
+            <h1>Remove delegated access?</h1>
+            <p>This account will stop using the current delegate.</p>
           </header>
 
           <section className='eip7702RevokeSection' aria-labelledby='revoke-identities-title'>

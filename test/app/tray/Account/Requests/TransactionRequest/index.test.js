@@ -428,7 +428,7 @@ describe('confirm', () => {
     expect(document.querySelector('.transactionReviewQueueContext').textContent).toBe(
       '3 pending signaturesQueued request 2 of 3 · waiting for earlier requests'
     )
-    expect(screen.getByRole('button', { name: 'Adjust' }).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Adjust' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
 
     rerender(
@@ -457,7 +457,7 @@ describe('confirm', () => {
       render(<TxRequest req={req} step='confirm' />)
 
       expect(screen.getByText('Read-only')).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'Adjust' }).disabled).toBe(true)
+      expect(screen.queryByRole('button', { name: 'Adjust' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Decrease nonce' })).toBeNull()
     }
   )
@@ -1065,8 +1065,8 @@ describe('simulation review', () => {
 
     render(<SimulationEffects account={account} simulation={simulation} />)
 
-    expect(screen.getByText('RPC-Reported Effects')).toBeTruthy()
-    expect(screen.getByRole('note').textContent).toMatch(/not a verified or complete balance diff/i)
+    expect(screen.getByText('Token effects')).toBeTruthy()
+    expect(screen.getByRole('note').textContent).toMatch(/preview may be incomplete/i)
     expect(screen.getByText('ERC-20 Send')).toBeTruthy()
     expect(screen.getByText('ERC-20 Unlimited Approval')).toBeTruthy()
     expect(screen.getAllByText(token)).toHaveLength(2)

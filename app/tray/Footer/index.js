@@ -238,7 +238,7 @@ export class Footer extends React.Component {
     const canDecide = decisionAvailable && !actionPending && feeDraftSafe
     const actionError =
       this.state.eip7702ActionError?.handlerId === req.handlerId ? this.state.eip7702ActionError.message : ''
-    const showContext = presentation.kind !== 'review' || !feeDraftSafe || Boolean(actionError)
+    const showContext = Boolean(presentation.title) || !feeDraftSafe || Boolean(actionError)
     const canStopMonitoring =
       active &&
       req.mode === 'monitor' &&
@@ -811,6 +811,15 @@ export class Footer extends React.Component {
           )
           return (
             <div className='requestApprove requestApproveLightweight walletCallsReviewActions'>
+              <div className='requestActionContext' role='status'>
+                <span className='requestActionContextIcon'>
+                  <Icon name='sign' size={19} />
+                </span>
+                <span className='requestActionContextCopy'>
+                  <strong>Ready to submit</strong>
+                  <span>Review the ordered calls before submitting.</span>
+                </span>
+              </div>
               <div className='requestActionButtons'>
                 <button
                   type='button'
@@ -932,13 +941,12 @@ export class Footer extends React.Component {
             </div>
           )
         } else if (req.type === 'access') {
-          const accountName = account.ensName || account.name || 'Account'
           return this.renderLightweightRequestFooter({
             approveLabel: 'Allow access',
             compactActions: true,
             contextDetail: 'Only this account',
             contextIcon: 'accounts',
-            contextTitle: accountName,
+            contextTitle: 'Account access',
             onApprove: () => link.send('tray:giveAccess', req, true),
             onDecline: () => link.send('tray:giveAccess', req, false)
           })

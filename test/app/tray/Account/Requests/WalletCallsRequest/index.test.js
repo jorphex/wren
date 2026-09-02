@@ -87,7 +87,7 @@ it('shows the approved hierarchy, ordered call identities, values, and disclosed
   await user.click(screen.getAllByRole('button', { name: /Calldata · 4 bytes/i })[0])
   expect(screen.getByText('0xa9059cbb')).toBeTruthy()
 
-  await user.click(screen.getByRole('button', { name: /USD Coin.*Token contract/i }))
+  await user.click(screen.getByRole('button', { name: /USD Coin.*0x2222/i }))
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', target)
   expect(screen.getByText('Address copied')).toBeTruthy()
 })

@@ -22,7 +22,7 @@ it('explains account visibility boundaries and copies the shared address', async
     />
   )
 
-  expect(screen.getByText('Share Workshop with this site?')).toBeTruthy()
+  expect(screen.getByText('Share this account with example.test?')).toBeTruthy()
   expect(screen.getByText('This account only')).toBeTruthy()
   expect(screen.getByText('Each request appears separately for your review.')).toBeTruthy()
 

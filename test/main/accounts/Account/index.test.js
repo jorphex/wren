@@ -1180,7 +1180,7 @@ describe('#addRequest', () => {
       approved: false,
       data: {
         title: 'Dangerous Message Signature',
-        confirmLabel: 'Sign Anyway',
+        confirmLabel: 'Sign anyway',
         riskCodes: 'legacy-eth-sign,siwe-expired'
       }
     })
@@ -1518,8 +1518,8 @@ describe('#addRequest', () => {
       type: ApprovalType.SimulationApproval,
       approved: false,
       data: {
-        title: 'RPC Reports Revert',
-        confirmLabel: 'Sign Anyway'
+        title: 'RPC reports a revert',
+        confirmLabel: 'Sign anyway'
       }
     })
     expect(approval.data.message).toMatch(/execution reverted: denied/)
@@ -1800,7 +1800,7 @@ describe('#addRequest', () => {
     expect(request.approvals[0]).toBe(approval)
     expect(approval).toMatchObject({
       approved: false,
-      data: { title: 'RPC Reports Revert' }
+      data: { title: 'RPC reports a revert' }
     })
   })
 
@@ -1844,7 +1844,7 @@ describe('#addRequest', () => {
       approved: false,
       data: {
         title: 'Broad Token Approvals',
-        confirmLabel: 'Approve Anyway',
+        confirmLabel: 'Approve anyway',
         riskCount: 2
       }
     })
@@ -1915,7 +1915,7 @@ describe('#addRequest', () => {
     expect(request.approvals[0]).toMatchObject({
       type: ApprovalType.TokenApprovalRisk,
       approved: false,
-      data: { riskCount: 1, evidence: 'calldata', confirmLabel: 'Approve Anyway' }
+      data: { riskCount: 1, evidence: 'calldata', confirmLabel: 'Approve anyway' }
     })
     expect(request.approvals[0].data.message).toMatch(/does not prove the contract standard/i)
   })

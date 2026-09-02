@@ -61,7 +61,8 @@
   transition var(--standard)
 
   &:has(.requestNoticeApproval),
-  &:has(.requestNoticeTransactionReview)
+  &:has(.requestNoticeTransactionReview),
+  &:has(.requestNoticeTransactionStatus)
     transition none
 
   .footerWrap
@@ -1240,6 +1241,8 @@
 
   .cardShow
     animation none
+    opacity 1
+    transform none
 
 .moduleExpanded
   padding-bottom var(--wren-space-5)
@@ -1273,6 +1276,34 @@
 
     .footerModule
       height var(--wren-request-review-shelf-height) !important
+
+  &:has(.requestNoticeTransactionStatus)
+    --wren-request-status-shelf-height 118px
+
+    .accountViewRequest
+      bottom var(--wren-request-status-shelf-height) !important
+
+    .footerModule
+      height var(--wren-request-status-shelf-height) !important
+
+  &:has(.requestNoticeApproval)
+    --wren-request-warning-shelf-height 154px
+
+    .accountViewRequest
+      bottom var(--wren-request-warning-shelf-height) !important
+
+    .footerModule
+      height var(--wren-request-warning-shelf-height) !important
+
+  &:has(.walletCallsReview)
+    --wren-wallet-calls-shelf-height 114px
+
+    .accountViewRequest
+      bottom var(--wren-wallet-calls-shelf-height) !important
+      transition none
+
+    .footerModule
+      height var(--wren-wallet-calls-shelf-height) !important
 
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none

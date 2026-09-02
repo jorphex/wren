@@ -803,7 +803,7 @@ class FrameAccount {
     switch (simulation.status) {
       case 'reverted':
         copy = {
-          title: 'RPC Reports Revert',
+          title: 'RPC reports a revert',
           message: 'Your configured RPC reports that this transaction will revert.'
         }
         break
@@ -823,7 +823,7 @@ class FrameAccount {
         return
     }
     const detail = simulation.reason ? ` RPC detail: ${simulation.reason}` : ''
-    const data = { ...copy, message: `${copy.message}${detail}`, confirmLabel: 'Sign Anyway' }
+    const data = { ...copy, message: `${copy.message}${detail}`, confirmLabel: 'Sign anyway' }
     this.syncManagedApproval(req, ApprovalType.SimulationApproval, data)
   }
 
@@ -859,7 +859,7 @@ class FrameAccount {
     this.syncManagedApproval(req, ApprovalType.TokenApprovalRisk, {
       title: broadApprovalCount === 1 ? 'Broad Token Approval' : 'Broad Token Approvals',
       message,
-      confirmLabel: 'Approve Anyway',
+      confirmLabel: 'Approve anyway',
       riskCount: broadApprovalCount,
       evidence
     })
@@ -969,7 +969,7 @@ class FrameAccount {
       message: `Wren detected ${risks.length} high-risk condition${
         risks.length === 1 ? '' : 's'
       } in this ${subject}. Review every displayed warning before proceeding.`,
-      confirmLabel: 'Sign Anyway',
+      confirmLabel: 'Sign anyway',
       riskCodes: risks.join(',')
     })
   }

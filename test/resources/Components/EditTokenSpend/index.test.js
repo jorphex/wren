@@ -93,6 +93,36 @@ describe('changing approval amounts', () => {
     expect(onUpdate).toHaveBeenCalledTimes(1)
   })
 
+  it('allows the user to revoke an editable token approval', async () => {
+    const onUpdate = jest.fn()
+    const requestedAmount = BigNumber('100')
+    const data = {
+      spender: {
+        address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4',
+        ens: '',
+        type: 'external'
+      },
+      amount: '100',
+      decimals: 0,
+      name: 'TST',
+      symbol: 'TST',
+      contract: {
+        address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698',
+        ens: '',
+        type: 'contract'
+      }
+    }
+    const { user } = render(
+      <EditTokenSpend canRevoke data={data} requestedAmount={requestedAmount} updateRequest={onUpdate} />
+    )
+
+    const revoke = screen.getByRole('button', { name: 'Revoke' })
+    await user.click(revoke)
+
+    expect(onUpdate).toHaveBeenCalledWith('0', expect.any(Function))
+    expect(revoke.getAttribute('aria-pressed')).toBe('true')
+  })
+
   it('allows users to input custom amounts which are decimal', async () => {
     const onUpdate = jest.fn()
     const requestedAmount = BigNumber('0x011170')

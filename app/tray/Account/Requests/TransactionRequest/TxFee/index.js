@@ -142,17 +142,16 @@ export class TxFee extends React.Component {
               <GasDisplay maxFeePerGas={displayValueData(maxFeePerGas)} />
             </span>
           </span>
-          <button
-            type='button'
-            aria-expanded={this.state.expanded}
-            disabled={adjustmentLocked}
-            className='wrenControl wrenControlSecondary wrenControlCompact transactionReviewFeeAdjust'
-            onClick={() => {
-              if (!adjustmentLocked) this.setState((state) => ({ expanded: !state.expanded }))
-            }}
-          >
-            Adjust
-          </button>
+          {!adjustmentLocked ? (
+            <button
+              type='button'
+              aria-expanded={this.state.expanded}
+              className='wrenControl wrenControlSecondary wrenControlCompact transactionReviewFeeAdjust'
+              onClick={() => this.setState((state) => ({ expanded: !state.expanded }))}
+            >
+              Adjust
+            </button>
+          ) : null}
         </div>
         {req.feesUpdatedByUser ? (
           <div className='transactionReviewFeeNotice' style={{ color: 'var(--good)' }}>

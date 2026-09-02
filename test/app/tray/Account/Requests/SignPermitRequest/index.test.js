@@ -218,7 +218,7 @@ it('shows and allows editing a zero-decimal token permit', async () => {
     />
   )
 
-  expect(screen.getByText('1 WHOLE')).toBeTruthy()
+  expect(screen.getAllByText('1 WHOLE')).toHaveLength(2)
   const editor = screen.getByRole('button', { name: 'Edit permit amount' })
   editor.focus()
   await user.keyboard('{Enter}')

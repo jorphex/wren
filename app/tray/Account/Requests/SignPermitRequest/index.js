@@ -67,15 +67,15 @@ const PermitOverview = ({
           <strong>{originName || 'Unknown app'}</strong>
           <span>{chainName} · signature</span>
         </span>
-        <span className='permitOriginKind'>signature</span>
+        <span className='permitOriginKind'>Permit signature</span>
       </section>
 
       <section className='permitActionCard'>
-        <h2>Action</h2>
+        <h2>Approval</h2>
         <strong>
-          Permit {localIdentity?.label || compactAddress(spender.address)} to spend up to {amountDisplay}{' '}
-          {amountSuffix}.
+          {amountDisplay} {amountSuffix}
         </strong>
+        <p className='permitActionSpender'>For {localIdentity?.label || compactAddress(spender.address)}</p>
         <button
           aria-label='View raw permit data'
           className='permitRawAction'

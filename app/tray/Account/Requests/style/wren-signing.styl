@@ -58,6 +58,12 @@
     display none
 
   .transactionReviewMain
+    .requestItemDetailsSlide
+      display none
+
+    .requestItemNoticeGood
+      display none
+
     .requestItem > .requestItemTitle
       display none
 
@@ -617,6 +623,24 @@
     align-items center
     column-gap var(--wren-space-4)
 
+  .transactionReviewApprovalLimit
+    grid-template-columns 96px minmax(0, 1fr) auto
+
+  .transactionReviewApprovalAdjust
+    display grid
+    min-width 72px
+    height 32px
+    box-sizing border-box
+    place-items center
+    border 1px solid var(--wren-border-default)
+    border-radius var(--wren-radius-sm)
+    color var(--wren-text-secondary)
+    background var(--wren-control-texture-dark), var(--wren-bg-elevated)
+    box-shadow var(--wren-control-shadow)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-caption)
+    font-weight 600
+
   .transactionReviewApprovalLimit strong
     color var(--wren-text-primary)
     font-family var(--wren-font-utility)
@@ -887,8 +911,8 @@
 
 .approvePermitPerch
   display flex
-  gap 12px
-  padding 10px 24px 24px
+  gap 0
+  padding 18px 30px 24px
   flex-direction column
   background transparent
 
@@ -900,28 +924,29 @@
 .permitDetailsCard
   flex none
   box-sizing border-box
-  border 1px solid var(--wren-border-default)
-  border-radius 10px
-  background linear-gradient(172deg, rgba(255, 255, 255, .022), transparent 46%), rgba(13, 18, 16, .72)
-  box-shadow 0 10px 26px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .035)
+  border 0
+  border-radius 0
+  background transparent
+  box-shadow none
 
 .permitOriginCard
   display grid
-  min-height 84px
-  padding 14px 20px
-  grid-template-columns 50px minmax(0, 1fr) auto
+  min-height 62px
+  padding 0 0 12px
+  grid-template-columns 36px minmax(0, 1fr) auto
   align-items center
-  gap 16px
+  gap 12px
+  border-bottom 1px solid var(--wren-ledger-rule)
 
 .permitOriginMark
   display grid
-  width 50px
-  height 50px
+  width 36px
+  height 36px
   place-items center
   border 1px solid var(--wren-border-default)
-  border-radius 10px
-  color var(--wren-text-primary)
-  background rgba(51, 111, 62, .84)
+  border-radius var(--wren-radius-md)
+  color var(--wren-accent-primary-hover)
+  background var(--wren-bg-elevated)
 
 .permitOriginIdentity
   min-width 0
@@ -935,13 +960,13 @@
 
   strong
     color var(--wren-text-primary)
-    font-size 16px
+    font-size 14px
     font-weight 650
 
   span
-    margin-top 4px
+    margin-top 2px
     color var(--wren-text-secondary)
-    font-size 14px
+    font-size var(--wren-type-caption)
 
 .permitOriginKind
   color var(--wren-text-secondary)
@@ -950,38 +975,45 @@
 
 .permitActionCard,
 .permitDetailsCard
-  padding 16px 20px
+  padding 14px 0
 
   h2
     margin 0
     color var(--wren-text-tertiary)
-    font-family var(--wren-font-mono)
-    font-size 12px
-    font-weight 600
-    letter-spacing 1.4px
-    text-transform uppercase
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 650
+    letter-spacing 0
+    text-transform none
 
 .permitActionCard
+  border-bottom 1px solid var(--wren-ledger-rule)
+
   > strong
     display block
-    margin-top 16px
+    margin-top 8px
     color var(--wren-text-primary)
-    font-size 15px
+    font-size 18px
     font-weight 620
     line-height 22px
+
+.permitActionSpender
+  margin 2px 0 0
+  color var(--wren-text-tertiary)
+  font-size var(--wren-type-caption)
 
 .permitRawAction
   appearance none
   display flex
   width 100%
-  min-height 66px
-  margin-top 12px
-  padding 12px 14px
+  min-height 58px
+  margin-top 10px
+  padding 10px 12px
   box-sizing border-box
-  border 1px solid var(--wren-border-default)
+  border 0
   border-radius 9px
   color var(--wren-text-secondary)
-  background rgba(18, 24, 19, .82)
+  background var(--wren-surface-inset)
   font-family var(--wren-font-mono)
   font-size 12px
   line-height 19px
@@ -994,7 +1026,6 @@
     font inherit
 
   &:hover
-    border-color var(--wren-border-strong)
     background var(--wren-surface-hover)
 
   &:focus-visible
@@ -1003,15 +1034,15 @@
 
 .permitDetailsCard
   dl
-    margin 16px 0 0
+    margin 8px 0 0
 
     > div
       display grid
       min-height 44px
       padding 0
-      grid-template-columns 150px minmax(0, 1fr)
+      grid-template-columns 112px minmax(0, 1fr)
       align-items center
-      border-bottom 1px solid rgba(43, 53, 45, .68)
+      border-bottom 1px solid var(--wren-ledger-rule)
 
       &:last-child
         border-bottom 0
@@ -1027,7 +1058,7 @@
     color var(--wren-text-primary)
     font-family var(--wren-font-mono)
     font-size 13px
-    text-align right
+    text-align left
     text-overflow ellipsis
     white-space nowrap
 
@@ -1055,7 +1086,7 @@
   margin-top 4px
   color var(--wren-text-tertiary)
   font-size 12px
-  text-align right
+  text-align left
 
   &:empty
     display none
@@ -1063,40 +1094,14 @@
 .permitCopySpender
   width 100%
 
+.approvePermitPerch .permitCopySpender
   .clusterAddressRecipient,
   .clusterAddressRecipientLabeled
-    justify-content flex-end
-    text-align right
+    justify-content flex-start
+    text-align left
 
-#panel:has(.approvePermitPerch)
-  .requestApproveSignature
-    height 114px
-    padding 16px 24px
-    grid-template-columns 1fr
-
-    .requestActionContext
-      display none
-
-    .requestActionButtons
-      display grid
-      width 100%
-      grid-template-columns 1fr 1.45fr
-      gap 16px
-
-    .requestDecline,
-    .requestSign
-      width 100%
-      min-width 0
-      max-width none
-
-    .requestDeclineButton
-      border-color transparent
-      color var(--wren-text-secondary)
-      background transparent
-      box-shadow none
-
-    .requestSignButton
-      color #11130f
+.approvePermitPerch .permitReviewValue
+  text-align left
 
 .requestNoticeTransactionReview
   height var(--wren-request-review-shelf-height, 88px)
@@ -1108,7 +1113,15 @@
     display block
 
 .requestNoticeTransactionStatus
+  height 118px
+  min-height 118px
   background var(--wren-bg-subtle)
+
+  .requestNoticeInner
+    display block
+    height 100%
+    padding 10px 20px
+    box-sizing border-box
 
 .requestNoticeDeclined
   height 114px
@@ -1165,10 +1178,16 @@
   animation none
 
   .requestDecline
-    flex-basis 132px
-    width 132px
-    min-width 132px
-    max-width 132px
+    flex-basis 112px
+    width 112px
+    min-width 112px
+    max-width 112px
+
+  .requestSign
+    flex-basis 144px
+    width 144px
+    min-width 144px
+    max-width 144px
 
 .requestApproveTransaction,
 .requestApproveSignature,
@@ -1328,7 +1347,7 @@
     height 44px
 
 .requestNoticeApproval
-  height 200px
+  height 154px
   border-top 1px solid var(--wren-border-subtle)
   background var(--wren-bg-subtle)
 
@@ -1418,23 +1437,14 @@
       max-width none
       height 44px
 
-.requestNoticeTransactionStatus
-  height auto
-  min-height 132px
-
-  .requestNoticeInner
-    display block
-    padding 8px 20px
-    box-sizing border-box
-
 .requestNoticeTransactionDeploymentStatus
   min-height 160px
 
 .txLifecycle
   display grid
-  grid-template-columns minmax(0, 1fr) minmax(310px, .82fr)
+  grid-template-columns minmax(0, 1fr)
   align-items center
-  gap 14px
+  gap 0
 
 .txLifecycleSummary
   display flex
@@ -1487,9 +1497,7 @@
     line-height 15px
 
 .txLifecycleSteps
-  display grid
-  margin 0
-  padding 0
+  display none
   list-style none
   grid-template-columns repeat(4, minmax(0, 1fr))
 
@@ -1649,9 +1657,9 @@
 .txLifecycleEvidence
   position relative
   display grid
-  margin-top 6px
-  padding-top 6px
-  border-top 1px solid var(--wren-ledger-rule)
+  margin-top 8px
+  padding-top 0
+  border-top 0
   grid-template-columns minmax(0, 1fr) auto
   align-items end
   gap 10px 16px
@@ -1718,7 +1726,7 @@
   color var(--wren-danger)
 
 .txLifecycleActionGood
-  color var(--wren-success)
+  color var(--wren-accent-primary-hover)
 
 .txLifecycleActionVerify
   min-width 132px

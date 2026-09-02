@@ -2,7 +2,7 @@
   position absolute
   inset 0
   box-sizing border-box
-  padding 18px 30px 32px
+  padding 18px 30px 24px
   overflow-y auto
   color var(--wren-text-primary)
   background transparent
@@ -14,7 +14,7 @@
 
   h2
     margin-top 3px
-    font-size 25px
+    font-size 22px
     font-weight 660
     line-height 1.18
 
@@ -37,10 +37,10 @@
 
 .walletCallsSummary
   display grid
-  min-height 92px
-  padding 7px 0 20px
-  grid-template-columns minmax(0, 1fr) 236px
-  gap 28px
+  min-height 78px
+  padding 2px 0 14px
+  grid-template-columns minmax(0, 1fr) 220px
+  gap 22px
   align-items end
 
   p
@@ -72,7 +72,7 @@
     line-height 1.45
 
 .walletCallsSection
-  padding 18px 0
+  padding 14px 0
   border-top 1px solid var(--wren-ledger-rule)
 
   > h3
@@ -80,8 +80,8 @@
 
 .walletCallsContext
   display grid
-  grid-template-columns repeat(3, minmax(0, 1fr))
-  gap 22px
+  grid-template-columns repeat(2, minmax(0, 1fr))
+  gap 12px 22px
 
   div
     min-width 0
@@ -103,6 +103,9 @@
     font-weight 570
     text-overflow ellipsis
     white-space nowrap
+
+.walletCallsContextAccount
+  grid-column 1 / -1
 
 .walletCallsFeeSummary
   display grid
@@ -191,8 +194,8 @@
 
 .walletCall
   display grid
-  min-height 78px
-  padding 14px 0
+  min-height 70px
+  padding 11px 0
   border-top 1px solid var(--wren-ledger-rule)
   border-radius 0
   box-sizing border-box
@@ -220,6 +223,7 @@
   width 100%
   min-width 0
   padding 0
+  min-height 44px
   border 0
   color inherit
   background transparent
@@ -258,7 +262,7 @@
 
 .walletCallsCallEvidence
   display flex
-  margin-top 10px
+  margin-top 7px
   color var(--wren-text-secondary)
   font-family var(--wren-font-utility)
   font-size 12px
