@@ -4,7 +4,6 @@ import BigNumber from 'bignumber.js'
 
 // New Tx
 import TxMain from './TxMainNew'
-import TxValue from './TxValue'
 import TxFee from './TxFee'
 import TxAction from './TxAction'
 import TxRecipient from './TxRecipient'
@@ -77,8 +76,6 @@ export class TransactionRequest extends React.Component {
     }
 
     const recognizedActions = req.recognizedActions || []
-    const isNativeTransfer = req.classification === 'NATIVE_TRANSFER'
-
     return (
       <div
         key={req.handlerId}
@@ -142,9 +139,6 @@ export class TransactionRequest extends React.Component {
                     <NonceControl req={req} hint='Transaction sequence' readOnly={readOnly} />
                   </div>
                 </div>
-                {!isNativeTransfer && (
-                  <TxValue i={3 + recognizedActions.length} {...this.props} req={req} chain={chain} />
-                )}
               </div>
             </div>
           </div>

@@ -1658,7 +1658,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.requestSign:disabled',
     requiredControls: ['Copy transaction recipient address'],
-    requiredText: ['Simulation completed', 'Additional checks pending', 'Final checks', 'Finishing checks']
+    requiredText: ['Additional checks pending', 'Final checks', 'Finishing checks']
   },
   {
     id: 'tray-transaction-advanced-partial-full-1',
@@ -1681,7 +1681,14 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewAssetChanges',
-    requiredText: ['Expected balance changes', 'Estimated by RPC simulation', 'Received USD Coin', '5 USDC'],
+    requiredText: [
+      'Balance changes',
+      'You send ETH',
+      '1 ETH',
+      'You receive USD Coin',
+      '5 USDC',
+      'Preview only — actual token changes may differ.'
+    ],
     layoutExpectations: [
       {
         kind: 'full-width',
@@ -1698,7 +1705,11 @@ const reviewScenarios = () => [
         kind: 'computed-style',
         selector: '.transactionReviewAssetChange',
         property: 'minHeight',
-        value: '40px'
+        value: '44px'
+      },
+      {
+        kind: 'hidden',
+        selector: '.txSendingValue'
       }
     ]
   },

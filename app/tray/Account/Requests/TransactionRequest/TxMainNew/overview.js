@@ -30,18 +30,52 @@ export const getExpectedAssetChanges = (simulation, account) => {
   )
 }
 
-const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
+export const BalanceChanges = ({ account, currencyRate, isTestnet, req, simulation, symbol, tokenFor }) => {
   const changes = getExpectedAssetChanges(simulation, account)
-  if (!changes.length) return null
+  const parsedNativeValue = BigNumber(req.data.value || '0')
+  const nativeValue =
+    req.classification !== 'NATIVE_TRANSFER' && !parsedNativeValue.isNaN() && !parsedNativeValue.isZero()
+      ? req.data.value
+      : null
+  if (!nativeValue && !changes.length) return null
 
   return (
     <ClusterRow className='transactionReviewAssetChanges'>
       <ClusterValue>
         <div className='transactionReviewAssetChangesInner'>
           <div className='transactionReviewAssetChangesHeader'>
-            <strong>Expected balance changes</strong>
-            <span>Estimated by RPC simulation</span>
+            <strong>Balance changes</strong>
           </div>
+          {nativeValue ? (
+            <div className='transactionReviewAssetChange transactionReviewAssetChangeOutgoing'>
+              <span className='transactionReviewAssetChangeIdentity'>
+                <strong>{`You send ${symbol}`}</strong>
+              </span>
+              <span className='transactionReviewAssetChangeValues'>
+                <span className='transactionReviewAssetChangeAmount'>
+                  <span aria-hidden='true'>−</span>
+                  <DisplayValue
+                    type='ether'
+                    value={nativeValue}
+                    valueDataParams={{ decimals: 18 }}
+                    currencySymbol={symbol}
+                    currencySymbolPosition='last'
+                  />
+                </span>
+                {currencyRate ? (
+                  <span className='transactionReviewAssetChangeFiat'>
+                    <span aria-hidden='true'>{isTestnet ? '=' : '≈'}</span>
+                    <DisplayValue
+                      type='fiat'
+                      value={nativeValue}
+                      valueDataParams={{ currencyRate, decimals: 18, isTestnet }}
+                      currencySymbol='$'
+                    />
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          ) : null}
           {changes.map((change, index) => {
             const token = tokenFor?.(change.token)
             const accountAddress = account.toLowerCase()
@@ -56,6 +90,14 @@ const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
                     ? 'Sent'
                     : 'Received'
             const incoming = direction === 'Minted' || direction === 'Received'
+            const action =
+              direction === 'Minted'
+                ? 'You mint'
+                : direction === 'Burned'
+                  ? 'You burn'
+                  : incoming
+                    ? 'You receive'
+                    : 'You send'
             const amount = change.amount ?? change.tokenId
             return (
               <div
@@ -64,7 +106,7 @@ const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
               >
                 <span className='transactionReviewAssetChangeIdentity'>
                   <strong title={change.token}>
-                    {`${direction} ${token?.name || token?.symbol || `${change.token.slice(0, 8)}…`}`}
+                    {`${action} ${token?.name || token?.symbol || `${change.token.slice(0, 8)}…`}`}
                   </strong>
                 </span>
                 <span className='transactionReviewAssetChangeAmount'>
@@ -86,9 +128,16 @@ const ExpectedAssetChanges = ({ account, simulation, tokenFor }) => {
               </div>
             )
           })}
-          {simulation.effectsTruncated ? (
-            <div className='transactionReviewAssetChangesNote'>
-              Additional RPC-reported effects are omitted.
+          {changes.length ? (
+            <div
+              className={`transactionReviewAssetChangesDisclaimer${
+                simulation.effectsTruncated ? ' transactionReviewAssetChangesDisclaimerWarning' : ''
+              }`}
+              role={simulation.effectsTruncated ? 'alert' : 'note'}
+            >
+              {simulation.effectsTruncated
+                ? 'Preview incomplete — other effects may not be shown.'
+                : 'Preview only — actual token changes may differ.'}
             </div>
           ) : null}
         </div>
@@ -315,12 +364,9 @@ export function getSimulationEffectsPresentation(simulation, account) {
   if (!effects.length && !simulation.effectsTruncated) return null
 
   const broadApproval = effects.some((effect) => isBroadTokenAuthorityEffect(effect, account))
-  const count = effects.length
-  const countLabel = `${count} RPC-reported token effect${count === 1 ? '' : 's'}`
-
   return {
     broadApproval,
-    label: `${countLabel}${simulation.effectsTruncated ? ' (truncated)' : ''}`
+    truncated: Boolean(simulation.effectsTruncated)
   }
 }
 
@@ -516,6 +562,7 @@ const TxOverview = ({
   const { data: tx = {}, classification } = req
   const { data: calldata } = tx
   const simulation = getSimulationPresentation(req.simulation)
+  const visibleSimulation = req.simulation?.status === 'succeeded' ? null : simulation
   const advancedChecks = getAdvancedChecksPresentation(req.simulation)
   const simulationEffects = getSimulationEffectsPresentation(req.simulation, req.account)
   const nativeBalanceChanges = getNativeBalanceChangesPresentation(req.simulation, {
@@ -537,7 +584,9 @@ const TxOverview = ({
     allowance,
     callTrace,
     nativeBalanceChanges,
-    simulationEffects ? { className: '_txMainTagWarning', label: simulationEffects.label } : null,
+    simulationEffects?.truncated
+      ? { className: '_txMainTagWarning', label: 'Balance preview may be incomplete' }
+      : null,
     accessList
   ])
   const supportingStatus = reviewStatus || advancedChecks
@@ -586,11 +635,11 @@ const TxOverview = ({
             </div>
           </ClusterValue>
         </ClusterRow>
-        {(simulation || supportingStatus) && (
+        {(visibleSimulation || supportingStatus) && (
           <ClusterRow className='transactionReviewStatusRow'>
             <ClusterValue>
               <div className='transactionReviewSummaryStatus' role='status' aria-live='polite'>
-                <span className={simulation?.className || ''}>{simulation?.label || ''}</span>
+                <span className={visibleSimulation?.className || ''}>{visibleSimulation?.label || ''}</span>
                 <span className={supportingStatus?.className || ''}>{supportingStatus?.label || ''}</span>
               </div>
             </ClusterValue>
@@ -598,7 +647,15 @@ const TxOverview = ({
         )}
         <ReplacementNotice replacement={req.replacement} />
         <ReplacementAssessment status={replacementStatus} />
-        <ExpectedAssetChanges account={req.account} simulation={req.simulation} tokenFor={tokenFor} />
+        <BalanceChanges
+          account={req.account}
+          currencyRate={currencyRate}
+          isTestnet={isTestnet}
+          req={req}
+          simulation={req.simulation}
+          symbol={symbol}
+          tokenFor={tokenFor}
+        />
         {isNonZeroHex(calldata) && <TransactionDataRow method={req.decodedData?.method} />}
       </Cluster>
     )

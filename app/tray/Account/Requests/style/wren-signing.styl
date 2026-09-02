@@ -532,14 +532,12 @@
 
   .transactionReviewAssetChangesInner
     width 100%
-    padding var(--wren-space-2) 0 0
+    padding var(--wren-space-2) 0
 
   .transactionReviewAssetChangesHeader
     display flex
-    min-height 24px
-    align-items baseline
-    justify-content space-between
-    gap var(--wren-space-3)
+    min-height 26px
+    align-items center
     padding-bottom var(--wren-space-1)
 
     strong
@@ -547,15 +545,9 @@
       font-size var(--wren-type-small)
       font-weight 620
 
-    span
-      color var(--wren-text-muted)
-      font-family var(--wren-font-utility)
-      font-size var(--wren-type-caption)
-      text-align right
-
   .transactionReviewAssetChange
     display grid
-    min-height 40px
+    min-height 44px
     padding var(--wren-space-1) 0
     box-sizing border-box
     align-items center
@@ -586,10 +578,35 @@
     font-weight 620
     text-align right
 
+  .transactionReviewAssetChangeValues
+    display flex
+    min-width 0
+    flex-direction column
+    align-items flex-end
+    justify-content center
+
+  .transactionReviewAssetChangeFiat
+    display flex
+    align-items baseline
+    gap var(--wren-space-1)
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+    text-align right
+
   .transactionReviewAssetChangeIncoming .transactionReviewAssetChangeAmount
     color var(--wren-success)
 
   .transactionReviewAssetChangeOutgoing .transactionReviewAssetChangeAmount
+    color var(--wren-warning)
+
+  .transactionReviewAssetChangesDisclaimer
+    padding-top var(--wren-space-2)
+    color var(--wren-text-muted)
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-caption)
+
+  .transactionReviewAssetChangesDisclaimerWarning
     color var(--wren-warning)
 
   .transactionReviewTokenApproval
@@ -626,12 +643,6 @@
         align-items flex-start
         justify-content flex-start
         text-align left
-
-  .transactionReviewAssetChangesNote
-    padding-top var(--wren-space-2)
-    color var(--wren-warning)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
 
   .clusterTag,
   ._txFeeValueDefault

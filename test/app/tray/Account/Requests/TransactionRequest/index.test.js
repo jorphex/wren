@@ -27,6 +27,7 @@ import {
   getSimulationEffectsPresentation,
   getSimulationPresentation,
   ApproveOverview,
+  BalanceChanges,
   ReplacementAssessment,
   ReplacementNotice,
   TransactionDataRow,
@@ -727,6 +728,46 @@ describe('address lookalike decision', () => {
 })
 
 describe('simulation review', () => {
+  it('groups the declared send and predicted receipt in one balance-change ledger', () => {
+    const token = '0x3333333333333333333333333333333333333333'
+    render(
+      <BalanceChanges
+        account={account}
+        currencyRate={{ price: 3200 }}
+        isTestnet={false}
+        req={{
+          classification: 'CONTRACT_CALL',
+          data: { value: '0xde0b6b3a7640000' }
+        }}
+        simulation={{
+          status: 'succeeded',
+          source: 'eth_simulateV1',
+          effects: [
+            {
+              type: 'transfer',
+              standard: 'erc20',
+              token,
+              from: '0x2222222222222222222222222222222222222222',
+              to: account.toLowerCase(),
+              amount: '5000000'
+            }
+          ]
+        }}
+        symbol='ETH'
+        tokenFor={() => ({ decimals: 6, name: 'USD Coin', symbol: 'USDC' })}
+      />
+    )
+
+    expect(screen.getByText('Balance changes')).toBeTruthy()
+    expect(screen.getByText('You send ETH')).toBeTruthy()
+    expect(screen.getByText('You receive USD Coin')).toBeTruthy()
+    expect(screen.getByRole('note').textContent).toBe('Preview only — actual token changes may differ.')
+    expect(screen.queryByText(/RPC simulation/i)).toBeNull()
+    const outgoing = screen.getByText('You send ETH').closest('.transactionReviewAssetChangeOutgoing')
+    const incoming = screen.getByText('You receive USD Coin').closest('.transactionReviewAssetChangeIncoming')
+    expect(outgoing.compareDocumentPosition(incoming) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('exposes contract data as a named disclosure in the main review', async () => {
     link.send.mockClear()
     const { user } = render(<TransactionDataRow method='deposit' />)
@@ -742,7 +783,7 @@ describe('simulation review', () => {
     expect(
       getReviewStatusPresentation([
         { className: '_txMainTagGood', label: 'Simulation completed' },
-        { className: '_txMainTagWarning', label: '2 RPC-reported token effects' },
+        { className: '_txMainTagWarning', label: 'Balance preview may be incomplete' },
         { className: '_txMainTagBad', label: 'RPC reports broad token approval' }
       ])
     ).toEqual({
@@ -1014,7 +1055,7 @@ describe('simulation review', () => {
 
     expect(getSimulationEffectsPresentation(simulation, account)).toEqual({
       broadApproval: true,
-      label: '2 RPC-reported token effects (truncated)'
+      truncated: true
     })
     expect(getExpectedAssetChanges(simulation, account)).toEqual([simulation.effects[0]])
 
