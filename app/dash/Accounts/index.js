@@ -317,12 +317,22 @@ export class Dash extends React.Component {
 
   selectSigningAccount = (account, signer) => {
     link.rpc('setSigner', account.id, (error) => {
-      if (error || !signer) return
+      if (error) return
+      const hardware = isHardwareSigner(account.lastSignerType)
+      if (!signer) {
+        if (hardware) {
+          link.send('tray:action', 'navDash', {
+            view: 'accounts',
+            data: { showAddAccounts: true, newAccountType: account.lastSignerType }
+          })
+        }
+        return
+      }
       const status = getSignerStatusMeta(signer)
-      if (status.ready) return
+      if (status.ready && !hardware) return
 
       link.send('tray:action', 'navDash', signerPanelCrumb(signer))
-      if (isHardwareSigner(signer) && status.reloadable && !status.busy && !status.input) {
+      if (hardware && status.reloadable && !status.busy && !status.input) {
         link.send('dash:reloadSigner', signer.id)
       }
     })
@@ -335,7 +345,7 @@ export class Dash extends React.Component {
     const hardware = ['ledger', 'trezor', 'lattice'].includes(type)
     const signer = this.signerForAccount(account, signers)
     const signerStatus = signer ? getSignerStatusMeta(signer) : undefined
-    const needsUnlock = Boolean(signerStatus && !signerStatus.ready)
+    const needsUnlock = hardware || Boolean(signerStatus && !signerStatus.ready)
     const detail = `${compactAccountAddress(address)}${
       signerStatus ? ` · ${signerStatus.label.toLowerCase()}` : hardware ? ' · connect device' : ''
     }`

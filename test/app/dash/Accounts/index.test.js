@@ -208,6 +208,53 @@ it('opens and reconnects a hardware signer when its account needs unlocking', ()
   expect(link.send).toHaveBeenCalledWith('dash:reloadSigner', 'ledger')
 })
 
+it('opens hardware signer management even when the device is already ready', () => {
+  class ReadyHardwareHarness extends SignerAccountsHarness {
+    store(...path) {
+      const value = super.store(...path)
+      if (path.join('.') !== 'main.signers') return value
+      return { ...value, ledger: { ...value.ledger, status: 'ok' } }
+    }
+  }
+  render(<ReadyHardwareHarness data={{}} />)
+  link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: `Select and unlock Ledger vault ${getAddress(hardwareAccount)}`
+    })
+  )
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'expandedSigner',
+    data: { signer: 'ledger' }
+  })
+  expect(link.send).not.toHaveBeenCalledWith('dash:reloadSigner', expect.anything())
+})
+
+it('routes a detached hardware account to device discovery after selecting it', () => {
+  class DetachedHardwareHarness extends SignerAccountsHarness {
+    store(...path) {
+      const value = super.store(...path)
+      if (path.join('.') !== 'main.signers') return value
+      return { personal: value.personal }
+    }
+  }
+  render(<DetachedHardwareHarness data={{}} />)
+  link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
+
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: `Select and unlock Ledger vault ${getAddress(hardwareAccount)}`
+    })
+  )
+
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'accounts',
+    data: { showAddAccounts: true, newAccountType: 'ledger' }
+  })
+})
+
 it('opens the password form for a locked software signer after selecting its account', () => {
   render(<SignerAccountsHarness data={{}} signerStatus='locked' />)
   link.rpc.mockImplementationOnce((_method, _account, callback) => callback(null, {}))
