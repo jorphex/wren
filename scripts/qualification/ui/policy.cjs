@@ -1698,14 +1698,20 @@ const reviewScenarios = () => [
       {
         kind: 'computed-style',
         selector: '.transactionReviewAssetChangesHeader',
-        property: 'display',
-        value: 'flex'
+        property: 'minHeight',
+        value: '22px'
       },
       {
         kind: 'computed-style',
         selector: '.transactionReviewAssetChange',
         property: 'minHeight',
-        value: '44px'
+        value: '36px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.transactionReviewAssetChangeValues',
+        property: 'flexDirection',
+        value: 'row'
       },
       {
         kind: 'computed-style',

@@ -413,10 +413,11 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewMainApproval[\s\S]*?\._txDescription[\s\S]*?min-height 72px/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewAssetChangesHeader[\s\S]*?display flex[\s\S]*?min-height 26px[\s\S]*?align-items center/
+    /\.transactionReviewAssetChangesInner[\s\S]*?padding var\(--wren-space-1\) 0 var\(--wren-space-2\)[\s\S]*?\.transactionReviewAssetChangesHeader[\s\S]*?min-height 22px/
   )
+  expect(signingStyle).toMatch(/\.transactionReviewAssetChange\n[\s\S]*?min-height 36px[\s\S]*?padding 2px 0/)
   expect(signingStyle).toMatch(
-    /\.transactionReviewAssetChange\n[\s\S]*?min-height 44px[\s\S]*?padding var\(--wren-space-1\) 0/
+    /\.transactionReviewAssetChangeValues[\s\S]*?flex-direction row[\s\S]*?align-items baseline[\s\S]*?gap var\(--wren-space-2\)/
   )
   expect(signingStyle).toMatch(
     /\.transactionReviewAssetChanges\n[\s\S]*?border-top 0[\s\S]*?\.transactionReviewAssetChange\n[\s\S]*?border-top 0/
