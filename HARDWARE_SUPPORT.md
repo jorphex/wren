@@ -3,7 +3,8 @@
 Use this reference to decide whether a signer or platform is within Wren's tested
 boundary. Run the complete candidate checks in the [qualification checklist](QUALIFICATION.md);
 see the [README](README.md) for orientation and the [release procedure](RELEASE.md)
-for package and publication gates.
+for package and publication gates. Software-signer storage boundaries are documented
+in [OS-backed signer protection](OS_SIGNER_PROTECTION.md).
 
 ## Evidence labels
 
@@ -30,7 +31,6 @@ transport; it does not upgrade the evidence label.
 | Windows x64                     | Electron/NSIS package         | Unsigned preview. The release workflow checks runtime and unsigned state; Windows is not platform-qualified.                                     |
 | macOS x64/arm64                 | Electron DMG                  | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.         |
 | Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                    |
-| Linux snap                      | Electron package              | Legacy configuration only; not produced by current CI.                                                                                           |
 
 Trezor Suite is not required for the qualified Safe 7 USB flow. Another app holding the device transport can cause contention.
 

@@ -391,6 +391,9 @@ test('lets transparent account artwork merge with the ruled ledger canvas', () =
 
 test('keeps ordered wallet calls free of redundant rules', () => {
   expect(walletCallsStyle).toMatch(
+    /\.walletCallsRequestSummary[\s\S]*?padding 0 12px 10px[\s\S]*?font-size var\(--wren-type-caption\)/
+  )
+  expect(walletCallsStyle).toMatch(
     /\.walletCall[\s\S]*?border-top 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
   expect(walletCallsStyle).toMatch(/\.walletCallsSection[\s\S]*?border-top 0/)

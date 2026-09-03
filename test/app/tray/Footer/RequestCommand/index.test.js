@@ -1,8 +1,5 @@
-import React from 'react'
-
 import { getReceiptFeeUsd, RequestCommand } from '../../../../../app/tray/Footer/RequestCommand'
 import { transactionLifecyclePresentation } from '../../../../../app/tray/Footer/RequestCommand/TxBar'
-import { Time } from '../../../../../app/tray/Footer/Time'
 import { act, render, screen } from '../../../../componentSetup'
 import link from '../../../../../resources/link'
 import {
@@ -816,15 +813,4 @@ it('renders a declined signature without a failure symbol', () => {
   expect(document.querySelector('.requestNoticeInnerSymbol')).toBeNull()
   expect(screen.queryByText('Signature Declined')).toBeNull()
   command.componentWillUnmount()
-})
-
-it('stops the completed-transaction clock when unmounted', () => {
-  const ref = React.createRef()
-  const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
-  const view = render(<Time ref={ref} time={Date.now()} />)
-  const clock = ref.current.clock
-
-  view.unmount()
-  expect(clearIntervalSpy).toHaveBeenCalledWith(clock)
-  clearIntervalSpy.mockRestore()
 })

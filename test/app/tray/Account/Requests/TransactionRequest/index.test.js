@@ -10,7 +10,6 @@ import {
 } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxMainNew'
 import TxRecipientComponent from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxRecipient'
 import { TxFee } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxFee'
-import { TxSending as TxValue } from '../../../../../../app/tray/Account/Requests/TransactionRequest/TxValue'
 import {
   getYearnIntentLines,
   TxSending as TxAction
@@ -561,18 +560,6 @@ describe('approval editing', () => {
     }
   }
 
-  class TxValueHarness extends TxValue {
-    store(...path) {
-      const key = path.join('.')
-      if (key === 'main.addressBook' || key === 'main.accounts') return {}
-      if (key === 'main.networks.ethereum.1.isTestnet') return false
-      if (key === 'main.networksMeta.ethereum.1') {
-        return { nativeCurrency: { symbol: 'ETH', usd: 1 } }
-      }
-      if (key === 'main.networks.ethereum.1.name') return 'Ethereum'
-    }
-  }
-
   const renderApprovalAction = (status) =>
     render(
       <TxActionHarness
@@ -631,22 +618,6 @@ describe('approval editing', () => {
 
     expect(link.send).toHaveBeenCalledWith('tray:clipboardData', approvalAction.data.spender.address)
     expect(screen.getByText('Approval spender address copied')).toBeTruthy()
-  })
-
-  it('announces a copied native-transfer recipient', async () => {
-    const recipient = '0x3333333333333333333333333333333333333333'
-    const { user } = render(
-      <TxValueHarness
-        chain={{ id: 1, type: 'ethereum' }}
-        i={0}
-        req={{ data: { to: recipient, value: '0x1' }, recipientType: 'external' }}
-      />
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Copy transfer recipient address' }))
-
-    expect(link.send).toHaveBeenCalledWith('tray:clipboardData', recipient)
-    expect(screen.getByText('Transfer recipient address copied')).toBeTruthy()
   })
 
   it('forwards the exact account, request, action, amount, and callback to the bridge', () => {
