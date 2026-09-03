@@ -14,7 +14,8 @@ Detailed release notes and platform boundaries live in
   signing reviews around one compact visual hierarchy.
 - Grouped estimated asset changes into a clear ledger and simplified submitted,
   confirming, and confirmed transaction progress.
-- Added exact, custom, unlimited, and revoke choices to token allowance reviews.
+- Made requested, custom, unlimited, and revoke allowance adjustments easier to
+  find while keeping the selected limit visible.
 - Let a known app origin move to another enabled chain without a redundant
   network approval screen or account exposure.
 
@@ -30,14 +31,16 @@ Detailed release notes and platform boundaries live in
   reconnect flow when a selected signer is locked or unavailable.
 - Kept decoded methods and supported transfer effects available in Activity,
   including wrapped-native deposits and withdrawals.
-- Made network fees and nonces consistently editable where the transaction type
-  supports them.
+- Presented network fees and nonces consistently as editable controls where the
+  transaction type supports them.
+- Kept internal Wren fields out of the transaction review's Raw data view.
 - Unified wallet and Control Center cards on one translucent surface treatment.
 
 ### Maintenance
 
-- Updated reviewed production and development dependencies; coordinated major
-  upgrades remain deferred.
+- Patched the transitive `fast-uri` advisory, updated Electron from 42.8.0 to
+  42.10.1, and refreshed other reviewed dependencies. Coordinated major upgrades
+  remain deferred.
 
 See [the complete 0.1.6 release notes](release-notes/v0.1.6.md).
 
