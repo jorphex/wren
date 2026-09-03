@@ -6,7 +6,17 @@ Detailed release notes and platform boundaries live in
 
 ## Unreleased
 
-## 0.1.6 - 2026-09-01
+## 0.1.6 - 2026-09-03
+
+### Changed
+
+- Reworked transaction, approval, permit, delegation, deployment, batch, and
+  signing reviews around one compact visual hierarchy.
+- Grouped estimated asset changes into a clear ledger and simplified submitted,
+  confirming, and confirmed transaction progress.
+- Added exact, custom, unlimited, and revoke choices to token allowance reviews.
+- Let a known app origin move to another enabled chain without a redundant
+  network approval screen or account exposure.
 
 ### Fixed
 
@@ -15,9 +25,14 @@ Detailed release notes and platform boundaries live in
 - Placed Rename and Remove in a balanced action row, sized empty and populated
   Activity to visible content, and clarified per-account app access management.
 - Renamed the global app view to Connected apps and matched its badge to the apps visible there.
-- Aligned wallet subview headers and separators to one 64px boundary.
+- Aligned wallet subviews to one 64px top bar and content grid.
 - Made Accounts open the appropriate password, device PIN, passphrase, or
   reconnect flow when a selected signer is locked or unavailable.
+- Kept decoded methods and supported transfer effects available in Activity,
+  including wrapped-native deposits and withdrawals.
+- Made network fees and nonces consistently editable where the transaction type
+  supports them.
+- Unified wallet and Control Center cards on one translucent surface treatment.
 
 ### Maintenance
 

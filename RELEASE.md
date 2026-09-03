@@ -114,16 +114,15 @@ checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
 
 ## 3. Review reproducibility evidence
 
-The bounded two-build comparison at commit
-`cb6078a2e2a4ce6c841cf5afa1907947d9a9be21` used the commit epoch with `TZ=UTC`,
-`LANG=C`, and `LC_ALL=C`. Compiled output, renderer bundles, unpacked application,
-extracted AppImage/deb payloads, all native modules, the CycloneDX SBOM, and deb
-package bytes matched. The AppImage container bytes did not; only the AppImage,
-its derived `latest-linux.yml`, and `SHA256SUMS` differed. Identical extracted
-payloads isolate the observed variance to the AppImage container. No low-risk
-repository-local remediation was evidenced, so Wren does not claim byte-for-byte
-AppImage reproducibility. Run the command above on each candidate and retain its
-report with private release evidence.
+Run the bounded two-build comparison for every candidate. It fixes the commit
+epoch, timezone, and locale, then compares compiled output, renderer bundles,
+unpacked applications, extracted AppImage/deb payloads, native modules, the SBOM,
+and package bytes. The per-candidate report is authoritative.
+
+Wren does not claim byte-for-byte AppImage reproducibility. The accepted boundary
+requires identical application and package payloads; AppImage container bytes,
+`latest-linux.yml`, and their checksum entries may vary. Any other difference
+blocks release. Retain the report with private release evidence.
 
 ## 4. Create and review the draft
 

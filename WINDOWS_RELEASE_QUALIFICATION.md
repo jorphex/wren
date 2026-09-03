@@ -1,6 +1,6 @@
 # Windows x64 preview qualification checklist
 
-Use this checklist for the unsigned Windows installer planned for Wren 0.1.6.
+Use this checklist for the unsigned Wren 0.1.6 Windows installer.
 Linux x64 remains the qualified platform. Passing this checklist makes the
 Windows file suitable for a clearly labeled preview; it does not create a trusted
 publisher or qualify untested hardware.
@@ -85,13 +85,19 @@ browser, compare the pairing code, approve one disposable account, and confirm
 the network list loads. On a test dapp or explorer:
 
 1. connect once as Wren;
-2. switch to an enabled network before account access and approve the request;
+2. switch to an enabled network before account access and confirm the route changes
+   immediately without a review or account exposure;
 3. reject, then approve, one personal message or zero-value testnet transaction;
 4. revoke the account and confirm the page receives an empty account list;
 5. restart Wren and the browser and confirm pairing recovers without a loop.
 
 No request may remain stuck after approval or rejection. Scan retained output for
 secrets before keeping any evidence.
+
+Review one token approval and one submitted transaction. Confirm the approval has
+exact, custom, unlimited, and revoke choices; estimated changes stay grouped;
+supported fees and nonces are editable; and transaction hash, explorer, cancel,
+speed-up, and progress controls appear only when applicable.
 
 On Base and Base Sepolia, also retry a native and ERC-20 Send after a retained
 funding-check failure. Recheck must refresh the gas limit, OP Stack L1 data fee,

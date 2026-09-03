@@ -375,7 +375,10 @@ That historical run did not assess reproducibility; its evidence is embedded
 clean-source identity, SHA-256, SBOM, and GitHub provenance. It qualifies Linux
 x64 only—not macOS, Windows, Linux arm64, native-Wayland Glide, Bluetooth,
 unlisted hardware, or unexercised Yearn product/signer combinations.
-The current release audit reports 19 low- and 2 moderate-severity transitive
-findings, with no high or critical finding. The moderate
+The current full-tree audit reports 19 low- and 3 moderate-severity transitive
+findings, with no high or critical finding. The production tree accounts for 19
+low and 2 moderate findings. The additional moderate `@xmldom/xmldom` finding is
+limited to the development packaging chain and has a compatible lockfile update
+that still requires the normal package qualification. The
 `decode-uri-component` remediation requires a breaking `query-string` upgrade;
-the remaining `elliptic` path has no upstream fix in this release line.
+the remaining `elliptic` path has no complete upstream fix in this release line.
