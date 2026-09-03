@@ -48,7 +48,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
       }
     case 'confirming':
       return {
-        detail: 'The transaction was sent. Wren is waiting for network confirmation.',
+        detail: 'Waiting for network confirmation.',
         icon: 'pending',
         position: 2,
         title: 'Confirming',

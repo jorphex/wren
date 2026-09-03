@@ -267,9 +267,11 @@ export class Footer extends React.Component {
                     ? 'check'
                     : presentation.kind === 'waiting'
                       ? 'pending'
-                      : 'permissions'
+                      : presentation.kind === 'review'
+                        ? 'verify'
+                        : 'permissions'
                 }
-                size={19}
+                size={presentation.kind === 'review' ? 20 : 19}
               />
             </span>
             <span className='requestActionContextCopy'>

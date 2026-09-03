@@ -66,6 +66,8 @@ test('keeps review ledgers and the approval editor on one shared value anchor', 
   expect(tokenSpendStyle).toMatch(
     /\.wrenTokenApprovalContext[\s\S]*?> div[\s\S]*?grid-template-columns var\(--wren-review-label-column\) minmax\(0, 1fr\)[\s\S]*?gap var\(--wren-space-4\)/
   )
+  expect(tokenSpendStyle).not.toMatch(/\.wrenTokenApprovalContext[\s\S]{0,180}?border-(?:top|bottom)/)
+  expect(tokenSpendStyle).not.toMatch(/> div \+ div[\s\S]{0,80}?border-top/)
   expect(tokenSpendStyle).toMatch(/\.wrenTokenApprovalAddress[\s\S]*?min-height 44px[\s\S]*?padding 4px 0/)
   expect(tokenSpendStyle).not.toContain('.wrenTokenApprovalCurrentAction')
 })
@@ -498,7 +500,7 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
     /\.requestSign:disabled \.requestSignButton,[\s\S]*?\.requestSign:disabled \.requestSignButton:hover[\s\S]*?color var\(--wren-text-inverse\)[\s\S]*?background var\(--wren-control-texture-light\), var\(--wren-accent-primary\)/
   )
   expect(signingStyle).toMatch(
-    /\.requestNoticeTransactionStatus[\s\S]*?\.requestNoticeInner[\s\S]*?display grid[\s\S]*?grid-template-rows 36px 31px[\s\S]*?\.txLifecycleEvidence[\s\S]*?display contents[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-template-columns minmax\(150px, 1fr\) repeat\(3, max-content\)[\s\S]*?div[\s\S]*?display grid[\s\S]*?dt,[\s\S]*?dd[\s\S]*?line-height 15px/
+    /\.requestNoticeTransactionStatus[\s\S]*?\.requestNoticeInner[\s\S]*?display grid[\s\S]*?grid-template-rows 44px 25px 18px[\s\S]*?\.txLifecycle[\s\S]*?grid-row 1 \/ 3[\s\S]*?\.txLifecycleSteps[\s\S]*?display grid[\s\S]*?\.txLifecycleEvidence[\s\S]*?display contents[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-row 3[\s\S]*?grid-template-columns minmax\(150px, 1fr\) repeat\(3, max-content\)[\s\S]*?div[\s\S]*?display flex[\s\S]*?dt,[\s\S]*?dd[\s\S]*?line-height 18px/
   )
   expect(signingStyle).toMatch(
     /\.permitAccountIdentity[\s\S]*?display grid[\s\S]*?\.permitAccountAddress[\s\S]*?white-space nowrap/
@@ -506,6 +508,8 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
   expect(signingStyle).toMatch(
     /\.permitRawAction[\s\S]*?\.permitRawActionHeader[\s\S]*?justify-content space-between[\s\S]*?> span[\s\S]*?color var\(--wren-accent-primary-hover\)/
   )
+  expect(signingStyle).not.toMatch(/\.permitOriginCard\n(?: {2}.*\n)*? {2}border-bottom/)
+  expect(signingStyle).not.toMatch(/\.permitActionCard\n(?: {2}.*\n)*? {2}border-bottom/)
   expect(lightweightRequestStyle).not.toMatch(
     /\.lightweightRequestFact \+ \.lightweightRequestFact[\s\S]*?border-top/
   )
@@ -525,7 +529,7 @@ test('keeps delegation revocation readable and operable at scaled narrow widths'
     /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/
   )
   expect(revokeStyle).toMatch(
-    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?min-height 44px/
+    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?grid-row 1[\s\S]*?align-self center[\s\S]*?min-height 44px/
   )
   expect(revokeStyle).toMatch(
     /@media \(max-width: 600px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/

@@ -139,11 +139,11 @@ export class RevocationFee extends React.Component {
       <div className='eip7702RevokeFeeBody'>
         <div className='eip7702RevokeFeeRow'>
           <span>
-            <strong>Maximum fee</strong>
+            <strong>Network fee</strong>
             <small>
               {chainUsesOptimismFees(chainId)
-                ? 'Network-added L1 data fees are not included.'
-                : 'The final network fee may be lower.'}
+                ? 'Maximum shown; network-added L1 data fees are not included.'
+                : 'Maximum shown; the final fee may be lower.'}
             </small>
           </span>
           <span className='eip7702RevokeFeeAmount'>
@@ -280,8 +280,7 @@ export class Eip7702RevokeRequest extends React.Component {
             ) : null}
           </section>
 
-          <section className='eip7702RevokeSection eip7702RevokeFee' aria-labelledby='revoke-fee-title'>
-            <h2 id='revoke-fee-title'>Network fee</h2>
+          <section className='eip7702RevokeSection eip7702RevokeFee' aria-label='Network fee'>
             <ConnectedRevocationFee req={req} />
           </section>
 

@@ -1254,11 +1254,15 @@ it.each(['revocation-review', 'revocation-monitor'])(
 )
 
 it('requires review actions and the safe initial focus for ambiguous monitoring', () => {
-  const review = scenarioMatrix().find(({ state, scale }) => state === 'revocation-review' && scale === 1)
-  const monitor = scenarioMatrix().find(({ state, scale }) => state === 'revocation-monitor' && scale === 1)
+  const scenarios = scenarioMatrix()
+  const reviews = scenarios.filter(({ state }) => state === 'revocation-review')
+  const review = reviews.find(({ scale }) => scale === 1)
+  const monitor = scenarios.find(({ state, scale }) => state === 'revocation-monitor' && scale === 1)
 
   expect(review.requiredControls).toEqual(['Cancel', 'Revoke delegation', 'Adjust'])
-  expect(review.requiredText).toEqual(expect.arrayContaining(['Delegation evidence', 'Maximum fee']))
+  for (const scenario of reviews) {
+    expect(scenario.requiredText).toEqual(expect.arrayContaining(['Delegation evidence', 'Network fee']))
+  }
   expect(monitor).toMatchObject({
     action: { type: 'clickText', text: 'Stop monitoring' },
     expectedInitialFocus: 'Keep monitoring',

@@ -638,7 +638,7 @@ it('omits explorer access without a configured explorer while preserving hash co
 it.each([
   ['sending', 'Sending', 'Wren is sending the transaction to the network.'],
   ['verifying', 'Submitted', 'Sent to the network.'],
-  ['confirming', 'Confirming', 'The transaction was sent. Wren is waiting for network confirmation.'],
+  ['confirming', 'Confirming', 'Waiting for network confirmation.'],
   ['confirmed', 'Confirmed', 'The transaction is confirmed on Ethereum.'],
   ['error', 'Transaction failed', 'The network did not confirm this transaction.']
 ])('maps %s to truthful lifecycle copy', (status, title, detail) => {

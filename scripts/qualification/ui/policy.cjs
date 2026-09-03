@@ -750,7 +750,21 @@ const reviewScenarios = () => [
     action: { type: 'clickText', text: 'Custom' },
     ready: '.wrenTokenApprovalEditor input[aria-label="Custom amount"]',
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom'],
-    requiredText: ['Token approval', 'Spending limit', 'Custom limit']
+    requiredText: ['Token approval', 'Spending limit', 'Custom limit'],
+    layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalContext',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalContext > div',
+        property: 'borderTopWidth',
+        value: '0px'
+      }
+    ]
   },
   {
     id: 'tray-permit-amount-invalid-full-1',
@@ -1829,6 +1843,18 @@ const reviewScenarios = () => [
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke'],
     requiredText: ['Token approval', 'Spending limit', '890', 'USDC'],
     layoutExpectations: [
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalContext',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
+      {
+        kind: 'computed-style',
+        selector: '.wrenTokenApprovalContext > div',
+        property: 'borderTopWidth',
+        value: '0px'
+      },
       {
         kind: 'computed-style',
         selector: '.wrenTokenApprovalRevoke',
@@ -3471,6 +3497,18 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               layoutExpectations: [
                 ...WALLET_VIEW_CHROME,
                 ...FOCUSED_WINDOW_SURFACE,
+                {
+                  kind: 'computed-style',
+                  selector: '.permitOriginCard',
+                  property: 'borderBottomWidth',
+                  value: '0px'
+                },
+                {
+                  kind: 'computed-style',
+                  selector: '.permitActionCard',
+                  property: 'borderBottomWidth',
+                  value: '0px'
+                },
                 { kind: 'text-unclipped', selector: '.permitAccountAddress' }
               ]
             },
@@ -3640,14 +3678,28 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
         requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
-        requiredText: ['Review transaction', 'Submitted', 'Transaction hash', 'Confirmations', '0'],
+        requiredText: [
+          'Review transaction',
+          'Sending',
+          'Submitted',
+          'Confirming',
+          'Confirmed',
+          'Transaction hash',
+          'Confirmations',
+          '0'
+        ],
         layoutExpectations: [
-          { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleSteps',
+            property: 'display',
+            value: 'grid'
+          },
           {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'grid'
+            value: 'flex'
           },
           { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
@@ -3662,14 +3714,27 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
         requiredControls: ['Copy hash', 'Open explorer'],
-        requiredText: ['Confirming', 'Transaction hash', 'Confirmations', '4'],
+        requiredText: [
+          'Sending',
+          'Submitted',
+          'Confirming',
+          'Confirmed',
+          'Transaction hash',
+          'Confirmations',
+          '4'
+        ],
         layoutExpectations: [
-          { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleSteps',
+            property: 'display',
+            value: 'grid'
+          },
           {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'grid'
+            value: 'flex'
           },
           { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
@@ -3684,14 +3749,27 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle-success',
         requiredControls: ['Copy hash', 'Open explorer', 'Close'],
-        requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13'],
+        requiredText: [
+          'Sending',
+          'Submitted',
+          'Confirming',
+          'Confirmed',
+          'Transaction hash',
+          'Confirmations',
+          '13'
+        ],
         layoutExpectations: [
-          { kind: 'hidden', selector: '.txLifecycleSteps' },
+          {
+            kind: 'computed-style',
+            selector: '.txLifecycleSteps',
+            property: 'display',
+            value: 'grid'
+          },
           {
             kind: 'computed-style',
             selector: '.txLifecycleFacts > div',
             property: 'display',
-            value: 'grid'
+            value: 'flex'
           },
           { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
           { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
@@ -3804,7 +3882,21 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum fee', 'Ready to revoke']
+        requiredText: ['Delegation evidence', 'Network fee', 'Ready to revoke'],
+        layoutExpectations: [
+          {
+            kind: 'computed-style',
+            selector: '.eip7702RevokeFeeRow > button',
+            property: 'gridRowStart',
+            value: '1'
+          },
+          {
+            kind: 'size',
+            selector: '.eip7702RevokeActions .requestActionContextIcon svg',
+            width: 20,
+            height: 20
+          }
+        ]
       },
       {
         id: `tray-revocation-review-short-${scale}`,
@@ -3815,7 +3907,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: SHORT_SHELL_HEIGHT,
         ready: '.eip7702RevokeRequest-review',
         requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-        requiredText: ['Delegation evidence', 'Maximum fee', 'Ready to revoke']
+        requiredText: ['Delegation evidence', 'Network fee', 'Ready to revoke']
       },
       {
         id: `tray-revocation-monitor-full-${scale}`,
@@ -4019,7 +4111,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       logicalHeight: SHORT_SHELL_HEIGHT,
       ready: '.eip7702RevokeRequest-review',
       requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
-      requiredText: ['Delegation evidence', 'Maximum fee'],
+      requiredText: ['Delegation evidence', 'Network fee'],
       layoutExpectations: [
         {
           kind: 'full-width',

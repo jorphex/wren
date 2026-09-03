@@ -326,7 +326,7 @@ export class RequestCommand extends React.Component {
             {hash && (
               <div>
                 <dt>{unconfirmedSubmission ? 'Expected transaction hash' : 'Transaction hash'}</dt>
-                <dd title={hash}>{`${hash.slice(0, 10)}…${hash.slice(-8)}`}</dd>
+                <dd title={hash}>{`${hash.slice(0, 6)}…${hash.slice(-4)}`}</dd>
               </div>
             )}
             {unconfirmedSubmission && (

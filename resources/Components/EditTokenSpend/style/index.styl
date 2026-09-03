@@ -9,8 +9,6 @@
 .wrenTokenApprovalContext
   display grid
   overflow hidden
-  border-top 1px solid var(--wren-ledger-rule)
-  border-bottom 1px solid var(--wren-ledger-rule)
   grid-template-columns minmax(0, 1fr)
 
   > div
@@ -22,12 +20,6 @@
     grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
     align-items center
     gap var(--wren-space-4)
-
-  > div + div
-    border-top 1px solid var(--wren-ledger-rule)
-
-  > div:nth-child(2)
-    border-left 0
 
 .wrenTokenApprovalContextLabel
   display block
