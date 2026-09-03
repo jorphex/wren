@@ -280,7 +280,7 @@ const joinedCanvasScenarios = () => [
             kind: 'computed-style',
             selector: '.accountChooserPanel .accountDrawerScroll',
             property: 'backgroundColor',
-            value: 'rgba(13, 18, 16, 0.66)'
+            value: 'rgba(10, 15, 12, 0.38)'
           },
           { kind: 'size', selector: '.accountChooserPanel .accountDrawerItem', height: 54 }
         ]
@@ -301,7 +301,7 @@ const joinedCanvasScenarios = () => [
             kind: 'computed-style',
             selector: '.accountChooserPanel .accountDrawerScroll',
             property: 'backgroundColor',
-            value: 'rgba(13, 18, 16, 0.66)'
+            value: 'rgba(10, 15, 12, 0.38)'
           },
           { kind: 'size', selector: '.accountChooserPanel .accountDrawerItem', height: 54 }
         ]
@@ -2586,7 +2586,7 @@ const reviewScenarios = () => [
         kind: 'computed-style',
         selector: '.accountSelector:not(.accountSelectorOpen) .accountSelectorScroll',
         property: 'backgroundColor',
-        value: 'rgba(13, 18, 16, 0.66)'
+        value: 'rgba(10, 15, 12, 0.38)'
       }
     ]
   },

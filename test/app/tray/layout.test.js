@@ -37,11 +37,36 @@ const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.sty
 const trayStyle = fs.readFileSync('app/tray/index.styl', 'utf8')
 const trayShellStyle = fs.readFileSync('app/tray/style/index.styl', 'utf8')
 const footerSource = fs.readFileSync('app/tray/Footer/index.js', 'utf8')
+const sharedCardStylePaths = [
+  'app/tray/Account/style/account.styl',
+  'app/tray/Account/Balances/style/index.styl',
+  'app/dash/index.styl',
+  'app/dash/Main/style/index.styl',
+  'app/dash/Send/style/index.styl',
+  'app/dash/Accounts/style/index.styl',
+  'app/dash/Accounts/Add/style/index.styl',
+  'app/dash/Tokens/AddToken/style/index.styl',
+  'app/dash/AddressBook/style/index.styl',
+  'app/dash/Settings/style/index.styl',
+  'app/dash/Dapps/style/index.styl'
+]
 
 test('keeps the compact wallet shell and its canvas on the same width contract', () => {
   expect(trayStyle).toMatch(/body::before[\s\S]*?width 620px/)
   expect(trayStyle).toMatch(/#panel[\s\S]*?width 620px/)
   expect(trayStyle).not.toMatch(/width 760px/)
+})
+
+test('uses one translucent card surface across tray and dashboard screens', () => {
+  expect(baseStyle).toMatch(/--wren-surface-card rgba\(10, 15, 12, \.38\)/)
+  for (const stylePath of sharedCardStylePaths) {
+    const style = fs.readFileSync(stylePath, 'utf8')
+    expect(style).not.toMatch(/rgba\(13, 18, 16, \.66\)|#0f1410|#0c100d/)
+  }
+  expect(accountStyle).not.toMatch(/^\s*--wren-surface-card/m)
+  expect(accountStyle).toMatch(
+    /\.accountPortfolioCard[\s\S]*?background [^\n]*var\(--wren-surface-card\)[\s\S]*?backdrop-filter blur\(10px\)/
+  )
 })
 
 test('keeps tray loaders subordinate to the shared reduced-motion override', () => {
