@@ -18,7 +18,7 @@ const replacementNotices = {
   'gas-fees-too-low': 'gas fees too low'
 }
 
-const CopyableDeploymentIdentity = ({ kind, value }) => {
+const CopyableDeploymentIdentity = ({ kind, note, value }) => {
   const [copied, copyValue] = useCopiedMessage(value, 1800)
   const label = kind === 'hash' ? 'deployment initcode hash' : 'provisional deployment address'
   const statusId = `transaction-review-deployment-${kind}-copy-status`
@@ -31,7 +31,8 @@ const CopyableDeploymentIdentity = ({ kind, value }) => {
         aria-describedby={statusId}
         onClick={() => copyValue()}
       >
-        {value}
+        <span className='transactionReviewDeploymentCopyValue'>{value}</span>
+        {note ? <span className='transactionReviewDeploymentNote'>{note}</span> : null}
       </button>
       <span id={statusId} className='transactionReviewDeploymentCopyStatus' role='status' aria-live='polite'>
         {copied ? `${kind === 'hash' ? 'Hash' : 'Address'} copied` : ''}
@@ -55,10 +56,10 @@ export const DeploymentReviewEvidence = ({ deployment }) => {
       aria-labelledby='transaction-review-deployment-title'
     >
       <div id='transaction-review-deployment-title' className='transactionReviewDeploymentTitle'>
-        Prepared deployment evidence
+        Deployment details
       </div>
       <div className='transactionReviewDeploymentRow'>
-        <span className='transactionReviewMetaLabel'>Deployment data</span>
+        <span className='transactionReviewMetaLabel'>Contract code</span>
         <span className='transactionReviewDeploymentValue'>
           <span>{`${deployment.initcodeBytes} bytes`}</span>
           <CopyableDeploymentIdentity kind='hash' value={deployment.initcodeHash} />
@@ -66,14 +67,17 @@ export const DeploymentReviewEvidence = ({ deployment }) => {
       </div>
       {deployment.provisionalAddress ? (
         <div className='transactionReviewDeploymentRow'>
-          <span className='transactionReviewMetaLabel'>Provisional address</span>
+          <span className='transactionReviewMetaLabel'>Address</span>
           <span className='transactionReviewDeploymentValue'>
-            <CopyableDeploymentIdentity kind='address' value={deployment.provisionalAddress} />
-            <span className='transactionReviewDeploymentNote'>
-              {nonce
-                ? `Based on pending nonce ${nonce}. This address may change before signing.`
-                : 'This address may change before signing.'}
-            </span>
+            <CopyableDeploymentIdentity
+              kind='address'
+              note={
+                nonce
+                  ? `Provisional address · Based on pending nonce ${nonce}; it may change before signing.`
+                  : 'Provisional address · It may change before signing.'
+              }
+              value={deployment.provisionalAddress}
+            />
           </span>
         </div>
       ) : null}

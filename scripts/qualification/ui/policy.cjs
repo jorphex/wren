@@ -54,6 +54,46 @@ const FOCUSED_WINDOW_SURFACE = Object.freeze([
   }
 ])
 
+const REQUEST_REVIEW_STATES = new Set([
+  'account-access-review',
+  'add-chain-review',
+  'add-token-review',
+  'revocation-monitor',
+  'revocation-review',
+  'signature-message-review',
+  'signature-permit-review',
+  'signature-typed-data-review',
+  'transaction-confirmed',
+  'transaction-confirming',
+  'transaction-deployment',
+  'transaction-deployment-confirmed',
+  'transaction-lookalike',
+  'transaction-responsive',
+  'transaction-safety-unavailable',
+  'transaction-signing-queue-review',
+  'transaction-submitted',
+  'transaction-unconfirmed',
+  'wallet-calls-adjustment',
+  'wallet-calls-funding',
+  'wallet-calls-review'
+])
+
+const enforceRequestReviewChrome = (scenario) => {
+  if (scenario.renderer !== 'tray' || !REQUEST_REVIEW_STATES.has(scenario.state)) return scenario
+  return {
+    ...scenario,
+    requiredControls:
+      scenario.state === 'revocation-monitor'
+        ? scenario.requiredControls
+        : [...new Set(['Back', ...(scenario.requiredControls || [])])],
+    layoutExpectations: [
+      ...WALLET_VIEW_CHROME,
+      ...FOCUSED_WINDOW_SURFACE,
+      ...(scenario.layoutExpectations || [])
+    ]
+  }
+}
+
 const RPC_WARNING_SCENARIOS = Object.freeze([
   {
     variant: 'gas-estimate',
@@ -199,13 +239,17 @@ const transactionDeploymentScenario = (geometry, scale, logicalHeight) => ({
     'Copy transaction sender address',
     'Copy deployment initcode hash',
     'Copy provisional deployment address',
+    'Adjust',
+    'Decrease nonce',
+    'Increase nonce',
     'Decline',
     'Sign transaction'
   ],
   requiredText: [
     'Deploy contract',
     'Wren Deploy',
-    'Deployment data',
+    'Deployment details',
+    'Contract code',
     '4 bytes',
     'Provisional address',
     'may change before signing'
@@ -327,40 +371,6 @@ const accountAccessReviewScenarios = () =>
     ready: '.requestApproveCompact .requestSign:not(:disabled)',
     requiredControls: ['Decline', 'Allow access'],
     requiredText: ['Only this account'],
-    layoutExpectations: [
-      { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
-      { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
-      {
-        kind: 'computed-style',
-        selector: '.lightweightRequestFact',
-        property: 'borderTopWidth',
-        value: '0px'
-      },
-      { kind: 'viewport-bottom', selector: '.requestApproveCompact' }
-    ]
-  }))
-
-const switchChainReviewScenarios = () =>
-  [
-    ['full', FULL_SHELL_HEIGHT],
-    ['short', SHORT_SHELL_HEIGHT]
-  ].map(([geometry, logicalHeight]) => ({
-    id: `tray-switch-chain-review-${geometry}-1`,
-    renderer: 'tray',
-    state: 'switch-chain-review',
-    scale: 1,
-    logicalWidth: 620,
-    logicalHeight,
-    ready: '.requestApproveCompact .requestSign:not(:disabled)',
-    requiredControls: ['Decline', 'Switch network'],
-    requiredText: [
-      'NETWORK CHANGE',
-      'Switch to Base?',
-      'https://basescan.org',
-      'Ethereum',
-      'Base',
-      'Account access is unchanged.'
-    ],
     layoutExpectations: [
       { kind: 'size', selector: '.requestApproveCompact .requestDecline', width: 104, height: 44 },
       { kind: 'size', selector: '.requestApproveCompact .requestSign', width: 128, height: 44 },
@@ -799,7 +809,6 @@ const reviewScenarios = () => [
     requiredText: [
       '1 ORDERED CALL',
       'Submit one transaction?',
-      'Partial execution possible',
       'Batch context',
       'Total maximum network fees',
       'Ready to submit'
@@ -849,8 +858,8 @@ const reviewScenarios = () => [
       layoutExpectations: [
         { kind: 'viewport-bottom', selector: '.requestNoticeTransactionDeploymentStatus' }
       ],
-      requiredControls: ['Copy hash', 'Open explorer', 'Verify source', 'Close'],
-      requiredText: ['Confirmed', 'Transaction hash', 'Confirmations', '13']
+      requiredControls: ['Copy hash', 'Open explorer', 'Verify source'],
+      requiredText: ['Confirmed', 'Tx hash', 'Confirmations', '13']
     }))
   ),
   ...INTERFACE_SCALES.flatMap((scale) =>
@@ -1467,6 +1476,10 @@ const reviewScenarios = () => [
       'AVAILABLE',
       'REQUIRED',
       'MISSING'
+    ],
+    layoutExpectations: [
+      { kind: 'text-unclipped', selector: '.walletCallsFundingRecovery .requestActionContextCopy' },
+      { kind: 'viewport-bottom', selector: '.walletCallsFundingRecovery' }
     ]
   },
   {
@@ -1479,7 +1492,11 @@ const reviewScenarios = () => [
     action: { type: 'clickText', text: 'Show receive QR' },
     ready: '.transactionFundingQr',
     requiredControls: ['Copy address', 'Hide receive QR', 'Reject request', 'Recheck'],
-    requiredText: ['More funds needed', 'Amounts at last check']
+    requiredText: ['More funds needed', 'Amounts at last check'],
+    layoutExpectations: [
+      { kind: 'text-unclipped', selector: '.walletCallsFundingRecovery .requestActionContextCopy' },
+      { kind: 'viewport-bottom', selector: '.walletCallsFundingRecovery' }
+    ]
   },
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -1737,12 +1754,11 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewAssetChanges',
     requiredText: [
-      'Balance changes',
+      'Estimated changes',
       'ETH',
       '1 ETH',
       'Wrapped Ether',
-      '1 WETH',
-      'Preview only — actual balance changes may differ.'
+      '1 WETH'
     ],
     layoutExpectations: [
       ...WALLET_VIEW_CHROME,
@@ -3492,7 +3508,8 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'USDC',
                 '2412',
                 'Jan 1, 2100',
-                'EIP-712'
+                'EIP-712',
+                'Verify this token approval on your signer before approving.'
               ],
               layoutExpectations: [
                 ...WALLET_VIEW_CHROME,
@@ -3511,6 +3528,59 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 },
                 { kind: 'text-unclipped', selector: '.permitAccountAddress' }
               ]
+            },
+            {
+              id: 'tray-signature-message-review-full-1',
+              renderer: 'tray',
+              state: 'signature-message-review',
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.messageSigningReview',
+              requiredControls: ['Back', 'Copy signing account address', 'Decline', 'Sign message'],
+              requiredText: [
+                'Sign a message',
+                'Readable text message',
+                'workshop.example',
+                'Review this exact message.'
+              ],
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
+            },
+            {
+              id: 'tray-signature-typed-data-review-full-1',
+              renderer: 'tray',
+              state: 'signature-typed-data-review',
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.signingReview',
+              requiredControls: ['Back', 'Decline', 'Sign message'],
+              requiredText: ['Sign data', 'Qualification', 'Domain, message, and types ›', 'workshop.example'],
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
+            },
+            {
+              id: 'tray-add-chain-review-full-1',
+              renderer: 'tray',
+              state: 'add-chain-review',
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.lightweightRequest',
+              requiredControls: ['Back', 'Copy proposed RPC endpoint', 'Decline', 'Review network'],
+              requiredText: ['Add Base to Wren?', 'Base', '8453', 'https://mainnet.base.org'],
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveLightweight' }]
+            },
+            {
+              id: 'tray-add-token-review-full-1',
+              renderer: 'tray',
+              state: 'add-token-review',
+              scale: 1,
+              logicalWidth: 620,
+              logicalHeight: FULL_SHELL_HEIGHT,
+              ready: '.lightweightRequest',
+              requiredControls: ['Back', 'Copy proposed token contract', 'Decline', 'Review token'],
+              requiredText: ['Add USDC to your token list?', 'USD Coin · USDC', 'Ethereum · 1'],
+              layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveLightweight' }]
             },
             {
               id: 'dash-split-control-right-1',
@@ -3679,12 +3749,9 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle',
         requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
         requiredText: [
-          'Review transaction',
-          'Sending',
+          'Transaction',
           'Submitted',
-          'Confirming',
-          'Confirmed',
-          'Transaction hash',
+          'Tx hash',
           'Confirmations',
           '0'
         ],
@@ -3715,11 +3782,8 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.txLifecycle',
         requiredControls: ['Copy hash', 'Open explorer'],
         requiredText: [
-          'Sending',
-          'Submitted',
           'Confirming',
-          'Confirmed',
-          'Transaction hash',
+          'Tx hash',
           'Confirmations',
           '4'
         ],
@@ -3741,6 +3805,27 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ]
       },
       {
+        id: `tray-transaction-unconfirmed-full-${scale}`,
+        renderer: 'tray',
+        state: 'transaction-unconfirmed',
+        scale,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.txLifecycle-warning',
+        requiredControls: ['Copy hash', 'Open explorer'],
+        requiredText: [
+          'Broadcast unconfirmed',
+          'Expected tx hash',
+          'RPC acceptance',
+          'Unconfirmed'
+        ],
+        layoutExpectations: [
+          { kind: 'text-unclipped', selector: '.txLifecycleDetailVisible' },
+          { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
+          { kind: 'viewport-bottom', selector: '.requestNoticeTransactionStatus' }
+        ]
+      },
+      {
         id: `tray-transaction-confirmed-full-${scale}`,
         renderer: 'tray',
         state: 'transaction-confirmed',
@@ -3748,13 +3833,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle-success',
-        requiredControls: ['Copy hash', 'Open explorer', 'Close'],
+        requiredControls: ['Copy hash', 'Open explorer'],
         requiredText: [
-          'Sending',
-          'Submitted',
-          'Confirming',
           'Confirmed',
-          'Transaction hash',
+          'Tx hash',
           'Confirmations',
           '13'
         ],
@@ -3920,7 +4002,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
         requiredControls: ['Keep monitoring', 'Stop monitoring'],
-        requiredText: ['Submission status unclear', 'cannot cancel a transaction']
+        requiredText: ['Submission status unclear', 'cannot cancel a transaction'],
+        layoutExpectations: [
+          { kind: 'text-unclipped', selector: '.eip7702StopMonitoringDialog .requestActionContextCopy' },
+          { kind: 'viewport-bottom', selector: '.eip7702StopMonitoringDialog' }
+        ]
       },
       {
         id: `tray-revocation-monitor-short-${scale}`,
@@ -3933,7 +4019,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         action: { type: 'clickText', text: 'Stop monitoring' },
         expectedInitialFocus: 'Keep monitoring',
         requiredControls: ['Keep monitoring', 'Stop monitoring'],
-        requiredText: ['Submission status unclear', 'cannot cancel a transaction']
+        requiredText: ['Submission status unclear', 'cannot cancel a transaction'],
+        layoutExpectations: [
+          { kind: 'text-unclipped', selector: '.eip7702StopMonitoringDialog .requestActionContextCopy' },
+          { kind: 'viewport-bottom', selector: '.eip7702StopMonitoringDialog' }
+        ]
       },
       {
         id: `onboard-intro-${scale}`,
@@ -4124,10 +4214,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   const defaultScenarios = [
     ...scenarios,
     ...accountAccessReviewScenarios(),
-    ...switchChainReviewScenarios(),
     ...sendComposerScenarios().filter(({ state }) => state === 'send-asset-picker')
   ]
-  return includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
+  return (includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios).map(
+    enforceRequestReviewChrome
+  )
 }
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({

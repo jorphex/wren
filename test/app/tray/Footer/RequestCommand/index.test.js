@@ -195,7 +195,7 @@ it.each([
   const view = renderMountedCommand(req, 'sentStatus', commandStore())
 
   expect(screen.queryByRole('button', { name: 'Verify source' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
   view.unmount()
 })
 
@@ -636,7 +636,7 @@ it('omits explorer access without a configured explorer while preserving hash co
 })
 
 it.each([
-  ['sending', 'Sending', 'Wren is sending the transaction to the network.'],
+  ['sending', 'Submitted', 'Wren is sending the transaction to the network.'],
   ['verifying', 'Submitted', 'Sent to the network.'],
   ['confirming', 'Confirming', 'Waiting for network confirmation.'],
   ['confirmed', 'Confirmed', 'The transaction is confirmed on Ethereum.'],
@@ -656,10 +656,11 @@ it('presents an ambiguous one-shot broadcast without claiming network acceptance
   })
 
   expect(transactionLifecyclePresentation(req, 'Ethereum')).toMatchObject({
-    title: 'Submission unconfirmed',
+    title: 'Broadcast unconfirmed',
     detail:
-      'Wren made one broadcast attempt, but the RPC has not confirmed acceptance yet. Wren is checking the network and will not automatically resubmit.',
-    steps: ['Broadcast once', 'Checking', 'Confirming', 'Confirmed']
+      'RPC acceptance is still unconfirmed. Wren is checking the network and will not resubmit automatically.',
+    position: 0,
+    tone: 'warning'
   })
 })
 
@@ -671,7 +672,7 @@ it('keeps transaction monitor evidence and actions stable without hover substitu
   })
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore())
 
-  expect(screen.getAllByText('Submitted')).toHaveLength(2)
+  expect(screen.getByText('Submitted')).toBeTruthy()
   expect(document.querySelector('.txLifecycleMark svg').getAttribute('width')).toBe('20')
   expect(screen.getByText('Sent to the network.')).toBeTruthy()
   expect(screen.getByRole('list', { name: 'Transaction progress' })).toBeTruthy()
@@ -702,10 +703,11 @@ it('shows truthful unconfirmed-submission evidence without replacement actions',
   const status = document.querySelector('.txLifecycle')
   expect(status.getAttribute('role')).toBe('status')
   expect(status.getAttribute('aria-live')).toBe('polite')
-  expect(status.textContent).toContain('Submission unconfirmed')
-  expect(status.textContent).toContain('Wren made one broadcast attempt')
-  expect(status.textContent).toContain('will not automatically resubmit')
-  expect(screen.getByText('Expected transaction hash')).toBeTruthy()
+  expect(status.textContent).toContain('Broadcast unconfirmed')
+  expect(status.textContent).toContain('RPC acceptance is still unconfirmed')
+  expect(document.querySelector('.requestNoticeTransactionUnconfirmed')).toBeTruthy()
+  expect(status.textContent).toContain('will not resubmit automatically')
+  expect(screen.getByText('Expected tx hash')).toBeTruthy()
   expect(screen.getByText('RPC acceptance')).toBeTruthy()
   expect(screen.getByText('Unconfirmed')).toBeTruthy()
   expect(screen.queryByText('Confirmations')).toBeNull()

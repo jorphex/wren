@@ -98,12 +98,12 @@ describe('confirm', () => {
       />
     )
 
-    expect(screen.getByRole('group', { name: 'Prepared deployment evidence' })).toBeTruthy()
-    expect(screen.getByText('Deployment data')).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Deployment details' })).toBeTruthy()
+    expect(screen.getByText('Contract code')).toBeTruthy()
     expect(screen.getByText('4 bytes')).toBeTruthy()
     expect(screen.getByText(hash)).toBeTruthy()
     expect(screen.getByText(provisionalAddress)).toBeTruthy()
-    expect(screen.getByText(/Based on pending nonce 5.*may change before signing/)).toBeTruthy()
+    expect(screen.getByText(/Provisional address.*pending nonce 5.*may change before signing/)).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Copy deployment initcode hash' }))
     expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: hash })
@@ -759,14 +759,14 @@ describe('simulation review', () => {
       />
     )
 
-    expect(screen.getByText('Balance changes')).toBeTruthy()
+    expect(screen.getByText('Estimated changes')).toBeTruthy()
     expect(screen.getByText('USD Coin')).toBeTruthy()
     const outgoingDirection = screen.getByText('You send')
     const incomingDirection = screen.getByText('You receive')
     expect(outgoingDirection.className).toBe('transactionReviewScreenReaderOnly')
     expect(incomingDirection.className).toBe('transactionReviewScreenReaderOnly')
     expect(screen.queryByText('$3,200.00')).toBeNull()
-    expect(screen.getByRole('note').textContent).toBe('Preview only — actual balance changes may differ.')
+    expect(screen.queryByRole('note')).toBeNull()
     expect(screen.queryByText(/RPC simulation/i)).toBeNull()
     const outgoing = outgoingDirection.closest('.transactionReviewAssetChangeOutgoing')
     const incoming = incomingDirection.closest('.transactionReviewAssetChangeIncoming')
@@ -819,7 +819,7 @@ describe('simulation review', () => {
       '7WETH',
       '<0.000001ETH'
     ])
-    expect(screen.getByRole('note').textContent).toBe('Preview only — actual balance changes may differ.')
+    expect(screen.queryByRole('note')).toBeNull()
   })
 
   it('exposes contract data as a named disclosure in the main review', async () => {

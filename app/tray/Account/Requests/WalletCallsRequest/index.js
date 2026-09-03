@@ -326,12 +326,14 @@ export class WalletCallsRequest extends React.Component {
             </div>
             <h2>Submit {req.calls.length === 1 ? 'one transaction' : `${req.calls.length} transactions`}?</h2>
           </div>
-          <div className='walletCallsAtomicWarning'>
-            <strong>
-              <Icon name='alert' size={17} /> Partial execution possible
-            </strong>
-            <span>An earlier transaction can succeed even if a later one fails.</span>
-          </div>
+          {req.calls.length > 1 ? (
+            <div className='walletCallsAtomicWarning'>
+              <strong>
+                <Icon name='alert' size={17} /> Partial execution possible
+              </strong>
+              <span>An earlier transaction can succeed even if a later one fails.</span>
+            </div>
+          ) : null}
         </section>
 
         <section className='walletCallsSection'>

@@ -27,6 +27,10 @@ const transactionStyle = fs.readFileSync(
   'app/tray/Account/Requests/TransactionRequest/style/new.styl',
   'utf8'
 )
+const transactionRequestSource = fs.readFileSync(
+  'app/tray/Account/Requests/TransactionRequest/index.js',
+  'utf8'
+)
 const revokeStyle = fs.readFileSync('app/tray/Account/Requests/style/wren-eip7702-revoke.styl', 'utf8')
 const walletCallsStatusStyle = fs.readFileSync('app/tray/Account/WalletCallsStatus/style/index.styl', 'utf8')
 const activityStyle = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
@@ -72,10 +76,17 @@ test('keeps review ledgers and the approval editor on one shared value anchor', 
   expect(tokenSpendStyle).not.toContain('.wrenTokenApprovalCurrentAction')
 })
 
-test('keeps prepared deployment copy identities at a full control height', () => {
+test('keeps prepared deployment copy identities compact and aligned', () => {
   expect(signingStyle).toMatch(
-    /button\.transactionReviewDeploymentCopy[\s\S]*?display flex[\s\S]*?align-items center[\s\S]*?min-height 44px/
+    /button\.transactionReviewDeploymentCopy[\s\S]*?display grid[\s\S]*?align-content center[\s\S]*?min-height 44px[\s\S]*?gap 2px/
   )
+})
+
+test('keeps contract-data disclosure rows free of standalone dividers', () => {
+  expect(signingStyle).toMatch(
+    /> \.clusterRow:first-child \+ \.clusterRow:not\(\.transactionReviewAssetChanges\):not\(\.transactionReviewDataRow\)/
+  )
+  expect(signingStyle).not.toMatch(/> \.transactionReviewDataRow\s*\n\s*border-top/)
 })
 
 test('squares the canvas and panel corners only along an open workspace seam', () => {
@@ -194,11 +205,11 @@ test('centers shared filter icons in the 44px field and anchors the startup cont
   )
 })
 
-test('keeps expanded balances as a plain ledger with crisp circular progress markers', () => {
+test('keeps expanded balances plain and transaction progress compact', () => {
   expect(balancesExpandedSource).not.toMatch(/ClusterBox/)
   expect(balancesExpandedSource).toMatch(/<Icon name='search' size=\{15\}/)
   expect(signingStyle).toMatch(
-    /\.txLifecycleStepMarker[\s\S]*?width 8px[\s\S]*?height 8px[\s\S]*?box-sizing border-box[\s\S]*?border-radius 999px/
+    /\.txLifecycleStepMarker[\s\S]*?width 24px[\s\S]*?height 24px[\s\S]*?box-sizing border-box[\s\S]*?border-radius var\(--wren-radius-sm\)/
   )
 })
 
@@ -353,10 +364,11 @@ test('lets transparent account artwork merge with the ruled ledger canvas', () =
   )
 })
 
-test('keeps ordered wallet calls on a flat ruled ledger', () => {
+test('keeps ordered wallet calls free of redundant rules', () => {
   expect(walletCallsStyle).toMatch(
-    /\.walletCall[\s\S]*?border-top 1px solid var\(--wren-ledger-rule\)[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
+    /\.walletCall[\s\S]*?border-top 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
+  expect(walletCallsStyle).toMatch(/\.walletCallsSection[\s\S]*?border-top 0/)
 })
 
 test('keeps ordinary account subviews below the shell header', () => {
@@ -449,7 +461,10 @@ test('keeps transaction review on one flat details ledger', () => {
     /\.transactionReviewMainApproval[\s\S]*?\._txDescription[\s\S]*?min-height 72px/
   )
   expect(signingStyle).toMatch(
-    /\.transactionReviewAssetChangesInner[\s\S]*?padding var\(--wren-space-1\) 0 var\(--wren-space-2\)[\s\S]*?\.transactionReviewAssetChangesHeader[\s\S]*?min-height 22px/
+    /\.transactionReviewDeploymentRow[\s\S]*?align-items baseline[\s\S]*?> \.transactionReviewMetaLabel[\s\S]*?padding-top 0/
+  )
+  expect(signingStyle).toMatch(
+    /\.transactionReviewAssetChangesInner[\s\S]*?padding var\(--wren-space-3\) var\(--wren-space-4\)[\s\S]*?border 1px solid var\(--wren-border-subtle\)[\s\S]*?\.transactionReviewAssetChangesHeader[\s\S]*?min-height 22px/
   )
   expect(signingStyle).toMatch(/\.transactionReviewAssetChange\n[\s\S]*?min-height 32px[\s\S]*?padding 2px 0/)
   expect(signingStyle).toMatch(/\.transactionReviewScreenReaderOnly[\s\S]*?clip-path inset\(50%\)/)
@@ -461,6 +476,14 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   expect(signingStyle).toMatch(/\.clusterValue[\s\S]*?justify-content flex-start[\s\S]*?text-align left/)
   expect(transactionEvidenceStyle).toMatch(/&\.transactionEvidenceGroupDisclosure\n {6}padding-top 0/)
+})
+
+test('keeps fee and nonce editing on every active transaction review variant', () => {
+  expect(transactionRequestSource).toMatch(
+    /<TxFee[\s\S]*?req=\{req\}[\s\S]*?readOnly=\{readOnly\}[\s\S]*?<NonceControl req=\{req\} hint='Transaction sequence' readOnly=\{readOnly\}/
+  )
+  expect(signingStyle).toMatch(/\.transactionReviewFeeAdjust[\s\S]*?min-width 88px[\s\S]*?height 32px/)
+  expect(signingStyle).toMatch(/\.transactionNonceButton[\s\S]*?width 44px[\s\S]*?height 44px/)
 })
 
 test('keeps dapp access actions compact without changing transaction actions', () => {
@@ -483,13 +506,18 @@ test('keeps compact transfer summaries inline and revocation review on one focus
     /\.txDescriptionSummaryStandalone[\s\S]*?\._txDescriptionTransfer[\s\S]*?display flex[\s\S]*?align-items baseline[\s\S]*?gap var\(--wren-space-2\)/
   )
   expect(revokeStyle).toMatch(/\.eip7702RevokeRequest[\s\S]*?background transparent/)
+  expect(revokeStyle).toMatch(
+    /\.eip7702RevokeFeeRow[\s\S]*?strong[\s\S]*?grid-row 1 \/ 3[\s\S]*?align-self center[\s\S]*?> button[\s\S]*?grid-row 1 \/ 3/
+  )
   expect(revokeStyle).not.toMatch(
     /@media \(max-width: 620px\)[\s\S]*?\.eip7702RevokeDocument[\s\S]*?padding-(?:right|left) var\(--wren-space-3\)/
   )
 })
 
 test('keeps signing evidence readable and operable when the shell is scaled', () => {
-  expect(signingStyle).toMatch(/\.txLifecycleStep[\s\S]*?font-size 12px/)
+  expect(signingStyle).toMatch(
+    /\.txLifecycleSteps[\s\S]*?grid-template-columns repeat\(3, minmax\(0, 1fr\)\)/
+  )
   expect(signingStyle).toMatch(
     /\.txLifecycleAction,[\s\S]*?\.txLifecycleCancelRequest[\s\S]*?min-height 44px[\s\S]*?height 44px/
   )
@@ -500,8 +528,15 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
     /\.requestSign:disabled \.requestSignButton,[\s\S]*?\.requestSign:disabled \.requestSignButton:hover[\s\S]*?color var\(--wren-text-inverse\)[\s\S]*?background var\(--wren-control-texture-light\), var\(--wren-accent-primary\)/
   )
   expect(signingStyle).toMatch(
-    /\.requestNoticeTransactionStatus[\s\S]*?\.requestNoticeInner[\s\S]*?display grid[\s\S]*?grid-template-rows 44px 25px 18px[\s\S]*?\.txLifecycle[\s\S]*?grid-row 1 \/ 3[\s\S]*?\.txLifecycleSteps[\s\S]*?display grid[\s\S]*?\.txLifecycleEvidence[\s\S]*?display contents[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-row 3[\s\S]*?grid-template-columns minmax\(150px, 1fr\) repeat\(3, max-content\)[\s\S]*?div[\s\S]*?display flex[\s\S]*?dt,[\s\S]*?dd[\s\S]*?line-height 18px/
+    /\.requestNoticeTransactionStatus[\s\S]*?\.requestNoticeInner[\s\S]*?display grid[\s\S]*?grid-template-rows 44px 18px[\s\S]*?\.txLifecycle[\s\S]*?grid-row 1[\s\S]*?\.txLifecycleSteps[\s\S]*?display grid[\s\S]*?\.txLifecycleEvidence[\s\S]*?display contents[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-row 2[\s\S]*?grid-template-columns minmax\(150px, 1fr\) repeat\(3, max-content\)[\s\S]*?div[\s\S]*?display flex[\s\S]*?dt,[\s\S]*?dd[\s\S]*?line-height 18px/
   )
+  expect(signingStyle).toMatch(
+    /\.requestNoticeTransactionUnconfirmed[\s\S]*?height 114px[\s\S]*?grid-template-rows 44px 30px 18px[\s\S]*?\.txLifecycleFacts[\s\S]*?grid-row 3/
+  )
+  expect(signingStyle).toMatch(
+    /\.txLifecycleFacts[\s\S]*?> div:nth-child\(2\):last-child[\s\S]*?grid-column 4/
+  )
+  expect(signingStyle).not.toMatch(/\.requestNoticeTransactionDeploymentStatus\n {2}min-height/)
   expect(signingStyle).toMatch(
     /\.permitAccountIdentity[\s\S]*?display grid[\s\S]*?\.permitAccountAddress[\s\S]*?white-space nowrap/
   )
@@ -517,10 +552,25 @@ test('keeps signing evidence readable and operable when the shell is scaled', ()
 
 test('keeps recoverable request feedback from shifting its icon and actions', () => {
   expect(signingStyle).toMatch(
+    /\.requestActionContextIcon[\s\S]*?> svg[\s\S]*?display block[\s\S]*?width 20px[\s\S]*?height 20px[\s\S]*?transform translate\(1px, 1px\)/
+  )
+  expect(signingStyle).toMatch(
+    /\.txLifecycleMark[\s\S]*?> svg[\s\S]*?display block[\s\S]*?transform translateX\(1px\)/
+  )
+  expect(signingStyle).toMatch(
     /\.requestApproveRecoverable[\s\S]*?height auto[\s\S]*?\.requestActionContext[\s\S]*?align-items flex-start[\s\S]*?\.requestActionContextIcon[\s\S]*?margin-top 2px/
   )
   expect(signingStyle).toMatch(
     /\.requestApproveRecoverable[\s\S]*?\.requestActionError[\s\S]*?min-height 16px/
+  )
+  expect(footerSource).toMatch(
+    /walletCallsFundingRecovery\$\{[\s\S]*?walletCallsFundingRecoveryEvidence[\s\S]*?walletCallsFundingRecoveryQr/
+  )
+  expect(signingStyle).toMatch(
+    /\.walletCallsFundingRecovery\n[\s\S]*?min-height 160px[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.walletCallsFundingRecoveryEvidence\n {2}min-height 272px[\s\S]*?\.walletCallsFundingRecoveryQr\n {2}min-height 430px/
+  )
+  expect(accountStyle).toMatch(
+    /&:has\(\.eip7702StopMonitoringDialog\)[\s\S]*?--wren-request-dialog-shelf-height 173px[\s\S]*?&:has\(\.walletCallsFundingRecovery\)[\s\S]*?--wren-wallet-calls-recovery-shelf-height 165px[\s\S]*?&:has\(\.walletCallsFundingRecoveryEvidence\)[\s\S]*?277px[\s\S]*?&:has\(\.walletCallsFundingRecoveryQr\)[\s\S]*?430px/
   )
 })
 
@@ -529,10 +579,13 @@ test('keeps delegation revocation readable and operable at scaled narrow widths'
     /\.eip7702RevokeRequestSummary[\s\S]*?font-family var\(--wren-font-ui\)[\s\S]*?> span[\s\S]*?font-family var\(--wren-font-mono\)/
   )
   expect(revokeStyle).toMatch(
-    /\.eip7702RevokeFeeRow[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?grid-row 1[\s\S]*?align-self center[\s\S]*?min-height 44px/
+    /\.eip7702RevokeFeeRow[\s\S]*?gap 2px var\(--wren-space-4\)[\s\S]*?min-height 52px[\s\S]*?> button[\s\S]*?grid-row 1[\s\S]*?align-self center[\s\S]*?min-height 44px/
   )
   expect(revokeStyle).toMatch(
     /@media \(max-width: 600px\)[\s\S]*?\.eip7702RevokeFacts > div[\s\S]*?grid-template-columns 1fr[\s\S]*?\.eip7702RevokeFeeRow[\s\S]*?grid-template-columns 1fr auto[\s\S]*?> button[\s\S]*?width 100%/
+  )
+  expect(revokeStyle).toMatch(
+    /\.eip7702StopMonitoringDialog[\s\S]*?min-height 168px[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.requestActionButtons[\s\S]*?grid-template-columns repeat\(2, minmax\(0, 1fr\)\)/
   )
 })
 

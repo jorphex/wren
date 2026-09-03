@@ -411,8 +411,7 @@
       background var(--wren-surface-active)
 
   .transactionReviewOverview
-    > .clusterRow:first-child + .clusterRow:not(.transactionReviewAssetChanges),
-    > .transactionReviewDataRow
+    > .clusterRow:first-child + .clusterRow:not(.transactionReviewAssetChanges):not(.transactionReviewDataRow)
       border-top 1px solid rgba(43, 53, 45, .68)
 
   .requestItemHeader
@@ -538,13 +537,17 @@
 
   .transactionReviewAssetChangesInner
     width 100%
-    padding var(--wren-space-1) 0 var(--wren-space-2)
+    box-sizing border-box
+    padding var(--wren-space-3) var(--wren-space-4)
+    border 1px solid var(--wren-border-subtle)
+    border-radius var(--wren-radius-md)
+    background var(--wren-surface-card)
 
   .transactionReviewAssetChangesHeader
     display flex
     min-height 22px
     align-items center
-    padding-bottom 0
+    padding-bottom var(--wren-space-1)
 
     strong
       color var(--wren-text-primary)
@@ -754,25 +757,27 @@
     gap 0
 
   .transactionReviewDeploymentTitle
-    padding var(--wren-space-2) 0
-    color var(--wren-text-tertiary)
-    font-family var(--wren-font-utility)
-    font-size var(--wren-type-caption)
-    letter-spacing .04em
-    text-transform uppercase
+    padding var(--wren-space-2) 0 var(--wren-space-1)
+    color var(--wren-text-primary)
+    font-family var(--wren-font-ui)
+    font-size var(--wren-type-small)
+    font-weight 620
 
   .transactionReviewDeploymentRow
     display grid
-    min-height 56px
+    min-height var(--transaction-review-row-height)
     grid-template-columns var(--wren-review-label-column) minmax(0, 1fr)
-    align-items center
+    align-items baseline
     column-gap var(--wren-space-4)
+
+    > .transactionReviewMetaLabel
+      padding-top 0
 
   .transactionReviewDeploymentValue
     display grid
     min-width 0
     gap var(--wren-space-1)
-    padding var(--wren-space-2) 0
+    padding 0 0 var(--wren-space-1)
     color var(--wren-text-primary)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-small)
@@ -781,17 +786,21 @@
     overflow-wrap anywhere
     color var(--wren-text-secondary)
 
+  .transactionReviewDeploymentCopyValue
+    overflow-wrap anywhere
+
   .transactionReviewDeploymentIdentity
     display grid
     min-width 0
     gap 2px
 
   button.transactionReviewDeploymentCopy
-    display flex
-    align-items center
+    display grid
+    align-content center
     width fit-content
     max-width 100%
     min-height 44px
+    gap 2px
     border 0
     padding 0
     background transparent
@@ -812,6 +821,10 @@
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
 
+    &:empty
+      display none
+      min-height 0
+
   .transactionReviewDeploymentNote
     color var(--wren-text-tertiary)
     font-family var(--wren-font-ui)
@@ -823,8 +836,8 @@
 
   .transactionNonceButton
     display flex
-    width 32px
-    height 32px
+    width 44px
+    height 44px
     padding 0
     align-items center
     justify-content center
@@ -1170,8 +1183,8 @@
     display block
 
 .requestNoticeTransactionStatus
-  height 118px
-  min-height 118px
+  height 88px
+  min-height 88px
   background var(--wren-bg-subtle)
 
   .requestNoticeInner
@@ -1181,10 +1194,20 @@
     padding 8px 20px
     box-sizing border-box
     grid-template-columns minmax(0, 1fr) auto
-    grid-template-rows 44px 25px 18px
+    grid-template-rows 44px 18px
     align-content center
     align-items center
     gap 2px 16px
+
+.requestNoticeTransactionUnconfirmed
+  height 114px
+  min-height 114px
+
+  .requestNoticeInner
+    grid-template-rows 44px 30px 18px
+
+  .txLifecycleFacts
+    grid-row 3
 
 .requestNoticeDeclined
   height 114px
@@ -1277,12 +1300,9 @@
     > svg
       display block
       flex none
-
-  .requestActionContextIconAlert > svg
-    transform translateX(2px)
-
-  .requestActionContextIconSign > svg
-    transform translateX(2px)
+      width 20px
+      height 20px
+      transform translate(1px, 1px)
 
   .requestActionContextCopy
     display block
@@ -1500,17 +1520,13 @@
       max-width none
       height 44px
 
-.requestNoticeTransactionDeploymentStatus
-  min-height 160px
-
 .txLifecycle
   display grid
   grid-column 1
-  grid-row 1 / 3
-  grid-template-columns minmax(0, 1fr)
-  grid-template-rows 44px 25px
+  grid-row 1
+  grid-template-columns max-content minmax(112px, 150px)
   align-items center
-  gap 0
+  gap 18px
 
 .txLifecycleSummary
   display flex
@@ -1535,6 +1551,7 @@
     display block
     flex 0 0 auto
     overflow visible
+    transform translateX(1px)
 
 .txLifecycle-success .txLifecycleMark
   color var(--wren-success)
@@ -1543,6 +1560,7 @@
   color var(--wren-danger)
 
 .txLifecycleCopy
+  position relative
   display block
   min-width 0
 
@@ -1556,33 +1574,52 @@
     font-weight 650
 
   span
-    margin-top 1px
-    color var(--wren-text-muted)
+    position absolute
+    width 1px
+    height 1px
+    margin -1px
+    padding 0
+    overflow hidden
+    clip rect(0, 0, 0, 0)
+    white-space nowrap
+    border 0
+
+  span.txLifecycleDetailVisible
+    position absolute
+    top calc(100% + 3px)
+    left 0
+    width 410px
+    max-width calc(100vw - 230px)
+    height auto
+    margin 0
+    overflow visible
+    clip auto
+    color var(--wren-warning)
     font-family var(--wren-font-utility)
     font-size var(--wren-type-caption)
     line-height 15px
+    white-space normal
 
 .txLifecycleSteps
   display grid
-  height 25px
+  height 28px
   margin 0
   padding 0
   list-style none
-  grid-template-columns repeat(4, minmax(0, 1fr))
+  grid-template-columns repeat(3, minmax(0, 1fr))
+  align-items center
 
 .txLifecycleStep
   position relative
   min-width 0
-  padding-top 11px
+  height 28px
   color var(--wren-text-muted)
   font-family var(--wren-font-utility)
-  font-size 12px
-  line-height 12px
-  text-align center
+  font-size 0
 
   &::before
     position absolute
-    top 4px
+    top 13px
     right 50%
     left -50%
     height 1px
@@ -1595,15 +1632,20 @@
 .txLifecycleStepMarker
   position absolute
   z-index 1
-  top 1px
+  top 2px
   left 50%
-  width 8px
-  height 8px
-  margin-left -4px
+  display grid
+  width 24px
+  height 24px
+  margin-left -12px
   box-sizing border-box
   border 1px solid var(--wren-border-strong)
-  border-radius 999px
+  border-radius var(--wren-radius-sm)
   background var(--wren-bg-subtle)
+  place-items center
+
+  > svg
+    display block
 
 .txLifecycleStep-complete,
 .txLifecycleStep-current
@@ -1613,6 +1655,7 @@
     background var(--wren-accent-primary)
 
   .txLifecycleStepMarker
+    color var(--wren-text-inverse)
     border-color var(--wren-accent-primary)
     background var(--wren-accent-primary)
 
@@ -1629,6 +1672,15 @@
 .txLifecycle-failure .txLifecycleStep-current .txLifecycleStepMarker
   border-color var(--wren-danger)
   background var(--wren-danger)
+
+.txLifecycle-warning .txLifecycleMark
+  color var(--wren-warning)
+  border-color var(--wren-warning)
+
+.txLifecycle-warning .txLifecycleStep-current .txLifecycleStepMarker
+  color var(--wren-warning)
+  border-color var(--wren-warning)
+  background var(--wren-bg-elevated)
 
 .requestApproveRecoverable
   height auto
@@ -1650,7 +1702,7 @@
 
 .walletCallsFundingRecovery
   height auto
-  min-height 224px
+  min-height 160px
   padding-top 16px
   padding-bottom 16px
   grid-template-columns minmax(0, 1fr)
@@ -1680,6 +1732,12 @@
     min-width 0
     max-width none
     flex-basis auto
+
+.walletCallsFundingRecoveryEvidence
+  min-height 272px
+
+.walletCallsFundingRecoveryQr
+  min-height 430px
 
 .transactionFundingFacts
   display grid
@@ -1730,7 +1788,7 @@
 .txLifecycleFacts
   display grid
   grid-column 1 / -1
-  grid-row 3
+  grid-row 2
   margin 0
   padding 0
   grid-template-columns minmax(150px, 1fr) repeat(3, max-content)
@@ -1765,6 +1823,9 @@
 
   div:first-child dd
     min-width 88px
+
+  > div:nth-child(2):last-child
+    grid-column 4
 
 .txLifecycleActions
   display flex

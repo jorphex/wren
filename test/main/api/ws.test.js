@@ -692,7 +692,7 @@ it('forwards a passive companion account probe without opening access UI', async
   pageSocket.emit('close')
 })
 
-it('keeps BaseScan network consent and account access as separate requests on one authenticated page socket', async () => {
+it('keeps BaseScan network switching and account access as separate RPC calls on one authenticated page socket', async () => {
   const pageSocket = await createAuthenticatedPageSocket()
   const callbacks = []
   provider.send.mockImplementation((payload, callback) => callbacks.push({ payload, callback }))
@@ -749,7 +749,7 @@ it('keeps BaseScan network consent and account access as separate requests on on
   pageSocket.emit('close')
 })
 
-it('carries approved BaseScan network consent and exact-origin events through the authenticated socket', async () => {
+it('switches an authenticated BaseScan origin without a consent prompt and emits exact-origin events', async () => {
   const actualProvider = jest.requireActual('../../../main/provider').default
   const pageSocket = await createAuthenticatedPageSocket()
   const alternatePageSocket = await createAuthenticatedPageSocket({
@@ -885,7 +885,6 @@ it('carries approved BaseScan network consent and exact-origin events through th
         }
       )
     ).toBe(true)
-
     pageSocket.emit(
       'message',
       JSON.stringify({
@@ -898,17 +897,7 @@ it('carries approved BaseScan network consent and exact-origin events through th
     )
     await flushPromises()
 
-    expect(pageSocket.send).not.toHaveBeenCalled()
-    expect(pending).toHaveLength(1)
-    expect(pending[0]).toMatchObject({ type: 'switchChain', origin: exactOriginId })
-
-    await new Promise((resolve, reject) =>
-      actualProvider.approveSwitchChain(account, pending[0].handlerId, (error) =>
-        error ? reject(error) : resolve()
-      )
-    )
-    await flushPromises()
-
+    expect(pending).toHaveLength(0)
     expect(pageSocket.send.mock.calls.map(([message]) => JSON.parse(message))).toEqual([
       { id: 65, jsonrpc: '2.0', result: null }
     ])

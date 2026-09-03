@@ -163,7 +163,23 @@ it('fails closed for failed, malformed, mismatched, or stale preparation', () =>
   expect(screen.getByRole('alert').textContent).toMatch(/fee evidence is invalid/i)
 })
 
-it('warns about non-atomic partial execution without putting approval controls in content', () => {
+it('warns about non-atomic partial execution only when there is more than one transaction', () => {
+  render(
+    <WalletCallsRequest
+      originName='example.test'
+      chainData={{ chainName: 'Ethereum' }}
+      req={request([
+        { to: target, value: '0x0', data: '0x' },
+        { to: target, value: '0x1', data: '0x' }
+      ])}
+    />
+  )
+
+  expect(screen.getByText('Partial execution possible')).toBeTruthy()
+  expect(screen.getByText(/earlier transaction can succeed/i)).toBeTruthy()
+  expect(screen.queryByText('Submit Batch')).toBeNull()
+
+  cleanup()
   render(
     <WalletCallsRequest
       originName='example.test'
@@ -171,10 +187,7 @@ it('warns about non-atomic partial execution without putting approval controls i
       req={request([{ to: target, value: '0x0', data: '0x' }])}
     />
   )
-
-  expect(screen.getByText('Partial execution possible')).toBeTruthy()
-  expect(screen.getByText(/earlier transaction can succeed/i)).toBeTruthy()
-  expect(screen.queryByText('Submit Batch')).toBeNull()
+  expect(screen.queryByText('Partial execution possible')).toBeNull()
 })
 
 it('blocks delegated-account submission and reports unavailable delegation checks', () => {

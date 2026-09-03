@@ -18,7 +18,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(107)
+  expect(scenarios).toHaveLength(112)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -66,8 +66,6 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
       'tray-revocation-review-capped-1.5',
       'tray-account-access-review-full-1',
       'tray-account-access-review-short-1',
-      'tray-switch-chain-review-full-1',
-      'tray-switch-chain-review-short-1',
       'tray-signature-permit-review-full-1',
       'dash-split-control-right-1',
       'tray-split-wallet-right-1'
@@ -170,17 +168,8 @@ it('qualifies the transaction approval editor as a navigable adjustable allowanc
   })
 })
 
-it('qualifies network consent separately from account access at the real tray width', () => {
-  const scenarios = scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')
-
-  expect(scenarios).toHaveLength(2)
-  for (const scenario of scenarios) {
-    expect(scenario.logicalWidth).toBe(620)
-    expect(scenario.requiredControls).toEqual(['Decline', 'Switch network'])
-    expect(fixtureFor(scenario).main.accounts[QUALIFICATION_ACCOUNT].requests).toHaveProperty(
-      'qualification-switch-chain'
-    )
-  }
+it('does not expose a review screen for configured network switches', () => {
+  expect(scenarioMatrix().filter(({ state }) => state === 'switch-chain-review')).toHaveLength(0)
 })
 
 it('qualifies compact account-access actions at the real tray width', () => {
@@ -189,7 +178,7 @@ it('qualifies compact account-access actions at the real tray width', () => {
   expect(scenarios).toHaveLength(2)
   for (const scenario of scenarios) {
     expect(scenario.logicalWidth).toBe(620)
-    expect(scenario.requiredControls).toEqual(['Decline', 'Allow access'])
+    expect(scenario.requiredControls).toEqual(['Back', 'Decline', 'Allow access'])
     expect(fixtureFor(scenario).main.accounts[QUALIFICATION_ACCOUNT].requests).toHaveProperty(
       'qualification-account-access'
     )
@@ -1259,7 +1248,7 @@ it('requires review actions and the safe initial focus for ambiguous monitoring'
   const review = reviews.find(({ scale }) => scale === 1)
   const monitor = scenarios.find(({ state, scale }) => state === 'revocation-monitor' && scale === 1)
 
-  expect(review.requiredControls).toEqual(['Cancel', 'Revoke delegation', 'Adjust'])
+  expect(review.requiredControls).toEqual(['Back', 'Cancel', 'Revoke delegation', 'Adjust'])
   for (const scenario of reviews) {
     expect(scenario.requiredText).toEqual(expect.arrayContaining(['Delegation evidence', 'Network fee']))
   }
@@ -1424,12 +1413,12 @@ it('qualifies source verification entry, evidence, results, credentials, and con
   const artifact = invokeReplyFor(forms[0], 'contractVerification:inspectArtifact')
   expect(artifact).toMatchObject({ success: true, artifact: { summary: { localRuntimeMatch: true } } })
   expect(JSON.stringify(artifact)).not.toMatch(/filePath|stdJsonInput|sourceContent|apiKey/u)
-  expect(confirmations[0].requiredControls).toEqual(['Copy hash', 'Open explorer', 'Verify source', 'Close'])
+  expect(confirmations[0].requiredControls).toEqual(['Back', 'Copy hash', 'Open explorer', 'Verify source'])
   expect(confirmations[0].layoutExpectations).toContainEqual({
     kind: 'viewport-bottom',
     selector: '.requestNoticeTransactionDeploymentStatus'
   })
-  expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(160)
+  expect(fixtureFor(confirmations[0]).windows.panel.footer.height).toBe(88)
 })
 
 it('qualifies deployment identity controls and an opaque short-geometry action shelf', () => {
@@ -1543,12 +1532,12 @@ it('forces the dashboard and tray capped-width fallback layouts at 150%', () => 
     scale: 1.5,
     logicalWidth: 600,
     logicalHeight: 744,
-    layoutExpectations: [
+    layoutExpectations: expect.arrayContaining([
       {
         kind: 'full-width',
         selector: '.eip7702RevokeFeeRow > button',
         container: '.eip7702RevokeFeeRow'
       }
-    ]
+    ])
   })
 })

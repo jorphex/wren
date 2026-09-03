@@ -76,7 +76,7 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
       <ClusterValue>
         <div className='transactionReviewAssetChangesInner'>
           <div className='transactionReviewAssetChangesHeader'>
-            <strong>Balance changes</strong>
+            <strong>Estimated changes</strong>
           </div>
           {(tracedNativeChange || sentNativeValue) && !nativeIncoming ? (
             <div className='transactionReviewAssetChange transactionReviewAssetChangeOutgoing'>
@@ -161,20 +161,12 @@ export const BalanceChanges = ({ account, req, simulation, symbol, tokenFor }) =
               </span>
             </div>
           ) : null}
-          {tracedNativeChange || changes.length ? (
+          {simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated ? (
             <div
-              className={`transactionReviewAssetChangesDisclaimer${
-                simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated
-                  ? ' transactionReviewAssetChangesDisclaimerWarning'
-                  : ''
-              }`}
-              role={
-                simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated ? 'alert' : 'note'
-              }
+              className='transactionReviewAssetChangesDisclaimer transactionReviewAssetChangesDisclaimerWarning'
+              role='alert'
             >
-              {simulation.effectsTruncated || simulation.nativeBalanceChanges?.truncated
-                ? 'Preview incomplete — other effects may not be shown.'
-                : 'Preview only — actual balance changes may differ.'}
+              Some token changes could not be simulated.
             </div>
           ) : null}
         </div>

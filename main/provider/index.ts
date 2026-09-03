@@ -2544,51 +2544,6 @@ export class Provider extends EventEmitter {
       }
       if (origin.chain.id === chainId) return res({ id: payload.id, jsonrpc: '2.0', result: null })
 
-      const authorized = hasOriginCapability(payload, { method: payload.method, chainId })
-      if (!authorized) {
-        const currentAccount = accounts.current()
-        if (!currentAccount) {
-          return resError(
-            { message: 'No account selected to approve the chain-switch request', code: 4100 },
-            payload,
-            res
-          )
-        }
-
-        const handlerId = this.addRequestHandler(res)
-        if (!handlerId) return
-        const request: SwitchChainRequest = {
-          handlerId,
-          type: 'switchChain',
-          chain: { type: origin.chain.type, id: chainId },
-          sourceChainId: origin.chain.id,
-          account: currentAccount.id,
-          origin: originId,
-          payload
-        }
-        const principalState = {
-          origins: store('main.origins') || {},
-          extensionCredentials: store('main.extensionCredentials') || {},
-          nativePeerCredentials: store('main.nativePeerCredentials') || {}
-        }
-        if (!isCurrentPreAccessSwitchOriginAuthorized(request, principalState)) {
-          return resError(
-            { message: 'Origin is not authorized to switch chains', code: 4100 },
-            payload,
-            (response) => this.respondToRequest(handlerId, response)
-          )
-        }
-
-        const requestResponder = inheritRequestSignal(res, (response: RPCResponsePayload) => {
-          this.respondToRequest(handlerId, response)
-        })
-        try {
-          accounts.addRequest(request, requestResponder)
-        } catch (error) {
-          return resError(error as Error, payload, requestResponder)
-        }
-        return
-      }
       let switchOriginChain: ReturnType<typeof requireStoreAction>
       try {
         switchOriginChain = requireStoreAction('switchOriginChain')

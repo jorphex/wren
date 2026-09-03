@@ -633,7 +633,11 @@ export class Footer extends React.Component {
             const chainName = this.store('main.networks', 'ethereum', chainId, 'name') || `Chain ${chainId}`
             const qrOpen = this.state.walletCallsFundingQrId === req.handlerId
             return (
-              <div className='requestApprove requestApproveLightweight walletCallsFundingRecovery'>
+              <div
+                className={`requestApprove requestApproveLightweight walletCallsFundingRecovery${
+                  evidence ? ' walletCallsFundingRecoveryEvidence' : ''
+                }${qrOpen ? ' walletCallsFundingRecoveryQr' : ''}`}
+              >
                 <div className='requestActionContext'>
                   <span className='requestActionContextIcon'>
                     <Icon name='alert' size={19} />

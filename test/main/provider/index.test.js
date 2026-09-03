@@ -2148,7 +2148,7 @@ describe('#send', () => {
       )
     })
 
-    it('keeps BaseScan network consent separate from account access on a fresh origin', async () => {
+    it('switches a known BaseScan origin without granting account access', async () => {
       const originName = 'https://basescan.org'
       const publicKeys = {
         control: generatePeerAuthKeyPair().publicKey,
@@ -2205,15 +2205,6 @@ describe('#send', () => {
         provider.networkChanged(chainId, selectedOrigin)
       })
 
-      let queuedResponder
-      accounts.addRequest.mockImplementationOnce((req, responder) => {
-        req.res = responder
-        queuedResponder = responder
-        accountRequests.push(req)
-      })
-      currentAccount.resolveRequest.mockImplementationOnce((req, result) => {
-        req.res({ id: req.payload.id, jsonrpc: req.payload.jsonrpc, result })
-      })
       const switchResponse = jest.fn()
 
       provider.send(
@@ -2227,25 +2218,8 @@ describe('#send', () => {
         switchResponse
       )
 
-      expect(switchResponse).not.toHaveBeenCalled()
-      expect(accountRequests).toHaveLength(1)
-      expect(accountRequests[0]).toMatchObject({
-        type: 'switchChain',
-        account: address,
-        origin: originId,
-        sourceChainId: 1,
-        chain: { type: 'ethereum', id: 8453 }
-      })
-      expect(store('main.permissions', address, originId)).toBeUndefined()
-
-      await new Promise((resolve, reject) =>
-        provider.approveSwitchChain(address, accountRequests[0].handlerId, (error) =>
-          error ? reject(error) : resolve()
-        )
-      )
-
-      expect(queuedResponder).toBeDefined()
       expect(switchResponse).toHaveBeenCalledWith({ id: 41, jsonrpc: '2.0', result: null })
+      expect(accountRequests).toHaveLength(0)
       expect(store.switchOriginChain).toHaveBeenCalledWith(originId, 8453, 'ethereum')
       expect(store('main.permissions', address, originId)).toBeUndefined()
       expect(subscriptionEvents).toEqual([
@@ -2287,8 +2261,8 @@ describe('#send', () => {
         )
       )
       expect(accessResponse.result).toEqual([address])
-      expect(accountRequests).toHaveLength(2)
-      expect(accountRequests[1]).toMatchObject({ type: 'access', origin: originId, account: address })
+      expect(accountRequests).toHaveLength(1)
+      expect(accountRequests[0]).toMatchObject({ type: 'access', origin: originId, account: address })
       provider.off('data:subscription', subscriptionListener)
       store.set('main.networks.ethereum', 8453, undefined)
       delete connection.connections.ethereum[8453]
@@ -2317,109 +2291,25 @@ describe('#send', () => {
       expect(store('main.permissions', address, defaultOriginId)).toBeUndefined()
     })
 
-    it('rejects instead of hanging when no account is selected for network consent', (done) => {
+    it('switches a known origin without requiring a selected account', (done) => {
       store.set('main.networks.ethereum', 5, { id: 5 })
       accounts.current.mockReturnValue(null)
 
       send({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x5' }] }, (response) => {
-        expect(response.error).toEqual({
-          code: 4100,
-          message: 'No account selected to approve the chain-switch request'
-        })
+        expect(response.result).toBeNull()
         expect(accountRequests).toHaveLength(0)
-        expect(store.switchOriginChain).not.toHaveBeenCalled()
+        expect(store.switchOriginChain).toHaveBeenCalledWith(defaultOriginId, 5, 'ethereum')
         done()
       })
     })
 
-    it('returns user rejection without granting account access when network consent is declined', () => {
-      const originName = 'https://basescan.org'
-      const originId = originIdForInvoker(originName, { provenance: 'direct' })
-      store.set('main.origins', originId, {
-        chain: { id: 1, type: 'ethereum' },
-        name: originName,
-        provenance: 'direct',
-        sessionOnly: false,
-        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
-      })
-      store.set('main.networks.ethereum', 8453, { id: 8453, on: true })
-      store.switchOriginChain = jest.fn()
-      accounts.addRequest.mockImplementationOnce((req) => accountRequests.push(req))
-      const response = jest.fn()
-
-      provider.send(
-        {
-          id: 44,
-          jsonrpc: '2.0',
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x2105' }],
-          _origin: originId
-        },
-        response
-      )
-      provider.declineRequest(accountRequests[0])
-
-      expect(response).toHaveBeenCalledWith({
-        id: 44,
-        jsonrpc: '2.0',
-        error: { code: 4001, message: 'User rejected the request' }
-      })
-      expect(store('main.permissions', address, originId)).toBeUndefined()
-      expect(store.switchOriginChain).not.toHaveBeenCalled()
-      store.set('main.networks.ethereum', 8453, undefined)
-    })
-
-    it('fails approval when the origin route changed while network consent was pending', () => {
-      const originName = 'https://basescan.org'
-      const originId = originIdForInvoker(originName, { provenance: 'direct' })
-      store.set('main.origins', originId, {
-        chain: { id: 1, type: 'ethereum' },
-        name: originName,
-        provenance: 'direct',
-        sessionOnly: false,
-        session: { requests: 1, startedAt: 1, lastUpdatedAt: 1 }
-      })
-      store.set('main.networks.ethereum', 8453, { id: 8453, on: true })
-      store.switchOriginChain = jest.fn()
-      accounts.addRequest.mockImplementationOnce((req) => accountRequests.push(req))
-      currentAccount.rejectRequest.mockImplementationOnce((req, error) => {
-        req.res?.({ id: req.payload.id, jsonrpc: req.payload.jsonrpc, error })
-      })
-
-      provider.send(
-        {
-          id: 45,
-          jsonrpc: '2.0',
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x2105' }],
-          _origin: originId
-        },
-        jest.fn()
-      )
-      store.set('main.origins', originId, 'chain', { id: 10, type: 'ethereum' })
-      const callback = jest.fn()
-
-      provider.approveSwitchChain(address, accountRequests[0].handlerId, callback)
-
-      expect(callback.mock.calls[0][0]).toMatchObject({ message: 'Chain-switch request is stale' })
-      expect(currentAccount.rejectRequest).toHaveBeenCalledWith(
-        accountRequests[0],
-        expect.objectContaining({ code: 4901 })
-      )
-      expect(store.switchOriginChain).not.toHaveBeenCalled()
-      store.set('main.networks.ethereum', 8453, undefined)
-    })
-
-    it('rejects a known origin that lacks account permission', (done) => {
+    it('switches a known origin that lacks account permission without exposing the account', (done) => {
       store.set('main.networks.ethereum', 5, { id: 5 })
 
       send({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x5' }] }, (response) => {
-        expect(response.error).toEqual({
-          code: 4100,
-          message: 'Origin is not authorized to switch chains'
-        })
-        expect(accounts.rejectUnapprovedRequestsForOriginChain).not.toHaveBeenCalled()
-        expect(store.switchOriginChain).not.toHaveBeenCalled()
+        expect(response.result).toBeNull()
+        expect(store.switchOriginChain).toHaveBeenCalledWith(defaultOriginId, 5, 'ethereum')
+        expect(store('main.permissions', address, defaultOriginId)).toBeUndefined()
         done()
       })
     })

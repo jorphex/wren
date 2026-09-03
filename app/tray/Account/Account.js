@@ -621,20 +621,17 @@ class _AccountBody extends React.Component {
     if (crumb.view === 'requestView') {
       const { accountId, requestId } = crumb.data
       const req = this.store('main.accounts', accountId, 'requests', requestId)
-      const chainData = req ? this.getChainData(req) : {}
-      const transactionChainId =
-        req?.type === 'transaction' && typeof req.data?.chainId === 'string'
-          ? Number.parseInt(req.data.chainId, 16)
-          : undefined
-      const transactionChainName = Number.isInteger(transactionChainId)
-        ? this.store('main.networks.ethereum', transactionChainId, 'name')
-        : undefined
+      const transactionInFlight =
+        req?.type === 'transaction' &&
+        ['sending', 'verifying', 'sent', 'confirming', 'confirmed'].includes(req.status)
       const accountViewTitle =
         req?.type === 'transaction' && crumb.data.step === 'adjustApproval'
           ? 'Token approval'
           : req?.type === 'walletCalls' && crumb.data.step === 'adjustWalletCalls'
             ? 'Call batch'
-            : (req && this.getAccountViewTitle(req)) || ''
+            : transactionInFlight
+              ? 'Transaction'
+              : (req && this.getAccountViewTitle(req)) || ''
 
       return (
         <AccountView
@@ -644,11 +641,6 @@ class _AccountBody extends React.Component {
           {...this.props}
           requestMode={true}
           accountViewTitle={accountViewTitle}
-          accountViewMeta={
-            req && isPendingSigningRequest(req)
-              ? ''
-              : chainData.chainName || chainData.requestChainName || transactionChainName
-          }
         >
           {req && this.renderRequest(req, crumb.data)}
         </AccountView>

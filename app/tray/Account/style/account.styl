@@ -1278,13 +1278,16 @@
       height var(--wren-request-review-shelf-height) !important
 
   &:has(.requestNoticeTransactionStatus)
-    --wren-request-status-shelf-height 118px
+    --wren-request-status-shelf-height 88px
 
     .accountViewRequest
       bottom var(--wren-request-status-shelf-height) !important
 
     .footerModule
       height var(--wren-request-status-shelf-height) !important
+
+  &:has(.requestNoticeTransactionUnconfirmed)
+    --wren-request-status-shelf-height 114px
 
   &:has(.requestNoticeApproval)
     --wren-request-warning-shelf-height 154px
@@ -1295,6 +1298,15 @@
     .footerModule
       height var(--wren-request-warning-shelf-height) !important
 
+  &:has(.eip7702StopMonitoringDialog)
+    --wren-request-dialog-shelf-height 173px
+
+    .accountViewRequest
+      bottom var(--wren-request-dialog-shelf-height) !important
+
+    .footerModule
+      height var(--wren-request-dialog-shelf-height) !important
+
   &:has(.walletCallsReview)
     --wren-wallet-calls-shelf-height 114px
 
@@ -1304,6 +1316,21 @@
 
     .footerModule
       height var(--wren-wallet-calls-shelf-height) !important
+
+  &:has(.walletCallsFundingRecovery)
+    --wren-wallet-calls-recovery-shelf-height 165px
+
+    .accountViewRequest
+      bottom var(--wren-wallet-calls-recovery-shelf-height) !important
+
+    .footerModule
+      height var(--wren-wallet-calls-recovery-shelf-height) !important
+
+  &:has(.walletCallsFundingRecoveryEvidence)
+    --wren-wallet-calls-recovery-shelf-height 277px
+
+  &:has(.walletCallsFundingRecoveryQr)
+    --wren-wallet-calls-recovery-shelf-height 430px
 
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none

@@ -1,7 +1,10 @@
 import Icon from '../../../../../resources/Components/Icon'
 
-const steps = ['Sending', 'Submitted', 'Confirming', 'Confirmed']
-const unconfirmedSteps = ['Broadcast once', 'Checking', 'Confirming', 'Confirmed']
+const steps = [
+  { icon: 'send', label: 'Submitted' },
+  { icon: 'pending', label: 'Confirming' },
+  { icon: 'verified', label: 'Confirmed' }
+]
 
 export const isUnconfirmedSubmission = (req) =>
   req?.status === 'verifying' && req?.submission?.status === 'unconfirmed'
@@ -10,12 +13,11 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
   if (isUnconfirmedSubmission(req)) {
     return {
       detail:
-        'Wren made one broadcast attempt, but the RPC has not confirmed acceptance yet. Wren is checking the network and will not automatically resubmit.',
-      icon: 'pending',
-      position: 1,
-      steps: unconfirmedSteps,
-      title: 'Submission unconfirmed',
-      tone: 'pending'
+        'RPC acceptance is still unconfirmed. Wren is checking the network and will not resubmit automatically.',
+      icon: 'alert',
+      position: 0,
+      title: 'Broadcast unconfirmed',
+      tone: 'warning'
     }
   }
 
@@ -33,7 +35,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
         detail: 'Wren is sending the transaction to the network.',
         icon: 'send',
         position: 0,
-        title: 'Sending',
+        title: 'Submitted',
         tone: 'pending'
       }
     case 'verifying':
@@ -42,7 +44,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
       return {
         detail: 'Sent to the network.',
         icon: 'send',
-        position: 1,
+        position: 0,
         title: 'Submitted',
         tone: 'pending'
       }
@@ -50,7 +52,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
       return {
         detail: 'Waiting for network confirmation.',
         icon: 'pending',
-        position: 2,
+        position: 1,
         title: 'Confirming',
         tone: 'pending'
       }
@@ -58,7 +60,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
       return {
         detail: `The transaction is confirmed on ${networkName}.`,
         icon: 'verified',
-        position: 3,
+        position: 2,
         title: 'Confirmed',
         tone: 'success'
       }
@@ -66,7 +68,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
       return {
         detail: 'The network did not confirm this transaction.',
         icon: 'failed',
-        position: req?.tx?.hash ? 1 : 0,
+        position: req?.tx?.hash ? 0 : -1,
         title: 'Transaction failed',
         tone: 'failure'
       }
@@ -75,7 +77,7 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
         detail: 'Wren is sending the transaction to the network.',
         icon: 'send',
         position: 0,
-        title: 'Sending',
+        title: 'Submitted',
         tone: 'pending'
       }
   }
@@ -98,7 +100,9 @@ const TxBar = ({ networkName, req }) => {
         </span>
         <span className='txLifecycleCopy'>
           <strong>{presentation.title}</strong>
-          <span>{presentation.detail}</span>
+          <span className={presentation.tone === 'warning' ? 'txLifecycleDetailVisible' : ''}>
+            {presentation.detail}
+          </span>
         </span>
       </div>
       <ol className='txLifecycleSteps' aria-label='Transaction progress'>
@@ -107,12 +111,14 @@ const TxBar = ({ networkName, req }) => {
             index < presentation.position ? 'complete' : index === presentation.position ? 'current' : 'next'
           return (
             <li
-              key={step}
+              key={step.label}
               className={`txLifecycleStep txLifecycleStep-${state}`}
               aria-current={state === 'current' ? 'step' : undefined}
+              aria-label={step.label}
             >
-              <span className='txLifecycleStepMarker' aria-hidden='true' />
-              <span>{step}</span>
+              <span className='txLifecycleStepMarker' aria-hidden='true'>
+                <Icon name={step.icon} size={14} />
+              </span>
             </li>
           )
         })}

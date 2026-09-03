@@ -242,6 +242,79 @@ const accountAccessRequest = () => ({
   payload: { id: 70, jsonrpc: '2.0', method: 'eth_requestAccounts', params: [] }
 })
 
+const messageReviewRequest = () => ({
+  handlerId: 'qualification-message-review',
+  type: 'sign',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 68, jsonrpc: '2.0', method: 'personal_sign', params: [] },
+  data: {
+    rawMessage: '0x5265766965772074686973206578616374206d6573736167652e',
+    decodedMessage: 'Review this exact message.',
+    context: {
+      method: 'personal_sign',
+      requestChainId: 1,
+      origin: 'workshop.example',
+      encoding: 'utf8',
+      byteLength: 26,
+      risks: []
+    }
+  }
+})
+
+const typedDataReviewRequest = () => ({
+  handlerId: 'qualification-typed-data-review',
+  type: 'signTypedData',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 69, jsonrpc: '2.0', method: 'eth_signTypedData_v4', params: [] },
+  context: { requestChainId: 1, domainChainId: '1', risks: [] },
+  typedMessage: {
+    version: 'V4',
+    data: {
+      types: {
+        EIP712Domain: [{ name: 'chainId', type: 'uint256' }],
+        Qualification: [{ name: 'statement', type: 'string' }]
+      },
+      primaryType: 'Qualification',
+      domain: { chainId: 1, name: 'Workshop' },
+      message: { statement: 'Review this exact field.' }
+    }
+  }
+})
+
+const addChainReviewRequest = () => ({
+  handlerId: 'qualification-add-chain-review',
+  type: 'addChain',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 70, jsonrpc: '2.0', method: 'wallet_addEthereumChain', params: [] },
+  chain: {
+    type: 'ethereum',
+    id: 8453,
+    name: 'Base',
+    symbol: 'ETH',
+    nativeCurrencyDecimals: 18,
+    rpcUrls: ['https://mainnet.base.org'],
+    explorer: 'https://basescan.org'
+  }
+})
+
+const addTokenReviewRequest = () => ({
+  handlerId: 'qualification-add-token-review',
+  type: 'addToken',
+  account: QUALIFICATION_ACCOUNT,
+  origin: 'workshop',
+  payload: { id: 71, jsonrpc: '2.0', method: 'wallet_watchAsset', params: [] },
+  token: {
+    address: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+    chainId: 1,
+    decimals: 6,
+    name: 'USD Coin',
+    symbol: 'USDC'
+  }
+})
+
 const permitReviewRequest = () => ({
   account: QUALIFICATION_ACCOUNT,
   type: 'signErc20Permit',
@@ -287,21 +360,6 @@ const permitReviewRequest = () => ({
   tokenData: { name: 'USD Coin', symbol: 'USDC', decimals: 6 }
 })
 
-const switchChainRequest = () => ({
-  handlerId: 'qualification-switch-chain',
-  type: 'switchChain',
-  account: QUALIFICATION_ACCOUNT,
-  origin: 'basescan',
-  sourceChainId: 1,
-  chain: { type: 'ethereum', id: 8453 },
-  payload: {
-    id: 71,
-    jsonrpc: '2.0',
-    method: 'wallet_switchEthereumChain',
-    params: [{ chainId: '0x2105' }]
-  }
-})
-
 const addressLookalikeRequest = () => ({
   handlerId: 'qualification-address-lookalike',
   activityId: '77777777-7777-4777-8777-777777777777',
@@ -324,7 +382,6 @@ const addressLookalikeRequest = () => ({
   recognizedActions: [],
   classification: 'NATIVE_TRANSFER',
   recipientType: 'external',
-  locked: true,
   simulation: {
     status: 'succeeded',
     source: 'eth_simulateV1',
@@ -2139,34 +2196,25 @@ const fixtureFor = (scenario) => {
     state.windows.panel.footer.height = 114
   }
 
-  if (scenario.state === 'switch-chain-review') {
-    const request = switchChainRequest()
+  if (
+    ['signature-message-review', 'signature-typed-data-review', 'add-chain-review', 'add-token-review'].includes(
+      scenario.state
+    )
+  ) {
+    const request =
+      scenario.state === 'signature-message-review'
+        ? messageReviewRequest()
+        : scenario.state === 'signature-typed-data-review'
+          ? typedDataReviewRequest()
+          : scenario.state === 'add-chain-review'
+            ? addChainReviewRequest()
+            : addTokenReviewRequest()
     prepareSelectedAccount(state, request)
-    state.main.origins = { basescan: { name: 'https://basescan.org' } }
-    state.main.networks.ethereum = {
-      1: {
-        id: 1,
-        name: 'Ethereum',
-        on: true,
-        connection: { endpoints: [{ connected: true, status: 'connected' }] }
-      },
-      8453: {
-        id: 8453,
-        name: 'Base',
-        on: true,
-        connection: { endpoints: [{ connected: true, status: 'connected' }] }
-      }
-    }
-    state.main.networksMeta.ethereum = {
-      1: {
-        primaryColor: 'wren-chain-ethereum',
-        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
-      },
-      8453: {
-        primaryColor: 'wren-chain-base',
-        nativeCurrency: { symbol: 'ETH', name: 'Ether', decimals: 18 }
-      }
-    }
+    state.main.accounts[QUALIFICATION_ACCOUNT].lastSignerType = 'ledger'
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = networks
+    state.main.networksMeta.ethereum = metadata
+    state.main.origins = { workshop: { name: 'workshop.example' } }
     state.windows.panel.nav = [
       {
         view: 'requestView',
@@ -2344,7 +2392,7 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = 160
+    state.windows.panel.footer.height = 88
   }
 
   if (
@@ -2390,12 +2438,13 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = scenario.id.includes('-qr-') ? 430 : 114
+    state.windows.panel.footer.height = scenario.id.includes('-qr-') ? 430 : 277
   }
 
   if (
     scenario.state === 'transaction-safety-unavailable' ||
     scenario.state === 'transaction-submitted' ||
+    scenario.state === 'transaction-unconfirmed' ||
     scenario.state === 'transaction-confirming' ||
     scenario.state === 'transaction-confirmed'
   ) {
@@ -2405,10 +2454,17 @@ const fixtureFor = (scenario) => {
         : monitoredTransactionRequest(
             scenario.state === 'transaction-confirmed'
               ? 'confirmed'
-              : scenario.state === 'transaction-submitted'
+              : scenario.state === 'transaction-submitted' || scenario.state === 'transaction-unconfirmed'
                 ? 'verifying'
                 : 'confirming'
           )
+    if (scenario.state === 'transaction-unconfirmed') {
+      request.submission = {
+        status: 'unconfirmed',
+        detail: 'The configured RPC returned no usable result.'
+      }
+      request.notice = 'Submission unconfirmed; checking network'
+    }
     prepareSelectedAccount(state, request)
     const { metadata, networks } = accountHomeNetworks()
     state.main.networks.ethereum = networks
@@ -2424,7 +2480,10 @@ const fixtureFor = (scenario) => {
         }
       }
     ]
-    state.windows.panel.footer.height = scenario.state === 'transaction-safety-unavailable' ? 114 : 118
+    state.windows.panel.footer.height =
+      scenario.state === 'transaction-safety-unavailable' || scenario.state === 'transaction-unconfirmed'
+        ? 114
+        : 88
   }
 
   if (scenario.state === 'transaction-responsive') {

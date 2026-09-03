@@ -316,7 +316,6 @@ export class RequestCommand extends React.Component {
     const replaceable = Boolean(
       hash && !receipt && !unconfirmedSubmission && ['verifying', 'sent'].includes(status)
     )
-    const terminal = ['confirmed', 'error'].includes(status)
     const canVerifySource = canContinueContractVerification(req)
 
     return (
@@ -325,7 +324,7 @@ export class RequestCommand extends React.Component {
           <dl className='txLifecycleFacts'>
             {hash && (
               <div>
-                <dt>{unconfirmedSubmission ? 'Expected transaction hash' : 'Transaction hash'}</dt>
+                <dt>{unconfirmedSubmission ? 'Expected tx hash' : 'Tx hash'}</dt>
                 <dd title={hash}>{`${hash.slice(0, 6)}…${hash.slice(-4)}`}</dd>
               </div>
             )}
@@ -420,15 +419,6 @@ export class RequestCommand extends React.Component {
               onClick={() => this.continueContractVerification(req)}
             >
               {this.state.requestActionPending ? 'Opening…' : 'Verify source'}
-            </button>
-          )}
-          {terminal && (
-            <button
-              type='button'
-              className='txLifecycleAction'
-              onClick={() => link.send('nav:back', 'panel')}
-            >
-              Close
             </button>
           )}
         </div>
@@ -595,8 +585,11 @@ export class RequestCommand extends React.Component {
       const deploymentStatusClass = canContinueContractVerification(req)
         ? ' requestNoticeTransactionDeploymentStatus'
         : ''
+      const unconfirmedStatusClass = isUnconfirmedSubmission(req)
+        ? ' requestNoticeTransactionUnconfirmed'
+        : ''
       const commandClass = monitoring
-        ? `requestNotice requestNoticeTransaction requestNoticeTransactionStatus${deploymentStatusClass}`
+        ? `requestNotice requestNoticeTransaction requestNoticeTransactionStatus${deploymentStatusClass}${unconfirmedStatusClass}`
         : 'requestNotice requestNoticeTransaction requestNoticeTransactionReview'
       return (
         <div className={commandClass}>
@@ -896,7 +889,11 @@ export class RequestCommand extends React.Component {
               </span>
               <span className='requestActionContextCopy'>
                 <strong>Ready to sign</strong>
-                <span>Verify this message on your signer before approving.</span>
+                <span>
+                  {req.type === 'signErc20Permit'
+                    ? 'Verify this token approval on your signer before approving.'
+                    : 'Verify this message on your signer before approving.'}
+                </span>
               </span>
             </div>
             <div className='requestActionButtons'>
