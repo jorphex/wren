@@ -6,6 +6,26 @@ Detailed release notes and platform boundaries live in
 
 ## Unreleased
 
+## 0.1.7 - 2026-09-04
+
+### Fixed
+
+- Kept transaction review stable while busy networks refresh fees and execution
+  checks in the background.
+- Accepted valid RPC quantities with leading zeroes by normalizing them before
+  estimation, simulation, funding checks, and signing.
+- Made funding retries refresh the request they belong to and reduced RPC
+  failures to short, actionable messages without exposing raw provider errors.
+- Kept token approval editors mounted through requested, custom, unlimited, and
+  revoke updates, with the selected allowance shown immediately.
+
+### Maintenance
+
+- Expanded approval, funding, simulation, and production-layout regression
+  coverage and removed obsolete frontend code.
+
+See [the complete 0.1.7 release notes](release-notes/v0.1.7.md).
+
 ## 0.1.6 - 2026-09-03
 
 ### Changed
