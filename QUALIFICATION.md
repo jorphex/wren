@@ -238,12 +238,14 @@ action and expose no source, compiler input, local path, API key, credential, or
 credential-bearing URL.
 
 From both the confirmed-deployment continuation and Control Center Tools, inspect
-Solidity and Vyper standard JSON plus applicable Foundry/Hardhat build-info. Test
-cancel, malformed JSON, symlink/FIFO/directory, oversize input, ambiguous contract
-selection, wrong compiler, wrong chain/address, empty code, mismatched runtime,
-RPC disconnect, and a target changing during inspection. Require all failures to
-occur before publication. For raw standard JSON, require the UI to say matching is
-completed by Sourcify rather than claiming a local compiler match.
+Solidity and Vyper standard JSON, Vyper `solc_json`, and applicable
+Foundry/Hardhat build-info. For Vyper `solc_json`, alter its compiler version,
+integrity value, and one source checksum in turn; each must fail before
+publication. Also test cancel, malformed JSON, symlink/FIFO/directory, oversize
+input, ambiguous contract selection, wrong compiler, wrong chain/address, empty
+code, mismatched runtime, RPC disconnect, and a target changing during inspection.
+For formats without compiler output, require the UI to say matching is completed
+by Sourcify rather than claiming a local compiler match.
 
 On the exact disposable source, compare the frozen chain, full address, runtime
 hash, compiler, contract identifier, and deployment finality. The permanent-public

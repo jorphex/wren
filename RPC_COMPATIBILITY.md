@@ -86,10 +86,11 @@ deployment.
 
 Contract source verification is also a dashboard-only Wren tool, not a JSON-RPC
 provider method or dapp capability. It accepts bounded Solidity/Vyper standard
-JSON, full Foundry/Hardhat 2 build info, or paired Hardhat 3 build-info/output
-files through a main-process file chooser. Build-info runtime output is matched
-locally; raw standard JSON has no compiler output and is matched by Sourcify only
-after explicit consent to permanent public publication. The target is revalidated through the
+JSON, checksum-validated Vyper `solc_json`, full Foundry/Hardhat 2 build info, or
+paired Hardhat 3 build-info/output files through a main-process file chooser.
+Build-info runtime output is matched locally; standard JSON and Vyper `solc_json`
+have no compiler output and are matched by Sourcify only after explicit consent
+to permanent public publication. The target is revalidated through the
 configured RPC and bound to chain, address, runtime-code hash, and confirmed Wren
 deployment evidence when present. Source publication does not sign, broadcast,
 or change transaction success. Sourcify and explorer calls are fixed external

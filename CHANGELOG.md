@@ -18,11 +18,18 @@ Detailed release notes and platform boundaries live in
   failures to short, actionable messages without exposing raw provider errors.
 - Kept token approval editors mounted through requested, custom, unlimited, and
   revoke updates, with the selected allowance shown immediately.
+- Kept recognized approval reviews stable while simulation evidence refreshes.
+- Accepted integrity-bearing Vyper 0.4.3 `solc_json` artifacts after validating
+  their compiler metadata and source checksums.
+- Accepted checksummed verification addresses, preserved specific artifact
+  errors, and reopened matching saved jobs instead of repeating publication.
+- Moved recent verification records below the active source-check flow and
+  aligned them with Wren’s flat ledger design.
 
 ### Maintenance
 
-- Expanded approval, funding, simulation, and production-layout regression
-  coverage and removed obsolete frontend code.
+- Expanded transaction, verification, and production-layout regression coverage
+  and removed obsolete frontend code.
 
 See [the complete 0.1.7 release notes](release-notes/v0.1.7.md).
 
