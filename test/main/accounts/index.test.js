@@ -285,14 +285,23 @@ describe('#updatePendingFees', () => {
     })
   })
 
-  it('updates the pending fees for a transaction', () => {
+  it('stages pending fee updates behind one silent execution check', () => {
     Accounts.addRequest(request)
-    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation').mockImplementation()
     Accounts.updatePendingFees(parseInt(request.data.chainId))
 
-    expect(request.data.maxFeePerGas).toBe(gweiToHex(11))
-    expect(request.data.maxPriorityFeePerGas).toBe(gweiToHex(2))
-    expect(refresh).toHaveBeenCalledWith(request, false, true)
+    expect(request.data.maxFeePerGas).toBe(gweiToHex(9))
+    expect(request.data.maxPriorityFeePerGas).toBe(gweiToHex(1))
+    expect(refresh).toHaveBeenCalledWith(
+      request,
+      false,
+      true,
+      expect.objectContaining({
+        maxFeePerGas: gweiToHex(11),
+        maxPriorityFeePerGas: gweiToHex(2)
+      })
+    )
+    refresh.mockRestore()
   })
 
   it('does not update a transaction with gas fees provided by a dapp', () => {
@@ -313,6 +322,18 @@ describe('#updatePendingFees', () => {
 
     expect(request.data.maxFeePerGas).toBe(gweiToHex(9))
     expect(request.data.maxPriorityFeePerGas).toBe(gweiToHex(1))
+  })
+
+  it('does not churn a failed transaction during background fee updates', () => {
+    request.status = 'error'
+    Accounts.addRequest(request)
+    const refresh = jest.spyOn(Accounts.current(), 'refreshTransactionSimulation')
+    refresh.mockClear()
+
+    Accounts.updatePendingFees(parseInt(request.data.chainId))
+
+    expect(refresh).not.toHaveBeenCalled()
+    refresh.mockRestore()
   })
 
   it('refreshes pending wallet-call preparation only for the updated chain', () => {
@@ -354,6 +375,17 @@ describe('#updatePendingFees', () => {
 
     expect(provider.getL1GasCost).toHaveBeenCalledWith(request.data)
     expect(request.chainData).toEqual({ optimism: { l1Fees: expectedFee } })
+  })
+
+  it('retains the last usable L1 fee when a refresh fails', async () => {
+    request.data.chainId = '0xa'
+    request.chainData = { optimism: { l1Fees: '0x123' } }
+    provider.getL1GasCost.mockRejectedValueOnce(new Error('RPC unavailable'))
+    Accounts.addRequest(request)
+
+    await Accounts.updatePendingFees(10)
+
+    expect(request.chainData).toEqual({ optimism: { l1Fees: '0x123' } })
   })
 })
 
@@ -1154,7 +1186,9 @@ describe('#updateRequest', () => {
 
     expect(updated).toBe(true)
     expect(update).toHaveBeenCalledWith(request, { amount: '42' })
-    expect(simulation).toHaveBeenCalledWith(request)
+    expect(simulation).toHaveBeenCalledWith(request, true, false, undefined, {
+      preserveRecognizedActions: true
+    })
   })
 
   it('does not simulate a rejected, locked, or submitted transaction update', () => {
@@ -1689,7 +1723,7 @@ describe('account-bound request transitions', () => {
     expect(targetAccount.summary().activeRequestId).toBe(explicit.handlerId)
   })
 
-  it('refreshes fees and keeps updated funding evidence when recheck is still short', async () => {
+  it('keeps updated funding evidence when recheck is still short', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('funding-still-short')
     targetAccount.addRequest(explicit)
@@ -1707,7 +1741,6 @@ describe('account-bound request transitions', () => {
       }),
       account2.address
     )
-    const feeRefresh = jest.spyOn(Accounts, 'updatePendingFees').mockImplementation()
     provider.assertTransactionFunding.mockRejectedValueOnce(
       new TransactionFundingError(TRANSACTION_FUNDING_ERROR, 'More funds are still needed.', {
         available: '0x4',
@@ -1722,7 +1755,6 @@ describe('account-bound request transitions', () => {
       /still needed/i
     )
 
-    expect(feeRefresh).toHaveBeenCalledWith(1)
     expect(explicit).toMatchObject({
       status: 'error',
       locked: true,
@@ -1731,7 +1763,6 @@ describe('account-bound request transitions', () => {
         data: { available: '0x4', required: '0xa', missing: '0x6' }
       }
     })
-    feeRefresh.mockRestore()
   })
 
   it('returns a funded request to fresh fee and simulation review', async () => {
@@ -1752,7 +1783,6 @@ describe('account-bound request transitions', () => {
       }),
       account2.address
     )
-    const feeRefresh = jest.spyOn(Accounts, 'updatePendingFees').mockImplementation()
     const simulationRefresh = jest.spyOn(targetAccount, 'refreshTransactionSimulation')
     provider.assertTransactionFunding.mockResolvedValueOnce({ missing: '0x0' })
 
@@ -1763,14 +1793,49 @@ describe('account-bound request transitions', () => {
     expect(explicit.recoverableError).toBeUndefined()
     expect(explicit.retainedPreBroadcastError).toBeUndefined()
     expect(simulationRefresh).toHaveBeenCalledWith(explicit, true, false)
-    feeRefresh.mockRestore()
     simulationRefresh.mockRestore()
+  })
+
+  it('refreshes request-bound L1 fee data after account selection changes', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-l1-fee-refresh')
+    explicit.data.chainId = '0xa'
+    explicit.chainData = { optimism: { l1Fees: '0x1' } }
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(
+        'transaction-funding-unavailable',
+        'Balance or fee data is unavailable. Nothing was signed.'
+      ),
+      account2.address
+    )
+    provider.getL1GasCost.mockResolvedValueOnce(0x123n)
+    provider.assertTransactionFunding.mockImplementationOnce(async (transaction) => {
+      expect(transaction.chainData).toEqual({ optimism: { l1Fees: '0x123' } })
+      return { missing: '0x0' }
+    })
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
+
+    expect(Accounts.current().id).toBe(account.address)
+    expect(provider.getL1GasCost).toHaveBeenCalledWith(explicit.data)
+    expect(explicit.chainData).toEqual({ optimism: { l1Fees: '0x123' } })
   })
 
   it('re-estimates a failed gas limit before repeating the funding check', async () => {
     const targetAccount = Accounts.accounts[account2.address]
     const explicit = targetRequest('funding-invalid-gas-limit')
-    explicit.data.gasLimit = '0x00'
+    explicit.data = {
+      ...explicit.data,
+      gasLimit: '0x00',
+      nonce: '0x0007',
+      maxPriorityFeePerGas: '0x01',
+      maxFeePerGas: '0x09'
+    }
     explicit.approvals = [{ type: ApprovalType.GasLimitApproval, approved: true }]
     targetAccount.addRequest(explicit)
     explicit.simulation = { status: 'succeeded', calls: [] }
@@ -1785,7 +1850,8 @@ describe('account-bound request transitions', () => {
       account2.address
     )
     provider.estimateGas.mockImplementationOnce(async (transaction) => {
-      expect(transaction.gasLimit).toBe('0x00')
+      expect(transaction).not.toHaveProperty('gasLimit')
+      expect(transaction).toMatchObject({ nonce: '0x7', maxPriorityFeePerGas: '0x1', maxFeePerGas: '0x9' })
       return '0x7b0c'
     })
     provider.assertTransactionFunding.mockResolvedValueOnce({ missing: '0x0' })
@@ -1793,8 +1859,47 @@ describe('account-bound request transitions', () => {
     await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
 
     expect(provider.estimateGas).toHaveBeenCalledTimes(1)
-    expect(explicit.data.gasLimit).toBe('0x7b0c')
+    expect(explicit.data).toMatchObject({
+      gasLimit: '0x7b0c',
+      nonce: '0xa',
+      maxPriorityFeePerGas: '0x1',
+      maxFeePerGas: '0x9'
+    })
     expect(explicit.approvals).toEqual([])
+    expect(provider.assertTransactionFunding).toHaveBeenCalledWith(explicit)
+  })
+
+  it('canonicalizes padded dapp quantities without repeating a valid gas estimate', async () => {
+    const targetAccount = Accounts.accounts[account2.address]
+    const explicit = targetRequest('funding-padded-quantities')
+    explicit.data = {
+      ...explicit.data,
+      gasLimit: '0x05208',
+      maxPriorityFeePerGas: '0x01',
+      maxFeePerGas: '0x09'
+    }
+    targetAccount.addRequest(explicit)
+    explicit.simulation = { status: 'succeeded', calls: [] }
+    Accounts.setRequestPending(explicit)
+    Accounts.lockRequest(explicit.handlerId, account2.address)
+    Accounts.setRequestError(
+      explicit.handlerId,
+      new TransactionFundingError(
+        'transaction-funding-unavailable',
+        'Balance or fee data is unavailable. Nothing was signed.'
+      ),
+      account2.address
+    )
+    provider.assertTransactionFunding.mockResolvedValueOnce({ missing: '0x0' })
+
+    await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).resolves.toBe(true)
+
+    expect(provider.estimateGas).not.toHaveBeenCalled()
+    expect(explicit.data).toMatchObject({
+      gasLimit: '0x5208',
+      maxPriorityFeePerGas: '0x1',
+      maxFeePerGas: '0x9'
+    })
     expect(provider.assertTransactionFunding).toHaveBeenCalledWith(explicit)
   })
 
@@ -1818,16 +1923,16 @@ describe('account-bound request transitions', () => {
     provider.estimateGas.mockRejectedValueOnce(new Error('private configured RPC response'))
 
     await expect(Accounts.retryFailedTransaction(explicit.handlerId, account2.address)).rejects.toThrow(
-      'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+      'Gas estimate unavailable. Nothing was signed.'
     )
 
     expect(explicit).toMatchObject({
       status: 'error',
       locked: true,
-      notice: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.',
+      notice: 'Gas estimate unavailable. Nothing was signed.',
       recoverableError: {
         code: 'transaction-funding-unavailable',
-        message: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+        message: 'Gas estimate unavailable. Nothing was signed.'
       }
     })
     expect(explicit.notice).not.toContain('private configured RPC response')

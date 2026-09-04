@@ -84,7 +84,7 @@ export function transactionFundingEvidence(
   ) {
     throw new TransactionFundingError(
       TRANSACTION_FUNDING_UNAVAILABLE,
-      'The transaction funding requirement could not be verified. Nothing was signed or sent.'
+      'Balance or fee data is unavailable. Nothing was signed.'
     )
   }
 
@@ -93,7 +93,7 @@ export function transactionFundingEvidence(
   if (maximumFee > MAX_UINT256 || required > MAX_UINT256) {
     throw new TransactionFundingError(
       TRANSACTION_FUNDING_UNAVAILABLE,
-      'The transaction funding requirement exceeds the supported quantity range. Nothing was signed or sent.'
+      'Balance or fee data is invalid. Nothing was signed.'
     )
   }
   const missing = required > available ? required - available : 0n

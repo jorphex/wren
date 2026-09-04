@@ -180,6 +180,7 @@ class FrameAccount {
   requests: Record<string, AnyAccountRequest> = {}
   private simulationVersions: Record<string, number> = {}
   private simulationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+  private simulationCandidateChecks: Record<string, boolean> = {}
   private calldataDecodeBindings: Record<string, CalldataDecodeBinding> = {}
   private preparationVersions: Record<string, number> = {}
   private preparationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
@@ -391,6 +392,7 @@ class FrameAccount {
     delete this.requestAbortCleanup[handlerId]
     delete this.requests[handlerId]
     delete this.simulationVersions[handlerId]
+    delete this.simulationCandidateChecks[handlerId]
     delete this.calldataDecodeBindings[handlerId]
     clearTimeout(this.simulationTimers[handlerId])
     delete this.simulationTimers[handlerId]
@@ -822,8 +824,9 @@ class FrameAccount {
       default:
         return
     }
-    const detail = simulation.reason ? ` RPC detail: ${simulation.reason}` : ''
-    const data = { ...copy, message: `${copy.message}${detail}`, confirmLabel: 'Sign anyway' }
+    const revertDetail =
+      simulation.status === 'reverted' && simulation.reason ? ` ${simulation.reason.slice(0, 96)}` : ''
+    const data = { ...copy, message: `${copy.message}${revertDetail}`, confirmLabel: 'Sign anyway' }
     this.syncManagedApproval(req, ApprovalType.SimulationApproval, data)
   }
 
@@ -974,10 +977,15 @@ class FrameAccount {
     })
   }
 
-  private applySimulationResult(req: TransactionRequest, simulation: TransactionSimulation, final = true) {
+  private applySimulationResult(
+    req: TransactionRequest,
+    simulation: TransactionSimulation,
+    final = true,
+    preserveRecognizedActions = false
+  ) {
     req.simulation = simulation
     this.prepareCalldataForSimulation(req, simulation)
-    req.recognizedActions = []
+    if (!preserveRecognizedActions) req.recognizedActions = []
     this.syncAddressSafety(req)
     this.syncSimulationApproval(req, simulation)
     this.syncTokenApprovalRisk(req, simulation)
@@ -989,8 +997,24 @@ class FrameAccount {
     this.recognizeActions(req)
   }
 
-  refreshTransactionSimulation(req: TransactionRequest, publishPending = true, preserveApproval = false) {
+  refreshTransactionSimulation(
+    req: TransactionRequest,
+    publishPending = true,
+    preserveApproval = false,
+    candidateData?: TransactionData,
+    { preserveRecognizedActions = false }: { preserveRecognizedActions?: boolean } = {}
+  ) {
     if (this.requests[req.handlerId] !== req) return
+
+    const candidateCheck = candidateData !== undefined
+    // Let one silent fee check finish even when every block produces a new quote.
+    // The next block can stage the latest quote after this bounded check settles.
+    if (candidateCheck && this.simulationCandidateChecks[req.handlerId]) return
+    if (candidateCheck) this.simulationCandidateChecks[req.handlerId] = true
+    else delete this.simulationCandidateChecks[req.handlerId]
+    const clearCandidateCheck = () => {
+      if (candidateCheck) delete this.simulationCandidateChecks[req.handlerId]
+    }
 
     const version = (this.simulationVersions[req.handlerId] || 0) + 1
     this.simulationVersions[req.handlerId] = version
@@ -1019,28 +1043,54 @@ class FrameAccount {
       delete this.simulationTimers[req.handlerId]
       if (this.requests[req.handlerId] !== req || this.simulationVersions[req.handlerId] !== version) return
 
-      simulateTransaction(req.data, {
+      const simulationData = candidateData || req.data
+      simulateTransaction(simulationData, {
         send: (payload, callback, targetChain) => provider.connection.send(payload, callback, targetChain),
         onCoreResult: (simulation) => {
+          if (candidateData) return
           const knownRequest = this.requests[req.handlerId]
           if (knownRequest !== req || this.simulationVersions[req.handlerId] !== version) return
-          this.applySimulationResult(req, simulation, false)
+          this.applySimulationResult(req, simulation, false, preserveRecognizedActions)
         }
       })
         .then((simulation) => {
           const knownRequest = this.requests[req.handlerId]
           if (knownRequest !== req || this.simulationVersions[req.handlerId] !== version) return
+          clearCandidateCheck()
 
-          this.applySimulationResult(req, simulation)
+          if (candidateData) {
+            if (req.locked || req.status !== undefined || req.feesUpdatedByUser) return
+            if (
+              ['failed', 'unavailable'].includes(simulation.status) &&
+              req.simulation &&
+              !['failed', 'unavailable', 'pending'].includes(req.simulation.status)
+            ) {
+              return
+            }
+            req.data = candidateData
+          }
+
+          this.applySimulationResult(req, simulation, true, preserveRecognizedActions)
         })
         .catch((error) => {
           const knownRequest = this.requests[req.handlerId]
           if (knownRequest !== req || this.simulationVersions[req.handlerId] !== version) return
+          clearCandidateCheck()
 
-          this.applySimulationResult(req, {
-            status: 'failed',
-            reason: error instanceof Error ? error.message.slice(0, 240) : 'RPC execution check failed'
-          })
+          if (candidateData) {
+            log.warn('Background transaction check unavailable', { handlerId: req.handlerId })
+            return
+          }
+
+          this.applySimulationResult(
+            req,
+            {
+              status: 'failed',
+              reason: error instanceof Error ? error.message.slice(0, 240) : 'RPC execution check failed'
+            },
+            true,
+            preserveRecognizedActions
+          )
         })
     }, 0)
   }
@@ -1445,6 +1495,7 @@ class FrameAccount {
 
     clearTimeout(this.simulationTimers[handlerId])
     delete this.simulationTimers[handlerId]
+    delete this.simulationCandidateChecks[handlerId]
     this.simulationVersions[handlerId] = (this.simulationVersions[handlerId] || 0) + 1
     clearTimeout(this.preparationTimers[handlerId])
     delete this.preparationTimers[handlerId]
@@ -1801,6 +1852,7 @@ class FrameAccount {
     this.requestAbortCleanup = {}
     Object.values(this.simulationTimers).forEach(clearTimeout)
     this.simulationTimers = {}
+    this.simulationCandidateChecks = {}
     Object.keys(this.simulationVersions).forEach((handlerId) => {
       const version = this.simulationVersions[handlerId]
       if (version !== undefined) this.simulationVersions[handlerId] = version + 1

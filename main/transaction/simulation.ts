@@ -5,7 +5,11 @@ import {
   parseErc20AllowanceResult,
   parseErc20ApprovalIntent
 } from '../../resources/domain/transaction/allowance'
-import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
+import {
+  normalizeTransactionQuantities,
+  parseRpcQuantity,
+  toRpcQuantity
+} from '../../resources/domain/transaction/quantity'
 import { parseAccountCode } from '../../resources/domain/account/code'
 import { parseSimulationEffects } from './effects'
 import type { SimulationEffect } from './effects'
@@ -478,18 +482,29 @@ function copyCallField(target: Record<string, unknown>, key: string, value: unkn
 
 export function buildSimulationCall(transaction: SimulationCallData) {
   const call: BuiltSimulationCall = {}
+  const { gas: _gas, gasLimit: _gasLimit, ...transactionWithoutGas } = transaction
+  const normalized = normalizeTransactionQuantities(transactionWithoutGas)
 
-  copyCallField(call, 'type', transaction.type)
-  copyCallField(call, 'nonce', transaction.nonce)
-  copyCallField(call, 'from', transaction.from)
-  copyCallField(call, 'to', transaction.to)
-  copyCallField(call, 'gas', transaction.gasLimit || transaction.gas)
-  copyCallField(call, 'value', transaction.value)
-  copyCallField(call, 'input', transaction.data)
-  copyCallField(call, 'gasPrice', transaction.gasPrice)
-  copyCallField(call, 'maxPriorityFeePerGas', transaction.maxPriorityFeePerGas)
-  copyCallField(call, 'maxFeePerGas', transaction.maxFeePerGas)
-  copyCallField(call, 'accessList', transaction.accessList)
+  const gas = transaction.gasLimit || transaction.gas
+  let parsedGas: bigint | undefined
+  try {
+    const normalizedGas = normalizeTransactionQuantities({ gas }).gas
+    parsedGas = parseRpcQuantity(normalizedGas)
+  } catch {
+    parsedGas = undefined
+  }
+
+  copyCallField(call, 'type', normalized.type)
+  copyCallField(call, 'nonce', normalized.nonce)
+  copyCallField(call, 'from', normalized.from)
+  copyCallField(call, 'to', normalized.to)
+  if (parsedGas !== undefined && parsedGas > 0n) copyCallField(call, 'gas', toRpcQuantity(parsedGas))
+  copyCallField(call, 'value', normalized.value)
+  copyCallField(call, 'input', normalized.data)
+  copyCallField(call, 'gasPrice', normalized.gasPrice)
+  copyCallField(call, 'maxPriorityFeePerGas', normalized.maxPriorityFeePerGas)
+  copyCallField(call, 'maxFeePerGas', normalized.maxFeePerGas)
+  copyCallField(call, 'accessList', normalized.accessList)
 
   return call
 }

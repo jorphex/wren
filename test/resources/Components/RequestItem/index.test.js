@@ -158,6 +158,28 @@ it('keeps header request composition static so nested actions remain valid', () 
   expect(screen.getByRole('button', { name: 'Nested review action' })).toBeTruthy()
 })
 
+it('leaves retained transaction recovery copy to the action shelf', () => {
+  render(
+    <RequestItem
+      account={account}
+      color='var(--outerspace)'
+      headerMode
+      req={{
+        created: Date.now(),
+        handlerId,
+        status: 'error',
+        type: 'transaction',
+        notice: 'Balance or fee data is unavailable. Nothing was signed.',
+        retainedPreBroadcastError: { responderPending: true }
+      }}
+      title='Base Sepolia Transaction'
+    />
+  )
+
+  expect(screen.queryByText('Balance or fee data is unavailable. Nothing was signed.')).toBeNull()
+  expect(screen.getByText('error')).toBeTruthy()
+})
+
 it('presents a declined request as neutral and inactive rather than failed', () => {
   render(
     <RequestItem

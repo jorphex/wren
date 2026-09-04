@@ -284,6 +284,29 @@ describe('#getRawTx', () => {
     expect(tx).not.toHaveProperty('unexpected')
   })
 
+  it('canonicalizes every JSON-RPC transaction quantity at admission', () => {
+    const tx = getRawTx({
+      chainId: '0x01',
+      nonce: '0x0007',
+      gas: '0x005208',
+      gasPrice: '0x000a',
+      maxPriorityFeePerGas: '0x0002',
+      maxFeePerGas: '0x0064',
+      value: '0x0001'
+    })
+
+    expect(tx).toMatchObject({
+      chainId: '0x1',
+      nonce: '0x7',
+      gasLimit: '0x5208',
+      gasPrice: '0xa',
+      maxPriorityFeePerGas: '0x2',
+      maxFeePerGas: '0x64',
+      value: '0x1',
+      type: '0x0'
+    })
+  })
+
   it('normalizes a valid access list without changing its order or duplicates', () => {
     const address = '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
     const storageKey = `0x${'BB'.repeat(32)}`

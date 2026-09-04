@@ -373,13 +373,13 @@ it('shows exact funding recovery amounts with copy, receive QR, and recheck acti
   view.unmount()
 })
 
-it('shows the exact unavailable funding evidence in a layout-stable retry slot', async () => {
+it('keeps an unavailable funding retry concise and shows that recheck completed', async () => {
   const req = transaction({
     status: 'error',
-    notice: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.',
+    notice: 'Gas estimate unavailable. Nothing was signed.',
     recoverableError: {
       code: 'transaction-funding-unavailable',
-      message: 'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
+      message: 'Gas estimate unavailable. Nothing was signed.'
     },
     retainedPreBroadcastError: { responderPending: true }
   })
@@ -387,16 +387,16 @@ it('shows the exact unavailable funding evidence in a layout-stable retry slot',
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
   expect(screen.getByText('Funding check unavailable')).toBeTruthy()
-  expect(
-    screen.getByText('The transaction gas limit could not be re-estimated. Nothing was signed or sent.')
-  ).toBeTruthy()
+  expect(screen.getByText('Gas estimate unavailable. Nothing was signed.')).toBeTruthy()
   const feedback = document.querySelector('.requestActionError')
   expect(feedback).toBeTruthy()
   expect(feedback.textContent).toBe('\u00a0')
 
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
 
-  expect(feedback.textContent).toBe('Wren could not update this request. It is still pending.')
+  expect(feedback.textContent).toBe('\u00a0')
+  expect(screen.getByText('Still unavailable')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy()
   expect(document.querySelector('.requestActionContextIconAlert')).toBeTruthy()
   view.unmount()
 })

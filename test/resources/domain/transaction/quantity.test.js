@@ -1,5 +1,6 @@
 import {
   MAX_UINT256,
+  normalizeTransactionQuantities,
   parseRpcQuantity,
   toRpcQuantity
 } from '../../../../resources/domain/transaction/quantity'
@@ -27,4 +28,17 @@ it('formats canonical uint256 quantities', () => {
 
 it.each([-1n, MAX_UINT256 + 1n])('rejects an out-of-range quantity', (value) => {
   expect(() => toRpcQuantity(value)).toThrow('uint256')
+})
+
+it('canonicalizes padded transaction quantities without changing other fields', () => {
+  expect(normalizeTransactionQuantities({ nonce: '0x000A', gasLimit: '0x005208', data: '0x000A' })).toEqual({
+    nonce: '0xa',
+    gasLimit: '0x5208',
+    data: '0x000A'
+  })
+})
+
+it('rejects malformed or out-of-range transaction quantities', () => {
+  expect(() => normalizeTransactionQuantities({ nonce: '0xg' })).toThrow('nonce')
+  expect(() => normalizeTransactionQuantities({ value: `0x1${'0'.repeat(64)}` })).toThrow('value')
 })

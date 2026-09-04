@@ -1384,6 +1384,46 @@ describe('#addRequest', () => {
     expect(request.simulation).toEqual({ status: 'succeeded', source: 'eth_call' })
   })
 
+  it('keeps a locally updated approval action visible while replacement recognition is pending', async () => {
+    let resolveRecognition
+    const approval = {
+      id: 'erc20:approve',
+      data: { amount: maxTokenAmount.toString(10) }
+    }
+    const replacement = { ...approval, data: { ...approval.data, symbol: 'TST' } }
+    const request = {
+      handlerId: 'updated-approval-recognition',
+      type: 'transaction',
+      data: {
+        chainId: '0x1',
+        from: accountState.address,
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount])
+      },
+      recognizedActions: [approval],
+      simulation: { status: 'succeeded', source: 'eth_call' },
+      approvals: []
+    }
+    simulateTransaction.mockImplementationOnce((_transaction, dependencies) => {
+      dependencies.onCoreResult({ status: 'succeeded', source: 'eth_call' })
+      return new Promise(() => {})
+    })
+    reveal.recog.mockImplementation(() => new Promise((resolve) => (resolveRecognition = resolve)))
+
+    account.requests[request.handlerId] = request
+    account.refreshTransactionSimulation(request, true, false, undefined, {
+      preserveRecognizedActions: true
+    })
+    jest.advanceTimersByTime(1)
+    await Promise.resolve()
+
+    expect(request.recognizedActions).toEqual([approval])
+
+    resolveRecognition([replacement])
+    await flushPromises()
+    expect(request.recognizedActions).toEqual([replacement])
+  })
+
   it('coalesces same-turn transaction updates before calling the RPC', async () => {
     simulateTransaction.mockResolvedValueOnce({ status: 'succeeded', source: 'eth_call' })
     const request = {
@@ -1404,25 +1444,120 @@ describe('#addRequest', () => {
     expect(request.simulation.status).toBe('succeeded')
   })
 
-  it('keeps the completed execution check visible during a silent fee refresh', async () => {
+  it('commits a silent fee refresh atomically after its execution check', async () => {
     let resolveRefresh
     const completed = { status: 'succeeded', source: 'eth_call' }
-    simulateTransaction.mockImplementationOnce(() => new Promise((resolve) => (resolveRefresh = resolve)))
+    simulateTransaction.mockImplementationOnce((_transaction, dependencies) => {
+      dependencies.onCoreResult({
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        advancedChecks: { status: 'pending' }
+      })
+      return new Promise((resolve) => (resolveRefresh = resolve))
+    })
     const request = {
       handlerId: 'silent-fee-simulation',
       type: 'transaction',
-      data: { chainId: '0x1', gasLimit: '0x5208' },
+      data: { chainId: '0x1', gasLimit: '0x5208', maxFeePerGas: '0x9' },
+      simulation: completed
+    }
+    const candidate = { ...request.data, maxFeePerGas: '0xb' }
+
+    account.requests[request.handlerId] = request
+    account.refreshTransactionSimulation(request, false, true, candidate)
+    expect(request.simulation).toBe(completed)
+    expect(request.data.maxFeePerGas).toBe('0x9')
+
+    jest.advanceTimersByTime(1)
+    expect(request.simulation).toBe(completed)
+    expect(request.data.maxFeePerGas).toBe('0x9')
+    resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1' })
+    await jest.advanceTimersByTimeAsync(0)
+    expect(request.simulation).toEqual({ status: 'succeeded', source: 'eth_simulateV1' })
+    expect(request.data.maxFeePerGas).toBe('0xb')
+  })
+
+  it('lets one fee check finish while newer block quotes arrive', async () => {
+    let resolveRefresh
+    simulateTransaction
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveRefresh = resolve)))
+      .mockResolvedValueOnce({ status: 'succeeded', source: 'eth_simulateV1' })
+    const request = {
+      handlerId: 'coalesced-fee-simulation',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208', maxFeePerGas: '0x9' },
+      simulation: { status: 'succeeded', source: 'eth_call' }
+    }
+    const candidate = { ...request.data, maxFeePerGas: '0xb' }
+
+    account.requests[request.handlerId] = request
+    account.refreshTransactionSimulation(request, false, true, candidate)
+    jest.advanceTimersByTime(1)
+    account.refreshTransactionSimulation(request, false, true, { ...candidate })
+    account.refreshTransactionSimulation(request, false, true, {
+      ...candidate,
+      maxFeePerGas: '0xc'
+    })
+
+    expect(simulateTransaction).toHaveBeenCalledTimes(1)
+    resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1' })
+    await jest.advanceTimersByTimeAsync(0)
+    expect(request.data.maxFeePerGas).toBe('0xb')
+
+    account.refreshTransactionSimulation(request, false, true, {
+      ...request.data,
+      maxFeePerGas: '0xc'
+    })
+    await jest.advanceTimersByTimeAsync(1)
+
+    expect(simulateTransaction).toHaveBeenCalledTimes(2)
+    expect(request.data.maxFeePerGas).toBe('0xc')
+  })
+
+  it('keeps a completed review when a silent fee check is unavailable', async () => {
+    const completed = { status: 'succeeded', source: 'eth_call' }
+    simulateTransaction.mockResolvedValueOnce({
+      status: 'failed',
+      source: 'eth_simulateV1',
+      reason: 'private RPC detail'
+    })
+    const request = {
+      handlerId: 'failed-silent-fee-simulation',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208', maxFeePerGas: '0x9' },
       simulation: completed
     }
 
     account.requests[request.handlerId] = request
-    account.refreshTransactionSimulation(request, false, true)
-    expect(request.simulation).toBe(completed)
-
+    account.refreshTransactionSimulation(request, false, true, { ...request.data, maxFeePerGas: '0xb' })
     jest.advanceTimersByTime(1)
+    await jest.advanceTimersByTimeAsync(0)
+
+    expect(request.simulation).toBe(completed)
+    expect(request.data.maxFeePerGas).toBe('0x9')
+  })
+
+  it('discards a staged fee refresh once signing locks the request', async () => {
+    let resolveRefresh
+    simulateTransaction.mockImplementationOnce(() => new Promise((resolve) => (resolveRefresh = resolve)))
+    const completed = { status: 'succeeded', source: 'eth_call' }
+    const request = {
+      handlerId: 'locked-silent-fee-simulation',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208', maxFeePerGas: '0x9' },
+      simulation: completed
+    }
+
+    account.requests[request.handlerId] = request
+    account.refreshTransactionSimulation(request, false, true, { ...request.data, maxFeePerGas: '0xb' })
+    jest.advanceTimersByTime(1)
+    request.locked = true
+    request.status = RequestStatus.Pending
     resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1' })
     await jest.advanceTimersByTimeAsync(0)
-    expect(request.simulation).toEqual({ status: 'succeeded', source: 'eth_simulateV1' })
+
+    expect(request.simulation).toBe(completed)
+    expect(request.data.maxFeePerGas).toBe('0x9')
   })
 
   it('retains decoded method details only while calldata, target, and reviewed code stay unchanged', async () => {
@@ -1530,6 +1665,31 @@ describe('#addRequest', () => {
     request.data.gasLimit = '0x6000'
     account.refreshTransactionSimulation(request)
     expect(request.approvals).toEqual([gasApproval])
+  })
+
+  it('keeps raw RPC errors out of execution-check approval copy', async () => {
+    simulateTransaction.mockResolvedValueOnce({
+      status: 'failed',
+      source: 'eth_simulateV1',
+      reason: 'invalid argument 0: private RPC detail'
+    })
+    const request = {
+      handlerId: 'simulation-rpc-detail',
+      type: 'transaction',
+      data: { chainId: '0x1', gasLimit: '0x5208' },
+      approvals: [],
+      simulation: { status: 'pending' }
+    }
+
+    account.addRequest(request)
+    jest.advanceTimersByTime(1)
+    await jest.advanceTimersByTimeAsync(0)
+
+    const approval = request.approvals[0]
+    expect(approval.data.message).toBe(
+      'Wren could not determine whether this transaction will execute successfully.'
+    )
+    expect(approval.data.message).not.toContain('private RPC detail')
   })
 
   it('requires stable explicit consent while the selected account remains delegated', async () => {

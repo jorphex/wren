@@ -128,6 +128,8 @@ class _RequestItem extends React.Component {
         ? `Queued · ${queuePositionLabel}`
         : undefined
     const requestIcon = requestIcons[svgName]
+    const recoveryShelfOwnsNotice =
+      headerMode && req.type === 'transaction' && req.status === 'error' && req.retainedPreBroadcastError
     const statusIcon =
       req.status === 'error'
         ? 'failed'
@@ -211,6 +213,7 @@ class _RequestItem extends React.Component {
             <div style={headerMode ? { pointerEvents: 'auto' } : { pointerEvents: 'none' }}>{children}</div>
             {notice &&
               notice !== status &&
+              !recoveryShelfOwnsNotice &&
               !(headerMode && req.type === 'transaction' && req.status === 'pending') && (
                 <div
                   role='alert'

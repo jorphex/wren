@@ -879,14 +879,14 @@ export class Provider extends EventEmitter {
     if (!Number.isSafeInteger(chainId) || chainId <= 0) {
       throw new TransactionFundingError(
         TRANSACTION_FUNDING_UNAVAILABLE,
-        'The transaction network could not be verified. Nothing was signed or sent.'
+        'Network unavailable. Nothing was signed.'
       )
     }
     const l1Fee = chainUsesOptimismFees(chainId) ? req.chainData?.optimism?.l1Fees : '0x0'
     if (l1Fee === undefined || l1Fee === '') {
       throw new TransactionFundingError(
         TRANSACTION_FUNDING_UNAVAILABLE,
-        'The network data fee could not be verified. Nothing was signed or sent.'
+        'Network fee unavailable. Nothing was signed.'
       )
     }
 
@@ -908,7 +908,7 @@ export class Provider extends EventEmitter {
             reject(
               new TransactionFundingError(
                 TRANSACTION_FUNDING_UNAVAILABLE,
-                'The account balance could not be verified. Nothing was signed or sent.'
+                'Balance unavailable. Nothing was signed.'
               )
             )
           } else {
@@ -2016,15 +2016,21 @@ export class Provider extends EventEmitter {
             type: ApprovalType.GasLimitApproval,
             data: {
               message: (error as Error).message,
-              gasLimit: '0x00'
+              gasLimit: '0x0'
             }
           })
-          return '0x00'
+          return '0x0'
         }
       }
 
+      const suppliedGasLimit = rawTx.gasLimit
+      const parsedGasLimit = parseRpcQuantity(suppliedGasLimit)
+      const gasLimitPromise =
+        suppliedGasLimit !== undefined && parsedGasLimit !== undefined && parsedGasLimit > 0n
+          ? Promise.resolve(suppliedGasLimit)
+          : estimateGasLimit()
       const [gasLimit, recipientType] = await Promise.all([
-        rawTx.gasLimit ?? estimateGasLimit(),
+        gasLimitPromise,
         rawTx.to ? reveal.resolveEntityType(rawTx.to, parseInt(rawTx.chainId, 16)) : ''
       ])
 

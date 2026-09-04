@@ -43,7 +43,12 @@ import { ActionType } from '../transaction/actions'
 import { ApprovalType } from '../../resources/constants'
 import { accountNS } from '../../resources/domain/account'
 import { chainUsesOptimismFees } from '../../resources/utils/chains'
-import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
+import {
+  MAX_UINT256,
+  normalizeTransactionQuantities,
+  parseRpcQuantity,
+  toRpcQuantity
+} from '../../resources/domain/transaction/quantity'
 import {
   getReplacementStatus,
   replacementFees,
@@ -137,6 +142,7 @@ function toTransactionsByLayer(requests: Record<string, AccountRequest>, chainId
         const txRequest = req as TransactionRequest
         if (
           !txRequest.locked &&
+          txRequest.status === undefined &&
           !txRequest.feesUpdatedByUser &&
           txRequest.data.gasFeesSource === GasFeesSource.Frame &&
           (!chainId || parseInt(txRequest.data.chainId, 16) === chainId)
@@ -718,8 +724,9 @@ export class Accounts extends EventEmitter {
   private restoreRequestedNonce(request: TransactionRequest) {
     request.data = { ...request.data }
     const requestedNonce = request.payload.params?.[0]?.nonce
-    if (requestedNonce) request.data.nonce = requestedNonce
-    else delete request.data.nonce
+    if (requestedNonce) {
+      request.data.nonce = normalizeTransactionQuantities({ nonce: requestedNonce }).nonce
+    } else delete request.data.nonce
   }
 
   private clearPendingNonceAdjustmentsForAccount(account: FrameAccount) {
@@ -1548,7 +1555,9 @@ export class Accounts extends EventEmitter {
         log.warn('Ignored invalid transaction action update', { reqId, actionId })
         return false
       }
-      currentAccount.refreshTransactionSimulation(transactionReq)
+      currentAccount.refreshTransactionSimulation(transactionReq, true, false, undefined, {
+        preserveRecognizedActions: true
+      })
       return true
     }
 
@@ -1912,6 +1921,77 @@ export class Accounts extends EventEmitter {
     this.updatePendingFees()
   }
 
+  private pendingTransactionFeeData(account: FrameAccount, req: TransactionRequest) {
+    const tx = req.data
+    const chain = { type: 'ethereum', id: parseInt(tx.chainId, 16) }
+    const gas = store('main.networksMeta', chain.type, chain.id, 'gas')
+    const gasLimit = this.requiredQuantity(tx.gasLimit, 'transaction gas limit')
+    const perGasCap = this.maxFeePerGasFor(gasLimit, tx)
+    let candidateData: TransactionData
+
+    if (usesBaseFee(tx)) {
+      const { maxBaseFeePerGas, maxPriorityFeePerGas } = gas.price.fees || {}
+      if (!maxBaseFeePerGas || !maxPriorityFeePerGas) {
+        throw new Error(`Network ${chain.id} has no EIP-1559 fee estimate`)
+      }
+      const priorityFee = this.limitedQuantity(
+        this.requiredQuantity(maxPriorityFeePerGas, 'network priority fee'),
+        this.limitedQuantity(MAX_FEE_PER_GAS, perGasCap)
+      )
+      const baseFee = this.limitedQuantity(
+        this.requiredQuantity(maxBaseFeePerGas, 'network base fee'),
+        this.limitedQuantity(MAX_FEE_PER_GAS, perGasCap - priorityFee)
+      )
+      candidateData = {
+        ...tx,
+        maxPriorityFeePerGas: toRpcQuantity(priorityFee),
+        maxFeePerGas: toRpcQuantity(baseFee + priorityFee)
+      }
+    } else {
+      const gasPrice = gas.price.levels.fast
+      if (!gasPrice) throw new Error(`Network ${chain.id} has no fast gas-price estimate`)
+      candidateData = {
+        ...tx,
+        gasPrice: toRpcQuantity(
+          this.limitedQuantity(
+            this.requiredQuantity(gasPrice, 'network gas price'),
+            this.limitedQuantity(MAX_FEE_PER_GAS, perGasCap)
+          )
+        )
+      }
+    }
+
+    if (req.replacement) {
+      candidateData = {
+        ...candidateData,
+        ...replacementFees(
+          { ...req, data: candidateData },
+          transactionRequests(account),
+          this.replacementFeeMarket(chain.id, usesBaseFee(tx))
+        ),
+        gasFeesSource: GasFeesSource.Frame
+      }
+    }
+
+    return candidateData
+  }
+
+  private async refreshTransactionL1Fee(req: TransactionRequest) {
+    try {
+      const estimate = toRpcQuantity(await provider.getL1GasCost(req.data))
+      req.chainData = {
+        ...req.chainData,
+        optimism: {
+          l1Fees: estimate
+        }
+      }
+      return true
+    } catch (error) {
+      log.error('Error estimating L1 gas cost', error)
+      return false
+    }
+  }
+
   async updatePendingFees(chainId?: number) {
     const currentAccount = this.current()
 
@@ -1928,27 +2008,16 @@ export class Accounts extends EventEmitter {
 
       walletCalls.forEach((request) => currentAccount.refreshWalletCallsPreparation(request))
 
-      l1Transactions.forEach(([id, req]) => {
+      l1Transactions.forEach(([_id, req]) => {
         try {
           const tx = req.data
-          const chain = { type: 'ethereum', id: parseInt(tx.chainId, 16) }
-          const gas = store('main.networksMeta', chain.type, chain.id, 'gas')
-
-          if (usesBaseFee(tx)) {
-            const { maxBaseFeePerGas, maxPriorityFeePerGas } = gas.price.fees || {}
-            if (!maxBaseFeePerGas || !maxPriorityFeePerGas) {
-              throw new Error(`Network ${chain.id} has no EIP-1559 fee estimate`)
-            }
-            this.setPriorityFee(maxPriorityFeePerGas, id, false)
-            this.setBaseFee(maxBaseFeePerGas, id, false)
-          } else {
-            const gasPrice = gas.price.levels.fast
-            if (!gasPrice) throw new Error(`Network ${chain.id} has no fast gas-price estimate`)
-            this.setGasPrice(gasPrice, id, false)
-          }
-          if (req.replacement) {
-            this.applyReplacementFees(currentAccount, req)
-            currentAccount.refreshTransactionSimulation(req)
+          const candidateData = this.pendingTransactionFeeData(currentAccount, req)
+          const changed = usesBaseFee(tx)
+            ? candidateData.maxPriorityFeePerGas !== tx.maxPriorityFeePerGas ||
+              candidateData.maxFeePerGas !== tx.maxFeePerGas
+            : candidateData.gasPrice !== tx.gasPrice
+          if (changed) {
+            currentAccount.refreshTransactionSimulation(req, false, true, candidateData)
           }
         } catch (e) {
           log.error('Could not update gas fees for transaction', e)
@@ -1957,21 +2026,7 @@ export class Accounts extends EventEmitter {
 
       await Promise.all(
         l2Transactions.map(async ([_id, req]) => {
-          let estimate = ''
-          try {
-            estimate = toRpcQuantity(await provider.getL1GasCost(req.data))
-          } catch (e) {
-            log.error('Error estimating L1 gas cost', e)
-          }
-
-          req.chainData = {
-            ...req.chainData,
-            optimism: {
-              l1Fees: estimate
-            }
-          }
-
-          currentAccount.update()
+          if (await this.refreshTransactionL1Fee(req)) currentAccount.update()
         })
       )
     }
@@ -2902,9 +2957,29 @@ export class Accounts extends EventEmitter {
     const fundingRecovery = request.recoverableError.code.startsWith('transaction-funding-')
     if (fundingRecovery) {
       delete request.locked
-      const failedGasEstimate =
-        (request.approvals || []).some((approval) => approval.type === ApprovalType.GasLimitApproval) &&
-        (parseRpcQuantity(request.data.gasLimit) ?? 0n) === 0n
+      const failFundingRecheck = (message: string): never => {
+        const error = new TransactionFundingError(TRANSACTION_FUNDING_UNAVAILABLE, message)
+        request.locked = true
+        request.notice = error.message
+        request.recoverableError = { code: error.code, message: error.message }
+        currentAccount.update()
+        throw error
+      }
+
+      const { gasLimit: retainedGasLimit, ...retainedData } = request.data
+      try {
+        request.data = normalizeTransactionQuantities(retainedData) as TransactionData
+      } catch {
+        failFundingRecheck('Transaction data could not be verified. Nothing was signed.')
+      }
+
+      let normalizedGasLimit: string | undefined
+      try {
+        normalizedGasLimit = normalizeTransactionQuantities({ gasLimit: retainedGasLimit }).gasLimit
+      } catch {
+        normalizedGasLimit = undefined
+      }
+      const failedGasEstimate = (parseRpcQuantity(normalizedGasLimit) ?? 0n) === 0n
       if (failedGasEstimate) {
         try {
           request.data.gasLimit = await provider.estimateGas(request.data)
@@ -2912,21 +2987,22 @@ export class Accounts extends EventEmitter {
             (approval) => approval.type !== ApprovalType.GasLimitApproval
           )
         } catch {
-          const error = new TransactionFundingError(
-            TRANSACTION_FUNDING_UNAVAILABLE,
-            'The transaction gas limit could not be re-estimated. Nothing was signed or sent.'
-          )
-          request.locked = true
-          request.notice = error.message
-          request.recoverableError = {
-            code: error.code,
-            message: error.message
-          }
-          currentAccount.update()
-          throw error
+          failFundingRecheck('Gas estimate unavailable. Nothing was signed.')
+        }
+      } else {
+        request.data.gasLimit = normalizedGasLimit as string
+      }
+      if (!request.feesUpdatedByUser && request.data.gasFeesSource === GasFeesSource.Frame) {
+        try {
+          request.data = this.pendingTransactionFeeData(currentAccount, request)
+        } catch {
+          log.warn('Could not refresh transaction fees during funding recheck', { handlerId })
         }
       }
-      await this.updatePendingFees(Number(parseRpcQuantity(request.data.chainId)))
+      const chainId = Number(parseRpcQuantity(request.data.chainId))
+      if (Number.isSafeInteger(chainId) && chainId > 0 && chainUsesOptimismFees(chainId)) {
+        if (await this.refreshTransactionL1Fee(request)) currentAccount.update()
+      }
       request.locked = true
       try {
         await provider.assertTransactionFunding(request)

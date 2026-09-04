@@ -150,6 +150,29 @@ it('builds bounded single-call RPC inputs from transaction data', () => {
   })
 })
 
+it('canonicalizes transaction quantities and omits placeholder gas from simulation calls', () => {
+  expect(
+    buildSimulationCall({
+      ...transaction,
+      type: '0x02',
+      nonce: '0x007',
+      gasLimit: '0x005208',
+      value: '0x01',
+      maxPriorityFeePerGas: '0x02',
+      maxFeePerGas: '0x064'
+    })
+  ).toMatchObject({
+    type: '0x2',
+    nonce: '0x7',
+    gas: '0x5208',
+    value: '0x1',
+    maxPriorityFeePerGas: '0x2',
+    maxFeePerGas: '0x64'
+  })
+  expect(buildSimulationCall({ ...transaction, gasLimit: '0x00' })).not.toHaveProperty('gas')
+  expect(buildSimulationCall({ ...transaction, gasLimit: '0x0' })).not.toHaveProperty('gas')
+})
+
 it('preserves an exact access list in configured-RPC simulation input', () => {
   const accessList = [
     {

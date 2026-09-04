@@ -728,6 +728,18 @@ describe('#assertTransactionFunding', () => {
     ).resolves.toMatchObject({ required: '0x16', missing: '0x0' })
   })
 
+  it.each([
+    ['an invalid chain', '0x0', 'Network unavailable. Nothing was signed.'],
+    ['a missing L1 fee', '0xa', 'Network fee unavailable. Nothing was signed.']
+  ])('keeps %s recovery copy concise', async (_label, chainId, message) => {
+    await expect(
+      assertFunding({
+        account: address,
+        data: { chainId, type: '0x0', value: '0x0', gasLimit: '0x1', gasPrice: '0x1' }
+      })
+    ).rejects.toMatchObject({ code: TRANSACTION_FUNDING_UNAVAILABLE, message })
+  })
+
   it('fails closed when the configured RPC balance is unavailable', async () => {
     connection.send.mockImplementationOnce((_payload, callback) => {
       callback({ error: { code: -32603, message: 'offline' } })
@@ -738,7 +750,10 @@ describe('#assertTransactionFunding', () => {
         account: address,
         data: { chainId: '0x1', type: '0x0', value: '0x0', gasLimit: '0x1', gasPrice: '0x1' }
       })
-    ).rejects.toMatchObject({ code: TRANSACTION_FUNDING_UNAVAILABLE })
+    ).rejects.toMatchObject({
+      code: TRANSACTION_FUNDING_UNAVAILABLE,
+      message: 'Balance unavailable. Nothing was signed.'
+    })
   })
 })
 
@@ -4475,6 +4490,27 @@ describe('#send', () => {
       })
     })
 
+    it('re-estimates a zero dapp gas limit before review', (done) => {
+      connection.send.mockImplementationOnce((payload, cb) => {
+        expect(payload.method).toBe('eth_estimateGas')
+        cb({ result: addHexPrefix((150000).toString(16)) })
+      })
+      tx.gasLimit = '0x00'
+
+      sendTransaction(() => {
+        try {
+          const initialRequest = accountRequests[0]
+          expect(initialRequest.data.gasLimit).toBe(addHexPrefix((225000).toString(16)))
+          expect(initialRequest.approvals).not.toContainEqual(
+            expect.objectContaining({ type: ApprovalType.GasLimitApproval })
+          )
+          done()
+        } catch (error) {
+          done(error)
+        }
+      })
+    })
+
     it.each([null, '1', '0x01'])(
       'requires explicit approval after a malformed gas estimate: %p',
       (estimate, done) => {
@@ -4483,10 +4519,10 @@ describe('#send', () => {
 
         provider.fillTransaction(tx, (error, metadata) => {
           expect(error).toBeNull()
-          expect(metadata.tx.gasLimit).toBe('0x00')
+          expect(metadata.tx.gasLimit).toBe('0x0')
           expect(metadata.approvals).toContainEqual({
             type: ApprovalType.GasLimitApproval,
-            data: { message: 'Invalid gas estimate response', gasLimit: '0x00' }
+            data: { message: 'Invalid gas estimate response', gasLimit: '0x0' }
           })
           done()
         })
@@ -4499,7 +4535,7 @@ describe('#send', () => {
       sendTransaction(() => {
         try {
           const initialRequest = accountRequests[0]
-          expect(initialRequest.data.gasPrice).toBe('0x00')
+          expect(initialRequest.data.gasPrice).toBe('0x0')
           done()
         } catch (e) {
           done(e)

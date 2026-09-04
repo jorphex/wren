@@ -97,6 +97,7 @@ export class RequestCommand extends React.Component {
       signerLocked: false,
       requestActionPending: false,
       requestActionError: '',
+      recheckCompleted: false,
       fundingQrOpen: false
     }
 
@@ -126,7 +127,10 @@ export class RequestCommand extends React.Component {
     this.syncSigningClock()
   }
 
-  componentDidUpdate() {
+  componentDidUpdate(previousProps) {
+    if (previousProps.req?.handlerId !== this.props.req?.handlerId && this.state.recheckCompleted) {
+      this.setState({ recheckCompleted: false })
+    }
     this.syncSigningClock()
   }
 
@@ -172,12 +176,20 @@ export class RequestCommand extends React.Component {
     const onResult = (error) => {
       if (!this.mounted) return
       if (error) {
+        if (method === 'retryTransactionRequest') {
+          this.setState({
+            requestActionPending: false,
+            requestActionError: '',
+            recheckCompleted: true
+          })
+          return
+        }
         this.setState({
           requestActionPending: false,
           requestActionError: 'Wren could not update this request. It is still pending.'
         })
       } else {
-        this.setState({ requestActionPending: false, requestActionError: '' })
+        this.setState({ requestActionPending: false, requestActionError: '', recheckCompleted: false })
       }
     }
     const reference = requestReference(req)
@@ -714,11 +726,14 @@ export class RequestCommand extends React.Component {
     const decimals = Number.isInteger(nativeCurrency.decimals) ? nativeCurrency.decimals : 18
     const symbol = nativeCurrency.symbol || 'native currency'
     const pending = this.state.requestActionPending
+    const recheckCompleted = this.state.recheckCompleted
     const title = recoverable
       ? funding
         ? 'More funds needed'
         : fundingUnavailable
-          ? 'Funding check unavailable'
+          ? recheckCompleted
+            ? 'Still unavailable'
+            : 'Funding check unavailable'
           : changed
             ? 'Transaction state changed'
             : 'Safety check unavailable'
@@ -728,8 +743,7 @@ export class RequestCommand extends React.Component {
       ? funding
         ? 'The account cannot cover the value and maximum network fee. Nothing was signed or sent.'
         : fundingUnavailable
-          ? req.recoverableError?.message ||
-            'The balance or fee requirement could not be verified. Nothing was signed or sent.'
+          ? req.recoverableError?.message || 'Balance or fee data is unavailable. Nothing was signed.'
           : changed
             ? 'Account code changed during the final safety check. Nothing was signed or sent.'
             : 'The safety check could not be repeated. Nothing was signed or sent.'
@@ -810,7 +824,7 @@ export class RequestCommand extends React.Component {
               onClick={() => this.runRequestAction('retryTransactionRequest', req)}
             >
               <span className='requestSignButton _txButton'>
-                <span>{pending ? 'Rechecking…' : 'Recheck'}</span>
+                <span>{pending ? 'Checking…' : recheckCompleted ? 'Check again' : 'Recheck'}</span>
               </span>
             </button>
           ) : null}

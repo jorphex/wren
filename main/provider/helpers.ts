@@ -18,7 +18,12 @@ import store from '../store'
 import { usesBaseFee, TransactionData, GasFeesSource } from '../../resources/domain/transaction'
 import { normalizeAccessList } from '../../resources/domain/transaction/accessList'
 import { getAddress } from '../../resources/utils'
-import { MAX_UINT256, parseRpcQuantity, toRpcQuantity } from '../../resources/domain/transaction/quantity'
+import {
+  MAX_UINT256,
+  normalizeTransactionQuantities,
+  parseRpcQuantity,
+  toRpcQuantity
+} from '../../resources/domain/transaction/quantity'
 import {
   increaseByTenPercent,
   maximumRpcQuantity,
@@ -188,7 +193,7 @@ export function getRawTx(newTx: RPC.SendTransaction.TxParams): TransactionData {
     gasFeesSource: GasFeesSource.Dapp
   }
 
-  return tx
+  return normalizeTransactionQuantities(tx)
 }
 
 export function gasFees(rawTx: TransactionData) {
