@@ -5,6 +5,7 @@ import { execFileSync } from 'child_process'
 
 import {
   CONTRACT_VERIFICATION_INTAKE_SESSION_TTL_MS,
+  contractVerificationArtifactErrorCode,
   ContractVerificationArtifactIntakeError,
   createContractVerificationArtifactIntake,
   MAX_CONTRACT_VERIFICATION_ARTIFACT_BUNDLE_BYTES,
@@ -12,6 +13,12 @@ import {
   type ContractVerificationArtifactFileChooser,
   type ContractVerificationArtifactIntakeErrorCode
 } from '../../../main/contractVerification/artifactIntake'
+import { ContractVerificationDomainError } from '../../../resources/domain/contractVerification'
+
+const VYPER_SOLC_JSON_FIXTURE = path.resolve(
+  __dirname,
+  '../../fixtures/contractVerification/vyper-0.4.3-solc-json.json'
+)
 
 const UUIDS = [
   '00000000-0000-4000-8000-000000000001',
@@ -163,6 +170,38 @@ test('accepts exactly two matching JSON artifacts and opens each with O_NOFOLLOW
   }
 })
 
+test('accepts a Vyper 0.4.3 solc_json artifact without exposing its source in the handle', async () => {
+  const intake = createContractVerificationArtifactIntake({
+    chooseFiles: chooserFor([VYPER_SOLC_JSON_FIXTURE]),
+    randomUUID: uuidSequence()
+  })
+
+  const handle = await intake.inspect()
+
+  expect(handle).toEqual({
+    token: UUIDS[0],
+    summary: {
+      format: 'vyper-solc-json',
+      language: 'Vyper',
+      compilerStatus: 'included',
+      compilerVersion: '0.4.3+commit.bff19ea2',
+      sourceCount: 1,
+      contractCandidates: [],
+      localRuntimeMatch: false,
+      selectionRequired: false,
+      selectedContractIdentifier: null
+    }
+  })
+  expect(JSON.stringify(handle)).not.toContain('#pragma version')
+  expect(JSON.stringify(handle)).not.toContain('sha256sum')
+
+  const consumed = intake.consume(handle!.token)
+  expect(consumed.artifact.stdJsonInput).not.toHaveProperty('compiler_version')
+  expect(consumed.artifact.stdJsonInput['sources']?.['contracts/simple/LastClaimWins.vy']).not.toHaveProperty(
+    'sha256sum'
+  )
+})
+
 test.each([
   [[], 'invalid-file-selection'],
   [['one.json', 'two.json', 'three.json'], 'invalid-file-selection'],
@@ -281,6 +320,18 @@ test('passes malformed artifact objects through the domain fixed error contract'
     code: 'invalid-standard-json',
     message: 'Compiler standard JSON input is invalid'
   })
+})
+
+test('preserves fixed intake and domain errors for the renderer boundary', () => {
+  expect(
+    contractVerificationArtifactErrorCode(
+      new ContractVerificationArtifactIntakeError('artifact-file-too-large')
+    )
+  ).toBe('artifact-file-too-large')
+  expect(
+    contractVerificationArtifactErrorCode(new ContractVerificationDomainError('source-checksum-mismatch'))
+  ).toBe('source-checksum-mismatch')
+  expect(contractVerificationArtifactErrorCode(new Error('private detail'))).toBe('invalid-file')
 })
 
 test('requires an explicit ambiguous contract choice and rotates the token on every edit', async () => {

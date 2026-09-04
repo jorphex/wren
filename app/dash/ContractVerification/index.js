@@ -1,5 +1,6 @@
 import React from 'react'
 
+import Icon from '../../../resources/Components/Icon'
 import link from '../../../resources/link'
 import {
   getExplorerCredentialStatus,
@@ -23,9 +24,42 @@ export const ACTIVE_JOB_REFRESH_MS = 2_000
 const ERROR_COPY = Object.freeze({
   'address-has-no-code': 'No deployed contract code was found at this address.',
   'api-key-required': 'Add an Etherscan API key in Settings before submitting directly.',
+  'artifact-bundle-too-large': 'The selected artifact files are too large.',
+  'artifact-file-too-large': 'This artifact file is too large.',
+  'artifact-too-deep': 'This artifact is nested too deeply.',
   'artifact-mismatch': 'This source artifact does not match the deployed contract.',
   'credential-unavailable': 'Secure API-key storage is unavailable on this system.',
+  'invalid-artifact-bundle': 'These files do not form a valid artifact bundle.',
   'invalid-artifact': 'Wren could not use this verification artifact.',
+  'invalid-file': 'This artifact file could not be read safely.',
+  'invalid-file-selection': 'Choose one or two JSON artifact files.',
+  'invalid-json': 'This artifact does not contain valid JSON.',
+  'invalid-standard-json': 'This file is not valid compiler Standard JSON.',
+  'invalid-vyper-solc-json': 'This file is not a valid Vyper solc_json artifact.',
+  'invalid-vyper-integrity': 'This Vyper artifact has invalid integrity metadata.',
+  'invalid-compiler-version': 'This artifact does not include a valid exact compiler version.',
+  'invalid-compiler-output': 'This artifact contains invalid compiler output.',
+  'invalid-contract-identifier': 'This artifact contains an invalid contract identifier.',
+  'invalid-deployed-bytecode': 'This artifact contains invalid deployed bytecode.',
+  'invalid-bytecode-reference': 'This artifact contains an invalid bytecode reference.',
+  'invalid-source-content': 'This artifact contains invalid source data.',
+  'invalid-source-path': 'This artifact contains an invalid source path.',
+  'invalid-utf8': 'This artifact is not valid UTF-8 text.',
+  'mismatched-build-info-pair': 'These build-info files do not match.',
+  'missing-build-output': 'Choose the matching compiler-output artifact too.',
+  'missing-compiler-version': 'This artifact does not include an exact compiler version.',
+  'output-too-large': 'This artifact’s compiler output is too large.',
+  'overlapping-bytecode-reference': 'This artifact has overlapping bytecode references.',
+  'source-checksum-mismatch': 'A Vyper source checksum does not match its content.',
+  'source-content-too-large': 'A source in this artifact is too large.',
+  'source-path-too-long': 'A source path in this artifact is too long.',
+  'submission-too-large': 'This verification artifact is too large.',
+  'too-many-artifacts': 'Choose no more than two artifact files.',
+  'too-many-contracts': 'This artifact contains too many contracts.',
+  'too-many-sources': 'This artifact contains too many sources.',
+  'total-source-content-too-large': 'The sources in this artifact are too large.',
+  'unsupported-artifact-format': 'This verification artifact format is not supported.',
+  'unsupported-language': 'This verification artifact language is not supported.',
   'invalid-artifact-session': 'This source selection expired. Choose the artifact again.',
   'invalid-operation': 'This deployment can no longer be verified from its saved receipt.',
   'job-unavailable': 'This verification record is unavailable.',
@@ -87,6 +121,7 @@ const formatLabel = (format) =>
   ({
     'solidity-standard-json': 'Solidity standard JSON',
     'vyper-standard-json': 'Vyper standard JSON',
+    'vyper-solc-json': 'Vyper solc_json',
     'foundry-build-info': 'Foundry build-info',
     'hardhat-2-build-info': 'Hardhat build-info',
     'hardhat-3-build-info': 'Hardhat 3 build-info'
@@ -324,6 +359,15 @@ export class ContractVerification extends React.Component {
       }
       if (!result?.success) {
         this.activeOperation = false
+        if (result?.error === 'already-submitted' && result.job) {
+          this.setState({
+            busy: '',
+            error: '',
+            status: 'Existing submission opened.',
+            job: result.job
+          })
+          return result
+        }
         this.setState({
           busy: '',
           error: errorCopy(result?.error, failure),
@@ -765,29 +809,34 @@ export class ContractVerification extends React.Component {
   renderRecent(networks) {
     if (this.state.job || this.state.operationId || !this.state.recentJobs.length) return null
     return (
-      <section className='contractVerificationRecent' aria-labelledby='contract-verification-recent-title'>
-        <div className='contractVerificationSectionHeading'>
-          <div>
-            <h2 id='contract-verification-recent-title'>Recent verifications</h2>
-            <p>Continue a saved publication or check its current status.</p>
-          </div>
-        </div>
+      <section
+        className='contractVerificationRecent dashHomeCard'
+        aria-labelledby='contract-verification-recent-title'
+      >
+        <header className='contractVerificationRecentHeading'>
+          <h2 id='contract-verification-recent-title'>Recent verifications</h2>
+        </header>
         <div className='contractVerificationRecentList'>
           {this.state.recentJobs.map((job) => {
             const network = networks.find(({ id }) => id === Number(job.target?.chainId))
+            const address = compactAddress(job.target?.address)
+            const networkName = network?.name || `Chain ${job.target?.chainId}`
+            const status = String(job.status || 'unknown').replaceAll('-', ' ')
             return (
               <button
                 type='button'
-                className='contractVerificationRecentRow wrenControl wrenControlGhost'
+                className='contractVerificationRecentRow'
                 key={job.id}
+                aria-label={`${address} on ${networkName}, ${status}. Open verification.`}
                 disabled={Boolean(this.state.busy)}
                 onClick={() => this.loadVerification(job.id)}
               >
-                <span>
-                  <strong className='contractVerificationMono'>{compactAddress(job.target?.address)}</strong>
-                  <small>{network?.name || `Chain ${job.target?.chainId}`}</small>
+                <span className='contractVerificationRecentIdentity'>
+                  <strong className='contractVerificationMono'>{address}</strong>
+                  <small>{networkName}</small>
                 </span>
-                <span>{String(job.status || 'unknown').replaceAll('-', ' ')}</span>
+                <span className='contractVerificationRecentMeta'>{status}</span>
+                <Icon name='next' size={14} />
               </button>
             )
           })}
@@ -1118,7 +1167,6 @@ export class ContractVerification extends React.Component {
         ) : null}
 
         {this.renderTarget(networks)}
-        {this.renderRecent(networks)}
 
         {this.state.job ? (
           <>
@@ -1183,6 +1231,7 @@ export class ContractVerification extends React.Component {
             </div>
           </form>
         )}
+        {this.renderRecent(networks)}
       </Root>
     )
   }

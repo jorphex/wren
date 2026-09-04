@@ -33,10 +33,13 @@ export const CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES = Object.freeze([
   'unsupported-artifact-format',
   'unsupported-language',
   'invalid-standard-json',
+  'invalid-vyper-solc-json',
+  'invalid-vyper-integrity',
   'too-many-sources',
   'invalid-source-path',
   'source-path-too-long',
   'invalid-source-content',
+  'source-checksum-mismatch',
   'source-content-too-large',
   'total-source-content-too-large',
   'submission-too-large',
@@ -72,10 +75,13 @@ export const CONTRACT_VERIFICATION_DOMAIN_ERROR_MESSAGES: Readonly<
   'unsupported-artifact-format': 'Verification artifact format is not supported',
   'unsupported-language': 'Verification artifact language is not supported',
   'invalid-standard-json': 'Compiler standard JSON input is invalid',
+  'invalid-vyper-solc-json': 'Vyper solc_json artifact is invalid',
+  'invalid-vyper-integrity': 'Vyper artifact integrity metadata is invalid',
   'too-many-sources': 'Verification artifact contains too many sources',
   'invalid-source-path': 'Verification source path is invalid',
   'source-path-too-long': 'Verification source path is too long',
   'invalid-source-content': 'Verification source content is invalid',
+  'source-checksum-mismatch': 'A Vyper source checksum does not match its content',
   'source-content-too-large': 'A verification source is too large',
   'total-source-content-too-large': 'Verification sources are too large',
   'submission-too-large': 'Verification submission is too large',
@@ -113,6 +119,7 @@ export type ContractVerificationLanguage = 'Solidity' | 'Vyper'
 export type ContractVerificationArtifactFormat =
   | 'solidity-standard-json'
   | 'vyper-standard-json'
+  | 'vyper-solc-json'
   | 'hardhat-2-build-info'
   | 'foundry-build-info'
   | 'hardhat-3-build-info'
@@ -257,6 +264,15 @@ const HH3_OUTPUT_KEYS = ['_format', 'id', 'output'] as const
 const STANDARD_JSON_REQUIRED_KEYS = ['language', 'sources'] as const
 const STANDARD_JSON_OPTIONAL_KEYS = ['settings'] as const
 const VYPER_STANDARD_JSON_OPTIONAL_KEYS = ['settings', 'storage_layout_overrides'] as const
+const VYPER_SOLC_JSON_REQUIRED_KEYS = [
+  'language',
+  'sources',
+  'settings',
+  'compiler_version',
+  'integrity'
+] as const
+const VYPER_SOLC_JSON_OPTIONAL_KEYS = ['storage_layout_overrides'] as const
+const VYPER_SOLC_JSON_SOURCE_KEYS = ['content', 'sha256sum'] as const
 const SOURCE_REQUIRED_KEYS = ['content'] as const
 const SOURCE_OPTIONAL_KEYS = ['keccak256', 'urls'] as const
 const TARGET_KEYS = ['address', 'chainId', 'runtimeCodeHash'] as const
@@ -551,11 +567,11 @@ function parseStandardJson(value: unknown): {
   if (!hasAllowedKeys(value, STANDARD_JSON_REQUIRED_KEYS, optionalKeys)) fail('invalid-standard-json')
   if (
     (hasOwn(value, 'settings') && !isRecord(ownValue(value, 'settings'))) ||
+    (hasOwn(value, 'storage_layout_overrides') && !isRecord(ownValue(value, 'storage_layout_overrides'))) ||
     !isRecord(ownValue(value, 'sources'))
   ) {
     fail('invalid-standard-json')
   }
-
   const sources = ownValue(value, 'sources') as Record<string, unknown>
   const sourcePaths = Object.keys(sources)
   if (sourcePaths.length === 0) fail('invalid-standard-json')
@@ -613,6 +629,81 @@ function parseStandardJson(value: unknown): {
     input: Object.freeze(normalized),
     language,
     sourceCount: sourcePaths.length
+  })
+}
+
+function parseVyperSolcJson(value: Record<string, unknown>): {
+  readonly input: ContractVerificationJsonObject
+  readonly language: 'Vyper'
+  readonly sourceCount: number
+  readonly compilerVersion: string
+} {
+  if (
+    !hasAllowedKeys(value, VYPER_SOLC_JSON_REQUIRED_KEYS, VYPER_SOLC_JSON_OPTIONAL_KEYS) ||
+    ownValue(value, 'language') !== 'Vyper'
+  ) {
+    fail('invalid-vyper-solc-json')
+  }
+
+  const compilerVersion = ownValue(value, 'compiler_version')
+  if (
+    typeof compilerVersion !== 'string' ||
+    !compilerVersion.startsWith('v') ||
+    !isContractVerificationCompilerVersion(compilerVersion)
+  ) {
+    fail('invalid-compiler-version')
+  }
+  const integrity = ownValue(value, 'integrity')
+  if (typeof integrity !== 'string' || !SHA_256.test(integrity)) fail('invalid-vyper-integrity')
+
+  const sourceValue = ownValue(value, 'sources')
+  if (!isRecord(sourceValue)) fail('invalid-standard-json')
+  const sourcePaths = Object.keys(sourceValue)
+  if (
+    Object.getOwnPropertySymbols(sourceValue).length !== 0 ||
+    Object.getOwnPropertyNames(sourceValue).length !== sourcePaths.length
+  ) {
+    fail('invalid-standard-json')
+  }
+  const normalizedSources: Record<string, unknown> = Object.create(null)
+  const checksums = new Map<string, string>()
+  for (const sourcePath of sourcePaths) {
+    const source = ownValue(sourceValue, sourcePath)
+    if (!isRecord(source) || !hasExactKeys(source, VYPER_SOLC_JSON_SOURCE_KEYS)) {
+      fail('invalid-source-content')
+    }
+    const content = ownValue(source, 'content')
+    const checksum = ownValue(source, 'sha256sum')
+    if (typeof content !== 'string' || typeof checksum !== 'string' || !SHA_256.test(checksum)) {
+      fail('invalid-source-content')
+    }
+    normalizedSources[sourcePath] = { content }
+    checksums.set(sourcePath, checksum)
+  }
+
+  const normalized: Record<string, unknown> = Object.create(null)
+  normalized['language'] = 'Vyper'
+  normalized['sources'] = normalizedSources
+  normalized['settings'] = ownValue(value, 'settings')
+  // Vyper defines integrity over its resolved import graph and any layout override.
+  // Downstream verifiers recompute it and accept the strict compiler input, not this envelope field.
+  if (hasOwn(value, 'storage_layout_overrides')) {
+    normalized['storage_layout_overrides'] = ownValue(value, 'storage_layout_overrides')
+  }
+  const standard = parseStandardJson(normalized)
+
+  const sources = standard.input['sources'] as ContractVerificationJsonObject
+  for (const [sourcePath, checksum] of checksums) {
+    const source = sources[sourcePath] as ContractVerificationJsonObject
+    if (sha256(toUtf8Bytes(source['content'] as string)).slice(2) !== checksum) {
+      fail('source-checksum-mismatch')
+    }
+  }
+
+  return Object.freeze({
+    ...standard,
+    language: 'Vyper' as const,
+    compilerVersion: compilerVersion.slice(1)
   })
 }
 
@@ -782,6 +873,19 @@ export function parseContractVerificationArtifacts(
 
   const artifact = records[0]!
   if (!hasOwn(artifact, '_format')) {
+    if (hasOwn(artifact, 'compiler_version')) {
+      const standard = parseVyperSolcJson(artifact)
+      return freezeArtifact({
+        format: 'vyper-solc-json',
+        language: standard.language,
+        compilerVersion: standard.compilerVersion,
+        sourceCount: standard.sourceCount,
+        contractCandidates: Object.freeze([]),
+        localRuntimeMatch: false,
+        stdJsonInput: standard.input,
+        compilerOutput: null
+      })
+    }
     const standard = parseStandardJson(artifact)
     return freezeArtifact({
       format: standard.language === 'Solidity' ? 'solidity-standard-json' : 'vyper-standard-json',

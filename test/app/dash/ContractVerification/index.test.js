@@ -81,6 +81,19 @@ const buildArtifact = {
   }
 }
 
+const vyperArtifact = {
+  token: 'vyper-token',
+  summary: {
+    format: 'vyper-solc-json',
+    language: 'Vyper',
+    compilerStatus: 'included',
+    compilerVersion: '0.4.3+commit.bff19ea2',
+    sourceCount: 1,
+    contractCandidates: [],
+    localRuntimeMatch: false
+  }
+}
+
 const prepared = {
   acknowledgementToken: 'ack-token',
   target: { chainId: 1, address, runtimeCodeHash: hash },
@@ -151,10 +164,14 @@ it('accepts only configured connected networks and renders the shared target fie
   listVerifications.mockResolvedValue({ success: true, jobs: [job] })
   expect(verificationNetworks(networks).map(({ id }) => id)).toEqual([8453, 1])
   render(<ContractVerification networks={networks} />)
-  await screen.findByRole('heading', { name: 'Recent verifications' })
+  const recentSummary = await screen.findByText('Recent verifications')
   expect(screen.getByLabelText('Network').classList.contains('wrenInput')).toBe(true)
   expect(screen.getByLabelText('Contract address').classList.contains('wrenInput')).toBe(true)
-  expect(screen.getByRole('button', { name: 'Check source' }).disabled).toBe(true)
+  const check = screen.getByRole('button', { name: 'Check source' })
+  expect(check.disabled).toBe(true)
+  expect(check.compareDocumentPosition(recentSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(recentSummary.closest('section')?.classList.contains('contractVerificationRecent')).toBe(true)
+  expect(screen.getByRole('button', { name: /0x11111111…11111111.*ethereum.*partial/i })).toBeTruthy()
 
   fireEvent.change(screen.getByLabelText('Contract address'), { target: { value: '0x1234' } })
   expect(screen.getByLabelText('Contract address').getAttribute('aria-invalid')).toBe('true')
@@ -170,7 +187,7 @@ it('loads a bounded flat recent list on the Tools route and opens a saved record
   getVerification.mockResolvedValue({ success: true, job })
   const { user } = render(<ContractVerification networks={networks} />)
 
-  expect(await screen.findByRole('heading', { name: 'Recent verifications' })).toBeTruthy()
+  await screen.findByText('Recent verifications')
   expect(listVerifications).toHaveBeenCalledTimes(1)
   const rows = screen.getAllByRole('button', {
     name: /0x11111111…11111111.*ethereum.*partial/i
@@ -180,7 +197,7 @@ it('loads a bounded flat recent list on the Tools route and opens a saved record
   await user.click(recent)
   expect(getVerification).toHaveBeenCalledWith('verification-1')
   expect(await screen.findByRole('heading', { name: 'Verification status' })).toBeTruthy()
-  expect(screen.queryByRole('heading', { name: 'Recent verifications' })).toBeNull()
+  expect(screen.queryByText('Recent verifications')).toBeNull()
 })
 
 it('renders an operation prefill as immutable flat context', () => {
@@ -226,6 +243,29 @@ it('shows compiler and contract choices only when the artifact requires them', a
   await waitFor(() => expect(screen.queryByLabelText('Exact compiler version')).toBeNull())
   await waitFor(() => expect(screen.queryByLabelText('Contract')).toBeNull())
   expect(screen.getByText('Available')).toBeTruthy()
+})
+
+it('labels a Vyper solc_json artifact and uses its embedded compiler version', async () => {
+  const { user } = render(<ContractVerification networks={networks} />)
+  await choose(user, vyperArtifact)
+
+  expect(screen.getByText('Vyper solc_json')).toBeTruthy()
+  expect(screen.getByText('0.4.3+commit.bff19ea2')).toBeTruthy()
+  expect(screen.queryByLabelText('Exact compiler version')).toBeNull()
+})
+
+it('surfaces a specific artifact validation failure', async () => {
+  inspectVerificationArtifact.mockResolvedValue({
+    success: false,
+    error: 'source-checksum-mismatch'
+  })
+  const { user } = render(<ContractVerification networks={networks} />)
+
+  await user.click(screen.getByRole('button', { name: 'Choose artifact' }))
+
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'A Vyper source checksum does not match its content.'
+  )
 })
 
 it('restores focus after cancel without rendering a path or source content', async () => {
@@ -342,6 +382,22 @@ it('publishes once with explicit acknowledgement and replaces the composer with 
   ).toBeTruthy()
   expect(screen.getByText('Blockscout')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Check source' })).toBeNull()
+})
+
+it('opens the existing job when duplicate protection finds an equivalent publication', async () => {
+  publishVerification.mockResolvedValue({ success: false, error: 'already-submitted', job })
+  const { user } = render(<ContractVerification networks={networks} />)
+  await fillTarget(user)
+  await choose(user)
+  await user.click(screen.getByRole('button', { name: 'Check source' }))
+  await user.click(await screen.findByRole('checkbox'))
+  await user.click(screen.getByRole('button', { name: 'Publish source' }))
+
+  expect(await screen.findByRole('heading', { name: 'Verification status' })).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toBe('Existing submission opened.')
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Publish source' })).toBeNull()
+  expect(publishVerification).toHaveBeenCalledTimes(1)
 })
 
 it('loads existing results, refreshes only on request, and opens external results explicitly', async () => {

@@ -518,7 +518,18 @@ test('serializes equivalent Sourcify publications before the first POST settles'
       acknowledgementToken: secondPrepared.prepared.acknowledgementToken,
       confirmation: 'PUBLISH_CONTRACT_SOURCE'
     })
-  ).resolves.toEqual({ success: false, error: 'already-submitted' })
+  ).resolves.toEqual({
+    success: false,
+    error: 'already-submitted',
+    job: expect.objectContaining({
+      destinations: expect.arrayContaining([
+        expect.objectContaining({
+          destination: 'sourcify',
+          publicationHash: expect.stringMatching(/^[0-9a-f]{64}$/u)
+        })
+      ])
+    })
+  })
 
   release?.({ status: 'accepted', verificationId: REMOTE_ID })
   await expect(first).resolves.toEqual({ success: true, job: expect.any(Object) })
@@ -609,7 +620,8 @@ test('fences the same Sourcify creation transaction across block-only evidence c
     })
   }
 
-  await expect(publishOperation(firstOperation)).resolves.toEqual({ success: true, job: expect.any(Object) })
+  const firstPublication = await publishOperation(firstOperation)
+  if (!firstPublication.success) throw new Error('expected publication')
   const reorged: OperationLifecycle = {
     ...firstOperation,
     id: '10000000-0000-4000-8000-000000000003',
@@ -619,7 +631,11 @@ test('fences the same Sourcify creation transaction across block-only evidence c
       blockNumber: '0x7'
     }
   }
-  await expect(publishOperation(reorged)).resolves.toEqual({ success: false, error: 'already-submitted' })
+  await expect(publishOperation(reorged)).resolves.toEqual({
+    success: false,
+    error: 'already-submitted',
+    job: firstPublication.job
+  })
 
   expect(subject.sourcify.submit).toHaveBeenCalledTimes(1)
 })
@@ -675,7 +691,16 @@ test('commits the Sourcify fence before POST and its accepted polling ID before 
     const restarted = harness({ persisted: fencedJobs, uuidOffset: 100 })
     await expect(restarted.prepareAndPublish()).resolves.toEqual({
       success: false,
-      error: 'already-submitted'
+      error: 'already-submitted',
+      job: expect.objectContaining({
+        destinations: expect.arrayContaining([
+          expect.objectContaining({
+            destination: 'sourcify',
+            status: 'unknown',
+            publicationHash: expect.stringMatching(/^[0-9a-f]{64}$/u)
+          })
+        ])
+      })
     })
     expect(restarted.sourcify.submit).not.toHaveBeenCalled()
 

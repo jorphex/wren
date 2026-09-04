@@ -33,6 +33,7 @@ import {
 } from '../contractVerification/artifactIntake'
 import { CONTRACT_VERIFICATION_SERVICE_ERROR_CODES } from '../contractVerification/service'
 import {
+  CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES,
   CONTRACT_VERIFICATION_DESTINATIONS,
   isContractVerificationCompilerVersion,
   MAX_CONTRACT_VERIFICATION_CANDIDATES,
@@ -410,6 +411,7 @@ const AccountRequestReferenceSchema = z
 const ContractVerificationRequestReferenceSchema = z
   .object({ account: AddressSchema, handlerId: HandlerIdSchema })
   .strict()
+const ContractVerificationAddressInputSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/)
 const ContractVerificationAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/)
 const ContractVerificationHashSchema = z.string().regex(/^0x[0-9a-f]{64}$/)
 const ContractVerificationSha256Schema = z.string().regex(/^[0-9a-f]{64}$/)
@@ -468,6 +470,7 @@ const ContractVerificationDestinationSchema = z
       'needs-api-key',
       'unknown'
     ]),
+    publicationHash: ContractVerificationSha256Schema.optional(),
     remoteId: ContractVerificationRemoteIdSchema.optional(),
     statusUrl: ContractVerificationUrlSchema.optional(),
     explorerUrl: ContractVerificationUrlSchema.optional(),
@@ -510,6 +513,7 @@ const ContractVerificationJobSchema = z
 const ContractVerificationArtifactFormatSchema = z.enum([
   'solidity-standard-json',
   'vyper-standard-json',
+  'vyper-solc-json',
   'hardhat-2-build-info',
   'foundry-build-info',
   'hardhat-3-build-info'
@@ -594,7 +598,13 @@ const ContractVerificationServiceFailureWithJobSchema = z
   })
   .strict()
 const ContractVerificationArtifactFailureSchema = z
-  .object({ success: z.literal(false), error: z.enum(CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES) })
+  .object({
+    success: z.literal(false),
+    error: z.enum([
+      ...CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES,
+      ...CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES
+    ])
+  })
   .strict()
 const AssetSuggestionReferenceSchema = AccountRequestReferenceSchema
 const WalletCallFeeAdjustmentSchema = z
@@ -824,7 +834,7 @@ const invokeSchemas = {
       .object({
         artifactToken: z.uuid(),
         chainId: ChainNumberSchema,
-        address: ContractVerificationAddressSchema,
+        address: ContractVerificationAddressInputSchema,
         operationId: z.uuid().optional(),
         compilerVersion: ContractVerificationCompilerVersionSchema.optional(),
         contractIdentifier: ContractVerificationIdentifierSchema.optional()
@@ -1001,7 +1011,7 @@ const invokeResultSchemas = {
   ]),
   'contractVerification:publish': z.union([
     z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),
-    ContractVerificationServiceFailureSchema
+    ContractVerificationServiceFailureWithJobSchema
   ]),
   'contractVerification:publishEtherscan': z.union([
     z.object({ success: z.literal(true), job: ContractVerificationJobSchema }).strict(),

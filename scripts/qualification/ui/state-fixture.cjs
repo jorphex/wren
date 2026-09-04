@@ -2604,6 +2604,41 @@ const rpcReplyFor = (scenario, method) => {
   }
 }
 
+const qualificationVerificationJob = (scenario) => ({
+  id: QUALIFICATION_VERIFICATION_JOB,
+  target: {
+    address: QUALIFICATION_VERIFICATION_ADDRESS,
+    chainId: 10,
+    runtimeCodeHash: QUALIFICATION_VERIFICATION_RUNTIME_HASH
+  },
+  language: 'Solidity',
+  compilerVersion: '0.8.28',
+  contractIdentifier: 'src/CommunityVault.sol:CommunityVault',
+  sourceHash: '68'.repeat(32),
+  submissionHash: '69'.repeat(32),
+  status: 'published',
+  destinations: [
+    { destination: 'sourcify', status: 'published' },
+    {
+      destination: 'etherscan-forwarded',
+      status: 'unavailable',
+      reasonCode: 'destination-unavailable'
+    },
+    { destination: 'blockscout-forwarded', status: 'verified' },
+    { destination: 'routescan-forwarded', status: 'not-submitted' },
+    scenario.variant === 'direct-transport-unknown'
+      ? {
+          destination: 'etherscan-direct',
+          status: 'unknown',
+          reasonCode: 'transport-failure',
+          publicationHash: '70'.repeat(32)
+        }
+      : { destination: 'etherscan-direct', status: 'not-submitted' }
+  ],
+  createdAt: Date.UTC(2026, 7, 20, 12, 0, 0),
+  updatedAt: Date.UTC(2026, 7, 20, 12, 1, 0)
+})
+
 const invokeReplyFor = (scenario, method, args = []) => {
   if (method === 'activity:details' && scenario.state === 'account-activity-detail-retained') {
     return {
@@ -2849,7 +2884,12 @@ const invokeReplyFor = (scenario, method, args = []) => {
       }
     }
   }
-  if (method === 'contractVerification:list') return { success: true, jobs: [] }
+  if (method === 'contractVerification:list') {
+    return {
+      success: true,
+      jobs: scenario.variant === 'history' ? [qualificationVerificationJob(scenario)] : []
+    }
+  }
   if (method === 'contractVerification:openResult') return { success: true }
   if (method === 'contractVerification:credentialStatus') {
     if (scenario.variant === 'credential-status-unavailable') {
@@ -2882,40 +2922,7 @@ const invokeReplyFor = (scenario, method, args = []) => {
   if (method === 'contractVerification:get') {
     return {
       success: true,
-      job: {
-        id: QUALIFICATION_VERIFICATION_JOB,
-        target: {
-          address: QUALIFICATION_VERIFICATION_ADDRESS,
-          chainId: 10,
-          runtimeCodeHash: QUALIFICATION_VERIFICATION_RUNTIME_HASH
-        },
-        language: 'Solidity',
-        compilerVersion: '0.8.28',
-        contractIdentifier: 'src/CommunityVault.sol:CommunityVault',
-        sourceHash: '68'.repeat(32),
-        submissionHash: '69'.repeat(32),
-        status: 'published',
-        destinations: [
-          { destination: 'sourcify', status: 'published' },
-          {
-            destination: 'etherscan-forwarded',
-            status: 'unavailable',
-            reasonCode: 'destination-unavailable'
-          },
-          { destination: 'blockscout-forwarded', status: 'verified' },
-          { destination: 'routescan-forwarded', status: 'not-submitted' },
-          scenario.variant === 'direct-transport-unknown'
-            ? {
-                destination: 'etherscan-direct',
-                status: 'unknown',
-                reasonCode: 'transport-failure',
-                publicationHash: '70'.repeat(32)
-              }
-            : { destination: 'etherscan-direct', status: 'not-submitted' }
-        ],
-        createdAt: Date.UTC(2026, 7, 20, 12, 0, 0),
-        updatedAt: Date.UTC(2026, 7, 20, 12, 1, 0)
-      }
+      job: qualificationVerificationJob(scenario)
     }
   }
   if (scenario.state.startsWith('send-') && method === 'send:resolveRecipient') {

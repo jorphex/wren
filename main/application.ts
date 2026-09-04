@@ -66,7 +66,7 @@ import contractVerification, {
   contractVerificationArtifactIntake,
   contractVerificationPollingRuntime
 } from './contractVerification/runtime'
-import { ContractVerificationArtifactIntakeError } from './contractVerification/artifactIntake'
+import { contractVerificationArtifactErrorCode } from './contractVerification/artifactIntake'
 import { wakeContractVerificationPollingForActiveResult } from './contractVerification/pollingRuntime'
 import { createSecretClipboard } from './security/secretClipboard'
 import activityDetails from './activity/detailsRuntime'
@@ -444,7 +444,7 @@ const contractVerificationArtifactMutation = async (operation: () => Promise<unk
   } catch (error) {
     return {
       success: false as const,
-      error: error instanceof ContractVerificationArtifactIntakeError ? error.code : ('invalid-file' as const)
+      error: contractVerificationArtifactErrorCode(error)
     }
   }
 }

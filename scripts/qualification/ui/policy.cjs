@@ -892,6 +892,53 @@ const reviewScenarios = () => [
       requiredText: ['Confirmed', 'Tx hash', 'Confirmations', '13']
     }))
   ),
+  ...[
+    ['full', FULL_SHELL_HEIGHT],
+    ['short', SHORT_SHELL_HEIGHT]
+  ].map(([geometry, logicalHeight]) => ({
+    id: `dash-contract-verification-history-${geometry}-1`,
+    renderer: 'dash',
+    state: 'contract-verification',
+    variant: 'history',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight,
+    ...(geometry === 'full'
+      ? {
+          action: {
+            type: 'hoverText',
+            text: '0x66666666…66666666 on Optimism Mainnet — Community RPC, published. Open verification.'
+          }
+        }
+      : {}),
+    ready: '.contractVerificationRecentRow',
+    captureScroll: 'target',
+    captureScrollSelector: '.contractVerificationRecent',
+    requiredControls: ['Network', 'Contract address', 'Choose artifact'],
+    requiredText: ['RECENT VERIFICATIONS', 'Optimism', 'Published'],
+    layoutExpectations: [
+      {
+        kind: 'full-width',
+        selector: '.contractVerificationRecentRow',
+        container: '.contractVerificationRecent',
+        inset: 0
+      },
+      {
+        kind: 'aligned-left',
+        selector: '.contractVerificationRecentIdentity',
+        with: '#contract-verification-recent-title',
+        tolerance: 1
+      },
+      {
+        kind: 'edge-clearance',
+        selector: '.contractVerificationRecentRow',
+        container: '.contractsPanel',
+        inset: 2
+      },
+      { kind: 'text-unclipped', selector: '.contractVerificationRecentIdentity' },
+      { kind: 'text-unclipped', selector: '.contractVerificationRecentMeta' }
+    ]
+  })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     ['unlocked', 'locked'].flatMap((variant) =>
       [

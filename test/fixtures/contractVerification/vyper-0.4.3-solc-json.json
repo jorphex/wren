@@ -1,0 +1,17 @@
+{
+  "language": "Vyper",
+  "sources": {
+    "contracts/simple/LastClaimWins.vy": {
+      "content": "#pragma version ^0.4.3\n\n\"\"\"\n@title LastClaimWins\n@notice Reusable last-claim-wins game with no token custody or transfers.\n\"\"\"\n\n\nevent GameStarted:\n    game_id: indexed(uint256)\n    deadline: uint256\n\nevent Claimed:\n    game_id: indexed(uint256)\n    claimer: indexed(address)\n    claimed_at: uint256\n\n\nadmin: public(immutable(address))\ngame_id: public(uint256)\ndeadline: public(HashMap[uint256, uint256])\nlast_claimer: public(HashMap[uint256, address])\nlast_claim_at: public(HashMap[uint256, uint256])\n\n\n@deploy\ndef __init__():\n    \"\"\"\n    @notice Sets the deployer as the permanent game administrator.\n    \"\"\"\n    admin = msg.sender\n\n\n@external\ndef start(_deadline: uint256):\n    \"\"\"\n    @notice Starts the next game with a fixed Unix timestamp deadline.\n    @param _deadline Final timestamp at which calls to `this_is_mine()` count.\n    \"\"\"\n    assert msg.sender == admin, \"not admin\"\n    assert (\n        self.game_id == 0\n        or block.timestamp > self.deadline[self.game_id]\n    ), \"game active\"\n    assert _deadline > block.timestamp, \"bad deadline\"\n\n    self.game_id += 1\n    self.deadline[self.game_id] = _deadline\n\n    log GameStarted(game_id=self.game_id, deadline=_deadline)\n\n\n@external\ndef this_is_mine():\n    \"\"\"\n    @notice Records the caller as the current claimer for the active game.\n    \"\"\"\n    assert self.game_id > 0, \"no game\"\n    assert block.timestamp <= self.deadline[self.game_id], \"expired\"\n\n    self.last_claimer[self.game_id] = msg.sender\n    self.last_claim_at[self.game_id] = block.timestamp\n\n    log Claimed(\n        game_id=self.game_id,\n        claimer=msg.sender,\n        claimed_at=block.timestamp,\n    )\n\n\n@external\n@view\ndef is_active(_game_id: uint256) -> bool:\n    \"\"\"\n    @notice Returns true when the requested game is the current live game.\n    \"\"\"\n    return (\n        _game_id > 0\n        and _game_id == self.game_id\n        and block.timestamp <= self.deadline[_game_id]\n    )\n\n\n@external\n@view\ndef is_expired(_game_id: uint256) -> bool:\n    \"\"\"\n    @notice Returns true when the requested game exists and its deadline passed.\n    \"\"\"\n    return (\n        _game_id > 0\n        and _game_id <= self.game_id\n        and block.timestamp > self.deadline[_game_id]\n    )\n",
+      "sha256sum": "c6223df051aa06598d04fcef19ffd6503be00904f51412741a30ae67ac93a5ef"
+    }
+  },
+  "settings": {
+    "outputSelection": {
+      "contracts/simple/LastClaimWins.vy": ["*"]
+    },
+    "search_paths": ["."]
+  },
+  "compiler_version": "v0.4.3+commit.bff19ea2",
+  "integrity": "216eddb2725db041dcf5a0b1111899a583038f2de9be650c0a9a62791b6daa64"
+}

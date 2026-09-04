@@ -887,10 +887,11 @@ export function createContractVerificationService(
 
       const publicationHash = sourcifyPublicationHash(session.target, submission.submissionHash)
       publicationFenceKey = publicationHash
-      if (
-        busySourcifyPublications.has(publicationHash) ||
-        dependencies.jobs.list().some((candidate) => hasSourcifyPublicationFence(candidate, publicationHash))
-      ) {
+      const existingJob = dependencies.jobs
+        .list()
+        .find((candidate) => hasSourcifyPublicationFence(candidate, publicationHash))
+      if (busySourcifyPublications.has(publicationHash) || existingJob) {
+        job = existingJob
         return fail('already-submitted')
       }
       busySourcifyPublications.add(publicationHash)

@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 import {
   canonicalContractVerificationJson,
   CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES,
@@ -21,6 +24,14 @@ import {
   validateContractVerificationJobLedger,
   validateContractVerificationTarget
 } from '../../../../resources/domain/contractVerification'
+
+const VYPER_SOLC_JSON_FIXTURE = path.resolve(
+  __dirname,
+  '../../../fixtures/contractVerification/vyper-0.4.3-solc-json.json'
+)
+
+const vyperSolcJson = (): Record<string, unknown> =>
+  JSON.parse(fs.readFileSync(VYPER_SOLC_JSON_FIXTURE, 'utf8')) as Record<string, unknown>
 
 const standardInput = (language: 'Solidity' | 'Vyper' = 'Solidity') => ({
   language,
@@ -151,6 +162,75 @@ describe('artifact format detection and renderer summary', () => {
     expect(Object.isFrozen(solidity)).toBe(true)
     expect(Object.isFrozen(solidity.stdJsonInput)).toBe(true)
     expect(Object.isFrozen(solidity.stdJsonInput['sources'])).toBe(true)
+  })
+
+  it('accepts and normalizes the integrity-bearing Vyper 0.4.3 solc_json envelope', () => {
+    const artifact = parseContractVerificationArtifacts([vyperSolcJson()])
+    const summary = summarizeContractVerificationArtifact(artifact)
+    const sources = artifact.stdJsonInput['sources'] as Record<string, Record<string, unknown>>
+    const source = sources['contracts/simple/LastClaimWins.vy']!
+
+    expect(summary).toEqual({
+      format: 'vyper-solc-json',
+      language: 'Vyper',
+      compilerStatus: 'included',
+      compilerVersion: '0.4.3+commit.bff19ea2',
+      sourceCount: 1,
+      contractCandidates: [],
+      localRuntimeMatch: false
+    })
+    expect(artifact.stdJsonInput).not.toHaveProperty('integrity')
+    expect(Object.keys(source)).toEqual(['content'])
+    expect(JSON.stringify(summary)).not.toContain('#pragma version')
+    expect(JSON.stringify(summary)).not.toContain('sha256sum')
+    expect(
+      prepareContractVerificationSubmission(artifact, {
+        contractIdentifier: 'contracts/simple/LastClaimWins.vy:LastClaimWins'
+      }).compilerVersion
+    ).toBe('0.4.3+commit.bff19ea2')
+  })
+
+  it('does not broaden raw Vyper Standard JSON with envelope integrity metadata', () => {
+    const input = {
+      ...standardInput('Vyper'),
+      sources: { 'contracts/Counter.vy': { content: '@external\ndef ping(): pass' } },
+      integrity: 'ab'.repeat(32)
+    }
+    expectCode(() => parseContractVerificationArtifacts([input]), 'invalid-standard-json')
+  })
+
+  it('rejects malformed, extended, and checksum-mismatched Vyper solc_json envelopes', () => {
+    expectCode(
+      () => parseContractVerificationArtifacts([{ ...vyperSolcJson(), extra: true }]),
+      'invalid-vyper-solc-json'
+    )
+    expectCode(
+      () =>
+        parseContractVerificationArtifacts([
+          { ...vyperSolcJson(), compiler_version: '0.4.3+commit.bff19ea2' }
+        ]),
+      'invalid-compiler-version'
+    )
+    expectCode(
+      () => parseContractVerificationArtifacts([{ ...vyperSolcJson(), integrity: 'ab'.repeat(31) }]),
+      'invalid-vyper-integrity'
+    )
+
+    const mismatched = vyperSolcJson()
+    const sources = mismatched['sources'] as Record<string, Record<string, unknown>>
+    sources['contracts/simple/LastClaimWins.vy'] = {
+      ...sources['contracts/simple/LastClaimWins.vy'],
+      content: `${sources['contracts/simple/LastClaimWins.vy']!['content']}\n# changed`
+    }
+    expectCode(() => parseContractVerificationArtifacts([mismatched]), 'source-checksum-mismatch')
+
+    const extendedSource = vyperSolcJson()
+    const extendedSources = extendedSource['sources'] as Record<string, Record<string, unknown>>
+    extendedSources['contracts/simple/LastClaimWins.vy'] = {
+      ...extendedSources['contracts/simple/LastClaimWins.vy'],
+      urls: ['ipfs://unexpected']
+    }
+    expectCode(() => parseContractVerificationArtifacts([extendedSource]), 'invalid-source-content')
   })
 
   it.each([

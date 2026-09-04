@@ -139,43 +139,102 @@
   margin var(--wren-space-2) 0 0
 
 .contractVerificationRecent
-  margin var(--wren-space-4) 0
+  margin calc(var(--wren-space-5) + var(--wren-space-6)) 0 0
+  padding 14px 0 0
+  overflow hidden
+
+.contractVerificationRecentHeading
+  display flex
+  min-height 34px
+  align-items flex-start
+  justify-content space-between
+  padding 0 20px
+
+  h2
+    margin 0
+    color var(--wren-text-tertiary)
+    font-family var(--wren-font-mono)
+    font-size 12px
+    font-weight 600
+    letter-spacing 1.4px
+    line-height 18px
+    text-transform uppercase
 
 .contractVerificationRecentList
   display flex
   flex-direction column
-  margin-top var(--wren-space-2)
+  gap 0
 
 button.contractVerificationRecentRow
+  appearance none
+  display grid
   width 100%
-  min-height 52px
-  justify-content space-between
-  padding var(--wren-space-2)
+  min-height 72px
+  align-items center
+  grid-template-columns minmax(0, 1fr) auto 16px
+  gap 12px
+  box-sizing border-box
+  padding 0 20px
+  border 0
+  border-top 1px solid rgba(150, 182, 150, .10)
+  border-radius 0
+  color var(--wren-text-primary)
+  background transparent
+  cursor pointer
+  font-family var(--wren-font-ui)
   text-align left
+  transition background var(--wren-motion-fast) var(--wren-ease)
 
-  > span:first-child
-    display flex
-    min-width 0
-    flex-direction column
-    gap 3px
+  &:first-child
+    border-top 0
+
+  &:hover
+    background var(--wren-surface-hover)
+
+  &:active
+    background rgba(10, 14, 12, .5)
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset -2px
+
+  &:disabled
+    cursor default
+    opacity .54
+
+.contractVerificationRecentIdentity
+  display flex
+  min-width 0
+  flex-direction column
+  align-items flex-start
+  gap 3px
 
   strong,
   small
+    max-width 100%
     overflow-wrap anywhere
 
   strong
-    color var(--wren-text-secondary)
-    font-size 12px
+    color var(--wren-text-primary)
+    font-size 14px
     font-weight 500
+    line-height 19px
 
   small
-    color var(--wren-text-muted)
+    color var(--wren-text-tertiary)
     font-size 12px
+    line-height 18px
 
-  > span:last-child
-    color var(--wren-text-muted)
-    font-size 12px
-    text-transform capitalize
+.contractVerificationRecentMeta
+  color var(--wren-text-tertiary)
+  font-family var(--wren-font-utility)
+  font-size var(--wren-type-caption)
+  line-height 18px
+  text-transform capitalize
+
+button.contractVerificationRecentRow > svg
+  display block
+  color var(--wren-text-tertiary)
 
 .contractVerificationLedgerRow,
 .contractVerificationDestination

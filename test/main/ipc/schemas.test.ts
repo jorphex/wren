@@ -1058,6 +1058,22 @@ describe('contract verification renderer IPC', () => {
     createdAt: 1,
     updatedAt: 2
   }
+  const fencedJob = {
+    ...job,
+    status: 'publishing',
+    destinations: [
+      {
+        destination: 'sourcify',
+        status: 'unknown',
+        publicationHash: 'd'.repeat(64),
+        reasonCode: 'status-unavailable'
+      },
+      { destination: 'etherscan-forwarded', status: 'not-submitted' },
+      { destination: 'blockscout-forwarded', status: 'not-submitted' },
+      { destination: 'routescan-forwarded', status: 'not-submitted' },
+      { destination: 'etherscan-direct', status: 'not-submitted' }
+    ]
+  }
   const artifact = {
     token: artifactToken,
     summary: {
@@ -1098,6 +1114,16 @@ describe('contract verification renderer IPC', () => {
           address,
           compilerVersion: '0.8.26+commit.8a97fa7a',
           contractIdentifier: 'src/Vault.sol:Vault'
+        }
+      ])
+    ).toHaveLength(1)
+    expect(
+      parse('invoke', 'contractVerification:prepare', [
+        {
+          artifactToken,
+          chainId: 1,
+          address: '0x52908400098527886E0F7030069857D2E4169EE7',
+          contractIdentifier: 'contracts/simple/LastClaimWins.vy:LastClaimWins'
         }
       ])
     ).toHaveLength(1)
@@ -1204,6 +1230,27 @@ describe('contract verification renderer IPC', () => {
     ).toBe(true)
     expect(
       parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: false,
+        error: 'source-checksum-mismatch'
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
+        success: true,
+        artifact: {
+          ...artifact,
+          summary: {
+            ...artifact.summary,
+            format: 'vyper-solc-json',
+            language: 'Vyper',
+            compilerStatus: 'included',
+            compilerVersion: '0.4.3+commit.bff19ea2'
+          }
+        }
+      }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:inspectArtifact', {
         success: true,
         artifact: { ...artifact, path: '/tmp/build-info.json' }
       }).success
@@ -1238,6 +1285,19 @@ describe('contract verification renderer IPC', () => {
       parseRendererInvokeResult('contractVerification:list', { success: true, jobs: [job] }).success
     ).toBe(true)
     expect(
+      parseRendererInvokeResult('contractVerification:list', { success: true, jobs: [fencedJob] }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:publish', { success: true, job: fencedJob }).success
+    ).toBe(true)
+    expect(
+      parseRendererInvokeResult('contractVerification:publish', {
+        success: false,
+        error: 'already-submitted',
+        job: fencedJob
+      }).success
+    ).toBe(true)
+    expect(
       parseRendererInvokeResult('contractVerification:refresh', {
         success: false,
         error: 'refresh-unavailable',
@@ -1263,6 +1323,19 @@ describe('contract verification renderer IPC', () => {
       parseRendererInvokeResult('contractVerification:get', {
         success: true,
         job: { ...job, target: { ...job.target, address: address.toUpperCase() } }
+      }).success
+    ).toBe(false)
+    expect(
+      parseRendererInvokeResult('contractVerification:list', {
+        success: true,
+        jobs: [
+          {
+            ...fencedJob,
+            destinations: [
+              { destination: 'sourcify', status: 'not-submitted', publicationHash: 'd'.repeat(64) }
+            ]
+          }
+        ]
       }).success
     ).toBe(false)
     expect(

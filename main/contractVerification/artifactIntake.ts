@@ -5,6 +5,7 @@ import { BrowserWindow, dialog, type OpenDialogOptions } from 'electron'
 
 import {
   ContractVerificationDomainError,
+  type ContractVerificationDomainErrorCode,
   parseContractVerificationArtifacts,
   summarizeContractVerificationArtifact,
   type ContractVerificationArtifact,
@@ -32,6 +33,9 @@ export const CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES = Object.freeze([
 export type ContractVerificationArtifactIntakeErrorCode =
   (typeof CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_CODES)[number]
 
+export type ContractVerificationArtifactErrorCode =
+  ContractVerificationArtifactIntakeErrorCode | ContractVerificationDomainErrorCode
+
 export const CONTRACT_VERIFICATION_ARTIFACT_INTAKE_ERROR_MESSAGES: Readonly<
   Record<ContractVerificationArtifactIntakeErrorCode, string>
 > = Object.freeze({
@@ -55,6 +59,16 @@ export class ContractVerificationArtifactIntakeError extends Error {
     this.name = 'ContractVerificationArtifactIntakeError'
     this.code = code
   }
+}
+
+export function contractVerificationArtifactErrorCode(error: unknown): ContractVerificationArtifactErrorCode {
+  if (
+    error instanceof ContractVerificationArtifactIntakeError ||
+    error instanceof ContractVerificationDomainError
+  ) {
+    return error.code
+  }
+  return 'invalid-file'
 }
 
 export interface ContractVerificationArtifactIntakeSummary extends ContractVerificationArtifactSummary {
