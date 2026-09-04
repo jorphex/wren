@@ -333,13 +333,12 @@ release. Report only versions, checksums, pass/fail, sanitized errors, and steps
 
 ### Current dependency audit
 
-The current full-tree audit reports 19 low- and 3 moderate-severity transitive
-findings, with no high or critical finding. The production tree accounts for 19
-low and 2 moderate findings. The additional moderate `@xmldom/xmldom` finding is
-limited to the development packaging chain and has a compatible lockfile update
-that still requires the normal package qualification. The
-`decode-uri-component` remediation requires a breaking `query-string` upgrade;
-the remaining `elliptic` path has no complete upstream fix in this release line.
+The current full and production-tree audits report 19 low- and 2
+moderate-severity transitive findings, with no high or critical finding. A
+patched `toml` override removes the newly disclosed Trezor dependency findings;
+the `decode-uri-component` remediation still requires a breaking `query-string`
+upgrade. The remaining `elliptic` path has no complete upstream fix in this
+release line.
 
 ### Historical 0.8.0 Linux x64 evidence
 

@@ -30,6 +30,7 @@ Detailed release notes and platform boundaries live in
 
 - Expanded transaction, verification, and production-layout regression coverage
   and removed obsolete frontend code.
+- Updated the transitive TOML and packaging XML parsers to patched releases.
 
 See [the complete 0.1.7 release notes](release-notes/v0.1.7.md).
 
