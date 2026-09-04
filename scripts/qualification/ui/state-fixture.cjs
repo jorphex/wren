@@ -567,6 +567,20 @@ const safetyUnavailableRequest = () => {
   return request
 }
 
+const fundingUnavailableRequest = () => {
+  const request = addressLookalikeRequest()
+  request.handlerId = 'qualification-funding-unavailable'
+  request.status = 'error'
+  request.notice = 'Balance or fee data is unavailable. Nothing was signed.'
+  request.retainedPreBroadcastError = { responderPending: true }
+  request.recoverableError = {
+    code: 'transaction-funding-unavailable',
+    message: request.notice
+  }
+  delete request.addressSafety
+  return request
+}
+
 const responsiveTransactionRequest = (variant) => {
   const request = addressLookalikeRequest()
   request.handlerId = `qualification-responsive-${variant}`
@@ -2443,6 +2457,7 @@ const fixtureFor = (scenario) => {
 
   if (
     scenario.state === 'transaction-safety-unavailable' ||
+    scenario.state === 'transaction-funding-unavailable' ||
     scenario.state === 'transaction-submitted' ||
     scenario.state === 'transaction-unconfirmed' ||
     scenario.state === 'transaction-confirming' ||
@@ -2451,13 +2466,15 @@ const fixtureFor = (scenario) => {
     const request =
       scenario.state === 'transaction-safety-unavailable'
         ? safetyUnavailableRequest()
-        : monitoredTransactionRequest(
-            scenario.state === 'transaction-confirmed'
-              ? 'confirmed'
-              : scenario.state === 'transaction-submitted' || scenario.state === 'transaction-unconfirmed'
-                ? 'verifying'
-                : 'confirming'
-          )
+        : scenario.state === 'transaction-funding-unavailable'
+          ? fundingUnavailableRequest()
+          : monitoredTransactionRequest(
+              scenario.state === 'transaction-confirmed'
+                ? 'confirmed'
+                : scenario.state === 'transaction-submitted' || scenario.state === 'transaction-unconfirmed'
+                  ? 'verifying'
+                  : 'confirming'
+            )
     if (scenario.state === 'transaction-unconfirmed') {
       request.submission = {
         status: 'unconfirmed',
@@ -2481,7 +2498,9 @@ const fixtureFor = (scenario) => {
       }
     ]
     state.windows.panel.footer.height =
-      scenario.state === 'transaction-safety-unavailable' || scenario.state === 'transaction-unconfirmed'
+      scenario.state === 'transaction-safety-unavailable' ||
+      scenario.state === 'transaction-funding-unavailable' ||
+      scenario.state === 'transaction-unconfirmed'
         ? 114
         : 88
   }
@@ -2532,6 +2551,12 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (
+    (scenario.adjustApproval || scenario.state === 'signature-permit-amount-editor') &&
+    method === 'updateRequest'
+  ) {
+    return true
+  }
   if (scenario.state === 'account-create-phrase' && method === 'reserveGeneratedWallet') {
     return { sessionId: '1'.repeat(32) }
   }

@@ -60,6 +60,63 @@ const parseWireValue = (value) => {
   return JSON.parse(value)
 }
 
+const applyApprovalAmountUpdate = (event, scenario, args) => {
+  if (scenario.state !== 'transaction-responsive' && scenario.state !== 'signature-permit-amount-editor') {
+    return
+  }
+  const [accountId, requestId, update, actionId] = args
+  const state = stateByWebContents.get(event.sender.id)
+  const request = state?.main?.accounts?.[accountId]?.requests?.[requestId]
+  const amount = update?.amount
+  if (!request || typeof amount !== 'string' || !/^(?:0|[1-9][0-9]{0,77})$/u.test(amount)) {
+    throw new Error('Invalid qualification approval update')
+  }
+
+  const updates = []
+  if (request.type === 'transaction') {
+    const action = request.recognizedActions?.find((candidate) => candidate.id === actionId)
+    if (!action || typeof request.data?.data !== 'string' || request.data.data.length < 64) {
+      throw new Error('Qualification transaction approval is unavailable')
+    }
+    const encodedAmount = BigInt(amount).toString(16).padStart(64, '0')
+    if (encodedAmount.length !== 64) throw new Error('Qualification approval amount exceeds uint256')
+    action.data.amount = amount
+    request.data.data = `${request.data.data.slice(0, -64)}${encodedAmount}`
+    updates.push(
+      {
+        path: `main.accounts.${accountId}.requests.${requestId}.recognizedActions`,
+        value: request.recognizedActions
+      },
+      { path: `main.accounts.${accountId}.requests.${requestId}.data.data`, value: request.data.data }
+    )
+  } else if (request.type === 'signErc20Permit') {
+    request.permit.value = amount
+    request.typedMessage.data.message.value = amount
+    updates.push(
+      { path: `main.accounts.${accountId}.requests.${requestId}.permit.value`, value: amount },
+      {
+        path: `main.accounts.${accountId}.requests.${requestId}.typedMessage.data.message.value`,
+        value: amount
+      }
+    )
+  } else {
+    throw new Error('Qualification request is not an editable approval')
+  }
+
+  event.sender.send(
+    'main:action',
+    'stateSync',
+    JSON.stringify([
+      {
+        name: 'qualification-update-approval',
+        count: 1,
+        deferred: false,
+        updates
+      }
+    ])
+  )
+}
+
 const waitFor = async (webContents, expression, timeoutMs = 8000) => {
   const started = Date.now()
   while (Date.now() - started < timeoutMs) {
@@ -596,15 +653,17 @@ const main = async () => {
   app.setPath('temp', path.join(runRoot, 'tmp'))
   installIsolation()
 
-  ipcMain.on('main:rpc', (event, idWire, methodWire) => {
+  ipcMain.on('main:rpc', (event, idWire, methodWire, ...argWires) => {
     const id = parseWireValue(idWire)
     const method = parseWireValue(methodWire)
+    const args = argWires.map(parseWireValue)
     const scenario = scenarioByWebContents.get(event.sender.id)
     const reply = scenario ? rpcReplyFor(scenario, method) : undefined
     if (method !== 'getState' && reply === undefined) {
       event.sender.send('main:rpc', id, JSON.stringify(`Qualification harness does not provide ${method}`))
       return
     }
+    if (method === 'updateRequest') applyApprovalAmountUpdate(event, scenario, args)
     const result = method === 'getState' ? stateByWebContents.get(event.sender.id) : reply
     event.sender.send('main:rpc', id, null, JSON.stringify(result))
   })

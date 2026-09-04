@@ -289,6 +289,7 @@ describe('changing approval amounts', () => {
 
     expect(onUpdate).toHaveBeenCalledWith(maxIntStr, expect.any(Function))
     expect(setUnlimited.getAttribute('aria-pressed')).toBe('true')
+    expect(document.querySelector('.wrenTokenApprovalCurrentValue strong').textContent).toBe('unlimited')
   })
 
   it('allows the user to revoke a transaction approval explicitly', async () => {
@@ -320,6 +321,7 @@ describe('changing approval amounts', () => {
 
     expect(onUpdate).toHaveBeenCalledWith('0', expect.any(Function))
     expect(revoke.getAttribute('aria-pressed')).toBe('true')
+    expect(document.querySelector('.wrenTokenApprovalCurrentValue strong').textContent).toBe('0')
   })
 
   it('rolls back a rejected preset and suppresses duplicate activation', async () => {
@@ -487,6 +489,7 @@ describe('changing approval amounts', () => {
     expect(onUpdate).toHaveBeenNthCalledWith(1, maxIntStr, expect.any(Function))
     expect(onUpdate).toHaveBeenNthCalledWith(2, '70000', expect.any(Function))
     expect(setRequested.getAttribute('aria-pressed')).toBe('true')
+    expect(document.querySelector('.wrenTokenApprovalCurrentValue strong').textContent).toBe('7')
   })
 
   it('allows a failed custom update to be retried', async () => {

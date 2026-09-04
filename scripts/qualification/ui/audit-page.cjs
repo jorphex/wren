@@ -234,6 +234,15 @@ const auditPage = async ({
           })
         }
       }
+    } else if (expectation.kind === 'input-value') {
+      for (const element of elements) {
+        if (element.value !== expectation.value) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} has value ${element.value}; expected ${expectation.value}`
+          })
+        }
+      }
     } else if (expectation.kind === 'viewport-bottom') {
       for (const element of elements) {
         const rect = element.getBoundingClientRect()

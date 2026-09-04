@@ -162,10 +162,35 @@ it('qualifies the transaction approval editor as a navigable adjustable allowanc
     ready: '.wrenTokenApprovalEditor',
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke']
   })
+  expect(scenario.action.steps.map(({ text }) => text).filter(Boolean)).toEqual([
+    'Unlimited',
+    'Requested',
+    'Custom',
+    'Update',
+    'Requested',
+    'Revoke'
+  ])
   expect(fixtureFor(scenario).windows.panel.nav[0].data).toMatchObject({
     step: 'adjustApproval',
     actionId: 'erc20:approve'
   })
+  expect(rpcReplyFor(scenario, 'updateRequest')).toBe(true)
+
+  const permitScenario = scenarioMatrix({ includeReview: true }).find(
+    ({ id }) => id === 'tray-permit-amount-interactions-full-1'
+  )
+  expect(permitScenario.action.steps.map(({ text }) => text).filter(Boolean)).toEqual([
+    'Unlimited',
+    'Requested',
+    'Custom',
+    'Update'
+  ])
+  expect(permitScenario.layoutExpectations).toContainEqual({
+    kind: 'input-value',
+    selector: 'input[aria-label="Custom amount"]',
+    value: '42'
+  })
+  expect(rpcReplyFor(permitScenario, 'updateRequest')).toBe(true)
 })
 
 it('does not expose a review screen for configured network switches', () => {
@@ -1061,6 +1086,14 @@ it('fixtures the transaction handoff, request summary, and Trezor PIN review sur
     status: 'error',
     notice: 'Delegation recheck unavailable',
     recoverableError: { code: 'account-code-evidence-unavailable' }
+  })
+
+  const funding = fixtureFor(byId('tray-transaction-funding-unavailable-short-1'))
+  const fundingRequest = Object.values(funding.main.accounts[QUALIFICATION_ACCOUNT].requests)[0]
+  expect(fundingRequest).toMatchObject({
+    status: 'error',
+    notice: 'Balance or fee data is unavailable. Nothing was signed.',
+    recoverableError: { code: 'transaction-funding-unavailable' }
   })
 
   const confirming = fixtureFor(byId('tray-transaction-confirming-full-1'))

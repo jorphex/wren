@@ -118,12 +118,21 @@ const EditTokenSpend = ({
   }
 
   const isCustom = mode === 'custom'
+  const selectedAmount =
+    mode === 'unlimited'
+      ? MAX_UINT256
+      : mode === 'requested'
+        ? requestedValue
+        : mode === 'revoke'
+          ? 0n
+          : amountValue
+  const selectedDecimalAmount = formatTokenBaseUnitAmount(selectedAmount.toString(10), decimals)
   const displayAmount =
     parsedAmount === undefined
       ? 'unknown'
-      : isMax(amountValue)
+      : isMax(selectedAmount)
         ? 'unlimited'
-        : decimalAmount || amountValue.toString(10)
+        : selectedDecimalAmount || selectedAmount.toString(10)
   const inputLock =
     hasInvalidAmount ||
     !data.symbol ||

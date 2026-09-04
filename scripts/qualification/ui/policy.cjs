@@ -67,6 +67,7 @@ const REQUEST_REVIEW_STATES = new Set([
   'transaction-confirming',
   'transaction-deployment',
   'transaction-deployment-confirmed',
+  'transaction-funding-unavailable',
   'transaction-lookalike',
   'transaction-responsive',
   'transaction-safety-unavailable',
@@ -793,6 +794,35 @@ const reviewScenarios = () => [
     },
     ready: '.wrenTokenApprovalStatusDanger',
     requiredText: ['Token approval', 'Custom limit', 'Invalid amount']
+  },
+  {
+    id: 'tray-permit-amount-interactions-full-1',
+    renderer: 'tray',
+    state: 'signature-permit-amount-editor',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      delayMs: 150,
+      steps: [
+        { type: 'clickText', text: 'Unlimited' },
+        { type: 'clickText', text: 'Requested' },
+        { type: 'clickText', text: 'Custom' },
+        { type: 'inputLabel', label: 'Custom amount', value: '42' },
+        { type: 'clickText', text: 'Update' }
+      ]
+    },
+    ready: '.wrenTokenApprovalStatusSuccess',
+    requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom'],
+    requiredText: ['Token approval', 'Custom limit', 'USDC'],
+    layoutExpectations: [
+      {
+        kind: 'input-value',
+        selector: 'input[aria-label="Custom amount"]',
+        value: '42'
+      }
+    ]
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -1855,9 +1885,22 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
+    action: {
+      type: 'sequence',
+      delayMs: 150,
+      steps: [
+        { type: 'clickText', text: 'Unlimited' },
+        { type: 'clickText', text: 'Requested' },
+        { type: 'clickText', text: 'Custom' },
+        { type: 'inputLabel', label: 'Custom amount', value: '42' },
+        { type: 'clickText', text: 'Update' },
+        { type: 'clickText', text: 'Requested' },
+        { type: 'clickText', text: 'Revoke' }
+      ]
+    },
     ready: '.wrenTokenApprovalEditor',
     requiredControls: ['Back', 'Requested', 'Unlimited', 'Custom', 'Revoke'],
-    requiredText: ['Token approval', 'Spending limit', '890', 'USDC'],
+    requiredText: ['Token approval', 'Spending limit', '0', 'Changes apply to this transaction immediately.'],
     layoutExpectations: [
       {
         kind: 'computed-style',
@@ -2969,6 +3012,18 @@ const reviewScenarios = () => [
       'Safety check unavailable',
       'The safety check could not be repeated. Nothing was signed or sent.'
     ]
+  },
+  {
+    id: 'tray-transaction-funding-unavailable-short-1',
+    renderer: 'tray',
+    state: 'transaction-funding-unavailable',
+    scale: 1,
+    logicalWidth: 620,
+    logicalHeight: SHORT_SHELL_HEIGHT,
+    ready: '.requestApproveRecoverable',
+    action: { type: 'clickText', text: 'Recheck' },
+    requiredControls: ['Close request', 'Check again'],
+    requiredText: ['Still unavailable', 'Balance or fee data is unavailable. Nothing was signed.']
   },
   {
     id: 'tray-account-activity-full-1',
