@@ -427,8 +427,7 @@ const RPC_WARNING_FIXTURES = Object.freeze({
   'broad-token-approval': {
     type: 'approveBroadTokenAuthority',
     title: 'Broad Token Approval',
-    message:
-      'Your configured RPC reports broad ERC-20 spending authority. This may grant maximum token spending. Review RPC-reported effects before proceeding.',
+    message: 'Your RPC reports broad access. Check the spender and limit.',
     confirmLabel: 'Approve anyway'
   },
   'existing-token-allowance': {

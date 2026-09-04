@@ -265,6 +265,15 @@ it('seats every RPC warning shelf at the viewport bottom with its exact reserved
     })
     expect(fixtureFor(warning).windows.panel.footer.height).toBe(154)
   }
+
+  const broadWarnings = warnings.filter(({ variant }) => variant === 'broad-token-approval')
+  expect(broadWarnings).toHaveLength(2)
+  for (const warning of broadWarnings) {
+    expect(warning.layoutExpectations).toContainEqual({
+      kind: 'text-unclipped',
+      selector: '.approveTransactionWarningMessage'
+    })
+  }
 })
 
 it('seats short transaction-review shelves at the viewport bottom', () => {

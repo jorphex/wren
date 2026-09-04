@@ -1424,6 +1424,164 @@ describe('#addRequest', () => {
     expect(request.recognizedActions).toEqual([replacement])
   })
 
+  it('keeps a recognized approval visible through a silent fee refresh', async () => {
+    let resolveRefresh
+    const approval = { id: 'erc20:approve', data: { amount: maxTokenAmount.toString(10) } }
+    const evidence = accountCodeEvidence()
+    evidence.targets[0].status = 'contract'
+    const request = {
+      handlerId: 'recognized-silent-fee-refresh',
+      type: 'transaction',
+      account: accountState.address,
+      data: {
+        chainId: '0x1',
+        from: accountState.address,
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount]),
+        maxFeePerGas: '0x9'
+      },
+      recognizedActions: [],
+      simulation: {
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        accountCodeEvidence: evidence
+      },
+      approvals: []
+    }
+    reveal.recog.mockResolvedValueOnce([approval]).mockImplementation(() => new Promise(() => {}))
+    simulateTransaction.mockImplementationOnce((_transaction, dependencies) => {
+      dependencies.onCoreResult({
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        advancedChecks: { status: 'pending' }
+      })
+      return new Promise((resolve) => (resolveRefresh = resolve))
+    })
+
+    account.requests[request.handlerId] = request
+    await account.recognizeActions(request)
+    expect(request.recognizedActions).toEqual([approval])
+
+    account.refreshTransactionSimulation(request, false, true, {
+      ...request.data,
+      maxFeePerGas: '0xb'
+    })
+    jest.advanceTimersByTime(1)
+    expect(request.recognizedActions).toEqual([approval])
+    expect(reveal.recog).toHaveBeenCalledTimes(1)
+
+    resolveRefresh({ status: 'succeeded', source: 'eth_simulateV1', accountCodeEvidence: evidence })
+    await jest.advanceTimersByTimeAsync(0)
+    expect(request.recognizedActions).toEqual([approval])
+    expect(reveal.recog).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores action recognition that resolves after the request calldata changes', async () => {
+    let resolveFirst
+    let resolveSecond
+    const first = { id: 'erc20:approve', data: { amount: '1' } }
+    const second = { id: 'erc20:approve', data: { amount: '2' } }
+    const request = {
+      handlerId: 'stale-action-recognition',
+      type: 'transaction',
+      account: accountState.address,
+      data: {
+        chainId: '0x1',
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, 1n])
+      },
+      recognizedActions: [],
+      simulation: { status: 'succeeded', source: 'eth_call' }
+    }
+    reveal.recog
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveSecond = resolve)))
+
+    account.requests[request.handlerId] = request
+    const firstRecognition = account.recognizeActions(request)
+    request.data.data = tokenInterface.encodeFunctionData('approve', [delegate, 2n])
+    const secondRecognition = account.recognizeActions(request)
+
+    resolveSecond([second])
+    await secondRecognition
+    expect(request.recognizedActions).toEqual([second])
+
+    resolveFirst([first])
+    await firstRecognition
+    expect(request.recognizedActions).toEqual([second])
+  })
+
+  it('clears a recognized action when executable-target evidence invalidates it', async () => {
+    const approval = { id: 'erc20:approve' }
+    const request = {
+      handlerId: 'invalidated-action-recognition',
+      type: 'transaction',
+      account: accountState.address,
+      data: {
+        chainId: '0x1',
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount])
+      },
+      recognizedActions: [],
+      simulation: { status: 'succeeded', source: 'eth_call' },
+      approvals: []
+    }
+    reveal.recog.mockResolvedValueOnce([approval])
+    simulateTransaction.mockResolvedValueOnce({
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      accountCodeEvidence: accountCodeEvidence()
+    })
+
+    account.requests[request.handlerId] = request
+    await account.recognizeActions(request)
+    expect(request.recognizedActions).toEqual([approval])
+
+    account.refreshTransactionSimulation(request)
+    await jest.advanceTimersByTimeAsync(1)
+    expect(request.recognizedActions).toEqual([])
+  })
+
+  it('does not retain a recognized action across changed contract code evidence', async () => {
+    const approval = { id: 'erc20:approve' }
+    const initialEvidence = accountCodeEvidence()
+    initialEvidence.targets[0].status = 'contract'
+    const changedEvidence = accountCodeEvidence()
+    changedEvidence.targets[0].status = 'contract'
+    changedEvidence.targets[0].codeHash = `0x${'1'.repeat(64)}`
+    const request = {
+      handlerId: 'changed-code-action-recognition',
+      type: 'transaction',
+      account: accountState.address,
+      data: {
+        chainId: '0x1',
+        to: tokenContract,
+        data: tokenInterface.encodeFunctionData('approve', [delegate, maxTokenAmount])
+      },
+      recognizedActions: [],
+      simulation: {
+        status: 'succeeded',
+        source: 'eth_simulateV1',
+        accountCodeEvidence: initialEvidence
+      },
+      approvals: []
+    }
+    reveal.recog.mockResolvedValueOnce([approval]).mockImplementation(() => new Promise(() => {}))
+    simulateTransaction.mockResolvedValueOnce({
+      status: 'succeeded',
+      source: 'eth_simulateV1',
+      accountCodeEvidence: changedEvidence
+    })
+
+    account.requests[request.handlerId] = request
+    await account.recognizeActions(request)
+    expect(request.recognizedActions).toEqual([approval])
+
+    account.refreshTransactionSimulation(request)
+    await jest.advanceTimersByTimeAsync(1)
+    expect(request.recognizedActions).toEqual([])
+  })
+
   it('coalesces same-turn transaction updates before calling the RPC', async () => {
     simulateTransaction.mockResolvedValueOnce({ status: 'succeeded', source: 'eth_call' })
     const request = {
@@ -2008,7 +2166,9 @@ describe('#addRequest', () => {
         riskCount: 2
       }
     })
-    expect(request.approvals[1].data.message).toMatch(/configured RPC reports 2 broad token permissions/i)
+    expect(request.approvals[1].data.message).toBe(
+      'Your RPC reports broad access. Check the spender and limit.'
+    )
 
     request.approvals[1].approve()
     expect(request.approvals[1].approved).toBe(true)
@@ -2077,7 +2237,9 @@ describe('#addRequest', () => {
       approved: false,
       data: { riskCount: 1, evidence: 'calldata', confirmLabel: 'Approve anyway' }
     })
-    expect(request.approvals[0].data.message).toMatch(/does not prove the contract standard/i)
+    expect(request.approvals[0].data.message).toBe(
+      'This request asks for broad access. Check the spender and limit.'
+    )
   })
 
   it('does not classify contract-creation initcode as token approval calldata', async () => {

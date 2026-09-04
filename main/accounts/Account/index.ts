@@ -129,6 +129,13 @@ type CalldataDecodeBinding = Readonly<{
   calldata: string
   codeFingerprint: string
 }>
+type ActionRecognitionBinding = Readonly<{
+  chainId: string
+  to: string
+  calldata: string
+  value?: string
+  codeFingerprint: string
+}>
 
 function accountCodeSnapshot(
   simulation: { status: string; accountCodeEvidence?: TransactionAccountCodeEvidence } | undefined,
@@ -165,6 +172,55 @@ function accountCodeSnapshot(
   return Object.freeze({ fingerprint })
 }
 
+function actionRecognitionBinding(
+  req: TransactionRequest,
+  simulation = req.simulation
+): ActionRecognitionBinding | undefined {
+  const { chainId, to, data: calldata, value } = req.data
+  if (!chainId || !to || !calldata || calldata === '0x' || parseInt(calldata, 16) === 0) return
+
+  const targetEvidence = simulation?.accountCodeEvidence?.targets.find(
+    (target) => target.account === to.toLowerCase() && target.callIndexes.includes(0)
+  )
+  if (simulation?.accountCodeEvidence && targetEvidence?.status !== 'contract') return
+
+  return Object.freeze({
+    chainId: chainId.toLowerCase(),
+    to: to.toLowerCase(),
+    calldata: calldata.toLowerCase(),
+    ...(value !== undefined && { value: String(value).toLowerCase() }),
+    codeFingerprint: accountCodeSnapshot(simulation, to, 0).fingerprint
+  })
+}
+
+function sameActionRecognitionInput(
+  left: ActionRecognitionBinding | undefined,
+  right: ActionRecognitionBinding | undefined,
+  { includeCalldata = true, includeCode = true } = {}
+) {
+  return (
+    left !== undefined &&
+    right !== undefined &&
+    left.chainId === right.chainId &&
+    left.to === right.to &&
+    (!includeCalldata || left.calldata === right.calldata) &&
+    left.value === right.value &&
+    (!includeCode || left.codeFingerprint === right.codeFingerprint)
+  )
+}
+
+function compatibleActionRecognitionCode(
+  previous: ActionRecognitionBinding | undefined,
+  current: ActionRecognitionBinding | undefined,
+  simulation: TransactionSimulation | undefined
+) {
+  return (
+    previous !== undefined &&
+    current !== undefined &&
+    (!simulation?.accountCodeEvidence || previous.codeFingerprint === current.codeFingerprint)
+  )
+}
+
 class FrameAccount {
   id: Address
   address: Address
@@ -182,6 +238,8 @@ class FrameAccount {
   private simulationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   private simulationCandidateChecks: Record<string, boolean> = {}
   private calldataDecodeBindings: Record<string, CalldataDecodeBinding> = {}
+  private actionRecognitionBindings: Record<string, ActionRecognitionBinding> = {}
+  private actionRecognitionVersions: Record<string, number> = {}
   private preparationVersions: Record<string, number> = {}
   private preparationTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   private requestAbortCleanup: Record<string, () => void> = {}
@@ -394,6 +452,8 @@ class FrameAccount {
     delete this.simulationVersions[handlerId]
     delete this.simulationCandidateChecks[handlerId]
     delete this.calldataDecodeBindings[handlerId]
+    delete this.actionRecognitionBindings[handlerId]
+    delete this.actionRecognitionVersions[handlerId]
     clearTimeout(this.simulationTimers[handlerId])
     delete this.simulationTimers[handlerId]
     delete this.preparationVersions[handlerId]
@@ -676,40 +736,48 @@ class FrameAccount {
   }
 
   private async recognizeActions(req: TransactionRequest) {
-    const { to, chainId, data: calldata } = req.data
-    const codeSnapshot = to ? accountCodeSnapshot(req.simulation, to, 0) : undefined
-    const targetEvidence = req.simulation?.accountCodeEvidence?.targets.find(
-      (target) => target.account === to?.toLowerCase() && target.callIndexes.includes(0)
-    )
-    const recognitionAllowed = !req.simulation?.accountCodeEvidence || targetEvidence?.status === 'contract'
-    if (to && recognitionAllowed && calldata && calldata !== '0x' && parseInt(calldata, 16) !== 0) {
+    const binding = actionRecognitionBinding(req)
+    const version = (this.actionRecognitionVersions[req.handlerId] || 0) + 1
+    this.actionRecognitionVersions[req.handlerId] = version
+
+    if (binding) {
       try {
-        const actions = await reveal.recog(calldata, {
-          contractAddress: to,
-          chainId: parseInt(chainId, 16),
+        const actions = await reveal.recog(binding.calldata, {
+          contractAddress: binding.to,
+          chainId: parseInt(binding.chainId, 16),
           account: this.address,
-          ...(req.data.value !== undefined && { value: req.data.value })
+          ...(binding.value !== undefined && { value: binding.value })
         })
 
         const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
-        const knownTargetEvidence = knownTxRequest?.simulation?.accountCodeEvidence?.targets.find(
-          (target) => target.account === to.toLowerCase() && target.callIndexes.includes(0)
-        )
-        const recognitionStillAllowed =
-          !knownTxRequest?.simulation?.accountCodeEvidence || knownTargetEvidence?.status === 'contract'
-        const knownCodeSnapshot = accountCodeSnapshot(knownTxRequest?.simulation, to, 0)
+        const currentBinding = knownTxRequest ? actionRecognitionBinding(knownTxRequest) : undefined
 
         if (
           knownTxRequest === req &&
-          recognitionStillAllowed &&
-          knownCodeSnapshot?.fingerprint === codeSnapshot?.fingerprint &&
+          this.actionRecognitionVersions[req.handlerId] === version &&
+          sameActionRecognitionInput(currentBinding, binding) &&
           actions
         ) {
           knownTxRequest.recognizedActions = actions
+          this.actionRecognitionBindings[req.handlerId] = binding
           this.syncAddressSafety(knownTxRequest)
           this.update()
         }
       } catch (e) {
+        const knownTxRequest = this.requests[req.handlerId] as TransactionRequest
+        const currentBinding = knownTxRequest ? actionRecognitionBinding(knownTxRequest) : undefined
+        const previousBinding = this.actionRecognitionBindings[req.handlerId]
+        if (
+          knownTxRequest === req &&
+          this.actionRecognitionVersions[req.handlerId] === version &&
+          (!sameActionRecognitionInput(previousBinding, currentBinding, { includeCode: false }) ||
+            !compatibleActionRecognitionCode(previousBinding, currentBinding, knownTxRequest.simulation))
+        ) {
+          knownTxRequest.recognizedActions = []
+          delete this.actionRecognitionBindings[req.handlerId]
+          this.syncAddressSafety(knownTxRequest)
+          this.update()
+        }
         log.warn(e)
       }
     }
@@ -848,17 +916,13 @@ class FrameAccount {
       return
     }
 
-    const subject =
-      broadApprovalCount === 1
-        ? 'one broad token permission'
-        : `${broadApprovalCount} broad token permissions`
     const evidence = intent ? (broadEffects.length > 0 ? 'calldata-and-rpc' : 'calldata') : 'rpc'
     const message =
       evidence === 'rpc'
-        ? `Your configured RPC reports ${subject}. This may grant maximum ERC-20 spending or collection-wide operator access. Review RPC-reported effects before proceeding.`
+        ? 'Your RPC reports broad access. Check the spender and limit.'
         : evidence === 'calldata-and-rpc'
-          ? `Top-level calldata requests broad token-like authority, and your configured RPC reports ${subject}. Review both the request intent and RPC-reported effects before proceeding.`
-          : `Top-level calldata requests ${subject}. The selector matches maximum approve(address,uint256) or enabled setApprovalForAll(address,bool), but does not prove the contract standard or successful execution.`
+          ? 'The request and your RPC report broad access. Check the spender and limit.'
+          : 'This request asks for broad access. Check the spender and limit.'
     this.syncManagedApproval(req, ApprovalType.TokenApprovalRisk, {
       title: broadApprovalCount === 1 ? 'Broad Token Approval' : 'Broad Token Approvals',
       message,
@@ -985,7 +1049,24 @@ class FrameAccount {
   ) {
     req.simulation = simulation
     this.prepareCalldataForSimulation(req, simulation)
-    if (!preserveRecognizedActions) req.recognizedActions = []
+    const previousRecognition = this.actionRecognitionBindings[req.handlerId]
+    const currentRecognition = actionRecognitionBinding(req, simulation)
+    const sameRecognitionInput = preserveRecognizedActions
+      ? currentRecognition !== undefined &&
+        (previousRecognition === undefined ||
+          sameActionRecognitionInput(previousRecognition, currentRecognition, {
+            includeCalldata: false,
+            includeCode: false
+          }))
+      : sameActionRecognitionInput(previousRecognition, currentRecognition, { includeCode: false })
+    const retainRecognizedActions =
+      sameRecognitionInput &&
+      (previousRecognition === undefined ||
+        compatibleActionRecognitionCode(previousRecognition, currentRecognition, simulation))
+    if (!retainRecognizedActions) {
+      req.recognizedActions = []
+      delete this.actionRecognitionBindings[req.handlerId]
+    }
     this.syncAddressSafety(req)
     this.syncSimulationApproval(req, simulation)
     this.syncTokenApprovalRisk(req, simulation)
@@ -994,7 +1075,13 @@ class FrameAccount {
     if (final) this.syncProxyImplementationChangeRisk(req, simulation)
     this.update()
     this.decodeCalldata(req)
-    this.recognizeActions(req)
+    const retainedThroughIncompleteEvidence =
+      retainRecognizedActions &&
+      previousRecognition !== undefined &&
+      !simulation.accountCodeEvidence &&
+      !previousRecognition.codeFingerprint.startsWith('legacy:') &&
+      previousRecognition.calldata === currentRecognition?.calldata
+    if (!retainedThroughIncompleteEvidence) this.recognizeActions(req)
   }
 
   refreshTransactionSimulation(
@@ -1856,6 +1943,10 @@ class FrameAccount {
     Object.keys(this.simulationVersions).forEach((handlerId) => {
       const version = this.simulationVersions[handlerId]
       if (version !== undefined) this.simulationVersions[handlerId] = version + 1
+    })
+    Object.keys(this.actionRecognitionVersions).forEach((handlerId) => {
+      const version = this.actionRecognitionVersions[handlerId]
+      if (version !== undefined) this.actionRecognitionVersions[handlerId] = version + 1
     })
     Object.values(this.preparationTimers).forEach(clearTimeout)
     this.preparationTimers = {}

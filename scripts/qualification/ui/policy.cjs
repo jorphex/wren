@@ -123,7 +123,7 @@ const RPC_WARNING_SCENARIOS = Object.freeze([
   {
     variant: 'broad-token-approval',
     title: 'Broad Token Approval',
-    message: 'Your configured RPC reports broad ERC-20 spending authority.',
+    message: 'Your RPC reports broad access.',
     confirmLabel: 'Approve anyway'
   },
   {
@@ -2927,7 +2927,10 @@ const reviewScenarios = () => [
       requiredText: [title, message],
       layoutExpectations: [
         { kind: 'hidden', selector: '.accountSelectorOpen' },
-        { kind: 'viewport-bottom', selector: '.requestNoticeApproval' }
+        { kind: 'viewport-bottom', selector: '.requestNoticeApproval' },
+        ...(variant === 'broad-token-approval'
+          ? [{ kind: 'text-unclipped', selector: '.approveTransactionWarningMessage' }]
+          : [])
       ]
     }))
   ),

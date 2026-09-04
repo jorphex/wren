@@ -979,8 +979,7 @@ describe('simulation review', () => {
       type: 'approveBroadTokenAuthority',
       data: {
         title: 'Broad Token Approval',
-        message:
-          'Top-level calldata requests one broad token permission. The selector matches maximum approve(address,uint256) or enabled setApprovalForAll(address,bool), but does not prove the contract standard or successful execution.',
+        message: 'This request asks for broad access. Check the spender and limit.',
         confirmLabel: 'Approve Anyway'
       }
     }
