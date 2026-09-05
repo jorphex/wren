@@ -5,10 +5,11 @@ import BigNumber from 'bignumber.js'
 
 import Icon from '../../../resources/Components/Icon'
 import QrCode from '../../../resources/Components/QrCode'
+import Receive from '../../../resources/Components/Receive'
 import useCopiedMessage from '../../../resources/Hooks/useCopiedMessage'
 import link from '../../../resources/link'
 import { isNetworkConnected } from '../../../resources/utils/chains'
-import { createBalance, formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
+import { formatUsdRate, isNativeCurrency } from '../../../resources/domain/balance'
 
 import Default from './Default'
 
@@ -62,29 +63,74 @@ const modules = {
   settings: Settings
 }
 
-const portfolioSummary = (store, accountId) => {
+export const portfolioSummary = (store, accountId) => {
   const account = store('main.accounts', accountId) || {}
   const address = account.address || accountId
   const networks = store('main.networks.ethereum') || {}
+  const connected = Object.entries(networks).filter(([, network]) => isNetworkConnected(network))
+  const stored = store('main.balances', address)
+  const updated = account.balances?.lastUpdated
+  if (!connected.length) return { value: '—', note: 'No connected networks', partial: false }
+  if (!Array.isArray(stored) || (!stored.length && !updated)) {
+    return { value: '—', note: 'Loading balances…', partial: false }
+  }
   const networksMeta = store('main.networksMeta.ethereum') || {}
   const rates = store('main.rates') || {}
-  const balances = (store('main.balances', address) || [])
-    .filter((balance) => isNetworkConnected(networks[balance.chainId]))
-    .map((balance) => {
-      const native = isNativeCurrency(balance.address)
-      const nativeCurrency = safeNetworkMetadata(
-        networksMeta[balance.chainId],
-        networks[balance.chainId]
-      ).nativeCurrency
-      const quote = native ? nativeCurrency.usd : rates[balance.address || balance.symbol]?.usd
-      const decimals = native ? nativeCurrency.decimals || 18 : balance.decimals
-      return createBalance(
-        { ...balance, decimals },
-        networks[balance.chainId]?.isTestnet ? { price: 0 } : quote
-      )
-    })
-  const total = balances.reduce((sum, balance) => sum.plus(balance.totalValue), BigNumber(0))
-  return { count: balances.length, total: total.isZero() ? '0.00' : formatUsdRate(total, 0) }
+  let total = BigNumber(0),
+    priced = 0,
+    positive = 0,
+    unpriced = false
+  const visible = stored.filter((balance) => isNetworkConnected(networks[balance.chainId]))
+  for (const balance of visible) {
+    const quantity = BigNumber(balance.balance || 0)
+    if (!quantity.isFinite() || quantity.isNegative()) {
+      unpriced = true
+      continue
+    }
+    if (quantity.isZero()) continue
+    positive++
+    if (networks[balance.chainId]?.isTestnet) continue
+    const native = isNativeCurrency(balance.address)
+    const currency = safeNetworkMetadata(
+      networksMeta[balance.chainId],
+      networks[balance.chainId]
+    ).nativeCurrency
+    const quote = native ? currency.usd : rates[balance.address || balance.symbol]?.usd
+    const price = BigNumber(quote?.price ?? NaN)
+    if (!price.isFinite() || price.isNegative()) {
+      unpriced = true
+      continue
+    }
+    const decimals = native ? (currency.decimals ?? 18) : balance.decimals
+    if (!Number.isInteger(decimals) || decimals < 0) {
+      unpriced = true
+      continue
+    }
+    total = total.plus(quantity.shiftedBy(-decimals).times(price))
+    priced++
+  }
+  const missingNetworks = connected.some(
+    ([id]) => !visible.some((balance) => String(balance.chainId) === id && isNativeCurrency(balance.address))
+  )
+  const disconnected = Object.values(networks).some((network) => network.on && !isNetworkConnected(network))
+  const stale = !updated || Date.now() - new Date(updated).getTime() > 60_000
+  const partial = unpriced || missingNetworks || disconnected || stale
+  const value = !priced && (unpriced || missingNetworks) ? '—' : '$' + formatUsdRate(total, 2)
+  const note =
+    !priced && unpriced
+      ? 'Prices unavailable'
+      : unpriced
+        ? 'Some prices unavailable'
+        : missingNetworks
+          ? 'Some balances unavailable'
+          : disconnected
+            ? 'Connected networks only'
+            : stale
+              ? 'Updating balances…'
+              : !positive
+                ? 'No balances found on connected networks'
+                : 'Connected networks'
+  return { value, note, partial }
 }
 
 export const AccountAddressActions = ({ address, name }) => {
@@ -371,26 +417,33 @@ class _AccountMain extends React.Component {
   }
 
   renderPortfolioSummary() {
-    const { count, total } = portfolioSummary(this.store, this.props.id)
+    const { value, note, partial } = portfolioSummary(this.store, this.props.id)
     const hideBalances = this.store('selected.hideBalances')
     return (
       <section className='accountPortfolioCard' aria-label='Portfolio balance'>
         <div className='accountPortfolioGlow' aria-hidden='true' />
         <div className='accountPortfolioHeader'>
-          <span>Portfolio balance</span>
+          <span>{partial && !hideBalances ? 'Known value' : 'Portfolio balance'}</span>
         </div>
         <div className='accountPortfolioValue'>
-          {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : `$${total}`}
+          {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : value}
         </div>
-        {!count ? <div className='accountPortfolioMeta'>No assets on this account yet</div> : null}
-        <button
-          type='button'
-          className='accountPortfolioSend wrenControl wrenControlPrimary wrenControlLarge'
-          onClick={() => link.send('tray:action', 'navDash', { view: 'send', data: {} })}
-        >
-          <Icon name='send' size={15} />
-          <span>Send</span>
-        </button>
+        {!hideBalances ? (
+          <div className='accountPortfolioMeta' role='status'>
+            {note}
+          </div>
+        ) : null}
+        <div className='accountPortfolioActions'>
+          <Receive address={this.props.id} />
+          <button
+            type='button'
+            className='accountPortfolioSend wrenControl wrenControlPrimary wrenControlLarge'
+            onClick={() => link.send('tray:action', 'navDash', { view: 'send', data: {} })}
+          >
+            <Icon name='send' size={15} />
+            <span>Send</span>
+          </button>
+        </div>
       </section>
     )
   }

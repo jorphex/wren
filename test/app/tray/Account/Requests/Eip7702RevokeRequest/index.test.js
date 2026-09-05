@@ -182,7 +182,7 @@ it('adapts revocation fees as EIP-1559 and never exposes the legacy gas-price ed
   const { user } = connectedReview(req)
 
   await user.click(screen.getByRole('button', { name: 'Adjust' }))
-  const baseFee = screen.getByLabelText('Base Fee (GWEI)')
+  const baseFee = screen.getByLabelText('Base Fee Cap (GWEI)')
   const priorityFee = screen.getByLabelText('Max Priority Fee (GWEI)')
   expect(screen.queryByLabelText('Gas Price (GWEI)')).toBeNull()
 

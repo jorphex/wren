@@ -220,6 +220,7 @@ export class ViewData extends React.Component {
 
     return (
       <div className='accountViewScroll cardShow transactionEvidenceView'>
+        <p className='transactionEvidenceSource'>Source: configured RPC · Not independently verified</p>
         {showActions &&
           this.renderEvidenceGroup(
             'Actions',

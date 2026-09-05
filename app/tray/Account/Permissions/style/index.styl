@@ -623,3 +623,142 @@ button.wrenControl.dappGuardrailManage.wrenControlCompact
 
   .revokeAccessActions
     grid-template-columns 1fr
+
+.dappGuardrailEditor details > summary
+  box-sizing border-box
+  min-height 44px
+  padding 12px 0
+  cursor pointer
+  font-size 12px
+  line-height 20px
+
+// Guardrails use the page measure, with flat fields and readable decision text.
+.permissionsLedgerView
+  scrollbar-gutter stable both-edges
+
+  .connectedAppsList .clusterValue
+    background transparent
+    border-radius 0
+
+  .connectedAppsList .signerPermission
+    padding 12px 0
+
+  .connectedAppsList .signerPermissionOrigin,
+  .dappGuardrailIdentity strong,
+  .dappGuardrailAction,
+  .connectedAppDetails summary
+    font-size 14px
+    line-height 22px
+
+  .dappGuardrailIdentity > span,
+  .connectedAppKind
+    font-size 13px
+    line-height 20px
+
+.dappGuardrailEditor
+  margin 0
+  padding 0
+  border 0
+  border-radius 0
+  background transparent
+  font-family var(--wren-font-ui)
+  font-size 14px
+  line-height 22px
+
+  .dappGuardrailEditorHeader
+    margin-bottom 16px
+
+    strong
+      font-size 18px
+
+    span
+      font-family var(--wren-font-ui)
+      font-size 14px
+      line-height 22px
+
+  details > summary
+    font-size 14px
+
+  .dappGuardrailDisclosure
+    padding 0
+    margin 12px 0 24px
+    border 0
+    background transparent
+    font-size 14px
+    line-height 22px
+
+  .dappGuardrailField
+    gap 8px
+    margin-bottom 24px
+
+    label
+      display grid
+      gap 8px
+
+  .dappGuardrailField > span,
+  .dappGuardrailToggleField legend,
+  input, select, textarea,
+  .dappGuardrailMessage,
+  .dappGuardrailConfirm > span
+    font-size 14px
+    line-height 22px
+
+  textarea
+    font-family var(--wren-font-mono)
+    font-size 13px
+
+  .dappGuardrailToggleField
+    padding 0
+    margin 0 0 24px
+    border 0
+    border-radius 0
+
+    legend
+      min-height 44px
+      align-items center
+      font-size 14px
+
+  .dappGuardrailFieldDetail
+    padding 4px 0 0
+    font-size 13px
+    line-height 20px
+    color var(--wren-text-secondary)
+
+  .dappGuardrailEvidence
+    gap 10px
+
+    > div
+      grid-template-columns 124px minmax(0, 1fr)
+      gap 12px
+
+    dt
+      font-size 13px
+      text-transform none
+
+    dd
+      font-size 13px
+      line-height 20px
+
+  .dappGuardrailActions
+    padding-top 16px
+    border-top 1px solid var(--wren-border-subtle)
+
+  .dappGuardrailConfirm
+    padding 16px
+    gap 16px
+
+.permissionsLedgerView button.wrenControl.dappGuardrailManage
+  min-height 64px
+
+.connectedAppDetails > summary
+  padding 0
+  margin 0
+
+  &:after
+    width 44px
+    text-align center
+
+.guardrailConnectionIdentity h3
+  margin 16px 0 8px
+  font-size 14px
+  line-height 22px

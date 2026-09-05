@@ -303,10 +303,10 @@ test('keeps reserved tray bands clean and gives startup one aligned account ledg
   )
   expect(revokeStyle).not.toMatch(/border-(?:top|bottom) 1px solid var\(--wren-ledger-rule\)/)
   expect(signingStyle).toMatch(
-    /\.requestNoticeTransactionReview\n[\s\S]{0,220}?height var\(--wren-request-review-shelf-height, 88px\)[\s\S]{0,180}?background linear-gradient\(180deg[\s\S]{0,180}?box-shadow 0 -14px 28px/
+    /\.requestNoticeTransactionReview\n[\s\S]{0,220}?height var\(--wren-request-review-shelf-height, 114px\)[\s\S]{0,180}?background linear-gradient\(180deg[\s\S]{0,180}?box-shadow 0 -14px 28px/
   )
   expect(accountStyle).toMatch(
-    /&:has\(\.requestNoticeTransactionReview\)\n[\s\S]{0,220}?--wren-request-review-shelf-height 88px[\s\S]{0,220}?\.accountViewRequest\n[\s\S]{0,100}?bottom var\(--wren-request-review-shelf-height\) !important[\s\S]{0,220}?\.footerModule\n[\s\S]{0,100}?height var\(--wren-request-review-shelf-height\) !important/
+    /&:has\(\.requestNoticeTransactionReview\)\n[\s\S]{0,220}?--wren-request-review-shelf-height 114px[\s\S]{0,220}?\.accountViewRequest\n[\s\S]{0,100}?bottom var\(--wren-request-review-shelf-height\) !important[\s\S]{0,220}?\.footerModule\n[\s\S]{0,100}?height var\(--wren-request-review-shelf-height\) !important/
   )
   expect(accountStyle).toMatch(
     /@media \(max-width: 560px\)\n[\s\S]{0,120}?#panel:has\(\.requestNoticeTransactionReview\)\n[\s\S]{0,80}?--wren-request-review-shelf-height 132px/
@@ -436,7 +436,7 @@ test('keeps transaction review on one flat details ledger', () => {
   )
   expect(signingStyle).toMatch(/\.requestNoticeTransactionReview\n[\s\S]*?animation none/)
   expect(signingStyle).toMatch(
-    /\.requestApproveTransaction\n[\s\S]{0,260}?height var\(--wren-request-review-shelf-height, 88px\)[\s\S]{0,220}?padding var\(--wren-space-3\) var\(--wren-space-5\)[\s\S]{0,220}?animation none/
+    /\.requestApproveTransaction\n[\s\S]{0,260}?height var\(--wren-request-review-shelf-height, 114px\)[\s\S]{0,220}?padding var\(--wren-space-3\) var\(--wren-space-5\)[\s\S]{0,220}?animation none/
   )
   expect(signingStyle).toMatch(
     /\._txActionButtonGood[\s\S]*?&:hover[\s\S]*?var\(--wren-accent-primary-hover\)/
@@ -598,7 +598,7 @@ test('keeps recoverable request feedback from shifting its icon and actions', ()
     /\.walletCallsFundingRecovery\n[\s\S]*?min-height 160px[\s\S]*?grid-template-columns minmax\(0, 1fr\)[\s\S]*?\.walletCallsFundingRecoveryEvidence\n {2}min-height 272px[\s\S]*?\.walletCallsFundingRecoveryQr\n {2}min-height 430px/
   )
   expect(accountStyle).toMatch(
-    /&:has\(\.eip7702StopMonitoringDialog\)[\s\S]*?--wren-request-dialog-shelf-height 173px[\s\S]*?&:has\(\.walletCallsFundingRecovery\)[\s\S]*?--wren-wallet-calls-recovery-shelf-height 165px[\s\S]*?&:has\(\.walletCallsFundingRecoveryEvidence\)[\s\S]*?277px[\s\S]*?&:has\(\.walletCallsFundingRecoveryQr\)[\s\S]*?430px/
+    /&:has\(\.walletCallsFundingRecovery\)[\s\S]*?bottom var\(--wren-measured-footer-height, 307px\) !important[\s\S]*?height auto !important/
   )
 })
 

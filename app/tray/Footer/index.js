@@ -1,3 +1,4 @@
+import FundingAmounts from '../../../resources/Components/FundingAmounts'
 import React from 'react'
 import Restore from 'react-restore'
 
@@ -20,19 +21,6 @@ const measure = (ref) => {
   if (!ref || !ref.current) return { height: 0, width: 0 }
   const { clientHeight, clientWidth } = ref.current
   return { height: clientHeight, width: clientWidth }
-}
-
-const formatFundingQuantity = (value, decimals = 18, symbol = '') => {
-  try {
-    const quantity = BigInt(value)
-    const places = Number.isInteger(decimals) && decimals >= 0 && decimals <= 36 ? decimals : 18
-    const scale = 10n ** BigInt(places)
-    const whole = (quantity / scale).toLocaleString('en-US')
-    const fraction = (quantity % scale).toString().padStart(places, '0').replace(/0+$/u, '')
-    return `${whole}${fraction ? `.${fraction}` : ''} ${symbol}`.trim()
-  } catch {
-    return `? ${symbol}`.trim()
-  }
 }
 
 const walletCallsSimulationWarning = (simulation) => {
@@ -111,6 +99,9 @@ export class Footer extends React.Component {
     })
     this.observer = new ResizeObserver(() => {
       const size = measure(this.footerRef)
+      this.footerRef.current
+        ?.closest('#panel')
+        ?.style.setProperty('--wren-measured-footer-height', `${size.height}px`)
       if (size.height !== this.lastHeight) {
         this.lastHeight = size.height
         link.send('tray:action', 'setFooterHeight', 'panel', size.height)
@@ -647,26 +638,18 @@ export class Footer extends React.Component {
                       <strong>{funding ? 'More funds needed' : 'Funding check unavailable'}</strong>
                       <span>
                         {funding
-                          ? `Fund this account on ${chainName}. It cannot cover the batch value and maximum fees. Nothing was signed or sent.`
+                          ? `Add ${symbol} on ${chainName}. Nothing signed or sent.`
                           : `Wren could not verify this batch's funding on ${chainName}. ${req.recoverableError.message} Recheck when network data is available.`}
                       </span>
                     </div>
                     {evidence ? <span>Amounts at last check</span> : null}
                     {evidence ? (
-                      <dl className='transactionFundingFacts'>
-                        <div>
-                          <dt>Available</dt>
-                          <dd>{formatFundingQuantity(evidence.available, decimals, symbol)}</dd>
-                        </div>
-                        <div>
-                          <dt>Required</dt>
-                          <dd>{formatFundingQuantity(evidence.required, decimals, symbol)}</dd>
-                        </div>
-                        <div>
-                          <dt>Missing</dt>
-                          <dd>{formatFundingQuantity(evidence.missing, decimals, symbol)}</dd>
-                        </div>
-                      </dl>
+                      <FundingAmounts
+                        evidence={evidence}
+                        decimals={decimals}
+                        symbol={symbol}
+                        hideBalances={this.store('selected.hideBalances')}
+                      />
                     ) : null}
                     {funding ? (
                       <span className='transactionFundingActions'>

@@ -47,7 +47,7 @@ it('renders the gas limit input', () => {
 
 it('submits independent field drafts without one timer cancelling another', () => {
   render(<AdjustFee req={req} />)
-  const baseFee = screen.getByLabelText('Base Fee (GWEI)')
+  const baseFee = screen.getByLabelText('Base Fee Cap (GWEI)')
   const priorityFee = screen.getByLabelText('Max Priority Fee (GWEI)')
 
   fireEvent.change(baseFee, { target: { value: '8' } })
@@ -64,8 +64,8 @@ it('submits independent field drafts without one timer cancelling another', () =
 it('cancels pending field submission when the fee editor unmounts', async () => {
   const view = render(<AdjustFee req={req} />)
 
-  await view.user.clear(screen.getByLabelText('Base Fee (GWEI)'))
-  await view.user.type(screen.getByLabelText('Base Fee (GWEI)'), '8')
+  await view.user.clear(screen.getByLabelText('Base Fee Cap (GWEI)'))
+  await view.user.type(screen.getByLabelText('Base Fee Cap (GWEI)'), '8')
   view.unmount()
   act(() => jest.advanceTimersByTime(500))
 
@@ -75,7 +75,7 @@ it('cancels pending field submission when the fee editor unmounts', async () => 
 
 it('marks incomplete drafts unsafe and restores the authoritative value on blur', async () => {
   const { user } = render(<AdjustFee req={req} />)
-  const baseFee = screen.getByLabelText('Base Fee (GWEI)')
+  const baseFee = screen.getByLabelText('Base Fee Cap (GWEI)')
 
   await user.clear(baseFee)
   expect(isTransactionFeeDraftSafe(req.handlerId)).toBe(false)
@@ -88,7 +88,7 @@ it('marks incomplete drafts unsafe and restores the authoritative value on blur'
 
 it('resyncs clean inputs when authoritative fee values refresh', () => {
   const view = render(<AdjustFee req={req} />)
-  expect(screen.getByLabelText('Base Fee (GWEI)').value).toBe('4')
+  expect(screen.getByLabelText('Base Fee Cap (GWEI)').value).toBe('4')
 
   const updatedReq = {
     ...req,
@@ -99,7 +99,7 @@ it('resyncs clean inputs when authoritative fee values refresh', () => {
   }
   view.rerender(<AdjustFee req={updatedReq} />)
 
-  expect(screen.getByLabelText('Base Fee (GWEI)').value).toBe('8')
+  expect(screen.getByLabelText('Base Fee Cap (GWEI)').value).toBe('8')
 })
 
 describe('base fee input', () => {
@@ -841,7 +841,7 @@ describe('legacy transactions', () => {
 function setupComponent(req) {
   const { user } = render(<AdjustFee req={req} />)
 
-  const getBaseFeeInput = () => screen.getByLabelText('Base Fee (GWEI)')
+  const getBaseFeeInput = () => screen.getByLabelText('Base Fee Cap (GWEI)')
   const getPriorityFeeInput = () => screen.getByLabelText('Max Priority Fee (GWEI)')
   const getGasLimitInput = () => screen.getByLabelText('Gas Limit (UNITS)')
   const getGasPriceInput = () => screen.getByLabelText('Gas Price (GWEI)')

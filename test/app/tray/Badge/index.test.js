@@ -32,7 +32,7 @@ it('renders the available update as an accessible dialog and preserves each IPC 
   const dialog = screen.getByRole('dialog', { name: 'Update available' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
   expect(screen.getByTestId('outside-update-dialog').hasAttribute('inert')).toBe(true)
-  expect(screen.getByText('Wren 0.1.3 is available. Get the update when you are ready.')).toBeTruthy()
+  expect(screen.getByText('Wren 0.1.3')).toBeTruthy()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Get update' }))
 
   const skip = screen.getByRole('button', { name: 'Skip this version' })
@@ -51,11 +51,11 @@ it('renders the available update as an accessible dialog and preserves each IPC 
 it('treats Escape as Later without exposing the quiet skip action', () => {
   renderBadge({ type: 'updateReady', version: '0.1.3' })
 
-  expect(screen.getByText('Wren 0.1.3 is ready. Continue to complete the update.')).toBeTruthy()
+  expect(screen.getByText('Wren 0.1.3')).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Skip this version' })).toBeNull()
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
   expect(link.send).toHaveBeenCalledWith('tray:action', 'updateBadge', '')
 
-  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Restart and install' }))
   expect(link.send).toHaveBeenCalledWith('tray:updateRestart')
 })

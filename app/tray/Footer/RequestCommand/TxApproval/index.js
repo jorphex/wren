@@ -3,7 +3,13 @@ import link from '../../../../../resources/link'
 
 const TxApproval = ({ req, approval }) => {
   const title = approval?.data?.title || 'estimated to fail'
-  const confirmLabel = approval?.data?.confirmLabel || 'Proceed'
+  const label = approval?.data?.confirmLabel
+  const confirmLabel =
+    label === 'Proceed Anyway'
+      ? 'Accept proxy changes'
+      : !label || label === 'Proceed'
+        ? 'Accept simulation risk'
+        : label
 
   return (
     <div className='approveTransactionWarning'>

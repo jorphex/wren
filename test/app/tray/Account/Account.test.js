@@ -1,6 +1,7 @@
 import Restore from 'react-restore'
 import { fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
 import {
+  portfolioSummary,
   AccountAddressActions,
   AccountBody,
   AccountMain,
@@ -182,4 +183,56 @@ it('uses the shared 64px wallet header and explicit title for expanded balances'
   expect(view.classList.contains('accountViewCompact')).toBe(true)
   expect(view.style.top).toBe('0px')
   expect(screen.getByText('Balances')).toBeTruthy()
+})
+
+const portfolioStore =
+  ({
+    balances,
+    updated = Date.now(),
+    quote,
+    networks = { 1: { on: true, connection: { endpoints: [{ connected: true }] } } }
+  }) =>
+  (...path) => {
+    const key = path.join('.')
+    if (key === 'main.accounts.' + address) return { address, balances: { lastUpdated: updated } }
+    if (key === 'main.balances.' + address) return balances
+    if (key === 'main.networks.ethereum') return networks
+    if (key === 'main.networksMeta.ethereum')
+      return { 1: { nativeCurrency: { decimals: 18, symbol: 'ETH', usd: quote } } }
+    if (key === 'main.rates') return {}
+  }
+const nativeBalance = {
+  address: '0x0000000000000000000000000000000000000000',
+  chainId: 1,
+  decimals: 18,
+  balance: '1000000000000000000'
+}
+it('does not confuse missing balance data or prices with a zero portfolio', () => {
+  expect(portfolioSummary(portfolioStore({ balances: undefined, updated: undefined }), address).value).toBe(
+    '—'
+  )
+  expect(portfolioSummary(portfolioStore({ balances: [nativeBalance] }), address)).toMatchObject({
+    value: '—',
+    note: 'Prices unavailable',
+    partial: true
+  })
+  expect(
+    portfolioSummary(portfolioStore({ balances: [{ ...nativeBalance, balance: '0' }] }), address)
+  ).toMatchObject({ value: '$0.00', note: 'No balances found on connected networks', partial: false })
+})
+it('labels partial portfolio value when token prices are missing', () => {
+  const balances = [
+    nativeBalance,
+    { ...nativeBalance, address: '0x1111111111111111111111111111111111111111' }
+  ]
+  expect(portfolioSummary(portfolioStore({ balances, quote: { price: 2 } }), address)).toMatchObject({
+    value: '$2.00',
+    partial: true,
+    note: 'Some prices unavailable'
+  })
+})
+it('hides balance-derived empty and coverage messages with portfolio privacy', () => {
+  render(accountMain({ hideBalances: true }).renderPortfolioSummary())
+  expect(screen.queryByRole('status')).toBeNull()
+  expect(screen.queryByText('$0.00')).toBeNull()
 })

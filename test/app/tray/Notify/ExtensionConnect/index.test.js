@@ -57,7 +57,7 @@ it('shows the pairing identity and submits the opaque pairing request', async ()
   expect(screen.getByText('123456')).toBeTruthy()
   expect(screen.getByText('pairing-fingerprint')).toBeTruthy()
 
-  const accept = screen.getByRole('button', { name: 'Accept extension connection' })
+  const accept = screen.getByRole('button', { name: 'Codes match, connect' })
   accept.focus()
   await user.keyboard('{Enter}')
   expect(link.rpc).toHaveBeenCalledWith(
@@ -83,7 +83,7 @@ it('settles one response for duplicate extension authorization input', async () 
     />
   )
 
-  await user.dblClick(screen.getByRole('button', { name: 'Accept extension connection' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Codes match, connect' }))
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
 })
@@ -99,7 +99,7 @@ it('keeps pairing open after an RPC error and permits one guarded retry', async 
     />
   )
 
-  await user.click(screen.getByRole('button', { name: 'Accept extension connection' }))
+  await user.click(screen.getByRole('button', { name: 'Codes match, connect' }))
   act(() => link.rpc.mock.calls[0][3](new Error('pairing failed')))
 
   expect(onClose).not.toHaveBeenCalled()

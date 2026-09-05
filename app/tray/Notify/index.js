@@ -138,7 +138,7 @@ export class Notify extends React.Component {
           <div className='notifySubtitle'>Your desktop EVM wallet</div>
           <div className='notifyBody'>
             <div className='notifyBodyLine'>
-              Read{' '}
+              {' '}
               <button
                 type='button'
                 className='notifyBodyLink'
@@ -146,11 +146,8 @@ export class Notify extends React.Component {
                   link.send('tray:openExternal', WREN_LICENSE_URL)
                 }}
               >
-                our license
+                License
               </button>
-              {
-                '. Use Wren at your own risk. When possible, verify transactions and account details on your signing device.'
-              }
             </div>
           </div>
           <div className='notifyInput'>
@@ -162,7 +159,7 @@ export class Notify extends React.Component {
                 this.dismissNotification()
               }}
             >
-              <div className='notifyInputOptionText'>Continue</div>
+              <div className='notifyInputOptionText'>Open wallet</div>
             </button>
           </div>
         </div>
@@ -179,13 +176,11 @@ export class Notify extends React.Component {
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
             <h2 id='wren-notify-title' className='notifyTitle'>
-              Safety notice
+              About Wren
             </h2>
             <div className='notifyBody'>
               <div className='notifyBodyBlock'>
-                <div className='notifySection'>Use hardware signers for high-value accounts.</div>
                 <div className='notifySection'>
-                  <span>Read</span>
                   <button
                     type='button'
                     className='notifyBodyLink'
@@ -193,9 +188,8 @@ export class Notify extends React.Component {
                       link.send('tray:openExternal', WREN_LICENSE_URL)
                     }}
                   >
-                    our license
+                    License
                   </button>
-                  <span>. Use Wren at your own risk.</span>
                 </div>
                 <div className='notifySection'>
                   <span>Report a problem </span>
@@ -206,7 +200,7 @@ export class Notify extends React.Component {
                       link.send('tray:openExternal', WREN_SUPPORT_URL)
                     }}
                   >
-                    on GitHub Issues
+                    GitHub Issues
                   </button>
                 </div>
               </div>
@@ -220,7 +214,7 @@ export class Notify extends React.Component {
                   this.dismissNotification()
                 }}
               >
-                <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
+                <div className='notifyInputOptionText notifyBetaGo'>Done</div>
               </button>
             </div>
           </div>
@@ -246,11 +240,9 @@ export class Notify extends React.Component {
                 <div className='notifyBodyLine notifyBodyPrice'>{`≈ $${feeUSD} in ${currentSymbol}`}</div>
               </>
             ) : (
-              <div className='notifyBodyLine'>
-                We were unable to determine this transaction&apos;s fee in USD.
-              </div>
+              <div className='notifyBodyLine'>Fee in USD unavailable.</div>
             )}
-            <div className='notifyBodyQuestion'>Review the fee before you continue.</div>
+            <div className='notifyBodyQuestion'></div>
             {approvalError ? (
               <div className='notifyBodyLine' role='alert'>
                 Couldn’t approve this request. It’s still pending.

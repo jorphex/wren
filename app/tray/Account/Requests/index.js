@@ -218,7 +218,7 @@ export class Requests extends React.Component {
               <div className='requestPreviewItem'>
                 <span className='requestPreviewIdentity'>
                   <strong>{requestPreviewTitle(current)}</strong>
-                  <span>{`${origin} · ${current.type}`}</span>
+                  <span>{origin}</span>
                 </span>
                 <span className='requestPreviewReview'>Review →</span>
               </div>
@@ -494,7 +494,19 @@ export class Requests extends React.Component {
                   i={this.requestIndexes.get(req.handlerId)}
                   actionRef={(element) => this.setRequestRef(req.handlerId, element)}
                   inspectableQueued
-                  title={`${chainName} transaction`}
+                  title={`${
+                    req.recognizedActions?.length === 1 && req.recognizedActions[0].id === 'erc20:transfer'
+                      ? 'Send token'
+                      : req.recognizedActions?.length === 1 && req.recognizedActions[0].id === 'erc20:approve'
+                        ? 'Approve token spending'
+                        : !req.data.to
+                          ? 'Deploy contract'
+                          : req.classification === 'NATIVE_TRANSFER'
+                            ? currentSymbol === '?'
+                              ? 'Send native asset'
+                              : `Send ${currentSymbol}`
+                            : 'Contract transaction'
+                  } · ${chainName || `Chain ${chainId}`}`}
                   color={primaryColor ? `var(--${primaryColor})` : ''}
                   img={icon}
                 >

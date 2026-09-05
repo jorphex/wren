@@ -231,6 +231,11 @@ const actionFields = (action, nativeCurrency, token) => {
             }
         return { label: sentenceLabel(argument.name), value: formatted.display, title: formatted.exact }
       }
+      if (/^uint/u.test(argument.type) && ['assets', 'shares'].includes(argument.name))
+        return {
+          label: `${sentenceLabel(argument.name)} (base units)`,
+          value: formatQuantity(argument.value)
+        }
       return {
         label: sentenceLabel(argument.name),
         value:
@@ -344,12 +349,44 @@ const ActivityActionDetails = ({ account, evidence, grouped, loading, nativeCurr
   )
 }
 
-const ActivityRow = ({ entry, networkName, onOpen, originName, selected }) => {
+const ActivityRow = ({ entry, networkName, onOpen, originName, selected, nativeCurrency, hideBalances }) => {
+  const rowRef = React.useRef()
+  const [evidence, setEvidence] = React.useState(null)
+  React.useEffect(() => {
+    if (
+      !['transaction', 'walletCalls', 'eip7702Revoke'].includes(entry.type) ||
+      typeof IntersectionObserver === 'undefined'
+    )
+      return
+    let active = true
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      Promise.resolve(link.invoke('activity:details', entry.id))
+        .then((result) => {
+          if (active && result?.success) setEvidence({ ...result, updatedAt: entry.completedAt })
+        })
+        .catch(() => {})
+    })
+    observer.observe(rowRef.current)
+    return () => {
+      active = false
+      observer.disconnect()
+    }
+  }, [entry.id, entry.completedAt, entry.type])
+  const action =
+    evidence?.updatedAt === entry.completedAt && evidence?.actions?.length === 1 ? evidence.actions[0] : null
+  const actionLabel = action?.method ? sentenceLabel(action.method) : ACTION_KIND_LABELS[action?.kind]
+  const amount =
+    action?.kind === 'native-value-transfer' && Number.isInteger(nativeCurrency?.decimals)
+      ? compactAssetAmount(action.value, nativeCurrency.decimals, nativeCurrency.symbol).display
+      : ''
+
   const meta = activityTypeMeta(entry.type)
   const origin = activityOriginLabel(entry.origin, originName)
   const outcome = outcomePresentation(entry)
   return (
-    <li className='activityItem'>
+    <li className='activityItem' ref={rowRef}>
       <button
         type='button'
         aria-label={`View ${meta.label} details from ${origin}`}
@@ -361,7 +398,10 @@ const ActivityRow = ({ entry, networkName, onOpen, originName, selected }) => {
           <Icon name={meta.icon} size={15} />
         </span>
         <span className='activityIdentity'>
-          <span className='activityTitle'>{meta.label}</span>
+          <span className='activityTitle'>
+            {actionLabel || meta.label}
+            {amount ? ` · ${hideBalances ? '••••' : amount}` : ''}
+          </span>
           <span className='activityContext'>
             {origin}
             {networkName ? ` · ${networkName}` : ''}
@@ -369,7 +409,7 @@ const ActivityRow = ({ entry, networkName, onOpen, originName, selected }) => {
         </span>
         <span className='activityResult' title={outcome.detail}>
           <span className={`activityOutcome activityOutcome-${entry.outcome}`}>{outcome.label}</span>
-          {outcome.detail ? <span className='activityOutcomeDetail'>{outcome.detail}</span> : null}
+
           <time dateTime={new Date(entry.completedAt).toISOString()}>{formatTime(entry.completedAt)}</time>
         </span>
         <span className='activityRowChevron' aria-hidden='true'>
@@ -430,7 +470,13 @@ const ActivityDetail = ({
           <Icon name={meta.icon} size={18} />
         </span>
         <span className='activityDetailIdentity'>
-          <span className='activityDetailTitle'>{meta.label}</span>
+          <span className='activityDetailTitle'>
+            {resolvedActions.length === 1
+              ? resolvedActions[0].method
+                ? sentenceLabel(resolvedActions[0].method)
+                : ACTION_KIND_LABELS[resolvedActions[0].kind]
+              : meta.label}
+          </span>
           <span className='activityDetailContext'>
             {origin}
             {networkName ? ` · ${networkName}` : ''}
@@ -440,6 +486,17 @@ const ActivityDetail = ({
       </header>
 
       {outcome.detail ? <div className='activityDetailOutcomeCopy'>{outcome.detail}</div> : null}
+
+      {onchainDetail ? (
+        <ActivityActionDetails
+          account={account}
+          evidence={actionEvidence}
+          grouped={Boolean(batch) || entry.type === 'walletCalls'}
+          loading={actionLoading}
+          nativeCurrency={nativeCurrency}
+          tokenFor={tokenFor}
+        />
+      ) : null}
 
       <section className='activityDetailSection'>
         <h2>Details</h2>
@@ -461,17 +518,6 @@ const ActivityDetail = ({
           </DetailRow>
         </dl>
       </section>
-
-      {onchainDetail ? (
-        <ActivityActionDetails
-          account={account}
-          evidence={actionEvidence}
-          grouped={Boolean(batch) || entry.type === 'walletCalls'}
-          loading={actionLoading}
-          nativeCurrency={nativeCurrency}
-          tokenFor={tokenFor}
-        />
-      ) : null}
 
       {transactionHash ? (
         <section className='activityDetailSection activityDetailOnchain'>
@@ -874,6 +920,8 @@ export class Activity extends React.Component {
               return (
                 <ActivityRow
                   entry={entry}
+                  nativeCurrency={this.store('main.networksMeta.ethereum', entry.chainId, 'nativeCurrency')}
+                  hideBalances={this.store('selected.hideBalances')}
                   key={entry.id}
                   networkName={networkName}
                   onOpen={(activityId) => this.openDetail(activityId)}
@@ -924,7 +972,7 @@ export class Activity extends React.Component {
               <DialogSurface
                 className='activityClearDialog'
                 role='alertdialog'
-                ariaLabel='Clear activity history?'
+                ariaLabel='Clear activity for all accounts?'
                 describedBy='activity-clear-description'
                 busy={this.state.clearing}
                 initialFocusRef={this.cancelClearRef}
@@ -932,12 +980,9 @@ export class Activity extends React.Component {
                 onCancel={() => this.cancelClear()}
               >
                 <div className='activityClearCopy'>
-                  <strong>Clear activity history?</strong>
+                  <strong>Clear activity for all accounts?</strong>
                   <span id='activity-clear-description'>
-                    This removes activity history for every account on this device. Pending activity may
-                    appear again if Wren receives an update. This also clears Wren’s local outbound-address
-                    memory, so prior-use and lookalike warnings may not appear again until you submit new
-                    transactions. This cannot be undone.
+                    Also resets prior-use and lookalike address memory. Pending activity may reappear.
                   </span>
                 </div>
                 <div className='activityClearActions'>
@@ -956,18 +1001,18 @@ export class Activity extends React.Component {
                     disabled={this.state.clearing}
                     onClick={() => this.confirmClear()}
                   >
-                    {this.state.clearing ? 'Clearing…' : 'Clear history'}
+                    {this.state.clearing ? 'Clearing…' : 'Clear activity for all accounts'}
                   </button>
                 </div>
               </DialogSurface>
             ) : (
               <button
                 type='button'
-                className='activityClearButton wrenControl wrenControlDanger wrenControlLarge'
+                className='activityClearButton wrenControl wrenControlGhost wrenControlLarge'
                 onClick={() => this.beginClear()}
                 ref={this.clearButtonRef}
               >
-                Clear activity
+                Clear activity for all accounts
               </button>
             )}
           </div>

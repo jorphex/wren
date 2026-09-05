@@ -285,7 +285,7 @@ it('keeps a queued transaction inspectable while non-transaction reviews remain 
   )
 
   const transactionButton = screen.getByRole('button', {
-    name: /transaction\. Queued · 2 of 3/i
+    name: /Send native asset · Chain 1\. Queued · 2 of 3/i
   })
   expect(transactionButton.disabled).toBe(false)
   expect(screen.getByRole('button', { name: 'Account access. Queued · 3 of 3' }).disabled).toBe(true)

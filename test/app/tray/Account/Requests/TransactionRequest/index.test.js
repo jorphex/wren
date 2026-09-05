@@ -294,7 +294,7 @@ describe('confirm', () => {
     await user.click(adjust)
 
     expect(adjust.getAttribute('aria-expanded')).toBe('true')
-    expect(screen.getByLabelText('Base Fee (GWEI)')).toBeTruthy()
+    expect(screen.getByLabelText('Base Fee Cap (GWEI)')).toBeTruthy()
     expect(screen.getByLabelText('Max Priority Fee (GWEI)')).toBeTruthy()
     expect(screen.getByLabelText('Gas Limit (UNITS)')).toBeTruthy()
     expect(link.send).not.toHaveBeenCalledWith('nav:update', 'panel', {
@@ -1090,7 +1090,7 @@ describe('simulation review', () => {
     expect(screen.getByText('ERC-20 Send')).toBeTruthy()
     expect(screen.getByText('ERC-20 Unlimited Approval')).toBeTruthy()
     expect(screen.getAllByText(token)).toHaveLength(2)
-    expect(screen.getByRole('alert').textContent).toMatch(/preview truncated/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/Partial .*preview/i)
   })
 
   it('keeps a normal token approval on one concise headline', () => {
@@ -1137,7 +1137,7 @@ describe('simulation review', () => {
     expect(screen.getByText('Native Balance Decrease')).toBeTruthy()
     expect(screen.getByText('Native Balance Increase')).toBeTruthy()
     expect(screen.getByText('-3')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/preview truncated/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/Partial .*preview/i)
   })
 
   it('shows unavailable native balance evidence without changing execution status', () => {
@@ -1216,8 +1216,8 @@ describe('simulation review', () => {
     render(<SimulationProxyImplementationChanges simulation={{ proxyImplementationCheck: evidence }} />)
 
     expect(screen.getByText('RPC-Reported ERC-1967 Implementation Slot Changes')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/configured RPC/i)
-    expect(screen.getByRole('alert').textContent).toMatch(/not independently verified/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/Implementation changed/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/asset authority may change/i)
     expect(screen.getByText('Proxy Implementation Slot Changed')).toBeTruthy()
     expect(screen.getByText(proxy)).toBeTruthy()
     expect(screen.getByText(before)).toBeTruthy()
@@ -1293,13 +1293,13 @@ describe('simulation review', () => {
     render(<SimulationCallTrace simulation={{ callTrace: evidence }} />)
 
     expect(screen.getByText('RPC-Reported Execution Trace')).toBeTruthy()
-    expect(screen.getByRole('note').textContent).toMatch(/configured RPC/i)
-    expect(screen.getByRole('note').textContent).toMatch(/raw call input and return data are omitted/i)
+    expect(screen.getByRole('note').textContent).toMatch(/Call trace/i)
+    expect(screen.getByRole('note').textContent).toMatch(/Raw input and return data omitted/i)
     expect(screen.getByText('DELEGATECALL Internal Call')).toBeTruthy()
     expect(screen.getByText('CREATE2 Contract Creation')).toBeTruthy()
     expect(screen.getByText('0xabcdef01')).toBeTruthy()
     expect(screen.getByText('execution reverted')).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toMatch(/trace preview truncated/i)
+    expect(screen.getByRole('alert').textContent).toMatch(/Partial execution trace/i)
   })
 
   it('omits an empty call-trace presentation', () => {
@@ -1334,7 +1334,7 @@ describe('simulation review', () => {
     render(<SimulationAllowance simulation={{ status: 'succeeded', allowance }} />)
 
     expect(screen.getByText('RPC-Reported Current Allowance')).toBeTruthy()
-    expect(screen.getByRole('note').textContent).toMatch(/not independently verified/i)
+    expect(screen.getByRole('note').textContent).toMatch(/Allowance at review time/i)
     expect(screen.getByText('7')).toBeTruthy()
     expect(screen.getByText('42')).toBeTruthy()
   })
@@ -1451,7 +1451,7 @@ describe('simulation review', () => {
       label: `Target delegates to ${delegate}; nested delegation is not followed`
     })
     render(<SimulationDelegation simulation={simulation} />)
-    expect(screen.getByText(/resolves only the first delegate address/i)).toBeTruthy()
+    expect(screen.getAllByText(/Nested delegation is not followed/i)).toBeTruthy()
   })
 
   it('does not treat empty delegate bytecode as proof that nothing can execute', () => {
@@ -1477,8 +1477,8 @@ describe('simulation review', () => {
       label: `Target delegates to ${delegate}; RPC returned empty code`
     })
     render(<SimulationDelegation simulation={simulation} />)
-    expect(screen.getByText(/precompiles can execute without bytecode/i)).toBeTruthy()
-    expect(screen.getByText(/cannot distinguish them from empty accounts/i)).toBeTruthy()
+    expect(screen.getByText(/No delegate bytecode/i)).toBeTruthy()
+    expect(screen.getByText(/empty account or a precompile/i)).toBeTruthy()
   })
 
   it('summarizes and renders a complete ordered access list', () => {

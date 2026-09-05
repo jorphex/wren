@@ -80,6 +80,7 @@ it('renders the balance privacy control for the current account', () => {
   )
 
   expect(screen.getByRole('button', { name: 'Show balances' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Account address QR code' })).toBeNull()
   const workspaceToggle = screen.getByRole('button', { name: 'Open dashboard' })
   expect(workspaceToggle).toBeTruthy()
   expect(workspaceToggle.querySelectorAll('svg rect')).toHaveLength(1)

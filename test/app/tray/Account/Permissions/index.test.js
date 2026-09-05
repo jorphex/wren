@@ -657,12 +657,19 @@ it('opens account-scoped management with the app connection ID and granted chain
   await user.click(screen.getAllByRole('button', { name: 'Add guardrail · Chain 0x1 (0x1)' })[0])
 
   const editor = screen.getByRole('region', { name: 'Guardrail for alpha.example' })
+  expect(editor.closest('.signerPermission')).toBeNull()
+  expect(screen.queryByRole('button', { name: /Revoke/ })).toBeNull()
   expect(within(editor).getByText('App connection ID')).toBeTruthy()
   expect(within(editor).getByText(account)).toBeTruthy()
   expect(within(editor).getByText('first')).toBeTruthy()
   expect(screen.getByText('Chain 0x1 · 0x1')).toBeTruthy()
   expect(document.activeElement).toBe(
     screen.getByRole('combobox', { name: 'When a request exceeds a restriction' })
+  )
+  await user.click(within(editor).getByRole('button', { name: 'Close editor' }))
+  expect(screen.queryByRole('region', { name: 'Guardrail for alpha.example' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getAllByRole('button', { name: 'Add guardrail · Chain 0x1 (0x1)' })[0]
   )
 })
 
@@ -981,22 +988,25 @@ it('converts native decimal amounts exactly without guessing token decimals', ()
 it('shows full source-bound evidence and saves an exact account, principal, and chain policy', async () => {
   const { rerender, user } = render(<DappGuardrailEditor {...guardrailProps} />)
 
-  expect(document.activeElement).toBe(screen.getByRole('combobox'))
+  expect(document.activeElement).toBe(
+    screen.getByRole('combobox', { name: 'When a request exceeds a restriction' })
+  )
   expect(screen.getByText(account)).toBeTruthy()
   expect(screen.getByText(guardrailProps.originId)).toBeTruthy()
   expect(screen.getByText(guardrailProps.origin.sourceId)).toBeTruthy()
   expect(screen.getByText(/Native app · bound to the source below/u)).toBeTruthy()
-  expect(
-    screen.getByText(/never sign automatically and never replace normal transaction review/u)
-  ).toBeTruthy()
+  expect(screen.getByText(/Requests still require your review/u)).toBeTruthy()
 
-  await user.selectOptions(screen.getByRole('combobox'), 'warn')
-  await user.click(screen.getByRole('switch', { name: 'Restrict request targets' }))
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'When a request exceeds a restriction' }),
+    'warn'
+  )
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Request targets' }), 'selected')
   await user.type(
     screen.getByRole('textbox', { name: 'Allowed target addresses' }),
     '0x2222222222222222222222222222222222222222'
   )
-  await user.click(screen.getByRole('switch', { name: 'Restrict approval spenders' }))
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Approval spenders' }), 'none')
   await user.click(screen.getByRole('switch', { name: 'Set native-value ceiling' }))
   await user.type(screen.getByRole('textbox', { name: 'Native-value ceiling' }), '1.25')
   await user.click(screen.getByRole('switch', { name: 'Set token ceilings' }))
@@ -1044,8 +1054,8 @@ it('distinguishes omitted and deny-all allowlists and focuses actionable validat
   await user.click(screen.getByRole('button', { name: 'Save changes' }))
   expect(screen.getByRole('alert').textContent).toContain('Enable at least one restriction')
 
-  await user.click(screen.getByRole('switch', { name: 'Restrict request targets' }))
-  expect(screen.getByText(/Enabled with no addresses denies every target/u)).toBeTruthy()
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Request targets' }), 'selected')
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Request targets' }), 'none')
   expect(
     guardrailBodyFor({
       mode: 'block',
@@ -1069,6 +1079,7 @@ it('distinguishes omitted and deny-all allowlists and focuses actionable validat
     })
   ).toEqual({ mode: 'block', tokenCeilings: [] })
 
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Request targets' }), 'selected')
   await user.type(screen.getByRole('textbox', { name: 'Allowed target addresses' }), 'not-an-address')
   await user.click(screen.getByRole('button', { name: 'Save changes' }))
   expect(screen.getByRole('alert').textContent).toContain('invalid address')
@@ -1122,4 +1133,11 @@ it('settles removal only after the scoped store record disappears', async () => 
   expect(screen.getByRole('status').textContent).toBe('Guardrail removed.')
   expect(document.activeElement).toBe(screen.getByRole('status'))
   expect(screen.queryByRole('button', { name: 'Remove guardrail' })).toBeNull()
+})
+
+it('keeps the precision-unavailable reason visible for a disabled native restriction', () => {
+  render(<DappGuardrailEditor {...guardrailProps} nativeDecimals={undefined} />)
+  expect(
+    screen.getByText('Native asset precision is unavailable, so this restriction cannot be edited.')
+  ).toBeTruthy()
 })

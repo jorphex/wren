@@ -1,3 +1,4 @@
+import { CopyableRequestValue } from '../LightweightRequest'
 import { MAX_UINT256 } from '../../../../../resources/domain/transaction/quantity'
 import {
   formatTokenBaseUnitAmount,
@@ -32,9 +33,10 @@ const PermitOverview = ({
 }) => {
   const { chainName } = chainData
   const {
-    permit: { spender, value, deadline },
+    permit: { spender, value, deadline, verifyingContract },
     tokenData
   } = req
+  const tokenContract = verifyingContract?.address || req.typedMessage?.data?.domain?.verifyingContract
   const localIdentity = resolveLocalAddressIdentity(addressBook, accounts, spender.address)
 
   const [showCopiedMessage, copySpender] = useCopiedMessage(spender.address)
@@ -49,7 +51,7 @@ const PermitOverview = ({
     amount === undefined
       ? 'UNKNOWN AMOUNT'
       : amount === MAX_UINT256
-        ? '~UNLIMITED'
+        ? 'Unlimited'
         : hasTokenDecimals
           ? formatTokenBaseUnitAmount(value, tokenData.decimals)
           : 'UNKNOWN AMOUNT'
@@ -75,23 +77,6 @@ const PermitOverview = ({
           {amountDisplay} {amountSuffix}
         </strong>
         <p className='permitActionSpender'>For {localIdentity?.label || compactAddress(spender.address)}</p>
-        <button
-          aria-label='View raw permit data'
-          className='permitRawAction'
-          onClick={() => {
-            link.send('nav:update', 'panel', { data: { step: 'viewRaw' } })
-          }}
-          type='button'
-        >
-          <span className='permitRawActionHeader'>
-            <strong>Permit data</strong>
-            <span>Review ›</span>
-          </span>
-          <span className='permitRawActionSignature'>
-            Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)
-          </span>
-          <code>spender: {compactAddress(spender.address)}</code>
-        </button>
       </section>
 
       <section className='permitDetailsCard'>
@@ -102,13 +87,20 @@ const PermitOverview = ({
             <dd>
               <span className='permitAccountIdentity'>
                 <strong>{accountName || 'Account'}</strong>
-                <span className='permitAccountAddress'>{compactAddress(req.account)}</span>
+                <span className='permitAccountAddress'>{req.account}</span>
               </span>
             </dd>
           </div>
           <div>
             <dt>Token</dt>
-            <dd>{amountSuffix}</dd>
+            <dd>
+              <strong>{amountSuffix}</strong>
+              {tokenContract ? (
+                <CopyableRequestValue copyLabel='Copy permit token contract' value={tokenContract} />
+              ) : (
+                <span>Contract unavailable</span>
+              )}
+            </dd>
           </div>
           <div>
             <dt>Amount</dt>
@@ -142,6 +134,7 @@ const PermitOverview = ({
               >
                 <AddressIdentity
                   address={spender.address}
+                  complete={true}
                   copied={showCopiedMessage}
                   label={localIdentity?.label || spender.ens}
                   revealOnHover={false}
@@ -152,8 +145,12 @@ const PermitOverview = ({
             </dd>
           </div>
           <div>
-            <dt>Expires</dt>
+            <dt>Signature deadline</dt>
             <dd>{formatApprovalExpiry(deadline)}</dd>
+          </div>
+          <div>
+            <dt>Spending access</dt>
+            <dd>Until used or revoked</dd>
           </div>
           <div>
             <dt>Type</dt>
@@ -163,6 +160,23 @@ const PermitOverview = ({
         <span className='permitCopyStatus' role='status'>
           {showCopiedMessage ? 'Permit spender address copied' : ''}
         </span>
+        <button
+          aria-label='View raw permit data'
+          className='permitRawAction'
+          onClick={() => {
+            link.send('nav:update', 'panel', { data: { step: 'viewRaw' } })
+          }}
+          type='button'
+        >
+          <span className='permitRawActionHeader'>
+            <strong>Permit data</strong>
+            <span>Review ›</span>
+          </span>
+          <span className='permitRawActionSignature'>
+            Permit(address owner, address spender, uint256 value, uint256 nonce, uint256 deadline)
+          </span>
+          <code>spender: {compactAddress(spender.address)}</code>
+        </button>{' '}
       </section>
       <TypedDataWarnings context={req.context} />
       <TypedDataDeviceWarning warning={deviceWarning} />
@@ -178,7 +192,7 @@ const EditPermit = ({ req }) => {
   const updateRequest = (newAmt, callback = () => {}) => {
     link.rpc('updateRequest', req.account, req.handlerId, { amount: newAmt }, null, callback)
   }
-  const deadline = deadlineInSeconds * 1000
+  const deadline = deadlineInSeconds
 
   const requestedAmount = req.payload.params[1].message.value
 

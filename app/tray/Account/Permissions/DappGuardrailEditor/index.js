@@ -109,8 +109,10 @@ const localDateTime = (timestamp) => {
 
 const formFor = (guardrail, nativeDecimals) => ({
   mode: guardrail?.mode === 'warn' ? 'warn' : 'block',
+  targetsMode: !Array.isArray(guardrail?.targets) ? 'any' : guardrail.targets.length ? 'selected' : 'none',
   targetsEnabled: Array.isArray(guardrail?.targets),
   targets: Array.isArray(guardrail?.targets) ? guardrail.targets.join('\n') : '',
+  spendersMode: !Array.isArray(guardrail?.spenders) ? 'any' : guardrail.spenders.length ? 'selected' : 'none',
   spendersEnabled: Array.isArray(guardrail?.spenders),
   spenders: Array.isArray(guardrail?.spenders) ? guardrail.spenders.join('\n') : '',
   nativeEnabled: typeof guardrail?.nativeValueCeiling === 'string',
@@ -127,6 +129,10 @@ const formFor = (guardrail, nativeDecimals) => ({
 
 export const guardrailBodyFor = (form, nativeDecimals = 18) => {
   const body = { mode: form.mode }
+  if (form.targetsMode === 'selected' && !form.targets.trim())
+    throw new Error('Add an allowed target or choose No targets.')
+  if (form.spendersMode === 'selected' && !form.spenders.trim())
+    throw new Error('Add an allowed spender or choose No spenders.')
   if (form.targetsEnabled) body.targets = parseAddresses(form.targets, 'Target allowlist')
   if (form.spendersEnabled) body.spenders = parseAddresses(form.spenders, 'Spender allowlist')
   if (form.nativeEnabled) {
@@ -371,7 +377,8 @@ export class DappGuardrailEditor extends React.Component {
       <section className='dappGuardrailEditor' aria-label={`Guardrail for ${origin?.name || originId}`}>
         <div className='dappGuardrailEditorHeader'>
           <div>
-            <strong>Local request guardrail</strong>
+            <strong>Request guardrail</strong>
+            <span>{origin?.name || originId}</span>
             <span>
               {chainName} · {chainId}
             </span>
@@ -386,36 +393,36 @@ export class DappGuardrailEditor extends React.Component {
           </button>
         </div>
 
-        <dl className='dappGuardrailEvidence'>
-          <div>
-            <dt>Account</dt>
-            <dd>{account}</dd>
-          </div>
-          <div>
-            <dt>Asserted origin</dt>
-            <dd>{origin?.name || 'Unknown origin'}</dd>
-          </div>
-          <div>
-            <dt>App connection ID</dt>
-            <dd>{originId}</dd>
-          </div>
-          <div>
-            <dt>Provenance</dt>
-            <dd>{provenanceCopy(origin)}</dd>
-          </div>
-          {sourceId ? (
+        <section className='guardrailConnectionIdentity'>
+          <h3>Connection identity</h3>
+          <dl className='dappGuardrailEvidence'>
             <div>
-              <dt>Bound source</dt>
-              <dd>{sourceId}</dd>
+              <dt>Account</dt>
+              <dd>{account}</dd>
             </div>
-          ) : null}
-        </dl>
+            <div>
+              <dt>Asserted origin</dt>
+              <dd>{origin?.name || 'Unknown origin'}</dd>
+            </div>
+            <div>
+              <dt>App connection ID</dt>
+              <dd>{originId}</dd>
+            </div>
+            <div>
+              <dt>Provenance</dt>
+              <dd>{provenanceCopy(origin)}</dd>
+            </div>
+            {sourceId ? (
+              <div>
+                <dt>Bound source</dt>
+                <dd>{sourceId}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
 
         <p className='dappGuardrailDisclosure' id={descriptionId}>
-          Direct web origins are asserted by the connecting app. Wren Companion and native app identities are
-          bound to their authenticated source. These restrictions are local guardrails. They never sign
-          automatically and never replace normal transaction review. If a configured target, spender, or
-          amount cannot be verified locally, the request exceeds that restriction.
+          Requests still require your review. Unverifiable values exceed the selected restriction.
         </p>
 
         {this.renderConfirmation()}
@@ -436,41 +443,41 @@ export class DappGuardrailEditor extends React.Component {
             </select>
           </label>
 
-          <GuardrailToggleField
-            checked={form.targetsEnabled}
-            disabled={fieldDisabled}
-            label='Restrict request targets'
-            detail='Covers transaction destinations and typed-data verifying contracts. Enabled with no addresses denies every target. Disabled allows any target.'
-            onChange={(checked) => this.updateForm({ targetsEnabled: checked })}
-          >
-            <textarea
-              aria-label='Allowed target addresses'
-              className='wrenInput wrenInputQuiet'
-              disabled={fieldDisabled}
-              placeholder='One full 0x address per line'
-              rows={3}
-              value={form.targets}
-              onChange={(event) => this.updateForm({ targets: event.target.value })}
-            />
-          </GuardrailToggleField>
-
-          <GuardrailToggleField
-            checked={form.spendersEnabled}
-            disabled={fieldDisabled}
-            label='Restrict approval spenders'
-            detail='Enabled with no addresses denies every spender. Disabled allows any spender.'
-            onChange={(checked) => this.updateForm({ spendersEnabled: checked })}
-          >
-            <textarea
-              aria-label='Allowed spender addresses'
-              className='wrenInput wrenInputQuiet'
-              disabled={fieldDisabled}
-              placeholder='One full 0x address per line'
-              rows={3}
-              value={form.spenders}
-              onChange={(event) => this.updateForm({ spenders: event.target.value })}
-            />
-          </GuardrailToggleField>
+          {['targets', 'spenders'].map((field) => (
+            <div className='dappGuardrailField' key={field}>
+              <label>
+                <span>{field === 'targets' ? 'Request targets' : 'Approval spenders'}</span>
+                <select
+                  className='wrenInput wrenInputQuiet'
+                  disabled={fieldDisabled}
+                  value={form[`${field}Mode`]}
+                  onChange={(event) => {
+                    const mode = event.target.value
+                    this.updateForm({
+                      [`${field}Mode`]: mode,
+                      [`${field}Enabled`]: mode !== 'any',
+                      ...(mode === 'none' ? { [field]: '' } : {})
+                    })
+                  }}
+                >
+                  <option value='any'>Any {field}</option>
+                  <option value='selected'>Selected {field}</option>
+                  <option value='none'>No {field}</option>
+                </select>
+              </label>
+              {form[`${field}Mode`] === 'selected' ? (
+                <textarea
+                  aria-label={field === 'targets' ? 'Allowed target addresses' : 'Allowed spender addresses'}
+                  className='wrenInput wrenInputQuiet'
+                  disabled={fieldDisabled}
+                  placeholder='One full 0x address per line'
+                  rows={3}
+                  value={form[field]}
+                  onChange={(event) => this.updateForm({ [field]: event.target.value })}
+                />
+              ) : null}
+            </div>
+          ))}
 
           <GuardrailToggleField
             checked={form.nativeEnabled}
@@ -478,7 +485,7 @@ export class DappGuardrailEditor extends React.Component {
             label='Set native-value ceiling'
             detail={
               validNativeDecimals(nativeDecimals)
-                ? `Amount uses the chain native asset with ${nativeDecimals} decimal places.`
+                ? ''
                 : 'Native asset precision is unavailable, so this restriction cannot be edited.'
             }
             onChange={(checked) => this.updateForm({ nativeEnabled: checked })}
@@ -498,7 +505,7 @@ export class DappGuardrailEditor extends React.Component {
             checked={form.tokensEnabled}
             disabled={fieldDisabled}
             label='Set token ceilings'
-            detail='Enabled with no entries denies every token. Amounts are raw whole base units; Wren does not guess token decimals.'
+            detail='No entries blocks all tokens. Enter whole base-unit amounts.'
             onChange={(checked) => this.updateForm({ tokensEnabled: checked })}
           >
             <textarea
@@ -516,7 +523,7 @@ export class DappGuardrailEditor extends React.Component {
             checked={form.expiresEnabled}
             disabled={fieldDisabled}
             label='Set allowed-until time'
-            detail='After this local time, requests exceed the guardrail.'
+            detail='Requests after this local time exceed the guardrail.'
             onChange={(checked) => this.updateForm({ expiresEnabled: checked })}
           >
             <input
@@ -570,7 +577,7 @@ const GuardrailToggleField = ({ checked, children, detail, disabled, label, onCh
       <span>{label}</span>
       <Toggle checked={checked} disabled={disabled} label={label} onChange={onChange} />
     </legend>
-    <span className='dappGuardrailFieldDetail'>{detail}</span>
+    {detail && (checked || disabled) ? <span className='dappGuardrailFieldDetail'>{detail}</span> : null}
     {checked ? children : null}
   </fieldset>
 )

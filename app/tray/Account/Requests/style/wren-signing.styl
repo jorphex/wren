@@ -173,7 +173,9 @@
         padding 0
 
     ._txDescriptionSummaryTag
-      display none
+      display block
+      margin-top 6px
+      color var(--wren-text-secondary)
 
   .transactionReviewMainApproval
     .transactionReviewOverview > .clusterRow:first-child .clusterValue,
@@ -1106,7 +1108,8 @@
     color var(--wren-text-tertiary)
     font-family var(--wren-font-mono)
     font-size 12px
-    white-space nowrap
+    white-space normal
+    overflow-wrap anywhere
 
 .permitEditAmount,
 .permitCopySpender
@@ -1168,7 +1171,7 @@
   text-align left
 
 .requestNoticeTransactionReview
-  height var(--wren-request-review-shelf-height, 88px)
+  height var(--wren-request-review-shelf-height, 114px)
   background linear-gradient(180deg, rgba(14, 18, 16, .72), var(--wren-bg-subtle) 30px)
   box-shadow 0 -14px 28px rgba(0, 0, 0, .16)
   animation none
@@ -1177,8 +1180,8 @@
     display block
 
 .requestNoticeTransactionStatus
-  height 88px
-  min-height 88px
+  height 114px
+  min-height 114px
   background var(--wren-bg-subtle)
 
   .requestNoticeInner
@@ -1252,7 +1255,7 @@
   animation 0.24s fadeUp ease-out
 
 .requestApproveTransaction
-  height var(--wren-request-review-shelf-height, 88px)
+  height var(--wren-request-review-shelf-height, 114px)
   padding var(--wren-space-3) var(--wren-space-5)
   gap var(--wren-space-4)
   animation none
@@ -1426,7 +1429,7 @@
 
 .requestNoticeApproval
   height 154px
-  border-top 1px solid var(--wren-border-subtle)
+  border-top 0
   background var(--wren-bg-subtle)
 
   .requestNoticeInnerApproval
@@ -1697,6 +1700,8 @@
 
 .walletCallsFundingRecovery
   height auto
+  max-height calc(100vh - 80px)
+  grid-template-rows minmax(0, 1fr) auto
   min-height 160px
   padding-top 16px
   padding-bottom 16px
@@ -1706,6 +1711,8 @@
 
   .requestActionContext
     align-items flex-start
+    min-height 0
+    overflow-y auto
 
   .requestActionContextIcon
     margin-top 2px
@@ -2031,3 +2038,210 @@
 @media (max-width: 560px)
   .transactionEvidenceView .simpleJsonChild
     grid-template-columns 104px minmax(0, 1fr)
+
+.signingAuthorityCopy, .simpleJsonCopyValue
+  position relative
+
+.signingCopyFeedback
+  position absolute
+  right 0
+  bottom 100%
+  z-index 2
+  width max-content
+  padding 4px 8px
+  color var(--wren-text-primary)
+  background var(--wren-bg-elevated)
+  font-size 12px
+  line-height 16px
+  white-space nowrap
+  pointer-events none
+
+  &:empty
+    display none
+
+.requestNoticeTransactionUnconfirmed
+  .requestNoticeInner
+    grid-template-rows minmax(64px, auto) 18px
+    gap 8px 16px
+
+  .txLifecycle
+    min-width 0
+    grid-template-columns minmax(0, 1fr)
+
+  .txLifecycleSummary
+    align-items flex-start
+
+  .txLifecycleCopy span.txLifecycleDetailVisible
+    position static
+    width auto
+    max-width none
+    margin 4px 0 0
+    overflow visible
+    clip auto
+    font-family var(--wren-font-ui)
+    line-height 16px
+
+  .txLifecycleFacts
+    grid-row 2
+
+.requestApproveTransaction.requestApproveRecoverable
+  height auto
+  min-height 114px
+  grid-template-columns minmax(0, 1fr)
+  gap 10px
+  padding 10px 20px
+
+  .requestActionContextCopy span
+    max-width none
+    font-family var(--wren-font-ui)
+    line-height 18px
+
+  .requestActionButtons
+    justify-self end
+
+.footerModule:has(.requestApproveRecoverable)
+  height auto !important
+  transition none
+.approvePermitPerch .permitDetailsCard dd
+  white-space normal
+  overflow-wrap anywhere
+
+.approvePermitPerch .permitDetailsCard .lightweightRequestCopy
+  max-width 100%
+  text-align left
+.fundingAmounts
+  min-width 0
+
+  .transactionFundingFacts
+    display grid
+    grid-template-columns minmax(0, 1fr)
+    gap 4px
+
+    > div
+      display grid
+      grid-template-columns 90px minmax(0, 1fr)
+      gap 12px
+
+    dd
+      text-align right
+      overflow-wrap anywhere
+
+.fundingExactAmounts > summary,
+.transactionEvidenceView details > summary
+  min-height 32px
+  padding 6px 0
+  box-sizing border-box
+  cursor pointer
+  font-size 12px
+  line-height 20px
+
+.fundingExactAmounts dl
+  margin 8px 0
+
+  dd
+    margin 0 0 8px
+    overflow-wrap anywhere
+    font-family var(--wren-font-mono)
+
+.transactionEvidenceSource
+  margin 16px 20px
+  color var(--wren-text-secondary)
+  font-size 12px
+
+.footerModule:has(.walletCallsFundingRecovery)
+  height auto !important
+  transition none
+
+.fundingExactAmounts > summary
+  min-height 44px
+  padding 12px 0
+
+.walletCallsFundingRecovery .requestActionContextCopy span
+  font-family var(--wren-font-ui)
+  line-height 18px
+
+.approvePermitPerch .permitDetailsCard dl > div
+  column-gap 12px
+
+// Keep the status title and icon on one row; detail length cannot move either.
+.requestApproveTransaction.requestApproveRecoverable
+  .requestActionContext
+    display grid
+    grid-template-columns 40px minmax(0, 1fr)
+    column-gap 12px
+    row-gap 8px
+    align-items center
+
+  .requestActionContextIcon
+    grid-column 1
+    grid-row 1
+    margin 0
+
+  .requestActionContextCopy
+    display contents
+
+    > strong
+      grid-column 2
+      grid-row 1
+      align-self center
+
+    > span,
+    > .fundingAmounts
+      grid-column 2
+      margin-top 0
+
+  .requestActionButtons
+    gap 8px
+
+.requestApproveRecoverable .requestActionContextCopy
+  > .transactionFundingQr
+    grid-column 2
+
+  > .requestActionError[aria-hidden='true']
+    display none
+
+.requestApproveTransaction.requestApproveRecoveryStatus
+  min-height 114px
+  padding 16px 20px
+  grid-template-columns minmax(0, 1fr) auto
+  gap 12px
+
+  .requestActionContext
+    display flex
+    gap 10px
+
+  .requestActionContextCopy
+    display block
+    min-width 0
+
+    > span
+      margin-top 4px
+      line-height 18px
+
+  .requestActionButtons button
+    min-width 0
+    width auto
+    padding 0 14px
+
+@media (max-width: 560px)
+  .requestApproveTransaction.requestApproveRecoveryStatus
+    grid-template-columns minmax(0, 1fr)
+
+button.fundingExactAmounts
+  min-height 44px
+  padding 8px 0
+  border 0
+  background transparent
+  color var(--wren-text-secondary)
+  font-family var(--wren-font-ui)
+  font-size 12px
+  cursor pointer
+
+  &[aria-pressed='true']
+    color var(--wren-accent-primary-hover)
+    text-decoration underline
+    text-underline-offset 4px
+
+  &:focus-visible
+    outline 2px solid var(--wren-focus)
+    outline-offset 2px

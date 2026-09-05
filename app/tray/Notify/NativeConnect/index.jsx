@@ -85,9 +85,7 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
             Allow local app to connect?
           </h2>
           <div className='notifyBody'>
-            <div className='notifyBodyLine'>
-              A local app wants to use Wren on this device. Compare this code with the app before allowing it.
-            </div>
+            <div className='notifyBodyLine'>Compare with the code in your local app.</div>
             <div className='extensionPairingCode'>{pairingCode}</div>
             <button
               type='button'
@@ -115,11 +113,11 @@ const NativeConnectNotification = ({ fingerprint, pairingCode, requestId, onClos
             <button
               type='button'
               className='notifyInputOption nativeConnectTarget notifyInputProceed wrenControl wrenControlPrimary'
-              aria-label='Allow'
+              aria-label='Codes match, connect'
               disabled={responding}
               onClick={() => respond(true)}
             >
-              Allow
+              Codes match, connect
             </button>
           </div>
         </div>

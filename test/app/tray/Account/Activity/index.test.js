@@ -254,7 +254,7 @@ it('loads a retained native transfer after its operation lifecycle has expired',
     />
   )
 
-  expect(await screen.findByText('Native value transfer')).toBeTruthy()
+  expect((await screen.findAllByText('Native value transfer')).length).toBeGreaterThan(0)
   expect(screen.getByText('1 ETH')).toBeTruthy()
   expect(screen.getByTitle('0x2222222222222222222222222222222222222222')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Copy hash' })).toBeTruthy()
@@ -509,7 +509,7 @@ it.each([
     />
   )
   expect(screen.getByText(label)).toBeTruthy()
-  expect(screen.getByText(new RegExp(detail, 'i'))).toBeTruthy()
+  expect(screen.getByTitle(new RegExp(detail, 'i'))).toBeTruthy()
 })
 
 it.each([
@@ -529,7 +529,7 @@ it.each([
   )
 
   expect(screen.getByText('Submission unconfirmed')).toBeTruthy()
-  expect(screen.getByText(detail)).toBeTruthy()
+  expect(screen.getByTitle(detail)).toBeTruthy()
   expect(screen.queryByText('Submitted')).toBeNull()
 })
 
@@ -569,22 +569,22 @@ it('clears all device activity through an explicit accessible confirmation', () 
   link.invoke.mockReturnValueOnce(new Promise(() => {}))
   render(<ActivityHarness account={account} moduleId='activity' expanded />)
 
-  const clear = screen.getByRole('button', { name: 'Clear activity' })
+  const clear = screen.getByRole('button', { name: 'Clear activity for all accounts' })
   fireEvent.click(clear)
 
-  const dialog = screen.getByRole('alertdialog', { name: 'Clear activity history?' })
-  expect(dialog.textContent).toContain('every account on this device')
-  expect(dialog.textContent).toContain('Pending activity may appear again')
-  expect(dialog.textContent).toContain('local outbound-address memory')
+  const dialog = screen.getByRole('alertdialog', { name: 'Clear activity for all accounts?' })
+  expect(dialog.textContent).toContain('all accounts')
+  expect(dialog.textContent).toContain('Pending activity may reappear')
+  expect(dialog.textContent).toContain('prior-use and lookalike address memory')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 
   fireEvent.keyDown(dialog, { key: 'Escape' })
   expect(screen.queryByRole('alertdialog')).toBeNull()
-  const restoredClear = screen.getByRole('button', { name: 'Clear activity' })
+  const restoredClear = screen.getByRole('button', { name: 'Clear activity for all accounts' })
   expect(document.activeElement).toBe(restoredClear)
 
   fireEvent.click(restoredClear)
-  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
   expect(link.invoke).toHaveBeenCalledWith('activity:clear')
   expect(screen.getByRole('alertdialog').getAttribute('aria-busy')).toBe('true')
   expect(screen.getByRole('button', { name: 'Clearing…' }).disabled).toBe(true)
@@ -600,8 +600,8 @@ it('announces durable success only after the invoked clear is acknowledged', asy
   )
   render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
   expect(screen.queryByText('Activity history and address memory cleared from this device.')).toBeNull()
   await act(async () => acknowledge({ success: true, durable: true }))
 
@@ -619,8 +619,8 @@ it('announces session-only Activity clearing when persistence is not acknowledge
   })
   render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
 
   expect(
     await screen.findByText(
@@ -633,8 +633,8 @@ it('does not claim clearing when the Activity acknowledgement is unavailable', a
   link.invoke.mockRejectedValueOnce(new Error('bridge unavailable'))
   render(<ActivityHarness account={account} entries={entries} moduleId='activity' expanded />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Clear activity' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Clear history' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear activity for all accounts' }))
 
   expect(
     await screen.findByText(

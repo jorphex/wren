@@ -19,16 +19,12 @@ it('presents a local-app identity without displaying its self-asserted label', a
     />
   )
   expect(screen.getByRole('heading', { name: 'Allow local app to connect?' })).toBeTruthy()
-  expect(
-    screen.getByText(
-      'A local app wants to use Wren on this device. Compare this code with the app before allowing it.'
-    )
-  ).toBeTruthy()
+  expect(screen.getByText('Compare with the code in your local app.')).toBeTruthy()
   expect(screen.getByText('123456')).toBeTruthy()
   expect(screen.getByText('Connection ID aaaaaaaa…aaaaaa')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Copy full connection ID' }))
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', fingerprint)
-  await user.dblClick(screen.getByRole('button', { name: 'Allow' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Codes match, connect' }))
   expect(link.rpc).toHaveBeenCalledTimes(1)
   expect(link.rpc).toHaveBeenCalledWith(
     'respondToNativePeerRequest',

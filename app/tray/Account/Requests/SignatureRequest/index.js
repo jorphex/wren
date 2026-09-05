@@ -69,11 +69,6 @@ const MessageReviewSummary = ({ context }) => {
       <div className='typedDataReviewSummaryMain'>
         <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
         <div className='typedDataReviewTitle'>{presentation.title}</div>
-        <div className='typedDataReviewHelp'>{presentation.help}</div>
-      </div>
-      <div className='typedDataReviewRecognition'>
-        <div>{presentation.status}</div>
-        <span>Recognition describes format, not trust.</span>
       </div>
     </div>
   )
@@ -125,10 +120,7 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
               json={{
                 origin: originName || context.origin || 'Unknown origin',
                 account,
-                requestNetwork: requestChain,
-                method,
-                encoding: context.encoding === 'utf8' ? 'UTF-8 text' : 'Opaque hex',
-                bytes: context.byteLength
+                requestNetwork: requestChain
               }}
             />
           </Section>
@@ -137,6 +129,18 @@ const SignatureRequest = ({ req, originName, chainData = {} }) => {
           <Section title={context.siwe ? 'Exact Signed Message' : 'Message'}>
             <div className='signMessageRaw'>{decodedMessage || '""'}</div>
           </Section>
+          <details className='signingRawDisclosure'>
+            <summary>Signature details</summary>
+            <SimpleJSON
+              humanizeKeys
+              quoteStrings={false}
+              json={{
+                method,
+                encoding: context.encoding === 'utf8' ? 'UTF-8 text' : 'Opaque hex',
+                bytes: context.byteLength
+              }}
+            />
+          </details>
         </div>
       </div>
     </div>

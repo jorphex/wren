@@ -10,7 +10,7 @@ test('uses safety labels without release-maturity wording', () => {
   notify.store = jest.fn(() => '')
   const { rerender } = render(notify.betaDisclosure())
 
-  expect(screen.getByRole('heading', { name: 'Safety notice' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'About Wren' })).toBeTruthy()
   rerender(notify.hotAccountWarning())
   expect(screen.getByRole('heading', { name: 'Hot signer warning' })).toBeTruthy()
 })

@@ -75,8 +75,10 @@ it('shows domain mismatch warnings in the specialized permit overview', () => {
 
   expect(screen.getByRole('alert').textContent).toBe('Domain chain 1 does not match request chain 5.')
   expect(screen.getByText('Workshop Software Account With A Long Name')).toBeTruthy()
-  expect(screen.getByText('0x00000…0001').classList.contains('permitAccountAddress')).toBe(true)
-  expect(screen.getByText('May 18, 2033')).toBeTruthy()
+  expect(document.querySelector('.permitAccountAddress').classList.contains('permitAccountAddress')).toBe(
+    true
+  )
+  expect(screen.getByText(/May 18, 2033.*UTC/)).toBeTruthy()
 })
 
 it('shows a live local label without hiding the permit spender address', () => {
@@ -124,7 +126,7 @@ it('labels the raw permit view with the resolved request chain', () => {
   render(<SignPermitRequest chainData={chainData} originName='example.test' req={req} step='viewRaw' />)
 
   expect(screen.getByText('Goerli (5)')).toBeTruthy()
-  expect(screen.getByText('Type Definitions')).toBeTruthy()
+  expect(screen.getByText('Type definitions')).toBeTruthy()
 })
 
 it('preserves raw-data navigation and spender copying on named controls', async () => {
@@ -249,4 +251,21 @@ it('shows and allows editing a zero-decimal token permit', async () => {
     />
   )
   expect(screen.getByRole('button', { name: 'Custom' })).toBeTruthy()
+})
+
+it('keeps the complete token and spender identities visible while copying', async () => {
+  const token = '0x1111111111111111111111111111111111111111'
+  const request = { ...req, permit: { ...req.permit, verifyingContract: { address: token } } }
+  const { user } = render(
+    <SignPermitRequest req={request} signer={{}} chainData={chainData} accountName='Wallet' />
+  )
+  expect(screen.getByText('Signature deadline')).toBeTruthy()
+  expect(screen.getByText(/May 18, 2033.*UTC/)).toBeTruthy()
+  const tokenCopy = screen.getByRole('button', { name: 'Copy permit token contract' })
+  expect(tokenCopy.textContent).toContain(token)
+  await user.click(tokenCopy)
+  expect(tokenCopy.textContent).toContain(token)
+  expect(screen.getByRole('button', { name: 'Copy permit spender address' }).textContent).toContain(
+    req.permit.spender.address
+  )
 })

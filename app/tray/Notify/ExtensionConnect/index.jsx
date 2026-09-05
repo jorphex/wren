@@ -83,12 +83,10 @@ const ExtensionConnectNotification = ({ fingerprint, pairingCode, requestId, onC
             {svg.handshake(40)}
           </div>
           <h2 id='wren-notify-title' className='notifyTitle'>
-            New Wren Companion pairing request
+            Connect Wren Companion
           </h2>
           <div className='notifyBody'>
-            <div className='notifyBodyLine'>
-              Approve only if this code matches the code shown in the Wren Companion popup.
-            </div>
+            <div className='notifyBodyLine'>Compare with the code in Wren Companion.</div>
             <div className='extensionPairingCode'>{pairingCode}</div>
             <button
               type='button'
@@ -101,7 +99,6 @@ const ExtensionConnectNotification = ({ fingerprint, pairingCode, requestId, onC
             <div className='clusterStatus' role='status'>
               {copyFingerprint ? 'Pairing fingerprint copied' : ''}
             </div>
-            <div className='notifyBodyQuestion'>Allow this extension to connect?</div>
           </div>
           <div className='notifyInput'>
             <button
@@ -117,11 +114,11 @@ const ExtensionConnectNotification = ({ fingerprint, pairingCode, requestId, onC
             <button
               type='button'
               className='notifyInputOption notifyInputProceed wrenControl wrenControlPrimary'
-              aria-label='Accept extension connection'
+              aria-label='Codes match, connect'
               disabled={responding}
               onClick={() => respond(true)}
             >
-              Accept
+              Codes match, connect
             </button>
           </div>
         </div>

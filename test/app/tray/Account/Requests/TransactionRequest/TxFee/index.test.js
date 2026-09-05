@@ -113,7 +113,7 @@ describe('usd estimate display', () => {
     render(<TxFee req={req} />)
     const baseFeeInput = screen.getByTestId('usd-estimate-display')
 
-    expect(baseFeeInput.textContent).toBe('=$?in MATIC')
+    expect(baseFeeInput.textContent).toBe('=—in MATIC')
   })
 })
 

@@ -1,3 +1,4 @@
+import FundingAmounts from '../../../../resources/Components/FundingAmounts'
 import React from 'react'
 import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 import Restore from 'react-restore'
@@ -22,18 +23,6 @@ import { WREN_DEPLOY_ORIGIN, originIdForName } from '../../../../resources/domai
 import { requestReference } from '../../../../resources/store/notifications'
 
 const FEE_WARNING_THRESHOLD_USD = 50
-
-const formatFundingQuantity = (value, decimals = 18, symbol = '') => {
-  try {
-    const quantity = BigInt(value)
-    const scale = 10n ** BigInt(decimals)
-    const whole = quantity / scale
-    const fraction = (quantity % scale).toString().padStart(decimals, '0').replace(/0+$/u, '')
-    return `${whole}${fraction ? `.${fraction}` : ''} ${symbol}`.trim()
-  } catch {
-    return `? ${symbol}`.trim()
-  }
-}
 
 export function accountCodeEvidenceReady(simulation) {
   const evidence = simulation?.accountCodeEvidence
@@ -401,11 +390,7 @@ export class RequestCommand extends React.Component {
               title='View transaction on explorer'
               className='txLifecycleAction txLifecycleActionIcon'
               onClick={() => {
-                if (this.store('main.mute.explorerWarning')) {
-                  link.send('tray:openExplorer', chain, hash)
-                } else {
-                  this.store.notify('openExplorer', { hash, chain })
-                }
+                link.send('tray:openExplorer', chain, hash)
               }}
             >
               <Icon name='external' size={15} />
@@ -495,11 +480,7 @@ export class RequestCommand extends React.Component {
             <strong>
               {reviewPending ? 'Checking transaction' : advancedPending ? 'Final checks' : 'Ready for review'}
             </strong>
-            <span>
-              {advancedPending
-                ? 'Wren is checking transaction details.'
-                : 'Verify on your signer before approving.'}
-            </span>
+
             {this.state.requestActionError ? (
               <span className='requestActionError' role='alert'>
                 {this.state.requestActionError}
@@ -743,36 +724,30 @@ export class RequestCommand extends React.Component {
       ? funding
         ? 'The account cannot cover the value and maximum network fee. Nothing was signed or sent.'
         : fundingUnavailable
-          ? req.recoverableError?.message || 'Balance or fee data is unavailable. Nothing was signed.'
+          ? 'Balance or fee data unavailable. Nothing signed.'
           : changed
             ? 'Account code changed during the final safety check. Nothing was signed or sent.'
-            : 'The safety check could not be repeated. Nothing was signed or sent.'
+            : 'Nothing signed or sent.'
       : `${failureNotice}. No transaction was sent.`
 
     return (
-      <div className='requestApprove requestApproveTransaction requestApproveRecoverable'>
+      <div
+        className={`requestApprove requestApproveTransaction requestApproveRecoverable${!funding ? ' requestApproveRecoveryStatus' : ''}`}
+      >
         <div className='requestActionContext' role='alert'>
           <span className='requestActionContextIcon requestActionContextIconAlert'>
             <Icon name='alert' size={19} />
           </span>
-          <span className='requestActionContextCopy'>
+          <div className='requestActionContextCopy'>
             <strong>{title}</strong>
             <span>{detail}</span>
             {fundingEvidence ? (
-              <dl className='transactionFundingFacts'>
-                <div>
-                  <dt>Available</dt>
-                  <dd>{formatFundingQuantity(fundingEvidence.available, decimals, symbol)}</dd>
-                </div>
-                <div>
-                  <dt>Required</dt>
-                  <dd>{formatFundingQuantity(fundingEvidence.required, decimals, symbol)}</dd>
-                </div>
-                <div>
-                  <dt>Missing</dt>
-                  <dd>{formatFundingQuantity(fundingEvidence.missing, decimals, symbol)}</dd>
-                </div>
-              </dl>
+              <FundingAmounts
+                evidence={fundingEvidence}
+                decimals={decimals}
+                symbol={symbol}
+                hideBalances={this.store('selected.hideBalances')}
+              />
             ) : null}
             {funding ? (
               <span className='transactionFundingActions'>
@@ -803,7 +778,7 @@ export class RequestCommand extends React.Component {
             >
               {this.state.requestActionError || '\u00a0'}
             </span>
-          </span>
+          </div>
         </div>
         <div className='requestActionButtons'>
           <button
@@ -824,7 +799,7 @@ export class RequestCommand extends React.Component {
               onClick={() => this.runRequestAction('retryTransactionRequest', req)}
             >
               <span className='requestSignButton _txButton'>
-                <span>{pending ? 'Checking…' : recheckCompleted ? 'Check again' : 'Recheck'}</span>
+                <span>{pending ? 'Checking…' : 'Recheck'}</span>
               </span>
             </button>
           ) : null}
@@ -903,11 +878,6 @@ export class RequestCommand extends React.Component {
               </span>
               <span className='requestActionContextCopy'>
                 <strong>Ready to sign</strong>
-                <span>
-                  {req.type === 'signErc20Permit'
-                    ? 'Verify this token approval on your signer before approving.'
-                    : 'Verify this message on your signer before approving.'}
-                </span>
               </span>
             </div>
             <div className='requestActionButtons'>
@@ -937,7 +907,7 @@ export class RequestCommand extends React.Component {
                 }}
               >
                 <span className='requestSignButton _txButton'>
-                  <span>Sign message</span>
+                  <span>{req.type === 'signErc20Permit' ? 'Sign approval' : 'Sign message'}</span>
                 </span>
               </button>
             </div>

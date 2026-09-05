@@ -1193,7 +1193,7 @@
     transition none
 
   &:has(.requestNoticeTransactionReview)
-    --wren-request-review-shelf-height 88px
+    --wren-request-review-shelf-height 114px
 
     .accountViewRequest
       bottom var(--wren-request-review-shelf-height) !important
@@ -1202,7 +1202,7 @@
       height var(--wren-request-review-shelf-height) !important
 
   &:has(.requestNoticeTransactionStatus)
-    --wren-request-status-shelf-height 88px
+    --wren-request-status-shelf-height 114px
 
     .accountViewRequest
       bottom var(--wren-request-status-shelf-height) !important
@@ -1242,19 +1242,12 @@
       height var(--wren-wallet-calls-shelf-height) !important
 
   &:has(.walletCallsFundingRecovery)
-    --wren-wallet-calls-recovery-shelf-height 165px
-
     .accountViewRequest
-      bottom var(--wren-wallet-calls-recovery-shelf-height) !important
+      bottom var(--wren-measured-footer-height, 307px) !important
 
     .footerModule
-      height var(--wren-wallet-calls-recovery-shelf-height) !important
-
-  &:has(.walletCallsFundingRecoveryEvidence)
-    --wren-wallet-calls-recovery-shelf-height 277px
-
-  &:has(.walletCallsFundingRecoveryQr)
-    --wren-wallet-calls-recovery-shelf-height 430px
+      height auto !important
+      transition none
 
   &:has(.accountSelectorOpen) .panelMenuItemOpen
     display none
@@ -2003,3 +1996,52 @@ button.accountHomeRename.wrenControl
 
 .accountContinuationRow.connectedAppsContinuation
   padding-left var(--wren-space-5)
+
+.accountPortfolioActions
+  position absolute
+  right 16px
+  bottom 20px
+  display flex
+  gap 8px
+  z-index 2
+
+  .accountPortfolioSend,
+  > button
+    position static
+    width auto
+    min-width 88px
+    min-height 44px
+    padding 0 12px
+
+@media (max-width: 550px)
+  .accountPortfolioActions
+    position relative
+    right auto
+    bottom auto
+    margin-top 16px
+
+.accountMainPerch .requestsPreview
+  .requestPreviewContent
+    min-height 106px
+    padding 12px 16px
+
+  .requestPreviewItem
+    min-height 52px
+    margin-top 8px
+    padding 8px 10px
+
+  .requestPreviewIdentity strong, .requestPreviewIdentity span
+    white-space normal
+    overflow-wrap anywhere
+    line-height 18px
+
+// The rendered shelf owns its height; reserve precisely that space in the review.
+#panel:has(.requestApprove),
+#panel:has(.requestNoticeTransactionStatus)
+  .footerModule
+    height auto !important
+    transition none
+
+  .accountViewRequest
+    bottom var(--wren-measured-footer-height, 114px) !important
+    transition none

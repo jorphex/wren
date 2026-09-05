@@ -410,6 +410,34 @@ export class DappsPermissionsExpanded extends React.Component {
     let permissionList = getPermissionIds(permissions, this.props.filter)
     if (!this.props.expanded) permissionList = permissionList.slice(0, 3)
 
+    const editing = this.state.guardrailEditor
+    const editingPermission =
+      editing && Object.values(permissions).find((permission) => permission.handlerId === editing.originId)
+    if (editingPermission) {
+      const { originId, chainId } = editing
+      return (
+        <div
+          className='accountViewScroll accountLedgerView permissionsLedgerView guardrailEditorView'
+          ref={this.moduleRef}
+          tabIndex={-1}
+        >
+          <DappGuardrailEditor
+            key={originId + chainId}
+            account={this.props.account}
+            originId={originId}
+            origin={
+              this.store('main.origins', originId) || { name: editingPermission.origin, provenance: 'legacy' }
+            }
+            chainId={chainId}
+            chainName={this.chainName(chainId)}
+            nativeDecimals={this.nativeDecimals(chainId)}
+            guardrail={this.store('main.dappGuardrails', this.props.account.toLowerCase(), originId, chainId)}
+            onClose={() => this.closeGuardrail()}
+          />
+        </div>
+      )
+    }
+
     return (
       <div
         className='accountViewScroll accountLedgerView permissionsLedgerView'
@@ -515,33 +543,6 @@ export class DappsPermissionsExpanded extends React.Component {
                               <span className='dappGuardrailNoChains'>No granted chains</span>
                             )}
                           </div>
-                          {this.state.guardrailEditor?.originId === originId
-                            ? chains
-                                .filter((chainId) => this.state.guardrailEditor.chainId === chainId)
-                                .map((chainId) => (
-                                  <DappGuardrailEditor
-                                    key={`${originId}-${chainId}`}
-                                    account={this.props.account.toLowerCase()}
-                                    originId={originId}
-                                    origin={
-                                      this.store('main.origins', originId) || {
-                                        name: permission.origin,
-                                        provenance: 'legacy'
-                                      }
-                                    }
-                                    chainId={chainId}
-                                    chainName={this.chainName(chainId)}
-                                    nativeDecimals={this.nativeDecimals(chainId)}
-                                    guardrail={this.store(
-                                      'main.dappGuardrails',
-                                      this.props.account.toLowerCase(),
-                                      originId,
-                                      chainId
-                                    )}
-                                    onClose={() => this.closeGuardrail()}
-                                  />
-                                ))
-                            : null}
                         </div>
                       </ClusterValue>
                     </ClusterRow>

@@ -12,7 +12,7 @@ beforeEach(() => {
   link.send.mockReset()
 })
 
-it('emphasizes token contract identity and the separate editor confirmation', async () => {
+it('emphasizes the proposed token contract identity', async () => {
   const address = '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
   const { user } = render(
     <AddTokenRequest
@@ -30,7 +30,7 @@ it('emphasizes token contract identity and the separate editor confirmation', as
   expect(screen.getByText('USD Coin · USDC')).toBeTruthy()
   expect(screen.getByText('Ethereum · 1')).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
-  expect(screen.getByText('Nothing is added until you confirm it in the token editor.')).toBeTruthy()
+  expect(screen.getByText('Token identity supplied by the site. Check the contract address.')).toBeTruthy()
 
   await user.click(screen.getByRole('button', { name: 'Copy proposed token contract' }))
   expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value: address })

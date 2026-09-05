@@ -29,9 +29,7 @@ export class Bridge extends React.Component {
 
     const versionSubject = badge.version ? `Wren ${badge.version}` : 'The Wren update'
     const heading = available ? 'Update available' : 'Update ready'
-    const body = available
-      ? `${versionSubject} is available. Get the update when you are ready.`
-      : `${versionSubject} is ready. Continue to complete the update.`
+    const body = versionSubject
 
     return (
       <div className='badgeWrap'>
@@ -59,7 +57,7 @@ export class Bridge extends React.Component {
               ref={this.primaryRef}
               type='button'
             >
-              {available ? 'Get update' : 'Continue'}
+              {available ? 'Get update' : 'Restart and install'}
             </button>
             <button
               className='wrenControl wrenControlSecondary wrenControlLarge'

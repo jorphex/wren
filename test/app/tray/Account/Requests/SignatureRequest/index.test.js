@@ -32,7 +32,7 @@ it('shows the complete signing context and exact message', () => {
   )
 
   expect(screen.getByText('Sign a message')).toBeTruthy()
-  expect(screen.getByText('Readable text message')).toBeTruthy()
+  expect(screen.queryByText('Readable text message')).toBeNull()
   expect(screen.getByText('request Network')).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText(account)).toBeTruthy()

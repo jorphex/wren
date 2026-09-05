@@ -104,7 +104,7 @@ export const SimulationEffects = ({ account, simulation }) => {
       )}
       {simulation.effectsTruncated && (
         <div className='simulationEffectsTruncated' role='alert'>
-          Effect preview truncated. Review the transaction through another trusted source before signing.
+          Partial effect preview · Some effects are not shown
         </div>
       )}
     </div>
@@ -150,8 +150,7 @@ export const SimulationNativeBalanceChanges = ({ simulation }) => {
         ))}
       {evidence.status === 'succeeded' && evidence.truncated && (
         <div className='simulationEffectsTruncated' role='alert'>
-          Native balance-change preview truncated. Review the transaction through another trusted source
-          before signing.
+          Partial balance-change preview · Some changes are not shown
         </div>
       )}
     </div>
@@ -181,9 +180,11 @@ export const SimulationProxyImplementationChanges = ({ simulation }) => {
     <div className='txViewData'>
       <div className='txViewDataHeader'>RPC-Reported ERC-1967 Implementation Slot Changes</div>
       <div className='simulationEffectsTruncated' role='alert'>
-        Your configured RPC reports net pre/post proxy implementation-slot changes. A new implementation can
-        replace the code executed by the proxy and change control over its assets. Temporary changes restored
-        before execution completes are not detected. This trace evidence is not independently verified.
+        Implementation changed · Execution code and asset authority may change.
+        <details>
+          <summary>Coverage</summary>Net ERC-1967 slot changes only. Temporary changes restored before
+          completion are excluded.
+        </details>
       </div>
       {evidence.changes.map((change) => (
         <section className='simulationEffect' key={change.proxy}>
@@ -213,8 +214,7 @@ export const SimulationProxyImplementationChanges = ({ simulation }) => {
       ))}
       {evidence.truncated && (
         <div className='simulationEffectsTruncated' role='alert'>
-          Proxy implementation-change preview truncated. Do not proceed without reviewing the complete
-          transaction through another trusted source.
+          Partial implementation-change preview · Some changes are not shown
         </div>
       )}
     </div>
@@ -236,8 +236,7 @@ export const SimulationCallTrace = ({ simulation }) => {
     <div className='txViewData'>
       <div className='txViewDataHeader'>RPC-Reported Execution Trace</div>
       <div className='simulationEffectsNotice' role='note'>
-        Derived from a callTracer result returned by your configured RPC. This is not independently verified
-        or guaranteed complete. Raw call input and return data are omitted.
+        Call trace · Raw input and return data omitted
       </div>
       {evidence.calls.map((call, index) => (
         <section
@@ -266,8 +265,7 @@ export const SimulationCallTrace = ({ simulation }) => {
       ))}
       {evidence.truncated && (
         <div className='simulationEffectsTruncated' role='alert'>
-          Execution trace preview truncated. Review the transaction through another trusted source before
-          signing.
+          Partial execution trace · Some calls are not shown
         </div>
       )}
     </div>
@@ -298,8 +296,7 @@ export const SimulationAllowance = ({ simulation }) => {
     <div className='txViewData'>
       <div className='txViewDataHeader'>RPC-Reported Current Allowance</div>
       <div className='simulationEffectsNotice' role='note'>
-        Read from your configured RPC at review time. Contract identity and current state are not
-        independently verified.
+        Allowance at review time
       </div>
       <SimpleJSON
         humanizeKeys
@@ -377,14 +374,11 @@ const DelegationEvidence = ({ evidence, subject }) => {
         {headline}
       </div>
       {target && delegateIsDelegated && (
-        <div className='simulationEffectsNotice'>
-          EIP-7702 resolves only the first delegate address; it does not follow this delegate’s delegation.
-        </div>
+        <div className='simulationEffectsNotice'>Nested delegation is not followed</div>
       )}
       {target && delegateHasNoCode && (
         <div className='simulationEffectsNotice'>
-          The configured RPC returned empty code for this delegate. Precompiles can execute without bytecode,
-          and code lookup alone cannot distinguish them from empty accounts.
+          No delegate bytecode · May be an empty account or a precompile
         </div>
       )}
       {target && !delegateUnavailable && !delegateHasNoCode && !delegateIsDelegated && (

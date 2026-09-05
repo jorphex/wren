@@ -12,8 +12,7 @@ export const isUnconfirmedSubmission = (req) =>
 export const transactionLifecyclePresentation = (req, networkName = 'the network') => {
   if (isUnconfirmedSubmission(req)) {
     return {
-      detail:
-        'RPC acceptance is still unconfirmed. Wren is checking the network and will not resubmit automatically.',
+      detail: 'Checking network acceptance. Wren will not resend automatically.',
       icon: 'alert',
       position: 0,
       title: 'Broadcast unconfirmed',
@@ -105,24 +104,30 @@ const TxBar = ({ networkName, req }) => {
           </span>
         </span>
       </div>
-      <ol className='txLifecycleSteps' aria-label='Transaction progress'>
-        {lifecycleSteps.map((step, index) => {
-          const state =
-            index < presentation.position ? 'complete' : index === presentation.position ? 'current' : 'next'
-          return (
-            <li
-              key={step.label}
-              className={`txLifecycleStep txLifecycleStep-${state}`}
-              aria-current={state === 'current' ? 'step' : undefined}
-              aria-label={step.label}
-            >
-              <span className='txLifecycleStepMarker' aria-hidden='true'>
-                <Icon name={step.icon} size={14} />
-              </span>
-            </li>
-          )
-        })}
-      </ol>
+      {!isUnconfirmedSubmission(req) && (
+        <ol className='txLifecycleSteps' aria-label='Transaction progress'>
+          {lifecycleSteps.map((step, index) => {
+            const state =
+              index < presentation.position
+                ? 'complete'
+                : index === presentation.position
+                  ? 'current'
+                  : 'next'
+            return (
+              <li
+                key={step.label}
+                className={`txLifecycleStep txLifecycleStep-${state}`}
+                aria-current={state === 'current' ? 'step' : undefined}
+                aria-label={step.label}
+              >
+                <span className='txLifecycleStepMarker' aria-hidden='true'>
+                  <Icon name={step.icon} size={14} />
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
     </section>
   )
 }

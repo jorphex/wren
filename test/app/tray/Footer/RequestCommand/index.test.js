@@ -254,7 +254,7 @@ it('uses native disabled decisions until the transaction signing delay completes
   const view = renderMountedCommand(req, 'signOrDecline', commandStore())
 
   expect(screen.getByText('Ready for review')).toBeTruthy()
-  expect(screen.getByText('Verify on your signer before approving.')).toBeTruthy()
+  expect(screen.queryByText('Verify on your signer before approving.')).toBeNull()
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(true)
 
@@ -319,7 +319,7 @@ it('retains a recoverable pre-sign failure with explicit recheck and close actio
   const alert = screen.getByRole('alert')
   expect(alert.textContent).toMatch(/safety check unavailable/i)
   expect(alert.firstElementChild.classList.contains('requestActionContextIconAlert')).toBe(true)
-  expect(screen.getByText('The safety check could not be repeated. Nothing was signed or sent.')).toBeTruthy()
+  expect(screen.getByText('Nothing signed or sent.')).toBeTruthy()
   expect(screen.queryByText(/Delegation recheck unavailable/)).toBeNull()
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))
 
@@ -387,7 +387,7 @@ it('keeps an unavailable funding retry concise and shows that recheck completed'
   const view = renderMountedCommand(req, 'renderTxCommand', commandStore(), 0)
 
   expect(screen.getByText('Funding check unavailable')).toBeTruthy()
-  expect(screen.getByText('Gas estimate unavailable. Nothing was signed.')).toBeTruthy()
+  expect(screen.getByText('Balance or fee data unavailable. Nothing signed.')).toBeTruthy()
   const feedback = document.querySelector('.requestActionError')
   expect(feedback).toBeTruthy()
   expect(feedback.textContent).toBe('\u00a0')
@@ -396,7 +396,7 @@ it('keeps an unavailable funding retry concise and shows that recheck completed'
 
   expect(feedback.textContent).toBe('\u00a0')
   expect(screen.getByText('Still unavailable')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Recheck' })).toBeTruthy()
   expect(document.querySelector('.requestActionContextIconAlert')).toBeTruthy()
   view.unmount()
 })
@@ -487,7 +487,7 @@ it('shows successful core execution while keeping signing disabled for required 
   renderCommandResult(command, 'signOrDecline')
 
   expect(screen.getByText('Final checks')).toBeTruthy()
-  expect(screen.getByText('Wren is checking transaction details.')).toBeTruthy()
+  expect(screen.getByText('Final checks')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Finishing checks' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Decline' }).disabled).toBe(false)
   command.componentWillUnmount()
@@ -654,8 +654,7 @@ it('presents an ambiguous one-shot broadcast without claiming network acceptance
 
   expect(transactionLifecyclePresentation(req, 'Ethereum')).toMatchObject({
     title: 'Broadcast unconfirmed',
-    detail:
-      'RPC acceptance is still unconfirmed. Wren is checking the network and will not resubmit automatically.',
+    detail: 'Checking network acceptance. Wren will not resend automatically.',
     position: 0,
     tone: 'warning'
   })
@@ -701,9 +700,9 @@ it('shows truthful unconfirmed-submission evidence without replacement actions',
   expect(status.getAttribute('role')).toBe('status')
   expect(status.getAttribute('aria-live')).toBe('polite')
   expect(status.textContent).toContain('Broadcast unconfirmed')
-  expect(status.textContent).toContain('RPC acceptance is still unconfirmed')
+  expect(status.textContent).toContain('Checking network acceptance')
   expect(document.querySelector('.requestNoticeTransactionUnconfirmed')).toBeTruthy()
-  expect(status.textContent).toContain('will not resubmit automatically')
+  expect(status.textContent).toContain('will not resend automatically')
   expect(screen.getByText('Expected tx hash')).toBeTruthy()
   expect(screen.getByText('RPC acceptance')).toBeTruthy()
   expect(screen.getByText('Unconfirmed')).toBeTruthy()
