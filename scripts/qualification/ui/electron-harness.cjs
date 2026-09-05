@@ -271,7 +271,7 @@ const createRendererWindow = (scenario) => {
 const clickText = async (webContents, text) => {
   const clicked = await webContents.executeJavaScript(
     `(() => {
-      const target = Array.from(document.querySelectorAll('button')).find(
+      const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(text)}
@@ -288,7 +288,7 @@ const clickText = async (webContents, text) => {
 const focusText = async (webContents, text) => {
   const focused = await webContents.executeJavaScript(
     `(() => {
-      const target = Array.from(document.querySelectorAll('button')).find(
+      const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(text)}
@@ -305,7 +305,7 @@ const focusText = async (webContents, text) => {
 const hoverText = async (webContents, text) => {
   const point = await webContents.executeJavaScript(
     `(() => {
-      const target = Array.from(document.querySelectorAll('button')).find(
+      const target = Array.from(document.querySelectorAll('button, summary')).find(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(text)}
@@ -393,7 +393,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'clickText') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('button')).some(
+      `Array.from(document.querySelectorAll('button, summary')).some(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(action.text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
@@ -405,7 +405,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'focusText') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('button')).some(
+      `Array.from(document.querySelectorAll('button, summary')).some(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(action.text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
@@ -417,7 +417,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'hoverText') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('button')).some(
+      `Array.from(document.querySelectorAll('button, summary')).some(
         (button) =>
           button.innerText.trim() === ${JSON.stringify(action.text)} ||
           button.getAttribute('aria-label') === ${JSON.stringify(action.text)}
@@ -469,7 +469,7 @@ const performAction = async (webContents, action) => {
   if (action.type === 'confirmRequestWarning') {
     await waitFor(
       webContents,
-      `Array.from(document.querySelectorAll('button')).some(
+      `Array.from(document.querySelectorAll('button, summary')).some(
         (button) => button.innerText.trim() === ${JSON.stringify(action.text)}
       )`
     )
@@ -507,7 +507,7 @@ const performAction = async (webContents, action) => {
     return
   }
   if (action.type === 'setRequestStatus') {
-    await waitFor(webContents, `document.body.innerText.includes('Transaction queued')`)
+    await waitFor(webContents, `document.body.innerText.includes('Awaiting your review')`)
     const requestState = {
       handlerId: action.requestId,
       status: action.status,
@@ -595,7 +595,10 @@ const runScenario = async (scenario) => {
     if (captureAll || audit.violations.length) {
       if (captureAll) {
         await window.webContents.executeJavaScript(
-          `if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+          `if (!${JSON.stringify(scenario.ready === '.receivePanel')}) {
+            document.querySelector('.receivePanel')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+            if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+          }
           for (const element of [document.scrollingElement, ...document.querySelectorAll('*')]) {
             if (element) {
               element.scrollTop = 0

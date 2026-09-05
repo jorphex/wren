@@ -146,16 +146,6 @@ const RPC_WARNING_SCENARIOS = Object.freeze([
   }
 ])
 
-const onboardingAction = (nextCount = 0) => ({
-  type: 'sequence',
-  delayMs: 650,
-  steps: [
-    { type: 'clickText', text: 'Get started' },
-    ...(nextCount >= 0 ? [{ type: 'clickText', text: 'Skip shortcut' }] : []),
-    ...Array.from({ length: nextCount }, () => ({ type: 'clickText', text: 'Next' }))
-  ]
-})
-
 const generatedWalletPresentationAction = () => ({
   type: 'sequence',
   delayMs: 900,
@@ -401,7 +391,7 @@ const updateDialogScenarios = () =>
         ready: '.updateDialog',
         expectedInitialFocus: 'Get update',
         requiredControls: ['Get update', 'Later', 'Skip this version'],
-        requiredText: ['Update available', 'Wren 0.1.3 is available. Get the update when you are ready.']
+        requiredText: ['Update available', 'Wren 0.1.3']
       },
       {
         id: `tray-update-ready-${geometry}-${scale}`,
@@ -411,9 +401,9 @@ const updateDialogScenarios = () =>
         logicalWidth: 620,
         logicalHeight,
         ready: '.updateDialog',
-        expectedInitialFocus: 'Continue',
-        requiredControls: ['Continue', 'Later'],
-        requiredText: ['Update ready', 'Wren 0.1.3 is ready. Continue to complete the update.']
+        expectedInitialFocus: 'Restart and install',
+        requiredControls: ['Restart and install', 'Later'],
+        requiredText: ['Update ready', 'Wren 0.1.3']
       }
     ])
   )
@@ -526,11 +516,7 @@ const sendComposerScenarios = () =>
         },
         ready: '.sendSweepAssetSelected',
         requiredControls: ['Send one', 'Sweep assets'],
-        requiredText: [
-          'Select positive balances',
-          '1 selected · 16 per sweep',
-          'Sweep is sequential and non-atomic.'
-        ],
+        requiredText: ['Select positive balances', '1 selected · 16 per sweep', 'Transfers run separately.'],
         layoutExpectations: [
           {
             kind: 'computed-style',
@@ -651,7 +637,7 @@ const SEND_LIFECYCLE_CASES = [
     geometry: 'full',
     logicalHeight: FULL_SHELL_HEIGHT,
     scale: 1,
-    heading: 'Transaction queued',
+    heading: 'Awaiting your review',
     requiredControls: ['Close']
   },
   {
@@ -670,7 +656,7 @@ const SEND_LIFECYCLE_CASES = [
     scale: 1.25,
     status: 'verifying',
     submission: { status: 'unconfirmed' },
-    heading: 'Submission status unconfirmed',
+    heading: 'Broadcast unconfirmed',
     requiredControls: ['Close']
   },
   {
@@ -957,17 +943,7 @@ const reviewScenarios = () => [
           variant === 'locked'
             ? ['Flexible', 'Locked', 'Deposit', 'Start locked cooldown']
             : ['Flexible', 'Locked', 'Deposit', 'Withdraw'],
-        requiredText: [
-          'yvUSD',
-          'Earn with flexible or time-locked yvUSD.',
-          'EST. APY',
-          'TVL',
-          'RISK',
-          'Choose how to earn',
-          'Locked withdrawal timing',
-          'APY is variable and not guaranteed.',
-          'Yearn vaults involve smart-contract and strategy risk.'
-        ]
+        requiredText: ['yvUSD', 'Est. APY', 'VAULT TVL', 'Withdrawal terms']
       }))
     )
   ),
@@ -993,7 +969,7 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       {
-        kind: geometry === 'short' ? 'scroll-overflows' : 'scroll-fits',
+        kind: 'scroll-fits',
         selector: '.dashMainScroll'
       }
     ]
@@ -1007,7 +983,7 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.earnPositionList',
     requiredControls: ['Refresh', 'Manage yvUSD position', 'View yvUSD on Ethereum'],
-    requiredText: ['Earn', 'YOUR POSITIONS', '1.5 USDC', '5.12%', '$1.5M TVL']
+    requiredText: ['Earn', 'Your positions', '1.5 USDC', '5.12%', '$1.5M TVL']
   },
   {
     id: 'dash-earn-privacy-short-1',
@@ -1018,7 +994,7 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.earnPositionList',
     requiredControls: ['Manage yvUSD position', 'View yvUSD on Ethereum'],
-    requiredText: ['YOUR POSITIONS', '•••• USDC', '•••• USDC available', '5.12%', '$1.5M TVL']
+    requiredText: ['Your positions', '•••• USDC', '•••• USDC available', '5.12%', '$1.5M TVL']
   },
   ...[
     ['full', FULL_SHELL_HEIGHT],
@@ -1033,7 +1009,7 @@ const reviewScenarios = () => [
     ready: '.inspectorInputPanel',
     layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }],
     requiredControls: ['Transaction', 'Calldata', 'EIP-712', 'JSON-RPC'],
-    requiredText: ['Read-only inspector', 'Never signs or broadcasts', 'Raw input is not saved.']
+    requiredText: ['Inspector', 'Read-only', 'Uses your configured RPC']
   })),
   ...INTERFACE_SCALES.flatMap((scale) =>
     [
@@ -1103,8 +1079,8 @@ const reviewScenarios = () => [
       requiredText: [
         'Source check',
         'Matched locally',
-        'selected Solidity or Vyper source artifact',
-        'Sourcify may forward them to Etherscan, Blockscout, or Routescan'
+        'Publishes source and metadata permanently to Sourcify',
+        'may forward them to Etherscan, Blockscout, or Routescan'
       ]
     }))
   ),
@@ -1127,7 +1103,7 @@ const reviewScenarios = () => [
       ]
     },
     ready: '.contractVerificationResult',
-    requiredControls: ['Refresh status', 'Submit directly with API key'],
+    requiredControls: ['Refresh status', 'Submit directly to Etherscan'],
     requiredText: [
       'Verification status',
       'Sourcify',
@@ -1174,22 +1150,15 @@ const reviewScenarios = () => [
           { type: 'clickText', text: 'Calldata' },
           { type: 'inputLabel', label: 'Calldata', value: '0x12345678' },
           { type: 'inputLabel', label: 'Chain ID optional', value: '1' },
-          { type: 'clickText', text: 'Inspect read-only' }
+          { type: 'clickText', text: 'Inspect' }
         ]
       },
       ready: '.inspectorResult',
-      requiredControls: [
-        'Transaction',
-        'Calldata',
-        'EIP-712',
-        'JSON-RPC',
-        'Inspect read-only',
-        'Copy selector'
-      ],
+      requiredControls: ['Transaction', 'Calldata', 'EIP-712', 'JSON-RPC', 'Inspect', 'Copy selector'],
       requiredText: [
-        'Read-only inspector',
-        'Never signs or broadcasts',
-        'Raw input is not saved.',
+        'Inspector',
+        'Read-only',
+        'Uses your configured RPC',
         'Unknown function',
         '0x12345678',
         'Configured-RPC simulation'
@@ -1246,7 +1215,7 @@ const reviewScenarios = () => [
         'Workshop Software Account With A Long Name',
         'Optimism',
         'configured RPC',
-        'does not sign'
+        'Uses your configured RPC'
       ]
     }))
   ),
@@ -1290,7 +1259,7 @@ const reviewScenarios = () => [
         'Keccak-256',
         'Simulation is evidence only',
         'Provisional CREATE address',
-        'does not sign'
+        'Uses your configured RPC'
       ]
     }))
   ),
@@ -1333,12 +1302,12 @@ const reviewScenarios = () => [
         { type: 'clickText', text: 'Calldata' },
         { type: 'inputLabel', label: 'Calldata', value: '0x12345678' },
         { type: 'inputLabel', label: 'Chain ID optional', value: '1' },
-        { type: 'clickText', text: 'Inspect read-only' }
+        { type: 'clickText', text: 'Inspect' }
       ]
     },
     ready: '.inspectorResult',
     requiredControls: ['Copy selector'],
-    requiredText: ['Never signs or broadcasts', 'Unknown function', '0x12345678'],
+    requiredText: ['Read-only', 'Unknown function', '0x12345678'],
     captureScroll: 'target',
     captureScrollSelector: '.inspectorMissing',
     captureScrollOffset: -220
@@ -1360,8 +1329,8 @@ const reviewScenarios = () => [
       requiredControls: [
         'Close editor',
         'When a request exceeds a restriction',
-        'Restrict request targets',
-        'Restrict approval spenders',
+        'Request targets',
+        'Approval spenders',
         'Set native-value ceiling',
         'Set token ceilings',
         'Set allowed-until time',
@@ -1369,12 +1338,9 @@ const reviewScenarios = () => [
         'Save changes'
       ],
       requiredText: [
-        'Local request guardrail',
-        '11111111-1111-4111-8111-111111111111',
-        'Direct web origin · asserted by the connecting app',
-        'never sign automatically and never replace normal transaction review',
-        'Enabled with no addresses denies every target',
-        'Amounts are raw whole base units'
+        'Request guardrail',
+        'Requests still require your review',
+        'Enter whole base-unit amounts'
       ]
     }))
   ),
@@ -1470,9 +1436,8 @@ const reviewScenarios = () => [
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
-    action: { type: 'clickText', text: 'Add guardrail · Ethereum (0x1)' },
+    action: { type: 'sequence', steps: [{ type: 'clickText', text: 'Add guardrail · Ethereum (0x1)' }] },
     ready: '.dappGuardrailEditor',
-    expectedInitialFocus: 'When a request exceeds a restriction',
     requiredText: [
       '22222222-2222-4222-8222-222222222222',
       'Native app · bound to the source below',
@@ -1513,6 +1478,8 @@ const reviewScenarios = () => [
       ]
     },
     ready: '.dappGuardrailMessage-alert',
+    captureScroll: 'bottom',
+    captureScrollSelector: '.permissionsLedgerView',
     requiredControls: ['Remove guardrail', 'Save changes'],
     requiredText: ['Wren could not save this guardrail. Nothing changed. Try again.']
   },
@@ -1531,10 +1498,10 @@ const reviewScenarios = () => [
       scale,
       logicalWidth: 620,
       logicalHeight,
-      action: { type: 'focusText', text: 'Account address QR code' },
-      ready: '.accountAddressQrPopover',
-      requiredText: ['Account address', 'Workshop Software Account With A Long Name'],
-      layoutExpectations: [{ kind: 'size', selector: '.accountAddressQrCode', width: 185, height: 185 }]
+      action: { type: 'focusText', text: 'Receive' },
+      ready: '.receivePanel',
+      requiredText: ['Receive assets'],
+      layoutExpectations: [{ kind: 'size', selector: '.receivePanel .qrCode', width: 185, height: 185 }]
     }))
   ]),
   {
@@ -1548,7 +1515,7 @@ const reviewScenarios = () => [
     requiredControls: ['Copy address', 'Show receive QR', 'Reject request', 'Recheck'],
     requiredText: [
       'More funds needed',
-      'Fund this account on Optimism Mainnet — Community RPC.',
+      'Add ETH on Optimism Mainnet — Community RPC.',
       'Amounts at last check',
       'AVAILABLE',
       'REQUIRED',
@@ -1609,7 +1576,7 @@ const reviewScenarios = () => [
         logicalHeight,
         ready: '.addressBookEditor',
         requiredControls: ['Save contact'],
-        requiredText: ['Address check', 'Checked outside Wren', 'Wren does not verify it.']
+        requiredText: ['Address check', 'Checked outside Wren', 'Address check · optional']
       },
       {
         id: `dash-send-recipient-picker-${geometry}-${scale}`,
@@ -1629,7 +1596,7 @@ const reviewScenarios = () => [
           'ACTIVE ACCOUNTS',
           'SAVED CONTACTS',
           'RECENT RECIPIENTS',
-          'Previously used on this device · verify the full address',
+          'Previously used on this device',
           '0x5555555555555555555555555555555555555555'
         ]
       },
@@ -1637,6 +1604,7 @@ const reviewScenarios = () => [
         id: `dash-settings-recent-recipients-${geometry}-${scale}`,
         renderer: 'dash',
         state: 'settings-recent-recipients',
+        settingsCategory: 'privacy',
         scale,
         logicalWidth: 620,
         logicalHeight,
@@ -1645,8 +1613,8 @@ const reviewScenarios = () => [
         requiredText: [
           'PRIVACY',
           'Recent recipients',
-          'Store canonical destinations from Wren Send and managed Sweep only after successful network confirmation.',
-          'Recent recipients are not included in backups.'
+          'Remember recipients from successful sends on this device.',
+          'Excluded from backups.'
         ],
         captureScroll: 'target',
         captureScrollSelector: '#wren-settings-privacy'
@@ -1697,10 +1665,9 @@ const reviewScenarios = () => [
         requiredControls: ['Edit amount', 'Queue transfer'],
         requiredText: [
           'Review maximum send',
-          'Total reserved',
-          'L1 data fee',
-          'may leave dust',
-          'Quote expires'
+          'Maximum fee reserve',
+          'Unused fee reserve stays in your account',
+          'Fee details'
         ]
       },
       {
@@ -1722,18 +1689,10 @@ const reviewScenarios = () => [
           ]
         },
         ready: '.sendSweepReview',
-        requiredControls: [
-          'Copy full sweep recipient address',
-          'Copy full token 1 address',
-          'Copy full token 1 amount',
-          'Back to selection',
-          'Queue 1 transfer'
-        ],
+        requiredControls: ['Copy full sweep recipient address', 'Back to selection', 'Queue 1 transfer'],
         requiredText: [
-          'Sequential execution — not atomic',
-          'No bridge or batch contract is used.',
-          '0x3333333333333333333333333333333333333333',
-          '100000000',
+          'Separate transfers',
+          'Completed transfers remain',
           'Exact ordered calls (1)',
           'Quote expires'
         ]
@@ -1763,6 +1722,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-recent-clear-short-1.5',
     renderer: 'dash',
     state: 'settings-recent-recipients',
+    settingsCategory: 'privacy',
     variant: 'clear',
     scale: 1.5,
     logicalWidth: 620,
@@ -1830,13 +1790,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.transactionReviewAssetChanges',
-    requiredText: [
-      'Estimated changes',
-      'ETH',
-      '1 ETH',
-      'Wrapped Ether',
-      '1 WETH'
-    ],
+    requiredText: ['Estimated changes', 'ETH', '1 ETH', 'Wrapped Ether', '1 WETH'],
     layoutExpectations: [
       ...WALLET_VIEW_CHROME,
       ...FOCUSED_WINDOW_SURFACE,
@@ -2075,7 +2029,8 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountsChooser',
-    requiredText: ['CREATE NEW', 'IMPORT EXISTING', 'WATCH-ONLY']
+    requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address'],
+    requiredText: ['Add account', 'Advanced']
   },
   {
     id: 'dash-account-weak-password-short-1.5',
@@ -2119,8 +2074,8 @@ const reviewScenarios = () => [
         requiredText: [
           'Your recovery phrase',
           'Write these 12 words down in order. Wren will not show them again.',
-          'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
-          'Finish setup within about 10 minutes.',
+          'Clipboard clears after 60 seconds; clipboard history may retain it.',
+          'Wallet setup expires in 10 minutes.',
           'Leaving now deletes this new wallet.'
         ],
         layoutExpectations: [GENERATED_EXPIRY_COLOR]
@@ -2138,10 +2093,10 @@ const reviewScenarios = () => [
         requiredText: [
           'Your private key',
           'Account address',
-          'Show or copy this key, then save it somewhere safe. Wren will not show it again.',
+          'Save this private key. It is shown only during setup.',
           "I've saved my key",
-          'Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.',
-          'Finish setup within about 10 minutes.',
+          'Clipboard clears after 60 seconds; clipboard history may retain it.',
+          'Wallet setup expires in 10 minutes.',
           'Leaving now deletes this new account.'
         ],
         layoutExpectations: [GENERATED_EXPIRY_COLOR]
@@ -2161,7 +2116,7 @@ const reviewScenarios = () => [
           'Word 2',
           'Word 6',
           'Word 10',
-          'Finish setup within about 10 minutes.',
+          'Wallet setup expires in 10 minutes.',
           'Leaving now deletes this new wallet.'
         ],
         layoutExpectations: [GENERATED_EXPIRY_COLOR]
@@ -2178,7 +2133,7 @@ const reviewScenarios = () => [
         requiredText: [
           'Verify your backup',
           'Enter the private key from your saved copy.',
-          'Finish setup within about 10 minutes.',
+          'Wallet setup expires in 10 minutes.',
           'Leaving now deletes this new account.'
         ],
         layoutExpectations: [GENERATED_EXPIRY_COLOR]
@@ -2203,7 +2158,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.addAccountItemOptionInput.phrase',
-    requiredText: ['Recovery phrase', 'Import an account from a recovery phrase.']
+    requiredText: ['Recovery phrase', 'Import wallet']
   },
   {
     id: 'dash-account-add-trezor-full-1',
@@ -2223,7 +2178,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.watchAccountIcon',
-    requiredControls: ['Derive new', 'Watch', 'Import'],
+    requiredControls: ['Create wallet', 'Watch', 'Import'],
     requiredText: ['Accounts', 'No signing accounts yet.', 'Watch account', 'ADD ACCOUNT']
   },
   {
@@ -2234,7 +2189,7 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.dashAccountsPerch',
-    requiredControls: ['Derive new', 'Watch', 'Import'],
+    requiredControls: ['Create wallet', 'Watch', 'Import'],
     requiredText: ['Accounts', 'Ledger vault', 'device disconnected', 'Watch account', 'ADD ACCOUNT'],
     layoutExpectations: [{ kind: 'stacked', selector: '.dashAccountsPerch .dashHomeCard' }]
   },
@@ -2275,6 +2230,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'general',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2285,17 +2241,13 @@ const reviewScenarios = () => [
     id: 'dash-settings-local-connections-full-1',
     renderer: 'dash',
     state: 'settings-local-connections',
+    settingsCategory: 'connections',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '#wren-settings-local-connections',
     requiredControls: ['Copy full connection ID', 'Revoke'],
-    requiredText: [
-      'Wallet activity notifications',
-      'Show private updates while Wren is hidden.',
-      'LOCAL CONNECTIONS',
-      'Authenticated software on this computer.'
-    ],
+    requiredText: ['LOCAL CONNECTIONS', 'Authenticated software on this computer.'],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-local-connections'
   },
@@ -2303,6 +2255,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-wallet-notifications-full-1',
     renderer: 'dash',
     state: 'settings-local-connections',
+    settingsCategory: 'general',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2320,6 +2273,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-recovery-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'security',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2333,6 +2287,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-contract-verification-short-1.5',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'advanced',
     scale: 1.5,
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
@@ -2352,6 +2307,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-contract-verification-unavailable-short-1.5',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'advanced',
     variant: 'credential-status-unavailable',
     scale: 1.5,
     logicalWidth: 620,
@@ -2360,7 +2316,7 @@ const reviewScenarios = () => [
     requiredText: [
       'CONTRACT VERIFICATION',
       'Storage status unavailable',
-      'Wren could not confirm OS credential protection, so it will not accept a key.',
+      'Secure storage could not be confirmed. Key entry is unavailable.',
       'Credential status unavailable.'
     ],
     captureScroll: 'target',
@@ -2370,6 +2326,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-about-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'general',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2391,6 +2348,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-recovery-export-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'security',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2405,6 +2363,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-recovery-restore-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'security',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2419,6 +2378,7 @@ const reviewScenarios = () => [
     id: 'dash-settings-recovery-restore-confirm-full-1',
     renderer: 'dash',
     state: 'settings',
+    settingsCategory: 'security',
     scale: 1,
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
@@ -2433,7 +2393,7 @@ const reviewScenarios = () => [
     ready: '[role="alertdialog"][aria-labelledby="recovery-replace-title"]',
     expectedInitialFocus: 'Cancel',
     requiredControls: ['Cancel', 'Replace this Wren profile'],
-    requiredText: ['Version 1', 'Signer records', 'atomically replaces the current profile'],
+    requiredText: ['Version 1', 'Wallet sources', 'replace this device’s current profile'],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-recovery'
   },
@@ -2544,11 +2504,11 @@ const reviewScenarios = () => [
         inset: 20
       }
     ],
-    requiredControls: ['Optimism Mainnet'],
+    requiredControls: ['Optimism Mainnet', 'Manage access'],
     requiredText: [
       'workshop.example',
       'Account access',
-      'Open an account in the wallet, then choose Apps with access to review or revoke this app.',
+      'Manage access',
       'Default network',
       'Ethereum',
       'Optimism Mainnet'
@@ -2562,12 +2522,13 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '.networkEditor',
+    action: { type: 'clickText', text: 'RPC connections' },
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.dashMainScroll' },
       { kind: 'scroll-fits', selector: '.localSettingsWrap' },
-      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+      { kind: 'scroll-fits', selector: '.networkEditor' }
     ],
-    requiredControls: ['Cancel', 'Save changes'],
+    requiredControls: ['Done'],
     requiredText: ['Edit Ethereum', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
   },
   {
@@ -2578,12 +2539,13 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
+    action: { type: 'clickText', text: 'RPC connections' },
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.localSettingsWrap' },
-      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
-      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+      { kind: 'scroll-fits', selector: '.networkEditorBody' },
+      { kind: 'scroll-fits', selector: '.networkEditor' }
     ],
-    requiredControls: ['Cancel', 'Save changes'],
+    requiredControls: ['Done'],
     requiredText: ['Edit Ethereum', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
   },
   {
@@ -2595,13 +2557,14 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.networkEditor',
+
     layoutExpectations: [
       { kind: 'scroll-fits', selector: '.localSettingsWrap' },
-      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
-      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
+
+      { kind: 'scroll-fits', selector: '.networkEditor' }
     ],
     requiredControls: ['Remove network', 'Cancel', 'Save changes'],
-    requiredText: ['Edit Optimism Mainnet', 'RPC endpoints', 'Connected', 'Off', '2 of 5 RPC endpoints used']
+    requiredText: ['Edit Optimism Mainnet', 'Network name', 'Chain ID']
   },
   {
     id: 'dash-network-add-full-1',
@@ -2884,7 +2847,7 @@ const reviewScenarios = () => [
       },
       { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
       { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
-      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
+      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 64 }
     ]
   },
   {
@@ -2921,7 +2884,7 @@ const reviewScenarios = () => [
       },
       { kind: 'computed-style', selector: '.moduleMainPermissions', property: 'display', value: 'grid' },
       { kind: 'size', selector: '.permissionsLedgerView .revokeAccessButton', width: 68, height: 44 },
-      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 52 }
+      { kind: 'size', selector: '.permissionsLedgerView .dappGuardrailManage', height: 64 }
     ]
   },
   ...[
@@ -2970,7 +2933,14 @@ const reviewScenarios = () => [
       logicalWidth: 620,
       logicalHeight,
       ready: '.approveTransactionWarning',
-      requiredControls: ['Decline', confirmLabel],
+      requiredControls: [
+        'Decline',
+        confirmLabel === 'Proceed'
+          ? 'Accept simulation risk'
+          : confirmLabel === 'Proceed Anyway'
+            ? 'Accept proxy changes'
+            : confirmLabel
+      ],
       requiredText: [title, message],
       layoutExpectations: [
         { kind: 'hidden', selector: '.accountSelectorOpen' },
@@ -3060,7 +3030,7 @@ const reviewScenarios = () => [
     requiredControls: ['Close request', 'Recheck'],
     requiredText: [
       'Safety check unavailable',
-      'The safety check could not be repeated. Nothing was signed or sent.'
+      'Nothing signed or sent.'
     ]
   },
   {
@@ -3072,8 +3042,8 @@ const reviewScenarios = () => [
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.requestApproveRecoverable',
     action: { type: 'clickText', text: 'Recheck' },
-    requiredControls: ['Close request', 'Check again'],
-    requiredText: ['Still unavailable', 'Balance or fee data is unavailable. Nothing was signed.']
+    requiredControls: ['Close request', 'Recheck'],
+    requiredText: ['Still unavailable', 'Balance or fee data unavailable. Nothing signed.']
   },
   {
     id: 'tray-account-activity-full-1',
@@ -3130,7 +3100,6 @@ const reviewScenarios = () => [
     ready: '.activityModuleExpanded',
     requiredText: [
       'Submitted',
-      'Not yet confirmed',
       'Confirming',
       'Reorg detected',
       'Replaced',
@@ -3168,7 +3137,12 @@ const reviewScenarios = () => [
     ],
     layoutExpectations: [
       { kind: 'hidden', selector: '.accountSelectorOpen' },
-      { kind: 'full-width', selector: '.activityDetail', container: '.accountViewMain', inset: 12 },
+      {
+        kind: 'full-width',
+        selector: '.activityDetail',
+        container: '.activityModuleExpanded',
+        excludeScrollbar: true
+      },
       ...ACTIVITY_DETAIL_CARD_ALIGNMENT
     ]
   },
@@ -3307,12 +3281,8 @@ const reviewScenarios = () => [
     logicalHeight: FULL_SHELL_HEIGHT,
     ready: '[role="dialog"][aria-labelledby="wren-notify-title"]',
     expectedInitialFocus: 'Not now',
-    requiredControls: ['Copy full connection ID', 'Not now', 'Allow'],
-    requiredText: [
-      'Allow local app to connect?',
-      'Compare this code with the app before allowing it.',
-      'Connection ID'
-    ]
+    requiredControls: ['Copy full connection ID', 'Not now', 'Codes match, connect'],
+    requiredText: ['Allow local app to connect?', 'Compare with the code in your local app.', 'Connection ID']
   },
   {
     id: 'tray-account-ledger-bottom-full-1',
@@ -3581,7 +3551,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.signerPreviewRow',
         requiredControls: ['Send', 'Open signer details'],
-        requiredText: ['PORTFOLIO BALANCE', '$0.00', 'No assets on this account yet', 'Signer']
+        requiredText: ['Signer']
       },
       ...(scale === 1
         ? [
@@ -3599,7 +3569,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 'Edit permit amount',
                 'Copy permit spender address',
                 'Decline',
-                'Sign message'
+                'Sign approval'
               ],
               requiredText: [
                 'Token approval',
@@ -3614,7 +3584,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
                 '2412',
                 'Jan 1, 2100',
                 'EIP-712',
-                'Verify this token approval on your signer before approving.'
+                'Sign approval'
               ],
               layoutExpectations: [
                 ...WALLET_VIEW_CHROME,
@@ -3643,12 +3613,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.messageSigningReview',
               requiredControls: ['Back', 'Copy signing account address', 'Decline', 'Sign message'],
-              requiredText: [
-                'Sign a message',
-                'Readable text message',
-                'workshop.example',
-                'Review this exact message.'
-              ],
+              requiredText: ['Sign a message', 'workshop.example', 'Review this exact message.'],
               layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
             },
             {
@@ -3660,7 +3625,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.signingReview',
               requiredControls: ['Back', 'Decline', 'Sign message'],
-              requiredText: ['Sign data', 'Qualification', 'Domain, message, and types ›', 'workshop.example'],
+              requiredText: ['Sign data', 'Qualification', 'Message:', 'workshop.example'],
               layoutExpectations: [{ kind: 'viewport-bottom', selector: '.requestApproveSignature' }]
             },
             {
@@ -3711,7 +3676,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
               ready: '.accountPortfolioCard',
-              requiredText: ['PORTFOLIO BALANCE', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer'],
+              requiredText: ['KNOWN VALUE', 'Ethereum', 'BALANCES', 'ACTIVITY', 'Signer'],
               layoutExpectations: [
                 {
                   kind: 'computed-style',
@@ -3771,7 +3736,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
             property: 'backgroundColor',
             value: 'rgba(0, 0, 0, 0)'
           },
-          { kind: 'size', selector: '.accountPortfolioSend', width: 136, height: 44 }
+          { kind: 'size', selector: '.accountPortfolioSend', width: 104, height: 44 }
         ]
       },
       {
@@ -3796,7 +3761,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
             property: 'borderTopWidth',
             value: '0px'
           },
-          { kind: 'size', selector: '.accountPortfolioSend', width: 136, height: 44 }
+          { kind: 'size', selector: '.accountPortfolioSend', width: 104, height: 44 }
         ]
       },
       ...[
@@ -3853,13 +3818,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
         requiredControls: ['Cancel', 'Copy hash', 'Open explorer', 'Speed up'],
-        requiredText: [
-          'Transaction',
-          'Submitted',
-          'Tx hash',
-          'Confirmations',
-          '0'
-        ],
+        requiredText: ['Transaction', 'Submitted', 'Tx hash', 'Confirmations', '0'],
         layoutExpectations: [
           {
             kind: 'computed-style',
@@ -3886,12 +3845,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle',
         requiredControls: ['Copy hash', 'Open explorer'],
-        requiredText: [
-          'Confirming',
-          'Tx hash',
-          'Confirmations',
-          '4'
-        ],
+        requiredText: ['Confirming', 'Tx hash', 'Confirmations', '4'],
         layoutExpectations: [
           {
             kind: 'computed-style',
@@ -3918,12 +3872,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle-warning',
         requiredControls: ['Copy hash', 'Open explorer'],
-        requiredText: [
-          'Broadcast unconfirmed',
-          'Expected tx hash',
-          'RPC acceptance',
-          'Unconfirmed'
-        ],
+        requiredText: ['Broadcast unconfirmed', 'Expected tx hash', 'RPC acceptance', 'Unconfirmed'],
         layoutExpectations: [
           { kind: 'text-unclipped', selector: '.txLifecycleDetailVisible' },
           { kind: 'text-unclipped', selector: '.txLifecycleFacts dd[title]' },
@@ -3939,12 +3888,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalHeight: FULL_SHELL_HEIGHT,
         ready: '.txLifecycle-success',
         requiredControls: ['Copy hash', 'Open explorer'],
-        requiredText: [
-          'Confirmed',
-          'Tx hash',
-          'Confirmations',
-          '13'
-        ],
+        requiredText: ['Confirmed', 'Tx hash', 'Confirmations', '13'],
         layoutExpectations: [
           {
             kind: 'computed-style',
@@ -3969,6 +3913,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale,
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
+        action: { type: 'clickText', text: 'Delegation' },
         ready: '.delegationRevocationEligible',
         requiredControls: ['Revoke delegation'],
         requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode']
@@ -3980,6 +3925,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale,
         logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
+        action: { type: 'clickText', text: 'Delegation' },
         ready: '.delegationRevocationEligible',
         requiredControls: ['Revoke delegation'],
         requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode']
@@ -4138,92 +4084,8 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         logicalWidth: 720,
         logicalHeight: 405,
         ready: 'button',
-        requiredControls: ['Get started'],
+        requiredControls: ['Create wallet', 'Import wallet', 'Connect hardware wallet', 'Watch address'],
         requiredText: ['Meet Wren']
-      },
-      {
-        id: `onboard-access-${scale}`,
-        renderer: 'onboard',
-        state: 'access',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: { type: 'clickText', text: 'Get started' },
-        requiredControls: ['Back', 'Skip shortcut'],
-        requiredText: ['Open Wren quickly']
-      },
-      {
-        id: `onboard-networks-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-networks',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(0),
-        requiredControls: ['Back', 'Next'],
-        requiredText: ['Choose your networks']
-      },
-      {
-        id: `onboard-context-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-context',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(1),
-        requiredControls: ['Back', 'Next'],
-        requiredText: ['Use the right network']
-      },
-      {
-        id: `onboard-accounts-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-accounts',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(2),
-        requiredControls: ['Back', 'Next'],
-        requiredText: ['Add your accounts']
-      },
-      {
-        id: `onboard-companion-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-companion',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(3),
-        requiredControls: ['Chrome', 'Firefox', 'Back', 'Next'],
-        requiredText: ['Connect browser dapps']
-      },
-      {
-        id: `onboard-dapp-network-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-dapp-network',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(4),
-        requiredControls: ['Back', 'Next'],
-        requiredText: ['Check the dapp network']
-      },
-      {
-        id: `onboard-ready-${scale}`,
-        renderer: 'onboard',
-        state: 'onboarding-ready',
-        scale,
-        logicalWidth: 720,
-        logicalHeight: 405,
-        ready: '[aria-labelledby="onboarding-slide-title"]',
-        action: onboardingAction(5),
-        requiredControls: ['Back', 'Open Wren'],
-        requiredText: ['Ready to begin']
       }
     ]),
     {
@@ -4251,7 +4113,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       captureScroll: 'target',
       captureScrollSelector: '.contractVerificationPublication',
       requiredControls: ['Edit and recheck', 'Publish source'],
-      requiredText: ['Sourcify may forward them to Etherscan, Blockscout, or Routescan', 'Matched locally'],
+      requiredText: ['may forward them to Etherscan, Blockscout, or Routescan', 'Matched locally'],
       layoutExpectations: [
         { kind: 'stacked', selector: '.contractVerificationLedgerRow' },
         {
@@ -4279,6 +4141,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       scale: 1.5,
       logicalWidth: 530,
       logicalHeight: SHORT_SHELL_HEIGHT,
+      action: { type: 'clickText', text: 'Delegation' },
       ready: '.delegationRevocationEligible',
       requiredControls: ['Revoke delegation'],
       requiredText: ['RPC-reported delegation target', 'Reported by configured RPC · eth_getCode'],
@@ -4318,12 +4181,216 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const defaultScenarios = [
     ...scenarios,
+    ...['full', 'short'].map((geometry) => ({
+      id: `tray-receive-${geometry}-1`,
+      renderer: 'tray',
+      state: 'account-home',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: geometry === 'full' ? FULL_SHELL_HEIGHT : SHORT_SHELL_HEIGHT,
+      action: { type: 'clickText', text: 'Receive' },
+      ready: '.receivePanel',
+      requiredControls: ['Copy address'],
+      requiredText: ['Receive assets']
+    })),
+    {
+      id: 'dash-network-details-full-1',
+      renderer: 'dash',
+      state: 'network-editor',
+      scale: 1,
+      logicalWidth: 620,
+      logicalHeight: FULL_SHELL_HEIGHT,
+      ready: '.networkEditor',
+      requiredControls: ['Cancel', 'Save changes', 'RPC connections'],
+      requiredText: ['Network name', 'Chain ID']
+    },
     ...accountAccessReviewScenarios(),
     ...sendComposerScenarios().filter(({ state }) => state === 'send-asset-picker')
   ]
-  return (includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios).map(
-    enforceRequestReviewChrome
-  )
+  const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
+  if (includeReview) {
+    for (const id of ['dash-network-add-full-1', 'dash-network-editor-full-1', 'dash-network-details-full-1', 'dash-send-sweep-review-full-1']) {
+      const base = selected.find((scenario) => scenario.id === id)
+      if (base && !selected.some((scenario) => scenario.id === id.replace('-full-', '-short-'))) selected.push({ ...base, id: id.replace('-full-', '-short-'), logicalHeight: SHORT_SHELL_HEIGHT })
+    }
+    const receive = selected.find((scenario) => scenario.id === 'tray-receive-short-1')
+    for (const scale of [1.25, 1.5]) selected.push({ ...receive, id: 'tray-receive-short-' + scale, scale })
+    selected.push({
+      id: 'tray-account-guardrail-remove-confirm-short-1', renderer: 'tray', state: 'account-permissions', scale: 1,
+      logicalWidth: 620, logicalHeight: SHORT_SHELL_HEIGHT,
+      action: { type: 'sequence', steps: [{ type: 'clickText', text: 'Edit guardrail · Ethereum (0x1)' }, { type: 'clickText', text: 'Remove guardrail' }] },
+      ready: '.dappGuardrailConfirm', requiredText: ['Remove this guardrail?'], requiredControls: ['Cancel', 'Confirm remove']
+    })
+    for (const state of ['account-add-seed', 'account-add-watch']) {
+      const base = selected.find((scenario) => scenario.state === state)
+      for (const scale of [1, 1.25, 1.5]) selected.push({ ...base, id: 'dash-' + state + '-short-' + scale, logicalHeight: SHORT_SHELL_HEIGHT, scale })
+    }
+    const funding = selected.find((scenario) => scenario.id === 'tray-wallet-calls-funding-full-1')
+    const permit = selected.find((scenario) => scenario.id === 'tray-signature-permit-review-full-1')
+    selected.push(
+      { ...permit, id: 'tray-signature-permit-review-short-1', logicalHeight: SHORT_SHELL_HEIGHT },
+      { ...funding, id: 'tray-wallet-calls-funding-exact-short-1', logicalHeight: SHORT_SHELL_HEIGHT,
+        action: { type: 'clickText', text: 'Exact amounts' }, ready: '.fundingExactAmounts[aria-pressed="true"]' }
+    )
+    for (const variant of ['loading', 'unavailable', 'partial', 'empty', 'privacy'])
+      selected.push({
+        id: 'tray-portfolio-' + variant + '-full-1',
+        renderer: 'tray',
+        state: 'portfolio-review',
+        portfolioVariant: variant,
+        scale: 1,
+        logicalWidth: 620,
+        logicalHeight: FULL_SHELL_HEIGHT,
+        ready: '.accountPortfolioCard',
+        requiredControls: ['Send'],
+        requiredText: {
+          loading: ['Loading balances…'],
+          unavailable: ['No connected networks'],
+          partial: ['KNOWN VALUE', '$3,200.00', 'Some prices unavailable'],
+          empty: ['$0.00', 'No balances found on connected networks'],
+          privacy: ['$••••']
+        }[variant]
+      })
+    for (const product of ['direct', 'activity', 'cooldown']) {
+      for (const geometry of ['full', 'short'])
+        selected.push({
+          id: `dash-earn-${product}-${geometry}-1`,
+          renderer: 'dash',
+          state: 'earn-extended',
+          product,
+          variant: product === 'direct' ? 'direct' : product === 'cooldown' ? 'locked' : 'unlocked',
+          scale: 1,
+          logicalWidth: 620,
+          logicalHeight: geometry === 'full' ? FULL_SHELL_HEIGHT : SHORT_SHELL_HEIGHT,
+          ready: product === 'activity' ? '.earnWorkflow' : '.earnDetails',
+          requiredText:
+            product === 'activity'
+              ? ['Earn activity', 'Deposit into yvUSD']
+              : product === 'direct'
+                ? ['USDC vault', 'TVL']
+                : ['Cooldown active'],
+          requiredControls: product === 'activity' ? ['View transaction'] : product === 'cooldown' ? ['Deposit', 'Cancel cooldown'] : ['Deposit', 'Max'],
+          layoutExpectations: product === 'activity' ? [] : [{ kind: 'viewport-bottom', selector: '.earnDetailActionShelf' }]
+        })
+    }
+  }
+  if (includeReview) {
+    const cooldown = selected.find(({ id }) => id === 'dash-earn-cooldown-short-1')
+    selected.push({ ...cooldown, id: 'dash-earn-cooldown-deposit-short-1',
+      action: { type: 'clickText', text: 'Deposit' },
+      requiredControls: ['Deposit', 'Cancel cooldown', 'Max'] })
+    const contact = selected.find(({ id }) => id === 'dash-address-book-editor-short-1')
+    selected.push({ ...contact, id: 'dash-address-book-editor-bottom-short-1',
+      captureScroll: 'bottom', captureScrollSelector: '.addressBookEditorScroll' })
+  }
+  const disclosures = includeReview
+    ? [
+        [
+          'dash-inspector-result-full-1',
+          ['Exact input', 'Transaction envelope', 'Simulation details', 'Evidence sources'],
+          ['Copy calldata'],
+          ['Calldata', 'Evidence sources']
+        ],
+        [
+          'dash-earn-yvusd-unlocked-full-1',
+          ['Vault details'],
+          ['Deposit'],
+          ['Variable APY', 'Yearn risk rating']
+        ],
+        [
+          'dash-contract-verification-evidence-full-1',
+          ['Runtime identity'],
+          ['Edit and recheck'],
+          ['Runtime code']
+        ],
+        [
+          'dash-send-sweep-review-full-1',
+          ['Token details'],
+          ['Copy full token 1 address', 'Copy full token 1 amount'],
+          ['100000000 base units']
+        ],
+        [
+          'dash-send-max-review-full-1',
+          ['Fee details'],
+          ['Queue transfer'],
+          ['L1 data fee', 'Quote expires']
+        ],
+        [
+          'dash-contract-verification-result-full-1',
+          ['Submit directly to Etherscan'],
+          ['Submit directly with API key'],
+          ['Encoded constructor arguments']
+        ],
+        ['dash-account-chooser-full-1', ['Advanced'], ['Create private key'], ['Advanced']],
+        ['dash-add-token-details-full-1', ['Token metadata'], ['Decimals', 'Logo URI'], ['Token metadata']]
+      ].map(([id, summaries, requiredControls, requiredText]) => {
+        const base = selected.find((scenario) => scenario.id === id)
+        if (!base) throw new Error(`Missing disclosure base: ${id}`)
+        const steps = base.action ? (base.action.type === 'sequence' ? base.action.steps : [base.action]) : []
+        return {
+          ...base,
+          id: `${id}-disclosed`,
+          action: {
+            type: 'sequence',
+            delayMs: 100,
+            steps: [...steps, ...summaries.map((text) => ({ type: 'clickText', text }))]
+          },
+          requiredControls,
+          requiredText
+        }
+      })
+    : []
+  return [...selected, ...disclosures].map((scenario) => {
+    const layout = [...(scenario.layoutExpectations || [])]
+    if (['account-add-seed', 'account-add-watch'].includes(scenario.state)) {
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionInput, .addAccountItemOptionSetupFrame:not([aria-hidden="true"]) .addAccountItemOptionTitle',
+        container: '.dash',
+        tolerance: 1
+      })
+    }
+    if (['network-add', 'network-editor'].includes(scenario.state)) {
+      layout.push({ kind: 'full-width', selector: '.networkEditorFooter', container: '.dash' })
+    }
+    if (scenario.id.includes('send-sweep-review')) {
+      layout.push({ kind: 'contained', selector: '.sendSweepReviewContent', container: '.sendSweepReview' })
+      layout.push({ kind: 'stacked', selector: '.sendSweepReviewContent, .sendSweepReviewActions' })
+    }
+    if (scenario.state === 'account-requests-summary') {
+      layout.push({ kind: 'contained', selector: '.requestPreviewItem', container: '.accountModuleCard' })
+    }
+    if (scenario.id.includes('transaction-safety-unavailable')) {
+      layout.push({ kind: 'contained', selector: '.requestActionButtons', container: '.footerModule' })
+    }
+    const shelfSelector = scenario.state === 'transaction-safety-unavailable' || scenario.state === 'transaction-funding-unavailable'
+      ? '.requestApproveRecoveryStatus'
+      : scenario.state === 'wallet-calls-adjustment'
+        ? '.walletCallsAdjustActions'
+        : ['transaction-confirming', 'transaction-confirmed', 'transaction-submitted'].includes(scenario.state)
+          ? '.requestNoticeTransactionStatus'
+          : null
+    if (shelfSelector) {
+      layout.push({ kind: 'size', selector: shelfSelector, width: scenario.logicalWidth, height: 114 })
+      layout.push({ kind: 'viewport-bottom', selector: shelfSelector })
+    }
+    if (scenario.state === 'address-book-editor') {
+      layout.push({ kind: 'computed-style', selector: '.dashMainScroll', property: 'overflowY', value: 'hidden' })
+      layout.push({ kind: 'viewport-bottom', selector: '.addressBookActionShelf' })
+      layout.push({ kind: 'stacked', selector: '.addressBookEditorScroll, .addressBookActionShelf' })
+    }
+    if (scenario.product === 'cooldown') {
+      layout.push({ kind: 'contained', selector: '.earnCooldownActions', container: '.earnDetailActionShelf' })
+    }
+    if (scenario.id.includes('notify-remove-network')) {
+      layout.push({
+        kind: 'centered-horizontal',
+        selector: '.notifyCompactConfirmation',
+        container: '.notify'
+      })
+    }
+    return enforceRequestReviewChrome({ ...scenario, layoutExpectations: layout })
+  })
 }
 
 const physicalSize = ({ logicalWidth, logicalHeight, scale }) => ({

@@ -22,6 +22,19 @@ const auditPage = async ({
     return String(name).slice(0, 120)
   }
   const visible = (element) => {
+    if (element.closest('[hidden]')) return false
+    let ancestor = element
+    while (ancestor?.parentElement) {
+      const parent = ancestor.parentElement
+      if (
+        parent.tagName === 'DETAILS' &&
+        !parent.open &&
+        ancestor !== parent.querySelector(':scope > summary')
+      )
+        return false
+      ancestor = parent
+    }
+
     const style = getComputedStyle(element)
     const rect = element.getBoundingClientRect()
     return (
@@ -100,6 +113,32 @@ const auditPage = async ({
       if (rects.some((rect, index) => index > 0 && rect.top < rects[index - 1].bottom - 1)) {
         violations.push({ kind: 'required-layout', detail: `${expectation.selector} is not stacked` })
       }
+    } else if (['centered-horizontal', 'contained'].includes(expectation.kind)) {
+      for (const element of elements) {
+        const container = element.closest(expectation.container)
+        if (!container) {
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} has no ${expectation.container} container`
+          })
+          continue
+        }
+        const inner = element.getBoundingClientRect()
+        const outer = container.getBoundingClientRect()
+        const tolerance = expectation.tolerance ?? 2
+        const fails =
+          expectation.kind === 'centered-horizontal'
+            ? Math.abs((inner.left + inner.right - outer.left - outer.right) / 2) > tolerance
+            : inner.left < outer.left - tolerance ||
+              inner.right > outer.right + tolerance ||
+              inner.top < outer.top - tolerance ||
+              inner.bottom > outer.bottom + tolerance
+        if (fails)
+          violations.push({
+            kind: 'required-layout',
+            detail: `${expectation.selector} is not ${expectation.kind} in ${expectation.container}`
+          })
+      }
     } else if (expectation.kind === 'full-width') {
       for (const element of elements) {
         const container = element.closest(expectation.container)
@@ -113,9 +152,12 @@ const auditPage = async ({
         const elementRect = element.getBoundingClientRect()
         const containerRect = container.getBoundingClientRect()
         const inset = expectation.inset || 0
+        const scrollbar = expectation.excludeScrollbar
+          ? (container.offsetWidth - container.clientWidth) * (containerRect.width / container.offsetWidth)
+          : 0
         if (
           Math.abs(elementRect.left - (containerRect.left + inset)) > 2 ||
-          Math.abs(elementRect.right - (containerRect.right - inset)) > 2
+          Math.abs(elementRect.right - (containerRect.right - inset - scrollbar)) > 2
         ) {
           violations.push({
             kind: 'required-layout',
@@ -280,7 +322,9 @@ const auditPage = async ({
   const controlSelector =
     'button, a[href], input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])'
   const modalRoot = Array.from(document.querySelectorAll('[aria-modal="true"]')).find(visible)
-  const controls = Array.from((modalRoot || document).querySelectorAll(controlSelector)).filter(
+  // Open popovers cover background controls; the closed home is qualified separately.
+  const popoverRoot = document.querySelector('.receivePanel')
+  const controls = Array.from((modalRoot || popoverRoot || document).querySelectorAll(controlSelector)).filter(
     (element) => visible(element) && !element.disabled && !element.closest('[aria-hidden="true"], [inert]')
   )
 
@@ -304,7 +348,7 @@ const auditPage = async ({
     }
 
     if (!fullyInViewport(rect) || !unobscured(target, rect)) {
-      target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      target.scrollIntoView({ block: 'center', inline: 'nearest' })
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       rect = target.getBoundingClientRect()
     }
@@ -355,6 +399,13 @@ const auditPage = async ({
   }
 
   return {
+    horizontalGeometry: [...document.querySelectorAll('.dashMainScroll, .addAccountItem, .addAccountItemOptionSetupFrame, .addAccountItemOptionTitle, .addAccountItemOptionInput, .earnDetailsContent, .earnDetailActionShelf, .networkEditorBody, .sendComposer, .permissionsLedgerView, .dappGuardrailEditor')]
+      .filter((element) => visible(element) && element.getBoundingClientRect().left < viewport.width && element.getBoundingClientRect().right > 0)
+      .map((element) => {
+        const rect = element.getBoundingClientRect()
+        const style = getComputedStyle(element)
+        return { selector: element.className, left: rect.left, right: rect.right, centerOffset: (rect.left + rect.right - viewport.width) / 2, clientWidth: element.clientWidth, scrollbar: element.offsetWidth - element.clientWidth, gutter: style.scrollbarGutter, paddingLeft: style.paddingLeft, paddingRight: style.paddingRight }
+      }),
     controlCount: controls.length,
     exceptions,
     textNodeCount: textParents.size,

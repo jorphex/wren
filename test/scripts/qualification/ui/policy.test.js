@@ -4,7 +4,7 @@ const {
   COMPACT_TARGET_EXCEPTIONS,
   INTERFACE_SCALES,
   physicalSize,
-  scenarioMatrix
+  scenarioMatrix: fullScenarioMatrix
 } = require('../../../../scripts/qualification/ui/policy.cjs')
 const {
   QUALIFICATION_ACCOUNT,
@@ -14,11 +14,13 @@ const {
   rpcReplyFor
 } = require('../../../../scripts/qualification/ui/state-fixture.cjs')
 
+const scenarioMatrix = (options) => fullScenarioMatrix(options).filter(({ id }) => !id.endsWith('-disclosed'))
+
 it('covers shell, token management, delegation, revocation, and onboarding at every supported scale', () => {
   const scenarios = scenarioMatrix()
 
   expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
-  expect(scenarios).toHaveLength(112)
+  expect(scenarios).toHaveLength(94)
   expect(new Set(scenarios.map(({ id }) => id)).size).toBe(scenarios.length)
   for (const scale of INTERFACE_SCALES) {
     expect(scenarios.filter((scenario) => scenario.scale === scale).map((scenario) => scenario.id)).toEqual(
@@ -47,14 +49,7 @@ it('covers shell, token management, delegation, revocation, and onboarding at ev
         `tray-revocation-review-short-${scale}`,
         `tray-revocation-monitor-full-${scale}`,
         `tray-revocation-monitor-short-${scale}`,
-        `onboard-intro-${scale}`,
-        `onboard-access-${scale}`,
-        `onboard-networks-${scale}`,
-        `onboard-context-${scale}`,
-        `onboard-accounts-${scale}`,
-        `onboard-companion-${scale}`,
-        `onboard-dapp-network-${scale}`,
-        `onboard-ready-${scale}`
+        `onboard-intro-${scale}`
       ])
     )
   }
@@ -515,7 +510,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     id: 'dash-earn-loading-short-1',
     ready: '.earnPositionsLoading',
     deferInvokes: ['yearn:getCatalog', 'yearn:getPositions', 'yearn:getWorkflows'],
-    layoutExpectations: [{ kind: 'scroll-overflows', selector: '.dashMainScroll' }]
+    layoutExpectations: [{ kind: 'scroll-fits', selector: '.dashMainScroll' }]
   })
   expect(
     invokeReplyFor(earnLoading[0], 'yearn:getCatalog', [{ force: false, cacheOnly: true }])
@@ -547,9 +542,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     )
   ).toBe(true)
   expect(inspectorResults.every(({ ready }) => ready === '.inspectorResult')).toBe(true)
-  expect(inspectors.every(({ requiredText }) => requiredText.includes('Never signs or broadcasts'))).toBe(
-    true
-  )
+  expect(inspectors.every(({ requiredText }) => requiredText.includes('Read-only'))).toBe(true)
   expect(invokeReplyFor(inspectorResults[0], 'inspector:inspect')).toMatchObject({
     success: true,
     inspection: {
@@ -561,13 +554,13 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     }
   })
   expect(addressQrReviews).toHaveLength(6)
-  expect(addressQrReviews.every(({ ready }) => ready === '.accountAddressQrPopover')).toBe(true)
+  expect(addressQrReviews.every(({ ready }) => ready === '.receivePanel')).toBe(true)
   expect(addressQrReviews.every(({ requiredControls }) => requiredControls === undefined)).toBe(true)
   expect(
     addressQrReviews.every(({ layoutExpectations }) =>
       layoutExpectations.some(
         ({ kind, selector, width, height }) =>
-          kind === 'size' && selector === '.accountAddressQrCode' && width === 185 && height === 185
+          kind === 'size' && selector === '.receivePanel .qrCode' && width === 185 && height === 185
       )
     )
   ).toBe(true)
@@ -909,10 +902,7 @@ it('fixtures the separator-review surfaces at native scale and geometry', () => 
     logicalHeight: 744,
     variant: 'removable',
     requiredControls: ['Remove network', 'Cancel', 'Save changes'],
-    layoutExpectations: expect.arrayContaining([
-      { kind: 'scroll-overflows', selector: '.networkEditorBody' },
-      { kind: 'viewport-bottom', selector: '.networkEditorFooter' }
-    ])
+    layoutExpectations: expect.arrayContaining([{ kind: 'scroll-fits', selector: '.networkEditor' }])
   })
   expect(fixtureFor(removableNetworkEditor).main.networks.ethereum[10].name).toBe('Optimism Mainnet')
   expect(Object.keys(fixtureFor(drawer).main.accounts)).toHaveLength(6)
@@ -961,7 +951,7 @@ it('qualifies recipient and contact surfaces at every scale and shell height', (
   const sweepReviews = scenarios.filter(({ state }) => state === 'send-sweep-review')
 
   expect(contactLists).toHaveLength(6)
-  expect(contactEditors).toHaveLength(6)
+  expect(contactEditors).toHaveLength(7)
   expect(recipientPickers).toHaveLength(6)
   expect(assetPickers).toHaveLength(6)
   expect(recentRecipientSettings).toHaveLength(6)
@@ -1154,7 +1144,9 @@ it('qualifies the decorative Control Center Wren and selected-chain explorer geo
     ({ state, logicalWidth }) => state === 'control-center' && logicalWidth === 620
   )
   const capped = scenarios.find(({ id }) => id === 'dash-control-center-capped-1.5')
-  const accountHomes = scenarios.filter(({ state }) => state === 'account-home')
+  const accountHomes = scenarios.filter(
+    ({ state, id }) => state === 'account-home' && !id.startsWith('tray-receive')
+  )
 
   expect(controlCenters).toHaveLength(7)
   expect(controlCenters.every(({ layoutExpectations }) => layoutExpectations[0].kind === 'size')).toBe(true)
@@ -1540,13 +1532,7 @@ it('qualifies connected-app destination margins at full and short heights', () =
     'dash-connected-app-details-full-1',
     'dash-connected-app-details-short-1'
   ])
-  expect(
-    details.every(({ requiredText }) =>
-      requiredText.includes(
-        'Open an account in the wallet, then choose Apps with access to review or revoke this app.'
-      )
-    )
-  ).toBe(true)
+  expect(details.every(({ requiredText }) => requiredText.includes('Manage access'))).toBe(true)
   expect(fixtureFor(details[0]).windows.dash.nav).toEqual([
     { view: 'dapps', data: { dappDetails: 'workshop' } }
   ])
@@ -1582,4 +1568,15 @@ it('forces the dashboard and tray capped-width fallback layouts at 150%', () => 
       }
     ])
   })
+})
+
+it('qualifies technical details separately from the default decision surface', () => {
+  const disclosed = fullScenarioMatrix({ includeReview: true }).filter(({ id }) => id.endsWith('-disclosed'))
+  expect(disclosed).toHaveLength(8)
+  for (const scenario of disclosed) {
+    expect(scenario.action.type).toBe('sequence')
+    expect(scenario.action.steps.some(({ type }) => type === 'clickText')).toBe(true)
+    expect(scenario.requiredControls.length).toBeGreaterThan(0)
+    expect(scenario.requiredText.length).toBeGreaterThan(0)
+  }
 })

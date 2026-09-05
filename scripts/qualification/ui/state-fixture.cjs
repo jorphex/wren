@@ -1147,7 +1147,7 @@ const fixtureFor = (scenario) => {
     }
   }
 
-  if (['earn-yvusd', 'earn-loading', 'earn-list', 'earn-privacy'].includes(scenario.state)) {
+  if (['earn-yvusd', 'earn-extended', 'earn-loading', 'earn-list', 'earn-privacy'].includes(scenario.state)) {
     prepareSelectedAccount(state)
     state.windows.dash = {
       ...state.windows.dash,
@@ -1155,8 +1155,13 @@ const fixtureFor = (scenario) => {
       nav: [
         {
           view: 'earn',
-          data:
-            scenario.state === 'earn-yvusd' ? { vaultId: 'ethereum-yvusd', variant: scenario.variant } : {}
+          data: ['earn-yvusd', 'earn-extended'].includes(scenario.state)
+            ? {
+                vaultId: 'ethereum-yvusd',
+                variant: scenario.variant,
+                ...(scenario.product === 'activity' ? { screen: 'activity' } : {})
+              }
+            : {}
         }
       ]
     }
@@ -1525,7 +1530,7 @@ const fixtureFor = (scenario) => {
     state.windows.dash = {
       ...state.windows.dash,
       showing: true,
-      nav: [{ view: 'settings', data: {} }]
+      nav: [{ view: 'settings', data: { category: scenario.settingsCategory || 'general' } }]
     }
     Object.assign(state.main, {
       accountCloseLock: false,
@@ -1694,7 +1699,10 @@ const fixtureFor = (scenario) => {
       }
     }
     state.main.permissions[QUALIFICATION_ACCOUNT] = {
-      treasury: activePermission('treasury', 'treasury.example')
+      treasury: activePermission('treasury', 'treasury.example'),
+      ...(scenario.variant === 'details'
+        ? { workshop: activePermission('workshop', 'workshop.example') }
+        : {})
     }
   }
 
@@ -2210,9 +2218,12 @@ const fixtureFor = (scenario) => {
   }
 
   if (
-    ['signature-message-review', 'signature-typed-data-review', 'add-chain-review', 'add-token-review'].includes(
-      scenario.state
-    )
+    [
+      'signature-message-review',
+      'signature-typed-data-review',
+      'add-chain-review',
+      'add-token-review'
+    ].includes(scenario.state)
   ) {
     const request =
       scenario.state === 'signature-message-review'
@@ -2546,6 +2557,47 @@ const fixtureFor = (scenario) => {
     ]
   }
 
+  if (scenario.state === 'portfolio-review') {
+    prepareSelectedAccount(state)
+    const { metadata, networks } = accountHomeNetworks()
+    state.main.networks.ethereum = { 1: networks[1] }
+    state.main.networksMeta.ethereum = { 1: metadata[1] }
+    state.main.accounts[QUALIFICATION_ACCOUNT].balances = { lastUpdated: Date.now() }
+    state.main.balances[QUALIFICATION_ACCOUNT] = [
+      {
+        address: '0x0000000000000000000000000000000000000000',
+        chainId: 1,
+        decimals: 18,
+        symbol: 'ETH',
+        name: 'Ether',
+        balance: '0',
+        displayBalance: '0'
+      }
+    ]
+    state.panel.account.moduleOrder = ['chains']
+    if (scenario.portfolioVariant === 'loading') {
+      delete state.main.balances[QUALIFICATION_ACCOUNT]
+      state.main.accounts[QUALIFICATION_ACCOUNT].balances = {}
+    }
+    state.panel.account.modules.chains.height = 56
+    if (scenario.portfolioVariant === 'unavailable') {
+      state.main.networks.ethereum[1].on = false
+      state.main.networks.ethereum[1].connection.endpoints[0].connected = false
+    }
+    if (scenario.portfolioVariant === 'partial') {
+      state.main.balances[QUALIFICATION_ACCOUNT][0].balance = '1000000000000000000'
+      state.main.balances[QUALIFICATION_ACCOUNT].push({
+        address: '0x' + '33'.repeat(20),
+        chainId: 1,
+        decimals: 18,
+        symbol: 'TOKEN',
+        name: 'Token',
+        balance: '1000000000000000000',
+        displayBalance: '1'
+      })
+    }
+    state.selected.hideBalances = scenario.portfolioVariant === 'privacy'
+  }
   return state
 }
 
@@ -2640,7 +2692,73 @@ const qualificationVerificationJob = (scenario) => ({
 })
 
 const invokeReplyFor = (scenario, method, args = []) => {
-  if (method === 'activity:details' && scenario.state === 'account-activity-detail-retained') {
+  if (scenario.state === 'earn-extended' && method.startsWith('yearn:')) {
+    const catalog = qualificationYearnCatalog()
+    const positions = qualificationYearnPositions()
+    if (scenario.product === 'direct') {
+      const vault = catalog.vaults[0]
+      vault.kind = 'direct'
+      vault.name = 'USDC vault'
+      vault.variants = [{ ...vault.variants[0], id: 'direct' }]
+      positions.chains[0].positions[0].variants = [
+        { ...positions.chains[0].positions[0].variants[0], id: 'direct' }
+      ]
+    }
+    if (scenario.product === 'cooldown') {
+      positions.chains[0].positions[0].variants[1].cooldown = {
+        ...positions.chains[0].positions[0].variants[1].cooldown,
+        status: 'cooling-down',
+        sharesRaw: '1000000',
+        shares: '1.0',
+        cooldownEnd: Math.floor(Date.now() / 1000) + 86400,
+        windowEnd: Math.floor(Date.now() / 1000) + 518400
+      }
+    }
+    if (method === 'yearn:getCatalog') return catalog
+    if (method === 'yearn:getPositions') return positions
+    if (method === 'yearn:getWorkflows')
+      return {
+        workflows:
+          scenario.product === 'activity'
+            ? [
+                {
+                  policyVersion: 1,
+                  id: '00000000-0000-4000-8000-000000000001',
+                  account: QUALIFICATION_ACCOUNT,
+                  vaultId: 'ethereum-yvusd',
+                  chainId: 1,
+                  action: 'deposit',
+                  variant: 'unlocked',
+                  amountRaw: '1250000',
+                  displayAmount: '1.25',
+                  symbol: 'USDC',
+                  max: false,
+                  maxLossBps: 0,
+                  status: 'complete',
+                  currentStep: 0,
+                  createdAt: 1787097600000,
+                  updatedAt: 1787097660000,
+                  steps: [
+                    {
+                      id: '00000000-0000-4000-8000-000000000002',
+                      kind: 'deposit',
+                      label: 'Deposit into yvUSD',
+                      target: QUALIFICATION_RECIPIENT,
+                      data: '0x12345678',
+                      amountRaw: '1250000',
+                      status: 'confirmed',
+                      txHash: QUALIFICATION_TX_HASH
+                    }
+                  ]
+                }
+              ]
+            : []
+      }
+  }
+  if (
+    method === 'activity:details' &&
+    ['account-activity-detail', 'account-activity-detail-retained'].includes(scenario.state)
+  ) {
     return {
       success: true,
       partial: false,
@@ -2674,7 +2792,11 @@ const invokeReplyFor = (scenario, method, args = []) => {
       ]
     }
   }
-  if (method === 'activity:details' && scenario.state === 'account-activity-detail') {
+  if (
+    method === 'activity:details' &&
+    scenario.state === 'account-activity' &&
+    args[0] === '11111111-1111-4111-8111-111111111111'
+  ) {
     return {
       success: true,
       partial: false,
@@ -2732,6 +2854,7 @@ const invokeReplyFor = (scenario, method, args = []) => {
       ]
     }
   }
+  if (method === 'activity:details') return { success: false, error: 'evidence-unavailable' }
   if (method === 'tray:revokeAccess') {
     if (scenario.id === 'tray-account-access-revoke-failed-short-1') {
       return {
@@ -2768,17 +2891,20 @@ const invokeReplyFor = (scenario, method, args = []) => {
     }
     return catalog
   }
-  if (['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) && method === 'yearn:getCatalog') {
+  if (
+    ['earn-yvusd', 'earn-extended', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
+    method === 'yearn:getCatalog'
+  ) {
     return qualificationYearnCatalog()
   }
   if (
-    ['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
+    ['earn-yvusd', 'earn-extended', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
     method === 'yearn:getPositions'
   ) {
     return qualificationYearnPositions()
   }
   if (
-    ['earn-yvusd', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
+    ['earn-yvusd', 'earn-extended', 'earn-list', 'earn-privacy'].includes(scenario.state) &&
     method === 'yearn:getWorkflows'
   ) {
     return { workflows: [] }
