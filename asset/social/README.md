@@ -45,5 +45,4 @@ excluded text, logos, crypto imagery, UI panels, and fantasy effects.
   rainy potting shed. The overhead lantern uses a compact radial contact
   shadow beneath Tux, with cool window light as a secondary source.
 
-Intermediate Apple-placement, cleanup, and lighting attempts are review
-artifacts rather than production sources and do not belong in this directory.
+Keep intermediate placement, cleanup, and lighting drafts outside this directory.

@@ -1,7 +1,7 @@
 # Changelog
 
-Detailed release notes and platform boundaries live in
-[`release-notes`](release-notes) and on the
+For release details and platform limits, see
+[`release-notes`](release-notes) and the
 [GitHub releases page](https://github.com/jorphex/wren/releases).
 
 ## Unreleased
@@ -10,29 +10,29 @@ Detailed release notes and platform boundaries live in
 
 ### Changed
 
-- Shortened UI copy and organized settings, onboarding, app access, and technical
-  details around the user's immediate task.
-- Replaced the wallet's separate Receive flow with an inline QR popover and
-  distinguished incomplete portfolio values from complete totals.
+- Shortened UI text. Organized settings, account setup, app access, and
+  technical details around the current task.
+- Made Receive open a QR popover. Marked portfolio totals when prices or
+  balances are incomplete.
 - Separated the Send account and asset fields and clarified review, signer,
   broadcast, and confirmation states.
-- Kept Earn positions and guardrail identity visible, aligned vault metadata,
-  and made active cooldown actions immediately accessible.
+- Kept Earn positions and guardrail connection details visible. Aligned vault
+  details and made cooldown actions easier to reach.
 - Added readable funding summaries with exact values available in the same rows.
 
 ### Fixed
 
-- Corrected setup-field alignment, contact-editor scrolling, network footer
-  clipping, and recipient/copy-control spacing.
-- Standardized transaction action-area height and fixed recovery-message,
-  lifecycle, Sweep review, and Wallet Calls footer placement.
-- Removed stray separators and Earn logo frames; fixed crowded action groups
-  and compact-window fee presentation.
+- Aligned setup fields and spaced recipient details and copy buttons.
+  Fixed scrolling in contact forms and clipping in network action areas.
+- Set a consistent minimum height for transaction action areas. Fixed status
+  and recovery message placement in transaction, Sweep, and Wallet Calls reviews.
+- Removed extra separators and Earn logo rings. Added space between actions
+  and corrected the fee layout in compact windows.
 
 ### Maintenance
 
-- Expanded component and isolated native-renderer checks for full, short, scaled,
-  expanded-detail, and recovery layouts.
+- Expanded component and isolated renderer tests for full, short, and scaled
+  windows, open details, and recovery states.
 
 See [the complete 0.1.8 release notes](release-notes/v0.1.8.md).
 
@@ -135,7 +135,7 @@ See [the complete 0.1.6 release notes](release-notes/v0.1.6.md).
 - Kept Activity transaction references out of renderer state and profile backups;
   clearing Activity removes them with the visible history.
 - Prevented unchanged retained transaction lifecycle evidence, including replacement
-  observations, from recreating rows after Activity is cleared. A genuinely newer
+  observations, from recreating rows after Activity is cleared. A newer
   pending or terminal update may still appear.
 
 ### Distribution
@@ -156,7 +156,7 @@ See [the complete 0.1.5 release notes](release-notes/v0.1.5.md).
   Sepolia, Zora, and recognized legacy OP Stack networks by encoding refreshed L1
   data fees as canonical JSON-RPC quantities.
 - Made initial approval await fresh OP Stack fee evidence and made retained
-  funding failures genuinely recoverable. Recheck refreshes failed gas estimates
+  funding failures recoverable. Recheck refreshes failed gas estimates
   and current network fees before repeating the final fail-closed funding check.
 - Kept FIFO transaction review moving after submission. Queued transactions are
   inspectable but read-only while Wren monitors earlier transactions for
@@ -168,7 +168,8 @@ See [the complete 0.1.5 release notes](release-notes/v0.1.5.md).
 
 ### Distribution
 
-- Added exact-commit, source-attested Intel and Apple Silicon macOS previews.
+- Added Intel and Apple Silicon macOS previews with attestations tied to the
+  exact source commit.
   They are ad-hoc signed, unnotarized, have no Apple publisher identity, and are
   not physically qualified.
 - Kept the Windows x64 installer explicitly unsigned and unqualified while the

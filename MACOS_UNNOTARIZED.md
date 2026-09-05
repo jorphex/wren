@@ -8,8 +8,8 @@ These previews are ad-hoc signed so macOS can validate their executable code
 seals, but they have no Apple Developer ID, Apple Team ID, trusted publisher, or
 notarization ticket. Apple has not checked them for malicious software. macOS
 therefore blocks the first launch until the user explicitly creates an exception.
-Wren does not plan to enroll an Apple publisher identity; this ad-hoc,
-unnotarized boundary is the project's continuing macOS release posture.
+Wren plans to continue using ad-hoc signatures without an Apple publisher
+identity or notarization.
 
 ## Choose and verify the download
 
@@ -25,8 +25,9 @@ grep "  $file$" SHA256SUMS | shasum -a 256 --check
 gh attestation verify "$file" -R jorphex/wren
 ```
 
-Replace the filename with the Intel DMG when applicable. A missing checksum
-entry, checksum mismatch, or failed attestation is a hard stop.
+Replace the filename with the Intel DMG when applicable. Do not install if the
+checksum entry is missing, the checksum differs, or
+attestation verification fails.
 
 ## Install and open
 

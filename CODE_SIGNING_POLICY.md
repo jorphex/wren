@@ -18,15 +18,14 @@ Signed release requests use the separate approval step required by SignPath.
 
 ## Privacy
 
-Wren's network behavior and third-party services are described in
-[Network data and privacy](README.md#network-data-and-privacy). Wren has no
+See [Privacy](README.md#privacy) for network services and shared data. Wren has no
 first-party hosted backend and does not collect telemetry. User-requested RPC,
 pricing, IPFS, protocol-data, and artwork operations can contact the services
 listed there.
 
 ## Current release boundary
 
-The Wren 0.1.7 Windows preview is explicitly unsigned while the SignPath
-Foundation service is being provisioned. Release notes and filenames state the
+The Wren 0.1.8 Windows preview is unsigned. SignPath Foundation setup is still
+in progress. Release notes and filenames state the
 signature status. Wren will not claim a trusted publisher until the protected
 signing workflow is approved and qualified.

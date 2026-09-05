@@ -18,18 +18,18 @@
 > [!NOTE]
 > Wren has not had an independent security audit. Linux x64 is the qualified
 > target. Windows and macOS builds are unqualified previews without trusted
-> publisher identities. Please keep a backup, verify checksums, and start small.
+> publisher identities. Keep a backup, verify checksums, and use a small test account first.
 
-Wren gives browser dapps and native apps one place to request account access,
-review activity, and ask for signatures. Each app keeps its own account permission
-and chain route, so Wren does not depend on a global network switch.
+Browser dapps and native apps use Wren to request account access and signatures.
+You review their requests in the wallet. Each app has its own account permission
+and network route.
 
 ## Highlights
 
 - Clear reviews for transactions, approvals, permits, messages, EIP-712, SIWE,
   EIP-7702 revocation, and sequential EIP-5792 calls.
 - Expected asset changes from configured-RPC simulation, with calldata and trace
-  evidence available when supported. Simulation is helpful context, not a guarantee.
+  evidence available when supported. Simulation does not guarantee the result.
 - Adjustable token allowances, editable fees and nonces, and compact transaction
   progress from submission through confirmation.
 - Encrypted software signers, supported hardware wallets, watch-only accounts,
@@ -45,8 +45,7 @@ See [supported standards](SUPPORTED_EIPS.md),
 Wren 0.1.8 pairs with Wren Companion 0.1.2
 over authenticated protocol 3. Linux x64 is qualified; Windows and macOS remain
 unqualified previews, and Linux arm64 is a CI smoke target only. Read
-[Signer and platform support](HARDWARE_SUPPORT.md) for the full platform and
-account boundary.
+[Signer and platform support](HARDWARE_SUPPORT.md) for tested platforms, signers, and limits.
 
 ## Install
 
@@ -97,8 +96,11 @@ pairing.
 
 ### Import a Frame profile
 
-Wren does not read Frame’s live profile. To make a one-time private copy, close
-both apps, back up `~/.config/frame`, and run this before Wren creates its profile:
+Wren does not read Frame’s live profile. To import a private copy:
+
+1. Close both apps.
+2. Back up `~/.config/frame`.
+3. Run this command before Wren creates its profile:
 
 ```bash
 ./Wren-0.1.8.AppImage --import-frame-profile
@@ -140,14 +142,13 @@ replaceable services:
 | Token artwork | Reviewed CoinGecko host | Recognized artwork requests only                          |
 
 Wren does not contact Pylon or use an NFT indexer. Read the
-[threat model](THREAT_MODEL.md) for the full trust and data boundary. Custom RPC
+[threat model](THREAT_MODEL.md) for data access and trust limits. Custom RPC
 and IPFS endpoints are supported through settings and environment configuration.
 
 ## Security and license
 
 Please report vulnerabilities privately through the
-[security policy](SECURITY.md). Only the newest Wren release is considered for
-security fixes.
+[security policy](SECURITY.md). Only the latest published Wren release receives security fixes.
 
 Wren is a community-maintained continuation of the GPL-licensed
 [Frame wallet](https://github.com/floating/frame), not a Frame Labs release. It is

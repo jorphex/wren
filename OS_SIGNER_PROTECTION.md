@@ -1,9 +1,9 @@
 # OS-backed software-signer device protection
 
 Wren can add an optional operating-system credential layer to software signer
-files on Linux and Windows x64. This is an additional at-rest factor: the
-existing signer password remains required, and Wren does not store that password
-in the operating-system credential store.
+files on Linux and Windows x64. This layer protects stored files. The signer
+password is still required.
+Wren does not store that password in the operating-system credential store.
 
 ## Supported credential stores
 
@@ -60,8 +60,8 @@ exists, Wren cannot recover the device-bound files.
 
 ## Security limits
 
-This feature does not protect against malware or another process running as the
-logged-in user after it can invoke the user's unlocked credential service. In
+This feature cannot stop malware or another process that can use the logged-in
+user’s unlocked credential service. In
 particular, DPAPI helps protect copied or offline profile files from other
 Windows users, but it does not isolate Wren from other applications running as
 the same logged-in user. The outer layer is not hardware custody, passwordless

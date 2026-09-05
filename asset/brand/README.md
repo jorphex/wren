@@ -26,5 +26,4 @@ npm run brand:verify
 The generated runtime copies under `main/windows/` and `build/icons/` must be
 byte-identical to the matching durable exports. macOS template icons are
 intentionally black with transparency so the operating system can apply its
-light or dark tint. Shipping identity artwork is always rendered from the
-vector master.
+light or dark tint. Generate all release artwork from the vector master.

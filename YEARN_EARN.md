@@ -1,8 +1,7 @@
 # Yearn Earn Reference
 
-This reference defines Wren's curated Yearn Earn integration. It is a product
-and transaction boundary, not a general DeFi guide or a guarantee of Yearn
-economics.
+This reference describes Wren’s selected Yearn products, transactions, and
+support limits. Wren does not guarantee returns or contract safety.
 
 ## Navigation
 
@@ -24,10 +23,10 @@ Frame-derived `0.7.0` release did not include it.
 
 Wren sends the same fixed vault-list request to Kong for every user. The
 request does not include account addresses, balances, or transaction details.
-See the [network data and privacy disclosures](README.md#network-data-and-privacy).
+See the [network data and privacy disclosures](README.md#privacy).
 
-The milestone has unit, integration, component, production-bundle, and
-isolated virtual-display Electron coverage. Manual Linux-package evidence
+Automated tests cover units, integrations, components, production bundles,
+and Electron windows in an isolated virtual display. Manual Linux-package evidence
 covers a Base deposit, partial and full withdrawal, and physical Trezor
 signing. This evidence does not qualify contract economics, every
 product/signer combination, or configured-RPC correctness outside those flows.
@@ -68,17 +67,31 @@ them.
 
 ## Data, balances, and availability
 
-- Kong data must match the local catalog, allocator policy, Yearn inclusion and highlight status, chain, vault and asset addresses, and pinned decimals. Wren rechecks asset/vault relationships and decimals on chain before each queued step.
-- Cards label Yearn's forward estimate `Est. APY`. The historical fallback is `Historical APY`. Missing yield is `Unavailable`, never `0%`. APY, TVL, labels, and simulation are third-party or configured-RPC evidence, not guarantees of return, liquidity, execution, or safety.
-- `All` separates Ethereum, Base, and Katana. Failure on one chain cannot erase another chain's products or positions. Deposits require fresh eligible metadata. Cached, retired, hidden, or failed data is withdraw-only when Wren recognizes an existing position.
-- Wren reads positions and underlying balances for the selected account. Watch-only accounts can inspect but cannot transact.
-- Curated assets, shares, and companion shares are hidden scanner defaults. A genuine nonzero ERC-20 balance appears in normal balances and Send without becoming a custom token. Wren fabricates no zero balance. Remote `omit` metadata cannot suppress a locally pinned entry. Cooldown-only yvUSD remains an Earn position, not a transferable token balance.
+- Kong data must match the local catalog, allocator policy, Yearn inclusion
+  and highlight status, chain, vault and asset addresses, and pinned decimals.
+  Wren rechecks asset/vault relationships and decimals on chain before each
+  queued step.
+- Cards label Yearn's forward estimate `Est. APY`. The historical fallback is
+  `Historical APY`. Missing yield is `Unavailable`, never `0%`. APY, TVL,
+  labels, and simulation are third-party or configured-RPC evidence, not
+  guarantees of return, liquidity, execution, or safety.
+- `All` separates Ethereum, Base, and Katana. Failure on one chain cannot
+  erase another chain's products or positions. Deposits require fresh eligible
+  metadata. Cached, retired, hidden, or failed data is withdraw-only when Wren
+  recognizes an existing position.
+- Wren reads positions and underlying balances for the selected account.
+  Watch-only accounts can inspect but cannot transact.
+- Curated assets, shares, and companion shares are hidden scanner defaults. A
+  genuine nonzero ERC-20 balance appears in normal balances and Send without
+  becoming a custom token. Wren fabricates no zero balance. Remote `omit`
+  metadata cannot suppress a locally pinned entry. Cooldown-only yvUSD remains
+  an Earn position, not a transferable token balance.
 
 ## Review layout
 
-Vault lists group TVL, Yearn risk, available assets, and position status. Vault
-headers use the shared plain asset mark. Existing positions stay visible; vault
-technical details can be opened separately.
+Vault lists group TVL, Yearn risk, available assets, and position status.
+Vault headers use token logos without rings. Existing positions stay visible.
+Open technical details separately when needed.
 
 Deposit and withdrawal forms occupy the action area below the scrolling review.
 During an active locked-yvUSD cooldown, that area initially shows Cancel cooldown
@@ -115,21 +128,40 @@ separately reviewed workflow persists across restart.
 New BOLD deposits use the pinned zap and finish staked as ysyBOLD. Existing
 unstaked yBOLD has a separate Stake action. Exits return BOLD through the zap
 with `maxLoss = 0`. Wren has no loss-tolerance or slippage setting and does not
-raise that value. Withdrawals that require realized loss are outside this
-milestone.
+raise that value. Wren does not support withdrawals that require a realized loss.
 
 ## Workflow safety and recovery
 
-- At most 64 bounded workflows persist. Each workflow queues only one step at a time. After a matching receipt, the user must explicitly Resume.
-- Before queuing, Wren re-recognizes the persisted target, chain, receiver or owner, amount, action, approval token, and spender against the current curated vault.
-- Rejected and unsubmitted steps can retry. Submitted transactions are never blindly retried. Receipt monitoring survives restart once a hash is known. If Wren cannot prove whether an awaiting-review request broadcast before restart, it cancels the workflow. Check on chain before replacing it.
-- Cancel and cleanup are blocked while a request awaits review or confirmation. If an exact approval completed but its operation did not, Wren offers one separately reviewed zero-allowance cleanup and prevents parallel resume. An uncertain prior approval requires a read-only allowance check and a separate Revoke again action. Wren never converts it directly into another transaction.
-- Earn labels require allowlist-bound calldata recognition. A mismatch in chain, target, value, receiver or owner, token-spender relation, action, or zero-loss policy falls back to generic contract-call review. Persisted amounts must match the main-process record.
-- Receipts list verified steps, bounded allowlisted ERC-20 `Transfer` inflow or outflow evidence when available, and the correct explorer link. Missing event evidence is not replaced with a renderer amount. Policy-version migrations discard older workflows rather than reinterpreting routes or amounts.
-- Notifications use Wren's generic transaction-hash copy. They do not include balances or Earn amounts.
+- At most 64 bounded workflows persist. Each workflow queues only one step at
+  a time. After a matching receipt, the user must explicitly Resume.
+- Before queueing, Wren checks the saved step against the current curated
+  vault. It checks the target, chain, receiver or owner, amount, action,
+  approval token, and spender.
+- Rejected and unsubmitted steps can retry. Submitted transactions are never
+  blindly retried. Receipt monitoring survives restart once a hash is known.
+  If Wren cannot prove whether an awaiting-review request broadcast before
+  restart, it cancels the workflow. Check on chain before replacing it.
+- Cancel and cleanup are blocked while a request awaits review or
+  confirmation. If an exact approval completed but its operation did not, Wren
+  offers one separately reviewed zero-allowance cleanup and prevents parallel
+  resume. An uncertain prior approval requires a read-only allowance check and
+  a separate Revoke again action. Wren never converts it directly into another
+  transaction.
+- Earn labels require allowlist-bound calldata recognition. A mismatch in
+  chain, target, value, receiver or owner, token-spender relation, action, or
+  zero-loss policy falls back to generic contract-call review. Persisted
+  amounts must match the main-process record.
+- Receipts list verified steps, bounded allowlisted ERC-20 `Transfer` inflow
+  or outflow evidence when available, and the correct explorer link. Missing
+  event evidence is not replaced with a renderer amount. Policy-version
+  migrations discard older workflows rather than reinterpreting routes or
+  amounts.
+- Notifications use Wren's generic transaction-hash copy. They do not include
+  balances or Earn amounts.
 
 ## Qualification boundary
 
-For the exact release boundary and remaining signer limits, see [Linux Release
-Qualification](QUALIFICATION.md). Do not generalize a tested row to an untested
+For the exact release boundary and remaining signer limits, see [release
+qualification checklist](QUALIFICATION.md). Do not generalize a tested row to
+an untested
 product, chain, or signer.

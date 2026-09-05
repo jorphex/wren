@@ -6,8 +6,8 @@ Wren is a desktop EVM wallet and account router. It accepts local HTTP/WebSocket
 and Wren Companion requests, obtains approval, and routes approved work to
 software or hardware signers.
 
-This document describes the implementation. It is not an audit and does not
-claim that every risk is mitigated. The method surface is in
+This document describes the implementation and its limits. It is not an audit
+and does not claim that Wren addresses every risk. The method surface is in
 [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md).
 
@@ -118,45 +118,50 @@ full authentication and revocation boundary.
 
 #### Software signer files
 
-The per-user config and signer files are mode `0600`; the `signers/` directory is
-mode `0700` on POSIX. New seed/key material uses a versioned, authenticated
+The per-user config and signer files are mode `0600`; the `signers/` directory
+is mode `0700` on POSIX. New seed/key material uses a versioned, authenticated
 scrypt-derived AES-256-GCM envelope and is decrypted only in an unlocked child
 process launched without inherited credential or Node-injection environment
 variables. Legacy AES-256-CBC payloads remain readable; after unlock, address
 derivation is checked, the original JSON is retained once as mode-`0600`
-`.legacy-v1.bak`, and the active file is replaced atomically. Backups are ignored
-during scanning. They are removed with the signer or after a later successful
-authenticated-envelope unlock proves the replacement can be read; a failed
-unlock or migration keeps the recovery copy. OS suspend and screen-lock events
-relock every unlocked software signer.
+`.legacy-v1.bak`, and the active file is replaced atomically.
 
-On Linux and Windows x64, users may additionally bind all software-signer files,
-including a retained legacy recovery copy, to the current operating-system
-credential context. This is a versioned outer layer around the existing
-password-encrypted record; it neither stores the signer password nor enables
-passwordless unlock. Linux accepts only Electron's Secret Service
-(`gnome_libsecret`) and KWallet backends and rejects `basic_text` and `unknown`.
-Windows uses Electron `safeStorage` through DPAPI and never queries the Linux-only
-selected-backend API. macOS remains unsupported. Wren rejects an unavailable
-credential store, another identity's undecryptable data, a corrupt policy marker,
-and any mixed protected/unprotected transition. In those states no software
-signer is loaded at startup or after the failure is detected, and new signer
-writes are refused. Each encrypted payload is bound to its filename, migrations
-replace one private file at a time, and a profile marker is committed last when
-enabling and removed last when disabling. An interrupted change must be
-explicitly finished or reversed from Settings after the original credential
-context is available.
+Backups are ignored during scanning. They are removed with the signer or after
+a later successful authenticated-envelope unlock proves the replacement can be
+read; a failed unlock or migration keeps the recovery copy. OS suspend and
+screen-lock events relock every unlocked software signer.
 
-Limits: while retained, legacy backup ciphertext is unauthenticated and protected
-by its old password inside either local storage layer. Device protection does not
-defend a compromised logged-in session, credential store, Wren process, signer
-worker, or host, and loss of the original credential context makes the bound
-local signer files unavailable. DPAPI does not isolate Wren from other processes
-running as the same Windows user. Without the optional OS-backed layer, signer
-encryption remains password-only. The outer layer is at-rest protection, not
-continuous authorization: a signer already loaded into a running Wren process is
-governed by the normal password and process-lock lifecycle. It is never
-hardware-bound.
+On Linux and Windows x64, users may additionally bind all software-signer
+files, including a retained legacy recovery copy, to the current
+operating-system credential context. This is a versioned outer layer around
+the existing password-encrypted record; it neither stores the signer password
+nor enables passwordless unlock. Linux accepts only Electron's Secret Service
+(`gnome_libsecret`) and KWallet backends and rejects `basic_text` and
+`unknown`.
+
+Windows uses Electron `safeStorage` through DPAPI and never queries the
+Linux-only selected-backend API. macOS remains unsupported. Wren rejects an
+unavailable credential store, another identity's undecryptable data, a corrupt
+policy marker, and any mixed protected/unprotected transition. In those states
+no software signer is loaded at startup or after the failure is detected, and
+new signer writes are refused. Each encrypted payload is bound to its
+filename, migrations replace one private file at a time, and a profile marker
+is committed last when enabling and removed last when disabling.
+
+An interrupted change must be explicitly finished or reversed from Settings
+after the original credential context is available.
+
+Limits: while retained, legacy backup ciphertext is unauthenticated and
+protected by its old password inside either local storage layer. Device
+protection does not defend a compromised logged-in session, credential store,
+Wren process, signer worker, or host, and loss of the original credential
+context makes the bound local signer files unavailable. DPAPI does not isolate
+Wren from other processes running as the same Windows user.
+
+Without the optional OS-backed layer, signer encryption remains password-only.
+The outer layer is at-rest protection, not continuous authorization: a signer
+already loaded into a running Wren process is governed by the normal password
+and process-lock lifecycle. It is never hardware-bound.
 
 Live-profile metadata, addresses,
 permissions, and networks are unencrypted; unlocked secrets exist in memory; and
@@ -164,31 +169,39 @@ overwrite-before-delete is not secure erasure on modern filesystems or SSDs.
 
 #### Local metadata
 
-Contacts, notes, addresses, timestamps, and user-attested verification provenance
-are unencrypted relationship metadata. "Verified out of band" records only the
-user's own statement, time, and optional note; it is not a trust score or proof and
-never suppresses the full address, lookalike evidence, simulation, approval, or
-signing warnings. Address-book JSON exports contain this metadata in plaintext.
-Wren offers Save contact explicitly after confirmation. Its separate Recent
-recipients feature is off by default and, when enabled, stores only canonical
-destinations from Wren Send and managed Sweep after successful canonical network
-confirmation. It keeps at most 50 operation uses for one year; the picker projects
-the newest use per address and never treats recency as trust. It never learns from
-generic dapp calls, incoming activity, indexers, chain history, simulation, contacts,
-declines, or failed pre-broadcast work. Pending candidates are bounded and memory-only,
-so restart or cap eviction may conservatively omit a later-successful recipient rather
-than persist an unconfirmed full address. Reorg, replacement, failure, and stop evidence
-remove the affected operation use without erasing an older successful use. Disabling,
-dedicated clearing, and clearing Activity erase stored uses and pending candidates.
-The preference and history are excluded from profile backups and support data.
-The address-safety index is also local unencrypted metadata: it keeps at most 500
-one-year records containing a profile-bound SHA-256 full-address digest, the first
-and last four hexadecimal characters needed for exact-end lookalike comparison,
-and the latest accepted outbound-submission time. A digest is not encryption. The
-index never learns from incoming activity, explorers, RPC history, simulation,
-arbitrary calldata, declines, or failed pre-broadcast work; clearing Activity clears
-the index, and profile backup excludes it. These warnings are evidence for review,
-not an assertion that a destination is safe or malicious.
+Contacts, notes, addresses, timestamps, and user-attested verification
+provenance are unencrypted relationship metadata. "Verified out of band"
+records the user’s statement, time, and optional note. It is not a trust score
+or proof. It never hides the full address, lookalike evidence, simulation,
+approval, or signing warnings. Address-book JSON exports contain this metadata
+in plaintext. Wren offers Save contact explicitly after confirmation.
+
+Recent recipients is off by default. When enabled, it stores canonical
+destinations only from Wren Send and managed Sweep after successful canonical
+network confirmation. It keeps at most 50 operation uses for one year. The
+picker shows the newest use of each address. A recent use does not establish
+trust. It never learns from generic dapp calls, incoming activity, indexers,
+chain history, simulation, contacts, declines, or failed pre-broadcast work.
+
+Pending candidates are bounded and memory-only, so restart or cap eviction may
+conservatively omit a later-successful recipient rather than persist an
+unconfirmed full address. Reorg, replacement, failure, and stop evidence
+remove the affected operation use without erasing an older successful use.
+Disabling, dedicated clearing, and clearing Activity erase stored uses and
+pending candidates. The preference and history are excluded from profile
+backups and support data.
+
+The address-safety index is also local and unencrypted. It keeps at most 500
+records for one year. Each record contains a profile-bound SHA-256 digest of
+the full address and the latest accepted outbound-submission time. It also
+keeps the first and last four hexadecimal characters to compare similar
+addresses. A digest is not encryption. The index never learns from incoming
+activity, explorers, RPC history, simulation, arbitrary calldata, declines, or
+failed pre-broadcast work; clearing Activity clears the index, and profile
+backup excludes it.
+
+These warnings are evidence for review, not an assertion that a destination is
+safe or malicious.
 
 Per-dapp guardrails are also unencrypted relationship and policy metadata: exact
 account, invoker principal, chain, allowlists, ceilings, mode, expiry, timestamps, and
@@ -199,30 +212,35 @@ policies. Guardrails do not contain request calldata or typed data.
 
 #### Profile backups
 
-User-created `.wren-backup` files are size-bounded, scrypt-derived AES-256-GCM
-envelopes over an explicit recovery allowlist. They include configuration, validated
-contacts and their provenance, and validated encrypted software-signer records, but
-exclude activity, address-safety memory, pending work, runtime observations, caches,
-installed dapp content, and Companion credentials;
-hardware devices keep their keys. Export writes a new mode-`0600` regular file.
-When OS-backed device protection is enabled, export first verifies the
-all-or-nothing local policy and removes only that outer layer in main memory; the
-backup contains the original password-encrypted signer record and never contains
-the device marker or device-bound ciphertext. Export fails if the source
-credential context cannot open every record. Restored signer files intentionally
-start password-only on the destination so recovery never depends on the source
-device; users may explicitly enable the destination layer afterward.
-Restore keeps the chosen path in main, binds a short-lived single-use token to its
-identity, bytes, and inspected metadata, then requires an explicit replace action.
-The replacement runs before application bootstrap using an atomic swap, receipt,
-and rollback; a target is not committed unless it revalidates. The backup password
-is user-managed, not keychain-bound, and restoring intentionally requires Companion
-re-pairing. Names and user-attested provenance are informational, never an
-authorization or destination source; review keeps the full address and they do not
-alter calldata, recipients, signing, simulation, or broadcast. Trusted labels and
-verification notes reject Unicode control/format characters; migration removes only
-invalid legacy entries. Prefer hardware signers
-and independent backups. Encryption migrations must stay versioned,
+User-created `.wrenbackup` files are size-bounded, scrypt-derived AES-256-GCM
+envelopes over an explicit recovery allowlist. They include configuration,
+validated contacts and their provenance, and validated encrypted
+software-signer records, but exclude activity, address-safety memory, pending
+work, runtime observations, caches, installed dapp content, and Companion
+credentials; hardware devices keep their keys. Export writes a new mode-`0600`
+regular file. When OS-backed device protection is enabled, export first
+verifies the all-or-nothing local policy and removes only that outer layer in
+main memory; the backup contains the original password-encrypted signer record
+and never contains the device marker or device-bound ciphertext.
+
+Export fails if the source credential context cannot open every record.
+Restored signer files intentionally start password-only on the destination so
+recovery never depends on the source device; users may explicitly enable the
+destination layer afterward. Restore keeps the chosen path in main, binds a
+short-lived single-use token to its identity, bytes, and inspected metadata,
+then requires an explicit replace action.
+
+The replacement runs before application bootstrap using an atomic swap,
+receipt, and rollback; a target is not committed unless it revalidates. The
+backup password is user-managed, not keychain-bound, and restoring
+intentionally requires Companion re-pairing. Names and user-attested
+provenance are informational, never an authorization or destination source;
+review keeps the full address and they do not alter calldata, recipients,
+signing, simulation, or broadcast.
+
+Trusted labels and verification notes reject Unicode control/format
+characters; migration removes only invalid legacy entries. Prefer hardware
+signers and independent backups. Encryption migrations must stay versioned,
 address-verified, atomic, tested with non-real data, and recoverable without
 weakening encryption.
 
@@ -248,20 +266,24 @@ denied for Wren renderers and embedded dapps.
 
 The preload accepts only bounded serialized envelopes from its own window, an
 expected packaged/development origin, and protocol label. Only registered IPC
-channels are accepted; request IDs and argument counts are bounded; malformed or
-oversized messages stop before Electron IPC. Typed request/response schemas and
-inventory tests require agreement among renderer callsites, handlers, and
-schemas. A main-owned role map independently authorizes the sender: each surface
-receives only its enumerated RPC, IPC, and store actions, and profile recovery is
-dashboard-only; missing, unknown, or duplicate roles fail closed. Remote dapp
-WebContentsViews lack the bridge. The inspector invoke is dashboard-only, bounds both
-input and projected output, and maps a small JSON-RPC allowlist to inert subjects; it
-never forwards the pasted method. Inspector component state is not copied into the
-store, activity, backup, support data, request queue, or signer path. Handler payload
-validation exists, but handler semantics and authorization remain privileged
-main-process work. Compromised tray/dash and broad renderer network/image policy
-remain high-impact; embedded dapps depend on partitioning, session checks, and
-request filtering.
+channels are accepted; request IDs and argument counts are bounded; malformed
+or oversized messages stop before Electron IPC. Typed request/response schemas
+and inventory tests require agreement among renderer callsites, handlers, and
+schemas. A main-owned role map independently authorizes the sender: each
+surface receives only its enumerated RPC, IPC, and store actions, and profile
+recovery is dashboard-only; missing, unknown, or duplicate roles fail closed.
+
+Remote dapp WebContentsViews lack the bridge. The inspector invoke is
+dashboard-only, bounds both input and projected output, and maps a small
+JSON-RPC allowlist to inert subjects; it never forwards the pasted method.
+Inspector component state is not copied into the store, activity, backup,
+support data, request queue, or signer path. Handlers validate payloads. The
+main process remains responsible for what each handler does and who can use
+it.
+
+A compromised wallet panel or dashboard can still cause serious harm. Broad
+renderer network and image permissions also carry risk. Embedded dapps depend
+on partitioning, session checks, and request filtering.
 
 The prepared-deployment invoke is dashboard-only. The main process validates and
 binds a short-lived one-use inspection to the exact current signer-capable account,
@@ -283,16 +305,19 @@ The main process selects and owns the configured RPC connection.
 
 #### RPC and execution evidence
 
-RPCs, explorers, IPFS, ABI/pricing/update/signer-vendor services can fail or lie.
-RPC-supplied execution checks, effects, balances, traces, allowances, code,
-delegation, quotes, simulation, and receipts are not independently verified.
-Native-balance evidence is bounded, omits code/storage and possibly gas, and
-needs Geth-compatible tracing. Internal-call evidence is accepted only when the
-root matches reviewed sender/destination/value/calldata; depth, frames, children,
-input size, and error text are bounded and raw input/return data stays out of the
-renderer. No code does not prove EOA; code does not prove an interface. Decoding
-and traces explain, not prove, behavior. Verify chain, recipient, value,
-calldata, and device display whenever possible.
+RPCs, explorers, IPFS, ABI/pricing/update/signer-vendor services can fail or
+lie. RPC-supplied execution checks, effects, balances, traces, allowances,
+code, delegation, quotes, simulation, and receipts are not independently
+verified. Native-balance evidence is bounded, omits code/storage and possibly
+gas, and needs Geth-compatible tracing. Internal-call evidence is accepted
+only when the root matches reviewed sender/destination/value/calldata; depth,
+frames, children, input size, and error text are bounded and raw input/return
+data stays out of the renderer.
+
+An empty code response does not prove that an account is an EOA. A nonempty
+response does not prove an interface. Decoding and traces help explain
+behavior but cannot prove it. Verify chain, recipient, value, calldata, and
+device display whenever possible.
 
 The read-only inspector reuses this configured-RPC simulation machinery without
 entering provider admission or any signer/broadcast path. Its bundled standard ABI can
@@ -304,21 +329,24 @@ signer, or chain context stays visibly unestablished rather than being inferred 
 selected wallet account or an EIP-712 domain.
 
 Before transaction signing, the main process asks the configured chain RPC for
-the account's pending native balance and compares it with the reviewed value plus
-the maximum execution fee; Optimism-family requests also require the available
-L1 data-fee estimate. Sequential Wallet Calls repeat the same check over every
-prepared transaction, aggregate value and fees exactly once, verify the pending
-nonce, and statefully simulate the exact prepared batch before Wren returns its
-public batch ID or invokes any signer. Missing or malformed quantities and
-account-code evidence fail closed. A shortfall keeps the original transient dapp
-responder and review alive, exposes exact available/required/missing quantities,
-and requires explicit Recheck; Reject closes the responder and failed batch.
-Recovery payloads are never persisted, so restart cannot restore or sign them;
-startup marks the corresponding unsigned, zero-transaction admission failed rather
-than leaving a phantom pending batch.
-These checks prevent a known-unfunded signing attempt but do not reserve funds or
-eliminate races with other pending transactions, RPC disagreement, reorgs, or
-fees changing after the check.
+the account's pending native balance and compares it with the reviewed value
+plus the maximum execution fee; Optimism-family requests also require the
+available L1 data-fee estimate. Sequential Wallet Calls repeat the same check
+over every prepared transaction, aggregate value and fees exactly once, verify
+the pending nonce, and statefully simulate the exact prepared batch before
+Wren returns its public batch ID or invokes any signer.
+
+Missing or malformed quantities and account-code evidence fail closed. A
+shortfall keeps the original transient dapp responder and review alive,
+exposes exact available/required/missing quantities, and requires explicit
+Recheck; Reject closes the responder and failed batch. Recovery payloads are
+never persisted, so restart cannot restore or sign them; startup marks the
+corresponding unsigned, zero-transaction admission failed rather than leaving
+a phantom pending batch.
+
+These checks prevent a known-unfunded signing attempt but do not reserve funds
+or eliminate races with other pending transactions, RPC disagreement, reorgs,
+or fees changing after the check.
 
 Dashboard native Max and Sweep add no remote quote or execution service. Native Max
 keeps a bounded opaque quote only in main-process memory. The quote binds the exact
@@ -328,73 +356,89 @@ signer handoff recompute that evidence and reject any drift without changing the
 reviewed amount. Because EIP-1559 reserves the maximum fee while the network may charge
 less, Max can leave dust and is not presented as a guaranteed zero balance.
 
-Sweep reads pending balances only for explicitly selected ERC-20 contracts, rejects
-duplicates, and caps the complete token-first/native-last sequence at 16 calls. It
-converges the fixed native value against exact prepared calls, aggregate worst-case
-execution and L1 data fees, pending nonce, and stateful simulation before admission.
-It then enters the ordinary Wallet Call review and signer pipeline. Every remaining
-call is checked again before signing; changed authorization, balances, nonce, fees,
-code, simulation, or funding stops the unsent suffix. Earlier broadcasts cannot be
-rolled back, so the UI states the non-atomic ordering and partial-completion risk.
-Persisted lifecycle evidence contains bounded hashes, receipts, and counts, never the
-asset selection or calldata; restart reconciles submitted evidence but never resumes
-or rebroadcasts unsent calls.
+Sweep reads pending balances only for explicitly selected ERC-20 contracts,
+rejects duplicates, and caps the complete token-first/native-last sequence at
+16 calls. It converges the fixed native value against exact prepared calls,
+aggregate worst-case execution and L1 data fees, pending nonce, and stateful
+simulation before admission. It then enters the ordinary Wallet Call review
+and signer pipeline. Every remaining call is checked again before signing;
+changed authorization, balances, nonce, fees, code, simulation, or funding
+stops the unsent suffix.
+
+Earlier broadcasts cannot be rolled back, so the UI states the non-atomic
+ordering and partial-completion risk. Persisted lifecycle evidence contains
+bounded hashes, receipts, and counts, never the asset selection or calldata;
+restart reconciles submitted evidence but never resumes or rebroadcasts unsent
+calls.
 
 #### Per-dapp guardrails
 
-Guardrails are a local restriction layered below the finite dapp permission. They
-never grant access, suppress normal review, rewrite a request, auto-sign, or represent
-a session key. Main validates exact account, origin principal, enabled permission
-chain, and source credential before authoring a policy. Policies are evaluated when a
-transaction, signature, permit, or non-atomic Wallet Call batch enters review, when a
-queued policy changes, and synchronously immediately before each signer invocation.
-That final boundary also requires the exact current permission, method, chain, origin
-provenance, and Companion/native source credential. Block or revoked-authorization
-failures return `4100`; warning violations require a new explicit approval bound to a
-fingerprint of principal, policy, normalized intent, and violations.
+Guardrails are a local restriction layered below the finite dapp permission.
+They never grant access, suppress normal review, rewrite a request, auto-sign,
+or represent a session key. Main validates exact account, origin principal,
+enabled permission chain, and source credential before authoring a policy.
+Policies are evaluated when a transaction, signature, permit, or non-atomic
+Wallet Call batch enters review, when a queued policy changes, and
+synchronously immediately before each signer invocation.
+
+That final boundary also requires the exact current permission, method, chain,
+origin provenance, and Companion/native source credential. Block or
+revoked-authorization failures return `4100`; warning violations require a new
+explicit approval bound to a fingerprint of principal, policy, normalized
+intent, and violations.
 
 Intent extraction is local and bounded. Top-level destinations and typed-data
-verifying contracts are targets; recognized ERC-20 transfers, EIP-2612, Permit2, and
-ERC-3009 contribute token amounts; recognized approvals contribute spenders; Wallet
-Calls aggregate all calls. Wren does not fetch remote ABI evidence to widen a policy.
-Opaque or ambiguous fields violate only configured restrictions that depend on those
-fields. Enforcement is fail-closed but cannot prove contract semantics, prevent a
-malicious allowed contract from moving additional assets, or reserve onchain state.
-The policy can change between user review and signing, so Wren rechecks at the signer
-boundary and stops remaining sequential calls on drift. A user-initiated Cancel is
-exempt so a dapp policy cannot trap transaction recovery; Speed Up remains constrained.
+verifying contracts are targets; recognized ERC-20 transfers, EIP-2612,
+Permit2, and ERC-3009 contribute token amounts; recognized approvals
+contribute spenders; Wallet Calls aggregate all calls. Wren does not fetch
+remote ABI evidence to widen a policy. Opaque or ambiguous fields violate only
+configured restrictions that depend on those fields. Enforcement is
+fail-closed but cannot prove contract semantics, prevent a malicious allowed
+contract from moving additional assets, or reserve onchain state.
+
+The policy can change between user review and signing, so Wren rechecks at the
+signer boundary and stops remaining sequential calls on drift. A
+user-initiated Cancel is exempt so a dapp policy cannot trap transaction
+recovery; Speed Up remains constrained.
 
 #### Remote services and content
 
-Wren has no first-party backend. Built-in networks use visibly named PublicNode;
-it can observe IP and routed account/contract reads, simulation/traces, calldata,
-and broadcasts. A custom/local RPC replaces it per network. Migration 53 retires
-Pylon for PublicNode; old Pylon URLs are inert history, and the release gate
-rejects active Pylon, Nebula-hosted IPFS, Frame CDN, and Frame runtime packages.
-DefiLlama sees native-asset and tracked-token IDs for supported mainnets, not the
-selected account, though timing/token sets can fingerprint; failures keep old
-values. There is no NFT account indexer. Default IPFS.io sees IP and CID; users
-may choose HTTPS gateway or separately-tokened self-hosted Kubo. Paths, response
-sizes, and stream duration are bounded. Only CoinGecko artwork is remote; other
-artwork uses a local fallback. Send is pinned to a reviewed CID and complete
-UnixFS directory, not mutable ENS; bundled token inventory can become stale.
-External links are allowlisted except configured explorers, whose final OS launch
-still permits only credential-free HTTP(S).
+Wren has no first-party backend. Built-in networks use visibly named
+PublicNode; it can observe IP and routed account/contract reads,
+simulation/traces, calldata, and broadcasts. A custom/local RPC replaces it
+per network. Migration 53 retires Pylon for PublicNode; old Pylon URLs are
+inert history, and the release gate rejects active Pylon, Nebula-hosted IPFS,
+Frame CDN, and Frame runtime packages. DefiLlama sees native-asset and
+tracked-token IDs for supported mainnets, not the selected account, though
+timing/token sets can fingerprint; failures keep old values.
+
+There is no NFT account indexer. Default IPFS.io sees IP and CID; users may
+choose HTTPS gateway or separately-tokened self-hosted Kubo. Paths, response
+sizes, and stream duration are bounded. Only CoinGecko artwork is remote;
+other artwork uses a local fallback. Send is pinned to a reviewed CID and
+complete UnixFS directory, not mutable ENS; bundled token inventory can become
+stale.
+
+External links are allowlisted except configured explorers, whose final OS
+launch still permits only credential-free HTTP(S).
 
 Contract verification deliberately publishes user-selected source and compiler
-metadata to Sourcify after an explicit permanent-public acknowledgement. Sourcify
-and any explorer it forwards to can observe the source, contract address, chain,
-IP address, and timing, and published source cannot be withdrawn by Wren. Direct
-Etherscan V2 fallback is manual and supported-chain only; the user API key is
-stored in a dedicated OS-protected credential file, excluded from profile backup,
-and sent only to Etherscan's fixed HTTPS API. Because the documented API requires
-authentication parameters in the request URL, Wren must not log, persist, expose,
-or include that URL in renderer state or errors. Direct submission also requires
-explicit ABI-encoded constructor arguments, or confirmation that the contract has
-none; Wren does not guess them. Source bundles remain bounded
-main-process memory and are never placed in Activity, ordinary state, backup, or
-logs. Persisted jobs contain hashes, public target evidence, bounded remote IDs,
-and fixed destination states only. A restart before remote acceptance requires
+metadata to Sourcify after an explicit permanent-public acknowledgement.
+Sourcify and any explorer it forwards to can observe the source, contract
+address, chain, IP address, and timing, and published source cannot be
+withdrawn by Wren. Direct Etherscan V2 fallback is manual and supported-chain
+only; the user API key is stored in a dedicated OS-protected credential file,
+excluded from profile backup, and sent only to Etherscan's fixed HTTPS API.
+
+Because the documented API requires authentication parameters in the request
+URL, Wren must not log, persist, expose, or include that URL in renderer state
+or errors. Direct submission also requires explicit ABI-encoded constructor
+arguments, or confirmation that the contract has none; Wren does not guess
+them. Source bundles remain bounded main-process memory and are never placed
+in Activity, ordinary state, backup, or logs.
+
+Persisted jobs contain hashes, public target evidence, bounded remote IDs, and
+fixed destination states only. A restart before remote acceptance requires
 source reselection; an accepted job resumes status checks and is never blindly
 resubmitted.
 
@@ -422,36 +466,41 @@ Wren never treats the button or a mempool observation as proof of cancellation.
 
 Earn promotes only its versioned local `(chainId, vaultAddress)` catalog. Kong
 cannot add targets; Wren pins assets and decimals, while Kong supplies display
-metadata and eligibility. Only fresh eligible metadata enables a deposit; cached
-or failed data can show positions/exits, never new deposit. The local catalog
-also supplies a hidden balance scanner: only nonzero configured-RPC `balanceOf`
-enters known tokens; zero removes it, and remote omit metadata cannot suppress it.
+metadata and eligibility. Only fresh eligible metadata enables a deposit;
+cached or failed data can show positions/exits, never new deposit. The local
+catalog also supplies a hidden balance scanner: only nonzero configured-RPC
+`balanceOf` enters known tokens; zero removes it, and remote omit metadata
+cannot suppress it.
+
 Cooldown state can be Earn-only. Transactions are limited to documented
 [`YEARN_EARN.md`](YEARN_EARN.md) allowlisted vault, companion, and first-party
-periphery contracts. The main process rebuilds calldata, verifies relationships
-and decimals, re-recognizes persisted steps, ignores renderer-provided target,
-metadata, calldata, and labels, and uses exact approvals (resetting mismatched
-ones). Contracts/strategies can still be buggy, governed, upgraded, malicious,
-or lose funds; Wren makes no safety or yield guarantee. Wren ships no hosted crash
-client: uncaught main errors stay local and are not sent to upstream Sentry.
+periphery contracts. The main process rebuilds calldata, verifies
+relationships and decimals, re-recognizes persisted steps, ignores
+renderer-provided target, metadata, calldata, and labels, and uses exact
+approvals (resetting mismatched ones). Contracts/strategies can still be
+buggy, governed, upgraded, malicious, or lose funds; Wren makes no safety or
+yield guarantee.
+
+Wren ships no hosted crash client: uncaught main errors stay local and are not
+sent to upstream Sentry.
 
 ### Builds and updates
 
 #### Supply-chain boundaries
 
-Dependencies are locked and install scripts allowlisted; CI actions are pinned.
-Release evidence includes checksums, an SBOM, a reviewed draft workflow, and
-GitHub provenance. The Windows preview is explicitly unsigned. macOS previews
-use ad-hoc code seals without a publisher identity or notarization. These controls
-do not create publisher trust.
-Two-build evidence covers identical Linux application payloads, native modules,
-SBOM, and deb bytes, but not AppImage container bytes. Companion archives are
-separately source-bound/deterministic with checksums, compatibility metadata, and
-a production SBOM.
-The updater uses package metadata's repository and needs user action to
-download/install. Release credentials, GitHub administration, CI, npm packages,
-and maintainer workstations are supply-chain boundaries; see
-[`RELEASE.md`](RELEASE.md).
+Dependencies are locked and install scripts allowlisted; CI actions are
+pinned. Release evidence includes checksums, an SBOM, a reviewed draft
+workflow, and GitHub provenance. The Windows preview is explicitly unsigned.
+macOS previews use ad-hoc code seals without a publisher identity or
+notarization. These controls do not create publisher trust. Two-build evidence
+covers identical Linux application payloads, native modules, SBOM, and deb
+bytes, but not AppImage container bytes.
+
+Companion archives are separately source-bound/deterministic with checksums,
+compatibility metadata, and a production SBOM. The updater uses package
+metadata's repository and needs user action to download/install. Release
+credentials, GitHub administration, CI, npm packages, and maintainer
+workstations are supply-chain boundaries; see [`RELEASE.md`](RELEASE.md).
 
 ## Invariants for new work
 

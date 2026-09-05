@@ -1,8 +1,8 @@
 # Linux, Windows, and macOS release procedure
 
-Use this how-to to prepare, verify, review, and publish Linux x64 packages, an
-unsigned Windows x64 preview, and ad-hoc-signed unnotarized macOS x64/arm64
-previews. It does not replace the
+Use this procedure to prepare and publish Linux x64 packages and Windows
+x64 and macOS x64/arm64 previews. Windows previews are unsigned. macOS previews
+are ad-hoc signed and unnotarized. This procedure does not replace the
 [qualification checklist](QUALIFICATION.md), the
 [Windows preview checklist](WINDOWS_RELEASE_QUALIFICATION.md), or the
 [macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md). See the
@@ -128,30 +128,36 @@ blocks release. Retain the report with private release evidence.
 
 Push `v<package version>` on that commit, or manually dispatch **Build a draft
 Linux, Windows, and macOS release**. The requested tag must exactly match the
-package version. Shared quality, Linux packaging, native Windows packaging, and
-both native macOS packaging jobs must pass for the same workflow SHA. The final
-job downloads only those staged files, compares all four platform SBOMs, creates
-and verifies one SHA-256 manifest, and attaches seven files to a draft: AppImage,
-deb, unsigned Windows installer, two unnotarized macOS DMGs, SBOM, and
-`SHA256SUMS`. Every public package receives build and SBOM attestations. The
-workflow rejects a tag pointing elsewhere and refuses to modify an existing
-release.
+package version. Shared quality, Linux packaging, native Windows packaging,
+and both native macOS packaging jobs must pass for the same workflow SHA. The
+final job downloads only those staged files, compares all four platform SBOMs,
+creates and verifies one SHA-256 manifest, and attaches seven files to a
+draft: AppImage, deb, unsigned Windows installer, two unnotarized macOS DMGs,
+SBOM, and `SHA256SUMS`.
 
-Before publishing, confirm the intended commit and passing jobs; verify the
-applicable entries in `SHA256SUMS` on separate Linux and Windows systems; inspect
-attestations, SBOM, filenames, application version, and notes; and test both Linux packages,
-single-instance/port-conflict behavior, tray/dash, provider startup, updater,
-and explicit import from a backed-up disposable Frame profile. Complete the
-applicable signer and paired Chrome/Firefox Companion regression in
-[`QUALIFICATION.md`](QUALIFICATION.md): archive checksums and compatibility,
-initial-code comparison, reconnect, reset, revocation, origin isolation, and
-EIP-6963 discovery. Complete the Windows preview checklist on the exact staged
-installer. Apply the [macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md)
-to each architecture with available physical evidence. An architecture without
-that evidence may remain a public preview only when release notes say it was not
-physically installed or qualified. Keep the unsigned Windows state, unnotarized
-macOS state, unsupported macOS device protection, and all unqualified
-platforms/signers clear in the notes.
+Every public package receives build and SBOM attestations. The workflow
+rejects a tag pointing elsewhere and refuses to modify an existing release.
+
+Before publishing:
+
+1. Confirm the intended commit and passing jobs.
+2. Verify the applicable `SHA256SUMS` entries on separate Linux and Windows systems.
+3. Check attestations, SBOM, filenames, application version, and notes.
+4. Test both Linux packages. Check single-instance behavior, port conflicts,
+   tray/dashboard, provider startup, and updater behavior. Test explicit import
+   from a backed-up disposable Frame profile.
+5. Complete the applicable signer and paired Chrome/Firefox Companion checks in
+   [`QUALIFICATION.md`](QUALIFICATION.md). Include archive checksums, compatibility,
+   initial-code comparison, reconnect, reset, revocation, origin isolation, and
+   EIP-6963 discovery.
+6. Complete the Windows preview checklist on the exact staged installer.
+7. Apply the [macOS unnotarized checklist](MACOS_UNNOTARIZED_QUALIFICATION.md)
+   to each architecture with available physical evidence.
+
+An architecture without physical evidence may remain a public preview only
+when its release notes state that it was not physically installed or qualified.
+Keep the unsigned Windows state, unnotarized macOS state, unsupported macOS
+device protection, and all unqualified platforms and signers clear in the notes.
 
 ## 5. Publish or reject
 

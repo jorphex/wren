@@ -1,8 +1,8 @@
 # RPC Compatibility Reference
 
-This reference defines Wren's local JSON-RPC and EIP-1193 provider boundary. It
-is for application developers that connect to Wren. It is not a tutorial and it
-does not describe the separate [browser companion](https://github.com/jorphex/wren-companion).
+This reference describes Wren’s local JSON-RPC and EIP-1193 provider for app
+developers. The [browser companion](https://github.com/jorphex/wren-companion)
+is documented separately.
 
 ## Navigation
 
@@ -34,16 +34,106 @@ the selected chain.
 
 ## Wallet-owned methods
 
-| Area         | Methods                                                                                                      | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Accounts     | `eth_accounts`, `eth_requestAccounts`, `eth_coinbase`                                                        | `eth_accounts` and `eth_coinbase` do not prompt. Before permission they return `[]` and `null`. `eth_requestAccounts` requests access. After permission, all expose only the selected Wren account. Watch-only accounts can read but cannot sign.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Permissions  | `wallet_getPermissions`, `wallet_requestPermissions`                                                         | EIP-2255 `eth_accounts` with a Wren-issued finite caveat that binds the selected account, permitted wallet methods, enabled-chain snapshot, invoker identity, and 30-day expiry. A bounded `requiredMethods` hint checks signer compatibility before prompting. It does not widen the persisted grant. Users may separately configure local account/invoker/chain guardrails; these never widen the EIP-2255 grant and are not disclosed as a dapp capability.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Transactions | `eth_sendTransaction`                                                                                        | Normalizes, decodes, checks, simulates, reviews, signs, and broadcasts legacy, type-1, and type-2 transactions. Immediately before invoking a signer, Wren checks the configured RPC's pending native balance against value plus the reviewed worst-case execution fee and any available Optimism L1 data fee. A shortfall retains the original request with exact evidence, funding-address copy/QR actions, and an explicit fee/balance/simulation recheck. Dashboard native Max is an internal convenience, not an RPC extension: its opaque one-use quote binds the account, chain, recipient, pending nonce/balance, gas and Optimism fee evidence, expires after 60 seconds, and must match again at queue and signer handoff. Wallet-initiated Speed Up and Cancel create another normal review, never mutate the saved gas preference, and fail closed if the original receipt/nonce or minimum replacement fee changed. Type 3+, EIP-7702 authorization lists, and unknown fields are rejected.                                                                                                                                                                                                                                                                |
-| Signing      | `personal_sign`, `eth_sign`, `personal_ecRecover`, `eth_signTypedData`, `eth_signTypedData_v1`, `_v3`, `_v4` | Normalizes standard and legacy `personal_sign`, reviews UTF-8 or opaque bytes, recognizes SIWE, and requires explicit consent for dangerous `eth_sign`. Typed data is strictly validated and reviewed. Similarly named unsupported methods fail closed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Chains       | `wallet_addEthereumChain`, `wallet_switchEthereumChain`, `wallet_getEthereumChains`                          | Adds a chain after metadata validation and confirmation. A known origin can switch its own route to a known enabled chain without approval or account exposure; untouched requests on the old route are cancelled. Unknown origins return `4100`, unknown chains return `4902`, and disabled chains return `4901`. The non-standard getter returns enabled Wren chains.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Assets       | `wallet_watchAsset`, `wallet_getAssets`                                                                      | Supports legacy ERC-20 and bounded ERC-1046 ERC-20 suggestions. Parameterized `wallet_getAssets` implements the ERC-7811 Draft response for selected-account native/ERC-20 assets, including explicit-asset, asset-type, and chain filters; all results are restricted to the invoker's granted chains. The historical no-parameter response is preserved. The passive getter does not prompt and returns `4100` before permission. Wren does not index NFTs or arbitrary asset types. ERC-1046 accepts inline JSON and IPFS metadata only and never fetches HTTP(S) metadata or images.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Wallet calls | `wallet_sendCalls`, `wallet_getCallsStatus`, `wallet_showCallsStatus`, `wallet_getCapabilities`              | Supports EIP-5792 `2.0.0` non-atomic sequential calls only. Before returning a batch ID or invoking any signer, Wren repeats configured-RPC nonce, account-code/stateful-simulation, pending-balance, worst-case execution-fee, and Optimism L1 data-fee checks. A funding shortfall keeps the transient authorized review open with aggregate available/required/missing evidence and explicit Reject/Recheck actions; it never signs, broadcasts, funds, bridges, sponsors, or auto-retries. Dashboard Sweep uses the same lifecycle through a narrowly validated managed Wren Send origin; it does not create a dapp permission or change the public EIP-5792 capability. Only explicitly selected positive ERC-20 balances are transferred, followed by an optional fixed native maximum. Every remaining call is rechecked before signing and no unsent suffix is retried. Status is persisted and scoped to origin/account, but payload and recovery evidence are not. If restart loses an unsigned transient review, its empty admission becomes failed instead of remaining resumable. `atomic.status` is `"unsupported"`. Signed or submitted prefixes resume evidence-only receipt and finality checks after restart and are never automatically rebroadcast. |
-| Identity     | `eth_chainId`, `net_version`, `web3_clientVersion`                                                           | Return Wren's target-chain and client identity. Wren does not blindly forward these values.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Area         | Methods                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| Accounts     | `eth_accounts`, `eth_requestAccounts`, `eth_coinbase`                                                        |
+| Permissions  | `wallet_getPermissions`, `wallet_requestPermissions`                                                         |
+| Transactions | `eth_sendTransaction`                                                                                        |
+| Signing      | `personal_sign`, `eth_sign`, `personal_ecRecover`, `eth_signTypedData`, `eth_signTypedData_v1`, `_v3`, `_v4` |
+| Chains       | `wallet_addEthereumChain`, `wallet_switchEthereumChain`, `wallet_getEthereumChains`                          |
+| Assets       | `wallet_watchAsset`, `wallet_getAssets`                                                                      |
+| Wallet calls | `wallet_sendCalls`, `wallet_getCallsStatus`, `wallet_showCallsStatus`, `wallet_getCapabilities`              |
+| Identity     | `eth_chainId`, `net_version`, `web3_clientVersion`                                                           |
+
+### Accounts
+
+`eth_accounts` and `eth_coinbase` do not prompt. Before permission they return
+`[]` and `null`. `eth_requestAccounts` requests access. After permission, all
+expose only the selected Wren account. Watch-only accounts can read but cannot
+sign.
+
+### Permissions
+
+EIP-2255 `eth_accounts` with a Wren-issued finite caveat that binds the
+selected account, permitted wallet methods, enabled-chain snapshot, invoker
+identity, and 30-day expiry. A bounded `requiredMethods` hint checks signer
+compatibility before prompting. It does not widen the persisted grant. Users
+may separately configure local account/invoker/chain guardrails; these never
+widen the EIP-2255 grant and are not disclosed as a dapp capability.
+
+### Transactions
+
+Normalizes, decodes, checks, simulates, reviews, signs, and broadcasts legacy,
+type-1, and type-2 transactions. Immediately before invoking a signer, Wren
+checks the configured RPC's pending native balance against value plus the
+reviewed worst-case execution fee and any available Optimism L1 data fee. A
+shortfall retains the original request with exact evidence, funding-address
+copy/QR actions, and an explicit fee/balance/simulation recheck. Dashboard
+native Max is not an RPC extension.
+
+Its opaque quote can be used once and expires after 60 seconds. The quote
+binds the account, chain, recipient, pending nonce and balance, gas, and
+Optimism fee evidence. Wren checks it again before queueing and signing. Speed
+Up and Cancel open a new review and keep the saved gas preference unchanged.
+Wren rejects them if the original receipt, nonce, or minimum replacement fee
+has changed.
+
+Type 3+, EIP-7702 authorization lists, and unknown fields are rejected.
+
+### Signing
+
+Normalizes standard and legacy `personal_sign`, reviews UTF-8 or opaque bytes,
+recognizes SIWE, and requires explicit consent for dangerous `eth_sign`. Typed
+data is strictly validated and reviewed. Similarly named unsupported methods
+fail closed.
+
+### Chains
+
+Adds a chain after metadata validation and confirmation. A known origin can
+switch its own route to a known enabled chain without approval or account
+exposure; untouched requests on the old route are cancelled. Unknown origins
+return `4100`, unknown chains return `4902`, and disabled chains return
+`4901`. The non-standard getter returns enabled Wren chains.
+
+### Assets
+
+Supports legacy ERC-20 and bounded ERC-1046 ERC-20 suggestions. Parameterized
+`wallet_getAssets` implements the ERC-7811 Draft response for selected-account
+native/ERC-20 assets, including explicit-asset, asset-type, and chain filters;
+all results are restricted to the invoker's granted chains. The historical
+no-parameter response is preserved. The passive getter does not prompt and
+returns `4100` before permission. Wren does not index NFTs or arbitrary asset
+types. ERC-1046 accepts inline JSON and IPFS metadata only and never fetches
+HTTP(S) metadata or images.
+
+### Wallet calls
+
+Supports EIP-5792 `2.0.0` non-atomic sequential calls only. Before returning a
+batch ID or invoking any signer, Wren repeats configured-RPC nonce,
+account-code/stateful-simulation, pending-balance, worst-case execution-fee,
+and Optimism L1 data-fee checks. A funding shortfall keeps the transient
+authorized review open with aggregate available/required/missing evidence and
+explicit Reject/Recheck actions; it never signs, broadcasts, funds, bridges,
+sponsors, or auto-retries. Dashboard Sweep uses the same lifecycle through a
+narrowly validated managed Wren Send origin; it does not create a dapp
+permission or change the public EIP-5792 capability.
+
+Only explicitly selected positive ERC-20 balances are transferred, followed by
+an optional fixed native maximum. Every remaining call is rechecked before
+signing and no unsent suffix is retried. Status is persisted and scoped to
+origin/account, but payload and recovery evidence are not. If restart loses an
+unsigned transient review, its empty admission becomes failed instead of
+remaining resumable. `atomic.status` is `"unsupported"`.
+
+Signed or submitted prefixes resume evidence-only receipt and finality checks
+after restart and are never automatically rebroadcast.
+
+### Identity
+
+Return Wren's target-chain and client identity. Wren does not blindly forward
+these values.
+
+### Shared permission checks
 
 Account, signing, transaction, chain-mutation, asset, and wallet-call methods
 require an active capability that covers the exact invoker, selected account,
@@ -51,15 +141,20 @@ method, and routed chain. Passive account, asset, and capability probes do not
 open UI. Without permission, they return empty results or `4100`.
 
 Optional guardrails are enforced at admission, when queued review resumes, and
-immediately before every signer invocation. Block mode returns `4100`; warn mode adds
-a fingerprint-bound acknowledgement to the ordinary review. Opaque calldata or
-signing context fails closed only for configured restrictions that require the
-missing field. Wallet Calls use aggregate native/token intent and recheck before each
-sequential signature. The final signer boundary also revalidates the exact current
-permission, method, chain, origin provenance, and Companion/native credential.
-User-initiated Cancel remains available as a recovery action; Speed Up retains the
-original dapp intent. Raw signed-transaction submission remains unsupported and cannot
-bypass this boundary.
+immediately before every signer invocation. Block mode returns `4100`; warn
+mode adds a fingerprint-bound acknowledgement to the ordinary review. Opaque
+calldata or signing context fails closed only for configured restrictions that
+require the missing field. Wallet Calls use aggregate native/token intent and
+recheck before each sequential signature. The final signer boundary also
+revalidates the exact current permission, method, chain, origin provenance,
+and Companion/native credential.
+
+User-initiated Cancel remains available as a recovery action; Speed Up retains
+the original dapp intent. These signer checks apply to requests that Wren
+signs. For already signed transactions, see [Forwarded
+methods](#forwarded-methods).
+
+### Dashboard tools
 
 The Control Center's read-only inspector is not a provider route or dapp capability.
 Its dashboard-only IPC accepts bounded unsigned transaction JSON, calldata with
@@ -71,31 +166,37 @@ through Wren's current configured-RPC review path only when sender and chain con
 are sufficient. Missing context remains explicit, and inspected payloads are neither
 queued nor persisted.
 
-The Control Center's prepared deployment tool is also dashboard-only and is not a
-provider method or dapp capability. It accepts at most 49,152 bytes of complete,
-even-length hexadecimal EVM deployment data (initcode), including any encoded constructor data,
-plus an exact decimal native value. Preparation uses only the selected configured RPC
-for gas estimation, simulation, and pending-nonce lookup. Evidence is short-lived and
-one-use; it is bound to the exact account, chain, creation-data hash and length, and
-value. Queueing creates a no-destination `eth_sendTransaction` under Wren's distinct
-managed Deploy principal, then uses the ordinary native review, permission recheck,
-signer, single-attempt broadcast, and reconciliation lifecycle. The provisional
-CREATE address can change when the pending nonce changes. The tool does not compile,
-decode constructor arguments, verify source/compiler/bytecode, or guarantee safety or
-deployment.
+The Control Center's prepared deployment tool is also dashboard-only and is
+not a provider method or dapp capability. It accepts at most 49,152 bytes of
+complete, even-length hexadecimal EVM deployment data (initcode), including
+any encoded constructor data, plus an exact decimal native value. Preparation
+uses only the selected configured RPC for gas estimation, simulation, and
+pending-nonce lookup. Evidence is short-lived and one-use; it is bound to the
+exact account, chain, creation-data hash and length, and value.
 
-Contract source verification is also a dashboard-only Wren tool, not a JSON-RPC
-provider method or dapp capability. It accepts bounded Solidity/Vyper standard
-JSON, checksum-validated Vyper `solc_json`, full Foundry/Hardhat 2 build info, or
-paired Hardhat 3 build-info/output files through a main-process file chooser.
-Build-info runtime output is matched locally; standard JSON and Vyper `solc_json`
-have no compiler output and are matched by Sourcify only after explicit consent
-to permanent public publication. The target is revalidated through the
-configured RPC and bound to chain, address, runtime-code hash, and confirmed Wren
-deployment evidence when present. Source publication does not sign, broadcast,
-or change transaction success. Sourcify and explorer calls are fixed external
-HTTPS services, not forwarded through the selected RPC. Direct Etherscan fallback
-requires explicit encoded constructor arguments or confirmation that there are none.
+Queueing creates a no-destination `eth_sendTransaction` under Wren's distinct
+managed Deploy principal, then uses the ordinary native review, permission
+recheck, signer, single-attempt broadcast, and reconciliation lifecycle. The
+provisional CREATE address can change when the pending nonce changes. The tool
+does not compile, decode constructor arguments, verify
+source/compiler/bytecode, or guarantee safety or deployment.
+
+Contract source verification is also a dashboard-only Wren tool, not a
+JSON-RPC provider method or dapp capability. It accepts bounded Solidity/Vyper
+standard JSON, checksum-validated Vyper `solc_json`, full Foundry/Hardhat 2
+build info, or paired Hardhat 3 build-info/output files through a main-process
+file chooser. Build-info runtime output is matched locally; standard JSON and
+Vyper `solc_json` have no compiler output and are matched by Sourcify only
+after explicit consent to permanent public publication.
+
+The target is revalidated through the configured RPC and bound to chain,
+address, runtime-code hash, and confirmed Wren deployment evidence when
+present. Source publication does not sign, broadcast, or change transaction
+success. Sourcify and explorer calls are fixed external HTTPS services, not
+forwarded through the selected RPC. Direct Etherscan fallback requires
+explicit encoded constructor arguments or confirmation that there are none.
+
+### Consent and legacy requests
 
 Only `wallet_requestPermissions` and legacy `eth_requestAccounts` can open
 account-access consent. A grant is replaced through fresh consent after expiry
@@ -127,10 +228,16 @@ not imply Wren wallet support.
 
 ## Routing and errors
 
-- A top-level `chainId` must be a canonical hexadecimal quantity and must route to an enabled Wren chain. If it is omitted, Wren uses the requesting origin's assigned chain.
-- An unknown or disconnected chain returns `4901`. An unauthorized wallet method returns `4100`. User rejection returns `4001`.
-- An unsupported capability or type returns `4200` or the method-specific EIP-5792 error. Invalid JSON-RPC or parameters return `-32600`, `-32601`, or `-32602`. Internal failures return `-32603`.
-- After transport disconnect, the JavaScript EIP-1193 wrapper rejects pending and future requests with `4900` and normalizes errors to `ProviderRpcError`.
+- A top-level `chainId` must be a canonical hexadecimal quantity and must
+  route to an enabled Wren chain. If it is omitted, Wren uses the requesting
+  origin's assigned chain.
+- An unknown or disconnected chain returns `4901`. An unauthorized wallet
+  method returns `4100`. User rejection returns `4001`.
+- An unsupported capability or type returns `4200` or the method-specific
+  EIP-5792 error. Invalid JSON-RPC or parameters return `-32600`, `-32601`, or
+  `-32602`. Internal failures return `-32603`.
+- After transport disconnect, the JavaScript EIP-1193 wrapper rejects pending
+  and future requests with `4900` and normalizes errors to `ProviderRpcError`.
 
 ## Events and subscriptions
 
@@ -152,14 +259,37 @@ The poll token is not process authentication.
 ## Transport and origin boundaries
 
 - JSON-RPC requests are limited to 1 MiB.
-- HTTP accepts only `POST` and `OPTIONS`. It bounds headers, body time, connections, request rate, subscriptions, events, and poll state. CORS allows any origin. Overflow closes affected subscriptions.
-- WebSocket bounds payloads, clients, message rate, subscriptions, and buffered deliveries. Per-message compression is disabled.
-- Originless native protocol-v3 clients use signed P-256 challenge/ack handshakes. HTTP requests bind a short-lived session, nonce, expiry, path, and body hash. WebSocket authentication is additionally bound to the exact socket, and every message is signed. New keys require six-digit comparison. Settings can revoke their source-bound grants and active work.
-- HTTP(S), WS(S), and extension origins keep scheme, host, and non-default port. Existing host-only browser grants are not assigned an invented scheme. Browser dapps need a new full-URI approval.
-- Direct browser-compatible clients and authenticated Companion installations have separate permission identities even when they claim the same web origin. Different Companion credentials are separate as well.
-- Originless, opaque, malformed, schemeless, and reserved-origin root clients receive `4100`. They must pair through native protocol 3. They cannot create a permission identity or open access UI.
-- A same-user malicious process can assert browser-like direct-origin metadata. Direct-client permission remains consent and capability scope, not process authentication. It cannot consume a grant issued through an authenticated Companion credential.
-- Companion protocol v3 mutually authenticates Wren and the control/page key bundle with signed, role-bound, expiring transcripts. New keys require six-digit comparison. Browser/runtime identity fields are transport evidence only and are not stored as durable identity. Legacy v3 hellos must match the current extension origin. Page sessions cannot pair. Rotation keeps old trust until the new connection proves adoption. Revocation removes source-bound grants, requests, subscriptions, and transports. Protocol-v2 clients must upgrade and cannot downgrade.
+- HTTP accepts only `POST` and `OPTIONS`. It bounds headers, body time,
+  connections, request rate, subscriptions, events, and poll state. CORS
+  allows any origin. Overflow closes affected subscriptions.
+- WebSocket bounds payloads, clients, message rate, subscriptions, and
+  buffered deliveries. Per-message compression is disabled.
+- Originless native protocol-v3 clients use signed P-256 challenge/ack
+  handshakes. HTTP requests bind a short-lived session, nonce, expiry, path,
+  and body hash. WebSocket authentication is additionally bound to the exact
+  socket, and every message is signed. New keys require six-digit comparison.
+  Settings can revoke their source-bound grants and active work.
+- HTTP(S), WS(S), and extension origins keep scheme, host, and non-default
+  port. Existing host-only browser grants are not assigned an invented scheme.
+  Browser dapps need a new full-URI approval.
+- Direct browser-compatible clients and authenticated Companion installations
+  have separate permission identities even when they claim the same web
+  origin. Different Companion credentials are separate as well.
+- Originless, opaque, malformed, schemeless, and reserved-origin root clients
+  receive `4100`. They must pair through native protocol 3. They cannot create
+  a permission identity or open access UI.
+- A same-user malicious process can assert browser-like direct-origin
+  metadata. Direct-client permission remains consent and capability scope, not
+  process authentication. It cannot consume a grant issued through an
+  authenticated Companion credential.
+- Companion protocol v3 mutually authenticates Wren and the control/page key
+  bundle with signed, role-bound, expiring transcripts. New keys require
+  six-digit comparison. Browser/runtime identity fields are transport evidence
+  only and are not stored as durable identity. Legacy v3 hellos must match the
+  current extension origin. Page sessions cannot pair. Rotation keeps old
+  trust until the new connection proves adoption. Revocation removes
+  source-bound grants, requests, subscriptions, and transports. Protocol-v2
+  clients must upgrade and cannot downgrade.
 
 The [browser companion](https://github.com/jorphex/wren-companion) is a separate
 project with its own compatibility artifact. Browser-wide injection and EIP-6963

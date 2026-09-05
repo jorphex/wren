@@ -2,12 +2,13 @@
 
 ## Purpose and status
 
-Wren implements only execution paths that it can review, sign, submit, and
-reconcile without dropping protocol data or trusting arbitrary execution code.
+Wren supports execution only when it can review, sign, submit, and track the
+result. It must preserve protocol data and reject untrusted execution code.
 The features below remain deliberately limited until Wren selects their product
 and trust boundaries.
 
-**Planning status:** These are fail-closed reference boundaries, not active tasks.
+**Planning status:** This reference records why Wren rejects these requests.
+The unsupported features below are not active tasks.
 Generic delegation creation, atomic batches without an account-owned executor,
 and wallet-authored blob transactions are not planned under the current product
 model. Revisit them only after their named trust and deployment choices exist.
@@ -122,13 +123,13 @@ Support requires all of the following as one coherent path:
 - authoritative codec/KZG vectors, malformed-sidecar tests, node compatibility,
   review coverage, and end-to-end submission/reconciliation evidence.
 
-Ethers can represent type-3 bodies, but Wren has no KZG dependency or sidecar
-trust boundary. Body parsing alone would drop required evidence. Body parsing
-alone is not support.
+Ethers can represent type-3 bodies. Wren has no KZG dependency or sidecar
+validation policy. Parsing the body alone would omit required evidence and
+does not provide type-3 support.
 
 ## Finish condition
 
-A status changes only when the selected product/deployment decisions exist and
-Wren owns the complete fail-closed lifecycle with automated evidence. Until
-then, the current rejection paths and conservative support claims are the
-implemented safety contract.
+Change a support status only after the product and deployment choices are
+defined. The complete execution path must pass automated checks, including
+failure handling. Until then, keep the current rejection behavior and support
+limits.

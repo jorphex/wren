@@ -10,7 +10,7 @@ Only the latest release published by
 fixes. Wren has not had an independent security audit. Wren does not inherit
 Frame Labs support guarantees.
 
-For implementation boundaries and limitations, see
+For implementation details and limits, see
 [`THREAT_MODEL.md`](THREAT_MODEL.md). See [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md)
 for physical-device claims. See [`SUPPORTED_EIPS.md`](SUPPORTED_EIPS.md) and
 [`RPC_COMPATIBILITY.md`](RPC_COMPATIBILITY.md) for the standards and local-provider
@@ -45,6 +45,6 @@ asset.
 
 ## What to expect after a report
 
-Wren is maintained by volunteers. No response-time guarantee is offered. When
+Volunteers maintain Wren. They cannot guarantee a response time. When
 practical, maintainers will acknowledge a private report, reproduce it, agree
 on a disclosure plan, and publish a fix and advisory before public discussion.

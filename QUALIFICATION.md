@@ -1,7 +1,9 @@
 # Desktop and Companion release qualification checklist
 
-This is the manual gate for a paired Wren desktop and Wren Companion candidate.
-It supplements automated tests and is not an audit. Use disposable accounts and Ethereum
+Use this checklist to qualify a paired Wren desktop and Companion candidate.
+These manual checks supplement automated tests. They are not a security audit.
+
+Use disposable accounts and Ethereum
 Sepolia (`0xaa36a7`) or Base Sepolia (`0x14a34`) unless testing Earn, which uses
 minimal live-fund flows. Never publish seeds, keys, PINs, passphrases, pairing
 responses, full addresses, signatures, transaction hashes, device IDs, or profile
@@ -41,7 +43,8 @@ The isolated desktop `npm run test:e2e` suite covers permission denial/revocatio
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
 The native smoke matrix builds real unsigned Linux arm64 and Windows x64 packages
-plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares packaged runtime evidence
+plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares
+packaged runtime evidence
 from the unpacked application and each extracted archive. These jobs verify source
 identity, runtime architecture, resources, native modules, and existing runtime
 invariants. macOS additionally requires valid ad-hoc code seals, no Apple
@@ -49,10 +52,10 @@ authority or Team ID, and Gatekeeper rejection. Retained smoke artifacts are not
 installer, GUI, hardware, or platform-qualification evidence. The separate draft
 workflow repeats the Windows and macOS package checks, verifies their exact
 signature states, and stages the clearly named previews.
-`npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display
-and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
-delegation entry, revocation review, ambiguous monitoring, safe focus,
-reachability, text, and targets.
+`npm run qualify:ui` loads production renderer bundles in an isolated Xvfb display.
+It checks full, short, and capped-width windows at 100%, 125%, and 150%.
+Checks cover delegation entry, revocation review, and uncertain monitoring states.
+They also cover focus, reachable controls, text, and pointer targets.
 For the 0.1.8 UI changes, also verify the following in the disposable profile:
 
 - Receive opens on hover/focus or click, displays the correct full account address,
@@ -71,15 +74,17 @@ Record full and short-window evidence and the tested interface scales. Native
 renderer checks establish layout and synthetic interaction behavior, not live
 signing or physical-device qualification.
 
-Panel-contained permission dialogs cannot inert or dim the joined dashboard because
-the dashboard is a separate WebContents. Their `aria-modal`, focus containment, and
-background inerting guarantees apply to the wallet panel only; the joined dashboard
-intentionally remains visually unchanged. In joined-window qualification, verify
-that the dialog stays inside the panel and retains panel focus, and do not treat the
-unchanged dashboard as part of the modal surface or operate it until the dialog is
-closed. A cross-window modal veil is outside the current release claim.
+Permission dialogs can disable and dim only the wallet panel. The joined
+dashboard uses a separate WebContents and stays visually unchanged.
+The dialogs’ `aria-modal` and focus containment apply only to the wallet panel.
+
+When testing joined windows, check that the dialog stays inside the panel
+and keeps focus there. Do not use the dashboard until the dialog is closed.
+Wren does not provide a modal overlay across both windows.
+
 Companion's `npm run qualify:browser` uses disposable temporary builds and profiles
-to exercise exact protocol 3 mutual authentication, EIP-6963, provider requests, and top/frame origin isolation
+to exercise exact protocol 3 mutual authentication, EIP-6963, provider
+requests, and top/frame origin isolation
 in real Chrome and Firefox. These automated checks do not replace the candidate-
 archive and active-desktop checks below.
 
@@ -130,11 +135,11 @@ archive and active-desktop checks below.
    Companion repository, open `http://127.0.0.1:8765/` (a local page that stores
    nothing and makes no network request itself), and require EIP-6963
    discovery as Wren / `io.github.jorphex.wren` even if another provider owns
-   `window.ethereum`. For each browser: compare/approve the initial six-digit
-   code; reject then approve one account; verify account/chain events once in all
-   tabs; ensure request results/signing payloads stay tab-local; verify restart
-   reconnect; revoke, re-pair, and reset; and ensure rejected/malformed requests
-   leave no spinner, stale approval, or reconnect loop.
+   `window.ethereum`. In each browser, compare and approve the initial six-digit code. Reject, then
+   approve, one account. Check that account and chain events occur once in all
+   tabs. Request results and signing payloads must stay in their source tab.
+   Check reconnect after restart, revocation, re-pairing, and reset. Rejected or
+   malformed requests must leave no spinner, stale approval, or reconnect loop.
    `npm run qualify:browser` uses an isolated desktop mock and does not satisfy
    the revoke check: record the real Wren permission-row removal and one
    `accountsChanged` event with an empty account list in every affected tab.
@@ -292,12 +297,16 @@ minimum funds, independently verified Ethereum/Base/Katana RPC chain IDs, and
 independently verify each displayed product/route and on-chain `asset()` before
 continuing. Stop on a mismatch.
 
-Check that no selected account yields three chain sections/eight products with no
-active transaction control; watch-only positions precede opportunities and cannot
-transact; individual disconnected chains fail locally and open settings; stale
-Kong data preserves visibility/exits but disables deposits and never shows missing
-APY as zero; malformed Kong data, altered decimals, or mismatched `asset()`/
-`decimals()` fail closed before the account queue.
+Check these states:
+
+- With no account selected, Earn shows three chain sections and eight products.
+  Transaction controls are inactive.
+- Watch-only positions appear before opportunities and cannot transact.
+- A disconnected chain affects only its own section and offers a settings action.
+- Stale Kong data keeps products and exits visible but disables deposits.
+  Missing APY must not appear as zero.
+- Malformed Kong data, altered decimals, or mismatched `asset()` or `decimals()`
+  must block the request before it enters the account queue.
 
 For each transaction, compare chain, account, target, asset, amount/share meaning,
 exact approval, receiver/owner, zero native value, simulation, and device display.
@@ -380,11 +389,11 @@ archives passed pairing, access, tab isolation, events, restart, revocation,
 reset, and re-pairing. Disposable private-key/seed signers passed wrong-password,
 personal/EIP-712 rejection and approval, Base Sepolia zero-value self-transfer
 (`0x1`, 21,000 gas, self-recipient, empty calldata), restart/relock/removal, and
-fixture scanning. Safe 7 `2.12.0` had prior full pairing/address/personal/
-clear-EIP-712 evidence and at `3963a014` passed address verification, two Base
-Sepolia funding transfers, and USB recovery; Model One `1.13.1` passed address,
-personal, hash-only EIP-712, and USB checks, while Base Sepolia failed closed
-because its signed network coin type was 1 vs Ethereum derivation 60. Eight
+fixture scanning. Safe 7 `2.12.0` had prior pairing, address, personal-signing, and clear-EIP-712
+evidence. At `3963a014`, it passed address verification, two Base Sepolia funding
+transfers, and USB recovery. Model One `1.13.1` passed address, personal-signing,
+hash-only EIP-712, and USB checks. It rejected Base Sepolia because the signed
+network coin type was 1 while Ethereum derivation used 60. Eight
 Yearn products, watch-only gating, and allowlisted review were observed; the
 earlier packaged Base yvUSDC-H deposit/partial-withdraw/Max-redeem physical Trezor
 evidence remains in [`YEARN_EARN.md`](YEARN_EARN.md), not evidence for all flows.

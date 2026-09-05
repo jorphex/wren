@@ -4,13 +4,12 @@
 
 Wren does not currently support selectable smart accounts, ERC-4337 execution,
 or ERC-6492 counterfactual signatures. These standards do not define one generic
-account implementation or signature format. Those paths therefore remain
-fail-closed until Wren selects and pins the product choices below.
+account implementation or signature format. Wren rejects these requests until
+it selects and pins the choices below.
 
 **Planning status:** Wren does not plan these paths under its current backend-free
-product model. The requirements below preserve an honest re-entry boundary if
-user demand and a privacy-compatible coordination/bundler strategy materially
-change.
+product model. Reconsider support only if user demand changes and a bundler strategy can meet
+Wren’s privacy requirements. The requirements below define that future work.
 
 ## Implemented verification foundation
 
@@ -66,12 +65,14 @@ Counterfactual validation depends on the selected account adapter. It requires
 an exact factory/prepare payload, deterministic sender derivation, allowlisted
 factory and implementation code hashes, and a pinned universal-validator
 deployment/code hash on each supported chain. Factory/prepare and ERC-1271
-verification must execute atomically through that rollback-capable validator in
-one `eth_call`, never as separate state reads or a broadcast transaction. Wren
-must check the ERC-6492 suffix first, then ERC-1271 when code exists; if a wrapped
-signature fails for an already deployed account, it must simulate the supplied
-prepare call and retry ERC-1271. EOA recovery is last and is attempted only when
-the signer has no contract code.
+verification must execute atomically through that rollback-capable validator
+in one `eth_call`, never as separate state reads or a broadcast transaction.
+Wren must check the ERC-6492 suffix first, then ERC-1271 when code exists; if
+a wrapped signature fails for an already deployed account, it must simulate
+the supplied prepare call and retry ERC-1271.
+
+EOA recovery is last and is attempted only when the signer has no contract
+code.
 
 ## Finish condition
 

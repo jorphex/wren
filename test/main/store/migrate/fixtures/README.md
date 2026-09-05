@@ -28,8 +28,11 @@ The test validates these fixtures individually:
 - `v41-current-state.json` — historical boundary name; it does not claim that
   version 41 is current.
 - `v52-pylon-network-state.json` — provider preset migration.
-- `v68-release-boundary-state.json` — the published Wren 0.1.2 schema boundary, including its legacy Ethereum label and internal-origin records.
-- `v69-safe-current-state.json` — previous safe profile coverage with contact provenance, dapp guardrails, opt-in recent recipients, and metadata-minimized Companion credentials.
+- `v68-release-boundary-state.json` — the published Wren 0.1.2 schema
+  boundary, including its legacy Ethereum label and internal-origin records.
+- `v69-safe-current-state.json` — previous safe profile coverage with contact
+  provenance, dapp guardrails, opt-in recent recipients, and
+  metadata-minimized Companion credentials.
 
 The test loads each fixture through the application state initializer from a
 temporary mode-`0600` persistence envelope. It verifies migration, reload
@@ -51,5 +54,6 @@ not add real credentials or secret-shaped data. Add assertions to
 `test/main/store/migrate/persistedState.test.js` when the migration has a
 specific invariant to preserve.
 
-Review the fixture diff and run the focused test. A passing validator is a
-guardrail, not a substitute for reviewing the fixture's migration assertions.
+Review the fixture diff and run the focused test. Also review the fixture’s
+migration assertions. Passing validation alone is
+not enough.

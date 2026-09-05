@@ -57,7 +57,7 @@ a password-encrypted Wren profile backup. In **Settings → Software signers**:
 7. enable DPAPI protection again, quit, and use that fully protected profile for
    the remaining checks.
 
-With Wren closed, inspect only structural predicates. The marker must report
+Close Wren. Check only the record format, version, and backend fields. The marker must report
 `wren-os-signer-protection`, version `1`, and backend `windows_dpapi`; every active
 or retained legacy signer record must report wrapper format
 `wren-os-protected-signer`, version `1`. Record counts and pass/fail only. Do not
@@ -84,8 +84,7 @@ qualification and requires investigation before any release claim.
 
 ## 4. Confirm tamper and interrupted-migration recovery
 
-Work from private copies of the disposable profile and backup. Never mutate the
-only recovery copy.
+Work from private copies of the disposable profile and backup. Never change the only recovery copy.
 
 For tamper denial, flip one byte in the decoded ciphertext of one wrapper, encode
 it again, and leave valid JSON. On restart, Wren must report the protected profile

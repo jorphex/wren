@@ -53,8 +53,9 @@ rmdir "$mountpoint"
 
 The signature details must report `Signature=adhoc`,
 `Identifier=io.github.jorphex.wren`, `TeamIdentifier=not set`, and no `Authority`
-line. Gatekeeper assessment must reject the app. An accepted assessment, Developer
-ID identity, Team ID, or unexpected notarization state blocks this preview posture.
+line. Gatekeeper assessment must reject the app. Stop qualification if
+Gatekeeper accepts the app or its signature reports a
+Developer ID, Team ID, or unexpected notarization state.
 
 ## 3. Exercise installation and runtime
 

@@ -1,7 +1,6 @@
 # Wren assets
 
-This directory contains durable artwork used by Wren. It is a production
-library, not a design-review archive.
+This directory contains artwork used by Wren. Keep review drafts elsewhere.
 
 - `brand/` contains the deterministic identity master, generated exports, the
   brand sheet, and approved concept provenance.
@@ -21,5 +20,5 @@ dimensions, app-tile geometry, monochrome polarity, platform copies, social
 crop safety, and stale asset paths. Do not edit generated delivery files
 directly.
 
-Historical review screenshots stay in Git history. Their decisions are
-recorded in `DESIGN.md`; rendered UI becomes obsolete as the product changes.
+Historical review screenshots stay in Git history. Local design notes may
+provide context, but the current application is the reference for its UI.
