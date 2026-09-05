@@ -99,7 +99,11 @@ const renderSettings = (mutate = (value) => value) => {
   return render(<TestSettings />)
 }
 
-const setting = (name) => screen.getByText(name).closest('.localSetting')
+const setting = (name) => {
+  const element = screen.getByText(name).closest('.localSetting')
+  if (element.closest('[hidden]')) fireEvent.click(screen.getByRole('button', { name: 'Privacy' }))
+  return element
+}
 
 it('groups settings into a short, semantic ledger', () => {
   renderSettings()
@@ -107,12 +111,6 @@ it('groups settings into a short, semantic ledger', () => {
   expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
     'Desktop behavior',
     'Accounts and signing',
-    'Privacy',
-    'Browser companions',
-    'Local connections',
-    'Contract verification',
-    'Recovery',
-    'Software signers',
     'About'
   ])
   expect(screen.getByRole('region', { name: 'Desktop behavior' }).contains(setting('Wallet shortcut'))).toBe(
@@ -123,18 +121,20 @@ it('groups settings into a short, semantic ledger', () => {
   ).toBe(true)
   expect(
     within(setting('Wallet activity notifications')).getByText(
-      'Show private updates while Wren is hidden. They never include app, account, network, amounts, addresses, call data, transaction hashes, or delegation details.'
+      'Show activity alerts while Wren is hidden. Wallet details stay private.'
     )
   ).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Privacy' }))
   expect(
     within(setting('Recent recipients')).getByText(
-      'Store canonical destinations from Wren Send and managed Sweep only after successful network confirmation. Stored only on this device; never from incoming activity, indexers, chain history, or dapp calls. Recent recipients are not included in backups.'
+      'Remember recipients from successful sends on this device. Excluded from backups.'
     )
   ).toBeTruthy()
 })
 
 it('enables recent recipients without backfilling history', () => {
   renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Privacy' }))
 
   fireEvent.click(
     within(setting('Recent recipients')).getByRole('switch', { name: 'Save recent recipients' })
@@ -243,6 +243,7 @@ it('keeps Clear available while enabled so memory-only pending recipients can be
     value.main.recentRecipientUses = []
     return value
   })
+  fireEvent.click(screen.getByRole('button', { name: 'Privacy' }))
 
   expect(within(setting('Clear recent recipients')).getByRole('button', { name: 'Clear' }).disabled).toBe(
     false
@@ -251,6 +252,7 @@ it('keeps Clear available while enabled so memory-only pending recipients can be
 
 it('shows native credentials as local apps using only their connection IDs', () => {
   renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
   const section = screen.getByRole('region', { name: 'Local connections' })
   expect(within(section).getByText('Local app')).toBeTruthy()
   expect(within(section).getByText('Connection ID nnnnnnnn…nnnnnn')).toBeTruthy()
@@ -379,6 +381,7 @@ it('debounces a whitespace-free custom Lattice relay value', () => {
 
 it('requires confirmation before revoking a companion pairing', () => {
   renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
 
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(link.rpc).not.toHaveBeenCalled()
@@ -398,6 +401,7 @@ it('requires confirmation before revoking a companion pairing', () => {
 
 it('cancels companion revocation and restores focus to its trigger', async () => {
   const { user } = renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
   const revoke = screen.getByRole('button', { name: 'Revoke' })
 
   revoke.focus()
@@ -415,6 +419,7 @@ it('cancels companion revocation and restores focus to its trigger', async () =>
 
 it('guards companion revocation while pending and recovers in place after failure', () => {
   renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
   fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
   const confirm = screen.getByRole('button', { name: 'Revoke pairing' })
 
@@ -467,7 +472,9 @@ it('orders the wallet shortcut label, edit action, and enable toggle', () => {
 
 it('uses shared controls for companion revocation', () => {
   renderSettings()
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
 
+  fireEvent.click(screen.getByRole('button', { name: 'Connections' }))
   const revoke = screen.getByRole('button', { name: 'Revoke' })
   expect(revoke.classList.contains('wrenControl')).toBe(true)
   expect(revoke.classList.contains('wrenControlGhost')).toBe(true)

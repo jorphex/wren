@@ -60,7 +60,7 @@ export class ControlNavigation extends React.Component {
             <button
               type='button'
               aria-current={current ? 'page' : undefined}
-              aria-label={`${item.title} ${item.description}`}
+              aria-label={item.title}
               className={`dashModule wrenControl ${current ? 'dashModuleCurrent' : 'wrenControlGhost'}`}
               key={item.view || item.title}
               onClick={() => this.openDestination(item.view)}

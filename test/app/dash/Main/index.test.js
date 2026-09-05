@@ -128,12 +128,12 @@ it('routes support, tutorial, and quit actions', () => {
   renderMain()
 
   fireEvent.click(screen.getByRole('button', { name: 'Report an issue' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Tutorial' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add account' }))
   fireEvent.click(screen.getByRole('button', { name: 'Quit Wren' }))
 
   expect(link.send.mock.calls).toEqual([
     ['tray:openExternal', WREN_SUPPORT_URL],
-    ['tray:action', 'setOnboard', { showing: true }],
+    ['tray:action', 'navDash', { view: 'accounts', data: { showAddAccounts: true } }],
     ['tray:quit']
   ])
 })

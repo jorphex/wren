@@ -75,6 +75,7 @@ test('renders directly editable network and RPC fields', () => {
   expect(screen.getByRole('heading', { name: 'Edit Leetnet' })).toBeTruthy()
   expect(screen.getByLabelText('Network name').value).toBe('Leetnet')
   expect(screen.getByLabelText('Chain ID').readOnly).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
   expect(screen.getByLabelText('RPC URL 1').value).toBe('https://rpc.example')
   expect(screen.getByLabelText('RPC URL 2').value).toBe('https://fallback.example')
   expect(screen.getByText('Connected · 84 ms')).toBeTruthy()
@@ -86,6 +87,7 @@ test('renders directly editable network and RPC fields', () => {
 
 test('commits a valid primary RPC when focus leaves the input', () => {
   render(<Chain view='expanded' {...chain} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
   const rpc = screen.getByLabelText('RPC URL 1')
 
   fireEvent.change(rpc, { target: { value: ' https://new-rpc.example ' } })
@@ -108,6 +110,7 @@ test('does not enable a disabled endpoint when its URL changes', () => {
     )
   }
   render(<Chain view='expanded' {...chain} connection={disabledConnection} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
   const rpc = screen.getByLabelText('RPC URL 2')
 
   fireEvent.change(rpc, { target: { value: 'https://quiet.example' } })
@@ -128,6 +131,7 @@ test('does not enable a disabled endpoint when its URL changes', () => {
 
 test('applies endpoint availability, ordering, and removal directly', async () => {
   const { user } = render(<Chain view='expanded' {...chain} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
 
   await user.click(screen.getByRole('switch', { name: 'Disable RPC endpoint 2' }))
   expect(link.send).toHaveBeenCalledWith('tray:action', 'toggleEndpoint', 'ethereum', 1337, 'rpc-2', false)
@@ -138,6 +142,7 @@ test('applies endpoint availability, ordering, and removal directly', async () =
 
 test('removes a fallback endpoint without entering a management mode', async () => {
   const { user } = render(<Chain view='expanded' {...chain} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
 
   await user.click(screen.getByRole('button', { name: 'Remove RPC endpoint 2' }))
 
@@ -148,6 +153,7 @@ test('removes a fallback endpoint without entering a management mode', async () 
 
 test('keeps an invalid RPC local and marks the field', () => {
   render(<Chain view='expanded' {...chain} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
   const rpc = screen.getByLabelText('RPC URL 1')
 
   fireEvent.change(rpc, { target: { value: 'not-a-url' } })
@@ -168,6 +174,7 @@ test('distinguishes a wrong-network RPC from a connection failure', () => {
   }
 
   render(<Chain view='expanded' {...chain} connection={mismatchedConnection} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
 
   expect(screen.getByText('Wrong network')).toBeTruthy()
   expect(screen.getByLabelText('RPC URL 1').getAttribute('aria-invalid')).toBe('true')
@@ -175,6 +182,7 @@ test('distinguishes a wrong-network RPC from a connection failure', () => {
 
 test('marks an empty fallback endpoint invalid without changing persisted state', () => {
   render(<Chain view='expanded' {...chain} />)
+  fireEvent.click(screen.getByRole('button', { name: 'RPC connections' }))
   const fallback = screen.getByLabelText('RPC URL 2')
 
   fireEvent.change(fallback, { target: { value: '' } })
@@ -188,6 +196,7 @@ test('saves identity, currency decimals, and enabled state together', async () =
   const { user } = render(<Chain view='expanded' {...chain} />)
 
   await user.clear(screen.getByLabelText('Network name'))
+  expect(screen.getByRole('button', { name: 'RPC connections' }).disabled).toBe(true)
   await user.type(screen.getByLabelText('Network name'), 'Updated')
   await user.clear(screen.getByLabelText('Decimals'))
   await user.type(screen.getByLabelText('Decimals'), '6')

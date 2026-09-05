@@ -731,3 +731,24 @@
 
     .contractVerificationCredentialActions button
       width auto
+
+.settingsCategories
+  display flex
+  flex-wrap wrap
+  gap 4px
+  margin-bottom 20px
+  button[aria-pressed='true']
+    background var(--wren-surface-active)
+
+.wrenSettingsSection[hidden]
+  display none
+
+.settingsCategories button.wrenControl.wrenControlGhost
+  min-height 44px
+
+.settings .recentRecipientsClear,
+.recentRecipientsClear.localSetting
+  border-bottom 0
+
+.localSettings .wrenSettingsSection .localSetting.recentRecipientsClear
+  border-bottom 0

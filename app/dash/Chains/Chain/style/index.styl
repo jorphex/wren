@@ -183,9 +183,8 @@
 // The editor owns its vertical rhythm. General settings-page padding otherwise
 // adds a small, empty scroll range around an editor that already fits.
 .localSettings:has(.networkEditor) > .localSettingsWrap
-  padding-top 0
-  padding-bottom 0
-  overflow-y hidden
+  padding 0
+  overflow hidden
 
 .networkEditorHeader
   flex none
@@ -222,7 +221,7 @@
   padding 34px var(--wren-page-gutter) 26px
   overflow-x hidden
   overflow-y auto
-  scrollbar-gutter stable
+  scrollbar-gutter stable both-edges
 
 .networkEditorGrid
   display grid
@@ -606,3 +605,12 @@ button.networkEditorRemove.wrenControl
     flex 1 1 0
     width auto
     min-width 0
+
+.networkEditorConnections
+  padding-top 8px
+
+.networkEditorSections
+  margin 0 var(--wren-page-gutter) 8px
+
+.networkEditorConnections > button
+  margin-top 20px

@@ -159,15 +159,15 @@ export class ContractVerificationCredential extends Component {
           </div>
         ) : null}
         <div className='signerPermissionDetails'>
-          Used only for direct Etherscan verification when Sourcify forwarding is unavailable.
+          For direct Etherscan source verification.
           {loading
-            ? ' Wren is checking whether OS credential protection is available.'
+            ? ' Checking secure storage…'
             : !statusKnown
-              ? ' Wren could not confirm OS credential protection, so it will not accept a key.'
+              ? ' Secure storage could not be confirmed. Key entry is unavailable.'
               : credential.available
-                ? ' Stored with OS credential protection on this device.'
-                : ' OS credential protection is unavailable, so Wren cannot save a key.'}{' '}
-          Not included in profile backups; re-enter it after a restore.
+                ? ' Protected by this device’s OS.'
+                : ' Secure storage unavailable. Cannot save a key.'}{' '}
+          Excluded from backups.
         </div>
         <div className='contractVerificationCredentialMessage' role='status' aria-live='polite'>
           {notice}

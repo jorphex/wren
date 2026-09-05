@@ -82,7 +82,7 @@ describe('generated recovery-phrase wallet', () => {
     await advancePassword(view, { ...phrasePresentation, expiresAt: Date.now() + 600_000 })
 
     const notice = screen
-      .getAllByText('Finish setup within about 10 minutes.')
+      .getAllByText('Wallet setup expires in 10 minutes.')
       .find((element) => element.closest('[aria-hidden="false"]'))
     expect(notice.className).toBe('generatedWalletSessionNote generatedWalletExpiryNotice')
   })
@@ -231,7 +231,7 @@ describe('generated recovery-phrase wallet', () => {
     const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: 0 })
     await advancePassword(view, expiring)
     expect(screen.getAllByText('test')).toHaveLength(11)
-    expectActiveText('Finish setup within less than a minute.')
+    expectActiveText('Wallet setup expires in under a minute.')
 
     act(() => jest.advanceTimersByTime(4_400))
 
@@ -246,13 +246,13 @@ describe('generated recovery-phrase wallet', () => {
 
     expect(
       screen
-        .getAllByText('Finish setup within about 2 minutes.')
+        .getAllByText('Wallet setup expires in 2 minutes.')
         .some((element) => element.closest('[aria-hidden="false"]'))
     ).toBe(true)
     act(() => jest.advanceTimersByTime(30_000))
     expect(
       screen
-        .getAllByText('Finish setup within less than a minute.')
+        .getAllByText('Wallet setup expires in under a minute.')
         .some((element) => element.closest('[aria-hidden="false"]'))
     ).toBe(true)
   })

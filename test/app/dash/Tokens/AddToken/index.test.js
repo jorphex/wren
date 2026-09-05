@@ -470,9 +470,12 @@ describe('setting token details', () => {
       />
     )
 
+    fireEvent.click(screen.getByText('Token metadata'))
+    screen.getByLabelText('Token contract address').focus()
     const fields = [
       screen.getByLabelText('Token name'),
       screen.getByLabelText('Symbol'),
+      screen.getByText('Token metadata'),
       screen.getByLabelText('Decimals'),
       screen.getByLabelText('Logo URI'),
       screen.getByRole('button', { name: 'Add token' })
@@ -482,7 +485,7 @@ describe('setting token details', () => {
       expect(document.activeElement).toBe(field)
     }
     await user.tab({ shift: true })
-    expect(document.activeElement).toBe(fields[3])
+    expect(document.activeElement).toBe(fields[4])
   })
 
   it('settles a reviewed asset suggestion only when the token is saved', async () => {

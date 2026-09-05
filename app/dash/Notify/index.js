@@ -113,46 +113,23 @@ export class Notify extends React.Component {
               <img alt='' aria-hidden='true' src={wrenIcon} />
             </div>
             <div id='wren-dash-notify-title' className='notifyTitle'>
-              Important safety notice
+              About Wren
             </div>
             <div className='notifyBody'>
-              <div className='notifyBodyBlock notifyBodyBlockBig'>
-                Wren is independently maintained and built from the original Frame project.
-              </div>
-              <div className='notifyBodyBlock'>
-                Back up your profile, verify release checksums, and test with accounts that hold no valuable
-                assets before relying on Wren.
-              </div>
-              <div className='notifyBodyBlock'>
-                Use hardware signers for high-value accounts. Verify every transaction and account detail on
-                the signing device.
-              </div>
-              <div className='notifyBodyBlock'>
-                <span>Read</span>
-                <button
-                  type='button'
-                  className='notifyBodyLink'
-                  onClick={() => {
-                    link.send('tray:openExternal', WREN_LICENSE_URL)
-                  }}
-                >
-                  our license
-                </button>
-                <span>before using Wren at your own risk.</span>
-              </div>
-              <div className='notifyBodyBlock notifyBodyBlockBig'>
-                <div>Need help or found a problem? Open a GitHub issue.</div>
-                <button
-                  type='button'
-                  className='notifyBodyLink'
-                  style={{ marginTop: '20px' }}
-                  onClick={() => {
-                    link.send('tray:openExternal', WREN_SUPPORT_URL)
-                  }}
-                >
-                  Open GitHub issue
-                </button>
-              </div>
+              <button
+                type='button'
+                className='notifyBodyLink'
+                onClick={() => link.send('tray:openExternal', WREN_LICENSE_URL)}
+              >
+                License
+              </button>
+              <button
+                type='button'
+                className='notifyBodyLink'
+                onClick={() => link.send('tray:openExternal', WREN_SUPPORT_URL)}
+              >
+                GitHub Issues
+              </button>
             </div>
             <div className='notifyInput'>
               <button
@@ -164,7 +141,7 @@ export class Notify extends React.Component {
                   this.dismissNotification()
                 }}
               >
-                <div className='notifyInputOptionText notifyBetaGo'>Continue</div>
+                <div className='notifyInputOptionText notifyBetaGo'>Done</div>
               </button>
             </div>
           </div>
@@ -648,7 +625,7 @@ export class Notify extends React.Component {
 
       return this.renderDialog(
         <>
-          <div className='notifyBoxWrap' onMouseDown={(e) => e.stopPropagation()}>
+          <div className='notifyBoxWrap notifyCompactConfirmation' onMouseDown={(e) => e.stopPropagation()}>
             <div className='notifyBoxSlide'>
               <Confirm
                 prompt={`Remove ${chain.name}?`}

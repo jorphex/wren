@@ -130,8 +130,8 @@ const EnterSecret = ({ newAccountType, validateSecret, title, autofocus, active,
           }}
         />
       </div>
-      <div role={error ? 'alert' : undefined} className='addAccountItemOptionError'>
-        {error}
+      <div role={error && error !== EMPTY_STATE ? 'alert' : undefined} className='addAccountItemOptionError'>
+        {error !== EMPTY_STATE ? error : ''}
       </div>
       <button
         type='button'
@@ -166,6 +166,7 @@ const Error = ({ error, active }) => {
 
 export function AddHotAccount({
   title,
+  secretTitle = title,
   summary,
   svgName,
   intro,
@@ -237,7 +238,7 @@ export function AddHotAccount({
       key={0}
       {...{
         validateSecret,
-        title,
+        title: secretTitle,
         newAccountType,
         autofocus: viewIndex === 0,
         onContinue: (secret) => advance('password', { secret })

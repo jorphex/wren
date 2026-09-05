@@ -474,17 +474,15 @@ it('opens product details and keeps watch-only transactions disabled', async () 
 
   await user.click(screen.getByRole('button', { name: 'View yvUSD on Ethereum' }))
 
-  expect(screen.getByRole('heading', { name: 'Choose how to earn' })).toBeTruthy()
-  expect(screen.getByText('Est. APY')).toBeTruthy()
-  expect(screen.getByText(/14-day cooldown/)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Withdrawal terms' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /^Flexible/ }).textContent).toContain('Est. APY')
+  expect(screen.getByText(/Cooldown: 14-day/)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Deposit' }).disabled).toBe(true)
-  expect(screen.getByText(/Watch-only accounts/)).toBeTruthy()
+  expect(screen.getByText(/Watch-only account/)).toBeTruthy()
   expect(screen.queryByText(/Performance fee/)).toBeNull()
   expect(screen.queryByText(/Yearn data updated/)).toBeNull()
   expect(screen.getByRole('button', { name: 'View vault contract (external)' })).toBeTruthy()
-  const disclosure = screen.getByText(
-    'APY is variable and not guaranteed. Yearn vaults involve smart-contract and strategy risk.'
-  )
+  const disclosure = screen.getByText('Variable APY · Smart-contract and strategy risk')
   expect(
     disclosure.compareDocumentPosition(screen.getByRole('button', { name: /^Flexible/ })) &
       Node.DOCUMENT_POSITION_FOLLOWING
@@ -512,9 +510,9 @@ it('keeps the watch-only capability notice visible through a transient positions
 
   rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
 
-  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  await screen.findByRole('heading', { name: 'Withdrawal terms' })
   expect(screen.getByText('Account positions could not be refreshed.')).toBeTruthy()
-  expect(screen.getByText(/Watch-only accounts/)).toBeTruthy()
+  expect(screen.getByText(/Watch-only account/)).toBeTruthy()
 })
 
 it('uses APY as the metric label when null APY is already labeled unavailable', async () => {
@@ -532,9 +530,8 @@ it('uses APY as the metric label when null APY is already labeled unavailable', 
 
   render(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
 
-  await screen.findByRole('heading', { name: 'Choose how to earn' })
-  expect(document.querySelector('.earnMetricLabel').textContent).toBe('APY')
-  expect(document.querySelector('.earnMetricValue').textContent).toBe('Unavailable')
+  await screen.findByRole('heading', { name: 'Withdrawal terms' })
+  expect(screen.getByRole('button', { name: /^Flexible/ }).textContent).toContain('Unavailable')
   expect(document.body.textContent).not.toMatch(/Unavailable\s+UNAVAILABLE/iu)
 })
 
@@ -563,15 +560,15 @@ it('moves focus through vault details and restores the invoking controls', async
   )
 })
 
-it('uses selected locked yvUSD metrics and labels root risk explicitly', async () => {
+it('keeps vault TVL stable across variants and labels root risk explicitly', async () => {
   const { user } = render(<ConnectedEarn />)
   await screen.findByRole('heading', { name: 'Ethereum' })
   await user.click(screen.getByRole('button', { name: 'View yvUSD on Ethereum' }))
   await user.click(screen.getByRole('button', { name: /^Locked/ }))
 
-  expect(screen.getByText('7%')).toBeTruthy()
-  expect(screen.getByText('$500,000.0')).toBeTruthy()
-  expect(screen.getByText('Underlying vault risk')).toBeTruthy()
+  expect(screen.getByRole('button', { name: /^Locked/ }).textContent).toContain('7%')
+  expect(screen.getByText('$1.5M')).toBeTruthy()
+  expect(screen.getByText(/Yearn risk rating/)).toBeTruthy()
   expect(link.send).toHaveBeenCalledWith(
     'nav:update',
     'dash',
@@ -602,8 +599,8 @@ it('uses the selected variant APY label in the detail metric', async () => {
 
   render(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'locked', screen: 'vault' }} />)
 
-  await screen.findByRole('heading', { name: 'Choose how to earn' })
-  expect(document.querySelector('.earnMetricLabel').textContent).toBe('7-day average APY')
+  await screen.findByRole('heading', { name: 'Withdrawal terms' })
+  expect(screen.getByRole('button', { name: /^Locked/ }).textContent).toContain('7-day average APY')
 })
 
 it('conceals every account-derived Earn amount while keeping public metrics visible', async () => {
@@ -687,8 +684,8 @@ it('explains an inactive locked withdrawal cooldown in user-facing terms', async
 
   await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
 
-  expect(screen.getByText('Locked withdrawal timing')).toBeTruthy()
-  expect(screen.getByText(/No cooldown is active/)).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Withdrawal terms' })).toBeTruthy()
+  expect(screen.queryByText(/No cooldown is active/)).toBeNull()
   expect(screen.queryByText(/Locked yvUSD: none/)).toBeNull()
 })
 
@@ -697,13 +694,13 @@ it('describes approvals only for routes that can request them', async () => {
   await screen.findByRole('heading', { name: 'Ethereum' })
   await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
 
-  expect(screen.getByText(/requests only the exact amount/i)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Deposit' }).getAttribute('aria-pressed')).toBe('true')
   await user.click(screen.getByRole('button', { name: 'Withdraw' }))
-  expect(screen.getByText(/does not request a token approval/i)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Withdraw' }).getAttribute('aria-pressed')).toBe('true')
   expect(screen.queryByText(/requests only the exact amount/i)).toBeNull()
 
   await user.click(screen.getByRole('button', { name: 'Deposit' }))
-  expect(screen.getByText(/requests only the exact amount/i)).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Deposit' }).getAttribute('aria-pressed')).toBe('true')
 })
 
 it('describes staking as staking rather than a withdrawal', async () => {
@@ -725,7 +722,7 @@ it('describes staking as staking rather than a withdrawal', async () => {
   await user.click(screen.getByRole('button', { name: 'Manage Staked yBOLD position' }))
   await user.click(screen.getByRole('button', { name: 'Stake existing yBOLD' }))
 
-  expect(screen.getByText('Stake existing yBOLD and receive ysyBOLD.')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Stake existing yBOLD' }).disabled).toBe(false)
   expect(screen.getByText('Available to stake: 1.5 yBOLD')).toBeTruthy()
   expect(screen.queryByText(/Withdraw directly/)).toBeNull()
 })
@@ -892,7 +889,7 @@ it('shows one account-position failure without repeating chain or signer notices
   expect(screen.queryByText('Position data is unavailable.')).toBeNull()
 
   rerender(<ConnectedEarn data={{ vaultId: 'ethereum-yvusd', variant: 'unlocked', screen: 'vault' }} />)
-  await screen.findByRole('heading', { name: 'Choose how to earn' })
+  await screen.findByRole('heading', { name: 'Withdrawal terms' })
   expect(screen.getAllByText('Account positions could not be refreshed.')).toHaveLength(1)
   expect(screen.queryByText('Select a signing account to transact.')).toBeNull()
 })
@@ -999,6 +996,7 @@ it('builds a locked yvUSD cooldown intent from the on-chain position state', asy
   const { user } = render(<ConnectedEarn />)
   await screen.findByRole('heading', { name: 'Ethereum' })
   await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
+  await user.click(screen.getByRole('button', { name: /^Locked/ }))
   await user.click(screen.getByRole('button', { name: 'Start locked cooldown' }))
   await user.click(screen.getByRole('button', { name: 'Max' }))
   await user.click(screen.getByRole('button', { name: 'Review Start cooldown' }))
@@ -1065,6 +1063,7 @@ it('disables cooldown actions when the on-chain cooldown read failed', async () 
   const { user } = render(<ConnectedEarn />)
   await screen.findByRole('heading', { name: 'Ethereum' })
   await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
+  await user.click(screen.getByRole('button', { name: /^Locked/ }))
 
   expect(screen.getByRole('button', { name: 'Start locked cooldown' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Cancel cooldown' }).disabled).toBe(true)
@@ -1119,5 +1118,57 @@ it('disables stale deposits while preserving exits from an existing position', a
 
   expect(screen.getByRole('button', { name: 'Deposit' }).disabled).toBe(true)
   expect(screen.getByRole('button', { name: 'Withdraw' }).disabled).toBe(false)
-  expect(screen.getByText(/Existing positions remain withdrawable/)).toBeTruthy()
+  expect(screen.getByText(/Deposits unavailable/)).toBeTruthy()
+})
+
+it('resets cooldown intent when switching to Flexible and queues only the new deposit', async () => {
+  getYearnPositions.mockResolvedValue({
+    ...makePositions(),
+    chains: makePositions().chains.map((chain) =>
+      chain.chainId === 1 ? { ...chain, positions: [lockedPosition] } : chain
+    )
+  })
+  startYearnWorkflow.mockResolvedValue(makeWorkflow())
+  const { user } = render(<ConnectedEarn />)
+  await screen.findByRole('heading', { name: 'Ethereum' })
+  await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
+  await user.click(screen.getByRole('button', { name: /^Locked/ }))
+  await user.click(screen.getByRole('button', { name: 'Start locked cooldown' }))
+  await user.click(screen.getByRole('button', { name: /^Flexible/ }))
+  expect(screen.queryByRole('button', { name: 'Review Start cooldown' })).toBeNull()
+  await user.type(screen.getByRole('textbox', { name: 'Amount in USDC' }), '1')
+  await user.click(screen.getByRole('button', { name: 'Review Deposit' }))
+  expect(startYearnWorkflow).toHaveBeenLastCalledWith(
+    expect.objectContaining({ action: 'deposit', variant: 'unlocked', amount: '1' })
+  )
+})
+
+it('keeps active cooldown actions visible and opens the deposit form on demand', async () => {
+  const coolingPosition = {
+    ...lockedPosition,
+    variants: lockedPosition.variants.map((variant) =>
+      variant.id === 'locked'
+        ? {
+            ...variant,
+            cooldown: { ...variant.cooldown, status: 'cooling-down', sharesRaw: '1000000', shares: '1.0' }
+          }
+        : variant
+    )
+  }
+  getYearnPositions.mockResolvedValue({
+    ...makePositions(),
+    chains: makePositions().chains.map((chain) =>
+      chain.chainId === 1 ? { ...chain, positions: [coolingPosition] } : chain
+    )
+  })
+  const { user } = render(<ConnectedEarn />)
+  await screen.findByRole('heading', { name: 'Ethereum' })
+  await user.click(screen.getByRole('button', { name: 'Manage yvUSD position' }))
+  await user.click(screen.getByRole('button', { name: /^Locked/ }))
+  expect(screen.getByRole('button', { name: 'Cancel cooldown' }).disabled).toBe(false)
+  expect(screen.queryByRole('textbox', { name: 'Amount in USDC' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Deposit' }))
+  expect(screen.getByRole('textbox', { name: 'Amount in USDC' })).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Cancel cooldown' }))
+  expect(screen.getByRole('button', { name: 'Review Cancel cooldown' })).toBeTruthy()
 })

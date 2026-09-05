@@ -200,61 +200,64 @@ export class AddressBookEditor extends React.Component {
             />
           </label>
 
-          <fieldset className='addressBookProvenanceField'>
-            <legend>Address check</legend>
-            <div className='addressBookProvenanceOptions'>
-              <label>
-                <input
-                  checked={this.state.provenanceStatus === 'saved'}
-                  disabled={this.state.saving}
-                  name='contact-provenance'
-                  onChange={() => this.setState({ provenanceStatus: 'saved', error: '' })}
-                  type='radio'
-                  value='saved'
-                />
-                <span>Saved — not independently verified</span>
-              </label>
-              <label>
-                <input
-                  checked={this.state.provenanceStatus === 'verified-out-of-band'}
-                  disabled={this.state.saving}
-                  name='contact-provenance'
-                  onChange={() => this.setState({ provenanceStatus: 'verified-out-of-band', error: '' })}
-                  type='radio'
-                  value='verified-out-of-band'
-                />
-                <span>Checked outside Wren</span>
-              </label>
-            </div>
-            <small>
-              {clearsVerification
-                ? 'Saving as “Saved — not independently verified” clears the check date and note.'
-                : this.state.provenanceStatus === 'verified-out-of-band'
-                  ? 'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
-                  : 'Wren stores your label. Wren does not verify this address.'}
-            </small>
-            {this.state.provenanceStatus === 'verified-out-of-band' ? (
-              <label className='addressBookField addressBookVerificationNote'>
-                <span>
-                  Verification note <small>optional</small>
-                </span>
-                <textarea
-                  aria-describedby='addressBookVerificationCount'
-                  className='wrenInput'
-                  disabled={this.state.saving}
-                  maxLength={280}
-                  onChange={(event) => this.setState({ verificationNote: event.target.value, error: '' })}
-                  placeholder='Where or how you checked this address'
-                  rows={2}
-                  value={this.state.verificationNote}
-                />
-                <small id='addressBookVerificationCount'>{this.state.verificationNote.length}/280</small>
-              </label>
-            ) : null}
-            {this.props.entry?.provenance?.status === 'verified-out-of-band' ? (
-              <small>{`Checked ${verifiedDate(this.props.entry)}`}</small>
-            ) : null}
-          </fieldset>
+          <details open={this.props.entry?.provenance?.status === 'verified-out-of-band' || undefined}>
+            <summary>Address check · optional</summary>
+            <fieldset className='addressBookProvenanceField'>
+              <legend>Address check</legend>
+              <div className='addressBookProvenanceOptions'>
+                <label>
+                  <input
+                    checked={this.state.provenanceStatus === 'saved'}
+                    disabled={this.state.saving}
+                    name='contact-provenance'
+                    onChange={() => this.setState({ provenanceStatus: 'saved', error: '' })}
+                    type='radio'
+                    value='saved'
+                  />
+                  <span>Saved</span>
+                </label>
+                <label>
+                  <input
+                    checked={this.state.provenanceStatus === 'verified-out-of-band'}
+                    disabled={this.state.saving}
+                    name='contact-provenance'
+                    onChange={() => this.setState({ provenanceStatus: 'verified-out-of-band', error: '' })}
+                    type='radio'
+                    value='verified-out-of-band'
+                  />
+                  <span>Checked outside Wren</span>
+                </label>
+              </div>
+              <small>
+                {clearsVerification
+                  ? 'Saving as “Saved” clears the check date and note.'
+                  : this.state.provenanceStatus === 'verified-out-of-band'
+                    ? 'Checked by you, outside Wren.'
+                    : 'Saved label only.'}
+              </small>
+              {this.state.provenanceStatus === 'verified-out-of-band' ? (
+                <label className='addressBookField addressBookVerificationNote'>
+                  <span>
+                    Verification note <small>optional</small>
+                  </span>
+                  <textarea
+                    aria-describedby='addressBookVerificationCount'
+                    className='wrenInput'
+                    disabled={this.state.saving}
+                    maxLength={280}
+                    onChange={(event) => this.setState({ verificationNote: event.target.value, error: '' })}
+                    placeholder='Where or how you checked this address'
+                    rows={2}
+                    value={this.state.verificationNote}
+                  />
+                  <small id='addressBookVerificationCount'>{this.state.verificationNote.length}/280</small>
+                </label>
+              ) : null}
+              {this.props.entry?.provenance?.status === 'verified-out-of-band' ? (
+                <small>{`Checked ${verifiedDate(this.props.entry)}`}</small>
+              ) : null}
+            </fieldset>
+          </details>
 
           <label className='addressBookField'>
             <span>
@@ -541,7 +544,7 @@ export class AddressBook extends React.Component {
               <img alt='' aria-hidden='true' className='addressBookEmptyArtwork' src={emptyContacts} />
             )}
             <strong>{filter ? 'No contacts match' : 'No saved contacts'}</strong>
-            <span>{filter ? 'Try another search.' : 'Save addresses you recognize and verify often.'}</span>
+            <span>{filter ? 'Try another search.' : 'Save an address for next time.'}</span>
           </div>
         )}
 

@@ -77,7 +77,7 @@ const EvidenceRow = ({ label, value, copy, tone }) => {
       <dd>
         {long ? (
           <details className='inspectorLongEvidence'>
-            <summary>Show bounded evidence ({display.length.toLocaleString()} characters)</summary>
+            <summary>Show evidence ({display.length.toLocaleString()} characters)</summary>
             <code>{display}</code>
           </details>
         ) : (
@@ -158,29 +158,47 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
     <section className='inspectorResult' aria-labelledby='inspector-result-title'>
       <header className='inspectorResultHeader' ref={resultRef} tabIndex='-1'>
         <div>
-          <span className='inspectorResultEyebrow'>Decoded from your input</span>
-          <h2 id='inspector-result-title'>Inspection evidence</h2>
+          <h2 id='inspector-result-title'>Inspection result</h2>
         </div>
-        <span className='inspectorReadonlyBadge'>Read-only</span>
       </header>
 
       {missing.length ? (
         <div className='inspectorMissing' role='status'>
           <strong>Not established</strong>
-          <span>
-            {missing.map(missingContextCopy).join(', ')}. Do not infer these values from the decoded fields.
-          </span>
+          <span>{missing.map(missingContextCopy).join(', ')}</span>
         </div>
       ) : null}
 
       {warnings.length ? (
         <section className='inspectorEvidenceSection' aria-labelledby='inspector-warning-title'>
-          <h3 id='inspector-warning-title'>Warnings from inspected evidence</h3>
+          <h3 id='inspector-warning-title'>Attention required</h3>
           <ul className='inspectorWarnings'>
             {warnings.map((warning, index) => (
               <li key={`${warning?.code || warning || 'warning'}-${index}`}>{riskCopy(warning)}</li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {!isTyped ? (
+        <section className='inspectorEvidenceSection' aria-labelledby='inspector-decode-title'>
+          <h3 id='inspector-decode-title'>Calldata interpretation</h3>
+          {isUnknownFunction ? (
+            <div className='inspectorMissing' role='status'>
+              <strong>Unknown function</strong>
+              <span>Selector {decode.selector || 'Unavailable'} could not be decoded locally.</span>
+            </div>
+          ) : null}
+          <dl>
+            <EvidenceRow label='Status' value={decode.status} />
+            <EvidenceRow label='Selector' value={decode.selector} copy={onCopy} />
+            {isDecoded ? <EvidenceRow label='Method' value={decode.method} copy={onCopy} /> : null}
+            {isDecoded ? <EvidenceRow label='Arguments' value={decode.arguments} copy={onCopy} /> : null}
+            <EvidenceRow label='Decode source' value={decode.source} />
+          </dl>
+          {!isUnknownFunction && decode.reason ? (
+            <p className='inspectorEvidenceReason'>{decode.reason}</p>
+          ) : null}
         </section>
       ) : null}
 
@@ -202,23 +220,31 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
             copy={onCopy}
           />
           {!isTyped ? <EvidenceRow label='Value' value={normalized.value} copy={onCopy} /> : null}
-          {!isTyped ? (
-            <EvidenceRow label='Calldata' value={normalized.data ?? normalized.input} copy={onCopy} />
-          ) : null}
+
           {isTyped ? <EvidenceRow label='Version' value={normalized.version} /> : null}
           {isTyped ? <EvidenceRow label='Domain' value={typedDomain} copy={onCopy} /> : null}
           {isTyped ? <EvidenceRow label='Primary type' value={normalized.primaryType} copy={onCopy} /> : null}
-          {isTyped ? <EvidenceRow label='Types' value={typedData?.types} copy={onCopy} /> : null}
+
           {isTyped ? <EvidenceRow label='Message' value={typedData?.message} copy={onCopy} /> : null}
-          {isTyped ? (
-            <EvidenceRow label='Exact typed-data JSON' value={normalized.typedData} copy={onCopy} />
-          ) : null}
         </dl>
       </section>
 
+      <details className='inspectorEvidenceSection'>
+        <summary>Exact input</summary>
+        <dl>
+          {isTyped ? (
+            <>
+              <EvidenceRow label='Types' value={typedData?.types} copy={onCopy} />
+              <EvidenceRow label='Exact typed-data JSON' value={normalized.typedData} copy={onCopy} />
+            </>
+          ) : (
+            <EvidenceRow label='Calldata' value={normalized.data ?? normalized.input} copy={onCopy} />
+          )}
+        </dl>
+      </details>
       {!isTyped ? (
-        <section className='inspectorEvidenceSection' aria-labelledby='inspector-envelope-title'>
-          <h3 id='inspector-envelope-title'>Transaction envelope</h3>
+        <details className='inspectorEvidenceSection'>
+          <summary>Transaction envelope</summary>
           <dl>
             <EvidenceRow label='Input source' value={inspection.source} />
             <EvidenceRow label='JSON-RPC method' value={inspection.sourceMethod} />
@@ -231,7 +257,7 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
             <EvidenceRow label='Priority fee per gas' value={normalized.maxPriorityFeePerGas} />
             <EvidenceRow label='Access list counts' value={normalized.accessList} />
           </dl>
-        </section>
+        </details>
       ) : null}
 
       {isTyped ? (
@@ -246,34 +272,9 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
         </section>
       ) : null}
 
-      {!isTyped ? (
-        <section className='inspectorEvidenceSection' aria-labelledby='inspector-decode-title'>
-          <h3 id='inspector-decode-title'>Calldata interpretation</h3>
-          {isUnknownFunction ? (
-            <div className='inspectorMissing' role='status'>
-              <strong>Unknown function</strong>
-              <span>
-                Wren could not decode selector {decode.selector || 'Unavailable'} with its bundled local ABI
-                set. Wren does not guess a function or use a remote ABI lookup.
-              </span>
-            </div>
-          ) : null}
-          <dl>
-            <EvidenceRow label='Status' value={decode.status} />
-            <EvidenceRow label='Selector' value={decode.selector} copy={onCopy} />
-            {isDecoded ? <EvidenceRow label='Method' value={decode.method} copy={onCopy} /> : null}
-            {isDecoded ? <EvidenceRow label='Arguments' value={decode.arguments} copy={onCopy} /> : null}
-            <EvidenceRow label='Decode source' value={decode.source} />
-          </dl>
-          {!isUnknownFunction && decode.reason ? (
-            <p className='inspectorEvidenceReason'>{decode.reason}</p>
-          ) : null}
-        </section>
-      ) : null}
-
       {simulation ? (
         <section className='inspectorEvidenceSection' aria-labelledby='inspector-simulation-title'>
-          <h3 id='inspector-simulation-title'>Configured-RPC simulation</h3>
+          <h3 id='inspector-simulation-title'>Simulation</h3>
           <dl>
             <EvidenceRow
               label='Status'
@@ -287,22 +288,30 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
               }
             />
             <EvidenceRow label='Source' value={simulation.source} />
-            <EvidenceRow label='Revert reason' value={simulation.reason ?? simulation.revertReason} />
+            {simulation.reason || simulation.revertReason ? (
+              <EvidenceRow label='Revert reason' value={simulation.reason ?? simulation.revertReason} />
+            ) : null}
             <EvidenceRow label='Gas used' value={simulation.gasUsed} />
             <EvidenceRow label='Effects' value={simulation.effects} />
-            <EvidenceRow label='Allowance evidence' value={simulation.allowance} />
-            <EvidenceRow label='Delegation evidence' value={simulation.delegation} />
-            <EvidenceRow label='Account-code evidence' value={simulation.accountCode} />
-            <EvidenceRow label='Native balance changes' value={simulation.nativeBalanceChanges} />
-            <EvidenceRow label='Proxy changes' value={simulation.proxyImplementation} />
-            <EvidenceRow label='Call trace' value={simulation.callTrace} />
-            <EvidenceRow label='Advanced checks' value={simulation.advancedStatus} />
           </dl>
+          <details>
+            <summary>Simulation details</summary>
+            <dl>
+              {' '}
+              <EvidenceRow label='Allowance evidence' value={simulation.allowance} />
+              <EvidenceRow label='Delegation evidence' value={simulation.delegation} />
+              <EvidenceRow label='Account-code evidence' value={simulation.accountCode} />
+              <EvidenceRow label='Native balance changes' value={simulation.nativeBalanceChanges} />
+              <EvidenceRow label='Proxy changes' value={simulation.proxyImplementation} />
+              <EvidenceRow label='Call trace' value={simulation.callTrace} />
+              <EvidenceRow label='Advanced checks' value={simulation.advancedStatus} />
+            </dl>
+          </details>
         </section>
       ) : null}
 
-      <section className='inspectorEvidenceSection' aria-labelledby='inspector-source-title'>
-        <h3 id='inspector-source-title'>Evidence sources</h3>
+      <details className='inspectorEvidenceSection'>
+        <summary>Evidence sources</summary>
         {evidence.length ? (
           <ul className='inspectorSources'>
             {evidence.map((entry, index) => (
@@ -316,12 +325,8 @@ export const InspectorResult = ({ inspection, onCopy, copyStatus, resultRef }) =
         ) : (
           <p className='inspectorEvidenceReason'>Evidence source unavailable.</p>
         )}
-      </section>
+      </details>
 
-      <p className='inspectorTerminalNote'>
-        The pasted JSON-RPC method or envelope was not forwarded or used to sign, broadcast, or queue. When
-        shown, configured-RPC evidence may use the disclosed transaction fields above.
-      </p>
       <span className='inspectorCopyStatus' role='status' aria-live='polite' aria-atomic='true'>
         {copyStatus}
       </span>
@@ -564,18 +569,12 @@ export class Inspector extends React.Component {
       <main className='inspector cardShow' aria-busy={pending ? 'true' : 'false'}>
         <header className='inspectorHeader'>
           <div>
-            <span className='inspectorEyebrow'>Local wallet utility</span>
-            <h1>Read-only inspector</h1>
-            <p>
-              Decode without signing. Raw input is not saved; configured-RPC evidence shares the disclosed
-              transaction fields.
-            </p>
+            <h1>Inspector</h1>
           </div>
           <div className='inspectorSafetyContract'>
             <Icon name='eye' size={16} />
             <span>
               <strong>Read-only</strong>
-              Never signs or broadcasts
             </span>
           </div>
         </header>
@@ -608,7 +607,6 @@ export class Inspector extends React.Component {
         >
           <div className='inspectorModeCopy'>
             <h2>{selected.title}</h2>
-            <p>{selected.description}</p>
           </div>
           <label className='inspectorRawInput'>
             <span>{selected.inputLabel}</span>
@@ -626,16 +624,18 @@ export class Inspector extends React.Component {
           </label>
           {this.renderContextFields()}
           <div className='inspectorActions'>
-            <span className='inspectorLocalNote'>
-              Raw input is not saved. With enough context, transaction and calldata modes share sender,
-              target, value, and calldata with your configured RPC for evidence.
-            </span>
+            {mode !== 'typed-data' ? (
+              <details className='inspectorLocalNote'>
+                <summary>Uses your configured RPC</summary>
+                Sender, target, value, and calldata are shared when available. Input is not saved.
+              </details>
+            ) : null}
             <button
               type='submit'
               className='inspectorInspectButton wrenControl wrenControlSecondary wrenControlLarge'
               disabled={!this.canInspect()}
             >
-              {pending ? 'Inspecting…' : 'Inspect read-only'}
+              {pending ? 'Inspecting…' : 'Inspect'}
             </button>
           </div>
           {error ? (
@@ -645,7 +645,7 @@ export class Inspector extends React.Component {
           ) : null}
           {pending ? (
             <div className='inspectorBusy' role='status' aria-live='polite'>
-              Gathering bounded evidence. No signing, broadcast, or queueing occurs.
+              Inspecting…
             </div>
           ) : null}
         </form>

@@ -364,3 +364,23 @@
         div
           font-size var(--wren-type-small)
           line-height 1.5
+
+.notify .notifyBoxWrap.notifyCompactConfirmation
+  position absolute
+  inset auto
+  top 50%
+  left 50%
+  transform translate(-50%, -50%)
+  width calc(100% - 40px)
+  max-width 420px
+  height auto
+  padding 24px
+  box-sizing border-box
+
+  .confirmDialog
+    width 100%
+    margin 0
+    padding 0
+
+  .confirmButtonOptions
+    margin-top 24px

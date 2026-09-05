@@ -17,8 +17,8 @@ it('owns the stable Control destination order and replaces top-level routes', ()
     'Settings'
   ])
 
-  fireEvent.click(screen.getByRole('button', { name: 'Home Control center home.' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Accounts Manage signing and watch-only accounts.' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Accounts' }))
 
   expect(link.send.mock.calls).toEqual([
     ['tray:action', 'navReplace', 'dash', []],

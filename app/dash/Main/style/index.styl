@@ -616,3 +616,64 @@ button.dashSupportWrenButton.wrenControl
 
   .dashSupportActions
     grid-template-columns repeat(2, minmax(0, 1fr))
+
+.dashModules
+  display grid
+  grid-template-columns repeat(5, minmax(0, 1fr))
+  gap 4px
+
+  button.dashModule.wrenControl
+    display flex
+    justify-content center
+    gap 4px
+    min-width 0
+    height auto
+    min-height 48px
+    padding 6px 4px
+    border 0
+    box-shadow none
+    background transparent
+    text-align center
+
+    .dashModuleIcon,
+    .dashModuleMeta
+      display none
+
+    .dashModuleTitle
+      font-size 12px
+      line-height 16px
+
+    &[aria-current='page']
+      background var(--wren-surface-active)
+
+    &:hover:not(:disabled)
+      box-shadow none
+      background var(--wren-ledger-hover)
+
+.networkEditorSections
+  display flex
+  gap 8px
+  margin-bottom 16px
+
+  [aria-pressed='true']
+    background var(--wren-surface-active)
+
+.networkEditorLiveStatus
+  color var(--wren-text-secondary)
+  font-size 12px
+
+.accountTypeAdvanced
+  margin-top 20px
+
+.networkEditorSections button.wrenControl.wrenControlGhost
+  min-height 44px
+
+.originAccountAccess
+  display flex
+  flex-direction column
+  align-items flex-start
+  gap 4px
+  width 100%
+  padding 12px
+  code
+    overflow-wrap anywhere

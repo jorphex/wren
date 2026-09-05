@@ -134,7 +134,7 @@ it('defers the network fee to authoritative request review', () => {
 
   expect(screen.getByText('Network fee')).toBeTruthy()
   expect(screen.getByText('Calculated during review')).toBeTruthy()
-  expect(screen.getByText('Wren estimates gas before anything is signed.')).toBeTruthy()
+  expect(screen.queryByText('Wren estimates gas before anything is signed.')).toBeNull()
   expect(screen.queryByText(/0\.000021 ETH/)).toBeNull()
 })
 
@@ -352,13 +352,13 @@ it('shows confirmed recent recipients with full-address provenance and canonical
   const recent = screen.getByText('Recent recipients').closest('.sendRecentRecipients')
   expect(within(recent).getAllByText(secondRecipient)).toHaveLength(1)
   expect(within(recent).queryByText(account)).toBeNull()
-  expect(within(recent).getByText('Previously used on this device · verify the full address')).toBeTruthy()
+  expect(within(recent).getByText('Previously used on this device')).toBeTruthy()
 
   fireEvent.click(within(recent).getByRole('button', { name: new RegExp(secondRecipient) }))
   closeDashStep(store)
 
   await waitFor(() => expect(resolveSendRecipient).toHaveBeenCalledWith(secondRecipient))
-  expect(await screen.findByText('Recent recipient · verify the full address')).toBeTruthy()
+  expect(await screen.findByText('Recent recipient')).toBeTruthy()
   expect(screen.getByPlaceholderText('Enter an address').value).toBe(secondRecipient)
   expect(link.send).toHaveBeenCalledWith('nav:back', 'dash')
 })
@@ -412,7 +412,12 @@ it('validates a recipient and amount before queueing the existing transaction re
       recipient
     })
   )
-  expect(await screen.findByText('Transaction queued')).toBeTruthy()
+  expect(await screen.findByText('Awaiting your review')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Open review' }))
+  expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
+    view: 'requestView',
+    data: { step: 'confirm', accountId: account, requestId: 'send-request' }
+  })
   expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite')
   const close = screen.getByRole('button', { name: 'Close' })
   expect(close.className).toContain('wrenControlGhost')
@@ -605,7 +610,7 @@ it('closes an ordinary retained pre-broadcast failure before composing another s
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests[retainedRequestId] = {
@@ -778,10 +783,10 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
       includeNative: false
     })
   )
-  expect(await screen.findByText('Sequential execution — not atomic')).toBeTruthy()
+  expect(await screen.findByText('Separate transfers')).toBeTruthy()
   expect(screen.getByText(token)).toBeTruthy()
-  expect(screen.getByText('100000000')).toBeTruthy()
-  expect(screen.getByText(/No bridge or batch contract is used/i)).toBeTruthy()
+  expect(screen.getByText(/100000000 base units/)).toBeTruthy()
+  expect(screen.getByText(/Completed transfers remain/)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Copy full token 1 address' }))
   expect(link.send).toHaveBeenCalledWith('tray:clipboardData', token)
   fireEvent.click(screen.getByRole('button', { name: 'Queue 1 transfer' }))
@@ -817,7 +822,7 @@ it('quotes and queues an explicit same-chain non-atomic Sweep with full review e
   link.rpc.mockImplementationOnce((method, request, callback) => callback(null))
   fireEvent.click(screen.getByRole('button', { name: 'Close request' }))
   expect(screen.queryByText('Sweep changed; close this review and create a fresh Sweep.')).toBeNull()
-  expect(screen.queryByText('Sequential execution — not atomic')).toBeNull()
+  expect(screen.queryByText('Separate transfers')).toBeNull()
   expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
   expect(quoteSweep).toHaveBeenCalledTimes(1)
 })
@@ -891,11 +896,11 @@ it('clears a consumed Sweep review after any queue failure', async () => {
   fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
   fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
-  await screen.findByText('Sequential execution — not atomic')
+  await screen.findByText('Separate transfers')
   fireEvent.click(screen.getByRole('button', { name: 'Queue 1 transfer' }))
 
   await waitFor(() => expect(queueSweep).toHaveBeenCalledTimes(1))
-  await waitFor(() => expect(screen.queryByText('Sequential execution — not atomic')).toBeNull())
+  await waitFor(() => expect(screen.queryByText('Separate transfers')).toBeNull())
   expect(screen.getByRole('button', { name: 'Review 1 transfer' })).toBeTruthy()
 })
 
@@ -927,7 +932,7 @@ it('masks Sweep amounts and encoded calldata and disables amount copy under bala
   fireEvent.change(screen.getByLabelText('Network'), { target: { value: '8453' } })
   fireEvent.click(screen.getByRole('checkbox', { name: /USDC/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Review 1 transfer' }))
-  await screen.findByText('Sequential execution — not atomic')
+  await screen.findByText('Separate transfers')
 
   expect(screen.queryByText('100000000')).toBeNull()
   expect(screen.queryByText(/a9059cbb-secret-amount/)).toBeNull()
@@ -974,7 +979,7 @@ it('ignores a stale Sweep quote after selection changes', async () => {
       }
     })
   )
-  expect(screen.queryByText('Sequential execution — not atomic')).toBeNull()
+  expect(screen.queryByText('Separate transfers')).toBeNull()
   expect(queueSweep).not.toHaveBeenCalled()
 })
 
@@ -1043,7 +1048,7 @@ it('retains a terminal request state after the core request is removed', async (
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'declined' }
@@ -1066,19 +1071,15 @@ it('keeps a submitted transaction visible without treating it as final success',
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'verifying' }
   })
 
   expect(screen.getByText('Transaction submitted')).toBeTruthy()
-  expect(
-    screen.getByText(
-      'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.'
-    )
-  ).toBeTruthy()
-  expect(screen.queryByText('Transaction queued')).toBeNull()
+  expect(screen.getByText('Waiting for network confirmation.')).toBeTruthy()
+  expect(screen.queryByText('Awaiting your review')).toBeNull()
   expect(screen.getByRole('status').textContent).toContain('Transaction submitted')
   const close = screen.getByRole('button', { name: 'Close' })
   expect(close.className).toContain('wrenControlGhost')
@@ -1095,7 +1096,7 @@ it('distinguishes an unconfirmed submission from a validated network response', 
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = {
@@ -1106,8 +1107,8 @@ it('distinguishes an unconfirmed submission from a validated network response', 
 
   const status = screen.getByRole('status')
   expect(status.getAttribute('aria-live')).toBe('polite')
-  expect(status.textContent).toContain('Submission status unconfirmed')
-  expect(status.textContent).toContain('network response was not confirmed')
+  expect(status.textContent).toContain('Broadcast unconfirmed')
+  expect(status.textContent).toContain('Checking network acceptance')
   expect(status.textContent).not.toContain('Transaction submitted')
 })
 
@@ -1120,7 +1121,7 @@ it('announces a confirmed transaction, keeps it open, and offers the unsaved des
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
@@ -1201,7 +1202,7 @@ it('opens an existing confirmed recipient contact without creating a duplicate',
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
   })
@@ -1223,8 +1224,8 @@ it('focuses each request-state heading once and announces only failures assertiv
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
-  const queuedHeading = screen.getByRole('heading', { name: 'Transaction queued' })
+  await screen.findByText('Awaiting your review')
+  const queuedHeading = screen.getByRole('heading', { name: 'Awaiting your review' })
   expect(queuedHeading.tabIndex).toBe(-1)
   expect(document.activeElement).toBe(queuedHeading)
 
@@ -1238,7 +1239,7 @@ it('focuses each request-state heading once and announces only failures assertiv
     },
     {
       request: { status: 'verifying', submission: { status: 'unconfirmed' } },
-      heading: 'Submission status unconfirmed',
+      heading: 'Broadcast unconfirmed',
       role: 'status',
       live: 'polite'
     },
@@ -1286,7 +1287,7 @@ it('closes the dashboard directly from confirmed success instead of returning to
   fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '0.25' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review send' }).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Review send' }))
-  await screen.findByText('Transaction queued')
+  await screen.findByText('Awaiting your review')
 
   replaceStore(store, (state) => {
     state.main.accounts[account].requests['send-request'] = { status: 'confirmed' }
@@ -1324,7 +1325,7 @@ it('ignores a delayed queue result after the selected account changes', async ()
   })
   await act(async () => finishQueue({ success: true, handlerId: 'old-account-request' }))
 
-  expect(screen.queryByText('Transaction queued')).toBeNull()
+  expect(screen.queryByText('Awaiting your review')).toBeNull()
   expect(screen.getByPlaceholderText('0.00').value).toBe('')
 })
 

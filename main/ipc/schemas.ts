@@ -717,7 +717,6 @@ const actionSchemas = {
   setLedgerDerivation: z.tuple([z.enum(['live', 'legacy', 'standard', 'testnet'])]),
   setLiveAccountLimit: z.tuple([z.number().int().min(1).max(100)]),
   setMenubarGasPrice: z.tuple([z.boolean()]),
-  setOnboard: z.tuple([z.object({ showing: z.boolean() }).strict()]),
   setEndpointUrl: z.tuple([NetworkTypeSchema, ChainKeySchema, EndpointIdSchema, UrlInputSchema]),
   setShortcut: z.tuple([z.literal('summon'), ShortcutSchema]),
   setTrezorDerivation: z.tuple([z.enum(['standard', 'legacy', 'testnet'])]),

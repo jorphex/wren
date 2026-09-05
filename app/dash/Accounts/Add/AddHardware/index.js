@@ -2,7 +2,7 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import hardwareSetup from 'url:../../../../../asset/ui/hardware-setup-v6.png'
-import RingIcon from '../../../../../resources/Components/RingIcon'
+import Icon from '../../../../../resources/Components/Icon'
 
 import Signer from '../../../Signer'
 
@@ -21,17 +21,12 @@ export class AddHardware extends React.Component {
           <div className='addAccountItemTop'>
             <div className='addAccountItemTopType'>
               <div className='addAccountItemIcon'>
-                {this.props.type === 'ledger' ? (
-                  <RingIcon svgName={'ledger'} svgSize={15} />
-                ) : (
-                  <RingIcon svgName={'trezor'} svgSize={15} />
-                )}
+                <Icon name='hardware' size={20} />
                 <div className='addAccountItemIconHex addAccountItemIconHexHardware' />
               </div>
               <div className='addAccountItemTopTitle'>{deviceName}</div>
             </div>
             {/* <div className='addAccountItemClose' onMouseDown={() => this.props.close()}>{'DONE'}</div> */}
-            <div className='addAccountItemSummary'>{`Unlock your ${deviceName} to continue.`}</div>
           </div>
           <div className='addAccountItemDevices'>
             {tethered.length ? (

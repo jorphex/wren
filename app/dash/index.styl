@@ -385,9 +385,13 @@ button,
     .dashMainScroll
       border-radius 0
       overflow-y auto
-      scrollbar-gutter stable
+      scrollbar-gutter stable both-edges
 
-    &:has(.sendComposer) .dashMainScroll
+    &:has(.sendComposer) .dashMainScroll,
+    &:has(.addAccounts) .dashMainScroll,
+    &:has(.earnDetails) .dashMainScroll,
+    &:has(.addressBookEditor) .dashMainScroll,
+    &:has(.networkEditor) .dashMainScroll
       overflow-y hidden
       scrollbar-gutter auto
 
@@ -649,6 +653,7 @@ button,
     width 100%
     height 56px
     margin 0
+    gap 10px
     padding 0 16px
     justify-content flex-start
     border 0

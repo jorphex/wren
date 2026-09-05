@@ -413,6 +413,9 @@ const TokenDetailsForm = ({ req, chain, tokenData = {}, isEdit = false, initialA
                     onChange={(event) => setSymbol(event.target.value)}
                   />
                 </label>
+              </div>
+              <details open={lookupState === 'manual' || !validDecimals || undefined}>
+                <summary>Token metadata</summary>{' '}
                 <label className='tokenInputLabel' htmlFor='tokenDecimals'>
                   <span>{COPY.decimals}</span>
                   <input
@@ -433,19 +436,19 @@ const TokenDetailsForm = ({ req, chain, tokenData = {}, isEdit = false, initialA
                     }}
                   />
                 </label>
-              </div>
-              <label className='tokenInputLabel' htmlFor='tokenLogoUri'>
-                <span>{COPY.logoUri}</span>
-                <input
-                  id='tokenLogoUri'
-                  className='tokenInput wrenInput'
-                  value={logoUri}
-                  disabled={isSaving}
-                  spellCheck={false}
-                  placeholder='https://…'
-                  onChange={(event) => setLogoUri(event.target.value)}
-                />
-              </label>
+                <label className='tokenInputLabel' htmlFor='tokenLogoUri'>
+                  <span>{COPY.logoUri}</span>
+                  <input
+                    id='tokenLogoUri'
+                    className='tokenInput wrenInput'
+                    value={logoUri}
+                    disabled={isSaving}
+                    spellCheck={false}
+                    placeholder='https://…'
+                    onChange={(event) => setLogoUri(event.target.value)}
+                  />
+                </label>
+              </details>
               {saveError ? (
                 <div className='newTokenSaveError' role='alert'>
                   {saveError}

@@ -5,13 +5,10 @@ import { getAddress } from '../../../resources/utils'
 import { isNetworkConnected } from '../../../resources/utils/chains'
 
 const COPY = {
-  available:
-    'View the execution code the configured RPC reports for any account. You can revoke a delegation only from Wren’s currently selected eligible Ring or Seed account.',
-  hardware:
-    'Observed only. Wren can prepare revocation only for its currently selected eligible Ring or Seed account.',
-  none: 'The configured RPC reports no code at this address.',
-  contract:
-    'The configured RPC reports contract code at this address. Wren can’t sign for this smart account.',
+  available: 'Check account delegation on a network.',
+  hardware: 'Revocation requires selecting a software wallet account.',
+  none: 'No delegation or contract code found.',
+  contract: 'Contract account. Revocation is unavailable.',
   empty: 'No accounts are available to observe.',
   unavailable: 'Execution state is unavailable.',
   admissionFailed: 'Couldn’t prepare the revocation request. No request was sent.'

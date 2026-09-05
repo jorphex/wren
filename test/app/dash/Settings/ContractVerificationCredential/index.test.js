@@ -17,9 +17,9 @@ it('fails closed when OS credential protection is unavailable', async () => {
 
   expect(await screen.findByText('Secure storage unavailable')).toBeTruthy()
   expect(screen.queryByLabelText('Etherscan API key')).toBeNull()
-  expect(screen.getByText(/OS credential protection is unavailable/i)).toBeTruthy()
-  expect(screen.queryByText(/Stored with OS credential protection/i)).toBeNull()
-  expect(screen.getByText(/not included in profile backups/i)).toBeTruthy()
+  expect(screen.getByText(/Secure storage unavailable. Cannot save a key./i)).toBeTruthy()
+  expect(screen.queryByText(/Protected by this device’s OS/i)).toBeNull()
+  expect(screen.getByText(/Excluded from backups/i)).toBeTruthy()
   view.unmount()
 })
 
@@ -28,8 +28,8 @@ it('does not claim OS protection when credential status cannot be checked', asyn
   const view = render(<ContractVerificationCredential />)
 
   expect(await screen.findByText('Storage status unavailable')).toBeTruthy()
-  expect(screen.getByText(/could not confirm OS credential protection/i)).toBeTruthy()
-  expect(screen.queryByText(/Stored with OS credential protection/i)).toBeNull()
+  expect(screen.getByText(/Secure storage could not be confirmed/i)).toBeTruthy()
+  expect(screen.queryByText(/Protected by this device’s OS/i)).toBeNull()
   expect(screen.queryByLabelText('Etherscan API key')).toBeNull()
   view.unmount()
 })

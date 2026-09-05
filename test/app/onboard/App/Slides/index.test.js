@@ -1,9 +1,10 @@
 import fs from 'fs'
+import link from '../../../../../resources/link'
 
-import { act, fireEvent, render, screen } from '../../../../componentSetup'
+import { fireEvent, render, screen } from '../../../../componentSetup'
 import Accounts from '../../../../../app/onboard/App/Slides/Accounts'
 import Extension from '../../../../../app/onboard/App/Slides/Extension'
-import Slides, { GUIDED_SLIDE_COUNT, guidedStepForSlide } from '../../../../../app/onboard/App/Slides'
+import Slides from '../../../../../app/onboard/App/Slides'
 
 jest.mock('../../../../../resources/link', () => ({
   off: jest.fn(),
@@ -50,32 +51,19 @@ it('labels both Companion download controls without the compact icon-only overri
   expect(firefox.className).not.toContain('wrenControlIcon')
 })
 
-it('numbers every guided slide while leaving the immersive welcome unnumbered', () => {
-  expect(GUIDED_SLIDE_COUNT).toBe(7)
-  expect(guidedStepForSlide(1)).toBe(1)
-  expect(guidedStepForSlide(2)).toBe(1)
-  expect(guidedStepForSlide(8)).toBe(7)
-})
-
-it('shows first and final progress with the visible slide title as context', () => {
-  render(<Slides platform='linux' />)
-
-  expect(screen.queryByText(/Step \d of 7/)).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: 'Get started' }))
-
-  expect(screen.getByText('Step 1 of 7')).toBeTruthy()
-  expect(screen.getByRole('heading', { name: 'Open Wren quickly' }).getAttribute('aria-describedby')).toBe(
-    'onboarding-slide-progress'
-  )
-
-  fireEvent.click(screen.getByRole('button', { name: 'Skip shortcut' }))
-  for (let slide = 0; slide < 5; slide += 1) {
-    act(() => jest.advanceTimersByTime(601))
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-  }
-
-  expect(screen.getByText('Step 7 of 7')).toBeTruthy()
-  expect(screen.getByRole('heading', { name: 'Ready to begin' })).toBeTruthy()
+it.each([
+  ['Create wallet', { newAccountType: 'create-seed' }],
+  ['Import wallet', { accountChooserMode: 'import' }],
+  ['Connect hardware wallet', { accountChooserMode: 'hardware' }],
+  ['Watch address', { newAccountType: 'nonsigning' }]
+])('starts %s directly', (label, data) => {
+  link.send.mockClear()
+  render(<Slides />)
+  fireEvent.click(screen.getByRole('button', { name: label }))
+  expect(link.send.mock.calls).toEqual([
+    ['tray:action', 'navReplace', 'dash', [{ view: 'accounts', data: { showAddAccounts: true, ...data } }]],
+    ['frame:close']
+  ])
 })
 
 it('uses the same restrained scrollbar treatment as the wallet shells', () => {

@@ -1,12 +1,13 @@
 import React from 'react'
 import Restore from 'react-restore'
 import link from '../../../../resources/link'
+import { getPermissionIds } from '../../../../resources/domain/permissions'
 import Icon from '../../../../resources/Components/Icon'
 import ChainIdentityMark from '../../../../resources/Components/ChainIdentityMark'
 import { safeNetworkMetadata } from '../../../../resources/domain/networkMetadata'
 
 export class DappDetails extends React.Component {
-  state = { switchingChainId: null }
+  state = { switchingChainId: null, openingAccount: '', accessError: '' }
 
   componentDidMount() {
     this.mounted = true
@@ -30,6 +31,31 @@ export class DappDetails extends React.Component {
       this.switchPending = false
       if (this.mounted) this.setState({ switchingChainId: null })
     }, 500)
+  }
+
+  openAccountAccess(account) {
+    if (this.openingAccess) return
+    const permissions = this.store('main.permissions', account) || {}
+    if (
+      !getPermissionIds(permissions).some(
+        (id) => permissions[id].handlerId === this.props.originId || id === this.props.originId
+      )
+    )
+      return
+    this.openingAccess = true
+    this.setState({ openingAccount: account, accessError: '' })
+    link.rpc('setSigner', account, (error) => {
+      if (!this.mounted) return
+      this.openingAccess = false
+      if (error)
+        return this.setState({ openingAccount: '', accessError: 'Could not open this account. Try again.' })
+      link.send('nav:forward', 'panel', {
+        view: 'expandedModule',
+        data: { id: 'permissions', account, title: 'Apps with access' }
+      })
+      link.send('tray:action', 'closeDash')
+      this.setState({ openingAccount: '' })
+    })
   }
 
   updateOriginChain(origin) {
@@ -94,8 +120,34 @@ export class DappDetails extends React.Component {
         </div>
         <section className='originAccessContext'>
           <div className='originSwapTitle'>Account access</div>
-          <p>Open an account in the wallet, then choose Apps with access to review or revoke this app.</p>
+          {Object.entries(this.store('main.permissions') || {})
+            .filter(([, permissions]) =>
+              getPermissionIds(permissions).some(
+                (id) => permissions[id].handlerId === this.props.originId || id === this.props.originId
+              )
+            )
+            .map(([account]) => (
+              <button
+                type='button'
+                className='wrenControl wrenControlGhost originAccountAccess'
+                key={account}
+                disabled={Boolean(this.state.openingAccount)}
+                onClick={() => this.openAccountAccess(account)}
+              >
+                <span>{this.store('main.accounts', account, 'name') || 'Account'}</span>
+                <code>{account}</code>
+                <span>{this.state.openingAccount === account ? 'Opening…' : 'Manage access'}</span>
+              </button>
+            ))}
+          {!Object.values(this.store('main.permissions') || {}).some((permissions) =>
+            getPermissionIds(permissions).some(
+              (id) => permissions[id].handlerId === this.props.originId || id === this.props.originId
+            )
+          ) ? (
+            <p>No active account access</p>
+          ) : null}
         </section>
+        {this.state.accessError ? <p role='alert'>{this.state.accessError}</p> : null}
         <div className='originSwapTitle'>Default network</div>
         <div>{this.updateOriginChain(origin)}</div>
       </div>

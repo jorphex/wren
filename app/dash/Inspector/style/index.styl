@@ -5,9 +5,7 @@
   color var(--wren-text-primary)
 
 .inspectorHeader
-  position sticky
-  top 0
-  z-index 5
+  position relative
   display grid
   grid-template-columns minmax(0, 1fr) auto
   gap var(--wren-space-4)
@@ -420,3 +418,11 @@ button.inspectorCopy
     scroll-behavior auto !important
     transition none !important
     animation none !important
+
+.inspector details > summary
+  box-sizing border-box
+  min-height 44px
+  padding 12px 0
+  cursor pointer
+  font-size 12px
+  line-height 20px

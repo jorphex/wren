@@ -226,7 +226,7 @@ it('prepares the exact draft and renders authoritative success evidence', async 
   expect(screen.getByText(/Value 0.25 ETH · Canonical 0x3782dace9d90000 · Chain 1/)).toBeTruthy()
   expect(screen.getByText('2 bytes')).toBeTruthy()
   expect(screen.getByText(`0x${'ab'.repeat(32)}`)).toBeTruthy()
-  expect(screen.getByText('21,000 gas · Wren padded configured-RPC estimate')).toBeTruthy()
+  expect(screen.getByText('21,000 gas · includes gas buffer')).toBeTruthy()
   expect(screen.getByText(/Simulation is evidence only/)).toBeTruthy()
   expect(screen.getByText('2')).toBeTruthy()
   expect(screen.getByText(/Provisional address\. It can change/)).toBeTruthy()
@@ -269,8 +269,8 @@ it('does not intercept Back or Escape while the mounted deployment workspace is 
 
 it.each([
   ['reverted', 'Simulation reverted. Check the data and network state.'],
-  ['unavailable', 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.'],
-  ['failed', 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.']
+  ['unavailable', 'Simulation unavailable. Check your RPC or continue without simulation.'],
+  ['failed', 'Simulation unavailable. Check your RPC or continue without simulation.']
 ])('keeps review available when simulation is %s', async (status, message) => {
   prepareDeployment.mockResolvedValue({
     success: true,
@@ -286,7 +286,7 @@ it.each([
   await user.click(screen.getByRole('button', { name: 'Check deployment' }))
 
   expect(await screen.findByText(message)).toBeTruthy()
-  expect(screen.getAllByText('Unavailable from configured RPC')).toHaveLength(2)
+  expect(screen.getAllByText('Unavailable')).toHaveLength(2)
   expect(screen.getByRole('button', { name: 'Review deployment' }).disabled).toBe(false)
   expect(screen.queryByText('Provisional CREATE address')).toBeNull()
 })

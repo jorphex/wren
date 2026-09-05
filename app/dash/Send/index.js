@@ -1,3 +1,4 @@
+import { tokenAmountPresentation } from '../../../resources/domain/token/display'
 import React from 'react'
 import Restore from 'react-restore'
 import emptyBalances from 'url:../../../asset/ui/wren-empty-balances-v2.png'
@@ -27,7 +28,7 @@ const COPY = Object.freeze({
   amount: 'Amount',
   amountExceedsBalance: 'Amount exceeds available balance',
   amountInvalid: 'Enter a valid amount',
-  asset: 'From',
+  asset: 'Asset',
   assetUnavailable: 'This asset is no longer available to send on this network. Choose another asset.',
   close: 'Close',
   chooseAsset: 'Choose an asset',
@@ -61,33 +62,31 @@ const COPY = Object.freeze({
   primarySubmitting: 'Sending…',
   quoteMax: 'Use Max',
   quotingMax: 'Calculating safe maximum…',
-  queuedBody: 'Your transaction is waiting to be submitted.',
-  queuedHeading: 'Transaction queued',
+  queuedBody: 'Review and sign in Wren.',
+  queuedHeading: 'Awaiting your review',
   recipient: 'To',
   recipientInvalid: 'Enter a valid address',
   recipientLookupUnavailable:
     'Recipient lookup is unavailable. Enter or verify the full address to continue.',
   recipientPlaceholder: 'Enter an address',
-  recipientResolved: 'No saved label · verify the full address',
+  recipientResolved: 'Unsaved address',
   recipientResolving: 'Checking address…',
   reviewFee: 'Wren estimates gas before anything is signed.',
   savedContacts: 'Saved contacts',
   recentRecipients: 'Recent recipients',
-  recentRecipientContext: 'Previously used on this device · verify the full address',
-  recentRecipientSource: 'Recent recipient · verify the full address',
+  recentRecipientContext: 'Previously used on this device',
+  recentRecipientSource: 'Recent recipient',
   searchContacts: 'Search accounts, contacts, and recent recipients',
   searchAssets: 'Search assets',
-  confirmedBody: 'Your transaction has been confirmed on the network.',
+  confirmedBody: '',
   confirmedHeading: 'Transaction confirmed',
   destination: 'Destination',
   saveContact: 'Save contact',
   viewContact: 'View contact',
-  submittedBody:
-    'Your transaction has been sent to the network and is waiting for confirmation. You can close this panel; Wren will keep tracking it.',
+  submittedBody: 'Waiting for network confirmation.',
   submittedHeading: 'Transaction submitted',
-  unconfirmedBody:
-    'Wren attempted one broadcast, but the network response was not confirmed. Wren is checking the signed transaction hash.',
-  unconfirmedHeading: 'Submission status unconfirmed',
+  unconfirmedBody: 'Checking network acceptance. Wren will not resend automatically.',
+  unconfirmedHeading: 'Broadcast unconfirmed',
   tryAgain: 'Try again',
   watchOnly: 'Watch-only accounts cannot sign transactions.'
 })
@@ -118,7 +117,19 @@ const expiryTime = (expiresAt) => {
 }
 const expiryLabel = (expiresAt) => {
   const time = expiryTime(expiresAt)
-  return Number.isFinite(time) ? new Date(time).toISOString() : exactValue(expiresAt)
+  return Number.isFinite(time)
+    ? new Date(time).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    : exactValue(expiresAt)
+}
+const amountLabel = (value, decimals, symbol) => {
+  const formatted = formatTokenBaseUnitAmount(String(value ?? ''), decimals)
+  return formatted === undefined ? `${exactValue(value)} base units` : `${formatted} ${symbol || ''}`.trim()
 }
 const quoteExpired = (quote) => {
   const expires = expiryTime(quote?.expiresAt)
@@ -190,6 +201,7 @@ export class Send extends React.Component {
       recipientStatus: '',
       requestAccount: '',
       requestRecipient: '',
+      requestSummary: null,
       requestId: '',
       selectedAsset: '',
       sweepChainId: null,
@@ -249,6 +261,7 @@ export class Send extends React.Component {
       recipientStatus: '',
       requestAccount: '',
       requestRecipient: '',
+      requestSummary: null,
       requestId: '',
       selectedAsset: '',
       sweepChainId: null,
@@ -321,7 +334,9 @@ export class Send extends React.Component {
               ? COPY.unconfirmedHeading
               : submitted
                 ? COPY.submittedHeading
-                : COPY.queuedHeading
+                : ['signing', 'sending'].includes(status)
+                  ? 'Waiting for signer'
+                  : COPY.queuedHeading
     const body = declined
       ? COPY.declinedBody
       : failed
@@ -332,7 +347,9 @@ export class Send extends React.Component {
             ? COPY.unconfirmedBody
             : submitted
               ? COPY.submittedBody
-              : COPY.queuedBody
+              : ['signing', 'sending'].includes(status)
+                ? 'Complete the request on your signer.'
+                : COPY.queuedBody
 
     return {
       key: `${heading}\u0000${body}`,
@@ -661,7 +678,13 @@ export class Send extends React.Component {
       queueing: false,
       requestAccount: account.id,
       requestRecipient,
-      requestId: result.handlerId
+      requestId: result.handlerId,
+      requestSummary: {
+        amount: this.state.amount,
+        symbol: selected.symbol,
+        chain: selected.chainName,
+        chainId: selected.chainId
+      }
     })
   }
 
@@ -844,6 +867,12 @@ export class Send extends React.Component {
       requestAccount: account.id,
       requestRecipient,
       requestId: result.handlerId || result.requestId || '',
+      requestSummary: {
+        chain: this.store('main.networks.ethereum', this.state.sweepChainId, 'name'),
+        chainId: this.state.sweepChainId,
+        amount: '',
+        symbol: 'Sweep'
+      },
       sweepStatus: result.handlerId || result.requestId ? 'queued' : 'queued-local'
     })
   }
@@ -869,6 +898,7 @@ export class Send extends React.Component {
       maxReview: false,
       requestAccount: '',
       requestRecipient: '',
+      requestSummary: null,
       requestId: '',
       sweepQuote: null,
       sweepReview: false,
@@ -1133,7 +1163,6 @@ export class Send extends React.Component {
       return (
         <section aria-busy='true' aria-live='polite' className='sendQuotePanel' role='status'>
           <strong>{COPY.quotingMax}</strong>
-          <span>The previous amount was cleared while Wren refreshed fee evidence.</span>
         </section>
       )
     }
@@ -1166,7 +1195,7 @@ export class Send extends React.Component {
               {this.store('selected.hideBalances') ? '••••' : `${this.state.amount} ${selected.symbol}`}
             </strong>
           </div>
-          <span className='sendQuoteBadge'>Fresh RPC quote</span>
+          <span className='sendQuoteBadge'>Expires {expiryLabel(maxQuote.expiresAt)}</span>
         </div>
         <button
           className='wrenControl wrenControlGhost wrenControlCompact sendQuoteEdit'
@@ -1179,18 +1208,27 @@ export class Send extends React.Component {
           Edit amount
         </button>
         <dl className='sendQuoteFacts'>
-          {rows.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{this.store('selected.hideBalances') && /fee|reserved/i.test(label) ? '••••' : value}</dd>
-            </div>
-          ))}
+          <div>
+            <dt>Maximum fee reserve</dt>
+            <dd>
+              {this.store('selected.hideBalances')
+                ? '••••'
+                : amountLabel(reserve.total, selected.decimals, selected.symbol)}
+            </dd>
+          </div>
         </dl>
-        <p>
-          {maxReview
-            ? 'Verify the recipient, exact reserve, and expiry. Worst-case reserve may leave dust; queueing opens Wren’s normal signing review.'
-            : 'This amount reserves the worst-case fee shown and may leave dust when the actual fee is lower. It is bound to this recipient and expiry; review is required.'}
-        </p>
+        <p>Unused fee reserve stays in your account.</p>
+        <details>
+          <summary>Fee details</summary>
+          <dl className='sendQuoteFacts'>
+            {rows.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{this.store('selected.hideBalances') && /fee|reserved/i.test(label) ? '••••' : value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
       </section>
     )
   }
@@ -1228,108 +1266,155 @@ export class Send extends React.Component {
       const calls = Array.isArray(quote.calls) ? quote.calls : []
       return (
         <section className='sendSweepReview' aria-label='Review sweep'>
-          <div className='sendSweepWarning' role='alert'>
-            <strong>Sequential execution — not atomic</strong>
-            <span>
-              These transfers are submitted one-by-one. If one fails, earlier transfers stay on-chain and
-              later transfers may not run. No bridge or batch contract is used. Wren does not retry
-              automatically; start a fresh Sweep for any remainder.
-            </span>
-          </div>
-          <div className='sendSweepTruth'>
-            <div>
-              <span>Recipient</span>
-              <code>{quote.recipient || this.state.recipientResolved}</code>
-              <button
-                aria-label='Copy full sweep recipient address'
-                className='wrenControl wrenControlGhost wrenControlCompact'
-                onClick={() =>
-                  this.copySweepValue('Recipient address', quote.recipient || this.state.recipientResolved)
-                }
-                type='button'
-              >
-                Copy
-              </button>
+          <div className='sendSweepReviewContent'>
+            <div className='sendSweepWarning' role='alert'>
+              <strong>Separate transfers</strong>
+              <span>
+                Completed transfers remain if a later transfer fails. Unsent assets stay in your account.
+              </span>
             </div>
-            {quotedAssets.map((asset, index) => (
-              <div key={`${asset.address}:${index}`}>
-                <span>Token {index + 1} · submitted before native</span>
-                <code>{asset.address}</code>
-                <code>{hideBalances ? '••••' : exactValue(asset.balance)}</code>
-                <span className='sendSweepCopies'>
+            <div className='sendSweepTruth'>
+              <div>
+                <span>Network</span>
+                <strong>{this.store('main.networks.ethereum', chainId, 'name') || `Chain ${chainId}`}</strong>
+              </div>
+              <div className='sendSweepRecipient'>
+                <span>Recipient</span>
+                <code>{quote.recipient || this.state.recipientResolved}</code>
+                <button
+                  aria-label='Copy full sweep recipient address'
+                  className='wrenControl wrenControlGhost wrenControlCompact'
+                  onClick={() =>
+                    this.copySweepValue('Recipient address', quote.recipient || this.state.recipientResolved)
+                  }
+                  type='button'
+                >
+                  Copy
+                </button>
+              </div>
+              {quotedAssets.map((asset, index) => {
+                const known = chainAssets.find(
+                  (candidate) => candidate.address.toLowerCase() === asset.address.toLowerCase()
+                )
+                return (
+                  <div key={`${asset.address}:${index}`}>
+                    <strong>
+                      {index + 1}. {known?.symbol || 'Token'}
+                    </strong>
+                    <strong>
+                      {hideBalances ? '••••' : amountLabel(asset.balance, known?.decimals, known?.symbol)}
+                    </strong>
+                    <details>
+                      <summary>Token details</summary>
+                      <code>{asset.address}</code>
+                      <code>{hideBalances ? '••••' : `${asset.balance} base units`}</code>
+                      <span className='sendSweepCopies'>
+                        <button
+                          aria-label={`Copy full token ${index + 1} address`}
+                          className='wrenControl wrenControlGhost wrenControlCompact'
+                          onClick={() => this.copySweepValue(`Token ${index + 1} address`, asset.address)}
+                          type='button'
+                        >
+                          Copy address
+                        </button>
+                        <button
+                          aria-label={`Copy full token ${index + 1} amount`}
+                          aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
+                          className='wrenControl wrenControlGhost wrenControlCompact'
+                          disabled={hideBalances}
+                          onClick={() => this.copySweepValue(`Token ${index + 1} amount`, asset.balance)}
+                          type='button'
+                        >
+                          Copy amount
+                        </button>
+                      </span>
+                    </details>
+                  </div>
+                )
+              })}
+              {quote.native?.selected ? (
+                <div>
+                  <span>Native asset · submitted last</span>
+                  <code>Native currency</code>
+                  <code>
+                    {hideBalances
+                      ? '••••'
+                      : amountLabel(quote.native.value, native?.decimals, native?.symbol)}
+                  </code>
                   <button
-                    aria-label={`Copy full token ${index + 1} address`}
-                    className='wrenControl wrenControlGhost wrenControlCompact'
-                    onClick={() => this.copySweepValue(`Token ${index + 1} address`, asset.address)}
-                    type='button'
-                  >
-                    Copy address
-                  </button>
-                  <button
-                    aria-label={`Copy full token ${index + 1} amount`}
+                    aria-label='Copy full native amount'
                     aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
                     className='wrenControl wrenControlGhost wrenControlCompact'
                     disabled={hideBalances}
-                    onClick={() => this.copySweepValue(`Token ${index + 1} amount`, asset.balance)}
+                    onClick={() => this.copySweepValue('Native amount', quote.native.value)}
                     type='button'
                   >
                     Copy amount
                   </button>
-                </span>
-              </div>
-            ))}
-            {quote.native?.selected ? (
+                </div>
+              ) : null}
+            </div>
+            {hideBalances ? (
+              <p className='sendSweepPrivacyCopy' id='sendSweepPrivacyCopy'>
+                Amount copy and calldata are hidden while balance privacy is on.
+              </p>
+            ) : null}
+            <details className='sendSweepCalls'>
+              <summary>Exact ordered calls ({calls.length})</summary>
+              {!hideBalances ? (
+                <code>
+                  Maximum total fee:{' '}
+                  {amountLabel(
+                    quote.maximumFee,
+                    native?.decimals ??
+                      this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency.decimals') ??
+                      18,
+                    native?.symbol ||
+                      this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency.symbol') ||
+                      '?'
+                  )}
+                </code>
+              ) : null}
+              {calls.map((call, index) => (
+                <div key={`${call.to}:${index}`}>
+                  <strong>
+                    {index + 1}.{' '}
+                    {index === calls.length - 1 && quote.native?.selected ? 'Native last' : 'Token call'}
+                  </strong>
+                  <code>to: {call.to}</code>
+                  <code>value: {hideBalances ? '••••' : exactValue(call.value)}</code>
+                  <code>data: {hideBalances ? '••••' : exactValue(call.data)}</code>
+                </div>
+              ))}
+            </details>
+            <dl className='sendQuoteFacts'>
               <div>
-                <span>Native asset · submitted last</span>
-                <code>Native currency</code>
-                <code>{hideBalances ? '••••' : exactValue(quote.native.value)}</code>
-                <button
-                  aria-label='Copy full native amount'
-                  aria-describedby={hideBalances ? 'sendSweepPrivacyCopy' : undefined}
-                  className='wrenControl wrenControlGhost wrenControlCompact'
-                  disabled={hideBalances}
-                  onClick={() => this.copySweepValue('Native amount', quote.native.value)}
-                  type='button'
-                >
-                  Copy amount
-                </button>
+                <dt>Maximum total fee</dt>
+                <dd>
+                  {hideBalances
+                    ? '••••'
+                    : tokenAmountPresentation(
+                        quote.maximumFee,
+                        native?.decimals ??
+                          this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency.decimals') ??
+                          18,
+                        native?.symbol ||
+                          this.store('main.networksMeta.ethereum', chainId, 'nativeCurrency.symbol') ||
+                          '?'
+                      ).display}
+                </dd>
               </div>
+              <div>
+                <dt>Quote expires</dt>
+                <dd>{expiryLabel(quote.expiresAt)}</dd>
+              </div>
+            </dl>
+            {this.state.copyStatus ? (
+              <span className='sendCopyStatus' aria-live='polite' role='status'>
+                {this.state.copyStatus}
+              </span>
             ) : null}
           </div>
-          {hideBalances ? (
-            <p className='sendSweepPrivacyCopy' id='sendSweepPrivacyCopy'>
-              Amount copy and calldata are hidden while balance privacy is on.
-            </p>
-          ) : null}
-          <details className='sendSweepCalls'>
-            <summary>Exact ordered calls ({calls.length})</summary>
-            {calls.map((call, index) => (
-              <div key={`${call.to}:${index}`}>
-                <strong>
-                  {index + 1}.{' '}
-                  {index === calls.length - 1 && quote.native?.selected ? 'Native last' : 'Token call'}
-                </strong>
-                <code>to: {call.to}</code>
-                <code>value: {hideBalances ? '••••' : exactValue(call.value)}</code>
-                <code>data: {hideBalances ? '••••' : exactValue(call.data)}</code>
-              </div>
-            ))}
-          </details>
-          <dl className='sendQuoteFacts'>
-            <div>
-              <dt>Maximum total fee</dt>
-              <dd>{hideBalances ? '••••' : `${exactValue(quote.maximumFee)} wei`}</dd>
-            </div>
-            <div>
-              <dt>Quote expires</dt>
-              <dd>{expiryLabel(quote.expiresAt)}</dd>
-            </div>
-          </dl>
-          {this.state.copyStatus ? (
-            <span className='sendCopyStatus' aria-live='polite' role='status'>
-              {this.state.copyStatus}
-            </span>
-          ) : null}
           <div className='sendSweepReviewActions'>
             <button
               className='wrenControl wrenControlGhost wrenControlLarge'
@@ -1450,9 +1535,7 @@ export class Send extends React.Component {
           {!tokens.length && !native ? <p>No positive balances on this network.</p> : null}
         </div>
         <p className='sendSweepWarning sendSweepWarningCompact'>
-          Sweep is sequential and non-atomic. Earlier completed transfers remain if a later one fails. No
-          bridge, batch contract, or automatic retry is used. Native reserve may leave dust when actual fees
-          are lower.
+          Transfers run separately. Completed transfers remain if a later transfer fails.
         </p>
         <div className='sendActionShelf sendSweepShelf'>
           <button
@@ -1464,7 +1547,9 @@ export class Send extends React.Component {
               ? 'Scanning balances…'
               : canReview
                 ? `Review ${selectedCount} transfer${selectedCount === 1 ? '' : 's'}`
-                : 'Select assets to sweep'}
+                : selectedCount
+                  ? 'Enter a recipient to review'
+                  : 'Select assets to sweep'}
           </button>
         </div>
       </section>
@@ -1499,10 +1584,16 @@ export class Send extends React.Component {
           <h2 ref={this.requestHeadingRef} tabIndex={-1}>
             {heading}
           </h2>
-          <p>{body}</p>
+          {body ? <p>{body}</p> : null}
+          {this.state.requestSummary ? (
+            <p className='sendReceipt'>
+              {this.store('selected.hideBalances') ? '••••' : this.state.requestSummary.amount}{' '}
+              {this.state.requestSummary.symbol} · {this.state.requestSummary.chain}
+            </p>
+          ) : null}
           {this.state.queueError ? <div className='sendComposerError'>{this.state.queueError}</div> : null}
         </div>
-        {confirmed && this.state.requestRecipient ? (
+        {this.state.requestRecipient ? (
           <div className='sendConfirmedDestination'>
             <span>{COPY.destination}</span>
             {savedContact ? <strong>{savedContact.name}</strong> : null}
@@ -1520,6 +1611,30 @@ export class Send extends React.Component {
               </span>
             ) : null}
           </div>
+        ) : null}
+        {(this.store('main.accounts', this.state.requestAccount, 'requests', this.state.requestId) ||
+          !this.lastRequest) &&
+        !declined &&
+        !failed ? (
+          <button
+            type='button'
+            className='wrenControl wrenControlPrimary wrenControlLarge'
+            onClick={() => {
+              link.send('nav:forward', 'panel', {
+                view: 'requestView',
+                data: {
+                  step: 'confirm',
+                  accountId: this.state.requestAccount,
+                  requestId: this.state.requestId
+                }
+              })
+              link.send('tray:action', 'closeDash')
+            }}
+          >
+            {['confirmed', 'success', 'verifying', 'sent', 'confirming'].includes(request?.status)
+              ? 'Transaction details'
+              : 'Open review'}
+          </button>
         ) : null}
         {declined || failed ? (
           <button
@@ -1681,6 +1796,11 @@ export class Send extends React.Component {
             Sweep assets
           </button>
         </div>
+        <div className='sendSourceAccount'>
+          <span className='sendRowLabel'>From</span>
+          <strong>{account.ensName || account.name || COPY.currentAccount}</strong>
+          <code>{account.id}</code>
+        </div>
         <div className='sendLedger'>
           {this.state.mode === 'send' ? (
             <div className='sendLedgerRow sendAssetRow'>
@@ -1696,14 +1816,8 @@ export class Send extends React.Component {
                 <span className='sendAssetIdentityCluster'>
                   <AssetMark appearance='plain' asset={selected} />
                   <span>
-                    <strong>{account.ensName || account.name || COPY.currentAccount}</strong>
-                    <small>
-                      {selected.symbol} ·{' '}
-                      {this.store('selected.hideBalances')
-                        ? 'Balance hidden'
-                        : `${selected.displayBalance} ${selected.symbol}`}{' '}
-                      · {selected.chainName}
-                    </small>
+                    <strong>{selected.symbol}</strong>
+                    <small>{selected.chainName}</small>
                   </span>
                 </span>
                 <Icon name='next' size={17} />
@@ -1871,7 +1985,6 @@ export class Send extends React.Component {
             <div className='sendLedgerRow sendFeeRow'>
               <span className='sendRowLabel'>{COPY.fee}</span>
               <span className='sendFeeValue'>{COPY.feeReview}</span>
-              <span className='sendRowHint'>{COPY.reviewFee}</span>
             </div>
           ) : null}
         </div>

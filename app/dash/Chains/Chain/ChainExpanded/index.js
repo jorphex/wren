@@ -28,6 +28,7 @@ const ChainExpanded = ({
   nativeCurrencyDecimals = 18
 }) => {
   const chain = { id, type, name, isTestnet, symbol, explorer, primaryColor }
+  const [section, setSection] = useState('details')
   const [currentName, setName] = useState(name)
   const [currentSymbol, setSymbol] = useState(symbol)
   const [currentExplorer, setExplorer] = useState(explorer)
@@ -57,16 +58,19 @@ const ChainExpanded = ({
     )
   }
 
-  const endpointInvalid = Object.values(endpointStatuses).some(
-    (status) => status === 'Enter a valid RPC URL.'
-  )
+  const detailsChanged =
+    currentName !== name ||
+    currentSymbol !== symbol ||
+    currentExplorer !== explorer ||
+    Number(currentDecimals) !== nativeCurrencyDecimals ||
+    currentOn !== on
   const decimals = Number(currentDecimals)
   const formValid =
     currentName.trim() &&
     currentSymbol.trim() &&
     Number.isInteger(decimals) &&
     decimals >= 0 &&
-    !endpointInvalid
+    decimals <= 255
 
   const commitRpc = (endpointId) => {
     const value = endpointValues[endpointId]
@@ -154,74 +158,115 @@ const ChainExpanded = ({
         <h1>Edit {currentName}</h1>
         <p>Chain ID {id}</p>
       </div>
-      <div className='networkEditorBody'>
-        <div className='networkEditorGrid'>
-          <NetworkEditorField label='Network name' value={currentName} onChange={setName} />
-          <NetworkEditorField label='Chain ID' value={id} technical readOnly />
-          <NetworkEditorField label='Native currency' value={currentSymbol} onChange={setSymbol} />
-          <NetworkEditorField
-            label='Decimals'
-            value={currentDecimals}
-            technical
-            inputMode='numeric'
-            onChange={setDecimals}
-          />
-          <div className='networkEditorWide'>
-            <RpcEndpointLedger
-              endpoints={endpoints}
-              values={endpointValues}
-              statuses={endpointStatuses}
-              onValueChange={(endpointId, value) => {
-                setEndpointValues((values) => ({ ...values, [endpointId]: value }))
-                setEndpointStatuses((statuses) => ({ ...statuses, [endpointId]: '' }))
-              }}
-              onCommit={commitRpc}
-              onToggle={(endpointId, endpointOn) => {
-                setEndpoints((items) =>
-                  items.map((endpoint) =>
-                    endpoint.id === endpointId ? { ...endpoint, on: endpointOn } : endpoint
-                  )
-                )
-                link.send('tray:action', 'toggleEndpoint', type, id, endpointId, endpointOn)
-              }}
-              onMove={moveEndpoint}
-              onAdd={addEndpoint}
-              onRemove={removeEndpoint}
-            />
-          </div>
-          <div className='networkEditorWide'>
-            <NetworkEditorField
-              label='Block explorer'
-              value={currentExplorer}
-              technical
-              onChange={setExplorer}
-            />
-          </div>
-        </div>
-        <NetworkEditorToggle
-          label='Use this network'
-          checked={currentOn}
-          disabled={isMainnet}
-          onChange={setOn}
-        />
+      <div className='networkEditorSections' role='group' aria-label='Network settings'>
+        <button
+          type='button'
+          className='wrenControl wrenControlGhost'
+          aria-pressed={section === 'details'}
+          onClick={() => setSection('details')}
+        >
+          Network details
+        </button>
+        <button
+          type='button'
+          className='wrenControl wrenControlGhost'
+          disabled={section === 'details' && detailsChanged}
+          title={detailsChanged ? 'Save or cancel network details first' : undefined}
+          aria-pressed={section === 'connections'}
+          onClick={() => setSection('connections')}
+        >
+          RPC connections
+        </button>
       </div>
-      <NetworkEditorActions
-        primaryLabel='Save changes'
-        primaryEnabled={Boolean(formValid)}
-        onCancel={() => link.send('tray:action', 'backDash')}
-        onPrimary={save}
-        onRemove={
-          isMainnet
-            ? undefined
-            : () => {
-                const confirmAction = {
-                  view: 'notify',
-                  data: { notify: 'confirmRemoveChain', notifyData: { chain } }
-                }
-                link.send('tray:action', 'navDash', confirmAction)
-              }
-        }
-      />
+      {section === 'connections' ? (
+        <>
+          <div className='networkEditorBody networkEditorConnections'>
+            <p className='networkEditorLiveStatus'>Changes apply immediately</p>
+            <div className='networkEditorWide'>
+              <RpcEndpointLedger
+                endpoints={endpoints}
+                values={endpointValues}
+                statuses={endpointStatuses}
+                onValueChange={(endpointId, value) => {
+                  setEndpointValues((values) => ({ ...values, [endpointId]: value }))
+                  setEndpointStatuses((statuses) => ({ ...statuses, [endpointId]: '' }))
+                }}
+                onCommit={commitRpc}
+                onToggle={(endpointId, endpointOn) => {
+                  setEndpoints((items) =>
+                    items.map((endpoint) =>
+                      endpoint.id === endpointId ? { ...endpoint, on: endpointOn } : endpoint
+                    )
+                  )
+                  link.send('tray:action', 'toggleEndpoint', type, id, endpointId, endpointOn)
+                }}
+                onMove={moveEndpoint}
+                onAdd={addEndpoint}
+                onRemove={removeEndpoint}
+              />
+            </div>
+          </div>
+          <div className='networkEditorFooter'>
+            <div className='networkEditorFooterActions'>
+              <button
+                type='button'
+                className='networkEditorSubmit wrenControl wrenControlSecondary wrenControlLarge'
+                onClick={() => link.send('tray:action', 'backDash')}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className='networkEditorBody'>
+            <div className='networkEditorGrid'>
+              <NetworkEditorField label='Network name' value={currentName} onChange={setName} />
+              <NetworkEditorField label='Chain ID' value={id} technical readOnly />
+              <NetworkEditorField label='Native currency' value={currentSymbol} onChange={setSymbol} />
+              <NetworkEditorField
+                label='Decimals'
+                value={currentDecimals}
+                technical
+                inputMode='numeric'
+                onChange={setDecimals}
+              />
+              <div className='networkEditorWide'>
+                <NetworkEditorField
+                  label='Block explorer'
+                  value={currentExplorer}
+                  technical
+                  onChange={setExplorer}
+                />
+              </div>
+            </div>
+            <NetworkEditorToggle
+              label='Use this network'
+              checked={currentOn}
+              disabled={isMainnet}
+              onChange={setOn}
+            />
+          </div>
+          <NetworkEditorActions
+            primaryLabel='Save changes'
+            primaryEnabled={Boolean(formValid)}
+            onCancel={() => link.send('tray:action', 'backDash')}
+            onPrimary={save}
+            onRemove={
+              isMainnet
+                ? undefined
+                : () => {
+                    const confirmAction = {
+                      view: 'notify',
+                      data: { notify: 'confirmRemoveChain', notifyData: { chain } }
+                    }
+                    link.send('tray:action', 'navDash', confirmAction)
+                  }
+            }
+          />
+        </>
+      )}
     </div>
   )
 }

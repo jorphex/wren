@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
 import onboardingWelcome from 'url:../../../../../asset/ui/onboarding-welcome.png'
@@ -62,7 +62,7 @@ const WelcomeTitle = styled.h1`
 `
 
 const WelcomeCopy = styled.p`
-  margin: 0 0 24px;
+  margin: 0 0 12px;
   color: var(--outerspace08);
   font-size: clamp(15px, 2.25vw, 18px);
   font-weight: 350;
@@ -70,36 +70,50 @@ const WelcomeCopy = styled.p`
 `
 
 const WelcomeButton = styled.button`
+  width: 100%;
+  margin-top: 8px;
   min-width: 144px;
   height: 46px;
-  font-size: 16px;
+  font-size: 14px;
 `
 
-const Intro = ({ onProceed, setTitle, setProceed }) => {
-  useEffect(() => {
-    setTitle('')
-    setProceed({})
-  }, [])
-
-  return (
-    <Slide>
-      <Welcome>
-        <WelcomeContent>
-          <WelcomeTitle>Meet Wren</WelcomeTitle>
-          <WelcomeCopy>
-            A calm desktop wallet for your accounts, networks, and signing tools.
-          </WelcomeCopy>
-          <WelcomeButton
-            type='button'
-            className='wrenControl wrenControlPrimary wrenControlLarge wrenOnboardPrimary'
-            onClick={onProceed}
-          >
-            Get started
-          </WelcomeButton>
-        </WelcomeContent>
-      </Welcome>
-    </Slide>
-  )
-}
+const Intro = ({ onProceed }) => (
+  <Slide>
+    <Welcome>
+      <WelcomeContent>
+        <WelcomeTitle>Meet Wren</WelcomeTitle>
+        <WelcomeCopy>Your accounts. Your keys.</WelcomeCopy>
+        <WelcomeButton
+          type='button'
+          className='wrenControl wrenControlPrimary wrenControlLarge wrenOnboardPrimary'
+          onClick={() => onProceed({ newAccountType: 'create-seed' })}
+        >
+          Create wallet
+        </WelcomeButton>
+        <WelcomeButton
+          type='button'
+          className='wrenControl wrenControlSecondary'
+          onClick={() => onProceed({ accountChooserMode: 'import' })}
+        >
+          Import wallet
+        </WelcomeButton>
+        <WelcomeButton
+          type='button'
+          className='wrenControl wrenControlSecondary'
+          onClick={() => onProceed({ accountChooserMode: 'hardware' })}
+        >
+          Connect hardware wallet
+        </WelcomeButton>
+        <WelcomeButton
+          type='button'
+          className='wrenControl wrenControlGhost'
+          onClick={() => onProceed({ newAccountType: 'nonsigning' })}
+        >
+          Watch address
+        </WelcomeButton>
+      </WelcomeContent>
+    </Welcome>
+  </Slide>
+)
 
 export default Intro

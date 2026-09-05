@@ -62,26 +62,26 @@ class SignerAccountsHarness extends Dash {
   }
 }
 
-it('groups account methods into a semantic ruled chooser', () => {
+it('offers four clear setup intents with private-key creation in Advanced', () => {
   render(<AddAccounts data={{}} />)
-
-  expect(screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual([
-    'Hardware devices',
-    'Create new',
-    'Import existing',
-    'Watch-only'
+  expect(screen.getByRole('heading', { name: 'Add account' })).toBeTruthy()
+  expect(screen.getAllByRole('button').map((button) => button.textContent.trim())).toEqual([
+    'Create wallet',
+    'Import wallet',
+    'Connect hardware wallet',
+    'Watch address',
+    'Create private key'
   ])
-  expect(screen.getAllByRole('button')).toHaveLength(9)
 })
 
 it('uses the seed identity mark for the seed phrase route', () => {
-  render(<AddAccounts data={{}} />)
+  render(<AddAccounts data={{ accountChooserMode: 'import' }} />)
 
   expect(AccountTypeMark.mock.calls.some(([props]) => props.type === 'seed' && props.size === 20)).toBe(true)
 })
 
-it('keeps each account method a one-click route', () => {
-  render(<AddAccounts data={{}} />)
+it('keeps each hardware method a one-click route', () => {
+  render(<AddAccounts data={{ accountChooserMode: 'hardware' }} />)
 
   fireEvent.click(screen.getByRole('button', { name: 'Ledger device' }))
 
@@ -92,9 +92,10 @@ it('keeps each account method a one-click route', () => {
 })
 
 it('routes creation separately from recovery-phrase import', () => {
-  render(<AddAccounts data={{}} />)
+  const view = render(<AddAccounts data={{}} />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Create recovery phrase' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Create wallet' }))
+  view.rerender(<AddAccounts data={{ accountChooserMode: 'import' }} />)
   fireEvent.click(screen.getByRole('button', { name: 'Import recovery phrase' }))
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
@@ -121,12 +122,17 @@ it('filters the account chooser for creation and import entry points', () => {
   expect(screen.queryByRole('button', { name: 'Create recovery phrase' })).toBeNull()
 })
 
-it('routes the three Perch add-account actions to real Wren flows', () => {
+it('routes the account-add actions to real Wren flows', () => {
   render(<AccountsHarness data={{}} />)
 
-  fireEvent.click(screen.getByRole('button', { name: 'Derive new' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Watch' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Import' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Create wallet' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Watch address' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Import wallet' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Connect hardware wallet' }))
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'accounts',
+    data: { showAddAccounts: true, accountChooserMode: 'hardware' }
+  })
 
   expect(link.send.mock.calls).toEqual(
     expect.arrayContaining([

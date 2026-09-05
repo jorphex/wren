@@ -8,7 +8,7 @@ test('gives the form body sole overflow ownership while actions stay anchored', 
   expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?height calc\(100vh - 64px\)[\s\S]*?overflow hidden/)
   expect(editorStyle).toMatch(/\.networkEditorBody\n[\s\S]*?overflow-y auto/)
   expect(editorStyle).toMatch(
-    /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap[\s\S]*?overflow-y hidden/
+    /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap[\s\S]*?overflow hidden/
   )
   expect(editorStyle).toMatch(
     /\.networkEditorHeader\n\s{4}min-height 60px\n\s{4}padding-top 10px\n\s{4}padding-bottom 8px/
@@ -29,9 +29,7 @@ test('gives the form body sole overflow ownership while actions stay anchored', 
 test('anchors add and edit actions at the bottom while the form fits', () => {
   expect(editorStyle).toMatch(/\.networkEditor\n[\s\S]*?height calc\(100vh - 64px\)/)
   expect(editorStyle).toMatch(/\.networkEditorBody\n\s{2}position relative\n\s{2}flex 1 1 auto/)
-  expect(editorStyle).toMatch(
-    /\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap\n\s{2}padding-top 0\n\s{2}padding-bottom 0/
-  )
+  expect(editorStyle).toMatch(/\.localSettings:has\(\.networkEditor\) > \.localSettingsWrap\n\s{2}padding 0/)
   expect(editorStyle).toMatch(
     /\.networkEditorFooter[\s\S]*?border-top 1px solid var\(--wren-border-subtle\)[\s\S]*?background var\(--wren-surface-overlay\)/
   )

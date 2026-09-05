@@ -1086,3 +1086,50 @@
   .wrenControl
     min-height 44px
     padding 0 var(--wren-space-4)
+
+// Keep setup fields adjacent to the identity and summary.
+.addAccountItem:not(:has(.generatedWalletFrame))
+  .addAccountItemOption
+    top 126px
+
+  .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
+    padding-top 16px
+
+// Every setup frame occupies one viewport; reserve scrollbars symmetrically.
+.addAccountItem:not(.generatedWalletSetup) .addAccountItemOptionSetup .addAccountItemOptionSetupFrames .addAccountItemOptionSetupFrame
+  flex 0 0 10%
+  min-width 0
+  overflow-y auto
+  scrollbar-gutter stable both-edges
+
+  .addAccountItemOptionInput
+    box-sizing border-box
+    width 100%
+    margin-left auto
+    margin-right auto
+
+    textarea
+      box-sizing border-box
+      margin-left 0
+      margin-right 0
+.addAccountItem:not(.generatedWalletSetup) .addAccountItemWrap
+  border 0
+  background transparent
+  box-shadow none
+
+.addAccountItem:not(.generatedWalletSetup) .addAccountItemTop
+  padding-top 20px
+
+.addAccountItemSummary:empty
+  display none
+
+.addAccountItem:not(.generatedWalletSetup) .addAccountItemWrap::before
+  display none
+
+.dash .addAccounts
+  overflow-y auto
+  scrollbar-gutter stable both-edges
+
+  &:has(.addAccountItem)
+    overflow hidden
+    scrollbar-gutter auto

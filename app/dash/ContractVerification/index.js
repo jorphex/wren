@@ -619,7 +619,7 @@ export class ContractVerification extends React.Component {
   }
 
   openSettings() {
-    link.send('tray:action', 'navDash', { view: 'settings', data: {} })
+    link.send('tray:action', 'navDash', { view: 'settings', data: { category: 'advanced' } })
   }
 
   checkAnother() {
@@ -739,10 +739,7 @@ export class ContractVerification extends React.Component {
           >
             {this.state.busy === 'choosing' ? 'Choosing artifact…' : 'Choose artifact'}
           </button>
-          <p>
-            Use Solidity or Vyper standard JSON, or Foundry or Hardhat build-info. Wren reads the selected
-            file locally.
-          </p>
+          <p>Solidity / Vyper standard JSON · Foundry / Hardhat build-info</p>
         </section>
       )
     }
@@ -867,15 +864,9 @@ export class ContractVerification extends React.Component {
         <div className='contractVerificationSectionHeading'>
           <div>
             <h2>Source check</h2>
-            <p>Evidence is bound to this exact target and artifact.</p>
           </div>
         </div>
         <dl className='contractVerificationLedger'>
-          <EvidenceRow label='Runtime code' mono>
-            {HASH.test(prepared.target?.runtimeCodeHash)
-              ? `Bound to ${prepared.target.runtimeCodeHash}`
-              : 'Unavailable'}
-          </EvidenceRow>
           <EvidenceRow label='Compiled match'>{localMatch}</EvidenceRow>
           <EvidenceRow label='Deployment finality'>{settlement}</EvidenceRow>
           <EvidenceRow label='Contract' mono>
@@ -885,6 +876,17 @@ export class ContractVerification extends React.Component {
             {prepared.compilerVersion}
           </EvidenceRow>
         </dl>
+        <details>
+          <summary>Runtime identity</summary>
+          <dl>
+            {' '}
+            <EvidenceRow label='Runtime code' mono>
+              {HASH.test(prepared.target?.runtimeCodeHash)
+                ? `Bound to ${prepared.target.runtimeCodeHash}`
+                : 'Unavailable'}
+            </EvidenceRow>
+          </dl>
+        </details>
       </section>
     )
   }
@@ -972,7 +974,8 @@ export class ContractVerification extends React.Component {
           })}
         </dl>
         {this.directEligible(job) ? (
-          <div className='contractVerificationDirect'>
+          <details className='contractVerificationDirect'>
+            <summary>Submit directly to Etherscan</summary>
             <label
               className='contractVerificationField'
               htmlFor='contract-verification-constructor-arguments'
@@ -1024,8 +1027,8 @@ export class ContractVerification extends React.Component {
               {constructorArgumentsHelp || 'Constructor arguments are ready.'}
             </p>
             <p className='contractVerificationNotice'>
-              This fallback sends the already-checked source, metadata, and any encoded constructor arguments
-              directly to Etherscan. Publication is permanent, public, and irreversible.
+              Publishes source, metadata, and constructor arguments directly to Etherscan. Public and
+              irreversible.
             </p>
             <label className='contractVerificationAcknowledgement'>
               <input
@@ -1064,7 +1067,7 @@ export class ContractVerification extends React.Component {
                 </button>
               </p>
             ) : null}
-          </div>
+          </details>
         ) : null}
         {directPollNeedsKey ? (
           <div className='contractVerificationDirect'>
@@ -1159,10 +1162,6 @@ export class ContractVerification extends React.Component {
           <header className='contractVerificationHeader'>
             <span>Contract verification</span>
             <h1>Verify contract source</h1>
-            <p>
-              Match a source artifact to this deployed contract, then publish the verification record
-              publicly.
-            </p>
           </header>
         ) : null}
 
@@ -1182,9 +1181,8 @@ export class ContractVerification extends React.Component {
             {prepared ? (
               <div className='contractVerificationPublication'>
                 <p className='contractVerificationNotice'>
-                  Submitting sends the selected Solidity or Vyper source artifact and verification metadata to
-                  Sourcify. Sourcify may forward them to Etherscan, Blockscout, or Routescan. Publication is
-                  permanent, public, and irreversible.
+                  Publishes source and metadata permanently to Sourcify, which may forward them to Etherscan,
+                  Blockscout, or Routescan. Public and irreversible.
                 </p>
                 <label className='contractVerificationAcknowledgement'>
                   <input

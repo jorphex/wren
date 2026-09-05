@@ -10,8 +10,9 @@ export default function AddPhrase({ accountSetupStep, error }) {
   return (
     <AddHotAccount
       {...{
-        title: 'Recovery phrase',
-        summary: 'Import an account from a recovery phrase.',
+        title: 'Import wallet',
+        secretTitle: 'Recovery phrase',
+        summary: '',
         svgName: 'seedling',
         intro: 'Add seed phrase account',
         accountSetupStep,

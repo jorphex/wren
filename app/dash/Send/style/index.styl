@@ -388,7 +388,18 @@
   flex-direction column
 
 .sendSweepReview
+  flex 1
+  min-height 0
+  padding 0
+  overflow hidden
   background transparent
+
+.sendSweepReviewContent
+  flex 1
+  min-height 0
+  padding 0 24px 16px
+  overflow-y auto
+  scrollbar-gutter stable both-edges
 
 .sendSweepChain
   display grid
@@ -647,14 +658,14 @@ button.sendSweepSelectAll.wrenControl
       font-size var(--wren-type-caption)
 
 .sendSweepReviewActions
-  position sticky
-  bottom 0
+  flex none
   display flex
   justify-content flex-end
   gap var(--wren-space-2)
-  margin 10px -24px 0
+  margin 0
   padding 14px 24px 16px
-  background var(--wren-bg-canvas)
+  border-top 1px solid var(--wren-border-subtle)
+  background var(--wren-bg-subtle)
 
 .sendSweepShelf
   margin-right -24px
@@ -1133,7 +1144,7 @@ button.sendSweepSelectAll.wrenControl
     min-height 0
     overflow-y auto
     overscroll-behavior contain
-    scrollbar-gutter stable
+    scrollbar-gutter stable both-edges
 
   .sendLedgerRow
     flex none
@@ -1254,7 +1265,7 @@ button.sendSweepSelectAll.wrenControl
     max-height 248px
     overflow-y auto
     overscroll-behavior contain
-    scrollbar-gutter stable
+    scrollbar-gutter stable both-edges
     border-top 1px solid var(--wren-ledger-rule)
     border-bottom 1px solid var(--wren-ledger-rule)
 
@@ -1317,3 +1328,104 @@ button.sendSweepSelectAll.wrenControl
     button
       height 52px
       min-height 52px
+
+.sendComposer details > summary
+  box-sizing border-box
+  min-height 44px
+  padding 12px 0
+  cursor pointer
+  font-size 12px
+  line-height 20px
+
+.sendSweepTruth > div > details
+  grid-column 1 / -1
+  min-width 0
+
+  > code
+    display block
+    overflow-wrap anywhere
+    margin 8px 0
+    font-size 12px
+    line-height 20px
+
+  .sendSweepCopies
+    flex-direction row
+    flex-wrap wrap
+
+.sendSourceAccount
+  display grid
+  grid-template-columns auto minmax(0, 1fr)
+  gap 4px 12px
+  padding 16px 2px
+  align-items baseline
+
+  strong
+    min-width 0
+    font-size 13px
+    font-weight 500
+    overflow-wrap anywhere
+
+  code
+    grid-column 2
+    overflow-wrap anywhere
+    color var(--wren-text-muted)
+    font-size 12px
+
+.sendComposer .sendAssetValue .sendAssetIdentityCluster strong
+  font-size 18px
+
+.sendSweepTruth > .sendSweepRecipient
+  grid-template-columns minmax(0, 1fr) auto
+  align-items center
+
+  > span:first-child
+    grid-column 1 / -1
+
+  > code
+    grid-column 1
+    grid-row 2
+
+  > button
+    grid-column 2
+    grid-row 2
+    margin 0
+
+.sendSourceAccount
+  flex none
+  margin 0 24px
+  padding 14px 0
+
+@media (max-height: 760px)
+  .sendComposer .sendAssetRow
+    min-height 86px
+
+  .sendComposer .sendAmountRow
+    min-height 110px
+
+  .sendComposer .sendInputRow:not(.sendAmountRow)
+    min-height 106px
+
+.sendRecipientFeedback
+  margin-top 10px
+
+.sendRecipientResolved
+  gap 4px 8px
+
+.sendRecipientCopy
+  margin 0
+  grid-column 2
+  grid-row 1 / span 2
+
+.sendRecipientResolved > span
+  grid-column 1
+
+.sendConfirmedActions
+  margin-top 12px
+
+.sendComposer .sendFeeRow
+  min-height 48px
+  padding 10px 18px
+  grid-template-rows auto
+
+  .sendFeeValue
+    grid-row 1

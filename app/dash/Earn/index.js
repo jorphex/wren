@@ -126,6 +126,7 @@ const earnChainColors = Object.freeze({ 1: 'accent1', 8453: 'accent8', 747474: '
 
 const VaultArtwork = ({ vault, size = 'card' }) => (
   <AssetMark
+    appearance='plain'
     asset={{
       ...vault.asset,
       address: vault.address,
@@ -161,7 +162,11 @@ const ChainStatus = ({ chain, loading = false, suppressed = false }) => {
   }
   return (
     <div className='earnNotice'>
-      <span>{chain.reason || 'Position data is unavailable.'}</span>
+      <span>
+        {{ disabled: 'Network disabled', disconnected: 'Network disconnected' }[chain.status] ||
+          chain.reason ||
+          'Position data unavailable'}
+      </span>
       {['disabled', 'disconnected'].includes(chain.status) ? (
         <button
           type='button'
@@ -276,7 +281,9 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBala
         </div>
         <div className='earnApy'>
           <strong>{metricsLoading ? <Skeleton className='earnSkeletonMetric' /> : formattedApy}</strong>
-          {!metricsLoading && showApyLabel ? <span>{vault.apy.label}</span> : null}
+          {!metricsLoading && showApyLabel ? (
+            <span>{vault.kind === 'yvUSD' ? `Vault · ${vault.apy.label}` : vault.apy.label}</span>
+          ) : null}
         </div>
       </div>
       <div className='earnVaultMetrics'>
@@ -288,7 +295,7 @@ const VaultCard = ({ vault, position, onSelect, metricsLoading = false, hideBala
         ) : (
           <>
             <span>{formatUsd(vault.tvlUsd)} TVL</span>
-            <span>{vault.riskLabel} risk</span>
+            <span>Yearn risk: {vault.riskLabel}</span>
           </>
         )}
         {position?.assetBalance !== null && position?.assetBalance !== undefined ? (
@@ -360,6 +367,14 @@ const actionTitle = (action) =>
     revoke: 'Revoke approval'
   })[action] || 'Yearn action'
 
+export const isEarnActionCompatible = (action, variant) => {
+  if (['start-cooldown', 'cancel-cooldown'].includes(action)) return variant === 'locked'
+  if (action === 'stake') return variant === 'direct'
+  return (
+    ['deposit', 'withdraw'].includes(action) && ['direct', 'unlocked', 'locked', 'staked'].includes(variant)
+  )
+}
+
 const actionForm = (action, variant) => ({
   action,
   variant,
@@ -411,11 +426,6 @@ const durationDays = (seconds, fallback) => {
   return Number.isInteger(days) ? `${days}-day` : `${days.toFixed(1)}-day`
 }
 
-const routeNeedsApproval = (action, variant) =>
-  action === 'deposit' ||
-  action === 'stake' ||
-  (action === 'withdraw' && ['locked', 'staked'].includes(variant))
-
 const actionDescription = (vault, form) => {
   if (form.action === 'deposit') {
     return `Deposit only ${vault.asset.symbol}; Wren will not swap or bridge assets.`
@@ -434,28 +444,27 @@ const actionDescription = (vault, form) => {
   return `Withdraw directly to ${vault.asset.symbol}.`
 }
 
-const CooldownNotice = ({ cooldown }) => {
-  const cooldownLength = durationDays(cooldown.cooldownDuration, '14-day')
-  const windowLength = durationDays(cooldown.withdrawalWindow, '5-day')
-  const messages = {
-    none: `Locked withdrawals use a ${cooldownLength} cooldown followed by a ${windowLength} withdrawal window. No cooldown is active.`,
-    'cooling-down': `Cooldown in progress. Your withdrawal window opens ${formatTimestamp(
-      cooldown.cooldownEnd
-    )} and closes ${formatTimestamp(cooldown.windowEnd)}.`,
-    'withdrawal-window': `Your withdrawal window is open now and closes ${formatTimestamp(
-      cooldown.windowEnd
-    )}.`,
-    expired: `The previous withdrawal window closed ${formatTimestamp(
-      cooldown.windowEnd
-    )}. Start a new cooldown to withdraw.`
-  }
-  return (
-    <div className='earnProductNote earnCooldownNotice'>
-      <strong>Locked withdrawal timing</strong>
-      <span>{messages[cooldown.status]}</span>
+const CooldownNotice = ({ cooldown }) => (
+  <div className='earnProductNote earnCooldownNotice' role='status'>
+    <strong>
+      {
+        {
+          'cooling-down': 'Cooldown active',
+          'withdrawal-window': 'Withdrawal window open',
+          expired: 'Withdrawal window closed'
+        }[cooldown.status]
+      }
+    </strong>
+    <div className='earnCooldownDates'>
+      <span>
+        Opens <strong>{formatTimestamp(cooldown.cooldownEnd)}</strong>
+      </span>
+      <span>
+        Closes <strong>{formatTimestamp(cooldown.windowEnd)}</strong>
+      </span>
     </div>
-  )
-}
+  </div>
+)
 
 const WorkflowCard = ({
   workflow,
@@ -777,19 +786,23 @@ const ActivityView = ({
   </div>
 )
 
-const ActionForm = ({
-  vault,
-  position,
-  form,
-  disabled,
-  hideBalances = false,
-  onChange,
-  onSubmit,
-  formRef
-}) => {
+const ActionReview = ({ form, disabled, onSubmit }) => {
+  const isCancel = form.action === 'cancel-cooldown'
+  return (
+    <button
+      type='button'
+      className='earnPrimaryAction wrenControl wrenControlPrimary wrenControlLarge'
+      disabled={disabled || form.busy || (!isCancel && !form.max && !form.amount)}
+      onClick={onSubmit}
+    >
+      {form.busy ? 'Preparing…' : `Review ${actionTitle(form.action)}`}
+    </button>
+  )
+}
+
+const ActionForm = ({ vault, position, form, disabled, hideBalances = false, onChange, formRef }) => {
   const variant = vault.variants.find(({ id }) => id === form.variant)
   const isCancel = form.action === 'cancel-cooldown'
-  const needsApproval = routeNeedsApproval(form.action, form.variant)
   const available = availableForAction(vault, position, form)
   const maxAvailable = hasAvailableAmount(available)
   const symbol =
@@ -805,13 +818,8 @@ const ActionForm = ({
       ref={formRef}
       tabIndex='-1'
     >
-      <div className='earnActionHead'>
-        <div>
-          <span>{vault.chainName}</span>
-          <h2>{actionTitle(form.action)}</h2>
-        </div>
-      </div>
-      <p>{actionDescription(vault, form)}</p>
+      {!['deposit', 'withdraw'].includes(form.action) ? <h2>{actionTitle(form.action)}</h2> : null}
+      {isCancel ? <p>{actionDescription(vault, form)}</p> : null}
       {!isCancel ? (
         <div className='earnAmountField'>
           <label htmlFor='earn-action-amount'>Amount in {symbol}</label>
@@ -861,21 +869,7 @@ const ActionForm = ({
           {form.error}
         </div>
       ) : null}
-      <div className='earnActionSafety'>
-        {needsApproval
-          ? 'This route may need a token approval. Wren requests only the exact amount.'
-          : 'This action does not request a token approval.'}{' '}
-        Every transaction opens Wren&apos;s simulation and signer review.
-        {form.action === 'withdraw' ? ' Withdrawal loss tolerance is fixed at 0%.' : ''}
-      </div>
-      <button
-        type='button'
-        className='earnPrimaryAction wrenControl wrenControlPrimary wrenControlLarge'
-        disabled={disabled || form.busy || (!isCancel && !form.max && !form.amount)}
-        onClick={onSubmit}
-      >
-        {form.busy ? 'Preparing…' : `Review ${actionTitle(form.action)}`}
-      </button>
+      {form.action === 'withdraw' ? <div className='earnActionSafety'>Loss tolerance: 0%</div> : null}
     </div>
   )
 }
@@ -906,6 +900,7 @@ const VaultDetails = ({
   detailsRef,
   formRef
 }) => {
+  const [cooldownFormOpen, setCooldownFormOpen] = React.useState(false)
   const signingAccount = account && !account.readOnly && ['ready', 'partial'].includes(chain?.status)
   const canDeposit = signingAccount && vault.status === 'available' && catalogStatus === 'fresh'
   const canExit = signingAccount && position?.hasPosition
@@ -930,246 +925,297 @@ const VaultDetails = ({
       : Boolean(canExit && selectedOwned && selectedOwned.sharesRaw !== '0')
   const canCancelCooldown =
     canExit && ['cooling-down', 'withdrawal-window', 'expired'].includes(cooldown?.status)
+  const coolingDown = selectedVariant === 'locked' && cooldown?.status === 'cooling-down'
+  const showActionForm = !coolingDown || cooldownFormOpen || form?.action !== 'deposit'
   const actionEnabled = {
     deposit: canDeposit,
     withdraw: canWithdrawSelected,
     stake: canDeposit,
-    'start-cooldown': canStartCooldown,
-    'cancel-cooldown': canCancelCooldown
+    'start-cooldown': selectedVariant === 'locked' && canStartCooldown,
+    'cancel-cooldown': selectedVariant === 'locked' && canCancelCooldown
   }
   return (
     <div className='earnDetails cardShow' ref={detailsRef} tabIndex='-1'>
-      <div className='earnDetailsHero'>
-        <div className='earnDetailsIdentity'>
-          <VaultArtwork vault={vault} size='hero' />
-          <div>
-            <div className='earnEyebrow'>
-              {vault.chainName} · {vault.asset.symbol}
+      <div className='earnDetailsContent'>
+        <div className='earnDetailsHero'>
+          <div className='earnDetailsIdentity'>
+            <VaultArtwork vault={vault} size='hero' />
+            <div>
+              <div className='earnEyebrow'>
+                {vault.chainName} · {vault.asset.symbol}
+              </div>
+              <h1>{vault.name}</h1>
             </div>
-            <h1>{vault.name}</h1>
           </div>
+          <div className='earnDetailsMetrics'>
+            {vault.kind !== 'yvUSD' && (
+              <Metric
+                label={apyMetricLabel(displayVariant?.apy)}
+                value={formatPercent(displayVariant?.apy.value)}
+                loading={metricsLoading}
+              />
+            )}
+            <Metric label='Vault TVL' value={formatUsd(vault.tvlUsd)} loading={metricsLoading} />
+          </div>
+          <details className='earnProductDetails'>
+            <summary>Vault details</summary>
+            <p>{vault.description}</p>
+            <p>Variable APY · Smart-contract and strategy risk</p>
+            <p>
+              Yearn risk rating: {vault.riskLabel}
+              {selectedVariant === 'locked' ? ' (underlying vault)' : ''}
+            </p>
+          </details>
         </div>
-        <p>{vault.description}</p>
+        {vault.kind === 'yvUSD' ? (
+          <div className='earnVariants'>
+            <h2>Withdrawal terms</h2>
+            <div className='earnVariantGrid'>
+              {vault.variants.map((variant) => (
+                <button
+                  type='button'
+                  className={`earnVariant wrenControl wrenControlSecondary ${
+                    selectedVariant === variant.id ? 'earnVariantSelected wrenControlSelected' : ''
+                  }`}
+                  aria-pressed={selectedVariant === variant.id}
+                  key={variant.id}
+                  onClick={() => onFormChange({ variant: variant.id, error: '' })}
+                >
+                  <strong>{variant.id === 'locked' ? 'Locked' : 'Flexible'}</strong>
+                  <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
+                  <span>
+                    {variant.id === 'locked'
+                      ? `Cooldown: ${durationDays(cooldown?.cooldownDuration, '14-day')}`
+                      : 'No cooldown'}
+                  </span>
+                  {variant.id === 'locked' ? (
+                    <span>Withdrawal window: {durationDays(cooldown?.withdrawalWindow, '5-day')}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {vault.kind === 'yBOLD' ? (
+          <div className='earnProductNote'>
+            Deposits finish staked as ysyBOLD. Existing unstaked yBOLD can be staked separately.
+          </div>
+        ) : null}
+        {positionsLoading && !position ? (
+          <div className='earnNotice earnDetailsNotice earnNoticeLoading' role='status'>
+            <Skeleton className='earnSkeletonInline' />
+            <span>Loading account position…</span>
+          </div>
+        ) : position?.hasPosition ? (
+          <section className='earnOwned'>
+            <h2>Your position</h2>
+            {position.variants
+              .filter(({ sharesRaw, cooldown }) => sharesRaw !== '0' || (cooldown?.sharesRaw || '0') !== '0')
+              .map((variant) => (
+                <React.Fragment key={variant.address}>
+                  {variant.sharesRaw !== '0' ? (
+                    <div className='earnOwnedLine'>
+                      {positionVariantLabel(vault, variant) ? (
+                        <span>{positionVariantLabel(vault, variant)}</span>
+                      ) : null}
+                      <strong>
+                        {displayAmount(variant.assets ?? variant.shares, hideBalances)}{' '}
+                        {variant.assets !== null ? variant.assetSymbol : variant.symbol}
+                      </strong>
+                    </div>
+                  ) : null}
+                  {(variant.cooldown?.sharesRaw || '0') !== '0' ? (
+                    <div className='earnOwnedLine'>
+                      <span>In cooldown</span>
+                      <strong>
+                        {displayAmount(variant.cooldown.shares, hideBalances)} {variant.symbol}
+                      </strong>
+                      <em>
+                        {{
+                          'cooling-down': 'Cooling down',
+                          expired: 'Expired',
+                          'withdrawal-window': 'Withdrawal window'
+                        }[variant.cooldown.status] || variant.cooldown.status.replace('-', ' ')}
+                      </em>
+                    </div>
+                  ) : null}
+                </React.Fragment>
+              ))}
+          </section>
+        ) : null}
+        {selectedVariant === 'locked' && cooldown && cooldown.status !== 'none' ? (
+          <CooldownNotice cooldown={cooldown} />
+        ) : null}
+        {!signingAccount || !canWithdrawSelected || !canDeposit ? (
+          <div className='earnEligibility' role='status'>
+            {!signingAccount
+              ? account?.readOnly
+                ? 'Watch-only account'
+                : chain?.reason || 'Connect a signing account'
+              : !canDeposit
+                ? 'Deposits unavailable · current vault data required'
+                : !canWithdrawSelected
+                  ? selectedVariant === 'locked'
+                    ? cooldown?.status === 'cooling-down'
+                      ? 'Withdrawal available when cooldown ends'
+                      : cooldown?.status === 'expired'
+                        ? 'Start a new cooldown to withdraw'
+                        : !cooldown
+                          ? 'Withdrawal timing unavailable'
+                          : 'Start cooldown to withdraw'
+                    : 'No balance to withdraw'
+                  : ''}
+          </div>
+        ) : null}
+        {vault.kind === 'yvUSD' && locked && selectedVariant === 'locked' && !coolingDown ? (
+          <div className='earnSecondaryActions'>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary wrenControlCompact'
+              disabled={!canStartCooldown}
+              onClick={() => onOpenAction('start-cooldown', 'locked')}
+            >
+              Start locked cooldown
+            </button>
+            <button
+              type='button'
+              className='wrenControl wrenControlDanger wrenControlCompact'
+              disabled={!canCancelCooldown}
+              onClick={() => onOpenAction('cancel-cooldown', 'locked')}
+            >
+              Cancel cooldown
+            </button>
+          </div>
+        ) : null}
+        {vault.kind === 'yBOLD' && direct?.sharesRaw !== '0' ? (
+          <div className='earnSecondaryActions'>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary wrenControlCompact'
+              disabled={!canDeposit}
+              onClick={() => onOpenAction('stake', 'direct')}
+            >
+              Stake existing yBOLD
+            </button>
+          </div>
+        ) : null}
+        {positionsError ? (
+          <div className='earnNotice earnNoticeWarn earnDetailsNotice' role='alert'>
+            {positionsError}
+          </div>
+        ) : null}
+        {workflowsLoading && !workflows.length ? (
+          <WorkflowLoading />
+        ) : workflows.length ? (
+          <ActivityPreview
+            workflows={workflows}
+            workflowBusy={workflowBusy}
+            canTransact={Boolean(signingAccount)}
+            hideBalances={hideBalances}
+            layoutKey={`${form?.action}:${form?.variant}:${Boolean(form?.error)}:${workflows
+              .map(({ id, updatedAt, status }) => `${id}:${updatedAt}:${status}`)
+              .join('|')}`}
+            onMore={onOpenActivity}
+            onResume={onResume}
+            onCancel={onCancel}
+            onRevoke={onRevoke}
+          />
+        ) : null}
+        {workflowsError ? (
+          <div className='earnNotice earnNoticeWarn' role='alert'>
+            {workflowsError}
+          </div>
+        ) : null}
+        <div className='earnDetailsFooter'>
+          <button
+            type='button'
+            className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
+            onClick={() => link.send('tray:openExternal', vault.yearnUrl)}
+          >
+            View on Yearn (external)
+          </button>
+          <button
+            type='button'
+            className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
+            onClick={() =>
+              link.send('tray:openExplorer', { type: 'ethereum', id: vault.chainId }, null, vault.address)
+            }
+          >
+            View vault contract (external)
+          </button>
+        </div>
       </div>
-      <div className='earnDetailsMetrics'>
-        <Metric
-          label={apyMetricLabel(displayVariant?.apy)}
-          value={formatPercent(displayVariant?.apy.value)}
-          loading={metricsLoading}
-        />
-        <Metric label='TVL' value={formatUsd(displayVariant?.tvlUsd)} loading={metricsLoading} />
-        <Metric
-          label={selectedVariant === 'locked' ? 'Underlying vault risk' : 'Risk'}
-          value={vault.riskLabel}
-          loading={metricsLoading}
-        />
-      </div>
-      <div className='earnRiskDisclosure'>
-        APY is variable and not guaranteed. Yearn vaults involve smart-contract and strategy risk.
-      </div>
-      {vault.kind === 'yvUSD' ? (
-        <div className='earnVariants'>
-          <h2>Choose how to earn</h2>
-          <div className='earnVariantGrid'>
-            {vault.variants.map((variant) => (
+      {form ? (
+        <div className='earnDetailActionShelf'>
+          {coolingDown ? (
+            <div className='earnCooldownActions'>
               <button
                 type='button'
-                className={`earnVariant wrenControl wrenControlSecondary ${
-                  selectedVariant === variant.id ? 'earnVariantSelected wrenControlSelected' : ''
-                }`}
-                aria-pressed={selectedVariant === variant.id}
-                key={variant.id}
-                onClick={() => onFormChange({ variant: variant.id, error: '' })}
+                className='wrenControl wrenControlDanger wrenControlLarge'
+                disabled={!canCancelCooldown}
+                onClick={() => onOpenAction('cancel-cooldown', 'locked')}
               >
-                <strong>{variant.id === 'locked' ? 'Locked' : 'Flexible'}</strong>
-                <span>{formatPercentLabel(variant.apy.value, variant.apy.label)}</span>
-                <p>
-                  {variant.id === 'locked'
-                    ? `A ${durationDays(cooldown?.cooldownDuration, '14-day')} cooldown and ${durationDays(
-                        cooldown?.withdrawalWindow,
-                        '5-day'
-                      )} withdrawal window; the current displayed APY is higher.`
-                    : 'Deposit and withdraw without a cooldown.'}
-                </p>
+                Cancel cooldown
               </button>
-            ))}
-          </div>
+              <button
+                type='button'
+                className='wrenControl wrenControlSecondary wrenControlLarge'
+                disabled={!canDeposit}
+                onClick={() => {
+                  setCooldownFormOpen(true)
+                  onOpenAction('deposit', 'locked')
+                }}
+              >
+                Deposit
+              </button>
+            </div>
+          ) : null}
+          {!coolingDown ? (
+            <div className='earnActions' role='group' aria-label='Vault action'>
+              <button
+                type='button'
+                aria-pressed={form?.action === 'deposit'}
+                className={`wrenControl wrenControlGhost wrenControlLarge ${
+                  form?.action === 'deposit' ? 'active wrenControlSelected' : ''
+                }`}
+                disabled={!canDeposit}
+                onClick={() => onOpenAction('deposit', selectedVariant)}
+              >
+                Deposit
+              </button>
+              <button
+                type='button'
+                aria-pressed={form?.action === 'withdraw'}
+                className={`wrenControl wrenControlGhost wrenControlLarge ${
+                  form?.action === 'withdraw' ? 'active wrenControlSelected' : ''
+                }`}
+                disabled={!canWithdrawSelected}
+                onClick={() => onOpenAction('withdraw', selectedVariant)}
+              >
+                Withdraw
+              </button>
+            </div>
+          ) : null}
+          {showActionForm ? (
+            <>
+              <ActionForm
+                vault={vault}
+                position={position}
+                form={form}
+                disabled={!actionEnabled[form.action]}
+                hideBalances={hideBalances}
+                onChange={onFormChange}
+                formRef={formRef}
+              />
+              <ActionReview
+                form={form}
+                disabled={!actionEnabled[form.action] || !isEarnActionCompatible(form.action, form.variant)}
+                onSubmit={onSubmit}
+              />
+            </>
+          ) : null}
         </div>
       ) : null}
-      {vault.kind === 'yBOLD' ? (
-        <div className='earnProductNote'>
-          Deposits finish staked as ysyBOLD. Existing unstaked yBOLD can be staked separately.
-        </div>
-      ) : null}
-      {positionsLoading && !position ? (
-        <div className='earnNotice earnDetailsNotice earnNoticeLoading' role='status'>
-          <Skeleton className='earnSkeletonInline' />
-          <span>Loading account position…</span>
-        </div>
-      ) : position?.hasPosition ? (
-        <div className='earnOwned'>
-          <h2>Your position</h2>
-          {position.variants
-            .filter(({ sharesRaw, cooldown }) => sharesRaw !== '0' || (cooldown?.sharesRaw || '0') !== '0')
-            .map((variant) => (
-              <React.Fragment key={variant.address}>
-                {variant.sharesRaw !== '0' ? (
-                  <div className='earnOwnedLine'>
-                    {positionVariantLabel(vault, variant) ? (
-                      <span>{positionVariantLabel(vault, variant)}</span>
-                    ) : null}
-                    <strong>
-                      {displayAmount(variant.assets ?? variant.shares, hideBalances)}{' '}
-                      {variant.assets !== null ? variant.assetSymbol : variant.symbol}
-                    </strong>
-                  </div>
-                ) : null}
-                {(variant.cooldown?.sharesRaw || '0') !== '0' ? (
-                  <div className='earnOwnedLine'>
-                    <span>In cooldown</span>
-                    <strong>
-                      {displayAmount(variant.cooldown.shares, hideBalances)} {variant.symbol}
-                    </strong>
-                    <em>
-                      {{
-                        'cooling-down': 'Cooling down',
-                        expired: 'Expired',
-                        'withdrawal-window': 'Withdrawal window'
-                      }[variant.cooldown.status] || variant.cooldown.status.replace('-', ' ')}
-                    </em>
-                  </div>
-                ) : null}
-              </React.Fragment>
-            ))}
-        </div>
-      ) : null}
-      {cooldown ? <CooldownNotice cooldown={cooldown} /> : null}
-      {positionsError ? (
-        <div className='earnNotice earnNoticeWarn earnDetailsNotice' role='alert'>
-          {positionsError}
-        </div>
-      ) : null}
-      {!positionsLoading && !signingAccount && (account?.readOnly || !positionsError) ? (
-        <div className='earnNotice earnDetailsNotice'>
-          {account?.readOnly
-            ? 'Watch-only accounts can inspect positions but cannot transact.'
-            : chain?.reason || 'Select a signing account to transact.'}
-        </div>
-      ) : null}
-      {catalogStatus !== 'fresh' || vault.status !== 'available' ? (
-        <div className='earnNotice earnDetailsNotice'>
-          Deposits are disabled because current eligibility data is unavailable. Existing positions remain
-          withdrawable.
-        </div>
-      ) : null}
-      <div className='earnActions' role='group' aria-label='Vault action'>
-        <button
-          type='button'
-          aria-pressed={form?.action === 'deposit'}
-          className={`wrenControl wrenControlGhost wrenControlLarge ${
-            form?.action === 'deposit' ? 'active wrenControlSelected' : ''
-          }`}
-          disabled={!canDeposit}
-          onClick={() => onOpenAction('deposit', selectedVariant)}
-        >
-          Deposit
-        </button>
-        <button
-          type='button'
-          aria-pressed={form?.action === 'withdraw'}
-          className={`wrenControl wrenControlGhost wrenControlLarge ${
-            form?.action === 'withdraw' ? 'active wrenControlSelected' : ''
-          }`}
-          disabled={!canWithdrawSelected}
-          onClick={() => onOpenAction('withdraw', selectedVariant)}
-        >
-          Withdraw
-        </button>
-      </div>
-      {vault.kind === 'yvUSD' && locked ? (
-        <div className='earnSecondaryActions'>
-          <button
-            type='button'
-            className='wrenControl wrenControlSecondary wrenControlCompact'
-            disabled={!canStartCooldown}
-            onClick={() => onOpenAction('start-cooldown', 'locked')}
-          >
-            Start locked cooldown
-          </button>
-          <button
-            type='button'
-            className='wrenControl wrenControlDanger wrenControlCompact'
-            disabled={!canCancelCooldown}
-            onClick={() => onOpenAction('cancel-cooldown', 'locked')}
-          >
-            Cancel cooldown
-          </button>
-        </div>
-      ) : null}
-      {vault.kind === 'yBOLD' && direct?.sharesRaw !== '0' ? (
-        <div className='earnSecondaryActions'>
-          <button
-            type='button'
-            className='wrenControl wrenControlSecondary wrenControlCompact'
-            disabled={!canDeposit}
-            onClick={() => onOpenAction('stake', 'direct')}
-          >
-            Stake existing yBOLD
-          </button>
-        </div>
-      ) : null}
-      {form ? (
-        <ActionForm
-          vault={vault}
-          position={position}
-          form={form}
-          disabled={!actionEnabled[form.action]}
-          hideBalances={hideBalances}
-          onChange={onFormChange}
-          onSubmit={onSubmit}
-          formRef={formRef}
-        />
-      ) : null}
-      {workflowsLoading && !workflows.length ? (
-        <WorkflowLoading />
-      ) : workflows.length ? (
-        <ActivityPreview
-          workflows={workflows}
-          workflowBusy={workflowBusy}
-          canTransact={Boolean(signingAccount)}
-          hideBalances={hideBalances}
-          layoutKey={`${form?.action}:${form?.variant}:${Boolean(form?.error)}:${workflows
-            .map(({ id, updatedAt, status }) => `${id}:${updatedAt}:${status}`)
-            .join('|')}`}
-          onMore={onOpenActivity}
-          onResume={onResume}
-          onCancel={onCancel}
-          onRevoke={onRevoke}
-        />
-      ) : null}
-      {workflowsError ? (
-        <div className='earnNotice earnNoticeWarn' role='alert'>
-          {workflowsError}
-        </div>
-      ) : null}
-      <div className='earnDetailsFooter'>
-        <button
-          type='button'
-          className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
-          onClick={() => link.send('tray:openExternal', vault.yearnUrl)}
-        >
-          View on Yearn (external)
-        </button>
-        <button
-          type='button'
-          className='earnYearnLink wrenControl wrenControlGhost wrenControlCompact'
-          onClick={() =>
-            link.send('tray:openExplorer', { type: 'ethereum', id: vault.chainId }, null, vault.address)
-          }
-        >
-          View vault contract (external)
-        </button>
-      </div>
     </div>
   )
 }
@@ -1433,13 +1479,18 @@ export class Earn extends React.Component {
     }
     this.setState(({ form }) => ({
       ...(changes.variant && { selectedVariant: changes.variant }),
-      form: changes.variant ? actionForm(form.action, changes.variant) : { ...form, ...changes }
+      form: changes.variant
+        ? actionForm(
+            isEarnActionCompatible(form.action, changes.variant) ? form.action : 'deposit',
+            changes.variant
+          )
+        : { ...form, ...changes }
     }))
   }
 
   async submitForm() {
     const form = this.state.form
-    if (!form) return
+    if (!form || !isEarnActionCompatible(form.action, form.variant)) return
     this.changeForm({ busy: true, error: '' })
     try {
       const workflow = await startYearnWorkflow({
@@ -1519,7 +1570,11 @@ export class Earn extends React.Component {
   renderChain(chainId, vaults, metricsLoading, hideBalances) {
     const positionChain = this.currentPositions()?.chains.find((chain) => chain.chainId === chainId)
     return (
-      <section className='earnChain' key={chainId} aria-labelledby={`earn-chain-${chainId}`}>
+      <section
+        className={`earnChain ${vaults.length ? '' : 'earnChainEmpty'}`}
+        key={chainId}
+        aria-labelledby={`earn-chain-${chainId}`}
+      >
         <div className='earnChainHeading'>
           <h2 id={`earn-chain-${chainId}`}>{chainName(chainId)}</h2>
           <span>
@@ -1531,6 +1586,9 @@ export class Earn extends React.Component {
           loading={this.state.positionsLoading}
           suppressed={Boolean(this.state.positionsError)}
         />
+        {!vaults.length && ['ready', 'partial'].includes(positionChain?.status) ? (
+          <span className='earnEmptyReason'>No eligible vaults</span>
+        ) : null}
         <div className='earnVaultList'>
           {vaults.map((vault) => (
             <VaultCard
@@ -1649,11 +1707,11 @@ export class Earn extends React.Component {
     return (
       <div className='earn cardShow'>
         <header className='earnHero'>
+          <h1>Earn</h1>
           <div className='earnEyebrow earnProvider'>
             <span>Vaults from</span>
             <img src={yearnLogo} alt='Yearn' />
           </div>
-          <h1>Earn</h1>
           <button
             type='button'
             className='earnRefresh wrenControl wrenControlSecondary wrenControlCompact'

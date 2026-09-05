@@ -197,9 +197,11 @@ export class Main extends React.Component {
             <button
               type='button'
               className='requestFeatureButton wrenControl wrenControlGhost'
-              onClick={() => link.send('tray:action', 'setOnboard', { showing: true })}
+              onClick={() =>
+                link.send('tray:action', 'navDash', { view: 'accounts', data: { showAddAccounts: true } })
+              }
             >
-              <span>Tutorial</span>
+              <span>Add account</span>
               <Icon name='external' size={14} />
             </button>
             <button

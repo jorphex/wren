@@ -81,14 +81,14 @@ const SetupExpiry = ({ expiresAt }) => {
   if (remaining <= 60_000) {
     return (
       <p className='generatedWalletSessionNote generatedWalletExpiryNotice'>
-        Finish setup within less than a minute.
+        Wallet setup expires in under a minute.
       </p>
     )
   }
   const minutes = Math.ceil(remaining / 60_000)
   return (
     <p className='generatedWalletSessionNote generatedWalletExpiryNotice'>
-      Finish setup within about {minutes} {minutes === 1 ? 'minute' : 'minutes'}.
+      Wallet setup expires in {minutes} {minutes === 1 ? 'minute' : 'minutes'}.
     </p>
   )
 }
@@ -126,7 +126,7 @@ const PhrasePresentation = ({ active, onContinue, presentation }) => {
         </ol>
         <CopyControl copied={copied} label='Copy recovery phrase' onCopy={copyPhrase} />
         <p className='generatedWalletClipboardNote'>
-          Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.
+          Clipboard clears after 60 seconds; clipboard history may retain it.
         </p>
         <SetupExpiry expiresAt={presentation.expiresAt} />
         <p className='generatedWalletConsequence'>Leaving now deletes this new wallet.</p>
@@ -167,9 +167,7 @@ const PrivateKeyPresentation = ({ active, onContinue, presentation }) => {
         <div role='heading' aria-level='2' className='addAccountItemOptionTitle'>
           Your private key
         </div>
-        <p className='generatedWalletGuidance'>
-          Show or copy this key, then save it somewhere safe. Wren will not show it again.
-        </p>
+        <p className='generatedWalletGuidance'>Save this private key. It is shown only during setup.</p>
         <div className='generatedWalletEvidenceGroup'>
           <div className='generatedWalletEvidence'>
             <div className='generatedWalletEvidenceLabel'>Account address</div>
@@ -210,7 +208,7 @@ const PrivateKeyPresentation = ({ active, onContinue, presentation }) => {
           </div>
         </div>
         <p className='generatedWalletClipboardNote'>
-          Wren clears an unchanged clipboard after 60 seconds. Clipboard history may retain it.
+          Clipboard clears after 60 seconds; clipboard history may retain it.
         </p>
         <SetupExpiry expiresAt={presentation.expiresAt} />
         <p className='generatedWalletConsequence'>Leaving now deletes this new account.</p>

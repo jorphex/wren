@@ -116,6 +116,7 @@ export class Settings extends Component {
     this.recentClearTriggerRef = createRef()
     this.recentClearCancelRef = createRef()
     this.state = {
+      category: props.data?.category || 'general',
       latticeEndpoint,
       latticeEndpointMode,
       resetConfirm: false,
@@ -427,7 +428,30 @@ export class Settings extends Component {
     return (
       <div className='localSettings wrenSettings wrenSettingsPerch'>
         <div className='localSettingsWrap'>
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-desktop'>
+          <nav className='settingsCategories' aria-label='Settings categories'>
+            {[
+              ['general', 'General'],
+              ['privacy', 'Privacy'],
+              ['connections', 'Connections'],
+              ['security', 'Security'],
+              ['advanced', 'Advanced']
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type='button'
+                className='wrenControl wrenControlGhost'
+                aria-pressed={this.state.category === id}
+                onClick={() => this.setState({ category: id })}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <section
+            hidden={this.state.category !== 'general'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-desktop'
+          >
             <h2 id='wren-settings-desktop' className='wrenSettingsSectionTitle'>
               Desktop behavior
             </h2>
@@ -548,8 +572,7 @@ export class Settings extends Component {
                 />
               </div>
               <div className='signerPermissionDetails'>
-                Show private updates while Wren is hidden. They never include app, account, network, amounts,
-                addresses, call data, transaction hashes, or delegation details.
+                Show activity alerts while Wren is hidden. Wallet details stay private.
               </div>
             </div>
             <div className='signerPermission localSetting' style={{ zIndex: 212 }}>
@@ -609,7 +632,11 @@ export class Settings extends Component {
             ) : null}
           </section>
 
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-accounts'>
+          <section
+            hidden={this.state.category !== 'general'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-accounts'
+          >
             <h2 id='wren-settings-accounts' className='wrenSettingsSectionTitle'>
               Accounts and signing
             </h2>
@@ -770,7 +797,11 @@ export class Settings extends Component {
             </div>
           </section>
 
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-privacy'>
+          <section
+            hidden={this.state.category !== 'privacy'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-privacy'
+          >
             <h2 id='wren-settings-privacy' className='wrenSettingsSectionTitle'>
               Privacy
             </h2>
@@ -784,9 +815,7 @@ export class Settings extends Component {
                 />
               </div>
               <div className='signerPermissionDetails'>
-                Store canonical destinations from Wren Send and managed Sweep only after successful network
-                confirmation. Stored only on this device; never from incoming activity, indexers, chain
-                history, or dapp calls. Recent recipients are not included in backups.
+                Remember recipients from successful sends on this device. Excluded from backups.
               </div>
               {this.state.recentDisableConfirm ? (
                 <DialogSurface
@@ -894,7 +923,11 @@ export class Settings extends Component {
           </section>
 
           {companionCredentials.length > 0 ? (
-            <section className='wrenSettingsSection' aria-labelledby='wren-settings-companions'>
+            <section
+              hidden={this.state.category !== 'connections'}
+              className='wrenSettingsSection'
+              aria-labelledby='wren-settings-companions'
+            >
               <h2 id='wren-settings-companions' className='wrenSettingsSectionTitle'>
                 Browser companions
               </h2>
@@ -981,7 +1014,11 @@ export class Settings extends Component {
             </section>
           ) : null}
           {nativeCredentials.length > 0 ? (
-            <section className='wrenSettingsSection' aria-labelledby='wren-settings-local-connections'>
+            <section
+              hidden={this.state.category !== 'connections'}
+              className='wrenSettingsSection'
+              aria-labelledby='wren-settings-local-connections'
+            >
               <h2 id='wren-settings-local-connections' className='wrenSettingsSectionTitle'>
                 Local connections
               </h2>
@@ -1074,25 +1111,41 @@ export class Settings extends Component {
               })}
             </section>
           ) : null}
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-contract-verification'>
+          <section
+            hidden={this.state.category !== 'advanced'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-contract-verification'
+          >
             <h2 id='wren-settings-contract-verification' className='wrenSettingsSectionTitle'>
               Contract verification
             </h2>
             <ContractVerificationCredential />
           </section>
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-recovery'>
+          <section
+            hidden={this.state.category !== 'security'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-recovery'
+          >
             <h2 id='wren-settings-recovery' className='wrenSettingsSectionTitle'>
               Recovery
             </h2>
             <Recovery />
           </section>
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-signer-protection'>
+          <section
+            hidden={this.state.category !== 'security'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-signer-protection'
+          >
             <h2 id='wren-settings-signer-protection' className='wrenSettingsSectionTitle'>
               Software signers
             </h2>
             <SignerProtection />
           </section>
-          <section className='wrenSettingsSection' aria-labelledby='wren-settings-about'>
+          <section
+            hidden={this.state.category !== 'general'}
+            className='wrenSettingsSection'
+            aria-labelledby='wren-settings-about'
+          >
             <h2 id='wren-settings-about' className='wrenSettingsSectionTitle'>
               About
             </h2>

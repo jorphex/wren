@@ -104,20 +104,86 @@ export class AddAccounts extends React.Component {
     })
   }
   renderDefault() {
-    const { accountChooserMode } = this.props.data
-    const showHardware = !accountChooserMode
-    const showCreate = !accountChooserMode || accountChooserMode === 'create'
-    const showImport = !accountChooserMode || accountChooserMode === 'import'
-    const showWatch = !accountChooserMode
+    const accountChooserMode =
+      this.props.data.accountChooserMode || (this.state.view !== 'default' && this.state.view)
+    const showHardware = accountChooserMode === 'hardware'
+    const showCreate = accountChooserMode === 'create'
+    const showImport = accountChooserMode === 'import'
+    const showWatch = false
+    if (!accountChooserMode)
+      return (
+        <div className='addAccounts addAccountsChooser cardShow'>
+          <h1>Add account</h1>
+          <div className='accountTypeList'>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('create-seed')}
+            >
+              <Icon name='add' size={20} /> Create wallet
+            </button>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() =>
+                link.send('tray:action', 'navDash', {
+                  view: 'accounts',
+                  data: { showAddAccounts: true, accountChooserMode: 'import' }
+                })
+              }
+            >
+              <Icon name='file' size={20} /> Import wallet
+            </button>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() =>
+                link.send('tray:action', 'navDash', {
+                  view: 'accounts',
+                  data: { showAddAccounts: true, accountChooserMode: 'hardware' }
+                })
+              }
+            >
+              <Icon name='hardware' size={20} /> Connect hardware wallet
+            </button>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('nonsigning')}
+            >
+              <Icon name='watch' size={20} /> Watch address
+            </button>
+          </div>
+          <details className='accountTypeAdvanced'>
+            <summary>Advanced</summary>
+            <button
+              type='button'
+              className='accountTypeSelect'
+              onClick={() => this.createNewAccount('create-keyring')}
+            >
+              Create private key
+            </button>
+          </details>
+        </div>
+      )
     const title =
       accountChooserMode === 'create'
         ? 'Create an account'
         : accountChooserMode === 'import'
           ? 'Import an account'
-          : 'Choose an account type'
+          : 'Connect hardware wallet'
 
     return (
       <div className='addAccounts addAccountsChooser cardShow'>
+        {!this.props.data.accountChooserMode ? (
+          <button
+            type='button'
+            className='wrenControl wrenControlGhost'
+            onClick={() => this.setState({ view: 'default' })}
+          >
+            Back to account types
+          </button>
+        ) : null}
         <div className='addAccountsHeader'>
           <div className='addAccountsHeaderTitle'>{title}</div>
         </div>
@@ -454,26 +520,38 @@ export class Dash extends React.Component {
             </div>
             <div className='dashAccountsActions'>
               <button type='button' onClick={() => this.openAccountChooser('create')}>
-                <Icon name='lock' size={19} />
-                <span>Derive new</span>
-              </button>
-              <button type='button' onClick={this.watchAccount}>
-                <Icon name='eye' size={19} />
-                <span>Watch</span>
+                <Icon name='add' size={20} />
+                <span>Create wallet</span>
               </button>
               <button type='button' onClick={() => this.openAccountChooser('import')}>
                 <Icon name='file' size={19} />
-                <span>Import</span>
+                <span>Import wallet</span>
+              </button>
+              <button type='button' onClick={() => this.openAccountChooser('hardware')}>
+                <Icon name='hardware' size={20} />
+                <span>Connect hardware wallet</span>
+              </button>
+              <button type='button' onClick={this.watchAccount}>
+                <Icon name='watch' size={20} />
+                <span>Watch address</span>
               </button>
             </div>
           </section>
           {accountCount ? (
-            <DelegationRevocation
-              accounts={accounts}
-              currentAccount={this.store('selected.current')}
-              networks={this.store('main.networks.ethereum') || {}}
-              signers={signers}
-            />
+            <details
+              className='accountDelegationEntry'
+              onToggle={(event) => this.setState({ showDelegation: event.currentTarget.open })}
+            >
+              <summary>Delegation</summary>
+              {this.state.showDelegation ? (
+                <DelegationRevocation
+                  accounts={accounts}
+                  currentAccount={this.store('selected.current')}
+                  networks={this.store('main.networks.ethereum') || {}}
+                  signers={signers}
+                />
+              ) : null}
+            </details>
           ) : null}
         </div>
       </div>

@@ -166,8 +166,10 @@ class CustomTokens extends React.Component {
                         </div>
                       </div>
                       <div className='customTokensListItemChain'>
-                        <div className='customTokensListItemChainLabel'>{'Chain ID:'}</div>
-                        <div>{token.chainId}</div>
+                        <div>
+                          {this.store('main.networks.ethereum', token.chainId, 'name') ||
+                            `Chain ${token.chainId}`}
+                        </div>
                         <button
                           ref={(node) => {
                             if (node) this.expandButtons.set(tokenId, node)

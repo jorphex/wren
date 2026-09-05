@@ -1,6 +1,6 @@
 .newTokenView
   width 100%
-  padding var(--wren-space-5) var(--wren-space-6) var(--wren-space-8)
+  padding 20px 20px 32px
   box-sizing border-box
   color var(--wren-text-primary)
   background transparent
@@ -8,15 +8,11 @@
 
 .newTokenFormInner
   width 100%
-  max-width 520px
-  margin 0 auto
-  padding 0 20px 20px
+  max-width none
+  margin 0
+  padding 0
   box-sizing border-box
-  overflow hidden
-  border 1px solid rgba(150, 182, 150, .16)
-  border-radius 10px
-  background var(--wren-surface-card)
-  box-shadow 0 12px 28px rgba(0, 0, 0, .42), inset 1px 1px 0 rgba(150, 182, 150, .04)
+  background transparent
 
 .newTokenTitle
   margin 0
@@ -195,3 +191,11 @@
   .newTokenContext
     align-items flex-start
     flex-direction column
+
+.newTokenDetails details > summary
+  box-sizing border-box
+  min-height 44px
+  padding 12px 0
+  cursor pointer
+  font-size 12px
+  line-height 20px

@@ -291,13 +291,13 @@ export class Recovery extends Component {
               <dd>{formatBackupDate(createdAt)}</dd>
             </div>
             <div>
-              <dt>Signer records</dt>
+              <dt>Wallet sources</dt>
               <dd>{signerCount}</dd>
             </div>
           </dl>
           <p id='recovery-replace-description' className='recoveryPanelCopy'>
-            Wren will verify and stage this backup, then restart. On restart, it atomically replaces the
-            current profile. If replacement fails, the current profile stays in place.
+            Restart Wren and replace this device’s current profile with the backup. If restoration fails, the
+            current profile stays in place.
           </p>
           <div className='recoveryActions'>
             <button
@@ -335,10 +335,7 @@ export class Recovery extends Component {
         onCancel={() => this.cancel('restore')}
         onSubmit={(event) => this.inspectBackup(event)}
       >
-        <p className='recoveryPanelCopy'>
-          Enter the backup password, then choose the encrypted Wren backup to inspect. Nothing is replaced
-          yet.
-        </p>
+        <p className='recoveryPanelCopy'>Choose a backup to preview before restoring.</p>
         <div className='recoveryFields'>
           <label htmlFor='recovery-restore-password'>Backup password</label>
           <input
@@ -389,7 +386,7 @@ export class Recovery extends Component {
           <div className='recoveryOptionCopy'>
             <strong>Export encrypted backup</strong>
             <span>
-              Includes accounts, names, networks, contacts, permissions, settings, and signer records. Live
+              Includes accounts, names, networks, contacts, permissions, settings, and wallet sources. Live
               balances, rates, and pending requests are left out.
             </span>
           </div>

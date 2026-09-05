@@ -348,7 +348,7 @@ button.addressBookRemove.wrenControl.wrenControlGhost
   display flex
   flex 1
   flex-direction column
-  gap var(--wren-space-4)
+  gap 12px
   overflow-y auto
   padding var(--wren-space-6) var(--wren-page-gutter) var(--wren-space-4)
 
@@ -365,6 +365,7 @@ button.addressBookRemove.wrenControl.wrenControlGhost
 
 .addressBookEditorHeader
   justify-content flex-start
+  padding-bottom 0
 
 .addressBookEditorIcon
   width 42px
@@ -613,3 +614,17 @@ button.addressBookRemove.wrenControl.wrenControlGhost
   font-size 12px
   line-height 18px
   text-align center
+
+.addressBookEditor details > summary
+  box-sizing border-box
+  min-height 44px
+  padding 12px 0
+  cursor pointer
+  font-size 12px
+  line-height 20px
+
+.addressBookActionShelf
+  flex none
+
+.addressBookEditorScroll > *
+  flex-shrink 0

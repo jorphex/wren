@@ -361,12 +361,8 @@ it('publishes once with explicit acknowledgement and replaces the composer with 
   await fillTarget(user)
   await choose(user)
   await user.click(screen.getByRole('button', { name: 'Check source' }))
-  expect(
-    await screen.findByText(
-      /selected Solidity or Vyper source artifact and verification metadata to Sourcify/
-    )
-  ).toBeTruthy()
-  expect(screen.getByText(/Sourcify may forward them to Etherscan, Blockscout, or Routescan/)).toBeTruthy()
+  expect(await screen.findByText(/Publishes source and metadata permanently to Sourcify/)).toBeTruthy()
+  expect(screen.getByText(/may forward them to Etherscan, Blockscout, or Routescan/)).toBeTruthy()
   await user.click(await screen.findByRole('checkbox'))
   await user.click(screen.getByRole('button', { name: 'Publish source' }))
   fireEvent.click(screen.getByRole('button', { name: 'Publishing source…' }))
@@ -563,7 +559,10 @@ it('checks credential status without exposing a key and opens Settings on the ex
   expect(publishVerificationToEtherscan).not.toHaveBeenCalled()
   expect(await screen.findByText(/No Etherscan API key is configured/)).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Open Settings' }))
-  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'settings', data: {} })
+  expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
+    view: 'settings',
+    data: { category: 'advanced' }
+  })
   expect(document.body.textContent).not.toContain('my-secret-explorer-key')
 })
 
@@ -599,9 +598,7 @@ it('submits the direct fallback only after confirming a configured credential', 
   await confirmNoConstructorArguments(user)
   expect(screen.getByRole('button', { name: 'Submit directly with API key' }).disabled).toBe(true)
   expect(
-    screen.getByText(
-      /already-checked source, metadata, and any encoded constructor arguments directly to Etherscan/
-    )
+    screen.getByText(/Publishes source, metadata, and constructor arguments directly to Etherscan/)
   ).toBeTruthy()
   await consentToDirectEtherscan(user)
   await user.click(screen.getByRole('button', { name: 'Submit directly with API key' }))

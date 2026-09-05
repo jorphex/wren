@@ -166,11 +166,7 @@ test('records an explicit outside-Wren check without letting the renderer set it
   await user.type(screen.getByLabelText('Address or ENS name'), address)
   await user.type(screen.getByLabelText('Name'), 'Yearn Treasury')
   await user.click(screen.getByRole('radio', { name: 'Checked outside Wren' }))
-  expect(
-    screen.getByText(
-      'You checked this address outside Wren. Wren does not verify it. Compare the full address before signing.'
-    )
-  ).toBeTruthy()
+  expect(screen.getByText('Checked by you, outside Wren.')).toBeTruthy()
   await user.type(screen.getByLabelText(/Verification note/), 'Compared during a voice call')
   await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
@@ -252,10 +248,8 @@ test('warns before explicitly clearing an out-of-band verification record', asyn
   saveAddressBookEntry.mockResolvedValue({ success: true, entry })
   const { user } = render(<AddressBookEditor entry={verified} />)
 
-  await user.click(screen.getByRole('radio', { name: 'Saved — not independently verified' }))
-  expect(
-    screen.getByText('Saving as “Saved — not independently verified” clears the check date and note.')
-  ).toBeTruthy()
+  await user.click(screen.getByRole('radio', { name: 'Saved' }))
+  expect(screen.getByText('Saving as “Saved” clears the check date and note.')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Save contact' }))
 
   await waitFor(() =>

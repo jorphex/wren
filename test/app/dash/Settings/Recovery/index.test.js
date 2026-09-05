@@ -104,8 +104,8 @@ it('inspects a selected backup before exposing the destructive replacement confi
   const confirmation = screen.getByRole('alertdialog', { name: 'Replace this Wren profile?' })
   expect(confirmation.hasAttribute('aria-modal')).toBe(false)
   expect(confirmation.textContent).toContain('Version 1')
-  expect(confirmation.textContent).toContain('Signer records3')
-  expect(confirmation.textContent).toContain('atomically replaces the current profile')
+  expect(confirmation.textContent).toContain('Wallet sources3')
+  expect(confirmation.textContent).toContain('replace this device’s current profile')
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cancel' }))
 })
 

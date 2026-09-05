@@ -108,11 +108,11 @@ const simulationCopy = (simulation) => {
   if (simulation?.status === 'reverted') {
     return 'Simulation reverted. Check the data and network state.'
   }
-  return 'Simulation unavailable from the configured RPC. Check the RPC or continue without it.'
+  return 'Simulation unavailable. Check your RPC or continue without simulation.'
 }
 
 const evidenceValue = (evidence, formatter = (value) => value) =>
-  evidence?.status === 'succeeded' ? formatter(evidence.value) : 'Unavailable from configured RPC'
+  evidence?.status === 'succeeded' ? formatter(evidence.value) : 'Unavailable'
 
 const EvidenceRow = ({ label, children, mono = false }) => (
   <div className='deploymentEvidenceRow'>
@@ -426,29 +426,35 @@ export class Deployment extends React.Component {
   renderEvidence(inspection, network) {
     const gas = evidenceValue(
       inspection.gasEstimate,
-      (value) => `${rpcQuantity(value)} gas · Wren padded configured-RPC estimate`
+      (value) => `${rpcQuantity(value)} gas · includes gas buffer`
     )
     const nonce =
       inspection.pendingNonce?.status === 'succeeded'
         ? rpcQuantity(inspection.pendingNonce.nonce)
-        : 'Unavailable from configured RPC'
+        : 'Unavailable'
     return (
       <section className='deploymentEvidence' aria-labelledby='deployment-evidence-title'>
         <div className='deploymentEvidenceHeader' ref={this.resultRef} tabIndex='-1'>
-          <span>Prepared evidence</span>
           <h2 id='deployment-evidence-title'>Check results</h2>
         </div>
         <dl>
-          <EvidenceRow label='Prepared data' mono>
-            {`Value ${nativeQuantity(inspection.value, network?.decimals, network?.symbol)} · Canonical ${inspection.value} · Chain ${rpcQuantity(inspection.chainId)} · ${new Date(inspection.preparedAt).toLocaleString()}`}
-          </EvidenceRow>
-          <EvidenceRow label='Payload size'>{inspection.initcode?.bytes?.toLocaleString()} bytes</EvidenceRow>
-          <EvidenceRow label='Keccak-256' mono>
-            {inspection.initcode?.hash}
-          </EvidenceRow>
           <EvidenceRow label='Gas estimate'>{gas}</EvidenceRow>
           <EvidenceRow label='Simulation'>{simulationCopy(inspection.simulation)}</EvidenceRow>
           <EvidenceRow label='Pending nonce'>{nonce}</EvidenceRow>
+          <details>
+            <summary>Deployment details</summary>
+            <dl>
+              <EvidenceRow label='Prepared data' mono>
+                {`Value ${nativeQuantity(inspection.value, network?.decimals, network?.symbol)} · Canonical ${inspection.value} · Chain ${rpcQuantity(inspection.chainId)} · ${new Date(inspection.preparedAt).toLocaleString()}`}
+              </EvidenceRow>
+              <EvidenceRow label='Payload size'>
+                {inspection.initcode?.bytes?.toLocaleString()} bytes
+              </EvidenceRow>
+              <EvidenceRow label='Keccak-256' mono>
+                {inspection.initcode?.hash}
+              </EvidenceRow>
+            </dl>
+          </details>
           {inspection.pendingNonce?.status === 'succeeded' ? (
             <EvidenceRow label='Provisional CREATE address' mono>
               {inspection.pendingNonce.provisionalAddress}
@@ -493,7 +499,7 @@ export class Deployment extends React.Component {
         {!this.props.embedded ? (
           <header className='deploymentHeader'>
             <span className='deploymentEyebrow'>Contract deployment</span>
-            <h1>Check deployment data</h1>
+            <h1>Deploy contract</h1>
           </header>
         ) : null}
 
@@ -593,10 +599,10 @@ export class Deployment extends React.Component {
             </small>
           </label>
 
-          <p className='deploymentRpcDisclosure'>
-            Checking sends deployment data, value, and account to your configured RPC. It does not sign,
-            broadcast, verify source, or guarantee deployment safety.
-          </p>
+          <details className='deploymentRpcDisclosure'>
+            <summary>Uses your configured RPC</summary>
+            <p>Shares deployment data, value, and account for estimation and simulation.</p>
+          </details>
 
           {hasEvidence ? this.renderEvidence(this.state.inspection, selectedNetwork) : null}
 

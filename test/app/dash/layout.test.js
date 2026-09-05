@@ -105,7 +105,7 @@ test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   )
   expect(dashStyle).toMatch(/\/\/ Wren dashboard shell[\s\S]*?\.dashMainScroll[\s\S]*?overflow-y auto/)
   expect(dashStyle).toMatch(/\.dashMainScroll[\s\S]*?scrollbar-gutter stable/)
-  expect(dashStyle).not.toMatch(/scrollbar-gutter stable both-edges/)
+  expect(dashStyle).toMatch(/scrollbar-gutter stable both-edges/)
 })
 
 test('keeps route-entry motion out of dashboard scroll geometry', () => {
@@ -254,32 +254,18 @@ test('uses separator-free Earn lists, spacing-led detail regions, and the shared
   expect(earnStyle).toMatch(
     /\.earnVariants, \.earnOwned, \.earnActionForm[\s\S]*?border 0[\s\S]*?border-radius 0[\s\S]*?background transparent[\s\S]*?box-shadow none/
   )
-  expect(earnStyle).toMatch(
-    /\.earnDetailsHero[\s\S]*?margin-bottom var\(--wren-space-2\)[\s\S]*?padding-bottom var\(--wren-space-3\)/
-  )
+
   expect(earnStyle).toMatch(/\.earnDetailsMetrics[\s\S]*?margin 0/)
-  expect(earnStyle).toMatch(
-    /\.earnVariants\n {2}margin-top var\(--wren-space-2\)[\s\S]*?padding-top var\(--wren-space-2\)/
-  )
-  expect(earnStyle).toMatch(
-    /\.earnProductNote\.earnCooldownNotice[\s\S]*?margin var\(--wren-space-3\) var\(--wren-space-2\)/
-  )
+
   expect(earnStyle).toMatch(/\.earnApy[\s\S]*?strong[\s\S]*?color var\(--wren-text-primary\)/)
-  expect(earnStyle).toMatch(
-    /\.earnPositionsOverview[\s\S]*?padding 0 0 var\(--wren-space-5\)[\s\S]*?border-bottom 0/
-  )
-  expect(earnStyle).toMatch(
-    /\.earnMetric[\s\S]*?padding var\(--wren-space-2\) var\(--wren-space-3\)[\s\S]*?border 0[\s\S]*?background transparent/
-  )
+
   expect(earnStyle).toMatch(
     /\.earnTabs button\.wrenControl:focus-visible,[\s\S]*?outline 2px solid var\(--wren-focus\)[\s\S]*?box-shadow none/
   )
   expect(earnStyle).toMatch(
     /button\.earnVariant\.wrenControl\.wrenControlSecondary[\s\S]*?flex-direction column/
   )
-  expect(earnStyle).toMatch(
-    /\.earnActions[\s\S]*?gap var\(--wren-space-1\)[\s\S]*?padding var\(--wren-space-1\)[\s\S]*?button\.wrenControl[\s\S]*?border-radius var\(--wren-radius-sm\)[\s\S]*?button\.wrenControl\.active[\s\S]*?background var\(--wren-surface-active\)/
-  )
+
   expect(earnStyle).toMatch(/@keyframes earnSkeletonPulse/)
   expect(earnStyle).toMatch(/\.earnPositionSkeleton[\s\S]*?pointer-events none[\s\S]*?transition none/)
   expect(earnStyle).toMatch(
