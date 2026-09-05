@@ -9,6 +9,7 @@ economics.
 - [Integration boundary and evidence](#integration-boundary-and-evidence)
 - [Curated products](#curated-products)
 - [Data, balances, and availability](#data-balances-and-availability)
+- [Review layout](#review-layout)
 - [Transactions](#transactions)
 - [Workflow safety and recovery](#workflow-safety-and-recovery)
 - [Qualification boundary](#qualification-boundary)
@@ -72,6 +73,18 @@ them.
 - `All` separates Ethereum, Base, and Katana. Failure on one chain cannot erase another chain's products or positions. Deposits require fresh eligible metadata. Cached, retired, hidden, or failed data is withdraw-only when Wren recognizes an existing position.
 - Wren reads positions and underlying balances for the selected account. Watch-only accounts can inspect but cannot transact.
 - Curated assets, shares, and companion shares are hidden scanner defaults. A genuine nonzero ERC-20 balance appears in normal balances and Send without becoming a custom token. Wren fabricates no zero balance. Remote `omit` metadata cannot suppress a locally pinned entry. Cooldown-only yvUSD remains an Earn position, not a transferable token balance.
+
+## Review layout
+
+Vault lists group TVL, Yearn risk, available assets, and position status. Vault
+headers use the shared plain asset mark. Existing positions stay visible; vault
+technical details can be opened separately.
+
+Deposit and withdrawal forms occupy the action area below the scrolling review.
+During an active locked-yvUSD cooldown, that area initially shows Cancel cooldown
+and Deposit. Selecting Deposit opens its amount form; selecting Cancel cooldown
+opens its separately reviewed workflow. This layout does not change the
+on-chain cooldown or withdrawal-window rules.
 
 ## Transactions
 

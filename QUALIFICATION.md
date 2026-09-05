@@ -53,6 +53,24 @@ signature states, and stages the clearly named previews.
 and checks full, short, and capped-width shells at 100%, 125%, and 150%, including
 delegation entry, revocation review, ambiguous monitoring, safe focus,
 reachability, text, and targets.
+For the 0.1.8 UI changes, also verify the following in the disposable profile:
+
+- Receive opens on hover/focus or click, displays the correct full account address,
+  blurs the wallet, and dismisses with Escape or outside interaction.
+- Setup labels and inputs share a horizontal center. Contact and network editors
+  have one scrolling body, with reachable final fields and stationary actions.
+- Send keeps its account and asset identities separate; resolved recipient text
+  and copy controls do not touch the input. Sweep details scroll above its actions.
+- Request action shelves reserve their rendered height and use a 114px minimum
+  at the standard width. Status text does not displace controls.
+- Exact funding values replace rounded rows, and privacy mode hides both forms.
+- Earn positions and guardrail identity remain visible. Active cooldown actions
+  are reachable before opening Deposit; the opened form still supports Max.
+
+Record full and short-window evidence and the tested interface scales. Native
+renderer checks establish layout and synthetic interaction behavior, not live
+signing or physical-device qualification.
+
 Panel-contained permission dialogs cannot inert or dim the joined dashboard because
 the dashboard is a separate WebContents. Their `aria-modal`, focus containment, and
 background inerting guarantees apply to the wallet panel only; the joined dashboard

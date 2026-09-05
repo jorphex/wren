@@ -6,6 +6,36 @@ Detailed release notes and platform boundaries live in
 
 ## Unreleased
 
+## 0.1.8 - 2026-09-05
+
+### Changed
+
+- Shortened UI copy and organized settings, onboarding, app access, and technical
+  details around the user's immediate task.
+- Replaced the wallet's separate Receive flow with an inline QR popover and
+  distinguished incomplete portfolio values from complete totals.
+- Separated the Send account and asset fields and clarified review, signer,
+  broadcast, and confirmation states.
+- Kept Earn positions and guardrail identity visible, aligned vault metadata,
+  and made active cooldown actions immediately accessible.
+- Added readable funding summaries with exact values available in the same rows.
+
+### Fixed
+
+- Corrected setup-field alignment, contact-editor scrolling, network footer
+  clipping, and recipient/copy-control spacing.
+- Standardized transaction action-area height and fixed recovery-message,
+  lifecycle, Sweep review, and Wallet Calls footer placement.
+- Removed stray separators and Earn logo frames; fixed crowded action groups
+  and compact-window fee presentation.
+
+### Maintenance
+
+- Expanded component and isolated native-renderer checks for full, short, scaled,
+  expanded-detail, and recovery layouts.
+
+See [the complete 0.1.8 release notes](release-notes/v0.1.8.md).
+
 ## 0.1.7 - 2026-09-04
 
 ### Fixed

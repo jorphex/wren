@@ -10,7 +10,7 @@
   <a href="https://getwren.xyz">Website</a> ·
   <a href="https://github.com/jorphex/wren/releases">Download</a> ·
   <a href="https://github.com/jorphex/wren-companion/releases">Companion</a> ·
-  <a href="release-notes/v0.1.7.md">What’s new</a> ·
+  <a href="release-notes/v0.1.8.md">What’s new</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="RPC_COMPATIBILITY.md">Developer reference</a>
 </p>
@@ -42,7 +42,7 @@ See [supported standards](SUPPORTED_EIPS.md),
 
 ## Support
 
-The current desktop release is Wren 0.1.7. It pairs with Wren Companion 0.1.2
+Wren 0.1.8 pairs with Wren Companion 0.1.2
 over authenticated protocol 3. Linux x64 is qualified; Windows and macOS remain
 unqualified previews, and Linux arm64 is a CI smoke target only. Read
 [Signer and platform support](HARDWARE_SUPPORT.md) for the full platform and
@@ -64,14 +64,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.7.AppImage
-./Wren-0.1.7.AppImage
+chmod +x Wren-0.1.8.AppImage
+./Wren-0.1.8.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.7_amd64.deb
+sudo apt install ./wren_0.1.8_amd64.deb
 ```
 
 Linux packages are unsigned. Checksums and GitHub attestations verify their
@@ -101,7 +101,7 @@ Wren does not read Frame’s live profile. To make a one-time private copy, clos
 both apps, back up `~/.config/frame`, and run this before Wren creates its profile:
 
 ```bash
-./Wren-0.1.7.AppImage --import-frame-profile
+./Wren-0.1.8.AppImage --import-frame-profile
 ```
 
 The import copies only the supported configuration and encrypted signer files.
