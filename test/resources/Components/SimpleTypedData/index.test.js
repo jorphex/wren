@@ -38,15 +38,15 @@ it('shows complete EIP-712 signing context and declarations', () => {
   render(<SimpleTypedData chainName='Ethereum' originName='example.test' req={request()} />)
 
   expect(screen.getByText('Review structured message')).toBeTruthy()
-  expect(screen.getByText('Typed-data structure recognized')).toBeTruthy()
+  expect(screen.queryByText('Typed-data structure recognized')).toBeNull()
   expect(screen.getByText('request Network')).toBeTruthy()
   expect(screen.getByText('example.test')).toBeTruthy()
   expect(screen.getByText('Ethereum (1)')).toBeTruthy()
-  expect(screen.getByText('V4')).toBeTruthy()
+  expect(screen.getByText(/EIP-712.*V4/)).toBeTruthy()
   expect(screen.getAllByText('Message').length).toBeGreaterThan(0)
   expect(screen.getByText('Domain')).toBeTruthy()
   expect(screen.getByText('Message: Message')).toBeTruthy()
-  expect(screen.getByText('Type Definitions')).toBeTruthy()
+  expect(screen.getByText('Type definitions')).toBeTruthy()
   expect(screen.getByText('EIP712Domain')).toBeTruthy()
 })
 
@@ -153,8 +153,8 @@ it('shows normalized Permit2 authority before the raw typed data', () => {
   expect(
     screen.getByText('Permission').compareDocumentPosition(warning) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy()
-  expect(screen.getByText(/Recognition describes structure, not safety/)).toBeTruthy()
-  expect(screen.getByText('Exact signed data').closest('details').open).toBe(false)
+  expect(screen.queryByText(/Recognition describes structure, not safety/)).toBeNull()
+  expect(screen.getByText('Type definitions').closest('details').open).toBe(false)
 })
 
 it('shows normalized ERC-3009 transfer authority', () => {
@@ -196,7 +196,7 @@ it('uses the same complete view for specialized permit requests', () => {
   render(<SimpleTypedData req={request({ type: 'signErc20Permit' })} />)
 
   expect(screen.getByText('Review structured message')).toBeTruthy()
-  expect(screen.getByText('Type Definitions')).toBeTruthy()
+  expect(screen.getByText('Type definitions')).toBeTruthy()
 })
 
 it('warns when the selected device displays only typed-data hashes', () => {

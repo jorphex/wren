@@ -19,9 +19,8 @@ const getMode = (requestedAmount, amount) => {
   return isMax(amount) ? 'unlimited' : 'custom'
 }
 
-const shortAddress = (address) => `${address.slice(0, 8)}…${address.slice(-6)}`
-
 export const formatApprovalExpiry = (deadline) => {
+  if (String(deadline) === MAX_UINT256.toString()) return 'No deadline'
   const timestamp = Number(deadline)
   const date = new Date(timestamp > 1_000_000_000_000 ? timestamp : timestamp * 1000)
   if (Number.isNaN(date.getTime())) return 'Unknown'
@@ -30,7 +29,11 @@ export const formatApprovalExpiry = (deadline) => {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
-    year: 'numeric'
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short'
   }).format(date)
 }
 
@@ -39,8 +42,9 @@ const ApprovalAddress = ({ address, name, copyLabel }) => {
 
   return (
     <button type='button' aria-label={copyLabel} className='wrenTokenApprovalAddress' onClick={copyAddress}>
-      <strong>{name || shortAddress(address)}</strong>
-      <span>{showCopiedMessage ? 'Copied' : name ? shortAddress(address) : 'Copy address'}</span>
+      {name ? <strong>{name}</strong> : null}
+      <code>{address}</code>
+      <span role='status'>{showCopiedMessage ? 'Copied' : 'Copy address'}</span>
     </button>
   )
 }
@@ -50,6 +54,7 @@ const EditTokenSpend = ({
   updateRequest: updateHandlerRequest,
   requestedAmount,
   deadline,
+  deadlineLabel = 'Signature deadline',
   canRevoke = false
 }) => {
   const { decimals, symbol = '???', name = 'Unknown Token', spender, contract, amount } = data
@@ -173,7 +178,7 @@ const EditTokenSpend = ({
         </div>
         {deadline ? (
           <div className='wrenTokenApprovalExpiry'>
-            <span className='wrenTokenApprovalContextLabel'>Expires</span>
+            <span className='wrenTokenApprovalContextLabel'>{deadlineLabel}</span>
             <strong>{formatApprovalExpiry(deadline)}</strong>
           </div>
         ) : null}

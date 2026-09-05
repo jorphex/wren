@@ -68,11 +68,6 @@ const TypedDataReviewSummary = ({ context, typedMessage }) => {
       <div className='typedDataReviewSummaryMain'>
         <div className='typedDataReviewEyebrow'>{presentation.eyebrow}</div>
         <div className='typedDataReviewTitle'>{presentation.title}</div>
-        <div className='typedDataReviewHelp'>{presentation.help}</div>
-      </div>
-      <div className='typedDataReviewRecognition'>
-        <div>{presentation.status}</div>
-        <span>Recognition describes structure, not safety.</span>
       </div>
     </div>
   )
@@ -88,7 +83,10 @@ const CopyableAuthorityValue = ({ label, value }) => {
       className='signingAuthorityCopy'
       onClick={() => copyValue()}
     >
-      {copied ? 'Address copied' : value}
+      {value}
+      <span className='signingCopyFeedback' role='status'>
+        {copied ? 'Address copied' : ''}
+      </span>
     </button>
   )
 }
@@ -110,7 +108,10 @@ const SimpleJSONScalar = ({ copyLabel, quoteStrings, value }) => {
       className='simpleJsonCopyValue'
       onClick={() => copyValue()}
     >
-      {copied ? 'Address copied' : displayValue(value, quoteStrings)}
+      {displayValue(value, quoteStrings)}
+      <span className='signingCopyFeedback' role='status'>
+        {copied ? 'Address copied' : ''}
+      </span>
     </button>
   ) : (
     displayValue(value, quoteStrings)
@@ -271,8 +272,7 @@ const Eip3009Authorization = ({ authorization }) => {
   )
 }
 
-const SigningContext = ({ chainName, context, origin, originName, typedMessage }) => {
-  const structured = !Array.isArray(typedMessage.data)
+const SigningContext = ({ account, chainName, context, origin, originName }) => {
   const requestChainId = context?.requestChainId
   const requestChain =
     requestChainId !== undefined ? `${chainName || 'Unknown chain'} (${requestChainId})` : 'Unknown chain'
@@ -285,9 +285,8 @@ const SigningContext = ({ chainName, context, origin, originName, typedMessage }
           quoteStrings={false}
           json={{
             origin: originName || origin || 'Unknown origin',
-            requestNetwork: requestChain,
-            signatureVersion: typedMessage.version,
-            primaryType: structured ? typedMessage.data.primaryType : 'Legacy fields'
+            account,
+            requestNetwork: requestChain
           }}
         />
       </Section>
@@ -306,9 +305,10 @@ const StructuredTypedData = ({ typedData }) => (
     <Section title={`Message: ${typedData.primaryType}`}>
       <SimpleJSON json={typedData.message} />
     </Section>
-    <Section title='Type Definitions'>
+    <details className='signingRawDisclosure'>
+      <summary>Type definitions</summary>
       <SimpleJSON json={typedData.types} />
-    </Section>
+    </details>
   </>
 )
 
@@ -327,22 +327,12 @@ export const SimpleTypedData = ({ chainName, deviceWarning, originName, req }) =
         <TypedDataReviewSummary context={context} typedMessage={typedMessage} />
         <div className='signTypedDataInner'>
           <TypedDataDeviceWarning warning={deviceWarning} />
-          <SigningContext {...{ chainName, context, origin, originName, typedMessage }} />
-          <details className='signingRawDisclosure'>
-            <summary>
-              <span>Exact signed data</span>
-              <span>
-                {Array.isArray(typedMessage.data) ? 'Signed fields' : 'Domain, message, and types'} ›
-              </span>
-            </summary>
-            <div className='signingRawDisclosureBody'>
-              {Array.isArray(typedMessage.data) ? (
-                <LegacyTypedData typedData={typedMessage.data} />
-              ) : (
-                <StructuredTypedData typedData={typedMessage.data} />
-              )}
-            </div>
-          </details>
+          <SigningContext account={req.account} {...{ chainName, context, origin, originName }} />
+          {Array.isArray(typedMessage.data) ? (
+            <LegacyTypedData typedData={typedMessage.data} />
+          ) : (
+            <StructuredTypedData typedData={typedMessage.data} />
+          )}
         </div>
       </div>
     </div>

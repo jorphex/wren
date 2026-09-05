@@ -58,6 +58,19 @@ export const DisplayValue = (props) => {
     displayUnit = ''
   } = value === MAX_HEX ? { displayValue: 'Unlimited' } : data[type]({ displayDecimals })
 
+  if (type === 'fiat' && displayValue === '?') {
+    return (
+      <div
+        className='displayValue'
+        data-testid='display-value'
+        aria-label='Value unavailable'
+        title='Value unavailable'
+      >
+        —
+      </div>
+    )
+  }
+
   return (
     <div className='displayValue' data-testid='display-value'>
       {type === 'fiat' ? (

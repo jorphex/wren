@@ -72,7 +72,7 @@ describe('changing approval amounts', () => {
         />
       )
 
-      expect(screen.getByText('Jan 1, 2100')).toBeTruthy()
+      expect(screen.getByText(/Jan 1, 2100.*UTC/)).toBeTruthy()
     }
   )
 

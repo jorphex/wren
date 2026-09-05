@@ -109,3 +109,13 @@ it('should render an unlimited value', () => {
   const displayValue = screen.getByTestId('display-value')
   expect(displayValue.textContent).toBe('UnlimitedETH')
 })
+
+it('distinguishes an unavailable fiat value from a known zero', () => {
+  const { rerender } = render(<DisplayValue value='100' type='fiat' currencySymbol='$' />)
+  expect(screen.getByLabelText('Value unavailable').textContent).toBe('—')
+  rerender(
+    <DisplayValue value='0' type='fiat' currencySymbol='$' valueDataParams={{ currencyRate: { price: 1 } }} />
+  )
+  expect(screen.queryByLabelText('Value unavailable')).toBeNull()
+  expect(screen.getByTestId('display-value').textContent).toContain('$0')
+})
