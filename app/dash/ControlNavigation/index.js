@@ -40,7 +40,7 @@ export const primaryDashboardItems = [
 
 export class ControlNavigation extends React.Component {
   openDestination = (view) => {
-    if (view === this.props.current) return
+    if ((view || 'overview') === this.props.current) return
     if (this.props.replace) {
       const crumbs = view ? [{ view, data: {} }] : []
       link.send('tray:action', 'navReplace', 'dash', crumbs)
@@ -50,12 +50,10 @@ export class ControlNavigation extends React.Component {
   }
 
   render() {
-    const { counts } = this.props
     return (
-      <nav className='dashModules' aria-label='Control destinations'>
+      <nav className='dashModules dashControlNavigation' aria-label='Control destinations'>
         {primaryDashboardItems.map((item) => {
           const current = (item.view || 'overview') === this.props.current
-          const meta = item.count ? counts[item.count] : undefined
           return (
             <button
               type='button'
@@ -65,18 +63,12 @@ export class ControlNavigation extends React.Component {
               key={item.view || item.title}
               onClick={() => this.openDestination(item.view)}
             >
-              <span className='dashModuleIcon'>
+              <span className='dashModuleIcon' aria-hidden='true'>
                 <Icon name={item.icon} size={18} />
               </span>
               <span className='dashModuleCopy'>
                 <strong className='dashModuleTitle'>{item.title}</strong>
-                <span className='dashModuleDescription'>{item.description}</span>
               </span>
-              {meta !== undefined ? (
-                <span className='dashModuleMeta' aria-hidden='true'>
-                  {meta}
-                </span>
-              ) : null}
             </button>
           )
         })}

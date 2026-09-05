@@ -40,7 +40,8 @@ function accountMain({ hideBalances = false, balances = [], networks = {}, netwo
   const main = new AccountMain({ id: address })
   main.store = (...path) => {
     const key = path.join('.')
-    if (key === `main.accounts.${address}`) return { address, name: 'Workshop' }
+    if (key === `main.accounts.${address}`)
+      return { address, name: 'Workshop', balances: { lastUpdated: new Date().toISOString() } }
     if (key === 'main.networks.ethereum') return networks
     if (key === 'main.networksMeta.ethereum') return networksMeta
     if (key === 'main.rates') return {}
@@ -89,6 +90,8 @@ it('keeps populated portfolio balance copy concise', () => {
   render(main.renderPortfolioSummary())
 
   expect(screen.queryByText('Across enabled networks')).toBeNull()
+  expect(screen.queryByText('Connected networks')).toBeNull()
+  expect(document.querySelector('.accountPortfolioMeta')).toBeNull()
   expect(screen.queryByText('No assets on this account yet')).toBeNull()
 })
 
@@ -235,4 +238,18 @@ it('hides balance-derived empty and coverage messages with portfolio privacy', (
   render(accountMain({ hideBalances: true }).renderPortfolioSummary())
   expect(screen.queryByRole('status')).toBeNull()
   expect(screen.queryByText('$0.00')).toBeNull()
+})
+
+it.each([
+  ['loading', { balances: undefined, updated: undefined }],
+  ['unavailable', { networks: {} }],
+  ['unpriced', { balances: [nativeBalance] }],
+  ['empty', { balances: [{ ...nativeBalance, balance: '0' }] }]
+])('has no caption beneath the portfolio value when %s', (_state, options) => {
+  const main = new AccountMain({ id: address })
+  main.store = portfolioStore(options)
+  render(main.renderPortfolioSummary())
+  const value = document.querySelector('.accountPortfolioValue')
+  expect(value.nextElementSibling.className).toBe('accountPortfolioActions')
+  expect(screen.queryByRole('status')).toBeNull()
 })

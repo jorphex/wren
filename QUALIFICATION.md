@@ -56,9 +56,9 @@ signature states, and stages the clearly named previews.
 It checks full, short, and capped-width windows at 100%, 125%, and 150%.
 Checks cover delegation entry, revocation review, and uncertain monitoring states.
 They also cover focus, reachable controls, text, and pointer targets.
-For the 0.1.8 UI changes, also verify the following in the disposable profile:
+For the current UI, also verify the following in the disposable profile:
 
-- Receive opens on hover/focus or click, displays the correct full account address,
+- Receive opens on click, displays the correct full account address,
   blurs the wallet, and dismisses with Escape or outside interaction.
 - Setup labels and inputs share a horizontal center. Contact and network editors
   have one scrolling body, with reachable final fields and stationary actions.

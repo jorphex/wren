@@ -32,19 +32,26 @@ it('opens an anchored nonmodal popover, copies the full address, and dismisses o
   expect(document.activeElement).toBe(trigger)
 })
 
-it('supports hover previews and outside dismissal', async () => {
+it('opens only on click and consumes outside dismissal without activating the wallet', async () => {
+  const send = jest.fn()
   const { user } = render(
     <>
       <Receive address={address} />
-      <button>Send</button>
+      <button onClick={send}>Send</button>
     </>
   )
   const trigger = screen.getByRole('button', { name: 'Receive' })
   await user.hover(trigger)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await user.tab()
+  expect(document.activeElement).toBe(trigger)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  await user.keyboard('{Enter}')
   expect(screen.getByRole('dialog')).toBeTruthy()
   await user.unhover(trigger)
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  await user.click(trigger)
-  await user.click(screen.getByRole('button', { name: 'Send' }))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  await user.click(document.querySelector('.receiveBackdrop'))
   expect(screen.queryByRole('dialog')).toBeNull()
+  expect(document.activeElement).toBe(trigger)
+  expect(send).not.toHaveBeenCalled()
 })

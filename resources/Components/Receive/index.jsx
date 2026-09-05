@@ -10,27 +10,20 @@ const Receive = ({ address }) => {
   const [position, setPosition] = useState({ left: 12, top: 12 })
   const trigger = useRef()
   const panel = useRef()
-  const leaveTimer = useRef()
-  const hovered = useRef(false)
   const id = useId()
   const fullAddress = getAddress(address)
   const [copied, copy] = useCopiedMessage(fullAddress)
   const inside = (node) => trigger.current?.contains(node) || panel.current?.contains(node)
-  const show = () => {
-    clearTimeout(leaveTimer.current)
-    setOpen(true)
-  }
-  const leave = () => {
-    clearTimeout(leaveTimer.current)
-    leaveTimer.current = setTimeout(() => {
-      if (!hovered.current && !inside(document.activeElement)) setOpen(false)
-    }, 120)
-  }
-  useEffect(() => () => clearTimeout(leaveTimer.current), [])
   useEffect(() => {
     if (!open) return
     const pointer = (event) => {
-      if (!inside(event.target)) setOpen(false)
+      if (!inside(event.target)) {
+        setOpen(false)
+        if (event.type === 'pointerdown') {
+          event.preventDefault()
+          trigger.current?.focus()
+        }
+      }
     }
     const key = (event) => {
       if (event.key === 'Escape') {
@@ -62,17 +55,6 @@ const Receive = ({ address }) => {
     window.addEventListener('resize', place)
     return () => window.removeEventListener('resize', place)
   }, [open])
-  const pointerEvents = {
-    onMouseEnter: () => {
-      hovered.current = true
-      show()
-    },
-    onMouseLeave: () => {
-      hovered.current = false
-      leave()
-    },
-    onBlur: leave
-  }
   return (
     <>
       <button
@@ -82,15 +64,13 @@ const Receive = ({ address }) => {
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         aria-haspopup='dialog'
-        onFocus={show}
-        onClick={show}
+        onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (event.key === 'Tab' && !event.shiftKey && open) {
             event.preventDefault()
             panel.current?.querySelector('button')?.focus()
           }
         }}
-        {...pointerEvents}
       >
         <Icon name='qr' size={16} /> Receive
       </button>
@@ -105,7 +85,6 @@ const Receive = ({ address }) => {
                 aria-label='Receive assets'
                 className='receivePanel'
                 style={position}
-                {...pointerEvents}
               >
                 <h2>Receive assets</h2>
                 <QrCode className='qrCode' value={fullAddress} label='Receive account QR code' />

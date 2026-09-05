@@ -305,7 +305,7 @@ const joinedCanvasScenarios = () => [
         scale,
         logicalWidth: 620,
         logicalHeight,
-        ready: '.dashModules',
+        ready: '.dashControlNavigation',
         layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
@@ -1498,7 +1498,7 @@ const reviewScenarios = () => [
       scale,
       logicalWidth: 620,
       logicalHeight,
-      action: { type: 'focusText', text: 'Receive' },
+      action: { type: 'clickText', text: 'Receive' },
       ready: '.receivePanel',
       requiredText: ['Receive assets'],
       layoutExpectations: [{ kind: 'size', selector: '.receivePanel .qrCode', width: 185, height: 185 }]
@@ -3661,7 +3661,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
               scale: 1,
               logicalWidth: 620,
               logicalHeight: FULL_SHELL_HEIGHT,
-              ready: '.dashModules',
+              ready: '.dashControlNavigation',
               requiredText: ['Control', 'Home', 'MORE TOOLS', 'BROWSER COMPANION', 'Support'],
               layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
             },
@@ -3695,7 +3695,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale,
         logicalWidth: 620,
         logicalHeight: FULL_SHELL_HEIGHT,
-        ready: '.dashModules',
+        ready: '.dashControlNavigation',
         layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
@@ -3705,7 +3705,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         scale,
         logicalWidth: 620,
         logicalHeight: SHORT_SHELL_HEIGHT,
-        ready: '.dashModules',
+        ready: '.dashControlNavigation',
         layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
       },
       {
@@ -4131,7 +4131,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
       scale: 1.5,
       logicalWidth: 530,
       logicalHeight: SHORT_SHELL_HEIGHT,
-      ready: '.dashModules',
+      ready: '.dashControlNavigation',
       layoutExpectations: [{ kind: 'size', selector: '.commandHomeMark', width: 26, height: 26 }]
     },
     {
@@ -4244,10 +4244,10 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
         ready: '.accountPortfolioCard',
         requiredControls: ['Send'],
         requiredText: {
-          loading: ['Loading balances…'],
-          unavailable: ['No connected networks'],
-          partial: ['KNOWN VALUE', '$3,200.00', 'Some prices unavailable'],
-          empty: ['$0.00', 'No balances found on connected networks'],
+          loading: ['PORTFOLIO BALANCE', '—'],
+          unavailable: ['PORTFOLIO BALANCE', '—'],
+          partial: ['KNOWN VALUE', '$3,200.00'],
+          empty: ['$0.00'],
           privacy: ['$••••']
         }[variant]
       })

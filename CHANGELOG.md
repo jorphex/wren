@@ -6,6 +6,11 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Removed all captions below the portfolio balance, including price and loading messages.
+- Restored the original Control Center navigation rows without number counters.
+- Made Receive open on click. Clicking outside closes the QR popover without
+  activating a wallet control underneath.
+
 ## 0.1.8 - 2026-09-05
 
 ### Changed

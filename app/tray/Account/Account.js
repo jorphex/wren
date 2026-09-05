@@ -129,7 +129,7 @@ export const portfolioSummary = (store, accountId) => {
               ? 'Updating balances…'
               : !positive
                 ? 'No balances found on connected networks'
-                : 'Connected networks'
+                : ''
   return { value, note, partial }
 }
 
@@ -417,7 +417,7 @@ class _AccountMain extends React.Component {
   }
 
   renderPortfolioSummary() {
-    const { value, note, partial } = portfolioSummary(this.store, this.props.id)
+    const { value, partial } = portfolioSummary(this.store, this.props.id)
     const hideBalances = this.store('selected.hideBalances')
     return (
       <section className='accountPortfolioCard' aria-label='Portfolio balance'>
@@ -428,11 +428,6 @@ class _AccountMain extends React.Component {
         <div className='accountPortfolioValue'>
           {hideBalances ? <span aria-label='Portfolio balance hidden'>$••••</span> : value}
         </div>
-        {!hideBalances ? (
-          <div className='accountPortfolioMeta' role='status'>
-            {note}
-          </div>
-        ) : null}
         <div className='accountPortfolioActions'>
           <Receive address={this.props.id} />
           <button
