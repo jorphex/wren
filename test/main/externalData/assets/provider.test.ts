@@ -43,7 +43,7 @@ test('keeps current prices when historical data is unavailable', async () => {
   }) as unknown as typeof fetch
 
   await expect(loadDefiLlamaPrices([identifier], fetchImpl)).resolves.toEqual({
-    [identifier]: { price: 2, change24hr: 0 }
+    [identifier]: { price: 2 }
   })
 })
 

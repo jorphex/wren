@@ -1,3 +1,4 @@
+import { toTokenId } from '../../../../../resources/domain/balance'
 import React from 'react'
 import Restore from 'react-restore'
 import { safeNetworkMetadata } from '../../../../../resources/domain/networkMetadata'
@@ -69,7 +70,7 @@ export class BalancesPreview extends React.Component {
             networks[rawBalance.chainId]
           ).nativeCurrency
 
-          const rate = isNative ? nativeCurrencyInfo : rates[rawBalance.address || rawBalance.symbol] || {}
+          const rate = isNative ? nativeCurrencyInfo : rates[toTokenId(rawBalance)] || {}
           const logoURI = (isNative && nativeCurrencyInfo.icon) || rawBalance.logoURI
           const name = isNative
             ? nativeCurrencyInfo.name || networks[rawBalance.chainId].name

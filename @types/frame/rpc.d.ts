@@ -66,7 +66,7 @@ declare namespace RPC {
 
     interface Erc20 extends Balance {
       tokenInfo: {
-        lastKnownPrice: { usd: { price: number; change24hr?: number } }
+        lastKnownPrice: { usd: { price: number; change24hr?: number | undefined } }
       }
       address: Address
     }

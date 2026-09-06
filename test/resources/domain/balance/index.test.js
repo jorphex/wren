@@ -68,3 +68,13 @@ describe('#sortByTotalValue', () => {
     expect(sortedValues).toStrictEqual([bal2, bal4, bal1, bal3])
   })
 })
+
+it('shows a fallback price without inventing a 24-hour change', () => {
+  const balance = createBalance({ balance: '2000000', decimals: 6 }, { price: 3 })
+  expect(balance.price).toBe('3.00')
+  expect(balance.totalValue.toNumber()).toBe(6)
+  expect(balance.priceChange).toBe(false)
+  expect(createBalance({ balance: '2000000', decimals: 6 }, { price: 3, change24hr: 0 }).priceChange).toBe(
+    '0.00'
+  )
+})

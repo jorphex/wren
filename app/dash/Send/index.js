@@ -1,3 +1,4 @@
+import { toTokenId } from '../../../resources/domain/balance'
 import { tokenAmountPresentation } from '../../../resources/domain/token/display'
 import React from 'react'
 import Restore from 'react-restore'
@@ -144,7 +145,7 @@ const displayedAsset = (rawBalance, networks, metadata, rates) => {
   const nativeCurrency = chainMeta.nativeCurrency || {}
   const nativeDecimals =
     Number.isInteger(nativeCurrency.decimals) && nativeCurrency.decimals >= 0 ? nativeCurrency.decimals : 18
-  const rate = native ? nativeCurrency.usd : rates[rawBalance.address || rawBalance.symbol]
+  const rate = native ? nativeCurrency.usd : rates[toTokenId(rawBalance)]?.usd
   const balance = createBalance(
     {
       ...rawBalance,

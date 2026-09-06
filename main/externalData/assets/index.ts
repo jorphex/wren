@@ -1,4 +1,6 @@
 import log from 'electron-log'
+import { loadGeckoTerminalPrices } from './geckoTerminal'
+import { toTokenId } from '../../../resources/domain/balance'
 
 import { loadDefiLlamaPrices, type ExternalPrice } from './provider'
 import type { NativeCurrency, Rate, Token } from '../../store/state'
@@ -19,7 +21,11 @@ const CHAIN_PRICE_IDENTIFIERS: Record<number, { chain: string; native: string }>
 
 type PriceTarget = { type: 'native'; chainId: number } | { type: 'token'; chainId: number; address: Address }
 
-type PriceLoader = (identifiers: string[], signal?: AbortSignal) => Promise<Record<string, ExternalPrice>>
+type PriceLoader = (
+  identifiers: string[],
+  signal?: AbortSignal,
+  onPrices?: (prices: Record<string, ExternalPrice>) => void
+) => Promise<Record<string, ExternalPrice>>
 
 const defaultPriceLoader: PriceLoader = (identifiers, signal) =>
   loadDefiLlamaPrices(identifiers, fetch, Date.now, signal)
@@ -30,7 +36,11 @@ const tokenIdentifier = (token: Token) => {
   return chain && /^0x[0-9a-f]{40}$/u.test(address) ? `${chain}:${address}` : undefined
 }
 
-export default function rates(store: Store, loadPrices: PriceLoader = defaultPriceLoader) {
+export default function rates(
+  store: Store,
+  loadPrices: PriceLoader = defaultPriceLoader,
+  loadFallback: PriceLoader = loadGeckoTerminalPrices
+) {
   const storeApi = {
     getKnownTokens: (address?: Address) =>
       ((address && store('main.tokens.known', address)) || []) as Token[],
@@ -39,13 +49,15 @@ export default function rates(store: Store, loadPrices: PriceLoader = defaultPri
       requireStoreActionFrom(store, 'setNativeCurrencyData')('ethereum', chainId, {
         usd: rate
       } satisfies Partial<NativeCurrency>),
-    setTokenRates: (rates: Record<Address, UsdRate>) => requireStoreActionFrom(store, 'setRates')(rates)
+    setTokenRates: (rates: Record<string, UsdRate>) => requireStoreActionFrom(store, 'setRates')(rates)
   }
 
   let started = false
   let generation = 0
   let refreshTimer: NodeJS.Timeout | undefined
   let refreshController: AbortController | undefined
+  let fallbackController: AbortController | undefined
+  let primaryIdentifiers = new Set<string>()
   let targets = new Map<string, PriceTarget[]>()
 
   const schedule = (activeGeneration: number) => {
@@ -54,15 +66,15 @@ export default function rates(store: Store, loadPrices: PriceLoader = defaultPri
   }
 
   const applyPrices = (prices: Record<string, ExternalPrice>) => {
-    const tokenRates: Record<Address, UsdRate> = {}
+    const tokenRates: Record<string, UsdRate> = {}
 
     Object.entries(prices).forEach(([identifier, price]) => {
-      const rate = { price: price.price, change24hr: price.change24hr }
+      const rate = { ...price }
       ;(targets.get(identifier) || []).forEach((target) => {
         if (target.type === 'native') {
           storeApi.setNativeCurrencyRate(target.chainId, rate)
         } else {
-          tokenRates[target.address.toLowerCase()] = { usd: rate }
+          tokenRates[toTokenId(target)] = { usd: rate }
         }
       })
     })
@@ -78,8 +90,24 @@ export default function rates(store: Store, loadPrices: PriceLoader = defaultPri
     refreshController = controller
 
     try {
-      const prices = await loadPrices([...targets.keys()], controller.signal)
-      if (started && activeGeneration === generation) applyPrices(prices)
+      const identifiers = [...targets.keys()]
+      let prices: Record<string, ExternalPrice> = {}
+      try {
+        prices = await loadPrices(identifiers, controller.signal)
+      } catch {
+        controller.signal.throwIfAborted()
+      }
+      if (started && activeGeneration === generation) {
+        primaryIdentifiers = new Set(Object.keys(prices))
+        applyPrices(prices)
+      }
+      controller.signal.throwIfAborted()
+      const missing = identifiers.filter(
+        (identifier) => !prices[identifier] && !identifier.startsWith('coingecko:')
+      )
+      if (missing.length && !fallbackController) {
+        void refreshFallback(missing, activeGeneration)
+      }
     } catch (error) {
       if (!controller.signal.aborted) {
         log.warn('Independent asset pricing is temporarily unavailable', error)
@@ -90,9 +118,33 @@ export default function rates(store: Store, loadPrices: PriceLoader = defaultPri
     }
   }
 
+  async function refreshFallback(identifiers: string[], activeGeneration: number) {
+    const controller = new AbortController()
+    fallbackController = controller
+    const delivered = new Set<string>()
+    const publish = (quotes: Record<string, ExternalPrice>) => {
+      if (!started || activeGeneration !== generation || controller.signal.aborted) return
+      const fresh = Object.fromEntries(
+        Object.entries(quotes).filter(([id]) => !delivered.has(id) && !primaryIdentifiers.has(id))
+      )
+      Object.keys(fresh).forEach((id) => delivered.add(id))
+      applyPrices(fresh)
+    }
+    try {
+      publish(await loadFallback(identifiers, controller.signal, publish))
+    } catch (error) {
+      if (!controller.signal.aborted) log.warn('Fallback asset pricing is temporarily unavailable', error)
+    } finally {
+      if (fallbackController === controller) fallbackController = undefined
+    }
+  }
+
   function setAssets(nextTargets: Map<string, PriceTarget[]>) {
     generation += 1
     targets = nextTargets
+    primaryIdentifiers.clear()
+    fallbackController?.abort()
+    fallbackController = undefined
     refreshController?.abort()
     refreshController = undefined
     clearTimeout(refreshTimer)
@@ -140,6 +192,8 @@ export default function rates(store: Store, loadPrices: PriceLoader = defaultPri
     stop() {
       started = false
       generation += 1
+      fallbackController?.abort()
+      fallbackController = undefined
       refreshController?.abort()
       refreshController = undefined
       clearTimeout(refreshTimer)

@@ -1,3 +1,4 @@
+import { toTokenId } from '../../../resources/domain/balance'
 import React from 'react'
 import { safeNetworkMetadata } from '../../../resources/domain/networkMetadata'
 import Restore from 'react-restore'
@@ -95,7 +96,7 @@ export const portfolioSummary = (store, accountId) => {
       networksMeta[balance.chainId],
       networks[balance.chainId]
     ).nativeCurrency
-    const quote = native ? currency.usd : rates[balance.address || balance.symbol]?.usd
+    const quote = native ? currency.usd : rates[toTokenId(balance)]?.usd
     const price = BigNumber(quote?.price ?? NaN)
     if (!price.isFinite() || price.isNegative()) {
       unpriced = true

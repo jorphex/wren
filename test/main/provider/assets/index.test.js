@@ -33,11 +33,12 @@ describe('#loadAssets', () => {
     const priceData = { usd: { price: 225.35 } }
     const balance = {
       symbol: 'OHM',
+      chainId: 1,
       balance: '0x606401fc9',
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
     }
 
-    store.set('main.rates', balance.address, priceData)
+    store.set('main.rates', `${balance.chainId}:${balance.address.toLowerCase()}`, priceData)
     store.set('main.balances', account, [balance])
 
     expect(loadAssets(account)).toEqual({
@@ -98,11 +99,12 @@ describe('#createObserver', () => {
     const priceData = { usd: { price: 225.35 } }
     const balance = {
       symbol: 'OHM',
+      chainId: 1,
       balance: '0x606401fc9',
       address: '0x383518188c0c6d7730d91b2c03a03c837814a899'
     }
 
-    store.set('main.rates', balance.address, priceData)
+    store.set('main.rates', `${balance.chainId}:${balance.address.toLowerCase()}`, priceData)
     store.set('main.balances', account, [balance])
 
     fireObserver()
@@ -146,4 +148,18 @@ describe('#createObserver', () => {
 
     expect(handler.assetsChanged).toHaveBeenCalledTimes(1)
   })
+})
+
+it('keeps prices isolated by chain and ignores old address-only rates', () => {
+  const address = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+  const balances = [1, 8453, 10].map((chainId) => ({ address, chainId, balance: '100', decimals: 6 }))
+  store.set('main.balances', account, balances)
+  store.set('main.rates', {
+    [address.toLowerCase()]: { usd: { price: 999 } },
+    [`1:${address.toLowerCase()}`]: { usd: { price: 1 } },
+    [`8453:${address.toLowerCase()}`]: { usd: { price: 7 } }
+  })
+  expect(loadAssets(account).erc20.map((asset) => asset.tokenInfo.lastKnownPrice.usd.price)).toEqual([
+    1, 7, 0
+  ])
 })

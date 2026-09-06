@@ -37,7 +37,7 @@ export function formatUsdRate(rate: BigNumber, decimals = 2) {
 export function createBalance(rawBalance: Balance, quote?: Rate): DisplayedBalance {
   const balance = BigNumber(rawBalance.balance || 0).shiftedBy(-rawBalance.decimals)
   const usdRate = new BigNumber((quote && quote.price) || NaN)
-  const change24hr = new BigNumber((quote && quote['change24hr']) || 0)
+  const change24hr = new BigNumber(quote?.change24hr ?? NaN)
 
   const totalValue = balance.times(usdRate)
   const balanceDecimals = Math.max(2, usdRate.shiftedBy(1).toFixed(0, BigNumber.ROUND_DOWN).length)
@@ -47,7 +47,7 @@ export function createBalance(rawBalance: Balance, quote?: Rate): DisplayedBalan
     usdRate: quote as Rate,
     displayBalance: formatBalance(balance, totalValue, balanceDecimals),
     price: formatUsdRate(usdRate),
-    priceChange: !usdRate.isZero() && !usdRate.isNaN() && change24hr.toFixed(2),
+    priceChange: !usdRate.isZero() && !usdRate.isNaN() && change24hr.isFinite() && change24hr.toFixed(2),
     totalValue: totalValue.isNaN() ? BigNumber(0) : totalValue,
     displayValue: totalValue.isZero() ? '0' : formatUsdRate(totalValue, 0)
   }

@@ -193,6 +193,7 @@ const portfolioStore =
     balances,
     updated = Date.now(),
     quote,
+    rates = {},
     networks = { 1: { on: true, connection: { endpoints: [{ connected: true }] } } }
   }) =>
   (...path) => {
@@ -202,7 +203,7 @@ const portfolioStore =
     if (key === 'main.networks.ethereum') return networks
     if (key === 'main.networksMeta.ethereum')
       return { 1: { nativeCurrency: { decimals: 18, symbol: 'ETH', usd: quote } } }
-    if (key === 'main.rates') return {}
+    if (key === 'main.rates') return rates
   }
 const nativeBalance = {
   address: '0x0000000000000000000000000000000000000000',
@@ -252,4 +253,22 @@ it.each([
   const value = document.querySelector('.accountPortfolioValue')
   expect(value.nextElementSibling.className).toBe('accountPortfolioActions')
   expect(screen.queryByRole('status')).toBeNull()
+})
+
+it('adds token values by chain and ignores legacy address-only quotes', () => {
+  const token = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+  const balances = [1, 8453].map((chainId) => ({ address: token, chainId, decimals: 6, balance: '2000000' }))
+  balances.push(...[1, 8453].map((chainId) => ({ ...nativeBalance, chainId, balance: '0' })))
+  const networks = Object.fromEntries(
+    [1, 8453].map((id) => [id, { on: true, connection: { endpoints: [{ connected: true }] } }])
+  )
+  const rates = {
+    [token]: { usd: { price: 999 } },
+    [`1:${token.toLowerCase()}`]: { usd: { price: 1 } },
+    [`8453:${token.toLowerCase()}`]: { usd: { price: 7 } }
+  }
+  expect(portfolioSummary(portfolioStore({ balances, networks, rates }), address)).toMatchObject({
+    value: '$16.00',
+    partial: false
+  })
 })

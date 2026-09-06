@@ -91,7 +91,7 @@ const baseState = () => ({
         }
       }
     },
-    rates: { [token]: { price: 1 } }
+    rates: { [`8453:${token}`]: { usd: { price: 1 } } }
   }
 })
 
@@ -1273,7 +1273,7 @@ it('focuses each request-state heading once and announces only failures assertiv
   const close = screen.getByRole('button', { name: 'Close' })
   close.focus()
   replaceStore(store, (state) => {
-    state.main.rates[token].price = 1.01
+    state.main.rates[`8453:${token}`].usd.price = 1.01
   })
   expect(document.activeElement).toBe(close)
 })
@@ -1352,4 +1352,17 @@ it('reports missing selected accounts and assets as quiet availability states', 
     return state
   })
   expect(screen.getByText('No sendable assets on this network')).toBeTruthy()
+})
+
+it('uses the USD quote for each token network in Send', () => {
+  const state = baseState()
+  const original = state.main.balances[account].find((balance) => balance.address === token)
+  state.main.balances[account].push({ ...original, chainId: 1 })
+  state.main.rates[`1:${token}`] = { usd: { price: 7 } }
+  state.main.rates[token] = { usd: { price: 999 } }
+  const send = new Send({})
+  send.store = Restore.create(state, {})
+  const tokens = send.getContext().assets.filter((asset) => asset.address === token)
+  expect(tokens.find((asset) => asset.chainId === 8453).totalValue.toNumber()).toBe(100)
+  expect(tokens.find((asset) => asset.chainId === 1).totalValue.toNumber()).toBe(700)
 })

@@ -206,3 +206,39 @@ it.each([
   expect(within(mark).getByAltText('')).toBeTruthy()
   expect(mark.textContent).not.toBe(symbol.slice(0, 1))
 })
+
+it.each([BalancesPreview, BalancesExpanded])('uses chain-specific USD quotes in %p', (Component) => {
+  const component = new Component({ account, moduleId: 'balances' })
+  component.store = (...path) => {
+    if (path.join('.') === 'main.networks.ethereum')
+      return Object.fromEntries(
+        [1, 8453].map((id) => [
+          id,
+          {
+            id,
+            name: 'Network',
+            connection: { endpoints: [{ connected: true }] }
+          }
+        ])
+      )
+    if (path.join('.') === 'main.networksMeta.ethereum') return {}
+    return 'Network'
+  }
+  const token = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+  const balances = [1, 8453].map((chainId) => ({
+    address: token,
+    chainId,
+    balance: '2000000',
+    decimals: 6,
+    symbol: 'USDC'
+  }))
+  const rates = {
+    [token]: { usd: { price: 999 } },
+    [`1:${token.toLowerCase()}`]: { usd: { price: 1 } },
+    [`8453:${token.toLowerCase()}`]: { usd: { price: 7 } }
+  }
+  const result = component.getBalances(balances, rates)
+  const displayed = Array.isArray(result) ? result : result.balances
+  expect(displayed.find((balance) => balance.chainId === 1).totalValue.toNumber()).toBe(2)
+  expect(displayed.find((balance) => balance.chainId === 8453).totalValue.toNumber()).toBe(14)
+})

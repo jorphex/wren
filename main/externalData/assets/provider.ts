@@ -8,7 +8,7 @@ const PRICE_IDENTIFIER_PATTERN = /^(?:coingecko:[a-z0-9-]+|[a-z0-9-]+:0x[0-9a-f]
 
 export interface ExternalPrice {
   price: number
-  change24hr: number
+  change24hr?: number
 }
 
 interface RawQuote {
@@ -97,8 +97,11 @@ export async function loadDefiLlamaPrices(
 
   return Object.entries(current).reduce<Record<string, ExternalPrice>>((prices, [identifier, quote]) => {
     const previous = historical[identifier]?.price
-    const change24hr = previous && previous > 0 ? ((quote.price - previous) / previous) * 100 : 0
-    prices[identifier] = { price: quote.price, change24hr }
+    const change24hr = previous && previous > 0 ? ((quote.price - previous) / previous) * 100 : undefined
+    prices[identifier] = {
+      price: quote.price,
+      ...(change24hr !== undefined && Number.isFinite(change24hr) ? { change24hr } : {})
+    }
     return prices
   }, {})
 }

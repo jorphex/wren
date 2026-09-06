@@ -1,3 +1,4 @@
+import { toTokenId } from '../../../resources/domain/balance'
 import store from '../../store'
 
 import { NATIVE_CURRENCY } from '../../../resources/constants'
@@ -20,8 +21,8 @@ const storeApi = {
 
     return currency || { usd: { price: 0 } }
   },
-  getUsdRate: (address: Address): UsdRate => {
-    const rate = store('main.rates', address.toLowerCase())
+  getUsdRate: (chainId: number, address: Address): UsdRate => {
+    const rate = store('main.rates', toTokenId({ chainId, address }))
 
     return rate || { usd: { price: 0 } }
   },
@@ -78,7 +79,7 @@ function fetchAssets(accountId: string) {
         currencyInfo: currency
       })
     } else {
-      const usdRate = storeApi.getUsdRate(balance.address)
+      const usdRate = storeApi.getUsdRate(balance.chainId, balance.address)
 
       assets.erc20.push({
         ...balance,

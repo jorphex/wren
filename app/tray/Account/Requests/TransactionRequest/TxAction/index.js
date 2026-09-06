@@ -1,3 +1,4 @@
+import { toTokenId } from '../../../../../../resources/domain/balance'
 import React from 'react'
 import Restore from 'react-restore'
 import BigNumber from 'bignumber.js'
@@ -241,7 +242,7 @@ export class TxSending extends React.Component {
         )
 
         const isTestnet = this.store('main.networks', this.props.chain.type, this.props.chain.id, 'isTestnet')
-        const rate = this.store('main.rates', contract)
+        const rate = this.store('main.rates', toTokenId({ chainId, address: contract }))
 
         return (
           <ClusterBox title={`Sending ${symbol}`} subtitle={name} animationSlot={this.props.i}>
