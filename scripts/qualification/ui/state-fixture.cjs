@@ -2602,6 +2602,7 @@ const fixtureFor = (scenario) => {
 }
 
 const rpcReplyFor = (scenario, method) => {
+  if (method === 'getApprovalBalance') return '123456789'
   if (
     (scenario.adjustApproval || scenario.state === 'signature-permit-amount-editor') &&
     method === 'updateRequest'

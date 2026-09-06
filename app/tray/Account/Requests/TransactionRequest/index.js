@@ -43,6 +43,8 @@ export class TransactionRequest extends React.Component {
     return (
       <EditTokenSpend
         data={data}
+        request={{ account: req.account, handlerId }}
+        hideBalance={this.store('selected.hideBalances')}
         requestedAmount={requestedAmount}
         updateRequest={(amount, callback = () => {}) =>
           link.rpc('updateRequest', req.account, handlerId, { amount }, actionId, callback)

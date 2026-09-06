@@ -737,6 +737,20 @@ const reviewScenarios = () => [
     requiredControls: ['Cancel', 'Revoke delegation', 'Adjust'],
     requiredText: ['Advanced fee limits', 'Base fee', 'Priority fee', 'Gas limit']
   },
+  ...['transaction', 'permit'].flatMap((kind) => [
+    ['full', FULL_SHELL_HEIGHT, 1], ['short', SHORT_SHELL_HEIGHT, 1], ['short', SHORT_SHELL_HEIGHT, 1.5]
+  ].map(([height, logicalHeight, scale]) => ({
+    id: `tray-${kind}-use-balance-${height}-${scale}`,
+    renderer: 'tray',
+    state: kind === 'permit' ? 'signature-permit-amount-editor' : 'transaction-responsive',
+    ...(kind === 'transaction' ? { variant: 'approval', adjustApproval: true } : {}),
+    scale, logicalWidth: 620, logicalHeight,
+    action: { type: 'clickText', text: 'Use balance' },
+    ready: 'input[aria-label="Custom amount"]',
+    requiredControls: ['Back', 'Use balance', 'Requested', 'Unlimited', 'Custom'],
+    requiredText: ['Your balance', 'Custom limit'],
+    layoutExpectations: [{ kind: 'input-value', selector: 'input[aria-label="Custom amount"]', value: '123.456789' }]
+  }))),
   {
     id: 'tray-permit-amount-editor-full-1',
     renderer: 'tray',

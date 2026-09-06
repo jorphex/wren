@@ -184,7 +184,7 @@ const PermitOverview = ({
   )
 }
 
-const EditPermit = ({ req }) => {
+const EditPermit = ({ req, hideBalances }) => {
   const { permit, tokenData } = req
 
   const { verifyingContract: contract, spender, value: amount, deadline: deadlineInSeconds } = permit
@@ -205,6 +205,8 @@ const EditPermit = ({ req }) => {
 
   return (
     <EditTokenSpend
+      request={{ account: req.account, handlerId: req.handlerId }}
+      hideBalance={hideBalances}
       {...{
         data,
         requestedAmount,
@@ -223,7 +225,8 @@ const PermitRequest = ({
   chainData,
   addressBook = {},
   accounts = {},
-  accountName
+  accountName,
+  hideBalances = false
 }) => {
   const requestClass = getSignatureRequestClass(req)
   const deviceWarning = getTypedDataDeviceWarning(signer)
@@ -231,7 +234,7 @@ const PermitRequest = ({
   const renderStep = () => {
     switch (step) {
       case 'adjustPermit':
-        return <EditPermit req={req} />
+        return <EditPermit req={req} hideBalances={hideBalances} />
       case 'viewRaw':
         return (
           <TypedSignatureOverview

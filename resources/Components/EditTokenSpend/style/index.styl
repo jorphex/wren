@@ -157,10 +157,13 @@
   min-height 44px
   padding 0 var(--wren-space-2)
   border 0
-  border-left 1px solid var(--wren-border-subtle)
+  border-left 1px solid var(--wren-border-default)
   color var(--wren-text-secondary)
-  background transparent
+  background-color var(--wren-bg-elevated)
+  background-image var(--wren-control-texture-dark)
+  box-shadow var(--wren-control-shadow)
   cursor pointer
+  transition background-color var(--wren-motion-fast) var(--wren-ease), box-shadow var(--wren-motion-fast) var(--wren-ease), color var(--wren-motion-fast) var(--wren-ease)
 
   &:first-child
     border-left 0
@@ -172,17 +175,16 @@
 
   &:hover:not(:disabled)
     color var(--wren-text-primary)
-    background var(--wren-ledger-hover)
+    background-color var(--wren-bg-panel)
+    box-shadow var(--wren-control-shadow-hover)
 
-  &[aria-pressed='true']
-    color var(--wren-text-primary)
-    background var(--wren-surface-active)
-    box-shadow var(--wren-shadow-sm)
-
+  &:active:not(:disabled),
+  &[aria-pressed='true'],
   &[aria-pressed='true']:hover:not(:disabled)
     color var(--wren-text-primary)
-    background var(--wren-surface-active)
-    box-shadow var(--wren-shadow-sm)
+    background-color var(--wren-surface-active)
+    background-image none
+    box-shadow var(--wren-control-shadow-pressed)
 
   &:focus-visible
     position relative
@@ -192,6 +194,8 @@
 
   &:disabled
     color var(--wren-text-disabled)
+    background-image none
+    box-shadow var(--wren-control-shadow-disabled)
     cursor default
 
 .wrenTokenApprovalRevoke
@@ -318,3 +322,33 @@
 
 .wrenTokenApprovalUnavailable
   color var(--wren-warning)
+
+.wrenTokenApprovalBalance
+  display flex
+  min-width 0
+  min-height 72px
+  padding var(--wren-space-3)
+  box-sizing border-box
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-sm)
+  background var(--wren-surface-inset)
+  margin 0 0 var(--wren-space-2)
+  gap var(--wren-space-4)
+  align-items center
+  justify-content space-between
+
+  > span
+    min-width 0
+
+  strong
+    display block
+    margin-top 2px
+    overflow-wrap anywhere
+    font-family var(--wren-font-utility)
+    font-size var(--wren-type-small)
+    font-weight 500
+
+  > button.wrenControl
+    flex-shrink 0
+    min-height 44px
+    padding 0 var(--wren-space-4)

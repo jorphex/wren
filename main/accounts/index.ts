@@ -3,6 +3,7 @@ import log from 'electron-log'
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid'
 
 import provider from '../provider'
+import { approvalBalanceTarget, readApprovalBalance } from './approvalBalance'
 import store from '../store'
 import { requireStoreAction } from '../store/action'
 import FrameAccount from './Account'
@@ -1523,6 +1524,22 @@ export class Accounts extends EventEmitter {
         approval.approve(approvalData)
       }
     }
+  }
+
+  async getApprovalBalance(accountId: string, reqId: string) {
+    const account = this.requestAccount(reqId, accountId)
+    const request = account?.getActiveReviewRequest<AnyAccountRequest>(reqId)
+    if (!account || !request) throw new Error('Approval is not active')
+    const target = approvalBalanceTarget(request)
+    const balance = await readApprovalBalance(target)
+    if (
+      this.requestAccount(reqId, accountId) !== account ||
+      account.getActiveReviewRequest(reqId) !== request ||
+      JSON.stringify(approvalBalanceTarget(request)) !== JSON.stringify(target)
+    ) {
+      throw new Error('Approval changed while reading its balance')
+    }
+    return balance
   }
 
   updateRequest(

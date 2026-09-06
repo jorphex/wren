@@ -737,3 +737,104 @@ describe('changing approval amounts', () => {
     })
   })
 })
+
+describe('using the token balance', () => {
+  const request = { account: '0x1111111111111111111111111111111111111111', handlerId: 'approval-1' }
+  const data = {
+    amount: maxIntStr,
+    decimals: 18,
+    name: 'Test token',
+    symbol: 'TST',
+    contract: { address: '0x2222222222222222222222222222222222222222' },
+    spender: { address: '0x3333333333333333333333333333333333333333' }
+  }
+  beforeEach(
+    () => (link.rpc = jest.fn((_method, _account, _id, callback) => callback(null, '123456789012345678901')))
+  )
+
+  it('shows a compact balance and applies its exact amount through Custom', async () => {
+    const update = jest.fn((_amount, callback) => callback(null))
+    const { user } = render(
+      <EditTokenSpend data={data} requestedAmount={maxIntStr} request={request} updateRequest={update} />
+    )
+    expect(screen.getByText('≈ 123.456 TST').title).toBe('123.456789012345678901 TST')
+    await user.dblClick(screen.getByRole('button', { name: 'Use balance' }))
+    expect(screen.getByRole('textbox', { name: 'Custom amount' }).value).toBe('123.456789012345678901')
+    expect(screen.getByRole('button', { name: 'Custom' }).getAttribute('aria-pressed')).toBe('true')
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update).toHaveBeenCalledWith('123456789012345678901', expect.any(Function))
+    expect(link.rpc).toHaveBeenCalledWith(
+      'getApprovalBalance',
+      request.account,
+      request.handlerId,
+      expect.any(Function)
+    )
+  })
+
+  it('supports zero balances and zero-decimal tokens', async () => {
+    link.rpc.mockImplementation((_method, _account, _id, callback) => callback(null, '0'))
+    const update = jest.fn()
+    const { user } = render(
+      <EditTokenSpend
+        data={{ ...data, decimals: 0 }}
+        requestedAmount={maxIntStr}
+        request={request}
+        updateRequest={update}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Use balance' }))
+    expect(update).toHaveBeenCalledWith('0', expect.any(Function))
+    expect(screen.getByRole('textbox', { name: 'Custom amount' }).value).toBe('0')
+  })
+
+  it('allows retry after a failed read without applying zero', async () => {
+    link.rpc.mockImplementationOnce((_method, _account, _id, callback) => callback(new Error('offline')))
+    const update = jest.fn()
+    const { user } = render(
+      <EditTokenSpend data={data} requestedAmount={maxIntStr} request={request} updateRequest={update} />
+    )
+    expect(screen.getByText('Unavailable')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Use balance' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(screen.getByRole('button', { name: 'Use balance' }).disabled).toBe(false)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('does not reveal the balance in privacy mode or allow it to fill the input', () => {
+    render(
+      <EditTokenSpend
+        data={data}
+        requestedAmount={maxIntStr}
+        request={request}
+        hideBalance
+        updateRequest={jest.fn()}
+      />
+    )
+    expect(screen.queryByText('≈ 123.456 TST')).toBeNull()
+    expect(document.querySelector('[title="123.456789012345678901 TST"]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Use balance' }).disabled).toBe(true)
+  })
+
+  it('ignores a late balance from another request', async () => {
+    const callbacks = []
+    link.rpc.mockImplementation((_method, _account, _id, callback) => callbacks.push(callback))
+    const props = { data, requestedAmount: maxIntStr, updateRequest: jest.fn() }
+    const { rerender } = render(<EditTokenSpend {...props} request={request} />)
+    rerender(<EditTokenSpend {...props} request={{ ...request, handlerId: 'approval-2' }} />)
+    await act(async () => callbacks[0](null, '999000000000000000000'))
+    expect(screen.queryByText('999 TST')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Use balance' }).disabled).toBe(true)
+    await act(async () => callbacks[1](null, '1000000000000000000'))
+    expect(screen.getByText('1 TST')).toBeTruthy()
+  })
+
+  it('restores the selected mode when the allowance update fails', async () => {
+    const update = jest.fn((_amount, callback) => callback(new Error('rejected')))
+    const { user } = render(
+      <EditTokenSpend data={data} requestedAmount={maxIntStr} request={request} updateRequest={update} />
+    )
+    await user.click(screen.getByRole('button', { name: 'Use balance' }))
+    expect(screen.getByRole('button', { name: 'Requested' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Use balance' }).disabled).toBe(false)
+  })
+})

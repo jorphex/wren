@@ -656,6 +656,7 @@ class _AccountBody extends React.Component {
         accountName={accountName}
         queueContext={queueContext}
         requestData={data}
+        hideBalances={this.store('selected.hideBalances')}
       />
     )
   }

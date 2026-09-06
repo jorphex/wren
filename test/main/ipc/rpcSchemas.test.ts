@@ -438,3 +438,13 @@ test('preserves nullish wire values and bounds encoded responses', () => {
     'Renderer RPC response is too large'
   )
 })
+
+test('bounds approval balance RPC to a request reference and exact amount response', () => {
+  expect(parseRendererRpcRequest(wire(1, 'getApprovalBalance', address, handlerId)).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, 'getApprovalBalance', address, handlerId, address)).success).toBe(
+    false
+  )
+  expect(parseRendererRpcRequest(wire(1, 'getApprovalBalance', address, 'not-a-request')).success).toBe(false)
+  expect(parseRendererRpcResponse('getApprovalBalance', [null, '0']).success).toBe(true)
+  expect(parseRendererRpcResponse('getApprovalBalance', [null, '-1']).success).toBe(false)
+})

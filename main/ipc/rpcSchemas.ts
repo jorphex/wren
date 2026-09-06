@@ -372,6 +372,10 @@ const rpcSchemas = {
   trezorPhrase: { request: z.tuple([IdSchema, z.string().max(256)]), response: actionResult },
   trezorPin: { request: z.tuple([IdSchema, z.string().max(64)]), response: actionResult },
   unlockSigner: { request: z.tuple([IdSchema, PasswordSchema]), response: actionResult },
+  getApprovalBalance: {
+    request: z.tuple([AddressSchema, HandlerIdSchema]),
+    response: result(AmountSchema)
+  },
   updateRequest: {
     request: z.tuple([
       AddressSchema,

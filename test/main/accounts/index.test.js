@@ -1,5 +1,6 @@
 import log from 'electron-log'
 import { addHexPrefix, intToHex } from '@ethereumjs/util'
+import { erc20Interface } from '../../../resources/contracts'
 import BigNumber from 'bignumber.js'
 
 import store from '../../../main/store'
@@ -5168,5 +5169,46 @@ describe('wallet-owned EIP-7702 revocation', () => {
     expect(() => Accounts.setGasPrice('0x1', reference.handlerId, true, authority)).toThrow(
       'does not use a legacy gas price'
     )
+  })
+})
+
+describe('#getApprovalBalance', () => {
+  const setup = () => {
+    const active = Accounts.current()
+    request.account = active.id
+    request.data.to = '0x2222222222222222222222222222222222222222'
+    request.data.data = erc20Interface.encodeFunctionData('approve', [
+      '0x3333333333333333333333333333333333333333',
+      1
+    ])
+    active.requests[request.handlerId] = request
+    active.activeReviewHandlerId = request.handlerId
+    return active
+  }
+
+  it('reads only the account owning the active approval', async () => {
+    const active = setup()
+    provider.connection.send.mockImplementation((_payload, callback) =>
+      callback({ result: '0x' + '0'.repeat(63) + '7' })
+    )
+    await expect(Accounts.getApprovalBalance(active.id, request.handlerId)).resolves.toBe('7')
+    await expect(Accounts.getApprovalBalance(account2.address, request.handlerId)).rejects.toThrow(
+      'not active'
+    )
+  })
+
+  it('rejects a queued approval and a response after the request is removed', async () => {
+    const active = setup()
+    active.activeReviewHandlerId = 'another-request'
+    await expect(Accounts.getApprovalBalance(active.id, request.handlerId)).rejects.toThrow('not active')
+    active.activeReviewHandlerId = request.handlerId
+    let reply
+    provider.connection.send.mockImplementation((_payload, callback) => {
+      reply = callback
+    })
+    const pending = Accounts.getApprovalBalance(active.id, request.handlerId)
+    delete active.requests[request.handlerId]
+    reply({ result: '0x' + '0'.repeat(64) })
+    await expect(pending).rejects.toThrow('changed')
   })
 })

@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import link from '../../link'
+import { tokenAmountPresentation } from '../../domain/token/display'
 
 import { MAX_UINT256 } from '../../domain/transaction/quantity'
 import {
@@ -55,7 +57,9 @@ const EditTokenSpend = ({
   requestedAmount,
   deadline,
   deadlineLabel = 'Signature deadline',
-  canRevoke = false
+  canRevoke = false,
+  request,
+  hideBalance = false
 }) => {
   const { decimals, symbol = '???', name = 'Unknown Token', spender, contract, amount } = data
   const parsedAmount = parseTokenBaseUnitAmount(amount)
@@ -69,6 +73,30 @@ const EditTokenSpend = ({
   const [custom, setCustom] = useState(decimalAmount || amountValue.toString(10))
   const [approvalSubmitting, setApprovalSubmitting] = useState(false)
   const approvalSubmittingRef = useRef(false)
+  const [balanceResult, setBalanceResult] = useState()
+  const [balanceRetrying, setBalanceRetrying] = useState(false)
+  const balanceRead = useRef()
+  const account = request?.account
+  const handlerId = request?.handlerId
+  const balanceKey = `${account}:${handlerId}:${contract.address}`
+  const balance = balanceResult?.key === balanceKey ? balanceResult.value : undefined
+  const balanceLoading = Boolean(
+    account && handlerId && (balanceResult?.key !== balanceKey || balanceRetrying)
+  )
+
+  useEffect(() => {
+    const read = { active: true }
+    balanceRead.current = read
+    if (!account || !handlerId) return
+    link.rpc('getApprovalBalance', account, handlerId, (error, value) => {
+      if (!read.active) return
+      setBalanceResult({ key: balanceKey, value: error ? undefined : parseTokenBaseUnitAmount(value) })
+      setBalanceRetrying(false)
+    })
+    return () => {
+      read.active = false
+    }
+  }, [account, handlerId, balanceKey])
 
   const releaseApprovalSubmission = () => {
     approvalSubmittingRef.current = false
@@ -121,6 +149,24 @@ const EditTokenSpend = ({
     if (custom === '') return resetToRequestAmount()
     submitApprovalAmount(nextAmount.toString(10), 'custom')
   }
+
+  const useBalance = () => {
+    if (approvalSubmittingRef.current || balanceLoading || hideBalance) return
+    if (balance !== undefined) {
+      const decimal = formatTokenBaseUnitAmount(balance.toString(), decimals)
+      if (decimal !== undefined) submitApprovalAmount(balance.toString(), 'custom', decimal)
+      return
+    }
+    const read = balanceRead.current
+    setBalanceRetrying(true)
+    link.rpc('getApprovalBalance', account, handlerId, (error, value) => {
+      if (!read?.active) return
+      setBalanceResult({ key: balanceKey, value: error ? undefined : parseTokenBaseUnitAmount(value) })
+      setBalanceRetrying(false)
+    })
+  }
+  const balanceDisplay =
+    balance === undefined ? undefined : tokenAmountPresentation(balance.toString(), decimals, symbol, 'down')
 
   const isCustom = mode === 'custom'
   const selectedAmount =
@@ -196,6 +242,29 @@ const EditTokenSpend = ({
             </span>
           ) : null}
         </div>
+
+        {account && handlerId && !inputLock ? (
+          <div className='wrenTokenApprovalBalance'>
+            <span>
+              <span className='wrenTokenApprovalContextLabel'>Your balance</span>
+              <strong title={hideBalance ? undefined : balanceDisplay?.exact}>
+                {hideBalance
+                  ? '••••'
+                  : balanceLoading
+                    ? 'Checking…'
+                    : balanceDisplay?.display || 'Unavailable'}
+              </strong>
+            </span>
+            <button
+              type='button'
+              className='wrenControl wrenControlSecondary'
+              disabled={approvalSubmitting || balanceLoading || hideBalance}
+              onClick={(event) => activateOnce(event, useBalance)}
+            >
+              {balance === undefined && !balanceLoading ? 'Retry' : 'Use balance'}
+            </button>
+          </div>
+        ) : null}
 
         {!hasInvalidAmount ? (
           <div className='wrenTokenApprovalModes' aria-label='Spending limit options'>

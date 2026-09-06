@@ -182,6 +182,12 @@ const rpc = {
   revokeNativePeerCredential(fingerprint, cb) {
     callbackWhenDone(() => revokeNativeAccess(fingerprint), cb)
   },
+  getApprovalBalance(accountId, reqId, cb) {
+    accounts.getApprovalBalance(accountId, reqId).then(
+      (balance) => cb(null, balance),
+      () => cb(new Error('Token balance unavailable'))
+    )
+  },
   updateRequest(accountId, reqId, data, actionId, cb) {
     callbackWhenDone(() => applyRequestUpdate(accounts, reqId, data, actionId, accountId), cb)
   },
