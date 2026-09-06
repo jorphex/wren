@@ -6,6 +6,15 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Added a token balance shortcut to approval and permit amount editors. Use balance
+  sets the custom allowance to the displayed balance with full precision.
+- Added tactile controls for approval amount options and the balance shortcut.
+- Added GeckoTerminal prices for tokens that DefiLlama cannot price, including
+  custom tokens on supported networks. Requests use a local queue and cache.
+- Kept primary price updates running during token pool searches. Closed failed
+  price responses to release their connections.
+- Kept token prices separate by network and contract. Fixed token values in Send.
+- Hid percentage changes when price history is unavailable.
 - Removed all captions below the portfolio balance, including price and loading messages.
 - Restored the original Control Center navigation rows without number counters.
 - Made Receive open on click. Clicking outside closes the QR popover without
