@@ -25,7 +25,7 @@ listed there.
 
 ## Current release boundary
 
-The Wren 0.1.8 Windows preview is unsigned. SignPath Foundation setup is still
+The Wren 0.1.9 Windows preview is unsigned. SignPath Foundation setup is still
 in progress. Release notes and filenames state the
 signature status. Wren will not claim a trusted publisher until the protected
 signing workflow is approved and qualified.

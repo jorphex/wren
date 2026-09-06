@@ -6,6 +6,8 @@ For release details and platform limits, see
 
 ## Unreleased
 
+## 0.1.9 - 2026-09-06
+
 - Added a token balance shortcut to approval and permit amount editors. Use balance
   sets the custom allowance to the displayed balance with full precision.
 - Added tactile controls for approval amount options and the balance shortcut.
@@ -19,6 +21,8 @@ For release details and platform limits, see
 - Restored the original Control Center navigation rows without number counters.
 - Made Receive open on click. Clicking outside closes the QR popover without
   activating a wallet control underneath.
+
+See [the complete 0.1.9 release notes](release-notes/v0.1.9.md).
 
 ## 0.1.8 - 2026-09-05
 
