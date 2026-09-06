@@ -1,14 +1,13 @@
 # Security policy
 
-Wren is wallet software. Signing, signer storage, local RPC, renderer isolation,
-IPC, hardware transports, updates, and packaging are security-sensitive.
+This policy covers vulnerability reports and security updates for Wren.
 
 ## Policy scope
 
 Only the latest release published by
 [`jorphex/wren`](https://github.com/jorphex/wren/releases) receives security
-fixes. Wren has not had an independent security audit. Wren does not inherit
-Frame Labs support guarantees.
+fixes. Wren has not had an independent security audit. Wren is maintained
+separately from Frame Labs.
 
 For implementation details and limits, see
 [`THREAT_MODEL.md`](THREAT_MODEL.md). See [`HARDWARE_SUPPORT.md`](HARDWARE_SUPPORT.md)
@@ -45,6 +44,6 @@ asset.
 
 ## What to expect after a report
 
-Volunteers maintain Wren. They cannot guarantee a response time. When
-practical, maintainers will acknowledge a private report, reproduce it, agree
-on a disclosure plan, and publish a fix and advisory before public discussion.
+Volunteers maintain Wren, so response times vary. Maintainers aim to confirm
+reports, reproduce the issue, agree on a disclosure plan, and publish a fix
+and advisory before public discussion.

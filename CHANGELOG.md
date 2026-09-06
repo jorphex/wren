@@ -12,7 +12,7 @@ For release details and platform limits, see
   sets the custom allowance to the displayed balance with full precision.
 - Added tactile controls for approval amount options and the balance shortcut.
 - Added GeckoTerminal prices for tokens that DefiLlama cannot price, including
-  custom tokens on supported networks. Requests use a local queue and cache.
+  custom tokens on supported networks. Requests go directly from the desktop.
 - Kept primary price updates running during token pool searches. Closed failed
   price responses to release their connections.
 - Kept token prices separate by network and contract. Fixed token values in Send.

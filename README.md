@@ -15,11 +15,6 @@
   <a href="RPC_COMPATIBILITY.md">Developer reference</a>
 </p>
 
-> [!NOTE]
-> Wren has not had an independent security audit. Linux x64 is the qualified
-> target. Windows and macOS builds are unqualified previews without trusted
-> publisher identities. Keep a backup, verify checksums, and use a small test account first.
-
 Browser dapps and native apps use Wren to request account access and signatures.
 You review their requests in the wallet. Each app has its own account permission
 and network route.
@@ -28,10 +23,10 @@ and network route.
 
 - Clear reviews for transactions, approvals, permits, messages, EIP-712, SIWE,
   EIP-7702 revocation, and sequential EIP-5792 calls.
-- Expected asset changes from configured-RPC simulation, with calldata and trace
-  evidence available when supported. Simulation does not guarantee the result.
-- Adjustable token allowances, editable fees and nonces, and compact transaction
-  progress from submission through confirmation.
+- Previews of expected asset changes from configured-RPC simulation, with calldata
+  and trace details available when supported.
+- Adjustable token allowances with a **Use balance** shortcut, editable fees and
+  nonces, and compact transaction progress.
 - Encrypted software signers, supported hardware wallets, watch-only accounts,
   and per-app permissions.
 - Local contacts, Send, multi-asset Sweep, and an allowlisted Yearn Earn catalog.

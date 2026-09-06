@@ -1,7 +1,7 @@
 # Yearn Earn Reference
 
 This reference describes Wren’s selected Yearn products, transactions, and
-support limits. Wren does not guarantee returns or contract safety.
+support limits. Returns vary, and deposits carry smart-contract risk.
 
 ## Navigation
 
