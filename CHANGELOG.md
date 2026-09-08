@@ -6,6 +6,8 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Excluded dependency source maps, type declarations, and reviewed SDK tests
+  from desktop packages.
 - Replaced dependencies with built-in APIs for message decoding, Companion query
   parsing, network comparisons, and test cleanup. Removed the unused transition
   library, development tools, and redundant type dependencies.
