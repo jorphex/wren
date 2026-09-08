@@ -1,4 +1,4 @@
-import deepEqual from 'deep-equal'
+import { isDeepStrictEqual } from 'node:util'
 import log from 'electron-log'
 
 import { Colorway, getColor } from '../../../resources/colors'
@@ -54,7 +54,7 @@ function createChainsObserver(handler: ChainsChangedHandler) {
       return
     }
 
-    if (!deepEqual(currentChains, availableChains)) {
+    if (!isDeepStrictEqual(currentChains, availableChains)) {
       availableChains = currentChains
 
       setTimeout(() => {

@@ -358,6 +358,30 @@ describe('#createChainsObserver', () => {
     expect(changedChains.map((c) => c.chainId)).toEqual([1, 11155111])
   })
 
+  it('ignores equivalent network data recreated in a different insertion order', () => {
+    setChains(
+      Object.fromEntries(
+        Object.entries(chains)
+          .reverse()
+          .map(([id, chain]) => [id, structuredClone(chain)])
+      ),
+      structuredClone(chainMeta)
+    )
+    fireObserver()
+    expect(handler.chainsChanged).not.toHaveBeenCalled()
+  })
+
+  it('reports a nested connection change once', () => {
+    setChains({ ...chains, 1: { ...chains[1], connection: connection(false) } })
+    fireObserver()
+    fireObserver()
+    expect(handler.chainsChanged).toHaveBeenCalledTimes(1)
+    expect(handler.chainsChanged).toHaveBeenCalledWith(
+      selectedAddress,
+      expect.arrayContaining([expect.objectContaining({ chainId: 1, connected: false })])
+    )
+  })
+
   it('does not invoke the handler when no chains have changed', () => {
     fireObserver()
 

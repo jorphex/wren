@@ -11,7 +11,7 @@ import {
 } from '@ethereumjs/util'
 import log from 'electron-log'
 import BN from 'bignumber.js'
-import isUtf8 from 'isutf8'
+import { isUtf8 } from 'node:buffer'
 import { isHexString } from 'ethers'
 
 import store from '../store'

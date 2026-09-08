@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { remove } from 'fs-extra'
+import { rm } from 'node:fs/promises'
 import log from 'electron-log'
 
 const PASSWORD = 'correct horse battery staple'
@@ -37,14 +37,14 @@ describe('staged hot signers', () => {
 
   beforeAll(async () => {
     log.transports.console.level = false
-    await remove(SIGNER_PATH)
+    await rm(SIGNER_PATH, { recursive: true, force: true })
     hot = await import('../../../../main/signers/hot')
   })
 
   afterAll(async () => {
     pending.forEach((signer) => signer.close())
     accepted.forEach((signer) => signer.close())
-    await remove(SIGNER_PATH)
+    await rm(SIGNER_PATH, { recursive: true, force: true })
     log.transports.console.level = 'debug'
   })
 

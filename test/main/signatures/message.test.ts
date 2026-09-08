@@ -27,6 +27,24 @@ Nonce: 32891756
 Issued At: ${issuedAt}${optionalFields}`
 
 describe('#parseMessageRequest', () => {
+  it.each(['0x80', '0xc0af', '0xe282', '0xeda080', '0xf4908080'])(
+    'keeps invalid UTF-8 as opaque bytes: %s',
+    (rawMessage) => {
+      const result = parseMessageRequest('personal_sign', [rawMessage, account], options)
+      expect(result.rawMessage).toBe(rawMessage)
+      expect(result.decodedMessage).toBe(rawMessage)
+      expect(result.context.risks).toContain('opaque-message')
+    }
+  )
+
+  it('preserves valid multibyte text in the signing preview', () => {
+    const message = 'Café 日本語 🌱'
+    const rawMessage = `0x${Buffer.from(message).toString('hex')}`
+    const result = parseMessageRequest('personal_sign', [rawMessage, account], options)
+    expect(result.rawMessage).toBe(rawMessage)
+    expect(result.decodedMessage).toBe(message)
+  })
+
   it('normalizes personal_sign standard and legacy parameter order', () => {
     const standard = parseMessageRequest('personal_sign', ['hello', account, 'password'], options)
     const legacy = parseMessageRequest('personal_sign', [account, 'hello'], options)

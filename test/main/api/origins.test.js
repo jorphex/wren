@@ -258,6 +258,32 @@ describe('#updateOrigin', () => {
 })
 
 describe('#parseFrameExtension', () => {
+  it.each([
+    '?identity=frame-extension&role=control',
+    'identity=frame-extension&identity=frame-extension&role=control',
+    'identity=frame-extension&role=control&role=page',
+    'identity=frame-extension&role=control&%72ole=control',
+    'identity=frame-extension&role=control&identity',
+    'identity=frame-extension&role=%FFcontrol',
+    'identity=frame-extension&role=control%00'
+  ])('rejects ambiguous or malformed extension fields: %s', (query) => {
+    expect(
+      parseFrameExtension({
+        headers: { origin: 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf' },
+        url: `/?${query}`
+      })
+    ).toBeUndefined()
+  })
+
+  it('accepts encoded extension fields and ignores unrelated repeated parameters', () => {
+    expect(
+      parseFrameExtension({
+        headers: { origin: 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf' },
+        url: '/?%69dentity=frame%2Dextension&role=%63ontrol&extra=1&extra=2'
+      })
+    ).toEqual({ browser: 'chrome', id: 'ldcoohedfbjoobcadoglnnmmfbdlmmhf', role: 'control' })
+  })
+
   it('correctly identifies the Chrome extension', () => {
     const origin = 'chrome-extension://ldcoohedfbjoobcadoglnnmmfbdlmmhf'
     const req = { headers: { origin }, url: '/?identity=frame-extension&role=control' }

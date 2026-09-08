@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { remove } from 'fs-extra'
+import { rm } from 'node:fs/promises'
 import log from 'electron-log'
 
 const PASSWORD = 'correct horse battery staple'
@@ -33,7 +33,7 @@ jest.mock('../../../../../main/store/persist')
 // Stubs
 const signers = { add: (signer) => store.updateSigner(signer.summary()) }
 // Util
-const clean = () => remove(SIGNER_PATH)
+const clean = () => rm(SIGNER_PATH, { recursive: true, force: true })
 
 let hot, store
 

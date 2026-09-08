@@ -6,6 +6,10 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Replaced dependencies with built-in APIs for message decoding, Companion query
+  parsing, network comparisons, and test cleanup. Removed the unused transition
+  library, development tools, and redundant type dependencies.
+
 ## 0.1.9 - 2026-09-06
 
 - Added a token balance shortcut to approval and permit amount editors. Use balance

@@ -1,5 +1,5 @@
 import { SiweMessage } from 'siwe'
-import isUtf8 from 'isutf8'
+import { isUtf8 } from 'node:buffer'
 
 import type {
   MessageSigningContext,

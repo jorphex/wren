@@ -2,7 +2,6 @@ import React from 'react'
 import Restore from 'react-restore'
 
 import emptyRequests from 'url:../../../../asset/ui/wren-empty-requests-v2.png'
-// import { CSSTransitionGroup } from 'react-transition-group'
 
 // import ProviderRequest from './ProviderRequest'
 // import TransactionRequest from './TransactionRequest'

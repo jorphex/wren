@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
 import { IncomingMessage } from 'http'
-import queryString from 'query-string'
 
 import accounts, { AccessRequest } from '../accounts'
 import store from '../store'
@@ -342,9 +341,11 @@ export function updateOrigin(
 
 export function parseFrameExtension(req: IncomingMessage): FrameExtension | undefined {
   const origin = req.headers.origin || ''
-  const query = queryString.parse((req.url || '').replace('/', ''))
-  if (query['identity'] !== 'frame-extension') return
-  const role = query['role']
+  const query = new URLSearchParams((req.url || '').replace('/', '').trim())
+  // Repeated identity or role parameters are ambiguous, even when their values match.
+  if (query.getAll('identity').length !== 1 || query.getAll('role').length !== 1) return
+  if (query.get('identity') !== 'frame-extension') return
+  const role = query.get('role')
   if (role !== 'control' && role !== 'page') return
 
   const match = /^(chrome-extension|moz-extension|safari-web-extension):\/\/([^/?#]+)$/iu.exec(origin)
