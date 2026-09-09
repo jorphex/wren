@@ -6,6 +6,12 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Added background activity for direct transactions and standard token transfers
+  across saved accounts. Calls outside Wren have a clear source label.
+- Recognised common approvals, deposits, and withdrawals. Grouped external activity
+  alerts and kept amounts and addresses out of notifications.
+- Saved scan progress for reconnects and restarts, with reorg recovery and duplicate checks.
+
 ## 0.1.9 - 2026-09-09
 
 - Updated Electron with browser and stability fixes, plus validation and test tools.

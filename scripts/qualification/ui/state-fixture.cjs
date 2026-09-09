@@ -2090,6 +2090,14 @@ const fixtureFor = (scenario) => {
     ]
     state.main.activity =
       scenario.state === 'account-activity-lifecycle' ? lifecycleActivity() : qualificationActivity()
+    if (scenario.externalActivity) {
+      state.main.activity = qualificationActivity().slice(0, 3).map((entry, index) => ({
+        ...entry, type: 'transaction', origin: 'wren:external', outcome: 'confirmed',
+        observed: {hash: QUALIFICATION_TX_HASH, from: QUALIFICATION_RECIPIENT,
+          blockHash: `0x${'ef'.repeat(32)}`, blockNumber: 100,
+          source: 'external', action: ['received', 'approve', 'deposit'][index]}
+      }))
+    }
     if (scenario.state === 'account-activity-detail') {
       state.main.operationLifecycles = qualificationOperationLifecycles()
     }

@@ -401,6 +401,27 @@ signer boundary and stops remaining sequential calls on drift. A
 user-initiated Cancel is exempt so a dapp policy cannot trap transaction
 recovery; Speed Up remains constrained.
 
+#### Account activity monitoring
+
+The desktop reads blocks, receipts, and filtered transfer logs through each enabled,
+connected RPC. Filters contain saved addresses. No indexer or Wren backend is used.
+First use starts at the current chain position. Subsequent runs resume saved progress.
+The scanner waits two blocks, checks block ancestry and receipt identity, and replays
+changed branches. This delay is not finality; an entry can later become reorged.
+
+Work is limited to 20 blocks per network pass and 500 watched addresses. Block summaries
+skip irrelevant log queries. Responses are validated before advancing progress. Cursor
+history holds 12 block hashes and up to 1,000 notification hashes per network; the existing
+Activity retention applies to records. Cursors stay out of renderer state and backups. Observed transaction evidence stays
+in the main process until the Activity details lookup; renderer summaries carry the action and source.
+Wren-owned transaction references avoid duplicate entries for the submitting account.
+
+Standard transfer events and recognised call selectors describe reported activity;
+they do not establish token value or prove a contract's intent. Internal traces and
+arbitrary indirect effects are not scanned. Alerts report mined activity and do not
+prevent execution. Catch-up alerts are grouped per network pass and omit account
+addresses and amounts.
+
 #### Remote services and content
 
 Wren has no first-party backend. Built-in networks use visibly named

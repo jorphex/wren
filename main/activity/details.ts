@@ -35,6 +35,7 @@ type ActivityDetailsDependencies = Readonly<{
 type ExpectedTransaction = Readonly<{
   hash: string
   account: string
+  from?: string
   receipt?: Readonly<{ blockHash: string; blockNumber: string }>
 }>
 
@@ -98,7 +99,7 @@ export const projectActivityTransaction = (
   const normalizedInput = typeof input === 'string' && DATA.test(input) ? input.toLowerCase() : undefined
   if (
     transactionHash !== expected.hash.toLowerCase() ||
-    from !== expected.account.toLowerCase() ||
+    from !== (expected.from ?? expected.account).toLowerCase() ||
     (rawTo !== null && !to) ||
     !normalizedValue ||
     !normalizedInput ||
@@ -253,17 +254,32 @@ export const createActivityDetailsService = (dependencies: ActivityDetailsDepend
       operation.origin === entry.origin &&
       operation.kind === entry.type
     )
-    if (!validReference && !validOperation) {
+    const observed = entry.observed && entry.outcome !== 'reorged' ? entry.observed : undefined
+    if (!validReference && !validOperation && !observed) {
       return { success: false, error: 'evidence-unavailable' }
     }
 
-    const targets = validReference
-      ? referenceTargets(reference as ActivityTransactionReference)
-      : operationTargets(operation as OperationLifecycle, dependencies.batches())
+    const targets: ExpectedTransaction[] = observed
+      ? [
+          {
+            hash: observed.hash,
+            account: entry.account,
+            from: observed.from,
+            receipt: {
+              blockHash: observed.blockHash,
+              blockNumber: toRpcQuantity(BigInt(observed.blockNumber))
+            }
+          }
+        ]
+      : validReference
+        ? referenceTargets(reference as ActivityTransactionReference)
+        : operationTargets(operation as OperationLifecycle, dependencies.batches())
     if (!targets.length) return { success: false, error: 'evidence-unavailable' }
-    const chainId = validReference
-      ? (reference as ActivityTransactionReference).chainId
-      : (operation as OperationLifecycle).chainId
+    const chainId = observed
+      ? entry.chainId!
+      : validReference
+        ? (reference as ActivityTransactionReference).chainId
+        : (operation as OperationLifecycle).chainId
 
     const outcomes = await Promise.all(
       targets.map(async (target) => {

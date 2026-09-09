@@ -53,12 +53,22 @@ describe('#clearActivity', () => {
   it('clears displayed history and both outbound-address memories together', () => {
     const updates = []
     const update = (path, reducer) =>
-      updates.push([path, reducer(path === 'main.activityClearedAt' ? 0 : { retained: true })])
+      updates.push([
+        path,
+        reducer(
+          path === 'main.activityClearedAt'
+            ? 0
+            : path === 'main.accountActivityCursors'
+              ? { 1: { number: 12, notified: ['hash'] } }
+              : { retained: true }
+        )
+      ])
 
     storeActions.clearActivity(update)
 
     expect(updates).toEqual([
       ['main.activityClearedAt', expect.any(Number)],
+      ['main.accountActivityCursors', { 1: { number: 12, notified: [] } }],
       ['main.activity', []],
       ['main.activityTransactionReferences', {}],
       ['main.outboundAddressMemory', {}],
@@ -2148,4 +2158,34 @@ describe('#updateTypedDataRequest', () => {
 
     expect(requests[request].typedMessage.data.oldAttribute).toBeTruthy()
   })
+})
+
+it('merges late Wren references without removing another account’s observed transaction', () => {
+  const hash = `0x${'a'.repeat(64)}`
+  const account = `0x${'1'.repeat(40)}`
+  const recipient = `0x${'2'.repeat(40)}`
+  const state = {
+    'main.activityTransactionReferences': {},
+    'main.activity': [
+      { account, chainId: 1, observed: { hash } },
+      { account: recipient, chainId: 1, observed: { hash } }
+    ]
+  }
+  const now = Date.now()
+  storeActions.recordActivityTransactionReference(
+    (path, reducer) => {
+      state[path] = reducer(state[path])
+    },
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      kind: 'transaction',
+      account,
+      origin: 'app',
+      chainId: 1,
+      updatedAt: now,
+      expiresAt: now + 90 * 24 * 60 * 60 * 1000,
+      transactions: [{ hash }]
+    }
+  )
+  expect(state['main.activity']).toEqual([{ account: recipient, chainId: 1, observed: { hash } }])
 })

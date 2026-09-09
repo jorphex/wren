@@ -642,3 +642,15 @@ it('does not claim clearing when the Activity acknowledgement is unavailable', a
     )
   ).toBeTruthy()
 })
+
+it('shows a concise external action and keeps it searchable by source and action', () => {
+  const external = entry({
+    origin: 'wren:external',
+    observed: { action: 'deposit', hash: transactionHash, source: 'external' }
+  })
+  render(<ActivityHarness moduleId='activity' account={account} entries={[external]} />)
+  expect(screen.getByRole('button', { name: 'View Deposit details from Outside Wren' })).toBeTruthy()
+  expect(screen.getByText('Outside Wren · Ethereum')).toBeTruthy()
+  expect(filterActivity([external], 'all', 'deposit')).toEqual([external])
+  expect(activityOriginLabel('wren:external')).toBe('Outside Wren')
+})

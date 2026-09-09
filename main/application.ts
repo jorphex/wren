@@ -33,6 +33,7 @@ import Erc20Contract from './contracts/erc20'
 import { getErrorCode } from '../resources/utils'
 import walletCallEvidenceRuntime from './provider/walletCallEvidenceRuntime'
 import operationLifecycleRuntime from './operationLifecycle/runtime'
+import accountActivityRuntime from './accountActivity/runtime'
 import operationLifecycleProjectionRuntime from './operationLifecycle/projectionRuntime'
 import walletCallBatchLedger from './provider/walletCallLedger'
 import { showWalletCallStatus } from './provider/walletCallStatusView'
@@ -133,11 +134,18 @@ function startWalletCallEvidenceRuntime() {
 function startOperationLifecycleRuntime() {
   if (!operationLifecycleReady) {
     operationLifecycleReady = true
-    powerMonitor.on('suspend', () => operationLifecycleRuntime.stop())
-    powerMonitor.on('resume', () => operationLifecycleRuntime.start())
+    powerMonitor.on('suspend', () => {
+      operationLifecycleRuntime.stop()
+      accountActivityRuntime.stop()
+    })
+    powerMonitor.on('resume', () => {
+      operationLifecycleRuntime.start()
+      accountActivityRuntime.start()
+    })
   }
   operationLifecycleProjectionRuntime.start()
   operationLifecycleRuntime.start()
+  accountActivityRuntime.start()
 }
 
 function startContractVerificationPollingRuntime() {
@@ -831,6 +839,7 @@ app.on('second-instance', (event, argv, workingDirectory) => {
 app.on('activate', () => windows.showTray())
 
 app.on('before-quit', () => {
+  accountActivityRuntime.stop()
   managedClipboard.dispose()
   recentRecipientsRuntime.stop()
   walletCallEvidenceRuntime.stop()

@@ -35,6 +35,18 @@ See [supported standards](SUPPORTED_EIPS.md),
 [execution boundaries](EXECUTION_BOUNDARIES.md), and
 [Yearn Earn](YEARN_EARN.md) for exact behavior.
 
+## Account activity (next release)
+
+While Wren runs, Activity tracks direct transactions and standard token transfers
+for saved addresses on enabled, connected networks. Calls made outside Wren show
+**Outside Wren**. Common approvals, deposits, and withdrawals have short action names.
+
+Monitoring starts at the current chain position. Wren saves progress and catches up
+after reconnecting. Alerts appear while Wren is hidden; use **Wallet activity
+notifications** in Settings to turn them off. Alerts omit amounts and addresses.
+Internal-call traces and historical activity from before monitoring began are outside
+this first version.
+
 ## Support
 
 Wren 0.1.9 pairs with Wren Companion 0.1.2

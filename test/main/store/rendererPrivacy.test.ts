@@ -6,6 +6,7 @@ it('removes private Activity lifecycle state from the renderer bootstrap state',
       main: {
         activity: [{ id: 'visible-summary' }],
         activityClearedAt: 1234,
+        accountActivityCursors: { 1: { number: 20, notified: ['hash'] } },
         activityTransactionReferences: { private: { hash: '0xprivate' } }
       },
       selected: { open: true }
@@ -23,6 +24,7 @@ it('drops private Activity updates while preserving unrelated renderer state upd
         name: 'recordActivityTransactionReference',
         updates: [
           { path: 'main.activityClearedAt', value: 1234 },
+          { path: 'main.accountActivityCursors.1', value: { number: 20 } },
           { path: 'main.activityTransactionReferences', value: { private: true } },
           { path: 'main.activity', value: [{ id: 'visible-summary' }] }
         ]
@@ -35,6 +37,7 @@ it('drops private Activity updates while preserving unrelated renderer state upd
             value: {
               activity: [],
               activityClearedAt: 1234,
+              accountActivityCursors: { 1: { number: 20, notified: ['hash'] } },
               activityTransactionReferences: { private: true },
               accounts: {}
             }
@@ -52,4 +55,31 @@ it('drops private Activity updates while preserving unrelated renderer state upd
       updates: [{ path: 'main', value: { activity: [], accounts: {} } }]
     }
   ])
+})
+
+it('keeps observed transaction evidence behind the Activity details lookup', () => {
+  const entry = {
+    id: 'summary',
+    observed: {
+      action: 'received',
+      source: 'external',
+      hash: 'private-hash',
+      from: 'private-sender',
+      blockHash: 'private-block',
+      blockNumber: 10
+    }
+  }
+  const summary = { id: 'summary', observed: { action: 'received', source: 'external' } }
+  expect(rendererVisibleState({ main: { activity: [entry] } })).toEqual({ main: { activity: [summary] } })
+  expect(
+    rendererVisibleActions([
+      {
+        name: 'commitAccountActivity',
+        updates: [
+          { path: 'main.activity', value: [entry] },
+          { path: 'main.activity.0.observed.hash', value: 'private-hash' }
+        ]
+      }
+    ])
+  ).toEqual([{ name: 'commitAccountActivity', updates: [{ path: 'main.activity', value: [summary] }] }])
 })

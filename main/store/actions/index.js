@@ -269,12 +269,39 @@ module.exports = {
     u('main.operationLifecycles', () => operations)
   },
   recordActivityTransactionReference: (u, reference) => {
-    u('main.activityTransactionReferences', (references = {}) =>
-      recordActivityTransactionReference(references, reference)
-    )
+    let retained
+    u('main.activityTransactionReferences', (references = {}) => {
+      const next = recordActivityTransactionReference(references, reference)
+      retained = next[reference?.id]
+      return next
+    })
+    if (retained) {
+      const hashes = new Set(retained.transactions.map((transaction) => transaction.hash))
+      u('main.activity', (activity = []) =>
+        activity.filter(
+          (entry) =>
+            !entry.observed ||
+            entry.account !== retained.account ||
+            entry.chainId !== retained.chainId ||
+            !hashes.has(entry.observed.hash)
+        )
+      )
+    }
   },
   setContractVerificationJobs: (u, jobs) => {
     u('main.contractVerificationJobs', () => jobs)
+  },
+  commitAccountActivity: (u, chainId, cursor, entries, reorgAfter) => {
+    u('main.activity', (activity = []) => {
+      const updated = activity.map((entry) =>
+        reorgAfter !== undefined && entry.chainId === chainId && entry.observed?.blockNumber > reorgAfter
+          ? { ...entry, outcome: 'reorged' }
+          : entry
+      )
+      const ids = new Set(entries.map((entry) => entry.id))
+      return pruneActivity([...entries, ...updated.filter((entry) => !ids.has(entry.id))])
+    })
+    u('main.accountActivityCursors', (cursors = {}) => ({ ...cursors, [chainId]: cursor }))
   },
   recordActivity: (u, entry) => {
     u('main.activity', (activity = []) => {
@@ -308,6 +335,11 @@ module.exports = {
   },
   clearActivity: (u) => {
     u('main.activityClearedAt', (clearedAt = 0) => Math.max(clearedAt, Date.now()))
+    u('main.accountActivityCursors', (cursors = {}) =>
+      Object.fromEntries(
+        Object.entries(cursors).map(([chainId, cursor]) => [chainId, { ...cursor, notified: [] }])
+      )
+    )
     u('main.activity', () => [])
     u('main.activityTransactionReferences', () => ({}))
     u('main.outboundAddressMemory', () => ({}))

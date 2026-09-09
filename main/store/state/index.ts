@@ -1,3 +1,4 @@
+import { pruneAccountActivityCursors } from './types/accountActivity'
 import { v4 as generateUuid } from 'uuid'
 import { z } from 'zod'
 import log from 'electron-log'
@@ -224,6 +225,7 @@ const mainState = {
   accountsMeta: main('accountsMeta', {}),
   activity: main('activity', []),
   activityClearedAt: main('activityClearedAt', 0),
+  accountActivityCursors: pruneAccountActivityCursors(main('accountActivityCursors', {})),
   activityTransactionReferences: pruneActivityTransactionReferences(
     main('activityTransactionReferences', {})
   ),

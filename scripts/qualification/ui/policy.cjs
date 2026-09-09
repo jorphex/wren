@@ -4224,6 +4224,11 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
   if (includeReview) {
+    const base = selected.find(scenario => scenario.id === 'tray-account-activity-full-1')
+    selected.push({...base, id: 'tray-account-external-activity-full-1', externalActivity: true,
+      requiredText: ['Received assets', 'Approve', 'Deposit', 'Outside Wren', 'Ethereum']})
+  }
+  if (includeReview) {
     for (const removing of [false, true]) {
       const base = selected.find((scenario) => scenario.id === 'dash-tokens-list-full-1')
       selected.push({

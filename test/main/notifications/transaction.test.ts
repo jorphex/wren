@@ -122,3 +122,39 @@ it('does nothing when unsupported, disabled, or visible', () => {
   expect(notifyTransactionOutcome(`${activityId.slice(0, -1)}4`, account, 'confirmed')).toBe(false)
   expect(mockNotifications).toHaveLength(0)
 })
+
+it('notifies external activity without exposing addresses or amounts and opens the matching account', async () => {
+  const { notifyObservedActivity } = await import('../../../main/notifications/accountActivity')
+  const entry = {
+    id: activityId,
+    account,
+    chainId: 1,
+    origin: 'wren:external',
+    type: 'transaction' as const,
+    outcome: 'confirmed' as const,
+    createdAt: 1,
+    completedAt: 1,
+    observed: {
+      hash: `0x${'1'.repeat(64)}`,
+      from: account,
+      blockHash: `0x${'2'.repeat(64)}`,
+      blockNumber: 1,
+      source: 'external' as const,
+      action: 'received' as const
+    }
+  }
+  mocks.store.mockImplementation((path) =>
+    path === 'main.accounts' ? { [account]: {} } : path === 'main.networks.ethereum' ? 'Ethereum' : true
+  )
+  expect(notifyObservedActivity(entry)).toBe(true)
+  expect(mockNotifications[0].options).toEqual({ title: 'Received assets', body: 'Outside Wren · Ethereum' })
+  mockNotifications[0].emit('click')
+  expect(mocks.showAccountActivity).toHaveBeenCalledWith(account, activityId)
+  mocks.windows.isAnyWrenVisible.mockReturnValue(true)
+  expect(notifyObservedActivity(entry)).toBe(false)
+  mocks.windows.isAnyWrenVisible.mockReturnValue(false)
+  mocks.store.mockImplementation((path) => (path === 'main.accounts' ? { [account]: {} } : false))
+  expect(notifyObservedActivity(entry)).toBe(false)
+  mocks.store.mockReturnValue({})
+  expect(notifyObservedActivity(entry)).toBe(false)
+})

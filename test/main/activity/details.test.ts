@@ -410,3 +410,36 @@ it('fails honestly when history, retained evidence, or configured-RPC evidence i
   })
   await expect(failedLookup.get(activityId)).resolves.toEqual({ success: false, error: 'lookup-failed' })
 })
+
+it('opens incoming observed activity without requiring the account to be the transaction sender', async () => {
+  const incoming = entry({
+    account: recipient,
+    origin: 'wren:external',
+    observed: {
+      hash: hash('a'),
+      from: account,
+      blockHash,
+      blockNumber: 16,
+      source: 'external',
+      action: 'received'
+    }
+  })
+  const rpc = jest.fn(async (_chain, method) =>
+    method === 'eth_getTransactionByHash'
+      ? rpcTransaction()
+      : { transactionHash: hash('a'), blockHash, blockNumber: '0x10', logs: [] }
+  )
+  const service = createActivityDetailsService({
+    activity: () => [incoming],
+    references: () => ({}),
+    operations: () => ({}),
+    batches: () => ({}),
+    rpc
+  })
+  expect(await service.get(activityId)).toMatchObject({
+    success: true,
+    actions: [{ from: account, to: recipient, kind: 'native-value-transfer' }]
+  })
+  incoming.outcome = 'reorged'
+  expect(await service.get(activityId)).toEqual({ success: false, error: 'evidence-unavailable' })
+})

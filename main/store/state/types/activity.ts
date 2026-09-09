@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ObservedActivitySchema } from './accountActivity'
 
 const AddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/u)
 export const ActivityEntrySchema = z
@@ -32,12 +33,16 @@ export const ActivityEntrySchema = z
       'clearance-unverified',
       'verified-clearance'
     ]),
+    observed: ObservedActivitySchema.optional(),
     broadcastPhase: z.enum(['broadcasting', 'unconfirmed', 'acknowledged']).optional(),
     createdAt: z.number().int().nonnegative(),
     completedAt: z.number().int().nonnegative(),
     chainId: z.number().int().positive().optional()
   })
   .strict()
+  .refine((entry) => !entry.observed || (entry.type === 'transaction' && entry.chainId !== undefined), {
+    message: 'Observed activity requires a transaction and chain'
+  })
   .refine(
     (entry) =>
       entry.broadcastPhase === undefined || (entry.type === 'transaction' && entry.outcome === 'submitted'),

@@ -1,16 +1,28 @@
-const PRIVATE_MAIN_PATHS = new Set(['main.activityClearedAt', 'main.activityTransactionReferences'])
+const PRIVATE_MAIN_PATHS = new Set([
+  'main.activityClearedAt',
+  'main.activityTransactionReferences',
+  'main.accountActivityCursors'
+])
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const activitySummary = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(activitySummary)
+  if (!isRecord(value) || !isRecord(value['observed'])) return value
+  const observed = value['observed']
+  return { ...value, observed: { action: observed['action'], source: observed['source'] } }
+}
+
 const withoutPrivateActivityState = (value: unknown) => {
   if (!isRecord(value)) return value
   const {
+    accountActivityCursors: _privateActivityCursors,
     activityClearedAt: _privateClearBoundary,
     activityTransactionReferences: _privateReferences,
     ...visible
   } = value
-  return visible
+  return 'activity' in visible ? { ...visible, activity: activitySummary(visible['activity']) } : visible
 }
 
 export const rendererVisibleState = (value: unknown) => {
@@ -25,6 +37,16 @@ const rendererVisibleUpdate = (value: unknown) => {
     [...PRIVATE_MAIN_PATHS].some((privatePath) => path === privatePath || path.startsWith(`${privatePath}.`))
   ) {
     return
+  }
+  if (/^main\.activity(?:\.|$)/u.test(path)) {
+    const field = path.split('.observed.')[1]
+    if (field && !['action', 'source'].includes(field)) return
+    if (path.endsWith('.observed'))
+      return {
+        ...value,
+        value: (activitySummary({ observed: value['value'] }) as Record<string, unknown>)['observed']
+      }
+    return { ...value, value: activitySummary(value['value']) }
   }
   if (path === 'main') return { ...value, value: withoutPrivateActivityState(value['value']) }
   return value

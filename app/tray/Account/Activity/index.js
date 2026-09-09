@@ -1,3 +1,4 @@
+import { observedActivityLabels } from '../../../../resources/domain/activity/labels'
 import React from 'react'
 import Restore from 'react-restore'
 import { formatUnits } from 'ethers'
@@ -85,8 +86,13 @@ const outcomePresentation = (entry) =>
   }
 
 export const activityTypeMeta = (type) => TYPE_META[type] || TYPE_META.transaction
+const activityEntryMeta = (entry) => {
+  const meta = activityTypeMeta(entry.type)
+  return entry.observed ? { ...meta, label: observedActivityLabels[entry.observed.action] } : meta
+}
 
 export const activityOriginLabel = (origin, knownName) => {
+  if (origin === 'wren:external') return 'Outside Wren'
   if (knownName) return getOriginDisplayName(knownName)
   const managedOriginName = getManagedOriginNameForId(origin)
   if (managedOriginName) return getOriginDisplayName(managedOriginName)
@@ -103,10 +109,15 @@ export const activityOriginLabel = (origin, knownName) => {
 export const filterActivity = (entries, category, filter = '') => {
   const query = filter.trim().toLowerCase()
   return entries.filter((entry) => {
-    const meta = activityTypeMeta(entry.type)
+    const meta = activityEntryMeta(entry)
     if (category !== 'all' && meta.category !== category) return false
     if (!query) return true
-    return [meta.label, outcomePresentation(entry).label, activityOriginLabel(entry.origin)]
+    return [
+      entry.observed && observedActivityLabels[entry.observed.action],
+      meta.label,
+      outcomePresentation(entry).label,
+      activityOriginLabel(entry.origin)
+    ]
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query))
   })
@@ -382,7 +393,7 @@ const ActivityRow = ({ entry, networkName, onOpen, originName, selected, nativeC
       ? compactAssetAmount(action.value, nativeCurrency.decimals, nativeCurrency.symbol).display
       : ''
 
-  const meta = activityTypeMeta(entry.type)
+  const meta = activityEntryMeta(entry)
   const origin = activityOriginLabel(entry.origin, originName)
   const outcome = outcomePresentation(entry)
   return (
@@ -399,7 +410,7 @@ const ActivityRow = ({ entry, networkName, onOpen, originName, selected, nativeC
         </span>
         <span className='activityIdentity'>
           <span className='activityTitle'>
-            {actionLabel || meta.label}
+            {(entry.observed && observedActivityLabels[entry.observed.action]) || actionLabel || meta.label}
             {amount ? ` · ${hideBalances ? '••••' : amount}` : ''}
           </span>
           <span className='activityContext'>
@@ -444,11 +455,12 @@ const ActivityDetail = ({
   nativeCurrency,
   tokenFor
 }) => {
-  const meta = activityTypeMeta(entry.type)
+  const meta = activityEntryMeta(entry)
   const origin = activityOriginLabel(entry.origin, originName)
   const outcome = outcomePresentation(entry)
   const resolvedActions = actionEvidence?.success ? actionEvidence.actions : []
   const transactionHash =
+    entry.observed?.hash ||
     transactionHashFor(operation) ||
     (entry.type !== 'walletCalls' ? resolvedActions[0]?.transactionHash : undefined)
   const receipt = operation?.receipt
