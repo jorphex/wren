@@ -141,6 +141,7 @@ Ethereum, Optimism, Gnosis, Polygon, Base, Arbitrum, and Katana. Wren checks up 
 and selects one with the most USD liquidity, at least $10,000 in liquidity, and trading
 activity in the last 24 hours. Quotes are cached for five minutes; pool
 selection lasts up to 30 minutes. Requests go directly from the desktop.
+Prices appear as lookups finish. Queued lookups resume after provider rate limits.
 If a later pool page fails, Wren keeps the best eligible quote found and retries
 the search after five minutes. Missing quotes keep the last known value, if one exists. GeckoTerminal
 quotes do not include a 24-hour change.
