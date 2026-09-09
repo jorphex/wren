@@ -112,6 +112,10 @@ checklist](WINDOWS_RELEASE_QUALIFICATION.md) and, for DPAPI claims, the separate
    identity, signature-state, Gatekeeper-state, migration, native-module, or
    packaging failure.
 
+Packaged dependencies omit source maps, type declarations, and reviewed SDK test
+files. License files remain included. Use the matching source checkout and
+lockfile when debugging dependency code.
+
 ## 3. Review reproducibility evidence
 
 Run the bounded two-build comparison for every candidate. It fixes the commit

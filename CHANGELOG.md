@@ -6,14 +6,15 @@ For release details and platform limits, see
 
 ## Unreleased
 
+## 0.1.9 - 2026-09-09
+
+- Updated the YAML parser to a patched release.
+
+- Reduced direct dependencies from 104 to 95. Removed unused packages and used
+  built-in APIs for message decoding, Companion queries, network comparisons,
+  and test cleanup.
 - Excluded dependency source maps, type declarations, and reviewed SDK tests
-  from desktop packages.
-- Replaced dependencies with built-in APIs for message decoding, Companion query
-  parsing, network comparisons, and test cleanup. Removed the unused transition
-  library, development tools, and redundant type dependencies.
-
-## 0.1.9 - 2026-09-06
-
+  from desktop packages. This reduced the unpacked Linux test build by about 65 MiB.
 - Added a token balance shortcut to approval and permit amount editors. Use balance
   sets the custom allowance to the displayed balance with full precision.
 - Added tactile controls for approval amount options and the balance shortcut.
