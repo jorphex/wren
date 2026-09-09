@@ -98,7 +98,7 @@ test('uses a default cursor for dashboard copy while preserving editable text be
 
 test('shows a narrow blocky scrollbar without drawing a track rule', () => {
   expect(dashStyle).toMatch(
-    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color var\(--wren-text-muted\)/
+    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 40%, transparent\)'\)[\s\S]*?::-webkit-scrollbar-thumb:hover\n {2}background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 60%, transparent\)'\)/
   )
   expect(dashStyle).toMatch(
     /::-webkit-scrollbar-track\n {2}background transparent\n\n::-webkit-scrollbar-thumb/

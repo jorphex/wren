@@ -70,6 +70,6 @@ it('uses the same restrained scrollbar treatment as the wallet shells', () => {
   const source = fs.readFileSync('app/onboard/App/index.styl', 'utf8')
 
   expect(source).toMatch(
-    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color var\(--wren-text-muted\)/
+    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 40%, transparent\)'\)[\s\S]*?::-webkit-scrollbar-thumb:hover\n {2}background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 60%, transparent\)'\)/
   )
 })
