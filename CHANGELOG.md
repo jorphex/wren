@@ -8,8 +8,11 @@ For release details and platform limits, see
 
 ## 0.1.9 - 2026-09-09
 
+- Matched wallet and Control Center scrollbars with a thin, muted style.
+- Added Robinhood Chain pricing.
+- Removed network-list subtitles. Grouped network editor and Settings controls
+  with a clear selected state.
 - Updated the YAML parser to a patched release.
-
 - Reduced direct dependencies from 104 to 95. Removed unused packages and used
   built-in APIs for message decoding, Companion queries, network comparisons,
   and test cleanup.

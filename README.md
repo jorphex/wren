@@ -137,8 +137,8 @@ replaceable services:
 | Token artwork | Reviewed CoinGecko host           | Recognized artwork requests only                          |
 
 GeckoTerminal supplies missing token prices on Ethereum, Optimism, Gnosis,
-Polygon, Base, Arbitrum, and Katana. Wren checks up to 200 pools and selects
-one with the most USD liquidity, at least $10,000 in liquidity, and trading
+Polygon, Base, Arbitrum, Katana, and Robinhood Chain. Wren checks up to 200 pools
+and selects one with the most USD liquidity, at least $10,000 in liquidity, and trading
 activity in the last 24 hours. Quotes are cached for five minutes; pool
 selection lasts up to 30 minutes. Requests go directly from the desktop.
 Missing quotes keep the last known value, if one exists. GeckoTerminal
