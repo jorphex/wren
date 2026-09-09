@@ -360,12 +360,11 @@ release. Report only versions, checksums, pass/fail, sanitized errors, and steps
 
 ### Current dependency audit
 
-The current full and production-tree audits report 19 low- and 2
-moderate-severity transitive findings, with no high or critical finding. A
-patched `toml` override removes the newly disclosed Trezor dependency findings;
-the `decode-uri-component` remediation still requires a breaking `query-string`
-upgrade. The remaining `elliptic` path has no complete upstream fix in this
-release line.
+On September 9, 2026, the full dependency audit reports 20 low-severity
+findings; the production audit reports 19. Neither reports moderate, high, or
+critical findings. The release includes the `js-yaml` 4.3.2 patch and removes
+`query-string` and `decode-uri-component`. Remaining findings cover `elliptic`
+and its dependency paths, plus development-only `joi` in the full audit.
 
 ### Historical 0.8.0 Linux x64 evidence
 
