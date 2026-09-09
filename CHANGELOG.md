@@ -8,6 +8,7 @@ For release details and platform limits, see
 
 ## 0.1.9 - 2026-09-09
 
+- Updated Electron with browser and stability fixes, plus validation and test tools.
 - Matched wallet and Control Center scrollbars with a thin, muted style.
 - Added Robinhood Chain pricing.
 - Removed network-list subtitles. Grouped network editor and Settings controls
