@@ -10,7 +10,8 @@ For release details and platform limits, see
 
 - Updated Electron with browser and stability fixes, plus validation and test tools.
 - Matched wallet and Control Center scrollbars with a thin, muted style.
-- Added Robinhood Chain pricing.
+- Used GeckoTerminal for Robinhood Chain token prices.
+- Kept valid pool quotes when a later page fails and retried incomplete searches.
 - Removed network-list subtitles. Grouped network editor and Settings controls
   with a clear selected state.
 - Updated the YAML parser to a patched release.

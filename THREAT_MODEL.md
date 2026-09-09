@@ -410,8 +410,9 @@ per network. Migration 53 retires Pylon for PublicNode; old Pylon URLs are
 inert history, and the release gate rejects active Pylon, Nebula-hosted IPFS,
 Frame CDN, and Frame runtime packages. DefiLlama sees native-asset and
 tracked-token IDs for supported mainnets, not the selected account, though
-timing/token sets can fingerprint; failures keep old values. Missing token
-quotes use GeckoTerminal on the same supported mainnets. It sees the user's
+timing/token sets can fingerprint; failures keep old values. Robinhood token
+quotes go directly to GeckoTerminal. Missing token quotes on other supported
+mainnets also use GeckoTerminal. It sees the user's
 IP address, network IDs, token contracts, and selected pool IDs. Wren does
 not send wallet addresses, balances, or keys to either price service.
 
@@ -419,7 +420,9 @@ GeckoTerminal requests share a desktop queue with at least 6.5 seconds
 between starts. HTTP 429 responses pause requests with exponential backoff
 and respect Retry-After. Quote and missing-pool caches last five minutes;
 pool selection lasts 30 minutes. The cache holds up to 1,000 token entries.
-Each request has a 10-second timeout and a 1 MiB response limit.
+Each request has a 10-second timeout and a 1 MiB response limit. If a later
+pool page fails, Wren retains the best eligible quote found. It retries discovery
+after the five-minute quote cache expires, subject to provider backoff.
 
 Pool discovery checks up to ten pages (200 pools). Wren selects the largest
 eligible USD reserve, with at least $10,000 in liquidity and positive volume

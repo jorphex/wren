@@ -269,12 +269,15 @@ test.each(['stop', 'subscription'])(
   }
 )
 
-test('routes Robinhood token prices to fallback and ETH prices to chain 4663', async () => {
+test('uses pool prices for Robinhood despite a primary quote and retains native ETH pricing', async () => {
   const token = { ...knownToken, chainId: 4663 }
   const identifier = `robinhood:${token.address.toLowerCase()}`
   store.set('main.tokens.known', account, [token])
   store.set('main.tokens.custom', [])
-  const primary = jest.fn(async () => ({ 'coingecko:ethereum': { price: 2000 } }))
+  const primary = jest.fn(async () => ({
+    'coingecko:ethereum': { price: 2000 },
+    [identifier]: { price: 0.02 }
+  }))
   const fallback = jest.fn(async () => ({ [identifier]: { price: 3 } }))
   const rates = Rates(store, primary, fallback)
   rates.start()
@@ -282,6 +285,8 @@ test('routes Robinhood token prices to fallback and ETH prices to chain 4663', a
   await Promise.resolve()
   await Promise.resolve()
   await Promise.resolve()
+  expect(primary).toHaveBeenCalledWith(['coingecko:ethereum'], expect.any(AbortSignal))
+  expect(store.setRates).toHaveBeenCalledTimes(1)
   expect(fallback).toHaveBeenCalledWith([identifier], expect.any(AbortSignal), expect.any(Function))
   expect(store.setNativeCurrencyData).toHaveBeenCalledWith('ethereum', 4663, { usd: { price: 2000 } })
   expect(store.setRates).toHaveBeenCalledWith({

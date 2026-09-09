@@ -128,20 +128,21 @@ For packaging and qualification, follow the
 Wren has no first-party hosted backend. Network requests go to explicit,
 replaceable services:
 
-| Purpose       | Default                           | Shared data                                               |
-| ------------- | --------------------------------- | --------------------------------------------------------- |
-| EVM RPC       | PublicNode                        | IP address, queries, calldata, and submitted transactions |
-| USD prices    | DefiLlama; GeckoTerminal fallback | IP address, network and token IDs; no wallet address      |
-| Send content  | IPFS.io                           | IP address and the reviewed, CID-verified content request |
-| Earn catalog  | Yearn Kong                        | A fixed catalog request; no account data                  |
-| Token artwork | Reviewed CoinGecko host           | Recognized artwork requests only                          |
+| Purpose       | Default                  | Shared data                                               |
+| ------------- | ------------------------ | --------------------------------------------------------- |
+| EVM RPC       | PublicNode               | IP address, queries, calldata, and submitted transactions |
+| USD prices    | DefiLlama; GeckoTerminal | IP address, network and token IDs; no wallet address      |
+| Send content  | IPFS.io                  | IP address and the reviewed, CID-verified content request |
+| Earn catalog  | Yearn Kong               | A fixed catalog request; no account data                  |
+| Token artwork | Reviewed CoinGecko host  | Recognized artwork requests only                          |
 
-GeckoTerminal supplies missing token prices on Ethereum, Optimism, Gnosis,
-Polygon, Base, Arbitrum, Katana, and Robinhood Chain. Wren checks up to 200 pools
+GeckoTerminal supplies Robinhood Chain token prices and missing token prices on
+Ethereum, Optimism, Gnosis, Polygon, Base, Arbitrum, and Katana. Wren checks up to 200 pools
 and selects one with the most USD liquidity, at least $10,000 in liquidity, and trading
 activity in the last 24 hours. Quotes are cached for five minutes; pool
 selection lasts up to 30 minutes. Requests go directly from the desktop.
-Missing quotes keep the last known value, if one exists. GeckoTerminal
+If a later pool page fails, Wren keeps the best eligible quote found and retries
+the search after five minutes. Missing quotes keep the last known value, if one exists. GeckoTerminal
 quotes do not include a 24-hour change.
 
 Wren does not contact Pylon or use an NFT indexer. Read the

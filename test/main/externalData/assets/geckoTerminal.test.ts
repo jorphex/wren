@@ -212,16 +212,27 @@ test('ignores malformed pool fields and oversized responses', async () => {
   expect(await finish(load([identifier]))).toEqual({})
 })
 
-test('does not retain a partial discovery when a later page fails', async () => {
-  const fetchImpl = jest
-    .fn()
-    .mockResolvedValueOnce(response(Array.from({ length: 20 }, (_, index) => pool(index + 10))))
-    .mockResolvedValueOnce(response([], 503))
-    .mockResolvedValueOnce(response([pool(1, 50000, '8')]))
-  const load = createGeckoTerminalPrices(fetchImpl)
-  expect(await finish(load([identifier]))).toEqual({})
-  expect(await finish(load([identifier]))).toEqual({ [identifier]: { price: 8 } })
-})
+test.each([429, 503])(
+  'retains the best eligible quote on HTTP %s and retries incomplete discovery',
+  async (status) => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(
+        response(Array.from({ length: 20 }, (_, index) => pool(index + 10, 20000 + index, String(index + 1))))
+      )
+      .mockResolvedValueOnce(response([], status))
+      .mockResolvedValueOnce(response([pool(1, 50000, '8')]))
+    const load = createGeckoTerminalPrices(fetchImpl)
+    const publish = jest.fn()
+    expect(await finish(load([identifier], undefined, publish))).toEqual({ [identifier]: { price: 20 } })
+    expect(publish).toHaveBeenCalledWith({ [identifier]: { price: 20 } })
+    expect(await finish(load([identifier]))).toEqual({ [identifier]: { price: 20 } })
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    jest.advanceTimersByTime(GECKO_QUOTE_TTL_MS)
+    expect(await finish(load([identifier]))).toEqual({ [identifier]: { price: 8 } })
+    expect(fetchImpl.mock.calls[2][0]).toContain('/tokens/')
+  }
+)
 
 test('publishes a token price while another token is still queued', async () => {
   const fetchImpl = jest.fn(async () => response([pool(1)]))
@@ -262,4 +273,24 @@ test('looks up Robinhood tokens using the provider network identifier', async ()
     `https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${token}/pools?page=1`,
     expect.any(Object)
   )
+})
+
+test('does not cache or publish partial discovery after cancellation', async () => {
+  const controller = new AbortController()
+  const fetchImpl = jest
+    .fn()
+    .mockResolvedValueOnce(response(Array.from({ length: 20 }, (_, index) => pool(index + 10))))
+    .mockImplementationOnce(async () => {
+      controller.abort(new Error('account changed'))
+      throw controller.signal.reason
+    })
+    .mockResolvedValueOnce(response([pool(1, 50000, '8')]))
+  const load = createGeckoTerminalPrices(fetchImpl)
+  const publish = jest.fn()
+  const pending = load([identifier], controller.signal, publish)
+  const rejected = expect(pending).rejects.toThrow('account changed')
+  await jest.runAllTimersAsync()
+  await rejected
+  expect(publish).not.toHaveBeenCalled()
+  expect(await finish(load([identifier]))).toEqual({ [identifier]: { price: 8 } })
 })

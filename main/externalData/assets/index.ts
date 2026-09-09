@@ -31,6 +31,9 @@ type PriceLoader = (
 const defaultPriceLoader: PriceLoader = (identifiers, signal) =>
   loadDefiLlamaPrices(identifiers, fetch, Date.now, signal)
 
+// Use pool USD prices for Robinhood tokens after inconsistent primary-provider quotes.
+const usesPoolPricing = (identifier: string) => identifier.startsWith('robinhood:')
+
 const tokenIdentifier = (token: Token) => {
   const chain = CHAIN_PRICE_IDENTIFIERS[token.chainId]?.chain
   const address = token.address.toLowerCase()
@@ -94,7 +97,11 @@ export default function rates(
       const identifiers = [...targets.keys()]
       let prices: Record<string, ExternalPrice> = {}
       try {
-        prices = await loadPrices(identifiers, controller.signal)
+        const primary = await loadPrices(
+          identifiers.filter((id) => !usesPoolPricing(id)),
+          controller.signal
+        )
+        prices = Object.fromEntries(Object.entries(primary).filter(([id]) => !usesPoolPricing(id)))
       } catch {
         controller.signal.throwIfAborted()
       }

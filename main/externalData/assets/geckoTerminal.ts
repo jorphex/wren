@@ -155,11 +155,20 @@ export function createGeckoTerminalPrices(fetchImpl: typeof fetch = fetch, now =
   async function discover(target: Target, signal?: AbortSignal) {
     let best: ReturnType<typeof poolQuote>
     const seen = new Set<string>()
+    let complete = true
     for (let page = 1; page <= MAX_POOL_PAGES; page++) {
-      const pools = await request(
-        `/networks/${target.network}/tokens/${target.address}/pools?page=${page}`,
-        signal
-      )
+      let pools: Pool[]
+      try {
+        pools = await request(
+          `/networks/${target.network}/tokens/${target.address}/pools?page=${page}`,
+          signal
+        )
+      } catch (error) {
+        signal?.throwIfAborted()
+        if (!best) throw error
+        complete = false
+        break
+      }
       let added = false
       for (const pool of pools.slice(0, 20)) {
         if (typeof pool.id !== 'string' || seen.has(pool.id)) continue
@@ -171,7 +180,13 @@ export function createGeckoTerminalPrices(fetchImpl: typeof fetch = fetch, now =
       if (pools.length < 20 || !added) break
     }
     const quote = best ? { price: best.price } : undefined
-    save(target.identifier, { pool: best?.pool, quote, selectedAt: now(), checkedAt: now() })
+    // Keep a usable quote, but rediscover after quote expiry if a later page failed.
+    save(target.identifier, {
+      pool: complete ? best?.pool : undefined,
+      quote,
+      selectedAt: now(),
+      checkedAt: now()
+    })
     return quote
   }
 
