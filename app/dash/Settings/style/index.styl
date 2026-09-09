@@ -734,17 +734,33 @@
 
 .settingsCategories
   display flex
+  gap var(--wren-space-1)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
+
+  button.wrenControl.wrenControlGhost
+    flex 1
+    min-width 0
+    min-height 44px
+    height auto
+    padding var(--wren-space-2)
+    font-size var(--wren-type-small)
+    border-color transparent
+    border-radius var(--wren-radius-sm)
+
+    &[aria-pressed='true'],
+    &[aria-pressed='true']:hover:not(:disabled)
+      border-color var(--wren-border-subtle)
+      color var(--wren-text-primary)
+      background var(--wren-surface-active)
+      box-shadow var(--wren-shadow-sm)
   flex-wrap wrap
-  gap 4px
   margin-bottom 20px
-  button[aria-pressed='true']
-    background var(--wren-surface-active)
 
 .wrenSettingsSection[hidden]
   display none
-
-.settingsCategories button.wrenControl.wrenControlGhost
-  min-height 44px
 
 .settings .recentRecipientsClear,
 .recentRecipientsClear.localSetting

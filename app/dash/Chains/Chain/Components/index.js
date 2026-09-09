@@ -287,7 +287,6 @@ export const ChainHeader = ({
   primaryColor,
   showExpand,
   showToggle,
-  compact,
   status
 }) => {
   const isMainnet = id === 1
@@ -298,11 +297,6 @@ export const ChainHeader = ({
       </div>
       <div className='networkIdentityText'>
         <span className='signerName'>{name}</span>
-        <div className='networkChainId'>
-          {compact
-            ? `${isTestnet ? 'Testnet' : id === 1 ? 'Mainnet' : 'Chain'} · 0x${Number(id).toString(16)}`
-            : `Chain ID ${id}`}
-        </div>
       </div>
       {showExpand && (
         <span className='networkDetailsChevron' aria-hidden='true'>

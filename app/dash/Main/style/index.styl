@@ -619,11 +619,29 @@ button.dashSupportWrenButton.wrenControl
 
 .networkEditorSections
   display flex
-  gap 8px
-  margin-bottom 16px
+  gap var(--wren-space-1)
+  padding var(--wren-space-1)
+  border 1px solid var(--wren-border-subtle)
+  border-radius var(--wren-radius-md)
+  background var(--wren-surface-inset)
 
-  [aria-pressed='true']
-    background var(--wren-surface-active)
+  button.wrenControl.wrenControlGhost
+    flex 1
+    min-width 0
+    min-height 44px
+    height auto
+    padding var(--wren-space-2)
+    font-size var(--wren-type-small)
+    border-color transparent
+    border-radius var(--wren-radius-sm)
+
+    &[aria-pressed='true'],
+    &[aria-pressed='true']:hover:not(:disabled)
+      border-color var(--wren-border-subtle)
+      color var(--wren-text-primary)
+      background var(--wren-surface-active)
+      box-shadow var(--wren-shadow-sm)
+  margin-bottom 16px
 
 .networkEditorLiveStatus
   color var(--wren-text-secondary)
@@ -631,9 +649,6 @@ button.dashSupportWrenButton.wrenControl
 
 .accountTypeAdvanced
   margin-top 20px
-
-.networkEditorSections button.wrenControl.wrenControlGhost
-  min-height 44px
 
 .originAccountAccess
   display flex

@@ -129,7 +129,7 @@ test('opens network details from the identity region while keeping the toggle se
     />
   )
   const details = screen.getByRole('button', { name: 'Polygon, Chain ID 137' })
-  expect(screen.getByText('Chain ID 137')).toBeTruthy()
+  expect(screen.queryByText('Chain ID 137')).toBeNull()
   const toggle = screen.getByRole('button', { name: 'Disable Polygon' })
 
   expect(details.classList.contains('networkDetailsTrigger')).toBe(true)

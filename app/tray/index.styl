@@ -94,12 +94,11 @@ div
 ::-webkit-scrollbar-thumb
   border 2px solid transparent
   border-radius 2px
-  background-color var(--wren-text-muted)
+  background-color unquote('color-mix(in srgb, var(--wren-text-muted) 40%, transparent)')
   background-clip content-box
 
 ::-webkit-scrollbar-thumb:hover
-  border-width 1px
-  background-color var(--wren-text-tertiary)
+  background-color unquote('color-mix(in srgb, var(--wren-text-muted) 60%, transparent)')
 
 .clip
   *

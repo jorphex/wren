@@ -2306,13 +2306,14 @@ const reviewScenarios = () => [
     logicalWidth: 620,
     logicalHeight: SHORT_SHELL_HEIGHT,
     ready: '.contractVerificationCredential',
-    requiredControls: ['Etherscan API key', 'Save'],
+    requiredControls: ['Etherscan API key'],
     requiredText: [
       'CONTRACT VERIFICATION',
       'Not configured',
-      'OS credential protection',
+      'Protected by this device’s OS.',
+      'Save',
       'Use 16–128 letters, numbers, underscores, or hyphens.',
-      'Not included in profile backups'
+      'Excluded from backups.'
     ],
     captureScroll: 'target',
     captureScrollSelector: '#wren-settings-contract-verification'
