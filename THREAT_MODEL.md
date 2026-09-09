@@ -418,7 +418,8 @@ not send wallet addresses, balances, or keys to either price service.
 
 GeckoTerminal requests share a desktop queue with at least 6.5 seconds
 between starts. HTTP 429 responses pause requests with exponential backoff
-and respect Retry-After. Quote and missing-pool caches last five minutes;
+and respect Retry-After. Remaining token lookups resume after the pause.
+Quote and missing-pool caches last five minutes;
 pool selection lasts 30 minutes. The cache holds up to 1,000 token entries.
 Each request has a 10-second timeout and a 1 MiB response limit. If a later
 pool page fails, Wren retains the best eligible quote found. It retries discovery

@@ -245,7 +245,7 @@ export function createGeckoTerminalPrices(fetchImpl: typeof fetch = fetch, now =
     }
     for (const target of discovery) {
       signal?.throwIfAborted()
-      if (now() < blockedUntil) break
+      if (now() < blockedUntil) await wait(blockedUntil - now(), signal)
       try {
         const quote = await discover(target, signal)
         if (quote) {

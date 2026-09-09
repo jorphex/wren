@@ -12,6 +12,8 @@ For release details and platform limits, see
 - Matched wallet and Control Center scrollbars with a thin, muted style.
 - Used GeckoTerminal for Robinhood Chain token prices.
 - Kept valid pool quotes when a later page fails and retried incomplete searches.
+- Resume queued token lookups after provider rate limits.
+- Improved custom-token actions and kept token metadata visible.
 - Removed network-list subtitles. Grouped network editor and Settings controls
   with a clear selected state.
 - Updated the YAML parser to a patched release.

@@ -414,8 +414,7 @@ const TokenDetailsForm = ({ req, chain, tokenData = {}, isEdit = false, initialA
                   />
                 </label>
               </div>
-              <details open={lookupState === 'manual' || !validDecimals || undefined}>
-                <summary>Token metadata</summary>{' '}
+              <div className='tokenMetadata'>
                 <label className='tokenInputLabel' htmlFor='tokenDecimals'>
                   <span>{COPY.decimals}</span>
                   <input
@@ -448,7 +447,7 @@ const TokenDetailsForm = ({ req, chain, tokenData = {}, isEdit = false, initialA
                     onChange={(event) => setLogoUri(event.target.value)}
                   />
                 </label>
-              </details>
+              </div>
               {saveError ? (
                 <div className='newTokenSaveError' role='alert'>
                   {saveError}

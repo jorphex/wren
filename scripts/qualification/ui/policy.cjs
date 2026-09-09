@@ -4224,6 +4224,26 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
   ]
   const selected = includeReview ? [...defaultScenarios, ...reviewScenarios()] : defaultScenarios
   if (includeReview) {
+    for (const removing of [false, true]) {
+      const base = selected.find((scenario) => scenario.id === 'dash-tokens-list-full-1')
+      selected.push({
+        ...base,
+        id: removing ? 'dash-token-removal-full-1' : 'dash-token-expanded-full-1',
+        action: {
+          type: 'sequence',
+          steps: [
+            { type: 'clickText', text: 'Expand yvWETH-1 token on chain 1' },
+            ...(removing ? [{ type: 'clickText', text: 'Remove token' }] : [])
+          ]
+        },
+        requiredControls: removing
+          ? ['Cancel', 'Remove token']
+          : ['Edit yvWETH-1 token', 'Remove yvWETH-1 token'],
+        layoutExpectations: []
+      })
+    }
+  }
+  if (includeReview) {
     for (const id of ['dash-network-add-full-1', 'dash-network-editor-full-1', 'dash-network-details-full-1', 'dash-send-sweep-review-full-1']) {
       const base = selected.find((scenario) => scenario.id === id)
       if (base && !selected.some((scenario) => scenario.id === id.replace('-full-', '-short-'))) selected.push({ ...base, id: id.replace('-full-', '-short-'), logicalHeight: SHORT_SHELL_HEIGHT })
@@ -4337,7 +4357,7 @@ const scenarioMatrix = ({ includeReview = false } = {}) => {
           ['Encoded constructor arguments']
         ],
         ['dash-account-chooser-full-1', ['Advanced'], ['Create private key'], ['Advanced']],
-        ['dash-add-token-details-full-1', ['Token metadata'], ['Decimals', 'Logo URI'], ['Token metadata']]
+        ['dash-add-token-details-full-1', [], ['Decimals', 'Logo URI'], []]
       ].map(([id, summaries, requiredControls, requiredText]) => {
         const base = selected.find((scenario) => scenario.id === id)
         if (!base) throw new Error(`Missing disclosure base: ${id}`)

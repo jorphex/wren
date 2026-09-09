@@ -139,9 +139,7 @@ test('stages removal, focuses the safe action, and deduplicates confirmation', a
   const dialog = screen.getByRole('alertdialog', { name: 'Remove ALPHA?' })
   expect(dialog.getAttribute('aria-modal')).toBeNull()
   expect(screen.getByText('Remove ALPHA?')).toBeTruthy()
-  expect(
-    screen.getByText('This removes the custom token from Wren. On-chain assets are not affected.')
-  ).toBeTruthy()
+  expect(screen.getByText('Remove from your token list.')).toBeTruthy()
   const cancel = screen.getByRole('button', { name: 'Cancel' })
   expect(document.activeElement).toBe(cancel)
   await user.keyboard('{Escape}')
