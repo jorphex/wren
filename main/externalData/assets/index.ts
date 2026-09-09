@@ -14,6 +14,7 @@ const CHAIN_PRICE_IDENTIFIERS: Record<number, { chain: string; native: string }>
   10: { chain: 'optimism', native: 'coingecko:ethereum' },
   100: { chain: 'xdai', native: 'coingecko:xdai' },
   137: { chain: 'polygon', native: 'coingecko:polygon-ecosystem-token' },
+  4663: { chain: 'robinhood', native: 'coingecko:ethereum' },
   8453: { chain: 'base', native: 'coingecko:ethereum' },
   42161: { chain: 'arbitrum', native: 'coingecko:ethereum' },
   747474: { chain: 'katana', native: 'coingecko:ethereum' }

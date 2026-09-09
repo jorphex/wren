@@ -251,3 +251,15 @@ test.each([404, 429, 503])(
     expect(jest.getTimerCount()).toBe(0)
   }
 )
+
+test('looks up Robinhood tokens using the provider network identifier', async () => {
+  const fetchImpl = jest.fn(async () => response([pool(1, 20000, '3', 'base', 'robinhood')]))
+  const load = createGeckoTerminalPrices(fetchImpl)
+  expect(await finish(load([`robinhood:${token}`]))).toEqual({
+    [`robinhood:${token}`]: { price: 3 }
+  })
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${token}/pools?page=1`,
+    expect.any(Object)
+  )
+})

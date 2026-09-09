@@ -268,3 +268,24 @@ test.each(['stop', 'subscription'])(
     rates.stop()
   }
 )
+
+test('routes Robinhood token prices to fallback and ETH prices to chain 4663', async () => {
+  const token = { ...knownToken, chainId: 4663 }
+  const identifier = `robinhood:${token.address.toLowerCase()}`
+  store.set('main.tokens.known', account, [token])
+  store.set('main.tokens.custom', [])
+  const primary = jest.fn(async () => ({ 'coingecko:ethereum': { price: 2000 } }))
+  const fallback = jest.fn(async () => ({ [identifier]: { price: 3 } }))
+  const rates = Rates(store, primary, fallback)
+  rates.start()
+  rates.updateSubscription([4663], account)
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(fallback).toHaveBeenCalledWith([identifier], expect.any(AbortSignal), expect.any(Function))
+  expect(store.setNativeCurrencyData).toHaveBeenCalledWith('ethereum', 4663, { usd: { price: 2000 } })
+  expect(store.setRates).toHaveBeenCalledWith({
+    [`4663:${token.address.toLowerCase()}`]: { usd: { price: 3 } }
+  })
+  rates.stop()
+})

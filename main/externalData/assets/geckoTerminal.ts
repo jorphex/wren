@@ -15,7 +15,8 @@ const NETWORKS: Record<string, string> = {
   polygon: 'polygon_pos',
   base: 'base',
   arbitrum: 'arbitrum',
-  katana: 'katana'
+  katana: 'katana',
+  robinhood: 'robinhood'
 }
 const ADDRESS = /^0x[0-9a-f]{40}$/u
 const POOL_ADDRESS = /^0x(?:[0-9a-f]{40}|[0-9a-f]{64})$/u
