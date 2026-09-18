@@ -88,6 +88,13 @@ updates:
         update-types:
           - version-update:semver-major
     groups:
+      react:
+        patterns:
+          - react
+          - react-dom
+        update-types:
+          - minor
+          - patch
       development-minor-and-patch:
         dependency-type: development
         update-types:
