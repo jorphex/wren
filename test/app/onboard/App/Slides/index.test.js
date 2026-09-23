@@ -42,11 +42,16 @@ it('labels both Companion download controls without the compact icon-only overri
     name: 'Open Wren Companion release downloads for Chrome'
   })
   const firefox = screen.getByRole('button', {
-    name: 'Open Wren Companion release downloads for Firefox'
+    name: 'Open Wren Companion on Firefox Add-ons'
   })
 
   expect(chrome.textContent).toContain('Chrome')
   expect(firefox.textContent).toContain('Firefox')
+  fireEvent.click(firefox)
+  expect(link.send).toHaveBeenCalledWith(
+    'tray:openExternal',
+    'https://addons.mozilla.org/en-US/firefox/addon/wren-companion/'
+  )
   expect(chrome.className).not.toContain('wrenControlIcon')
   expect(firefox.className).not.toContain('wrenControlIcon')
 })

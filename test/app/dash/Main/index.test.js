@@ -3,7 +3,7 @@ import Restore from 'react-restore'
 import { Main } from '../../../../app/dash/Main'
 import {
   WREN_COMPANION_CHROME_WEB_STORE_URL,
-  WREN_COMPANION_RELEASES_URL,
+  WREN_COMPANION_FIREFOX_ADDONS_URL,
   WREN_SUPPORT_ADDRESS,
   WREN_SUPPORT_URL
 } from '../../../../resources/constants'
@@ -121,7 +121,7 @@ it('keeps Firefox on companion releases while store approval is pending', () => 
 
   fireEvent.click(screen.getByRole('button', { name: 'Download Firefox companion' }))
 
-  expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_RELEASES_URL)
+  expect(link.send).toHaveBeenCalledWith('tray:openExternal', WREN_COMPANION_FIREFOX_ADDONS_URL)
 })
 
 it('routes support, tutorial, and quit actions', () => {

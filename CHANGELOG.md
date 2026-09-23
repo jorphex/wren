@@ -6,6 +6,10 @@ For release details and platform limits, see
 
 ## Unreleased
 
+## 0.1.10 - 2026-09-23
+
+- Linked Firefox Companion buttons to the approved Firefox Add-ons listing.
+- Updated Electron, React, Ledger libraries, validation, and development tools.
 - Added background activity for direct transactions and standard token transfers
   across saved accounts. Calls outside Wren have a clear source label.
 - Recognised common approvals, deposits, and withdrawals. Grouped external activity

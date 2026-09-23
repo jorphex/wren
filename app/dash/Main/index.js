@@ -6,7 +6,7 @@ import link from '../../../resources/link'
 import svg from '../../../resources/svg'
 import {
   WREN_COMPANION_CHROME_WEB_STORE_URL,
-  WREN_COMPANION_RELEASES_URL,
+  WREN_COMPANION_FIREFOX_ADDONS_URL,
   WREN_SUPPORT_ADDRESS,
   WREN_SUPPORT_URL
 } from '../../../resources/constants'
@@ -140,7 +140,7 @@ export class Main extends React.Component {
                 type='button'
                 aria-label='Download Firefox companion'
                 className='wrenControl wrenControlGhost wrenControlIcon'
-                onClick={() => link.send('tray:openExternal', WREN_COMPANION_RELEASES_URL)}
+                onClick={() => link.send('tray:openExternal', WREN_COMPANION_FIREFOX_ADDONS_URL)}
               >
                 {svg.firefox(22)}
                 <span>Firefox</span>

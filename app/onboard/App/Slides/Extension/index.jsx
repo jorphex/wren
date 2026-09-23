@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import onboardingCompanion from 'url:../../../../../asset/ui/onboarding-companion-v4.png'
 import link from '../../../../../resources/link'
+import { WREN_COMPANION_FIREFOX_ADDONS_URL } from '../../../../../resources/constants'
 import svg from '../../../../../resources/svg'
 
 import { BrowserChoice, BrowserChoices, Slide, SlideBody, SlideItem, Tag } from '../../styled'
@@ -31,12 +32,10 @@ const Extension = ({ setTitle, setProceed }) => {
             <span>Chrome</span>
           </BrowserChoice>
           <BrowserChoice
-            aria-label='Open Wren Companion release downloads for Firefox'
+            aria-label='Open Wren Companion on Firefox Add-ons'
             className='wrenControl wrenControlSecondary'
             type='button'
-            onClick={() =>
-              link.send('tray:openExternal', 'https://github.com/jorphex/wren-companion/releases')
-            }
+            onClick={() => link.send('tray:openExternal', WREN_COMPANION_FIREFOX_ADDONS_URL)}
           >
             {svg.firefox(20)}
             <span>Firefox</span>
