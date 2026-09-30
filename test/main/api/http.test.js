@@ -13,6 +13,7 @@ import {
   HTTP_REQUEST_TIMEOUT_MS
 } from '../../../main/api/http'
 import { MAX_REQUEST_BYTES } from '../../../main/api/validPayload'
+import originSessions from '../../../main/api/originSessions'
 import provider from '../../../main/provider'
 import accounts from '../../../main/accounts'
 import { isTrusted, updateOrigin } from '../../../main/api/origins'
@@ -88,7 +89,10 @@ beforeAll(() => {
 })
 
 afterEach((done) => {
-  server.close(done)
+  server.close(() => {
+    originSessions.clear()
+    done()
+  })
 })
 
 const send = ({ body = '', method = 'POST', headers, agent, path } = {}) =>

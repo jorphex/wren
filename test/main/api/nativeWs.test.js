@@ -2,6 +2,7 @@ import WebSocket from 'ws'
 import { EventEmitter } from 'stream'
 
 import ws from '../../../main/api/ws'
+import originSessions from '../../../main/api/originSessions'
 import {
   authenticateNativeRequest,
   issueNativeChallenge,
@@ -91,6 +92,7 @@ beforeEach(() => {
 
 afterEach(() => {
   socket.emit('close')
+  originSessions.clear()
   jest.useRealTimers()
 })
 
