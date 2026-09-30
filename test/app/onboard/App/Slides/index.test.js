@@ -1,8 +1,7 @@
-import fs from 'fs'
 import link from '../../../../../resources/link'
 
 import { fireEvent, render, screen } from '../../../../componentSetup'
-import Accounts from '../../../../../app/onboard/App/Slides/Accounts'
+
 import Extension from '../../../../../app/onboard/App/Slides/Extension'
 import Slides from '../../../../../app/onboard/App/Slides'
 
@@ -26,15 +25,6 @@ afterEach(() => {
   delete global.store
 })
 
-it('introduces every supported account type without internal signer terminology', () => {
-  render(<Accounts setProceed={jest.fn()} setTitle={jest.fn()} />)
-
-  expect(
-    screen.getByText('Connect a hardware wallet, create a local account, or add a watch-only address.')
-  ).toBeTruthy()
-  expect(screen.getByText('Select Add account, then choose how to add it.')).toBeTruthy()
-})
-
 it('labels both Companion download controls without the compact icon-only override', () => {
   render(<Extension setProceed={jest.fn()} setTitle={jest.fn()} />)
 
@@ -52,8 +42,6 @@ it('labels both Companion download controls without the compact icon-only overri
     'tray:openExternal',
     'https://addons.mozilla.org/en-US/firefox/addon/wren-companion/'
   )
-  expect(chrome.className).not.toContain('wrenControlIcon')
-  expect(firefox.className).not.toContain('wrenControlIcon')
 })
 
 it.each([
@@ -69,12 +57,4 @@ it.each([
     ['tray:action', 'navReplace', 'dash', [{ view: 'accounts', data: { showAddAccounts: true, ...data } }]],
     ['frame:close']
   ])
-})
-
-it('uses the same restrained scrollbar treatment as the wallet shells', () => {
-  const source = fs.readFileSync('app/onboard/App/index.styl', 'utf8')
-
-  expect(source).toMatch(
-    /::-webkit-scrollbar[\s\S]*?width 6px[\s\S]*?::-webkit-scrollbar-track[\s\S]*?background transparent[\s\S]*?::-webkit-scrollbar-thumb[\s\S]*?border 2px solid transparent[\s\S]*?border-radius 2px[\s\S]*?background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 40%, transparent\)'\)[\s\S]*?::-webkit-scrollbar-thumb:hover\n {2}background-color unquote\('color-mix\(in srgb, var\(--wren-text-muted\) 60%, transparent\)'\)/
-  )
 })

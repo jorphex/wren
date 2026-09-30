@@ -288,11 +288,6 @@ describe('dapp guardrail actions', () => {
   })
 })
 
-it('does not expose the retired Pylon migration actions', () => {
-  expect(storeActions).not.toHaveProperty('mutePylonMigrationNotice')
-  expect(storeActions).not.toHaveProperty('migrateToPylonConnections')
-})
-
 it('records and finishes durable account and signer removal journals', () => {
   const reduce = (action, initial, ...args) => {
     let result

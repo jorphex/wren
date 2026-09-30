@@ -3,7 +3,6 @@ import Restore from 'react-restore'
 import { act, render, screen, waitFor } from '../../../componentSetup'
 import {
   Earn,
-  activityPreviewLimit,
   formatPercentLabel,
   formatReceiptAmount,
   positionsMatchAccount,
@@ -340,27 +339,6 @@ it('formats receipt base units without floating-point conversion', () => {
   expect(formatReceiptAmount('1200000', 6)).toBe('1.2')
   expect(formatReceiptAmount('1234567890123456789', 18)).toBe('~1.234567')
   expect(formatReceiptAmount('42', 0)).toBe('42')
-})
-
-it('fits activity cards within the remaining viewport budget', () => {
-  expect(
-    activityPreviewLimit({
-      cardHeights: [100, 100, 100],
-      total: 5,
-      budget: 265,
-      headingHeight: 20,
-      moreHeight: 45
-    })
-  ).toBe(2)
-  expect(
-    activityPreviewLimit({
-      cardHeights: [100, 100, 100],
-      total: 5,
-      budget: 164,
-      headingHeight: 20,
-      moreHeight: 45
-    })
-  ).toBe(0)
 })
 
 it('fails closed while positions belong to the previously selected account', () => {

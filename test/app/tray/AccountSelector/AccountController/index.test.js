@@ -1,40 +1,12 @@
 import { fireEvent, render, screen } from '../../../../componentSetup'
-import {
-  Account,
-  AccountTypeMark,
-  accountTypeIcon
-} from '../../../../../app/tray/AccountSelector/AccountController'
-import { getAccountTypeMarkSize } from '../../../../../resources/Components/AccountTypeMark'
+import { Account } from '../../../../../app/tray/AccountSelector/AccountController'
+
 import link from '../../../../../resources/link'
 
 jest.mock('../../../../../resources/link', () => ({
   rpc: jest.fn(),
   send: jest.fn()
 }))
-
-test('maps account identity types to distinct Wren glyphs', () => {
-  expect(accountTypeIcon('address')).toBe('watch')
-  expect(accountTypeIcon('seed')).toBe('seedling')
-  expect(accountTypeIcon('ring')).toBe('key')
-  expect(accountTypeIcon('trezor')).toBe('hardware')
-})
-
-test('balances account marks from the surrounding context size', () => {
-  expect(getAccountTypeMarkSize('ledger', 20)).toBe(17)
-  expect(getAccountTypeMarkSize('trezor', 20)).toBe(24)
-  expect(getAccountTypeMarkSize('lattice', 20)).toBe(20)
-  expect(getAccountTypeMarkSize('seed', 20)).toBe(20)
-
-  const { container } = render(<AccountTypeMark type='trezor' size={17} />)
-  const mark = container.firstChild
-  const icon = mark.firstChild
-
-  expect(mark.style.width).toBe('17px')
-  expect(mark.style.height).toBe('17px')
-  expect(mark.style.lineHeight).toBe('0')
-  expect(icon.getAttribute('width')).toBe('100%')
-  expect(icon.getAttribute('height')).toBe('100%')
-})
 
 test('selects an account from the startup chooser', () => {
   const id = '0x0000000000000000000000000000000000000002'

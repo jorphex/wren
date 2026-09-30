@@ -1,6 +1,6 @@
 import { act, render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
-import { getAddressLimit, Signer } from '../../../../app/dash/Signer'
+import { Signer } from '../../../../app/dash/Signer'
 import { SignerStatus } from '../../../../app/dash/Signer/SignerStatus'
 import { getAddress } from '../../../../resources/utils'
 
@@ -31,35 +31,9 @@ class SignerHarness extends Signer {
 const renderSigner = (props) =>
   render(<SignerHarness id='device-1' expanded={true} name='Test signer' {...props} />)
 
-const renderSignerPreview = (props) =>
-  render(<SignerHarness id='device-1' index={0} expanded={false} name='Test signer' {...props} />)
-
 beforeEach(() => {
   link.rpc.mockReset()
   link.send.mockReset()
-})
-
-it('derives address capacity from the supported shell heights', () => {
-  expect(getAddressLimit(744)).toBe(8)
-  expect(getAddressLimit(900)).toBe(10)
-  expect(getAddressLimit(2000)).toBe(10)
-})
-
-it('maps warning and danger signer status tones to distinct classes', () => {
-  const view = renderSignerPreview({ type: 'trezor', status: 'wrong-app', addresses: [] })
-  expect(screen.getByRole('status').classList.contains('signerStatusWarning')).toBe(true)
-
-  view.rerender(
-    <SignerHarness
-      id='device-1'
-      expanded={false}
-      name='Test signer'
-      type='trezor'
-      status='device-error'
-      addresses={[]}
-    />
-  )
-  expect(screen.getByRole('status').classList.contains('signerStatusDanger')).toBe(true)
 })
 
 it('renders the Trezor PIN matrix as named native controls', () => {

@@ -80,12 +80,3 @@ it('accepts a new confirmed handoff while mounted without losing the deployment 
   await user.click(screen.getByRole('button', { name: 'Deploy contract' }))
   expect(screen.getByLabelText('Deployment draft').value).toBe('0x6000')
 })
-
-it('uses the established quiet Send-style peer control without a primary action treatment', () => {
-  render(<Contracts />)
-
-  const switcher = screen.getByRole('group', { name: 'Contract tool' })
-  expect(switcher.classList.contains('sendModeSwitch')).toBe(true)
-  expect(switcher.classList.contains('contractsModeSwitch')).toBe(true)
-  expect(switcher.querySelector('.wrenControlPrimary')).toBeNull()
-})

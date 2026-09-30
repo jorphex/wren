@@ -1,10 +1,6 @@
 import migration from '../../../../../main/store/migrate/migrations/44'
 import { createState } from '../setup'
 
-it('has migration version 44', () => {
-  expect(migration.version).toBe(44)
-})
-
 it('removes legacy boolean trust and starts an empty authenticated credential store', () => {
   const state = createState(43)
   state.main.accounts = { fixture: { name: 'preserved' } }

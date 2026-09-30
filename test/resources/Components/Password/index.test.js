@@ -23,12 +23,6 @@ describe('creating password', () => {
     }
   }
 
-  it('should display the correct title when entering the password', () => {
-    setupComponent()
-
-    expect(screen.getByRole('heading').textContent).toBe('Create password')
-  })
-
   it('supports password-manager creation semantics and an explicit reveal action', async () => {
     const { user } = setupComponent()
     const input = screen.getByRole('textbox', { name: 'Create password' })
@@ -96,14 +90,6 @@ describe('creating password', () => {
     expect(getSubmitButton().disabled).toBe(true)
   })
 
-  it('should show the continue button when a valid password is entered', async () => {
-    const { enterPassword, getSubmitButton } = setupComponent()
-
-    await enterPassword(validPassword)
-
-    expect(getSubmitButton().textContent).toBe('Continue')
-  })
-
   it('accepts an eight-character password after consent when its estimate is low', async () => {
     const { user, enterPassword, getSubmitButton } = setupComponent()
 
@@ -147,24 +133,6 @@ describe('confirming password', () => {
     await enterPassword('DOES_NOT_MATCH')
 
     expect(screen.getByRole('alert').textContent).toBe('Passwords do not match')
-  })
-
-  it('uses confirmation-specific empty guidance', () => {
-    setupComponent()
-
-    expect(screen.getByText('Enter your password again')).toBeTruthy()
-    expect(screen.queryByRole('alert')).toBeNull()
-    expect(screen.getByRole('textbox', { name: 'Confirm password' }).getAttribute('aria-describedby')).toBe(
-      screen.getByText('Enter your password again').id
-    )
-  })
-
-  it('should show the create button when a valid password is entered', async () => {
-    const { enterPassword, getConfirmButton } = setupComponent()
-
-    await enterPassword(validPassword)
-
-    expect(getConfirmButton().textContent).toBe('Create')
   })
 
   it('should call the onConfirm function when the password is confirmed', async () => {

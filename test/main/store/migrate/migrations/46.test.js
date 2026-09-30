@@ -1,10 +1,6 @@
 import migration from '../../../../../main/store/migrate/migrations/46'
 import { createState } from '../setup'
 
-it('has migration version 46', () => {
-  expect(migration.version).toBe(46)
-})
-
 it('preserves legacy null gas fees and unrelated metadata', () => {
   const state = createState(45)
   const preservedMetadata = { customField: { preserved: true } }

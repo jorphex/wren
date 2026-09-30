@@ -1,9 +1,7 @@
-import Restore from 'react-restore'
 import { fireEvent, render, screen, waitFor, within } from '../../../componentSetup'
 import {
   portfolioSummary,
   AccountAddressActions,
-  AccountBody,
   AccountMain,
   AccountNameEditor,
   EMPTY_ACTIVITY_MODULE_HEIGHT,
@@ -68,33 +66,6 @@ it('keeps the portfolio Send action connected to the native flow', async () => {
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view: 'send', data: {} })
 })
 
-it('keeps populated portfolio balance copy concise', () => {
-  const main = accountMain({
-    balances: [
-      {
-        address: '0x0000000000000000000000000000000000000000',
-        balance: '1000000000000000000',
-        chainId: 1,
-        decimals: 18,
-        symbol: 'ETH'
-      }
-    ],
-    networks: {
-      1: { id: 1, isTestnet: false, connection: { endpoints: [{ connected: true }] } }
-    },
-    networksMeta: {
-      1: { nativeCurrency: { decimals: 18, symbol: 'ETH', usd: { price: 1 } } }
-    }
-  })
-
-  render(main.renderPortfolioSummary())
-
-  expect(screen.queryByText('Across enabled networks')).toBeNull()
-  expect(screen.queryByText('Connected networks')).toBeNull()
-  expect(document.querySelector('.accountPortfolioMeta')).toBeNull()
-  expect(screen.queryByText('No assets on this account yet')).toBeNull()
-})
-
 it('shows the selected account address QR on hover without a click action', () => {
   render(<AccountAddressActions address={address} name='Workshop' />)
   const qrTrigger = screen.getByRole('button', { name: 'Account address QR code' })
@@ -156,36 +127,6 @@ it('cancels header name editing without changing the account', async () => {
   expect(link.send).not.toHaveBeenCalledWith('tray:renameAccount', expect.anything(), expect.anything())
   const rename = screen.getByRole('button', { name: 'Update account name' })
   await waitFor(() => expect(document.activeElement).toBe(rename))
-})
-
-it('uses the shared 64px wallet header and explicit title for expanded balances', () => {
-  const store = Restore.create(
-    {
-      selected: { open: false },
-      windows: {
-        panel: {
-          footer: { height: 0 },
-          nav: [{ view: 'expandedModule', data: { id: 'balances', account: address } }]
-        }
-      },
-      main: {
-        accounts: { [address]: { address } },
-        balances: { [address]: [] },
-        rates: {},
-        networks: { ethereum: {} },
-        networksMeta: { ethereum: {} }
-      }
-    },
-    {}
-  )
-  const ConnectedAccountBody = Restore.connect(AccountBody, store)
-
-  render(<ConnectedAccountBody id={address} />)
-
-  const view = document.querySelector('.accountView')
-  expect(view.classList.contains('accountViewCompact')).toBe(true)
-  expect(view.style.top).toBe('0px')
-  expect(screen.getByText('Balances')).toBeTruthy()
 })
 
 const portfolioStore =

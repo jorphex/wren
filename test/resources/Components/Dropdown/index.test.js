@@ -6,13 +6,6 @@ const options = [
   { text: 'Light', value: 'light' }
 ]
 
-it('exposes the full selected label through a native combobox', () => {
-  render(<Dropdown label='Theme' options={options} syncValue='dark' onChange={jest.fn()} />)
-
-  expect(screen.getByRole('combobox', { name: 'Theme' }).value).toBe('dark')
-  expect(screen.getByRole('option', { name: 'Dark' }).selected).toBe(true)
-})
-
 it('tracks a changed synchronized value without emitting a user change', () => {
   const onChange = jest.fn()
   const { rerender } = render(

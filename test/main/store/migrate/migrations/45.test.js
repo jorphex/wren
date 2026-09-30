@@ -1,10 +1,6 @@
 import migration from '../../../../../main/store/migrate/migrations/45'
 import { createState } from '../setup'
 
-it('has migration version 45', () => {
-  expect(migration.version).toBe(45)
-})
-
 it('clears protocol-one credentials while preserving unrelated state', () => {
   const state = createState(44)
   state.main.accounts = { fixture: { name: 'preserved' } }

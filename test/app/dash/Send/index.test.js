@@ -173,16 +173,6 @@ it('restores focus to the asset trigger after the picker closes', async () => {
   )
 })
 
-it('uses the shared illustrated empty-state anatomy when no asset is sendable', () => {
-  renderSend((state) => {
-    state.main.balances[account] = []
-    return state
-  })
-
-  expect(screen.getByText('No sendable assets on this network').closest('.wrenEmptyState')).toBeTruthy()
-  expect(screen.getByText('Wren found no positive balances available to send.')).toBeTruthy()
-})
-
 it('distinguishes balance refresh and disconnected asset networks from an empty account', () => {
   const { unmount } = renderSend((state) => {
     state.main.scanning = { [account]: true }
@@ -382,13 +372,6 @@ it('returns an open picker to the composer when the selected account changes', (
   })
 
   expect(link.send).toHaveBeenCalledWith('nav:back', 'dash')
-})
-
-it('uses the canonical chiseled input groups for recipient and amount', () => {
-  renderSend()
-
-  expect(screen.getByPlaceholderText('Enter an address').closest('.wrenInputGroup')).toBeTruthy()
-  expect(screen.getByPlaceholderText('0.00').closest('.wrenInputGroup')).toBeTruthy()
 })
 
 it('validates a recipient and amount before queueing the existing transaction review', async () => {

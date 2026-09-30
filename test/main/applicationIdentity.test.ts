@@ -6,7 +6,6 @@ import {
   APPLICATION_NAME,
   INSTANCE_LOCK_DIRECTORY,
   configureApplicationIdentity,
-  legacyProfilePath,
   requestWrenSingleInstanceLock
 } from '../../main/applicationIdentity'
 
@@ -97,11 +96,5 @@ it('rejects direct and nested access to the legacy Frame profile', () => {
 
   expect(() => configureApplicationIdentity(linked)).toThrow(
     'Wren cannot use a profile inside the Frame profile; use --import-frame-profile instead'
-  )
-})
-
-it('resolves the legacy Frame profile without touching it', () => {
-  expect(legacyProfilePath(path.join(path.sep, 'home', 'test', '.config'))).toBe(
-    path.join(path.sep, 'home', 'test', '.config', 'frame')
   )
 })

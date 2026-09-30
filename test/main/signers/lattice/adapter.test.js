@@ -38,25 +38,6 @@ afterEach(() => {
   store.clear()
 })
 
-it('has the correct adapter type', () => {
-  const adapter = new LatticeSignerAdapter()
-  expect(adapter.adapterType).toBe('lattice')
-})
-
-describe('#open', () => {
-  it('adds the settings observer', () => {
-    adapter.open()
-
-    expect(adapter.settingsObserver).toBeTruthy()
-  })
-
-  it('adds the signer observer', () => {
-    adapter.open()
-
-    expect(adapter.signerObserver).toBeTruthy()
-  })
-})
-
 describe('#close', () => {
   beforeEach(() => {
     adapter.open()

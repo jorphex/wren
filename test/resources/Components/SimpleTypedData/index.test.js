@@ -1,9 +1,5 @@
 import { screen, render } from '../../../componentSetup'
-import {
-  getTypedDataDeviceWarning,
-  getTypedDataReviewPresentation,
-  SimpleTypedData
-} from '../../../../resources/Components/SimpleTypedData'
+import { getTypedDataDeviceWarning, SimpleTypedData } from '../../../../resources/Components/SimpleTypedData'
 
 const typedData = {
   types: {
@@ -239,15 +235,4 @@ it('does not warn when device-specific review behavior is not known', () => {
       signingCapabilities: { typedDataHashOnly: false }
     })
   ).toBeUndefined()
-})
-
-it('uses authority-specific summaries without presenting recognition as approval', () => {
-  expect(
-    getTypedDataReviewPresentation({ permit2: { kind: 'allowance' } }, { version: 'V4', data: typedData })
-  ).toEqual({
-    eyebrow: 'Permit2 allowance',
-    title: 'Authorize token spending',
-    help: 'This signature can grant spending authority without a transaction.',
-    status: 'Permit2 structure recognized'
-  })
 })

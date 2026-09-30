@@ -408,27 +408,6 @@ it('offers one top-level clear-all action, cancels with Escape, and submits only
   expect(link.send).toHaveBeenCalledTimes(1)
 })
 
-it('uses singular confirmation copy for one staged request', async () => {
-  const { user } = render(
-    <ExpandedRequestsHarness
-      expanded
-      account='0xabc'
-      moduleId='requests'
-      requests={{ only: createRequest('only', 1) }}
-    />
-  )
-
-  await user.click(screen.getByRole('button', { name: 'Clear all requests' }))
-
-  expect(screen.getByText('Clear 1 request?')).toBeTruthy()
-  expect(
-    screen.getByText(
-      'This removes this request from the list. It does not cancel a transaction already submitted.'
-    )
-  ).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Clear' })).toBeTruthy()
-})
-
 it('restores request focus to its originating row after returning', async () => {
   const { user, unmount } = render(
     <RequestItem

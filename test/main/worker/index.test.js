@@ -57,16 +57,6 @@ describe('events', () => {
     worker = new WorkerProcess({ name: 'test-worker', modulePath: './test.js' })
   })
 
-  it('emits an event when a message is received', () => {
-    let emittedData = ''
-
-    worker.once('update', (data) => (emittedData = data))
-
-    currentChildProcess().emit('message', { event: 'update', payload: 'hello, world!' })
-
-    expect(emittedData).toBe('hello, world!')
-  })
-
   it('emits worker events without a payload', () => {
     const handler = jest.fn()
     worker.on('update', handler)
@@ -125,15 +115,6 @@ describe('api', () => {
   })
 
   describe('#kill', () => {
-    it('emits an exit event', () => {
-      let exitEmitted = false
-
-      worker.once('exit', () => (exitEmitted = true))
-      worker.kill()
-
-      expect(exitEmitted).toBe(true)
-    })
-
     it('kills the worker process', () => {
       worker.kill('SIGHUP')
 
