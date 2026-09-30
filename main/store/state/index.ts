@@ -909,6 +909,33 @@ const initial = {
   main: mainState
 }
 
+// Cached measurements belong to the previous session, not the saved configuration.
+// Clear them before validation, including when no versioned migration is needed.
+function clearCachedEndpointLatency(state: unknown) {
+  if (!isRecord(state) || !isRecord(state['main'])) return
+  const networks = state['main']['networks']
+  if (!isRecord(networks) || !isRecord(networks['ethereum'])) return
+
+  let invalidCount = 0
+  Object.values(networks['ethereum']).forEach((chain) => {
+    if (!isRecord(chain) || !isRecord(chain['connection'])) return
+    const endpoints = chain['connection']['endpoints']
+    if (!Array.isArray(endpoints)) return
+    endpoints.forEach((endpoint: unknown) => {
+      if (!isRecord(endpoint)) return
+      const latency = endpoint['latencyMs']
+      if (
+        latency !== undefined &&
+        (typeof latency !== 'number' || !Number.isFinite(latency) || latency < 0)
+      ) {
+        invalidCount++
+      }
+      delete endpoint['latencyMs']
+    })
+  })
+  if (invalidCount) log.warn('Discarded invalid cached RPC latency measurements', { count: invalidCount })
+}
+
 function clearSessionState(state: z.infer<typeof StateSchema>) {
   clearSessionOnlyOrigins(state.main)
 
@@ -954,6 +981,7 @@ function clearSessionState(state: z.infer<typeof StateSchema>) {
 
 export default function () {
   const migratedState = migrations.apply(initial)
+  clearCachedEndpointLatency(migratedState)
   const result = StateSchema.safeParse(migratedState)
 
   if (!result.success) {

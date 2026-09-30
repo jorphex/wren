@@ -1,6 +1,7 @@
 // status = Network Mismatch, Not Connected, Connected, Standby, Syncing
 const { Notification, powerMonitor } = require('electron')
 const EventEmitter = require('events')
+const { performance } = require('perf_hooks')
 const { addHexPrefix } = require('@ethereumjs/util')
 const { Hardfork } = require('@ethereumjs/common')
 const BigNumber = require('bignumber.js')
@@ -404,7 +405,7 @@ class ChainConnection extends EventEmitter {
       })
     )
 
-    const startedAt = Date.now()
+    const startedAt = performance.now()
     this._createProvider(target, endpoint.id)
     const activeProvider = this.active.provider
     const generation = this.active.generation
@@ -438,7 +439,7 @@ class ChainConnection extends EventEmitter {
 
         this.active.connected = true
         this.active.type = ''
-        this.active.latencyMs = Date.now() - startedAt
+        this.active.latencyMs = Math.max(0, performance.now() - startedAt)
         if (failoverFrom) {
           this.emit('failover', { from: failoverFrom, to: endpoint.id, chainId: this.chainId })
         }
