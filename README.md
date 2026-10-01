@@ -10,7 +10,7 @@
   <a href="https://getwren.xyz">Website</a> ·
   <a href="https://github.com/jorphex/wren/releases">Download</a> ·
   <a href="https://github.com/jorphex/wren-companion/releases">Companion</a> ·
-  <a href="release-notes/v0.1.10.md">What’s new</a> ·
+  <a href="release-notes/v0.1.11.md">What’s new</a> ·
   <a href="SECURITY.md">Security</a> ·
   <a href="RPC_COMPATIBILITY.md">Developer reference</a>
 </p>
@@ -49,14 +49,10 @@ this first version.
 
 ## Support
 
-Wren 0.1.10 pairs with Wren Companion 0.1.2
-over authenticated protocol 3. Linux x64 is qualified; Windows and macOS remain
+Wren 0.1.11 works with Wren Companion 0.1.3 over pairing protocol 3.
+Companion 0.1.2 remains compatible; 0.1.3 adds connection retry fixes. Linux x64 is qualified; Windows and macOS remain
 unqualified previews, and Linux arm64 is a CI smoke target only. Read
 [Signer and platform support](HARDWARE_SUPPORT.md) for tested platforms, signers, and limits.
-
-The [0.1.11 candidate notes](release-notes/v0.1.11.md) cover wallet recovery,
-signing, and Trezor Connect 10. Companion 0.1.3 adds browser retry fixes through
-a separate extension update; Companion 0.1.2 remains compatible.
 
 ## Install
 
@@ -74,14 +70,14 @@ sha256sum --check --ignore-missing SHA256SUMS
 Run the AppImage:
 
 ```bash
-chmod +x Wren-0.1.10.AppImage
-./Wren-0.1.10.AppImage
+chmod +x Wren-0.1.11.AppImage
+./Wren-0.1.11.AppImage
 ```
 
 Or install the deb:
 
 ```bash
-sudo apt install ./wren_0.1.10_amd64.deb
+sudo apt install ./wren_0.1.11_amd64.deb
 ```
 
 Linux packages are unsigned. Checksums and GitHub attestations verify their
@@ -104,8 +100,7 @@ Firefox users can install
 Manual Chrome and Firefox archives are available
 from the [Companion releases page](https://github.com/jorphex/wren-companion/releases).
 
-Use Companion 0.1.2 and compare the six-digit code shown by both apps before
-pairing.
+Compare the six-digit code shown by Wren and Companion before pairing.
 
 ### Import a Frame profile
 
@@ -116,7 +111,7 @@ Wren does not read Frame’s live profile. To import a private copy:
 3. Run this command before Wren creates its profile:
 
 ```bash
-./Wren-0.1.10.AppImage --import-frame-profile
+./Wren-0.1.11.AppImage --import-frame-profile
 ```
 
 The import copies only the supported configuration and encrypted signer files.

@@ -40,7 +40,7 @@ using the USB connection can block Wren’s access.
 
 Wren 0.1.11 uses Trezor Connect 10. User testing covered several Safe 7 mainnet
 transaction signatures, cancellation, and unplug/reconnect. The full pairing,
-address, message, and EIP-712 checks have not been repeated for this candidate.
+address, message, and EIP-712 checks have not been repeated for this release.
 Model One has not been physically retested with Connect 10. Existing accounts,
 derivation paths, and signing features are unchanged.
 
