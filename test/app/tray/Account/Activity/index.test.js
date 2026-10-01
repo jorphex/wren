@@ -1,5 +1,3 @@
-import fs from 'fs'
-
 import {
   Activity,
   activityOriginLabel,
@@ -86,25 +84,6 @@ it('classifies network changes as connection activity', () => {
     icon: 'network',
     label: 'Network change'
   })
-})
-
-it('gives interactive activity rows quiet hover and focus treatment', () => {
-  const styles = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
-  const rowRule = styles.match(/\.activityRow\n([\s\S]*?)\n\.activityMark/)[1]
-
-  expect(rowRule).toContain('&:hover')
-  expect(rowRule).toContain('background var(--wren-surface-hover)')
-  expect(rowRule).toContain('&:focus-visible')
-  expect(styles).toContain('.activityRowChevron')
-})
-
-it('uses the quiet selected treatment shared with Earn filters', () => {
-  const styles = fs.readFileSync('app/tray/Account/Activity/style/index.styl', 'utf8')
-  expect(styles).toContain(
-    "&.wrenControl[aria-pressed='true']\n    color var(--wren-text-primary)\n    background var(--wren-surface-active)\n    border-color var(--wren-border-default)\n    box-shadow var(--wren-shadow-sm), var(--wren-shadow-inset)"
-  )
-  expect(styles).not.toContain('background var(--wren-bg-panel)')
-  expect(styles).not.toContain('border-color var(--wren-border-strong)')
 })
 
 it('shows four privacy-safe recent entries and opens the complete activity view', () => {

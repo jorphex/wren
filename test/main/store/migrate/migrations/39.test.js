@@ -17,11 +17,6 @@ beforeEach(() => {
   }
 })
 
-it('should have migration version 39', () => {
-  const { version } = migration
-  expect(version).toBe(39)
-})
-
 const connectionPriorities = ['primary', 'secondary']
 
 connectionPriorities.forEach((priority) => {

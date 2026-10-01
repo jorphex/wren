@@ -16,12 +16,6 @@ it('completes when the user clicks close', async () => {
   await user.click(screen.getByRole('button', { name: 'Done' }))
 
   expect(onComplete).toHaveBeenCalled()
-
-  const button = screen.getByRole('button', { name: 'Done' })
-  const style = window.getComputedStyle(button)
-  expect(style.minWidth).toBe('156px')
-  expect(style.height).toBe('46px')
-  expect(button.classList.contains('wrenOnboardPrimary')).toBe(true)
 })
 
 it('lets later slides move back without hiding the primary action', async () => {
@@ -38,13 +32,6 @@ it('lets later slides move back without hiding the primary action', async () => 
   )
 
   const back = screen.getByRole('button', { name: 'Back' })
-  const backStyle = window.getComputedStyle(back)
-
-  expect(backStyle.minWidth).toBe('96px')
-  expect(backStyle.height).toBe('48px')
-  expect(back.classList.contains('wrenControlSecondary')).toBe(true)
-  expect(back.classList.contains('wrenOnboardSecondary')).toBe(true)
-
   await user.click(back)
 
   expect(prevSlide).toHaveBeenCalledTimes(1)

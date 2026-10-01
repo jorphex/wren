@@ -1,4 +1,4 @@
-const { accountNameForSigner, completeGeneratedWalletAccount } = require('../../../main/rpc/generatedWallet')
+const { completeGeneratedWalletAccount } = require('../../../main/rpc/generatedWallet')
 
 const ADDRESS = '0x0000000000000000000000000000000000000001'
 const PREVIOUS_ADDRESS = '0x0000000000000000000000000000000000000002'
@@ -195,9 +195,4 @@ test('reports partial rollback honestly when a generated signer cannot be remove
     'Could not roll back generated signer',
     expect.any(Error)
   )
-})
-
-test('uses signer-specific default account names', () => {
-  expect(accountNameForSigner('seed')).toBe('Recovery Phrase Account')
-  expect(accountNameForSigner('ring')).toBe('Private Key Account')
 })

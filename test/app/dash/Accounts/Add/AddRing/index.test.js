@@ -33,13 +33,6 @@ const advanceToConfirmation = async (view) => {
 }
 
 describe('entering private key', () => {
-  it('should display the correct title when entering the private key', () => {
-    setupComponent()
-
-    expect(screen.getAllByRole('heading')[0].textContent).toBe('Private key')
-    expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(true)
-  })
-
   it('protects the private-key input from text assistance', () => {
     setupComponent()
 

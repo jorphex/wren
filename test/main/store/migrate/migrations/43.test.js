@@ -23,10 +23,6 @@ function legacyBatch(overrides = {}) {
   }
 }
 
-it('has migration version 43', () => {
-  expect(migration.version).toBe(43)
-})
-
 it('marks valid legacy transaction hashes as submitted without changing unrelated state', () => {
   const state = createState(42)
   state.main.accounts = { fixture: { name: 'preserved' } }

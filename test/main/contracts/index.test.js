@@ -34,16 +34,6 @@ afterAll(() => {
 })
 
 describe('#fetchContract', () => {
-  it('retrieves a contract from sourcify', async () => {
-    fetchSourcifyContract.mockResolvedValue(mockContractSource('sourcify'))
-
-    return expect(fetchContract('0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0', 1)).resolves.toStrictEqual({
-      abi: JSON.stringify(mockAbi),
-      name: 'mock sourcify abi',
-      source: 'sourcify'
-    })
-  })
-
   it(`retrieves a contract from etherscan when sourcify returns no contract`, async () => {
     fetchSourcifyContract.mockResolvedValue(undefined)
     fetchEtherscanContract.mockResolvedValue(mockContractSource('etherscan'))

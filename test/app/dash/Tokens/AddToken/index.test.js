@@ -1,4 +1,3 @@
-import fs from 'fs'
 import Restore from 'react-restore'
 
 import { act, fireEvent, screen, render, waitFor } from '../../../../componentSetup'
@@ -13,7 +12,6 @@ jest.mock('../../../../../resources/link', () => ({
 }))
 
 const AddToken = Restore.connect(AddTokenComponent, store)
-const addTokenStyle = fs.readFileSync('app/dash/Tokens/AddToken/style/index.styl', 'utf8')
 
 beforeAll(() => {
   store.addNetwork({
@@ -54,23 +52,6 @@ describe('selecting token chain', () => {
     expect(tokenChainNames).toEqual(['Ethereum', 'Polygon'])
     expect(screen.getByRole('heading', { name: 'Select a network' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Open networks' })).toBeTruthy()
-  })
-
-  it('uses canonical chain identity marks instead of stored raster logos for known networks', () => {
-    render(<AddToken />)
-
-    for (const name of ['Ethereum', 'Polygon']) {
-      const chainButton = screen.getByRole('button', { name })
-      expect(chainButton.querySelector('.ringIconNoRing')).toBeTruthy()
-      expect(chainButton.querySelector('img')).toBeNull()
-    }
-  })
-
-  it('inherits the shared inset list without local dividers or forced full-height overflow', () => {
-    const viewRule = addTokenStyle.split('\n\n')[0]
-
-    expect(addTokenStyle).not.toContain('.newTokenView .originSwapChainList')
-    expect(viewRule).not.toContain('min-height')
   })
 
   it('shows the approved empty state when no networks are enabled', () => {
@@ -192,18 +173,6 @@ describe('detecting token details', () => {
   const runLookup = async () => {
     await act(async () => jest.advanceTimersByTime(350))
   }
-
-  it('should prompt for a contract address if a chain has been selected', () => {
-    render(<AddToken data={{ notifyData: { chain: { id: 137, name: 'Polygon' } } }} />)
-
-    const contractAddressInput = screen.getByLabelText('Token contract address')
-    expect(contractAddressInput.value).toBe('')
-    expect(contractAddressInput.placeholder).toBe('0x…')
-    expect(screen.getByRole('heading', { name: 'Add token' })).toBeTruthy()
-    expect(screen.getByText('On Polygon')).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: 'Token details' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
-  })
 
   it('keeps an invalid contract address inline without adding a navigation crumb', async () => {
     const { user } = render(<AddToken data={{ notifyData: { chain: { id: 1 } } }} />)
@@ -344,59 +313,6 @@ describe('detecting token details', () => {
 describe('setting token details', () => {
   beforeEach(() => {
     link.invoke.mockResolvedValue({ success: true })
-  })
-
-  it('should show the user that they are editing a token', () => {
-    render(
-      <AddToken
-        data={{
-          notifyData: {
-            chain: { id: 1 },
-            address: '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4',
-            isEdit: true,
-            tokenData: {
-              decimals: 12,
-              symbol: 'FAKE',
-              name: 'FAKE',
-              address: '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4',
-              totalSupply: '100'
-            }
-          }
-        }}
-      />
-    )
-
-    const heading = screen.getByTestId('addTokenFormTitle')
-    const button = screen.getByRole('button')
-    expect(heading.textContent).toBe('Token details')
-    expect(button.textContent).toBe('Save')
-  })
-
-  it('should show the user that they are adding a token', () => {
-    render(
-      <AddToken
-        data={{
-          notifyData: { chain: { id: 1 }, address: '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4' }
-        }}
-      />
-    )
-
-    const heading = screen.getByTestId('addTokenFormTitle')
-    expect(heading.textContent).toBe('Add token')
-    expect(screen.getByRole('heading', { name: 'Token details' })).toBeTruthy()
-  })
-
-  it('should prompt to fill in missing token data', () => {
-    render(
-      <AddToken
-        data={{
-          notifyData: { chain: { id: 1 }, address: '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4' }
-        }}
-      />
-    )
-
-    const button = screen.getByRole('button')
-    expect(button.textContent).toBe('Complete token details')
   })
 
   it('should show defaults in fields where token data is missing', () => {

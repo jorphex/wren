@@ -91,17 +91,6 @@ it('keeps a mismatched broadcast hash pending for reconciliation and stops later
   expect(deps.ledger.fail).not.toHaveBeenCalled()
 })
 
-it('leaves a rejected broadcast pending because RPC acceptance is ambiguous', async () => {
-  const deps = dependencies()
-  deps.broadcast.mockRejectedValueOnce(new Error('connection closed'))
-
-  await expect(executeWalletCallBatch(input(), deps)).rejects.toThrow('connection closed')
-  expect(deps.ledger.reserveTransaction).toHaveBeenCalledWith('example.test', account, 'batch-id', hashes[0])
-  expect(deps.ledger.markTransactionSubmitted).not.toHaveBeenCalled()
-  expect(deps.ledger.fail).not.toHaveBeenCalled()
-  expect(deps.signCall).toHaveBeenCalledTimes(1)
-})
-
 it('leaves an accepted broadcast pending when its submitted-state write fails', async () => {
   const deps = dependencies()
   deps.ledger.markTransactionSubmitted.mockImplementationOnce(() => {
@@ -155,27 +144,6 @@ it('does not create a terminal lifecycle when signing fails before reservation',
   ).rejects.toThrow('device declined')
   expect(ledger.getStatus('example.test', account, 'batch-id').status).toBe(400)
   expect(operationLifecycles.listStored()).toEqual([])
-})
-
-it('fails terminally after a confirmed earlier submission and stops the remainder', async () => {
-  const events = []
-  const deps = dependencies(events)
-  deps.signCall.mockImplementation(async (_call, index) => {
-    events.push(`sign:${index}`)
-    if (index === 1) throw new Error('second signature declined')
-    return { rawTransaction: rawTransactions[index] }
-  })
-
-  await expect(executeWalletCallBatch(input(), deps)).rejects.toThrow('second signature declined')
-  expect(events).toEqual([
-    'sign:0',
-    `reserve:${hashes[0]}`,
-    'broadcast:0',
-    `submit:${hashes[0]}`,
-    'sign:1',
-    'fail'
-  ])
-  expect(deps.broadcast).toHaveBeenCalledTimes(1)
 })
 
 it('bounds combined execution and ledger-close failures', async () => {

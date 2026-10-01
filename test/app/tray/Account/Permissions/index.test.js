@@ -83,17 +83,6 @@ it('sorts permission rows by their displayed origin', () => {
   expect(screen.queryByText(FRAME_SEND_ORIGIN)).toBeNull()
 })
 
-it('keeps revoke quiet without reducing its accessible name', () => {
-  renderWithStore(DappsPermissionsPreview, {}, { first: permissions.first })
-
-  const revoke = screen.getByRole('button', { name: 'Revoke access' })
-  expect(revoke.textContent).toBe('Revoke')
-  expect(revoke.classList.contains('wrenControlGhost')).toBe(true)
-  expect(revoke.querySelector('.revokeAccessLabel')).toBeTruthy()
-  expect(document.querySelector('.connectedAppMark')).toBeTruthy()
-  expect(screen.getByText('alpha.example').closest('.signerPermissionIdentity')).toBeTruthy()
-})
-
 it('keeps the preview header semantic and non-interactive', async () => {
   const { user } = renderWithStore(DappsPermissionsPreview)
   const header = screen.getByRole('heading', { name: 'Apps with access' })

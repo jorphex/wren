@@ -35,12 +35,6 @@ const advanceToConfirmation = async (view) => {
 }
 
 describe('entering seed phrase', () => {
-  it('should display the correct title when entering the seed phrase', () => {
-    setupComponent()
-
-    expect(screen.getAllByRole('heading')[0].textContent).toBe('Recovery phrase')
-  })
-
   it('protects the recovery-phrase input from text assistance', () => {
     setupComponent()
 

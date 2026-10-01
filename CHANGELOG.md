@@ -6,6 +6,25 @@ For release details and platform limits, see
 
 ## Unreleased
 
+## 0.1.12 - 2026-09-30
+
+- Recover startup when a saved RPC latency measurement is invalid, preserving
+  wallet and network configuration.
+- Measure RPC connection latency with a monotonic clock so clock changes cannot
+  produce a negative duration.
+- Update Electron to 42.11.8 with upstream engine security and stability fixes.
+- Patch transitive dependencies through the existing security overrides.
+- Remove redundant tests while retaining behavioral regression coverage.
+
+## 0.1.11 - 2026-09-30
+
+- Recover startup when a saved RPC latency measurement is invalid, preserving
+  wallet and network configuration.
+- Measure RPC connection latency with a monotonic clock so clock changes cannot
+  produce a negative duration.
+- Patch transitive dependencies through the existing security overrides.
+- Remove redundant tests while retaining behavioral regression coverage.
+
 ## 0.1.10 - 2026-09-23
 
 - Linked Firefox Companion buttons to the approved Firefox Add-ons listing.

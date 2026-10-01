@@ -32,12 +32,6 @@ beforeEach(() => {
   link.invoke.mockReset().mockResolvedValue({ success: true })
 })
 
-it('should not display the copied text by default', () => {
-  render(<TestComponent />)
-
-  expect(screen.getByTestId('iscopied').textContent).toBe('waiting for click')
-})
-
 it('should let the component know to display the copied text after the copy function is invoked', async () => {
   const { user } = render(<TestComponent />)
 

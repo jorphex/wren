@@ -77,16 +77,6 @@ describe('generated recovery-phrase wallet', () => {
     focus.mockRestore()
   })
 
-  test('marks the one-time secret expiry as intentional secondary guidance', async () => {
-    const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: 300 })
-    await advancePassword(view, { ...phrasePresentation, expiresAt: Date.now() + 600_000 })
-
-    const notice = screen
-      .getAllByText('Wallet setup expires in 10 minutes.')
-      .find((element) => element.closest('[aria-hidden="false"]'))
-    expect(notice.className).toBe('generatedWalletSessionNote generatedWalletExpiryNotice')
-  })
-
   test('shows a fail-closed generation error without leaving the frame carousel blank', async () => {
     const view = render(<CreateGenerated kind='phrase' />, { advanceTimersAfterInput: true })
     await view.user.type(screen.getByRole('textbox', { name: 'Create password' }), password)

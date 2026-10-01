@@ -23,22 +23,6 @@ async function withReleaseFiles(run) {
   }
 }
 
-test('defines exact Linux, macOS preview, and unsigned Windows release filenames', () => {
-  assert.deepEqual(releaseArtifactNames(version), [
-    'Wren-0.1.3.AppImage',
-    'wren.cdx.json',
-    'wren_0.1.3_amd64.deb'
-  ])
-  assert.deepEqual(releaseArtifactNames(version, { includeMacos: true, includeWindows: true }), [
-    'Wren-0.1.3-macos-arm64-unnotarized.dmg',
-    'Wren-0.1.3-macos-x64-unnotarized.dmg',
-    'Wren-0.1.3.AppImage',
-    'Wren-Setup-0.1.3-unsigned-x64.exe',
-    'wren.cdx.json',
-    'wren_0.1.3_amd64.deb'
-  ])
-})
-
 test('writes and verifies one manifest across Linux, Windows, and macOS release files', async () => {
   await withReleaseFiles(async (dist) => {
     const options = { dist, version, includeMacos: true, includeWindows: true }

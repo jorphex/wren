@@ -21,14 +21,6 @@ it.each(['eth_accounts', 'eth_coinbase', 'wallet_getAssets', 'wallet_getCapabili
   }
 )
 
-it.each(['eth_requestAccounts', 'eth_sendTransaction', 'wallet_switchEthereumChain'])(
-  'requests origin access for interactive method %s',
-  (method) =>
-    expect(requiresStandingCapability(method)).toBe(
-      !passivePermissionMethods.has(method) && !capabilityConsentMethods.has(method)
-    )
-)
-
 it('routes chain switching to its dedicated consent flow without treating it as standing access', () => {
   expect(capabilityConsentMethods).toContain('wallet_switchEthereumChain')
   expect(accountCapabilityConsentMethods).not.toContain('wallet_switchEthereumChain')

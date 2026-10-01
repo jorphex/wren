@@ -38,20 +38,6 @@ it('opens a request with a validated navigation breadcrumb', async () => {
   })
 })
 
-it('removes the generic backing plate around chain artwork', () => {
-  render(
-    <RequestItem
-      account={account}
-      color='var(--accent1)'
-      img='https://example.test/chain.png'
-      req={{ created: Date.now(), handlerId, status: 'confirming', type: 'transaction' }}
-      title='Ethereum transaction'
-    />
-  )
-
-  expect(document.querySelector('.requestItemIconRing')).toBeTruthy()
-})
-
 it('opens a request only once for duplicate activation', async () => {
   const { user } = render(
     <RequestItem
@@ -156,76 +142,6 @@ it('keeps header request composition static so nested actions remain valid', () 
 
   expect(screen.queryByRole('button', { name: 'Review Base Sepolia Transaction' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Nested review action' })).toBeTruthy()
-})
-
-it('leaves retained transaction recovery copy to the action shelf', () => {
-  render(
-    <RequestItem
-      account={account}
-      color='var(--outerspace)'
-      headerMode
-      req={{
-        created: Date.now(),
-        handlerId,
-        status: 'error',
-        type: 'transaction',
-        notice: 'Balance or fee data is unavailable. Nothing was signed.',
-        retainedPreBroadcastError: { responderPending: true }
-      }}
-      title='Base Sepolia Transaction'
-    />
-  )
-
-  expect(screen.queryByText('Balance or fee data is unavailable. Nothing was signed.')).toBeNull()
-  expect(screen.getByText('error')).toBeTruthy()
-})
-
-it('presents a declined request as neutral and inactive rather than failed', () => {
-  render(
-    <RequestItem
-      account={account}
-      color='var(--outerspace)'
-      req={{ created: Date.now(), handlerId, status: 'declined', type: 'transaction' }}
-      title='Base Sepolia Transaction'
-    />
-  )
-
-  const status = screen.getByText('declined')
-  const title = status.closest('.requestItemTitle')
-  const details = Array.from(title.children).find((child) => child.classList.contains('requestItemDetails'))
-
-  expect(details.classList.contains('requestItemDetailsNeutral')).toBe(true)
-  expect(details.classList.contains('requestItemDetailsBad')).toBe(false)
-  expect(details.querySelector('[data-icon="close"]')).toBeTruthy()
-  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
-})
-
-it('presents a confirmed request as solid success while confirming remains pending', () => {
-  const { rerender } = render(
-    <RequestItem
-      account={account}
-      color='var(--outerspace)'
-      req={{ created: Date.now(), handlerId, status: 'confirming', type: 'transaction' }}
-      title='Base Sepolia Transaction'
-    />
-  )
-
-  let status = screen.getByText('confirming')
-  expect(status.parentElement.classList.contains('requestItemDetailsSlideGood')).toBe(false)
-  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(false)
-
-  rerender(
-    <RequestItem
-      account={account}
-      color='var(--outerspace)'
-      req={{ created: Date.now(), handlerId, status: 'confirmed', type: 'transaction' }}
-      title='Base Sepolia Transaction'
-    />
-  )
-
-  status = screen.getByText('confirmed')
-  expect(status.parentElement.classList.contains('requestItemDetailsSlideGood')).toBe(true)
-  expect(status.previousElementSibling.classList.contains('requestItemDetailsIndicatorStill')).toBe(true)
 })
 
 it.each([

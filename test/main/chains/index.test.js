@@ -7,6 +7,9 @@ import { gweiToHex } from '../../util'
 
 log.transports.console.level = false
 
+const mockMonotonicNow = jest.fn(() => 1000)
+jest.mock('perf_hooks', () => ({ performance: { now: () => mockMonotonicNow() } }))
+
 const mockNotification = jest.fn()
 jest.mock('electron', () => ({
   Notification: class {
@@ -378,6 +381,43 @@ it('creates a standby provider only after the active endpoint loses connectivity
 
   store.toggleEndpoint('ethereum', '137', 'rpc-1', true)
   store.toggleEndpoint('ethereum', '137', 'rpc-2', true)
+})
+
+it.each([
+  [1025, 25],
+  [990, 0]
+])('measures connection latency independently of wall-clock rollback (%s)', (finish, expected) => {
+  const connection = new MockConnection(137)
+  let chainIdCallback
+  connection.sendAsync = (payload, cb) => {
+    if (payload.method === 'eth_chainId') chainIdCallback = cb
+    else cb('unknown method!')
+  }
+  deferredConnections[staleTarget] = connection
+  const chain = chains.connections.ethereum[137]
+  const wallClock = jest.spyOn(Date, 'now').mockReturnValue(10000)
+  mockMonotonicNow.mockReturnValue(1000)
+  try {
+    chain.connectEndpoint(
+      [
+        {
+          ...store('main.networks.ethereum.137.connection.endpoints.0'),
+          current: 'custom',
+          custom: staleTarget
+        }
+      ],
+      0
+    )
+    connection.emit('connect')
+    wallClock.mockReturnValue(5820)
+    mockMonotonicNow.mockReturnValue(finish)
+    chainIdCallback(null, { result: '0x89' })
+    expect(store('main.networks.ethereum.137.connection.endpoints.0.latencyMs')).toBe(expected)
+  } finally {
+    wallClock.mockRestore()
+    mockMonotonicNow.mockReturnValue(1000)
+    chain.close(false)
+  }
 })
 
 it('ignores deferred callbacks from a replaced URL with the same endpoint ID', () => {

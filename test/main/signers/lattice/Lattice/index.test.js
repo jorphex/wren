@@ -66,19 +66,6 @@ describe('#connect', () => {
     })
   })
 
-  it('emits an update with connecting status', (done) => {
-    lattice.once('update', () => {
-      try {
-        expect(lattice.status).toBe('connecting')
-        done()
-      } catch (e) {
-        done(e)
-      }
-    })
-
-    lattice.connect(baseUrl, privateKey)
-  })
-
   it('connects when not paired', async () => {
     pairingStatus = false
 

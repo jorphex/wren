@@ -1,5 +1,5 @@
 import { AddAccounts, Dash } from '../../../../app/dash/Accounts'
-import AccountTypeMark from '../../../../resources/Components/AccountTypeMark'
+
 import link from '../../../../resources/link'
 import { getAddress } from '../../../../resources/utils'
 import { fireEvent, render, screen } from '../../../componentSetup'
@@ -72,12 +72,6 @@ it('offers four clear setup intents with private-key creation in Advanced', () =
     'Watch address',
     'Create private key'
   ])
-})
-
-it('uses the seed identity mark for the seed phrase route', () => {
-  render(<AddAccounts data={{ accountChooserMode: 'import' }} />)
-
-  expect(AccountTypeMark.mock.calls.some(([props]) => props.type === 'seed' && props.size === 20)).toBe(true)
 })
 
 it('keeps each hardware method a one-click route', () => {

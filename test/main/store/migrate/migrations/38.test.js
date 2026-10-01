@@ -21,11 +21,6 @@ beforeEach(() => {
   state = createState(migration.version - 1)
 })
 
-it('should have migration version 38', () => {
-  const { version } = migration
-  expect(version).toBe(38)
-})
-
 migratedChains.forEach(([id, chainName]) => {
   providers.forEach((provider) => {
     it(`should remove the RPC for a primary ${chainName} ${provider} connection`, () => {

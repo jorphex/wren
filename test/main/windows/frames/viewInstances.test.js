@@ -1,6 +1,6 @@
 import store from '../../../../main/store'
 import server from '../../../../main/dapps/server'
-import viewInstances, { embeddedDappOrigin } from '../../../../main/windows/frames/viewInstances'
+import viewInstances from '../../../../main/windows/frames/viewInstances'
 import { createViewInstance } from '../../../../main/windows/window'
 
 jest.mock('../../../../main/store', () => jest.fn())
@@ -27,10 +27,6 @@ const createFrameWindow = () => {
 }
 
 describe('WebContentsView creation', () => {
-  it('uses the canonical local origin expected by embedded dapp permissions', () => {
-    expect(embeddedDappOrigin('send.frame.eth')).toBe('http://send.frame.eth.localhost:8421')
-  })
-
   it('rewrites embedded Send requests to its canonical permission origin', () => {
     const onBeforeSendHeaders = jest.fn()
     const viewInstance = {

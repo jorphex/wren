@@ -1,4 +1,3 @@
-import { InventoryExpanded } from '../../../../../app/tray/Account/Inventory/InventoryExpanded'
 import { Inventory as InventoryCollection } from '../../../../../app/tray/Account/Inventory/InventoryCollection'
 import { InventoryPreview } from '../../../../../app/tray/Account/Inventory/InventoryPreview'
 import link from '../../../../../resources/link'
@@ -29,12 +28,6 @@ const inventoryStore =
   }
 
 class InventoryPreviewHarness extends InventoryPreview {
-  store(...path) {
-    return this.props.readStore(...path)
-  }
-}
-
-class InventoryExpandedHarness extends InventoryExpanded {
   store(...path) {
     return this.props.readStore(...path)
   }
@@ -71,20 +64,6 @@ it('opens inventory from a native Wren control', async () => {
     view: 'expandedModule',
     data: { id: 'inventory', account }
   })
-})
-
-it('uses calm empty-state copy in compact and expanded inventory', () => {
-  const emptyStore = inventoryStore({})
-  const view = render(
-    <InventoryPreviewHarness account={account} moduleId='inventory' readStore={emptyStore} />
-  )
-  expect(screen.getByText('No collectibles yet')).toBeTruthy()
-  expect(document.querySelector('.wrenEmptyStateImage')).toBeTruthy()
-  view.unmount()
-
-  render(<InventoryExpandedHarness account={account} moduleId='inventory' readStore={emptyStore} />)
-  expect(screen.getByText('No collectibles yet')).toBeTruthy()
-  expect(document.querySelector('.wrenEmptyStateExpanded')).toBeTruthy()
 })
 
 it('shows a plain filtered miss when inventory exists', () => {

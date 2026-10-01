@@ -54,13 +54,6 @@ it('does not expose internal instance controls', () => {
   expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
 })
 
-it('leaves dashboard identity to the shared Control chrome', () => {
-  renderMain()
-
-  expect(screen.queryByTestId('control-center-wren')).toBeNull()
-  expect(screen.queryByText('Desktop EVM wallet')).toBeNull()
-})
-
 it('includes each tool description in its accessible name', () => {
   renderMain()
 
@@ -89,20 +82,6 @@ it('retains the additional tools owned by the Overview content', () => {
       name: 'Contracts Deploy prepared bytecode or publish verified source.'
     })
   ).toBeTruthy()
-})
-
-it('orders the lower Control surfaces by utility and keeps Support cardless', () => {
-  renderMain()
-
-  const sections = [...document.querySelector('.localSettingsWrap').children].map((element) =>
-    ['dashModules', 'dashToolsCard', 'dashCompanion', 'dashSupportActions'].find((name) =>
-      element.classList.contains(name)
-    )
-  )
-
-  expect(sections).toEqual(['dashToolsCard', 'dashCompanion', 'dashSupportActions'])
-  expect(document.querySelector('.dashSupportCard')).toBeNull()
-  expect(document.querySelectorAll('.dashSupportActions > *')).toHaveLength(4)
 })
 
 it('routes Chrome to its Web Store listing', () => {

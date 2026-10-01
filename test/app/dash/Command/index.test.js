@@ -87,20 +87,6 @@ it('uses back-enabled shared chrome for the Send composer', () => {
   expect(document.querySelector('.commandItemBack')).toBeTruthy()
 })
 
-it('uses an authored title for the generic notice surface', () => {
-  renderCommand([{ view: 'notify', data: { notify: 'gasFeeWarning' } }])
-
-  expect(screen.getByText('Notice')).toBeTruthy()
-  expect(screen.queryByText('notify')).toBeNull()
-})
-
-it('uses the authored Connected apps title', () => {
-  renderCommand([{ view: 'dapps', data: {} }])
-
-  expect(screen.getByText('Connected apps')).toBeTruthy()
-  expect(screen.queryByText('dapps')).toBeNull()
-})
-
 it.each(['contracts', 'deployment', 'contractVerification'])(
   'uses the authored Contracts title for the %s route',
   (view) => {

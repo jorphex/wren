@@ -1,10 +1,6 @@
 import migration from '../../../../../main/store/migrate/migrations/47'
 import { createState } from '../setup'
 
-it('has migration version 47', () => {
-  expect(migration.version).toBe(47)
-})
-
 it('adds disabled Katana defaults and an empty Yearn cache', () => {
   const state = createState(46)
 

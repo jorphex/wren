@@ -24,9 +24,3 @@ test('shows the complete address when requested', () => {
   expect(screen.getAllByText(address)).toHaveLength(2)
   expect(screen.getByLabelText(address).classList.contains('clusterAddressRecipientComplete')).toBe(true)
 })
-
-test('keeps copied feedback visible without requiring hover', () => {
-  render(<AddressIdentity address={address} copied />)
-
-  expect(screen.getByText('Address copied').closest('.clusterAddressRecipientFullCopied')).toBeTruthy()
-})

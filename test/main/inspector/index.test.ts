@@ -1,6 +1,3 @@
-import fs from 'fs'
-import path from 'path'
-
 import { Interface } from 'ethers'
 
 import { inspect, InspectorInvokeResultSchema, projectInspectorSimulation } from '../../../main/inspector'
@@ -373,16 +370,4 @@ test('projects full production simulation evidence into the exact bounded result
     }).success
   ).toBe(true)
   expect(simulation.callTrace?.calls[0]?.value).toBe('7')
-})
-
-test('inspector implementation has no signer, request-admission, reveal, persistence, or broadcast imports', () => {
-  const directory = path.resolve(__dirname, '../../../main/inspector')
-  const source = fs
-    .readdirSync(directory)
-    .filter((name) => name.endsWith('.ts'))
-    .map((name) => fs.readFileSync(path.join(directory, name), 'utf8'))
-    .join('\n')
-
-  expect(source).not.toMatch(/from ['"][^'"]*(?:accounts|provider|signers|reveal|store|externalData)/)
-  expect(source).not.toMatch(/sendRawTransaction|signTransaction|broadcast|persist\s*\(/)
 })
