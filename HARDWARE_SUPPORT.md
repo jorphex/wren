@@ -18,25 +18,33 @@ transport; it does not upgrade the evidence label.
 
 ## Current support matrix
 
-| Signer or platform              | Transport/package             | Evidence and release boundary                                                                                                                    |
-| ------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Trezor Safe 7                   | USB, Trezor Connect           | Physical address, message, EIP-712, transaction, broadcast, rejection, and reconnect tests on Linux x64; automated bridge coverage.              |
-| Trezor Model One                | USB, Trezor Connect           | Physical address, message, hash-only EIP-712, rejection, and reconnect on firmware 1.13.1. Qualified with limitations on Linux x64.              |
-| Other Trezor models             | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                 |
-| Trezor Safe 7 Bluetooth         | Bluetooth                     | No Wren transport; unsupported.                                                                                                                  |
-| Ledger                          | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                   |
-| GridPlus Lattice1               | Vendor SDK/network            | Automated adapter/device coverage; not physically requalified.                                                                                   |
-| Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                  |
-| Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified. |
-| Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                            |
-| Windows x64                     | Electron/NSIS package         | Unsigned preview. The release workflow checks runtime and unsigned state; Windows is not platform-qualified.                                     |
-| macOS x64/arm64                 | Electron DMG                  | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.         |
-| Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                    |
+| Signer or platform              | Transport/package             | Evidence and release boundary                                                                                                                             |
+| ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trezor Safe 7                   | USB, Trezor Connect 10        | User-tested transaction signing, cancellation, and reconnect on Linux x64; automated bridge coverage. Earlier address and message tests are listed below. |
+| Trezor Model One                | USB, Trezor Connect 10        | Automated bridge coverage. Physical Connect 10 checks are pending; earlier firmware 1.13.1 tests are listed below.                                        |
+| Other Trezor models             | USB, Trezor Connect           | Shared implementation and automated bridge coverage; not physically requalified.                                                                          |
+| Trezor Safe 7 Bluetooth         | Bluetooth                     | No Wren transport; unsupported.                                                                                                                           |
+| Ledger                          | USB HID                       | Automated adapter/device coverage; not physically requalified.                                                                                            |
+| GridPlus Lattice1               | Vendor SDK/network            | Automated adapter/device coverage; not physically requalified.                                                                                            |
+| Seed, private key, keystore     | Local encrypted signer worker | Packaged import, unlock, signing, restart, removal, and automated signer coverage. Qualified on Linux x64; legacy limits apply.                           |
+| Windows DPAPI signer protection | Electron `safeStorage`        | Implemented with unit, migration, backup, UI, and native package-probe coverage; native Windows VM checklist pending, so not platform-qualified.          |
+| Linux x64 AppImage/deb          | Electron package              | Package verification and live fresh, migrated AppImage, and deb-upgrade runs. Current release target.                                                     |
+| Windows x64                     | Electron/NSIS package         | Unsigned preview. The release workflow checks runtime and unsigned state; Windows is not platform-qualified.                                              |
+| macOS x64/arm64                 | Electron DMG                  | Unqualified previews. The release workflow checks runtime, ad-hoc seals, and no Apple identity; physical qualification remains separate.                  |
+| Linux arm64 AppImage/tar.gz     | Electron package              | Real unsigned native CI smoke packages pass archive/runtime verification; not released or platform-qualified.                                             |
 
-Trezor Suite is not required for the qualified Safe 7 USB flow. Another app
+Trezor Suite is not required for the Safe 7 USB flow. Another app
 using the USB connection can block Wren’s access.
 
 ## Trezor limitations
+
+Wren 0.1.11 uses Trezor Connect 10. User testing covered several Safe 7 mainnet
+transaction signatures, cancellation, and unplug/reconnect. The full pairing,
+address, message, and EIP-712 checks have not been repeated for this candidate.
+Model One has not been physically retested with Connect 10. Existing accounts,
+derivation paths, and signing features are unchanged.
+
+The following physical results apply to earlier builds.
 
 The pre-separation `0.8.0` qualification covered fresh Safe 7 pairing, full
 address display, rejection, personal signing, and EIP-712 review. After

@@ -6,22 +6,21 @@ For release details and platform limits, see
 
 ## Unreleased
 
-- Added recovery when the wallet view fails. Kept updater setup from repeating after reload.
-- Fixed site connection retries and kept late replies from changing the selected network.
-- Set time limits for transaction checks and ignored late replies after cancellation.
-- Prevented repeat Sign clicks during signer checks. Used Submitting while sending.
-- Used an enabled default network for new site connections.
-
 ## 0.1.11 - 2026-10-01
 
-- Recover startup when a saved RPC latency measurement is invalid, preserving
-  wallet and network configuration.
-- Measure RPC connection latency with a monotonic clock so clock changes cannot
-  produce a negative duration.
-- Update Electron to 42.11.8 with upstream engine security and stability fixes.
-- Patch Axios to 1.20.0 through the existing transitive security overrides.
-- Align Ledger dependency versions and update compatible development tools.
-- Remove redundant tests while retaining behavioral regression coverage.
+- Fixed startup when saved RPC latency is invalid. Kept wallet and network settings.
+- Measured RPC latency independently of system clock changes.
+- Added recovery for failed or unresponsive wallet views.
+- Set time limits for transaction checks and ignored late replies after cancellation.
+- Prevented repeat Sign clicks during signer checks. Showed Submitting while sending.
+- Used an enabled network for new site connections.
+- Updated Trezor USB support to Connect 10. Kept existing accounts and signing features.
+- Matched Trezor PIN, passphrase, and pairing replies to their active prompts.
+- Updated Electron to 42.11.8 and Axios to 1.20.0 for security and stability fixes.
+- Aligned Ledger dependencies and updated development tools.
+- Removed redundant tests and kept behavioral regression coverage.
+
+See [the 0.1.11 release notes](release-notes/v0.1.11.md) for testing and platform details.
 
 ## 0.1.10 - 2026-09-23
 

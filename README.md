@@ -54,6 +54,10 @@ over authenticated protocol 3. Linux x64 is qualified; Windows and macOS remain
 unqualified previews, and Linux arm64 is a CI smoke target only. Read
 [Signer and platform support](HARDWARE_SUPPORT.md) for tested platforms, signers, and limits.
 
+The [0.1.11 candidate notes](release-notes/v0.1.11.md) cover wallet recovery,
+signing, and Trezor Connect 10. Companion 0.1.3 adds browser retry fixes through
+a separate extension update; Companion 0.1.2 remains compatible.
+
 ## Install
 
 Download Wren and `SHA256SUMS` from the

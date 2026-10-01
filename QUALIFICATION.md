@@ -16,6 +16,16 @@ protection has an additional
 unnotarized macOS releases have a separate
 [architecture-specific checklist](MACOS_UNNOTARIZED_QUALIFICATION.md).
 
+## 0.1.11 candidate record
+
+Candidate source: `18561d2379db38a08a430f3a126681d4be5561fc`.
+[Quality and native checks](https://github.com/jorphex/wren/actions/runs/36840386513)
+and [CodeQL](https://github.com/jorphex/wren/actions/runs/36840386590) passed.
+The [release build](https://github.com/jorphex/wren/actions/runs/36840460713)
+passed its quality gate and four platform package jobs. Draft assembly stopped
+because 0.1.11 already had a draft; the verified assets were attached separately.
+Current device testing is recorded in [signer support](HARDWARE_SUPPORT.md).
+
 ## Checklist navigation
 
 - [1. Record the candidate and automated evidence](#1-record-the-candidate-and-automated-evidence)
@@ -140,6 +150,8 @@ archive and active-desktop checks below.
    tabs. Request results and signing payloads must stay in their source tab.
    Check reconnect after restart, revocation, re-pairing, and reset. Rejected or
    malformed requests must leave no spinner, stale approval, or reconnect loop.
+   With Companion 0.1.3, delay the first connection reply until a retry starts.
+   Confirm the old reply cannot cancel the retry or change its network.
    `npm run qualify:browser` uses an isolated desktop mock and does not satisfy
    the revoke check: record the real Wren permission-row removal and one
    `accountsChanged` event with an empty account list in every affected tab.
@@ -149,7 +161,9 @@ archive and active-desktop checks below.
    Record address discovery, cancel/reject, and lock/reconnect results for Trezor
    Safe 7 USB, Trezor Model One USB, disposable private key, and disposable seed.
    On devices record firmware and compare full address, chain, recipient, value,
-   calldata, and fees. Safe 7 pairing must reconnect without a reload loop;
+   calldata, and fees. Safe 7 pairing must reconnect without a reload loop.
+   With Connect 10, cancel and replace PIN, passphrase, and pairing prompts.
+   Late replies must not satisfy a replacement prompt or a different device.
    Model One must explicitly report unsupported display types rather than blind
    sign. For software signers test wrong password, unlock, relock, restart, and
    removal. Generate one 12-word wallet and one private-key wallet. Confirm each
