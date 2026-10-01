@@ -3,6 +3,7 @@ import log from 'electron-log'
 import WebSocket from 'ws'
 import { EventEmitter } from 'stream'
 
+import originSessions from '../../../main/api/originSessions'
 import store from '../../../main/store'
 import provider from '../../../main/provider'
 import accounts from '../../../main/accounts'
@@ -241,7 +242,10 @@ beforeEach(async () => {
   mockSocket.send.mockClear()
 })
 
-afterEach(() => mockSocket.emit('close'))
+afterEach(() => {
+  mockSocket.emit('close')
+  originSessions.clear()
+})
 
 it('requires and accepts a signed companion authentication handshake', () => {
   expect(authenticatedResponse).toMatchObject({

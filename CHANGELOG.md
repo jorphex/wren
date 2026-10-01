@@ -12,6 +12,17 @@ For release details and platform limits, see
 - Prevented repeat Sign clicks during signer checks. Used Submitting while sending.
 - Used an enabled default network for new site connections.
 
+## 0.1.11 - 2026-10-01
+
+- Recover startup when a saved RPC latency measurement is invalid, preserving
+  wallet and network configuration.
+- Measure RPC connection latency with a monotonic clock so clock changes cannot
+  produce a negative duration.
+- Update Electron to 42.11.8 with upstream engine security and stability fixes.
+- Patch Axios to 1.20.0 through the existing transitive security overrides.
+- Align Ledger dependency versions and update compatible development tools.
+- Remove redundant tests while retaining behavioral regression coverage.
+
 ## 0.1.10 - 2026-09-23
 
 - Linked Firefox Companion buttons to the approved Firefox Add-ons listing.
