@@ -78,4 +78,17 @@ describe('renderer link bridge', () => {
     expect(log).toHaveBeenCalledWith('link.rpc response had no handler')
     log.mockRestore()
   })
+  test('cancels a renderer callback so a late approval acknowledgement cannot affect a new review', () => {
+    const callback = jest.fn()
+    const cancel = link.rpc('approveRequest', { account: 'test', handlerId: 'test' }, callback)
+    const request = JSON.parse(rendererWindow.postMessage.mock.calls[0][0])
+    expect(cancel).toEqual(expect.any(Function))
+    cancel()
+    messageListener({
+      data: JSON.stringify({ source: 'bridge:link', method: 'rpc', id: request.id, args: [null] }),
+      source: rendererWindow,
+      origin: 'null'
+    })
+    expect(callback).not.toHaveBeenCalled()
+  })
 })

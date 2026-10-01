@@ -30,6 +30,7 @@ link.rpc = (...args) => {
   const id = v4()
   handlers.set(id, cb)
   postToBridge({ id, args, source: LINK_SOURCE, method: 'rpc' })
+  return () => handlers.delete(id)
 }
 link.send = (...args) => {
   postToBridge({ args, source: LINK_SOURCE, method: 'event' })

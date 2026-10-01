@@ -50,7 +50,10 @@ jest.mock('../../../main/store/persist', () => ({
   commitMainState: jest.fn(),
   default: { pruneTransientState: jest.fn(), queue: jest.fn(), set: jest.fn() }
 }))
-jest.mock('../../../main/chains', () => ({ send: jest.fn(), syncDataEmit: jest.fn(), on: jest.fn() }))
+jest.mock('../../../main/chains', () => {
+  const EventEmitter = require('events')
+  return Object.assign(new EventEmitter(), { send: jest.fn(), syncDataEmit: jest.fn() })
+})
 jest.mock('../../../main/accounts', () => ({}))
 jest.mock('../../../main/reveal', () => ({
   resolveEntityType: jest.fn().mockResolvedValue('external')
@@ -515,8 +518,8 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    await Promise.resolve()
-    await Promise.resolve()
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
 
     expect(accounts.recheckReplacementRequest).toHaveBeenCalledWith(request)
     expect(signAndSend).toHaveBeenCalledWith(request, callback)
@@ -533,8 +536,8 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    await Promise.resolve()
-    await Promise.resolve()
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
 
     expect(callback).toHaveBeenCalledWith(
       expect.objectContaining({ message: expect.stringMatching(/included/i) })
@@ -557,8 +560,8 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    await Promise.resolve()
-    await Promise.resolve()
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
 
     expect(callback).toHaveBeenCalledWith(fundingError)
     expect(signAndSend).not.toHaveBeenCalled()
@@ -588,15 +591,15 @@ describe('#approveTransactionRequest', () => {
     })
 
     provider.approveTransactionRequest(request, jest.fn())
-    await Promise.resolve()
-    await Promise.resolve()
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
 
     expect(accounts.updatePendingFees).toHaveBeenCalledWith(8453)
     expect(provider.assertTransactionFunding).not.toHaveBeenCalled()
     expect(signAndSend).not.toHaveBeenCalled()
 
     finishFeeRefresh()
-    for (let i = 0; i < 4; i += 1) await Promise.resolve()
+    for (let i = 0; i < 4; i += 1) await jest.advanceTimersByTimeAsync(0)
 
     expect(events).toEqual(['fees', 'funding', 'sign'])
     signAndSend.mockRestore()
@@ -617,9 +620,9 @@ describe('#approveTransactionRequest', () => {
     })
 
     provider.approveTransactionRequest(request, jest.fn())
-    await Promise.resolve()
-    await Promise.resolve()
-    await Promise.resolve()
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
+    await jest.advanceTimersByTimeAsync(0)
 
     expect(events).toEqual(['funding', 'native-max', 'sign'])
     signAndSend.mockRestore()
@@ -637,7 +640,7 @@ describe('#approveTransactionRequest', () => {
     provider.handlers[request.handlerId] = responder
 
     provider.approveTransactionRequest(request, callback)
-    for (let i = 0; i < 6; i += 1) await Promise.resolve()
+    for (let i = 0; i < 6; i += 1) await jest.advanceTimersByTimeAsync(0)
 
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback).toHaveBeenCalledWith(
@@ -663,7 +666,7 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    for (let i = 0; i < 4; i += 1) await Promise.resolve()
+    for (let i = 0; i < 4; i += 1) await jest.advanceTimersByTimeAsync(0)
 
     expect(callback).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'ordinary sign pipeline failed' })
@@ -678,7 +681,7 @@ describe('#approveTransactionRequest', () => {
     const callback = jest.fn()
 
     provider.approveTransactionRequest(request, callback)
-    for (let i = 0; i < 6; i += 1) await Promise.resolve()
+    for (let i = 0; i < 6; i += 1) await jest.advanceTimersByTimeAsync(0)
 
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback.mock.calls[0][0].message).toMatch(/quote changed or expired/i)
@@ -6844,3 +6847,82 @@ function mockConnectionError(message) {
     cb({ id: p.id, jsonrpc: p.jsonrpc, error: { message, code: -1 } })
   )
 }
+
+describe('pre-sign stalled RPC recovery', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => jest.useRealTimers())
+
+  it('terminates a silent balance lookup and ignores a late success', async () => {
+    const closeListeners = connection.listenerCount('close')
+    let reply
+    connection.send.mockImplementation((_payload, cb) => {
+      reply = cb
+    })
+    const pending = Object.getPrototypeOf(provider).assertTransactionFunding.call(provider, {
+      account: address,
+      data: { chainId: '0x1', type: '0x0', value: '0x0', gasLimit: '0x1', gasPrice: '0x1' }
+    })
+    const rejected = expect(pending).rejects.toMatchObject({ code: TRANSACTION_FUNDING_UNAVAILABLE })
+    await jest.advanceTimersByTimeAsync(15000)
+    await rejected
+    reply({ result: '0xffff' })
+    expect(connection.listenerCount('close')).toBe(closeListeners)
+  })
+
+  it('settles a nonce lookup once on chain loss or timeout', async () => {
+    const closeListeners = connection.listenerCount('close')
+    let reply
+    connection.send.mockImplementation((_payload, cb) => {
+      reply = cb
+    })
+    const result = jest.fn()
+    provider.getNonce({ from: address, chainId: '0x1' }, result)
+    connection.emit('close', { type: 'ethereum', id: 5 })
+    expect(result).not.toHaveBeenCalled()
+    connection.emit('close', { type: 'ethereum', id: 1 })
+    expect(result).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ code: 4900 }) })
+    )
+    reply({ result: '0x7' })
+    await jest.advanceTimersByTimeAsync(15000)
+    expect(result).toHaveBeenCalledTimes(1)
+
+    result.mockClear()
+    provider.getNonce({ from: address, chainId: '0x1' }, result)
+    await jest.advanceTimersByTimeAsync(15000)
+    expect(result).toHaveBeenCalledWith(expect.objectContaining({ error: expect.anything() }))
+    expect(connection.listenerCount('close')).toBe(closeListeners)
+  })
+
+  it('does not sign an approval cancelled while its balance check was outstanding', async () => {
+    const req = {
+      account: address,
+      handlerId: 'cancel-during-funding',
+      type: 'transaction',
+      status: 'pending',
+      payload: { id: 1, jsonrpc: '2.0', method: 'eth_sendTransaction' },
+      data: { from: address, chainId: '0x1', nonce: '0x1' },
+      simulation: { status: 'succeeded' },
+      approvals: []
+    }
+    accountRequests.push(req)
+    let funded
+    provider.assertTransactionFunding.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          funded = resolve
+        })
+    )
+    const signer = jest.spyOn(provider, 'signAndSend').mockImplementation(() => {})
+    try {
+      provider.approveTransactionRequest(req, jest.fn())
+      req.status = 'declined'
+      funded({ missing: '0x0' })
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(signer).not.toHaveBeenCalled()
+    } finally {
+      signer.mockRestore()
+    }
+  })
+})

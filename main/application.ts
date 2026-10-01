@@ -43,7 +43,7 @@ import {
   applyNetworkRouteRendererAction,
   applyOriginChainRendererAction
 } from './provider/originChainActions'
-import { handleRenderer, onRenderer } from './ipc/renderer'
+import { handleRenderer, onRenderer, onceRenderer } from './ipc/renderer'
 import { isPathInsideRoot } from './security/fileAccess'
 import { assertSandboxEnabled } from './security/sandbox'
 import yearn from './yearn'
@@ -731,7 +731,7 @@ onRenderer('tray:resetNonce', (e, request) => {
   accounts.resetNonce(request.handlerId, request.account)
 })
 
-onRenderer('tray:ready', () => {
+onceRenderer('tray:ready', () => {
   require('./api')
 
   if (!isDev) {

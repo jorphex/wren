@@ -34,7 +34,8 @@ export const transactionLifecyclePresentation = (req, networkName = 'the network
         detail: 'Wren is sending the transaction to the network.',
         icon: 'send',
         position: 0,
-        title: 'Submitted',
+        title: 'Submitting',
+        steps: [{ icon: 'send', label: 'Submitting' }, ...steps.slice(1)],
         tone: 'pending'
       }
     case 'verifying':

@@ -21,7 +21,12 @@ import {
   LEDGER_SHOP_URL,
   TREZOR_SHOP_URL
 } from '../../resources/constants'
-import { registerRendererRole } from '../ipc/renderer'
+import { onRenderer, registerRendererRole } from '../ipc/renderer'
+
+// Reload only the requesting wallet view; keep navigation policy unchanged.
+onRenderer('tray:reload', (event) => {
+  if (!event.sender.isDestroyed()) event.sender.reload()
+})
 
 const hardenedSessions = new WeakSet<Session>()
 
@@ -103,7 +108,68 @@ export function createWindow(
   browserWindow.webContents.on('will-attach-webview', (e) => e.preventDefault()) // Prevent attaching <webview>
   browserWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' })) // Prevent new windows
 
+  if (isShellWindow) installTrayRecovery(browserWindow)
   return browserWindow
+}
+
+function installTrayRecovery(window: BrowserWindow) {
+  const contents = window.webContents
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let unresponsiveTimer: ReturnType<typeof setTimeout> | undefined
+  let recoveryReason: string | undefined
+  let attempts = 0
+  let lastRecovery = 0
+  const cancelUnresponsive = () => {
+    clearTimeout(unresponsiveTimer)
+    unresponsiveTimer = undefined
+  }
+  const recover = (reason: string) => {
+    if (window.isDestroyed() || contents.isDestroyed()) return
+    if (timer) {
+      if (reason === 'render-process-gone') recoveryReason = reason
+      return
+    }
+    if (Date.now() - lastRecovery >= 60_000) attempts = 0
+    if (attempts >= 2) return
+    recoveryReason = reason
+    log.warn('Wallet renderer recovery', { reason })
+    timer = setTimeout(() => {
+      timer = undefined
+      if (window.isDestroyed() || contents.isDestroyed()) return
+      attempts += 1
+      lastRecovery = Date.now()
+      // Reload only the view. Transaction execution stays in the main process.
+      contents.reload()
+    }, 500)
+  }
+  contents.on('render-process-gone', () => recover('render-process-gone'))
+  contents.on('did-fail-load', (_event, errorCode, _description, _url, isMainFrame) => {
+    if (isMainFrame && errorCode !== -3) recover('load-failed')
+  })
+  contents.on('unresponsive', () => {
+    if (unresponsiveTimer) return
+    unresponsiveTimer = setTimeout(() => {
+      unresponsiveTimer = undefined
+      recover('unresponsive')
+    }, 3000)
+  })
+  contents.on('responsive', () => {
+    cancelUnresponsive()
+    if (recoveryReason === 'unresponsive') {
+      clearTimeout(timer)
+      timer = undefined
+      recoveryReason = undefined
+    }
+  })
+  contents.on('did-finish-load', () => {
+    cancelUnresponsive()
+    clearTimeout(timer)
+    timer = undefined
+  })
+  window.on('closed', () => {
+    clearTimeout(timer)
+    cancelUnresponsive()
+  })
 }
 
 export function restoreWindow(browserWindow: BrowserWindow) {

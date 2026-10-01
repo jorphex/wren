@@ -805,6 +805,7 @@ const eventSchemas: Record<string, z.ZodType> = {
   'tray:openExternal': z.tuple([z.string().url().max(MAX_URL)]),
   'tray:quit': noArgs,
   'tray:ready': noArgs,
+  'tray:reload': noArgs,
   'tray:rejectRequest': z.tuple([AccountRequestReferenceSchema]),
   'tray:removeToken': z.tuple([TokenIdSchema]),
   'tray:renameAccount': z.tuple([AddressSchema, z.string().trim().min(1).max(128)]),

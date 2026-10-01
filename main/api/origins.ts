@@ -301,6 +301,13 @@ export function updateOrigin(
 ): OriginUpdateResult {
   const originId = originIdForInvoker(origin, invoker)
   const existingOrigin = store('main.origins', originId)
+  const networks = store('main.networks.ethereum') || {}
+  const defaultChainId = networks[1]?.on
+    ? 1
+    : Object.values(networks)
+        .filter((chain) => chain.on && Number.isSafeInteger(chain.id) && chain.id > 0)
+        .sort((a, b) => a.id - b.id)[0]?.id || 1
+  const originChainId = existingOrigin?.chain?.id || defaultChainId
 
   if (!connectionMessage) {
     // the extension will attempt to send messages (eth_chainId and net_version) in order
@@ -315,14 +322,14 @@ export function updateOrigin(
         ...invoker,
         ...(isSessionOnlyOrigin(origin) && { sessionOnly: true }),
         chain: {
-          id: 1,
+          id: originChainId,
           type: 'ethereum'
         }
       })
     }
   }
 
-  const chainId = requestPayload.chainId || `0x${(existingOrigin?.chain?.id || 1).toString(16)}`
+  const chainId = requestPayload.chainId || `0x${originChainId.toString(16)}`
 
   const payload = {
     ...requestPayload,

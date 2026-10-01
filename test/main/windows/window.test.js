@@ -22,6 +22,7 @@ const createMockSession = () => ({
 })
 
 const mockWindow = {
+  on: jest.fn(),
   isFullScreen: jest.fn(() => false),
   setFullScreen: jest.fn(),
   unmaximize: jest.fn(),
@@ -43,6 +44,7 @@ const mockView = {
 }
 
 jest.mock('electron', () => ({
+  ipcMain: { on: jest.fn() },
   BrowserWindow: jest.fn(() => mockWindow),
   shell: { openExternal: jest.fn() },
   WebContentsView: jest.fn(() => mockView)
@@ -342,4 +344,33 @@ describe('openBlockExplorer', () => {
 
     expect(shell.openExternal).not.toHaveBeenCalled()
   })
+})
+
+it('recovers tray renderer failure with bounded reloads and cancels recovery on window close', () => {
+  jest.useFakeTimers()
+  mockWindow.isDestroyed = jest.fn(() => false)
+  mockWindow.on = jest.fn()
+  mockWindow.webContents.isDestroyed = jest.fn(() => false)
+  mockWindow.webContents.reload = jest.fn()
+  mockWindow.webContents.on.mockClear()
+  createWindow('tray')
+  const event = (name) => mockWindow.webContents.on.mock.calls.find(([eventName]) => eventName === name)?.[1]
+  try {
+    expect(event('render-process-gone')).toEqual(expect.any(Function))
+    event('render-process-gone')({}, { reason: 'crashed' })
+    jest.advanceTimersByTime(1000)
+    expect(mockWindow.webContents.reload).toHaveBeenCalledTimes(1)
+    event('render-process-gone')({}, { reason: 'crashed' })
+    jest.advanceTimersByTime(1000)
+    event('render-process-gone')({}, { reason: 'crashed' })
+    jest.advanceTimersByTime(1000)
+    expect(mockWindow.webContents.reload).toHaveBeenCalledTimes(2)
+    jest.advanceTimersByTime(60000)
+    event('render-process-gone')({}, { reason: 'crashed' })
+    mockWindow.on.mock.calls.find(([name]) => name === 'closed')[1]()
+    jest.advanceTimersByTime(1000)
+    expect(mockWindow.webContents.reload).toHaveBeenCalledTimes(2)
+  } finally {
+    jest.useRealTimers()
+  }
 })

@@ -682,3 +682,23 @@ async function withEnvironment(env, test) {
   process.env = oldEnv
   jest.resetModules()
 }
+
+it('bootstraps a new origin on an enabled network while preserving explicit and saved chains', () => {
+  const previous = store('main.networks.ethereum')
+  store.set('main.networks.ethereum', { 1: { id: 1, on: false }, 4663: { id: 4663, on: true } })
+  try {
+    const origin = 'https://new.example'
+    expect(updateOrigin({}, origin, true).chainId).toBe('0x1237')
+    expect(store.initOrigin).not.toHaveBeenCalled()
+    expect(updateOrigin({}, origin).chainId).toBe('0x1237')
+    expect(store.initOrigin).toHaveBeenCalledWith(
+      directOriginId(origin),
+      expect.objectContaining({ chain: { type: 'ethereum', id: 4663 } })
+    )
+    expect(updateOrigin({ chainId: '0x1' }, origin, true).chainId).toBe('0x1')
+    store.set('main.origins', directOriginId(origin), { chain: { type: 'ethereum', id: 1 } })
+    expect(updateOrigin({}, origin, true).chainId).toBe('0x1')
+  } finally {
+    store.set('main.networks.ethereum', previous)
+  }
+})

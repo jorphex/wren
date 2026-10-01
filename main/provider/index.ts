@@ -874,6 +874,53 @@ export class Provider extends EventEmitter {
     }
   }
 
+  private withPreparationDeadline<T>(operation: Promise<T>, error: Error, timeoutMs = 15_000) {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(error), timeoutMs)
+      timer.unref?.()
+      operation.then(
+        (value) => {
+          clearTimeout(timer)
+          resolve(value)
+        },
+        (failure) => {
+          clearTimeout(timer)
+          reject(failure)
+        }
+      )
+    })
+  }
+
+  // Bound fresh pre-sign reads, without retrying a signed broadcast.
+  private sendPreSignRpc(payload: JSONRPCRequestPayload, res: RPCRequestCallback, targetChain: Chain) {
+    let settled = false
+    const finish: RPCRequestCallback = (response) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      this.connection.off('close', disconnected)
+      this.connection.off('failover', disconnected)
+      if (!response || typeof response !== 'object') {
+        return resError({ code: -32603, message: 'Invalid network response' }, payload, res)
+      }
+      res(response)
+    }
+    const unavailable = () =>
+      resError({ code: 4900, message: 'Network check unavailable. Try again.' }, payload, finish)
+    const disconnected = (chain: Chain) => {
+      if (chain.type === targetChain.type && Number(chain.id) === targetChain.id) unavailable()
+    }
+    const timer = setTimeout(unavailable, 15_000)
+    timer.unref?.()
+    this.connection.on('close', disconnected)
+    this.connection.on('failover', disconnected)
+    try {
+      this.connection.send(payload, finish, targetChain)
+    } catch {
+      unavailable()
+    }
+  }
+
   async assertTransactionFunding(req: TransactionRequest) {
     const chainId = Number(parseRpcQuantity(req.data.chainId))
     if (!Number.isSafeInteger(chainId) || chainId <= 0) {
@@ -896,7 +943,7 @@ export class Provider extends EventEmitter {
       // checked against canonical balance; ordinary transactions use pending state
       // so earlier local/mempool spends are accounted for when the RPC supports it.
       const balanceTag = req.replacement ? 'latest' : 'pending'
-      this.connection.send(
+      this.sendPreSignRpc(
         {
           id: Date.now(),
           jsonrpc: '2.0',
@@ -953,6 +1000,7 @@ export class Provider extends EventEmitter {
       return failBeforeBroadcast(req, new Error('Transaction request is no longer available'))
     }
     const transactionRequest = storedRequest as TransactionRequest
+    const approvedStatus = transactionRequest.status
     if (reviewPending(transactionRequest)) {
       return failBeforeBroadcast(transactionRequest, new Error('Transaction safety checks are still pending'))
     }
@@ -973,12 +1021,18 @@ export class Provider extends EventEmitter {
         Number.isSafeInteger(chainId) && chainId > 0 && chainUsesOptimismFees(chainId)
           ? accounts.updatePendingFees(chainId).then(() => this.assertTransactionFunding(requestToSign))
           : this.assertTransactionFunding(requestToSign)
-      void fundingCheck.then(
+      void this.withPreparationDeadline(
+        fundingCheck,
+        new TransactionFundingError(TRANSACTION_FUNDING_UNAVAILABLE, 'Funding check unavailable. Try again.')
+      ).then(
         async () => {
           if (requestToSign.nativeMax) {
             try {
               if (!this.nativeMaxRevalidator) throw new Error('Native Max safety recheck is unavailable')
-              await this.nativeMaxRevalidator(requestToSign.nativeMax, requestToSign.data)
+              await this.withPreparationDeadline(
+                this.nativeMaxRevalidator(requestToSign.nativeMax, requestToSign.data),
+                new Error('Maximum-send check unavailable')
+              )
             } catch {
               failBeforeBroadcast(
                 requestToSign,
@@ -990,6 +1044,17 @@ export class Provider extends EventEmitter {
             }
           }
           try {
+            const current = accounts.getActiveRequestForAccount(
+              requestToSign.account,
+              requestToSign.handlerId
+            )
+            if (
+              current !== requestToSign ||
+              current.status !== approvedStatus ||
+              (current.status !== undefined && current.status !== RequestStatus.Pending)
+            ) {
+              throw new SignerUserRejectedError('Transaction request was cancelled')
+            }
             this.signAndSend(requestToSign, cb)
           } catch (error) {
             cb(error as Error)
@@ -1186,7 +1251,7 @@ export class Provider extends EventEmitter {
     account: string
   ) {
     return new Promise<string>((resolve, reject) => {
-      this.connection.send(
+      this.sendPreSignRpc(
         { id: Date.now(), jsonrpc: '2.0', method, params: [account, 'pending'] },
         (response) => {
           const quantity = response.error ? undefined : parseRpcQuantity(response.result)
@@ -1210,7 +1275,7 @@ export class Provider extends EventEmitter {
 
   private walletCallsRpcCall(chainId: number, to: string, data: string) {
     return new Promise<string>((resolve, reject) => {
-      this.connection.send(
+      this.sendPreSignRpc(
         {
           id: Date.now(),
           jsonrpc: '2.0',
@@ -1535,7 +1600,11 @@ export class Provider extends EventEmitter {
 
       accounts.refreshRequestAddressSafety(accountId, handlerId)
 
-      const preflight = await this.inspectWalletCallsPreflight(request)
+      const preflight = await this.withPreparationDeadline(
+        this.inspectWalletCallsPreflight(request),
+        new WalletCallFundingError(WALLET_CALL_FUNDING_UNAVAILABLE, 'Batch check unavailable. Try again.'),
+        45_000
+      )
 
       const currentRequest = accounts.getRequestForAccount<WalletCallsRequest>(accountId, handlerId)
       if (currentRequest !== request) throw new Error('Wallet-call request changed during preflight')
@@ -1982,7 +2051,7 @@ export class Provider extends EventEmitter {
       id: parseInt(rawTx.chainId, 16)
     }
 
-    this.connection.send(
+    this.sendPreSignRpc(
       { id: 1, jsonrpc: '2.0', method: 'eth_getTransactionCount', params: [rawTx.from, 'pending'] },
       res,
       targetChain

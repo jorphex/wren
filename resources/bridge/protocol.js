@@ -31,6 +31,7 @@ export const requestEventChannels = new Set([
   'tray:openExternal',
   'tray:quit',
   'tray:ready',
+  'tray:reload',
   'tray:rejectRequest',
   'tray:removeToken',
   'tray:renameAccount',

@@ -117,14 +117,25 @@ export class RequestCommand extends React.Component {
   }
 
   componentDidUpdate(previousProps) {
-    if (previousProps.req?.handlerId !== this.props.req?.handlerId && this.state.recheckCompleted) {
-      this.setState({ recheckCompleted: false })
+    if (
+      previousProps.req?.handlerId !== this.props.req?.handlerId ||
+      previousProps.req?.account !== this.props.req?.account ||
+      previousProps.req?.status !== this.props.req?.status
+    ) {
+      this.cancelCompatibilityCheck()
+      this.cancelRequestAction?.()
+      this.cancelRequestAction = undefined
+      this.requestAction = undefined
+      this.setState({ recheckCompleted: false, requestActionPending: false, requestActionError: '' })
     }
     this.syncSigningClock()
   }
 
   componentWillUnmount() {
     this.mounted = false
+    this.cancelCompatibilityCheck()
+    this.cancelRequestAction?.()
+    this.requestAction = undefined
     ;['allowInputTimer', 'txHashCopiedTimer', 'signerLockedTimer', 'signingClockTimer'].forEach((name) => {
       clearTimeout(this[name])
       this[name] = undefined
@@ -155,15 +166,26 @@ export class RequestCommand extends React.Component {
   }
 
   decline(req) {
+    this.cancelCompatibilityCheck()
+    this.setState({ requestActionPending: false })
     link.rpc('declineRequest', requestReference(req), () => {}) // Move to link.send
   }
 
   runRequestAction(method, req) {
-    if (this.state.requestActionPending) return
+    if (this.state.requestActionPending || this.requestAction) return
 
+    const action = {}
+    this.requestAction = action
     this.setState({ requestActionPending: true, requestActionError: '' })
     const onResult = (error) => {
-      if (!this.mounted) return
+      if (
+        !this.mounted ||
+        this.requestAction !== action ||
+        this.props.req?.handlerId !== req.handlerId ||
+        this.props.req?.account !== req.account
+      )
+        return
+      this.requestAction = undefined
       if (error) {
         if (method === 'retryTransactionRequest') {
           this.setState({
@@ -182,10 +204,12 @@ export class RequestCommand extends React.Component {
       }
     }
     const reference = requestReference(req)
-    if (method === 'approveRequest') link.rpc('approveRequest', reference, onResult)
-    else if (method === 'retryTransactionRequest') link.rpc('retryTransactionRequest', reference, onResult)
+    if (method === 'approveRequest')
+      this.cancelRequestAction = link.rpc('approveRequest', reference, onResult)
+    else if (method === 'retryTransactionRequest')
+      this.cancelRequestAction = link.rpc('retryTransactionRequest', reference, onResult)
     else if (method === 'closeFailedTransactionRequest') {
-      link.rpc('closeFailedTransactionRequest', reference, onResult)
+      this.cancelRequestAction = link.rpc('closeFailedTransactionRequest', reference, onResult)
     } else {
       onResult(new Error('Unsupported request action'))
     }
@@ -242,6 +266,46 @@ export class RequestCommand extends React.Component {
         requestActionError: 'Verification could not be opened. The deployment is still confirmed.'
       })
     }
+  }
+
+  cancelCompatibilityCheck() {
+    clearTimeout(this.compatibilityTimer)
+    this.cancelCompatibilityRpc?.()
+    this.cancelCompatibilityRpc = undefined
+    this.compatibilityAttempt = undefined
+  }
+
+  checkSignerCompatibility(req, onCompatible) {
+    if (this.state.requestActionPending || this.compatibilityAttempt) return
+    const attempt = {}
+    this.compatibilityAttempt = attempt
+    this.setState({ requestActionPending: true, requestActionError: '' })
+    const finish = (error, compatibility) => {
+      if (this.compatibilityAttempt !== attempt) return
+      this.cancelCompatibilityCheck()
+      if (
+        !this.mounted ||
+        this.props.req?.handlerId !== req.handlerId ||
+        this.props.req?.account !== req.account ||
+        this.props.req?.status !== undefined
+      )
+        return
+      this.setState({ requestActionPending: false }, () => {
+        if (
+          !this.mounted ||
+          this.props.req?.handlerId !== req.handlerId ||
+          this.props.req?.status !== undefined
+        )
+          return
+        if (error === 'timeout') {
+          this.setState({ requestActionError: 'Signer check unavailable. Try again.' })
+        } else if (!this.handleSignerCompatibilityFailure(error, compatibility, req)) {
+          onCompatible(compatibility)
+        }
+      })
+    }
+    this.compatibilityTimer = setTimeout(() => finish('timeout'), 10_000)
+    this.cancelCompatibilityRpc = link.rpc('signerCompatibility', req.account, req.handlerId, finish)
   }
 
   handleSignerCompatibilityFailure(error, compatibility, req) {
@@ -478,7 +542,13 @@ export class RequestCommand extends React.Component {
           </span>
           <span className='requestActionContextCopy'>
             <strong>
-              {reviewPending ? 'Checking transaction' : advancedPending ? 'Final checks' : 'Ready for review'}
+              {this.state.requestActionPending
+                ? 'Preparing to sign'
+                : reviewPending
+                  ? 'Checking transaction'
+                  : advancedPending
+                    ? 'Final checks'
+                    : 'Ready for review'}
             </strong>
 
             {this.state.requestActionError ? (
@@ -507,9 +577,7 @@ export class RequestCommand extends React.Component {
             disabled={!allowApproval}
             onClick={() => {
               if (allowApproval) {
-                link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
-                  if (this.handleSignerCompatibilityFailure(e, compatibility, req)) return
-
+                this.checkSignerCompatibility(req, (compatibility) => {
                   if (!compatibility.compatible && !this.store('main.mute.signerCompatibilityWarning')) {
                     this.store.notify('signerCompatibilityWarning', { req, compatibility, chain: chain })
                   } else if (
@@ -541,7 +609,13 @@ export class RequestCommand extends React.Component {
                 </span>
               ) : (
                 <span>
-                  {reviewPending ? 'Checking' : advancedPending ? 'Finishing checks' : 'Sign transaction'}
+                  {this.state.requestActionPending
+                    ? 'Preparing'
+                    : reviewPending
+                      ? 'Checking'
+                      : advancedPending
+                        ? 'Finishing checks'
+                        : 'Sign transaction'}
                 </span>
               )}
             </span>
@@ -620,7 +694,7 @@ export class RequestCommand extends React.Component {
       },
       'rechecking-safety': {
         title: 'Rechecking transaction',
-        detail: 'Wren is repeating the safety checks before signing.',
+        detail: 'Checking the latest balance and account code.',
         button: 'Rechecking'
       },
       'sending-to-signer': {
@@ -877,7 +951,7 @@ export class RequestCommand extends React.Component {
                 <Icon name='sign' size={19} />
               </span>
               <span className='requestActionContextCopy'>
-                <strong>Ready to sign</strong>
+                <strong>{this.state.requestActionPending ? 'Preparing to sign' : 'Ready to sign'}</strong>
               </span>
             </div>
             <div className='requestActionButtons'>
@@ -896,18 +970,21 @@ export class RequestCommand extends React.Component {
               <button
                 type='button'
                 className='requestSign'
-                disabled={!this.state.allowInput}
+                disabled={!this.state.allowInput || this.state.requestActionPending}
                 onClick={() => {
                   if (this.state.allowInput) {
-                    link.rpc('signerCompatibility', req.account, req.handlerId, (e, compatibility) => {
-                      if (this.handleSignerCompatibilityFailure(e, compatibility, req)) return
-                      this.approve(req.handlerId, req)
-                    })
+                    this.checkSignerCompatibility(req, () => this.approve(req.handlerId, req))
                   }
                 }}
               >
                 <span className='requestSignButton _txButton'>
-                  <span>{req.type === 'signErc20Permit' ? 'Sign approval' : 'Sign message'}</span>
+                  <span>
+                    {this.state.requestActionPending
+                      ? 'Preparing'
+                      : req.type === 'signErc20Permit'
+                        ? 'Sign approval'
+                        : 'Sign message'}
+                  </span>
                 </span>
               </button>
             </div>
@@ -922,7 +999,7 @@ export class RequestCommand extends React.Component {
     if (!req) return null
     const crumb = this.store('windows.panel.nav')[0] || {}
 
-    if (req.type === 'transaction' && crumb.data.step === 'confirm') {
+    if (req.type === 'transaction' && crumb.data?.step === 'confirm') {
       return this.renderTxCommand()
     } else if (isSignatureRequest(req)) {
       return this.renderSignDataCommand()

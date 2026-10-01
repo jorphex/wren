@@ -619,7 +619,7 @@ it('omits explorer access without a configured explorer while preserving hash co
 })
 
 it.each([
-  ['sending', 'Submitted', 'Wren is sending the transaction to the network.'],
+  ['sending', 'Submitting', 'Wren is sending the transaction to the network.'],
   ['verifying', 'Submitted', 'Sent to the network.'],
   ['confirming', 'Confirming', 'Waiting for network confirmation.'],
   ['confirmed', 'Confirmed', 'The transaction is confirmed on Ethereum.'],
@@ -798,4 +798,37 @@ it('renders a declined signature without a failure symbol', () => {
   expect(document.querySelector('.requestNoticeInnerSymbol')).toBeNull()
   expect(screen.queryByText('Signature Declined')).toBeNull()
   command.componentWillUnmount()
+})
+
+it('locks Sign while compatibility is pending and ignores a reply after the review changes', async () => {
+  const req = transaction()
+  const store = commandStore()
+  const view = renderMountedCommand(req, 'signOrDecline', store, 0)
+  act(() => jest.advanceTimersByTime(0))
+  const sign = screen.getByRole('button', { name: 'Sign transaction' })
+  await view.user.click(sign)
+  await view.user.click(sign)
+  expect(sign.disabled).toBe(true)
+  expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility'])
+  const callback = link.rpc.mock.calls[0].at(-1)
+  const next = transaction({ handlerId: '33333333-3333-4333-8333-333333333333' })
+  view.rerender(
+    <RequestCommandHarness req={next} renderMethod='signOrDecline' signingDelay={0} testStore={store} />
+  )
+  act(() => callback(null, { compatible: true }))
+  expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility'])
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
+  view.unmount()
+})
+
+it('allows retry after a missing compatibility reply and ignores its late response', async () => {
+  const view = renderMountedCommand(transaction(), 'signOrDecline', commandStore(), 0)
+  act(() => jest.advanceTimersByTime(0))
+  await view.user.click(screen.getByRole('button', { name: 'Sign transaction' }))
+  const callback = link.rpc.mock.calls[0].at(-1)
+  act(() => jest.advanceTimersByTime(10000))
+  expect(screen.getByRole('button', { name: 'Sign transaction' }).disabled).toBe(false)
+  act(() => callback(null, { compatible: true }))
+  expect(link.rpc.mock.calls.map(([method]) => method)).toEqual(['signerCompatibility'])
+  view.unmount()
 })

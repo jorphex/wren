@@ -6,6 +6,12 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Added recovery when the wallet view fails. Kept updater setup from repeating after reload.
+- Fixed site connection retries and kept late replies from changing the selected network.
+- Set time limits for transaction checks and ignored late replies after cancellation.
+- Prevented repeat Sign clicks during signer checks. Used Submitting while sending.
+- Used an enabled default network for new site connections.
+
 ## 0.1.10 - 2026-09-23
 
 - Linked Firefox Companion buttons to the approved Firefox Add-ons listing.
