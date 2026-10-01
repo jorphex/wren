@@ -28,6 +28,7 @@ beforeAll(() => {
 afterAll(() => {
   nock.cleanAll()
   nock.enableNetConnect()
+  nock.restore()
   log.transports.console.level = 'debug'
 })
 
