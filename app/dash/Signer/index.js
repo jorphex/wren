@@ -123,12 +123,29 @@ export class Signer extends React.Component {
   }
 
   componentDidUpdate(previousProps) {
-    if (previousProps.status !== this.props.status) {
+    if (
+      previousProps.status !== this.props.status ||
+      previousProps.authenticationRequestId !== this.props.authenticationRequestId
+    ) {
       this.pending.pin = false
       this.pending.phrase = false
       this.pending.pairing = false
-      if (this.state.tPinPending || this.state.tPhrasePending || this.state.tPairingPending) {
-        this.setState({ tPinPending: false, tPhrasePending: false, tPairingPending: false })
+      if (
+        this.state.tPin ||
+        this.state.tPhrase ||
+        this.state.tPairing ||
+        this.state.tPinPending ||
+        this.state.tPhrasePending ||
+        this.state.tPairingPending
+      ) {
+        this.setState({
+          tPin: '',
+          tPhrase: '',
+          tPairing: '',
+          tPinPending: false,
+          tPhrasePending: false,
+          tPairingPending: false
+        })
       }
     } else if (previousProps.pinError !== this.props.pinError && this.state.tPinPending) {
       this.pending.pin = false
@@ -157,34 +174,34 @@ export class Signer extends React.Component {
   }
 
   submitPin() {
-    if (!this.state.tPin || this.pending.pin) return
+    if (!this.props.authenticationRequestId || !this.state.tPin || this.pending.pin) return
     const pin = this.state.tPin
     this.pending.pin = true
     this.setState({ tPin: '', tPinPending: true })
-    link.rpc('trezorPin', this.props.id, pin, () => {})
+    link.rpc('trezorPin', this.props.id, pin, this.props.authenticationRequestId, () => {})
   }
 
   submitPhrase() {
-    if (this.pending.phrase) return
+    if (!this.props.authenticationRequestId || this.pending.phrase) return
     const phrase = this.state.tPhrase || ''
     this.pending.phrase = true
     this.setState({ tPhrase: '', tPhrasePending: true })
-    link.rpc('trezorPhrase', this.props.id, phrase, () => {})
+    link.rpc('trezorPhrase', this.props.id, phrase, this.props.authenticationRequestId, () => {})
   }
 
   submitPhraseOnDevice() {
-    if (this.pending.phrase) return
+    if (!this.props.authenticationRequestId || this.pending.phrase) return
     this.pending.phrase = true
     this.setState({ tPhrase: '', tPhrasePending: true })
-    link.rpc('trezorEnterPhrase', this.props.id, () => {})
+    link.rpc('trezorEnterPhrase', this.props.id, this.props.authenticationRequestId, () => {})
   }
 
   submitPairing() {
-    if (!this.state.tPairing || this.pending.pairing) return
+    if (!this.props.authenticationRequestId || !this.state.tPairing || this.pending.pairing) return
     const pairing = this.state.tPairing
     this.pending.pairing = true
     this.setState({ tPairing: '', tPairingPending: true })
-    link.rpc('trezorPairing', this.props.id, { tag: pairing }, () => {})
+    link.rpc('trezorPairing', this.props.id, { tag: pairing }, this.props.authenticationRequestId, () => {})
   }
 
   dismissHardwarePrompt() {

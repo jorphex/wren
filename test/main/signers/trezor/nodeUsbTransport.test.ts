@@ -51,7 +51,7 @@ describe('Linux Trezor NodeUsb transport', () => {
     const transport = {
       api: {
         resetDevice: jest.fn().mockResolvedValue(undefined),
-        closeDevice: jest.fn().mockResolvedValue({ success: false, error: 'close failed' }),
+        closeDevice: jest.fn().mockResolvedValue({ success: false, error: { code: 'close failed' } }),
         devices: [{ path: 'trezor-path' }]
       }
     }

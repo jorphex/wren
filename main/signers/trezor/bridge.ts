@@ -1,19 +1,24 @@
 import log from 'electron-log'
 import { EventEmitter } from 'events'
 import type { ThpPairingMethod } from '@trezor/protocol'
-import type { ConnectSettingsTransport } from '@trezor/connect/lib/types/settings'
 import TrezorConnect, {
   CommonParams,
   Device,
   DeviceEvent,
-  UiEvent,
+  UiEventMessage,
+  PopupEventMessage,
+  UiRequestMessage,
   Response,
   DEVICE,
   DEVICE_EVENT,
-  UI,
+  UI_EVENTS,
+  UI_REQUEST,
+  UI_REQUESTS,
+  UI_RESPONSE,
   UI_EVENT
 } from '@trezor/connect'
 import { closeFrameNodeUsbTransports, FrameNodeUsbTransport } from './nodeUsbTransport'
+import { trezorSignerId } from './deviceId'
 import { WREN_REPOSITORY_URL } from '../../../resources/constants'
 
 export class DeviceError extends Error {
@@ -43,10 +48,7 @@ const config = {
   manifest,
   popup: false,
   debug: false,
-  lazyLoad: false,
-  // Trezor's NodeUsb constructor currently conflicts with its own public
-  // transport type when exactOptionalPropertyTypes is enabled.
-  transports: [FrameNodeUsbTransport as unknown as ConnectSettingsTransport]
+  lazyLoad: false
 }
 
 type TrezorTypedData = Parameters<typeof TrezorConnect.ethereumSignTypedData>[0]['data']
@@ -63,12 +65,13 @@ async function handleResponse<T>(p: Response<T>) {
   const response = await p
 
   if (response.success) return response.payload
-  const responseError = new Error(response.payload.error) as NodeJS.ErrnoException
-  responseError.code = response.payload.code
+  const responseError = new Error(response.error.message) as NodeJS.ErrnoException
+  responseError.code = response.error.code
   throw responseError
 }
 
 class TrezorBridge extends EventEmitter {
+  private pendingPrompts = new Map<string, { requestId: string; type: string; generation: number }>()
   private lifecycleGeneration = 0
   private requestQueue: Promise<void> = Promise.resolve()
   private retryDelays = new Set<{
@@ -81,9 +84,16 @@ class TrezorBridge extends EventEmitter {
 
     TrezorConnect.on(DEVICE_EVENT, this.handleDeviceEvent.bind(this))
     TrezorConnect.on(UI_EVENT, this.handleUiEvent.bind(this))
+    TrezorConnect.on(UI_REQUEST, this.handleUiRequest.bind(this))
 
     try {
-      await TrezorConnect.init(config)
+      await TrezorConnect.init({
+        ...config,
+        // Connect 10 vendors a second private AbstractTransport identity in its declarations.
+        // The packaged runtime probe verifies this real guarded transport instance.
+        // @ts-expect-error Upstream vendored private class differs from @trezor/transport-common.
+        transports: [new FrameNodeUsbTransport({ id: 'Wren' })]
+      })
 
       if (generation !== this.lifecycleGeneration) return
 
@@ -98,6 +108,7 @@ class TrezorBridge extends EventEmitter {
   async close() {
     ++this.lifecycleGeneration
     this.cancelRetryDelays()
+    this.pendingPrompts.clear()
     this.requestQueue = Promise.resolve()
     this.removeAllListeners()
 
@@ -122,7 +133,9 @@ class TrezorBridge extends EventEmitter {
   }
 
   async getPublicKey(device: DeviceReference, path: string) {
-    return this.makeRequest(() => TrezorConnect.getPublicKey({ device: deviceSelector(device), path }))
+    return this.makeRequest(() =>
+      TrezorConnect.ethereumGetPublicKey({ device: deviceSelector(device), path })
+    )
   }
 
   async getAddress(device: DeviceReference, path: string, display = false) {
@@ -198,46 +211,67 @@ class TrezorBridge extends EventEmitter {
     return { v, r, s }
   }
 
-  pinEntered(deviceId: string, pin: string) {
+  pinEntered(deviceId: string, pin: string, authenticationRequestId: string) {
     log.debug('pin entered for device', deviceId)
 
-    TrezorConnect.uiResponse({ type: UI.RECEIVE_PIN, payload: pin })
+    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PIN)
+    if (!requestId) return
+    TrezorConnect.uiResponse({ type: UI_RESPONSE.RECEIVE_PIN, payload: pin, requestId })
 
     this.emit('trezor:entered:pin', deviceId)
   }
 
-  passphraseEntered(deviceId: string, phrase: string) {
+  passphraseEntered(deviceId: string, phrase: string, authenticationRequestId: string) {
     log.debug('passphrase entered for device', deviceId)
 
-    TrezorConnect.uiResponse({ type: UI.RECEIVE_PASSPHRASE, payload: { save: true, value: phrase } })
+    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PASSPHRASE)
+    if (!requestId) return
+    TrezorConnect.uiResponse({
+      type: UI_RESPONSE.RECEIVE_PASSPHRASE,
+      payload: { save: true, value: phrase },
+      requestId
+    })
 
     this.emit('trezor:entered:passphrase', deviceId)
   }
 
-  enterPassphraseOnDevice(deviceId: string) {
+  enterPassphraseOnDevice(deviceId: string, authenticationRequestId: string) {
     log.debug('requested to enter passphrase on device', deviceId)
 
+    const requestId = this.consumePrompt(deviceId, authenticationRequestId, UI_REQUESTS.REQUEST_PASSPHRASE)
+    if (!requestId) return
     TrezorConnect.uiResponse({
-      type: UI.RECEIVE_PASSPHRASE,
+      requestId,
+      type: UI_RESPONSE.RECEIVE_PASSPHRASE,
       payload: { value: '', passphraseOnDevice: true, save: true }
     })
 
     this.emit('trezor:enteringPhrase', deviceId)
   }
 
-  pairingEntered(deviceId: string, payload: TrezorPairingResponse) {
+  pairingEntered(deviceId: string, payload: TrezorPairingResponse, authenticationRequestId: string) {
     log.debug('pairing response entered for device', deviceId)
 
-    TrezorConnect.uiResponse({ type: UI.RECEIVE_THP_PAIRING_TAG, payload })
+    const requestId = this.consumePrompt(
+      deviceId,
+      authenticationRequestId,
+      UI_REQUESTS.REQUEST_THP_PAIRING_TAG
+    )
+    if (!requestId) return
+    TrezorConnect.uiResponse({ type: UI_RESPONSE.RECEIVE_THP_PAIRING_TAG, payload, requestId })
 
     this.emit('trezor:entered:pairing', deviceId)
   }
 
   cancelCurrentRequest() {
+    this.pendingPrompts.clear()
+    this.emit('trezor:authenticationCancelled')
     TrezorConnect.cancel('Transaction signing cancelled in Wren')
   }
 
   cancelAuthentication() {
+    this.pendingPrompts.clear()
+    this.emit('trezor:authenticationCancelled')
     TrezorConnect.cancel('Authentication dismissed in Wren')
   }
 
@@ -246,6 +280,9 @@ class TrezorBridge extends EventEmitter {
     const request = this.requestQueue
       .catch(() => undefined)
       .then(() => this.runRequest(fn, retries, generation))
+      .finally(() => {
+        if (generation === this.lifecycleGeneration) this.pendingPrompts.clear()
+      })
 
     this.requestQueue = request.then(
       () => undefined,
@@ -330,6 +367,7 @@ class TrezorBridge extends EventEmitter {
     } else if (e.type === DEVICE.CONNECT && e.payload.type === 'acquired') {
       this.emit('trezor:connect', e.payload)
     } else if (e.type === DEVICE.DISCONNECT) {
+      this.pendingPrompts.delete(trezorSignerId(e.payload.path))
       this.emit('trezor:disconnect', e.payload)
     } else if (e.type === DEVICE.CHANGED) {
       // update the device to remember things like passphrases and other session info
@@ -337,19 +375,50 @@ class TrezorBridge extends EventEmitter {
     }
   }
 
-  private handleUiEvent(e: UiEvent) {
-    log.debug('received Trezor ui event', { e })
+  private consumePrompt(deviceId: string, authenticationRequestId: string, type: string) {
+    const prompt = this.pendingPrompts.get(deviceId)
+    if (
+      !authenticationRequestId ||
+      !prompt ||
+      prompt.requestId !== authenticationRequestId ||
+      prompt.type !== type ||
+      prompt.generation !== this.lifecycleGeneration
+    )
+      return
+    this.pendingPrompts.delete(deviceId)
+    return prompt.requestId
+  }
 
-    if (e.type === UI.REQUEST_PIN) {
-      this.emit('trezor:needPin', e.payload.device)
-    } else if (e.type === UI.INVALID_PIN) {
+  private handleUiRequest(e: UiRequestMessage) {
+    if (
+      e.type === UI_REQUESTS.REQUEST_PIN ||
+      e.type === UI_REQUESTS.REQUEST_PASSPHRASE ||
+      e.type === UI_REQUESTS.REQUEST_THP_PAIRING_TAG
+    ) {
+      this.pendingPrompts.set(trezorSignerId(e.payload.device.path), {
+        requestId: e.requestId,
+        type: e.type,
+        generation: this.lifecycleGeneration
+      })
+      if (e.type === UI_REQUESTS.REQUEST_PIN) this.emit('trezor:needPin', e.payload.device, e.requestId)
+      else if (e.type === UI_REQUESTS.REQUEST_PASSPHRASE)
+        this.emit('trezor:needPhrase', e.payload.device, e.requestId)
+      else this.emit('trezor:needPairing', { ...e.payload, requestId: e.requestId })
+    } else {
+      // Wren does not provide firmware/recovery or host confirmation UI.
+      // Never silently approve a newly introduced SDK confirmation.
+      this.pendingPrompts.clear()
+      this.emit('trezor:authenticationCancelled')
+      TrezorConnect.cancel('Unsupported Trezor authentication request in Wren')
+    }
+  }
+
+  private handleUiEvent(e: UiEventMessage | PopupEventMessage) {
+    if (e.type === UI_EVENTS.PIN_INVALID) {
       this.emit('trezor:invalidPin', e.payload.device)
-    } else if (e.type === UI.INVALID_PIN_ATTEMPTS_DEPLETED) {
+    } else if (e.type === UI_EVENTS.PIN_INVALID_ATTEMPTS_DEPLETED) {
+      this.pendingPrompts.delete(trezorSignerId(e.payload.device.path))
       this.emit('trezor:pinAttemptsDepleted', e.payload.device)
-    } else if (e.type === UI.REQUEST_PASSPHRASE) {
-      this.emit('trezor:needPhrase', e.payload.device)
-    } else if (e.type === UI.REQUEST_THP_PAIRING) {
-      this.emit('trezor:needPairing', e.payload)
     }
   }
 }

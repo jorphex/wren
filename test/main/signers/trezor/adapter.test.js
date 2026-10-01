@@ -82,7 +82,7 @@ describe('Trezor adapter lifecycle', () => {
     TrezorBridge.emit('trezor:detected', device.path)
     signer.status = Status.OK
 
-    TrezorBridge.emit('trezor:needPhrase', device)
+    TrezorBridge.emit('trezor:needPhrase', device, 'phrase-request')
     expect(signer.status).toBe(Status.NEEDS_PASSPHRASE)
 
     TrezorBridge.emit('trezor:enteringPhrase', signer.id)
@@ -102,13 +102,40 @@ describe('Trezor adapter lifecycle', () => {
     expect(mockStoreActions.navReplace).toBeUndefined()
 
     signer.status = Status.INITIAL
-    TrezorBridge.emit('trezor:needPin', device)
+    TrezorBridge.emit('trezor:needPin', device, 'pin-request')
     expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledWith(signer.id, true)
 
     TrezorBridge.emit('trezor:entered:pin', signer.id)
     signer.status = Status.OK
     signer.emit('update')
     expect(mockStoreActions.clearHardwarePrompt).toHaveBeenCalledWith(signer.id)
+  })
+
+  it('serializes replacement prompt IDs and clears them after response, cancellation and disconnect', () => {
+    let signer
+    adapter.once('add', (addedSigner) => {
+      signer = addedSigner
+    })
+    TrezorBridge.emit('trezor:detected', device.path)
+    signer.status = Status.OK
+    TrezorBridge.emit('trezor:needPin', device, 'pin-old')
+    expect(signer.summary().authenticationRequestId).toBe('pin-old')
+    TrezorBridge.emit('trezor:needPin', device, 'pin-new')
+    expect(signer.summary().authenticationRequestId).toBe('pin-new')
+    TrezorBridge.emit('trezor:entered:pin', signer.id)
+    expect(signer.summary().authenticationRequestId).toBeUndefined()
+    TrezorBridge.emit('trezor:needPhrase', device, 'phrase-new')
+    TrezorBridge.emit('trezor:authenticationCancelled')
+    expect(signer.summary().authenticationRequestId).toBeUndefined()
+    TrezorBridge.emit('trezor:needPairing', {
+      device,
+      requestId: 'pairing-new',
+      availableMethods: [2],
+      selectedMethod: 2
+    })
+    expect(signer.summary().authenticationRequestId).toBe('pairing-new')
+    TrezorBridge.emit('trezor:disconnect', device)
+    expect(signer.summary().authenticationRequestId).toBeUndefined()
   })
 
   it('defers passive session authentication until onboarding completes', async () => {
@@ -160,18 +187,19 @@ describe('Trezor adapter lifecycle', () => {
     signer.status = Status.INITIAL
     signer.device = device
 
-    TrezorBridge.emit('trezor:needPin', device)
+    TrezorBridge.emit('trezor:needPin', device, 'pin-request')
     expect(adapter.dismissAuthentication(signer)).toBe(true)
     expect(TrezorBridge.cancelAuthentication).toHaveBeenCalledTimes(1)
     expect(mockStoreActions.dismissHardwarePrompt).toHaveBeenCalledWith(signer.id)
     expect(signer.device).toBe(device)
     expect(signer.status).toBe(Status.NEEDS_RECONNECTION)
+    expect(signer.authenticationRequestId).toBeUndefined()
 
-    TrezorBridge.emit('trezor:needPin', device)
+    TrezorBridge.emit('trezor:needPin', device, 'pin-request')
     expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledTimes(1)
 
     await adapter.reload(signer)
-    TrezorBridge.emit('trezor:needPin', device)
+    TrezorBridge.emit('trezor:needPin', device, 'pin-request')
     expect(mockStoreActions.showHardwarePrompt).toHaveBeenCalledTimes(2)
   })
 
@@ -184,7 +212,7 @@ describe('Trezor adapter lifecycle', () => {
     signer.status = Status.OK
     // Signing requests retain ready status while their request is live; only
     // startup/session establishment is eligible for a passive dismissal.
-    TrezorBridge.emit('trezor:needPhrase', device)
+    TrezorBridge.emit('trezor:needPhrase', device, 'phrase-request')
 
     expect(adapter.dismissAuthentication(signer)).toBe(false)
     expect(TrezorBridge.cancelAuthentication).not.toHaveBeenCalled()
@@ -200,7 +228,7 @@ describe('Trezor adapter lifecycle', () => {
       })
       TrezorBridge.emit('trezor:detected', device.path)
       signer.status = Status.INITIAL
-      TrezorBridge.emit('trezor:needPin', device)
+      TrezorBridge.emit('trezor:needPin', device, 'pin-request')
       signer.hasActiveSigningOperation = jest.fn(() => true)
 
       expect(adapter.dismissAuthentication(signer)).toBe(false)
@@ -217,7 +245,7 @@ describe('Trezor adapter lifecycle', () => {
     TrezorBridge.emit('trezor:detected', device.path)
     signer.status = Status.OK
 
-    TrezorBridge.emit('trezor:needPin', device)
+    TrezorBridge.emit('trezor:needPin', device, 'pin-request')
     TrezorBridge.emit('trezor:pinAttemptsDepleted', device)
     TrezorBridge.emit('trezor:entered:pin', signer.id)
 

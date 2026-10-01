@@ -11,6 +11,7 @@ const TrezorConnect = {
   getFeatures: jest.fn(),
   getAccountInfo: jest.fn(),
   getPublicKey: jest.fn(),
+  ethereumGetPublicKey: jest.fn(),
   ethereumGetAddress: jest.fn(),
   ethereumSignMessage: jest.fn(),
   ethereumSignTypedData: jest.fn(),
@@ -28,12 +29,17 @@ module.exports = {
     CONNECT: 'device-connect',
     DISCONNECT: 'device-disconnect'
   },
-  UI: {
+  UI_REQUEST: 'UI_REQUEST',
+  UI_REQUESTS: {
     REQUEST_PIN: 'ui-request_pin',
-    INVALID_PIN: 'ui-invalid_pin',
-    INVALID_PIN_ATTEMPTS_DEPLETED: 'ui-invalid_pin_attempts_depleted',
     REQUEST_PASSPHRASE: 'ui-request_passphrase',
-    REQUEST_THP_PAIRING: 'ui-request_thp_pairing',
+    REQUEST_THP_PAIRING_TAG: 'ui-request_thp_pairing_tag'
+  },
+  UI_EVENTS: {
+    PIN_INVALID: 'ui-event_pin_invalid',
+    PIN_INVALID_ATTEMPTS_DEPLETED: 'ui-event_pin_invalid_attempts_depleted'
+  },
+  UI_RESPONSE: {
     RECEIVE_PIN: 'ui-receive_pin',
     RECEIVE_PASSPHRASE: 'ui-receive_passphrase',
     RECEIVE_THP_PAIRING_TAG: 'ui-receive_thp_pairing_tag'

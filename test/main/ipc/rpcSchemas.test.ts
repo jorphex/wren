@@ -448,3 +448,16 @@ test('bounds approval balance RPC to a request reference and exact amount respon
   expect(parseRendererRpcResponse('getApprovalBalance', [null, '0']).success).toBe(true)
   expect(parseRendererRpcResponse('getApprovalBalance', [null, '-1']).success).toBe(false)
 })
+
+test.each([
+  ['trezorPin', ['trezor-id', '1234']],
+  ['trezorPhrase', ['trezor-id', '']],
+  ['trezorPairing', ['trezor-id', { tag: 'ABC123' }]],
+  ['trezorEnterPhrase', ['trezor-id']]
+])('requires a bounded authentication request ID for %s', (method, args) => {
+  expect(parseRendererRpcRequest(wire(1, method, ...args, 'request-1')).success).toBe(true)
+  expect(parseRendererRpcRequest(wire(1, method, ...args)).success).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, method, ...args, '')).success).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, method, ...args, 'x'.repeat(257))).success).toBe(false)
+  expect(parseRendererRpcRequest(wire(1, method, ...args, 123)).success).toBe(false)
+})

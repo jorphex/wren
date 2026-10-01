@@ -110,21 +110,21 @@ const rpc = {
       provider.accountsChanged(currentAddresses)
     }
   },
-  trezorPin: (id, pin, cb) => {
+  trezorPin: (id, pin, requestId, cb) => {
     cb()
-    TrezorBridge.pinEntered(id, pin)
+    TrezorBridge.pinEntered(id, pin, requestId)
   },
-  trezorPhrase: (id, phrase, cb) => {
+  trezorPhrase: (id, phrase, requestId, cb) => {
     cb()
-    TrezorBridge.passphraseEntered(id, phrase)
+    TrezorBridge.passphraseEntered(id, phrase, requestId)
   },
-  trezorPairing: (id, payload, cb) => {
+  trezorPairing: (id, payload, requestId, cb) => {
     cb()
-    TrezorBridge.pairingEntered(id, payload)
+    TrezorBridge.pairingEntered(id, payload, requestId)
   },
-  trezorEnterPhrase: (id, cb) => {
+  trezorEnterPhrase: (id, requestId, cb) => {
     cb()
-    TrezorBridge.enterPassphraseOnDevice(id)
+    TrezorBridge.enterPassphraseOnDevice(id, requestId)
   },
   createLattice: (deviceId, deviceName, cb) => {
     if (!deviceId) {
