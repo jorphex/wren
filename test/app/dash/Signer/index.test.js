@@ -1,3 +1,4 @@
+import React from 'react'
 import { act, render, screen } from '../../../componentSetup'
 import link from '../../../../resources/link'
 import { Signer } from '../../../../app/dash/Signer'
@@ -29,7 +30,15 @@ class SignerHarness extends Signer {
 }
 
 const renderSigner = (props) =>
-  render(<SignerHarness id='device-1' expanded={true} name='Test signer' {...props} />)
+  render(
+    <SignerHarness
+      id='device-1'
+      expanded={true}
+      name='Test signer'
+      authenticationRequestId='prompt-1'
+      {...props}
+    />
+  )
 
 beforeEach(() => {
   link.rpc.mockReset()
@@ -145,8 +154,8 @@ it('dismisses a busy but passive authentication prompt on Escape', async () => {
   expect(link.send).toHaveBeenCalledWith('dash:dismissHardwarePrompt', 'device-1')
 })
 
-it('submits one Trezor PIN with the original RPC payload', async () => {
-  link.rpc.mockImplementationOnce((_action, _id, _pin, callback) => callback())
+it('submits one Trezor PIN with its authentication request ID', async () => {
+  link.rpc.mockImplementationOnce((_action, _id, _pin, _requestId, callback) => callback())
   const { user } = renderSigner({ type: 'trezor', status: 'need pin' })
 
   await user.click(screen.getByRole('button', { name: 'PIN position 1' }))
@@ -154,11 +163,11 @@ it('submits one Trezor PIN with the original RPC payload', async () => {
   await user.dblClick(screen.getByRole('button', { name: 'Submit PIN' }))
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
-  expect(link.rpc).toHaveBeenCalledWith('trezorPin', 'device-1', '12', expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('trezorPin', 'device-1', '12', 'prompt-1', expect.any(Function))
 })
 
 it('allows one empty Trezor passphrase submission from the keyboard', async () => {
-  link.rpc.mockImplementation((_action, _id, _phrase, callback) => callback())
+  link.rpc.mockImplementation((_action, _id, _phrase, _requestId, callback) => callback())
   const view = renderSigner({ type: 'trezor', status: 'enter passphrase' })
   const input = screen.getByLabelText('Trezor passphrase')
 
@@ -166,13 +175,20 @@ it('allows one empty Trezor passphrase submission from the keyboard', async () =
   await view.user.keyboard('{Enter}{Enter}')
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
-  expect(link.rpc).toHaveBeenCalledWith('trezorPhrase', 'device-1', '', expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('trezorPhrase', 'device-1', '', 'prompt-1', expect.any(Function))
 
   view.rerender(
     <SignerHarness id='device-1' expanded={true} name='Test signer' type='trezor' status='connecting' />
   )
   view.rerender(
-    <SignerHarness id='device-1' expanded={true} name='Test signer' type='trezor' status='enter passphrase' />
+    <SignerHarness
+      id='device-1'
+      expanded={true}
+      name='Test signer'
+      type='trezor'
+      status='enter passphrase'
+      authenticationRequestId='prompt-2'
+    />
   )
   await view.user.click(screen.getByLabelText('Trezor passphrase'))
   await view.user.keyboard('{Enter}')
@@ -180,7 +196,7 @@ it('allows one empty Trezor passphrase submission from the keyboard', async () =
 })
 
 it('guards passphrase-on-device activation', async () => {
-  link.rpc.mockImplementationOnce((_action, _id, callback) => callback())
+  link.rpc.mockImplementationOnce((_action, _id, _requestId, callback) => callback())
   const { user } = renderSigner({
     type: 'trezor',
     status: 'enter passphrase',
@@ -190,11 +206,11 @@ it('guards passphrase-on-device activation', async () => {
   await user.dblClick(screen.getByRole('button', { name: 'Enter passphrase on device' }))
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
-  expect(link.rpc).toHaveBeenCalledWith('trezorEnterPhrase', 'device-1', expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith('trezorEnterPhrase', 'device-1', 'prompt-1', expect.any(Function))
 })
 
 it('submits one normalized Trezor pairing code', async () => {
-  link.rpc.mockImplementationOnce((_action, _id, _payload, callback) => callback())
+  link.rpc.mockImplementationOnce((_action, _id, _payload, _requestId, callback) => callback())
   const { user } = renderSigner({
     type: 'trezor',
     status: 'need pairing code',
@@ -206,7 +222,13 @@ it('submits one normalized Trezor pairing code', async () => {
   await user.keyboard('{Enter}{Enter}')
 
   expect(link.rpc).toHaveBeenCalledTimes(1)
-  expect(link.rpc).toHaveBeenCalledWith('trezorPairing', 'device-1', { tag: 'ABC123' }, expect.any(Function))
+  expect(link.rpc).toHaveBeenCalledWith(
+    'trezorPairing',
+    'device-1',
+    { tag: 'ABC123' },
+    'prompt-1',
+    expect.any(Function)
+  )
 })
 
 it('keeps a GridPlus pairing code available after an error and retries once', async () => {
@@ -461,4 +483,70 @@ it('opens active hardware account management from the signer preview', async () 
     data: { signer: 'device-1' }
   })
   expect(screen.queryByLabelText(getAddress(address))).toBeNull()
+})
+
+it.each([
+  ['need pin', 'tPin'],
+  ['enter passphrase', 'tPhrase'],
+  ['need pairing code', 'tPairing']
+])('clears entered secrets when a new %s prompt replaces the same status', (status, field) => {
+  const ref = React.createRef()
+  const props = { id: 'device-1', expanded: true, name: 'Test signer', type: 'trezor', status }
+  const view = render(<SignerHarness ref={ref} {...props} authenticationRequestId='prompt-old' />)
+  act(() => ref.current.setState({ [field]: 'old-secret', [`${field}Pending`]: true }))
+  view.rerender(<SignerHarness ref={ref} {...props} authenticationRequestId='prompt-new' />)
+  expect(ref.current.state[field]).toBe('')
+  expect(ref.current.state[`${field}Pending`]).toBe(false)
+  expect(link.rpc).not.toHaveBeenCalled()
+})
+
+it('sends the replacement PIN request ID after clearing the previous pending submission', async () => {
+  const view = renderSigner({ type: 'trezor', status: 'need pin', authenticationRequestId: 'prompt-old' })
+  await view.user.click(screen.getByRole('button', { name: 'PIN position 1' }))
+  await view.user.click(screen.getByRole('button', { name: 'Submit PIN' }))
+  view.rerender(
+    <SignerHarness
+      id='device-1'
+      expanded
+      name='Test signer'
+      type='trezor'
+      status='need pin'
+      authenticationRequestId='prompt-new'
+    />
+  )
+  await view.user.click(screen.getByRole('button', { name: 'PIN position 2' }))
+  await view.user.click(screen.getByRole('button', { name: 'Submit PIN' }))
+  expect(link.rpc).toHaveBeenNthCalledWith(
+    1,
+    'trezorPin',
+    'device-1',
+    '1',
+    'prompt-old',
+    expect.any(Function)
+  )
+  expect(link.rpc).toHaveBeenNthCalledWith(
+    2,
+    'trezorPin',
+    'device-1',
+    '2',
+    'prompt-new',
+    expect.any(Function)
+  )
+})
+
+it('does not submit any authentication response without a request ID', () => {
+  const ref = React.createRef()
+  render(
+    <SignerHarness ref={ref} id='device-1' expanded name='Test signer' type='trezor' status='need pin' />
+  )
+  act(() => {
+    ref.current.setState({ tPin: '1', tPhrase: 'phrase', tPairing: 'PAIRING' })
+  })
+  act(() => {
+    ref.current.submitPin()
+    ref.current.submitPhrase()
+    ref.current.submitPhraseOnDevice()
+    ref.current.submitPairing()
+  })
+  expect(link.rpc).not.toHaveBeenCalled()
 })

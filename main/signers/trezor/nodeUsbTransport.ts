@@ -11,8 +11,7 @@ type UsbDeviceReference = {
 
 type UsbCloseResult = {
   success: boolean
-  error?: string
-  message?: string
+  error?: { code?: string; message?: string }
 }
 
 type ManagedUsbApi = ResettableUsbApi & {
@@ -64,7 +63,9 @@ export async function closeNodeUsbDevices(transport: NodeUsbTransportInternals) 
     const result = await api.closeDevice(path)
 
     if (!result.success) {
-      throw new Error(result.message || result.error || `Could not close Trezor USB device ${path}`)
+      throw new Error(
+        result.error?.message || result.error?.code || `Could not close Trezor USB device ${path}`
+      )
     }
   }
 }

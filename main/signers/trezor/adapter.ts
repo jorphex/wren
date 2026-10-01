@@ -18,6 +18,7 @@ interface KnownSigners {
 }
 
 interface TrezorPairingRequest extends TrezorPairing {
+  requestId: string
   device: TrezorDevice
 }
 
@@ -142,6 +143,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       const signer = this.knownSigners[deviceId]?.signer
       if (!signer) return
 
+      signer.authenticationRequestId = undefined
       this.showPrompt(signer)
       this.rememberPromptStatus(signer)
       this.addEventHandler(signer, 'trezor:entered:passphrase', () => {
@@ -152,8 +154,10 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       this.emit('update', signer)
     })
 
-    TrezorBridge.on('trezor:needPin', (device: TrezorDevice) => {
+    TrezorBridge.on('trezor:needPin', (device: TrezorDevice, requestId: string) => {
       this.withSigner(device, (signer) => {
+        if (this.suspendedPrompts.has(signer.id)) return
+        signer.authenticationRequestId = requestId
         log.verbose(`Trezor ${signer.id} needs pin`)
 
         this.showPrompt(signer)
@@ -192,8 +196,10 @@ export default class TrezorSignerAdapter extends SignerAdapter {
       })
     })
 
-    TrezorBridge.on('trezor:needPhrase', (device: TrezorDevice) => {
+    TrezorBridge.on('trezor:needPhrase', (device: TrezorDevice, requestId: string) => {
       this.withSigner(device, (signer) => {
+        if (this.suspendedPrompts.has(signer.id)) return
+        signer.authenticationRequestId = requestId
         log.verbose(`Trezor ${signer.id} needs passphrase`, { status: signer.status })
 
         this.showPrompt(signer)
@@ -210,6 +216,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
 
     TrezorBridge.on('trezor:needPairing', (payload: TrezorPairingRequest) => {
       this.withSigner(payload.device, (signer) => {
+        if (this.suspendedPrompts.has(signer.id)) return
+        signer.authenticationRequestId = payload.requestId
         log.verbose(`Trezor ${signer.id} needs pairing`, {
           methods: payload.availableMethods,
           selectedMethod: payload.selectedMethod
@@ -229,6 +237,13 @@ export default class TrezorSignerAdapter extends SignerAdapter {
           ...(payload.nfcData !== undefined ? { nfcData: payload.nfcData } : {})
         }
         signer.status = Status.NEEDS_PAIRING
+        this.emit('update', signer)
+      })
+    })
+
+    TrezorBridge.on('trezor:authenticationCancelled', () => {
+      Object.values(this.knownSigners).forEach(({ signer }) => {
+        signer.authenticationRequestId = undefined
         this.emit('update', signer)
       })
     })
@@ -363,6 +378,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     if (trezor.id in this.knownSigners) {
       log.info(`removing Trezor ${trezor.id}`)
 
+      trezor.authenticationRequestId = undefined
       delete this.knownSigners[trezor.id]
       this.clearSignerTimers(trezor.id)
       this.pendingSessionProbes.delete(trezor.id)
@@ -490,6 +506,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
     delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pin']
     delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:passphrase']
     delete this.knownSigners[signer.id]?.eventHandlers['trezor:entered:pairing']
+    signer.authenticationRequestId = undefined
     signer.pinError = undefined
     signer.pairing = undefined
     signer.status = Status.NEEDS_RECONNECTION
@@ -511,6 +528,8 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   }
 
   private clearPrompt(signerId: string) {
+    const signer = this.knownSigners[signerId]?.signer
+    if (signer) signer.authenticationRequestId = undefined
     const visiblePrompt = this.activePrompts.values().next().value === signerId
     if (!this.activePrompts.delete(signerId)) return
     this.promptDismissibility.delete(signerId)
@@ -534,6 +553,7 @@ export default class TrezorSignerAdapter extends SignerAdapter {
   private restorePromptStatus(signer: Trezor) {
     if (this.knownSigners[signer.id]?.signer !== signer) return
 
+    signer.authenticationRequestId = undefined
     const status = this.promptStatuses.get(signer.id)
     this.promptStatuses.delete(signer.id)
 

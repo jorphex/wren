@@ -303,6 +303,10 @@ export async function verifyNativePackage(targetName, options = {}) {
   if (target.platform === 'linux') assert.ok(result.osSignerProtection.linuxBackendQueries > 0)
   else assert.equal(result.osSignerProtection.linuxBackendQueries, 0)
   assert.deepEqual(result.runtime, {
+    trezorConnectVersion: packageJson.dependencies['@trezor/connect'],
+    trezorEvmPublicKey: 'function',
+    trezorBridge: 'function',
+    trezorTransportContract: true,
     ethers: packageJson.dependencies.ethers,
     ethersBrowserProvider: 'function',
     siweDomain: 'example.com',

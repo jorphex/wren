@@ -3,7 +3,7 @@ import { padToEven, stripHexPrefix, addHexPrefix } from '@ethereumjs/util'
 import { SignTypedDataVersion, TypedDataUtils } from '@metamask/eth-sig-util'
 import type { Device as TrezorDevice } from '@trezor/connect'
 
-import { v5 as uuid } from 'uuid'
+import { trezorSignerId } from '../deviceId'
 
 import Signer from '../../Signer'
 import type { SignerTransactionPhase } from '../../Signer'
@@ -14,8 +14,6 @@ import TrezorBridge, { DeviceError } from '../bridge'
 import type { TypedMessage } from '../../../accounts/types'
 import { normalizeTrezorTransaction } from '../transaction'
 import { SignerUserRejectedError } from '../../errors'
-
-const ns = '3bbcee75-cecc-5b56-8031-b6641c1ed1f1'
 
 const defaultTrezorTVersion = { major_version: 2, minor_version: 3, patch_version: 0 }
 const defaultTrezorOneVersion = { major_version: 1, minor_version: 9, patch_version: 2 }
@@ -84,6 +82,7 @@ export default class Trezor extends Signer {
   derivation: Derivation | undefined
   pairing: TrezorPairing | undefined
   pinError: string | undefined
+  authenticationRequestId: string | undefined
 
   private closed = false
   private lifecycleGeneration = 0
@@ -105,7 +104,7 @@ export default class Trezor extends Signer {
   }
 
   static generateId(path: string) {
-    return uuid('Trezor' + path, ns)
+    return trezorSignerId(path)
   }
 
   override async open(device: TrezorDevice) {
@@ -181,6 +180,7 @@ export default class Trezor extends Signer {
     this.pendingCallbacks.clear()
     pendingCallbacks.forEach((cancel) => cancel(cancellation))
     this.device = undefined
+    this.authenticationRequestId = undefined
 
     this.emit('close')
     this.removeAllListeners()
@@ -195,7 +195,8 @@ export default class Trezor extends Signer {
       ...summary,
       capabilities: this.device?.features?.capabilities || [],
       pairing: this.pairing,
-      pinError: this.pinError
+      pinError: this.pinError,
+      authenticationRequestId: this.authenticationRequestId
     }
   }
 
@@ -508,6 +509,8 @@ export default class Trezor extends Signer {
     const signing = this.transactionSigning
     if (!signing) return false
     signing.cancelled = true
+    this.authenticationRequestId = undefined
+    this.emitUpdate()
     if (signing.dispatched) TrezorBridge.cancelCurrentRequest()
     return true
   }

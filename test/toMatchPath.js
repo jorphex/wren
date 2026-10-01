@@ -1,3 +1,6 @@
+jest.mock('@trezor/connect')
+jest.mock('@trezor/transport')
+
 import { expect } from '@jest/globals'
 import path from 'path'
 
