@@ -133,7 +133,7 @@
     "tar-fs": "3.1.3",
     "uqr": "0.1.3",
     "uuid": "11.1.1",
-    "ws": "8.21.3",
+    "ws": "8.22.0",
     "zod": "4.6.5",
     "zxcvbn": "4.4.2"
   },
@@ -162,7 +162,7 @@
     "@types/pngjs": "6.0.5",
     "@types/semver": "7.8.0",
     "@types/tar-fs": "2.0.4",
-    "@types/ws": "8.18.1",
+    "@types/ws": "8.18.2",
     "@typescript-eslint/eslint-plugin": "8.71.0",
     "@typescript-eslint/parser": "8.71.0",
     "cross-env": "10.1.0",
