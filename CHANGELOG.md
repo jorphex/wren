@@ -8,6 +8,7 @@ For release details and platform limits, see
 
 - Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
 - Updated commit checks and HTTP caching to remove vulnerable dependency paths.
+- Updated Electron, Trezor, Ledger, WebSocket support, and development tools.
 
 ## 0.1.11 - 2026-10-01
 
