@@ -6,6 +6,9 @@ For release details and platform limits, see
 
 ## Unreleased
 
+- Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
+- Updated commit checks and HTTP caching to remove vulnerable dependency paths.
+
 ## 0.1.11 - 2026-10-01
 
 - Fixed startup when saved RPC latency is invalid. Kept wallet and network settings.

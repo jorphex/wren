@@ -66,9 +66,6 @@ updates:
       - dependency-name: lint-staged
         update-types:
           - version-update:semver-major
-        # 13.3.0 accidentally shipped v14 code and a vulnerable micromatch.
-        versions:
-          - 13.3.0
       - dependency-name: node-hid
         update-types:
           - version-update:semver-minor

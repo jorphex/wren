@@ -117,7 +117,7 @@ Issued At: 2021-09-30T16:25:24Z`)
 const walletAddress = Wallet.fromPrivateKey(Buffer.from('46'.repeat(32), 'hex')).getAddressString()
 
 Promise.all([
-  Promise.all([modernModules.loadKuboModule(), modernModules.loadUnixFsModule()]),
+  Promise.all([modernModules.loadCidModule(), modernModules.loadUnixFsModule()]),
   fetchUtils.readJsonWithLimit(new Response('{"runtime":"native"}'), 64)
 ])
   .then(([esmModules, fetchProbe]) =>
