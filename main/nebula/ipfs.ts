@@ -1,4 +1,4 @@
-import { loadCidModule, loadKuboModule } from './modules'
+import { loadCidModule } from './modules'
 
 import type { KuboClient } from './modules'
 
@@ -14,7 +14,6 @@ type IpfsDependencies = {
   env?: NodeJS.ProcessEnv
   fetch?: Fetch
   loadCidModule?: typeof loadCidModule
-  loadKuboModule?: typeof loadKuboModule
   timeoutMs?: number
 }
 
@@ -125,8 +124,8 @@ function createDeadline(timeoutMs: number, onTimeout?: () => void) {
     rejectTimeout = reject
   })
   const timer = setTimeout(() => {
-    onTimeout?.()
     rejectTimeout(new Error(`IPFS request timed out after ${timeoutMs}ms`))
+    onTimeout?.()
   }, timeoutMs)
 
   return {
@@ -166,6 +165,7 @@ async function* streamWithDeadline(
     }
   } finally {
     deadline.close()
+    controller.abort()
     void iterator?.return?.().catch(() => undefined)
   }
 }
@@ -194,15 +194,29 @@ export default function createIpfs(
 
   const apiConfigured = Boolean(clientFactory || env['WREN_IPFS_API_URL'] || env['FRAME_IPFS_API_URL'])
   let client: Promise<KuboClient> | undefined
-  const getClient = () => {
-    if (!client) {
-      client = clientFactory
-        ? clientFactory()
-        : (dependencies.loadKuboModule || loadKuboModule)().then(({ create }) =>
-            Promise.resolve(create(getKuboOptions(env)))
-          )
-    }
-    return client
+  const getClient = () => (client ||= clientFactory!())
+
+  const openApi = async (
+    path: CanonicalPath,
+    command: 'cat' | 'get',
+    archive: boolean,
+    signal: AbortSignal,
+    maxBytes: number,
+    sizeLabel: string
+  ) => {
+    const options = getKuboOptions(env)
+    const url = new URL(options.url)
+    const basePath = url.pathname === '/' ? '/api/v0' : url.pathname.replace(/\/+$/, '')
+    url.pathname = `${basePath}/${command}`
+    url.searchParams.set('arg', path.kubo)
+    if (command === 'get') url.searchParams.set('archive', String(archive))
+    const fetcher = dependencies.fetch || globalThis.fetch
+    if (!fetcher) throw new Error('IPFS API mode requires Fetch API support')
+    const response = await fetcher(url, { method: 'POST', headers: options.headers, signal })
+    if (!response.ok) throw new Error(`IPFS API request failed with HTTP ${response.status}`)
+    if (!response.body) throw new Error('IPFS API response has no body')
+    parseContentLength(response, maxBytes, sizeLabel)
+    return response.body as unknown as AsyncIterable<Uint8Array>
   }
 
   const openGateway = async (
@@ -226,7 +240,8 @@ export default function createIpfs(
   }
 
   const openJson = async (path: CanonicalPath, signal: AbortSignal) => {
-    if (apiConfigured) return (await getClient()).cat(path.kubo, { signal })
+    if (clientFactory) return (await getClient()).cat(path.kubo, { signal })
+    if (apiConfigured) return openApi(path, 'cat', false, signal, maxJsonBytes, 'IPFS JSON response')
     return openGateway(path, false, signal, maxJsonBytes, 'IPFS JSON response')
   }
 
@@ -252,7 +267,8 @@ export default function createIpfs(
       const sizeLabel = archive ? 'IPFS archive' : 'IPFS response'
 
       const open = async (signal: AbortSignal) => {
-        if (apiConfigured) return (await getClient()).get(canonicalPath.kubo, { ...options, signal })
+        if (clientFactory) return (await getClient()).get(canonicalPath.kubo, { ...options, signal })
+        if (apiConfigured) return openApi(canonicalPath, 'get', archive, signal, maxBytes, sizeLabel)
         return openGateway(canonicalPath, archive, signal, maxBytes, sizeLabel)
       }
 

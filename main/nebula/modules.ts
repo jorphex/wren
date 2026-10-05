@@ -3,15 +3,6 @@ type KuboClient = {
   get: (path: string, options?: { archive?: boolean; signal?: AbortSignal }) => AsyncIterable<Uint8Array>
 }
 
-type KuboModule = {
-  create: (options: { url: string; headers?: Record<string, string> }) => KuboClient
-  globSource: (
-    path: string,
-    pattern: string,
-    options?: { hidden?: boolean; followSymlinks?: boolean }
-  ) => AsyncIterable<{ path: string; content?: AsyncIterable<Uint8Array> }>
-}
-
 type CidModule = {
   CID: {
     parse: (value: string) => {
@@ -39,18 +30,12 @@ const nativeImport = new Function('specifier', 'return import(specifier)') as <T
   specifier: string
 ) => Promise<T>
 
-let kuboModule: Promise<KuboModule> | undefined
 let cidModule: Promise<CidModule> | undefined
 let unixFsModule: Promise<UnixFsModule> | undefined
 
 export function loadCidModule() {
   cidModule ||= nativeImport<CidModule>('multiformats/cid')
   return cidModule
-}
-
-export function loadKuboModule() {
-  kuboModule ||= nativeImport<KuboModule>('kubo-rpc-client')
-  return kuboModule
 }
 
 export function loadUnixFsModule() {

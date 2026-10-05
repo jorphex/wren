@@ -1,8 +1,9 @@
 import path from 'path'
 import fs from 'fs/promises'
+import { createReadStream } from 'fs'
 import { app } from 'electron'
 
-import { loadKuboModule, loadUnixFsModule } from '../../nebula/modules'
+import { loadUnixFsModule } from '../../nebula/modules'
 
 async function assertRegularTree(directory: string) {
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
@@ -16,22 +17,33 @@ async function assertRegularTree(directory: string) {
 
 export async function hashDirectory(directory: string) {
   await assertRegularTree(directory)
-  const [{ globSource }, { importer }] = await Promise.all([loadKuboModule(), loadUnixFsModule()])
+  const { importer } = await loadUnixFsModule()
 
-  async function* normalizedSource() {
-    for await (const entry of globSource(directory, '**', {
-      hidden: true,
-      followSymlinks: false
-    })) {
-      const relativePath = entry.path.replace(/^[/\\]+/, '')
-      if (relativePath) yield { ...entry, path: relativePath }
+  async function* directorySource(
+    current: string,
+    relative = ''
+  ): AsyncGenerator<{ path: string; content?: AsyncIterable<Uint8Array> }> {
+    const entries = await fs.readdir(current, { withFileTypes: true })
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name)
+      const sourcePath = relative ? `${relative}/${entry.name}` : entry.name
+      if (entry.isSymbolicLink()) throw new Error(`Dapp cache contains a symbolic link: ${entryPath}`)
+      if (entry.isDirectory()) {
+        yield { path: sourcePath }
+        yield* directorySource(entryPath, sourcePath)
+      } else if (entry.isFile()) {
+        yield { path: sourcePath, content: createReadStream(entryPath) }
+      } else {
+        throw new Error(`Dapp cache contains a non-file entry: ${entryPath}`)
+      }
     }
   }
 
   let rootCID
   const blockstore = { put: async () => {} }
 
-  for await (const entry of importer(normalizedSource(), blockstore, {
+  for await (const entry of importer(directorySource(directory), blockstore, {
     profile: 'unixfs-v0-2015',
     wrapWithDirectory: true
   })) {

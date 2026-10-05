@@ -3,11 +3,9 @@ import createIpfs, { getGatewayUrl, getKuboOptions } from '../../../main/nebula/
 const mockParseCid = jest.fn((value) => ({
   toV1: () => ({ toString: () => (value.startsWith('Qm') ? 'bafy-canonical' : value) })
 }))
-const mockLoadKuboModule = jest.fn()
 
 jest.mock('../../../main/nebula/modules', () => ({
-  loadCidModule: jest.fn(async () => ({ CID: { parse: mockParseCid } })),
-  loadKuboModule: (...args) => mockLoadKuboModule(...args)
+  loadCidModule: jest.fn(async () => ({ CID: { parse: mockParseCid } }))
 }))
 
 const CID = 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3gue3ohqgs2a6ihz7ukwxh4ze'
@@ -40,7 +38,7 @@ beforeEach(() => {
 })
 
 describe('gateway mode', () => {
-  test('defaults to ipfs.io without loading Kubo or contacting Nebula', async () => {
+  test('defaults to ipfs.io without contacting Nebula', async () => {
     const fetch = jest.fn(async () => response(['{}']))
     const ipfs = createIpfs(undefined, 32, 64, { env: {}, fetch })
 
@@ -49,7 +47,6 @@ describe('gateway mode', () => {
     const [url] = fetch.mock.calls[0]
     expect(url.toString()).toBe(`https://ipfs.io/ipfs/${CID}`)
     expect(url.toString()).not.toContain('nebula')
-    expect(mockLoadKuboModule).not.toHaveBeenCalled()
   })
 
   test('uses an HTTPS gateway override, preserving a safe base path', async () => {
@@ -218,23 +215,6 @@ describe('gateway mode', () => {
 })
 
 describe('explicit Kubo API mode', () => {
-  test('uses Wren API configuration and lazily creates one client', async () => {
-    const get = jest.fn(() => chunks('archive'))
-    const cat = jest.fn(() => chunks('{"ok":true}'))
-    const create = jest.fn(() => ({ get, cat }))
-    mockLoadKuboModule.mockResolvedValue({ create })
-    const fetch = jest.fn()
-    const env = { WREN_IPFS_API_URL: 'https://kubo.example.test/api/v0' }
-    const ipfs = createIpfs(undefined, 32, 64, { env, fetch })
-
-    await expect(ipfs.getJson(CID)).resolves.toEqual({ ok: true })
-    await expect(collect(ipfs.get(CID, { archive: true }))).resolves.toEqual(['archive'])
-
-    expect(create).toHaveBeenCalledWith({ url: 'https://kubo.example.test/api/v0', headers: {} })
-    expect(mockLoadKuboModule).toHaveBeenCalledTimes(1)
-    expect(fetch).not.toHaveBeenCalled()
-  })
-
   test('preserves an injected Kubo client factory', async () => {
     const client = { get: jest.fn(() => chunks('archive')), cat: jest.fn(() => chunks('{}')) }
     const factory = jest.fn(async () => client)

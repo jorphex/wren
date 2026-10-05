@@ -188,7 +188,7 @@ try {
   noSandboxRejected = true
 }
 Promise.all([
-  Promise.all([modernModules.loadKuboModule(), modernModules.loadUnixFsModule()]),
+  Promise.all([modernModules.loadCidModule(), modernModules.loadUnixFsModule()]),
   fetchUtils.readJsonWithLimit(new Response('{"runtime":"native"}'), 64)
 ])
   .then(([loaded, fetchProbe]) => process.stdout.write(JSON.stringify({
