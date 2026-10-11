@@ -180,7 +180,7 @@
     "jest": "30.5.2",
     "jest-environment-jsdom": "30.5.2",
     "lint-staged": "17.6.0",
-    "nock": "14.0.17",
+    "nock": "15.0.1",
     "node-abi": "4.35.0",
     "parcel": "2.16.4",
     "prebuild-install": "7.1.3",
