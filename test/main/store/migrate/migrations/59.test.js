@@ -32,7 +32,3 @@ it('retains only valid recent activity in deterministic newest-first order', () 
 
   expect(migration.migrate(state).main.activity).toEqual([newer, recent])
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

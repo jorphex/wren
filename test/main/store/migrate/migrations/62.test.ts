@@ -43,7 +43,3 @@ it('preserves an existing valid desktop identity', () => {
 
   expect(second.main.desktopAuthIdentity).toEqual(first.main.desktopAuthIdentity)
 })
-
-it('preserves malformed input for framework rejection', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

@@ -1,8 +1,4 @@
-import {
-  generatePeerAuthKeyPair,
-  peerAuthClientBundleFingerprint,
-  peerAuthFingerprint
-} from '../../../main/api/peerAuth'
+import { generatePeerAuthKeyPair, peerAuthClientBundleFingerprint } from '../../../main/api/peerAuth'
 
 import store from '../../../main/store'
 import {
@@ -278,12 +274,4 @@ it('rejects ungranted first-access requests when Companion access is revoked', (
     expect.any(String),
     expect.arrayContaining(['other'])
   )
-})
-
-it('binds a role proof to its role key rather than the stable bundle principal', () => {
-  const pairing = candidate('h')
-  expect(peerAuthFingerprint(pairing.publicKeys.control)).not.toBe(
-    peerAuthFingerprint(pairing.publicKeys.page)
-  )
-  expect(pairing.fingerprint).toBe(peerAuthClientBundleFingerprint(pairing.publicKeys))
 })

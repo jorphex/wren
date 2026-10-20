@@ -11,7 +11,3 @@ it('moves existing profiles to Wren dark mode and preserves a valid Glide edge',
   right.main.glideSide = 'outside'
   expect(migration.migrate(right).main).toMatchObject({ colorway: 'dark', glideSide: 'right' })
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

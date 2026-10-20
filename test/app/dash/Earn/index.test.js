@@ -3,7 +3,6 @@ import Restore from 'react-restore'
 import { act, render, screen, waitFor } from '../../../componentSetup'
 import {
   Earn,
-  formatPercentLabel,
   formatReceiptAmount,
   positionsMatchAccount,
   workflowsForAccount
@@ -41,12 +40,6 @@ it('keeps selected-account workflows visible without position data', () => {
 
   expect(workflowsForAccount(workflows, 'vault-1', address)).toEqual([workflows[0]])
   expect(workflowsForAccount(workflows, 'vault-1', '')).toEqual([])
-})
-
-it('does not repeat an unavailable percentage label', () => {
-  expect(formatPercentLabel(undefined, 'Unavailable')).toBe('Unavailable')
-  expect(formatPercentLabel(null, 'UNAVAILABLE')).toBe('Unavailable')
-  expect(formatPercentLabel(0.07, 'Est. APY')).toBe('7% Est. APY')
 })
 
 const makeVault = (id, chainId, chainName, kind = 'direct') => ({

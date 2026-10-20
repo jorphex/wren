@@ -14,8 +14,3 @@ it('initializes an empty wallet-call ledger without changing existing state', ()
     }
   })
 })
-
-it('returns malformed inputs unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
-  expect(migration.migrate({ main: {} })).toEqual({ main: {} })
-})

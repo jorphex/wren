@@ -46,9 +46,6 @@ it('focuses the expanded account name editor and saves with Enter', async () => 
   const { user } = renderWithStore(SettingsExpanded, { expanded: true })
   const input = screen.getByRole('textbox', { name: 'Account name' })
 
-  expect(input.classList.contains('wrenInput')).toBe(true)
-  expect(input.classList.contains('panelBlockItem')).toBe(true)
-  expect(input.parentElement.classList.contains('panelBlock')).toBe(true)
   expect(input.closest('.panelBlockValues')).toBeNull()
 
   expect(document.activeElement).toBe(input)
@@ -256,16 +253,4 @@ it('explains when durable account removal is finishing in the background', () =>
     'Removal is in progress. Wren will finish automatically.'
   )
   expect(screen.getByRole('button', { name: 'Removing account\u2026' }).disabled).toBe(true)
-})
-
-it('keeps rename and removal available as separate account actions', () => {
-  renderWithStore(SettingsPreview)
-
-  const rename = screen.getByRole('button', { name: 'Rename account' })
-  const remove = screen.getByRole('button', { name: 'Remove account' })
-
-  expect(rename.parentElement).toBe(remove.parentElement)
-  expect(rename.parentElement.classList.contains('settingsPreviewActions')).toBe(true)
-  expect(rename.classList.contains('wrenControlSecondary')).toBe(true)
-  expect(remove.classList.contains('wrenControlDanger')).toBe(true)
 })

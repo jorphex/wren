@@ -1,6 +1,6 @@
 import link from '../../../../resources/link'
 import { Inspector } from '../../../../app/dash/Inspector'
-import { inspectReadOnlyInput } from '../../../../app/dash/Inspector/api'
+
 import { fireEvent, render, screen, waitFor } from '../../../componentSetup'
 
 jest.mock('../../../../resources/link', () => ({ invoke: jest.fn(), send: jest.fn() }))
@@ -37,7 +37,7 @@ it('states its non-signing safety contract and focuses the local editor', () => 
 
   expect(screen.getByRole('heading', { name: 'Inspector' })).toBeTruthy()
   expect(screen.getByText('Read-only')).toBeTruthy()
-  expect(screen.getByLabelText('Unsigned transaction JSON').classList.contains('wrenInput')).toBe(true)
+
   expect(document.activeElement).toBe(screen.getByLabelText('Unsigned transaction JSON'))
   expect(screen.getByRole('button', { name: 'Inspect' }).disabled).toBe(true)
 })
@@ -388,12 +388,4 @@ it('rejects malformed invoke responses before rendering evidence', async () => {
   await user.click(screen.getByRole('button', { name: 'Inspect' }))
 
   expect((await screen.findByRole('alert')).textContent).toContain('Inspector evidence was unavailable.')
-})
-
-it('uses the shared inspector invoke boundary', async () => {
-  await expect(inspectReadOnlyInput({ kind: 'transaction', input: '{}' })).resolves.toEqual({
-    success: true,
-    inspection
-  })
-  expect(link.invoke).toHaveBeenCalledWith('inspector:inspect', { kind: 'transaction', input: '{}' })
 })

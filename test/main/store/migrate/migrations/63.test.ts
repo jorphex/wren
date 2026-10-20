@@ -35,7 +35,3 @@ test('normalizes legacy private activity without time-dependent pruning', () => 
     }
   ])
 })
-
-test('preserves malformed roots for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

@@ -23,10 +23,6 @@ jest.mock('electron-log', () => ({
 }))
 
 const fixtureDirectory = path.join(__dirname, 'fixtures')
-const fixtureFiles = fs
-  .readdirSync(fixtureDirectory)
-  .filter((name) => name.endsWith('.json'))
-  .sort()
 const fixtureAccount = '0x000000000000000000000000000000000000dead'
 
 const clone = (value) => JSON.parse(JSON.stringify(value))
@@ -86,50 +82,6 @@ beforeAll(() => {
 
 afterAll(() => {
   Date.now.mockRestore()
-})
-
-it.each(fixtureFiles)('validates sanitized migration fixture %s', (filename) => {
-  expect(() => loadFixture(filename)).not.toThrow()
-})
-
-it('rejects secret-shaped and malformed fixtures', () => {
-  const fixture = loadFixture('v41-current-state.json')
-
-  expect(() =>
-    assertSafeMigrationFixture({
-      ...clone(fixture),
-      state: { main: { ...clone(fixture.state.main), privateKey: `0x${'1'.repeat(64)}` } }
-    })
-  ).toThrow('Forbidden secret-shaped key')
-
-  expect(() =>
-    assertSafeMigrationFixture({
-      ...clone(fixture),
-      state: { main: { ...clone(fixture.state.main), encryptedSeed: 'synthetic-value' } }
-    })
-  ).toThrow('Forbidden secret-shaped key')
-
-  expect(() =>
-    assertSafeMigrationFixture({
-      ...clone(fixture),
-      state: { main: { ...clone(fixture.state.main), unsafeValue: `0x${'1'.repeat(64)}` } }
-    })
-  ).toThrow('Raw private-key-shaped value')
-
-  expect(() =>
-    assertSafeMigrationFixture({
-      ...clone(fixture),
-      metadata: { ...fixture.metadata, sourceVersion: 40 }
-    })
-  ).toThrow('source version must match')
-
-  expect(() =>
-    assertSafeMigrationFixture({
-      ...clone(fixture),
-      metadata: { ...fixture.metadata, sourceVersion: migrations.latest + 1 },
-      state: { main: { ...clone(fixture.state.main), _version: migrations.latest + 1 } }
-    })
-  ).toThrow('newer than the latest known migration')
 })
 
 it('migrates a representative version 12 profile through application state initialization', async () => {

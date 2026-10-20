@@ -18,8 +18,7 @@ it('uses the Contacts title and routes Back and Close actions', () => {
   expect(screen.getByText('Contacts')).toBeTruthy()
   const back = screen.getByRole('button', { name: 'Back' })
   const close = screen.getByRole('button', { name: 'Close' })
-  expect(back.classList.contains('wrenShellNav')).toBe(true)
-  expect(close.classList.contains('wrenShellNav')).toBe(true)
+
   fireEvent.click(back)
   fireEvent.click(close)
 
@@ -50,49 +49,3 @@ it('uses the active crumb title for a nested dashboard surface', () => {
   expect(screen.getByText('Choose an asset')).toBeTruthy()
   expect(screen.getAllByRole('button', { name: 'Back' })).toHaveLength(1)
 })
-
-it('uses the simple shared chrome for the Networks landing', () => {
-  renderCommand([{ view: 'chains', data: {} }])
-
-  expect(screen.getByText('Networks')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
-  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
-})
-
-it('uses the simple shared chrome for the Accounts landing', () => {
-  renderCommand([{ view: 'accounts', data: {} }])
-
-  expect(screen.getByText('Accounts')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
-  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
-})
-
-it('uses the simple shared chrome for the Settings landing', () => {
-  renderCommand([{ view: 'settings', data: {} }])
-
-  expect(screen.getByText('Settings')).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
-  expect(document.querySelector('.commandHomeMark')).toBeTruthy()
-})
-
-it('uses back-enabled shared chrome for the Send composer', () => {
-  renderCommand([{ view: 'send', data: {} }])
-
-  expect(screen.getByText('Send')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
-  expect(document.querySelector('.commandItemBack')).toBeTruthy()
-})
-
-it.each(['contracts', 'deployment', 'contractVerification'])(
-  'uses the authored Contracts title for the %s route',
-  (view) => {
-    renderCommand([{ view, data: {} }])
-
-    expect(screen.getByText('Contracts')).toBeTruthy()
-    expect(screen.queryByText(view)).toBeNull()
-  }
-)

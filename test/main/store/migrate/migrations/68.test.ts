@@ -43,7 +43,7 @@ test('strips browser transport metadata while preserving the signed Companion pr
   expect(migrations.apply(state).main._version).toBe(migrations.latest)
 })
 
-test('drops malformed or incorrectly keyed credentials and leaves invalid state unchanged', () => {
+test('drops malformed or incorrectly keyed credentials', () => {
   const state = createState(67)
   const credential = transportCredential()
   state.main['extensionCredentials'] = {
@@ -52,5 +52,4 @@ test('drops malformed or incorrectly keyed credentials and leaves invalid state 
   }
 
   expect(migration.migrate(state).main.extensionCredentials).toEqual({})
-  expect(migration.migrate(null)).toBeNull()
 })

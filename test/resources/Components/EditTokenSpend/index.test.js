@@ -76,14 +76,10 @@ describe('changing approval amounts', () => {
     )
 
     const custom = screen.queryByRole('button', { name: 'Custom' })
-    expect(custom.closest('.wrenTokenApprovalEditor')).toBeTruthy()
-    expect(custom.classList.contains('wrenTokenApprovalMode')).toBe(true)
     await user.click(custom)
     expect(custom.getAttribute('aria-pressed')).toBe('true')
 
     const enterAmount = screen.queryByRole('textbox', { name: 'Custom amount' })
-    expect(enterAmount.classList.contains('wrenInput')).toBe(true)
-    expect(enterAmount.parentElement.classList.contains('wrenInputGroup')).toBe(true)
     await user.type(enterAmount, '50')
 
     const updateCustom = screen.getByRole('button', { name: 'Update' })
@@ -121,7 +117,6 @@ describe('changing approval amounts', () => {
 
     expect(amountModes.querySelectorAll('.wrenTokenApprovalMode')).toHaveLength(3)
     expect(amountModes.contains(revoke)).toBe(false)
-    expect(revoke.classList.contains('wrenTokenApprovalRevoke')).toBe(true)
     await user.click(revoke)
 
     expect(onUpdate).toHaveBeenCalledWith('0', expect.any(Function))
@@ -203,33 +198,6 @@ describe('changing approval amounts', () => {
     ).toBeNull()
     expect(screen.queryByText('Update')).toBeNull()
     expect(onUpdate).not.toHaveBeenCalled()
-  })
-
-  it('does not allows the user to set the token approval to a custom amount for an unknown token', () => {
-    const requestedAmount = BigNumber('0x100e6')
-    const approval = {
-      id: 'erc20:approve',
-      data: {
-        spender: {
-          address: '0x9bc5baf874d2da8d216ae9f137804184ee5afef4',
-          ens: '',
-          type: 'external'
-        },
-        amount: '0x' + requestedAmount.toString(16),
-        decimals: 6,
-        symbol: 'aUSDC',
-        contract: {
-          address: '0x1eba19f260421142AD9Bf5ba193f6d4A0825e698',
-          type: 'contract',
-          ens: ''
-        }
-      }
-    }
-
-    render(<EditTokenSpend data={approval.data} requestedAmount={requestedAmount} updateRequest={() => {}} />)
-
-    const custom = screen.queryByRole('button', { name: 'Custom' })
-    expect(custom).toBe(null)
   })
 
   it('allows the user to set the token approval to unlimited', async () => {

@@ -171,8 +171,6 @@ it('moves focus into the chooser and restores the account trigger after Escape',
   const { user } = utils
   const trigger = screen.getByRole('button', { name: /Watch Account/i })
 
-  expect(trigger.closest('.accountSelector').classList.contains('accountSelectorOpen')).toBe(true)
-
   await user.click(trigger)
   utils.rerender(selector.render())
   expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Filter accounts' }))

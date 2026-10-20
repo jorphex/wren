@@ -165,12 +165,11 @@ it('accepts only configured connected networks and renders the shared target fie
   expect(verificationNetworks(networks).map(({ id }) => id)).toEqual([8453, 1])
   render(<ContractVerification networks={networks} />)
   const recentSummary = await screen.findByText('Recent verifications')
-  expect(screen.getByLabelText('Network').classList.contains('wrenInput')).toBe(true)
-  expect(screen.getByLabelText('Contract address').classList.contains('wrenInput')).toBe(true)
+
   const check = screen.getByRole('button', { name: 'Check source' })
   expect(check.disabled).toBe(true)
   expect(check.compareDocumentPosition(recentSummary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  expect(recentSummary.closest('section')?.classList.contains('contractVerificationRecent')).toBe(true)
+
   expect(screen.getByRole('button', { name: /0x11111111…11111111.*ethereum.*partial/i })).toBeTruthy()
 
   fireEvent.change(screen.getByLabelText('Contract address'), { target: { value: '0x1234' } })

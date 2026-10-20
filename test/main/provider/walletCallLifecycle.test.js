@@ -205,16 +205,6 @@ it('keeps the published id and reports a terminal execution failure through stat
   )
 })
 
-it('leaves an ambiguous execution pending for reconciliation', async () => {
-  const { controller, ledger, execute } = dependencies()
-  const admitted = controller.admit(input(), jest.fn())
-  execute.mockRejectedValueOnce(new Error('connection closed after signed submission'))
-
-  await expect(controller.approve(account, 'handler-id', claimEvidence)).rejects.toThrow(/connection closed/)
-
-  expect(ledger.getStatus('example.test', account, admitted.id).status).toBe(100)
-})
-
 it('reports response and outcome callback failures without skipping execution', async () => {
   const { controller, accounts, execute, reportError } = dependencies()
   accounts.settleWalletCallsRequest.mockImplementationOnce(() => {

@@ -26,10 +26,6 @@ it('returns a valid payload with a string id', () => {
   expect(parse()).toStrictEqual({ success: true, payload })
 })
 
-it('returns a valid payload with array params', () => {
-  expect(parse()).toStrictEqual({ success: true, payload })
-})
-
 it('returns a valid payload with object params', () => {
   payload.params = { asset: { address: '0x912a' } }
 

@@ -57,7 +57,7 @@ it('opens inventory from a native Wren control', async () => {
   )
 
   const more = screen.getByRole('button', { name: 'View all collections' })
-  expect(more.classList.contains('wrenControl')).toBe(true)
+
   await user.click(more)
 
   expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {

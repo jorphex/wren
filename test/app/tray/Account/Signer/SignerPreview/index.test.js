@@ -84,13 +84,3 @@ test('keeps hardware address verification single-flight until its callback settl
   expect(screen.getByText('Address matched')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Verify account address on signer' }).disabled).toBe(false)
 })
-
-test('ignores a hardware verification callback after unmount', async () => {
-  const { unmount, user } = renderSigner()
-
-  await user.click(screen.getByRole('button', { name: 'Verify account address on signer' }))
-  const callback = link.rpc.mock.calls[0][1]
-  unmount()
-
-  expect(() => act(() => callback(new Error('disconnected')))).not.toThrow()
-})

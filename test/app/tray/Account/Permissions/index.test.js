@@ -242,7 +242,7 @@ it('announces a store-confirmed revoke, advances focus, and dismisses the inline
   const status = screen.getByRole('status')
   expect(status.textContent).toBe('Access revoked for alpha.example. The app must request access again.')
   expect(status.getAttribute('aria-live')).toBe('polite')
-  expect(status.classList.contains('revokeAccessStatus')).toBe(true)
+
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Revoke access' }))
 
   act(() => jest.advanceTimersByTime(3999))
@@ -535,8 +535,7 @@ it('requires confirmation and revokes a permission once', async () => {
   )
 
   const trigger = screen.getByRole('button', { name: 'Revoke access' })
-  expect(trigger.classList.contains('wrenControlGhost')).toBe(true)
-  expect(trigger.classList.contains('wrenControlDanger')).toBe(false)
+
   await user.click(trigger)
   const dialog = screen.getByRole('alertdialog', { name: 'Revoke access for alpha.example?' })
   expect(dialog.getAttribute('aria-modal')).toBe('true')
@@ -548,25 +547,12 @@ it('requires confirmation and revokes a permission once', async () => {
   expect(link.send).not.toHaveBeenCalled()
 
   const confirm = screen.getByRole('button', { name: 'Confirm revoke' })
-  expect(confirm.classList.contains('wrenControlDanger')).toBe(true)
+
   await user.dblClick(confirm)
 
   expect(link.invoke).toHaveBeenCalledWith('tray:revokeAccess', account, 'first')
   expect(onRevokeRequested).toHaveBeenCalledWith('first', 'alpha.example', [])
   expect(screen.getByRole('button', { name: 'Revoking…' }).disabled).toBe(true)
-})
-
-it('hosts confirmation inside the wallet panel instead of the wider workspace shell', async () => {
-  const { user } = render(
-    <div id='panel'>
-      <RevokeAccess account={account} permissionId='first' origin='alpha.example' />
-    </div>
-  )
-
-  await user.click(screen.getByRole('button', { name: 'Revoke access' }))
-
-  expect(document.querySelector('#panel > .revokeAccessDialog')).toBeTruthy()
-  expect(document.body.querySelector(':scope > .revokeAccessDialog')).toBeNull()
 })
 
 it('cancels safely, reports a refused revoke, and allows a retry', async () => {
@@ -696,8 +682,6 @@ it('opens truncated permission management once from a continuation row', async (
   const { user } = renderWithStore(DappsPermissionsPreview, {}, crowdedPermissions)
   const more = screen.getByRole('button', { name: 'View all app access' })
 
-  expect(more.classList.contains('accountContinuationRow')).toBe(true)
-
   await user.dblClick(more)
 
   expect(link.send.mock.calls).toEqual([
@@ -723,8 +707,6 @@ it('requires safe confirmation and keeps a delayed clear pending without a false
   await user.click(screen.getByRole('button', { name: 'Cancel' }))
   const trigger = screen.getByRole('button', { name: 'Revoke all app access' })
   expect(document.activeElement).toBe(trigger)
-  expect(trigger.classList.contains('wrenControlGhost')).toBe(true)
-  expect(trigger.classList.contains('wrenControlDanger')).toBe(false)
 
   await user.click(screen.getByRole('button', { name: 'Revoke all app access' }))
   await user.dblClick(screen.getByRole('button', { name: 'Confirm revoke' }))

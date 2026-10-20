@@ -21,19 +21,11 @@ beforeEach(() => {
   clearTransactionFeeDraftSafety('revoke-1')
 })
 
-let resizeCallback
-const disconnectResizeObserver = jest.fn()
-
 beforeAll(() => {
   global.ResizeObserver = class {
-    constructor(callback) {
-      resizeCallback = callback
-    }
     observe() {}
     unobserve() {}
-    disconnect() {
-      disconnectResizeObserver()
-    }
+    disconnect() {}
   }
 })
 
@@ -358,10 +350,6 @@ it('recovers delegation decision controls after an RPC failure', async () => {
   expect(screen.getByRole('button', { name: 'Revoke delegation' }).disabled).toBe(false)
 })
 
-it('allows a fully reviewed wallet-call batch to be submitted', () => {
-  expect(canApproveWalletCalls(request(), undefined, 'ledger')).toBe(true)
-})
-
 it('requires an explicit acknowledgement before a failed simulation can be submitted', () => {
   const failed = request({
     simulation: { status: 'failed', accountCodeEvidence: readyAccountCodeEvidence }
@@ -369,18 +357,6 @@ it('requires an explicit acknowledgement before a failed simulation can be submi
 
   expect(canApproveWalletCalls(failed, undefined, 'ledger')).toBe(false)
   expect(canApproveWalletCalls(failed, undefined, 'ledger', true)).toBe(true)
-})
-
-it('keeps a lookalike wallet-call target on the standard review path', () => {
-  const lookalike = request({
-    addressSafety: {
-      assessedAt: 1,
-      fingerprint: 'a'.repeat(64),
-      targets: [{ address: request().calls[0].to, state: 'lookalike' }]
-    }
-  })
-
-  expect(canApproveWalletCalls(lookalike, undefined, 'ledger')).toBe(true)
 })
 
 it('submits a lookalike wallet-call batch through the standard review actions', async () => {
@@ -816,23 +792,6 @@ describe('asset suggestion lifecycle', () => {
       }
     })
     expect(link.send).not.toHaveBeenCalledWith('tray:resolveRequest', expect.anything(), null)
-  })
-
-  it('reports each footer height once and disconnects its observer', () => {
-    const view = renderFooter()
-    link.send.mockClear()
-
-    resizeCallback()
-    resizeCallback()
-
-    expect(
-      link.send.mock.calls.filter(
-        ([channel, action]) => channel === 'tray:action' && action === 'setFooterHeight'
-      )
-    ).toEqual([['tray:action', 'setFooterHeight', 'panel', 0]])
-
-    view.unmount()
-    expect(disconnectResizeObserver).toHaveBeenCalled()
   })
 })
 

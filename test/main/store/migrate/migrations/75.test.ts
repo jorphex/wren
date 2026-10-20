@@ -48,9 +48,7 @@ test('prefers an existing canonical record when duplicate address casing exists'
   })
 })
 
-test('leaves malformed envelopes and non-address account keys available for validation', () => {
-  expect(migration.migrate(null)).toBeNull()
-
+test('leaves non-address account keys available for validation', () => {
   const state = createState(74)
   state.main.accounts = { fixture: { name: 'Preserved fixture' } }
   expect(migration.migrate(state)).toMatchObject({

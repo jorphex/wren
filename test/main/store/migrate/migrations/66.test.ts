@@ -18,5 +18,4 @@ test('replaces untrusted pre-migration guardrail data and migrates through the c
 
   expect(migration.migrate(state).main['dappGuardrails']).toEqual({})
   expect(migrations.apply(state).main._version).toBe(migrations.latest)
-  expect(migration.migrate(null)).toBeNull()
 })

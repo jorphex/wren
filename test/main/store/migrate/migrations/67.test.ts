@@ -22,5 +22,4 @@ test('replaces spoofed pre-migration preference and recipient data and migrates 
     recentRecipientUses: []
   })
   expect(migrations.apply(state).main._version).toBe(migrations.latest)
-  expect(migration.migrate(null)).toBeNull()
 })

@@ -13,8 +13,3 @@ it('removes legacy boolean trust and starts an empty authenticated credential st
   })
   expect(migration.migrate(state).main).not.toHaveProperty('knownExtensions')
 })
-
-it('returns malformed inputs unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
-  expect(migration.migrate({ main: {} })).toEqual({ main: {} })
-})

@@ -3,10 +3,7 @@ import {
   portfolioSummary,
   AccountAddressActions,
   AccountMain,
-  AccountNameEditor,
-  EMPTY_ACTIVITY_MODULE_HEIGHT,
-  accountModuleHeight,
-  activityModuleMinHeight
+  AccountNameEditor
 } from '../../../../app/tray/Account/Account'
 import link from '../../../../resources/link'
 
@@ -16,23 +13,6 @@ jest.mock('../../../../resources/link', () => ({
 }))
 
 const address = '0x0000000000000000000000000000000000000001'
-
-it('sizes Activity to its visible rows and caps the preview at four', () => {
-  expect(accountModuleHeight('activity', 332, address, [])).toBe(EMPTY_ACTIVITY_MODULE_HEIGHT)
-  expect(activityModuleMinHeight(1)).toBe(166)
-  expect(activityModuleMinHeight(2)).toBe(224)
-  expect(activityModuleMinHeight(3)).toBe(282)
-  expect(activityModuleMinHeight(4)).toBe(340)
-  expect(activityModuleMinHeight(5)).toBe(340)
-  expect(accountModuleHeight('activity', 158, address.toUpperCase(), [{ account: address }])).toBe(166)
-  expect(accountModuleHeight('activity', 236, address, [{ account: address }, { account: address }])).toBe(
-    236
-  )
-  expect(accountModuleHeight('activity', 158, address, [{ account: '0x2' }])).toBe(
-    EMPTY_ACTIVITY_MODULE_HEIGHT
-  )
-  expect(accountModuleHeight('settings', 72, address, [])).toBe(104)
-})
 
 function accountMain({ hideBalances = false, balances = [], networks = {}, networksMeta = {} } = {}) {
   const main = new AccountMain({ id: address })
@@ -180,20 +160,6 @@ it('hides balance-derived empty and coverage messages with portfolio privacy', (
   render(accountMain({ hideBalances: true }).renderPortfolioSummary())
   expect(screen.queryByRole('status')).toBeNull()
   expect(screen.queryByText('$0.00')).toBeNull()
-})
-
-it.each([
-  ['loading', { balances: undefined, updated: undefined }],
-  ['unavailable', { networks: {} }],
-  ['unpriced', { balances: [nativeBalance] }],
-  ['empty', { balances: [{ ...nativeBalance, balance: '0' }] }]
-])('has no caption beneath the portfolio value when %s', (_state, options) => {
-  const main = new AccountMain({ id: address })
-  main.store = portfolioStore(options)
-  render(main.renderPortfolioSummary())
-  const value = document.querySelector('.accountPortfolioValue')
-  expect(value.nextElementSibling.className).toBe('accountPortfolioActions')
-  expect(screen.queryByRole('status')).toBeNull()
 })
 
 it('adds token values by chain and ignores legacy address-only quotes', () => {

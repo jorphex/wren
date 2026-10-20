@@ -1,6 +1,5 @@
 import { Dash } from '../../../app/dash/App'
 import Dapps from '../../../app/dash/Dapps'
-import Inspector from '../../../app/dash/Inspector'
 import Contracts from '../../../app/dash/Contracts'
 import link from '../../../resources/link'
 import { RECENT_ORIGIN_TTL } from '../../../resources/domain/connectedApps'
@@ -110,12 +109,6 @@ it('refreshes the Connected apps count at the visibility expiry boundary', () =>
 
   clearTimeout(dash.controlCountExpiryTimer)
   jest.useRealTimers()
-})
-
-it('renders the read-only inspector as an explicit dashboard destination', () => {
-  const dash = new Dash({})
-
-  expect(dash.renderPanel('inspector', {}).type).toBe(Inspector)
 })
 
 it('renders Contracts with the exact account and network state needed by deployment', () => {

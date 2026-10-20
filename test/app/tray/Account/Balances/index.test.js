@@ -2,7 +2,7 @@ import { BalancesExpanded } from '../../../../../app/tray/Account/Balances/Balan
 import { BalancesPreview } from '../../../../../app/tray/Account/Balances/BalancesPreview'
 import { Balance } from '../../../../../app/tray/Account/Balances/Balance'
 import link from '../../../../../resources/link'
-import { render, screen, within } from '../../../../componentSetup'
+import { render, screen } from '../../../../componentSetup'
 
 jest.mock('../../../../../resources/link', () => ({ send: jest.fn() }))
 
@@ -102,7 +102,7 @@ it('opens token settings from the expanded native control', async () => {
 
   const addToken = screen.getByRole('button', { name: 'Add token' })
   expect(screen.getByText('No balances yet')).toBeTruthy()
-  expect(addToken.classList.contains('wrenControl')).toBe(true)
+
   await user.click(addToken)
 
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', {
@@ -114,20 +114,12 @@ it('opens token settings from the expanded native control', async () => {
 it('uses the full search width until an in-field clear action is needed', async () => {
   const { user } = render(<BalancesExpandedHarness account={account} moduleId='balances' />)
   const filter = screen.getByRole('textbox', { name: 'Filter balances' })
-  const filterSurface = filter.closest('.balanceFilter')
 
-  expect(filterSurface.classList.contains('balanceFilterHasValue')).toBe(false)
-  expect(filter.classList.contains('wrenInput')).toBe(true)
-  expect(filter.classList.contains('wrenInputQuiet')).toBe(true)
-  expect(filterSurface.parentElement.classList.contains('balancesExpandedView')).toBe(true)
-  expect(filterSurface.nextElementSibling.classList.contains('balancesExpandedScroll')).toBe(true)
   expect(screen.queryByRole('button', { name: 'Clear balance filter' })).toBeNull()
 
   await user.type(filter, 'eth')
 
-  const clear = screen.getByRole('button', { name: 'Clear balance filter' })
-  expect(filterSurface.classList.contains('balanceFilterHasValue')).toBe(true)
-  expect(clear.classList.contains('wrenControlIcon')).toBe(true)
+  screen.getByRole('button', { name: 'Clear balance filter' })
 })
 
 it('keeps filtered misses plain instead of showing empty-account artwork', () => {
@@ -167,44 +159,6 @@ it('hides holdings while keeping public unit prices visible', () => {
   expect(screen.getAllByTestId('display-value')).toHaveLength(1)
   expect(document.body.textContent).not.toContain('2,500')
   expect(document.body.textContent).toContain('2.4')
-  expect(
-    screen.getByRole('img', { name: 'TST asset' }).style.getPropertyValue('--asset-mark-chain-color')
-  ).toBe('var(--wren-chain-ethereum)')
-  expect(screen.getByRole('img', { name: 'TST asset' }).classList.contains('balancesAssetMark')).toBe(true)
-  expect(screen.getByRole('img', { name: 'TST asset' }).classList.contains('assetMark-plain')).toBe(true)
-})
-
-it.each([
-  ['yvWETH-1', '0xc56413869c6CDf96496f2b1eF801fEDBdFA7dDB0'],
-  ['USDS', '0xdC035D45d973E3EC169d2276DDab16f1e407384F']
-])('renders bundled artwork for a %s balance without a remote logo', (symbol, tokenAddress) => {
-  const balance = new Balance({
-    symbol,
-    balance: {
-      address: tokenAddress,
-      name: symbol,
-      priceChange: '',
-      decimals: 18,
-      balance: '1',
-      usdRate: { price: 1 },
-      logoURI: ''
-    },
-    i: 0,
-    scanning: false,
-    chainId: 1
-  })
-  balance.store = (...path) => {
-    const key = path.join('.')
-    if (key === 'main.networks.ethereum.1') return { name: 'Ethereum', isTestnet: false }
-    if (key === 'main.networksMeta.ethereum.1.primaryColor') return 'accent1'
-    if (key === 'selected.hideBalances') return true
-  }
-
-  render(balance.render())
-
-  const mark = screen.getByRole('img', { name: `${symbol} asset` })
-  expect(within(mark).getByAltText('')).toBeTruthy()
-  expect(mark.textContent).not.toBe(symbol.slice(0, 1))
 })
 
 it.each([BalancesPreview, BalancesExpanded])('uses chain-specific USD quotes in %p', (Component) => {

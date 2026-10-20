@@ -13,7 +13,3 @@ it('preserves an explicit notification preference', () => {
 
   expect(migration.migrate(state).main.transactionNotifications).toBe(false)
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

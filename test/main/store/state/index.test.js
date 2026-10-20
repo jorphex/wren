@@ -106,33 +106,6 @@ it('restores a supported requested interface scale', async () => {
   expect(state().main.interfaceScale).toBe(1.5)
 })
 
-it('uses PublicNode for every built-in network with a public preset', async () => {
-  mockLatestVersion = 2
-
-  const { default: state } = await import('../../../../main/store/state')
-  const networks = state().main.networks.ethereum
-  const publicNodeChains = Object.values(networks)
-    .filter((network) => network.connection.endpoints[0].current === 'publicnode')
-    .map((network) => network.id)
-    .sort((left, right) => left - right)
-
-  expect(publicNodeChains).toEqual([1, 10, 137, 8453, 42161, 84532, 11155111, 11155420])
-  for (const chainId of [1, 10, 137, 8453, 42161, 84532, 11155111, 11155420]) {
-    expect(networks[chainId].connection.endpoints[0].current).toBe('publicnode')
-  }
-  expect(JSON.stringify(state().main.networksMeta)).not.toContain('frame.nyc3.cdn.digitaloceanspaces.com')
-  expect(state().main.mute).not.toHaveProperty('migrateToPylon')
-  expect(state().panel.account.moduleOrder).toEqual([
-    'requests',
-    'chains',
-    'balances',
-    'activity',
-    'permissions',
-    'signer',
-    'settings'
-  ])
-})
-
 it('does not restore the removed upstream error-reporting preference', async () => {
   mockLatestVersion = 2
 

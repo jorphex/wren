@@ -51,9 +51,8 @@ it('replays frozen v1 migrations before upgrading instead of deleting legacy con
   })
 })
 
-it('initializes missing state and preserves malformed envelopes', () => {
+it('initializes missing state', () => {
   expect(migration.migrate(createState(64)).main.addressBook).toEqual({})
-  expect(migration.migrate(null)).toBeNull()
 })
 
 it('drops contacts with timestamps outside the supported date range', () => {

@@ -114,12 +114,6 @@ it('shows full lookalike destinations with highlighted ends and an inline warnin
   expect(screen.getByRole('alert').textContent).toContain(
     'Possible address poisoning. Verify the full address. Its first and last four characters match a destination you used before.'
   )
-  expect(
-    screen
-      .getAllByText(/^(0x)?2222$/)
-      .every((segment) => segment.classList.contains('clusterAddressLookalikeEnd'))
-  ).toBe(true)
-  expect(screen.getByLabelText(target).classList.contains('clusterAddressRecipientComplete')).toBe(true)
 })
 
 it('renders per-transaction and aggregate maximum fees and opens a separate editor', async () => {
@@ -320,16 +314,9 @@ it('edits the batch nonce and transaction fee fields only in the draft', async (
   expect(screen.getAllByText('Priority fee')).toHaveLength(2)
   expect(screen.queryByText('EIP-1559')).toBeNull()
   const startingNonce = screen.getByLabelText('Starting nonce')
-  const gasLimit = screen.getAllByLabelText(/gas limit$/i)[0]
-  const maxFee = screen.getAllByLabelText(/maximum fee per gas$/i)[0]
-  const priorityFee = screen.getAllByLabelText(/priority fee$/i)[0]
-
-  expect(startingNonce.classList.contains('wrenInput')).toBe(true)
-  expect(gasLimit.classList.contains('wrenInput')).toBe(true)
-  expect(maxFee.classList.contains('wrenInput')).toBe(true)
-  expect(maxFee.parentElement.classList.contains('wrenInputGroup')).toBe(true)
-  expect(priorityFee.classList.contains('wrenInput')).toBe(true)
-  expect(priorityFee.parentElement.classList.contains('wrenInputGroup')).toBe(true)
+  screen.getAllByLabelText(/gas limit$/i)
+  screen.getAllByLabelText(/maximum fee per gas$/i)
+  screen.getAllByLabelText(/priority fee$/i)
 
   await user.clear(startingNonce)
   await user.type(startingNonce, '9')

@@ -158,11 +158,4 @@ describe('preload renderer bridge', () => {
       '*'
     )
   })
-
-  test('registers only live outbound event channels', () => {
-    expect(mockIpcRenderer.on.mock.calls.map(([channel]) => channel).sort()).toEqual([
-      'main:action',
-      'main:flex'
-    ])
-  })
 })

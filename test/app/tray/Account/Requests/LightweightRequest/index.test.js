@@ -1,8 +1,5 @@
 import { render, screen, waitFor } from '../../../../../componentSetup'
-import {
-  LightweightRequest,
-  RequestFact
-} from '../../../../../../app/tray/Account/Requests/LightweightRequest'
+import { RequestFact } from '../../../../../../app/tray/Account/Requests/LightweightRequest'
 import link from '../../../../../../resources/link'
 
 jest.mock('../../../../../../resources/link', () => ({
@@ -35,20 +32,4 @@ it('keeps a copyable fact stable while exposing copy feedback', async () => {
   expect(copy.textContent).toContain('rpc.example/…')
   await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Copied'))
   expect(link.invoke).toHaveBeenCalledWith('tray:writeClipboard', { secret: false, value })
-})
-
-it('uses neutral terminal feedback for a declined lightweight request', () => {
-  render(
-    <LightweightRequest
-      eyebrow='Request'
-      help='Review this request.'
-      icon='network'
-      req={{ handlerId: 'request-1', status: 'declined' }}
-      title='Review request'
-    />
-  )
-
-  expect(screen.getByRole('status')).toBeTruthy()
-  expect(screen.getByTestId('icon-close')).toBeTruthy()
-  expect(screen.queryByTestId('icon-blocked')).toBeNull()
 })

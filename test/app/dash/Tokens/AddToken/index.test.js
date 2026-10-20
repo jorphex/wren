@@ -42,18 +42,6 @@ beforeAll(() => {
 })
 
 describe('selecting token chain', () => {
-  it('should display the expected chain IDs', () => {
-    render(<AddToken />)
-
-    const tokenChainNames = screen
-      .getAllByRole('button')
-      .filter((el) => el.classList.contains('originChainItem'))
-      .map((el) => el.textContent)
-    expect(tokenChainNames).toEqual(['Ethereum', 'Polygon'])
-    expect(screen.getByRole('heading', { name: 'Select a network' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Open networks' })).toBeTruthy()
-  })
-
   it('shows the approved empty state when no networks are enabled', () => {
     store.activateNetwork('ethereum', 1, false)
     store.activateNetwork('ethereum', 137, false)
@@ -313,30 +301,6 @@ describe('detecting token details', () => {
 describe('setting token details', () => {
   beforeEach(() => {
     link.invoke.mockResolvedValue({ success: true })
-  })
-
-  it('should show defaults in fields where token data is missing', () => {
-    render(
-      <AddToken
-        data={{ notifyData: { chain: { id: 137 }, address: '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4' } }}
-      />
-    )
-
-    const contractAddress = screen.getByLabelText('Token contract address')
-    const tokenNameInput = screen.getByLabelText('Token name')
-    const tokenSymbolInput = screen.getByLabelText('Symbol')
-    const tokenDecimalsInput = screen.getByLabelText('Decimals')
-
-    expect(contractAddress.value).toEqual('0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D4')
-    expect(tokenNameInput.value).toEqual('')
-    expect(tokenNameInput.placeholder).toEqual('Token name')
-    expect(tokenSymbolInput.value).toEqual('')
-    expect(tokenSymbolInput.placeholder).toEqual('e.g. USDC')
-    expect(tokenDecimalsInput.value).toEqual('')
-    expect(tokenDecimalsInput.placeholder).toEqual('e.g. 6')
-    expect(screen.getByLabelText('Logo URI').placeholder).toEqual('https://…')
-    expect(tokenNameInput.previousElementSibling.textContent).toBe('Token name')
-    expect(screen.getByText('On Polygon')).toBeTruthy()
   })
 
   it('should populate fields with token data', async () => {

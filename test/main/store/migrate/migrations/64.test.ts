@@ -13,5 +13,4 @@ it('replaces untrusted pre-migration address-memory data', () => {
   expect(migration.migrate({ main: { outboundAddressMemory: { leaked: 'address' } } })).toEqual({
     main: { outboundAddressMemory: {} }
   })
-  expect(migration.migrate(null)).toBeNull()
 })

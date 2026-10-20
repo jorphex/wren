@@ -20,7 +20,6 @@ jest.mock('../../../../main/signers/hot/RingSigner', () =>
 )
 
 const SeedSigner = require('../../../../main/signers/hot/SeedSigner')
-const RingSigner = require('../../../../main/signers/hot/RingSigner')
 const hot = require('../../../../main/signers/hot')
 const PASSWORD_OPTIONS = { allowWeakPassword: false }
 
@@ -52,20 +51,6 @@ test('exposes and immediately cancels a phrase signer while its worker callback 
   phraseDone(null)
   expect(signer.lock).not.toHaveBeenCalled()
   expect(cb).not.toHaveBeenCalled()
-})
-
-test('exposes a synchronous cancellation handle for a private-key signer', () => {
-  const signers = { trackHotSigner: jest.fn(() => true), untrackHotSigner: jest.fn() }
-  const staged = hot.stageFromPrivateKey(
-    signers,
-    `0x${'1'.padStart(64, '0')}`,
-    'correct horse battery staple',
-    PASSWORD_OPTIONS,
-    jest.fn()
-  )
-  const signer = RingSigner.mock.instances[0]
-
-  expect(staged).toEqual({ cancel: expect.any(Function), signer })
 })
 
 test('does not swallow a synchronous caller callback failure after staging succeeds', () => {

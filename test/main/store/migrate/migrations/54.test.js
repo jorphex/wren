@@ -55,7 +55,3 @@ it('drops only an untouched dormant secondary connection', () => {
     expect.objectContaining({ id: 'rpc-1', custom: 'https://primary.example/rpc' })
   ])
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

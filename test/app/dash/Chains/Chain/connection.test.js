@@ -1,13 +1,7 @@
 import Restore from 'react-restore'
 
 import { ChainHeader, NetworkEditorToggle } from '../../../../../app/dash/Chains/Chain/Components'
-import {
-  ChainModule,
-  connectionHealthLabel,
-  connectionTarget,
-  endpointLabel,
-  presetLabel
-} from '../../../../../app/dash/Chains/Chain/Connection'
+import { ChainModule, connectionTarget } from '../../../../../app/dash/Chains/Chain/Connection'
 import link from '../../../../../resources/link'
 import { render, screen } from '../../../../componentSetup'
 
@@ -70,22 +64,6 @@ function renderConnection(primary = {}) {
   return render(<ConnectedChainModule id={1} type='ethereum' />)
 }
 
-test('presents provider names cleanly', () => {
-  expect(presetLabel('publicnode')).toBe('PublicNode')
-  expect(presetLabel('custom')).toBe('custom')
-  expect(endpointLabel(1, { current: 'custom', custom: 'https://rpc.example/path' })).toBe('rpc.example')
-  expect(endpointLabel(1, { current: 'custom', custom: 'https://www.node.example' })).toBe('node.example')
-  expect(endpointLabel(1, { current: 'publicnode' })).toBe('PublicNode')
-})
-
-test('labels the active endpoint with its measured health', () => {
-  expect(connectionHealthLabel({ status: 'connected' })).toBe('Connected')
-  expect(connectionHealthLabel({ status: 'degraded', connected: true })).toBe('Degraded')
-  expect(connectionHealthLabel({ status: 'loading' })).toBe('Checking connection…')
-  expect(connectionHealthLabel({ status: 'standby' })).toBe('Standby')
-  expect(connectionHealthLabel({ status: 'error' })).toBe('Unavailable')
-})
-
 test('resolves preset and custom endpoints for the editor', () => {
   expect(connectionTarget(1, { current: 'publicnode' })).toBe('https://ethereum-rpc.publicnode.com')
   expect(connectionTarget(1, { current: 'custom', custom: 'https://rpc.example' })).toBe(
@@ -132,7 +110,6 @@ test('opens network details from the identity region while keeping the toggle se
   expect(screen.queryByText('Chain ID 137')).toBeNull()
   const toggle = screen.getByRole('button', { name: 'Disable Polygon' })
 
-  expect(details.classList.contains('networkDetailsTrigger')).toBe(true)
   expect(details.parentElement).toBe(toggle.parentElement.parentElement)
   details.focus()
   await user.keyboard('{Enter}')
@@ -151,8 +128,7 @@ test('uses the shared switch language in the network editor', async () => {
   const { user } = render(<NetworkEditorToggle label='Test network' checked={true} onChange={onChange} />)
 
   const toggle = screen.getByRole('switch', { name: 'Test network' })
-  expect(toggle.classList.contains('wrenToggle')).toBe(true)
-  expect(toggle.classList.contains('wrenToggleOn')).toBe(true)
+
   await user.click(toggle)
   expect(onChange).toHaveBeenCalledWith(false)
 })

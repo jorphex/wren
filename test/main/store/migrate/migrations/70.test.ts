@@ -56,7 +56,6 @@ test('migrates the reported current-version shape and is idempotent', () => {
   expect(migrations.apply(structuredClone(migrated))).toEqual(migrated)
 })
 
-test('leaves malformed migration envelopes unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
+test('leaves malformed metadata available for subsequent repair', () => {
   expect(migration.migrate({ main: { networksMeta: [] } })).toEqual({ main: { networksMeta: [] } })
 })

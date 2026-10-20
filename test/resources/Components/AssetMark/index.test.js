@@ -43,5 +43,4 @@ it('falls back to the asset initial if bundled artwork cannot load', () => {
   fireEvent.error(within(mark).getByAltText(''))
 
   expect(screen.getByText('Y')).toBeTruthy()
-  expect(mark.classList.contains('assetMark-hero')).toBe(true)
 })

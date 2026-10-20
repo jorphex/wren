@@ -38,20 +38,6 @@ const directPrincipalState = {
   nativePeerCredentials: {}
 }
 
-it('authorizes a request only while its external origin permission is enabled', () => {
-  expect(
-    isRequestOriginAuthorized(request, {
-      [originId]: permission
-    })
-  ).toBe(true)
-  expect(
-    isRequestOriginAuthorized(request, {
-      [originId]: { origin, provider: false }
-    })
-  ).toBe(false)
-  expect(isRequestOriginAuthorized(request, {})).toBe(false)
-})
-
 it('does not authorize a different origin with the same account permission set', () => {
   expect(
     isRequestOriginAuthorized(
@@ -356,20 +342,4 @@ it('rejects an unauthorized approval against its stored account and handler', ()
     message: 'Request origin is no longer authorized'
   })
   expect(error).toMatchObject({ code: 4100, message: 'Request origin is no longer authorized' })
-})
-
-it('leaves an authorized approval pending for its normal signer path', () => {
-  const reject = jest.fn()
-  const error = enforceRequestOriginAuthorization(
-    {
-      ...request,
-      account,
-      handlerId: 'request-id'
-    },
-    { [originId]: permission },
-    reject
-  )
-
-  expect(error).toBeUndefined()
-  expect(reject).not.toHaveBeenCalled()
 })

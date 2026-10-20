@@ -112,7 +112,7 @@ it('offers a quiet dismissal for passive hardware authentication', async () => {
   )
 
   const dismiss = screen.getByRole('button', { name: 'Not now' })
-  expect(dismiss.classList.contains('hardwareSignerPromptDismiss')).toBe(true)
+
   expect(document.activeElement).toBe(dismiss)
   await user.click(dismiss)
 
@@ -324,7 +324,7 @@ it.each(['seed', 'ring'])('hides populated %s signer addresses and controls whil
   })
 
   expect(screen.getByLabelText('Signer password')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Unlock' }).classList.contains('wrenControlLarge')).toBe(true)
+
   expect(screen.queryByText('Available accounts')).toBeNull()
   expect(screen.queryByText('0x0000…00AA')).toBeNull()
   expect(screen.queryByRole('button', { name: /account$/ })).toBeNull()

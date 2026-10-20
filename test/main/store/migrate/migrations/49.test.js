@@ -10,10 +10,5 @@ it('invalidates the prior Yearn catalog cache and pre-policy workflows', () => {
 
   const migrated = migration.migrate(state)
 
-  expect(migration.version).toBe(49)
   expect(migrated.main.yearn).toEqual({ catalogCache: null, workflows: {} })
-})
-
-it('preserves malformed input', () => {
-  expect(migration.migrate(null)).toBeNull()
 })

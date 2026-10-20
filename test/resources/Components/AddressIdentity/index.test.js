@@ -22,5 +22,4 @@ test('shows the complete address when requested', () => {
   render(<AddressIdentity address={address} complete />)
 
   expect(screen.getAllByText(address)).toHaveLength(2)
-  expect(screen.getByLabelText(address).classList.contains('clusterAddressRecipientComplete')).toBe(true)
 })

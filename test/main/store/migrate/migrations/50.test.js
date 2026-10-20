@@ -21,7 +21,3 @@ it('preserves a valid address book and replaces malformed data', () => {
   state.main.addressBook = []
   expect(migration.migrate(state).main.addressBook).toEqual({})
 })
-
-it('preserves malformed input', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

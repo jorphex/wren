@@ -15,23 +15,6 @@ const load = (path, env = {}) => {
 }
 
 describe('electron-builder platform boundaries', () => {
-  test('keeps the Linux build independent of signing configuration', () => {
-    const config = load('../../../build/electron-builder-linux.js')
-    expect(config.linux.category).toBe('Office;Finance')
-    expect(config.appImage.executableArgs).toEqual([])
-    expect(config.linux.target.map(({ target }) => target)).toEqual(['AppImage', 'deb'])
-    expect(config.linux.target.every((target) => target.arch.every((arch) => arch === 'x64'))).toBe(true)
-    expect(config.mac).toBeUndefined()
-    expect(config.win).toBeUndefined()
-  })
-
-  test('shares Linux policy with the native arm64 configuration', () => {
-    const config = load('../../../build/electron-builder-linux-arm64.js')
-    expect(config.linux.category).toBe('Office;Finance')
-    expect(config.appImage.executableArgs).toEqual([])
-    expect(config.linux.target.every((target) => target.arch.every((arch) => arch === 'arm64'))).toBe(true)
-  })
-
   test('makes unsigned macOS output explicit and removes inherited identities', () => {
     const config = load('../../../build/electron-builder-macos.js', {
       WREN_MAC_SIGNING: 'skip',

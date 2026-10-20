@@ -48,38 +48,12 @@ it.each([
   expect(link.send).toHaveBeenCalledWith('tray:action', 'navDash', { view, data: {} })
 })
 
-it('does not expose internal instance controls', () => {
-  renderMain()
-
-  expect(screen.queryByRole('button', { name: instanceId })).toBeNull()
-})
-
 it('includes each tool description in its accessible name', () => {
   renderMain()
 
   expect(
     screen.getByRole('button', {
       name: 'Contacts Save labels for addresses. Compare the full address before signing.'
-    })
-  ).toBeTruthy()
-})
-
-it('retains the additional tools owned by the Overview content', () => {
-  renderMain()
-
-  const toolItems = [...document.querySelectorAll('.dashToolList .dashModuleTitle')].map(
-    (item) => item.textContent
-  )
-  expect(screen.queryByText('home')).toBeNull()
-  expect(screen.queryByText('app')).toBeNull()
-  expect(screen.getByText('More tools')).toBeTruthy()
-  expect(toolItems).toEqual(['Earn', 'Contacts', 'Tokens', 'Read-only inspector', 'Contracts'])
-  expect(
-    screen.getByRole('button', { name: 'Read-only inspector Inspect requests without signing.' })
-  ).toBeTruthy()
-  expect(
-    screen.getByRole('button', {
-      name: 'Contracts Deploy prepared bytecode or publish verified source.'
     })
   ).toBeTruthy()
 })

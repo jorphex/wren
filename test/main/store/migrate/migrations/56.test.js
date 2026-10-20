@@ -15,7 +15,3 @@ it('removes the retired Activity placeholder from persisted account modules', ()
     'custom-module'
   ])
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

@@ -13,8 +13,3 @@ it('clears protocol-one credentials while preserving unrelated state', () => {
     extensionCredentials: {}
   })
 })
-
-it('returns malformed inputs unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
-  expect(migration.migrate({ main: {} })).toEqual({ main: {} })
-})

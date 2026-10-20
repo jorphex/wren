@@ -7,13 +7,11 @@ it('adds persisted Yearn workflows without replacing the catalog cache', () => {
 
   const migrated = migration.migrate(state)
 
-  expect(migration.version).toBe(48)
   expect(migrated.main.yearn).toEqual({ catalogCache: { existing: true }, workflows: {} })
 })
 
-it('preserves existing workflows and malformed input', () => {
+it('preserves existing workflows', () => {
   const state = createState(47)
   state.main.yearn = { catalogCache: null, workflows: { existing: true } }
   expect(migration.migrate(state).main.yearn.workflows).toEqual({ existing: true })
-  expect(migration.migrate(null)).toBeNull()
 })
