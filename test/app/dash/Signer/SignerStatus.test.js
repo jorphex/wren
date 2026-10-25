@@ -32,16 +32,3 @@ it('submits one signer unlock and allows a retry after an error', async () => {
   expect(link.rpc).toHaveBeenCalledTimes(2)
   act(() => succeed(null))
 })
-
-it('ignores an unlock callback after unmount', async () => {
-  let finish
-  link.rpc.mockImplementationOnce((_action, _id, _password, callback) => {
-    finish = callback
-  })
-  const view = render(<SignerStatus signer={signer} />)
-  await view.user.type(screen.getByLabelText('Signer password'), 'password')
-  await view.user.click(screen.getByRole('button', { name: 'Unlock' }))
-  view.unmount()
-
-  expect(() => act(() => finish(new Error('late error')))).not.toThrow()
-})

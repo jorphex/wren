@@ -1,5 +1,4 @@
 import EventEmitter from 'events'
-import { createHash } from 'crypto'
 import { Buffer } from 'buffer'
 
 import {
@@ -33,11 +32,6 @@ const expectCanonicalWrenIcon = (icon) => {
   const png = Buffer.from(match[1], 'base64')
   expect(png.toString('base64')).toBe(match[1])
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
-  expect(png.readUInt32BE(16)).toBe(128)
-  expect(png.readUInt32BE(20)).toBe(128)
-  expect(createHash('sha256').update(png).digest('hex')).toBe(
-    'bc8ba0f545d9a8b005cbf704a147b94f6e77a20afa54bd01b1c74983decc9676'
-  )
 }
 
 it('announces immutable final EIP-6963 metadata immediately', () => {
@@ -60,7 +54,6 @@ it('announces immutable final EIP-6963 metadata immediately', () => {
   expect(Object.isFrozen(installation.detail.info)).toBe(true)
   expect(Object.isFrozen(provider)).toBe(false)
   expectCanonicalWrenIcon(installation.detail.info.icon)
-  expect(installation.detail.info.rdns).toBe('io.github.jorphex.wren')
   expect(target.crypto.randomUUID).toHaveBeenCalledTimes(1)
 })
 

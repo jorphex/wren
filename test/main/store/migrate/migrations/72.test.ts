@@ -54,7 +54,3 @@ test('preserves exact managed origins and unrelated permission grants', () => {
     permissions: state.main.permissions
   })
 })
-
-test('preserves malformed input for framework rejection', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

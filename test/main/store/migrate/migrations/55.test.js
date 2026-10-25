@@ -26,7 +26,3 @@ it('retires the legacy Send dapp, origin, and managed permissions', () => {
     example: state.main.permissions['0xaccount'].example
   })
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

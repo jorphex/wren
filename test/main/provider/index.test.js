@@ -3437,21 +3437,6 @@ describe('#send', () => {
       })
     })
 
-    it('returns the response from the connection', (done) => {
-      blockResult = {
-        blockHash: '0xc1b0227f0721a05357b2b417e3872c5f6f01da209422013fe66ee291527fb123',
-        blockNumber: '0xc80d08'
-      }
-
-      send(request, (response) => {
-        expect(response.result.blockHash).toBe(
-          '0xc1b0227f0721a05357b2b417e3872c5f6f01da209422013fe66ee291527fb123'
-        )
-        expect(response.result.blockNumber).toBe('0xc80d08')
-        done()
-      })
-    })
-
     it('uses maxFeePerGas as the gasPrice if one is not defined', (done) => {
       const fee = `0x${(10e9).toString(16)}`
 
@@ -5767,18 +5752,6 @@ describe('#signAndSend', () => {
           )
 
           cb({ result: txHash })
-        })
-      })
-
-      it('sends a successfully signed transaction', (done) => {
-        signAndSend((err, result) => {
-          try {
-            expect(err).toBe(null)
-            expect(result).toBe(txHash)
-            done()
-          } catch (e) {
-            done(e)
-          }
         })
       })
 

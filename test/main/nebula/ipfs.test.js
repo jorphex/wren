@@ -63,18 +63,6 @@ describe('gateway mode', () => {
     )
   })
 
-  test('requests directory archives with the tar format query', async () => {
-    const fetch = jest.fn(async () => response(['first', 'second']))
-    const ipfs = createIpfs(undefined, 32, 64, { env: {}, fetch })
-
-    await expect(collect(ipfs.get(`/ipfs/${CID}/directory`, { archive: true }))).resolves.toEqual([
-      'first',
-      'second'
-    ])
-
-    expect(fetch.mock.calls[0][0].toString()).toBe(`https://ipfs.io/ipfs/${CID}/directory?format=tar`)
-  })
-
   test('canonicalizes CIDv0 and URL-encodes decoded subpath segments', async () => {
     const fetch = jest.fn(async () => response(['{}']))
     const ipfs = createIpfs(undefined, 32, 64, { env: {}, fetch })

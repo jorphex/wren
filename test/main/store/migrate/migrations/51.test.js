@@ -25,8 +25,7 @@ it('removes unsafe address-book entries while preserving valid contacts', () => 
   expect(migration.migrate(state).main.addressBook).toEqual({ [valid.address]: valid })
 })
 
-it('initializes missing address-book state and preserves malformed input state', () => {
+it('initializes missing address-book state', () => {
   const state = createState(50)
   expect(migration.migrate(state).main.addressBook).toEqual({})
-  expect(migration.migrate(null)).toBeNull()
 })

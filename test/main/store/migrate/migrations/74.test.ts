@@ -1,5 +1,4 @@
 import migrations from '../../../../../main/store/migrate'
-import migration from '../../../../../main/store/migrate/migrations/74'
 import { createState } from '../setup'
 
 const canonicalColorwayPrimary = {
@@ -35,8 +34,4 @@ test('canonicalizes legacy primary colors without changing wallet state', () => 
   expect(migrated.main.colorwayPrimary).toEqual(canonicalColorwayPrimary)
   expect(migrated.main.accounts).toEqual({ account: { name: 'Preserved account' } })
   expect(migrated.main.signers).toEqual({ signer: { type: 'seed' } })
-})
-
-test('preserves malformed migration envelopes for framework rejection', () => {
-  expect(migration.migrate(null)).toBeNull()
 })

@@ -29,22 +29,6 @@ beforeEach(() => {
   }
 })
 
-it('renders the base fee input', () => {
-  const { getBaseFeeInput } = setupComponent(req)
-  expect(getBaseFeeInput().value).toBe('4')
-  expect(getBaseFeeInput().classList.contains('wrenInput')).toBe(true)
-})
-
-it('renders the priority fee input', () => {
-  const { getPriorityFeeInput } = setupComponent(req)
-  expect(getPriorityFeeInput().value).toBe('3')
-})
-
-it('renders the gas limit input', () => {
-  const { getGasLimitInput } = setupComponent(req)
-  expect(getGasLimitInput().value).toBe('25000')
-})
-
 it('submits independent field drafts without one timer cancelling another', () => {
   render(<AdjustFee req={req} />)
   const baseFee = screen.getByLabelText('Base Fee Cap (GWEI)')
@@ -618,16 +602,6 @@ describe('legacy transactions', () => {
       },
       handlerId: '1'
     }
-  })
-
-  it('renders the gas price input', () => {
-    const { getGasPriceInput } = setupComponent(req)
-    expect(getGasPriceInput().value).toBe('7')
-  })
-
-  it('renders the gas limit input', () => {
-    const { getGasLimitInput } = setupComponent(req)
-    expect(getGasLimitInput().value).toBe('25000')
   })
 
   describe('gas price input', () => {

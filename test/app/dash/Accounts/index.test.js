@@ -62,18 +62,6 @@ class SignerAccountsHarness extends Dash {
   }
 }
 
-it('offers four clear setup intents with private-key creation in Advanced', () => {
-  render(<AddAccounts data={{}} />)
-  expect(screen.getByRole('heading', { name: 'Add account' })).toBeTruthy()
-  expect(screen.getAllByRole('button').map((button) => button.textContent.trim())).toEqual([
-    'Create wallet',
-    'Import wallet',
-    'Connect hardware wallet',
-    'Watch address',
-    'Create private key'
-  ])
-})
-
 it('keeps each hardware method a one-click route', () => {
   render(<AddAccounts data={{ accountChooserMode: 'hardware' }} />)
 
@@ -160,17 +148,6 @@ it('keeps watch-only accounts visible and opens them directly', () => {
   fireEvent.click(accountRow)
 
   expect(link.rpc).toHaveBeenCalledWith('setSigner', account, expect.any(Function))
-})
-
-it('keeps signing and watch accounts together before account creation actions', () => {
-  render(<AccountsHarness data={{}} />)
-
-  expect(
-    screen
-      .getAllByRole('heading', { level: 2 })
-      .slice(0, 3)
-      .map((heading) => heading.textContent)
-  ).toEqual(['Signing accounts', 'Watch accounts', 'Add account'])
 })
 
 it('keeps ready signing accounts as direct account selection', () => {

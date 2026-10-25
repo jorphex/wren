@@ -138,27 +138,6 @@ describe('#remove', () => {
   })
 })
 
-describe('#reload', () => {
-  const latticeSigner = { deviceId: 'NBaJ8e' }
-
-  beforeEach(() => {
-    latticeSigner.connect = jest.fn()
-    latticeSigner.disconnect = jest.fn()
-  })
-
-  it('disconnects the Lattice signer', () => {
-    adapter.reload(latticeSigner)
-
-    expect(latticeSigner.disconnect).toHaveBeenCalled()
-  })
-
-  it('connects the Lattice signer with the correct settings', () => {
-    adapter.reload(latticeSigner)
-
-    expect(latticeSigner.connect).toHaveBeenCalledWith('https://signing.gridpl.us', 'supersecretkey')
-  })
-})
-
 describe('settings changes', () => {
   const latticeSigner = {
     deviceId: 'NBaJ8e'

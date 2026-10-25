@@ -216,7 +216,7 @@ Promise.all([
     signatureVersion: require(path.join(appModules, '@metamask/eth-sig-util/package.json')).version,
     archiveVersions: {
       'tar-fs': require(path.join(appModules, 'tar-fs/package.json')).version,
-      'tar-stream': tarFsRequire('tar-stream/package.json').version
+      'tar-stream': JSON.parse(fs.readFileSync(path.join(path.dirname(tarFsRequire.resolve('tar-stream')), 'package.json'), 'utf8')).version
     },
     archiveApis: [typeof tarFs.extract, typeof tarStream.extract],
     electronLogVersion: require(path.join(appModules, 'electron-log/package.json')).version,

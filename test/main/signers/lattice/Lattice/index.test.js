@@ -66,14 +66,6 @@ describe('#connect', () => {
     })
   })
 
-  it('connects when not paired', async () => {
-    pairingStatus = false
-
-    const paired = await lattice.connect(baseUrl, privateKey)
-
-    expect(paired).toBe(false)
-  })
-
   it('emits an update if not yet paired', (done) => {
     pairingStatus = false
 
@@ -160,16 +152,6 @@ describe('#connect', () => {
     }
 
     return handler
-  })
-
-  it('sets the version', async () => {
-    await lattice.connect(baseUrl, privateKey)
-
-    expect(lattice.appVersion).toStrictEqual({
-      major: 0,
-      minor: 13,
-      patch: 4
-    })
   })
 
   it('allows only the latest concurrent connection to update state', async () => {

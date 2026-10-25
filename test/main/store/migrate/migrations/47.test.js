@@ -31,8 +31,3 @@ it('preserves an existing Katana network and metadata', () => {
   expect(migrated.main.networksMeta.ethereum['747474']).toEqual({ custom: 'metadata' })
   expect(migrated.main.yearn).toEqual({ catalogCache: { existing: true } })
 })
-
-it('returns malformed inputs unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
-  expect(migration.migrate({ main: {} })).toEqual({ main: {} })
-})

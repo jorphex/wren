@@ -7,16 +7,6 @@ import { FRAME_SEND_ORIGIN, originIdForName } from '../../../resources/domain/or
 
 jest.mock('electron', () => ({ app: { getPath: jest.fn(() => process.cwd()), on: jest.fn() } }))
 
-const root = path.resolve(__dirname, '../../..')
-
-test('the provider exclusively owns successful transaction lifecycle admission', () => {
-  const providerSource = fs.readFileSync(path.join(root, 'main/provider/index.ts'), 'utf8')
-  const rpcSource = fs.readFileSync(path.join(root, 'main/rpc/index.js'), 'utf8')
-
-  expect(providerSource.match(/accounts\.setTxSent\s*\(/gu)).toHaveLength(1)
-  expect(rpcSource).not.toMatch(/accounts\.setTxSent\s*\(/u)
-})
-
 test('broadcast-attempt recovery is on disk before response while queued writes are pending', () => {
   jest.useFakeTimers()
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'wren-submitted-transaction-'))

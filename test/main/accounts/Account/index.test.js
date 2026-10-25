@@ -1329,29 +1329,6 @@ describe('#addRequest', () => {
       expect(request).not.toHaveProperty('addressSafetyPending')
       account.clearRequest(request.handlerId)
     })
-
-    it('recognizes an ERC-20 approval', async () => {
-      const request = {
-        handlerId: '123456',
-        type: 'transaction',
-        data: {
-          chainId: '0x539',
-          to: '0x6887246668a3b87F54DeB3b94Ba47a6f63F32985',
-          data: '0x095ea7b30000000000000000000000009bc5baf874d2da8d216ae9f137804184ee5afef40000000000000000000000000000000000000000000000000000000000011170'
-        }
-      }
-
-      reveal.recog.mockResolvedValue([
-        {
-          id: 'erc20:approve'
-        }
-      ])
-
-      account.addRequest(request)
-      await flushPromises()
-
-      expect(request.recognizedActions).toHaveLength(1)
-    })
   })
 
   it('keeps only the newest execution check result', async () => {

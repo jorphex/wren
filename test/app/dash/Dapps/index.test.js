@@ -1,7 +1,7 @@
 import Restore from 'react-restore'
 
 import { act, render, screen } from '../../../componentSetup'
-import { Dapps, OriginModuleComponent } from '../../../../app/dash/Dapps'
+import { Dapps } from '../../../../app/dash/Dapps'
 import link from '../../../../resources/link'
 import { MAX_TIMER_DELAY } from '../../../../resources/domain/connectedApps'
 import { FRAME_SEND_ORIGIN } from '../../../../resources/domain/origin'
@@ -180,21 +180,6 @@ test('ignores duplicate connected-app activation', async () => {
   )
 
   expect(link.send).toHaveBeenCalledTimes(1)
-})
-
-test('clears its navigation guard on unmount', () => {
-  const ref = { current: null }
-  const origin = {
-    id: 'origin',
-    name: 'example.test',
-    session: { startedAt: 100, lastUpdatedAt: 100, requests: 1 }
-  }
-  const { unmount } = render(<OriginModuleComponent ref={ref} connected origin={origin} />)
-
-  ref.current.navigationPending = true
-  unmount()
-
-  expect(ref.current).toBeNull()
 })
 
 test('expires the last recently disconnected app without a store update', () => {

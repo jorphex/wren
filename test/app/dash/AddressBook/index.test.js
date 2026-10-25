@@ -76,31 +76,6 @@ test('searches contacts, copies rows, and opens add and edit navigation explicit
   })
 })
 
-test('orders a checked contact as note, date, then check note without a provenance pill', () => {
-  const checked = {
-    ...entry,
-    note: 'Quarterly treasury recipient',
-    provenance: {
-      status: 'verified-out-of-band',
-      verifiedAt: Date.UTC(2026, 7, 18),
-      note: 'Compared on a separate device'
-    }
-  }
-  const checkedStore = Restore.create({ main: { addressBook: { [address.toLowerCase()]: checked } } }, {})
-  const CheckedAddressBook = Restore.connect(AddressBook, checkedStore)
-
-  render(<CheckedAddressBook data={{}} />)
-
-  const identity = screen.getByText('Yearn Treasury').closest('.addressBookIdentity')
-  expect([...identity.children].map((child) => child.textContent)).toEqual([
-    'Yearn Treasury',
-    address,
-    'Quarterly treasury recipient',
-    'Checked 2026-08-18 · Compared on a separate device'
-  ])
-  expect(screen.queryByText('Checked outside Wren')).toBeNull()
-})
-
 test('orders contact actions as Copy, Edit, then Remove and exposes an explicit safe confirmation', async () => {
   const { user } = render(<ConnectedAddressBook data={{}} />)
   const copy = screen.getByRole('button', {

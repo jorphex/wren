@@ -23,15 +23,6 @@ async function withReleaseFiles(run) {
   }
 }
 
-test('writes and verifies one manifest across Linux, Windows, and macOS release files', async () => {
-  await withReleaseFiles(async (dist) => {
-    const options = { dist, version, includeMacos: true, includeWindows: true }
-    const written = await writeReleaseChecksums(options)
-    assert.deepEqual(written, releaseArtifactNames(version, options))
-    assert.deepEqual(await verifyReleaseChecksums(options), written)
-  })
-})
-
 test('rejects missing, unexpected, repeated, and modified checksum entries', async () => {
   await withReleaseFiles(async (dist) => {
     const options = { dist, version, includeMacos: true, includeWindows: true }

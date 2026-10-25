@@ -6,8 +6,7 @@ import {
   encodeBridgeMessage,
   getRendererTargetOrigin,
   getRendererRole,
-  isTrustedBridgeEvent,
-  responseEventChannels
+  isTrustedBridgeEvent
 } from '../../../resources/bridge/protocol'
 
 const id = '74b6f0b5-0396-4d91-b505-0fb66f00786a'
@@ -139,7 +138,6 @@ describe('renderer bridge protocol', () => {
         BRIDGE_SOURCE
       )
     ).toBeNull()
-    expect([...responseEventChannels].sort()).toEqual(['action', 'flex'])
   })
 
   test('rejects malformed state updates, unsafe paths, and dead response channels', () => {

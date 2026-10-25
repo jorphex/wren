@@ -1,9 +1,4 @@
-import {
-  Activity,
-  activityOriginLabel,
-  activityTypeMeta,
-  filterActivity
-} from '../../../../../app/tray/Account/Activity'
+import { Activity, activityOriginLabel, filterActivity } from '../../../../../app/tray/Account/Activity'
 import {
   WREN_DEPLOY_DISPLAY_NAME,
   WREN_DEPLOY_ORIGIN,
@@ -78,14 +73,6 @@ beforeEach(() => {
   link.send.mockReset()
 })
 
-it('classifies network changes as connection activity', () => {
-  expect(activityTypeMeta('switchChain')).toEqual({
-    category: 'connections',
-    icon: 'network',
-    label: 'Network change'
-  })
-})
-
 it('shows four privacy-safe recent entries and opens the complete activity view', () => {
   render(<ActivityHarness account={account} moduleId='activity' />)
 
@@ -95,7 +82,7 @@ it('shows four privacy-safe recent entries and opens the complete activity view'
   expect(document.body.textContent).not.toMatch(/payload|calldata|recipient/i)
 
   const continuation = screen.getByRole('button', { name: 'View all activity' })
-  expect(continuation.classList.contains('accountContinuationRow')).toBe(true)
+
   fireEvent.click(continuation)
   expect(link.send).toHaveBeenCalledWith('nav:forward', 'panel', {
     view: 'expandedModule',

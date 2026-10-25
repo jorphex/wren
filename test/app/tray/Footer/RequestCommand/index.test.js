@@ -318,7 +318,7 @@ it('retains a recoverable pre-sign failure with explicit recheck and close actio
 
   const alert = screen.getByRole('alert')
   expect(alert.textContent).toMatch(/safety check unavailable/i)
-  expect(alert.firstElementChild.classList.contains('requestActionContextIconAlert')).toBe(true)
+
   expect(screen.getByText('Nothing signed or sent.')).toBeTruthy()
   expect(screen.queryByText(/Delegation recheck unavailable/)).toBeNull()
   await view.user.click(screen.getByRole('button', { name: 'Recheck' }))

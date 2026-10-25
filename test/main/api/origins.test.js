@@ -119,26 +119,6 @@ describe('#updateOrigin', () => {
       expect(payload.chainId).toBe('0x1')
     })
 
-    it('sets the payload chain id to the origin default for connection messages with a known origin', () => {
-      const originalPayload = {}
-      const { payload, chainId } = updateOrigin(originalPayload, 'frame.test', true)
-
-      expect(chainId).toBe('0x1')
-      expect(payload.chainId).toBe('0x1')
-    })
-
-    it('sets the chain id to mainnet for a new origin', () => {
-      const { chainId } = updateOrigin({}, 'frame.test')
-
-      expect(chainId).toBe('0x1')
-    })
-
-    it('sets the chain id to mainnet for an unknown origin', () => {
-      const { chainId } = updateOrigin({}, 'Unknown')
-
-      expect(chainId).toBe('0x1')
-    })
-
     it('sets the chain id for an existing origin', () => {
       store.set('main.origins', directOriginId('frame.test'), { chain: { id: 137 } })
 

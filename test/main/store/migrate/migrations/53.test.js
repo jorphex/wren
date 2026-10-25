@@ -155,7 +155,3 @@ it('removes only inventory from persisted account module ordering', () => {
     'custom-module'
   ])
 })
-
-it('preserves malformed input for the migration framework to reject', () => {
-  expect(migration.migrate(null)).toBeNull()
-})

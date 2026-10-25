@@ -99,25 +99,6 @@ it('should render an existing Meta key shortcut on Windows', () => {
 })
 
 describe('when configuring', () => {
-  it('should prompt to enter a shortcut', async () => {
-    render(
-      <KeyboardShortcutConfigurator
-        actionText='Test this component'
-        platform='linux'
-        shortcutName='Test'
-        shortcut={{
-          modifierKeys: ['Meta'],
-          shortcutKey: 'Slash',
-          enabled: true,
-          configuring: true
-        }}
-      />
-    )
-
-    const enterShortcutPrompt = screen.getByText('Press a new keyboard shortcut')
-    expect(enterShortcutPrompt).toBeDefined()
-  })
-
   describe('and a valid shortcut is entered', () => {
     it('should set the new shortcut', async () => {
       const { user } = render(

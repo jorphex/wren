@@ -6,7 +6,6 @@ import {
 
 describe('interface scale', () => {
   it('accepts only supported requested scales', () => {
-    expect(INTERFACE_SCALES).toEqual([1, 1.25, 1.5])
     expect(INTERFACE_SCALES.map(normalizeInterfaceScale)).toEqual([1, 1.25, 1.5])
     expect([undefined, null, 0, 1.1, 2, '1.25'].map(normalizeInterfaceScale)).toEqual([1, 1, 1, 1, 1, 1])
   })

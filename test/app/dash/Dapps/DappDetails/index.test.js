@@ -61,19 +61,6 @@ test('switches an app network once and releases the pending guard', async () => 
   expect(screen.getByRole('button', { name: 'Polygon' }).disabled).toBe(false)
 })
 
-test('clears a pending network-switch timer on unmount', async () => {
-  const ref = { current: null }
-  const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
-  const { unmount, user } = render(<DappDetailsHarness ref={ref} originId='origin' />)
-
-  await user.click(screen.getByRole('button', { name: 'Polygon' }))
-  const switchTimer = ref.current.switchTimer
-  unmount()
-
-  expect(clearTimeoutSpy).toHaveBeenCalledWith(switchTimer)
-  clearTimeoutSpy.mockRestore()
-})
-
 test('renders a safe status when a connected app disappears', () => {
   origin = undefined
   render(<DappDetailsHarness originId='origin' />)

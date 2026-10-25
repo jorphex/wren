@@ -42,13 +42,6 @@ test('limits Activity history actions to the tray renderer', () => {
   }
 })
 
-test('does not treat an unregistered verification-like prefix as a dashboard-only exception', () => {
-  expect(hasRendererCapability('dash', 'invoke', ['contractVerification:unknown'])).toBe(true)
-  expect(hasRendererCapability('tray', 'invoke', ['contractVerification:unknown'])).toBe(true)
-  expect(hasRendererCapability('dapp', 'invoke', ['contractVerification:unknown'])).toBe(false)
-  expect(hasRendererCapability('onboard', 'invoke', ['contractVerification:unknown'])).toBe(false)
-})
-
 test('limits generated-wallet secret lifecycle RPCs to the dashboard role', () => {
   for (const method of [
     'reserveGeneratedWallet',

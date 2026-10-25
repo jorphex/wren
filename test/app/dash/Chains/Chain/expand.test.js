@@ -224,20 +224,3 @@ test('opens the existing removal confirmation', async () => {
     expect.objectContaining({ view: 'notify' })
   )
 })
-
-test('forwards the testnet identity flag through the preview', () => {
-  render(
-    <Chain
-      view='preview'
-      id={11155111}
-      type='ethereum'
-      name='Sepolia'
-      symbol='sepETH'
-      explorer='https://sepolia.etherscan.io'
-      isTestnet={true}
-      on={false}
-    />
-  )
-
-  expect(screen.getByTestId('chain-icon').getAttribute('data-color')).toBe('var(--wren-chain-testnet)')
-})

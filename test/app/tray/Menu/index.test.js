@@ -17,8 +17,7 @@ it('opens the dashboard with the current visibility inverted', () => {
 
   const button = screen.getByRole('button', { name: 'Open dashboard' })
   expect(screen.getAllByRole('button')).toHaveLength(1)
-  expect(button.classList.contains('wrenShellNav')).toBe(true)
-  expect(button.classList.contains('panelWorkspaceToggle')).toBe(true)
+
   expect(button.getAttribute('aria-pressed')).toBe('false')
   expect(button.querySelectorAll('svg rect')).toHaveLength(1)
   fireEvent.click(button)

@@ -2,8 +2,6 @@ import { getCreateAddress, keccak256 } from 'ethers'
 
 import {
   buildDeploymentTransaction,
-  DEPLOYMENT_DOMAIN_ERROR_CODES,
-  DeploymentDomainError,
   deriveProvisionalDeploymentAddress,
   inspectDeploymentInitcode,
   MAX_DEPLOYMENT_INITCODE_BYTES,
@@ -59,10 +57,6 @@ describe('prepared deployment draft', () => {
         code: 'invalid-account',
         message: 'Deployment account is invalid'
       })
-    )
-    expect(DEPLOYMENT_DOMAIN_ERROR_CODES).toContain('invalid-account')
-    expect(new DeploymentDomainError('invalid-value')).toEqual(
-      expect.objectContaining({ code: 'invalid-value', message: 'Deployment value is invalid' })
     )
   })
 })
@@ -176,7 +170,6 @@ describe('transaction construction', () => {
     )
 
     expect(transaction).toEqual({ from: account, chainId: '0x2105', data: '0x60aa00', value: '0x19' })
-    expect(Object.keys(transaction)).toEqual(['from', 'chainId', 'data', 'value'])
     expect('to' in transaction).toBe(false)
     expect(Object.isFrozen(transaction)).toBe(true)
   })

@@ -8,7 +8,18 @@
     "\\.svg$": "<rootDir>/test/jest.svg.js"
   },
   "transform": {
-    "\\.[jt]sx?$": ["babel-jest", { "configFile": "./.babelrc.json" }]
+    "\\.[jt]sx?$": [
+      "babel-jest",
+      {
+        "configFile": "./.babelrc.json",
+        "overrides": [
+          {
+            "test": "./test/**",
+            "plugins": ["@babel/plugin-transform-dynamic-import"]
+          }
+        ]
+      }
+    ]
   },
   "transformIgnorePatterns": [
     "/node_modules/(?!(@ethereumjs/wallet|@ethereumjs/util|ethereum-cryptography|@noble/[^/]+|@scure/[^/]+)(/|$))"

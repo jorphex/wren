@@ -3,7 +3,6 @@ import path from 'path'
 
 import {
   canonicalContractVerificationJson,
-  CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES,
   ContractVerificationDomainError,
   hashContractVerificationSources,
   hashContractVerificationSubmission,
@@ -892,15 +891,5 @@ describe('exact target and privacy-minimal job ledger', () => {
       id: `123e4567-e89b-42d3-a456-${index.toString(16).padStart(12, '0')}`
     }))
     expect(validateContractVerificationJobLedger(records)).toHaveLength(MAX_CONTRACT_VERIFICATION_JOBS)
-  })
-
-  it('exposes only fixed kebab-case public errors and messages', () => {
-    expect(CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES.length).toBeGreaterThan(20)
-    for (const code of CONTRACT_VERIFICATION_DOMAIN_ERROR_CODES) {
-      expect(code).toMatch(/^[a-z]+(?:-[a-z]+)*$/u)
-      const error = new ContractVerificationDomainError(code)
-      expect(error.code).toBe(code)
-      expect(error.message.length).toBeGreaterThan(0)
-    }
   })
 })

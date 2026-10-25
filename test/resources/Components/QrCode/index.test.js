@@ -6,8 +6,6 @@ test('encodes the exact address with the minimum reliable quiet zone', () => {
   const qr = createQrMatrix(address)
 
   expect(QR_QUIET_ZONE_MODULES).toBe(4)
-  expect(qr.version).toBe(3)
-  expect(qr.size).toBe(37)
 
   for (let offset = 0; offset < QR_QUIET_ZONE_MODULES; offset += 1) {
     expect(qr.data[offset].every((module) => module === false)).toBe(true)

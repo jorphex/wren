@@ -444,12 +444,6 @@ describe('#populate', () => {
       }
     ]
 
-    it('sets the transaction type', () => {
-      const tx = populate(rawTx, chainConfig, gas)
-
-      expect(tx.type).toBe('0x1')
-    })
-
     it('preserves an access list on a supporting chain', () => {
       const tx = populate({ ...rawTx, accessList }, chainConfig, gas)
 

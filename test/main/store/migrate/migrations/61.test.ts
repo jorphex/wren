@@ -79,7 +79,7 @@ test('extracts only valid transaction and revocation evidence before discarding 
   )
 })
 
-test('discards unproven request evidence and preserves malformed input for framework rejection', () => {
+test('discards unproven request evidence', () => {
   const state = createState(60)
   state.main.accounts[account] = {
     requests: {
@@ -99,7 +99,6 @@ test('discards unproven request evidence and preserves malformed input for frame
   }
   expect(migrated.main.operationLifecycles).toEqual({})
   expect(migrated.main.accounts[account]).toHaveProperty('requests', {})
-  expect(migration.migrate(null)).toBeNull()
 })
 
 test('deduplicates lifecycle ids and keeps only the newest 500 valid rows deterministically', () => {

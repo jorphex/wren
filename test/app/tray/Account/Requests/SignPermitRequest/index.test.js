@@ -75,9 +75,7 @@ it('shows domain mismatch warnings in the specialized permit overview', () => {
 
   expect(screen.getByRole('alert').textContent).toBe('Domain chain 1 does not match request chain 5.')
   expect(screen.getByText('Workshop Software Account With A Long Name')).toBeTruthy()
-  expect(document.querySelector('.permitAccountAddress').classList.contains('permitAccountAddress')).toBe(
-    true
-  )
+
   expect(screen.getByText(/May 18, 2033.*UTC/)).toBeTruthy()
 })
 

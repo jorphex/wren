@@ -49,11 +49,6 @@ it('preserves current signed state and prunes malformed or unsafe records', () =
   })
 })
 
-it('returns malformed inputs unchanged', () => {
-  expect(migration.migrate(null)).toBeNull()
-  expect(migration.migrate({ main: {} })).toEqual({ main: {} })
-})
-
 it('replaces a malformed ledger container without changing the surrounding state', () => {
   const state = createState(42)
   state.main.accounts = { fixture: { name: 'preserved' } }

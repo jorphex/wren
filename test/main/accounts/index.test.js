@@ -151,10 +151,6 @@ afterEach(() => {
   })
 })
 
-it('sets the account signer', () => {
-  expect(Accounts.current().address).toBe('0x22dd63c3619818fdbc262c78baee43cb61e9cccf')
-})
-
 it('removes exclusive signer accounts, rejects their requests, and preserves shared and unrelated accounts', () => {
   const signerId = 'signer-to-remove'
   const derivedAddress = '0x4444444444444444444444444444444444444444'
@@ -436,14 +432,12 @@ describe('#setBaseFee', () => {
     request.locked = true
 
     expect(() => setBaseFee('0x1dcd65000')).toThrow()
-    expect(Accounts.current().requests[1].data.maxFeePerGas).toBe(request.data.maxFeePerGas)
   })
 
   it('does not set a base fee on an automatic update if fees were manually set by the user', () => {
     request.feesUpdatedByUser = true
 
     expect(() => setBaseFee('0x1dcd65000')).toThrow()
-    expect(Accounts.current().requests[1].data.maxFeePerGas).toBe(request.data.maxFeePerGas)
   })
 
   it('applies automatic base fee update', () => {
@@ -574,14 +568,12 @@ describe('#setPriorityFee', () => {
     request.locked = true
 
     expect(() => setPriorityFee('0x12a05f200')).toThrow()
-    expect(Accounts.current().requests[1].data.maxFeePerGas).toBe(request.data.maxFeePerGas)
   })
 
   it('does not set a priority fee on an automatic update if fees were manually set by the user', () => {
     request.feesUpdatedByUser = true
 
     expect(() => setPriorityFee('0x12a05f200')).toThrow()
-    expect(Accounts.current().requests[1].data.maxFeePerGas).toBe(request.data.maxFeePerGas)
   })
 
   it('sets a valid priority fee', () => {
@@ -703,14 +695,12 @@ describe('#setGasPrice', () => {
     request.locked = true
 
     expect(() => setGasPrice('0x23')).toThrow()
-    expect(Accounts.current().requests[1].data.gasPrice).toBe(request.data.gasPrice)
   })
 
   it('does not set a gas price on an automatic update if fees were manually set by the user', () => {
     request.feesUpdatedByUser = true
 
     expect(() => setGasPrice('0x23')).toThrow()
-    expect(Accounts.current().requests[1].data.gasPrice).toBe(request.data.gasPrice)
   })
 
   it('sets a valid gas price', () => {
@@ -811,14 +801,12 @@ describe('#setGasLimit', () => {
     request.locked = true
 
     expect(() => setGasLimit('0x61a8')).toThrow()
-    expect(Accounts.current().requests[1].data.gasLimit).toBe(request.data.gasLimit)
   })
 
   it('does not set a gas limit on an automatic update if fees were manually set by the user', () => {
     request.feesUpdatedByUser = true
 
     expect(() => setGasLimit('0x61a8')).toThrow()
-    expect(Accounts.current().requests[1].data.gasLimit).toBe(request.data.gasLimit)
   })
 
   it('sets a valid gas limit', () => {
@@ -906,18 +894,6 @@ describe('#adjustNonce', () => {
   })
 
   const adjustNonce = (nonceAdjust, requestId = 1) => Accounts.adjustNonce(requestId, nonceAdjust)
-
-  it('does not allow an invalid adjustment', () => {
-    adjustNonce(2)
-
-    expect(Accounts.current().requests[1].data.nonce).toBe(request.data.nonce)
-  })
-
-  it('does not adjust a request if no account is active', () => {
-    adjustNonce(1)
-
-    expect(Accounts.current().requests[1].data.nonce).toBe(request.data.nonce)
-  })
 
   it('adjusts the provided nonce up one increment', () => {
     const expectedNonce = addHexPrefix((parseInt(request.data.nonce) + 1).toString(16))

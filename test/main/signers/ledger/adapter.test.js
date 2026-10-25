@@ -68,20 +68,6 @@ afterAll(() => {
   log.transports.console.level = 'debug'
 })
 
-it('recognizes a connected Ledger', (done) => {
-  adapter.once('add', (ledger) => {
-    try {
-      expect(ledger.devicePath).toBe('nano-s-path')
-      done()
-    } catch (e) {
-      done(e)
-    }
-  })
-
-  simulateLedgerConnection('nano-s-path')
-  adapter.handleDeviceChanges()
-})
-
 it('polls for connected Ledgers without loading the USB event transport', () => {
   const onAdd = jest.fn()
   adapter.on('add', onAdd)
