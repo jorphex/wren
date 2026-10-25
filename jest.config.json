@@ -12,7 +12,12 @@
       "babel-jest",
       {
         "configFile": "./.babelrc.json",
-        "plugins": ["@babel/plugin-transform-dynamic-import"]
+        "overrides": [
+          {
+            "test": "./test/**",
+            "plugins": ["@babel/plugin-transform-dynamic-import"]
+          }
+        ]
       }
     ]
   },
