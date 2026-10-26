@@ -19,13 +19,20 @@ export const TokenApprovalObservationSchema = z
     token: Address,
     spender: Address,
     transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/u),
+    submittedTransactionHash: z
+      .string()
+      .regex(/^0x[0-9a-f]{64}$/u)
+      .optional(),
     observedAt: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
   })
   .strict()
 
 export type TokenApprovalObservation = z.infer<typeof TokenApprovalObservationSchema>
 
-const VisibleObservation = TokenApprovalObservationSchema.omit({ transactionHash: true })
+const VisibleObservation = TokenApprovalObservationSchema.omit({
+  transactionHash: true,
+  submittedTransactionHash: true
+})
 export const TokenApprovalViewSchema = z.discriminatedUnion('status', [
   VisibleObservation.extend({
     status: z.literal('current'),

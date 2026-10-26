@@ -77,7 +77,6 @@ import operationLifecycleLedger from '../operationLifecycle'
 import operationLifecycleRuntime from '../operationLifecycle/runtime'
 import { operationLifecycleRpc } from '../operationLifecycle/rpc'
 import { publishOperationLifecycleObservation } from '../operationLifecycle/events'
-import { recordSubmittedTokenApproval } from '../tokenApprovals/runtime'
 import type { OperationLifecycle } from '../store/state/types/operationLifecycle'
 import { MAX_OPERATION_LIFECYCLE_AGE_MS } from '../store/state/types/operationLifecycle'
 import recentRecipientsRuntime from '../recentRecipients/runtime'
@@ -3201,9 +3200,6 @@ export class Accounts extends EventEmitter {
     }
     const lifecycle = this.admitTransactionLifecycle(context, hash, 'acknowledged')
     if (!lifecycle) return false
-    if (request?.type === 'transaction' && request.activityId === context.activityId) {
-      recordSubmittedTokenApproval(request.data, hash)
-    }
     const lateAcknowledgement =
       currentAccount &&
       request?.type === 'transaction' &&

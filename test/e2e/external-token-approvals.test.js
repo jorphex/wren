@@ -64,7 +64,7 @@ async function fixture() {
     throw new Error(`Unexpected RPC method ${method}`)
   })
   const rpc = createDappClient(upstream.url, 'https://wren-test.invalid')
-  const service = new TokenApprovalsService({
+  const approvalDependencies = {
     load: () => storage.load().main.observedTokenApprovals,
     save: (entries) => {
       const state = storage.load()
@@ -77,7 +77,8 @@ async function fixture() {
       expect(chainId).toBe(1)
       return rpc.request(method, params)
     }
-  })
+  }
+  const service = new TokenApprovalsService(approvalDependencies)
   const deps = {
     rpc: (chainId, method, params) => {
       expect(chainId).toBe(1)
@@ -140,6 +141,11 @@ async function fixture() {
     notifications,
     upstream,
     deps,
+    restartApprovals: () => {
+      const restarted = new TokenApprovalsService(approvalDependencies)
+      deps.tokenApprovals = restarted
+      return restarted
+    },
     head: (value) => (head = value),
     amount: (value) => (amount = value),
     accounts: (value) => (accounts = value),
@@ -287,6 +293,32 @@ it('does not let a pre-update allowance read overwrite a newly observed external
   await old
   expect(f.service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '0' })
 })
+
+it.each([false, true])(
+  'refreshes a Wren submission after older external activity for the same pair (restart: %s)',
+  async (restart) => {
+    const submittedHash = hash(80000)
+    f.service.observeSubmitted(
+      { from: ACCOUNT, to: TARGET, chainId: '0x1', data: abi.encodeFunctionData('approve', [spender, 0]) },
+      submittedHash
+    )
+    f.tx(3)
+    f.head(5)
+    await f.scanner.scan(1)
+    const service = restart ? f.restartApprovals() : f.service
+    const [{ id }] = service.list(ACCOUNT)
+    await service.refresh(ACCOUNT, [id])
+    expect(service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '125' })
+
+    f.amount(0n)
+    await service.afterExecution(1, submittedHash, 'canonical receipt')
+    expect(service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '0' })
+    expect(service.list(ACCOUNT)[0]).not.toHaveProperty('submittedTransactionHash')
+    const reads = f.upstream.requests.filter(({ payload }) => payload.method === 'eth_call').length
+    await service.afterExecution(1, submittedHash, 'canonical receipt')
+    expect(f.upstream.requests.filter(({ payload }) => payload.method === 'eth_call')).toHaveLength(reads)
+  }
+)
 
 it.each(['clear', 'remove', 'disable', 'stop'])('honors %s during receipt collection', async (change) => {
   f.tx(3)

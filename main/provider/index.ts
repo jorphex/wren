@@ -802,6 +802,7 @@ export class Provider extends EventEmitter {
                 callbackTimer.unref?.()
 
                 try {
+                  recordSubmittedTokenApproval(rawTx, signedHash)
                   this.connection.send(
                     {
                       id: payload.id,

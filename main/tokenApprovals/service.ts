@@ -13,6 +13,7 @@ import {
 } from '../../resources/domain/transaction/allowance'
 import { parseRpcQuantity } from '../../resources/domain/transaction/quantity'
 import { erc20Interface } from '../../resources/contracts'
+import { parseSimulationEffects } from '../transaction/effects'
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/u
 const HASH = /^0x[0-9a-f]{64}$/u
@@ -45,7 +46,8 @@ const identifier = (entry: Pick<TokenApprovalObservation, 'account' | 'chainId' 
   createHash('sha256')
     .update(`${entry.account}:${entry.chainId}:${entry.token}:${entry.spender}`)
     .digest('hex')
-const generation = (entry: TokenApprovalObservation) => `${entry.transactionHash}:${entry.observedAt}`
+const generation = (entry: TokenApprovalObservation) =>
+  `${entry.transactionHash}:${entry.submittedTransactionHash || ''}:${entry.observedAt}`
 
 export class TokenApprovalsService {
   private checks = new Map<string, Check>()
@@ -85,7 +87,8 @@ export class TokenApprovalsService {
   private mergeSubmitted(
     observations: TokenApprovalObservation[],
     transaction: { from?: unknown; to?: unknown; chainId?: unknown; data?: unknown },
-    hash: unknown
+    hash: unknown,
+    source: 'submitted' | 'external' = 'submitted'
   ) {
     if (
       typeof transaction.from !== 'string' ||
@@ -110,8 +113,16 @@ export class TokenApprovalsService {
       observedAt: Date.now()
     }
     const id = identifier(entry)
-    if (observations.some((item) => item.id === id && item.transactionHash === hash)) return observations
-    return pruneObservedTokenApprovals([{ ...entry, id }, ...observations.filter((item) => item.id !== id)])
+    const previous = observations.find((item) => item.id === id)
+    if (previous?.transactionHash === hash) return observations
+    // Catch-up may observe an older external call after a newer Wren submission.
+    // Keep its hash so execution/reorg evidence still refreshes this pair after restart.
+    const submittedTransactionHash =
+      source === 'submitted' ? hash : previous?.submittedTransactionHash || previous?.transactionHash
+    return pruneObservedTokenApprovals([
+      { ...entry, id, ...(submittedTransactionHash ? { submittedTransactionHash } : {}) },
+      ...observations.filter((item) => item.id !== id)
+    ])
   }
 
   private observationsChanged(previous: TokenApprovalObservation[]) {
@@ -160,7 +171,12 @@ export class TokenApprovalsService {
     const previous = this.observations()
     let next = previous
     for (const call of calls) {
-      next = this.mergeSubmitted(next, { ...call, chainId: `0x${chainId.toString(16)}` }, call.hash)
+      next = this.mergeSubmitted(
+        next,
+        { ...call, chainId: `0x${chainId.toString(16)}` },
+        call.hash,
+        'external'
+      )
     }
     // Persist observations and scanner progress together. Failed commits remain retryable.
     commit(next === previous ? undefined : next)
@@ -183,7 +199,7 @@ export class TokenApprovalsService {
   }
 
   private view(entry: TokenApprovalObservation): TokenApprovalView {
-    const { transactionHash: _hash, ...visible } = entry
+    const { transactionHash: _hash, submittedTransactionHash: _submittedHash, ...visible } = entry
     if (!this.dependencies.chainEnabled(entry.chainId)) return { ...visible, status: 'network-off' }
     const checked = this.checks.get(entry.id)
     const age = checked ? Date.now() - checked.checkedAt : -1
@@ -284,13 +300,43 @@ export class TokenApprovalsService {
     })
   }
 
-  async afterExecution(chainId: number, hash: string, evidence?: string) {
+  invalidateAccountAllowances(chainId: number, account: string) {
+    for (const entry of this.observations()) {
+      if (entry.chainId === chainId && entry.account === account.toLowerCase()) {
+        this.invalidate(entry.id)
+        this.executions.delete(entry.id)
+      }
+    }
+  }
+
+  async afterExecution(
+    chainId: number,
+    hash: string,
+    evidence?: string,
+    receipt?: Readonly<Record<string, unknown>>
+  ) {
+    const effects =
+      receipt?.['transactionHash'] === hash && receipt['status'] === '0x1' && Array.isArray(receipt['logs'])
+        ? receipt['logs'].slice(0, 10000).flatMap((log) => parseSimulationEffects([log]).effects)
+        : []
     const entries = this.observations().filter(
-      (entry) => entry.chainId === chainId && entry.transactionHash === hash
+      (entry) =>
+        entry.chainId === chainId &&
+        (entry.transactionHash === hash ||
+          entry.submittedTransactionHash === hash ||
+          effects.some(
+            (effect) =>
+              effect.type === 'approval' &&
+              effect.standard === 'erc20' &&
+              effect.token === entry.token &&
+              effect.owner === entry.account &&
+              effect.spender === entry.spender
+          ))
     )
     for (const entry of entries) {
-      if (evidence && this.executions.get(entry.id) === evidence) continue
-      if (evidence) this.executions.set(entry.id, evidence)
+      const execution = evidence && `${hash}:${evidence}`
+      if (execution && this.executions.get(entry.id) === execution) continue
+      if (execution) this.executions.set(entry.id, execution)
       this.invalidate(entry.id)
       if (this.dependencies.accounts().some((saved) => saved.toLowerCase() === entry.account))
         await this.refresh(entry.account, [entry.id])

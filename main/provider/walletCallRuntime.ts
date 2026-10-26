@@ -153,6 +153,14 @@ export async function executeWalletCallRuntime(
         }
 
         try {
+          const transaction = snapshot.preparation.calls[index]?.transaction
+          if (transaction) {
+            try {
+              dependencies.recordSubmittedApproval?.(transaction, hashSignedTransaction(rawTransaction))
+            } catch {
+              // Observation must never change broadcast settlement.
+            }
+          }
           send(
             {
               id: index + 1,
@@ -170,14 +178,6 @@ export async function executeWalletCallRuntime(
           }
         }
       }).then((hash) => {
-        const transaction = snapshot.preparation.calls[index]?.transaction
-        if (transaction && hash.toLowerCase() === hashSignedTransaction(rawTransaction)) {
-          try {
-            dependencies.recordSubmittedApproval?.(transaction, hash)
-          } catch {
-            // Observation must never change broadcast settlement.
-          }
-        }
         const target = snapshot.calls[index]?.to
         if (target) {
           try {

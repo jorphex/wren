@@ -45,14 +45,18 @@ export const recordSubmittedTokenApproval = (
   }
 }
 
-observeOperationLifecycles(({ previous, current }) => {
+observeOperationLifecycles(({ previous, current, receipt }) => {
+  if (current.state === 'reorged' && previous.state !== current.state) {
+    tokenApprovals.invalidateAccountAllowances(current.chainId, current.account)
+  }
   if (current.kind === 'transaction') {
     if (!current.transaction || JSON.stringify(previous.receipt) === JSON.stringify(current.receipt)) return
     void tokenApprovals
       .afterExecution(
         current.chainId,
         current.transaction.hash,
-        JSON.stringify(current.receipt || current.state)
+        JSON.stringify(current.receipt || current.state),
+        receipt
       )
       .catch(() => {
         log.warn('Could not refresh local token approval')
@@ -75,7 +79,8 @@ observeOperationLifecycles(({ previous, current }) => {
               transaction.receipt?.blockHash,
               transaction.receipt?.status,
               current.state === 'reorged'
-            ])
+            ]),
+            transaction.receipt
           )
           .catch(() => {
             log.warn('Could not refresh local token approval')

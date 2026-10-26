@@ -404,13 +404,16 @@ recovery; Speed Up remains constrained.
 #### Observed token approvals
 
 Wren retains at most 500 locally observed ERC-20 approval pairs for one year.
-Each record holds the account, chain, token, spender, submission hash, and time.
+Each record holds the account, chain, token, spender, last observed hash, and time.
+It also retains a submission hash for execution checks across scan catch-up.
 It does not retain the approved amount or calldata. Records stay out of renderer
 bootstrap state, profile backups, and diagnostics. Removing an account or using
 **Forget observed approvals** removes its records.
 
-Pairs come from Wren submissions and successful direct calls found by the Activity
-monitor. External calls use its existing block and receipt checks. Observations
+Pairs come from Wren broadcast attempts and successful direct calls found by the
+Activity monitor. Wren records the signed hash before sending, so a missing RPC
+reply does not lose the pair. An attempt is not confirmation or allowance evidence.
+External calls use the monitor's existing block and receipt checks. Observations
 and scan progress are saved together. Replaying a known call keeps one record;
 clearing the list also excludes calls from an unfinished scan.
 
@@ -420,6 +423,9 @@ in memory for one minute. Missing, malformed, or failed replies remain unavailab
 they are not treated as zero. Wren execution evidence triggers a new check.
 An external approval change or Activity reorg clears cached allowances until
 refresh. Late replies cannot restore cleared history or overwrite a newer check.
+Canonical receipt approval events also match known pairs when several approvals
+are pending. Event amounts are not used as current allowances. A Wren reorg clears
+cached allowances for its account and network.
 
 Revocation rechecks the selected account and allowance, then queues the exact
 token's `approve(spender, 0)` through normal transaction review. It does not sign,

@@ -20,7 +20,8 @@ const otherAccount = '0x4444444444444444444444444444444444444444'
 const hash = `0x${'ab'.repeat(32)}`
 const contract = new Interface([
   'function approve(address spender, uint256 amount)',
-  'function allowance(address owner, address spender) view returns (uint256)'
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'event Approval(address indexed owner, address indexed spender, uint256 value)'
 ])
 const transaction = (overrides = {}) => ({
   from: ACCOUNT,
@@ -128,6 +129,33 @@ it('keeps malformed RPC evidence distinct from zero and rechecks before revocati
   const requestCount = upstream.requests.length
   expect(await service.refresh(ACCOUNT, [id])).toMatchObject([{ status: 'network-off' }])
   expect(upstream.requests).toHaveLength(requestCount)
+})
+
+it('checks each confirmed approval when multiple submissions share a pair and block', async () => {
+  const earlier = `0x${'cd'.repeat(32)}`
+  service.observeSubmitted(transaction(), earlier)
+  service.observeSubmitted(transaction({ data: contract.encodeFunctionData('approve', [spender, 0]) }), hash)
+  const [{ id }] = service.list(ACCOUNT)
+  await service.refresh(ACCOUNT, [id])
+  const receipt = {
+    transactionHash: earlier,
+    status: '0x1',
+    logs: [
+      { address: TARGET, ...contract.encodeEventLog(contract.getEvent('Approval'), [ACCOUNT, spender, 999]) }
+    ]
+  }
+  amount = 50n
+  await service.afterExecution(1, earlier, 'same block and status', { ...receipt, transactionHash: hash })
+  expect(service.list(ACCOUNT)[0].amount).toBe('100')
+  await service.afterExecution(1, earlier, 'same block and status', receipt)
+  expect(service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '50' })
+  amount = 0n
+  await service.afterExecution(1, hash, 'same block and status')
+  expect(service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '0' })
+  service.invalidateAccountAllowances(1, otherAccount)
+  expect(service.list(ACCOUNT)[0].status).toBe('current')
+  service.invalidateAccountAllowances(1, ACCOUNT)
+  expect(service.list(ACCOUNT)[0].status).toBe('unchecked')
 })
 
 it('rejects foreign candidates and forged references without querying an arbitrary token', async () => {
