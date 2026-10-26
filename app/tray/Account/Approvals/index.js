@@ -286,8 +286,9 @@ export class Approvals extends React.Component {
           <details className='tokenApprovalsAbout'>
             <summary>About this list</summary>
             <p>
-              Token approvals submitted through Wren appear here. Refresh checks current allowances through
-              your configured RPC. Earlier approvals, NFT approvals, and signed permits are not included.
+              Approvals sent through Wren and direct approvals observed by Activity appear here. Refresh
+              checks current allowances through your configured RPC. Earlier approvals, NFT approvals, and
+              signed permits are not included.
             </p>
             <p>
               Records stay on this device for up to a year, with a limit of 500. Forgetting them does not

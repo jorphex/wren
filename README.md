@@ -49,9 +49,10 @@ this first version.
 
 ## Token approvals
 
-Open **Approvals** from the account screen. Wren lists token approvals submitted
-through Wren and checks current allowances through your configured RPC. **Revoke**
-opens a zero-allowance transaction for normal review and signing.
+Open **Approvals** from the account screen. The list includes approvals sent through
+Wren and successful direct approvals observed by Activity outside Wren. **Refresh**
+checks current allowances through your configured RPC. **Revoke** opens a
+zero-allowance transaction for normal review and signing.
 
 The list covers locally observed ERC-20 approval calls. Earlier approvals, NFT
 approvals, and signed permits are not included. Records stay on this device for

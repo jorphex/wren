@@ -292,7 +292,10 @@ module.exports = {
   setContractVerificationJobs: (u, jobs) => {
     u('main.contractVerificationJobs', () => jobs)
   },
-  commitAccountActivity: (u, chainId, cursor, entries, reorgAfter) => {
+  commitAccountActivity: (u, chainId, cursor, entries, reorgAfter, approvals) => {
+    if (approvals !== undefined) {
+      u('main.observedTokenApprovals', () => pruneObservedTokenApprovals(approvals))
+    }
     u('main.activity', (activity = []) => {
       const updated = activity.map((entry) =>
         reorgAfter !== undefined && entry.chainId === chainId && entry.observed?.blockNumber > reorgAfter

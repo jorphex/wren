@@ -19,6 +19,13 @@ const HASH = /^0x[0-9a-f]{64}$/u
 const CHECK_LIFETIME_MS = 60_000
 const RPC_DEADLINE_MS = 5_000
 
+export type ObservedTokenApprovalCall = {
+  from: string
+  to: string
+  data: string
+  hash: string
+}
+
 interface Dependencies {
   load(): unknown
   save(value: TokenApprovalObservation[]): void
@@ -45,12 +52,13 @@ export class TokenApprovalsService {
   private pending = new Map<string, Promise<void>>()
   private revisions = new Map<string, number>()
   private executions = new Map<string, string>()
+  private historyRevisions = new Map<string, number>()
   private sequence = 0
 
   constructor(private dependencies: Dependencies) {}
 
   private version(entry: TokenApprovalObservation) {
-    return `${generation(entry)}:${this.revisions.get(entry.id) || 0}`
+    return `${generation(entry)}:${this.revisions.get(entry.id) || 0}:${this.historyRevisions.get(entry.account) || 0}`
   }
 
   private invalidate(id: string) {
@@ -74,7 +82,8 @@ export class TokenApprovalsService {
     return account.toLowerCase()
   }
 
-  observeSubmitted(
+  private mergeSubmitted(
+    observations: TokenApprovalObservation[],
     transaction: { from?: unknown; to?: unknown; chainId?: unknown; data?: unknown },
     hash: unknown
   ) {
@@ -85,13 +94,13 @@ export class TokenApprovalsService {
       typeof hash !== 'string' ||
       !HASH.test(hash)
     )
-      return
+      return observations
     const account = transaction.from.toLowerCase()
-    if (!this.dependencies.accounts().some((saved) => saved.toLowerCase() === account)) return
+    if (!this.dependencies.accounts().some((saved) => saved.toLowerCase() === account)) return observations
     const chainId = Number(parseRpcQuantity(transaction.chainId))
     const intent = parseErc20ApprovalIntent(transaction.data)
     if (!Number.isSafeInteger(chainId) || chainId < 1 || !intent || !this.dependencies.chainEnabled(chainId))
-      return
+      return observations
     const entry = {
       account,
       chainId,
@@ -101,16 +110,69 @@ export class TokenApprovalsService {
       observedAt: Date.now()
     }
     const id = identifier(entry)
+    if (observations.some((item) => item.id === id && item.transactionHash === hash)) return observations
+    return pruneObservedTokenApprovals([{ ...entry, id }, ...observations.filter((item) => item.id !== id)])
+  }
+
+  private observationsChanged(previous: TokenApprovalObservation[]) {
     const observations = this.observations()
-    this.dependencies.save(
-      pruneObservedTokenApprovals([{ ...entry, id }, ...observations.filter((item) => item.id !== id)])
-    )
-    this.invalidate(id)
-    this.executions.delete(id)
-    const retained = new Set(this.observations().map((item) => item.id))
+    const generations = new Map(previous.map((entry) => [entry.id, generation(entry)]))
+    for (const entry of observations) {
+      if (generations.get(entry.id) === generation(entry)) continue
+      this.invalidate(entry.id)
+      this.executions.delete(entry.id)
+    }
+    const retained = new Set(observations.map((item) => item.id))
     for (const key of this.checks.keys()) if (!retained.has(key)) this.checks.delete(key)
     for (const key of this.revisions.keys()) if (!retained.has(key)) this.revisions.delete(key)
     for (const key of this.executions.keys()) if (!retained.has(key)) this.executions.delete(key)
+  }
+
+  observeSubmitted(
+    transaction: { from?: unknown; to?: unknown; chainId?: unknown; data?: unknown },
+    hash: unknown
+  ) {
+    const previous = this.observations()
+    const next = this.mergeSubmitted(previous, transaction, hash)
+    if (next === previous) return
+    this.dependencies.save(next)
+    this.observationsChanged(previous)
+  }
+
+  captureObservationGuard() {
+    const captured = new Map(
+      this.dependencies.accounts().map((account) => {
+        const owner = account.toLowerCase()
+        return [owner, this.historyRevisions.get(owner) || 0] as const
+      })
+    )
+    return (account: string) =>
+      captured.has(account.toLowerCase()) &&
+      captured.get(account.toLowerCase()) === (this.historyRevisions.get(account.toLowerCase()) || 0)
+  }
+
+  commitActivity(
+    chainId: number,
+    calls: readonly ObservedTokenApprovalCall[],
+    reorgAfter: number | undefined,
+    commit: (observations?: TokenApprovalObservation[]) => void
+  ) {
+    const previous = this.observations()
+    let next = previous
+    for (const call of calls) {
+      next = this.mergeSubmitted(next, { ...call, chainId: `0x${chainId.toString(16)}` }, call.hash)
+    }
+    // Persist observations and scanner progress together. Failed commits remain retryable.
+    commit(next === previous ? undefined : next)
+    if (next !== previous) this.observationsChanged(previous)
+    if (reorgAfter !== undefined) {
+      for (const entry of this.observations()) {
+        if (entry.chainId === chainId) {
+          this.invalidate(entry.id)
+          this.executions.delete(entry.id)
+        }
+      }
+    }
   }
 
   list(account: string): TokenApprovalView[] {
@@ -239,6 +301,7 @@ export class TokenApprovalsService {
     const owner = this.requireAccount(account)
     const entries = this.observations()
     this.dependencies.save(entries.filter((entry) => entry.account !== owner))
+    this.historyRevisions.set(owner, ++this.sequence)
     for (const entry of entries)
       if (entry.account === owner) {
         this.checks.delete(entry.id)

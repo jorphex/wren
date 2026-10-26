@@ -409,11 +409,17 @@ It does not retain the approved amount or calldata. Records stay out of renderer
 bootstrap state, profile backups, and diagnostics. Removing an account or using
 **Forget observed approvals** removes its records.
 
+Pairs come from Wren submissions and successful direct calls found by the Activity
+monitor. External calls use its existing block and receipt checks. Observations
+and scan progress are saved together. Replaying a known call keeps one record;
+clearing the list also excludes calls from an unfinished scan.
+
 The account view reads allowances through the configured RPC, at most 20 pairs
 per refresh with four concurrent reads and a five-second deadline. Results stay
 in memory for one minute. Missing, malformed, or failed replies remain unavailable;
-they are not treated as zero. Canonical execution and reorg evidence triggers a
-new check. Late replies cannot restore cleared history or overwrite a newer check.
+they are not treated as zero. Wren execution evidence triggers a new check.
+An external approval change or Activity reorg clears cached allowances until
+refresh. Late replies cannot restore cleared history or overwrite a newer check.
 
 Revocation rechecks the selected account and allowance, then queues the exact
 token's `approve(spender, 0)` through normal transaction review. It does not sign,

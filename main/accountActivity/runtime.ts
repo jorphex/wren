@@ -5,6 +5,7 @@ import chains from '../chains'
 import { requireStoreAction } from '../store/action'
 import { createWalletCallEvidenceRPC } from '../provider/walletCallEvidenceRPC'
 import { createAccountActivityScanner } from './scanner'
+import { tokenApprovals } from '../tokenApprovals/runtime'
 import {
   activityTransactionReferenceForOperation,
   type ActivityTransactionReference
@@ -32,6 +33,7 @@ function start() {
   let notifications: ActivityEntry[] = []
   const scanner = createAccountActivityScanner({
     rpc,
+    tokenApprovals,
     accounts,
     active,
     cursor: (chainId) => ((store('main.accountActivityCursors') || {}) as AccountActivityCursors)[chainId],
@@ -52,7 +54,7 @@ function start() {
         (reference) => reference.chainId === chainId && reference.transactions.some((tx) => tx.hash === hash)
       )
     },
-    commit: (chainId, cursor, entries, reorgAfter) => {
+    commit: (chainId, cursor, entries, reorgAfter, approvals) => {
       if (!active() || !networks().some((chain) => chain.id === chainId))
         throw new Error('Activity network disconnected')
       const currentAccounts = accounts()
@@ -60,7 +62,8 @@ function start() {
         chainId,
         cursor,
         entries.filter((entry) => currentAccounts.includes(entry.account)),
-        reorgAfter
+        reorgAfter,
+        approvals
       )
     },
     notify: (entry) => {
