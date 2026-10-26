@@ -40,6 +40,7 @@ let savedAccounts
 let storage
 let service
 let fixtureSequence = 0
+let tokenContracts
 
 beforeEach(async () => {
   amount = 100n
@@ -47,6 +48,7 @@ beforeEach(async () => {
   hold = undefined
   enabled = true
   savedAccounts = [ACCOUNT]
+  tokenContracts = [TARGET]
   upstream = await startJsonRpcFixture(async (payload) => {
     if (payload.method !== 'eth_call') throw new Error('Unexpected RPC method')
     const observedAmount = amount
@@ -54,7 +56,7 @@ beforeEach(async () => {
     if (failure) return { result: '0x' }
     const [call, block] = payload.params
     expect(block).toBe('latest')
-    expect(call.to).toBe(TARGET)
+    expect(tokenContracts).toContain(call.to)
     const decoded = contract.decodeFunctionData('allowance', call.data)
     expect(decoded.owner.toLowerCase()).toBe(ACCOUNT)
     expect(decoded.spender.toLowerCase()).toBe(spender)
@@ -221,6 +223,64 @@ it('uses a new post-execution read when an older allowance reply is still in fli
   await Promise.all([previous, afterExecution])
   expect(upstream.requests).toHaveLength(2)
   expect(service.list(ACCOUNT)[0]).toMatchObject({ status: 'current', amount: '0' })
+})
+
+it.each(['clear', 'remove'])('stops queued allowance lookups after history %s', async (change) => {
+  tokenContracts = [TARGET, ...['33', '44', '55', '66'].map((byte) => `0x${byte.repeat(20)}`)]
+  tokenContracts.forEach((token, index) =>
+    service.observeSubmitted(transaction({ to: token }), `0x${(index + 1).toString(16).repeat(64)}`)
+  )
+  const ids = service.list(ACCOUNT).map(({ id }) => id)
+  let release
+  hold = new Promise((resolve) => {
+    release = resolve
+  })
+  const pending = service.refresh(ACCOUNT, ids)
+  try {
+    const deadline = Date.now() + 2000
+    while (upstream.requests.length < 4 && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(upstream.requests).toHaveLength(4)
+    if (change === 'clear') service.clear(ACCOUNT)
+    else savedAccounts = []
+  } finally {
+    release()
+    await pending
+  }
+  expect(upstream.requests).toHaveLength(4)
+  if (change === 'clear') expect(service.list(ACCOUNT)).toEqual([])
+})
+
+it('invalidates every affected allowance before waiting for receipt refreshes', async () => {
+  tokenContracts = [TARGET, ...['33', '44', '55', '66'].map((byte) => `0x${byte.repeat(20)}`)]
+  tokenContracts.forEach((token, index) =>
+    service.observeSubmitted(transaction({ to: token }), `0x${(index + 1).toString(16).repeat(64)}`)
+  )
+  await service.refresh(
+    ACCOUNT,
+    service.list(ACCOUNT).map(({ id }) => id)
+  )
+  expect(service.list(ACCOUNT).every(({ status }) => status === 'current')).toBe(true)
+  let release
+  hold = new Promise((resolve) => {
+    release = resolve
+  })
+  const receiptHash = `0x${'77'.repeat(32)}`
+  const pending = service.afterExecution(1, receiptHash, 'confirmed multi-token call', {
+    transactionHash: receiptHash,
+    status: '0x1',
+    logs: tokenContracts.map((address) => ({
+      address,
+      ...contract.encodeEventLog(contract.getEvent('Approval'), [ACCOUNT, spender, 0])
+    }))
+  })
+  try {
+    expect(service.list(ACCOUNT).every(({ status }) => status === 'unchecked')).toBe(true)
+  } finally {
+    release()
+    await pending
+  }
+  expect(service.list(ACCOUNT).every(({ status }) => status === 'current')).toBe(true)
 })
 
 it('queues only a normal zero-allowance review and blocks duplicate clicks', async () => {

@@ -437,6 +437,8 @@ in memory for one minute. Missing, malformed, or failed replies remain unavailab
 they are not treated as zero. Wren execution evidence triggers a new check.
 An external approval change or Activity reorg clears cached allowances until
 refresh. Late replies cannot restore cleared history or overwrite a newer check.
+Queued reads stop after history or account removal. Receipt updates clear all
+affected allowances before starting fresh lookups.
 Canonical receipt approval events also match known pairs when several approvals
 are pending. Event amounts are not used as current allowances. A Wren reorg clears
 cached allowances for its account and network.

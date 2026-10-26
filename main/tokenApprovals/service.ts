@@ -212,7 +212,14 @@ export class TokenApprovalsService {
   }
 
   private async read(entry: TokenApprovalObservation) {
-    if (!this.dependencies.chainEnabled(entry.chainId)) return
+    const observed = this.observations().find((candidate) => candidate.id === entry.id)
+    if (
+      !observed ||
+      generation(observed) !== generation(entry) ||
+      !this.dependencies.accounts().some((account) => account.toLowerCase() === entry.account) ||
+      !this.dependencies.chainEnabled(entry.chainId)
+    )
+      return
     const version = this.version(entry)
     const key = `${entry.id}:${version}`
     const inProgress = this.pending.get(key)
@@ -259,6 +266,15 @@ export class TokenApprovalsService {
     }
   }
 
+  private async readSelected(selected: readonly TokenApprovalObservation[]) {
+    let index = 0
+    await Promise.all(
+      Array.from({ length: Math.min(4, selected.length) }, async () => {
+        while (index < selected.length) await this.read(selected[index++]!)
+      })
+    )
+  }
+
   async refresh(account: string, ids: readonly string[]): Promise<TokenApprovalView[]> {
     const owner = this.requireAccount(account)
     if (
@@ -273,12 +289,7 @@ export class TokenApprovalsService {
       if (!entry) throw new Error('Approval is no longer available')
       return entry
     })
-    let index = 0
-    await Promise.all(
-      Array.from({ length: Math.min(4, selected.length) }, async () => {
-        while (index < selected.length) await this.read(selected[index++]!)
-      })
-    )
+    await this.readSelected(selected)
     return this.dependencies.accounts().some((saved) => saved.toLowerCase() === owner)
       ? this.list(owner).filter((entry) => ids.includes(entry.id))
       : []
@@ -333,14 +344,15 @@ export class TokenApprovalsService {
               effect.spender === entry.spender
           ))
     )
+    const selected: TokenApprovalObservation[] = []
     for (const entry of entries) {
       const execution = evidence && `${hash}:${evidence}`
       if (execution && this.executions.get(entry.id) === execution) continue
       if (execution) this.executions.set(entry.id, execution)
       this.invalidate(entry.id)
-      if (this.dependencies.accounts().some((saved) => saved.toLowerCase() === entry.account))
-        await this.refresh(entry.account, [entry.id])
+      selected.push(entry)
     }
+    await this.readSelected(selected)
   }
 
   clear(account: string) {
