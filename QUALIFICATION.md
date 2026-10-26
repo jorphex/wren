@@ -52,6 +52,9 @@ checksums, compatibility metadata, and source-bound SBOM.
 The isolated desktop `npm run test:e2e` suite covers permission denial/revocation,
 review rejection, sequential EIP-5792 success and partial failure, restart recovery,
 and origin/account status scoping without using live Wren ports or public networks.
+It also covers single-call simulation fallbacks, snapshot-bound trace events,
+provider errors, and partial evidence. Retain the Jest result and
+`compiled/simulation-fallback-e2e.json` before the next compile clears that folder.
 The native smoke matrix builds real unsigned Linux arm64 and Windows x64 packages
 plus ad-hoc-signed macOS x64/arm64 previews on matching runners, then compares
 packaged runtime evidence

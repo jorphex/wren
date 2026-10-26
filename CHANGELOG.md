@@ -11,6 +11,7 @@ For release details and platform limits, see
 - Bound broad-approval consent to the reviewed request. Detected unlimited and NFT operator approvals in call batches even without simulation.
 - Showed exact local token units in known Permit2 and ERC-3009 reviews. Grouped raw signed fields under Signed data when the summary is complete.
 - Improved signing review spacing, address controls, and fee labels.
+- Added token-event previews from compatible RPC traces.
 - Settled pending Trezor requests when the bridge closes during a metadata lookup.
 - Removed unused IPFS client and build dependencies. Kept content hashes and endpoint settings.
 - Updated commit checks and HTTP caching to remove vulnerable dependency paths.

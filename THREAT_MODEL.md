@@ -321,6 +321,13 @@ only when the root matches reviewed sender/destination/value/calldata; depth,
 frames, children, input size, and error text are bounded and raw input/return
 data stays out of the renderer.
 
+Token events collected after an `eth_call` fallback require a shared canonical
+block hash and matching reviewed call fields, including gas. Reverted subtrees
+are excluded; emitters and event ordering are validated. Log count, bytes, and
+displayed effects are bounded. Missing or ambiguous logs leave the preview
+limited; capped evidence is marked partial. Details retain the separate execution
+and event sources. See [Simulation fallback](SIMULATION_FALLBACK.md).
+
 An empty code response does not prove that an account is an EOA. A nonempty
 response does not prove an interface. Decoding and traces help explain
 behavior but cannot prove it. Verify chain, recipient, value, calldata, and

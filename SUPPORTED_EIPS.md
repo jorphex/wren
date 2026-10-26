@@ -70,9 +70,12 @@ for the method boundary.
 
 ## Simulation evidence
 
-Wren uses configured-RPC `eth_simulateV1` when available. Otherwise it uses
-bounded `eth_call`. Successful single transactions can also request bounded
-`debug_traceCall` prestate and optional call traces.
+Wren uses configured-RPC `eth_simulateV1` when available. An unsupported-method
+reply falls back to bounded `eth_call` for single transactions. Successful
+calls can also request bounded `debug_traceCall` prestate and call traces.
+Fallback token events require execution and traces at the same canonical block
+hash. Missing tracing or block-selector support leaves the preview limited.
+See [Simulation fallback](SIMULATION_FALLBACK.md) for coverage and tested endpoints.
 
 Wren can show native Wei deltas and summarized nested calls or creations. The
 results can omit fees or details and remain RPC claims. Wren hides raw trace
